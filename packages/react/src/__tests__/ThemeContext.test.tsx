@@ -1,14 +1,14 @@
 /**
- * Tests for VizThemeProvider and useVizTheme.
+ * Tests for VizThemeProvider, useVizTheme, and useVizDarkMode.
  *
- * Verifies that themes cascade through the provider hierarchy and that
- * nested providers override parent themes.
+ * Verifies that themes and dark mode preferences cascade through the
+ * provider hierarchy and that nested providers override parent values.
  */
 
 import type { ThemeConfig } from '@openchart/core';
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useVizTheme, VizThemeProvider } from '../ThemeContext';
+import { useVizDarkMode, useVizTheme, VizThemeProvider } from '../ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Test harness components
@@ -17,6 +17,11 @@ import { useVizTheme, VizThemeProvider } from '../ThemeContext';
 function ThemeConsumer({ testId = 'theme-output' }: { testId?: string }) {
   const theme = useVizTheme();
   return <div data-testid={testId}>{theme ? JSON.stringify(theme) : 'no-theme'}</div>;
+}
+
+function DarkModeConsumer({ testId = 'darkmode-output' }: { testId?: string }) {
+  const darkMode = useVizDarkMode();
+  return <div data-testid={testId}>{darkMode ?? 'undefined'}</div>;
 }
 
 /** Render a ThemeConsumer and wait for it to appear in the DOM. */
@@ -161,6 +166,77 @@ describe('VizThemeProvider', () => {
         container.querySelector('[data-testid="theme-output"]')!.textContent!,
       );
       expect(parsed2.borderRadius).toBe(12);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useVizDarkMode
+// ---------------------------------------------------------------------------
+
+describe('useVizDarkMode', () => {
+  it('returns undefined when used outside of a provider', async () => {
+    const { container } = await renderTheme(<DarkModeConsumer />);
+    const output = container.querySelector('[data-testid="darkmode-output"]');
+    expect(output?.textContent).toBe('undefined');
+  });
+
+  it('returns the darkMode value from provider', async () => {
+    const { container } = await renderTheme(
+      <VizThemeProvider theme={undefined} darkMode="force">
+        <DarkModeConsumer />
+      </VizThemeProvider>,
+    );
+
+    const output = container.querySelector('[data-testid="darkmode-output"]');
+    expect(output?.textContent).toBe('force');
+  });
+
+  it('returns undefined when provider omits darkMode', async () => {
+    const { container } = await renderTheme(
+      <VizThemeProvider theme={undefined}>
+        <DarkModeConsumer />
+      </VizThemeProvider>,
+    );
+
+    const output = container.querySelector('[data-testid="darkmode-output"]');
+    expect(output?.textContent).toBe('undefined');
+  });
+
+  it('nested provider overrides parent darkMode', async () => {
+    const { container } = await renderTheme(
+      <VizThemeProvider theme={undefined} darkMode="force">
+        <VizThemeProvider theme={undefined} darkMode="off">
+          <DarkModeConsumer />
+        </VizThemeProvider>
+      </VizThemeProvider>,
+    );
+
+    const output = container.querySelector('[data-testid="darkmode-output"]');
+    expect(output?.textContent).toBe('off');
+  });
+
+  it('darkMode updates propagate to consumers', async () => {
+    const { container, rerender } = await renderTheme(
+      <VizThemeProvider theme={undefined} darkMode="off">
+        <DarkModeConsumer />
+      </VizThemeProvider>,
+    );
+
+    expect(
+      container.querySelector('[data-testid="darkmode-output"]')?.textContent,
+    ).toBe('off');
+
+    rerender(
+      <VizThemeProvider theme={undefined} darkMode="force">
+        <DarkModeConsumer />
+      </VizThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-testid="darkmode-output"]')?.textContent,
+      ).toBe('force');
     });
   });
 });

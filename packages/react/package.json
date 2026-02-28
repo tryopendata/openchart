@@ -3,6 +3,20 @@
   "version": "0.0.1",
   "description": "React components for openchart: <Chart />, <DataTable />, <VizThemeProvider />",
   "license": "Apache-2.0",
+  "author": "Riley Hilliard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openchart/openchart.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/openchart/openchart#readme",
+  "bugs": "https://github.com/openchart/openchart/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
