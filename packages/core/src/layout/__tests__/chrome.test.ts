@@ -1,0 +1,114 @@
+import { describe, expect, it } from 'vitest';
+import { resolveTheme } from '../../theme/resolve';
+import type { Chrome } from '../../types/spec';
+import { computeChrome } from '../chrome';
+
+const theme = resolveTheme();
+
+describe('computeChrome', () => {
+  it('returns zero heights when chrome is undefined', () => {
+    const result = computeChrome(undefined, theme, 600);
+    expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(0);
+    expect(result.title).toBeUndefined();
+    expect(result.subtitle).toBeUndefined();
+  });
+
+  it('returns zero heights when chrome is empty', () => {
+    const result = computeChrome({}, theme, 600);
+    expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(0);
+  });
+
+  it('positions title correctly', () => {
+    const chrome: Chrome = { title: 'GDP Growth Rate' };
+    const result = computeChrome(chrome, theme, 600);
+
+    expect(result.title).toBeDefined();
+    expect(result.title!.text).toBe('GDP Growth Rate');
+    expect(result.title!.x).toBe(theme.spacing.padding);
+    expect(result.title!.y).toBe(theme.spacing.padding);
+    expect(result.title!.style.fontSize).toBe(theme.chrome.title.fontSize);
+    expect(result.title!.style.fontWeight).toBe(theme.chrome.title.fontWeight);
+    expect(result.topHeight).toBeGreaterThan(0);
+  });
+
+  it('positions subtitle below title', () => {
+    const chrome: Chrome = { title: 'Title', subtitle: 'Subtitle text' };
+    const result = computeChrome(chrome, theme, 600);
+
+    expect(result.title).toBeDefined();
+    expect(result.subtitle).toBeDefined();
+    expect(result.subtitle!.y).toBeGreaterThan(result.title!.y);
+  });
+
+  it('computes top height from title + subtitle + gaps', () => {
+    const chrome: Chrome = { title: 'Title', subtitle: 'Subtitle' };
+    const result = computeChrome(chrome, theme, 600);
+
+    // Top height should account for title, gap, subtitle, and chromeToChart
+    expect(result.topHeight).toBeGreaterThan(30);
+  });
+
+  it('positions source in bottom chrome', () => {
+    const chrome: Chrome = { source: 'Source: World Bank' };
+    const result = computeChrome(chrome, theme, 600);
+
+    expect(result.source).toBeDefined();
+    expect(result.source!.text).toBe('Source: World Bank');
+    expect(result.bottomHeight).toBeGreaterThan(0);
+  });
+
+  it('handles ChromeText objects with style overrides', () => {
+    const chrome: Chrome = {
+      title: {
+        text: 'Custom Title',
+        style: { fontSize: 24, fontWeight: 700, color: '#ff0000' },
+      },
+    };
+    const result = computeChrome(chrome, theme, 600);
+
+    expect(result.title!.style.fontSize).toBe(24);
+    expect(result.title!.style.fontWeight).toBe(700);
+    expect(result.title!.style.fill).toBe('#ff0000');
+  });
+
+  it('sets maxWidth based on width minus padding', () => {
+    const chrome: Chrome = { title: 'Title' };
+    const result = computeChrome(chrome, theme, 600);
+
+    const expectedMaxWidth = 600 - theme.spacing.padding * 2;
+    expect(result.title!.maxWidth).toBe(expectedMaxWidth);
+  });
+
+  it('handles full chrome with all elements', () => {
+    const chrome: Chrome = {
+      title: 'Title',
+      subtitle: 'Subtitle',
+      source: 'Source',
+      byline: 'By Author',
+      footer: 'Footer note',
+    };
+    const result = computeChrome(chrome, theme, 600);
+
+    expect(result.title).toBeDefined();
+    expect(result.subtitle).toBeDefined();
+    expect(result.source).toBeDefined();
+    expect(result.byline).toBeDefined();
+    expect(result.footer).toBeDefined();
+    expect(result.topHeight).toBeGreaterThan(0);
+    expect(result.bottomHeight).toBeGreaterThan(0);
+  });
+
+  it('uses measureText function when provided', () => {
+    const measureText = (text: string, fontSize: number) => ({
+      width: text.length * fontSize * 0.6,
+      height: fontSize * 1.2,
+    });
+
+    const chrome: Chrome = { title: 'Title' };
+    const result = computeChrome(chrome, theme, 600, measureText);
+    expect(result.title).toBeDefined();
+    // Just verify it runs without error; exact values depend on measure fn
+  });
+});

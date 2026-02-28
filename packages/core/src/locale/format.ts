@@ -1,0 +1,132 @@
+/**
+ * Locale-aware number and date formatting utilities.
+ *
+ * Uses d3-format and d3-time-format for formatting,
+ * with convenience wrappers for common patterns.
+ */
+
+import { format as d3Format } from 'd3-format';
+import { timeFormat, utcFormat } from 'd3-time-format';
+
+// ---------------------------------------------------------------------------
+// Number formatting
+// ---------------------------------------------------------------------------
+
+/**
+ * Format a number with locale-appropriate separators.
+ *
+ * Uses d3-format under the hood. Default format: comma-separated
+ * with auto-precision (e.g. 1500000 -> "1,500,000").
+ *
+ * @param value - The number to format.
+ * @param locale - Locale string (currently unused, reserved for i18n).
+ */
+export function formatNumber(value: number, _locale?: string): string {
+  if (!Number.isFinite(value)) return String(value);
+  // Auto-detect: use integer format for whole numbers, 2dp for decimals
+  if (Number.isInteger(value)) {
+    return d3Format(',')(value);
+  }
+  return d3Format(',.2f')(value);
+}
+
+// ---------------------------------------------------------------------------
+// Number abbreviation
+// ---------------------------------------------------------------------------
+
+/** Suffixes for abbreviated numbers. */
+const ABBREVIATIONS: Array<{ threshold: number; suffix: string; divisor: number }> = [
+  { threshold: 1_000_000_000_000, suffix: 'T', divisor: 1_000_000_000_000 },
+  { threshold: 1_000_000_000, suffix: 'B', divisor: 1_000_000_000 },
+  { threshold: 1_000_000, suffix: 'M', divisor: 1_000_000 },
+  { threshold: 1_000, suffix: 'K', divisor: 1_000 },
+];
+
+/**
+ * Abbreviate a large number with a suffix.
+ *
+ * Examples:
+ * - 1500000 -> "1.5M"
+ * - 2300 -> "2.3K"
+ * - 42 -> "42"
+ * - 1000000000 -> "1B"
+ */
+export function abbreviateNumber(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  for (const { threshold, suffix, divisor } of ABBREVIATIONS) {
+    if (absValue >= threshold) {
+      const abbreviated = absValue / divisor;
+      // Use .1f precision, drop trailing .0
+      const formatted = abbreviated % 1 === 0 ? String(abbreviated) : d3Format('.1f')(abbreviated);
+      return `${sign}${formatted}${suffix}`;
+    }
+  }
+
+  return formatNumber(value);
+}
+
+// ---------------------------------------------------------------------------
+// Date formatting
+// ---------------------------------------------------------------------------
+
+/** Granularity levels for date formatting. */
+export type DateGranularity = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute';
+
+/** Format strings for each granularity level. */
+const GRANULARITY_FORMATS: Record<DateGranularity, string> = {
+  year: '%Y',
+  quarter: '', // Quarter is always special-cased in formatDate() below
+  month: '%b %Y',
+  week: '%b %d',
+  day: '%b %d, %Y',
+  hour: '%b %d %H:%M',
+  minute: '%H:%M',
+};
+
+/**
+ * Format a date value for display.
+ *
+ * @param value - Date object, ISO string, or timestamp number.
+ * @param locale - Locale string (currently unused, reserved for i18n).
+ * @param granularity - Time granularity for format selection.
+ */
+export function formatDate(
+  value: Date | string | number,
+  _locale?: string,
+  granularity?: DateGranularity,
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  const gran = granularity ?? inferGranularity(date);
+
+  // Special handling for quarter (not a d3 format token)
+  if (gran === 'quarter') {
+    const q = Math.ceil((date.getMonth() + 1) / 3);
+    return `Q${q} ${date.getFullYear()}`;
+  }
+
+  const formatStr = GRANULARITY_FORMATS[gran];
+  // Use UTC format for year/month/day to avoid timezone shifts
+  if (['year', 'month', 'day'].includes(gran)) {
+    return utcFormat(formatStr)(date);
+  }
+  return timeFormat(formatStr)(date);
+}
+
+/**
+ * Infer the appropriate granularity from a date value.
+ * If time components are all zero, assume day or higher.
+ */
+function inferGranularity(date: Date): DateGranularity {
+  if (date.getHours() !== 0 || date.getMinutes() !== 0) {
+    return date.getMinutes() !== 0 ? 'minute' : 'hour';
+  }
+  if (date.getDate() !== 1) return 'day';
+  if (date.getMonth() !== 0) return 'month';
+  return 'year';
+}

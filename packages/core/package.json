@@ -1,0 +1,48 @@
+{
+  "name": "@openchart/core",
+  "version": "0.0.1",
+  "description": "Types, theme, colors, accessibility, and utilities for openchart",
+  "license": "Apache-2.0",
+  "author": "Riley Hilliard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openchart/openchart.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/openchart/openchart#readme",
+  "bugs": "https://github.com/openchart/openchart/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": ["dist", "src"],
+  "sideEffects": ["./dist/styles.css"],
+  "keywords": ["chart", "visualization", "data-table", "svg", "typescript", "d3", "declarative"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "d3-color": "^3.1.0",
+    "d3-format": "^3.1.0",
+    "d3-time-format": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/d3-color": "^3.1.3",
+    "@types/d3-format": "^3.0.4",
+    "@types/d3-time-format": "^4.0.3"
+  }
+}

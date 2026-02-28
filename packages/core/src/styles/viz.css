@@ -1,0 +1,757 @@
+/**
+ * @openchart/core styles
+ *
+ * Plain CSS with viz- prefix for all class names.
+ * CSS custom properties for theme overrides.
+ * Dark mode via .viz-dark class on the container.
+ */
+
+/* For optimal typography, load Inter: https://fonts.google.com/specimen/Inter */
+
+/* ---------------------------------------------------------------------------
+ * Custom properties (light mode defaults)
+ * --------------------------------------------------------------------------- */
+
+.viz-root,
+.viz-chart-root,
+.viz-table-wrapper,
+.viz-table-root,
+.viz-graph-wrapper,
+.viz-graph-root {
+  --viz-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --viz-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  --viz-title-size: 22px;
+  --viz-title-weight: 700;
+  --viz-title-tracking: -0.02em;
+  --viz-subtitle-size: 14px;
+  --viz-subtitle-weight: 400;
+  --viz-source-size: 12px;
+  --viz-source-weight: 400;
+  --viz-body-size: 13px;
+  --viz-bg: #ffffff;
+  --viz-text: #1d1d1d;
+  --viz-text-secondary: #5c5c5c;
+  --viz-text-muted: #999999;
+  --viz-gridline: #e8e8e8;
+  --viz-axis: #888888;
+  --viz-border: #e2e2e2;
+  --viz-border-radius: 4px;
+  --viz-focus: #3b82f6;
+  --viz-hover-bg: rgba(0, 0, 0, 0.025);
+  --viz-tooltip-bg: rgba(255, 255, 255, 0.88);
+  --viz-tooltip-border: rgba(0, 0, 0, 0.08);
+  --viz-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
+  --viz-tooltip-text: #1d1d1d;
+  --viz-legend-text: #555555;
+}
+
+/* ---------------------------------------------------------------------------
+ * Dark mode overrides
+ * --------------------------------------------------------------------------- */
+
+.viz-dark {
+  --viz-bg: #1a1a2e;
+  --viz-text: #e0e0e0;
+  --viz-text-secondary: #b0b0b0;
+  --viz-text-muted: #808080;
+  --viz-gridline: #333355;
+  --viz-axis: #999999;
+  --viz-border: #444466;
+  --viz-focus: #60a5fa;
+  --viz-hover-bg: rgba(255, 255, 255, 0.05);
+  --viz-tooltip-bg: rgba(30, 30, 50, 0.85);
+  --viz-tooltip-border: rgba(255, 255, 255, 0.08);
+  --viz-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
+  --viz-tooltip-text: #e0e0e0;
+  --viz-legend-text: #b0b0b0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Chrome (title, subtitle, source, footer)
+ * --------------------------------------------------------------------------- */
+
+.viz-chrome {
+  font-family: var(--viz-font-family);
+}
+
+.viz-title {
+  font-size: var(--viz-title-size);
+  font-weight: var(--viz-title-weight);
+  letter-spacing: var(--viz-title-tracking);
+  fill: var(--viz-text);
+}
+
+.viz-subtitle {
+  font-size: var(--viz-subtitle-size);
+  font-weight: var(--viz-subtitle-weight);
+  fill: var(--viz-text-secondary);
+}
+
+.viz-source,
+.viz-byline,
+.viz-footer {
+  font-size: var(--viz-source-size);
+  font-weight: var(--viz-source-weight);
+  fill: var(--viz-text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+ * Table footer chrome
+ * --------------------------------------------------------------------------- */
+
+.viz-chrome-footer {
+  padding-top: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tooltip
+ * --------------------------------------------------------------------------- */
+
+.viz-tooltip {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  z-index: 1000;
+  background: var(--viz-tooltip-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--viz-tooltip-border);
+  border-radius: 8px;
+  box-shadow: var(--viz-tooltip-shadow);
+  color: var(--viz-tooltip-text);
+  font-family: var(--viz-font-family);
+  font-size: 12px;
+  padding: 0;
+  max-width: 260px;
+  min-width: 140px;
+  line-height: 1.4;
+  animation: viz-tooltip-in 120ms ease-out;
+}
+
+@keyframes viz-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.viz-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 6px;
+}
+
+.viz-tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.viz-tooltip-title {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  color: var(--viz-tooltip-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viz-tooltip-body {
+  padding: 4px 12px 8px;
+  border-top: 1px solid var(--viz-tooltip-border);
+}
+
+/* Only add separator when header is present */
+.viz-tooltip-header + .viz-tooltip-body {
+  padding-top: 6px;
+}
+
+/* No separator when body is the only child */
+.viz-tooltip-body:first-child {
+  border-top: none;
+  padding-top: 8px;
+}
+
+.viz-tooltip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+}
+
+.viz-tooltip-label {
+  color: var(--viz-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.viz-tooltip-value {
+  font-weight: 500;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+ * Legend
+ * --------------------------------------------------------------------------- */
+
+.viz-legend {
+  font-family: var(--viz-font-family);
+  font-size: var(--viz-body-size);
+}
+
+.viz-legend-entry {
+  cursor: default;
+}
+
+.viz-legend text {
+  fill: var(--viz-legend-text);
+}
+
+/* ---------------------------------------------------------------------------
+ * React wrapper roots
+ * --------------------------------------------------------------------------- */
+
+.viz-chart-root,
+.viz-table-root,
+.viz-graph-root {
+  width: 100%;
+  height: 100%;
+}
+
+.viz-table-root {
+  overflow: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * Chart container
+ * --------------------------------------------------------------------------- */
+
+.viz-chart {
+  font-family: var(--viz-font-family);
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Screen reader only utility
+ * --------------------------------------------------------------------------- */
+
+.viz-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Table base
+ * --------------------------------------------------------------------------- */
+
+.viz-table-wrapper {
+  font-family: var(--viz-font-family);
+  color: var(--viz-text);
+  background: var(--viz-bg);
+}
+
+.viz-table-wrapper > .viz-chrome {
+  margin-bottom: 16px;
+}
+
+.viz-table-title {
+  margin-bottom: 4px;
+  font-size: var(--viz-title-computed-size, var(--viz-title-size));
+  font-weight: var(--viz-title-computed-weight, var(--viz-title-weight));
+  color: var(--viz-title-computed-color, var(--viz-text));
+}
+
+.viz-table-subtitle {
+  margin-bottom: 8px;
+  font-size: var(--viz-subtitle-computed-size, var(--viz-subtitle-size));
+  font-weight: var(--viz-subtitle-computed-weight, var(--viz-subtitle-weight));
+  color: var(--viz-subtitle-computed-color, var(--viz-text-secondary));
+}
+
+.viz-table-source {
+  font-size: var(--viz-source-computed-size, var(--viz-source-size));
+  color: var(--viz-source-computed-color, var(--viz-text-muted));
+}
+
+.viz-table-footer-text {
+  font-size: var(--viz-footer-computed-size, var(--viz-source-size));
+  color: var(--viz-footer-computed-color, var(--viz-text-muted));
+}
+
+.viz-table-scroll {
+  overflow-x: auto;
+}
+
+.viz-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.viz-table-wrapper th,
+.viz-table-wrapper td {
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--viz-border);
+}
+
+.viz-table-wrapper th {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--viz-text-secondary);
+  white-space: nowrap;
+}
+
+.viz-table-wrapper thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--viz-bg);
+}
+
+.viz-table-wrapper thead th {
+  border-bottom-width: 2px;
+}
+
+.viz-table-wrapper td {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Sticky first column
+ * --------------------------------------------------------------------------- */
+
+.viz-table--sticky th:first-child,
+.viz-table--sticky td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--viz-bg);
+}
+
+/* ---------------------------------------------------------------------------
+ * Sort controls
+ * --------------------------------------------------------------------------- */
+
+.viz-table-sort-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 6px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  gap: 2px;
+}
+
+.viz-table-sort-btn::before,
+.viz-table-sort-btn::after {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
+}
+
+.viz-table-sort-btn::before {
+  border-bottom: 4.5px solid var(--viz-text-secondary);
+  opacity: 0.45;
+}
+
+.viz-table-sort-btn::after {
+  border-top: 4.5px solid var(--viz-text-secondary);
+  opacity: 0.45;
+}
+
+.viz-table-sort-btn:hover::before,
+.viz-table-sort-btn:hover::after {
+  opacity: 0.75;
+}
+
+th[aria-sort="ascending"] .viz-table-sort-btn::before {
+  opacity: 1;
+  border-bottom-color: var(--viz-text);
+}
+
+th[aria-sort="ascending"] .viz-table-sort-btn::after {
+  opacity: 0.15;
+}
+
+th[aria-sort="descending"] .viz-table-sort-btn::after {
+  opacity: 1;
+  border-top-color: var(--viz-text);
+}
+
+th[aria-sort="descending"] .viz-table-sort-btn::before {
+  opacity: 0.15;
+}
+
+/* ---------------------------------------------------------------------------
+ * Search
+ * --------------------------------------------------------------------------- */
+
+.viz-table-search {
+  padding: 8px 0;
+}
+
+.viz-table-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--viz-border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--viz-bg);
+  color: var(--viz-text);
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.viz-table-search input::placeholder {
+  color: var(--viz-text-muted);
+  font-size: 13px;
+}
+
+.viz-table-search input:focus {
+  outline: none;
+  border-color: var(--viz-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ---------------------------------------------------------------------------
+ * Pagination
+ * --------------------------------------------------------------------------- */
+
+.viz-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 4px;
+  font-size: 13px;
+  color: var(--viz-text-secondary);
+}
+
+.viz-table-pagination-info {
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-table-pagination-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.viz-table-pagination button {
+  padding: 6px 14px;
+  border: 1px solid var(--viz-border);
+  border-radius: 6px;
+  background: var(--viz-bg);
+  color: var(--viz-text);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.viz-table-pagination button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.viz-table-pagination button:hover:not(:disabled) {
+  background: var(--viz-hover-bg);
+  border-color: var(--viz-axis);
+}
+
+.viz-table-pagination button:focus-visible {
+  outline: 2px solid var(--viz-focus);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Bar cells
+ * --------------------------------------------------------------------------- */
+
+.viz-table-bar {
+  position: relative;
+}
+
+.viz-table-bar-fill {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  bottom: 6px;
+  border-radius: 2px;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.viz-table-bar-value {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Sparkline cells
+ * --------------------------------------------------------------------------- */
+
+.viz-table-sparkline {
+  display: block;
+  width: 100%;
+  position: relative;
+}
+
+.viz-table-sparkline svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.viz-table-sparkline-dot {
+  position: absolute;
+  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+}
+
+.viz-table-sparkline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Image cells
+ * --------------------------------------------------------------------------- */
+
+.viz-table-image {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.viz-table-image img {
+  object-fit: cover;
+}
+
+.viz-table-image-rounded img {
+  border-radius: 50%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Flag cells
+ * --------------------------------------------------------------------------- */
+
+.viz-table-flag {
+  font-size: 1.2em;
+}
+
+/* ---------------------------------------------------------------------------
+ * Compact mode
+ * --------------------------------------------------------------------------- */
+
+.viz-table--compact th,
+.viz-table--compact td {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.viz-table--compact th {
+  font-size: 11px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Row hover (when onRowClick is set)
+ * --------------------------------------------------------------------------- */
+
+.viz-table--clickable tbody tr {
+  cursor: pointer;
+}
+
+.viz-table--clickable tbody tr:hover {
+  background: var(--viz-hover-bg);
+}
+
+/* ---------------------------------------------------------------------------
+ * Table header keyboard focus
+ * --------------------------------------------------------------------------- */
+
+.viz-table-wrapper th:focus {
+  outline: 2px solid var(--viz-focus);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Keyboard cell focus indicator
+ * --------------------------------------------------------------------------- */
+
+.viz-table-cell-focus {
+  outline: 2px solid var(--viz-focus);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Table body focus (for keyboard navigation entry)
+ * --------------------------------------------------------------------------- */
+
+.viz-table-wrapper tbody:focus {
+  outline: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Empty state
+ * --------------------------------------------------------------------------- */
+
+.viz-table-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--viz-text-secondary);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion
+ * --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .viz-table-sort-btn::before,
+  .viz-table-sort-btn::after,
+  .viz-table-search input,
+  .viz-table-pagination button {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Graph
+ * --------------------------------------------------------------------------- */
+
+.viz-graph-wrapper {
+  position: relative;
+  overflow: hidden;
+  background: var(--viz-bg);
+  font-family: var(--viz-font-family);
+}
+
+.viz-graph-canvas {
+  display: block;
+  cursor: grab;
+}
+
+.viz-graph-canvas--dragging {
+  cursor: grabbing;
+}
+
+.viz-graph-chrome {
+  padding: 16px 16px 8px;
+}
+
+.viz-graph-chrome .viz-title {
+  font-size: var(--viz-title-size);
+  font-weight: var(--viz-title-weight);
+  letter-spacing: var(--viz-title-tracking);
+  color: var(--viz-text);
+  margin: 0 0 4px;
+}
+
+.viz-graph-chrome .viz-subtitle {
+  font-size: var(--viz-subtitle-size);
+  color: var(--viz-text-secondary);
+  margin: 0;
+}
+
+.viz-graph-legend {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--viz-bg);
+  border: 1px solid var(--viz-border);
+  border-radius: var(--viz-border-radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--viz-text-secondary);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.viz-graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.viz-graph-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.viz-graph-search {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.viz-graph-search input {
+  font-family: var(--viz-font-family);
+  font-size: var(--viz-body-size);
+  padding: 6px 10px;
+  border: 1px solid var(--viz-border);
+  border-radius: var(--viz-border-radius);
+  background: var(--viz-bg);
+  color: var(--viz-text);
+  outline: none;
+}
+
+.viz-graph-search input:focus {
+  border-color: var(--viz-focus);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+/* Dark mode graph overrides (darker bg for canvas-based rendering) */
+.viz-dark .viz-graph-wrapper {
+  --viz-bg: #0d1117;
+}
+
+.viz-dark .viz-graph-legend {
+  background: rgba(13, 17, 23, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.viz-dark .viz-graph-search input {
+  background: rgba(13, 17, 23, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+}

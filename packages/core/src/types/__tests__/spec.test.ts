@@ -1,0 +1,387 @@
+import { describe, expect, it } from 'vitest';
+import type {
+  Annotation,
+  ChartSpec,
+  GraphSpec,
+  RangeAnnotation,
+  TableSpec,
+  TextAnnotation,
+  VizSpec,
+} from '../spec';
+import {
+  CHART_TYPES,
+  isChartSpec,
+  isGraphSpec,
+  isRangeAnnotation,
+  isRefLineAnnotation,
+  isTableSpec,
+  isTextAnnotation,
+} from '../spec';
+
+// ---------------------------------------------------------------------------
+// Test data factories
+// ---------------------------------------------------------------------------
+
+function makeChartSpec(overrides?: Partial<ChartSpec>): ChartSpec {
+  return {
+    type: 'line',
+    data: [
+      { date: '2020-01', value: 42 },
+      { date: '2020-02', value: 45 },
+    ],
+    encoding: {
+      x: { field: 'date', type: 'temporal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+    ...overrides,
+  };
+}
+
+function makeTableSpec(overrides?: Partial<TableSpec>): TableSpec {
+  return {
+    type: 'table',
+    data: [
+      { name: 'US', gdp: 21000 },
+      { name: 'China', gdp: 14700 },
+    ],
+    columns: [
+      { key: 'name', label: 'Country' },
+      { key: 'gdp', label: 'GDP (B$)', format: ',.0f' },
+    ],
+    ...overrides,
+  };
+}
+
+function makeGraphSpec(overrides?: Partial<GraphSpec>): GraphSpec {
+  return {
+    type: 'graph',
+    nodes: [
+      { id: 'a', label: 'Node A' },
+      { id: 'b', label: 'Node B' },
+    ],
+    edges: [{ source: 'a', target: 'b', weight: 1 }],
+    ...overrides,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Spec type guard tests
+// ---------------------------------------------------------------------------
+
+describe('isChartSpec', () => {
+  it('returns true for all chart types', () => {
+    const chartTypes = ['line', 'area', 'bar', 'column', 'pie', 'donut', 'dot', 'scatter'] as const;
+
+    for (const chartType of chartTypes) {
+      const spec = makeChartSpec({ type: chartType });
+      expect(isChartSpec(spec)).toBe(true);
+    }
+  });
+
+  it('returns false for table specs', () => {
+    const spec: VizSpec = makeTableSpec();
+    expect(isChartSpec(spec)).toBe(false);
+  });
+
+  it('returns false for graph specs', () => {
+    const spec: VizSpec = makeGraphSpec();
+    expect(isChartSpec(spec)).toBe(false);
+  });
+});
+
+describe('isTableSpec', () => {
+  it('returns true for table specs', () => {
+    const spec: VizSpec = makeTableSpec();
+    expect(isTableSpec(spec)).toBe(true);
+  });
+
+  it('returns false for chart specs', () => {
+    const spec: VizSpec = makeChartSpec();
+    expect(isTableSpec(spec)).toBe(false);
+  });
+
+  it('returns false for graph specs', () => {
+    const spec: VizSpec = makeGraphSpec();
+    expect(isTableSpec(spec)).toBe(false);
+  });
+});
+
+describe('isGraphSpec', () => {
+  it('returns true for graph specs', () => {
+    const spec: VizSpec = makeGraphSpec();
+    expect(isGraphSpec(spec)).toBe(true);
+  });
+
+  it('returns false for chart specs', () => {
+    const spec: VizSpec = makeChartSpec();
+    expect(isGraphSpec(spec)).toBe(false);
+  });
+
+  it('returns false for table specs', () => {
+    const spec: VizSpec = makeTableSpec();
+    expect(isGraphSpec(spec)).toBe(false);
+  });
+});
+
+describe('type guard mutual exclusivity', () => {
+  it('exactly one guard returns true for each spec type', () => {
+    const specs: VizSpec[] = [makeChartSpec(), makeTableSpec(), makeGraphSpec()];
+
+    for (const spec of specs) {
+      const guards = [isChartSpec(spec), isTableSpec(spec), isGraphSpec(spec)];
+      const trueCount = guards.filter(Boolean).length;
+      expect(trueCount).toBe(1);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CHART_TYPES constant tests
+// ---------------------------------------------------------------------------
+
+describe('CHART_TYPES', () => {
+  it('contains all 8 chart types', () => {
+    expect(CHART_TYPES.size).toBe(8);
+  });
+
+  it('contains expected types', () => {
+    const expected = ['line', 'area', 'bar', 'column', 'pie', 'donut', 'dot', 'scatter'];
+    for (const t of expected) {
+      expect(CHART_TYPES.has(t)).toBe(true);
+    }
+  });
+
+  it('does not contain non-chart types', () => {
+    expect(CHART_TYPES.has('table')).toBe(false);
+    expect(CHART_TYPES.has('graph')).toBe(false);
+    expect(CHART_TYPES.has('map')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Annotation type guard tests
+// ---------------------------------------------------------------------------
+
+describe('isTextAnnotation', () => {
+  it('returns true for text annotations', () => {
+    const annotation: Annotation = {
+      type: 'text',
+      x: '2020-06',
+      y: 42,
+      text: 'Peak value',
+    };
+    expect(isTextAnnotation(annotation)).toBe(true);
+  });
+
+  it('returns false for range annotations', () => {
+    const annotation: Annotation = {
+      type: 'range',
+      x1: '2020-03',
+      x2: '2020-09',
+      label: 'Recession',
+    };
+    expect(isTextAnnotation(annotation)).toBe(false);
+  });
+
+  it('returns false for refline annotations', () => {
+    const annotation: Annotation = {
+      type: 'refline',
+      y: 0,
+      label: 'Zero',
+    };
+    expect(isTextAnnotation(annotation)).toBe(false);
+  });
+});
+
+describe('isRangeAnnotation', () => {
+  it('returns true for range annotations', () => {
+    const annotation: Annotation = {
+      type: 'range',
+      x1: '2020-03',
+      x2: '2020-09',
+      fill: '#fee2e2',
+    };
+    expect(isRangeAnnotation(annotation)).toBe(true);
+  });
+
+  it('returns false for text annotations', () => {
+    const annotation: TextAnnotation = {
+      type: 'text',
+      x: 10,
+      y: 20,
+      text: 'Hello',
+    };
+    expect(isRangeAnnotation(annotation)).toBe(false);
+  });
+});
+
+describe('isRefLineAnnotation', () => {
+  it('returns true for refline annotations', () => {
+    const annotation: Annotation = {
+      type: 'refline',
+      y: 0,
+      label: 'Baseline',
+      style: 'dashed',
+    };
+    expect(isRefLineAnnotation(annotation)).toBe(true);
+  });
+
+  it('returns false for text annotations', () => {
+    const annotation: TextAnnotation = {
+      type: 'text',
+      x: 10,
+      y: 20,
+      text: 'Hello',
+    };
+    expect(isRefLineAnnotation(annotation)).toBe(false);
+  });
+
+  it('returns false for range annotations', () => {
+    const annotation: RangeAnnotation = {
+      type: 'range',
+      y1: 0,
+      y2: 100,
+    };
+    expect(isRefLineAnnotation(annotation)).toBe(false);
+  });
+});
+
+describe('annotation type guard mutual exclusivity', () => {
+  it('exactly one annotation guard returns true for each annotation type', () => {
+    const annotations: Annotation[] = [
+      { type: 'text', x: 0, y: 0, text: 'test' },
+      { type: 'range', x1: 0, x2: 10 },
+      { type: 'refline', y: 0 },
+    ];
+
+    for (const annotation of annotations) {
+      const guards = [
+        isTextAnnotation(annotation),
+        isRangeAnnotation(annotation),
+        isRefLineAnnotation(annotation),
+      ];
+      const trueCount = guards.filter(Boolean).length;
+      expect(trueCount).toBe(1);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Type-level tests (compile-time verification)
+// ---------------------------------------------------------------------------
+
+describe('type-level spec construction', () => {
+  it('allows a fully featured chart spec', () => {
+    const spec: ChartSpec = {
+      type: 'line',
+      data: [{ date: '2020-01', value: 42, series: 'US' }],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: {
+          field: 'value',
+          type: 'quantitative',
+          axis: { label: 'GDP Growth (%)' },
+          scale: { zero: true, nice: true },
+        },
+        color: { field: 'series', type: 'nominal' },
+      },
+      chrome: {
+        title: 'GDP Growth Rate',
+        subtitle: { text: 'Quarterly, seasonally adjusted', style: { fontSize: 14 } },
+        source: 'World Bank',
+        byline: 'OpenData',
+        footer: 'Last updated: Jan 2024',
+      },
+      annotations: [
+        {
+          type: 'range',
+          x1: '2020-03',
+          x2: '2020-09',
+          label: 'COVID-19',
+          fill: '#fee2e2',
+        },
+        {
+          type: 'text',
+          x: '2021-06',
+          y: 45,
+          text: 'Recovery begins',
+        },
+        {
+          type: 'refline',
+          y: 0,
+          label: 'Zero growth',
+          style: 'dashed',
+        },
+      ],
+      responsive: true,
+      theme: {
+        colors: { categorical: ['#2563eb', '#dc2626'] },
+        fonts: { family: 'Inter' },
+      },
+      darkMode: 'auto',
+    };
+
+    // If this compiles and type-checks, the types are correct.
+    expect(spec.type).toBe('line');
+    expect(spec.data).toHaveLength(1);
+    expect(spec.encoding.x?.field).toBe('date');
+    expect(spec.annotations).toHaveLength(3);
+  });
+
+  it('allows a table spec with column configs', () => {
+    const spec: TableSpec = {
+      type: 'table',
+      data: [{ country: 'US', gdp: 21000, trend: [20000, 20500, 21000] }],
+      columns: [
+        { key: 'country', label: 'Country', sortable: true },
+        { key: 'gdp', label: 'GDP (B$)', format: ',.0f', align: 'right' },
+        {
+          key: 'trend',
+          label: 'Trend',
+          sparkline: { type: 'line', valuesField: 'trend', color: '#2563eb' },
+        },
+      ],
+      chrome: { title: 'GDP by Country' },
+      search: true,
+      pagination: { pageSize: 25 },
+      stickyFirstColumn: true,
+      compact: false,
+      darkMode: 'off',
+    };
+
+    expect(spec.type).toBe('table');
+    expect(spec.columns).toHaveLength(3);
+    expect(spec.search).toBe(true);
+  });
+
+  it('allows a graph spec with encoding and layout', () => {
+    const spec: GraphSpec = {
+      type: 'graph',
+      nodes: [
+        { id: 'a', name: 'Alice', dept: 'Engineering' },
+        { id: 'b', name: 'Bob', dept: 'Design' },
+      ],
+      edges: [{ source: 'a', target: 'b', weight: 5, type: 'collaboration' }],
+      encoding: {
+        nodeColor: { field: 'dept', type: 'nominal' },
+        nodeLabel: { field: 'name' },
+        edgeWidth: { field: 'weight', type: 'quantitative' },
+      },
+      layout: {
+        type: 'force',
+        clustering: { field: 'dept' },
+        chargeStrength: -100,
+        linkDistance: 50,
+      },
+      chrome: {
+        title: 'Team Collaboration Network',
+        source: 'HR Data',
+      },
+      darkMode: 'auto',
+    };
+
+    expect(spec.type).toBe('graph');
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.edges).toHaveLength(1);
+  });
+});
