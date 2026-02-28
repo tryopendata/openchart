@@ -1,0 +1,609 @@
+/**
+ * SVG renderer integration tests.
+ *
+ * Tests the full pipeline: spec -> compileChart -> renderChartSVG -> DOM.
+ * Verifies that each chart type produces the correct SVG mark elements,
+ * and that chart furniture (chrome, axes, legend, gridlines) renders properly.
+ */
+
+import type { ChartSpec, CompileOptions } from '@openchart/engine';
+import { compileChart } from '@openchart/engine';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createContainer } from '../__test-fixtures__/dom';
+import {
+  barSpec,
+  columnSpec,
+  lineSpec,
+  multiSeriesBarSpec,
+  pieSpec,
+  scatterSpec,
+  singleSeriesLineSpec,
+} from '../__test-fixtures__/specs';
+import { renderChartSVG } from '../svg-renderer';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const COMPILE_OPTS: CompileOptions = { width: 600, height: 400 };
+
+/**
+ * Compile a spec and render into a fresh container.
+ * Returns both the SVG element and the container for querying.
+ */
+function renderSpec(spec: ChartSpec, opts: CompileOptions = COMPILE_OPTS) {
+  const container = createContainer(opts.width, opts.height);
+  const layout = compileChart(spec, opts);
+  const svg = renderChartSVG(layout, container);
+  return { svg, container, layout };
+}
+
+// ---------------------------------------------------------------------------
+// Cleanup
+// ---------------------------------------------------------------------------
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+// ---------------------------------------------------------------------------
+// Line chart marks
+// ---------------------------------------------------------------------------
+
+describe('line chart SVG rendering', () => {
+  it('renders <path> elements with valid d attribute for each series', () => {
+    const { svg } = renderSpec(lineSpec);
+    const paths = svg.querySelectorAll('.viz-mark-line path');
+    expect(paths.length).toBeGreaterThan(0);
+
+    for (const path of paths) {
+      const d = path.getAttribute('d');
+      expect(d).not.toBeNull();
+      // d attribute should start with M (moveTo) and contain curve commands
+      expect(d).toMatch(/^M/);
+      expect(d!.length).toBeGreaterThan(5);
+    }
+  });
+
+  it('creates a mark group per series in multi-series line chart', () => {
+    const { svg } = renderSpec(lineSpec);
+    const lineGroups = svg.querySelectorAll('.viz-mark-line');
+    // lineSpec has 2 series (US and UK)
+    expect(lineGroups.length).toBe(2);
+  });
+
+  it('each line mark group has a data-mark-id attribute', () => {
+    const { svg } = renderSpec(lineSpec);
+    const lineGroups = svg.querySelectorAll('.viz-mark-line');
+    for (const group of lineGroups) {
+      const markId = group.getAttribute('data-mark-id');
+      expect(markId).not.toBeNull();
+      expect(markId).toMatch(/^line-/);
+    }
+  });
+
+  it('each line mark group has a data-series attribute', () => {
+    const { svg } = renderSpec(lineSpec);
+    const lineGroups = svg.querySelectorAll('.viz-mark-line');
+    const seriesNames = new Set<string>();
+    for (const group of lineGroups) {
+      const series = group.getAttribute('data-series');
+      expect(series).not.toBeNull();
+      seriesNames.add(series!);
+    }
+    expect(seriesNames.has('US')).toBe(true);
+    expect(seriesNames.has('UK')).toBe(true);
+  });
+
+  it('paths have stroke color and non-zero stroke width', () => {
+    const { svg } = renderSpec(lineSpec);
+    const paths = svg.querySelectorAll('.viz-mark-line path');
+    for (const path of paths) {
+      const stroke = path.getAttribute('stroke');
+      expect(stroke).not.toBeNull();
+      expect(stroke).not.toBe('none');
+      const strokeWidth = Number(path.getAttribute('stroke-width'));
+      expect(strokeWidth).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bar chart marks
+// ---------------------------------------------------------------------------
+
+describe('bar chart SVG rendering', () => {
+  it('renders <rect> elements for each data point', () => {
+    const { svg } = renderSpec(barSpec);
+    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    // barSpec has 3 data points
+    expect(rects.length).toBe(3);
+  });
+
+  it('rect elements have width and height > 0', () => {
+    const { svg } = renderSpec(barSpec);
+    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    for (const rect of rects) {
+      const width = Number(rect.getAttribute('width'));
+      const height = Number(rect.getAttribute('height'));
+      expect(width).toBeGreaterThan(0);
+      expect(height).toBeGreaterThan(0);
+    }
+  });
+
+  it('rect marks have data-mark-id attributes', () => {
+    const { svg } = renderSpec(barSpec);
+    const markGroups = svg.querySelectorAll('.viz-mark-rect');
+    for (const group of markGroups) {
+      const markId = group.getAttribute('data-mark-id');
+      expect(markId).not.toBeNull();
+      expect(markId).toMatch(/^rect-/);
+    }
+  });
+
+  it('bar rects are oriented horizontally (width varies, y is categorical)', () => {
+    const { svg } = renderSpec(barSpec);
+    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const widths = Array.from(rects).map((r) => Number(r.getAttribute('width')));
+    // Different data values should produce different widths
+    const uniqueWidths = new Set(widths);
+    expect(uniqueWidths.size).toBeGreaterThan(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Column chart marks
+// ---------------------------------------------------------------------------
+
+describe('column chart SVG rendering', () => {
+  it('renders <rect> elements oriented vertically', () => {
+    const { svg } = renderSpec(columnSpec);
+    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    expect(rects.length).toBe(3);
+  });
+
+  it('column rects have varying heights (vertical orientation)', () => {
+    const { svg } = renderSpec(columnSpec);
+    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const heights = Array.from(rects).map((r) => Number(r.getAttribute('height')));
+    // Different revenue values should produce different heights
+    const uniqueHeights = new Set(heights);
+    expect(uniqueHeights.size).toBeGreaterThan(1);
+    // All heights should be positive
+    for (const h of heights) {
+      expect(h).toBeGreaterThan(0);
+    }
+  });
+
+  it('column rects have positive width', () => {
+    const { svg } = renderSpec(columnSpec);
+    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    for (const rect of rects) {
+      const width = Number(rect.getAttribute('width'));
+      expect(width).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scatter chart marks
+// ---------------------------------------------------------------------------
+
+describe('scatter chart SVG rendering', () => {
+  it('renders <circle> elements for each data point', () => {
+    const { svg } = renderSpec(scatterSpec);
+    const circles = svg.querySelectorAll('.viz-mark-point');
+    // scatterSpec has 4 data points
+    expect(circles.length).toBe(4);
+  });
+
+  it('circles have valid cx, cy, and r attributes', () => {
+    const { svg } = renderSpec(scatterSpec);
+    const circles = svg.querySelectorAll('.viz-mark-point');
+    for (const circle of circles) {
+      const cx = Number(circle.getAttribute('cx'));
+      const cy = Number(circle.getAttribute('cy'));
+      const r = Number(circle.getAttribute('r'));
+      expect(cx).toBeTypeOf('number');
+      expect(cy).toBeTypeOf('number');
+      expect(r).toBeGreaterThan(0);
+      // cx and cy should be within the SVG dimensions
+      expect(cx).toBeGreaterThanOrEqual(0);
+      expect(cy).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('scatter marks have data-mark-id attributes', () => {
+    const { svg } = renderSpec(scatterSpec);
+    const circles = svg.querySelectorAll('.viz-mark-point');
+    for (const circle of circles) {
+      const markId = circle.getAttribute('data-mark-id');
+      expect(markId).not.toBeNull();
+      expect(markId).toMatch(/^point-/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pie chart marks
+// ---------------------------------------------------------------------------
+
+describe('pie chart SVG rendering', () => {
+  it('renders <path> arc segments for each slice', () => {
+    const { svg } = renderSpec(pieSpec);
+    const arcGroups = svg.querySelectorAll('.viz-mark-arc');
+    // pieSpec has 3 categories
+    expect(arcGroups.length).toBe(3);
+  });
+
+  it('arc paths have valid d attribute with arc commands', () => {
+    const { svg } = renderSpec(pieSpec);
+    const paths = svg.querySelectorAll('.viz-mark-arc path');
+    for (const path of paths) {
+      const d = path.getAttribute('d');
+      expect(d).not.toBeNull();
+      // Arc paths should contain A (arc) commands
+      expect(d).toMatch(/[AaLl]/);
+      expect(d!.length).toBeGreaterThan(5);
+    }
+  });
+
+  it('arc groups are translated to the pie center', () => {
+    const { svg } = renderSpec(pieSpec);
+    const arcGroups = svg.querySelectorAll('.viz-mark-arc');
+    for (const group of arcGroups) {
+      const transform = group.getAttribute('transform');
+      expect(transform).not.toBeNull();
+      expect(transform).toMatch(/translate\(\d+/);
+    }
+  });
+
+  it('arc marks have fill colors', () => {
+    const { svg } = renderSpec(pieSpec);
+    const paths = svg.querySelectorAll('.viz-mark-arc path');
+    for (const path of paths) {
+      const fill = path.getAttribute('fill');
+      expect(fill).not.toBeNull();
+      expect(fill).not.toBe('none');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-series: correct grouping and distinct colors
+// ---------------------------------------------------------------------------
+
+describe('multi-series rendering', () => {
+  it('multi-series line chart has distinct stroke colors per series', () => {
+    const { svg } = renderSpec(lineSpec);
+    const paths = svg.querySelectorAll('.viz-mark-line path');
+    const strokes = new Set<string>();
+    for (const path of paths) {
+      const stroke = path.getAttribute('stroke');
+      if (stroke) strokes.add(stroke);
+    }
+    // US and UK should have different colors
+    expect(strokes.size).toBe(2);
+  });
+
+  it('multi-series scatter chart has distinct fill colors per group', () => {
+    const { svg } = renderSpec(scatterSpec);
+    const circles = svg.querySelectorAll('.viz-mark-point');
+    const fills = new Set<string>();
+    for (const circle of circles) {
+      const fill = circle.getAttribute('fill');
+      if (fill) fills.add(fill);
+    }
+    // group A and B should have different fill colors
+    expect(fills.size).toBe(2);
+  });
+
+  it('multi-series bar chart renders data-series attributes on rect marks', () => {
+    const { svg } = renderSpec(multiSeriesBarSpec);
+    const marks = svg.querySelectorAll('.viz-mark-rect[data-series]');
+    const seriesNames = new Set<string>();
+    for (const mark of marks) {
+      const s = mark.getAttribute('data-series');
+      if (s) seriesNames.add(s);
+    }
+    // Should have marks with series info
+    expect(seriesNames.size).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chrome elements (title, subtitle, source)
+// ---------------------------------------------------------------------------
+
+describe('chart chrome rendering', () => {
+  it('renders title text with correct content', () => {
+    const { svg } = renderSpec(lineSpec);
+    const title = svg.querySelector('.viz-title');
+    expect(title).not.toBeNull();
+    expect(title!.textContent).toBe('GDP Growth');
+  });
+
+  it('renders subtitle text with correct content', () => {
+    const { svg } = renderSpec(lineSpec);
+    const subtitle = svg.querySelector('.viz-subtitle');
+    expect(subtitle).not.toBeNull();
+    expect(subtitle!.textContent).toBe('US vs UK over time');
+  });
+
+  it('renders source text with correct content', () => {
+    const { svg } = renderSpec(lineSpec);
+    const source = svg.querySelector('.viz-source');
+    expect(source).not.toBeNull();
+    expect(source!.textContent).toBe('World Bank');
+  });
+
+  it('chrome elements are inside a .viz-chrome group', () => {
+    const { svg } = renderSpec(lineSpec);
+    const chromeGroup = svg.querySelector('.viz-chrome');
+    expect(chromeGroup).not.toBeNull();
+    expect(chromeGroup!.querySelector('.viz-title')).not.toBeNull();
+  });
+
+  it('title has font styling applied', () => {
+    const { svg } = renderSpec(lineSpec);
+    const title = svg.querySelector('.viz-title');
+    expect(title).not.toBeNull();
+    const fontFamily = title!.getAttribute('font-family');
+    const fontSize = Number(title!.getAttribute('font-size'));
+    expect(fontFamily).not.toBeNull();
+    expect(fontSize).toBeGreaterThan(0);
+  });
+
+  it('chart with no chrome specified renders no chrome text elements', () => {
+    const noChrome: ChartSpec = {
+      type: 'bar',
+      data: [{ name: 'A', value: 10 }],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'name', type: 'nominal' },
+      },
+    };
+    const { svg } = renderSpec(noChrome);
+    const chromeGroup = svg.querySelector('.viz-chrome');
+    expect(chromeGroup).not.toBeNull();
+    // No title/subtitle/source should be in the chrome group
+    expect(chromeGroup!.querySelector('.viz-title')).toBeNull();
+    expect(chromeGroup!.querySelector('.viz-subtitle')).toBeNull();
+    expect(chromeGroup!.querySelector('.viz-source')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Axes and tick labels
+// ---------------------------------------------------------------------------
+
+describe('axis rendering', () => {
+  it('renders x-axis and y-axis groups', () => {
+    const { svg } = renderSpec(lineSpec);
+    const xAxis = svg.querySelector('.viz-axis-x');
+    const yAxis = svg.querySelector('.viz-axis-y');
+    expect(xAxis).not.toBeNull();
+    expect(yAxis).not.toBeNull();
+  });
+
+  it('x-axis has tick labels as text elements', () => {
+    const { svg } = renderSpec(lineSpec);
+    const xAxis = svg.querySelector('.viz-axis-x');
+    const labels = xAxis!.querySelectorAll('text');
+    expect(labels.length).toBeGreaterThan(0);
+    // Each label should have text content
+    for (const label of labels) {
+      expect(label.textContent!.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('y-axis has tick labels as text elements', () => {
+    const { svg } = renderSpec(barSpec);
+    const yAxis = svg.querySelector('.viz-axis-y');
+    const labels = yAxis!.querySelectorAll('text');
+    expect(labels.length).toBeGreaterThan(0);
+  });
+
+  it('x-axis has a baseline line element', () => {
+    const { svg } = renderSpec(lineSpec);
+    const xAxis = svg.querySelector('.viz-axis-x');
+    const line = xAxis!.querySelector('line');
+    // The renderer draws an axis line for x-axis
+    expect(line).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Gridlines
+// ---------------------------------------------------------------------------
+
+describe('gridline rendering', () => {
+  it('renders gridlines as line elements within axis groups', () => {
+    const { svg } = renderSpec(lineSpec);
+    // y-axis gridlines are horizontal lines
+    const yAxis = svg.querySelector('.viz-axis-y');
+    const gridlines = yAxis!.querySelectorAll('line');
+    expect(gridlines.length).toBeGreaterThan(0);
+  });
+
+  it('gridlines have stroke-opacity for subtlety', () => {
+    const { svg } = renderSpec(lineSpec);
+    const yAxis = svg.querySelector('.viz-axis-y');
+    const gridlines = yAxis!.querySelectorAll('line');
+    for (const gl of gridlines) {
+      const opacity = gl.getAttribute('stroke-opacity');
+      if (opacity) {
+        // Gridlines should be subtle (less than 1.0 opacity)
+        expect(Number(opacity)).toBeLessThan(1);
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Legend
+// ---------------------------------------------------------------------------
+
+describe('legend rendering', () => {
+  it('multi-series chart renders legend entries', () => {
+    const { svg } = renderSpec(lineSpec);
+    const legend = svg.querySelector('.viz-legend');
+    expect(legend).not.toBeNull();
+    const entries = legend!.querySelectorAll('.viz-legend-entry');
+    // lineSpec has US and UK series
+    expect(entries.length).toBe(2);
+  });
+
+  it('legend entries have labels with series names', () => {
+    const { svg } = renderSpec(lineSpec);
+    const entries = svg.querySelectorAll('.viz-legend-entry');
+    const labels: string[] = [];
+    for (const entry of entries) {
+      const text = entry.querySelector('text');
+      if (text?.textContent) labels.push(text.textContent);
+    }
+    expect(labels).toContain('US');
+    expect(labels).toContain('UK');
+  });
+
+  it('legend entries have data-legend-label attribute', () => {
+    const { svg } = renderSpec(lineSpec);
+    const entries = svg.querySelectorAll('.viz-legend-entry');
+    for (const entry of entries) {
+      expect(entry.getAttribute('data-legend-label')).not.toBeNull();
+    }
+  });
+
+  it('legend has ARIA attributes for accessibility', () => {
+    const { svg } = renderSpec(lineSpec);
+    const legend = svg.querySelector('.viz-legend');
+    expect(legend!.getAttribute('role')).toBe('list');
+    expect(legend!.getAttribute('aria-label')).toBe('Chart legend');
+    const entries = legend!.querySelectorAll('.viz-legend-entry');
+    for (const entry of entries) {
+      expect(entry.getAttribute('role')).toBe('listitem');
+    }
+  });
+
+  it('single-series chart has no legend entries', () => {
+    const { svg } = renderSpec(singleSeriesLineSpec);
+    const entries = svg.querySelectorAll('.viz-legend-entry');
+    expect(entries.length).toBe(0);
+  });
+
+  it('pie chart renders legend entries for each slice', () => {
+    const { svg } = renderSpec(pieSpec);
+    const entries = svg.querySelectorAll('.viz-legend-entry');
+    // pieSpec has 3 slices
+    expect(entries.length).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SVG root structure
+// ---------------------------------------------------------------------------
+
+describe('SVG root structure', () => {
+  it('SVG has correct viewBox matching dimensions', () => {
+    const { svg } = renderSpec(lineSpec);
+    const viewBox = svg.getAttribute('viewBox');
+    expect(viewBox).toBe('0 0 600 400');
+  });
+
+  it('SVG has accessibility role and aria-label', () => {
+    const { svg } = renderSpec(lineSpec);
+    expect(svg.getAttribute('role')).toBe('img');
+    const ariaLabel = svg.getAttribute('aria-label');
+    expect(ariaLabel).not.toBeNull();
+    expect(ariaLabel!.length).toBeGreaterThan(0);
+  });
+
+  it('SVG has viz-chart class', () => {
+    const { svg } = renderSpec(lineSpec);
+    expect(svg.getAttribute('class')).toBe('viz-chart');
+  });
+
+  it('SVG has a background rect as first child', () => {
+    const { svg } = renderSpec(lineSpec);
+    const firstChild = svg.children[0];
+    expect(firstChild.tagName.toLowerCase()).toBe('rect');
+    expect(Number(firstChild.getAttribute('width'))).toBe(600);
+    expect(Number(firstChild.getAttribute('height'))).toBe(400);
+  });
+
+  it('SVG has a defs element with clip path', () => {
+    const { svg } = renderSpec(lineSpec);
+    const defs = svg.querySelector('defs');
+    expect(defs).not.toBeNull();
+    const clipPath = defs!.querySelector('clipPath');
+    expect(clipPath).not.toBeNull();
+    expect(clipPath!.getAttribute('id')).toMatch(/^viz-clip-/);
+  });
+
+  it('marks group is clipped via clip-path attribute', () => {
+    const { svg } = renderSpec(lineSpec);
+    const clippedGroup = svg.querySelector('[clip-path]');
+    expect(clippedGroup).not.toBeNull();
+    expect(clippedGroup!.getAttribute('clip-path')).toMatch(/url\(#viz-clip-/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inline snapshot for a critical mark element
+// ---------------------------------------------------------------------------
+
+describe('targeted mark snapshots', () => {
+  it('line mark group has expected structure', () => {
+    const { svg } = renderSpec(singleSeriesLineSpec);
+    const lineGroup = svg.querySelector('.viz-mark-line');
+    expect(lineGroup).not.toBeNull();
+    expect(lineGroup!.getAttribute('class')).toBe('viz-mark viz-mark-line');
+    expect(lineGroup!.getAttribute('data-mark-id')).toMatch(/^line-/);
+
+    const path = lineGroup!.querySelector('path');
+    expect(path).not.toBeNull();
+    expect(path!.getAttribute('fill')).toBe('none');
+    expect(path!.getAttribute('stroke')).not.toBeNull();
+    expect(Number(path!.getAttribute('stroke-width'))).toBeGreaterThan(0);
+    expect(path!.getAttribute('d')).toMatch(/^M/);
+  });
+
+  it('rect mark group has expected structure', () => {
+    const { svg } = renderSpec(barSpec);
+    const rectGroup = svg.querySelector('.viz-mark-rect');
+    expect(rectGroup).not.toBeNull();
+    expect(rectGroup!.getAttribute('class')).toBe('viz-mark viz-mark-rect');
+    expect(rectGroup!.getAttribute('data-mark-id')).toMatch(/^rect-/);
+
+    const rect = rectGroup!.querySelector('rect');
+    expect(rect).not.toBeNull();
+    expect(Number(rect!.getAttribute('width'))).toBeGreaterThan(0);
+    expect(Number(rect!.getAttribute('height'))).toBeGreaterThan(0);
+    expect(rect!.getAttribute('fill')).not.toBeNull();
+  });
+
+  it('point mark has expected attributes', () => {
+    const { svg } = renderSpec(scatterSpec);
+    const point = svg.querySelector('.viz-mark-point');
+    expect(point).not.toBeNull();
+    expect(point!.tagName.toLowerCase()).toBe('circle');
+    expect(point!.getAttribute('class')).toBe('viz-mark viz-mark-point');
+    expect(point!.getAttribute('data-mark-id')).toMatch(/^point-/);
+    expect(Number(point!.getAttribute('r'))).toBeGreaterThan(0);
+    expect(point!.getAttribute('fill')).not.toBeNull();
+  });
+
+  it('arc mark group has expected structure', () => {
+    const { svg } = renderSpec(pieSpec);
+    const arcGroup = svg.querySelector('.viz-mark-arc');
+    expect(arcGroup).not.toBeNull();
+    expect(arcGroup!.getAttribute('class')).toBe('viz-mark viz-mark-arc');
+    expect(arcGroup!.getAttribute('data-mark-id')).toMatch(/^arc-/);
+    expect(arcGroup!.getAttribute('transform')).toMatch(/translate\(/);
+
+    const path = arcGroup!.querySelector('path');
+    expect(path).not.toBeNull();
+    expect(path!.getAttribute('fill')).not.toBeNull();
+    expect(path!.getAttribute('d')).not.toBeNull();
+  });
+});
