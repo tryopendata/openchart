@@ -9,11 +9,13 @@ packages/
 ├── core/       # Types, spec builders, formatters, palettes (d3-color, d3-format)
 ├── engine/     # Spec validation, data compilation, scale/layout (d3-scale, d3-shape, d3-array)
 ├── vanilla/    # DOM rendering: createChart(), createTable() (d3-force for graphs)
-└── react/      # React wrappers: <Chart />, <DataTable />, <VizThemeProvider />
+├── react/      # React wrappers: <Chart />, <DataTable />, <VizThemeProvider />
+├── vue/        # Vue 3 wrappers: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />
+└── svelte/     # Svelte 5 wrappers: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />
 examples/       # Ladle stories for interactive development
 ```
 
-Build order matters: core -> engine -> vanilla + react (parallel).
+Build order matters: core -> engine -> vanilla + react + vue + svelte (parallel).
 
 ## Quick Commands
 
@@ -44,7 +46,10 @@ When changes affect chart rendering, use the `playwright-cli` skill to visually 
 ## Conventions
 
 - All packages are ESM-only (`"type": "module"`)
-- Builds use tsup
+- Builds use tsup (except svelte which uses svelte-package)
 - Workspace dependencies use `workspace:*` protocol
 - Tests use happy-dom for DOM simulation
 - React package uses @testing-library/react for component tests
+- Vue package uses @vue/test-utils for component tests
+- Svelte package uses @testing-library/svelte for component tests
+- Svelte package uses svelte-check for typechecking (not tsc)

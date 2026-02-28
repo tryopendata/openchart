@@ -14,7 +14,7 @@
   },
   "workspaces": ["packages/*", "examples"],
   "scripts": {
-    "build": "bun run --filter '@openchart/core' build && bun run --filter '@openchart/engine' build && bun run --filter '@openchart/vanilla' --filter '@openchart/react' build",
+    "build": "bun run --filter '@openchart/core' build && bun run --filter '@openchart/engine' build && bun run --filter '@openchart/vanilla' --filter '@openchart/react' --filter '@openchart/vue' --filter '@openchart/svelte' build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check packages/ examples/src/",

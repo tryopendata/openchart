@@ -1,0 +1,67 @@
+/**
+ * Exported prop types for Svelte components.
+ *
+ * These mirror the inline types used in each component's $props() destructuring
+ * and provide named exports for downstream typing.
+ */
+
+import type {
+  Annotation,
+  AnnotationOffset,
+  DarkMode,
+  GraphSpec,
+  MarkEvent,
+  SortState,
+  TableSpec,
+  TextAnnotation,
+  ThemeConfig,
+  VizSpec,
+} from '@openchart/core';
+import type { Snippet } from 'svelte';
+
+export interface ChartProps {
+  spec: VizSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  onmarkclick?: (event: MarkEvent) => void;
+  onmarkhover?: (event: MarkEvent) => void;
+  onmarkleave?: () => void;
+  onlegendtoggle?: (series: string, visible: boolean) => void;
+  onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
+  onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
+  ondatapointclick?: (data: Record<string, unknown>) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface DataTableProps {
+  spec: TableSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  onrowclick?: (row: Record<string, unknown>) => void;
+  onsortchange?: (sort: SortState | null) => void;
+  onsearchchange?: (query: string) => void;
+  onpagechange?: (page: number) => void;
+  sort?: SortState | null;
+  search?: string;
+  page?: number;
+  class?: string;
+  style?: string;
+}
+
+export interface GraphProps {
+  spec: GraphSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  onnodeclick?: (node: Record<string, unknown>) => void;
+  onnodedoubleclick?: (node: Record<string, unknown>) => void;
+  onselectionchange?: (nodeIds: string[]) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface VizThemeProviderProps {
+  theme: ThemeConfig | undefined;
+  darkMode?: DarkMode;
+  children: Snippet;
+}

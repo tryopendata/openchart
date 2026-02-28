@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .turbo/
+.svelte-kit/
 coverage/
 *.tsbuildinfo
 .DS_Store
