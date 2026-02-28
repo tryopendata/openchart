@@ -1,0 +1,32 @@
+/* Story layout utilities - prefix: story- */
+
+.story-column {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.story-column-tight {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.story-heading {
+  margin: 0 0 8px;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+}
+
+.story-debug-border {
+  border: 1px solid #eee;
+}
+
+.story-centered {
+  margin: 0 auto;
+}
+
+.story-dark-bg {
+  background: #1a1a2e;
+  padding: 24px;
+}

@@ -1,0 +1,557 @@
+# @openchart - Full Reference
+
+> Declarative visualization library: write a JSON spec, get a chart or data table. Spec in, SVG out.
+
+## Install
+
+```bash
+npm install @openchart/react    # React
+npm install @openchart/vanilla  # Vanilla JS / any framework
+npm install @openchart/core @openchart/engine  # Types only / custom renderer
+```
+
+Each package re-exports the types you need. The React package pulls in vanilla, engine, and core.
+
+## Core Concept
+
+Write a VizSpec JSON object. Render with `<Chart spec={spec} />` (React) or `createChart(container, spec)` (vanilla JS). The engine validates, compiles, and renders as SVG. Specs are plain JSON objects, serializable, and easy to validate.
+
+Package dependency direction: `core <- engine <- vanilla <- react`. No lateral imports.
+
+---
+
+## ChartSpec - Complete Reference
+
+```typescript
+interface ChartSpec {
+  // REQUIRED
+  type: "line" | "area" | "bar" | "column" | "pie" | "donut" | "dot" | "scatter";
+  data: DataRow[];          // Array of objects, minimum 1 row
+  encoding: Encoding;       // Maps data fields to visual channels
+
+  // OPTIONAL
+  chrome?: Chrome;          // Title, subtitle, source, byline, footer
+  annotations?: Annotation[];
+  labels?: LabelConfig;
+  responsive?: boolean;     // Default: true
+  theme?: ThemeConfig;
+  darkMode?: "auto" | "force" | "off";  // Default: "off"
+}
+```
+
+### Encoding Channels
+
+```typescript
+interface Encoding {
+  x?: EncodingChannel;      // Horizontal position
+  y?: EncodingChannel;      // Vertical position
+  color?: EncodingChannel;  // Series differentiation
+  size?: EncodingChannel;   // Bubble/mark size
+  detail?: EncodingChannel; // Group without visual mapping
+}
+
+interface EncodingChannel {
+  field: string;             // REQUIRED: column name in data
+  type: FieldType;           // REQUIRED: "quantitative"|"temporal"|"nominal"|"ordinal"
+  aggregate?: AggregateOp;   // "count"|"sum"|"mean"|"median"|"min"|"max"
+  axis?: AxisConfig;
+  scale?: ScaleConfig;
+}
+
+interface AxisConfig {
+  label?: string;            // Axis label (default: field name)
+  format?: string;           // d3-format: ",.0f" "$,.2f" ".1%" "%Y-%m"
+  tickCount?: number;
+  grid?: boolean;
+}
+
+interface ScaleConfig {
+  domain?: [number, number] | string[];
+  type?: "linear" | "log" | "time" | "band" | "point" | "ordinal";
+  nice?: boolean;            // Default: true
+  zero?: boolean;            // Default: true for quantitative
+}
+```
+
+### Encoding Requirements by Chart Type
+
+| Type | x | y | color | size |
+|------|---|---|-------|------|
+| line | REQUIRED: temporal, ordinal | REQUIRED: quantitative | optional: nominal, ordinal | optional: quantitative |
+| area | REQUIRED: temporal, ordinal | REQUIRED: quantitative | optional: nominal, ordinal | optional: quantitative |
+| bar | REQUIRED: quantitative | REQUIRED: nominal, ordinal | optional: nominal, ordinal | optional: quantitative |
+| column | REQUIRED: nominal, ordinal, temporal | REQUIRED: quantitative | optional: nominal, ordinal | optional: quantitative |
+| pie | optional | REQUIRED: quantitative | REQUIRED: nominal, ordinal | optional: quantitative |
+| donut | optional | REQUIRED: quantitative | REQUIRED: nominal, ordinal | optional: quantitative |
+| dot | REQUIRED: quantitative | REQUIRED: nominal, ordinal | optional: nominal, ordinal | optional: quantitative |
+| scatter | REQUIRED: quantitative | REQUIRED: quantitative | optional: nominal, ordinal | optional: quantitative |
+
+**Bar = horizontal** (category on y). **Column = vertical** (category on x).
+**Pie/Donut:** No x. Value on y, category on color.
+
+### Chrome
+
+```typescript
+interface Chrome {
+  title?: string | ChromeText;
+  subtitle?: string | ChromeText;
+  source?: string | ChromeText;
+  byline?: string | ChromeText;
+  footer?: string | ChromeText;
+}
+
+interface ChromeText {
+  text: string;
+  style?: { fontSize?: number; fontWeight?: number; fontFamily?: string; color?: string };
+}
+```
+
+### Annotations
+
+**Text** (callout at a data point):
+```typescript
+{ type: "text", x: string|number, y: string|number, text: string,
+  label?: string, fontSize?: number, fontWeight?: number,
+  offset?: { dx?: number, dy?: number },
+  anchor?: "top"|"bottom"|"left"|"right"|"auto",
+  connector?: boolean,  // default: true
+  fill?: string, stroke?: string, opacity?: number }
+```
+
+**Range** (highlighted region):
+```typescript
+{ type: "range",
+  x1?: string|number, x2?: string|number,  // vertical band
+  y1?: string|number, y2?: string|number,  // horizontal band
+  label?: string,
+  labelOffset?: { dx?: number, dy?: number },
+  labelAnchor?: "top"|"bottom"|"left"|"right"|"auto",
+  fill?: string, stroke?: string, opacity?: number }
+```
+
+**Reference line** (threshold/baseline):
+```typescript
+{ type: "refline",
+  x?: string|number,   // vertical line
+  y?: string|number,   // horizontal line
+  label?: string,
+  style?: "solid"|"dashed"|"dotted",
+  strokeWidth?: number,
+  labelOffset?: { dx?: number, dy?: number },
+  labelAnchor?: "top"|"bottom"|"left"|"right"|"auto",
+  fill?: string, stroke?: string, opacity?: number }
+```
+
+### Labels
+
+```typescript
+interface LabelConfig {
+  density?: "all" | "auto" | "endpoints" | "none";  // Default: "auto"
+  format?: string;  // d3-format for label values
+}
+```
+
+- `auto`: collision detection, shows what fits
+- `all`: every label, no collision detection
+- `endpoints`: first and last per series (good for line charts)
+- `none`: no data labels (rely on tooltips and legend)
+
+---
+
+## TableSpec - Complete Reference
+
+```typescript
+interface TableSpec {
+  type: "table";             // REQUIRED
+  data: DataRow[];           // REQUIRED
+  columns: ColumnConfig[];   // REQUIRED
+  rowKey?: string;
+  chrome?: Chrome;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  search?: boolean;
+  pagination?: boolean | { pageSize: number };
+  stickyFirstColumn?: boolean;
+  compact?: boolean;
+  responsive?: boolean;      // Default: true
+}
+
+interface ColumnConfig {
+  key: string;               // REQUIRED: data field name
+  label?: string;            // Header label (default: key)
+  sortable?: boolean;        // Default: true
+  align?: "left" | "center" | "right";
+  width?: string;            // CSS: "200px", "20%"
+  format?: string;           // d3-format or d3-time-format
+
+  // Visual features - pick at most ONE per column:
+  heatmap?: { palette?: string|string[], domain?: [number,number], colorByField?: string };
+  bar?: { maxValue?: number, color?: string };
+  sparkline?: { type?: "line"|"bar"|"column", valuesField?: string, color?: string };
+  image?: { width?: number, height?: number, rounded?: boolean };
+  flag?: boolean;
+  categoryColors?: Record<string, string>;
+}
+```
+
+Built-in palettes for heatmap: `"blue"`, `"green"`, `"orange"`, `"purple"` (sequential); `"redBlue"`, `"brownTeal"` (diverging).
+
+---
+
+## GraphSpec - Complete Reference
+
+```typescript
+interface GraphSpec {
+  type: "graph";                    // REQUIRED
+  nodes: GraphNode[];               // REQUIRED: each node must have id: string
+  edges: GraphEdge[];               // REQUIRED: each edge has source + target node ids
+  encoding?: GraphEncoding;
+  layout?: GraphLayoutConfig;
+  chrome?: Chrome;
+  annotations?: Annotation[];
+  theme?: ThemeConfig;
+  darkMode?: "auto" | "force" | "off";
+}
+
+interface GraphNode {
+  id: string;                       // REQUIRED: unique identifier
+  [key: string]: unknown;           // Arbitrary data fields
+}
+
+interface GraphEdge {
+  source: string;                   // REQUIRED: source node id
+  target: string;                   // REQUIRED: target node id
+  [key: string]: unknown;
+}
+
+interface GraphEncoding {
+  nodeColor?: { field: string, type: "nominal" | "ordinal" };
+  nodeSize?: { field: string, type: "quantitative" };
+  edgeColor?: { field: string, type: "nominal" | "ordinal" };
+  edgeWidth?: { field: string, type: "quantitative" };
+  nodeLabel?: { field: string, type: "nominal" | "ordinal" };
+}
+
+interface GraphLayoutConfig {
+  type: "force" | "radial" | "hierarchical";  // REQUIRED
+  clustering?: { field: string };
+  chargeStrength?: number;          // Negative = repulsion
+  linkDistance?: number;
+}
+```
+
+Graphs render on canvas with force-directed layout. They support node click/drag/double-click, text search, zoom/pan, and keyboard navigation.
+
+---
+
+## Theme
+
+```typescript
+interface ThemeConfig {
+  colors?: {
+    categorical?: string[];           // Up to 10 colors
+    sequential?: Record<string, string[]>;
+    diverging?: Record<string, string[]>;
+    background?: string;
+    text?: string;
+    gridline?: string;
+    axis?: string;
+  };
+  fonts?: {
+    family?: string;
+    mono?: string;
+  };
+  spacing?: {
+    padding?: number;
+    chromeGap?: number;
+  };
+  borderRadius?: number;
+}
+```
+
+Default categorical palette: `["#1b7fa3", "#c44e52", "#6a9f58", "#d47215", "#507e79", "#9a6a8d", "#c4636b", "#9c755f", "#a88f22", "#858078"]`
+
+Dark mode: `"auto"` respects system preference, `"force"` always dark, `"off"` always light.
+
+---
+
+## React API
+
+```tsx
+import { Chart, DataTable, VizThemeProvider } from '@openchart/react';
+import type { ChartSpec, TableSpec, ThemeConfig } from '@openchart/core';
+
+// Chart component
+<Chart
+  spec={spec}
+  theme={theme}
+  darkMode="auto"
+  onMarkClick={(e) => console.log(e.datum)}
+  onMarkHover={(e) => {}}
+  onMarkLeave={() => {}}
+  onLegendToggle={(series, visible) => {}}
+  onAnnotationClick={(ann, e) => {}}
+  className="my-chart"
+  style={{ width: 600, height: 400 }}
+/>
+
+// DataTable component
+<DataTable
+  spec={tableSpec}
+  theme={theme}
+  darkMode="auto"
+  onRowClick={(row) => {}}
+  onSortChange={(sort) => {}}
+  onSearchChange={(query) => {}}
+  onPageChange={(page) => {}}
+  sort={sortState}       // controlled mode
+  search={searchQuery}   // controlled mode
+  page={pageNumber}      // controlled mode
+/>
+
+// Graph component
+<Graph
+  spec={graphSpec}
+  theme={theme}
+  darkMode="auto"
+  onNodeClick={(node) => {}}
+  onNodeDoubleClick={(node) => {}}
+  onSelectionChange={(nodeIds) => {}}
+/>
+
+// useGraph hook for imperative control
+const { ref, search, clearSearch, zoomToFit, zoomToNode, selectNode, getSelectedNodes } = useGraph();
+<Graph ref={ref} spec={graphSpec} />
+
+// Theme provider for all descendants
+<VizThemeProvider theme={theme}>
+  <Chart spec={spec1} />
+  <Chart spec={spec2} />
+</VizThemeProvider>
+```
+
+## Vanilla JS API
+
+```typescript
+import { createChart } from '@openchart/vanilla';
+import { createTable } from '@openchart/vanilla';
+
+const chart = createChart(container, spec, {
+  theme?: ThemeConfig,
+  darkMode?: "auto"|"force"|"off",
+  responsive?: boolean,
+  onMarkClick?: (event: MarkEvent) => void,
+  onMarkHover?: (event: MarkEvent) => void,
+  onMarkLeave?: () => void,
+  onLegendToggle?: (series: string, visible: boolean) => void,
+  onAnnotationClick?: (annotation: Annotation, event: MouseEvent) => void,
+});
+
+chart.update(newSpec);
+chart.resize();
+chart.export('svg');           // returns string
+await chart.export('png');     // returns Blob
+chart.export('csv');           // returns string
+chart.destroy();
+
+const table = createTable(container, tableSpec, {
+  theme?, darkMode?, responsive?,
+  onRowClick?: (row) => void,
+});
+table.update(newSpec);
+table.destroy();
+
+const graph = createGraph(container, graphSpec, {
+  theme?, darkMode?, responsive?,
+  onNodeClick?: (node) => void,
+  onNodeDoubleClick?: (node) => void,
+  onSelectionChange?: (nodeIds) => void,
+});
+graph.update(newSpec);
+graph.search(query);           // highlight matching nodes
+graph.clearSearch();
+graph.zoomToFit();             // fit all nodes in viewport
+graph.zoomToNode(nodeId);      // center and zoom to node
+graph.selectNode(nodeId);
+graph.getSelectedNodes();      // returns string[]
+graph.resize();
+graph.destroy();
+```
+
+## Builder Functions
+
+```typescript
+import { lineChart, barChart, columnChart, pieChart, scatterChart, dataTable } from '@openchart/core';
+
+lineChart(data, x, y, options?)       // x: FieldRef, y: FieldRef
+barChart(data, category, value, options?)
+columnChart(data, x, y, options?)
+pieChart(data, category, value, options?)
+scatterChart(data, x, y, options?)
+dataTable(data, options?)             // auto-generates columns if omitted
+
+// FieldRef = string (auto-infers type) | EncodingChannel (explicit config)
+// options: { color?, size?, chrome?, annotations?, responsive?, theme?, darkMode? }
+```
+
+---
+
+## Chart Type Examples
+
+### Line (trend over time)
+```json
+{
+  "type": "line",
+  "data": [
+    { "date": "2022-01", "users": 1200 },
+    { "date": "2022-07", "users": 3400 },
+    { "date": "2023-01", "users": 5100 },
+    { "date": "2023-07", "users": 8900 }
+  ],
+  "encoding": {
+    "x": { "field": "date", "type": "temporal" },
+    "y": { "field": "users", "type": "quantitative", "axis": { "format": ",.0f" } }
+  },
+  "chrome": { "title": "User growth doubled year-over-year", "source": "Source: Internal analytics" },
+  "labels": { "density": "endpoints" }
+}
+```
+
+### Bar (ranking)
+```json
+{
+  "type": "bar",
+  "data": [
+    { "lang": "Python", "pct": 29 },
+    { "lang": "JavaScript", "pct": 24 },
+    { "lang": "TypeScript", "pct": 17 },
+    { "lang": "Java", "pct": 14 },
+    { "lang": "Go", "pct": 10 }
+  ],
+  "encoding": {
+    "x": { "field": "pct", "type": "quantitative", "axis": { "format": ".0f" } },
+    "y": { "field": "lang", "type": "nominal" }
+  },
+  "chrome": { "title": "Python remains the most popular language", "source": "Source: Stack Overflow Survey" }
+}
+```
+
+### Column (periodic comparison)
+```json
+{
+  "type": "column",
+  "data": [
+    { "quarter": "Q1", "revenue": 4.2 },
+    { "quarter": "Q2", "revenue": 5.1 },
+    { "quarter": "Q3", "revenue": 4.8 },
+    { "quarter": "Q4", "revenue": 6.3 }
+  ],
+  "encoding": {
+    "x": { "field": "quarter", "type": "ordinal" },
+    "y": { "field": "revenue", "type": "quantitative", "axis": { "format": "$,.1f", "label": "Revenue ($B)" } }
+  },
+  "chrome": { "title": "Q4 revenue exceeded expectations", "source": "Source: Annual report" }
+}
+```
+
+### Donut (part-to-whole)
+```json
+{
+  "type": "donut",
+  "data": [
+    { "segment": "Enterprise", "share": 45 },
+    { "segment": "SMB", "share": 30 },
+    { "segment": "Consumer", "share": 25 }
+  ],
+  "encoding": {
+    "y": { "field": "share", "type": "quantitative" },
+    "color": { "field": "segment", "type": "nominal" }
+  },
+  "chrome": { "title": "Enterprise accounts drive nearly half of revenue", "source": "Source: Q4 earnings" }
+}
+```
+
+### Scatter (correlation)
+```json
+{
+  "type": "scatter",
+  "data": [
+    { "hours": 2, "score": 65, "student": "A" },
+    { "hours": 5, "score": 80, "student": "B" },
+    { "hours": 8, "score": 92, "student": "C" },
+    { "hours": 3, "score": 70, "student": "D" },
+    { "hours": 7, "score": 88, "student": "E" }
+  ],
+  "encoding": {
+    "x": { "field": "hours", "type": "quantitative", "axis": { "label": "Study hours per week" } },
+    "y": { "field": "score", "type": "quantitative", "axis": { "label": "Exam score" } }
+  },
+  "chrome": { "title": "More study time correlates with higher scores" },
+  "annotations": [
+    { "type": "refline", "y": 75, "label": "Passing grade", "style": "dashed" }
+  ]
+}
+```
+
+### Dot (distribution)
+```json
+{
+  "type": "dot",
+  "data": [
+    { "dept": "Engineering", "salary": 145000 },
+    { "dept": "Engineering", "salary": 128000 },
+    { "dept": "Design", "salary": 115000 },
+    { "dept": "Design", "salary": 105000 },
+    { "dept": "Marketing", "salary": 98000 },
+    { "dept": "Marketing", "salary": 88000 }
+  ],
+  "encoding": {
+    "x": { "field": "salary", "type": "quantitative", "axis": { "format": "$,.0f" } },
+    "y": { "field": "dept", "type": "nominal" }
+  },
+  "chrome": { "title": "Engineering salaries have the widest spread" }
+}
+```
+
+### Multi-series line
+```json
+{
+  "type": "line",
+  "data": [
+    { "year": "2021", "region": "US", "revenue": 12.4 },
+    { "year": "2022", "region": "US", "revenue": 15.1 },
+    { "year": "2023", "region": "US", "revenue": 18.3 },
+    { "year": "2021", "region": "EU", "revenue": 8.2 },
+    { "year": "2022", "region": "EU", "revenue": 9.7 },
+    { "year": "2023", "region": "EU", "revenue": 11.5 }
+  ],
+  "encoding": {
+    "x": { "field": "year", "type": "temporal" },
+    "y": { "field": "revenue", "type": "quantitative", "axis": { "format": "$,.1f" } },
+    "color": { "field": "region", "type": "nominal" }
+  },
+  "chrome": { "title": "US growth outpaced Europe across all years", "source": "Source: Finance team" }
+}
+```
+
+### Data table with visual features
+```json
+{
+  "type": "table",
+  "data": [
+    { "name": "Product A", "sales": 42000, "growth": 12.5, "status": "Active", "trend": [30, 35, 38, 42] },
+    { "name": "Product B", "sales": 38500, "growth": -3.2, "status": "Active", "trend": [41, 40, 39, 38.5] },
+    { "name": "Product C", "sales": 21000, "growth": 28.1, "status": "New", "trend": [8, 12, 17, 21] }
+  ],
+  "columns": [
+    { "key": "name", "label": "Product" },
+    { "key": "sales", "label": "Sales ($)", "format": "$,.0f", "bar": {} },
+    { "key": "growth", "label": "Growth %", "format": "+.1f", "heatmap": { "palette": "redBlue" } },
+    { "key": "status", "label": "Status", "categoryColors": { "Active": "#6a9f58", "New": "#1b7fa3", "Sunset": "#c44e52" } },
+    { "key": "trend", "label": "Trend", "sparkline": { "type": "line" } }
+  ],
+  "chrome": { "title": "Product performance dashboard", "source": "Source: Sales analytics" },
+  "search": true,
+  "pagination": { "pageSize": 20 }
+}
+```

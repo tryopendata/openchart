@@ -1,0 +1,111 @@
+# @openchart
+
+> Declarative visualization library: write a JSON spec, get a chart or data table. Spec in, SVG out.
+
+## Install
+
+```bash
+npm install @openchart/react    # React
+npm install @openchart/vanilla  # Vanilla JS / any framework
+```
+
+## Core Concept
+
+Write a VizSpec JSON object. Render with `<Chart spec={spec} />` (React) or `createChart(container, spec)` (vanilla JS). The engine handles layout, scales, accessibility, tooltips, and rendering.
+
+## ChartSpec
+
+```typescript
+{
+  type: "line"|"area"|"bar"|"column"|"pie"|"donut"|"dot"|"scatter",
+  data: Array<Record<string, unknown>>,
+  encoding: {
+    x?: { field: string, type: "quantitative"|"temporal"|"nominal"|"ordinal", axis?: { label?, format?, tickCount?, grid? }, scale?: { domain?, type?, nice?, zero? } },
+    y?: EncodingChannel,
+    color?: EncodingChannel,
+    size?: EncodingChannel,
+  },
+  chrome?: { title?, subtitle?, source?, byline?, footer? },
+  annotations?: Array<TextAnnotation | RangeAnnotation | RefLineAnnotation>,
+  labels?: { density?: "all"|"auto"|"endpoints"|"none", format?: string },
+  theme?: ThemeConfig,
+  darkMode?: "auto"|"force"|"off",
+}
+```
+
+## TableSpec
+
+```typescript
+{
+  type: "table",
+  data: Array<Record<string, unknown>>,
+  columns: Array<{ key: string, label?, format?, align?, heatmap?, bar?, sparkline?, image?, flag?, categoryColors? }>,
+  chrome?: Chrome,
+  search?: boolean,
+  pagination?: boolean | { pageSize: number },
+  stickyFirstColumn?: boolean,
+  compact?: boolean,
+}
+```
+
+## GraphSpec
+
+```typescript
+{
+  type: "graph",
+  nodes: Array<{ id: string, [key: string]: unknown }>,
+  edges: Array<{ source: string, target: string }>,
+  encoding?: { nodeColor?, nodeSize?, edgeColor?, edgeWidth?, nodeLabel? },
+  layout?: { type: "force"|"radial"|"hierarchical", clustering?, chargeStrength?, linkDistance? },
+  chrome?: Chrome,
+  darkMode?: "auto"|"force"|"off",
+}
+```
+
+## Encoding Requirements by Chart Type
+
+| Type | x | y | color | Best for |
+|------|---|---|-------|----------|
+| line | temporal/ordinal (req) | quantitative (req) | nominal (opt) | Trends |
+| area | temporal/ordinal (req) | quantitative (req) | nominal (opt) | Volume trends |
+| bar | quantitative (req) | nominal/ordinal (req) | nominal (opt) | Rankings |
+| column | nominal/ordinal/temporal (req) | quantitative (req) | nominal (opt) | Categories |
+| pie/donut | - | quantitative (req) | nominal (req) | Part-to-whole |
+| dot | quantitative (req) | nominal/ordinal (req) | nominal (opt) | Distribution |
+| scatter | quantitative (req) | quantitative (req) | nominal (opt) | Correlation |
+
+## React Example
+
+```tsx
+import { Chart } from '@openchart/react';
+
+const spec = {
+  type: 'bar',
+  data: [
+    { language: 'Python', popularity: 29 },
+    { language: 'JavaScript', popularity: 24 },
+    { language: 'Go', popularity: 10 },
+  ],
+  encoding: {
+    x: { field: 'popularity', type: 'quantitative' },
+    y: { field: 'language', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Python leads developer popularity',
+    source: 'Source: Stack Overflow Survey 2024',
+  },
+};
+
+function App() {
+  return <div style={{ width: 600, height: 400 }}><Chart spec={spec} /></div>;
+}
+```
+
+## Full Documentation
+
+- Complete field reference: [llms-full.txt](./llms-full.txt)
+- Spec reference: [docs/spec-reference.md](./docs/spec-reference.md)
+- Agent patterns cookbook: [docs/agent-patterns.md](./docs/agent-patterns.md)
+- Getting started guide: [docs/getting-started.md](./docs/getting-started.md)
+- Integration guide: [docs/integration-guide.md](./docs/integration-guide.md)
+- Architecture: [docs/architecture.md](./docs/architecture.md)
