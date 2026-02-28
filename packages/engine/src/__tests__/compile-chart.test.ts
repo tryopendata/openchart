@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileChart, compileGraph, compileTable } from '../compile';
 
-// Import chart renderers so they register (side-effect import)
-import '../charts/line/index';
-import '../charts/bar/index';
-
 // ---------------------------------------------------------------------------
 // Test data
 // ---------------------------------------------------------------------------

@@ -32,13 +32,13 @@ import {
   resolveTheme,
 } from '@openchart/core';
 import { computeAnnotations } from './annotations/compute';
-import { barRenderer } from './charts/bar/index';
-import { columnRenderer } from './charts/column/index';
-import { dotRenderer } from './charts/dot/index';
-import { areaRenderer, lineRenderer } from './charts/line/index';
-import { donutRenderer, pieRenderer } from './charts/pie/index';
+import { barRenderer } from './charts/bar';
+import { columnRenderer } from './charts/column';
+import { dotRenderer } from './charts/dot';
+import { areaRenderer, lineRenderer } from './charts/line';
+import { donutRenderer, pieRenderer } from './charts/pie';
 import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
-import { scatterRenderer } from './charts/scatter/index';
+import { scatterRenderer } from './charts/scatter';
 import { compile as compileSpec } from './compiler/index';
 
 // Register all built-in chart renderers. Explicit imports ensure bundlers

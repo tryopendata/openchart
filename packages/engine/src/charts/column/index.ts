@@ -1,8 +1,7 @@
 /**
  * Column chart module (vertical bars).
  *
- * Exports computation functions and registers "column" chart renderer
- * in the chart registry.
+ * Exports the column chart renderer and computation functions.
  */
 
 import type { Mark } from '@openchart/core';

@@ -27,7 +27,7 @@
     }
   },
   "files": ["dist", "src"],
-  "sideEffects": ["./src/index.ts", "./dist/index.js"],
+  "sideEffects": false,
   "keywords": ["chart", "visualization", "compiler", "layout", "scales", "d3"],
   "scripts": {
     "build": "tsup",

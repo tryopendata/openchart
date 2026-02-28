@@ -1,8 +1,7 @@
 /**
  * Pie and donut chart module.
  *
- * Exports computation functions and registers "pie" and "donut" chart
- * renderers in the chart registry.
+ * Exports pie and donut chart renderers and computation functions.
  */
 
 import type { Mark } from '@openchart/core';

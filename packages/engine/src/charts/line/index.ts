@@ -1,8 +1,7 @@
 /**
  * Line & area chart module.
  *
- * Exports computation functions and registers "line" and "area"
- * chart renderers in the chart registry.
+ * Exports line and area chart renderers and computation functions.
  */
 
 import type { LineMark, Mark } from '@openchart/core';

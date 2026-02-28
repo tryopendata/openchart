@@ -1,8 +1,7 @@
 /**
  * Scatter / bubble chart module.
  *
- * Exports computation functions and registers "scatter" chart renderer
- * in the chart registry.
+ * Exports the scatter chart renderer and computation functions.
  */
 
 import type { Mark } from '@openchart/core';

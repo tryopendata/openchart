@@ -1,8 +1,7 @@
 /**
  * Bar chart module (horizontal bars).
  *
- * Exports computation functions and registers "bar" chart renderer
- * in the chart registry.
+ * Exports the bar chart renderer and computation functions.
  */
 
 import type { Mark } from '@openchart/core';

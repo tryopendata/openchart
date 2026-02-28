@@ -1,8 +1,7 @@
 /**
  * Dot plot / lollipop chart module.
  *
- * Exports computation functions and registers "dot" chart renderer
- * in the chart registry.
+ * Exports the dot chart renderer and computation functions.
  */
 
 import type { Mark, PointMark } from '@openchart/core';
