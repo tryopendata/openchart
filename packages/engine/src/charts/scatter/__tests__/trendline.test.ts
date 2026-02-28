@@ -91,8 +91,8 @@ describe('computeTrendLine', () => {
       const result = computeTrendLine(points)!;
 
       // The slope should be approximately 0.5
-      const slope = (result.points[1].y - result.points[0].y) /
-                    (result.points[1].x - result.points[0].x);
+      const slope =
+        (result.points[1].y - result.points[0].y) / (result.points[1].x - result.points[0].x);
       expect(slope).toBeCloseTo(0.5, 0);
 
       // Intercept at x=0 should be approximately 50
@@ -169,18 +169,14 @@ describe('computeTrendLine', () => {
     });
 
     it('handles large coordinate values without overflow', () => {
-      const points = [
-        makePoint(10000, 50000),
-        makePoint(20000, 60000),
-        makePoint(30000, 70000),
-      ];
+      const points = [makePoint(10000, 50000), makePoint(20000, 60000), makePoint(30000, 70000)];
       const result = computeTrendLine(points)!;
 
       expect(result.points[0].x).toBeCloseTo(10000, 0);
       expect(result.points[1].x).toBeCloseTo(30000, 0);
       // Perfect slope = 1
-      const slope = (result.points[1].y - result.points[0].y) /
-                    (result.points[1].x - result.points[0].x);
+      const slope =
+        (result.points[1].y - result.points[0].y) / (result.points[1].x - result.points[0].x);
       expect(slope).toBeCloseTo(1, 5);
     });
 
