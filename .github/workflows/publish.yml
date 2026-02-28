@@ -1,0 +1,104 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@4bc047ad259df6fc24a6c9b0f9a0cb08cf17fbe5 # v2.0.1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+      - name: Extract version from tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Rewrite workspace dependencies to real versions
+        run: |
+          VERSION="${{ steps.version.outputs.value }}"
+          for pkg in packages/core packages/engine packages/vanilla packages/react; do
+            node -e "
+              const fs = require('fs');
+              const p = '$pkg/package.json';
+              const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+              for (const [k, v] of Object.entries(j.dependencies || {})) {
+                if (v === 'workspace:*') j.dependencies[k] = '${VERSION}';
+              }
+              fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+            "
+          done
+
+      - name: Verify no workspace references remain
+        run: |
+          if grep -r "workspace:" packages/*/package.json; then
+            echo "ERROR: workspace: references found in package.json files"
+            exit 1
+          fi
+
+      - name: Publish @openchart/core
+        run: npm publish --provenance --access public
+        working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @openchart/engine
+        run: npm publish --provenance --access public
+        working-directory: packages/engine
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @openchart/vanilla
+        run: npm publish --provenance --access public
+        working-directory: packages/vanilla
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @openchart/react
+        run: npm publish --provenance --access public
+        working-directory: packages/react
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

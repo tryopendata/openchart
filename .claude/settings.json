@@ -1,0 +1,60 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs bunx biome check --fix --unsafe 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Skill",
+      "WebFetch",
+      "WebSearch",
+      "Bash(git:*)",
+      "Bash(bun:*)",
+      "Bash(bunx:*)",
+      "Bash(node:*)",
+      "Bash(npx:*)",
+      "Bash(make:*)",
+      "Bash(vitest:*)",
+      "Bash(eslint:*)",
+      "Bash(prettier:*)",
+      "Bash(tsc:*)",
+      "Bash(tsup:*)",
+      "Bash(ladle:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(pwd)",
+      "Bash(echo:*)",
+      "Bash(which:*)",
+      "Bash(wc:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf .)",
+      "Bash(git push --force)",
+      "Bash(git push -f)",
+      "Bash(git reset --hard)"
+    ]
+  },
+  "_readme": "Claude Code configuration. Machine-specific overrides go in settings.local.json (gitignored).",
+  "extraKnownMarketplaces": {
+    "claude-essentials": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/rileyhilliard/claude-essentials.git"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ce@claude-essentials": true
+  }
+}
