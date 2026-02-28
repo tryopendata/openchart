@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+*.log
+.vscode/
+.idea/
+.playwright-cli
+./claude/worktrees

@@ -1,0 +1,321 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - button "Theme Default" [ref=e246] [cursor=pointer]:
+      - generic [ref=e247]: Theme
+      - generic [ref=e249]: Default
+      - img [ref=e250]
+    - generic [ref=e253]:
+      - generic [ref=e254]:
+        - generic [ref=e255]: Interactive Demo
+        - heading "Annotation Editing" [level=1] [ref=e256]
+        - paragraph [ref=e257]:
+          - text: Drag text annotations to reposition them. The
+          - code [ref=e258]: onAnnotationEdit
+          - text: callback returns the updated offset values for persistence.
+      - generic [ref=e259]:
+        - button "Edit mode" [pressed] [ref=e260] [cursor=pointer]: Edit mode
+        - button "Reset positions" [ref=e264] [cursor=pointer]
+        - generic [ref=e265]: drag annotations to reposition
+      - generic "Area chart showing Apple Shares Hit Record After AI-Fuelled Rally from 2023 to 2024 (24 data points)" [ref=e268]:
+        - img "Area chart showing Apple Shares Hit Record After AI-Fuelled Rally from 2023 to 2024 (24 data points)" [ref=e269]:
+          - generic [ref=e271]:
+            - generic [ref=e272]: Oct 2022
+            - generic [ref=e273]: "2023"
+            - generic [ref=e274]: Apr 2023
+            - generic [ref=e275]: Jul 2023
+            - generic [ref=e276]: Oct 2023
+            - generic [ref=e277]: "2024"
+            - generic [ref=e278]: Apr 2024
+            - generic [ref=e279]: Jul 2024
+            - generic [ref=e280]: Oct 2024
+            - generic [ref=e281]: "2025"
+          - generic [ref=e282]:
+            - generic [ref=e283]: "120"
+            - generic [ref=e284]: "140"
+            - generic [ref=e285]: "160"
+            - generic [ref=e286]: "180"
+            - generic [ref=e287]: "200"
+            - generic [ref=e288]: "220"
+            - generic [ref=e289]: "240"
+            - generic [ref=e290]: Share Price
+          - generic [ref=e292]:
+            - generic "Area with 24 data points" [ref=e293]
+            - generic "Line with 24 data points" [ref=e296]
+            - 'generic "Data point: date=2023-01-01, price=130.21" [ref=e298]'
+            - 'generic "Data point: date=2023-02-01, price=147.41" [ref=e299]'
+            - 'generic "Data point: date=2023-03-01, price=125.07" [ref=e300]'
+            - 'generic "Data point: date=2023-04-01, price=169.68" [ref=e301]'
+            - 'generic "Data point: date=2023-05-01, price=177.25" [ref=e302]'
+            - 'generic "Data point: date=2023-06-01, price=193.97" [ref=e303]'
+            - 'generic "Data point: date=2023-07-01, price=196.45" [ref=e304]'
+            - 'generic "Data point: date=2023-08-01, price=187.87" [ref=e305]'
+            - 'generic "Data point: date=2023-09-01, price=171.21" [ref=e306]'
+            - 'generic "Data point: date=2023-10-01, price=170.77" [ref=e307]'
+            - 'generic "Data point: date=2023-11-01, price=189.95" [ref=e308]'
+            - 'generic "Data point: date=2023-12-01, price=192.53" [ref=e309]'
+            - 'generic "Data point: date=2024-01-01, price=185.85" [ref=e310]'
+            - 'generic "Data point: date=2024-02-01, price=188.28" [ref=e311]'
+            - 'generic "Data point: date=2024-03-01, price=171.48" [ref=e312]'
+            - 'generic "Data point: date=2024-04-01, price=170.33" [ref=e313]'
+            - 'generic "Data point: date=2024-05-01, price=192.35" [ref=e314]'
+            - 'generic "Data point: date=2024-06-01, price=210.62" [ref=e315]'
+            - 'generic "Data point: date=2024-07-01, price=222.08" [ref=e316]'
+            - 'generic "Data point: date=2024-08-01, price=226.84" [ref=e317]'
+            - 'generic "Data point: date=2024-09-01, price=226.21" [ref=e318]'
+            - 'generic "Data point: date=2024-10-01, price=225.91" [ref=e319]'
+            - 'generic "Data point: date=2024-11-01, price=237.33" [ref=e320]'
+            - 'generic "Data point: date=2024-12-01, price=242.84" [ref=e321]'
+          - generic [ref=e322]:
+            - generic [ref=e325]: SVB collapse
+            - generic [ref=e327]: "2-yr avg: $181"
+            - generic [ref=e330]: "Record close: $243"
+            - generic [ref=e332]: March 2023 low
+          - generic [ref=e333]:
+            - generic [ref=e334]: Apple Shares Hit Record After AI-Fuelled Rally
+            - generic [ref=e335]: AAPL monthly closing price, Jan 2023 to Dec 2024
+            - generic [ref=e336]: "Source: Nasdaq historical data"
+            - generic [ref=e337]: "Chart: OpenChart"
+        - 'table "Data table: Area chart showing Apple Shares Hit Record After AI-Fuelled Rally from 2023 to 2024 (24 data points)" [ref=e338]':
+          - rowgroup [ref=e339]:
+            - row "date price" [ref=e340]:
+              - columnheader "date" [ref=e341]
+              - columnheader "price" [ref=e342]
+          - rowgroup [ref=e343]:
+            - row "2023-01-01 130.21" [ref=e344]:
+              - cell "2023-01-01" [ref=e345]
+              - cell "130.21" [ref=e346]
+            - row "2023-02-01 147.41" [ref=e347]:
+              - cell "2023-02-01" [ref=e348]
+              - cell "147.41" [ref=e349]
+            - row "2023-03-01 125.07" [ref=e350]:
+              - cell "2023-03-01" [ref=e351]
+              - cell "125.07" [ref=e352]
+            - row "2023-04-01 169.68" [ref=e353]:
+              - cell "2023-04-01" [ref=e354]
+              - cell "169.68" [ref=e355]
+            - row "2023-05-01 177.25" [ref=e356]:
+              - cell "2023-05-01" [ref=e357]
+              - cell "177.25" [ref=e358]
+            - row "2023-06-01 193.97" [ref=e359]:
+              - cell "2023-06-01" [ref=e360]
+              - cell "193.97" [ref=e361]
+            - row "2023-07-01 196.45" [ref=e362]:
+              - cell "2023-07-01" [ref=e363]
+              - cell "196.45" [ref=e364]
+            - row "2023-08-01 187.87" [ref=e365]:
+              - cell "2023-08-01" [ref=e366]
+              - cell "187.87" [ref=e367]
+            - row "2023-09-01 171.21" [ref=e368]:
+              - cell "2023-09-01" [ref=e369]
+              - cell "171.21" [ref=e370]
+            - row "2023-10-01 170.77" [ref=e371]:
+              - cell "2023-10-01" [ref=e372]
+              - cell "170.77" [ref=e373]
+            - row "2023-11-01 189.95" [ref=e374]:
+              - cell "2023-11-01" [ref=e375]
+              - cell "189.95" [ref=e376]
+            - row "2023-12-01 192.53" [ref=e377]:
+              - cell "2023-12-01" [ref=e378]
+              - cell "192.53" [ref=e379]
+            - row "2024-01-01 185.85" [ref=e380]:
+              - cell "2024-01-01" [ref=e381]
+              - cell "185.85" [ref=e382]
+            - row "2024-02-01 188.28" [ref=e383]:
+              - cell "2024-02-01" [ref=e384]
+              - cell "188.28" [ref=e385]
+            - row "2024-03-01 171.48" [ref=e386]:
+              - cell "2024-03-01" [ref=e387]
+              - cell "171.48" [ref=e388]
+            - row "2024-04-01 170.33" [ref=e389]:
+              - cell "2024-04-01" [ref=e390]
+              - cell "170.33" [ref=e391]
+            - row "2024-05-01 192.35" [ref=e392]:
+              - cell "2024-05-01" [ref=e393]
+              - cell "192.35" [ref=e394]
+            - row "2024-06-01 210.62" [ref=e395]:
+              - cell "2024-06-01" [ref=e396]
+              - cell "210.62" [ref=e397]
+            - row "2024-07-01 222.08" [ref=e398]:
+              - cell "2024-07-01" [ref=e399]
+              - cell "222.08" [ref=e400]
+            - row "2024-08-01 226.84" [ref=e401]:
+              - cell "2024-08-01" [ref=e402]
+              - cell "226.84" [ref=e403]
+            - row "2024-09-01 226.21" [ref=e404]:
+              - cell "2024-09-01" [ref=e405]
+              - cell "226.21" [ref=e406]
+            - row "2024-10-01 225.91" [ref=e407]:
+              - cell "2024-10-01" [ref=e408]
+              - cell "225.91" [ref=e409]
+            - row "2024-11-01 237.33" [ref=e410]:
+              - cell "2024-11-01" [ref=e411]
+              - cell "237.33" [ref=e412]
+            - row "2024-12-01 242.84" [ref=e413]:
+              - cell "2024-12-01" [ref=e414]
+              - cell "242.84" [ref=e415]
+      - generic [ref=e416]:
+        - generic [ref=e419]: Inspector
+        - generic [ref=e420]:
+          - generic [ref=e421]: Annotation offsets
+          - generic [ref=e422]:
+            - generic [ref=e423]:
+              - generic [ref=e424]: "\"Record close: $243\""
+              - generic [ref=e425]: →
+              - generic [ref=e426]:
+                - text: "{ dx:"
+                - generic [ref=e427]: "-100"
+                - text: ", dy:"
+                - generic [ref=e428]: "-12"
+                - text: "}"
+            - generic [ref=e429]:
+              - generic [ref=e430]: "\"March 2023 low\""
+              - generic [ref=e431]: →
+              - generic [ref=e432]:
+                - text: "{ dx:"
+                - generic [ref=e433]: "0"
+                - text: ", dy:"
+                - generic [ref=e434]: "16"
+                - text: "}"
+  - separator [ref=e5]
+  - navigation [ref=e6]:
+    - textbox "Search stories" [ref=e7]:
+      - /placeholder: Search
+    - tree [ref=e8]:
+      - treeitem "Annotation editing" [expanded] [ref=e9]:
+        - generic "Annotation editing" [ref=e10] [cursor=pointer]:
+          - img [ref=e12]
+          - generic [ref=e15]: Annotation editing
+        - group [ref=e16]:
+          - treeitem "Editable annotations" [expanded] [ref=e17]:
+            - generic [ref=e18]:
+              - img [ref=e20]
+              - link "Editable annotations" [ref=e22] [cursor=pointer]:
+                - /url: "?story=annotation-editing--editable-annotations"
+      - treeitem "Bar" [ref=e23]:
+        - generic "Bar" [ref=e24] [cursor=pointer]:
+          - img [ref=e26]
+          - generic [ref=e29]: Bar
+      - treeitem "Bar horizontal" [ref=e30]:
+        - generic "Bar horizontal" [ref=e31] [cursor=pointer]:
+          - img [ref=e33]
+          - generic [ref=e36]: Bar horizontal
+      - treeitem "Bar stacked" [ref=e37]:
+        - generic "Bar stacked" [ref=e38] [cursor=pointer]:
+          - img [ref=e40]
+          - generic [ref=e43]: Bar stacked
+      - treeitem "Chrome" [ref=e44]:
+        - generic "Chrome" [ref=e45] [cursor=pointer]:
+          - img [ref=e47]
+          - generic [ref=e50]: Chrome
+      - treeitem "Column" [ref=e51]:
+        - generic "Column" [ref=e52] [cursor=pointer]:
+          - img [ref=e54]
+          - generic [ref=e57]: Column
+      - treeitem "Column diverging" [ref=e58]:
+        - generic "Column diverging" [ref=e59] [cursor=pointer]:
+          - img [ref=e61]
+          - generic [ref=e64]: Column diverging
+      - treeitem "Column stacked" [ref=e65]:
+        - generic "Column stacked" [ref=e66] [cursor=pointer]:
+          - img [ref=e68]
+          - generic [ref=e71]: Column stacked
+      - treeitem "Dark mode" [ref=e72]:
+        - generic "Dark mode" [ref=e73] [cursor=pointer]:
+          - img [ref=e75]
+          - generic [ref=e78]: Dark mode
+      - treeitem "Donut comparison" [ref=e79]:
+        - generic "Donut comparison" [ref=e80] [cursor=pointer]:
+          - img [ref=e82]
+          - generic [ref=e85]: Donut comparison
+      - treeitem "Donut leaders" [ref=e86]:
+        - generic "Donut leaders" [ref=e87] [cursor=pointer]:
+          - img [ref=e89]
+          - generic [ref=e92]: Donut leaders
+      - treeitem "Dot" [ref=e93]:
+        - generic "Dot" [ref=e94] [cursor=pointer]:
+          - img [ref=e96]
+          - generic [ref=e99]: Dot
+      - treeitem "Dot dumbbell" [ref=e100]:
+        - generic "Dot dumbbell" [ref=e101] [cursor=pointer]:
+          - img [ref=e103]
+          - generic [ref=e106]: Dot dumbbell
+      - treeitem "Financial" [ref=e107]:
+        - generic "Financial" [ref=e108] [cursor=pointer]:
+          - img [ref=e110]
+          - generic [ref=e113]: Financial
+      - treeitem "Graph" [ref=e114]:
+        - generic "Graph" [ref=e115] [cursor=pointer]:
+          - img [ref=e117]
+          - generic [ref=e120]: Graph
+      - treeitem "Infographic" [ref=e121]:
+        - generic "Infographic" [ref=e122] [cursor=pointer]:
+          - img [ref=e124]
+          - generic [ref=e127]: Infographic
+      - treeitem "Line" [ref=e128]:
+        - generic "Line" [ref=e129] [cursor=pointer]:
+          - img [ref=e131]
+          - generic [ref=e134]: Line
+      - treeitem "Line multiseries" [ref=e135]:
+        - generic "Line multiseries" [ref=e136] [cursor=pointer]:
+          - img [ref=e138]
+          - generic [ref=e141]: Line multiseries
+      - treeitem "Pie" [ref=e142]:
+        - generic "Pie" [ref=e143] [cursor=pointer]:
+          - img [ref=e145]
+          - generic [ref=e148]: Pie
+      - treeitem "Responsive" [ref=e149]:
+        - generic "Responsive" [ref=e150] [cursor=pointer]:
+          - img [ref=e152]
+          - generic [ref=e155]: Responsive
+      - treeitem "Scatter" [ref=e156]:
+        - generic "Scatter" [ref=e157] [cursor=pointer]:
+          - img [ref=e159]
+          - generic [ref=e162]: Scatter
+      - treeitem "Scatter bubble" [ref=e163]:
+        - generic "Scatter bubble" [ref=e164] [cursor=pointer]:
+          - img [ref=e166]
+          - generic [ref=e169]: Scatter bubble
+      - treeitem "Scatter trend" [ref=e170]:
+        - generic "Scatter trend" [ref=e171] [cursor=pointer]:
+          - img [ref=e173]
+          - generic [ref=e176]: Scatter trend
+      - treeitem "Table basic" [ref=e177]:
+        - generic "Table basic" [ref=e178] [cursor=pointer]:
+          - img [ref=e180]
+          - generic [ref=e183]: Table basic
+      - treeitem "Table flags" [ref=e184]:
+        - generic "Table flags" [ref=e185] [cursor=pointer]:
+          - img [ref=e187]
+          - generic [ref=e190]: Table flags
+      - treeitem "Table heatmap" [ref=e191]:
+        - generic "Table heatmap" [ref=e192] [cursor=pointer]:
+          - img [ref=e194]
+          - generic [ref=e197]: Table heatmap
+      - treeitem "Table mini charts" [ref=e198]:
+        - generic "Table mini charts" [ref=e199] [cursor=pointer]:
+          - img [ref=e201]
+          - generic [ref=e204]: Table mini charts
+      - treeitem "Theme" [ref=e205]:
+        - generic "Theme" [ref=e206] [cursor=pointer]:
+          - img [ref=e208]
+          - generic [ref=e211]: Theme
+  - banner [ref=e212]:
+    - list [ref=e213]:
+      - listitem [ref=e214]:
+        - button "Switch to dark theme." [ref=e215] [cursor=pointer]:
+          - img [ref=e216]
+      - listitem [ref=e220]:
+        - button "Open fullscreen mode. Can be toggled by pressing f." [ref=e221] [cursor=pointer]:
+          - img [ref=e222]
+      - listitem [ref=e225]:
+        - button "Change the story viewport." [ref=e226] [cursor=pointer]:
+          - img [ref=e227]
+      - listitem [ref=e231]:
+        - button "Switch text direction to right to left." [ref=e232] [cursor=pointer]:
+          - img [ref=e233]
+      - listitem [ref=e236]:
+        - button "Show the story source code." [ref=e237] [cursor=pointer]:
+          - img [ref=e238]
+      - listitem [ref=e241]:
+        - button "Get more information about Ladle." [ref=e242] [cursor=pointer]:
+          - img [ref=e243]

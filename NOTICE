@@ -1,0 +1,10 @@
+@openchart
+Copyright 2025 Riley Hilliard
+
+Licensed under the Apache License, Version 2.0.
+
+This product includes software developed by the D3 project (https://d3js.org/),
+licensed under the ISC License. The following D3 modules are used:
+
+- d3-array, d3-color, d3-force, d3-format, d3-interpolate,
+  d3-quadtree, d3-scale, d3-shape, d3-time-format
