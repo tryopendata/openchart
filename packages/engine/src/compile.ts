@@ -1,0 +1,335 @@
+/**
+ * Main compile API: the public entry points for the engine.
+ *
+ * Pipeline for charts:
+ *   validate spec -> normalize -> resolve theme -> dark mode adapt ->
+ *   compute legend -> compute dimensions (with legend space) ->
+ *   compute scales -> compute axes -> compute gridlines ->
+ *   get chart renderer -> compute marks -> compute a11y -> return ChartLayout
+ *
+ * Table compiler handles full data pipeline (sort, search, pagination, visual enhancements).
+ * Graph compiler is a stub for future implementation.
+ */
+
+import type {
+  ChartLayout,
+  CompileOptions,
+  CompileTableOptions,
+  Mark,
+  PointMark,
+  Rect,
+  RectMark,
+  ResolvedAnnotation,
+  ResolvedTheme,
+  TableLayout,
+} from '@openchart/core';
+import {
+  adaptTheme,
+  generateAltText,
+  generateDataTable,
+  getBreakpoint,
+  getLayoutStrategy,
+  resolveTheme,
+} from '@openchart/core';
+import { computeAnnotations } from './annotations/compute';
+import { getChartRenderer } from './charts/registry';
+import { compile as compileSpec } from './compiler/index';
+import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
+import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
+import type { GraphCompilation } from './graphs/types';
+import { computeAxes } from './layout/axes';
+import { computeDimensions } from './layout/dimensions';
+import { computeGridlines } from './layout/gridlines';
+import { computeScales, type ResolvedScales } from './layout/scales';
+import { computeLegend } from './legend/compute';
+import { compileTableLayout } from './tables/compile-table';
+import { computeTooltipDescriptors } from './tooltips/compute';
+
+// ---------------------------------------------------------------------------
+// Mark obstacles for annotation collision avoidance
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute per-row bounding rects for band-scale charts (dot, bar).
+ * Each obstacle covers the full band height and x-range of marks in that row,
+ * giving the annotation nudge system awareness of data marks.
+ */
+function computeRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
+  if (!scales.y || scales.y.type !== 'band') return [];
+
+  // Group marks by their y-center (rounded), compute x-extent per group
+  const rows = new Map<number, { minX: number; maxX: number; bandY: number }>();
+
+  for (const mark of marks) {
+    let cy: number;
+    let left: number;
+    let right: number;
+
+    if (mark.type === 'point') {
+      const pm = mark as PointMark;
+      cy = pm.cy;
+      left = pm.cx - pm.r;
+      right = pm.cx + pm.r;
+    } else if (mark.type === 'rect') {
+      const rm = mark as RectMark;
+      cy = rm.y + rm.height / 2;
+      left = rm.x;
+      right = rm.x + rm.width;
+    } else {
+      continue;
+    }
+
+    // Round cy to group marks on the same band
+    const key = Math.round(cy);
+    const existing = rows.get(key);
+    if (existing) {
+      existing.minX = Math.min(existing.minX, left);
+      existing.maxX = Math.max(existing.maxX, right);
+    } else {
+      rows.set(key, { minX: left, maxX: right, bandY: cy });
+    }
+  }
+
+  // Get bandwidth from the band scale
+  const bandScale = scales.y.scale as { bandwidth?: () => number };
+  const bandwidth = bandScale.bandwidth?.() ?? 0;
+  if (bandwidth === 0) return [];
+
+  const obstacles: Rect[] = [];
+  for (const { minX, maxX, bandY } of rows.values()) {
+    obstacles.push({
+      x: minX,
+      y: bandY - bandwidth / 2,
+      width: maxX - minX,
+      height: bandwidth,
+    });
+  }
+
+  return obstacles;
+}
+
+// ---------------------------------------------------------------------------
+// Chart compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a chart spec into a ChartLayout.
+ *
+ * This is the main engine entry point. Takes a raw spec (any shape,
+ * validated at runtime) and compile options, produces a fully resolved
+ * ChartLayout with positions, colors, and marks ready for rendering.
+ *
+ * @param spec - Raw chart spec (validated and normalized internally).
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns ChartLayout with all computed positions.
+ * @throws Error if spec is invalid or not a chart type.
+ */
+export function compileChart(spec: unknown, options: CompileOptions): ChartLayout {
+  // Validate + normalize
+  const { spec: normalized } = compileSpec(spec);
+
+  if (normalized.type === 'table') {
+    throw new Error('compileChart received a table spec. Use compileTable instead.');
+  }
+  if (normalized.type === 'graph') {
+    throw new Error('compileChart received a graph spec. Use compileGraph instead.');
+  }
+
+  const chartSpec = normalized as NormalizedChartSpec;
+
+  // Resolve theme: merge spec-level theme with options-level overrides
+  const mergedThemeConfig = options.theme
+    ? { ...chartSpec.theme, ...options.theme }
+    : chartSpec.theme;
+  let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
+  if (options.darkMode) {
+    theme = adaptTheme(theme);
+  }
+
+  // Responsive strategy
+  const breakpoint = getBreakpoint(options.width);
+  const strategy = getLayoutStrategy(breakpoint);
+
+  // Compute legend first (needs to reserve space)
+  const preliminaryArea: Rect = {
+    x: 0,
+    y: 0,
+    width: options.width,
+    height: options.height,
+  };
+  const legendLayout = computeLegend(chartSpec, strategy, theme, preliminaryArea);
+
+  // Compute dimensions (accounts for chrome + legend)
+  const dims = computeDimensions(chartSpec, options, legendLayout, theme);
+  const chartArea = dims.chartArea;
+
+  // Recompute legend bounds relative to actual chart area.
+  // chartArea was shrunk to exclude legend space, so expand it back to include
+  // the reserved margin. This way computeLegend positions the legend outside
+  // the data area (in the margin) instead of overlapping data marks.
+  const legendArea: Rect = { ...chartArea };
+  if (legendLayout.entries.length > 0) {
+    switch (legendLayout.position) {
+      case 'top':
+        legendArea.y -= legendLayout.bounds.height + 4;
+        legendArea.height += legendLayout.bounds.height + 4;
+        break;
+      case 'bottom':
+        legendArea.height += legendLayout.bounds.height + 4;
+        break;
+      case 'right':
+      case 'bottom-right':
+        legendArea.width += legendLayout.bounds.width + 8;
+        break;
+    }
+  }
+  const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea);
+
+  // Compute scales
+  const scales = computeScales(chartSpec, chartArea, chartSpec.data);
+
+  // Update color scale to use theme palette
+  if (scales.color) {
+    (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
+      theme.colors.categorical,
+    );
+  }
+
+  // Set default color for single-series charts (no color encoding)
+  scales.defaultColor = theme.colors.categorical[0];
+
+  // Pie/donut charts don't use axes or gridlines
+  const isRadial = chartSpec.type === 'pie' || chartSpec.type === 'donut';
+
+  // Compute axes (skip for radial charts)
+  const axes = isRadial
+    ? { x: undefined, y: undefined }
+    : computeAxes(scales, chartArea, strategy, theme);
+
+  // Compute gridlines (stored in axes, used by adapters via axes.y.gridlines)
+  if (!isRadial) {
+    computeGridlines(axes, chartArea);
+  }
+
+  // Get chart renderer and compute marks
+  const renderer = getChartRenderer(chartSpec.type);
+  const marks: Mark[] = renderer ? renderer(chartSpec, scales, chartArea, strategy, theme) : [];
+
+  // Compute annotations from spec, passing legend + mark bounds as obstacles for collision avoidance
+  const obstacles: Rect[] = [];
+  if (finalLegend.bounds.width > 0) {
+    obstacles.push(finalLegend.bounds);
+  }
+  obstacles.push(...computeRowObstacles(marks, scales));
+  const annotations: ResolvedAnnotation[] = computeAnnotations(
+    chartSpec,
+    scales,
+    chartArea,
+    strategy,
+    theme.isDark,
+    obstacles,
+  );
+
+  // Compute tooltip descriptors from marks and encoding
+  const tooltipDescriptors = computeTooltipDescriptors(chartSpec, marks);
+
+  // Compute accessibility
+  const altText = generateAltText(
+    {
+      type: chartSpec.type,
+      data: chartSpec.data,
+      encoding: chartSpec.encoding,
+      chrome: chartSpec.chrome,
+    },
+    chartSpec.data,
+  );
+  const dataTableFallback = generateDataTable(
+    {
+      type: chartSpec.type,
+      data: chartSpec.data,
+      encoding: chartSpec.encoding,
+    },
+    chartSpec.data,
+  );
+
+  return {
+    area: chartArea,
+    chrome: dims.chrome,
+    axes: {
+      x: axes.x,
+      y: axes.y,
+    },
+    marks,
+    annotations,
+    legend: finalLegend,
+    tooltipDescriptors,
+    a11y: {
+      altText,
+      dataTableFallback,
+      role: 'img',
+      keyboardNavigable: marks.length > 0,
+    },
+    theme,
+    dimensions: {
+      width: options.width,
+      height: options.height,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Table compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a table spec into a TableLayout.
+ *
+ * Validates and normalizes the spec, resolves the theme, then delegates
+ * to compileTableLayout for the full pipeline: column resolution, search,
+ * sort, pagination, cell formatting, and visual enhancements.
+ *
+ * @param spec - Raw table spec.
+ * @param options - Compile options with sort, search, pagination state.
+ * @returns Fully resolved TableLayout.
+ */
+export function compileTable(spec: unknown, options: CompileTableOptions): TableLayout {
+  const { spec: normalized } = compileSpec(spec);
+
+  if (normalized.type !== 'table') {
+    throw new Error(`compileTable received a ${normalized.type} spec. Use compileChart instead.`);
+  }
+
+  const tableSpec = normalized as NormalizedTableSpec;
+
+  // Resolve theme: merge spec-level theme with options-level overrides
+  const mergedThemeConfig = options.theme
+    ? { ...tableSpec.theme, ...options.theme }
+    : tableSpec.theme;
+  let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
+  if (options.darkMode) {
+    theme = adaptTheme(theme);
+  }
+
+  return compileTableLayout(tableSpec, options, theme);
+}
+
+// ---------------------------------------------------------------------------
+// Graph compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a graph spec into a GraphCompilation.
+ *
+ * The graph pipeline resolves visual properties (size, color, stroke) for
+ * nodes and edges, assigns communities, and builds legend/tooltip/a11y data.
+ * Unlike charts, the output does NOT include x/y positions since the force
+ * simulation in the adapter handles layout at runtime.
+ *
+ * @param spec - Raw graph spec (validated and normalized internally).
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns GraphCompilation with resolved visual properties and simulation config.
+ * @throws Error if spec is invalid or not a graph type.
+ */
+export function compileGraph(spec: unknown, options: CompileOptions): GraphCompilation {
+  return compileGraphImpl(spec, options);
+}

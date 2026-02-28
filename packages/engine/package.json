@@ -1,0 +1,52 @@
+{
+  "name": "@openchart/engine",
+  "version": "0.0.1",
+  "description": "Headless compiler for openchart: spec validation, data compilation, scales, and layout",
+  "license": "Apache-2.0",
+  "author": "Riley Hilliard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openchart/openchart.git",
+    "directory": "packages/engine"
+  },
+  "homepage": "https://github.com/openchart/openchart#readme",
+  "bugs": "https://github.com/openchart/openchart/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "sideEffects": ["./src/index.ts", "./dist/index.js"],
+  "keywords": ["chart", "visualization", "compiler", "layout", "scales", "d3"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openchart/core": "workspace:*",
+    "d3-array": "^3.2.0",
+    "d3-format": "^3.1.2",
+    "d3-interpolate": "^3.0.0",
+    "d3-scale": "^4.0.0",
+    "d3-shape": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/d3-array": "^3.2.1",
+    "@types/d3-format": "^3.0.4",
+    "@types/d3-interpolate": "^3.0.4",
+    "@types/d3-scale": "^4.0.8",
+    "@types/d3-shape": "^3.1.6"
+  }
+}
