@@ -689,7 +689,5 @@ const earningsSpec: TableSpec = {
 };
 
 export const EarningsSeason: Story = () => (
-  <FinancialShell maxWidth={920}>
-    {(dark) => <DataTable spec={earningsSpec} />}
-  </FinancialShell>
+  <FinancialShell maxWidth={920}>{(_dark) => <DataTable spec={earningsSpec} />}</FinancialShell>
 );

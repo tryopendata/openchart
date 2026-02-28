@@ -18,7 +18,7 @@ import { DEFAULT_THEME } from './defaults';
  * Deep merge source into target, creating a new object.
  * Only merges plain objects; arrays and primitives replace directly.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: recursive object merge requires dynamic typing
 function deepMerge(target: any, source: any): any {
   const result = { ...target };
 

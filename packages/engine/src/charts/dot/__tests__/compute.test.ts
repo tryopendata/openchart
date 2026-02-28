@@ -228,18 +228,7 @@ describe('computeDotMarks', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeDotMarks(spec, scales, chartArea, fullStrategy);
 
-      // For each category, the rect should appear before any points
-      let seenPoint = false;
-      let rectAfterPoint = false;
-      for (const mark of marks) {
-        if (mark.type === 'point') seenPoint = true;
-        // After seeing a point in a category, a rect for the SAME category
-        // would be wrong. But since we process category by category,
-        // rects for a new category can appear after points of previous.
-        // Check the first category's ordering.
-      }
-
-      // Simpler check: first mark should be a rect (connecting bar)
+      // First mark should be a rect (connecting bar renders before dots)
       expect(marks[0].type).toBe('rect');
     });
 

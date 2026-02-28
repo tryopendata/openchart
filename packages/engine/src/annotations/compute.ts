@@ -372,9 +372,7 @@ function estimateLabelBounds(label: ResolvedLabel): Rect {
   const fontWeight = label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
   const lineHeight = label.style.lineHeight ?? 1.3;
 
-  const maxWidth = Math.max(
-    ...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)),
-  );
+  const maxWidth = Math.max(...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)));
   const totalHeight = lines.length * fontSize * lineHeight;
 
   // Multi-line text is rendered with text-anchor: middle by the SVG renderer,

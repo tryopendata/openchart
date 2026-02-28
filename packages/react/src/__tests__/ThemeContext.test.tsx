@@ -223,9 +223,7 @@ describe('useVizDarkMode', () => {
       </VizThemeProvider>,
     );
 
-    expect(
-      container.querySelector('[data-testid="darkmode-output"]')?.textContent,
-    ).toBe('off');
+    expect(container.querySelector('[data-testid="darkmode-output"]')?.textContent).toBe('off');
 
     rerender(
       <VizThemeProvider theme={undefined} darkMode="force">
@@ -234,9 +232,7 @@ describe('useVizDarkMode', () => {
     );
 
     await waitFor(() => {
-      expect(
-        container.querySelector('[data-testid="darkmode-output"]')?.textContent,
-      ).toBe('force');
+      expect(container.querySelector('[data-testid="darkmode-output"]')?.textContent).toBe('force');
     });
   });
 });

@@ -20,7 +20,7 @@ const tempSpec: ChartSpec = {
     { year: '1910', anomaly: -0.42, trend: 'Cooler' },
     { year: '1920', anomaly: -0.27, trend: 'Cooler' },
     { year: '1930', anomaly: -0.14, trend: 'Cooler' },
-    { year: '1940', anomaly: 0.10, trend: 'Warmer' },
+    { year: '1940', anomaly: 0.1, trend: 'Warmer' },
     { year: '1950', anomaly: -0.16, trend: 'Cooler' },
     { year: '1960', anomaly: 0.03, trend: 'Warmer' },
     { year: '1970', anomaly: 0.01, trend: 'Warmer' },

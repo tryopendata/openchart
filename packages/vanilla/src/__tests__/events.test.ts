@@ -15,9 +15,7 @@ const annotatedSpec: ChartSpec = {
 
 const textAnnotatedSpec: ChartSpec = {
   ...barSpec,
-  annotations: [
-    { type: 'text', x: 10, y: 'A', text: 'Peak', offset: { dx: 10, dy: -20 } },
-  ],
+  annotations: [{ type: 'text', x: 10, y: 'A', text: 'Peak', offset: { dx: 10, dy: -20 } }],
 };
 
 // ---------------------------------------------------------------------------
