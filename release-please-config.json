@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "include-component-in-tag": false,
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore: release v${version}",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactoring" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "chore", "hidden": true },
+    { "type": "test", "hidden": true },
+    { "type": "build", "hidden": true },
+    { "type": "ci", "hidden": true }
+  ],
+  "packages": {
+    "packages/core": {
+      "component": "core"
+    },
+    "packages/engine": {
+      "component": "engine"
+    },
+    "packages/vanilla": {
+      "component": "vanilla"
+    },
+    "packages/react": {
+      "component": "react"
+    },
+    "packages/vue": {
+      "component": "vue"
+    },
+    "packages/svelte": {
+      "component": "svelte"
+    }
+  },
+  "plugins": [
+    {
+      "type": "node-workspace",
+      "merge": false
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "openchart",
+      "components": ["core", "engine", "vanilla", "react", "vue", "svelte"]
+    }
+  ]
+}
