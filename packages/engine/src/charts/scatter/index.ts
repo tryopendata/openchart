@@ -7,7 +7,6 @@
 
 import type { Mark } from '@openchart/core';
 import type { ChartRenderer } from '../registry';
-import { registerChartRenderer } from '../registry';
 import { computeScatterMarks } from './compute';
 import { computeTrendLine } from './trendline';
 
@@ -21,7 +20,7 @@ import { computeTrendLine } from './trendline';
  * Produces point marks for each data point, optionally with size encoding
  * for bubbles and a trend line overlay.
  */
-const scatterRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const scatterRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const pointMarks = computeScatterMarks(spec, scales, chartArea, strategy);
   const marks: Mark[] = [...pointMarks];
 
@@ -34,12 +33,6 @@ const scatterRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _them
 
   return marks;
 };
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
-registerChartRenderer('scatter', scatterRenderer);
 
 // ---------------------------------------------------------------------------
 // Public exports

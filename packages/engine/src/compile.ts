@@ -32,8 +32,32 @@ import {
   resolveTheme,
 } from '@openchart/core';
 import { computeAnnotations } from './annotations/compute';
-import { getChartRenderer } from './charts/registry';
+import { barRenderer } from './charts/bar/index';
+import { columnRenderer } from './charts/column/index';
+import { dotRenderer } from './charts/dot/index';
+import { areaRenderer, lineRenderer } from './charts/line/index';
+import { donutRenderer, pieRenderer } from './charts/pie/index';
+import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
+import { scatterRenderer } from './charts/scatter/index';
 import { compile as compileSpec } from './compiler/index';
+
+// Register all built-in chart renderers. Explicit imports ensure bundlers
+// cannot tree-shake the registrations away (bare side-effect imports are
+// treated as dead code by esbuild).
+const builtinRenderers: Record<string, ChartRenderer> = {
+  line: lineRenderer,
+  area: areaRenderer,
+  bar: barRenderer,
+  column: columnRenderer,
+  scatter: scatterRenderer,
+  pie: pieRenderer,
+  donut: donutRenderer,
+  dot: dotRenderer,
+};
+for (const [type, renderer] of Object.entries(builtinRenderers)) {
+  registerChartRenderer(type, renderer);
+}
+
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';

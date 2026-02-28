@@ -7,7 +7,6 @@
 
 import type { Mark, PointMark } from '@openchart/core';
 import type { ChartRenderer } from '../registry';
-import { registerChartRenderer } from '../registry';
 import { computeDotMarks } from './compute';
 import { computeDotLabels } from './labels';
 
@@ -21,7 +20,7 @@ import { computeDotLabels } from './labels';
  * Produces stem (RectMark) and dot (PointMark) pairs for each data point.
  * Value labels are attached to the dot marks.
  */
-const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const marks = computeDotMarks(spec, scales, chartArea, strategy);
 
   // Extract just the point marks for label computation
@@ -39,12 +38,6 @@ const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) =
 
   return marks as Mark[];
 };
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
-registerChartRenderer('dot', dotRenderer);
 
 // ---------------------------------------------------------------------------
 // Public exports

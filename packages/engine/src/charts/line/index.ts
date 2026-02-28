@@ -7,7 +7,6 @@
 
 import type { LineMark, Mark } from '@openchart/core';
 import type { ChartRenderer } from '../registry';
-import { registerChartRenderer } from '../registry';
 import { computeAreaMarks } from './area';
 import { computeLineMarks } from './compute';
 import { computeLineLabels } from './labels';
@@ -22,7 +21,7 @@ import { computeLineLabels } from './labels';
  * Computes line marks + point marks for hover targets, then resolves
  * end-of-line labels and attaches them to the corresponding line marks.
  */
-const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const marks = computeLineMarks(spec, scales, chartArea, strategy);
 
   // Extract just the line marks for label computation
@@ -53,20 +52,13 @@ const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) 
  * Also computes line marks for the top boundary and point marks
  * for hover targets, layered on top of the areas.
  */
-const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const areas = computeAreaMarks(spec, scales, chartArea);
   const lines = computeLineMarks(spec, scales, chartArea, strategy);
 
   // Areas go first (rendered behind lines), then lines on top
   return [...areas, ...lines] as Mark[];
 };
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
-registerChartRenderer('line', lineRenderer);
-registerChartRenderer('area', areaRenderer);
 
 // ---------------------------------------------------------------------------
 // Public exports

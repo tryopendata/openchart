@@ -7,7 +7,6 @@
 
 import type { Mark } from '@openchart/core';
 import type { ChartRenderer } from '../registry';
-import { registerChartRenderer } from '../registry';
 import { computeColumnMarks } from './compute';
 import { computeColumnLabels } from './labels';
 
@@ -15,7 +14,7 @@ import { computeColumnLabels } from './labels';
 // Column chart renderer
 // ---------------------------------------------------------------------------
 
-const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const marks = computeColumnMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
@@ -26,12 +25,6 @@ const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme
 
   return marks as Mark[];
 };
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
-registerChartRenderer('column', columnRenderer);
 
 // ---------------------------------------------------------------------------
 // Public exports

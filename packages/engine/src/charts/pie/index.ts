@@ -7,7 +7,6 @@
 
 import type { Mark } from '@openchart/core';
 import type { ChartRenderer } from '../registry';
-import { registerChartRenderer } from '../registry';
 import { computePieMarks } from './compute';
 import { computePieLabels } from './labels';
 
@@ -15,7 +14,7 @@ import { computePieLabels } from './labels';
 // Pie chart renderer
 // ---------------------------------------------------------------------------
 
-const pieRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+export const pieRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
   const marks = computePieMarks(spec, scales, chartArea, strategy, false);
 
   // Compute and attach labels (respects spec.labels.density)
@@ -31,7 +30,7 @@ const pieRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) =>
 // Donut chart renderer
 // ---------------------------------------------------------------------------
 
-const donutRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+export const donutRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
   const marks = computePieMarks(spec, scales, chartArea, strategy, true);
 
   // Compute and attach labels (respects spec.labels.density)
@@ -42,13 +41,6 @@ const donutRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) 
 
   return marks as Mark[];
 };
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
-registerChartRenderer('pie', pieRenderer);
-registerChartRenderer('donut', donutRenderer);
 
 // ---------------------------------------------------------------------------
 // Public exports

@@ -58,17 +58,6 @@ export {
 } from './charts/registry';
 
 // ---------------------------------------------------------------------------
-// Chart type registration (side-effect imports trigger self-registration)
-// ---------------------------------------------------------------------------
-
-import './charts/line/index';
-import './charts/bar/index';
-import './charts/column/index';
-import './charts/scatter/index';
-import './charts/pie/index';
-import './charts/dot/index';
-
-// ---------------------------------------------------------------------------
 // Re-export core types for convenience
 // ---------------------------------------------------------------------------
 

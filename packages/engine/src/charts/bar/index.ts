@@ -7,7 +7,6 @@
 
 import type { Mark } from '@openchart/core';
 import type { ChartRenderer } from '../registry';
-import { registerChartRenderer } from '../registry';
 import { computeBarMarks } from './compute';
 import { computeBarLabels } from './labels';
 
@@ -15,7 +14,7 @@ import { computeBarLabels } from './labels';
 // Bar chart renderer
 // ---------------------------------------------------------------------------
 
-const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const marks = computeBarMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
@@ -26,12 +25,6 @@ const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) =
 
   return marks as Mark[];
 };
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
-registerChartRenderer('bar', barRenderer);
 
 // ---------------------------------------------------------------------------
 // Public exports
