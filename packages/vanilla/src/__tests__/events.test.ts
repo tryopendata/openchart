@@ -112,11 +112,7 @@ describe('chart event handlers', () => {
       const chart = createChart(container, lineSpec, { onLegendToggle });
 
       const legendEntry = container.querySelector('[data-legend-index]');
-      if (!legendEntry) {
-        // If no legend is rendered (e.g. only one series visible), skip test
-        chart.destroy();
-        return;
-      }
+      expect(legendEntry).not.toBeNull();
 
       legendEntry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
@@ -143,7 +139,7 @@ describe('chart event handlers', () => {
 
       const annotation = container.querySelector('.viz-annotation');
       if (!annotation) {
-        // Annotation may not render if the refline resolves outside the chart area
+        // Refline at y=0 may resolve outside the chart area in test env
         chart.destroy();
         return;
       }

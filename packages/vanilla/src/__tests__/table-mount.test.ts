@@ -31,7 +31,7 @@ const paginatedSpec: TableSpec = {
   data: Array.from({ length: 50 }, (_, i) => ({
     id: i + 1,
     name: `Person ${i + 1}`,
-    value: Math.round(Math.random() * 100),
+    value: (i * 17 + 3) % 100,
   })),
   columns: [
     { key: 'id', label: 'ID' },
