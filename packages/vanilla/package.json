@@ -1,6 +1,6 @@
 {
   "name": "@openchart/vanilla",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Vanilla JS renderer for openchart: SVG charts, HTML tables, force-directed graphs",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",

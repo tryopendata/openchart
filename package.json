@@ -1,6 +1,6 @@
 {
   "name": "@openchart/monorepo",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -21,7 +21,8 @@
     "lint:fix": "biome check --write packages/ examples/src/",
     "format": "biome format --write packages/ examples/src/",
     "typecheck": "bun run --filter './packages/*' typecheck",
-    "dev": "cd examples && bun run dev"
+    "dev": "cd examples && bun run dev",
+    "release": "./scripts/release.sh"
   },
   "overrides": {
     "strip-ansi": "6.0.1"

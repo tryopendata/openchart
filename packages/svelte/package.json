@@ -1,6 +1,6 @@
 {
   "name": "@openchart/svelte",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Svelte components for openchart: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",

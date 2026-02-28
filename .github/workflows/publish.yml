@@ -60,7 +60,7 @@ jobs:
       - name: Rewrite workspace dependencies to real versions
         run: |
           VERSION="${{ steps.version.outputs.value }}"
-          for pkg in packages/core packages/engine packages/vanilla packages/react; do
+          for pkg in packages/core packages/engine packages/vanilla packages/react packages/vue packages/svelte; do
             node -e "
               const fs = require('fs');
               const p = '$pkg/package.json';
@@ -100,5 +100,17 @@ jobs:
       - name: Publish @openchart/react
         run: npm publish --provenance --access public
         working-directory: packages/react
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @openchart/vue
+        run: npm publish --provenance --access public
+        working-directory: packages/vue
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @openchart/svelte
+        run: npm publish --provenance --access public
+        working-directory: packages/svelte
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

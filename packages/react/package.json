@@ -1,6 +1,6 @@
 {
   "name": "@openchart/react",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "React components for openchart: <Chart />, <DataTable />, <VizThemeProvider />",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",

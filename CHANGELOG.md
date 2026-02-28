@@ -6,9 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-28
+
 ### Added
 
-- Initial release of `@openchart/core`, `@openchart/engine`, `@openchart/vanilla`, `@openchart/react`
+- Initial release of `@openchart/core`, `@openchart/engine`, `@openchart/vanilla`, `@openchart/react`, `@openchart/vue`, `@openchart/svelte`
 - Chart types: line, area, bar, column, scatter, dot, pie, donut
 - Data tables with sort, search, pagination, heatmap, sparklines, inline bars, category colors
 - Force-directed graph visualization with canvas rendering
