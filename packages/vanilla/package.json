@@ -1,0 +1,48 @@
+{
+  "name": "@openchart/vanilla",
+  "version": "0.0.1",
+  "description": "Vanilla JS renderer for openchart: SVG charts, HTML tables, force-directed graphs",
+  "license": "Apache-2.0",
+  "author": "Riley Hilliard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openchart/openchart.git",
+    "directory": "packages/vanilla"
+  },
+  "homepage": "https://github.com/openchart/openchart#readme",
+  "bugs": "https://github.com/openchart/openchart/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./simulation-worker": "./dist/simulation-worker.js"
+  },
+  "files": ["dist", "src"],
+  "sideEffects": false,
+  "keywords": ["chart", "visualization", "svg", "data-table", "vanilla-js", "d3"],
+  "scripts": {
+    "build": "tsup && bun build src/graph/simulation-worker.ts --outfile dist/simulation-worker.js --target=browser --format=iife",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openchart/core": "workspace:*",
+    "@openchart/engine": "workspace:*",
+    "d3-force": "^3.0.0",
+    "d3-quadtree": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-quadtree": "^3.0.6"
+  }
+}

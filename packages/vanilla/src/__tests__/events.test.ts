@@ -13,6 +13,13 @@ const annotatedSpec: ChartSpec = {
   annotations: [{ type: 'refline', y: 0, label: 'Zero' }],
 };
 
+const textAnnotatedSpec: ChartSpec = {
+  ...barSpec,
+  annotations: [
+    { type: 'text', x: 10, y: 'A', text: 'Peak', offset: { dx: 10, dy: -20 } },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -153,6 +160,145 @@ describe('chart event handlers', () => {
       expect(mouseEvent).toBeInstanceOf(MouseEvent);
 
       chart.destroy();
+    });
+  });
+
+  describe('onAnnotationEdit', () => {
+    it('sets cursor:grab on text annotations when onAnnotationEdit is provided', () => {
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
+
+      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      expect(annotation.style.cursor).toBe('grab');
+      chart.destroy();
+    });
+
+    it('does not set cursor:grab on non-text annotations', () => {
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, annotatedSpec, { onAnnotationEdit });
+
+      const annotation = container.querySelector('.viz-annotation-refline') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      expect(annotation.style.cursor).not.toBe('grab');
+      chart.destroy();
+    });
+
+    it('fires with original annotation and updated offset after drag', () => {
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
+
+      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      // Simulate drag: mousedown -> mousemove -> mouseup
+      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
+      document.dispatchEvent(createMouseEvent('mousemove', 150, 130));
+      document.dispatchEvent(createMouseEvent('mouseup', 150, 130));
+
+      expect(onAnnotationEdit).toHaveBeenCalledTimes(1);
+      const [annotationArg, offsetArg] = onAnnotationEdit.mock.calls[0];
+      expect(annotationArg.type).toBe('text');
+      expect(annotationArg.text).toBe('Peak');
+      // Original offset (10, -20) + drag delta (50, 30) = (60, 10)
+      expect(offsetArg.dx).toBe(60);
+      expect(offsetArg.dy).toBe(10);
+
+      chart.destroy();
+    });
+
+    it('does not fire when drag movement is below threshold', () => {
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
+
+      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      // Simulate drag with minimal movement (< 3px)
+      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
+      document.dispatchEvent(createMouseEvent('mousemove', 101, 101));
+      document.dispatchEvent(createMouseEvent('mouseup', 101, 101));
+
+      expect(onAnnotationEdit).not.toHaveBeenCalled();
+      chart.destroy();
+    });
+
+    it('suppresses click after drag', () => {
+      const onAnnotationClick = vi.fn();
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, {
+        onAnnotationClick,
+        onAnnotationEdit,
+      });
+
+      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      // Drag > 3px
+      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
+      document.dispatchEvent(createMouseEvent('mousemove', 150, 130));
+      document.dispatchEvent(createMouseEvent('mouseup', 150, 130));
+
+      // Fire a click after the drag
+      annotation.dispatchEvent(createMouseEvent('click', 150, 130));
+
+      expect(onAnnotationEdit).toHaveBeenCalledTimes(1);
+      // Click should have been suppressed by the one-time capture handler
+      expect(onAnnotationClick).not.toHaveBeenCalled();
+
+      chart.destroy();
+    });
+
+    it('applies transform during drag', () => {
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
+
+      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
+      document.dispatchEvent(createMouseEvent('mousemove', 140, 120));
+
+      // During drag, the annotation group should have a transform
+      const transform = annotation.getAttribute('transform');
+      expect(transform).toContain('translate');
+
+      // Complete the drag to clean up
+      document.dispatchEvent(createMouseEvent('mouseup', 140, 120));
+      chart.destroy();
+    });
+
+    it('cleans up listeners on destroy', () => {
+      const onAnnotationEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
+
+      chart.destroy();
+
+      // After destroy, dispatching events should not cause errors
+      document.dispatchEvent(createMouseEvent('mousemove', 200, 200));
+      document.dispatchEvent(createMouseEvent('mouseup', 200, 200));
+
+      expect(onAnnotationEdit).not.toHaveBeenCalled();
     });
   });
 
