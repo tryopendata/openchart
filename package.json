@@ -2,6 +2,16 @@
   "name": "@openchart/monorepo",
   "version": "0.0.1",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openchart/openchart.git"
+  },
+  "homepage": "https://github.com/openchart/openchart#readme",
+  "bugs": "https://github.com/openchart/openchart/issues",
+  "author": "Riley Hilliard",
+  "engines": {
+    "node": ">=18"
+  },
   "workspaces": ["packages/*", "examples"],
   "scripts": {
     "build": "bun run --filter '@openchart/core' build && bun run --filter '@openchart/engine' build && bun run --filter '@openchart/vanilla' --filter '@openchart/react' build",
