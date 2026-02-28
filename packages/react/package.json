@@ -1,0 +1,39 @@
+{
+  "name": "@openchart/react",
+  "version": "0.0.1",
+  "description": "React components for openchart: <Chart />, <DataTable />, <VizThemeProvider />",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "sideEffects": false,
+  "keywords": ["chart", "visualization", "react", "data-table", "svg", "d3", "declarative"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openchart/core": "workspace:*",
+    "@openchart/engine": "workspace:*",
+    "@openchart/vanilla": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
