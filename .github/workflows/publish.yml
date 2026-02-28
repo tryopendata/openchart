@@ -65,8 +65,10 @@ jobs:
               const fs = require('fs');
               const p = '$pkg/package.json';
               const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-              for (const [k, v] of Object.entries(j.dependencies || {})) {
-                if (v === 'workspace:*') j.dependencies[k] = '${VERSION}';
+              for (const field of ['dependencies', 'peerDependencies', 'devDependencies']) {
+                for (const [k, v] of Object.entries(j[field] || {})) {
+                  if (v === 'workspace:*') j[field][k] = '${VERSION}';
+                }
               }
               fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
             "

@@ -34,6 +34,13 @@ fi
 echo "Releasing v$NEXT (was v$CURRENT)"
 echo ""
 
+# Must be on main
+BRANCH=$(git branch --show-current)
+if [[ "$BRANCH" != "main" ]]; then
+  echo "Error: releases must be run from main (currently on $BRANCH)."
+  exit 1
+fi
+
 # Check for uncommitted changes
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "Error: working directory has uncommitted changes. Commit or stash first."
@@ -61,11 +68,11 @@ done
 
 # Update CHANGELOG: replace [Unreleased] marker with new version section
 DATE=$(date +%Y-%m-%d)
-sed -i '' "s/^## \[Unreleased\]/## [Unreleased]\n\n## [$NEXT] - $DATE/" CHANGELOG.md
+perl -i -pe "s/^## \[Unreleased\]/## [Unreleased]\n\n## [$NEXT] - $DATE/" CHANGELOG.md
 echo "  Updated CHANGELOG.md"
 
 # Commit and tag
-git add -A
+git add package.json CHANGELOG.md "${PACKAGES[@]/%//package.json}"
 git commit -m "release: v$NEXT"
 git tag "v$NEXT"
 
