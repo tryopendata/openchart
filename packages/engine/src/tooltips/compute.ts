@@ -19,6 +19,7 @@ import type {
   TooltipField,
 } from '@openchart/core';
 import { formatDate, formatNumber } from '@openchart/core';
+import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 
@@ -27,7 +28,7 @@ import type { NormalizedChartSpec } from '../compiler/types';
 // ---------------------------------------------------------------------------
 
 /** Format a raw data value for tooltip display. */
-function formatValue(value: unknown, fieldType?: string): string {
+function formatValue(value: unknown, fieldType?: string, format?: string): string {
   if (value == null) return '';
 
   if (fieldType === 'temporal' || value instanceof Date) {
@@ -35,6 +36,13 @@ function formatValue(value: unknown, fieldType?: string): string {
   }
 
   if (typeof value === 'number') {
+    if (format) {
+      try {
+        return d3Format(format)(value);
+      } catch {
+        return formatNumber(value);
+      }
+    }
     return formatNumber(value);
   }
 
@@ -49,7 +57,7 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
   if (encoding.y) {
     fields.push({
       label: encoding.y.axis?.label ?? encoding.y.field,
-      value: formatValue(row[encoding.y.field], encoding.y.type),
+      value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
       color,
     });
   }
@@ -58,7 +66,7 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
   if (encoding.x) {
     fields.push({
       label: encoding.x.axis?.label ?? encoding.x.field,
-      value: formatValue(row[encoding.x.field], encoding.x.type),
+      value: formatValue(row[encoding.x.field], encoding.x.type, encoding.x.axis?.format),
     });
   }
 
@@ -66,7 +74,7 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
   if (encoding.size) {
     fields.push({
       label: encoding.size.axis?.label ?? encoding.size.field,
-      value: formatValue(row[encoding.size.field], encoding.size.type),
+      value: formatValue(row[encoding.size.field], encoding.size.type, encoding.size.axis?.format),
     });
   }
 
@@ -148,14 +156,14 @@ function tooltipsForArc(
     if (encoding.y) {
       fields.push({
         label: categoryName,
-        value: formatValue(row[encoding.y.field], encoding.y.type),
+        value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
         color: mark.fill,
       });
     }
   } else if (encoding.y) {
     fields.push({
       label: encoding.y.field,
-      value: formatValue(row[encoding.y.field], encoding.y.type),
+      value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
       color: mark.fill,
     });
   }

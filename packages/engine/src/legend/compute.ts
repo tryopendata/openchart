@@ -53,6 +53,9 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   const colorEnc = spec.encoding.color;
   if (!colorEnc) return [];
 
+  // Sequential (quantitative) color doesn't produce discrete legend entries
+  if (colorEnc.type === 'quantitative') return [];
+
   const uniqueValues = [...new Set(spec.data.map((d) => String(d[colorEnc.field])))];
   const palette = theme.colors.categorical;
   const shape = swatchShapeForType(spec.type);

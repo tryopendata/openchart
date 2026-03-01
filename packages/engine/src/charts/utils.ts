@@ -98,3 +98,19 @@ export function getColor(
   }
   return scales.defaultColor ?? fallback;
 }
+
+/**
+ * Get color from a sequential (quantitative) color scale.
+ * Maps a numeric value to a color via linear interpolation.
+ */
+export function getSequentialColor(
+  scales: ResolvedScales,
+  value: number,
+  fallback: string = DEFAULT_COLOR,
+): string {
+  if (scales.color?.type === 'sequential') {
+    const colorScale = scales.color.scale as (v: number) => string;
+    return colorScale(value);
+  }
+  return scales.defaultColor ?? fallback;
+}

@@ -4,8 +4,12 @@
  * visible in context.
  */
 
-import type { ChartSpec, TableSpec, ThemeConfig } from '@openchart/core';
+import type { ChartSpec, TableSpec, ThemeConfig, VizSpec } from '@openchart/core';
+import { isTableSpec } from '@openchart/core';
+import type { ValidationResult } from '@openchart/engine';
+import { validateSpec } from '@openchart/engine';
 import { Chart, DataTable } from '@openchart/react';
+import React, { useCallback, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Shared demo data
@@ -26,6 +30,7 @@ const lineSpec: ChartSpec = {
     y: { field: 'value', type: 'quantitative' },
     color: { field: 'series', type: 'nominal' },
   },
+  legend: { position: 'top' },
   chrome: {
     title: 'Revenue vs Costs',
     subtitle: 'Three-year trend comparison',
@@ -46,6 +51,7 @@ const barSpec: ChartSpec = {
   encoding: {
     x: { field: 'popularity', type: 'quantitative' },
     y: { field: 'language', type: 'nominal' },
+    color: { field: 'popularity', type: 'quantitative' },
   },
   chrome: {
     title: 'Language Popularity',
@@ -62,7 +68,7 @@ const donutSpec: ChartSpec = {
     { segment: 'Other', revenue: 12 },
   ],
   encoding: {
-    y: { field: 'revenue', type: 'quantitative' },
+    y: { field: 'revenue', type: 'quantitative', axis: { format: '$,.0f', label: 'Revenue ($B)' } },
     color: { field: 'segment', type: 'nominal' },
   },
   chrome: {
@@ -383,3 +389,357 @@ const genZTheme: ThemeConfig = {
 };
 
 export const GenZTheme = () => <Showcase theme={genZTheme} />;
+
+// ---------------------------------------------------------------------------
+// 12. Custom — Interactive spec editor with live preview
+// ---------------------------------------------------------------------------
+
+const columnSpec: ChartSpec = {
+  type: 'column',
+  data: [
+    { quarter: 'Q1', revenue: 42 },
+    { quarter: 'Q2', revenue: 58 },
+    { quarter: 'Q3', revenue: 35 },
+    { quarter: 'Q4', revenue: 71 },
+  ],
+  encoding: {
+    x: { field: 'quarter', type: 'nominal' },
+    y: { field: 'revenue', type: 'quantitative', axis: { format: '$,.0f' } },
+  },
+  chrome: {
+    title: 'Quarterly Revenue',
+    subtitle: 'Fiscal year 2024',
+  },
+};
+
+const scatterSpec: ChartSpec = {
+  type: 'scatter',
+  data: [
+    { height: 170, weight: 65, group: 'A' },
+    { height: 175, weight: 72, group: 'B' },
+    { height: 160, weight: 55, group: 'A' },
+    { height: 182, weight: 80, group: 'B' },
+    { height: 168, weight: 62, group: 'A' },
+    { height: 178, weight: 75, group: 'B' },
+  ],
+  encoding: {
+    x: { field: 'height', type: 'quantitative', axis: { label: 'Height (cm)' } },
+    y: { field: 'weight', type: 'quantitative', axis: { label: 'Weight (kg)' } },
+    color: { field: 'group', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Height vs Weight',
+    subtitle: 'Sample measurements by group',
+  },
+};
+
+const dotSpec: ChartSpec = {
+  type: 'dot',
+  data: [
+    { category: 'Engineering', value: 42 },
+    { category: 'Design', value: 28 },
+    { category: 'Marketing', value: 35 },
+    { category: 'Sales', value: 51 },
+    { category: 'Support', value: 19 },
+  ],
+  encoding: {
+    x: { field: 'value', type: 'quantitative' },
+    y: { field: 'category', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Team Sizes',
+    subtitle: 'Headcount by department',
+  },
+};
+
+const areaSpec: ChartSpec = {
+  type: 'area',
+  data: [
+    { date: '2020-01-01', value: 10, series: 'Mobile' },
+    { date: '2021-01-01', value: 25, series: 'Mobile' },
+    { date: '2022-01-01', value: 45, series: 'Mobile' },
+    { date: '2020-01-01', value: 30, series: 'Desktop' },
+    { date: '2021-01-01', value: 28, series: 'Desktop' },
+    { date: '2022-01-01', value: 22, series: 'Desktop' },
+  ],
+  encoding: {
+    x: { field: 'date', type: 'temporal' },
+    y: { field: 'value', type: 'quantitative' },
+    color: { field: 'series', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Traffic by Platform',
+    subtitle: 'Sessions over time (millions)',
+  },
+};
+
+const presets: Record<string, VizSpec> = {
+  Line: lineSpec,
+  Bar: barSpec,
+  Column: columnSpec,
+  Donut: donutSpec,
+  Scatter: scatterSpec,
+  Dot: dotSpec,
+  Area: areaSpec,
+  Table: tableSpec,
+};
+
+const defaultCustomTheme: ThemeConfig = {
+  colors: {
+    categorical: ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899'],
+    background: '#ffffff',
+    text: '#1e293b',
+    gridline: '#e2e8f0',
+    axis: '#94a3b8',
+  },
+  fonts: {
+    family: 'system-ui, -apple-system, sans-serif',
+  },
+};
+
+function specWithTheme(spec: VizSpec, theme: ThemeConfig): VizSpec {
+  return { ...spec, theme } as VizSpec;
+}
+
+const defaultJson = JSON.stringify(specWithTheme(lineSpec, defaultCustomTheme), null, 2);
+
+class ChartErrorBoundary extends React.Component<
+  { children: React.ReactNode; resetKey: number },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidUpdate(prevProps: { resetKey: number }) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div
+          style={{
+            padding: 24,
+            color: '#dc2626',
+            fontFamily: 'monospace',
+            fontSize: 13,
+            lineHeight: 1.6,
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Render error</div>
+          <div>{this.state.error.message}</div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export const CustomTheme = () => {
+  const [jsonText, setJsonText] = useState(defaultJson);
+  const [validSpec, setValidSpec] = useState<VizSpec>(specWithTheme(lineSpec, defaultCustomTheme));
+  const [error, setError] = useState<string | null>(null);
+  const [specVersion, setSpecVersion] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const processJson = useCallback((text: string) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      setError(`JSON parse error: ${(e as Error).message}`);
+      return;
+    }
+
+    const result: ValidationResult = validateSpec(parsed);
+    if (!result.valid) {
+      const msgs = result.errors
+        .map((err) => {
+          let msg = err.message;
+          if (err.path) msg = `[${err.path}] ${msg}`;
+          if (err.suggestion) msg += ` — ${err.suggestion}`;
+          return msg;
+        })
+        .join('\n');
+      setError(msgs);
+      return;
+    }
+
+    setError(null);
+    setValidSpec(result.normalized!);
+    setSpecVersion((v) => v + 1);
+  }, []);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const text = e.target.value;
+      setJsonText(text);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => processJson(text), 200);
+    },
+    [processJson],
+  );
+
+  const loadPreset = useCallback(
+    (name: string) => {
+      const preset = presets[name];
+      if (!preset) return;
+
+      // Preserve the current theme when switching presets
+      let currentTheme = defaultCustomTheme;
+      try {
+        const parsed = JSON.parse(jsonText);
+        if (parsed && typeof parsed === 'object' && parsed.theme) {
+          currentTheme = parsed.theme;
+        }
+      } catch {
+        // If current JSON is invalid, fall back to default theme
+      }
+
+      const withTheme = specWithTheme(preset, currentTheme);
+      const text = JSON.stringify(withTheme, null, 2);
+      setJsonText(text);
+      setError(null);
+      setValidSpec(withTheme);
+      setSpecVersion((v) => v + 1);
+    },
+    [jsonText],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const target = e.currentTarget;
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const text = `${jsonText.substring(0, start)}  ${jsonText.substring(end)}`;
+        setJsonText(text);
+        // Restore cursor position after React re-render
+        requestAnimationFrame(() => {
+          target.selectionStart = target.selectionEnd = start + 2;
+        });
+      }
+    },
+    [jsonText],
+  );
+
+  return (
+    <div style={{ display: 'flex', gap: 16, padding: 24, minHeight: '80vh' }}>
+      {/* Editor panel */}
+      <div style={{ flex: '0 0 42%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Preset buttons */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {Object.keys(presets).map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => loadPreset(name)}
+              style={{
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: 500,
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                border: '1px solid #e2e8f0',
+                borderRadius: 6,
+                background: '#f8fafc',
+                color: '#475569',
+                cursor: 'pointer',
+                lineHeight: 1,
+                transition: 'background 0.1s, border-color 0.1s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#eef2ff';
+                e.currentTarget.style.borderColor = '#c7d2fe';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          value={jsonText}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          style={{
+            flex: 1,
+            fontFamily: '"JetBrains Mono", "Fira Code", Menlo, monospace',
+            fontSize: 12,
+            lineHeight: 1.5,
+            padding: 16,
+            border: `1px solid ${error ? '#fca5a5' : '#e2e8f0'}`,
+            borderRadius: 8,
+            resize: 'none',
+            outline: 'none',
+            background: '#fafafa',
+            color: '#1e293b',
+            tabSize: 2,
+            whiteSpace: 'pre',
+            overflowWrap: 'normal',
+            overflowX: 'auto',
+          }}
+        />
+
+        {/* Status bar */}
+        {error ? (
+          <div
+            style={{
+              padding: '8px 12px',
+              fontSize: 11,
+              lineHeight: 1.5,
+              fontFamily: '"JetBrains Mono", "Fira Code", Menlo, monospace',
+              color: '#dc2626',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 6,
+              whiteSpace: 'pre-wrap',
+              maxHeight: 120,
+              overflow: 'auto',
+            }}
+          >
+            {error}
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '6px 12px',
+              fontSize: 11,
+              color: '#16a34a',
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: 6,
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+          >
+            Valid spec
+          </div>
+        )}
+      </div>
+
+      {/* Preview panel */}
+      <div style={{ flex: '1 1 58%', minHeight: 400 }}>
+        <ChartErrorBoundary resetKey={specVersion}>
+          {isTableSpec(validSpec) ? (
+            <DataTable spec={validSpec} />
+          ) : (
+            <Chart spec={validSpec as ChartSpec} />
+          )}
+        </ChartErrorBoundary>
+      </div>
+    </div>
+  );
+};

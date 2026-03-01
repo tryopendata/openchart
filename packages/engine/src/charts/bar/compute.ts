@@ -12,7 +12,7 @@ import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, groupByField } from '../utils';
+import { getColor, getSequentialColor, groupByField } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -62,9 +62,10 @@ export function computeBarMarks(
   const bandwidth = yScale.bandwidth();
   const baseline = xScale(0);
   const colorField = encoding.color?.field;
+  const isSequentialColor = encoding.color?.type === 'quantitative';
 
-  // If no color encoding, render simple bars
-  if (!colorField) {
+  // If no color encoding, or sequential color (value-based gradient), render simple bars
+  if (!colorField || isSequentialColor) {
     return computeSimpleBars(
       spec.data,
       xChannel.field,
@@ -74,6 +75,7 @@ export function computeBarMarks(
       bandwidth,
       baseline,
       scales,
+      isSequentialColor,
     );
   }
 
@@ -157,6 +159,7 @@ function computeSimpleBars(
   bandwidth: number,
   baseline: number,
   scales: ResolvedScales,
+  sequentialColor = false,
 ): RectMark[] {
   const marks: RectMark[] = [];
 
@@ -168,7 +171,9 @@ function computeSimpleBars(
     const bandY = yScale(category);
     if (bandY === undefined) continue;
 
-    const color = getColor(scales, '__default__');
+    const color = sequentialColor
+      ? getSequentialColor(scales, value)
+      : getColor(scales, '__default__');
     const xPos = value >= 0 ? baseline : xScale(value);
     const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
 

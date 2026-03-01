@@ -214,9 +214,18 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   // Update color scale to use theme palette
   if (scales.color) {
-    (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
-      theme.colors.categorical,
-    );
+    if (scales.color.type === 'sequential') {
+      // Sequential: use first sequential palette (or fall back to categorical endpoints)
+      const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
+      (scales.color.scale as import('d3-scale').ScaleLinear<string, string>).range([
+        seqStops[0],
+        seqStops[seqStops.length - 1],
+      ]);
+    } else {
+      (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
+        theme.colors.categorical,
+      );
+    }
   }
 
   // Set default color for single-series charts (no color encoding)

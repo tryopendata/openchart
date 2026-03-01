@@ -39,6 +39,9 @@ export type D3CategoricalScale =
 /** Union of all D3 scale types used by the engine. */
 export type D3Scale = D3ContinuousScale | D3CategoricalScale;
 
+/** A sequential color scale mapping numbers to color strings. */
+export type D3SequentialColorScale = ScaleLinear<string, string>;
+
 /**
  * A resolved scale wrapping a d3 scale with type metadata.
  * We need to carry the scale type around so axes and marks know
@@ -47,9 +50,9 @@ export type D3Scale = D3ContinuousScale | D3CategoricalScale;
  */
 export interface ResolvedScale {
   /** The d3 scale function. Maps domain value -> pixel position. */
-  scale: D3Scale;
+  scale: D3Scale | D3SequentialColorScale;
   /** The scale type for downstream use. */
-  type: 'linear' | 'time' | 'band' | 'ordinal' | 'point' | 'log';
+  type: 'linear' | 'time' | 'band' | 'ordinal' | 'point' | 'log' | 'sequential';
   /** The encoding channel this scale was derived from. */
   channel: EncodingChannel;
 }
@@ -217,6 +220,23 @@ function buildOrdinalColorScale(
   return { scale, type: 'ordinal', channel };
 }
 
+function buildSequentialColorScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  palette: string[],
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+  const domainMin = min(values) ?? 0;
+  const domainMax = max(values) ?? 1;
+
+  const scale = scaleLinear<string>()
+    .domain([domainMin, domainMax])
+    .range([palette[0], palette[palette.length - 1]])
+    .clamp(true);
+
+  return { scale, type: 'sequential', channel };
+}
+
 // ---------------------------------------------------------------------------
 // Positional scale selection
 // ---------------------------------------------------------------------------
@@ -377,25 +397,26 @@ export function computeScales(
   }
 
   if (encoding.color) {
-    // Color scale uses the categorical palette
-    result.color = buildOrdinalColorScale(
-      encoding.color,
-      data,
-      // Palette comes from theme but we use a sensible default here.
-      // The actual theme palette is applied in the compile pipeline.
-      [
-        '#1b7fa3',
-        '#c44e52',
-        '#6a9f58',
-        '#d47215',
-        '#507e79',
-        '#9a6a8d',
-        '#c4636b',
-        '#9c755f',
-        '#a88f22',
-        '#858078',
-      ],
-    );
+    const defaultPalette = [
+      '#1b7fa3',
+      '#c44e52',
+      '#6a9f58',
+      '#d47215',
+      '#507e79',
+      '#9a6a8d',
+      '#c4636b',
+      '#9c755f',
+      '#a88f22',
+      '#858078',
+    ];
+
+    if (encoding.color.type === 'quantitative') {
+      // Sequential color scale for value-based coloring
+      result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
+    } else {
+      // Categorical color scale for nominal/ordinal grouping
+      result.color = buildOrdinalColorScale(encoding.color, data, defaultPalette);
+    }
   }
 
   return result;

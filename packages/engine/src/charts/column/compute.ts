@@ -15,7 +15,7 @@ import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, groupByField } from '../utils';
+import { getColor, getSequentialColor, groupByField } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -66,8 +66,10 @@ export function computeColumnMarks(
   const baseline = yScale(0);
   const colorField = encoding.color?.field;
 
+  const isSequentialColor = encoding.color?.type === 'quantitative';
+
   // Color encoding present: decide between colored simple columns vs stacked
-  if (colorField) {
+  if (colorField && !isSequentialColor) {
     // Check if any category has multiple rows (actual stacking needed)
     const categoryGroups = groupByField(spec.data, xChannel.field);
     const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
@@ -109,6 +111,7 @@ export function computeColumnMarks(
     bandwidth,
     baseline,
     scales,
+    isSequentialColor,
   );
 }
 
@@ -122,6 +125,7 @@ function computeSimpleColumns(
   bandwidth: number,
   baseline: number,
   scales: ResolvedScales,
+  sequentialColor = false,
 ): RectMark[] {
   const marks: RectMark[] = [];
 
@@ -133,7 +137,9 @@ function computeSimpleColumns(
     const bandX = xScale(category);
     if (bandX === undefined) continue;
 
-    const color = getColor(scales, '__default__');
+    const color = sequentialColor
+      ? getSequentialColor(scales, value)
+      : getColor(scales, '__default__');
     const yPos = yScale(value);
     const columnHeight = Math.max(Math.abs(baseline - yPos), MIN_COLUMN_HEIGHT);
 

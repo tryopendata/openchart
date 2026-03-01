@@ -75,14 +75,14 @@ export const CHART_ENCODING_RULES: Record<ChartType, EncodingRule> = {
   bar: {
     x: required('quantitative'),
     y: required('nominal', 'ordinal'),
-    color: optional('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
     detail: optional('nominal'),
   },
   column: {
     x: required('nominal', 'ordinal', 'temporal'),
     y: required('quantitative'),
-    color: optional('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
     detail: optional('nominal'),
   },
