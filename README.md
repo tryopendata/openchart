@@ -4,7 +4,7 @@
 [![npm](https://img.shields.io/npm/v/@openchart/core)](https://www.npmjs.com/package/@openchart/core)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-From the team behind [OpenData](https://opnhub.ai), an open source data platform.
+From the team behind [OpenData](https://tryopendata.ai), an open source data platform.
 
 Publication-quality data graphics from a JSON spec. The kind of rich, annotated charts you see in the best newsrooms and research teams, generated from a simple declarative format that both humans and LLMs can write.
 
@@ -53,7 +53,7 @@ OpenChart works the other way around. You describe *what the chart should commun
 
 The spec is a plain JSON object. That makes it easy for both humans and LLMs to author, and simple to serialize, validate, and store. The headless engine means the same spec renders in React, Vue, Svelte, or vanilla JS without code changes.
 
-OpenChart is the visualization layer for [OpenData](https://opnhub.ai), where researchers and journalists work with public datasets. That context shaped its design: when someone is exploring economic trends or environmental data, the chart needs to communicate the finding clearly, not just plot numbers on a screen.
+OpenChart is the visualization layer for [OpenData](https://tryopendata.ai), where researchers and journalists work with public datasets. That context shaped its design: when someone is exploring economic trends or environmental data, the chart needs to communicate the finding clearly, not just plot numbers on a screen.
 
 Tables are a first-class visualization type, not an afterthought. They support heatmaps, sparklines, inline bars, category coloring, sorting, search, and pagination out of the box.
 
@@ -319,7 +319,7 @@ Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. No la
 
 ## Part of the OpenData ecosystem
 
-OpenChart is one piece of [OpenData](https://opnhub.ai), an open source platform for discovering, exploring, and visualizing public datasets. If you're looking for data to chart, that's a good place to start.
+OpenChart is one piece of [OpenData](https://tryopendata.ai), an open source platform for discovering, exploring, and visualizing public datasets. If you're looking for data to chart, that's a good place to start.
 
 ## License
 
