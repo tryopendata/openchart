@@ -6,6 +6,8 @@
 
 A declarative visualization library that compiles JSON specs into charts and data tables. Write what you want to see, not how to render it.
 
+<img alt="image" src="https://github.com/user-attachments/assets/a08a9237-8fe0-45ff-8203-898848a142ab" />
+
 ### [Interactive Examples](https://tryopendata.github.io/openchart/)
 
 ## Quick start
@@ -48,6 +50,9 @@ The spec is a plain JSON object. That makes it easy for both humans and LLMs to 
 
 Tables are treated as a visualization type, not an afterthought. They support heatmaps, sparklines, inline bars, category coloring, sorting, search, and pagination out of the box.
 
+<img alt="image" src="https://github.com/user-attachments/assets/392db37a-1ee1-4659-8b51-4fab0890e7a9" />
+
+
 ## Features
 
 | Category | What you get |
@@ -62,6 +67,8 @@ Tables are treated as a visualization type, not an afterthought. They support he
 | Responsive | Breakpoint-aware layout (label density, legend position, annotation placement) |
 | Graphs | Force-directed network visualization, canvas rendering, node interaction, search, zoom, keyboard navigation |
 | Export | SVG, PNG, CSV |
+
+![Clipboard-20260301-051059-787](https://github.com/user-attachments/assets/3f20cfab-76fe-4a44-8d8d-2fe624e6b3de)
 
 ## Installation
 
