@@ -4,6 +4,8 @@
 [![npm](https://img.shields.io/npm/v/@openchart/core)](https://www.npmjs.com/package/@openchart/core)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+From the team behind [OpenData](https://opnhub.ai), an open source data platform.
+
 Publication-quality data graphics from a JSON spec. The kind of rich, annotated charts you see in the best newsrooms and research teams, generated from a simple declarative format that both humans and LLMs can write.
 
 <img alt="image" src="https://github.com/user-attachments/assets/a08a9237-8fe0-45ff-8203-898848a142ab" />
@@ -51,6 +53,8 @@ OpenChart works the other way around. You describe *what the chart should commun
 
 The spec is a plain JSON object. That makes it easy for both humans and LLMs to author, and simple to serialize, validate, and store. The headless engine means the same spec renders in React, Vue, Svelte, or vanilla JS without code changes.
 
+OpenChart is the visualization layer for [OpenData](https://opnhub.ai), where researchers and journalists work with public datasets. That context shaped its design: when someone is exploring economic trends or environmental data, the chart needs to communicate the finding clearly, not just plot numbers on a screen.
+
 Tables are a first-class visualization type, not an afterthought. They support heatmaps, sparklines, inline bars, category coloring, sorting, search, and pagination out of the box.
 
 <img alt="image" src="https://github.com/user-attachments/assets/392db37a-1ee1-4659-8b51-4fab0890e7a9" />
@@ -78,6 +82,8 @@ Tables are a first-class visualization type, not an afterthought. They support h
 | Use case | Install |
 |----------|---------|
 | React app | `bun add @openchart/react` |
+| Vue 3 app | `bun add @openchart/vue` |
+| Svelte 5 app | `bun add @openchart/svelte` |
 | Vanilla JS / any framework | `bun add @openchart/vanilla` |
 | Types only / custom renderer | `bun add @openchart/core @openchart/engine` |
 
@@ -305,9 +311,15 @@ table.destroy();
 @openchart/engine     Headless compiler: spec in, layout out (no DOM)
 @openchart/vanilla    Imperative DOM rendering (SVG charts, HTML tables, canvas graphs)
 @openchart/react      React components wrapping vanilla with lifecycle management
+@openchart/vue        Vue 3 components wrapping vanilla with lifecycle management
+@openchart/svelte     Svelte 5 components wrapping vanilla with lifecycle management
 ```
 
-Dependency direction: `core <- engine <- vanilla <- react`. No lateral imports.
+Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. No lateral imports.
+
+## Part of the OpenData ecosystem
+
+OpenChart is one piece of [OpenData](https://opnhub.ai), an open source platform for discovering, exploring, and visualizing public datasets. If you're looking for data to chart, that's a good place to start.
 
 ## License
 
