@@ -8,8 +8,8 @@ import type { ChartSpec, TableSpec, ThemeConfig, VizSpec } from '@openchart/core
 import { isTableSpec } from '@openchart/core';
 import type { ValidationResult } from '@openchart/engine';
 import { validateSpec } from '@openchart/engine';
-import { Chart, DataTable } from '@openchart/react';
-import React, { useCallback, useRef, useState } from 'react';
+import { Chart, DataTable, useVizDarkMode, useVizTheme } from '@openchart/react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Shared demo data
@@ -394,114 +394,149 @@ export const GenZTheme = () => <Showcase theme={genZTheme} />;
 // 12. Custom — Interactive spec editor with live preview
 // ---------------------------------------------------------------------------
 
-const columnSpec: ChartSpec = {
-  type: 'column',
-  data: [
-    { quarter: 'Q1', revenue: 42 },
-    { quarter: 'Q2', revenue: 58 },
-    { quarter: 'Q3', revenue: 35 },
-    { quarter: 'Q4', revenue: 71 },
-  ],
-  encoding: {
-    x: { field: 'quarter', type: 'nominal' },
-    y: { field: 'revenue', type: 'quantitative', axis: { format: '$,.0f' } },
-  },
-  chrome: {
-    title: 'Quarterly Revenue',
-    subtitle: 'Fiscal year 2024',
-  },
-};
+// ---- Fonts ----------------------------------------------------------------
 
-const scatterSpec: ChartSpec = {
-  type: 'scatter',
-  data: [
-    { height: 170, weight: 65, group: 'A' },
-    { height: 175, weight: 72, group: 'B' },
-    { height: 160, weight: 55, group: 'A' },
-    { height: 182, weight: 80, group: 'B' },
-    { height: 168, weight: 62, group: 'A' },
-    { height: 178, weight: 75, group: 'B' },
-  ],
-  encoding: {
-    x: { field: 'height', type: 'quantitative', axis: { label: 'Height (cm)' } },
-    y: { field: 'weight', type: 'quantitative', axis: { label: 'Weight (kg)' } },
-    color: { field: 'group', type: 'nominal' },
-  },
-  chrome: {
-    title: 'Height vs Weight',
-    subtitle: 'Sample measurements by group',
-  },
-};
-
-const dotSpec: ChartSpec = {
-  type: 'dot',
-  data: [
-    { category: 'Engineering', value: 42 },
-    { category: 'Design', value: 28 },
-    { category: 'Marketing', value: 35 },
-    { category: 'Sales', value: 51 },
-    { category: 'Support', value: 19 },
-  ],
-  encoding: {
-    x: { field: 'value', type: 'quantitative' },
-    y: { field: 'category', type: 'nominal' },
-  },
-  chrome: {
-    title: 'Team Sizes',
-    subtitle: 'Headcount by department',
-  },
-};
-
-const areaSpec: ChartSpec = {
-  type: 'area',
-  data: [
-    { date: '2020-01-01', value: 10, series: 'Mobile' },
-    { date: '2021-01-01', value: 25, series: 'Mobile' },
-    { date: '2022-01-01', value: 45, series: 'Mobile' },
-    { date: '2020-01-01', value: 30, series: 'Desktop' },
-    { date: '2021-01-01', value: 28, series: 'Desktop' },
-    { date: '2022-01-01', value: 22, series: 'Desktop' },
-  ],
-  encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'value', type: 'quantitative' },
-    color: { field: 'series', type: 'nominal' },
-  },
-  chrome: {
-    title: 'Traffic by Platform',
-    subtitle: 'Sessions over time (millions)',
-  },
-};
-
-const presets: Record<string, VizSpec> = {
-  Line: lineSpec,
-  Bar: barSpec,
-  Column: columnSpec,
-  Donut: donutSpec,
-  Scatter: scatterSpec,
-  Dot: dotSpec,
-  Area: areaSpec,
-  Table: tableSpec,
-};
-
-const defaultCustomTheme: ThemeConfig = {
-  colors: {
-    categorical: ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899'],
-    background: '#ffffff',
-    text: '#1e293b',
-    gridline: '#e2e8f0',
-    axis: '#94a3b8',
-  },
-  fonts: {
-    family: 'system-ui, -apple-system, sans-serif',
-  },
-};
-
-function specWithTheme(spec: VizSpec, theme: ThemeConfig): VizSpec {
-  return { ...spec, theme } as VizSpec;
+function useEditorFonts() {
+  useEffect(() => {
+    const id = 'custom-theme-fonts';
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href =
+      'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap';
+    document.head.appendChild(link);
+  }, []);
 }
 
-const defaultJson = JSON.stringify(specWithTheme(lineSpec, defaultCustomTheme), null, 2);
+// ---- Color helpers --------------------------------------------------------
+
+function editorHexToRgba(hex: string, alpha: number): string {
+  const cl = hex.replace('#', '');
+  const r = Number.parseInt(cl.slice(0, 2), 16);
+  const g = Number.parseInt(cl.slice(2, 4), 16);
+  const b = Number.parseInt(cl.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function editorIsColorDark(hex: string): boolean {
+  const cl = hex.replace('#', '');
+  const r = Number.parseInt(cl.slice(0, 2), 16);
+  const g = Number.parseInt(cl.slice(2, 4), 16);
+  const b = Number.parseInt(cl.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+}
+
+// ---- Theme-aware color tokens ---------------------------------------------
+
+function useEditorColors() {
+  const theme = useVizTheme();
+  const darkMode = useVizDarkMode();
+
+  const bg = theme?.colors?.background ?? (darkMode === 'force' ? '#1a1a2e' : '#ffffff');
+  const isDark = editorIsColorDark(bg);
+  const text = theme?.colors?.text ?? (isDark ? '#e2e8f0' : '#0f172a');
+  const gridline = theme?.colors?.gridline;
+  const accent = theme?.colors?.categorical?.[0] ?? (isDark ? '#818cf8' : '#4f46e5');
+
+  return {
+    isDark,
+    bg,
+    text,
+    accent,
+    surface: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)',
+    surfaceElevated: bg,
+    border: gridline
+      ? editorHexToRgba(gridline, isDark ? 0.6 : 0.5)
+      : isDark
+        ? 'rgba(255,255,255,0.06)'
+        : 'rgba(0,0,0,0.09)',
+    borderAccent: editorHexToRgba(accent, 0.4),
+    textSecondary: editorHexToRgba(text, isDark ? 0.65 : 0.6),
+    textMuted: editorHexToRgba(text, isDark ? 0.35 : 0.35),
+    shadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+    codeBg: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.03)',
+    codeBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    badgeBg: editorHexToRgba(accent, isDark ? 0.15 : 0.1),
+    badgeText: accent,
+    btnBg: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)',
+    btnBgHover: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.04)',
+    btnBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+    syntaxString: isDark ? '#a5d6a7' : '#16a34a',
+    syntaxNumber: isDark ? '#ffcc80' : '#d97706',
+    syntaxKeyword: isDark ? '#80deea' : '#0891b2',
+  };
+}
+
+type EditorColors = ReturnType<typeof useEditorColors>;
+
+// ---- JSON syntax highlighting ---------------------------------------------
+
+function highlightJson(json: string, c: EditorColors): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const regex =
+    /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|(\btrue\b|\bfalse\b|\bnull\b)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let i = 0;
+
+  while ((match = regex.exec(json)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(
+        <span key={i++} style={{ color: c.textMuted }}>
+          {json.slice(lastIndex, match.index)}
+        </span>,
+      );
+    }
+
+    if (match[1] !== undefined) {
+      if (match[2] !== undefined) {
+        nodes.push(
+          <span key={i++} style={{ color: c.accent }}>
+            {match[1]}
+          </span>,
+        );
+        nodes.push(
+          <span key={i++} style={{ color: c.textMuted }}>
+            {match[2]}
+          </span>,
+        );
+      } else {
+        nodes.push(
+          <span key={i++} style={{ color: c.syntaxString }}>
+            {match[1]}
+          </span>,
+        );
+      }
+    } else if (match[3] !== undefined) {
+      nodes.push(
+        <span key={i++} style={{ color: c.syntaxNumber }}>
+          {match[3]}
+        </span>,
+      );
+    } else if (match[4] !== undefined) {
+      nodes.push(
+        <span key={i++} style={{ color: c.syntaxKeyword }}>
+          {match[4]}
+        </span>,
+      );
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < json.length) {
+    nodes.push(
+      <span key={i++} style={{ color: c.textMuted }}>
+        {json.slice(lastIndex)}
+      </span>,
+    );
+  }
+
+  return nodes;
+}
+
+// ---- Error boundary -------------------------------------------------------
 
 class ChartErrorBoundary extends React.Component<
   { children: React.ReactNode; resetKey: number },
@@ -526,7 +561,7 @@ class ChartErrorBoundary extends React.Component<
           style={{
             padding: 24,
             color: '#dc2626',
-            fontFamily: 'monospace',
+            fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 13,
             lineHeight: 1.6,
           }}
@@ -540,12 +575,359 @@ class ChartErrorBoundary extends React.Component<
   }
 }
 
-export const CustomTheme = () => {
+// ---- Real-world data ------------------------------------------------------
+
+// Bureau of Labor Statistics: US monthly unemployment rate (seasonally adjusted)
+// Monthly for 2020, quarterly for 2021-2024
+const unemploymentData = [
+  { date: '2020-01-01', rate: 3.5 },
+  { date: '2020-02-01', rate: 3.5 },
+  { date: '2020-03-01', rate: 4.4 },
+  { date: '2020-04-01', rate: 14.7 },
+  { date: '2020-05-01', rate: 13.3 },
+  { date: '2020-06-01', rate: 11.1 },
+  { date: '2020-07-01', rate: 10.2 },
+  { date: '2020-08-01', rate: 8.4 },
+  { date: '2020-09-01', rate: 7.8 },
+  { date: '2020-10-01', rate: 6.9 },
+  { date: '2020-11-01', rate: 6.7 },
+  { date: '2020-12-01', rate: 6.7 },
+  { date: '2021-03-01', rate: 6.0 },
+  { date: '2021-06-01', rate: 5.9 },
+  { date: '2021-09-01', rate: 4.8 },
+  { date: '2021-12-01', rate: 3.9 },
+  { date: '2022-03-01', rate: 3.6 },
+  { date: '2022-06-01', rate: 3.6 },
+  { date: '2022-09-01', rate: 3.5 },
+  { date: '2022-12-01', rate: 3.5 },
+  { date: '2023-03-01', rate: 3.5 },
+  { date: '2023-06-01', rate: 3.6 },
+  { date: '2023-09-01', rate: 3.8 },
+  { date: '2023-12-01', rate: 3.7 },
+  { date: '2024-03-01', rate: 3.8 },
+  { date: '2024-06-01', rate: 4.0 },
+  { date: '2024-09-01', rate: 4.2 },
+  { date: '2024-12-01', rate: 4.1 },
+];
+
+// Default spec with all ChartSpec options demonstrated
+const defaultEditorSpec: ChartSpec = {
+  type: 'line',
+  data: unemploymentData,
+  encoding: {
+    x: {
+      field: 'date',
+      type: 'temporal',
+      axis: { label: 'Date' },
+    },
+    y: {
+      field: 'rate',
+      type: 'quantitative',
+      axis: { label: 'Unemployment Rate (%)', format: '.1f' },
+      scale: { zero: true },
+    },
+  },
+  chrome: {
+    title: "The Job Market's V-Shaped Recovery",
+    subtitle: 'US monthly unemployment rate, seasonally adjusted, 2020\u20132024',
+    source: 'Source: Bureau of Labor Statistics',
+    byline: 'Chart: OpenChart',
+  },
+  annotations: [
+    {
+      type: 'range',
+      x1: '2020-03-01',
+      x2: '2020-06-01',
+      label: 'COVID lockdowns',
+      fill: '#dc2626',
+      opacity: 0.08,
+    },
+    {
+      type: 'refline',
+      y: 3.5,
+      label: 'Pre-pandemic: 3.5%',
+      style: 'dashed',
+      stroke: '#94a3b8',
+      strokeWidth: 1,
+    },
+    {
+      type: 'text',
+      x: '2020-04-01',
+      y: 14.7,
+      text: 'Peak: 14.7%',
+      fontSize: 11,
+      anchor: 'bottom',
+      connector: true,
+      offset: { dx: 0, dy: 16 },
+    },
+  ],
+  labels: { density: 'none' },
+  legend: { position: 'top' },
+  responsive: true,
+  theme: {
+    colors: {
+      categorical: ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899'],
+      sequential: { blue: ['#eff6ff', '#3b82f6', '#1e3a5f'] },
+      diverging: { 'red-blue': ['#dc2626', '#f5f5f5', '#2563eb'] },
+      background: '#ffffff',
+      text: '#1e293b',
+      gridline: '#e2e8f0',
+      axis: '#94a3b8',
+    },
+    fonts: {
+      family: 'system-ui, -apple-system, sans-serif',
+      mono: "'JetBrains Mono', monospace",
+    },
+    spacing: { padding: 20, chromeGap: 6 },
+    borderRadius: 4,
+  },
+  darkMode: 'off',
+};
+
+// IMF World Economic Outlook, Oct 2024: nominal GDP (USD trillions)
+const gdpBarSpec: ChartSpec = {
+  type: 'bar',
+  data: [
+    { country: 'United States', gdp: 28.78 },
+    { country: 'China', gdp: 18.53 },
+    { country: 'Germany', gdp: 4.59 },
+    { country: 'Japan', gdp: 4.19 },
+    { country: 'India', gdp: 3.94 },
+    { country: 'United Kingdom', gdp: 3.5 },
+    { country: 'France', gdp: 3.13 },
+    { country: 'Italy', gdp: 2.33 },
+    { country: 'Brazil', gdp: 2.33 },
+    { country: 'Canada', gdp: 2.24 },
+  ],
+  encoding: {
+    x: {
+      field: 'gdp',
+      type: 'quantitative',
+      axis: { label: 'GDP (USD trillions)', format: '$,.1f' },
+    },
+    y: { field: 'country', type: 'nominal' },
+    color: { field: 'gdp', type: 'quantitative' },
+  },
+  chrome: {
+    title: "The World's Largest Economies",
+    subtitle: 'Nominal GDP in trillions of US dollars, 2024 estimates',
+    source: 'Source: IMF World Economic Outlook, October 2024',
+  },
+};
+
+// BLS: US monthly nonfarm payroll gains (thousands), 2024
+const columnSpec: ChartSpec = {
+  type: 'column',
+  data: [
+    { month: 'Jan', jobs: 256 },
+    { month: 'Feb', jobs: 270 },
+    { month: 'Mar', jobs: 315 },
+    { month: 'Apr', jobs: 108 },
+    { month: 'May', jobs: 216 },
+    { month: 'Jun', jobs: 179 },
+    { month: 'Jul', jobs: 118 },
+    { month: 'Aug', jobs: 159 },
+    { month: 'Sep', jobs: 254 },
+    { month: 'Oct', jobs: 12 },
+    { month: 'Nov', jobs: 227 },
+    { month: 'Dec', jobs: 256 },
+  ],
+  encoding: {
+    x: { field: 'month', type: 'ordinal' },
+    y: { field: 'jobs', type: 'quantitative', axis: { label: 'Jobs added (thousands)' } },
+  },
+  chrome: {
+    title: 'A Bumpy Year for Hiring',
+    subtitle: 'Monthly nonfarm payroll gains (thousands), 2024',
+    source: 'Source: Bureau of Labor Statistics',
+  },
+};
+
+// IDC Worldwide Quarterly Mobile Phone Tracker, Q3 2024
+const _smartphoneDonutSpec: ChartSpec = {
+  type: 'donut',
+  data: [
+    { vendor: 'Samsung', share: 18.4 },
+    { vendor: 'Apple', share: 17.7 },
+    { vendor: 'Xiaomi', share: 14.3 },
+    { vendor: 'OPPO', share: 8.8 },
+    { vendor: 'vivo', share: 7.7 },
+    { vendor: 'Others', share: 33.1 },
+  ],
+  encoding: {
+    y: { field: 'share', type: 'quantitative', axis: { format: '.1f', label: 'Market share (%)' } },
+    color: { field: 'vendor', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Samsung Leads a Fragmented Market',
+    subtitle: 'Global smartphone shipment share, Q3 2024',
+    source: 'Source: IDC Quarterly Mobile Phone Tracker',
+  },
+};
+
+// World Bank: life expectancy vs GDP per capita (select countries, 2022)
+const _scatterSpec: ChartSpec = {
+  type: 'scatter',
+  data: [
+    { country: 'Norway', gdpPerCapita: 82832, lifeExpectancy: 83.3 },
+    { country: 'United States', gdpPerCapita: 76330, lifeExpectancy: 77.5 },
+    { country: 'Germany', gdpPerCapita: 48718, lifeExpectancy: 80.6 },
+    { country: 'Japan', gdpPerCapita: 33815, lifeExpectancy: 84.8 },
+    { country: 'South Korea', gdpPerCapita: 32423, lifeExpectancy: 83.7 },
+    { country: 'Chile', gdpPerCapita: 16265, lifeExpectancy: 78.9 },
+    { country: 'China', gdpPerCapita: 12720, lifeExpectancy: 78.6 },
+    { country: 'Brazil', gdpPerCapita: 8917, lifeExpectancy: 72.8 },
+    { country: 'India', gdpPerCapita: 2389, lifeExpectancy: 67.2 },
+    { country: 'Nigeria', gdpPerCapita: 1621, lifeExpectancy: 52.7 },
+    { country: 'Ethiopia', gdpPerCapita: 1027, lifeExpectancy: 61.8 },
+  ],
+  encoding: {
+    x: {
+      field: 'gdpPerCapita',
+      type: 'quantitative',
+      axis: { label: 'GDP per capita (USD)', format: '$,.0f' },
+      scale: { type: 'log' },
+    },
+    y: {
+      field: 'lifeExpectancy',
+      type: 'quantitative',
+      axis: { label: 'Life expectancy (years)', format: '.0f' },
+    },
+    color: { field: 'country', type: 'nominal' },
+  },
+  labels: { density: 'all' },
+  chrome: {
+    title: 'Wealth and Health of Nations',
+    subtitle: 'Life expectancy vs GDP per capita (PPP), select countries, 2022',
+    source: 'Source: World Bank Open Data',
+  },
+};
+
+// US Census Bureau: 2023 population estimates for largest cities
+const _dotSpec: ChartSpec = {
+  type: 'dot',
+  data: [
+    { city: 'New York', population: 8258035 },
+    { city: 'Los Angeles', population: 3820914 },
+    { city: 'Chicago', population: 2664452 },
+    { city: 'Houston', population: 2314157 },
+    { city: 'Phoenix', population: 1650070 },
+    { city: 'Philadelphia', population: 1550542 },
+    { city: 'San Antonio', population: 1495295 },
+    { city: 'San Diego', population: 1388320 },
+    { city: 'Dallas', population: 1302868 },
+    { city: 'Austin', population: 979882 },
+  ],
+  encoding: {
+    x: { field: 'population', type: 'quantitative', axis: { label: 'Population', format: ',.0f' } },
+    y: { field: 'city', type: 'nominal' },
+  },
+  chrome: {
+    title: "America's Largest Cities",
+    subtitle: '2023 population estimates for the 10 most populous US cities',
+    source: 'Source: US Census Bureau',
+  },
+};
+
+// EIA: US electricity generation by source (billion kWh), 2020-2024
+const _areaSpec: ChartSpec = {
+  type: 'area',
+  data: [
+    { year: '2020-01-01', source: 'Natural Gas', generation: 1617 },
+    { year: '2021-01-01', source: 'Natural Gas', generation: 1575 },
+    { year: '2022-01-01', source: 'Natural Gas', generation: 1689 },
+    { year: '2023-01-01', source: 'Natural Gas', generation: 1748 },
+    { year: '2024-01-01', source: 'Natural Gas', generation: 1802 },
+    { year: '2020-01-01', source: 'Renewables', generation: 834 },
+    { year: '2021-01-01', source: 'Renewables', generation: 886 },
+    { year: '2022-01-01', source: 'Renewables', generation: 913 },
+    { year: '2023-01-01', source: 'Renewables', generation: 976 },
+    { year: '2024-01-01', source: 'Renewables', generation: 1038 },
+    { year: '2020-01-01', source: 'Coal', generation: 774 },
+    { year: '2021-01-01', source: 'Coal', generation: 899 },
+    { year: '2022-01-01', source: 'Coal', generation: 826 },
+    { year: '2023-01-01', source: 'Coal', generation: 665 },
+    { year: '2024-01-01', source: 'Coal', generation: 594 },
+    { year: '2020-01-01', source: 'Nuclear', generation: 790 },
+    { year: '2021-01-01', source: 'Nuclear', generation: 778 },
+    { year: '2022-01-01', source: 'Nuclear', generation: 772 },
+    { year: '2023-01-01', source: 'Nuclear', generation: 775 },
+    { year: '2024-01-01', source: 'Nuclear', generation: 780 },
+  ],
+  encoding: {
+    x: { field: 'year', type: 'temporal' },
+    y: {
+      field: 'generation',
+      type: 'quantitative',
+      axis: { label: 'Generation (billion kWh)' },
+    },
+    color: { field: 'source', type: 'nominal' },
+  },
+  chrome: {
+    title: 'The Changing US Power Grid',
+    subtitle: 'Electricity generation by source, billion kilowatt-hours, 2020\u20132024',
+    source: 'Source: US Energy Information Administration',
+  },
+};
+
+// IMF WEO: economic indicators for major economies, 2024 estimates
+const economyTableSpec: TableSpec = {
+  type: 'table',
+  data: [
+    { country: 'United States', gdp: 28781, population: 340, gdpPerCapita: 84651, growth: 2.8 },
+    { country: 'China', gdp: 18533, population: 1425, gdpPerCapita: 13005, growth: 4.8 },
+    { country: 'Germany', gdp: 4592, population: 84, gdpPerCapita: 54667, growth: 0.0 },
+    { country: 'Japan', gdp: 4186, population: 124, gdpPerCapita: 33758, growth: 0.3 },
+    { country: 'India', gdp: 3937, population: 1442, gdpPerCapita: 2731, growth: 7.0 },
+    { country: 'United Kingdom', gdp: 3495, population: 68, gdpPerCapita: 51397, growth: 1.1 },
+    { country: 'France', gdp: 3131, population: 68, gdpPerCapita: 46044, growth: 1.1 },
+    { country: 'Brazil', gdp: 2331, population: 217, gdpPerCapita: 10742, growth: 3.0 },
+  ],
+  columns: [
+    { key: 'country', label: 'Country' },
+    { key: 'gdp', label: 'GDP ($B)', format: '$,.0f', bar: {} },
+    { key: 'population', label: 'Pop (M)', format: ',.0f' },
+    { key: 'gdpPerCapita', label: 'GDP/Capita', format: '$,.0f' },
+    { key: 'growth', label: 'Growth %', format: '+.1f' },
+  ],
+  chrome: {
+    title: "The World's Major Economies at a Glance",
+    subtitle: '2024 estimates: GDP, population, and growth rates',
+    source: 'Source: IMF World Economic Outlook, October 2024',
+  },
+};
+
+function specWithTheme(spec: VizSpec, theme: ThemeConfig): VizSpec {
+  return { ...spec, theme } as VizSpec;
+}
+
+const editorPresets: Record<string, VizSpec> = {
+  Line: defaultEditorSpec,
+  Bar: gdpBarSpec,
+  Column: columnSpec,
+  Donut: _smartphoneDonutSpec,
+  Scatter: _scatterSpec,
+  Dot: _dotSpec,
+  Area: _areaSpec,
+  Table: economyTableSpec,
+};
+
+const defaultJson = JSON.stringify(defaultEditorSpec, null, 2);
+
+// ---- Main component -------------------------------------------------------
+
+function SpecEditor() {
+  const c = useEditorColors();
+  useEditorFonts();
+
   const [jsonText, setJsonText] = useState(defaultJson);
-  const [validSpec, setValidSpec] = useState<VizSpec>(specWithTheme(lineSpec, defaultCustomTheme));
+  const [validSpec, setValidSpec] = useState<VizSpec>(defaultEditorSpec);
   const [error, setError] = useState<string | null>(null);
   const [specVersion, setSpecVersion] = useState(0);
+  const [activePreset, setActivePreset] = useState('Line');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
 
   const processJson = useCallback((text: string) => {
     let parsed: unknown;
@@ -562,7 +944,7 @@ export const CustomTheme = () => {
         .map((err) => {
           let msg = err.message;
           if (err.path) msg = `[${err.path}] ${msg}`;
-          if (err.suggestion) msg += ` — ${err.suggestion}`;
+          if (err.suggestion) msg += `\n  \u2192 ${err.suggestion}`;
           return msg;
         })
         .join('\n');
@@ -587,26 +969,26 @@ export const CustomTheme = () => {
 
   const loadPreset = useCallback(
     (name: string) => {
-      const preset = presets[name];
+      const preset = editorPresets[name];
       if (!preset) return;
 
-      // Preserve the current theme when switching presets
-      let currentTheme = defaultCustomTheme;
+      let currentTheme = defaultEditorSpec.theme;
       try {
         const parsed = JSON.parse(jsonText);
-        if (parsed && typeof parsed === 'object' && parsed.theme) {
+        if (parsed?.theme && typeof parsed.theme === 'object') {
           currentTheme = parsed.theme;
         }
       } catch {
-        // If current JSON is invalid, fall back to default theme
+        // keep default theme if current JSON is invalid
       }
 
-      const withTheme = specWithTheme(preset, currentTheme);
+      const withTheme = specWithTheme(preset, currentTheme!);
       const text = JSON.stringify(withTheme, null, 2);
       setJsonText(text);
       setError(null);
       setValidSpec(withTheme);
       setSpecVersion((v) => v + 1);
+      setActivePreset(name);
     },
     [jsonText],
   );
@@ -618,9 +1000,8 @@ export const CustomTheme = () => {
         const target = e.currentTarget;
         const start = target.selectionStart;
         const end = target.selectionEnd;
-        const text = `${jsonText.substring(0, start)}  ${jsonText.substring(end)}`;
-        setJsonText(text);
-        // Restore cursor position after React re-render
+        const updated = `${jsonText.substring(0, start)}  ${jsonText.substring(end)}`;
+        setJsonText(updated);
         requestAnimationFrame(() => {
           target.selectionStart = target.selectionEnd = start + 2;
         });
@@ -629,117 +1010,312 @@ export const CustomTheme = () => {
     [jsonText],
   );
 
+  const handleScroll = useCallback(() => {
+    if (preRef.current && textareaRef.current) {
+      preRef.current.scrollTop = textareaRef.current.scrollTop;
+      preRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  }, []);
+
+  const mono = "'IBM Plex Mono', 'SF Mono', ui-monospace, monospace";
+  const display = "'Bricolage Grotesque', system-ui, sans-serif";
+
+  // Shared style for textarea and pre overlay (must be identical for alignment)
+  const codeStyle: React.CSSProperties = {
+    fontFamily: mono,
+    fontSize: 12,
+    lineHeight: '18px',
+    padding: 16,
+    margin: 0,
+    border: 'none',
+    whiteSpace: 'pre',
+    tabSize: 2,
+    letterSpacing: 'normal',
+    wordBreak: 'normal',
+    boxSizing: 'border-box',
+  };
+
   return (
-    <div style={{ display: 'flex', gap: 16, padding: 24, minHeight: '80vh' }}>
-      {/* Editor panel */}
-      <div style={{ flex: '0 0 42%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* Preset buttons */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {Object.keys(presets).map((name) => (
+    <div
+      style={{
+        maxWidth: 960,
+        margin: '0 auto',
+        padding: '40px 32px 64px',
+        fontFamily: display,
+        color: c.text,
+        transition: 'color 0.25s ease',
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: 28 }}>
+        <div
+          style={{
+            display: 'inline-block',
+            padding: '3px 10px',
+            borderRadius: 100,
+            background: c.badgeBg,
+            color: c.badgeText,
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase' as const,
+            marginBottom: 12,
+            fontFamily: mono,
+          }}
+        >
+          Spec Editor
+        </div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 28,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            color: c.text,
+            lineHeight: 1.2,
+          }}
+        >
+          Custom Theme
+        </h1>
+        <p
+          style={{
+            margin: '8px 0 0',
+            fontSize: 14,
+            color: c.textSecondary,
+            lineHeight: 1.5,
+            maxWidth: 600,
+          }}
+        >
+          Edit the full VizSpec JSON to customize chart type, data, encoding, annotations, and
+          theme. Changes are validated and rendered in real time. Use the presets to switch chart
+          types while preserving your theme.
+        </p>
+      </div>
+
+      {/* Toolbar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '10px 16px',
+          borderRadius: 10,
+          background: c.surface,
+          border: `1px solid ${c.border}`,
+          marginBottom: 20,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: c.textMuted,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+            fontFamily: mono,
+            marginRight: 4,
+          }}
+        >
+          Presets
+        </span>
+        {Object.keys(editorPresets).map((name) => {
+          const isActive = name === activePreset;
+          return (
             <button
               key={name}
               type="button"
               onClick={() => loadPreset(name)}
               style={{
-                padding: '4px 10px',
-                fontSize: 11,
-                fontWeight: 500,
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                border: '1px solid #e2e8f0',
+                padding: '5px 12px',
+                fontSize: 12,
+                fontWeight: isActive ? 600 : 400,
+                fontFamily: display,
+                border: `1px solid ${isActive ? c.borderAccent : c.btnBorder}`,
                 borderRadius: 6,
-                background: '#f8fafc',
-                color: '#475569',
+                background: isActive ? c.badgeBg : c.btnBg,
+                color: isActive ? c.accent : c.textSecondary,
                 cursor: 'pointer',
                 lineHeight: 1,
-                transition: 'background 0.1s, border-color 0.1s',
+                transition: 'all 0.15s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#eef2ff';
-                e.currentTarget.style.borderColor = '#c7d2fe';
+                if (!isActive) {
+                  e.currentTarget.style.background = c.btnBgHover;
+                  e.currentTarget.style.borderColor = c.borderAccent;
+                  e.currentTarget.style.color = c.text;
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#f8fafc';
-                e.currentTarget.style.borderColor = '#e2e8f0';
+                if (!isActive) {
+                  e.currentTarget.style.background = c.btnBg;
+                  e.currentTarget.style.borderColor = c.btnBorder;
+                  e.currentTarget.style.color = c.textSecondary;
+                }
               }}
             >
               {name}
             </button>
-          ))}
+          );
+        })}
+
+        {/* Status indicator */}
+        <span
+          style={{
+            marginLeft: 'auto',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontFamily: mono,
+            fontSize: 11,
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              background: error ? '#dc2626' : '#22c55e',
+              display: 'inline-block',
+              transition: 'background 0.2s',
+            }}
+          />
+          <span style={{ color: error ? '#dc2626' : c.textMuted }}>
+            {error ? 'Error' : 'Valid'}
+          </span>
+        </span>
+      </div>
+
+      {/* Chart card */}
+      <div
+        style={{
+          borderRadius: 12,
+          border: `1px solid ${c.border}`,
+          background: c.surfaceElevated,
+          boxShadow: c.shadow,
+          overflow: 'hidden',
+          transition: 'background 0.25s ease, border-color 0.25s ease',
+        }}
+      >
+        <div style={{ height: 440 }}>
+          <ChartErrorBoundary resetKey={specVersion}>
+            {isTableSpec(validSpec) ? (
+              <DataTable spec={validSpec} theme={validSpec.theme} darkMode={validSpec.darkMode} />
+            ) : (
+              <Chart
+                spec={validSpec as ChartSpec}
+                theme={(validSpec as ChartSpec).theme}
+                darkMode={(validSpec as ChartSpec).darkMode ?? 'off'}
+              />
+            )}
+          </ChartErrorBoundary>
+        </div>
+      </div>
+
+      {/* Editor panel */}
+      <div
+        style={{
+          marginTop: 20,
+          borderRadius: 10,
+          border: `1px solid ${c.border}`,
+          background: c.codeBg,
+          overflow: 'hidden',
+          transition: 'background 0.25s ease, border-color 0.25s ease',
+        }}
+      >
+        {/* Editor header */}
+        <div
+          style={{
+            padding: '10px 16px',
+            borderBottom: `1px solid ${c.codeBorder}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: c.textSecondary,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase' as const,
+              fontFamily: mono,
+            }}
+          >
+            Spec JSON
+          </span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: c.textMuted, fontFamily: mono }}>
+            {jsonText.split('\n').length} lines
+          </span>
         </div>
 
-        {/* Textarea */}
-        <textarea
-          value={jsonText}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          style={{
-            flex: 1,
-            fontFamily: '"JetBrains Mono", "Fira Code", Menlo, monospace',
-            fontSize: 12,
-            lineHeight: 1.5,
-            padding: 16,
-            border: `1px solid ${error ? '#fca5a5' : '#e2e8f0'}`,
-            borderRadius: 8,
-            resize: 'none',
-            outline: 'none',
-            background: '#fafafa',
-            color: '#1e293b',
-            tabSize: 2,
-            whiteSpace: 'pre',
-            overflowWrap: 'normal',
-            overflowX: 'auto',
-          }}
-        />
+        {/* Syntax-highlighted editor */}
+        <div style={{ position: 'relative', height: 420, overflow: 'hidden' }}>
+          <pre
+            ref={preRef}
+            aria-hidden="true"
+            style={{
+              ...codeStyle,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              background: 'transparent',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <code>{highlightJson(jsonText, c)}</code>
+          </pre>
+          <textarea
+            ref={textareaRef}
+            value={jsonText}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onScroll={handleScroll}
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            style={{
+              ...codeStyle,
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              color: 'transparent',
+              caretColor: c.text,
+              background: 'transparent',
+              outline: 'none',
+              resize: 'none',
+              overflow: 'auto',
+            }}
+          />
+        </div>
 
-        {/* Status bar */}
-        {error ? (
+        {/* Error details */}
+        {error && (
           <div
             style={{
-              padding: '8px 12px',
+              padding: '10px 16px',
+              borderTop: `1px solid ${c.codeBorder}`,
+              fontFamily: mono,
               fontSize: 11,
-              lineHeight: 1.5,
-              fontFamily: '"JetBrains Mono", "Fira Code", Menlo, monospace',
+              lineHeight: 1.6,
               color: '#dc2626',
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: 6,
               whiteSpace: 'pre-wrap',
-              maxHeight: 120,
+              maxHeight: 140,
               overflow: 'auto',
             }}
           >
             {error}
           </div>
-        ) : (
-          <div
-            style={{
-              padding: '6px 12px',
-              fontSize: 11,
-              color: '#16a34a',
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: 6,
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-            }}
-          >
-            Valid spec
-          </div>
         )}
-      </div>
-
-      {/* Preview panel */}
-      <div style={{ flex: '1 1 58%', minHeight: 400 }}>
-        <ChartErrorBoundary resetKey={specVersion}>
-          {isTableSpec(validSpec) ? (
-            <DataTable spec={validSpec} />
-          ) : (
-            <Chart spec={validSpec as ChartSpec} />
-          )}
-        </ChartErrorBoundary>
       </div>
     </div>
   );
-};
+}
+
+export const CustomTheme = () => <SpecEditor />;
