@@ -6,7 +6,7 @@
 
 A declarative visualization library that compiles JSON specs into charts and data tables. Write what you want to see, not how to render it.
 
-### [Examples](https://tryopendata.github.io/openchart/)
+### [Interactive Examples](https://tryopendata.github.io/openchart/)
 
 ## Quick start
 
