@@ -4,7 +4,7 @@
 [![npm](https://img.shields.io/npm/v/@openchart/core)](https://www.npmjs.com/package/@openchart/core)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-A declarative visualization library that compiles JSON specs into charts and data tables. Write what you want to see, not how to render it.
+Publication-quality data graphics from a JSON spec. The kind of rich, annotated charts you see in the best newsrooms and research teams, generated from a simple declarative format that both humans and LLMs can write.
 
 <img alt="image" src="https://github.com/user-attachments/assets/a08a9237-8fe0-45ff-8203-898848a142ab" />
 
@@ -28,7 +28,8 @@ const spec = {
     y: { field: 'value', type: 'quantitative' },
   },
   chrome: {
-    title: 'Monthly active users',
+    title: 'User growth accelerated through Q4',
+    subtitle: 'Monthly active users, 2023',
     source: 'Source: Internal analytics',
   },
 };
@@ -44,11 +45,13 @@ function App() {
 
 ## Why this exists
 
-Most charting libraries make you think in terms of SVG primitives, component trees, or imperative draw calls. This library takes a different approach: you describe *what* the chart should show using a declarative spec (inspired by Vega-Lite), and the engine handles layout, scales, accessibility, and rendering.
+Most charting libraries give you building blocks and leave the editorial work to you. You get axes, gridlines, and bars, but no opinions about how to actually communicate with data. You end up spending more time wrangling SVG primitives and layout quirks than telling the story your data contains.
 
-The spec is a plain JSON object. That makes it easy for both humans and LLMs to generate, and simple to serialize, validate, and store. The headless engine means the same spec renders in React, vanilla JS, or a future server-side renderer without any code changes.
+OpenChart works the other way around. You describe *what the chart should communicate* in a declarative spec: the title states a finding, annotations highlight what matters, and the engine handles scales, label placement, accessibility, and responsive layout so the result reads like a polished infographic, not a developer's debug output.
 
-Tables are treated as a visualization type, not an afterthought. They support heatmaps, sparklines, inline bars, category coloring, sorting, search, and pagination out of the box.
+The spec is a plain JSON object. That makes it easy for both humans and LLMs to author, and simple to serialize, validate, and store. The headless engine means the same spec renders in React, Vue, Svelte, or vanilla JS without code changes.
+
+Tables are a first-class visualization type, not an afterthought. They support heatmaps, sparklines, inline bars, category coloring, sorting, search, and pagination out of the box.
 
 <img alt="image" src="https://github.com/user-attachments/assets/392db37a-1ee1-4659-8b51-4fab0890e7a9" />
 
