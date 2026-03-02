@@ -1,17 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs bunx biome check --fix --unsafe 2>/dev/null || true"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Skill",
@@ -45,7 +32,23 @@
       "Bash(git reset --hard)"
     ]
   },
-  "_readme": "Claude Code configuration. Machine-specific overrides go in settings.local.json (gitignored).",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs bunx biome check --fix --unsafe 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "ce@claude-essentials": true,
+    "openchart@openchart": true
+  },
   "extraKnownMarketplaces": {
     "claude-essentials": {
       "source": {
@@ -54,7 +57,5 @@
       }
     }
   },
-  "enabledPlugins": {
-    "ce@claude-essentials": true
-  }
+  "_readme": "Claude Code configuration. Machine-specific overrides go in settings.local.json (gitignored)."
 }
