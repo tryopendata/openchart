@@ -28,7 +28,8 @@
     "release": "./scripts/release.sh"
   },
   "overrides": {
-    "strip-ansi": "6.0.1"
+    "strip-ansi": "6.0.1",
+    "string-width": "4.2.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
