@@ -7,7 +7,7 @@
 
 import type { DataRow } from '@opendata-ai/core';
 import type { ScaleLinear, ScaleTime } from 'd3-scale';
-import type { D3ContinuousScale, ResolvedScales } from '../layout/scales';
+import type { ResolvedScales } from '../layout/scales';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -21,23 +21,27 @@ export const DEFAULT_COLOR = '#1b7fa3';
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve a data value to a pixel position using a D3 continuous scale.
+ * Resolve a data value to a pixel position using a D3 scale.
  *
- * Handles time scales (parsing string dates) and linear scales (coercing
- * to number). Returns null for values that can't be resolved (null, NaN,
- * invalid dates).
+ * Handles time scales (parsing string dates), categorical scales
+ * (point, band, ordinal - passing string values directly), and
+ * linear/log scales (coercing to number). Returns null for values
+ * that can't be resolved (null, NaN, invalid dates, or values not
+ * in a categorical scale's domain).
  */
-export function scaleValue(
-  scale: D3ContinuousScale,
-  scaleType: string,
-  value: unknown,
-): number | null {
+export function scaleValue(scale: D3Scale, scaleType: string, value: unknown): number | null {
   if (value == null) return null;
 
   if (scaleType === 'time') {
     const date = value instanceof Date ? value : new Date(String(value));
     if (Number.isNaN(date.getTime())) return null;
     return (scale as ScaleTime<number, number>)(date);
+  }
+
+  // Categorical scales: pass string values directly
+  if (scaleType === 'point' || scaleType === 'band' || scaleType === 'ordinal') {
+    const result = (scale as ScalePoint<string> | ScaleBand<string>)(String(value));
+    return result ?? null;
   }
 
   const num = typeof value === 'number' ? value : Number(value);

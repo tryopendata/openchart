@@ -19,7 +19,7 @@ import type {
 import { curveMonotoneX, line } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
-import type { D3ContinuousScale, ResolvedScales } from '../../layout/scales';
+import type { ResolvedScales } from '../../layout/scales';
 import { getColor, groupByField, scaleValue } from '../utils';
 
 // ---------------------------------------------------------------------------
@@ -77,16 +77,8 @@ export function computeLineMarks(
     let currentSegment: { x: number; y: number }[] = [];
 
     for (const row of rows) {
-      const xVal = scaleValue(
-        scales.x.scale as D3ContinuousScale,
-        scales.x.type,
-        row[xChannel.field],
-      );
-      const yVal = scaleValue(
-        scales.y.scale as D3ContinuousScale,
-        scales.y.type,
-        row[yChannel.field],
-      );
+      const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
+      const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
 
       if (xVal === null || yVal === null) {
         // Break the line here. Push current segment if non-empty.

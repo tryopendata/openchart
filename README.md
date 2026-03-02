@@ -334,6 +334,30 @@ table.destroy();
 
 Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. No lateral imports.
 
+## Claude Code Plugin
+
+If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the OpenChart plugin gives Claude knowledge of the spec grammar, chart types, encoding rules, and design best practices so it can generate publication-quality specs from your data.
+
+### Install
+
+```shell
+# Add the marketplace
+/plugin marketplace add tryopendata/openchart-plugin
+
+# Install the plugin
+/plugin install openchart@openchart
+```
+
+### Use
+
+Invoke the skill directly:
+
+```shell
+/visualize-data
+```
+
+Or reference it in your prompts and rules as `openchart:visualize-data`. The skill includes reference docs for all chart types, annotations, theming, color strategy, typography, and editorial design review.
+
 ## Part of the OpenData ecosystem
 
 OpenChart is one piece of [OpenData](https://tryopendata.ai), an open source platform for discovering, exploring, and visualizing public datasets. If you're looking for data to chart, that's a good place to start.

@@ -11,7 +11,7 @@ import type { ScaleLinear } from 'd3-scale';
 import { area, curveMonotoneX, line, stack, stackOffsetNone, stackOrderNone } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
-import type { D3ContinuousScale, ResolvedScales } from '../../layout/scales';
+import type { ResolvedScales } from '../../layout/scales';
 import { getColor, scaleValue } from '../utils';
 
 // ---------------------------------------------------------------------------
@@ -68,16 +68,8 @@ function computeSingleArea(
     const validPoints: { x: number; yTop: number; yBottom: number; row: DataRow }[] = [];
 
     for (const row of rows) {
-      const xVal = scaleValue(
-        scales.x.scale as D3ContinuousScale,
-        scales.x.type,
-        row[xChannel.field],
-      );
-      const yVal = scaleValue(
-        scales.y.scale as D3ContinuousScale,
-        scales.y.type,
-        row[yChannel.field],
-      );
+      const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
+      const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
 
       if (xVal === null || yVal === null) continue;
 
@@ -215,7 +207,7 @@ function computeStackedArea(
     const validPoints: { x: number; yTop: number; yBottom: number }[] = [];
 
     for (const d of layer) {
-      const xVal = scaleValue(scales.x.scale as D3ContinuousScale, scales.x.type, d.data.__x__);
+      const xVal = scaleValue(scales.x.scale, scales.x.type, d.data.__x__);
 
       if (xVal === null) continue;
 

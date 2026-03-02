@@ -341,17 +341,22 @@ describe('computeAnnotations', () => {
       expect(annotations[0].label!.connector).toBeUndefined();
     });
 
-    it('connector "to" points to the original data position', () => {
+    it('connector "to" points near the data position with a small gap', () => {
       const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Connector check' }]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const px = scales.x?.scale(new Date('2020-01-01'));
-      const py = scales.y?.scale(20);
+      const px = scales.x?.scale(new Date('2020-01-01')) as number;
+      const py = scales.y?.scale(20) as number;
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
       const connector = annotations[0].label!.connector!;
-      expect(connector.to.x).toBeCloseTo(px as number, 0);
-      expect(connector.to.y).toBeCloseTo(py as number, 0);
+      // The "to" endpoint is pulled back along the connector direction by a
+      // small gap (~4px), so it won't exactly match the data point.
+      const dx = px - connector.to.x;
+      const dy = py - connector.to.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      expect(dist).toBeGreaterThan(0);
+      expect(dist).toBeLessThanOrEqual(5);
     });
   });
 

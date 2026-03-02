@@ -1,5 +1,5 @@
 ---
-name: data-visualization
+name: visualize-data
 description: >
   Generates @opendata-ai chart, table, and graph specs from data, and guides editorial
   design decisions. Use when creating visualizations, building charts, rendering data

@@ -181,23 +181,22 @@ function resolveTextAnnotation(
   // Compute connector origin based on style and text layout
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
+  const lines = annotation.text.split('\n');
+  const lineHeight = 1.3;
   let connectorFromX: number;
   if (connectorStyle === 'curve') {
     // Curved connectors start from the right edge of the text
     connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight);
+  } else if (lines.length > 1) {
+    // Multi-line text uses text-anchor: middle, so labelX is already the center
+    connectorFromX = labelX;
   } else {
     // Straight connectors start from the horizontal center of the text
-    const lines = annotation.text.split('\n');
-    if (lines.length > 1) {
-      // Multi-line text uses text-anchor: middle, so labelX is already the center
-      connectorFromX = labelX;
-    } else {
-      connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight) / 2;
-    }
+    connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight) / 2;
   }
 
-  // Compute connector from.y to sit below the text baseline
-  const connectorFromY = labelY + fontSize * 0.3;
+  // Connector from.y sits at the bottom of the text block
+  const connectorFromY = labelY + (lines.length - 1) * fontSize * lineHeight + fontSize * 0.3;
 
   // Apply user-provided connector endpoint offsets
   const baseFrom = { x: connectorFromX, y: connectorFromY };
@@ -206,10 +205,21 @@ function resolveTextAnnotation(
     x: baseFrom.x + (annotation.connectorOffset?.from?.dx ?? 0),
     y: baseFrom.y + (annotation.connectorOffset?.from?.dy ?? 0),
   };
-  const adjustedTo = {
+  const adjustedToRaw = {
     x: baseTo.x + (annotation.connectorOffset?.to?.dx ?? 0),
     y: baseTo.y + (annotation.connectorOffset?.to?.dy ?? 0),
   };
+
+  // Pull the "to" endpoint back along the connector direction so the
+  // line doesn't touch the data point directly (leaves a small gap).
+  const GAP = 4;
+  const cdx = adjustedToRaw.x - adjustedFrom.x;
+  const cdy = adjustedToRaw.y - adjustedFrom.y;
+  const dist = Math.sqrt(cdx * cdx + cdy * cdy);
+  const adjustedTo =
+    dist > GAP * 2
+      ? { x: adjustedToRaw.x - (cdx / dist) * GAP, y: adjustedToRaw.y - (cdy / dist) * GAP }
+      : adjustedToRaw;
 
   const label: ResolvedLabel = {
     text: annotation.text,
