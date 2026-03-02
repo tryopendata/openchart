@@ -273,6 +273,78 @@ export function pieChart(
 }
 
 /**
+ * Create an area chart spec.
+ *
+ * @param data - Array of data rows.
+ * @param x - X-axis field (typically temporal or ordinal).
+ * @param y - Y-axis field (typically quantitative).
+ * @param options - Optional color, size, chrome, annotations, theme, etc.
+ */
+export function areaChart(
+  data: DataRow[],
+  x: FieldRef,
+  y: FieldRef,
+  options?: ChartBuilderOptions,
+): ChartSpec {
+  const xChannel = resolveField(x, data);
+  const yChannel = resolveField(y, data);
+  const encoding = buildEncoding({ x: xChannel, y: yChannel }, options, data);
+  return buildChartSpec('area', data, encoding, options);
+}
+
+/**
+ * Create a donut chart spec.
+ *
+ * Convention: category maps to the color channel, value maps to y.
+ * Donut charts have no x-axis.
+ *
+ * @param data - Array of data rows.
+ * @param category - Category field (color channel, nominal).
+ * @param value - Value field (y channel, quantitative).
+ * @param options - Optional chrome, annotations, theme, etc.
+ *                  Note: color option is ignored since category is used for color.
+ */
+export function donutChart(
+  data: DataRow[],
+  category: FieldRef,
+  value: FieldRef,
+  options?: ChartBuilderOptions,
+): ChartSpec {
+  const categoryChannel = resolveField(category, data);
+  const valueChannel = resolveField(value, data);
+
+  const encoding: Encoding = {
+    y: valueChannel,
+    color: categoryChannel,
+  };
+  if (options?.size && data) {
+    encoding.size = resolveField(options.size, data);
+  }
+
+  return buildChartSpec('donut', data, encoding, options);
+}
+
+/**
+ * Create a dot chart spec (strip plot / dot plot).
+ *
+ * @param data - Array of data rows.
+ * @param x - X-axis field (quantitative or temporal).
+ * @param y - Y-axis field (nominal/categorical grouping).
+ * @param options - Optional color, size, chrome, annotations, theme, etc.
+ */
+export function dotChart(
+  data: DataRow[],
+  x: FieldRef,
+  y: FieldRef,
+  options?: ChartBuilderOptions,
+): ChartSpec {
+  const xChannel = resolveField(x, data);
+  const yChannel = resolveField(y, data);
+  const encoding = buildEncoding({ x: xChannel, y: yChannel }, options, data);
+  return buildChartSpec('dot', data, encoding, options);
+}
+
+/**
  * Create a scatter chart spec.
  *
  * @param data - Array of data rows.

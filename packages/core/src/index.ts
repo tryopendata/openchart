@@ -116,9 +116,12 @@ export type {
   TableBuilderOptions,
 } from './helpers/spec-builders';
 export {
+  areaChart,
   barChart,
   columnChart,
   dataTable,
+  donutChart,
+  dotChart,
   inferFieldType,
   lineChart,
   pieChart,
