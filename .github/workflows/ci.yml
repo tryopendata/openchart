@@ -34,16 +34,9 @@ jobs:
         run: |
           bun run lint &
           LINT_PID=$!
-          bun run typecheck &
-          TC_PID=$!
-          bun run build
-          BUILD_EXIT=$?
-          if [ $BUILD_EXIT -ne 0 ]; then
-            echo "::error::Build failed"
-            exit $BUILD_EXIT
-          fi
+          bun run build || { echo "::error::Build failed"; exit 1; }
           wait $LINT_PID || { echo "::error::Lint failed"; exit 1; }
-          wait $TC_PID || { echo "::error::Typecheck failed"; exit 1; }
+          bun run typecheck || { echo "::error::Typecheck failed"; exit 1; }
 
       - name: Test
         run: bun run test
