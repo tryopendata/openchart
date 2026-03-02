@@ -342,7 +342,7 @@ If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the Op
 
 ```shell
 # Add the marketplace
-/plugin marketplace add tryopendata/openchart-plugin
+/plugin marketplace add tryopendata/openchart
 
 # Install the plugin
 /plugin install openchart@openchart
