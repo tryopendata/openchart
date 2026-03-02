@@ -178,13 +178,38 @@ function resolveTextAnnotation(
   const showConnector = annotation.connector !== false;
   const connectorStyle = annotation.connector === 'curve' ? 'curve' : 'straight';
 
-  // For curved connectors, start from the right end of the text
+  // Compute connector origin based on style and text layout
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
-  const connectorFromX =
-    connectorStyle === 'curve'
-      ? labelX + estimateTextWidth(annotation.text, fontSize, fontWeight)
-      : labelX;
+  let connectorFromX: number;
+  if (connectorStyle === 'curve') {
+    // Curved connectors start from the right edge of the text
+    connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight);
+  } else {
+    // Straight connectors start from the horizontal center of the text
+    const lines = annotation.text.split('\n');
+    if (lines.length > 1) {
+      // Multi-line text uses text-anchor: middle, so labelX is already the center
+      connectorFromX = labelX;
+    } else {
+      connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight) / 2;
+    }
+  }
+
+  // Compute connector from.y to sit below the text baseline
+  const connectorFromY = labelY + fontSize * 0.3;
+
+  // Apply user-provided connector endpoint offsets
+  const baseFrom = { x: connectorFromX, y: connectorFromY };
+  const baseTo = { x: px, y: py };
+  const adjustedFrom = {
+    x: baseFrom.x + (annotation.connectorOffset?.from?.dx ?? 0),
+    y: baseFrom.y + (annotation.connectorOffset?.from?.dy ?? 0),
+  };
+  const adjustedTo = {
+    x: baseTo.x + (annotation.connectorOffset?.to?.dx ?? 0),
+    y: baseTo.y + (annotation.connectorOffset?.to?.dy ?? 0),
+  };
 
   const label: ResolvedLabel = {
     text: annotation.text,
@@ -194,11 +219,11 @@ function resolveTextAnnotation(
     visible: true,
     connector: showConnector
       ? {
-        from: { x: connectorFromX, y: labelY + 4 },
-        to: { x: px, y: py },
-        stroke: annotation.stroke ?? '#999999',
-        style: connectorStyle,
-      }
+          from: adjustedFrom,
+          to: adjustedTo,
+          stroke: annotation.stroke ?? '#999999',
+          style: connectorStyle,
+        }
       : undefined,
     background: annotation.background,
   };
@@ -462,12 +487,12 @@ function nudgeAnnotationFromObstacles(
       y: annotation.label.y + dy,
       connector: annotation.label.connector
         ? {
-          ...annotation.label.connector,
-          from: {
-            x: annotation.label.connector.from.x + dx,
-            y: annotation.label.connector.from.y + dy,
-          },
-        }
+            ...annotation.label.connector,
+            from: {
+              x: annotation.label.connector.from.x + dx,
+              y: annotation.label.connector.from.y + dy,
+            },
+          }
         : undefined,
     };
 

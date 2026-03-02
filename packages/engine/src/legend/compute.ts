@@ -134,12 +134,16 @@ export function computeLegend(
         ? chartArea.y + chartArea.height - clampedHeight
         : chartArea.y;
 
+    // Apply user-provided legend offset
+    const offsetDx = spec.legend?.offset?.dx ?? 0;
+    const offsetDy = spec.legend?.offset?.dy ?? 0;
+
     return {
       position: resolvedPosition,
       entries,
       bounds: {
-        x: chartArea.x + chartArea.width - legendWidth,
-        y: legendY,
+        x: chartArea.x + chartArea.width - legendWidth + offsetDx,
+        y: legendY + offsetDy,
         width: legendWidth,
         height: clampedHeight,
       },
@@ -158,13 +162,19 @@ export function computeLegend(
 
   const legendHeight = SWATCH_SIZE + LEGEND_PADDING * 2;
 
+  // Apply user-provided legend offset
+  const offsetDx = spec.legend?.offset?.dx ?? 0;
+  const offsetDy = spec.legend?.offset?.dy ?? 0;
+
   return {
     position: resolvedPosition,
     entries,
     bounds: {
-      x: chartArea.x,
+      x: chartArea.x + offsetDx,
       y:
-        resolvedPosition === 'bottom' ? chartArea.y + chartArea.height - legendHeight : chartArea.y,
+        (resolvedPosition === 'bottom'
+          ? chartArea.y + chartArea.height - legendHeight
+          : chartArea.y) + offsetDy,
       width: Math.min(totalWidth, chartArea.width),
       height: legendHeight,
     },

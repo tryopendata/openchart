@@ -18,6 +18,8 @@ export {
 // Event types (chart interaction callbacks)
 export type {
   ChartEventHandlers,
+  ChromeKey,
+  ElementEdit,
   MarkEvent,
 } from './events';
 // Layout types (engine output)

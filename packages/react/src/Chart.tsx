@@ -44,6 +44,7 @@ export function Chart({
   onLegendToggle,
   onAnnotationClick,
   onAnnotationEdit,
+  onEdit,
   className,
   style,
 }: ChartProps) {
@@ -66,6 +67,7 @@ export function Chart({
     onLegendToggle?: ChartProps['onLegendToggle'];
     onAnnotationClick?: ChartProps['onAnnotationClick'];
     onAnnotationEdit?: ChartProps['onAnnotationEdit'];
+    onEdit?: ChartProps['onEdit'];
   }>({});
   handlersRef.current = {
     onDataPointClick,
@@ -75,6 +77,7 @@ export function Chart({
     onLegendToggle,
     onAnnotationClick,
     onAnnotationEdit,
+    onEdit,
   };
 
   // Stable callback wrappers that read from refs
@@ -107,6 +110,10 @@ export function Chart({
     ) => handlersRef.current.onAnnotationEdit?.(annotation, updatedOffset),
     [],
   );
+  const stableOnEdit = useCallback(
+    (edit: import('@opendata-ai/core').ElementEdit) => handlersRef.current.onEdit?.(edit),
+    [],
+  );
 
   // Mount chart and recreate when theme/darkMode change.
   // Event handlers use stable refs so they don't trigger recreation.
@@ -123,7 +130,11 @@ export function Chart({
       onMarkLeave: stableOnMarkLeave,
       onLegendToggle: stableOnLegendToggle,
       onAnnotationClick: stableOnAnnotationClick,
-      onAnnotationEdit: stableOnAnnotationEdit,
+      // Only include editing callbacks when the consumer provides them.
+      // The stable wrappers are always truthy, so gating on handlersRef
+      // avoids adding unstable prop references to the effect deps.
+      ...(handlersRef.current.onAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
+      ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
       responsive: true,
     };
 
@@ -142,6 +153,7 @@ export function Chart({
     spec,
     stableOnAnnotationClick,
     stableOnDataPointClick,
+    stableOnEdit,
     stableOnLegendToggle,
     stableOnMarkClick,
     stableOnMarkHover,

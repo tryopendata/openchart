@@ -9,7 +9,43 @@
  * mark elements and constructs these typed events from the raw browser events.
  */
 
-import type { Annotation, AnnotationOffset, DataRow, TextAnnotation } from './spec';
+import type {
+  Annotation,
+  AnnotationOffset,
+  DataRow,
+  RangeAnnotation,
+  RefLineAnnotation,
+  TextAnnotation,
+} from './spec';
+
+// ---------------------------------------------------------------------------
+// Chrome key identifiers
+// ---------------------------------------------------------------------------
+
+/** Identifies a specific chrome text element (title, subtitle, source, byline, footer). */
+export type ChromeKey = 'title' | 'subtitle' | 'source' | 'byline' | 'footer';
+
+// ---------------------------------------------------------------------------
+// Element edit events
+// ---------------------------------------------------------------------------
+
+/**
+ * Discriminated union of all element edit events.
+ * Fired by the `onEdit` callback when any editable chart element is repositioned.
+ */
+export type ElementEdit =
+  | { type: 'annotation'; annotation: TextAnnotation; offset: AnnotationOffset }
+  | {
+      type: 'annotation-connector';
+      annotation: TextAnnotation;
+      endpoint: 'from' | 'to';
+      offset: AnnotationOffset;
+    }
+  | { type: 'range-label'; annotation: RangeAnnotation; labelOffset: AnnotationOffset }
+  | { type: 'refline-label'; annotation: RefLineAnnotation; labelOffset: AnnotationOffset }
+  | { type: 'chrome'; key: ChromeKey; text: string; offset: AnnotationOffset }
+  | { type: 'series-label'; series: string; offset: AnnotationOffset }
+  | { type: 'legend'; offset: AnnotationOffset };
 
 // ---------------------------------------------------------------------------
 // Mark events
@@ -55,4 +91,6 @@ export interface ChartEventHandlers {
   onAnnotationClick?: (annotation: Annotation, event: MouseEvent) => void;
   /** Called when a text annotation label is dragged to a new position. */
   onAnnotationEdit?: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) => void;
+  /** Unified edit callback. Fires for any editable chart element (annotations, chrome, legend, series labels). */
+  onEdit?: (edit: ElementEdit) => void;
 }

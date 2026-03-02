@@ -27,7 +27,7 @@ export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _
   const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
 
   // Compute and attach labels to line marks by seriesKey lookup
-  const labelMap = computeLineLabels(lineMarks, strategy, spec.labels.density);
+  const labelMap = computeLineLabels(lineMarks, strategy, spec.labels.density, spec.labels.offsets);
   for (const mark of marks) {
     if (mark.type === 'line' && mark.seriesKey) {
       const label = labelMap.get(mark.seriesKey);

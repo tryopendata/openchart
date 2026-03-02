@@ -10,6 +10,7 @@ import type {
   Annotation,
   AnnotationOffset,
   DarkMode,
+  ElementEdit,
   MarkEvent,
   TextAnnotation,
   ThemeConfig,
@@ -19,6 +20,7 @@ import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai
 import {
   type CSSProperties,
   defineComponent,
+  getCurrentInstance,
   h,
   inject,
   onMounted,
@@ -68,6 +70,7 @@ export const Chart = defineComponent({
     'legend-toggle': (_series: string, _visible: boolean) => true,
     'annotation-click': (_annotation: Annotation, _event: MouseEvent) => true,
     'annotation-edit': (_annotation: TextAnnotation, _updatedOffset: AnnotationOffset) => true,
+    edit: (_edit: ElementEdit) => true,
     'data-point-click': (_data: Record<string, unknown>) => true,
   },
   setup(props, { emit }) {
@@ -78,6 +81,15 @@ export const Chart = defineComponent({
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
     const contextDarkMode = inject(VizDarkModeKey, undefined);
+
+    // Check which event listeners are bound by the parent.
+    // Vue 3 passes listeners as onXxx props on the component vnode.
+    // We cache this at setup time since it won't change.
+    const vm = getCurrentInstance();
+    const vnodeProps = vm?.vnode.props ?? {};
+    const hasAnnotationEditListener =
+      'onAnnotation-edit' in vnodeProps || 'onAnnotationEdit' in vnodeProps;
+    const hasEditListener = 'onEdit' in vnodeProps;
 
     function resolveTheme(): ThemeConfig | undefined {
       return props.theme ?? contextTheme?.value;
@@ -102,8 +114,15 @@ export const Chart = defineComponent({
           emit('legend-toggle', series, visible),
         onAnnotationClick: (annotation: Annotation, event: MouseEvent) =>
           emit('annotation-click', annotation, event),
-        onAnnotationEdit: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) =>
-          emit('annotation-edit', annotation, updatedOffset),
+        // Only include editing callbacks when the parent binds a listener.
+        // Without this gate, every chart gets drag editing wired up.
+        ...(hasAnnotationEditListener
+          ? {
+              onAnnotationEdit: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) =>
+                emit('annotation-edit', annotation, updatedOffset),
+            }
+          : {}),
+        ...(hasEditListener ? { onEdit: (edit: ElementEdit) => emit('edit', edit) } : {}),
         responsive: true,
       };
 

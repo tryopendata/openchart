@@ -19,13 +19,13 @@ import { estimateTextHeight, estimateTextWidth } from './text-measure';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Normalize a chrome field to text + optional style overrides. */
+/** Normalize a chrome field to text + optional style and offset overrides. */
 function normalizeChromeText(
   value: string | ChromeText | undefined,
-): { text: string; style?: ChromeText['style'] } | null {
+): { text: string; style?: ChromeText['style']; offset?: ChromeText['offset'] } | null {
   if (value === undefined) return null;
   if (typeof value === 'string') return { text: value };
-  return { text: value.text, style: value.style };
+  return { text: value.text, style: value.style, offset: value.offset };
 }
 
 /** Build a TextStyle from chrome defaults + optional overrides. */
@@ -115,8 +115,8 @@ export function computeChrome(
     const lineCount = estimateLineCount(titleNorm.text, style, maxWidth, measureText);
     const element: ResolvedChromeElement = {
       text: titleNorm.text,
-      x: padding,
-      y: topY,
+      x: padding + (titleNorm.offset?.dx ?? 0),
+      y: topY + (titleNorm.offset?.dy ?? 0),
       maxWidth,
       style,
     };
@@ -136,8 +136,8 @@ export function computeChrome(
     const lineCount = estimateLineCount(subtitleNorm.text, style, maxWidth, measureText);
     const element: ResolvedChromeElement = {
       text: subtitleNorm.text,
-      x: padding,
-      y: topY,
+      x: padding + (subtitleNorm.offset?.dx ?? 0),
+      y: topY + (subtitleNorm.offset?.dy ?? 0),
       maxWidth,
       style,
     };
@@ -156,7 +156,7 @@ export function computeChrome(
 
   const bottomItems: Array<{
     key: 'source' | 'byline' | 'footer';
-    norm: { text: string; style?: ChromeText['style'] };
+    norm: { text: string; style?: ChromeText['style']; offset?: ChromeText['offset'] };
     defaults: ChromeDefaults;
   }> = [];
 
@@ -199,8 +199,8 @@ export function computeChrome(
       // chart area by the engine. We store offsets from bottom start.
       bottomElements[item.key] = {
         text: item.norm.text,
-        x: padding,
-        y: bottomHeight, // offset from where bottom chrome starts
+        x: padding + (item.norm.offset?.dx ?? 0),
+        y: bottomHeight + (item.norm.offset?.dy ?? 0), // offset from where bottom chrome starts
         maxWidth,
         style,
       };

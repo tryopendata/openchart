@@ -10,6 +10,7 @@ import type {
   Annotation,
   AnnotationOffset,
   DarkMode,
+  ElementEdit,
   MarkEvent,
   TextAnnotation,
   ThemeConfig,
@@ -29,6 +30,7 @@ let {
   onlegendtoggle,
   onannotationclick,
   onannotationedit,
+  onedit,
   ondatapointclick,
   class: className,
   style,
@@ -42,6 +44,7 @@ let {
   onlegendtoggle?: (series: string, visible: boolean) => void;
   onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
   onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
+  onedit?: (edit: ElementEdit) => void;
   ondatapointclick?: (data: Record<string, unknown>) => void;
   class?: string;
   style?: string;
@@ -71,10 +74,14 @@ const stableHandlers: MountOptions = {
     untrack(() => onlegendtoggle)?.(series, visible),
   onAnnotationClick: (annotation: Annotation, event: MouseEvent) =>
     untrack(() => onannotationclick)?.(annotation, event),
-  onAnnotationEdit: (annotation: TextAnnotation, offset: AnnotationOffset) =>
-    untrack(() => onannotationedit)?.(annotation, offset),
   onDataPointClick: (data: Record<string, unknown>) => untrack(() => ondatapointclick)?.(data),
 };
+
+// Editing callbacks - only defined as stable wrappers, but only
+// included in options when the consumer provides the prop.
+const stableOnAnnotationEdit = (annotation: TextAnnotation, offset: AnnotationOffset) =>
+  untrack(() => onannotationedit)?.(annotation, offset);
+const stableOnEdit = (edit: ElementEdit) => untrack(() => onedit)?.(edit);
 
 // Main effect: only tracks spec, theme, and darkMode.
 // Callback prop changes don't trigger recreation.
@@ -85,11 +92,19 @@ $effect(() => {
 
   instance?.destroy();
 
+  // Only include editing callbacks when the consumer provides them.
+  // The stable wrappers are always truthy, so we gate on the original
+  // prop (read via untrack to avoid reactive deps).
+  const hasAnnotationEdit = untrack(() => onannotationedit) !== undefined;
+  const hasEdit = untrack(() => onedit) !== undefined;
+
   const options: MountOptions = {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     responsive: true,
     ...stableHandlers,
+    ...(hasAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
+    ...(hasEdit ? { onEdit: stableOnEdit } : {}),
   };
 
   instance = createChart(containerEl, currentSpec, options);

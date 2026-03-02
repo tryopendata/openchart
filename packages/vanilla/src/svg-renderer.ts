@@ -70,11 +70,13 @@ function renderChromeElement(
   parent: SVGElement,
   element: ResolvedChromeElement,
   className: string,
+  chromeKey: string,
 ): void {
   const text = createSVGElement('text');
   setAttrs(text, { x: element.x, y: element.y });
   applyTextStyle(text, element.style);
   text.setAttribute('class', className);
+  text.setAttribute('data-chrome-key', chromeKey);
   text.textContent = element.text;
   parent.appendChild(text);
 }
@@ -87,10 +89,10 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
 
   // Top chrome: render at their stored y positions (already absolute)
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'viz-title');
+    renderChromeElement(g, chrome.title, 'viz-title', 'title');
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'viz-subtitle');
+    renderChromeElement(g, chrome.subtitle, 'viz-subtitle', 'subtitle');
   }
 
   // Bottom chrome starts below x-axis labels/title, not at chart area bottom.
@@ -99,13 +101,28 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   const xAxisExtent = layout.axes.x ? (layout.axes.x.label ? 48 : 26) : 0;
   const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
   if (chrome.source) {
-    renderChromeElement(g, { ...chrome.source, y: bottomOffset + chrome.source.y }, 'viz-source');
+    renderChromeElement(
+      g,
+      { ...chrome.source, y: bottomOffset + chrome.source.y },
+      'viz-source',
+      'source',
+    );
   }
   if (chrome.byline) {
-    renderChromeElement(g, { ...chrome.byline, y: bottomOffset + chrome.byline.y }, 'viz-byline');
+    renderChromeElement(
+      g,
+      { ...chrome.byline, y: bottomOffset + chrome.byline.y },
+      'viz-byline',
+      'byline',
+    );
   }
   if (chrome.footer) {
-    renderChromeElement(g, { ...chrome.footer, y: bottomOffset + chrome.footer.y }, 'viz-footer');
+    renderChromeElement(
+      g,
+      { ...chrome.footer, y: bottomOffset + chrome.footer.y },
+      'viz-footer',
+      'footer',
+    );
   }
 
   parent.appendChild(g);
@@ -286,6 +303,9 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
   if (mark.label?.visible) {
     const label = createSVGElement('text');
     label.setAttribute('class', 'viz-mark-label');
+    if (mark.seriesKey) {
+      label.setAttribute('data-series', mark.seriesKey);
+    }
     setAttrs(label, { x: mark.label.x, y: mark.label.y });
     applyTextStyle(label, mark.label.style);
     label.textContent = mark.label.text;

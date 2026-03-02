@@ -12,9 +12,13 @@ import type {
   AnnotationOffset,
   ChartEventHandlers,
   ChartLayout,
+  ChromeKey,
   CompileOptions,
   DarkMode,
+  ElementEdit,
   MeasureTextFn,
+  RangeAnnotation,
+  RefLineAnnotation,
   TextAnnotation,
   ThemeConfig,
   TooltipContent,
@@ -331,6 +335,196 @@ function wireChartEvents(
 }
 
 // ---------------------------------------------------------------------------
+// Shared drag handler utility
+// ---------------------------------------------------------------------------
+
+interface DragConfig {
+  element: SVGElement;
+  svg: SVGSVGElement;
+  onMove: (dx: number, dy: number) => void;
+  onEnd: (dx: number, dy: number, moved: boolean) => void;
+  setDragging: (dragging: boolean) => void;
+  threshold?: number; // default: 3
+}
+
+/**
+ * Reusable drag handler for SVG elements.
+ * Handles mouse and touch events, viewBox scaling, threshold detection,
+ * click suppression after drag, and cursor state.
+ *
+ * Returns a cleanup function that removes all listeners.
+ */
+function createDragHandler(config: DragConfig): () => void {
+  const { element, svg, onMove, onEnd, setDragging, threshold = 3 } = config;
+  const cleanups: Array<() => void> = [];
+
+  // Track active document listeners so cleanup can remove them mid-drag
+  let activeDocMouseMove: ((e: MouseEvent) => void) | null = null;
+  let activeDocMouseUp: ((e: MouseEvent) => void) | null = null;
+  let activeDocTouchMove: ((e: TouchEvent) => void) | null = null;
+  let activeDocTouchEnd: ((e: TouchEvent) => void) | null = null;
+  let activeDocTouchCancel: ((e: TouchEvent) => void) | null = null;
+
+  function getScale(): { scaleX: number; scaleY: number } {
+    const viewBox = svg.viewBox?.baseVal;
+    const svgRect = svg.getBoundingClientRect();
+    return {
+      scaleX: viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1,
+      scaleY: viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1,
+    };
+  }
+
+  function startDrag(startX: number, startY: number): void {
+    setDragging(true);
+    const { scaleX, scaleY } = getScale();
+
+    element.style.cursor = 'grabbing';
+    // Prevent text selection during drag
+    svg.style.userSelect = 'none';
+
+    const handleMove = (clientX: number, clientY: number) => {
+      const dx = (clientX - startX) * scaleX;
+      const dy = (clientY - startY) * scaleY;
+      onMove(dx, dy);
+    };
+
+    const cleanupDocListeners = () => {
+      if (activeDocMouseMove) {
+        document.removeEventListener('mousemove', activeDocMouseMove);
+        activeDocMouseMove = null;
+      }
+      if (activeDocMouseUp) {
+        document.removeEventListener('mouseup', activeDocMouseUp);
+        activeDocMouseUp = null;
+      }
+      if (activeDocTouchMove) {
+        document.removeEventListener('touchmove', activeDocTouchMove);
+        activeDocTouchMove = null;
+      }
+      if (activeDocTouchEnd) {
+        document.removeEventListener('touchend', activeDocTouchEnd);
+        activeDocTouchEnd = null;
+      }
+      if (activeDocTouchCancel) {
+        document.removeEventListener('touchcancel', activeDocTouchCancel);
+        activeDocTouchCancel = null;
+      }
+    };
+
+    const handleEnd = (clientX: number, clientY: number) => {
+      const dx = (clientX - startX) * scaleX;
+      const dy = (clientY - startY) * scaleY;
+      const moved = Math.abs(dx) > threshold || Math.abs(dy) > threshold;
+
+      onEnd(dx, dy, moved);
+
+      // Suppress click if drag actually moved
+      if (moved) {
+        element.addEventListener(
+          'click',
+          (clickE) => {
+            clickE.stopPropagation();
+          },
+          { capture: true, once: true },
+        );
+      }
+
+      element.style.cursor = 'grab';
+      svg.style.userSelect = '';
+
+      cleanupDocListeners();
+      setDragging(false);
+    };
+
+    // Mouse listeners
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      handleMove(moveEvent.clientX, moveEvent.clientY);
+    };
+    const onMouseUp = (upEvent: MouseEvent) => {
+      handleEnd(upEvent.clientX, upEvent.clientY);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    activeDocMouseMove = onMouseMove;
+    activeDocMouseUp = onMouseUp;
+
+    // Touch listeners
+    const onTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length > 0) {
+        moveEvent.preventDefault();
+        handleMove(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+      }
+    };
+    const onTouchEnd = (endEvent: TouchEvent) => {
+      const touch = endEvent.changedTouches[0];
+      if (touch) {
+        handleEnd(touch.clientX, touch.clientY);
+      } else {
+        handleEnd(startX, startY);
+      }
+    };
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+    activeDocTouchMove = onTouchMove;
+    activeDocTouchEnd = onTouchEnd;
+    activeDocTouchCancel = onTouchEnd;
+  }
+
+  // Mouse down handler
+  const handleMouseDown = (e: Event) => {
+    const mouseEvent = e as MouseEvent;
+    mouseEvent.preventDefault();
+    startDrag(mouseEvent.clientX, mouseEvent.clientY);
+  };
+
+  // Touch start handler
+  const handleTouchStart = (e: Event) => {
+    const touchEvent = e as TouchEvent;
+    if (touchEvent.touches.length === 1) {
+      touchEvent.preventDefault();
+      startDrag(touchEvent.touches[0].clientX, touchEvent.touches[0].clientY);
+    }
+  };
+
+  element.addEventListener('mousedown', handleMouseDown);
+  element.addEventListener('touchstart', handleTouchStart, { passive: false });
+  cleanups.push(() => {
+    element.removeEventListener('mousedown', handleMouseDown);
+    element.removeEventListener('touchstart', handleTouchStart);
+  });
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+    // Clean up any active document listeners (mid-drag unmount)
+    if (activeDocMouseMove) {
+      document.removeEventListener('mousemove', activeDocMouseMove);
+      activeDocMouseMove = null;
+    }
+    if (activeDocMouseUp) {
+      document.removeEventListener('mouseup', activeDocMouseUp);
+      activeDocMouseUp = null;
+    }
+    if (activeDocTouchMove) {
+      document.removeEventListener('touchmove', activeDocTouchMove);
+      activeDocTouchMove = null;
+    }
+    if (activeDocTouchEnd) {
+      document.removeEventListener('touchend', activeDocTouchEnd);
+      activeDocTouchEnd = null;
+    }
+    if (activeDocTouchCancel) {
+      document.removeEventListener('touchcancel', activeDocTouchCancel);
+      activeDocTouchCancel = null;
+    }
+    // Restore user-select in case of mid-drag cleanup
+    svg.style.userSelect = '';
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Annotation drag editing
 // ---------------------------------------------------------------------------
 
@@ -346,15 +540,14 @@ function wireChartEvents(
 function wireAnnotationDrag(
   svg: SVGElement,
   specAnnotations: Annotation[],
-  onAnnotationEdit: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) => void,
+  onAnnotationEdit:
+    | ((annotation: TextAnnotation, updatedOffset: AnnotationOffset) => void)
+    | undefined,
+  onEdit: ((edit: ElementEdit) => void) | undefined,
   setDragging: (dragging: boolean) => void,
 ): () => void {
   const annotationElements = svg.querySelectorAll('.viz-annotation-text');
   const cleanups: Array<() => void> = [];
-
-  // Track active document listeners so cleanup can remove them mid-drag
-  let activeDocMouseMove: ((e: MouseEvent) => void) | null = null;
-  let activeDocMouseUp: ((e: MouseEvent) => void) | null = null;
 
   for (const el of annotationElements) {
     const indexStr = el.getAttribute('data-annotation-index');
@@ -370,40 +563,23 @@ function wireAnnotationDrag(
     // Visual affordance: show grab cursor
     annotationG.style.cursor = 'grab';
 
-    const handleMouseDown = (e: Event) => {
-      const mouseEvent = e as MouseEvent;
-      mouseEvent.preventDefault();
+    // Stash connector info for real-time updates during drag
+    const connectorLine = annotationG.querySelector('line.viz-annotation-connector');
+    const origX2 = connectorLine ? Number(connectorLine.getAttribute('x2')) : 0;
+    const origY2 = connectorLine ? Number(connectorLine.getAttribute('y2')) : 0;
 
-      setDragging(true);
+    // For curved connectors, stash path/polygon elements to hide during drag
+    const curvedPath = annotationG.querySelector('path.viz-annotation-connector');
+    const arrowhead = annotationG.querySelector('polygon.viz-annotation-connector');
+    const hasCurvedConnector = curvedPath !== null;
 
-      const startMouseX = mouseEvent.clientX;
-      const startMouseY = mouseEvent.clientY;
-      const origDx = textAnnotation.offset?.dx ?? 0;
-      const origDy = textAnnotation.offset?.dy ?? 0;
+    const origDx = textAnnotation.offset?.dx ?? 0;
+    const origDy = textAnnotation.offset?.dy ?? 0;
 
-      // Compute viewBox scale factors for responsive SVG coordinate conversion
-      const svgEl = svg as unknown as SVGSVGElement;
-      const viewBox = svgEl.viewBox?.baseVal;
-      const svgRect = svg.getBoundingClientRect();
-      const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
-      const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
-
-      // Stash connector info for real-time updates
-      const connectorLine = annotationG.querySelector('line');
-      const origX2 = connectorLine ? Number(connectorLine.getAttribute('x2')) : 0;
-      const origY2 = connectorLine ? Number(connectorLine.getAttribute('y2')) : 0;
-
-      // For curved connectors, stash path/polygon elements to hide during drag
-      const curvedPath = annotationG.querySelector('path');
-      const arrowhead = annotationG.querySelector('polygon');
-      const hasCurvedConnector = curvedPath !== null;
-
-      annotationG.style.cursor = 'grabbing';
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const dx = (moveEvent.clientX - startMouseX) * scaleX;
-        const dy = (moveEvent.clientY - startMouseY) * scaleY;
-
+    const cleanup = createDragHandler({
+      element: annotationG,
+      svg: svg as unknown as SVGSVGElement,
+      onMove: (dx, dy) => {
         // Move the entire annotation group
         annotationG.setAttribute('transform', `translate(${dx}, ${dy})`);
 
@@ -418,30 +594,10 @@ function wireAnnotationDrag(
           if (curvedPath) curvedPath.setAttribute('display', 'none');
           if (arrowhead) arrowhead.setAttribute('display', 'none');
         }
-      };
-
-      const handleMouseUp = (upEvent: MouseEvent) => {
-        const deltaX = (upEvent.clientX - startMouseX) * scaleX;
-        const deltaY = (upEvent.clientY - startMouseY) * scaleY;
-        const newOffset: AnnotationOffset = {
-          dx: origDx + deltaX,
-          dy: origDy + deltaY,
-        };
-
-        // Suppress click if drag actually moved (> 3px threshold)
-        if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-          annotationG.addEventListener(
-            'click',
-            (clickE) => {
-              clickE.stopPropagation();
-            },
-            { capture: true, once: true },
-          );
-        }
-
+      },
+      onEnd: (dx, dy, moved) => {
         // Clean up visual state
         annotationG.removeAttribute('transform');
-        annotationG.style.cursor = 'grab';
 
         // Restore straight connector to original values
         if (connectorLine && !hasCurvedConnector) {
@@ -455,43 +611,480 @@ function wireAnnotationDrag(
           if (arrowhead) arrowhead.removeAttribute('display');
         }
 
-        // Remove document listeners
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        activeDocMouseMove = null;
-        activeDocMouseUp = null;
-
-        // Fire callback (only if drag actually moved)
-        if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-          onAnnotationEdit(textAnnotation, newOffset);
+        if (moved) {
+          const newOffset: AnnotationOffset = {
+            dx: origDx + dx,
+            dy: origDy + dy,
+          };
+          // Fire legacy callback
+          onAnnotationEdit?.(textAnnotation, newOffset);
+          // Fire unified edit callback
+          onEdit?.({ type: 'annotation', annotation: textAnnotation, offset: newOffset });
         }
+      },
+      setDragging,
+    });
 
-        setDragging(false);
-      };
-
-      // Attach document-level listeners for drag tracking
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      activeDocMouseMove = handleMouseMove;
-      activeDocMouseUp = handleMouseUp;
-    };
-
-    annotationG.addEventListener('mousedown', handleMouseDown);
-    cleanups.push(() => annotationG.removeEventListener('mousedown', handleMouseDown));
+    cleanups.push(cleanup);
   }
 
   return () => {
     for (const cleanup of cleanups) {
       cleanup();
     }
-    // Clean up any active document listeners (mid-drag unmount)
-    if (activeDocMouseMove) {
-      document.removeEventListener('mousemove', activeDocMouseMove);
-      activeDocMouseMove = null;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Connector endpoint drag
+// ---------------------------------------------------------------------------
+
+/**
+ * Wire drag on connector endpoint handles for text annotations.
+ * Dynamically creates invisible handle circles at connector endpoints
+ * so they only exist when editing is active (not in every chart).
+ * During drag, updates the handle position and the connector line endpoints.
+ * On end, fires onEdit with the accumulated endpoint offset.
+ *
+ * Shows handles on hover over the parent annotation group.
+ * Returns a cleanup function that removes handles and all listeners.
+ */
+function wireConnectorEndpointDrag(
+  svg: SVGElement,
+  specAnnotations: Annotation[],
+  onEdit: (edit: ElementEdit) => void,
+  setDragging: (dragging: boolean) => void,
+): () => void {
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const cleanups: Array<() => void> = [];
+  const annotationGroups = svg.querySelectorAll('.viz-annotation-text');
+
+  for (const el of annotationGroups) {
+    const annotationG = el as SVGGElement;
+    const indexStr = annotationG.getAttribute('data-annotation-index');
+    if (indexStr === null) continue;
+
+    const index = Number(indexStr);
+    const specAnnotation = specAnnotations[index];
+    if (!specAnnotation || specAnnotation.type !== 'text') continue;
+
+    const textAnnotation = specAnnotation as TextAnnotation;
+
+    // Find connector line or curved connector to determine endpoints
+    const connectorLine = annotationG.querySelector('line.viz-annotation-connector');
+    const curvedPath = annotationG.querySelector('path.viz-annotation-connector');
+    if (!connectorLine && !curvedPath) continue;
+
+    // Determine connector endpoint positions from the connector element
+    let fromX: number, fromY: number, toX: number, toY: number;
+    if (connectorLine) {
+      fromX = Number(connectorLine.getAttribute('x1'));
+      fromY = Number(connectorLine.getAttribute('y1'));
+      toX = Number(connectorLine.getAttribute('x2'));
+      toY = Number(connectorLine.getAttribute('y2'));
+    } else {
+      // For curved connectors, get positions from the path data
+      // The path starts at M x y, so parse the first coordinates
+      const pathD = curvedPath!.getAttribute('d') ?? '';
+      const mMatch = pathD.match(/M\s*([\d.e+-]+)\s+([\d.e+-]+)/);
+      fromX = mMatch ? Number(mMatch[1]) : 0;
+      fromY = mMatch ? Number(mMatch[2]) : 0;
+      // For curved connectors, the arrow polygon has the target
+      const arrowhead = annotationG.querySelector('polygon.viz-annotation-connector');
+      const points = arrowhead?.getAttribute('points') ?? '';
+      const firstPoint = points.split(' ')[0] ?? '0,0';
+      const [px, py] = firstPoint.split(',');
+      toX = Number(px);
+      toY = Number(py);
     }
-    if (activeDocMouseUp) {
-      document.removeEventListener('mouseup', activeDocMouseUp);
-      activeDocMouseUp = null;
+
+    // Create handles dynamically
+    const endpoints: Array<{ name: 'from' | 'to'; cx: number; cy: number }> = [
+      { name: 'from', cx: fromX, cy: fromY },
+      { name: 'to', cx: toX, cy: toY },
+    ];
+
+    const createdHandles: SVGCircleElement[] = [];
+
+    for (const ep of endpoints) {
+      const handleEl = document.createElementNS(SVG_NS, 'circle') as SVGCircleElement;
+      handleEl.setAttribute('class', 'viz-connector-handle');
+      handleEl.setAttribute('data-endpoint', ep.name);
+      handleEl.setAttribute('cx', String(ep.cx));
+      handleEl.setAttribute('cy', String(ep.cy));
+      handleEl.setAttribute('r', '4');
+      handleEl.setAttribute('opacity', '0');
+      handleEl.setAttribute('fill', 'currentColor');
+      handleEl.setAttribute('stroke', 'currentColor');
+      annotationG.appendChild(handleEl);
+      createdHandles.push(handleEl);
+
+      const origCx = ep.cx;
+      const origCy = ep.cy;
+
+      // Prevent parent annotation drag from firing
+      const stopProp = (e: Event) => {
+        e.stopPropagation();
+      };
+      handleEl.addEventListener('mousedown', stopProp);
+      handleEl.addEventListener('touchstart', stopProp);
+      cleanups.push(() => {
+        handleEl.removeEventListener('mousedown', stopProp);
+        handleEl.removeEventListener('touchstart', stopProp);
+      });
+
+      const cleanup = createDragHandler({
+        element: handleEl,
+        svg: svg as unknown as SVGSVGElement,
+        onMove: (dx, dy) => {
+          handleEl.setAttribute('cx', String(origCx + dx));
+          handleEl.setAttribute('cy', String(origCy + dy));
+
+          if (connectorLine) {
+            if (ep.name === 'from') {
+              connectorLine.setAttribute('x1', String(origCx + dx));
+              connectorLine.setAttribute('y1', String(origCy + dy));
+            } else {
+              connectorLine.setAttribute('x2', String(origCx + dx));
+              connectorLine.setAttribute('y2', String(origCy + dy));
+            }
+          }
+        },
+        onEnd: (dx, dy, moved) => {
+          handleEl.setAttribute('cx', String(origCx));
+          handleEl.setAttribute('cy', String(origCy));
+
+          if (connectorLine) {
+            if (ep.name === 'from') {
+              connectorLine.setAttribute('x1', String(origCx));
+              connectorLine.setAttribute('y1', String(origCy));
+            } else {
+              connectorLine.setAttribute('x2', String(origCx));
+              connectorLine.setAttribute('y2', String(origCy));
+            }
+          }
+
+          if (moved) {
+            const existingOffset = textAnnotation.connectorOffset?.[ep.name];
+            const origEndDx = existingOffset?.dx ?? 0;
+            const origEndDy = existingOffset?.dy ?? 0;
+            onEdit({
+              type: 'annotation-connector',
+              annotation: textAnnotation,
+              endpoint: ep.name,
+              offset: { dx: origEndDx + dx, dy: origEndDy + dy },
+            });
+          }
+        },
+        setDragging,
+      });
+
+      cleanups.push(cleanup);
+    }
+
+    // Wire hover to show/hide handles
+    const showHandles = () => {
+      for (const h of createdHandles) {
+        h.setAttribute('opacity', '0.6');
+      }
+    };
+    const hideHandles = () => {
+      for (const h of createdHandles) {
+        h.setAttribute('opacity', '0');
+      }
+    };
+
+    annotationG.addEventListener('mouseenter', showHandles);
+    annotationG.addEventListener('mouseleave', hideHandles);
+    cleanups.push(() => {
+      annotationG.removeEventListener('mouseenter', showHandles);
+      annotationG.removeEventListener('mouseleave', hideHandles);
+      // Remove dynamically created handles
+      for (const h of createdHandles) {
+        h.remove();
+      }
+    });
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Range/refline annotation label drag
+// ---------------------------------------------------------------------------
+
+/**
+ * Wire drag on range and refline annotation labels.
+ * On drag end, fires onEdit with the label offset.
+ * Returns a cleanup function.
+ */
+function wireAnnotationLabelDrag(
+  svg: SVGElement,
+  specAnnotations: Annotation[],
+  onEdit: (edit: ElementEdit) => void,
+  setDragging: (dragging: boolean) => void,
+): () => void {
+  const cleanups: Array<() => void> = [];
+
+  // Target range and refline annotation labels
+  const selectors = [
+    '.viz-annotation-range .viz-annotation-label',
+    '.viz-annotation-refline .viz-annotation-label',
+  ];
+
+  for (const selector of selectors) {
+    const labels = svg.querySelectorAll(selector);
+
+    for (const label of labels) {
+      const annotationG = label.closest('.viz-annotation') as SVGGElement | null;
+      if (!annotationG) continue;
+
+      const indexStr = annotationG.getAttribute('data-annotation-index');
+      if (indexStr === null) continue;
+
+      const index = Number(indexStr);
+      const specAnnotation = specAnnotations[index];
+      if (!specAnnotation) continue;
+
+      const labelEl = label as SVGTextElement;
+      labelEl.style.cursor = 'grab';
+
+      const isRange = specAnnotation.type === 'range';
+      const existingLabelOffset = isRange
+        ? (specAnnotation as RangeAnnotation).labelOffset
+        : (specAnnotation as RefLineAnnotation).labelOffset;
+      const origLabelDx = existingLabelOffset?.dx ?? 0;
+      const origLabelDy = existingLabelOffset?.dy ?? 0;
+
+      const cleanup = createDragHandler({
+        element: labelEl,
+        svg: svg as unknown as SVGSVGElement,
+        onMove: (dx, dy) => {
+          (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
+            `translate(${dx}px, ${dy}px)`;
+        },
+        onEnd: (dx, dy, moved) => {
+          (labelEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
+
+          if (moved) {
+            if (isRange) {
+              onEdit({
+                type: 'range-label',
+                annotation: specAnnotation as RangeAnnotation,
+                labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
+              });
+            } else {
+              onEdit({
+                type: 'refline-label',
+                annotation: specAnnotation as RefLineAnnotation,
+                labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
+              });
+            }
+          }
+        },
+        setDragging,
+      });
+
+      cleanups.push(cleanup);
+    }
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Chrome text drag
+// ---------------------------------------------------------------------------
+
+/**
+ * Wire drag on chrome text elements (title, subtitle, source, byline, footer).
+ * On drag end, fires onEdit with the chrome key, text, and offset.
+ * Returns a cleanup function.
+ */
+function wireChromeDrag(
+  svg: SVGElement,
+  spec: VizSpec,
+  onEdit: (edit: ElementEdit) => void,
+  setDragging: (dragging: boolean) => void,
+): () => void {
+  const chromeTexts = svg.querySelectorAll('.viz-chrome text[data-chrome-key]');
+  const cleanups: Array<() => void> = [];
+
+  // Read existing chrome offsets from the spec
+  const chromeConfig = 'chrome' in spec ? spec.chrome : undefined;
+
+  for (const el of chromeTexts) {
+    const textEl = el as SVGTextElement;
+    const key = textEl.getAttribute('data-chrome-key') as ChromeKey;
+    if (!key) continue;
+
+    // Read existing offset for this chrome element
+    const chromeEntry = chromeConfig?.[key];
+    const existingOffset =
+      typeof chromeEntry === 'object' && chromeEntry !== null ? chromeEntry.offset : undefined;
+    const origChromeDx = existingOffset?.dx ?? 0;
+    const origChromeDy = existingOffset?.dy ?? 0;
+
+    textEl.style.cursor = 'grab';
+
+    const cleanup = createDragHandler({
+      element: textEl,
+      svg: svg as unknown as SVGSVGElement,
+      onMove: (dx, dy) => {
+        (textEl as SVGElement & ElementCSSInlineStyle).style.transform =
+          `translate(${dx}px, ${dy}px)`;
+      },
+      onEnd: (dx, dy, moved) => {
+        (textEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
+
+        if (moved) {
+          onEdit({
+            type: 'chrome',
+            key,
+            text: textEl.textContent ?? '',
+            offset: { dx: origChromeDx + dx, dy: origChromeDy + dy },
+          });
+        }
+      },
+      setDragging,
+    });
+
+    cleanups.push(cleanup);
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Legend drag
+// ---------------------------------------------------------------------------
+
+/**
+ * Wire drag on the legend group.
+ * Click suppression prevents legend toggle from firing after a drag.
+ * On drag end, fires onEdit with the legend offset.
+ * Returns a cleanup function.
+ */
+function wireLegendDrag(
+  svg: SVGElement,
+  spec: VizSpec,
+  onEdit: (edit: ElementEdit) => void,
+  setDragging: (dragging: boolean) => void,
+): () => void {
+  const legendG = svg.querySelector('.viz-legend') as SVGGElement | null;
+  if (!legendG) return () => {};
+
+  const cleanups: Array<() => void> = [];
+
+  // Read existing legend offset from the spec
+  const legendConfig = 'legend' in spec ? spec.legend : undefined;
+  const origLegendDx = legendConfig?.offset?.dx ?? 0;
+  const origLegendDy = legendConfig?.offset?.dy ?? 0;
+
+  // Set grab cursor on the legend background, not on entry elements
+  legendG.style.cursor = 'grab';
+
+  const cleanup = createDragHandler({
+    element: legendG,
+    svg: svg as unknown as SVGSVGElement,
+    onMove: (dx, dy) => {
+      (legendG as SVGElement & ElementCSSInlineStyle).style.transform =
+        `translate(${dx}px, ${dy}px)`;
+    },
+    onEnd: (dx, dy, moved) => {
+      (legendG as SVGElement & ElementCSSInlineStyle).style.transform = '';
+
+      if (moved) {
+        onEdit({ type: 'legend', offset: { dx: origLegendDx + dx, dy: origLegendDy + dy } });
+      }
+    },
+    setDragging,
+  });
+
+  cleanups.push(cleanup);
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Series label drag
+// ---------------------------------------------------------------------------
+
+/**
+ * Wire drag on series label elements (.viz-mark-label[data-series]).
+ * On drag end, fires onEdit with the series name and offset.
+ * Returns a cleanup function.
+ */
+function wireSeriesLabelDrag(
+  svg: SVGElement,
+  spec: VizSpec,
+  onEdit: (edit: ElementEdit) => void,
+  setDragging: (dragging: boolean) => void,
+): () => void {
+  const labels = svg.querySelectorAll('.viz-mark-label');
+  const cleanups: Array<() => void> = [];
+
+  // Read existing label offsets from the spec
+  const labelsConfig = 'labels' in spec ? spec.labels : undefined;
+
+  for (const label of labels) {
+    const labelEl = label as SVGTextElement;
+    // Check label itself first, then fall back to the parent mark group's data-series
+    const series =
+      labelEl.getAttribute('data-series') ??
+      labelEl.closest('[data-series]')?.getAttribute('data-series');
+    if (!series) continue;
+
+    // Read existing offset for this series label
+    const existingSeriesOffset = labelsConfig?.offsets?.[series];
+    const origSeriesDx = existingSeriesOffset?.dx ?? 0;
+    const origSeriesDy = existingSeriesOffset?.dy ?? 0;
+
+    labelEl.style.cursor = 'grab';
+
+    const cleanup = createDragHandler({
+      element: labelEl,
+      svg: svg as unknown as SVGSVGElement,
+      onMove: (dx, dy) => {
+        (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
+          `translate(${dx}px, ${dy}px)`;
+      },
+      onEnd: (dx, dy, moved) => {
+        (labelEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
+
+        if (moved) {
+          onEdit({
+            type: 'series-label',
+            series,
+            offset: { dx: origSeriesDx + dx, dy: origSeriesDy + dy },
+          });
+        }
+      },
+      setDragging,
+    });
+
+    cleanups.push(cleanup);
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
     }
   };
 }
@@ -759,6 +1352,7 @@ export function createChart(
   let cleanupLegend: (() => void) | null = null;
   let cleanupChartEvents: (() => void) | null = null;
   let cleanupAnnotationDrag: (() => void) | null = null;
+  let cleanupEditDrags: (() => void) | null = null;
   let srTable: HTMLTableElement | null = null;
   let destroyed = false;
   let isDragging = false;
@@ -817,6 +1411,10 @@ export function createChart(
       cleanupAnnotationDrag();
       cleanupAnnotationDrag = null;
     }
+    if (cleanupEditDrags) {
+      cleanupEditDrags();
+      cleanupEditDrags = null;
+    }
     if (svgElement?.parentNode) {
       svgElement.parentNode.removeChild(svgElement);
     }
@@ -865,24 +1463,60 @@ export function createChart(
       cleanupChartEvents = wireChartEvents(svgElement, currentLayout, specAnnotations, options);
     }
 
-    // Wire annotation drag editing
-    if (options?.onAnnotationEdit) {
-      const dragAnnotations: Annotation[] =
-        'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
-          ? currentSpec.annotations
-          : [];
+    // Shared setDragging callback for all drag handlers
+    const setDragging = (dragging: boolean) => {
+      isDragging = dragging;
+      if (!dragging && pendingRender) {
+        pendingRender = false;
+        render();
+      }
+    };
+
+    // Shared annotation list for drag handlers (computed once)
+    const dragAnnotations: Annotation[] =
+      'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
+        ? currentSpec.annotations
+        : [];
+
+    // Wire annotation drag editing (activates when onAnnotationEdit or onEdit is provided)
+    if (options?.onAnnotationEdit || options?.onEdit) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
-        options.onAnnotationEdit,
-        (dragging: boolean) => {
-          isDragging = dragging;
-          if (!dragging && pendingRender) {
-            pendingRender = false;
-            render();
-          }
-        },
+        options?.onAnnotationEdit,
+        options?.onEdit,
+        setDragging,
       );
+    }
+
+    // Wire all edit drag handlers when onEdit is provided
+    if (options?.onEdit) {
+      const editCleanups: Array<() => void> = [];
+
+      // Connector endpoint drag
+      editCleanups.push(
+        wireConnectorEndpointDrag(svgElement, dragAnnotations, options.onEdit, setDragging),
+      );
+
+      // Range/refline annotation label drag
+      editCleanups.push(
+        wireAnnotationLabelDrag(svgElement, dragAnnotations, options.onEdit, setDragging),
+      );
+
+      // Chrome text drag
+      editCleanups.push(wireChromeDrag(svgElement, currentSpec, options.onEdit, setDragging));
+
+      // Legend drag
+      editCleanups.push(wireLegendDrag(svgElement, currentSpec, options.onEdit, setDragging));
+
+      // Series label drag
+      editCleanups.push(wireSeriesLabelDrag(svgElement, currentSpec, options.onEdit, setDragging));
+
+      cleanupEditDrags = () => {
+        for (const cleanup of editCleanups) {
+          cleanup();
+        }
+      };
     }
 
     // Create hidden data table for screen readers
@@ -957,6 +1591,10 @@ export function createChart(
     if (cleanupAnnotationDrag) {
       cleanupAnnotationDrag();
       cleanupAnnotationDrag = null;
+    }
+    if (cleanupEditDrags) {
+      cleanupEditDrags();
+      cleanupEditDrags = null;
     }
     if (disconnectResize) {
       disconnectResize();

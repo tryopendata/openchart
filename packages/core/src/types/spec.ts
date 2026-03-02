@@ -160,6 +160,8 @@ export interface ChromeText {
   text: string;
   /** Optional style overrides. Theme defaults are used for any omitted property. */
   style?: ChromeTextStyle;
+  /** Pixel offset for fine-tuning position. */
+  offset?: AnnotationOffset;
 }
 
 /**
@@ -236,6 +238,13 @@ export interface TextAnnotation extends AnnotationBase {
    * - `false`: no connector
    */
   connector?: boolean | 'curve';
+  /** Per-endpoint offsets for the connector line. Allows fine-tuning where the connector starts and ends. */
+  connectorOffset?: {
+    /** Offset for the label-end of the connector. */
+    from?: AnnotationOffset;
+    /** Offset for the data-point-end of the connector. */
+    to?: AnnotationOffset;
+  };
   /** Background color behind the text. Useful for readability over chart lines. */
   background?: string;
 }
@@ -354,6 +363,8 @@ export interface LabelConfig {
   density?: LabelDensity;
   /** Number format override for label values (d3-format string, e.g. ",.0f"). */
   format?: string;
+  /** Per-series pixel offsets for fine-tuning label positions, keyed by series name. */
+  offsets?: Record<string, AnnotationOffset>;
 }
 
 // ---------------------------------------------------------------------------
@@ -364,6 +375,8 @@ export interface LabelConfig {
 export interface LegendConfig {
   /** Override the legend position. If omitted, the responsive strategy decides. */
   position?: LegendPosition;
+  /** Pixel offset for fine-tuning legend position. */
+  offset?: AnnotationOffset;
 }
 
 // ---------------------------------------------------------------------------

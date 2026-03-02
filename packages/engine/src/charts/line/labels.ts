@@ -58,6 +58,7 @@ export function computeLineLabels(
   marks: LineMark[],
   strategy: LayoutStrategy,
   density: LabelDensity = 'auto',
+  labelOffsets?: Record<string, { dx?: number; dy?: number }>,
 ): Map<string, ResolvedLabel> {
   const result = new Map<string, ResolvedLabel>();
 
@@ -109,10 +110,12 @@ export function computeLineLabels(
   if (density === 'all') {
     for (let i = 0; i < candidates.length; i++) {
       const c = candidates[i];
-      result.set(seriesOrder[i], {
+      const seriesKey = seriesOrder[i];
+      const userOffset = labelOffsets?.[seriesKey];
+      result.set(seriesKey, {
         text: c.text,
-        x: c.anchorX,
-        y: c.anchorY,
+        x: c.anchorX + (userOffset?.dx ?? 0),
+        y: c.anchorY + (userOffset?.dy ?? 0),
         style: c.style,
         visible: true,
       });
@@ -126,7 +129,15 @@ export function computeLineLabels(
 
   const resolved = resolveCollisions(candidates);
   for (let i = 0; i < resolved.length; i++) {
-    result.set(seriesOrder[i], resolved[i]);
+    const seriesKey = seriesOrder[i];
+    const label = resolved[i];
+    // Apply user-provided per-series label offset after collision resolution
+    const userOffset = labelOffsets?.[seriesKey];
+    if (userOffset) {
+      label.x += userOffset.dx ?? 0;
+      label.y += userOffset.dy ?? 0;
+    }
+    result.set(seriesKey, label);
   }
 
   return result;
