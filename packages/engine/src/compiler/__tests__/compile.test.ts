@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compile } from '../index';
+import type { NormalizedChartSpec } from '../types';
 
 describe('compile (validate + normalize pipeline)', () => {
   const validSpec = {
@@ -24,7 +25,7 @@ describe('compile (validate + normalize pipeline)', () => {
 
   it('fills in defaults on the normalized spec', () => {
     const result = compile(validSpec);
-    const spec = result.spec as any;
+    const spec = result.spec as NormalizedChartSpec;
     expect(spec.responsive).toBe(true);
     expect(spec.darkMode).toBe('off');
     expect(spec.annotations).toEqual([]);
@@ -32,7 +33,7 @@ describe('compile (validate + normalize pipeline)', () => {
 
   it('normalizes chrome strings', () => {
     const result = compile(validSpec);
-    const spec = result.spec as any;
+    const spec = result.spec as NormalizedChartSpec;
     expect(spec.chrome.title).toEqual({ text: 'Test Chart' });
   });
 

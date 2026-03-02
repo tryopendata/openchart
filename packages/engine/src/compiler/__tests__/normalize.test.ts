@@ -1,4 +1,11 @@
-import type { ChartSpec, GraphSpec, TableSpec } from '@opendata-ai/core';
+import type {
+  ChartSpec,
+  GraphSpec,
+  RangeAnnotation,
+  RefLineAnnotation,
+  TableSpec,
+  TextAnnotation,
+} from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { normalizeSpec } from '../normalize';
 import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } from '../types';
@@ -77,6 +84,7 @@ describe('normalizeSpec', () => {
         encoding: {
           // No type specified, should be inferred as quantitative
           x: { field: 'x', type: 'quantitative' },
+          // biome-ignore lint/suspicious/noExplicitAny: intentionally omitting `type` to test inference
           y: { field: 'y' } as any,
         },
       };
@@ -95,6 +103,7 @@ describe('normalizeSpec', () => {
           { date: '2021-06-15', value: 20 },
         ],
         encoding: {
+          // biome-ignore lint/suspicious/noExplicitAny: intentionally omitting `type` to test inference
           x: { field: 'date' } as any,
           y: { field: 'value', type: 'quantitative' },
         },
@@ -153,14 +162,14 @@ describe('normalizeSpec', () => {
       };
 
       const result = normalizeSpec(spec) as NormalizedChartSpec;
-      const refline = result.annotations[0] as any;
+      const refline = result.annotations[0] as RefLineAnnotation;
       expect(refline.style).toBe('dashed');
       expect(refline.strokeWidth).toBe(1);
 
-      const text = result.annotations[1] as any;
+      const text = result.annotations[1] as TextAnnotation;
       expect(text.fontSize).toBe(12);
 
-      const range = result.annotations[2] as any;
+      const range = result.annotations[2] as RangeAnnotation;
       expect(range.opacity).toBe(0.1);
     });
   });
