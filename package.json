@@ -25,7 +25,6 @@
     "format": "biome format --write packages/ examples/src/",
     "typecheck": "bun run --filter './packages/*' typecheck",
     "dev": "cd examples && bun run dev",
-    "release": "./scripts/release.sh",
     "prepare": "husky"
   },
   "overrides": {
