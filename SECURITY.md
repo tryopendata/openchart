@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in @opendata-ai, please report it responsibly. **Do not open a public GitHub issue.**
 
-Instead, use [GitHub's private vulnerability reporting](https://github.com/openchart/openchart/security/advisories/new) to submit your report. This keeps the details confidential until a fix is available.
+Instead, use [GitHub's private vulnerability reporting](https://github.com/tryopendata/openchart/security/advisories/new) to submit your report. This keeps the details confidential until a fix is available.
 
 ### What to include
 

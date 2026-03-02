@@ -6,11 +6,11 @@
   "author": "Riley Hilliard",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openchart/openchart.git",
+    "url": "https://github.com/tryopendata/openchart.git",
     "directory": "packages/svelte"
   },
-  "homepage": "https://github.com/openchart/openchart#readme",
-  "bugs": "https://github.com/openchart/openchart/issues",
+  "homepage": "https://github.com/tryopendata/openchart#readme",
+  "bugs": "https://github.com/tryopendata/openchart/issues",
   "publishConfig": {
     "access": "public"
   },

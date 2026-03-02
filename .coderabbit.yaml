@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+enable_free_tier: true
+reviews:
+  profile: "chill" # Options: "assertive", "chill", "friendly"
+  request_reviews_from_completions: true
+  auto_review:
+    enabled: true
+    ignore_title_keywords: ["WIP", "draft"]
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!dist/**"
+    - "!node_modules/**"
+    - "!**.min.js"
+chat:
+  auto_reply: true

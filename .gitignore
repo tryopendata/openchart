@@ -12,3 +12,4 @@ coverage/
 .idea/
 .playwright-cli
 ./claude/worktrees
+.npmrc
