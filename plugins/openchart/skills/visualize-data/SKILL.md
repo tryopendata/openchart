@@ -45,6 +45,7 @@ Each type has a detailed reference with full spec, encoding rules, and examples.
 
 **Cross-cutting references:**
 - [Annotations](references/annotations.md) (spec syntax for text callouts, ranges, reference lines)
+- [Editing](references/editing.md) (onEdit callback, ElementEdit type, persisting drag positions for all elements)
 - [Theme customization](references/theme.md) (colors, fonts, spacing config)
 - [Rendering & APIs](references/rendering.md) (React, Vue, Svelte, Vanilla JS, events, builders)
 

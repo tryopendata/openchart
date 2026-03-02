@@ -68,11 +68,11 @@ graph.destroy();
 
 ## Event Handlers
 
-**Charts:** `onMarkClick`, `onMarkHover`, `onMarkLeave`, `onLegendToggle`, `onAnnotationClick`, `onAnnotationEdit`
+**Charts:** `onMarkClick`, `onMarkHover`, `onMarkLeave`, `onLegendToggle`, `onAnnotationClick`, `onEdit`
 **Tables:** `onRowClick`, `onSortChange`, `onSearchChange`, `onPageChange`
 **Graphs:** `onNodeClick`, `onNodeDoubleClick`, `onSelectionChange`
 
-`onAnnotationEdit` fires when a user drags a text annotation label to reposition it. Signature: `(annotation: TextAnnotation, updatedOffset: { dx?: number, dy?: number }) => void`. Use this to persist annotation position changes.
+`onEdit` is the unified edit callback. Passing it to `<Chart>` activates edit mode, making text annotations, connectors, range/refline labels, chrome elements, series labels, and the legend all draggable. It fires a typed `ElementEdit` discriminated union. See [editing reference](editing.md) for the full API and how to persist edits back to the spec.
 
 ## Builder Functions
 

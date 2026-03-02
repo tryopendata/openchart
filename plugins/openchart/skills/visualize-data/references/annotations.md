@@ -29,6 +29,10 @@ Callout at a specific data point.
   offset?: { dx?: number, dy?: number },  // pixel offset from position
   anchor?: "top"|"bottom"|"left"|"right"|"auto",
   connector?: boolean | "curve",  // true: straight line, "curve": curved arrow, false: none
+  connectorOffset?: {
+    from?: { dx?: number, dy?: number },  // offset at the label end of the connector
+    to?: { dx?: number, dy?: number },    // offset at the data point end of the connector
+  },
   background?: string,           // background color behind text for readability
 }
 ```
@@ -83,28 +87,9 @@ Horizontal or vertical threshold/baseline line.
 
 ## Annotation Editing
 
-Text annotations are draggable by default. Use the `onAnnotationEdit` event handler to persist position changes:
+Chart elements are draggable when `onEdit` is passed to `<Chart>`. This covers text annotations, connector endpoints, range/refline labels, chrome, series labels, and the legend.
 
-```tsx
-// React
-<Chart
-  spec={spec}
-  onAnnotationEdit={(annotation, updatedOffset) => {
-    // updatedOffset: { dx?: number, dy?: number }
-    // Update your spec's annotation offset to persist the new position
-  }}
-/>
-```
-
-```typescript
-// Vanilla
-createChart(container, spec, {
-  onAnnotationEdit: (annotation, updatedOffset) => {
-    // annotation: the TextAnnotation that was dragged
-    // updatedOffset: the new pixel offset from the data point
-  },
-});
-```
+See [editing reference](editing.md) for the full `onEdit` API, `ElementEdit` type, and how to persist each edit back to the spec.
 
 ## Example: Annotated Line Chart
 
