@@ -1,5 +1,5 @@
 /**
- * @openchart/core
+ * @opendata-ai/core
  *
  * Core types, theme engine, color system, accessibility, and locale utilities
  * for the openchart library.
@@ -18,7 +18,7 @@ export * from './types/index';
 //
 // Individual named palettes (SEQUENTIAL_BLUE, DIVERGING_RED_BLUE, etc.) are
 // available via SEQUENTIAL_PALETTES and DIVERGING_PALETTES or by direct import
-// from '@openchart/core/src/colors/palettes'.
+// from '@opendata-ai/core/src/colors/palettes'.
 // ---------------------------------------------------------------------------
 
 export type {

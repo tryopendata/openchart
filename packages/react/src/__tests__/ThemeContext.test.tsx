@@ -5,7 +5,7 @@
  * provider hierarchy and that nested providers override parent values.
  */
 
-import type { ThemeConfig } from '@openchart/core';
+import type { ThemeConfig } from '@opendata-ai/core';
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useVizDarkMode, useVizTheme, VizThemeProvider } from '../ThemeContext';

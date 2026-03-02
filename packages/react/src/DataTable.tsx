@@ -6,8 +6,8 @@
  * for sort, search, and pagination state.
  */
 
-import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@openchart/core';
-import { createTable, type TableInstance, type TableMountOptions } from '@openchart/vanilla';
+import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/core';
+import { createTable, type TableInstance, type TableMountOptions } from '@opendata-ai/vanilla';
 import { type CSSProperties, useEffect, useRef } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 

@@ -1,8 +1,8 @@
 # Spec reference
 
-The definitive field-by-field reference for every type in `VizSpec`. Cross-referenced against the TypeScript source in `@openchart/core/src/types/`.
+The definitive field-by-field reference for every type in `VizSpec`. Cross-referenced against the TypeScript source in `@opendata-ai/core/src/types/`.
 
-All types are importable from `@openchart/core` or from the convenience re-exports in `@openchart/react` and `@openchart/engine`.
+All types are importable from `@opendata-ai/core` or from the convenience re-exports in `@opendata-ai/react` and `@opendata-ai/engine`.
 
 ## VizSpec
 
@@ -13,6 +13,7 @@ type VizSpec = ChartSpec | TableSpec | GraphSpec;
 ```
 
 Use `type` to select which spec shape you're building:
+
 - Chart types (`line`, `area`, `bar`, `column`, `pie`, `donut`, `dot`, `scatter`) produce a `ChartSpec`
 - `table` produces a `TableSpec`
 - `graph` produces a `GraphSpec`
@@ -25,17 +26,17 @@ Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpe
 
 The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `ChartType` | (required) | Chart type: `'line'`, `'area'`, `'bar'`, `'column'`, `'pie'`, `'donut'`, `'dot'`, `'scatter'` |
-| `data` | `DataRow[]` | (required) | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty. |
-| `encoding` | `Encoding` | (required) | Maps data fields to visual channels. See [Encoding](#encoding). |
-| `chrome` | `Chrome` | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome). |
-| `annotations` | `Annotation[]` | `undefined` | Text callouts, highlighted ranges, reference lines. See [Annotations](#annotations). |
-| `labels` | `LabelConfig` | `undefined` | Data label display controls. See [Labels](#labels). |
-| `responsive` | `boolean` | `true` | Whether the chart adapts to container width via ResizeObserver. |
-| `theme` | `ThemeConfig` | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig). |
-| `darkMode` | `DarkMode` | `'off'` | Dark mode behavior. See [DarkMode](#darkmode). |
+| Field         | Type           | Default     | Description                                                                                   |
+| ------------- | -------------- | ----------- | --------------------------------------------------------------------------------------------- |
+| `type`        | `ChartType`    | (required)  | Chart type: `'line'`, `'area'`, `'bar'`, `'column'`, `'pie'`, `'donut'`, `'dot'`, `'scatter'` |
+| `data`        | `DataRow[]`    | (required)  | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty.               |
+| `encoding`    | `Encoding`     | (required)  | Maps data fields to visual channels. See [Encoding](#encoding).                               |
+| `chrome`      | `Chrome`       | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome).               |
+| `annotations` | `Annotation[]` | `undefined` | Text callouts, highlighted ranges, reference lines. See [Annotations](#annotations).          |
+| `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](#labels).                                           |
+| `responsive`  | `boolean`      | `true`      | Whether the chart adapts to container width via ResizeObserver.                               |
+| `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
+| `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
 
 ### DataRow
 
@@ -65,22 +66,22 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 
 ### EncodingChannel
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `field` | `string` | (required) | Data field name. Must match a key in the data rows. |
-| `type` | `FieldType` | (required) | How to interpret values: `'quantitative'`, `'temporal'`, `'nominal'`, `'ordinal'`. |
+| Field       | Type          | Default     | Description                                                                                    |
+| ----------- | ------------- | ----------- | ---------------------------------------------------------------------------------------------- |
+| `field`     | `string`      | (required)  | Data field name. Must match a key in the data rows.                                            |
+| `type`      | `FieldType`   | (required)  | How to interpret values: `'quantitative'`, `'temporal'`, `'nominal'`, `'ordinal'`.             |
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
-| `axis` | `AxisConfig` | `undefined` | Axis configuration. Only relevant for `x` and `y` channels. |
-| `scale` | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero). |
+| `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
+| `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
 
 ### FieldType
 
-| Value | Meaning | Scale created |
-|-------|---------|---------------|
-| `quantitative` | Continuous numbers | Linear (or log) |
-| `temporal` | Dates and times | Time |
-| `nominal` | Unordered categories | Band/ordinal |
-| `ordinal` | Ordered categories | Band/ordinal |
+| Value          | Meaning              | Scale created   |
+| -------------- | -------------------- | --------------- |
+| `quantitative` | Continuous numbers   | Linear (or log) |
+| `temporal`     | Dates and times      | Time            |
+| `nominal`      | Unordered categories | Band/ordinal    |
+| `ordinal`      | Ordered categories   | Band/ordinal    |
 
 ### AggregateOp
 
@@ -90,21 +91,21 @@ Applied to the field values before encoding. Useful when your data has multiple 
 
 ### AxisConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `label` | `string` | field name | Axis label text displayed along the axis. |
-| `format` | `string` | auto | d3-format string for tick labels, e.g. `",.0f"` for comma-separated integers. |
-| `tickCount` | `number` | auto | Override the number of ticks. Engine picks a sensible default if omitted. |
-| `grid` | `boolean` | `true` for y-axis | Whether to show gridlines for this axis. |
+| Field       | Type      | Default           | Description                                                                   |
+| ----------- | --------- | ----------------- | ----------------------------------------------------------------------------- |
+| `label`     | `string`  | field name        | Axis label text displayed along the axis.                                     |
+| `format`    | `string`  | auto              | d3-format string for tick labels, e.g. `",.0f"` for comma-separated integers. |
+| `tickCount` | `number`  | auto              | Override the number of ticks. Engine picks a sensible default if omitted.     |
+| `grid`      | `boolean` | `true` for y-axis | Whether to show gridlines for this axis.                                      |
 
 ### ScaleConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `domain` | `[number, number]` or `string[]` | auto from data | Explicit domain override. |
-| `type` | `'linear'` \| `'log'` \| `'time'` \| `'band'` \| `'point'` \| `'ordinal'` | inferred from FieldType | Scale type override. |
-| `nice` | `boolean` | `true` | Round domain to clean tick values. |
-| `zero` | `boolean` | `true` (quantitative) | Whether the domain should include zero. |
+| Field    | Type                                                                      | Default                 | Description                             |
+| -------- | ------------------------------------------------------------------------- | ----------------------- | --------------------------------------- |
+| `domain` | `[number, number]` or `string[]`                                          | auto from data          | Explicit domain override.               |
+| `type`   | `'linear'` \| `'log'` \| `'time'` \| `'band'` \| `'point'` \| `'ordinal'` | inferred from FieldType | Scale type override.                    |
+| `nice`   | `boolean`                                                                 | `true`                  | Round domain to clean tick values.      |
+| `zero`   | `boolean`                                                                 | `true` (quantitative)   | Whether the domain should include zero. |
 
 ---
 
@@ -114,16 +115,16 @@ The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. 
 
 **Legend**: (req) = required, (opt) = optional, -- = not applicable
 
-| Chart Type | x | y | color | size | detail | Notes |
-|------------|---|---|-------|------|--------|-------|
-| `line` | temporal, ordinal (req) | quantitative (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | color splits into multi-series with auto legend |
-| `area` | temporal, ordinal (req) | quantitative (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Same encoding as line, filled region |
-| `bar` | quantitative (req) | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Horizontal bars. x = values, y = categories |
-| `column` | nominal, ordinal, temporal (req) | quantitative (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Vertical bars. x = categories, y = values |
-| `pie` | -- (opt, unused) | quantitative (req) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | color = slice categories, y = slice values |
-| `donut` | -- (opt, unused) | quantitative (req) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | Same as pie with inner radius |
-| `dot` | quantitative (req) | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Dot plot. x = values, y = categories |
-| `scatter` | quantitative (req) | quantitative (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Both axes quantitative. size creates bubble chart |
+| Chart Type | x                                | y                      | color                  | size               | detail        | Notes                                             |
+| ---------- | -------------------------------- | ---------------------- | ---------------------- | ------------------ | ------------- | ------------------------------------------------- |
+| `line`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | color splits into multi-series with auto legend   |
+| `area`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Same encoding as line, filled region              |
+| `bar`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Horizontal bars. x = values, y = categories       |
+| `column`   | nominal, ordinal, temporal (req) | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Vertical bars. x = categories, y = values         |
+| `pie`      | -- (opt, unused)                 | quantitative (req)     | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | color = slice categories, y = slice values        |
+| `donut`    | -- (opt, unused)                 | quantitative (req)     | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | Same as pie with inner radius                     |
+| `dot`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Dot plot. x = values, y = categories              |
+| `scatter`  | quantitative (req)               | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Both axes quantitative. size creates bubble chart |
 
 ### Channel purpose per chart type
 
@@ -155,13 +156,13 @@ interface Chrome {
 
 Each field accepts either a plain string or a `ChromeText` object for style overrides.
 
-| Field | Position | Default style |
-|-------|----------|--------------|
-| `title` | Top, above chart | 22px, bold (700), `#333333` |
-| `subtitle` | Below title | 15px, normal (400), `#666666` |
-| `source` | Below chart area | 12px, normal (400), `#999999` |
-| `byline` | Below source | 12px, normal (400), `#999999` |
-| `footer` | Below byline | 12px, normal (400), `#999999` |
+| Field      | Position         | Default style                 |
+| ---------- | ---------------- | ----------------------------- |
+| `title`    | Top, above chart | 22px, bold (700), `#333333`   |
+| `subtitle` | Below title      | 15px, normal (400), `#666666` |
+| `source`   | Below chart area | 12px, normal (400), `#999999` |
+| `byline`   | Below source     | 12px, normal (400), `#999999` |
+| `footer`   | Below byline     | 12px, normal (400), `#999999` |
 
 ### ChromeText
 
@@ -174,10 +175,10 @@ interface ChromeText {
 }
 
 interface ChromeTextStyle {
-  fontSize?: number;     // Pixels
-  fontWeight?: number;   // 400 = normal, 600 = semibold, 700 = bold
-  fontFamily?: string;   // CSS font family
-  color?: string;        // CSS color string
+  fontSize?: number; // Pixels
+  fontWeight?: number; // 400 = normal, 600 = semibold, 700 = bold
+  fontFamily?: string; // CSS font family
+  color?: string; // CSS color string
 }
 ```
 
@@ -205,23 +206,23 @@ Three annotation types are available, discriminated by the `type` field:
 
 A callout label positioned at a data coordinate.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'text'` | (required) | Discriminant. |
-| `x` | `string \| number` | (required) | X-axis data value or position. |
-| `y` | `string \| number` | (required) | Y-axis data value or position. |
-| `text` | `string` | (required) | The annotation text. |
-| `label` | `string` | `undefined` | Additional label text. |
-| `fontSize` | `number` | theme default | Font size override in pixels. |
-| `fontWeight` | `number` | theme default | Font weight override. |
-| `offset` | `AnnotationOffset` | `undefined` | Pixel offset from computed position. `{ dx?: number, dy?: number }`. |
-| `anchor` | `AnnotationAnchor` | `'auto'` | Label placement direction: `'top'`, `'bottom'`, `'left'`, `'right'`, `'auto'`. |
-| `connector` | `boolean \| 'curve'` | `true` | `true` draws a straight connector line, `'curve'` draws a curved arrow with arrowhead, `false` disables the connector. |
-| `background` | `string` | `undefined` | Background color behind the text. Renders a masking rect for readability over chart lines. |
-| `fill` | `string` | theme `annotationFill` | Fill color. |
-| `stroke` | `string` | theme `annotationText` | Stroke color. |
-| `opacity` | `number` | `1` | Opacity (0 to 1). |
-| `zIndex` | `number` | `0` | Render ordering. Higher values render on top. |
+| Field        | Type                 | Default                | Description                                                                                                            |
+| ------------ | -------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `type`       | `'text'`             | (required)             | Discriminant.                                                                                                          |
+| `x`          | `string \| number`   | (required)             | X-axis data value or position.                                                                                         |
+| `y`          | `string \| number`   | (required)             | Y-axis data value or position.                                                                                         |
+| `text`       | `string`             | (required)             | The annotation text.                                                                                                   |
+| `label`      | `string`             | `undefined`            | Additional label text.                                                                                                 |
+| `fontSize`   | `number`             | theme default          | Font size override in pixels.                                                                                          |
+| `fontWeight` | `number`             | theme default          | Font weight override.                                                                                                  |
+| `offset`     | `AnnotationOffset`   | `undefined`            | Pixel offset from computed position. `{ dx?: number, dy?: number }`.                                                   |
+| `anchor`     | `AnnotationAnchor`   | `'auto'`               | Label placement direction: `'top'`, `'bottom'`, `'left'`, `'right'`, `'auto'`.                                         |
+| `connector`  | `boolean \| 'curve'` | `true`                 | `true` draws a straight connector line, `'curve'` draws a curved arrow with arrowhead, `false` disables the connector. |
+| `background` | `string`             | `undefined`            | Background color behind the text. Renders a masking rect for readability over chart lines.                             |
+| `fill`       | `string`             | theme `annotationFill` | Fill color.                                                                                                            |
+| `stroke`     | `string`             | theme `annotationText` | Stroke color.                                                                                                          |
+| `opacity`    | `number`             | `1`                    | Opacity (0 to 1).                                                                                                      |
+| `zIndex`     | `number`             | `0`                    | Render ordering. Higher values render on top.                                                                          |
 
 The `text` field supports `\n` for multi-line annotations. Each line renders as a separate `<tspan>` element, auto-centered within the label.
 
@@ -229,22 +230,23 @@ The `text` field supports `\n` for multi-line annotations. Each line renders as 
 
 A highlighted band or rectangle.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'range'` | (required) | Discriminant. |
-| `x1` | `string \| number` | `undefined` | Start of the range on x-axis. |
-| `x2` | `string \| number` | `undefined` | End of the range on x-axis. |
-| `y1` | `string \| number` | `undefined` | Start of the range on y-axis. |
-| `y2` | `string \| number` | `undefined` | End of the range on y-axis. |
-| `label` | `string` | `undefined` | Range label text. |
-| `labelOffset` | `AnnotationOffset` | `undefined` | Pixel offset for the label. `{ dx?: number, dy?: number }`. |
-| `labelAnchor` | `AnnotationAnchor` | `'auto'` | Label placement direction. |
-| `fill` | `string` | theme `annotationFill` | Fill color. |
-| `stroke` | `string` | `undefined` | Stroke color. |
-| `opacity` | `number` | `1` | Opacity (0 to 1). |
-| `zIndex` | `number` | `0` | Render ordering. |
+| Field         | Type               | Default                | Description                                                 |
+| ------------- | ------------------ | ---------------------- | ----------------------------------------------------------- |
+| `type`        | `'range'`          | (required)             | Discriminant.                                               |
+| `x1`          | `string \| number` | `undefined`            | Start of the range on x-axis.                               |
+| `x2`          | `string \| number` | `undefined`            | End of the range on x-axis.                                 |
+| `y1`          | `string \| number` | `undefined`            | Start of the range on y-axis.                               |
+| `y2`          | `string \| number` | `undefined`            | End of the range on y-axis.                                 |
+| `label`       | `string`           | `undefined`            | Range label text.                                           |
+| `labelOffset` | `AnnotationOffset` | `undefined`            | Pixel offset for the label. `{ dx?: number, dy?: number }`. |
+| `labelAnchor` | `AnnotationAnchor` | `'auto'`               | Label placement direction.                                  |
+| `fill`        | `string`           | theme `annotationFill` | Fill color.                                                 |
+| `stroke`      | `string`           | `undefined`            | Stroke color.                                               |
+| `opacity`     | `number`           | `1`                    | Opacity (0 to 1).                                           |
+| `zIndex`      | `number`           | `0`                    | Render ordering.                                            |
 
 Range behavior depends on which bounds are provided:
+
 - `x1`/`x2` only: vertical band (full chart height)
 - `y1`/`y2` only: horizontal band (full chart width)
 - All four: rectangle
@@ -253,20 +255,20 @@ Range behavior depends on which bounds are provided:
 
 A horizontal or vertical reference line.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'refline'` | (required) | Discriminant. |
-| `x` | `string \| number` | `undefined` | X-axis value for a vertical line. |
-| `y` | `string \| number` | `undefined` | Y-axis value for a horizontal line. |
-| `label` | `string` | `undefined` | Line label text. |
-| `style` | `'solid' \| 'dashed' \| 'dotted'` | `'solid'` | Line style. |
-| `strokeWidth` | `number` | `1` | Line width in pixels. |
-| `labelOffset` | `AnnotationOffset` | `undefined` | Pixel offset for the label. |
-| `labelAnchor` | `AnnotationAnchor` | `'auto'` | Label placement direction. |
-| `fill` | `string` | `undefined` | Fill color. |
-| `stroke` | `string` | theme `annotationText` | Stroke/line color. |
-| `opacity` | `number` | `1` | Opacity (0 to 1). |
-| `zIndex` | `number` | `0` | Render ordering. |
+| Field         | Type                              | Default                | Description                         |
+| ------------- | --------------------------------- | ---------------------- | ----------------------------------- |
+| `type`        | `'refline'`                       | (required)             | Discriminant.                       |
+| `x`           | `string \| number`                | `undefined`            | X-axis value for a vertical line.   |
+| `y`           | `string \| number`                | `undefined`            | Y-axis value for a horizontal line. |
+| `label`       | `string`                          | `undefined`            | Line label text.                    |
+| `style`       | `'solid' \| 'dashed' \| 'dotted'` | `'solid'`              | Line style.                         |
+| `strokeWidth` | `number`                          | `1`                    | Line width in pixels.               |
+| `labelOffset` | `AnnotationOffset`                | `undefined`            | Pixel offset for the label.         |
+| `labelAnchor` | `AnnotationAnchor`                | `'auto'`               | Label placement direction.          |
+| `fill`        | `string`                          | `undefined`            | Fill color.                         |
+| `stroke`      | `string`                          | theme `annotationText` | Stroke/line color.                  |
+| `opacity`     | `number`                          | `1`                    | Opacity (0 to 1).                   |
+| `zIndex`      | `number`                          | `0`                    | Render ordering.                    |
 
 Provide `x` for a vertical line or `y` for a horizontal line. Both can be set for a crosshair.
 
@@ -275,20 +277,26 @@ Provide `x` for a vertical line or `y` for a horizontal line. Both can be set fo
 ```ts
 annotations: [
   // Horizontal threshold line
-  { type: 'refline', y: 100, label: 'Target', style: 'dashed', stroke: '#e45' },
+  { type: "refline", y: 100, label: "Target", style: "dashed", stroke: "#e45" },
   // Highlighted time range
-  { type: 'range', x1: '2023-06-01', x2: '2023-09-01', label: 'Q3', opacity: 0.08 },
+  {
+    type: "range",
+    x1: "2023-06-01",
+    x2: "2023-09-01",
+    label: "Q3",
+    opacity: 0.08,
+  },
   // Text callout with fine-tuned positioning
   {
-    type: 'text',
-    x: '2023-07-15',
+    type: "text",
+    x: "2023-07-15",
     y: 142,
-    text: 'All-time high',
-    anchor: 'top',
+    text: "All-time high",
+    anchor: "top",
     offset: { dy: -8 },
     connector: true,
   },
-]
+];
 ```
 
 ---
@@ -304,19 +312,19 @@ interface LabelConfig {
 }
 ```
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `density` | `LabelDensity` | `'auto'` | How many data labels to show. |
-| `format` | `string` | auto | d3-format override for label values, e.g. `",.0f"`. |
+| Field     | Type           | Default  | Description                                         |
+| --------- | -------------- | -------- | --------------------------------------------------- |
+| `density` | `LabelDensity` | `'auto'` | How many data labels to show.                       |
+| `format`  | `string`       | auto     | d3-format override for label values, e.g. `",.0f"`. |
 
 ### LabelDensity
 
-| Value | Behavior |
-|-------|----------|
-| `'all'` | Show every label. No collision detection. Can overlap. |
-| `'auto'` | Show labels with collision detection. Overlapping labels are hidden and only appear in tooltips. |
+| Value         | Behavior                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `'all'`       | Show every label. No collision detection. Can overlap.                                                                   |
+| `'auto'`      | Show labels with collision detection. Overlapping labels are hidden and only appear in tooltips.                         |
 | `'endpoints'` | Show only the first and last label per series. Good for line charts where the trend matters more than individual values. |
-| `'none'` | Hide all labels. Rely on tooltips and the legend for value readout. |
+| `'none'`      | Hide all labels. Rely on tooltips and the legend for value readout.                                                      |
 
 ---
 
@@ -351,70 +359,70 @@ interface ThemeConfig {
 
 ### Color overrides
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `colors.categorical` | `string[]` | 8-color palette | Categorical palette for nominal data. Array of CSS color strings. |
-| `colors.sequential` | `Record<string, string[]>` | `{ blue, green, orange, purple }` | Sequential palettes keyed by name. |
-| `colors.diverging` | `Record<string, string[]>` | `{ redBlue, brownTeal }` | Diverging palettes keyed by name. |
-| `colors.background` | `string` | `'#ffffff'` | Visualization background color. |
-| `colors.text` | `string` | `'#1d1d1d'` | Default text color. |
-| `colors.gridline` | `string` | `'#e8e8e8'` | Gridline color. |
-| `colors.axis` | `string` | `'#888888'` | Axis line and tick color. |
+| Field                | Type                       | Default                           | Description                                                       |
+| -------------------- | -------------------------- | --------------------------------- | ----------------------------------------------------------------- |
+| `colors.categorical` | `string[]`                 | 8-color palette                   | Categorical palette for nominal data. Array of CSS color strings. |
+| `colors.sequential`  | `Record<string, string[]>` | `{ blue, green, orange, purple }` | Sequential palettes keyed by name.                                |
+| `colors.diverging`   | `Record<string, string[]>` | `{ redBlue, brownTeal }`          | Diverging palettes keyed by name.                                 |
+| `colors.background`  | `string`                   | `'#ffffff'`                       | Visualization background color.                                   |
+| `colors.text`        | `string`                   | `'#1d1d1d'`                       | Default text color.                                               |
+| `colors.gridline`    | `string`                   | `'#e8e8e8'`                       | Gridline color.                                                   |
+| `colors.axis`        | `string`                   | `'#888888'`                       | Axis line and tick color.                                         |
 
 ### Font overrides
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `fonts.family` | `string` | `'Inter, -apple-system, ..., sans-serif'` | Primary font family. |
-| `fonts.mono` | `string` | `'"JetBrains Mono", ..., monospace'` | Monospace font for tabular numbers. |
+| Field          | Type     | Default                                   | Description                         |
+| -------------- | -------- | ----------------------------------------- | ----------------------------------- |
+| `fonts.family` | `string` | `'Inter, -apple-system, ..., sans-serif'` | Primary font family.                |
+| `fonts.mono`   | `string` | `'"JetBrains Mono", ..., monospace'`      | Monospace font for tabular numbers. |
 
 ### Spacing overrides
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `spacing.padding` | `number` | `12` | Padding inside the chart container (px). |
-| `spacing.chromeGap` | `number` | `4` | Gap between chrome elements (px). |
+| Field               | Type     | Default | Description                              |
+| ------------------- | -------- | ------- | ---------------------------------------- |
+| `spacing.padding`   | `number` | `12`    | Padding inside the chart container (px). |
+| `spacing.chromeGap` | `number` | `4`     | Gap between chrome elements (px).        |
 
 ### Other
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `borderRadius` | `number` | `4` | Border radius for the chart container and tooltips (px). |
+| Field          | Type     | Default | Description                                              |
+| -------------- | -------- | ------- | -------------------------------------------------------- |
+| `borderRadius` | `number` | `4`     | Border radius for the chart container and tooltips (px). |
 
 ### DEFAULT_THEME reference
 
 The full default theme (from `core/src/theme/defaults.ts`):
 
-| Property | Value |
-|----------|-------|
-| `colors.background` | `#ffffff` |
-| `colors.text` | `#1d1d1d` |
-| `colors.gridline` | `#e8e8e8` |
-| `colors.axis` | `#888888` |
-| `colors.annotationFill` | `rgba(0,0,0,0.04)` |
-| `colors.annotationText` | `#555555` |
-| `fonts.family` | Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif |
-| `fonts.mono` | "JetBrains Mono", "Fira Code", "Cascadia Code", monospace |
-| `fonts.sizes.title` | 22 |
-| `fonts.sizes.subtitle` | 15 |
-| `fonts.sizes.body` | 13 |
-| `fonts.sizes.small` | 11 |
-| `fonts.sizes.axisTick` | 11 |
-| `fonts.weights.normal` | 400 |
-| `fonts.weights.medium` | 500 |
-| `fonts.weights.semibold` | 600 |
-| `fonts.weights.bold` | 700 |
-| `spacing.padding` | 12 |
-| `spacing.chromeGap` | 4 |
-| `spacing.chromeToChart` | 8 |
-| `spacing.chartToFooter` | 8 |
-| `spacing.axisMargin` | 6 |
-| `borderRadius` | 4 |
-| `chrome.title` | 22px, 700 weight, `#333333`, 1.3 line-height |
-| `chrome.subtitle` | 15px, 400 weight, `#666666`, 1.4 line-height |
-| `chrome.source` | 12px, 400 weight, `#999999`, 1.3 line-height |
-| `chrome.byline` | 12px, 400 weight, `#999999`, 1.3 line-height |
-| `chrome.footer` | 12px, 400 weight, `#999999`, 1.3 line-height |
+| Property                 | Value                                                                    |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `colors.background`      | `#ffffff`                                                                |
+| `colors.text`            | `#1d1d1d`                                                                |
+| `colors.gridline`        | `#e8e8e8`                                                                |
+| `colors.axis`            | `#888888`                                                                |
+| `colors.annotationFill`  | `rgba(0,0,0,0.04)`                                                       |
+| `colors.annotationText`  | `#555555`                                                                |
+| `fonts.family`           | Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif |
+| `fonts.mono`             | "JetBrains Mono", "Fira Code", "Cascadia Code", monospace                |
+| `fonts.sizes.title`      | 22                                                                       |
+| `fonts.sizes.subtitle`   | 15                                                                       |
+| `fonts.sizes.body`       | 13                                                                       |
+| `fonts.sizes.small`      | 11                                                                       |
+| `fonts.sizes.axisTick`   | 11                                                                       |
+| `fonts.weights.normal`   | 400                                                                      |
+| `fonts.weights.medium`   | 500                                                                      |
+| `fonts.weights.semibold` | 600                                                                      |
+| `fonts.weights.bold`     | 700                                                                      |
+| `spacing.padding`        | 12                                                                       |
+| `spacing.chromeGap`      | 4                                                                        |
+| `spacing.chromeToChart`  | 8                                                                        |
+| `spacing.chartToFooter`  | 8                                                                        |
+| `spacing.axisMargin`     | 6                                                                        |
+| `borderRadius`           | 4                                                                        |
+| `chrome.title`           | 22px, 700 weight, `#333333`, 1.3 line-height                             |
+| `chrome.subtitle`        | 15px, 400 weight, `#666666`, 1.4 line-height                             |
+| `chrome.source`          | 12px, 400 weight, `#999999`, 1.3 line-height                             |
+| `chrome.byline`          | 12px, 400 weight, `#999999`, 1.3 line-height                             |
+| `chrome.footer`          | 12px, 400 weight, `#999999`, 1.3 line-height                             |
 
 ---
 
@@ -423,14 +431,14 @@ The full default theme (from `core/src/theme/defaults.ts`):
 Controls dark mode rendering. Source: `core/src/types/spec.ts`.
 
 ```ts
-type DarkMode = 'auto' | 'force' | 'off';
+type DarkMode = "auto" | "force" | "off";
 ```
 
-| Value | Behavior |
-|-------|----------|
-| `'auto'` | Checks `window.matchMedia('(prefers-color-scheme: dark)')`. Adapts to system preference. |
-| `'force'` | Always render in dark mode. |
-| `'off'` | Always render in light mode. This is the default. |
+| Value     | Behavior                                                                                 |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `'auto'`  | Checks `window.matchMedia('(prefers-color-scheme: dark)')`. Adapts to system preference. |
+| `'force'` | Always render in dark mode.                                                              |
+| `'off'`   | Always render in light mode. This is the default.                                        |
 
 Dark mode resolution happens in the adapter layer (vanilla/React), not the engine. The adapter resolves the `DarkMode` union to a boolean and passes `darkMode: true/false` to the engine's `CompileOptions`. The engine then calls `adaptTheme()` to transform colors: swap background/text, adjust palette brightness, lighten gridlines.
 
@@ -442,76 +450,76 @@ You don't need to define a separate dark theme. The engine handles the color tra
 
 Input for data table visualizations. Source: `core/src/types/spec.ts`.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'table'` | (required) | Discriminant. Always `'table'`. |
-| `data` | `DataRow[]` | (required) | Array of data rows. Must be non-empty. |
-| `columns` | `ColumnConfig[]` | (required) | Column definitions. See [ColumnConfig](#columnconfig). |
-| `rowKey` | `string` | auto-generated | Field to use as a unique row identifier. |
-| `chrome` | `Chrome` | `undefined` | Editorial text (title, subtitle, source, etc.). |
-| `theme` | `ThemeConfig` | `undefined` | Theme overrides. |
-| `darkMode` | `DarkMode` | `'off'` | Dark mode behavior. |
-| `search` | `boolean` | `false` | Enable client-side search/filter bar. |
-| `pagination` | `boolean \| { pageSize: number }` | `false` | Enable pagination. `true` uses default page size. Object sets explicit page size. |
-| `stickyFirstColumn` | `boolean` | `false` | Freeze the first column during horizontal scroll. |
-| `compact` | `boolean` | `false` | Reduced padding and font sizes. |
-| `responsive` | `boolean` | `true` | Whether the table adapts to container width. |
+| Field               | Type                              | Default        | Description                                                                       |
+| ------------------- | --------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `type`              | `'table'`                         | (required)     | Discriminant. Always `'table'`.                                                   |
+| `data`              | `DataRow[]`                       | (required)     | Array of data rows. Must be non-empty.                                            |
+| `columns`           | `ColumnConfig[]`                  | (required)     | Column definitions. See [ColumnConfig](#columnconfig).                            |
+| `rowKey`            | `string`                          | auto-generated | Field to use as a unique row identifier.                                          |
+| `chrome`            | `Chrome`                          | `undefined`    | Editorial text (title, subtitle, source, etc.).                                   |
+| `theme`             | `ThemeConfig`                     | `undefined`    | Theme overrides.                                                                  |
+| `darkMode`          | `DarkMode`                        | `'off'`        | Dark mode behavior.                                                               |
+| `search`            | `boolean`                         | `false`        | Enable client-side search/filter bar.                                             |
+| `pagination`        | `boolean \| { pageSize: number }` | `false`        | Enable pagination. `true` uses default page size. Object sets explicit page size. |
+| `stickyFirstColumn` | `boolean`                         | `false`        | Freeze the first column during horizontal scroll.                                 |
+| `compact`           | `boolean`                         | `false`        | Reduced padding and font sizes.                                                   |
+| `responsive`        | `boolean`                         | `true`         | Whether the table adapts to container width.                                      |
 
 ### ColumnConfig
 
 Configuration for a single table column. Source: `core/src/types/table.ts`.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `key` | `string` | (required) | Data field key. Must match a key in the data rows. |
-| `label` | `string` | same as `key` | Display label for the column header. |
-| `sortable` | `boolean` | `true` | Whether this column is sortable. |
-| `align` | `'left' \| 'center' \| 'right'` | `'right'` for numbers, `'left'` otherwise | Text alignment. |
-| `width` | `string` | auto-sized | CSS width like `'200px'` or `'20%'`. |
-| `format` | `string` | none | d3-format or d3-time-format string. e.g. `',.0f'` for numbers, `'%Y-%m-%d'` for dates. |
+| Field      | Type                            | Default                                   | Description                                                                            |
+| ---------- | ------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `key`      | `string`                        | (required)                                | Data field key. Must match a key in the data rows.                                     |
+| `label`    | `string`                        | same as `key`                             | Display label for the column header.                                                   |
+| `sortable` | `boolean`                       | `true`                                    | Whether this column is sortable.                                                       |
+| `align`    | `'left' \| 'center' \| 'right'` | `'right'` for numbers, `'left'` otherwise | Text alignment.                                                                        |
+| `width`    | `string`                        | auto-sized                                | CSS width like `'200px'` or `'20%'`.                                                   |
+| `format`   | `string`                        | none                                      | d3-format or d3-time-format string. e.g. `',.0f'` for numbers, `'%Y-%m-%d'` for dates. |
 
 ### Column visual types
 
 Each column can have at most one visual feature. If multiple are set, precedence is: sparkline > bar > heatmap > image > flag > categoryColors.
 
-| Feature | Config field | Config type | Description |
-|---------|-------------|-------------|-------------|
-| Heatmap | `heatmap` | `HeatmapColumnConfig` | Color cell background based on numeric value. |
-| Inline bar | `bar` | `BarColumnConfig` | Proportional bar in the cell. |
-| Sparkline | `sparkline` | `SparklineColumnConfig` | Mini line/bar chart from array data. |
-| Image | `image` | `ImageColumnConfig` | Render cell value as an image. |
-| Flag | `flag` | `boolean` | Render cell value as a country flag. |
-| Category colors | `categoryColors` | `Record<string, string>` | Color-code cells by categorical value. |
+| Feature         | Config field     | Config type              | Description                                   |
+| --------------- | ---------------- | ------------------------ | --------------------------------------------- |
+| Heatmap         | `heatmap`        | `HeatmapColumnConfig`    | Color cell background based on numeric value. |
+| Inline bar      | `bar`            | `BarColumnConfig`        | Proportional bar in the cell.                 |
+| Sparkline       | `sparkline`      | `SparklineColumnConfig`  | Mini line/bar chart from array data.          |
+| Image           | `image`          | `ImageColumnConfig`      | Render cell value as an image.                |
+| Flag            | `flag`           | `boolean`                | Render cell value as a country flag.          |
+| Category colors | `categoryColors` | `Record<string, string>` | Color-code cells by categorical value.        |
 
 #### HeatmapColumnConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `palette` | `string \| string[]` | theme sequential | Palette name (e.g. `'blue'`, `'redBlue'`) or array of color stops. |
-| `domain` | `[number, number]` | auto from data | Explicit min/max for the color scale. |
-| `colorByField` | `string` | same column | Use a different field's values for coloring while displaying this column's values. |
+| Field          | Type                 | Default          | Description                                                                        |
+| -------------- | -------------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| `palette`      | `string \| string[]` | theme sequential | Palette name (e.g. `'blue'`, `'redBlue'`) or array of color stops.                 |
+| `domain`       | `[number, number]`   | auto from data   | Explicit min/max for the color scale.                                              |
+| `colorByField` | `string`             | same column      | Use a different field's values for coloring while displaying this column's values. |
 
 #### BarColumnConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `maxValue` | `number` | auto from data | Maximum value for the bar scale. |
-| `color` | `string` | first categorical color | Bar fill color. |
+| Field      | Type     | Default                 | Description                      |
+| ---------- | -------- | ----------------------- | -------------------------------- |
+| `maxValue` | `number` | auto from data          | Maximum value for the bar scale. |
+| `color`    | `string` | first categorical color | Bar fill color.                  |
 
 #### SparklineColumnConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'line' \| 'bar' \| 'column'` | `'line'` | Sparkline chart type. |
-| `valuesField` | `string` | same column | Field containing the array of values to plot. |
-| `color` | `string` | first categorical color | Sparkline color. |
+| Field         | Type                          | Default                 | Description                                   |
+| ------------- | ----------------------------- | ----------------------- | --------------------------------------------- |
+| `type`        | `'line' \| 'bar' \| 'column'` | `'line'`                | Sparkline chart type.                         |
+| `valuesField` | `string`                      | same column             | Field containing the array of values to plot. |
+| `color`       | `string`                      | first categorical color | Sparkline color.                              |
 
 #### ImageColumnConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `width` | `number` | `24` | Image width in pixels. |
-| `height` | `number` | `24` | Image height in pixels. |
+| Field     | Type      | Default | Description                              |
+| --------- | --------- | ------- | ---------------------------------------- |
+| `width`   | `number`  | `24`    | Image width in pixels.                   |
+| `height`  | `number`  | `24`    | Image height in pixels.                  |
 | `rounded` | `boolean` | `false` | Apply border-radius for circular images. |
 
 #### CategoryColorsConfig
@@ -540,34 +548,34 @@ Pass these through `MountOptions` (vanilla) or `ChartProps` (React).
 
 ### ChartEventHandlers
 
-| Handler | Signature | When it fires |
-|---------|-----------|---------------|
-| `onMarkClick` | `(event: MarkEvent) => void` | User clicks a data mark (bar, point, line, arc). |
-| `onMarkHover` | `(event: MarkEvent) => void` | Mouse enters a data mark. |
-| `onMarkLeave` | `() => void` | Mouse leaves a data mark. |
-| `onLegendToggle` | `(series: string, visible: boolean) => void` | User clicks a legend entry to show/hide a series. |
-| `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent) => void` | User clicks an annotation element. |
+| Handler             | Signature                                             | When it fires                                     |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------- |
+| `onMarkClick`       | `(event: MarkEvent) => void`                          | User clicks a data mark (bar, point, line, arc).  |
+| `onMarkHover`       | `(event: MarkEvent) => void`                          | Mouse enters a data mark.                         |
+| `onMarkLeave`       | `() => void`                                          | Mouse leaves a data mark.                         |
+| `onLegendToggle`    | `(series: string, visible: boolean) => void`          | User clicks a legend entry to show/hide a series. |
+| `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent) => void` | User clicks an annotation element.                |
 
 ### MarkEvent
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `datum` | `DataRow` | The data row associated with the mark. For line/area marks, this is the first row of the series. |
-| `series` | `string \| undefined` | Series identifier for multi-series charts. Matches the color encoding field value. |
-| `position` | `{ x: number, y: number }` | Click/hover position relative to the chart container. |
-| `event` | `MouseEvent` | The raw browser MouseEvent. |
+| Field      | Type                       | Description                                                                                      |
+| ---------- | -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `datum`    | `DataRow`                  | The data row associated with the mark. For line/area marks, this is the first row of the series. |
+| `series`   | `string \| undefined`      | Series identifier for multi-series charts. Matches the color encoding field value.               |
+| `position` | `{ x: number, y: number }` | Click/hover position relative to the chart container.                                            |
+| `event`    | `MouseEvent`               | The raw browser MouseEvent.                                                                      |
 
 ### Table event handlers
 
 Table events are passed through `TableMountOptions` (vanilla) or `DataTableProps` (React).
 
-| Handler | Signature | When it fires |
-|---------|-----------|---------------|
-| `onRowClick` | `(row: Record<string, unknown>) => void` | User clicks a table row. |
-| `onSortChange` | `(sort: SortState \| null) => void` | Sort state changes (React `DataTable` only). |
-| `onSearchChange` | `(query: string) => void` | Search query changes (React `DataTable` only). |
-| `onPageChange` | `(page: number) => void` | Page changes (React `DataTable` only). |
-| `onStateChange` | `(state: TableState) => void` | Any table state changes (vanilla `createTable` only). |
+| Handler          | Signature                                | When it fires                                         |
+| ---------------- | ---------------------------------------- | ----------------------------------------------------- |
+| `onRowClick`     | `(row: Record<string, unknown>) => void` | User clicks a table row.                              |
+| `onSortChange`   | `(sort: SortState \| null) => void`      | Sort state changes (React `DataTable` only).          |
+| `onSearchChange` | `(query: string) => void`                | Search query changes (React `DataTable` only).        |
+| `onPageChange`   | `(page: number) => void`                 | Page changes (React `DataTable` only).                |
+| `onStateChange`  | `(state: TableState) => void`            | Any table state changes (vanilla `createTable` only). |
 
 ---
 
@@ -577,36 +585,36 @@ Input for network/relationship visualizations. Source: `core/src/types/spec.ts`.
 
 Graphs render force-directed network visualizations on canvas. They support node interaction (click, drag, double-click), search, zoom/pan, keyboard navigation, and selection. Nodes are positioned by a force simulation running in a web worker.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'graph'` | (required) | Discriminant. |
-| `nodes` | `GraphNode[]` | (required) | Node array. Each node must have an `id: string` field plus arbitrary data fields. |
-| `edges` | `GraphEdge[]` | (required) | Edge array. Each edge has `source: string` and `target: string` referencing node ids. |
-| `encoding` | `GraphEncoding` | `undefined` | Visual property mappings for nodes/edges. |
-| `layout` | `GraphLayoutConfig` | `undefined` | Layout algorithm configuration. |
-| `chrome` | `Chrome` | `undefined` | Editorial text. |
-| `annotations` | `Annotation[]` | `undefined` | Annotations. |
-| `theme` | `ThemeConfig` | `undefined` | Theme overrides. |
-| `darkMode` | `DarkMode` | `'off'` | Dark mode behavior. |
+| Field         | Type                | Default     | Description                                                                           |
+| ------------- | ------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `type`        | `'graph'`           | (required)  | Discriminant.                                                                         |
+| `nodes`       | `GraphNode[]`       | (required)  | Node array. Each node must have an `id: string` field plus arbitrary data fields.     |
+| `edges`       | `GraphEdge[]`       | (required)  | Edge array. Each edge has `source: string` and `target: string` referencing node ids. |
+| `encoding`    | `GraphEncoding`     | `undefined` | Visual property mappings for nodes/edges.                                             |
+| `layout`      | `GraphLayoutConfig` | `undefined` | Layout algorithm configuration.                                                       |
+| `chrome`      | `Chrome`            | `undefined` | Editorial text.                                                                       |
+| `annotations` | `Annotation[]`      | `undefined` | Annotations.                                                                          |
+| `theme`       | `ThemeConfig`       | `undefined` | Theme overrides.                                                                      |
+| `darkMode`    | `DarkMode`          | `'off'`     | Dark mode behavior.                                                                   |
 
 ### GraphEncoding
 
-| Channel | Field type constraint | Purpose |
-|---------|----------------------|---------|
-| `nodeColor` | nominal, ordinal | Color mapping for nodes. |
-| `nodeSize` | quantitative | Size mapping for nodes. |
-| `edgeColor` | nominal, ordinal | Color mapping for edges. |
-| `edgeWidth` | quantitative | Width mapping for edges. |
-| `nodeLabel` | any | Label field for nodes. |
+| Channel     | Field type constraint | Purpose                  |
+| ----------- | --------------------- | ------------------------ |
+| `nodeColor` | nominal, ordinal      | Color mapping for nodes. |
+| `nodeSize`  | quantitative          | Size mapping for nodes.  |
+| `edgeColor` | nominal, ordinal      | Color mapping for edges. |
+| `edgeWidth` | quantitative          | Width mapping for edges. |
+| `nodeLabel` | any                   | Label field for nodes.   |
 
 ### GraphLayoutConfig
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | `'force' \| 'radial' \| 'hierarchical'` | (required) | Layout algorithm. |
-| `clustering` | `{ field: string }` | `undefined` | Group nodes by a field for cluster forces. |
-| `chargeStrength` | `number` | library default | Charge strength for force layout. Negative = repulsion. |
-| `linkDistance` | `number` | library default | Target distance between linked nodes. |
+| Field            | Type                                    | Default         | Description                                             |
+| ---------------- | --------------------------------------- | --------------- | ------------------------------------------------------- |
+| `type`           | `'force' \| 'radial' \| 'hierarchical'` | (required)      | Layout algorithm.                                       |
+| `clustering`     | `{ field: string }`                     | `undefined`     | Group nodes by a field for cluster forces.              |
+| `chargeStrength` | `number`                                | library default | Charge strength for force layout. Negative = repulsion. |
+| `linkDistance`   | `number`                                | library default | Target distance between linked nodes.                   |
 
 ---
 
@@ -616,28 +624,32 @@ Graphs render force-directed network visualizations on canvas. They support node
 
 ```ts
 const spec: ChartSpec = {
-  type: 'line',
+  type: "line",
   data: [
-    { date: '2023-01-01', revenue: 42000, region: 'North' },
-    { date: '2023-04-01', revenue: 58000, region: 'North' },
-    { date: '2023-07-01', revenue: 63000, region: 'North' },
-    { date: '2023-01-01', revenue: 31000, region: 'South' },
-    { date: '2023-04-01', revenue: 44000, region: 'South' },
-    { date: '2023-07-01', revenue: 52000, region: 'South' },
+    { date: "2023-01-01", revenue: 42000, region: "North" },
+    { date: "2023-04-01", revenue: 58000, region: "North" },
+    { date: "2023-07-01", revenue: 63000, region: "North" },
+    { date: "2023-01-01", revenue: 31000, region: "South" },
+    { date: "2023-04-01", revenue: 44000, region: "South" },
+    { date: "2023-07-01", revenue: 52000, region: "South" },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'revenue', type: 'quantitative', axis: { label: 'Revenue ($)', format: ',.0f' } },
-    color: { field: 'region', type: 'nominal' },
+    x: { field: "date", type: "temporal" },
+    y: {
+      field: "revenue",
+      type: "quantitative",
+      axis: { label: "Revenue ($)", format: ",.0f" },
+    },
+    color: { field: "region", type: "nominal" },
   },
   chrome: {
-    title: 'Revenue by region',
-    subtitle: 'Quarterly results, 2023',
-    source: 'Source: Finance team',
+    title: "Revenue by region",
+    subtitle: "Quarterly results, 2023",
+    source: "Source: Finance team",
   },
-  labels: { density: 'endpoints' },
+  labels: { density: "endpoints" },
   annotations: [
-    { type: 'refline', y: 50000, label: 'Target', style: 'dashed' },
+    { type: "refline", y: 50000, label: "Target", style: "dashed" },
   ],
 };
 ```
@@ -646,18 +658,18 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'area',
+  type: "area",
   data: [
-    { month: '2024-01', users: 1200 },
-    { month: '2024-02', users: 1800 },
-    { month: '2024-03', users: 2400 },
-    { month: '2024-04', users: 3100 },
+    { month: "2024-01", users: 1200 },
+    { month: "2024-02", users: 1800 },
+    { month: "2024-03", users: 2400 },
+    { month: "2024-04", users: 3100 },
   ],
   encoding: {
-    x: { field: 'month', type: 'temporal' },
-    y: { field: 'users', type: 'quantitative' },
+    x: { field: "month", type: "temporal" },
+    y: { field: "users", type: "quantitative" },
   },
-  chrome: { title: 'User growth' },
+  chrome: { title: "User growth" },
 };
 ```
 
@@ -665,19 +677,19 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'bar',
+  type: "bar",
   data: [
-    { language: 'Python', popularity: 29 },
-    { language: 'JavaScript', popularity: 24 },
-    { language: 'TypeScript', popularity: 17 },
-    { language: 'Java', popularity: 14 },
-    { language: 'Go', popularity: 10 },
+    { language: "Python", popularity: 29 },
+    { language: "JavaScript", popularity: 24 },
+    { language: "TypeScript", popularity: 17 },
+    { language: "Java", popularity: 14 },
+    { language: "Go", popularity: 10 },
   ],
   encoding: {
-    x: { field: 'popularity', type: 'quantitative' },
-    y: { field: 'language', type: 'nominal' },
+    x: { field: "popularity", type: "quantitative" },
+    y: { field: "language", type: "nominal" },
   },
-  chrome: { title: 'Language popularity' },
+  chrome: { title: "Language popularity" },
 };
 ```
 
@@ -685,19 +697,19 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'column',
+  type: "column",
   data: [
-    { month: 'Jan', sales: 120 },
-    { month: 'Feb', sales: 180 },
-    { month: 'Mar', sales: 240 },
-    { month: 'Apr', sales: 210 },
+    { month: "Jan", sales: 120 },
+    { month: "Feb", sales: 180 },
+    { month: "Mar", sales: 240 },
+    { month: "Apr", sales: 210 },
   ],
   encoding: {
-    x: { field: 'month', type: 'nominal' },
-    y: { field: 'sales', type: 'quantitative' },
+    x: { field: "month", type: "nominal" },
+    y: { field: "sales", type: "quantitative" },
   },
-  chrome: { title: 'Monthly sales' },
-  labels: { density: 'all', format: ',.0f' },
+  chrome: { title: "Monthly sales" },
+  labels: { density: "all", format: ",.0f" },
 };
 ```
 
@@ -705,17 +717,17 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'pie',
+  type: "pie",
   data: [
-    { category: 'Desktop', share: 58 },
-    { category: 'Mobile', share: 35 },
-    { category: 'Tablet', share: 7 },
+    { category: "Desktop", share: 58 },
+    { category: "Mobile", share: 35 },
+    { category: "Tablet", share: 7 },
   ],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
-    color: { field: 'category', type: 'nominal' },
+    y: { field: "share", type: "quantitative" },
+    color: { field: "category", type: "nominal" },
   },
-  chrome: { title: 'Traffic by device' },
+  chrome: { title: "Traffic by device" },
 };
 ```
 
@@ -723,17 +735,17 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'donut',
+  type: "donut",
   data: [
-    { status: 'Complete', count: 42 },
-    { status: 'In Progress', count: 18 },
-    { status: 'Blocked', count: 5 },
+    { status: "Complete", count: 42 },
+    { status: "In Progress", count: 18 },
+    { status: "Blocked", count: 5 },
   ],
   encoding: {
-    y: { field: 'count', type: 'quantitative' },
-    color: { field: 'status', type: 'nominal' },
+    y: { field: "count", type: "quantitative" },
+    color: { field: "status", type: "nominal" },
   },
-  chrome: { title: 'Task status' },
+  chrome: { title: "Task status" },
 };
 ```
 
@@ -741,20 +753,28 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'scatter',
+  type: "scatter",
   data: [
-    { gdp: 21400, lifeExp: 78.9, country: 'USA', pop: 331 },
-    { gdp: 40300, lifeExp: 83.4, country: 'Switzerland', pop: 8.6 },
-    { gdp: 1900, lifeExp: 69.4, country: 'India', pop: 1380 },
-    { gdp: 10500, lifeExp: 76.9, country: 'China', pop: 1400 },
+    { gdp: 21400, lifeExp: 78.9, country: "USA", pop: 331 },
+    { gdp: 40300, lifeExp: 83.4, country: "Switzerland", pop: 8.6 },
+    { gdp: 1900, lifeExp: 69.4, country: "India", pop: 1380 },
+    { gdp: 10500, lifeExp: 76.9, country: "China", pop: 1400 },
   ],
   encoding: {
-    x: { field: 'gdp', type: 'quantitative', axis: { label: 'GDP per capita ($)' } },
-    y: { field: 'lifeExp', type: 'quantitative', axis: { label: 'Life expectancy' } },
-    size: { field: 'pop', type: 'quantitative' },
-    color: { field: 'country', type: 'nominal' },
+    x: {
+      field: "gdp",
+      type: "quantitative",
+      axis: { label: "GDP per capita ($)" },
+    },
+    y: {
+      field: "lifeExp",
+      type: "quantitative",
+      axis: { label: "Life expectancy" },
+    },
+    size: { field: "pop", type: "quantitative" },
+    color: { field: "country", type: "nominal" },
   },
-  chrome: { title: 'GDP vs life expectancy' },
+  chrome: { title: "GDP vs life expectancy" },
 };
 ```
 
@@ -762,18 +782,18 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: 'dot',
+  type: "dot",
   data: [
-    { team: 'Engineering', satisfaction: 8.2 },
-    { team: 'Design', satisfaction: 7.9 },
-    { team: 'Sales', satisfaction: 6.5 },
-    { team: 'Support', satisfaction: 7.1 },
+    { team: "Engineering", satisfaction: 8.2 },
+    { team: "Design", satisfaction: 7.9 },
+    { team: "Sales", satisfaction: 6.5 },
+    { team: "Support", satisfaction: 7.1 },
   ],
   encoding: {
-    x: { field: 'satisfaction', type: 'quantitative' },
-    y: { field: 'team', type: 'nominal' },
+    x: { field: "satisfaction", type: "quantitative" },
+    y: { field: "team", type: "nominal" },
   },
-  chrome: { title: 'Team satisfaction scores' },
+  chrome: { title: "Team satisfaction scores" },
 };
 ```
 
@@ -781,19 +801,43 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: TableSpec = {
-  type: 'table',
+  type: "table",
   data: [
-    { city: 'San Francisco', temp: 18.2, pop: 874961, trend: [15, 16, 17, 18, 19, 18] },
-    { city: 'New York', temp: 12.8, pop: 8336817, trend: [8, 10, 14, 18, 16, 12] },
-    { city: 'Austin', temp: 20.5, pop: 978908, trend: [12, 15, 20, 25, 22, 18] },
+    {
+      city: "San Francisco",
+      temp: 18.2,
+      pop: 874961,
+      trend: [15, 16, 17, 18, 19, 18],
+    },
+    {
+      city: "New York",
+      temp: 12.8,
+      pop: 8336817,
+      trend: [8, 10, 14, 18, 16, 12],
+    },
+    {
+      city: "Austin",
+      temp: 20.5,
+      pop: 978908,
+      trend: [12, 15, 20, 25, 22, 18],
+    },
   ],
   columns: [
-    { key: 'city', label: 'City' },
-    { key: 'temp', label: 'Avg Temp (C)', format: '.1f', heatmap: { palette: 'redBlue' } },
-    { key: 'pop', label: 'Population', format: ',.0f', bar: {} },
-    { key: 'trend', label: '6-Month Trend', sparkline: { type: 'line', valuesField: 'trend' } },
+    { key: "city", label: "City" },
+    {
+      key: "temp",
+      label: "Avg Temp (C)",
+      format: ".1f",
+      heatmap: { palette: "redBlue" },
+    },
+    { key: "pop", label: "Population", format: ",.0f", bar: {} },
+    {
+      key: "trend",
+      label: "6-Month Trend",
+      sparkline: { type: "line", valuesField: "trend" },
+    },
   ],
-  chrome: { title: 'City comparison' },
+  chrome: { title: "City comparison" },
   search: true,
   pagination: { pageSize: 25 },
   stickyFirstColumn: true,
@@ -808,38 +852,38 @@ Helper functions that reduce boilerplate. Source: `core/src/helpers/spec-builder
 
 All builders accept field names as strings (auto-infer type from data) or full `EncodingChannel` objects (when you need to customize type, aggregate, axis, or scale).
 
-| Builder | Signature | Produces |
-|---------|-----------|----------|
-| `lineChart` | `(data, x, y, options?)` | `ChartSpec` with `type: 'line'` |
-| `barChart` | `(data, category, value, options?)` | `ChartSpec` with `type: 'bar'`. category -> y, value -> x |
-| `columnChart` | `(data, x, y, options?)` | `ChartSpec` with `type: 'column'` |
-| `pieChart` | `(data, category, value, options?)` | `ChartSpec` with `type: 'pie'`. category -> color, value -> y |
-| `scatterChart` | `(data, x, y, options?)` | `ChartSpec` with `type: 'scatter'` |
-| `dataTable` | `(data, options?)` | `TableSpec`. Auto-generates columns from data keys if none provided. |
+| Builder        | Signature                           | Produces                                                             |
+| -------------- | ----------------------------------- | -------------------------------------------------------------------- |
+| `lineChart`    | `(data, x, y, options?)`            | `ChartSpec` with `type: 'line'`                                      |
+| `barChart`     | `(data, category, value, options?)` | `ChartSpec` with `type: 'bar'`. category -> y, value -> x            |
+| `columnChart`  | `(data, x, y, options?)`            | `ChartSpec` with `type: 'column'`                                    |
+| `pieChart`     | `(data, category, value, options?)` | `ChartSpec` with `type: 'pie'`. category -> color, value -> y        |
+| `scatterChart` | `(data, x, y, options?)`            | `ChartSpec` with `type: 'scatter'`                                   |
+| `dataTable`    | `(data, options?)`                  | `TableSpec`. Auto-generates columns from data keys if none provided. |
 
 ### ChartBuilderOptions
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `color` | `FieldRef` | Color encoding for series differentiation. |
-| `size` | `FieldRef` | Size encoding (bubble charts). |
-| `chrome` | `Chrome` | Editorial chrome. |
-| `annotations` | `Annotation[]` | Annotations. |
-| `responsive` | `boolean` | Responsive behavior. |
-| `theme` | `ThemeConfig` | Theme overrides. |
-| `darkMode` | `DarkMode` | Dark mode behavior. |
+| Field         | Type           | Description                                |
+| ------------- | -------------- | ------------------------------------------ |
+| `color`       | `FieldRef`     | Color encoding for series differentiation. |
+| `size`        | `FieldRef`     | Size encoding (bubble charts).             |
+| `chrome`      | `Chrome`       | Editorial chrome.                          |
+| `annotations` | `Annotation[]` | Annotations.                               |
+| `responsive`  | `boolean`      | Responsive behavior.                       |
+| `theme`       | `ThemeConfig`  | Theme overrides.                           |
+| `darkMode`    | `DarkMode`     | Dark mode behavior.                        |
 
 `FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` samples up to 20 data values to determine the encoding type (quantitative, temporal, or nominal).
 
 ### Builder example
 
 ```ts
-import { lineChart } from '@openchart/core';
+import { lineChart } from "@opendata-ai/core";
 
-const spec = lineChart(data, 'date', 'revenue', {
-  color: 'region',
-  chrome: { title: 'Revenue trend' },
-  annotations: [{ type: 'refline', y: 50000, label: 'Target' }],
+const spec = lineChart(data, "date", "revenue", {
+  color: "region",
+  chrome: { title: "Revenue trend" },
+  annotations: [{ type: "refline", y: 50000, label: "Target" }],
 });
 ```
 
@@ -850,7 +894,7 @@ const spec = lineChart(data, 'date', 'revenue', {
 The engine validates specs at runtime. Source: `engine/src/compiler/validate.ts`.
 
 ```ts
-import { validateSpec } from '@openchart/engine';
+import { validateSpec } from "@opendata-ai/engine";
 
 const result = validateSpec(spec);
 // result.valid: boolean
@@ -860,23 +904,23 @@ const result = validateSpec(spec);
 
 ### ValidationError
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `message` | `string` | Human-readable error description. |
-| `path` | `string \| undefined` | Dot-path to the field that failed, e.g. `'encoding.x.field'`. |
-| `code` | `ValidationErrorCode` | Machine-readable error code. |
-| `suggestion` | `string` | Actionable fix suggestion. |
+| Field        | Type                  | Description                                                   |
+| ------------ | --------------------- | ------------------------------------------------------------- |
+| `message`    | `string`              | Human-readable error description.                             |
+| `path`       | `string \| undefined` | Dot-path to the field that failed, e.g. `'encoding.x.field'`. |
+| `code`       | `ValidationErrorCode` | Machine-readable error code.                                  |
+| `suggestion` | `string`              | Actionable fix suggestion.                                    |
 
 ### ValidationErrorCode
 
-| Code | Meaning |
-|------|---------|
-| `INVALID_TYPE` | Wrong type (expected object, got array, etc.). |
-| `MISSING_FIELD` | Required field is missing. |
-| `INVALID_VALUE` | Field has an invalid value (bad chart type, bad dark mode string, etc.). |
-| `EMPTY_DATA` | Data array is empty. |
-| `DATA_FIELD_MISSING` | Encoding references a field that doesn't exist in the data. |
-| `ENCODING_MISMATCH` | Encoding type doesn't match the channel requirements or the actual data values. |
+| Code                 | Meaning                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `INVALID_TYPE`       | Wrong type (expected object, got array, etc.).                                  |
+| `MISSING_FIELD`      | Required field is missing.                                                      |
+| `INVALID_VALUE`      | Field has an invalid value (bad chart type, bad dark mode string, etc.).        |
+| `EMPTY_DATA`         | Data array is empty.                                                            |
+| `DATA_FIELD_MISSING` | Encoding references a field that doesn't exist in the data.                     |
+| `ENCODING_MISMATCH`  | Encoding type doesn't match the channel requirements or the actual data values. |
 
 ---
 

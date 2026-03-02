@@ -5,8 +5,8 @@
  * mounts automatically and updates when the spec changes.
  */
 
-import type { ChartLayout, DarkMode, ThemeConfig, VizSpec } from '@openchart/core';
-import { type ChartInstance, createChart, type MountOptions } from '@openchart/vanilla';
+import type { ChartLayout, DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/core';
+import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/vanilla';
 import { onMounted, onUnmounted, type Ref, ref, type ShallowRef, shallowRef, watch } from 'vue';
 
 export interface UseChartOptions {

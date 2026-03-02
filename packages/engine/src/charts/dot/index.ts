@@ -4,7 +4,7 @@
  * Exports the dot chart renderer and computation functions.
  */
 
-import type { Mark, PointMark } from '@openchart/core';
+import type { Mark, PointMark } from '@opendata-ai/core';
 import type { ChartRenderer } from '../registry';
 import { computeDotMarks } from './compute';
 import { computeDotLabels } from './labels';

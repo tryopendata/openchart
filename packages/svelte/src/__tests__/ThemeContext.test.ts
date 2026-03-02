@@ -9,7 +9,7 @@
  * getVizTheme() and getVizDarkMode().
  */
 
-import type { ChartSpec, ThemeConfig } from '@openchart/core';
+import type { ChartSpec, ThemeConfig } from '@opendata-ai/core';
 import { cleanup, render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import Chart from '../Chart.svelte';

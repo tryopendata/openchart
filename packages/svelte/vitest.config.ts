@@ -10,9 +10,9 @@ export default defineConfig({
   resolve: {
     alias: [
       // Workspace packages -> source (so side-effect imports fire)
-      { find: '@openchart/core', replacement: `${packages}/core/src/index.ts` },
-      { find: '@openchart/engine', replacement: `${packages}/engine/src/index.ts` },
-      { find: '@openchart/vanilla', replacement: `${packages}/vanilla/src/index.ts` },
+      { find: '@opendata-ai/core', replacement: `${packages}/core/src/index.ts` },
+      { find: '@opendata-ai/engine', replacement: `${packages}/engine/src/index.ts` },
+      { find: '@opendata-ai/vanilla', replacement: `${packages}/vanilla/src/index.ts` },
     ],
   },
   test: {

@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in @openchart, please report it responsibly. **Do not open a public GitHub issue.**
+If you discover a security vulnerability in @opendata-ai, please report it responsibly. **Do not open a public GitHub issue.**
 
 Instead, use [GitHub's private vulnerability reporting](https://github.com/openchart/openchart/security/advisories/new) to submit your report. This keeps the details confidential until a fix is available.
 
@@ -22,16 +22,16 @@ Instead, use [GitHub's private vulnerability reporting](https://github.com/openc
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 0.x     | Yes       |
 
 ## Scope
 
 This policy covers the four published npm packages:
 
-- `@openchart/core`
-- `@openchart/engine`
-- `@openchart/vanilla`
-- `@openchart/react`
+- `@opendata-ai/core`
+- `@opendata-ai/engine`
+- `@opendata-ai/vanilla`
+- `@opendata-ai/react`
 
 Vulnerabilities in dependencies (d3, etc.) should be reported upstream to the respective projects.

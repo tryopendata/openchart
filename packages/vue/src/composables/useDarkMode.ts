@@ -6,7 +6,7 @@
  * - "auto" -> matches system preference (reactive to changes)
  */
 
-import type { DarkMode } from '@openchart/core';
+import type { DarkMode } from '@opendata-ai/core';
 import { onUnmounted, type Ref, ref, watch } from 'vue';
 
 /**

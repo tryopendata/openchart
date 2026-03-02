@@ -7,9 +7,9 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: [
-    '@openchart/core',
-    '@openchart/engine',
-    '@openchart/vanilla',
+    '@opendata-ai/core',
+    '@opendata-ai/engine',
+    '@opendata-ai/vanilla',
     'vue',
   ],
 });

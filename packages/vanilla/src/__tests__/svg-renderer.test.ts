@@ -6,8 +6,8 @@
  * and that chart furniture (chrome, axes, legend, gridlines) renders properly.
  */
 
-import type { ChartSpec, CompileOptions } from '@openchart/engine';
-import { compileChart } from '@openchart/engine';
+import type { ChartSpec, CompileOptions } from '@opendata-ai/engine';
+import { compileChart } from '@opendata-ai/engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import {

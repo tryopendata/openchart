@@ -1,5 +1,5 @@
-import type { BarColumnConfig } from '@openchart/core';
-import { resolveTheme } from '@openchart/core';
+import type { BarColumnConfig } from '@opendata-ai/core';
+import { resolveTheme } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { computeBarCell, computeColumnMax, computeColumnMin } from '../bar-column';
 

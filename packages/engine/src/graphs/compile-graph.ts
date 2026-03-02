@@ -21,8 +21,8 @@ import type {
   TextStyle,
   TooltipContent,
   TooltipField,
-} from '@openchart/core';
-import { adaptTheme, computeChrome, resolveTheme } from '@openchart/core';
+} from '@opendata-ai/core';
+import { adaptTheme, computeChrome, resolveTheme } from '@opendata-ai/core';
 
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedGraphSpec } from '../compiler/types';

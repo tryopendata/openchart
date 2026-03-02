@@ -1,4 +1,4 @@
-import type { ColumnConfig } from '@openchart/core';
+import type { ColumnConfig } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { formatCell, formatValueForSearch } from '../format-cells';
 

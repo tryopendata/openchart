@@ -24,7 +24,7 @@ import type {
   LegendConfig,
   ScaleConfig,
   ThemeConfig,
-} from '@openchart/core';
+} from '@opendata-ai/core';
 
 // ---------------------------------------------------------------------------
 // NormalizedChrome: all fields are ChromeText objects (not plain strings)
@@ -136,7 +136,7 @@ export interface ValidationResult {
   /** Validation errors (empty if valid). */
   errors: ValidationError[];
   /** The validated spec cast to VizSpec, or null if invalid. */
-  normalized: import('@openchart/core').VizSpec | null;
+  normalized: import('@opendata-ai/core').VizSpec | null;
 }
 
 /** Result of the compile pipeline (validate + normalize). */

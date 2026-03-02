@@ -1,12 +1,12 @@
-# @openchart
+# @opendata-ai
 
 > Declarative visualization library: write a JSON spec, get a chart or data table. Spec in, SVG out.
 
 ## Install
 
 ```bash
-npm install @openchart/react    # React
-npm install @openchart/vanilla  # Vanilla JS / any framework
+npm install @opendata-ai/react    # React
+npm install @opendata-ai/vanilla  # Vanilla JS / any framework
 ```
 
 ## Core Concept
@@ -77,7 +77,7 @@ Write a VizSpec JSON object. Render with `<Chart spec={spec} />` (React) or `cre
 ## React Example
 
 ```tsx
-import { Chart } from '@openchart/react';
+import { Chart } from '@opendata-ai/react';
 
 const spec = {
   type: 'bar',

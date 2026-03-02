@@ -17,9 +17,9 @@ import type {
   TableLayout,
   TableSpec,
   ThemeConfig,
-} from '@openchart/core';
-import { getBreakpoint } from '@openchart/core';
-import { compileTable } from '@openchart/engine';
+} from '@opendata-ai/core';
+import { getBreakpoint } from '@opendata-ai/core';
+import { compileTable } from '@opendata-ai/engine';
 import { observeResize } from './resize-observer';
 import { attachKeyboardNav } from './table-keyboard';
 import { renderTable } from './table-renderer';

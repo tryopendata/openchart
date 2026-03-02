@@ -1,7 +1,7 @@
-# @openchart
+# @opendata-ai
 
 [![CI](https://github.com/openchart/openchart/actions/workflows/ci.yml/badge.svg)](https://github.com/openchart/openchart/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@openchart/core)](https://www.npmjs.com/package/@openchart/core)
+[![npm](https://img.shields.io/npm/v/@opendata-ai/core)](https://www.npmjs.com/package/@opendata-ai/core)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 From the team behind [OpenData](https://tryopendata.ai), an open source data platform.
@@ -15,24 +15,24 @@ Publication-quality data graphics from a JSON spec. The kind of rich, annotated 
 ## Quick start
 
 ```tsx
-import { Chart } from '@openchart/react';
+import { Chart } from "@opendata-ai/react";
 
 const spec = {
-  type: 'line',
+  type: "line",
   data: [
-    { date: '2023-01-01', value: 12 },
-    { date: '2023-04-01', value: 28 },
-    { date: '2023-07-01', value: 35 },
-    { date: '2023-10-01', value: 42 },
+    { date: "2023-01-01", value: 12 },
+    { date: "2023-04-01", value: 28 },
+    { date: "2023-07-01", value: 35 },
+    { date: "2023-10-01", value: 42 },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'value', type: 'quantitative' },
+    x: { field: "date", type: "temporal" },
+    y: { field: "value", type: "quantitative" },
   },
   chrome: {
-    title: 'User growth accelerated through Q4',
-    subtitle: 'Monthly active users, 2023',
-    source: 'Source: Internal analytics',
+    title: "User growth accelerated through Q4",
+    subtitle: "Monthly active users, 2023",
+    source: "Source: Internal analytics",
   },
 };
 
@@ -49,7 +49,7 @@ function App() {
 
 Most charting libraries give you building blocks and leave the editorial work to you. You get axes, gridlines, and bars, but no opinions about how to actually communicate with data. You end up spending more time wrangling SVG primitives and layout quirks than telling the story your data contains.
 
-OpenChart works the other way around. You describe *what the chart should communicate* in a declarative spec: the title states a finding, annotations highlight what matters, and the engine handles scales, label placement, accessibility, and responsive layout so the result reads like a polished infographic, not a developer's debug output.
+OpenChart works the other way around. You describe _what the chart should communicate_ in a declarative spec: the title states a finding, annotations highlight what matters, and the engine handles scales, label placement, accessibility, and responsive layout so the result reads like a polished infographic, not a developer's debug output.
 
 The spec is a plain JSON object. That makes it easy for both humans and LLMs to author, and simple to serialize, validate, and store. The headless engine means the same spec renders in React, Vue, Svelte, or vanilla JS without code changes.
 
@@ -59,33 +59,32 @@ Tables are a first-class visualization type, not an afterthought. They support h
 
 <img alt="image" src="https://github.com/user-attachments/assets/392db37a-1ee1-4659-8b51-4fab0890e7a9" />
 
-
 ## Features
 
-| Category | What you get |
-|----------|-------------|
-| Chart types | Line, area, bar, column, scatter, dot, pie, donut |
-| Tables | Sort, search, pagination, heatmap cells, sparklines, inline bars, category colors, flags, images |
-| Chrome | Title, subtitle, source, byline, footer (first-class, not string afterthoughts) |
-| Annotations | Reference lines, highlighted ranges, text callouts |
-| Dark mode | `"auto"` (system preference), `"force"`, or `"off"` |
-| Themes | Deep-mergeable theme config for colors, fonts, spacing |
-| Accessibility | Auto-generated alt text, ARIA labels, keyboard navigation, screen reader data tables |
-| Responsive | Breakpoint-aware layout (label density, legend position, annotation placement) |
-| Graphs | Force-directed network visualization, canvas rendering, node interaction, search, zoom, keyboard navigation |
-| Export | SVG, PNG, CSV |
+| Category      | What you get                                                                                                |
+| ------------- | ----------------------------------------------------------------------------------------------------------- |
+| Chart types   | Line, area, bar, column, scatter, dot, pie, donut                                                           |
+| Tables        | Sort, search, pagination, heatmap cells, sparklines, inline bars, category colors, flags, images            |
+| Chrome        | Title, subtitle, source, byline, footer (first-class, not string afterthoughts)                             |
+| Annotations   | Reference lines, highlighted ranges, text callouts                                                          |
+| Dark mode     | `"auto"` (system preference), `"force"`, or `"off"`                                                         |
+| Themes        | Deep-mergeable theme config for colors, fonts, spacing                                                      |
+| Accessibility | Auto-generated alt text, ARIA labels, keyboard navigation, screen reader data tables                        |
+| Responsive    | Breakpoint-aware layout (label density, legend position, annotation placement)                              |
+| Graphs        | Force-directed network visualization, canvas rendering, node interaction, search, zoom, keyboard navigation |
+| Export        | SVG, PNG, CSV                                                                                               |
 
 ![Clipboard-20260301-051059-787](https://github.com/user-attachments/assets/3f20cfab-76fe-4a44-8d8d-2fe624e6b3de)
 
 ## Installation
 
-| Use case | Install |
-|----------|---------|
-| React app | `bun add @openchart/react` |
-| Vue 3 app | `bun add @openchart/vue` |
-| Svelte 5 app | `bun add @openchart/svelte` |
-| Vanilla JS / any framework | `bun add @openchart/vanilla` |
-| Types only / custom renderer | `bun add @openchart/core @openchart/engine` |
+| Use case                     | Install                                         |
+| ---------------------------- | ----------------------------------------------- |
+| React app                    | `bun add @opendata-ai/react`                    |
+| Vue 3 app                    | `bun add @opendata-ai/vue`                      |
+| Svelte 5 app                 | `bun add @opendata-ai/svelte`                   |
+| Vanilla JS / any framework   | `bun add @opendata-ai/vanilla`                  |
+| Types only / custom renderer | `bun add @opendata-ai/core @opendata-ai/engine` |
 
 Each package re-exports the types you need, so you typically only install one. The React package pulls in vanilla, engine, and core as dependencies.
 
@@ -96,26 +95,26 @@ Replace `bun add` with `npm install` or `yarn add` depending on your setup.
 ### React: chart
 
 ```tsx
-import { Chart } from '@openchart/react';
-import type { ChartSpec } from '@openchart/core';
+import { Chart } from "@opendata-ai/react";
+import type { ChartSpec } from "@opendata-ai/core";
 
 const spec: ChartSpec = {
-  type: 'bar',
+  type: "bar",
   data: [
-    { language: 'Python', popularity: 29 },
-    { language: 'JavaScript', popularity: 24 },
-    { language: 'TypeScript', popularity: 17 },
-    { language: 'Java', popularity: 14 },
-    { language: 'Go', popularity: 10 },
+    { language: "Python", popularity: 29 },
+    { language: "JavaScript", popularity: 24 },
+    { language: "TypeScript", popularity: 17 },
+    { language: "Java", popularity: 14 },
+    { language: "Go", popularity: 10 },
   ],
   encoding: {
-    x: { field: 'popularity', type: 'quantitative' },
-    y: { field: 'language', type: 'nominal' },
+    x: { field: "popularity", type: "quantitative" },
+    y: { field: "language", type: "nominal" },
   },
   chrome: {
-    title: 'Language popularity',
-    subtitle: '2024 developer survey results',
-    source: 'Source: Stack Overflow',
+    title: "Language popularity",
+    subtitle: "2024 developer survey results",
+    source: "Source: Stack Overflow",
   },
 };
 
@@ -131,26 +130,36 @@ function App() {
 ### React: data table
 
 ```tsx
-import { DataTable } from '@openchart/react';
-import type { TableSpec } from '@openchart/core';
+import { DataTable } from "@opendata-ai/react";
+import type { TableSpec } from "@opendata-ai/core";
 
 const spec: TableSpec = {
-  type: 'table',
+  type: "table",
   data: [
-    { city: 'Phoenix', jan: 12.8, jul: 35.0, avg: 24.3 },
-    { city: 'Miami', jan: 20.1, jul: 28.3, avg: 24.8 },
-    { city: 'Chicago', jan: -3.2, jul: 24.7, avg: 10.8 },
-    { city: 'Anchorage', jan: -8.8, jul: 15.4, avg: 2.6 },
+    { city: "Phoenix", jan: 12.8, jul: 35.0, avg: 24.3 },
+    { city: "Miami", jan: 20.1, jul: 28.3, avg: 24.8 },
+    { city: "Chicago", jan: -3.2, jul: 24.7, avg: 10.8 },
+    { city: "Anchorage", jan: -8.8, jul: 15.4, avg: 2.6 },
   ],
   columns: [
-    { key: 'city', label: 'City' },
-    { key: 'jan', label: 'Jan', format: '.1f', heatmap: { palette: 'redBlue' } },
-    { key: 'jul', label: 'Jul', format: '.1f', heatmap: { palette: 'redBlue' } },
-    { key: 'avg', label: 'Average', format: '.1f', bar: {} },
+    { key: "city", label: "City" },
+    {
+      key: "jan",
+      label: "Jan",
+      format: ".1f",
+      heatmap: { palette: "redBlue" },
+    },
+    {
+      key: "jul",
+      label: "Jul",
+      format: ".1f",
+      heatmap: { palette: "redBlue" },
+    },
+    { key: "avg", label: "Average", format: ".1f", bar: {} },
   ],
   chrome: {
-    title: 'Average monthly temperatures',
-    subtitle: 'Degrees Celsius by US city',
+    title: "Average monthly temperatures",
+    subtitle: "Degrees Celsius by US city",
   },
   search: true,
 };
@@ -167,28 +176,28 @@ function App() {
 ### React: graph
 
 ```tsx
-import { Graph } from '@openchart/react';
+import { Graph } from "@opendata-ai/react";
 
 <Graph
   spec={{
-    type: 'graph',
+    type: "graph",
     nodes: [
-      { id: 'a', label: 'Alice', group: 'eng' },
-      { id: 'b', label: 'Bob', group: 'eng' },
-      { id: 'c', label: 'Carol', group: 'design' },
+      { id: "a", label: "Alice", group: "eng" },
+      { id: "b", label: "Bob", group: "eng" },
+      { id: "c", label: "Carol", group: "design" },
     ],
     edges: [
-      { source: 'a', target: 'b' },
-      { source: 'b', target: 'c' },
+      { source: "a", target: "b" },
+      { source: "b", target: "c" },
     ],
     encoding: {
-      nodeColor: { field: 'group', type: 'nominal' },
-      nodeLabel: { field: 'label', type: 'nominal' },
+      nodeColor: { field: "group", type: "nominal" },
+      nodeLabel: { field: "label", type: "nominal" },
     },
-    layout: { type: 'force' },
-    chrome: { title: 'Team connections' },
+    layout: { type: "force" },
+    chrome: { title: "Team connections" },
   }}
-/>
+/>;
 ```
 
 ### React: dark mode
@@ -204,8 +213,8 @@ import { Graph } from '@openchart/react';
 ### React: custom theme
 
 ```tsx
-import { Chart, VizThemeProvider } from '@openchart/react';
-import type { ThemeConfig } from '@openchart/core';
+import { Chart, VizThemeProvider } from '@opendata-ai/react';
+import type { ThemeConfig } from '@opendata-ai/core';
 
 const theme: ThemeConfig = {
   colors: {
@@ -231,36 +240,40 @@ const theme: ThemeConfig = {
 ### Vanilla JS
 
 ```ts
-import { createChart } from '@openchart/vanilla';
+import { createChart } from "@opendata-ai/vanilla";
 
-const container = document.getElementById('chart');
+const container = document.getElementById("chart");
 
-const chart = createChart(container, {
-  type: 'line',
-  data: [
-    { date: '2023-01-01', value: 12 },
-    { date: '2023-04-01', value: 28 },
-    { date: '2023-07-01', value: 35 },
-    { date: '2023-10-01', value: 42 },
-  ],
-  encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'value', type: 'quantitative' },
+const chart = createChart(
+  container,
+  {
+    type: "line",
+    data: [
+      { date: "2023-01-01", value: 12 },
+      { date: "2023-04-01", value: 28 },
+      { date: "2023-07-01", value: 35 },
+      { date: "2023-10-01", value: 42 },
+    ],
+    encoding: {
+      x: { field: "date", type: "temporal" },
+      y: { field: "value", type: "quantitative" },
+    },
+    chrome: {
+      title: "Monthly active users",
+    },
   },
-  chrome: {
-    title: 'Monthly active users',
+  {
+    darkMode: "auto",
+    responsive: true,
   },
-}, {
-  darkMode: 'auto',
-  responsive: true,
-});
+);
 
 // Update with new data
 chart.update(newSpec);
 
 // Export
-const svgString = chart.export('svg');
-const pngBlob = await chart.export('png');
+const svgString = chart.export("svg");
+const pngBlob = await chart.export("png");
 
 // Clean up
 chart.destroy();
@@ -269,23 +282,27 @@ chart.destroy();
 ### Vanilla JS: data table
 
 ```ts
-import { createTable } from '@openchart/vanilla';
+import { createTable } from "@opendata-ai/vanilla";
 
-const container = document.getElementById('table');
+const container = document.getElementById("table");
 
-const table = createTable(container, {
-  type: 'table',
-  data: myData,
-  columns: [
-    { key: 'name', label: 'Name' },
-    { key: 'value', label: 'Value', format: ',.0f', bar: {} },
-  ],
-  search: true,
-  pagination: { pageSize: 20 },
-}, {
-  responsive: true,
-  onRowClick: (row) => console.log('Clicked:', row),
-});
+const table = createTable(
+  container,
+  {
+    type: "table",
+    data: myData,
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "value", label: "Value", format: ",.0f", bar: {} },
+    ],
+    search: true,
+    pagination: { pageSize: 20 },
+  },
+  {
+    responsive: true,
+    onRowClick: (row) => console.log("Clicked:", row),
+  },
+);
 
 // Update with new data
 table.update(newSpec);
@@ -307,12 +324,12 @@ table.destroy();
 ## Package structure
 
 ```
-@openchart/core       Types, theme, colors, a11y, locale (no DOM)
-@openchart/engine     Headless compiler: spec in, layout out (no DOM)
-@openchart/vanilla    Imperative DOM rendering (SVG charts, HTML tables, canvas graphs)
-@openchart/react      React components wrapping vanilla with lifecycle management
-@openchart/vue        Vue 3 components wrapping vanilla with lifecycle management
-@openchart/svelte     Svelte 5 components wrapping vanilla with lifecycle management
+@opendata-ai/core       Types, theme, colors, a11y, locale (no DOM)
+@opendata-ai/engine     Headless compiler: spec in, layout out (no DOM)
+@opendata-ai/vanilla    Imperative DOM rendering (SVG charts, HTML tables, canvas graphs)
+@opendata-ai/react      React components wrapping vanilla with lifecycle management
+@opendata-ai/vue        Vue 3 components wrapping vanilla with lifecycle management
+@opendata-ai/svelte     Svelte 5 components wrapping vanilla with lifecycle management
 ```
 
 Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. No lateral imports.

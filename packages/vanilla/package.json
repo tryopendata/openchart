@@ -1,5 +1,5 @@
 {
-  "name": "@openchart/vanilla",
+  "name": "@opendata-ai/vanilla",
   "version": "1.0.0",
   "description": "Vanilla JS renderer for openchart: SVG charts, HTML tables, force-directed graphs",
   "license": "Apache-2.0",
@@ -27,17 +27,27 @@
     },
     "./simulation-worker": "./dist/simulation-worker.js"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "sideEffects": false,
-  "keywords": ["chart", "visualization", "svg", "data-table", "vanilla-js", "d3"],
+  "keywords": [
+    "chart",
+    "visualization",
+    "svg",
+    "data-table",
+    "vanilla-js",
+    "d3"
+  ],
   "scripts": {
     "build": "tsup && bun build src/graph/simulation-worker.ts --outfile dist/simulation-worker.js --target=browser --format=iife",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openchart/core": "workspace:*",
-    "@openchart/engine": "workspace:*",
+    "@opendata-ai/core": "workspace:*",
+    "@opendata-ai/engine": "workspace:*",
     "d3-force": "^3.0.0",
     "d3-quadtree": "^3.0.1"
   },

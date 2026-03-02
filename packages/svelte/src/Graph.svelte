@@ -9,8 +9,8 @@
   control (search, zoom, select).
 -->
 <script lang="ts">
-import type { DarkMode, GraphSpec, ThemeConfig } from '@openchart/core';
-import { createGraph, type GraphInstance, type GraphMountOptions } from '@openchart/vanilla';
+import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/core';
+import { createGraph, type GraphInstance, type GraphMountOptions } from '@opendata-ai/vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
 

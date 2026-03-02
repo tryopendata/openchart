@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Release script for @openchart monorepo
+# Release script for @opendata-ai monorepo
 # Usage: ./scripts/release.sh [patch|minor|major|x.y.z]
 # Defaults to patch if no argument provided.
 

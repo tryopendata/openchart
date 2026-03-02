@@ -4,7 +4,7 @@
  * Exports line and area chart renderers and computation functions.
  */
 
-import type { LineMark, Mark } from '@openchart/core';
+import type { LineMark, Mark } from '@opendata-ai/core';
 import type { ChartRenderer } from '../registry';
 import { computeAreaMarks } from './area';
 import { computeLineMarks } from './compute';

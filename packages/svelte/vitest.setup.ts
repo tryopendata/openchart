@@ -3,7 +3,7 @@ import { cleanup } from '@testing-library/svelte';
 import { afterEach } from 'vitest';
 
 // Ensure all chart renderers are registered (side-effect imports)
-import '@openchart/engine';
+import '@opendata-ai/engine';
 
 afterEach(() => {
   cleanup();
@@ -28,7 +28,7 @@ HTMLElement.prototype.getBoundingClientRect = function () {
 // happy-dom doesn't implement Canvas 2D context. The Graph component's
 // canvas renderer calls ctx.save(), ctx.setTransform(), etc. in its
 // animation loop. Provide a no-op stub so those calls don't throw.
-const noop = () => {};
+const noop = () => { };
 const noopCtx: Record<string, unknown> = new Proxy(
   {},
   {

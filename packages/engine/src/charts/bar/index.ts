@@ -4,7 +4,7 @@
  * Exports the bar chart renderer and computation functions.
  */
 
-import type { Mark } from '@openchart/core';
+import type { Mark } from '@opendata-ai/core';
 import type { ChartRenderer } from '../registry';
 import { computeBarMarks } from './compute';
 import { computeBarLabels } from './labels';

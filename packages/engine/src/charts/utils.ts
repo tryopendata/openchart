@@ -5,7 +5,7 @@
  * data grouping, color lookup, and shared constants.
  */
 
-import type { DataRow } from '@openchart/core';
+import type { DataRow } from '@opendata-ai/core';
 import type { ScaleLinear, ScaleTime } from 'd3-scale';
 import type { D3ContinuousScale, ResolvedScales } from '../layout/scales';
 

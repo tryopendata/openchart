@@ -12,7 +12,7 @@
  *   asset and rewrites the URL.
  *
  * Usage:
- *   import { createSimulationWorker } from '@openchart/vanilla';
+ *   import { createSimulationWorker } from '@opendata-ai/vanilla';
  *   const worker = createSimulationWorker();
  *   worker.postMessage({ type: 'init', nodes, links, width: 800, height: 600 });
  *   worker.onmessage = (e) => console.log(e.data);

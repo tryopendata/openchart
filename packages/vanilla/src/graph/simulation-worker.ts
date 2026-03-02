@@ -15,7 +15,7 @@ declare const self: WorkerSelf;
  * into dist/simulation-worker.js as a self-contained IIFE. d3-force and all
  * its transitive deps are inlined -- no external imports in the output.
  *
- * IMPORTANT: This file cannot import from workspace packages (@openchart/*).
+ * IMPORTANT: This file cannot import from workspace packages (@opendata-ai/*).
  * All needed types are defined inline or duplicated from worker-protocol.ts.
  * The bun build step bundles this as an isolated IIFE.
  *

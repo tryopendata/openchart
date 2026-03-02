@@ -8,7 +8,7 @@
  * .svelte components.
  */
 
-import type { SortState } from '@openchart/core';
+import type { SortState } from '@opendata-ai/core';
 
 export interface UseTableStateOptions {
   sort?: SortState | null;

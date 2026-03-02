@@ -1,5 +1,5 @@
-import type { LegendLayout } from '@openchart/core';
-import { adaptTheme, resolveTheme } from '@openchart/core';
+import type { LegendLayout } from '@opendata-ai/core';
+import { adaptTheme, resolveTheme } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeDimensions } from '../layout/dimensions';

@@ -19,8 +19,8 @@ import type {
   GraphSpec,
   TableSpec,
   VizSpec,
-} from '@openchart/core';
-import { isChartSpec, isGraphSpec, isTableSpec } from '@openchart/core';
+} from '@opendata-ai/core';
+import { isChartSpec, isGraphSpec, isTableSpec } from '@opendata-ai/core';
 
 import type {
   NormalizedChartSpec,
@@ -224,9 +224,9 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
   };
   const layout = spec.layout
     ? {
-        ...defaultLayout,
-        ...spec.layout,
-      }
+      ...defaultLayout,
+      ...spec.layout,
+    }
     : defaultLayout;
 
   return {

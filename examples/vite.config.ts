@@ -12,10 +12,10 @@ import path from 'node:path';
 export default {
   resolve: {
     alias: {
-      '@openchart/core': path.resolve(__dirname, '../packages/core/src/index.ts'),
-      '@openchart/engine': path.resolve(__dirname, '../packages/engine/src/index.ts'),
-      '@openchart/vanilla': path.resolve(__dirname, '../packages/vanilla/src/index.ts'),
-      '@openchart/react': path.resolve(__dirname, '../packages/react/src/index.ts'),
+      '@opendata-ai/core': path.resolve(__dirname, '../packages/core/src/index.ts'),
+      '@opendata-ai/engine': path.resolve(__dirname, '../packages/engine/src/index.ts'),
+      '@opendata-ai/vanilla': path.resolve(__dirname, '../packages/vanilla/src/index.ts'),
+      '@opendata-ai/react': path.resolve(__dirname, '../packages/react/src/index.ts'),
     },
   },
 };

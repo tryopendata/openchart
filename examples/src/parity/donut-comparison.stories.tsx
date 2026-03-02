@@ -5,8 +5,8 @@
  * Demonstrates multi-chart layout in a single story.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // Global Electricity Mix: 2010 vs 2023

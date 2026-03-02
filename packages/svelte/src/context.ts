@@ -6,7 +6,7 @@
  * when the parent's props change.
  */
 
-import type { DarkMode, ThemeConfig } from '@openchart/core';
+import type { DarkMode, ThemeConfig } from '@opendata-ai/core';
 import { getContext, setContext } from 'svelte';
 
 /** @internal Context key for theme (exported for test use). */

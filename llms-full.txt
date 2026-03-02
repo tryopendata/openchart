@@ -1,13 +1,13 @@
-# @openchart - Full Reference
+# @opendata-ai - Full Reference
 
 > Declarative visualization library: write a JSON spec, get a chart or data table. Spec in, SVG out.
 
 ## Install
 
 ```bash
-npm install @openchart/react    # React
-npm install @openchart/vanilla  # Vanilla JS / any framework
-npm install @openchart/core @openchart/engine  # Types only / custom renderer
+npm install @opendata-ai/react    # React
+npm install @opendata-ai/vanilla  # Vanilla JS / any framework
+npm install @opendata-ai/core @opendata-ai/engine  # Types only / custom renderer
 ```
 
 Each package re-exports the types you need. The React package pulls in vanilla, engine, and core.
@@ -278,8 +278,8 @@ Dark mode: `"auto"` respects system preference, `"force"` always dark, `"off"` a
 ## React API
 
 ```tsx
-import { Chart, DataTable, VizThemeProvider } from '@openchart/react';
-import type { ChartSpec, TableSpec, ThemeConfig } from '@openchart/core';
+import { Chart, DataTable, VizThemeProvider } from '@opendata-ai/react';
+import type { ChartSpec, TableSpec, ThemeConfig } from '@opendata-ai/core';
 
 // Chart component
 <Chart
@@ -333,8 +333,8 @@ const { ref, search, clearSearch, zoomToFit, zoomToNode, selectNode, getSelected
 ## Vanilla JS API
 
 ```typescript
-import { createChart } from '@openchart/vanilla';
-import { createTable } from '@openchart/vanilla';
+import { createChart } from '@opendata-ai/vanilla';
+import { createTable } from '@opendata-ai/vanilla';
 
 const chart = createChart(container, spec, {
   theme?: ThemeConfig,
@@ -381,7 +381,7 @@ graph.destroy();
 ## Builder Functions
 
 ```typescript
-import { lineChart, barChart, columnChart, pieChart, scatterChart, dataTable } from '@openchart/core';
+import { lineChart, barChart, columnChart, pieChart, scatterChart, dataTable } from '@opendata-ai/core';
 
 lineChart(data, x, y, options?)       // x: FieldRef, y: FieldRef
 barChart(data, category, value, options?)

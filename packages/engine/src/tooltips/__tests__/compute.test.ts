@@ -1,4 +1,4 @@
-import type { ArcMark, Mark, PointMark, Rect, RectMark } from '@openchart/core';
+import type { ArcMark, Mark, PointMark, Rect, RectMark } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeTooltipDescriptors } from '../compute';

@@ -1,5 +1,5 @@
-import type { ColumnConfig, ResolvedTheme } from '@openchart/core';
-import { adaptTheme, contrastRatio, resolveTheme } from '@openchart/core';
+import type { ColumnConfig, ResolvedTheme } from '@opendata-ai/core';
+import { adaptTheme, contrastRatio, resolveTheme } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { computeCategoryColors } from '../category-colors';
 

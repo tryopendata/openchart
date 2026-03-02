@@ -6,8 +6,8 @@
  */
 
 import type { Story } from '@ladle/react';
-import type { TableSpec } from '@openchart/core';
-import { DataTable } from '@openchart/react';
+import type { TableSpec } from '@opendata-ai/core';
+import { DataTable } from '@opendata-ai/react';
 
 const data = [
   {

@@ -23,8 +23,8 @@ import type {
   ResolvedLabel,
   TextAnnotation,
   TextStyle,
-} from '@openchart/core';
-import { estimateTextWidth } from '@openchart/core';
+} from '@opendata-ai/core';
+import { estimateTextWidth } from '@opendata-ai/core';
 import type { ScaleBand, ScaleLinear, ScaleTime } from 'd3-scale';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
@@ -194,11 +194,11 @@ function resolveTextAnnotation(
     visible: true,
     connector: showConnector
       ? {
-          from: { x: connectorFromX, y: labelY + 4 },
-          to: { x: px, y: py },
-          stroke: annotation.stroke ?? '#999999',
-          style: connectorStyle,
-        }
+        from: { x: connectorFromX, y: labelY + 4 },
+        to: { x: px, y: py },
+        stroke: annotation.stroke ?? '#999999',
+        style: connectorStyle,
+      }
       : undefined,
     background: annotation.background,
   };
@@ -462,12 +462,12 @@ function nudgeAnnotationFromObstacles(
       y: annotation.label.y + dy,
       connector: annotation.label.connector
         ? {
-            ...annotation.label.connector,
-            from: {
-              x: annotation.label.connector.from.x + dx,
-              y: annotation.label.connector.from.y + dy,
-            },
-          }
+          ...annotation.label.connector,
+          from: {
+            x: annotation.label.connector.from.x + dx,
+            y: annotation.label.connector.from.y + dy,
+          },
+        }
         : undefined,
     };
 

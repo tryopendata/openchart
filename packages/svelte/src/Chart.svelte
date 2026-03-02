@@ -14,8 +14,8 @@ import type {
   TextAnnotation,
   ThemeConfig,
   VizSpec,
-} from '@openchart/core';
-import { type ChartInstance, createChart, type MountOptions } from '@openchart/vanilla';
+} from '@opendata-ai/core';
+import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
 

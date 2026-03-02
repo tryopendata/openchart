@@ -5,8 +5,8 @@
  * Uses real-world GDP growth data with recession annotation and reference line.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // GDP Growth: Multi-series line with annotations

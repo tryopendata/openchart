@@ -1,4 +1,4 @@
-import type { PointMark } from '@openchart/core';
+import type { PointMark } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { computeTrendLine } from '../trendline';
 

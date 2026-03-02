@@ -1,4 +1,4 @@
-import type { LayoutStrategy, LineMark } from '@openchart/core';
+import type { LayoutStrategy, LineMark } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { computeLineLabels } from '../labels';
 

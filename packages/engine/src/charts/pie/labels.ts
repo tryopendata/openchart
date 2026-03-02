@@ -12,8 +12,8 @@
  * - 'none': return empty array
  */
 
-import type { ArcMark, LabelCandidate, LabelDensity, Rect, ResolvedLabel } from '@openchart/core';
-import { estimateTextWidth, resolveCollisions } from '@openchart/core';
+import type { ArcMark, LabelCandidate, LabelDensity, Rect, ResolvedLabel } from '@opendata-ai/core';
+import { estimateTextWidth, resolveCollisions } from '@opendata-ai/core';
 
 // ---------------------------------------------------------------------------
 // Constants

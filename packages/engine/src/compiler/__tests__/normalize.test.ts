@@ -1,4 +1,4 @@
-import type { ChartSpec, GraphSpec, TableSpec } from '@openchart/core';
+import type { ChartSpec, GraphSpec, TableSpec } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { normalizeSpec } from '../normalize';
 import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } from '../types';

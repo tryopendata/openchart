@@ -1,4 +1,4 @@
-import type { ChartSpec } from '@openchart/core';
+import type { ChartSpec } from '@opendata-ai/core';
 import { cleanup, render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import Chart from '../Chart.svelte';
@@ -47,7 +47,7 @@ const barSpec: ChartSpec = {
 // Helper: render Chart and wait for SVG to appear ($effect is deferred)
 // ---------------------------------------------------------------------------
 
-async function renderChart(props: { spec: ChartSpec; [key: string]: unknown }) {
+async function renderChart(props: { spec: ChartSpec;[key: string]: unknown }) {
   const result = render(Chart, { props });
   await waitFor(() => {
     expect(result.container.querySelector('svg')).not.toBeNull();

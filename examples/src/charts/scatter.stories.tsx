@@ -5,8 +5,8 @@
  * color grouping, and trend line overlay.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // Basic scatter (x vs y)

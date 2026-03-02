@@ -1,4 +1,4 @@
-import type { LayoutStrategy, Rect } from '@openchart/core';
+import type { LayoutStrategy, Rect } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';

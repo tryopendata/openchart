@@ -24,11 +24,11 @@ Switch chart types by changing the `type` field. If the encoding channels are co
 ### React example
 
 ```tsx
-import { useState } from 'react';
-import { Chart } from '@openchart/react';
-import type { ChartType, ChartSpec } from '@openchart/core';
+import { useState } from "react";
+import { Chart } from "@opendata-ai/react";
+import type { ChartType, ChartSpec } from "@opendata-ai/core";
 
-const CHART_TYPES: ChartType[] = ['line', 'column', 'area', 'bar'];
+const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
 
 function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
   const [chartType, setChartType] = useState<ChartType>(baseSpec.type);
@@ -38,12 +38,17 @@ function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
 
   return (
     <div>
-      <select value={chartType} onChange={(e) => setChartType(e.target.value as ChartType)}>
+      <select
+        value={chartType}
+        onChange={(e) => setChartType(e.target.value as ChartType)}
+      >
         {CHART_TYPES.map((t) => (
-          <option key={t} value={t}>{t}</option>
+          <option key={t} value={t}>
+            {t}
+          </option>
         ))}
       </select>
-      <div style={{ width: '100%', height: 400 }}>
+      <div style={{ width: "100%", height: 400 }}>
         <Chart spec={spec} />
       </div>
     </div>
@@ -68,21 +73,24 @@ If the encoding doesn't match the new type, the engine returns a validation erro
 ### React
 
 ```tsx
-import { useState } from 'react';
-import { Chart } from '@openchart/react';
-import type { DarkMode } from '@openchart/core';
+import { useState } from "react";
+import { Chart } from "@opendata-ai/react";
+import type { DarkMode } from "@opendata-ai/core";
 
 function ChartWithDarkMode({ spec }: { spec: ChartSpec }) {
-  const [darkMode, setDarkMode] = useState<DarkMode>('off');
+  const [darkMode, setDarkMode] = useState<DarkMode>("off");
 
   return (
     <div>
-      <select value={darkMode} onChange={(e) => setDarkMode(e.target.value as DarkMode)}>
+      <select
+        value={darkMode}
+        onChange={(e) => setDarkMode(e.target.value as DarkMode)}
+      >
         <option value="off">Light</option>
         <option value="force">Dark</option>
         <option value="auto">System</option>
       </select>
-      <div style={{ width: '100%', height: 400 }}>
+      <div style={{ width: "100%", height: 400 }}>
         <Chart spec={spec} darkMode={darkMode} />
       </div>
     </div>
@@ -95,9 +103,9 @@ The `darkMode` prop is a dependency of the mount effect. Changing it destroys an
 ### Vanilla
 
 ```ts
-import { createChart } from '@openchart/vanilla';
+import { createChart } from "@opendata-ai/vanilla";
 
-const chart = createChart(container, spec, { darkMode: 'auto' });
+const chart = createChart(container, spec, { darkMode: "auto" });
 ```
 
 In vanilla mode, `darkMode: 'auto'` checks `window.matchMedia('(prefers-color-scheme: dark)')` at mount time. To react to live system preference changes, destroy and recreate the chart, or use the React wrapper which handles this for you.
@@ -107,14 +115,14 @@ In vanilla mode, `darkMode: 'auto'` checks `window.matchMedia('(prefers-color-sc
 For more control over dark mode in React:
 
 ```tsx
-import { useDarkMode } from '@openchart/react';
+import { useDarkMode } from "@opendata-ai/react";
 
 function App() {
   // Reactively tracks system preference when mode is 'auto'
-  const isDark = useDarkMode('auto');
+  const isDark = useDarkMode("auto");
 
   return (
-    <div className={isDark ? 'dark-bg' : 'light-bg'}>
+    <div className={isDark ? "dark-bg" : "light-bg"}>
       <Chart spec={spec} darkMode="auto" />
     </div>
   );
@@ -132,7 +140,7 @@ function App() {
 Pass `theme` as a prop. It's deep-merged onto `DEFAULT_THEME` during compilation:
 
 ```tsx
-<Chart spec={spec} theme={{ colors: { background: '#f5f0e8' } }} />
+<Chart spec={spec} theme={{ colors: { background: "#f5f0e8" } }} />
 ```
 
 ### Global theme via provider
@@ -140,13 +148,13 @@ Pass `theme` as a prop. It's deep-merged onto `DEFAULT_THEME` during compilation
 `VizThemeProvider` sets a theme for all descendant `<Chart>` and `<DataTable>` components. Individual components can still override with their own `theme` prop.
 
 ```tsx
-import { VizThemeProvider, Chart, DataTable } from '@openchart/react';
-import type { ThemeConfig } from '@openchart/core';
+import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/react";
+import type { ThemeConfig } from "@opendata-ai/core";
 
 const brandTheme: ThemeConfig = {
   colors: {
-    categorical: ['#1a73e8', '#ea4335', '#34a853', '#fbbc04'],
-    background: '#fafafa',
+    categorical: ["#1a73e8", "#ea4335", "#34a853", "#fbbc04"],
+    background: "#fafafa",
   },
   fonts: { family: '"Roboto", sans-serif' },
 };
@@ -169,18 +177,20 @@ The provider uses React context. Components read it via the `useVizTheme()` hook
 If you're building UI that should match the chart theme (custom legends, data cards, etc.), read the theme from context with `useVizTheme()`:
 
 ```tsx
-import { useVizTheme } from '@openchart/react';
+import { useVizTheme } from "@opendata-ai/react";
 
 function DataCard({ label, value }: { label: string; value: string }) {
   const theme = useVizTheme();
   // Returns ThemeConfig | undefined from the nearest VizThemeProvider
 
   return (
-    <div style={{
-      fontFamily: theme?.fonts?.family,
-      background: theme?.colors?.background,
-      color: theme?.colors?.text,
-    }}>
+    <div
+      style={{
+        fontFamily: theme?.fonts?.family,
+        background: theme?.colors?.background,
+        color: theme?.colors?.text,
+      }}
+    >
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
@@ -215,7 +225,11 @@ function removeAnnotation(spec: ChartSpec, index: number): ChartSpec {
 ### Updating encoding
 
 ```tsx
-function setAxisFormat(spec: ChartSpec, channel: 'x' | 'y', format: string): ChartSpec {
+function setAxisFormat(
+  spec: ChartSpec,
+  channel: "x" | "y",
+  format: string,
+): ChartSpec {
   const encoding = { ...spec.encoding };
   const ch = encoding[channel];
   if (ch) {
@@ -228,7 +242,10 @@ function setAxisFormat(spec: ChartSpec, channel: 'x' | 'y', format: string): Cha
 ### Filtering data
 
 ```tsx
-function filterData(spec: ChartSpec, predicate: (row: DataRow) => boolean): ChartSpec {
+function filterData(
+  spec: ChartSpec,
+  predicate: (row: DataRow) => boolean,
+): ChartSpec {
   return { ...spec, data: spec.data.filter(predicate) };
 }
 ```
@@ -238,14 +255,17 @@ function filterData(spec: ChartSpec, predicate: (row: DataRow) => boolean): Char
 Use `useMemo` to avoid unnecessary recompiles when the parent re-renders but the spec hasn't actually changed:
 
 ```tsx
-const spec = useMemo(() => ({
-  type: 'line' as const,
-  data: filteredData,
-  encoding: { x: xChannel, y: yChannel },
-  chrome: { title: chartTitle },
-}), [filteredData, xChannel, yChannel, chartTitle]);
+const spec = useMemo(
+  () => ({
+    type: "line" as const,
+    data: filteredData,
+    encoding: { x: xChannel, y: yChannel },
+    chrome: { title: chartTitle },
+  }),
+  [filteredData, xChannel, yChannel, chartTitle],
+);
 
-<Chart spec={spec} />
+<Chart spec={spec} />;
 ```
 
 The `<Chart>` component compares specs via `JSON.stringify`. If the serialized form hasn't changed, it skips the update. But avoiding unnecessary object allocations is still good practice for complex parent trees.
@@ -259,14 +279,14 @@ The `<Chart>` component compares specs via `JSON.stringify`. If the serialized f
 Handle clicks on data marks (bars, points, lines, arcs):
 
 ```tsx
-import { Chart } from '@openchart/react';
-import type { MarkEvent } from '@openchart/core';
+import { Chart } from "@opendata-ai/react";
+import type { MarkEvent } from "@opendata-ai/core";
 
 function InteractiveChart({ spec }: { spec: ChartSpec }) {
   const handleMarkClick = (event: MarkEvent) => {
-    console.log('Clicked data:', event.datum);
-    console.log('Series:', event.series);
-    console.log('Position:', event.position);
+    console.log("Clicked data:", event.datum);
+    console.log("Series:", event.series);
+    console.log("Position:", event.position);
   };
 
   const handleMarkHover = (event: MarkEvent) => {
@@ -292,9 +312,9 @@ function InteractiveChart({ spec }: { spec: ChartSpec }) {
 ### Click-to-drill-down pattern
 
 ```tsx
-import { useState, useMemo } from 'react';
-import { Chart } from '@openchart/react';
-import type { MarkEvent, ChartSpec } from '@openchart/core';
+import { useState, useMemo } from "react";
+import { Chart } from "@opendata-ai/react";
+import type { MarkEvent, ChartSpec } from "@opendata-ai/core";
 
 interface SalesData {
   region: string;
@@ -308,17 +328,19 @@ function DrillDownChart({ data }: { data: SalesData[] }) {
   const spec = useMemo((): ChartSpec => {
     if (selectedRegion) {
       // Drilled-down view: cities within the selected region
-      const cityData = data.filter((d) => d.region === selectedRegion && d.city);
+      const cityData = data.filter(
+        (d) => d.region === selectedRegion && d.city,
+      );
       return {
-        type: 'bar',
+        type: "bar",
         data: cityData,
         encoding: {
-          x: { field: 'revenue', type: 'quantitative' },
-          y: { field: 'city', type: 'nominal' },
+          x: { field: "revenue", type: "quantitative" },
+          y: { field: "city", type: "nominal" },
         },
         chrome: {
           title: `Revenue: ${selectedRegion}`,
-          subtitle: 'Click a bar for details. Press back to return.',
+          subtitle: "Click a bar for details. Press back to return.",
         },
       };
     }
@@ -326,13 +348,16 @@ function DrillDownChart({ data }: { data: SalesData[] }) {
     // Top-level view: revenue by region
     const regionData = data.filter((d) => !d.city);
     return {
-      type: 'bar',
+      type: "bar",
       data: regionData,
       encoding: {
-        x: { field: 'revenue', type: 'quantitative' },
-        y: { field: 'region', type: 'nominal' },
+        x: { field: "revenue", type: "quantitative" },
+        y: { field: "region", type: "nominal" },
       },
-      chrome: { title: 'Revenue by region', subtitle: 'Click a bar to drill down' },
+      chrome: {
+        title: "Revenue by region",
+        subtitle: "Click a bar to drill down",
+      },
     };
   }, [data, selectedRegion]);
 
@@ -347,7 +372,7 @@ function DrillDownChart({ data }: { data: SalesData[] }) {
       {selectedRegion && (
         <button onClick={() => setSelectedRegion(null)}>Back to regions</button>
       )}
-      <div style={{ width: '100%', height: 400 }}>
+      <div style={{ width: "100%", height: 400 }}>
         <Chart spec={spec} onMarkClick={handleClick} />
       </div>
     </div>
@@ -363,7 +388,7 @@ Legend entries are interactive by default. Clicking a legend swatch hides/shows 
 <Chart
   spec={spec}
   onLegendToggle={(series, visible) => {
-    console.log(`${series} is now ${visible ? 'visible' : 'hidden'}`);
+    console.log(`${series} is now ${visible ? "visible" : "hidden"}`);
   }}
 />
 ```
@@ -377,7 +402,7 @@ The vanilla adapter handles the DOM toggling (setting `display: none` on matchin
   spec={spec}
   onAnnotationClick={(annotation, event) => {
     // Open a detail panel for the clicked annotation
-    if (annotation.type === 'text') {
+    if (annotation.type === "text") {
       showDetailPanel(annotation.label);
     }
   }}
@@ -393,14 +418,14 @@ The vanilla adapter handles the DOM toggling (setting `display: none` on matchin
 The table manages its own sort, search, and pagination state internally. You get callbacks when state changes but don't need to manage state yourself:
 
 ```tsx
-import { DataTable } from '@openchart/react';
+import { DataTable } from "@opendata-ai/react";
 
 <DataTable
   spec={tableSpec}
-  onSortChange={(sort) => console.log('Sort changed:', sort)}
-  onSearchChange={(query) => console.log('Search:', query)}
-  onPageChange={(page) => console.log('Page:', page)}
-/>
+  onSortChange={(sort) => console.log("Sort changed:", sort)}
+  onSearchChange={(query) => console.log("Search:", query)}
+  onPageChange={(page) => console.log("Page:", page)}
+/>;
 ```
 
 ### Controlled
@@ -408,13 +433,13 @@ import { DataTable } from '@openchart/react';
 Pass `sort`, `search`, and/or `page` props to take over state management. When any of these are provided, the table reads state from props instead of managing it internally:
 
 ```tsx
-import { useState } from 'react';
-import { DataTable } from '@openchart/react';
-import type { SortState } from '@openchart/core';
+import { useState } from "react";
+import { DataTable } from "@opendata-ai/react";
+import type { SortState } from "@opendata-ai/core";
 
 function ControlledTable({ spec }: { spec: TableSpec }) {
   const [sort, setSort] = useState<SortState | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
   return (
@@ -430,7 +455,7 @@ function ControlledTable({ spec }: { spec: TableSpec }) {
       />
 
       {/* External sort controls */}
-      <button onClick={() => setSort({ column: 'name', direction: 'asc' })}>
+      <button onClick={() => setSort({ column: "name", direction: "asc" })}>
         Sort by name
       </button>
       <button onClick={() => setSort(null)}>Clear sort</button>
@@ -454,10 +479,11 @@ function ControlledTable({ spec }: { spec: TableSpec }) {
 For a quick way to get controlled state without wiring it all manually:
 
 ```tsx
-import { DataTable, useTableState } from '@openchart/react';
+import { DataTable, useTableState } from "@opendata-ai/react";
 
 function TableWithManagedState({ spec }: { spec: TableSpec }) {
-  const { sort, search, page, setSort, setSearch, setPage, resetState } = useTableState();
+  const { sort, search, page, setSort, setSearch, setPage, resetState } =
+    useTableState();
 
   return (
     <div>
@@ -480,8 +506,8 @@ function TableWithManagedState({ spec }: { spec: TableSpec }) {
 
 ```tsx
 const state = useTableState({
-  sort: { column: 'name', direction: 'asc' },
-  search: '',
+  sort: { column: "name", direction: "asc" },
+  search: "",
   page: 0,
 });
 ```
@@ -491,20 +517,20 @@ const state = useTableState({
 For cases where you need direct access to the vanilla `TableInstance`:
 
 ```tsx
-import { useTable } from '@openchart/react';
+import { useTable } from "@opendata-ai/react";
 
 function AdvancedTable({ spec }: { spec: TableSpec }) {
   const { ref, table, state } = useTable(spec, {
-    onRowClick: (row) => console.log('Clicked:', row),
+    onRowClick: (row) => console.log("Clicked:", row),
     responsive: true,
   });
 
   return (
     <div>
       <p>Current page: {state.page}</p>
-      <p>Sort: {state.sort?.column ?? 'none'}</p>
-      <button onClick={() => table?.export('csv')}>Export CSV</button>
-      <div ref={ref} style={{ width: '100%', height: 500 }} />
+      <p>Sort: {state.sort?.column ?? "none"}</p>
+      <button onClick={() => table?.export("csv")}>Export CSV</button>
+      <div ref={ref} style={{ width: "100%", height: 500 }} />
     </div>
   );
 }
@@ -513,6 +539,7 @@ function AdvancedTable({ spec }: { spec: TableSpec }) {
 ### Table sort cycling
 
 Sort behavior follows a three-state cycle:
+
 - Click column: sort ascending
 - Click same column again: sort descending
 - Click same column again: clear sort
@@ -541,23 +568,29 @@ The `<Chart>` and `<DataTable>` components render a wrapper div set to `width: 1
 For charts, the container needs an explicit height (charts don't have intrinsic height):
 
 ```tsx
-{/* Works: explicit height */}
-<div style={{ width: '100%', height: 400 }}>
+{
+  /* Works: explicit height */
+}
+<div style={{ width: "100%", height: 400 }}>
   <Chart spec={spec} />
-</div>
+</div>;
 
-{/* Works: flex layout */}
-<div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+{
+  /* Works: flex layout */
+}
+<div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
   <header>...</header>
   <div style={{ flex: 1 }}>
     <Chart spec={spec} />
   </div>
-</div>
+</div>;
 
-{/* Won't work: no height constraint, chart collapses to minimum */}
+{
+  /* Won't work: no height constraint, chart collapses to minimum */
+}
 <div>
   <Chart spec={spec} />
-</div>
+</div>;
 ```
 
 Tables don't need explicit height since they expand with content. The wrapper has `overflow: auto` for scroll handling.
@@ -568,7 +601,7 @@ Set `responsive: false` on the spec or component prop to disable ResizeObserver.
 
 ```tsx
 // Spec-level
-const spec = { type: 'line', data, encoding, responsive: false };
+const spec = { type: "line", data, encoding, responsive: false };
 
 // Vanilla adapter
 createChart(container, spec, { responsive: false });
@@ -579,13 +612,13 @@ createChart(container, spec, { responsive: false });
 When you need a chart at specific dimensions (for image export, thumbnails, etc.), set the container to the exact size you want, disable responsive, and export:
 
 ```ts
-const container = document.createElement('div');
-container.style.width = '1200px';
-container.style.height = '800px';
+const container = document.createElement("div");
+container.style.width = "1200px";
+container.style.height = "800px";
 document.body.appendChild(container);
 
 const chart = createChart(container, spec, { responsive: false });
-const pngBlob = await chart.export('png', { dpi: 2 });
+const pngBlob = await chart.export("png", { dpi: 2 });
 
 chart.destroy();
 container.remove();
@@ -603,21 +636,21 @@ The `ChartInstance` returned by `createChart` supports three export formats:
 const chart = createChart(container, spec);
 
 // SVG: synchronous, returns an XML string
-const svgString = chart.export('svg');
+const svgString = chart.export("svg");
 
 // PNG: async, returns a Blob. Optional DPI scaling (default: 2x for retina).
-const pngBlob = await chart.export('png');
-const hiResPng = await chart.export('png', { dpi: 3 });
+const pngBlob = await chart.export("png");
+const hiResPng = await chart.export("png", { dpi: 3 });
 
 // CSV: synchronous, returns the data as comma-separated text
-const csvString = chart.export('csv');
+const csvString = chart.export("csv");
 ```
 
 Tables support CSV export through `TableInstance`:
 
 ```ts
 const table = createTable(container, tableSpec);
-const csvString = table.export('csv');
+const csvString = table.export("csv");
 ```
 
 Table CSV export respects the current sort and search state but exports all rows (ignores pagination), so you get the full filtered dataset.
@@ -629,7 +662,7 @@ The library doesn't include download utilities, but wiring one up is straightfor
 ```ts
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   a.click();
@@ -642,14 +675,14 @@ function downloadString(content: string, filename: string, mime: string) {
 }
 
 // Usage
-const svgString = chart.export('svg');
-downloadString(svgString, 'chart.svg', 'image/svg+xml');
+const svgString = chart.export("svg");
+downloadString(svgString, "chart.svg", "image/svg+xml");
 
-const pngBlob = await chart.export('png');
-downloadBlob(pngBlob, 'chart.png');
+const pngBlob = await chart.export("png");
+downloadBlob(pngBlob, "chart.png");
 
-const csvString = chart.export('csv');
-downloadString(csvString, 'data.csv', 'text/csv');
+const csvString = chart.export("csv");
+downloadString(csvString, "data.csv", "text/csv");
 ```
 
 ### React export
@@ -657,16 +690,16 @@ downloadString(csvString, 'data.csv', 'text/csv');
 The `<Chart>` component doesn't expose the instance directly. For export access, use the `useChart` hook:
 
 ```tsx
-import { useChart } from '@openchart/react';
+import { useChart } from "@opendata-ai/react";
 
 function ExportableChart({ spec }: { spec: ChartSpec }) {
-  const { ref, chart } = useChart(spec, { darkMode: 'off' });
+  const { ref, chart } = useChart(spec, { darkMode: "off" });
 
-  const handleExport = async (format: 'svg' | 'png' | 'csv') => {
+  const handleExport = async (format: "svg" | "png" | "csv") => {
     if (!chart) return;
 
-    if (format === 'png') {
-      const blob = await chart.export('png');
+    if (format === "png") {
+      const blob = await chart.export("png");
       // Download or process the blob
     } else {
       const str = chart.export(format);
@@ -676,9 +709,9 @@ function ExportableChart({ spec }: { spec: ChartSpec }) {
 
   return (
     <div>
-      <button onClick={() => handleExport('svg')}>Export SVG</button>
-      <button onClick={() => handleExport('png')}>Export PNG</button>
-      <div ref={ref} style={{ width: '100%', height: 400 }} />
+      <button onClick={() => handleExport("svg")}>Export SVG</button>
+      <button onClick={() => handleExport("png")}>Export PNG</button>
+      <div ref={ref} style={{ width: "100%", height: 400 }} />
     </div>
   );
 }
@@ -693,11 +726,11 @@ For non-React usage, the vanilla adapter provides direct instance control.
 ### Chart lifecycle
 
 ```ts
-import { createChart } from '@openchart/vanilla';
+import { createChart } from "@opendata-ai/vanilla";
 
 // Mount
 const chart = createChart(container, spec, {
-  darkMode: 'auto',
+  darkMode: "auto",
   responsive: true,
   onMarkClick: (event) => console.log(event.datum),
 });
@@ -713,7 +746,7 @@ const layout = chart.layout;
 console.log(layout.dimensions, layout.marks.length);
 
 // Export
-const svg = chart.export('svg');
+const svg = chart.export("svg");
 
 // Clean up: removes DOM, disconnects observers
 chart.destroy();
@@ -722,15 +755,15 @@ chart.destroy();
 ### Table lifecycle
 
 ```ts
-import { createTable } from '@openchart/vanilla';
+import { createTable } from "@opendata-ai/vanilla";
 
 const table = createTable(container, tableSpec, {
-  darkMode: 'auto',
+  darkMode: "auto",
   responsive: true,
   onRowClick: (row) => console.log(row),
   onStateChange: (state) => {
     // state: { sort: SortState | null, search: string, page: number }
-    console.log('Table state:', state);
+    console.log("Table state:", state);
   },
 });
 
@@ -739,11 +772,11 @@ table.update(newTableSpec);
 
 // Read/set state programmatically
 const state = table.getState();
-table.setState({ sort: { column: 'name', direction: 'asc' } });
-table.setState({ search: 'query', page: 0 });
+table.setState({ sort: { column: "name", direction: "asc" } });
+table.setState({ search: "query", page: 0 });
 
 // Export
-const csv = table.export('csv');
+const csv = table.export("csv");
 
 // Clean up
 table.destroy();
@@ -755,7 +788,7 @@ Pass `externalState` in mount options to use controlled mode:
 
 ```ts
 const table = createTable(container, tableSpec, {
-  externalState: { sort: null, search: '', page: 0 },
+  externalState: { sort: null, search: "", page: 0 },
   onStateChange: (state) => {
     // Update your external state store, then call table.setState()
     myStore.update(state);
@@ -788,41 +821,42 @@ Graphs render force-directed network visualizations on canvas. The input is a `G
 ### React
 
 ```tsx
-import { Graph } from '@openchart/react';
-import type { GraphSpec } from '@openchart/core';
+import { Graph } from "@opendata-ai/react";
+import type { GraphSpec } from "@opendata-ai/core";
 
 <Graph
   spec={graphSpec}
   theme={theme}
   darkMode="auto"
-  onNodeClick={(node) => console.log('Clicked:', node)}
-  onNodeDoubleClick={(node) => console.log('Double-clicked:', node)}
-  onSelectionChange={(nodeIds) => console.log('Selected:', nodeIds)}
+  onNodeClick={(node) => console.log("Clicked:", node)}
+  onNodeDoubleClick={(node) => console.log("Double-clicked:", node)}
+  onSelectionChange={(nodeIds) => console.log("Selected:", nodeIds)}
   className="my-graph"
-  style={{ width: '100%', height: 500 }}
-/>
+  style={{ width: "100%", height: 500 }}
+/>;
 ```
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `spec` | `GraphSpec` | The graph spec. Required. |
-| `theme` | `ThemeConfig` | Theme overrides. |
-| `darkMode` | `DarkMode` | Dark mode: `'auto'`, `'force'`, or `'off'`. |
-| `onNodeClick` | `(node: Record<string, unknown>) => void` | Fires when a node is clicked. |
-| `onNodeDoubleClick` | `(node: Record<string, unknown>) => void` | Fires when a node is double-clicked. |
-| `onSelectionChange` | `(nodeIds: string[]) => void` | Fires when the selected nodes change. |
-| `className` | `string` | CSS class for the wrapper div. |
-| `style` | `CSSProperties` | Inline styles for the wrapper div. |
+| Prop                | Type                                      | Description                                 |
+| ------------------- | ----------------------------------------- | ------------------------------------------- |
+| `spec`              | `GraphSpec`                               | The graph spec. Required.                   |
+| `theme`             | `ThemeConfig`                             | Theme overrides.                            |
+| `darkMode`          | `DarkMode`                                | Dark mode: `'auto'`, `'force'`, or `'off'`. |
+| `onNodeClick`       | `(node: Record<string, unknown>) => void` | Fires when a node is clicked.               |
+| `onNodeDoubleClick` | `(node: Record<string, unknown>) => void` | Fires when a node is double-clicked.        |
+| `onSelectionChange` | `(nodeIds: string[]) => void`             | Fires when the selected nodes change.       |
+| `className`         | `string`                                  | CSS class for the wrapper div.              |
+| `style`             | `CSSProperties`                           | Inline styles for the wrapper div.          |
 
 ### useGraph hook
 
 For imperative control over the graph (search, zoom, selection), use the `useGraph()` hook with a forwarded ref:
 
 ```tsx
-import { Graph, useGraph } from '@openchart/react';
+import { Graph, useGraph } from "@opendata-ai/react";
 
 function SearchableGraph({ spec }: { spec: GraphSpec }) {
-  const { ref, search, clearSearch, zoomToFit, zoomToNode, selectNode } = useGraph();
+  const { ref, search, clearSearch, zoomToFit, zoomToNode, selectNode } =
+    useGraph();
 
   return (
     <div>
@@ -832,7 +866,7 @@ function SearchableGraph({ spec }: { spec: GraphSpec }) {
       />
       <button onClick={zoomToFit}>Fit all</button>
       <button onClick={clearSearch}>Clear search</button>
-      <div style={{ width: '100%', height: 500 }}>
+      <div style={{ width: "100%", height: 500 }}>
         <Graph ref={ref} spec={spec} />
       </div>
     </div>
@@ -842,35 +876,35 @@ function SearchableGraph({ spec }: { spec: GraphSpec }) {
 
 `useGraph()` returns:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `ref` | `RefObject` | Pass to `<Graph ref={ref}>`. |
-| `search(query)` | `(string) => void` | Highlight nodes matching the query. |
-| `clearSearch()` | `() => void` | Clear search highlights. |
-| `zoomToFit()` | `() => void` | Fit all nodes in the viewport. |
-| `zoomToNode(id)` | `(string) => void` | Center and zoom to a specific node. |
-| `selectNode(id)` | `(string) => void` | Programmatically select a node. |
-| `getSelectedNodes()` | `() => string[]` | Get currently selected node IDs. |
+| Property             | Type               | Description                         |
+| -------------------- | ------------------ | ----------------------------------- |
+| `ref`                | `RefObject`        | Pass to `<Graph ref={ref}>`.        |
+| `search(query)`      | `(string) => void` | Highlight nodes matching the query. |
+| `clearSearch()`      | `() => void`       | Clear search highlights.            |
+| `zoomToFit()`        | `() => void`       | Fit all nodes in the viewport.      |
+| `zoomToNode(id)`     | `(string) => void` | Center and zoom to a specific node. |
+| `selectNode(id)`     | `(string) => void` | Programmatically select a node.     |
+| `getSelectedNodes()` | `() => string[]`   | Get currently selected node IDs.    |
 
 ### Vanilla
 
 ```ts
-import { createGraph } from '@openchart/vanilla';
+import { createGraph } from "@opendata-ai/vanilla";
 
 const graph = createGraph(container, graphSpec, {
-  darkMode: 'auto',
+  darkMode: "auto",
   responsive: true,
-  onNodeClick: (node) => console.log('Clicked:', node),
-  onNodeDoubleClick: (node) => console.log('Double-clicked:', node),
-  onSelectionChange: (nodeIds) => console.log('Selected:', nodeIds),
+  onNodeClick: (node) => console.log("Clicked:", node),
+  onNodeDoubleClick: (node) => console.log("Double-clicked:", node),
+  onSelectionChange: (nodeIds) => console.log("Selected:", nodeIds),
 });
 
 // Imperative control
-graph.search('alice');
+graph.search("alice");
 graph.clearSearch();
 graph.zoomToFit();
-graph.zoomToNode('node-42');
-graph.selectNode('node-42');
+graph.zoomToNode("node-42");
+graph.selectNode("node-42");
 console.log(graph.getSelectedNodes());
 
 // Update with new spec
@@ -882,17 +916,17 @@ graph.destroy();
 
 `createGraph` returns a `GraphInstance` with these methods:
 
-| Method | What it does |
-|--------|-------------|
-| `update(spec)` | Recompile and re-render with a new spec. |
-| `search(query)` | Highlight nodes matching the query string. |
-| `clearSearch()` | Clear search highlights. |
-| `zoomToFit()` | Fit all nodes in the viewport. |
-| `zoomToNode(id)` | Center and zoom to a specific node. |
-| `selectNode(id)` | Programmatically select a node. |
-| `getSelectedNodes()` | Get currently selected node IDs. |
-| `resize()` | Manually trigger resize (usually handled by ResizeObserver). |
-| `destroy()` | Remove DOM, stop simulation, disconnect observers. |
+| Method               | What it does                                                 |
+| -------------------- | ------------------------------------------------------------ |
+| `update(spec)`       | Recompile and re-render with a new spec.                     |
+| `search(query)`      | Highlight nodes matching the query string.                   |
+| `clearSearch()`      | Clear search highlights.                                     |
+| `zoomToFit()`        | Fit all nodes in the viewport.                               |
+| `zoomToNode(id)`     | Center and zoom to a specific node.                          |
+| `selectNode(id)`     | Programmatically select a node.                              |
+| `getSelectedNodes()` | Get currently selected node IDs.                             |
+| `resize()`           | Manually trigger resize (usually handled by ResizeObserver). |
+| `destroy()`          | Remove DOM, stop simulation, disconnect observers.           |
 
 ### Graph interaction model
 

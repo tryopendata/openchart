@@ -1,5 +1,5 @@
 /**
- * @openchart/vanilla
+ * @opendata-ai/vanilla
  *
  * Vanilla JS adapter for openchart. Renders ChartLayout and TableLayout
  * objects into real DOM elements using imperative SVG/HTML creation.
@@ -16,7 +16,7 @@ export type {
   TableLayout,
   TableSpec,
   VizSpec,
-} from '@openchart/engine';
+} from '@opendata-ai/engine';
 export type { PNGExportOptions } from './export';
 // Export utilities
 export { exportCSV, exportPNG, exportSVG } from './export';

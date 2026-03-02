@@ -6,7 +6,7 @@
  * stacked areas via d3-shape stack layout.
  */
 
-import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@openchart/core';
+import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/core';
 import type { ScaleLinear } from 'd3-scale';
 import { area, curveMonotoneX, line, stack, stackOffsetNone, stackOrderNone } from 'd3-shape';
 

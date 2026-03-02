@@ -5,8 +5,8 @@
  * Uses real-world country population data with sorted bars and value labels.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // Most Populous Countries: Horizontal bar with value labels

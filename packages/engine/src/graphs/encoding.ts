@@ -7,7 +7,7 @@
  * for categorical color, scaleLinear for quantitative color.
  */
 
-import type { GraphEdge, GraphEncoding, GraphNode, ResolvedTheme } from '@openchart/core';
+import type { GraphEdge, GraphEncoding, GraphNode, ResolvedTheme } from '@opendata-ai/core';
 import { max, min } from 'd3-array';
 import { scaleLinear, scaleOrdinal, scaleSqrt } from 'd3-scale';
 
@@ -46,9 +46,9 @@ export function darkenColor(hex: string, amount: number = 0.2): string {
   const full =
     clean.length === 3
       ? clean
-          .split('')
-          .map((c) => c + c)
-          .join('')
+        .split('')
+        .map((c) => c + c)
+        .join('')
       : clean;
 
   const r = Math.max(0, Math.round(parseInt(full.substring(0, 2), 16) * (1 - amount)));
@@ -71,9 +71,9 @@ function hexWithOpacity(hex: string, opacity: number): string {
   const full =
     clean.length === 3
       ? clean
-          .split('')
-          .map((c) => c + c)
-          .join('')
+        .split('')
+        .map((c) => c + c)
+        .join('')
       : clean;
 
   const r = parseInt(full.substring(0, 2), 16);

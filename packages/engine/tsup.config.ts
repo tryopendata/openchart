@@ -7,7 +7,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: [
-    '@openchart/core',
+    '@opendata-ai/core',
     'd3-array',
     'd3-format',
     'd3-interpolate',

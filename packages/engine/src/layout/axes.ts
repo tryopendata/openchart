@@ -14,8 +14,8 @@ import type {
   Rect,
   ResolvedTheme,
   TextStyle,
-} from '@openchart/core';
-import { abbreviateNumber, formatDate, formatNumber } from '@openchart/core';
+} from '@opendata-ai/core';
+import { abbreviateNumber, formatDate, formatNumber } from '@opendata-ai/core';
 import type { ScaleBand } from 'd3-scale';
 import type {
   D3CategoricalScale,

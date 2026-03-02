@@ -9,8 +9,8 @@
  * x-axis is categorical (band scale), y-axis is quantitative.
  */
 
-import type { DataRow, Encoding, LayoutStrategy, MarkAria, Rect, RectMark } from '@openchart/core';
-import { abbreviateNumber, formatNumber } from '@openchart/core';
+import type { DataRow, Encoding, LayoutStrategy, MarkAria, Rect, RectMark } from '@opendata-ai/core';
+import { abbreviateNumber, formatNumber } from '@opendata-ai/core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';

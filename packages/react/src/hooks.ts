@@ -5,8 +5,8 @@
  * useDarkMode: resolves the DarkMode preference to a boolean.
  */
 
-import type { ChartLayout, DarkMode, VizSpec } from '@openchart/core';
-import { type ChartInstance, createChart, type MountOptions } from '@openchart/vanilla';
+import type { ChartLayout, DarkMode, VizSpec } from '@opendata-ai/core';
+import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/vanilla';
 import { useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------

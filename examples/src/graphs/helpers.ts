@@ -6,7 +6,7 @@
  * - generateScaleFreeGraph: preferential attachment (Barabasi-Albert model)
  */
 
-import type { GraphSpec } from '@openchart/core';
+import type { GraphSpec } from '@opendata-ai/core';
 
 // ---------------------------------------------------------------------------
 // Deterministic pseudo-random (seeded for stable stories)

@@ -5,8 +5,8 @@
  * and lollipop stems with various data patterns.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // Simple dot plot

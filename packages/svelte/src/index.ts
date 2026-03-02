@@ -1,5 +1,5 @@
 /**
- * @openchart/svelte
+ * @opendata-ai/svelte
  *
  * Svelte 5 adapter for openchart. Provides <Chart />, <DataTable />,
  * and <Graph /> components that wrap the vanilla adapter with Svelte
@@ -14,7 +14,7 @@ export type {
   TableLayout,
   TableSpec,
   VizSpec,
-} from '@openchart/engine';
+} from '@opendata-ai/engine';
 // Components
 export { default as Chart } from './Chart.svelte';
 export type { UseChartOptions, UseChartReturn } from './composables/useChart.svelte.js';

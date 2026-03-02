@@ -15,8 +15,8 @@ import type {
   Rect,
   ResolvedChrome,
   ResolvedTheme,
-} from '@openchart/core';
-import { computeChrome, estimateTextWidth } from '@openchart/core';
+} from '@opendata-ai/core';
+import { computeChrome, estimateTextWidth } from '@opendata-ai/core';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
 
@@ -43,7 +43,7 @@ export interface LayoutDimensions {
 // ---------------------------------------------------------------------------
 
 /** Convert NormalizedChrome back to a Chrome-compatible shape for computeChrome. */
-function chromeToInput(chrome: NormalizedChrome): import('@openchart/core').Chrome {
+function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/core').Chrome {
   return {
     title: chrome.title,
     subtitle: chrome.subtitle,

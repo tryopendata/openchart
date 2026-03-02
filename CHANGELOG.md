@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- Initial release of `@openchart/core`, `@openchart/engine`, `@openchart/vanilla`, `@openchart/react`, `@openchart/vue`, `@openchart/svelte`
+- Initial release of `@opendata-ai/core`, `@opendata-ai/engine`, `@opendata-ai/vanilla`, `@opendata-ai/react`, `@opendata-ai/vue`, `@opendata-ai/svelte`
 - Chart types: line, area, bar, column, scatter, dot, pie, donut
 - Data tables with sort, search, pagination, heatmap, sparklines, inline bars, category colors
 - Force-directed graph visualization with canvas rendering

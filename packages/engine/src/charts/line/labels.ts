@@ -18,8 +18,8 @@ import type {
   LayoutStrategy,
   LineMark,
   ResolvedLabel,
-} from '@openchart/core';
-import { estimateTextWidth, resolveCollisions } from '@openchart/core';
+} from '@opendata-ai/core';
+import { estimateTextWidth, resolveCollisions } from '@opendata-ai/core';
 
 // ---------------------------------------------------------------------------
 // Constants

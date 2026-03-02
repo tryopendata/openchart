@@ -1,5 +1,5 @@
 {
-  "name": "@openchart/core",
+  "name": "@opendata-ai/core",
   "version": "1.0.0",
   "description": "Types, theme, colors, accessibility, and utilities for openchart",
   "license": "Apache-2.0",
@@ -27,9 +27,22 @@
     },
     "./styles.css": "./dist/styles.css"
   },
-  "files": ["dist", "src"],
-  "sideEffects": ["./dist/styles.css"],
-  "keywords": ["chart", "visualization", "data-table", "svg", "typescript", "d3", "declarative"],
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "keywords": [
+    "chart",
+    "visualization",
+    "data-table",
+    "svg",
+    "typescript",
+    "d3",
+    "declarative"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",

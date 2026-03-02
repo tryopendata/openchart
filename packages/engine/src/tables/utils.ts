@@ -2,7 +2,7 @@
  * Shared utilities for table column computations.
  */
 
-import { contrastRatio } from '@openchart/core';
+import { contrastRatio } from '@opendata-ai/core';
 
 /**
  * Pick a text color (black or white) that meets better contrast against the background.

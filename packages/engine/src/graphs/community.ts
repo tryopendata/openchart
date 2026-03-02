@@ -7,7 +7,7 @@
  * override nodeColor encoding when clustering is active.
  */
 
-import type { ResolvedTheme } from '@openchart/core';
+import type { ResolvedTheme } from '@opendata-ai/core';
 import { darkenColor } from './encoding';
 import type { CompiledGraphNode } from './types';
 

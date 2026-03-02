@@ -6,8 +6,8 @@
  * createChart() function.
  */
 
-import type { ChartEventHandlers, DarkMode, ThemeConfig, VizSpec } from '@openchart/core';
-import { type ChartInstance, createChart, type MountOptions } from '@openchart/vanilla';
+import type { ChartEventHandlers, DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/core';
+import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/vanilla';
 import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
@@ -83,11 +83,11 @@ export function Chart({
     [],
   );
   const stableOnMarkClick = useCallback(
-    (event: import('@openchart/core').MarkEvent) => handlersRef.current.onMarkClick?.(event),
+    (event: import('@opendata-ai/core').MarkEvent) => handlersRef.current.onMarkClick?.(event),
     [],
   );
   const stableOnMarkHover = useCallback(
-    (event: import('@openchart/core').MarkEvent) => handlersRef.current.onMarkHover?.(event),
+    (event: import('@opendata-ai/core').MarkEvent) => handlersRef.current.onMarkHover?.(event),
     [],
   );
   const stableOnMarkLeave = useCallback(() => handlersRef.current.onMarkLeave?.(), []);
@@ -96,14 +96,14 @@ export function Chart({
     [],
   );
   const stableOnAnnotationClick = useCallback(
-    (annotation: import('@openchart/core').Annotation, event: MouseEvent) =>
+    (annotation: import('@opendata-ai/core').Annotation, event: MouseEvent) =>
       handlersRef.current.onAnnotationClick?.(annotation, event),
     [],
   );
   const stableOnAnnotationEdit = useCallback(
     (
-      annotation: import('@openchart/core').TextAnnotation,
-      updatedOffset: import('@openchart/core').AnnotationOffset,
+      annotation: import('@opendata-ai/core').TextAnnotation,
+      updatedOffset: import('@opendata-ai/core').AnnotationOffset,
     ) => handlersRef.current.onAnnotationEdit?.(annotation, updatedOffset),
     [],
   );

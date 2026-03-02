@@ -15,13 +15,13 @@
  * .svelte components.
  */
 
-import type { TableSpec } from '@openchart/core';
+import type { TableSpec } from '@opendata-ai/core';
 import {
   createTable,
   type TableInstance,
   type TableMountOptions,
   type TableState,
-} from '@openchart/vanilla';
+} from '@opendata-ai/vanilla';
 
 export interface UseTableReturn {
   /** Svelte action to attach to a container div. */

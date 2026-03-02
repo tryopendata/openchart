@@ -1,5 +1,5 @@
 {
-  "name": "@openchart/monorepo",
+  "name": "@opendata-ai/monorepo",
   "version": "1.0.0",
   "private": true,
   "repository": {
@@ -12,9 +12,12 @@
   "engines": {
     "node": ">=18"
   },
-  "workspaces": ["packages/*", "examples"],
+  "workspaces": [
+    "packages/*",
+    "examples"
+  ],
   "scripts": {
-    "build": "bun run --filter '@openchart/core' build && bun run --filter '@openchart/engine' build && bun run --filter '@openchart/vanilla' --filter '@openchart/react' --filter '@openchart/vue' --filter '@openchart/svelte' build",
+    "build": "bun run --filter '@opendata-ai/core' build && bun run --filter '@opendata-ai/engine' build && bun run --filter '@opendata-ai/vanilla' --filter '@opendata-ai/react' --filter '@opendata-ai/vue' --filter '@opendata-ai/svelte' build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check packages/ examples/src/",

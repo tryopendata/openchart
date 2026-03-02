@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ['@openchart/engine', '@openchart/core', 'd3-force', 'd3-quadtree'],
+  external: ['@opendata-ai/engine', '@opendata-ai/core', 'd3-force', 'd3-quadtree'],
 });

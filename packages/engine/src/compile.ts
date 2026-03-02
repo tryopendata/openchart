@@ -22,7 +22,7 @@ import type {
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
-} from '@openchart/core';
+} from '@opendata-ai/core';
 import {
   adaptTheme,
   generateAltText,
@@ -30,7 +30,7 @@ import {
   getBreakpoint,
   getLayoutStrategy,
   resolveTheme,
-} from '@openchart/core';
+} from '@opendata-ai/core';
 import { computeAnnotations } from './annotations/compute';
 import { barRenderer } from './charts/bar';
 import { columnRenderer } from './charts/column';

@@ -1,5 +1,5 @@
 /**
- * Color palettes for @openchart.
+ * Color palettes for @opendata-ai.
  *
  * Categorical palette is Infrographic-influenced with WCAG AA contrast
  * for large text (3:1 ratio) on both light (#ffffff) and dark (#1a1a2e)

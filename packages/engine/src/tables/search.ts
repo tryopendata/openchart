@@ -5,7 +5,7 @@
  * substring matching works across all columns.
  */
 
-import type { ColumnConfig } from '@openchart/core';
+import type { ColumnConfig } from '@opendata-ai/core';
 import { formatValueForSearch } from './format-cells';
 
 /**

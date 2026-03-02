@@ -5,8 +5,8 @@
  * theme categorical palette, with AA-contrast text colors.
  */
 
-import type { CellStyle, ColumnConfig, ResolvedTheme } from '@openchart/core';
-import { adaptColorForDarkMode } from '@openchart/core';
+import type { CellStyle, ColumnConfig, ResolvedTheme } from '@opendata-ai/core';
+import { adaptColorForDarkMode } from '@opendata-ai/core';
 import { accessibleTextColor } from './utils';
 
 /**

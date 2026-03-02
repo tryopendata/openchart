@@ -1,4 +1,4 @@
-import type { GraphSpec } from '@openchart/core';
+import type { GraphSpec } from '@opendata-ai/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGraph } from '../../graph-mount';
 
@@ -62,7 +62,7 @@ function makeContainer(): HTMLElement {
       right: 800,
       x: 0,
       y: 0,
-      toJSON: () => {},
+      toJSON: () => { },
     }),
   });
   document.body.appendChild(el);

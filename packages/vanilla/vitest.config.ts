@@ -9,8 +9,8 @@ const packages = path.resolve(__dirname, '..');
 export default defineConfig({
   resolve: {
     alias: [
-      { find: '@openchart/core', replacement: `${packages}/core/src/index.ts` },
-      { find: '@openchart/engine', replacement: `${packages}/engine/src/index.ts` },
+      { find: '@opendata-ai/core', replacement: `${packages}/core/src/index.ts` },
+      { find: '@opendata-ai/engine', replacement: `${packages}/engine/src/index.ts` },
     ],
   },
   test: {

@@ -1,4 +1,4 @@
-# @openchart
+# @opendata-ai
 
 Data visualization library monorepo. Declarative chart and table specs rendered via SVG (charts) and DOM (tables).
 

@@ -4,7 +4,7 @@
  * Exports the scatter chart renderer and computation functions.
  */
 
-import type { Mark } from '@openchart/core';
+import type { Mark } from '@opendata-ai/core';
 import type { ChartRenderer } from '../registry';
 import { computeScatterMarks } from './compute';
 import { computeTrendLine } from './trendline';

@@ -5,7 +5,7 @@
  * The adapter handles the actual drawing.
  */
 
-import type { ResolvedTheme, SparklineColumnConfig, SparklineData } from '@openchart/core';
+import type { ResolvedTheme, SparklineColumnConfig, SparklineData } from '@opendata-ai/core';
 
 export type { SparklineData };
 

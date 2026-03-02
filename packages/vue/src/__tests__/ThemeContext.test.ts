@@ -5,7 +5,7 @@
  * provider hierarchy and that nested providers override parent values.
  */
 
-import type { ThemeConfig } from '@openchart/core';
+import type { ThemeConfig } from '@opendata-ai/core';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { defineComponent, h } from 'vue';

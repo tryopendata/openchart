@@ -1,5 +1,5 @@
 /**
- * @openchart/core styles
+ * @opendata-ai/core styles
  *
  * Plain CSS with viz- prefix for all class names.
  * CSS custom properties for theme overrides.
@@ -18,7 +18,8 @@
 .viz-table-root,
 .viz-graph-wrapper,
 .viz-graph-root {
-  --viz-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --viz-font-family:
+    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --viz-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
   --viz-title-size: 22px;
   --viz-title-weight: 700;
@@ -40,7 +41,8 @@
   --viz-hover-bg: rgba(0, 0, 0, 0.025);
   --viz-tooltip-bg: rgba(255, 255, 255, 0.88);
   --viz-tooltip-border: rgba(0, 0, 0, 0.08);
-  --viz-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
+  --viz-tooltip-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
   --viz-tooltip-text: #1d1d1d;
   --viz-legend-text: #555555;
 }
@@ -61,7 +63,8 @@
   --viz-hover-bg: rgba(255, 255, 255, 0.05);
   --viz-tooltip-bg: rgba(30, 30, 50, 0.85);
   --viz-tooltip-border: rgba(255, 255, 255, 0.08);
-  --viz-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
+  --viz-tooltip-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
   --viz-tooltip-text: #e0e0e0;
   --viz-legend-text: #b0b0b0;
 }

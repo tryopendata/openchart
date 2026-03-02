@@ -18,7 +18,8 @@ Steps or a minimal code example that reproduces the issue:
 ```
 
 **Environment**
-- Package: `@openchart/react` (or vanilla, core, engine)
+
+- Package: `@opendata-ai/react` (or vanilla, core, engine)
 - Version:
 - Framework: (React version, or vanilla JS)
 - Browser:

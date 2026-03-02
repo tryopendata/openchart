@@ -67,10 +67,10 @@ packages/engine/src/charts/<type>/
 ```ts
 // packages/engine/src/charts/<type>/compute.ts
 
-import type { Rect } from '@openchart/core';
-import type { LayoutStrategy } from '@openchart/core';
-import type { NormalizedChartSpec } from '../../compiler/types';
-import type { ResolvedScales } from '../../layout/scales';
+import type { Rect } from "@opendata-ai/core";
+import type { LayoutStrategy } from "@opendata-ai/core";
+import type { NormalizedChartSpec } from "../../compiler/types";
+import type { ResolvedScales } from "../../layout/scales";
 
 export function computeMyTypeMarks(
   spec: NormalizedChartSpec,
@@ -92,7 +92,7 @@ Look at `charts/bar/compute.ts` for a concrete example.
 ```ts
 // packages/engine/src/charts/<type>/labels.ts
 
-import type { Rect, ResolvedLabel } from '@openchart/core';
+import type { Rect, ResolvedLabel } from "@opendata-ai/core";
 
 export function computeMyTypeLabels(
   marks: MyMark[],
@@ -109,11 +109,11 @@ export function computeMyTypeLabels(
 ```ts
 // packages/engine/src/charts/<type>/index.ts
 
-import type { Mark } from '@openchart/core';
-import { registerChartRenderer } from '../registry';
-import type { ChartRenderer } from '../registry';
-import { computeMyTypeMarks } from './compute';
-import { computeMyTypeLabels } from './labels';
+import type { Mark } from "@opendata-ai/core";
+import { registerChartRenderer } from "../registry";
+import type { ChartRenderer } from "../registry";
+import { computeMyTypeMarks } from "./compute";
+import { computeMyTypeLabels } from "./labels";
 
 const myTypeRenderer: ChartRenderer = (spec, scales, chartArea, strategy) => {
   const marks = computeMyTypeMarks(spec, scales, chartArea, strategy);
@@ -124,21 +124,24 @@ const myTypeRenderer: ChartRenderer = (spec, scales, chartArea, strategy) => {
   return marks as Mark[];
 };
 
-registerChartRenderer('<type>', myTypeRenderer);
+registerChartRenderer("<type>", myTypeRenderer);
 
-export { computeMyTypeMarks } from './compute';
-export { computeMyTypeLabels } from './labels';
+export { computeMyTypeMarks } from "./compute";
+export { computeMyTypeLabels } from "./labels";
 ```
 
 ### Step 5: Wire it up
 
 1. Add the import to `packages/engine/src/index.ts`:
+
    ```ts
-   import './charts/<type>/index';
+   import "./charts/<type>/index";
    ```
+
    This import triggers self-registration at module load time.
 
 2. Add the type string to the `ChartType` union in `packages/core/src/types/spec.ts`:
+
    ```ts
    export type ChartType = 'line' | 'area' | 'bar' | ... | '<type>';
    ```
@@ -150,15 +153,19 @@ export { computeMyTypeLabels } from './labels';
 ```ts
 // packages/engine/src/charts/<type>/__tests__/compute.test.ts
 
-import { describe, it, expect } from 'vitest';
-import { computeMyTypeMarks } from '../compute';
+import { describe, it, expect } from "vitest";
+import { computeMyTypeMarks } from "../compute";
 
 // Create fixture factory functions at the top
-function createTestSpec() { /* ... */ }
-function createTestScales() { /* ... */ }
+function createTestSpec() {
+  /* ... */
+}
+function createTestScales() {
+  /* ... */
+}
 
-describe('computeMyTypeMarks', () => {
-  it('returns marks for each data point', () => {
+describe("computeMyTypeMarks", () => {
+  it("returns marks for each data point", () => {
     const marks = computeMyTypeMarks(spec, scales, chartArea, strategy);
     expect(marks).toHaveLength(4);
   });
@@ -179,7 +186,7 @@ Add the interface to `packages/core/src/types/layout.ts`:
 
 ```ts
 export interface MyFeatureTableCell extends TableCellBase {
-  cellType: 'myFeature';
+  cellType: "myFeature";
   // Type-specific fields
   computedWidth: number;
 }
@@ -227,7 +234,10 @@ Wire it into `packages/engine/src/tables/compile-table.ts`, following the existi
 Add a render function to `packages/vanilla/src/renderers/table-cells.ts`:
 
 ```ts
-export function renderMyFeatureCell(cell: MyFeatureTableCell, td: HTMLTableCellElement): void {
+export function renderMyFeatureCell(
+  cell: MyFeatureTableCell,
+  td: HTMLTableCellElement,
+): void {
   // Create DOM elements for the visual feature
 }
 ```
@@ -244,19 +254,22 @@ Add CSS classes (prefixed `viz-table-myFeature`) to `packages/core/src/styles/vi
 - **Environment**: `node` for core and engine, `happy-dom` for vanilla and react
 
 ```ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
 // Fixture factories at the top of the file
 function createTestSpec(): ChartSpec {
   return {
-    type: 'line',
+    type: "line",
     data: [{ x: 1, y: 2 }],
-    encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
+    encoding: {
+      x: { field: "x", type: "quantitative" },
+      y: { field: "y", type: "quantitative" },
+    },
   };
 }
 
-describe('myFunction', () => {
-  it('does the thing', () => {
+describe("myFunction", () => {
+  it("does the thing", () => {
     const result = myFunction(createTestSpec());
     expect(result).toBeDefined();
   });
@@ -293,7 +306,7 @@ Releases are automated via GitHub Actions. The process:
 
 The publish workflow runs automatically on version tags. It builds, tests, rewrites `workspace:*` dependencies to the real version, and publishes all four packages to npm in dependency order.
 
-The `NPM_TOKEN` secret is a granular npm token scoped to the `@openchart` org. Granular tokens expire every 90 days, so the token needs periodic rotation in the repo's GitHub Actions secrets.
+The `NPM_TOKEN` secret is a granular npm token scoped to the `@opendata-ai` org. Granular tokens expire every 90 days, so the token needs periodic rotation in the repo's GitHub Actions secrets.
 
 ## PR guidelines
 

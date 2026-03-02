@@ -5,13 +5,13 @@
  * and exposes the instance and current state.
  */
 
-import type { TableSpec } from '@openchart/core';
+import type { TableSpec } from '@opendata-ai/core';
 import {
   createTable,
   type TableInstance,
   type TableMountOptions,
   type TableState,
-} from '@openchart/vanilla';
+} from '@opendata-ai/vanilla';
 import { onMounted, onUnmounted, type Ref, ref, type ShallowRef, shallowRef, watch } from 'vue';
 
 export interface UseTableReturn {

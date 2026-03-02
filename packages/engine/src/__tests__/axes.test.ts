@@ -1,5 +1,5 @@
-import type { LayoutStrategy } from '@openchart/core';
-import { resolveTheme } from '@openchart/core';
+import type { LayoutStrategy } from '@opendata-ai/core';
+import { resolveTheme } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeAxes } from '../layout/axes';

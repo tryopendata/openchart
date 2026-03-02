@@ -1,5 +1,5 @@
 /**
- * @openchart/engine
+ * @opendata-ai/engine
  *
  * Headless computation engine that takes a declarative spec and produces
  * structured layout objects (ChartLayout, TableLayout, GraphCompilation).
@@ -71,4 +71,4 @@ export type {
   TableLayout,
   TableSpec,
   VizSpec,
-} from '@openchart/core';
+} from '@opendata-ai/core';

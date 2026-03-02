@@ -5,8 +5,8 @@
  * Uses GDP per capita vs life expectancy data (classic Gapminder-style).
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // GDP vs Life Expectancy: Scatter with categories and trend

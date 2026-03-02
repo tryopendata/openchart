@@ -1,12 +1,12 @@
 ---
 name: data-visualization
 description: >
-  Generates @openchart chart and table specs from data. Use when creating
+  Generates @opendata-ai chart and table specs from data. Use when creating
   visualizations, building charts, rendering data tables, generating VizSpec JSON,
-  or answering questions about @openchart types and encoding rules.
+  or answering questions about @opendata-ai types and encoding rules.
 ---
 
-# Data Visualization with @openchart
+# Data Visualization with @opendata-ai
 
 **Core concept:** Write a VizSpec JSON object, render with `<Chart spec={spec} />` (React) or `createChart(container, spec)` (vanilla JS). The engine validates, compiles, and renders. Specs are plain JSON, no imperative drawing.
 
@@ -24,16 +24,16 @@ Default                      -> bar
 
 ## Chart Type Quick Reference
 
-| Type | Required encoding | Optional encoding | Best for |
-|------|------------------|-------------------|----------|
-| `line` | x: temporal/ordinal, y: quantitative | color, size, detail | Trends over time |
-| `area` | x: temporal/ordinal, y: quantitative | color, size, detail | Trends with volume emphasis |
-| `bar` | x: quantitative, y: nominal/ordinal | color, size, detail | Rankings, comparisons (horizontal) |
-| `column` | x: nominal/ordinal/temporal, y: quantitative | color, size, detail | Periodic data, categories (vertical) |
-| `pie` | y: quantitative, color: nominal/ordinal | size, detail | Part-to-whole (2-5 categories max) |
-| `donut` | y: quantitative, color: nominal/ordinal | size, detail | Part-to-whole (prefer over pie) |
-| `dot` | x: quantitative, y: nominal/ordinal | color, size, detail | Distribution, strip plots |
-| `scatter` | x: quantitative, y: quantitative | color, size, detail | Correlation between two variables |
+| Type      | Required encoding                            | Optional encoding   | Best for                             |
+| --------- | -------------------------------------------- | ------------------- | ------------------------------------ |
+| `line`    | x: temporal/ordinal, y: quantitative         | color, size, detail | Trends over time                     |
+| `area`    | x: temporal/ordinal, y: quantitative         | color, size, detail | Trends with volume emphasis          |
+| `bar`     | x: quantitative, y: nominal/ordinal          | color, size, detail | Rankings, comparisons (horizontal)   |
+| `column`  | x: nominal/ordinal/temporal, y: quantitative | color, size, detail | Periodic data, categories (vertical) |
+| `pie`     | y: quantitative, color: nominal/ordinal      | size, detail        | Part-to-whole (2-5 categories max)   |
+| `donut`   | y: quantitative, color: nominal/ordinal      | size, detail        | Part-to-whole (prefer over pie)      |
+| `dot`     | x: quantitative, y: nominal/ordinal          | color, size, detail | Distribution, strip plots            |
+| `scatter` | x: quantitative, y: quantitative             | color, size, detail | Correlation between two variables    |
 
 **Bar vs Column:** Bar = horizontal (category on y-axis). Column = vertical (category on x-axis). Use bar for ranked lists (easier to read labels). Use column for time periods.
 
@@ -148,6 +148,7 @@ Default                      -> bar
 Three types, all with shared base: `label?: string, fill?: string, stroke?: string, opacity?: number, zIndex?: number`
 
 **Text annotation** (callout at a data point):
+
 ```typescript
 { type: "text", x: value, y: value, text: "string",
   fontSize?: number, fontWeight?: number,
@@ -157,6 +158,7 @@ Three types, all with shared base: `label?: string, fill?: string, stroke?: stri
 ```
 
 **Range annotation** (highlighted region):
+
 ```typescript
 { type: "range",
   x1?: value, x2?: value,  // vertical band
@@ -166,6 +168,7 @@ Three types, all with shared base: `label?: string, fill?: string, stroke?: stri
 ```
 
 **Reference line** (horizontal or vertical threshold):
+
 ```typescript
 { type: "refline",
   x?: value,               // vertical line
@@ -179,22 +182,24 @@ Three types, all with shared base: `label?: string, fill?: string, stroke?: stri
 ## Chrome Best Practices
 
 **Title formula:** State the insight, not the chart description.
+
 - Good: "Remote work doubled after 2020"
 - Bad: "Line chart of remote work percentage over time"
 
 **Subtitle:** Provide context the title can't. Units, time range, methodology.
+
 - "Share of US workers fully remote, 2015-2024"
 
 **Source:** Always include for credibility. Format: "Source: Organization Name"
 
 ## Label Density
 
-| Mode | Behavior | Use when |
-|------|----------|----------|
-| `auto` | Show labels with collision detection | Default, most charts |
-| `all` | Show every label, no collision detection | Few data points, precise values matter |
-| `endpoints` | First and last per series only | Line charts, emphasize start/end |
-| `none` | No labels (tooltips + legend only) | Dense data, clean look |
+| Mode        | Behavior                                 | Use when                               |
+| ----------- | ---------------------------------------- | -------------------------------------- |
+| `auto`      | Show labels with collision detection     | Default, most charts                   |
+| `all`       | Show every label, no collision detection | Few data points, precise values matter |
+| `endpoints` | First and last per series only           | Line charts, emphasize start/end       |
+| `none`      | No labels (tooltips + legend only)       | Dense data, clean look                 |
 
 ## Theme Customization
 
@@ -224,8 +229,9 @@ theme: {
 ## Rendering
 
 **React:**
+
 ```tsx
-import { Chart, DataTable, VizThemeProvider } from '@openchart/react';
+import { Chart, DataTable, VizThemeProvider } from '@opendata-ai/react';
 
 <Chart spec={chartSpec} darkMode="auto" />
 <DataTable spec={tableSpec} onRowClick={(row) => console.log(row)} />
@@ -238,27 +244,31 @@ import { Chart, DataTable, VizThemeProvider } from '@openchart/react';
 ```
 
 **Vanilla JS:**
-```typescript
-import { createChart } from '@openchart/vanilla';
 
-const chart = createChart(container, spec, { darkMode: 'auto', responsive: true });
-chart.update(newSpec);              // re-render with new spec
-const svg = chart.export('svg');    // export as SVG string
-const blob = await chart.export('png');  // export as PNG blob
-chart.destroy();                    // cleanup
+```typescript
+import { createChart } from "@opendata-ai/vanilla";
+
+const chart = createChart(container, spec, {
+  darkMode: "auto",
+  responsive: true,
+});
+chart.update(newSpec); // re-render with new spec
+const svg = chart.export("svg"); // export as SVG string
+const blob = await chart.export("png"); // export as PNG blob
+chart.destroy(); // cleanup
 ```
 
 ## Event Handlers
 
 Charts support these callbacks (pass as props in React, or in MountOptions for vanilla):
 
-| Handler | Signature | Fires when |
-|---------|-----------|------------|
-| `onMarkClick` | `(event: MarkEvent) => void` | User clicks a data mark |
-| `onMarkHover` | `(event: MarkEvent) => void` | Mouse enters a data mark |
-| `onMarkLeave` | `() => void` | Mouse leaves a data mark |
-| `onLegendToggle` | `(series: string, visible: boolean) => void` | Legend entry toggled |
-| `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent) => void` | Annotation clicked |
+| Handler             | Signature                                             | Fires when               |
+| ------------------- | ----------------------------------------------------- | ------------------------ |
+| `onMarkClick`       | `(event: MarkEvent) => void`                          | User clicks a data mark  |
+| `onMarkHover`       | `(event: MarkEvent) => void`                          | Mouse enters a data mark |
+| `onMarkLeave`       | `() => void`                                          | Mouse leaves a data mark |
+| `onLegendToggle`    | `(series: string, visible: boolean) => void`          | Legend entry toggled     |
+| `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent) => void` | Annotation clicked       |
 
 **MarkEvent:** `{ datum: DataRow, series?: string, position: { x, y }, event: MouseEvent }`
 
@@ -266,21 +276,29 @@ Tables support: `onRowClick`, `onSortChange`, `onSearchChange`, `onPageChange`
 
 ## Builder Functions
 
-Shorthand for common chart specs. Import from `@openchart/core`.
+Shorthand for common chart specs. Import from `@opendata-ai/core`.
 
 ```typescript
-import { lineChart, barChart, columnChart, pieChart, scatterChart, dataTable } from '@openchart/core';
+import {
+  lineChart,
+  barChart,
+  columnChart,
+  pieChart,
+  scatterChart,
+  dataTable,
+} from "@opendata-ai/core";
 
 // Field names auto-infer types from data values
-const spec = lineChart(data, 'date', 'revenue', {
-  color: 'region',
-  chrome: { title: 'Revenue by region' },
+const spec = lineChart(data, "date", "revenue", {
+  color: "region",
+  chrome: { title: "Revenue by region" },
 });
 
 // Or pass full EncodingChannel objects for control
-const spec = barChart(data,
-  { field: 'category', type: 'nominal' },
-  { field: 'value', type: 'quantitative', axis: { format: '$,.0f' } },
+const spec = barChart(
+  data,
+  { field: "category", type: "nominal" },
+  { field: "value", type: "quantitative", axis: { format: "$,.0f" } },
 );
 
 // dataTable auto-generates columns if omitted
@@ -290,6 +308,7 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
 ## Examples
 
 ### Line chart (trend)
+
 ```json
 {
   "type": "line",
@@ -302,7 +321,11 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
   ],
   "encoding": {
     "x": { "field": "year", "type": "temporal" },
-    "y": { "field": "rate", "type": "quantitative", "axis": { "format": ".1f", "label": "Adoption rate (%)" } }
+    "y": {
+      "field": "rate",
+      "type": "quantitative",
+      "axis": { "format": ".1f", "label": "Adoption rate (%)" }
+    }
   },
   "chrome": {
     "title": "EV adoption accelerated sharply after 2021",
@@ -314,6 +337,7 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
 ```
 
 ### Bar chart (ranking)
+
 ```json
 {
   "type": "bar",
@@ -325,7 +349,11 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
     { "country": "Singapore", "gdp": 82808 }
   ],
   "encoding": {
-    "x": { "field": "gdp", "type": "quantitative", "axis": { "format": "$,.0f" } },
+    "x": {
+      "field": "gdp",
+      "type": "quantitative",
+      "axis": { "format": "$,.0f" }
+    },
     "y": { "field": "country", "type": "nominal" }
   },
   "chrome": {
@@ -337,6 +365,7 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
 ```
 
 ### Donut chart (composition)
+
 ```json
 {
   "type": "donut",
@@ -359,6 +388,7 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
 ```
 
 ### Scatter chart (correlation)
+
 ```json
 {
   "type": "scatter",
@@ -370,8 +400,16 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
     { "country": "Brazil", "spending": 1518, "lifeExp": 75.9, "pop": 214 }
   ],
   "encoding": {
-    "x": { "field": "spending", "type": "quantitative", "axis": { "label": "Health spending per capita ($)" } },
-    "y": { "field": "lifeExp", "type": "quantitative", "axis": { "label": "Life expectancy (years)" } },
+    "x": {
+      "field": "spending",
+      "type": "quantitative",
+      "axis": { "label": "Health spending per capita ($)" }
+    },
+    "y": {
+      "field": "lifeExp",
+      "type": "quantitative",
+      "axis": { "label": "Life expectancy (years)" }
+    },
     "size": { "field": "pop", "type": "quantitative" },
     "color": { "field": "country", "type": "nominal" }
   },
@@ -384,6 +422,7 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
 ```
 
 ### Annotated chart (infographic)
+
 ```json
 {
   "type": "line",
@@ -399,7 +438,11 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
   ],
   "encoding": {
     "x": { "field": "month", "type": "temporal" },
-    "y": { "field": "price", "type": "quantitative", "axis": { "format": "$,.0f" } }
+    "y": {
+      "field": "price",
+      "type": "quantitative",
+      "axis": { "format": "$,.0f" }
+    }
   },
   "chrome": {
     "title": "Bitcoin surged past $70K after spot ETF approvals",
@@ -407,30 +450,95 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
     "source": "Source: CoinGecko"
   },
   "annotations": [
-    { "type": "refline", "y": 42800, "label": "Jan 2024: ETF approved", "style": "dashed", "stroke": "#c44e52" },
-    { "type": "range", "x1": "2024-01", "x2": "2024-04", "label": "Post-ETF rally", "fill": "#1b7fa3", "opacity": 0.1 },
-    { "type": "text", "x": "2024-10", "y": 72800, "text": "New ATH", "anchor": "left", "offset": { "dx": -10, "dy": -5 } }
+    {
+      "type": "refline",
+      "y": 42800,
+      "label": "Jan 2024: ETF approved",
+      "style": "dashed",
+      "stroke": "#c44e52"
+    },
+    {
+      "type": "range",
+      "x1": "2024-01",
+      "x2": "2024-04",
+      "label": "Post-ETF rally",
+      "fill": "#1b7fa3",
+      "opacity": 0.1
+    },
+    {
+      "type": "text",
+      "x": "2024-10",
+      "y": 72800,
+      "text": "New ATH",
+      "anchor": "left",
+      "offset": { "dx": -10, "dy": -5 }
+    }
   ]
 }
 ```
 
 ### Rich data table
+
 ```json
 {
   "type": "table",
   "data": [
-    { "city": "Tokyo", "country": "JP", "pop": 37.4, "density": 6158, "trend": [34.5, 35.2, 36.1, 37.0, 37.4] },
-    { "city": "Delhi", "country": "IN", "pop": 32.9, "density": 11320, "trend": [25.7, 28.1, 30.3, 31.8, 32.9] },
-    { "city": "Shanghai", "country": "CN", "pop": 29.2, "density": 3826, "trend": [24.2, 25.6, 27.1, 28.5, 29.2] },
-    { "city": "Sao Paulo", "country": "BR", "pop": 22.6, "density": 7523, "trend": [20.9, 21.3, 21.8, 22.2, 22.6] },
-    { "city": "Mexico City", "country": "MX", "pop": 22.1, "density": 9544, "trend": [20.1, 20.8, 21.3, 21.7, 22.1] }
+    {
+      "city": "Tokyo",
+      "country": "JP",
+      "pop": 37.4,
+      "density": 6158,
+      "trend": [34.5, 35.2, 36.1, 37.0, 37.4]
+    },
+    {
+      "city": "Delhi",
+      "country": "IN",
+      "pop": 32.9,
+      "density": 11320,
+      "trend": [25.7, 28.1, 30.3, 31.8, 32.9]
+    },
+    {
+      "city": "Shanghai",
+      "country": "CN",
+      "pop": 29.2,
+      "density": 3826,
+      "trend": [24.2, 25.6, 27.1, 28.5, 29.2]
+    },
+    {
+      "city": "Sao Paulo",
+      "country": "BR",
+      "pop": 22.6,
+      "density": 7523,
+      "trend": [20.9, 21.3, 21.8, 22.2, 22.6]
+    },
+    {
+      "city": "Mexico City",
+      "country": "MX",
+      "pop": 22.1,
+      "density": 9544,
+      "trend": [20.1, 20.8, 21.3, 21.7, 22.1]
+    }
   ],
   "columns": [
     { "key": "city", "label": "City" },
     { "key": "country", "label": "", "flag": true, "width": "48px" },
-    { "key": "pop", "label": "Population (M)", "format": ".1f", "bar": { "color": "#1b7fa3" } },
-    { "key": "density", "label": "Density /km2", "format": ",.0f", "heatmap": { "palette": "orange" } },
-    { "key": "trend", "label": "2020-2024", "sparkline": { "type": "line", "color": "#6a9f58" } }
+    {
+      "key": "pop",
+      "label": "Population (M)",
+      "format": ".1f",
+      "bar": { "color": "#1b7fa3" }
+    },
+    {
+      "key": "density",
+      "label": "Density /km2",
+      "format": ",.0f",
+      "heatmap": { "palette": "orange" }
+    },
+    {
+      "key": "trend",
+      "label": "2020-2024",
+      "sparkline": { "type": "line", "color": "#6a9f58" }
+    }
   ],
   "chrome": {
     "title": "World's largest metropolitan areas",
@@ -445,18 +553,18 @@ const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
 
 ## Anti-Patterns
 
-| Mistake | Fix |
-|---------|-----|
-| Title describes chart type ("Bar chart of sales") | Title states the insight ("Q4 sales exceeded targets by 18%") |
-| Pie/donut with 7+ categories | Use bar chart, or group small categories into "Other" |
-| Missing source attribution | Always include `chrome.source` |
-| Using `nominal` type for numeric field | Use `quantitative` for numbers, `temporal` for dates |
-| Using `ordinal` for temporal data | Use `temporal` type for dates; ordinal is for ordered categories |
-| Huge inline data arrays (500+ rows) | Aggregate or sample data before passing to spec |
-| Forgetting encoding.color for multi-series | Line/bar with groups needs `color` channel to differentiate |
-| Bar chart for time series | Use line or column for temporal data; bar is for categories |
-| Not specifying axis format for currency/pct | Add `axis: { format: "$,.0f" }` or `".1%"` |
-| Using pie for comparison across groups | Pie shows composition of ONE whole; use column for comparison |
+| Mistake                                           | Fix                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------- |
+| Title describes chart type ("Bar chart of sales") | Title states the insight ("Q4 sales exceeded targets by 18%")    |
+| Pie/donut with 7+ categories                      | Use bar chart, or group small categories into "Other"            |
+| Missing source attribution                        | Always include `chrome.source`                                   |
+| Using `nominal` type for numeric field            | Use `quantitative` for numbers, `temporal` for dates             |
+| Using `ordinal` for temporal data                 | Use `temporal` type for dates; ordinal is for ordered categories |
+| Huge inline data arrays (500+ rows)               | Aggregate or sample data before passing to spec                  |
+| Forgetting encoding.color for multi-series        | Line/bar with groups needs `color` channel to differentiate      |
+| Bar chart for time series                         | Use line or column for temporal data; bar is for categories      |
+| Not specifying axis format for currency/pct       | Add `axis: { format: "$,.0f" }` or `".1%"`                       |
+| Using pie for comparison across groups            | Pie shows composition of ONE whole; use column for comparison    |
 
 ## Quality Checklist
 

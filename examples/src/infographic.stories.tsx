@@ -8,8 +8,8 @@
  */
 
 import type { Story } from '@ladle/react';
-import type { ChartSpec, TableSpec } from '@openchart/core';
-import { Chart, DataTable } from '@openchart/react';
+import type { ChartSpec, TableSpec } from '@opendata-ai/core';
+import { Chart, DataTable } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // 1. Simple Horizontal Bar Chart

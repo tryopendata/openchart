@@ -1,4 +1,4 @@
-import type { GraphSpec } from '@openchart/core';
+import type { GraphSpec } from '@opendata-ai/core';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { Graph } from '../Graph';

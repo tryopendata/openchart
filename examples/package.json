@@ -1,5 +1,5 @@
 {
-  "name": "@openchart/examples",
+  "name": "@opendata-ai/examples",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -7,10 +7,10 @@
     "build": "ladle build"
   },
   "dependencies": {
-    "@openchart/core": "workspace:*",
-    "@openchart/engine": "workspace:*",
-    "@openchart/vanilla": "workspace:*",
-    "@openchart/react": "workspace:*",
+    "@opendata-ai/core": "workspace:*",
+    "@opendata-ai/engine": "workspace:*",
+    "@opendata-ai/vanilla": "workspace:*",
+    "@opendata-ai/react": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

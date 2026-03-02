@@ -7,9 +7,9 @@
  * simulation ticks. Returns a GraphInstance with update/search/zoom/destroy.
  */
 
-import type { CompileOptions, DarkMode, GraphSpec, ThemeConfig } from '@openchart/core';
-import type { CompiledGraphEdge, CompiledGraphNode, GraphCompilation } from '@openchart/engine';
-import { compileGraph } from '@openchart/engine';
+import type { CompileOptions, DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/core';
+import type { CompiledGraphEdge, CompiledGraphNode, GraphCompilation } from '@opendata-ai/engine';
+import { compileGraph } from '@opendata-ai/engine';
 
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
 import { GraphInteractionManager } from './graph/interaction';
@@ -626,15 +626,15 @@ export function createGraph(
     console.error('[viz] Graph mount failed:', err);
     // Return a no-op instance so callers don't crash
     return {
-      update() {},
-      search() {},
-      clearSearch() {},
-      zoomToFit() {},
-      zoomToNode() {},
-      selectNode() {},
+      update() { },
+      search() { },
+      clearSearch() { },
+      zoomToFit() { },
+      zoomToNode() { },
+      selectNode() { },
       getSelectedNodes: () => [],
-      resize() {},
-      destroy() {},
+      resize() { },
+      destroy() { },
     };
   }
 

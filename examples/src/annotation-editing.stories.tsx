@@ -6,8 +6,8 @@
  * are shown in a live inspector panel below the chart.
  */
 
-import type { AnnotationOffset, ChartSpec, TextAnnotation } from '@openchart/core';
-import { Chart, useDarkMode, useVizDarkMode, useVizTheme } from '@openchart/react';
+import type { AnnotationOffset, ChartSpec, TextAnnotation } from '@opendata-ai/core';
+import { Chart, useDarkMode, useVizDarkMode, useVizTheme } from '@opendata-ai/react';
 import { useEffect, useState } from 'react';
 
 // ---------------------------------------------------------------------------

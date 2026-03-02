@@ -1,4 +1,4 @@
-import type { ResolvedTheme } from '@openchart/core';
+import type { ResolvedTheme } from '@opendata-ai/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { GraphCanvasRenderer, labelThreshold, visibleRect } from '../canvas-renderer';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from '../types';

@@ -5,7 +5,7 @@
  * resetState function to return to initial values.
  */
 
-import type { SortState } from '@openchart/core';
+import type { SortState } from '@opendata-ai/core';
 import { type Ref, ref } from 'vue';
 
 export interface UseTableStateReturn {

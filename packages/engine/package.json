@@ -1,5 +1,5 @@
 {
-  "name": "@openchart/engine",
+  "name": "@opendata-ai/engine",
   "version": "1.0.0",
   "description": "Headless compiler for openchart: spec validation, data compilation, scales, and layout",
   "license": "Apache-2.0",
@@ -26,16 +26,26 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "sideEffects": false,
-  "keywords": ["chart", "visualization", "compiler", "layout", "scales", "d3"],
+  "keywords": [
+    "chart",
+    "visualization",
+    "compiler",
+    "layout",
+    "scales",
+    "d3"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openchart/core": "workspace:*",
+    "@opendata-ai/core": "workspace:*",
     "d3-array": "^3.2.0",
     "d3-format": "^3.1.2",
     "d3-interpolate": "^3.0.0",

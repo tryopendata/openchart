@@ -5,13 +5,13 @@
  * and exposes the instance and current state.
  */
 
-import type { TableSpec } from '@openchart/core';
+import type { TableSpec } from '@opendata-ai/core';
 import {
   createTable,
   type TableInstance,
   type TableMountOptions,
   type TableState,
-} from '@openchart/vanilla';
+} from '@opendata-ai/vanilla';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface UseTableReturn {

@@ -5,8 +5,8 @@
  * strategy changes (legend position, axis density) at breakpoints.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 import { useState } from 'react';
 
 const spec: ChartSpec = {

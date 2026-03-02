@@ -1,4 +1,4 @@
-import { resolveTheme } from '@openchart/core';
+import { resolveTheme } from '@opendata-ai/core';
 import { describe, expect, it } from 'vitest';
 import { applyCommunityColors, assignCommunities, buildCommunityColorMap } from '../community';
 import type { CompiledGraphNode } from '../types';

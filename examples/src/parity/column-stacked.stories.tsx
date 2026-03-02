@@ -5,8 +5,8 @@
  * Uses real-world energy source data showing the transition over time.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // Global Energy Mix: Stacked columns by source

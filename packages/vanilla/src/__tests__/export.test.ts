@@ -5,8 +5,8 @@
  * validity and CSV formatting with headers and proper escaping.
  */
 
-import type { CompileOptions } from '@openchart/engine';
-import { compileChart } from '@openchart/engine';
+import type { CompileOptions } from '@opendata-ai/engine';
+import { compileChart } from '@opendata-ai/engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';

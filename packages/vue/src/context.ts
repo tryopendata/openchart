@@ -5,7 +5,7 @@
  * and dark mode from any descendant component within a VizThemeProvider.
  */
 
-import type { DarkMode, ThemeConfig } from '@openchart/core';
+import type { DarkMode, ThemeConfig } from '@opendata-ai/core';
 import { type ComputedRef, computed, type InjectionKey, inject, type Ref } from 'vue';
 
 /** Injection key for the theme config ref. */

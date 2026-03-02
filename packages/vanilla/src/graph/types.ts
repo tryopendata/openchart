@@ -7,8 +7,8 @@
  * PositionedNode/Edge that the canvas renderer can draw.
  */
 
-import type { ResolvedTheme } from '@openchart/core';
-import type { CompiledGraphEdge, CompiledGraphNode } from '@openchart/engine';
+import type { ResolvedTheme } from '@opendata-ai/core';
+import type { CompiledGraphEdge, CompiledGraphNode } from '@opendata-ai/engine';
 
 /** A compiled node with simulation-assigned x/y position. */
 export interface PositionedNode extends CompiledGraphNode {

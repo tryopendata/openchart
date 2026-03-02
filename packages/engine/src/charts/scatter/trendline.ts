@@ -5,7 +5,7 @@
  * point marks and returns a LineMark representing the best-fit line.
  */
 
-import type { LineMark, MarkAria, PointMark } from '@openchart/core';
+import type { LineMark, MarkAria, PointMark } from '@opendata-ai/core';
 
 // ---------------------------------------------------------------------------
 // Constants

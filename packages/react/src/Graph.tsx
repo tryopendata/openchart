@@ -8,8 +8,8 @@
  * Supports forwardRef for imperative control via useGraph() hook.
  */
 
-import type { DarkMode, GraphSpec, ThemeConfig } from '@openchart/core';
-import { createGraph, type GraphInstance, type GraphMountOptions } from '@openchart/vanilla';
+import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/core';
+import { createGraph, type GraphInstance, type GraphMountOptions } from '@opendata-ai/vanilla';
 import {
   type CSSProperties,
   forwardRef,

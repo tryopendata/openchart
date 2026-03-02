@@ -6,8 +6,8 @@
  * colored dots for each series.
  */
 
-import type { ChartSpec } from '@openchart/core';
-import { Chart } from '@openchart/react';
+import type { ChartSpec } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/react';
 
 // ---------------------------------------------------------------------------
 // Life Expectancy by Gender: Dumbbell dot plot
