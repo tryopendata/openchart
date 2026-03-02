@@ -47,7 +47,7 @@ const barSpec: ChartSpec = {
 // Helper: render Chart and wait for SVG to appear ($effect is deferred)
 // ---------------------------------------------------------------------------
 
-async function renderChart(props: { spec: ChartSpec;[key: string]: unknown }) {
+async function renderChart(props: { spec: ChartSpec; [key: string]: unknown }) {
   const result = render(Chart, { props });
   await waitFor(() => {
     expect(result.container.querySelector('svg')).not.toBeNull();

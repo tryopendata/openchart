@@ -62,7 +62,7 @@ function makeContainer(): HTMLElement {
       right: 800,
       x: 0,
       y: 0,
-      toJSON: () => { },
+      toJSON: () => {},
     }),
   });
   document.body.appendChild(el);

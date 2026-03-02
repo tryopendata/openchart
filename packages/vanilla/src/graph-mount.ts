@@ -626,15 +626,15 @@ export function createGraph(
     console.error('[viz] Graph mount failed:', err);
     // Return a no-op instance so callers don't crash
     return {
-      update() { },
-      search() { },
-      clearSearch() { },
-      zoomToFit() { },
-      zoomToNode() { },
-      selectNode() { },
+      update() {},
+      search() {},
+      clearSearch() {},
+      zoomToFit() {},
+      zoomToNode() {},
+      selectNode() {},
       getSelectedNodes: () => [],
-      resize() { },
-      destroy() { },
+      resize() {},
+      destroy() {},
     };
   }
 

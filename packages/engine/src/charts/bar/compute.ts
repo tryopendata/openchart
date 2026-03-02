@@ -6,7 +6,14 @@
  * stacked variants via the color encoding channel.
  */
 
-import type { DataRow, Encoding, LayoutStrategy, MarkAria, Rect, RectMark } from '@opendata-ai/core';
+import type {
+  DataRow,
+  Encoding,
+  LayoutStrategy,
+  MarkAria,
+  Rect,
+  RectMark,
+} from '@opendata-ai/core';
 import { abbreviateNumber, formatNumber } from '@opendata-ai/core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 

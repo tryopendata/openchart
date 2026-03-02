@@ -6,8 +6,8 @@
  */
 
 import type { DataRow } from '@opendata-ai/core';
-import type { ScaleLinear, ScaleTime } from 'd3-scale';
-import type { ResolvedScales } from '../layout/scales';
+import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
+import type { D3Scale, ResolvedScales } from '../layout/scales';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -113,7 +113,7 @@ export function getSequentialColor(
   fallback: string = DEFAULT_COLOR,
 ): string {
   if (scales.color?.type === 'sequential') {
-    const colorScale = scales.color.scale as (v: number) => string;
+    const colorScale = scales.color.scale as unknown as (v: number) => string;
     return colorScale(value);
   }
   return scales.defaultColor ?? fallback;

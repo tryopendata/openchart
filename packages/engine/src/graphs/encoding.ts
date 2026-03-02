@@ -46,9 +46,9 @@ export function darkenColor(hex: string, amount: number = 0.2): string {
   const full =
     clean.length === 3
       ? clean
-        .split('')
-        .map((c) => c + c)
-        .join('')
+          .split('')
+          .map((c) => c + c)
+          .join('')
       : clean;
 
   const r = Math.max(0, Math.round(parseInt(full.substring(0, 2), 16) * (1 - amount)));
@@ -71,9 +71,9 @@ function hexWithOpacity(hex: string, opacity: number): string {
   const full =
     clean.length === 3
       ? clean
-        .split('')
-        .map((c) => c + c)
-        .join('')
+          .split('')
+          .map((c) => c + c)
+          .join('')
       : clean;
 
   const r = parseInt(full.substring(0, 2), 16);

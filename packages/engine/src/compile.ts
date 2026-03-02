@@ -217,7 +217,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     if (scales.color.type === 'sequential') {
       // Sequential: use first sequential palette (or fall back to categorical endpoints)
       const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
-      (scales.color.scale as import('d3-scale').ScaleLinear<string, string>).range([
+      (scales.color.scale as unknown as import('d3-scale').ScaleLinear<string, string>).range([
         seqStops[0],
         seqStops[seqStops.length - 1],
       ]);

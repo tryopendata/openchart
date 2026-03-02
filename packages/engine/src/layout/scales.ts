@@ -49,8 +49,8 @@ export type D3SequentialColorScale = ScaleLinear<string, string>;
  * to determine which D3 methods are available on the scale.
  */
 export interface ResolvedScale {
-  /** The d3 scale function. Maps domain value -> pixel position. */
-  scale: D3Scale | D3SequentialColorScale;
+  /** The d3 scale function. Maps domain value -> pixel position or color. */
+  scale: D3Scale;
   /** The scale type for downstream use. */
   type: 'linear' | 'time' | 'band' | 'ordinal' | 'point' | 'log' | 'sequential';
   /** The encoding channel this scale was derived from. */
@@ -234,7 +234,10 @@ function buildSequentialColorScale(
     .range([palette[0], palette[palette.length - 1]])
     .clamp(true);
 
-  return { scale, type: 'sequential', channel };
+  // Cast: sequential color scale (number -> string) is structurally incompatible
+  // with D3Scale (number -> number), but is only ever accessed via scales.color
+  // where consumers already cast appropriately.
+  return { scale: scale as unknown as D3Scale, type: 'sequential', channel };
 }
 
 // ---------------------------------------------------------------------------

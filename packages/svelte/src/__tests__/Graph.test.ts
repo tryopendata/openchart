@@ -40,7 +40,7 @@ const updatedSpec: GraphSpec = {
 // Helper: render Graph and wait for canvas to mount ($effect is deferred)
 // ---------------------------------------------------------------------------
 
-async function renderGraph(props: { spec: GraphSpec;[key: string]: unknown }) {
+async function renderGraph(props: { spec: GraphSpec; [key: string]: unknown }) {
   const result = render(Graph, { props });
   await waitFor(() => {
     expect(result.container.querySelector('canvas')).not.toBeNull();

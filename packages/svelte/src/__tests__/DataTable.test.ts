@@ -39,7 +39,7 @@ const updatedSpec: TableSpec = {
 // Helper: render DataTable and wait for the table to mount ($effect is deferred)
 // ---------------------------------------------------------------------------
 
-async function renderTable(props: { spec: TableSpec;[key: string]: unknown }) {
+async function renderTable(props: { spec: TableSpec; [key: string]: unknown }) {
   const result = render(DataTable, { props });
   await waitFor(() => {
     expect(result.container.querySelector('table')).not.toBeNull();

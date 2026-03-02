@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs bunx biome check --fix --unsafe 2>/dev/null || true"
+            "command": "FILE=$(jq -r '.tool_input.file_path'); if echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|svelte)$'; then bunx biome check --fix --unsafe \"$FILE\" 2>&1; PKG=$(echo \"$FILE\" | grep -oE 'packages/[^/]+' | sed 's|packages/||'); [ -n \"$PKG\" ] && bun run --filter \"@opendata-ai/$PKG\" typecheck 2>&1; fi"
           }
         ]
       }
