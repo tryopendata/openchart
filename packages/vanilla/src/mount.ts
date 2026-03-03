@@ -12,17 +12,18 @@ import type {
   AnnotationOffset,
   ChartEventHandlers,
   ChartLayout,
+  ChartSpec,
   ChromeKey,
   CompileOptions,
   DarkMode,
   ElementEdit,
+  GraphSpec,
   MeasureTextFn,
   RangeAnnotation,
   RefLineAnnotation,
   TextAnnotation,
   ThemeConfig,
   TooltipContent,
-  VizSpec,
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { exportCSV, exportPNG, exportSVG, type PNGExportOptions } from './export';
@@ -51,7 +52,7 @@ export interface ExportOptions extends PNGExportOptions {
 
 export interface ChartInstance {
   /** Re-compile and re-render with a new spec. */
-  update(spec: VizSpec): void;
+  update(spec: ChartSpec | GraphSpec): void;
   /** Re-compile at current container dimensions. */
   resize(): void;
   /** Export the chart. */
@@ -911,7 +912,7 @@ function wireAnnotationLabelDrag(
  */
 function wireChromeDrag(
   svg: SVGElement,
-  spec: VizSpec,
+  spec: ChartSpec | GraphSpec,
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
@@ -979,7 +980,7 @@ function wireChromeDrag(
  */
 function wireLegendDrag(
   svg: SVGElement,
-  spec: VizSpec,
+  spec: ChartSpec | GraphSpec,
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
@@ -1033,7 +1034,7 @@ function wireLegendDrag(
  */
 function wireSeriesLabelDrag(
   svg: SVGElement,
-  spec: VizSpec,
+  spec: ChartSpec | GraphSpec,
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
@@ -1339,10 +1340,10 @@ function createScreenReaderTable(
  */
 export function createChart(
   container: HTMLElement,
-  spec: VizSpec,
+  spec: ChartSpec | GraphSpec,
   options?: MountOptions,
 ): ChartInstance {
-  let currentSpec = spec;
+  let currentSpec: ChartSpec | GraphSpec = spec;
   let currentLayout: ChartLayout;
   let svgElement: SVGElement | null = null;
   let tooltipManager: TooltipManager | null = null;
@@ -1532,7 +1533,7 @@ export function createChart(
     }
   }
 
-  function update(newSpec: VizSpec): void {
+  function update(newSpec: ChartSpec | GraphSpec): void {
     if (destroyed) return;
     currentSpec = newSpec;
     render();

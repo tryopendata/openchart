@@ -16,8 +16,9 @@
  * .svelte components.
  */
 
-import type { ChartLayout, VizSpec } from '@opendata-ai/openchart-core';
+import type { ChartLayout, ChartSpec, GraphSpec } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
+import { untrack } from 'svelte';
 
 export interface UseChartOptions {
   /** Theme overrides. */
@@ -40,15 +41,17 @@ export interface UseChartReturn {
 }
 
 export function useChart(
-  spec: () => VizSpec,
+  spec: () => ChartSpec | GraphSpec,
   options?: () => UseChartOptions | undefined,
 ): UseChartReturn {
   let chart = $state<ChartInstance | null>(null);
   let layout = $state<ChartLayout | null>(null);
 
   function action(node: HTMLElement) {
+    let prevSpec = '';
+
+    // Effect 1: Mount/recreate on option changes
     $effect(() => {
-      const currentSpec = spec();
       const opts = options?.();
 
       const mountOpts: MountOptions = {
@@ -58,15 +61,32 @@ export function useChart(
         responsive: opts?.responsive ?? true,
       };
 
+      // Read spec without tracking
+      const currentSpec = untrack(() => spec());
+
       const instance = createChart(node, currentSpec, mountOpts);
       chart = instance;
       layout = instance.layout;
+      prevSpec = JSON.stringify(currentSpec);
 
       return () => {
         instance.destroy();
         chart = null;
         layout = null;
       };
+    });
+
+    // Effect 2: Update on spec change
+    $effect(() => {
+      const currentSpec = spec();
+      if (!chart) return;
+
+      const specString = JSON.stringify(currentSpec);
+      if (specString !== prevSpec) {
+        prevSpec = specString;
+        chart.update(currentSpec);
+        layout = chart.layout;
+      }
     });
 
     return {

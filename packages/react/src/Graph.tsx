@@ -133,6 +133,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
 
   // Mount graph and recreate when theme/darkMode change.
   // Event handlers use stable refs so they don't trigger recreation.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: spec intentionally excluded - spec changes handled via update() in Effect 2
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -158,7 +159,6 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   }, [
     theme,
     resolvedDarkMode,
-    spec,
     stableOnNodeClick,
     stableOnNodeDoubleClick,
     stableOnSelectionChange,

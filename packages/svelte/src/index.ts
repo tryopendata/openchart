@@ -40,5 +40,7 @@ export type {
   ChartProps,
   DataTableProps,
   GraphProps,
+  VisualizationProps,
   VizThemeProviderProps,
 } from './types.js';
+export { default as Visualization } from './Visualization.svelte';

@@ -58,16 +58,18 @@ onMount(() => {
   };
 });
 
-// Main effect: tracks spec, theme, darkMode, and controlled state.
-// Callback props use untrack() so they don't trigger recreation.
+let prevSpec = '';
+
+// Effect 1: Mount/recreate table on theme/darkMode changes.
 $effect(() => {
   const resolvedTheme = theme ?? ctxTheme?.();
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
-  const currentSpec = spec;
-  const currentIsControlled = isControlled;
-  const currentSort = sort;
-  const currentSearch = search;
-  const currentPage = page;
+  // Read spec and controlled state without tracking
+  const currentSpec = untrack(() => spec);
+  const currentIsControlled = untrack(() => isControlled);
+  const currentSort = untrack(() => sort);
+  const currentSearch = untrack(() => search);
+  const currentPage = untrack(() => page);
 
   instance?.destroy();
 
@@ -92,6 +94,34 @@ $effect(() => {
   }
 
   instance = createTable(containerEl, currentSpec, mountOptions);
+  prevSpec = JSON.stringify(currentSpec);
+});
+
+// Effect 2: Update table when spec changes (no destroy/recreate).
+$effect(() => {
+  const currentSpec = spec;
+  if (!instance) return;
+
+  const specString = JSON.stringify(currentSpec);
+  if (specString !== prevSpec) {
+    prevSpec = specString;
+    instance.update(currentSpec);
+  }
+});
+
+// Effect 3: Sync controlled state without remounting.
+$effect(() => {
+  const currentIsControlled = isControlled;
+  const currentSort = sort;
+  const currentSearch = search;
+  const currentPage = page;
+  if (!instance || !currentIsControlled) return;
+
+  instance.setState({
+    sort: currentSort ?? null,
+    search: currentSearch ?? '',
+    page: currentPage ?? 0,
+  });
 });
 </script>
 

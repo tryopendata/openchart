@@ -5,7 +5,13 @@
  * mounts automatically and updates when the spec changes.
  */
 
-import type { ChartLayout, DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
+import type {
+  ChartLayout,
+  ChartSpec,
+  DarkMode,
+  GraphSpec,
+  ThemeConfig,
+} from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { onMounted, onUnmounted, type Ref, ref, type ShallowRef, shallowRef, watch } from 'vue';
 
@@ -35,7 +41,10 @@ export interface UseChartReturn {
  * Attach the returned containerRef to a container div via `ref="containerRef"`.
  * The chart mounts automatically and updates when the spec changes.
  */
-export function useChart(spec: Ref<VizSpec>, options?: UseChartOptions): UseChartReturn {
+export function useChart(
+  spec: Ref<ChartSpec | GraphSpec>,
+  options?: UseChartOptions,
+): UseChartReturn {
   const containerRef = ref<HTMLDivElement | null>(null);
   const chart = shallowRef<ChartInstance | null>(null);
   const layout = shallowRef<ChartLayout | null>(null);
