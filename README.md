@@ -1,4 +1,4 @@
-# @opendata-ai
+# @opendata-ai/openchart
 
 [![CI](https://github.com/tryopendata/openchart/actions/workflows/ci.yml/badge.svg)](https://github.com/tryopendata/openchart/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@opendata-ai/openchart-core)](https://www.npmjs.com/package/@opendata-ai/openchart-core)
