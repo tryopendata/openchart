@@ -8,9 +8,10 @@
 
 import type {
   ChartEventHandlers,
+  ChartSpec,
   DarkMode,
+  GraphSpec,
   ThemeConfig,
-  VizSpec,
 } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
@@ -18,7 +19,7 @@ import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
 export interface ChartProps extends ChartEventHandlers {
   /** The visualization spec to render. */
-  spec: VizSpec;
+  spec: ChartSpec | GraphSpec;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */
@@ -124,6 +125,7 @@ export function Chart({
 
   // Mount chart and recreate when theme/darkMode change.
   // Event handlers use stable refs so they don't trigger recreation.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: spec intentionally excluded - spec changes handled via update() in Effect 2
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -157,7 +159,6 @@ export function Chart({
   }, [
     theme,
     resolvedDarkMode,
-    spec,
     stableOnAnnotationClick,
     stableOnDataPointClick,
     stableOnEdit,

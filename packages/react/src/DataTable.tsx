@@ -12,7 +12,7 @@ import {
   type TableInstance,
   type TableMountOptions,
 } from '@opendata-ai/openchart-vanilla';
-import { type CSSProperties, useEffect, useRef } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
 export interface DataTableProps {
@@ -68,12 +68,37 @@ export function DataTable({
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TableInstance | null>(null);
-  const prevSpecRef = useRef<TableSpec | null>(null);
+
+  // Store event handlers in refs so they don't trigger table recreation.
+  const handlersRef = useRef<{
+    onRowClick?: DataTableProps['onRowClick'];
+    onSortChange?: DataTableProps['onSortChange'];
+    onSearchChange?: DataTableProps['onSearchChange'];
+    onPageChange?: DataTableProps['onPageChange'];
+  }>({});
+  handlersRef.current = { onRowClick, onSortChange, onSearchChange, onPageChange };
+
+  // Stable callback wrappers that read from refs
+  const stableOnRowClick = useCallback(
+    (row: Record<string, unknown>) => handlersRef.current.onRowClick?.(row),
+    [],
+  );
+  const stableOnStateChange = useCallback(
+    (state: { sort?: SortState | null; search?: string; page?: number }) => {
+      if (state.sort !== undefined) handlersRef.current.onSortChange?.(state.sort);
+      if (state.search !== undefined) handlersRef.current.onSearchChange?.(state.search);
+      if (state.page !== undefined) handlersRef.current.onPageChange?.(state.page);
+    },
+    [],
+  );
+
+  const prevSpecRef = useRef<string>('');
 
   // Determine if we're in controlled mode
   const isControlled = sort !== undefined || search !== undefined || page !== undefined;
 
   // Effect 1: Mount/unmount. Only recreate when structural options change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: spec, sort, search, page intentionally excluded - handled via update()/setState() in Effects 2-3
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -81,13 +106,9 @@ export function DataTable({
     const mountOptions: TableMountOptions = {
       theme,
       darkMode: resolvedDarkMode,
-      onRowClick,
+      onRowClick: stableOnRowClick,
       responsive: true,
-      onStateChange: (state) => {
-        if (state.sort !== undefined) onSortChange?.(state.sort);
-        if (state.search !== undefined) onSearchChange?.(state.search);
-        if (state.page !== undefined) onPageChange?.(state.page);
-      },
+      onStateChange: stableOnStateChange,
     };
 
     if (isControlled) {
@@ -99,7 +120,7 @@ export function DataTable({
     }
 
     tableRef.current = createTable(container, spec, mountOptions);
-    prevSpecRef.current = spec;
+    prevSpecRef.current = JSON.stringify(spec);
 
     return () => {
       tableRef.current?.destroy();
@@ -108,19 +129,7 @@ export function DataTable({
     // Only recreate on structural option changes (theme, darkMode, onRowClick).
     // Controlled state updates are handled in Effect 2.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    theme,
-    resolvedDarkMode,
-    onRowClick,
-    isControlled,
-    onPageChange,
-    onSearchChange,
-    onSortChange,
-    page,
-    search,
-    sort,
-    spec,
-  ]);
+  }, [theme, resolvedDarkMode, isControlled, stableOnRowClick, stableOnStateChange]);
 
   // Effect 2: Sync controlled state without remounting.
   useEffect(() => {
@@ -139,9 +148,9 @@ export function DataTable({
     const table = tableRef.current;
     if (!table) return;
 
-    // Use reference equality; users should memoize with useMemo if needed
-    if (spec !== prevSpecRef.current) {
-      prevSpecRef.current = spec;
+    const specString = JSON.stringify(spec);
+    if (specString !== prevSpecRef.current) {
+      prevSpecRef.current = specString;
       table.update(spec);
     }
   }, [spec]);

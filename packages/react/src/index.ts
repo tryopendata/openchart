@@ -22,7 +22,6 @@ export { DataTable } from './DataTable';
 export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
 export type { UseChartOptions, UseChartReturn } from './hooks';
-
 // Hooks
 export { useChart, useDarkMode } from './hooks';
 export type { GraphHandle, UseGraphReturn } from './hooks/useGraph';
@@ -34,3 +33,5 @@ export { useTableState } from './hooks/useTableState';
 export type { VizThemeProviderProps } from './ThemeContext';
 // Theme context
 export { useVizDarkMode, useVizTheme, VizThemeProvider } from './ThemeContext';
+export type { VisualizationProps } from './Visualization';
+export { Visualization } from './Visualization';

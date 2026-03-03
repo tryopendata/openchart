@@ -9,12 +9,13 @@
 import type {
   Annotation,
   AnnotationOffset,
+  ChartSpec,
   DarkMode,
   ElementEdit,
+  GraphSpec,
   MarkEvent,
   TextAnnotation,
   ThemeConfig,
-  VizSpec,
 } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
@@ -35,7 +36,7 @@ let {
   class: className,
   style,
 }: {
-  spec: VizSpec;
+  spec: ChartSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   onmarkclick?: (event: MarkEvent) => void;
@@ -83,18 +84,18 @@ const stableOnAnnotationEdit = (annotation: TextAnnotation, offset: AnnotationOf
   untrack(() => onannotationedit)?.(annotation, offset);
 const stableOnEdit = (edit: ElementEdit) => untrack(() => onedit)?.(edit);
 
-// Main effect: only tracks spec, theme, and darkMode.
-// Callback prop changes don't trigger recreation.
+let prevSpec = '';
+
+// Effect 1: Mount/recreate chart on theme/darkMode changes.
+// Reads spec via untrack() so spec changes don't trigger full recreate.
 $effect(() => {
   const resolvedTheme = theme ?? ctxTheme?.();
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
-  const currentSpec = spec;
+  // Read spec without tracking - spec changes handled in Effect 2
+  const currentSpec = untrack(() => spec);
 
   instance?.destroy();
 
-  // Only include editing callbacks when the consumer provides them.
-  // The stable wrappers are always truthy, so we gate on the original
-  // prop (read via untrack to avoid reactive deps).
   const hasAnnotationEdit = untrack(() => onannotationedit) !== undefined;
   const hasEdit = untrack(() => onedit) !== undefined;
 
@@ -108,6 +109,19 @@ $effect(() => {
   };
 
   instance = createChart(containerEl, currentSpec, options);
+  prevSpec = JSON.stringify(currentSpec);
+});
+
+// Effect 2: Update chart when spec changes (no destroy/recreate).
+$effect(() => {
+  const currentSpec = spec;
+  if (!instance) return;
+
+  const specString = JSON.stringify(currentSpec);
+  if (specString !== prevSpec) {
+    prevSpec = specString;
+    instance.update(currentSpec);
+  }
 });
 </script>
 

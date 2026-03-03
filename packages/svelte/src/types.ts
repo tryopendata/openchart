@@ -8,7 +8,9 @@
 import type {
   Annotation,
   AnnotationOffset,
+  ChartSpec,
   DarkMode,
+  ElementEdit,
   GraphSpec,
   MarkEvent,
   SortState,
@@ -20,7 +22,7 @@ import type {
 import type { Snippet } from 'svelte';
 
 export interface ChartProps {
-  spec: VizSpec;
+  spec: ChartSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   onmarkclick?: (event: MarkEvent) => void;
@@ -29,6 +31,7 @@ export interface ChartProps {
   onlegendtoggle?: (series: string, visible: boolean) => void;
   onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
   onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
+  onedit?: (edit: ElementEdit) => void;
   ondatapointclick?: (data: Record<string, unknown>) => void;
   class?: string;
   style?: string;
@@ -56,6 +59,14 @@ export interface GraphProps {
   onnodeclick?: (node: Record<string, unknown>) => void;
   onnodedoubleclick?: (node: Record<string, unknown>) => void;
   onselectionchange?: (nodeIds: string[]) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface VisualizationProps {
+  spec: VizSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
   class?: string;
   style?: string;
 }

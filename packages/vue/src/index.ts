@@ -37,3 +37,5 @@ export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
 export type { VizThemeProviderProps } from './ThemeProvider';
 export { VizThemeProvider } from './ThemeProvider';
+export type { VisualizationProps } from './Visualization';
+export { Visualization } from './Visualization';

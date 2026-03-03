@@ -5,7 +5,7 @@
  * useDarkMode: resolves the DarkMode preference to a boolean.
  */
 
-import type { ChartLayout, DarkMode, VizSpec } from '@opendata-ai/openchart-core';
+import type { ChartLayout, ChartSpec, DarkMode, GraphSpec } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { useEffect, useRef, useState } from 'react';
 
@@ -43,13 +43,14 @@ export interface UseChartReturn {
  * @param options - Mount options.
  * @returns { ref, chart, layout }
  */
-export function useChart(spec: VizSpec, options?: UseChartOptions): UseChartReturn {
+export function useChart(spec: ChartSpec | GraphSpec, options?: UseChartOptions): UseChartReturn {
   const ref = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const [layout, setLayout] = useState<ChartLayout | null>(null);
+  const specRef = useRef<string>('');
 
-  // Mount / unmount. Recreate when options change since they're captured
-  // in the closure at creation time.
+  // Mount / unmount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: spec intentionally excluded - spec changes handled via update() in the update effect
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
@@ -64,6 +65,7 @@ export function useChart(spec: VizSpec, options?: UseChartOptions): UseChartRetu
     const chart = createChart(container, spec, mountOpts);
     chartRef.current = chart;
     setLayout(chart.layout);
+    specRef.current = JSON.stringify(spec);
 
     return () => {
       chart.destroy();
@@ -71,15 +73,19 @@ export function useChart(spec: VizSpec, options?: UseChartOptions): UseChartRetu
       setLayout(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.theme, options?.darkMode, options?.onDataPointClick, options?.responsive, spec]);
+  }, [options?.theme, options?.darkMode, options?.onDataPointClick, options?.responsive]);
 
   // Update on spec change
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
-    chart.update(spec);
-    setLayout(chart.layout);
+    const specString = JSON.stringify(spec);
+    if (specString !== specRef.current) {
+      specRef.current = specString;
+      chart.update(spec);
+      setLayout(chart.layout);
+    }
   }, [spec]);
 
   return {

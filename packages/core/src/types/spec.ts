@@ -503,6 +503,15 @@ export interface GraphSpec {
  */
 export type VizSpec = ChartSpec | TableSpec | GraphSpec;
 
+/** Chart spec without runtime data, for persistence/storage. */
+export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
+/** Table spec without runtime data and columns, for persistence/storage. Columns can be auto-generated via dataTable(). */
+export type TableSpecWithoutData = Omit<TableSpec, 'data' | 'columns'>;
+/** Graph spec without runtime data, for persistence/storage. */
+export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
+/** Union of data-stripped spec types for persistence/storage. */
+export type StoredVizSpec = ChartSpecWithoutData | TableSpecWithoutData | GraphSpecWithoutData;
+
 // ---------------------------------------------------------------------------
 // Type guards
 // ---------------------------------------------------------------------------

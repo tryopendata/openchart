@@ -9,12 +9,13 @@
 import type {
   Annotation,
   AnnotationOffset,
+  ChartSpec,
   DarkMode,
   ElementEdit,
+  GraphSpec,
   MarkEvent,
   TextAnnotation,
   ThemeConfig,
-  VizSpec,
 } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import {
@@ -32,7 +33,7 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface ChartProps {
-  spec: VizSpec;
+  spec: ChartSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   class?: string;
@@ -43,7 +44,7 @@ export const Chart = defineComponent({
   name: 'Chart',
   props: {
     spec: {
-      type: Object as PropType<VizSpec>,
+      type: Object as PropType<ChartSpec | GraphSpec>,
       required: true,
     },
     theme: {

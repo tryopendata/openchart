@@ -51,12 +51,13 @@ onMount(() => {
   };
 });
 
-// Main effect: only tracks spec, theme, and darkMode.
-// Callback props use untrack() so they don't trigger recreation.
+let prevSpec = '';
+
+// Effect 1: Mount/recreate graph on theme/darkMode changes.
 $effect(() => {
   const resolvedTheme = theme ?? ctxTheme?.();
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
-  const currentSpec = spec;
+  const currentSpec = untrack(() => spec);
 
   instance?.destroy();
 
@@ -70,6 +71,19 @@ $effect(() => {
   };
 
   instance = createGraph(containerEl, currentSpec, options);
+  prevSpec = JSON.stringify(currentSpec);
+});
+
+// Effect 2: Update graph when spec changes (no destroy/recreate).
+$effect(() => {
+  const currentSpec = spec;
+  if (!instance) return;
+
+  const specString = JSON.stringify(currentSpec);
+  if (specString !== prevSpec) {
+    prevSpec = specString;
+    instance.update(currentSpec);
+  }
 });
 
 // Imperative methods exposed via component exports
