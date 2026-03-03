@@ -6,7 +6,7 @@
  * nominal/ordinal -> scaleBand() or scaleOrdinal(), depending on context.
  */
 
-import type { DataRow, Encoding, EncodingChannel, Rect } from '@opendata-ai/core';
+import type { DataRow, Encoding, EncodingChannel, Rect } from '@opendata-ai/openchart-core';
 import { extent, max, min } from 'd3-array';
 import type {
   ScaleBand,

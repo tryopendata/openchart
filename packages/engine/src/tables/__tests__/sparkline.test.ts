@@ -1,5 +1,5 @@
-import type { SparklineColumnConfig } from '@opendata-ai/core';
-import { resolveTheme } from '@opendata-ai/core';
+import type { SparklineColumnConfig } from '@opendata-ai/openchart-core';
+import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { computeSparkline, computeSparklineForRow } from '../sparkline';
 

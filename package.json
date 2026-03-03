@@ -17,7 +17,7 @@
     "examples"
   ],
   "scripts": {
-    "build": "bun run --filter '@opendata-ai/core' build && bun run --filter '@opendata-ai/engine' build && bun run --filter '@opendata-ai/vanilla' --filter '@opendata-ai/react' --filter '@opendata-ai/vue' --filter '@opendata-ai/svelte' build",
+    "build": "bun run --filter '@opendata-ai/openchart-core' build && bun run --filter '@opendata-ai/openchart-engine' build && bun run --filter '@opendata-ai/openchart-vanilla' --filter '@opendata-ai/openchart-react' --filter '@opendata-ai/openchart-vue' --filter '@opendata-ai/openchart-svelte' build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check packages/ examples/src/",

@@ -16,8 +16,8 @@ import type {
   MarkAria,
   Rect,
   RectMark,
-} from '@opendata-ai/core';
-import { abbreviateNumber, formatNumber } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { abbreviateNumber, formatNumber } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';

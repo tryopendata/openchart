@@ -7,9 +7,13 @@
  * simulation ticks. Returns a GraphInstance with update/search/zoom/destroy.
  */
 
-import type { CompileOptions, DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/core';
-import type { CompiledGraphEdge, CompiledGraphNode, GraphCompilation } from '@opendata-ai/engine';
-import { compileGraph } from '@opendata-ai/engine';
+import type { CompileOptions, DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type {
+  CompiledGraphEdge,
+  CompiledGraphNode,
+  GraphCompilation,
+} from '@opendata-ai/openchart-engine';
+import { compileGraph } from '@opendata-ai/openchart-engine';
 
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
 import { GraphInteractionManager } from './graph/interaction';

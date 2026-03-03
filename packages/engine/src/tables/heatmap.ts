@@ -5,8 +5,8 @@
  * then picks an accessible text color for each background.
  */
 
-import type { CellStyle, ColumnConfig, ResolvedTheme } from '@opendata-ai/core';
-import { adaptColorForDarkMode } from '@opendata-ai/core';
+import type { CellStyle, ColumnConfig, ResolvedTheme } from '@opendata-ai/openchart-core';
+import { adaptColorForDarkMode } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleSequential } from 'd3-scale';
 import { accessibleTextColor } from './utils';

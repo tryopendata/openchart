@@ -1,5 +1,5 @@
 {
-  "name": "@opendata-ai/svelte",
+  "name": "@opendata-ai/openchart-svelte",
   "version": "1.1.0",
   "description": "Svelte components for openchart: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />",
   "license": "Apache-2.0",
@@ -48,9 +48,9 @@
     "typecheck": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "@opendata-ai/core": "workspace:*",
-    "@opendata-ai/engine": "workspace:*",
-    "@opendata-ai/vanilla": "workspace:*"
+    "@opendata-ai/openchart-core": "workspace:*",
+    "@opendata-ai/openchart-engine": "workspace:*",
+    "@opendata-ai/openchart-vanilla": "workspace:*"
   },
   "peerDependencies": {
     "svelte": ">=5.0.0"

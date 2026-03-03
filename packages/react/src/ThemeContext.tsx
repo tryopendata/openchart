@@ -6,7 +6,7 @@
  * `theme` or `darkMode` prop is passed.
  */
 
-import type { DarkMode, ThemeConfig } from '@opendata-ai/core';
+import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
 import { createContext, type ReactNode, useContext } from 'react';
 
 const VizThemeContext = createContext<ThemeConfig | undefined>(undefined);

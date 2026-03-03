@@ -1,4 +1,4 @@
-import type { GraphSpec } from '@opendata-ai/core';
+import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGraph } from '../../graph-mount';
 

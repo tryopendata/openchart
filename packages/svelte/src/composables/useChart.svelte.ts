@@ -16,8 +16,8 @@
  * .svelte components.
  */
 
-import type { ChartLayout, VizSpec } from '@opendata-ai/core';
-import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/vanilla';
+import type { ChartLayout, VizSpec } from '@opendata-ai/openchart-core';
+import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 
 export interface UseChartOptions {
   /** Theme overrides. */

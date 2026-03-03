@@ -1,8 +1,8 @@
 /**
- * @opendata-ai/core type system barrel export.
+ * @opendata-ai/openchart-core type system barrel export.
  *
  * Re-exports all types from the type modules so consumers can import
- * from '@opendata-ai/core' directly.
+ * from '@opendata-ai/openchart-core' directly.
  */
 
 // Encoding rules

@@ -53,8 +53,8 @@ Each edit gives you the new offset. Write it back into the corresponding spec fi
 
 ```tsx
 import { useState } from 'react';
-import { Chart } from '@opendata-ai/react';
-import type { ChartSpec, ElementEdit, TextAnnotation, RangeAnnotation, RefLineAnnotation } from '@opendata-ai/core';
+import { Chart } from '@opendata-ai/openchart-react';
+import type { ChartSpec, ElementEdit, TextAnnotation, RangeAnnotation, RefLineAnnotation } from '@opendata-ai/openchart-core';
 
 function EditableChart() {
   const [spec, setSpec] = useState<ChartSpec>({

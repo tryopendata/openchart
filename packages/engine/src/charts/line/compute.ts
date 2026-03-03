@@ -15,7 +15,7 @@ import type {
   MarkAria,
   PointMark,
   Rect,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 import { curveMonotoneX, line } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';

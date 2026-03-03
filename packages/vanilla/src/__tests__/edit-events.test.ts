@@ -1,4 +1,4 @@
-import type { ChartSpec, ElementEdit } from '@opendata-ai/engine';
+import type { ChartSpec, ElementEdit } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';

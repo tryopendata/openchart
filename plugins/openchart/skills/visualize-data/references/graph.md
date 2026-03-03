@@ -80,7 +80,7 @@ layout?: {
 
 **React:**
 ```tsx
-import { Graph } from '@opendata-ai/react';
+import { Graph } from '@opendata-ai/openchart-react';
 
 <Graph
   spec={graphSpec}
@@ -93,21 +93,21 @@ import { Graph } from '@opendata-ai/react';
 
 **Vue:**
 ```vue
-import { Graph } from '@opendata-ai/vue';
+import { Graph } from '@opendata-ai/openchart-vue';
 
 <Graph :spec="graphSpec" darkMode="auto" />
 ```
 
 **Svelte:**
 ```svelte
-import { Graph } from '@opendata-ai/svelte';
+import { Graph } from '@opendata-ai/openchart-svelte';
 
 <Graph {spec} darkMode="auto" />
 ```
 
 **Vanilla JS:**
 ```typescript
-import { createGraph } from "@opendata-ai/vanilla";
+import { createGraph } from "@opendata-ai/openchart-vanilla";
 
 const graph = createGraph(container, spec, {
   darkMode: "auto",

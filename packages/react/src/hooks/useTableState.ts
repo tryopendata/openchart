@@ -5,7 +5,7 @@
  * resetState function to return to initial values.
  */
 
-import type { SortState } from '@opendata-ai/core';
+import type { SortState } from '@opendata-ai/openchart-core';
 import { useCallback, useState } from 'react';
 
 export interface UseTableStateReturn {

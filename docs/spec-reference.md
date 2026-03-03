@@ -1,8 +1,8 @@
 # Spec reference
 
-The definitive field-by-field reference for every type in `VizSpec`. Cross-referenced against the TypeScript source in `@opendata-ai/core/src/types/`.
+The definitive field-by-field reference for every type in `VizSpec`. Cross-referenced against the TypeScript source in `@opendata-ai/openchart-core/src/types/`.
 
-All types are importable from `@opendata-ai/core` or from the convenience re-exports in `@opendata-ai/react` and `@opendata-ai/engine`.
+All types are importable from `@opendata-ai/openchart-core` or from the convenience re-exports in `@opendata-ai/openchart-react` and `@opendata-ai/openchart-engine`.
 
 ## VizSpec
 
@@ -878,7 +878,7 @@ All builders accept field names as strings (auto-infer type from data) or full `
 ### Builder example
 
 ```ts
-import { lineChart } from "@opendata-ai/core";
+import { lineChart } from "@opendata-ai/openchart-core";
 
 const spec = lineChart(data, "date", "revenue", {
   color: "region",
@@ -894,7 +894,7 @@ const spec = lineChart(data, "date", "revenue", {
 The engine validates specs at runtime. Source: `engine/src/compiler/validate.ts`.
 
 ```ts
-import { validateSpec } from "@opendata-ai/engine";
+import { validateSpec } from "@opendata-ai/openchart-engine";
 
 const result = validateSpec(spec);
 // result.valid: boolean

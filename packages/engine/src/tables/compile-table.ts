@@ -16,8 +16,8 @@ import type {
   TableCell,
   TableLayout,
   TableRow,
-} from '@opendata-ai/core';
-import { computeChrome, estimateTextWidth } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedTableSpec } from '../compiler/types';
 import { computeBarCell, computeColumnMax, computeColumnMin } from './bar-column';

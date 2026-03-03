@@ -15,7 +15,7 @@ import type {
   SparklineTableCell,
   TableCell,
   TextTableCell,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Utility

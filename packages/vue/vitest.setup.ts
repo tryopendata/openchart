@@ -1,7 +1,7 @@
 import { afterEach } from 'vitest';
 
 // Ensure all chart renderers are registered (side-effect imports)
-import '@opendata-ai/engine';
+import '@opendata-ai/openchart-engine';
 
 afterEach(() => {
   // Vue test utils cleanup is handled per-test via wrapper.unmount()

@@ -6,8 +6,8 @@
  */
 
 import type { Story } from '@ladle/react';
-import type { TableSpec } from '@opendata-ai/core';
-import { DataTable } from '@opendata-ai/react';
+import type { TableSpec } from '@opendata-ai/openchart-core';
+import { DataTable } from '@opendata-ai/openchart-react';
 
 const data = [
   { city: 'Phoenix', jan: 12.8, apr: 24.4, jul: 35.0, oct: 25.0, yearAvg: 24.3 },

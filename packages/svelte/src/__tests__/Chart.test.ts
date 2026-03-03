@@ -1,4 +1,4 @@
-import type { ChartSpec } from '@opendata-ai/core';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import Chart from '../Chart.svelte';

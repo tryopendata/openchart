@@ -6,8 +6,8 @@
  */
 
 import type { Story } from '@ladle/react';
-import type { TableSpec } from '@opendata-ai/core';
-import { DataTable } from '@opendata-ai/react';
+import type { TableSpec } from '@opendata-ai/openchart-core';
+import { DataTable } from '@opendata-ai/openchart-react';
 
 const data = [
   { code: 'US', country: 'United States', gold: 40, silver: 44, bronze: 42, total: 126 },

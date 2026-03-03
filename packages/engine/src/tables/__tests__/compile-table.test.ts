@@ -1,4 +1,4 @@
-import type { CompileTableOptions } from '@opendata-ai/core';
+import type { CompileTableOptions } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileTable } from '../../compile';
 

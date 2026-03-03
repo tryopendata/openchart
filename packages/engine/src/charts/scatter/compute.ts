@@ -7,7 +7,13 @@
  * scaling, and color encoding groups points by category.
  */
 
-import type { Encoding, LayoutStrategy, MarkAria, PointMark, Rect } from '@opendata-ai/core';
+import type {
+  Encoding,
+  LayoutStrategy,
+  MarkAria,
+  PointMark,
+  Rect,
+} from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
 import type { ScaleLinear } from 'd3-scale';
 import { scaleSqrt } from 'd3-scale';

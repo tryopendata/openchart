@@ -1,4 +1,4 @@
-import type { RectMark } from '@opendata-ai/core';
+import type { RectMark } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { computeBarLabels } from '../labels';
 

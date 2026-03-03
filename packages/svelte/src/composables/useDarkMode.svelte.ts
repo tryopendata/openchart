@@ -9,7 +9,7 @@
  * .svelte components.
  */
 
-import type { DarkMode } from '@opendata-ai/core';
+import type { DarkMode } from '@opendata-ai/openchart-core';
 
 export function useDarkMode(mode: () => DarkMode | undefined) {
   let isDark = $state(resolveInitial(mode()));

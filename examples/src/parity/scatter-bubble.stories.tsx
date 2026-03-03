@@ -5,8 +5,8 @@
  * logarithmic x-axis, and editorial annotations.
  */
 
-import type { ChartSpec } from '@opendata-ai/core';
-import { Chart } from '@opendata-ai/react';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
+import { Chart } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
 // CO2 Emissions vs Renewable Energy: Bubble scatter

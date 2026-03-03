@@ -4,7 +4,7 @@
  * Exports pie and donut chart renderers and computation functions.
  */
 
-import type { Mark } from '@opendata-ai/core';
+import type { Mark } from '@opendata-ai/openchart-core';
 import type { ChartRenderer } from '../registry';
 import { computePieMarks } from './compute';
 import { computePieLabels } from './labels';

@@ -13,5 +13,5 @@
 
 * The following workspace dependencies were updated
   * dependencies
-    * @opendata-ai/core bumped to 1.1.0
-    * @opendata-ai/engine bumped to 1.1.0
+    * @opendata-ai/openchart-core bumped to 1.1.0
+    * @opendata-ai/openchart-engine bumped to 1.1.0

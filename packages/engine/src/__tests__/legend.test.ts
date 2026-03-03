@@ -1,5 +1,5 @@
-import type { LayoutStrategy, Rect, ResolvedTheme } from '@opendata-ai/core';
-import { resolveTheme } from '@opendata-ai/core';
+import type { LayoutStrategy, Rect, ResolvedTheme } from '@opendata-ai/openchart-core';
+import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeLegend } from '../legend/compute';

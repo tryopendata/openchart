@@ -1,5 +1,10 @@
-import type { GraphEdge, GraphEncoding, GraphNode, ResolvedTheme } from '@opendata-ai/core';
-import { resolveTheme } from '@opendata-ai/core';
+import type {
+  GraphEdge,
+  GraphEncoding,
+  GraphNode,
+  ResolvedTheme,
+} from '@opendata-ai/openchart-core';
+import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { darkenColor, resolveEdgeVisuals, resolveNodeVisuals } from '../encoding';
 

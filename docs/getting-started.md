@@ -7,13 +7,13 @@ A hands-on walkthrough building from a bare chart to themed, annotated visualiza
 Install the React package (it pulls in everything else as dependencies):
 
 ```bash
-bun add @opendata-ai/react
+bun add @opendata-ai/openchart-react
 ```
 
 Create a line chart with a few data points:
 
 ```tsx
-import { Chart } from "@opendata-ai/react";
+import { Chart } from "@opendata-ai/openchart-react";
 
 const spec = {
   type: "line",
@@ -215,8 +215,8 @@ Dark mode adapts the theme automatically: background, text colors, gridlines, ax
 Override any part of the default theme with a `ThemeConfig` object. The engine deep-merges your overrides onto the defaults, so you only specify what you want to change.
 
 ```tsx
-import { Chart, VizThemeProvider } from "@opendata-ai/react";
-import type { ThemeConfig } from "@opendata-ai/core";
+import { Chart, VizThemeProvider } from "@opendata-ai/openchart-react";
+import type { ThemeConfig } from "@opendata-ai/openchart-core";
 
 const warmTheme: ThemeConfig = {
   colors: {
@@ -268,8 +268,8 @@ Theme config options:
 Tables are a visualization type, not a plain HTML grid. Define columns, add visual features, enable sorting and search.
 
 ```tsx
-import { DataTable } from "@opendata-ai/react";
-import type { TableSpec } from "@opendata-ai/core";
+import { DataTable } from "@opendata-ai/openchart-react";
+import type { TableSpec } from "@opendata-ai/openchart-core";
 
 const spec: TableSpec = {
   type: "table",
@@ -400,8 +400,8 @@ const spec: TableSpec = {
 Graphs render force-directed network visualizations from nodes and edges. Instead of `data` and `encoding`, you provide `nodes` (with `id` fields), `edges` (with `source`/`target`), and a graph-specific `encoding` that maps node data to visual properties.
 
 ```tsx
-import { Graph } from "@opendata-ai/react";
-import type { GraphSpec } from "@opendata-ai/core";
+import { Graph } from "@opendata-ai/openchart-react";
+import type { GraphSpec } from "@opendata-ai/openchart-core";
 
 const spec: GraphSpec = {
   type: "graph",
@@ -441,13 +441,13 @@ Graphs render on canvas (not SVG) and use a force simulation to position nodes. 
 If you're not using React, install the vanilla package directly:
 
 ```bash
-bun add @opendata-ai/vanilla
+bun add @opendata-ai/openchart-vanilla
 ```
 
 ### Chart
 
 ```ts
-import { createChart } from "@opendata-ai/vanilla";
+import { createChart } from "@opendata-ai/openchart-vanilla";
 
 const container = document.getElementById("chart")!;
 
@@ -500,7 +500,7 @@ Responsive mode (enabled by default) uses a `ResizeObserver` on the container, s
 ### Table
 
 ```ts
-import { createTable } from "@opendata-ai/vanilla";
+import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const container = document.getElementById("table")!;
 

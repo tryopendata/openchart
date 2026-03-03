@@ -1,4 +1,4 @@
-import type { TableSpec } from '@opendata-ai/engine';
+import type { TableSpec } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTable } from '../table-mount';
 

@@ -40,7 +40,7 @@ Use `color` with a nominal/ordinal field to create stacked bars.
 ## Builder
 
 ```typescript
-import { barChart } from "@opendata-ai/core";
+import { barChart } from "@opendata-ai/openchart-core";
 
 // Note: barChart(data, category, value) - category maps to y, value maps to x
 const spec = barChart(data, "country", "gdp", {

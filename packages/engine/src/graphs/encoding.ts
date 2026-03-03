@@ -7,7 +7,12 @@
  * for categorical color, scaleLinear for quantitative color.
  */
 
-import type { GraphEdge, GraphEncoding, GraphNode, ResolvedTheme } from '@opendata-ai/core';
+import type {
+  GraphEdge,
+  GraphEncoding,
+  GraphNode,
+  ResolvedTheme,
+} from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
 import { scaleLinear, scaleOrdinal, scaleSqrt } from 'd3-scale';
 

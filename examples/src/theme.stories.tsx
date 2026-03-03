@@ -4,11 +4,11 @@
  * visible in context.
  */
 
-import type { ChartSpec, TableSpec, ThemeConfig, VizSpec } from '@opendata-ai/core';
-import { isTableSpec } from '@opendata-ai/core';
-import type { ValidationResult } from '@opendata-ai/engine';
-import { validateSpec } from '@opendata-ai/engine';
-import { Chart, DataTable, useVizDarkMode, useVizTheme } from '@opendata-ai/react';
+import type { ChartSpec, TableSpec, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
+import { isTableSpec } from '@opendata-ai/openchart-core';
+import type { ValidationResult } from '@opendata-ai/openchart-engine';
+import { validateSpec } from '@opendata-ai/openchart-engine';
+import { Chart, DataTable, useVizDarkMode, useVizTheme } from '@opendata-ai/openchart-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------

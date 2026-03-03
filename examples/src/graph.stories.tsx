@@ -5,8 +5,8 @@
  * chrome elements, search, dark mode, and scale/performance tests.
  */
 
-import type { GraphSpec } from '@opendata-ai/core';
-import { Graph, VizThemeProvider } from '@opendata-ai/react';
+import type { GraphSpec } from '@opendata-ai/openchart-core';
+import { Graph, VizThemeProvider } from '@opendata-ai/openchart-react';
 import { useEffect, useRef, useState } from 'react';
 import { generateRandomGraph } from './graphs/helpers';
 

@@ -1,4 +1,4 @@
-import type { GraphSpec } from '@opendata-ai/core';
+import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Graph } from '../Graph';

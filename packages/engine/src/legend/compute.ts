@@ -16,8 +16,8 @@ import type {
   Rect,
   ResolvedTheme,
   TextStyle,
-} from '@opendata-ai/core';
-import { estimateTextWidth } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 

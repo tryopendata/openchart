@@ -6,7 +6,7 @@
  * The returned element replaces or appends to the given container.
  */
 
-import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/core';
+import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
 import { renderCell } from './renderers/table-cells';
 
 // ---------------------------------------------------------------------------

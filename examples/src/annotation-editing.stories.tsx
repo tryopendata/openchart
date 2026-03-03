@@ -11,8 +11,8 @@ import type {
   RangeAnnotation,
   RefLineAnnotation,
   TextAnnotation,
-} from '@opendata-ai/core';
-import { Chart, useDarkMode, useVizDarkMode, useVizTheme } from '@opendata-ai/react';
+} from '@opendata-ai/openchart-core';
+import { Chart, useDarkMode, useVizDarkMode, useVizTheme } from '@opendata-ai/openchart-react';
 import { useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------

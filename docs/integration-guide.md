@@ -25,8 +25,8 @@ Switch chart types by changing the `type` field. If the encoding channels are co
 
 ```tsx
 import { useState } from "react";
-import { Chart } from "@opendata-ai/react";
-import type { ChartType, ChartSpec } from "@opendata-ai/core";
+import { Chart } from "@opendata-ai/openchart-react";
+import type { ChartType, ChartSpec } from "@opendata-ai/openchart-core";
 
 const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
 
@@ -74,8 +74,8 @@ If the encoding doesn't match the new type, the engine returns a validation erro
 
 ```tsx
 import { useState } from "react";
-import { Chart } from "@opendata-ai/react";
-import type { DarkMode } from "@opendata-ai/core";
+import { Chart } from "@opendata-ai/openchart-react";
+import type { DarkMode } from "@opendata-ai/openchart-core";
 
 function ChartWithDarkMode({ spec }: { spec: ChartSpec }) {
   const [darkMode, setDarkMode] = useState<DarkMode>("off");
@@ -103,7 +103,7 @@ The `darkMode` prop is a dependency of the mount effect. Changing it destroys an
 ### Vanilla
 
 ```ts
-import { createChart } from "@opendata-ai/vanilla";
+import { createChart } from "@opendata-ai/openchart-vanilla";
 
 const chart = createChart(container, spec, { darkMode: "auto" });
 ```
@@ -115,7 +115,7 @@ In vanilla mode, `darkMode: 'auto'` checks `window.matchMedia('(prefers-color-sc
 For more control over dark mode in React:
 
 ```tsx
-import { useDarkMode } from "@opendata-ai/react";
+import { useDarkMode } from "@opendata-ai/openchart-react";
 
 function App() {
   // Reactively tracks system preference when mode is 'auto'
@@ -148,8 +148,8 @@ Pass `theme` as a prop. It's deep-merged onto `DEFAULT_THEME` during compilation
 `VizThemeProvider` sets a theme for all descendant `<Chart>` and `<DataTable>` components. Individual components can still override with their own `theme` prop.
 
 ```tsx
-import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/react";
-import type { ThemeConfig } from "@opendata-ai/core";
+import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/openchart-react";
+import type { ThemeConfig } from "@opendata-ai/openchart-core";
 
 const brandTheme: ThemeConfig = {
   colors: {
@@ -177,7 +177,7 @@ The provider uses React context. Components read it via the `useVizTheme()` hook
 If you're building UI that should match the chart theme (custom legends, data cards, etc.), read the theme from context with `useVizTheme()`:
 
 ```tsx
-import { useVizTheme } from "@opendata-ai/react";
+import { useVizTheme } from "@opendata-ai/openchart-react";
 
 function DataCard({ label, value }: { label: string; value: string }) {
   const theme = useVizTheme();
@@ -279,8 +279,8 @@ The `<Chart>` component compares specs via `JSON.stringify`. If the serialized f
 Handle clicks on data marks (bars, points, lines, arcs):
 
 ```tsx
-import { Chart } from "@opendata-ai/react";
-import type { MarkEvent } from "@opendata-ai/core";
+import { Chart } from "@opendata-ai/openchart-react";
+import type { MarkEvent } from "@opendata-ai/openchart-core";
 
 function InteractiveChart({ spec }: { spec: ChartSpec }) {
   const handleMarkClick = (event: MarkEvent) => {
@@ -313,8 +313,8 @@ function InteractiveChart({ spec }: { spec: ChartSpec }) {
 
 ```tsx
 import { useState, useMemo } from "react";
-import { Chart } from "@opendata-ai/react";
-import type { MarkEvent, ChartSpec } from "@opendata-ai/core";
+import { Chart } from "@opendata-ai/openchart-react";
+import type { MarkEvent, ChartSpec } from "@opendata-ai/openchart-core";
 
 interface SalesData {
   region: string;
@@ -418,7 +418,7 @@ The vanilla adapter handles the DOM toggling (setting `display: none` on matchin
 The table manages its own sort, search, and pagination state internally. You get callbacks when state changes but don't need to manage state yourself:
 
 ```tsx
-import { DataTable } from "@opendata-ai/react";
+import { DataTable } from "@opendata-ai/openchart-react";
 
 <DataTable
   spec={tableSpec}
@@ -434,8 +434,8 @@ Pass `sort`, `search`, and/or `page` props to take over state management. When a
 
 ```tsx
 import { useState } from "react";
-import { DataTable } from "@opendata-ai/react";
-import type { SortState } from "@opendata-ai/core";
+import { DataTable } from "@opendata-ai/openchart-react";
+import type { SortState } from "@opendata-ai/openchart-core";
 
 function ControlledTable({ spec }: { spec: TableSpec }) {
   const [sort, setSort] = useState<SortState | null>(null);
@@ -479,7 +479,7 @@ function ControlledTable({ spec }: { spec: TableSpec }) {
 For a quick way to get controlled state without wiring it all manually:
 
 ```tsx
-import { DataTable, useTableState } from "@opendata-ai/react";
+import { DataTable, useTableState } from "@opendata-ai/openchart-react";
 
 function TableWithManagedState({ spec }: { spec: TableSpec }) {
   const { sort, search, page, setSort, setSearch, setPage, resetState } =
@@ -517,7 +517,7 @@ const state = useTableState({
 For cases where you need direct access to the vanilla `TableInstance`:
 
 ```tsx
-import { useTable } from "@opendata-ai/react";
+import { useTable } from "@opendata-ai/openchart-react";
 
 function AdvancedTable({ spec }: { spec: TableSpec }) {
   const { ref, table, state } = useTable(spec, {
@@ -690,7 +690,7 @@ downloadString(csvString, "data.csv", "text/csv");
 The `<Chart>` component doesn't expose the instance directly. For export access, use the `useChart` hook:
 
 ```tsx
-import { useChart } from "@opendata-ai/react";
+import { useChart } from "@opendata-ai/openchart-react";
 
 function ExportableChart({ spec }: { spec: ChartSpec }) {
   const { ref, chart } = useChart(spec, { darkMode: "off" });
@@ -726,7 +726,7 @@ For non-React usage, the vanilla adapter provides direct instance control.
 ### Chart lifecycle
 
 ```ts
-import { createChart } from "@opendata-ai/vanilla";
+import { createChart } from "@opendata-ai/openchart-vanilla";
 
 // Mount
 const chart = createChart(container, spec, {
@@ -755,7 +755,7 @@ chart.destroy();
 ### Table lifecycle
 
 ```ts
-import { createTable } from "@opendata-ai/vanilla";
+import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const table = createTable(container, tableSpec, {
   darkMode: "auto",
@@ -821,8 +821,8 @@ Graphs render force-directed network visualizations on canvas. The input is a `G
 ### React
 
 ```tsx
-import { Graph } from "@opendata-ai/react";
-import type { GraphSpec } from "@opendata-ai/core";
+import { Graph } from "@opendata-ai/openchart-react";
+import type { GraphSpec } from "@opendata-ai/openchart-core";
 
 <Graph
   spec={graphSpec}
@@ -852,7 +852,7 @@ import type { GraphSpec } from "@opendata-ai/core";
 For imperative control over the graph (search, zoom, selection), use the `useGraph()` hook with a forwarded ref:
 
 ```tsx
-import { Graph, useGraph } from "@opendata-ai/react";
+import { Graph, useGraph } from "@opendata-ai/openchart-react";
 
 function SearchableGraph({ spec }: { spec: GraphSpec }) {
   const { ref, search, clearSearch, zoomToFit, zoomToNode, selectNode } =
@@ -889,7 +889,7 @@ function SearchableGraph({ spec }: { spec: GraphSpec }) {
 ### Vanilla
 
 ```ts
-import { createGraph } from "@opendata-ai/vanilla";
+import { createGraph } from "@opendata-ai/openchart-vanilla";
 
 const graph = createGraph(container, graphSpec, {
   darkMode: "auto",

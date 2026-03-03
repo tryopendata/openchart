@@ -7,8 +7,8 @@
  */
 
 import type { Story } from '@ladle/react';
-import type { ChartSpec, TableSpec } from '@opendata-ai/core';
-import { Chart, DataTable, useDarkMode, useVizDarkMode } from '@opendata-ai/react';
+import type { ChartSpec, TableSpec } from '@opendata-ai/openchart-core';
+import { Chart, DataTable, useDarkMode, useVizDarkMode } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
 // Shell: reads dark mode from VizThemeProvider context (set by Ladle toggle)

@@ -15,7 +15,7 @@ import {
   type ChartType,
   type FieldType,
   type VizSpec,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 
 import type { ValidationError, ValidationResult } from './types';
 

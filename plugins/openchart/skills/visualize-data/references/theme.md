@@ -44,7 +44,7 @@ darkMode?: "auto" | "force" | "off"
 Wrap multiple visualizations to share a theme:
 
 ```tsx
-import { VizThemeProvider } from '@opendata-ai/react';
+import { VizThemeProvider } from '@opendata-ai/openchart-react';
 
 <VizThemeProvider theme={myTheme} darkMode="auto">
   <Chart spec={spec1} />

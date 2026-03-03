@@ -16,8 +16,12 @@
  * .svelte components.
  */
 
-import type { GraphSpec } from '@opendata-ai/core';
-import { createGraph, type GraphInstance, type GraphMountOptions } from '@opendata-ai/vanilla';
+import type { GraphSpec } from '@opendata-ai/openchart-core';
+import {
+  createGraph,
+  type GraphInstance,
+  type GraphMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 
 export interface UseGraphOptions {
   /** Theme overrides. */

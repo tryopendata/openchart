@@ -1,4 +1,4 @@
-import type { ColumnConfig } from '@opendata-ai/core';
+import type { ColumnConfig } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { buildSearchIndex, filterBySearch } from '../search';
 

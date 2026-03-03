@@ -5,7 +5,7 @@ Framework-specific rendering, event handlers, and builder functions.
 ## React
 
 ```tsx
-import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/react';
+import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/openchart-react';
 
 <Chart spec={chartSpec} darkMode="auto" />
 <DataTable spec={tableSpec} onRowClick={(row) => console.log(row)} />
@@ -20,7 +20,7 @@ import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/react';
 ## Vue
 
 ```vue
-import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/vue';
+import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/openchart-vue';
 
 <Chart :spec="chartSpec" darkMode="auto" />
 <DataTable :spec="tableSpec" />
@@ -30,7 +30,7 @@ import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/vue';
 ## Svelte
 
 ```svelte
-import { Chart, DataTable, Graph, ThemeProvider } from '@opendata-ai/svelte';
+import { Chart, DataTable, Graph, ThemeProvider } from '@opendata-ai/openchart-svelte';
 
 <Chart {spec} darkMode="auto" />
 <DataTable {spec} />
@@ -40,7 +40,7 @@ import { Chart, DataTable, Graph, ThemeProvider } from '@opendata-ai/svelte';
 ## Vanilla JS
 
 ```typescript
-import { createChart, createTable, createGraph } from "@opendata-ai/vanilla";
+import { createChart, createTable, createGraph } from "@opendata-ai/openchart-vanilla";
 
 // Charts
 const chart = createChart(container, spec, { darkMode: "auto", responsive: true });
@@ -76,10 +76,10 @@ graph.destroy();
 
 ## Builder Functions
 
-Shorthand for common specs. Import from `@opendata-ai/core`.
+Shorthand for common specs. Import from `@opendata-ai/openchart-core`.
 
 ```typescript
-import { lineChart, barChart, columnChart, pieChart, scatterChart, dataTable, inferFieldType } from "@opendata-ai/core";
+import { lineChart, barChart, columnChart, pieChart, scatterChart, dataTable, inferFieldType } from "@opendata-ai/openchart-core";
 
 const spec = lineChart(data, "date", "revenue", { color: "region", chrome: { title: "Revenue by region" } });
 const spec = barChart(data, "category", "value");  // note: barChart(data, category, value) not (data, x, y)

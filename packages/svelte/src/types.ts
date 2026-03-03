@@ -16,7 +16,7 @@ import type {
   TextAnnotation,
   ThemeConfig,
   VizSpec,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 import type { Snippet } from 'svelte';
 
 export interface ChartProps {

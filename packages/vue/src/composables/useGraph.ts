@@ -5,7 +5,7 @@
  * (search, zoom, select) for programmatic control of the graph instance.
  */
 
-import type { GraphInstance } from '@opendata-ai/vanilla';
+import type { GraphInstance } from '@opendata-ai/openchart-vanilla';
 import { type Ref, ref } from 'vue';
 
 /** Handle exposed by Graph component via expose(). */

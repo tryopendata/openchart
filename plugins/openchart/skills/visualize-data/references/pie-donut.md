@@ -39,7 +39,7 @@ No x-axis. The `y` channel is the slice value, `color` is the category.
 ## Builder
 
 ```typescript
-import { pieChart } from "@opendata-ai/core";
+import { pieChart } from "@opendata-ai/openchart-core";
 
 // pieChart(data, category, value) - category maps to color, value maps to y
 const spec = pieChart(data, "source", "share", {

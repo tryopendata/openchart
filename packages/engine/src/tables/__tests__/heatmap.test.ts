@@ -1,5 +1,5 @@
-import type { ColumnConfig, ResolvedTheme } from '@opendata-ai/core';
-import { adaptTheme, contrastRatio, resolveTheme } from '@opendata-ai/core';
+import type { ColumnConfig, ResolvedTheme } from '@opendata-ai/openchart-core';
+import { adaptTheme, contrastRatio, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { computeHeatmapColors } from '../heatmap';
 

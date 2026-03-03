@@ -40,7 +40,7 @@ Use `color` with a nominal/ordinal field to create stacked or grouped columns.
 ## Builder
 
 ```typescript
-import { columnChart } from "@opendata-ai/core";
+import { columnChart } from "@opendata-ai/openchart-core";
 
 const spec = columnChart(data, "quarter", "revenue", {
   color: "department",

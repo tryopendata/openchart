@@ -6,7 +6,7 @@
   `theme` or `darkMode` prop is passed.
 -->
 <script lang="ts">
-import type { DarkMode, ThemeConfig } from '@opendata-ai/core';
+import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
 import type { Snippet } from 'svelte';
 import { setVizDarkMode, setVizTheme } from './context.js';
 

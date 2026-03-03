@@ -29,9 +29,9 @@ Instead, use [GitHub's private vulnerability reporting](https://github.com/tryop
 
 This policy covers the four published npm packages:
 
-- `@opendata-ai/core`
-- `@opendata-ai/engine`
-- `@opendata-ai/vanilla`
-- `@opendata-ai/react`
+- `@opendata-ai/openchart-core`
+- `@opendata-ai/openchart-engine`
+- `@opendata-ai/openchart-vanilla`
+- `@opendata-ai/openchart-react`
 
 Vulnerabilities in dependencies (d3, etc.) should be reported upstream to the respective projects.

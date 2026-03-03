@@ -5,7 +5,7 @@
  * Supports negative values with bidirectional bars.
  */
 
-import type { BarColumnConfig, ResolvedTheme } from '@opendata-ai/core';
+import type { BarColumnConfig, ResolvedTheme } from '@opendata-ai/openchart-core';
 
 const NEGATIVE_BAR_COLOR = '#c44e52';
 

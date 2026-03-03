@@ -1,7 +1,7 @@
 # @opendata-ai
 
 [![CI](https://github.com/tryopendata/openchart/actions/workflows/ci.yml/badge.svg)](https://github.com/tryopendata/openchart/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@opendata-ai/core)](https://www.npmjs.com/package/@opendata-ai/core)
+[![npm](https://img.shields.io/npm/v/@opendata-ai/openchart-core)](https://www.npmjs.com/package/@opendata-ai/openchart-core)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 From the team behind [OpenData](https://tryopendata.ai), an open source data platform.
@@ -15,7 +15,7 @@ Publication-quality data graphics from a JSON spec. The kind of rich, annotated 
 ## Quick start
 
 ```tsx
-import { Chart } from "@opendata-ai/react";
+import { Chart } from "@opendata-ai/openchart-react";
 
 const spec = {
   type: "line",
@@ -80,11 +80,11 @@ Tables are a first-class visualization type, not an afterthought. They support h
 
 | Use case                     | Install                                         |
 | ---------------------------- | ----------------------------------------------- |
-| React app                    | `bun add @opendata-ai/react`                    |
-| Vue 3 app                    | `bun add @opendata-ai/vue`                      |
-| Svelte 5 app                 | `bun add @opendata-ai/svelte`                   |
-| Vanilla JS / any framework   | `bun add @opendata-ai/vanilla`                  |
-| Types only / custom renderer | `bun add @opendata-ai/core @opendata-ai/engine` |
+| React app                    | `bun add @opendata-ai/openchart-react`                    |
+| Vue 3 app                    | `bun add @opendata-ai/openchart-vue`                      |
+| Svelte 5 app                 | `bun add @opendata-ai/openchart-svelte`                   |
+| Vanilla JS / any framework   | `bun add @opendata-ai/openchart-vanilla`                  |
+| Types only / custom renderer | `bun add @opendata-ai/openchart-core @opendata-ai/openchart-engine` |
 
 Each package re-exports the types you need, so you typically only install one. The React package pulls in vanilla, engine, and core as dependencies.
 
@@ -95,8 +95,8 @@ Replace `bun add` with `npm install` or `yarn add` depending on your setup.
 ### React: chart
 
 ```tsx
-import { Chart } from "@opendata-ai/react";
-import type { ChartSpec } from "@opendata-ai/core";
+import { Chart } from "@opendata-ai/openchart-react";
+import type { ChartSpec } from "@opendata-ai/openchart-core";
 
 const spec: ChartSpec = {
   type: "bar",
@@ -130,8 +130,8 @@ function App() {
 ### React: data table
 
 ```tsx
-import { DataTable } from "@opendata-ai/react";
-import type { TableSpec } from "@opendata-ai/core";
+import { DataTable } from "@opendata-ai/openchart-react";
+import type { TableSpec } from "@opendata-ai/openchart-core";
 
 const spec: TableSpec = {
   type: "table",
@@ -176,7 +176,7 @@ function App() {
 ### React: graph
 
 ```tsx
-import { Graph } from "@opendata-ai/react";
+import { Graph } from "@opendata-ai/openchart-react";
 
 <Graph
   spec={{
@@ -213,8 +213,8 @@ import { Graph } from "@opendata-ai/react";
 ### React: custom theme
 
 ```tsx
-import { Chart, VizThemeProvider } from '@opendata-ai/react';
-import type { ThemeConfig } from '@opendata-ai/core';
+import { Chart, VizThemeProvider } from '@opendata-ai/openchart-react';
+import type { ThemeConfig } from '@opendata-ai/openchart-core';
 
 const theme: ThemeConfig = {
   colors: {
@@ -240,7 +240,7 @@ const theme: ThemeConfig = {
 ### Vanilla JS
 
 ```ts
-import { createChart } from "@opendata-ai/vanilla";
+import { createChart } from "@opendata-ai/openchart-vanilla";
 
 const container = document.getElementById("chart");
 
@@ -282,7 +282,7 @@ chart.destroy();
 ### Vanilla JS: data table
 
 ```ts
-import { createTable } from "@opendata-ai/vanilla";
+import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const container = document.getElementById("table");
 
@@ -324,12 +324,12 @@ table.destroy();
 ## Package structure
 
 ```
-@opendata-ai/core       Types, theme, colors, a11y, locale (no DOM)
-@opendata-ai/engine     Headless compiler: spec in, layout out (no DOM)
-@opendata-ai/vanilla    Imperative DOM rendering (SVG charts, HTML tables, canvas graphs)
-@opendata-ai/react      React components wrapping vanilla with lifecycle management
-@opendata-ai/vue        Vue 3 components wrapping vanilla with lifecycle management
-@opendata-ai/svelte     Svelte 5 components wrapping vanilla with lifecycle management
+@opendata-ai/openchart-core       Types, theme, colors, a11y, locale (no DOM)
+@opendata-ai/openchart-engine     Headless compiler: spec in, layout out (no DOM)
+@opendata-ai/openchart-vanilla    Imperative DOM rendering (SVG charts, HTML tables, canvas graphs)
+@opendata-ai/openchart-react      React components wrapping vanilla with lifecycle management
+@opendata-ai/openchart-vue        Vue 3 components wrapping vanilla with lifecycle management
+@opendata-ai/openchart-svelte     Svelte 5 components wrapping vanilla with lifecycle management
 ```
 
 Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. No lateral imports.

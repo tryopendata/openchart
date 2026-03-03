@@ -42,7 +42,7 @@ Use `color` to differentiate 2-5 series. For 6+ series, filter to the top 5 or u
 ## Builder
 
 ```typescript
-import { lineChart } from "@opendata-ai/core";
+import { lineChart } from "@opendata-ai/openchart-core";
 
 const spec = lineChart(data, "date", "revenue", {
   color: "region",

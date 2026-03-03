@@ -28,7 +28,7 @@ Use @testing-library/react with happy-dom:
 
 ```typescript
 import { render, screen } from '@testing-library/react'
-import { Chart } from '@opendata-ai/react'
+import { Chart } from '@opendata-ai/openchart-react'
 
 test('renders chart', () => {
   render(<Chart spec={spec} />)

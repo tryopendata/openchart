@@ -17,7 +17,7 @@ import type {
   PointMark,
   Rect,
   RectMark,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';

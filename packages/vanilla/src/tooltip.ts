@@ -5,7 +5,7 @@
  * edge avoidance. Touch support via tap-to-show, tap-outside-to-hide.
  */
 
-import type { TooltipContent } from '@opendata-ai/core';
+import type { TooltipContent } from '@opendata-ai/openchart-core';
 
 export interface TooltipManager {
   /** Show the tooltip with content at a given position. */

@@ -62,7 +62,7 @@ Rich data tables with sorting, search, pagination, and inline visualizations.
 ## Builder
 
 ```typescript
-import { dataTable } from "@opendata-ai/core";
+import { dataTable } from "@opendata-ai/openchart-core";
 
 // Auto-generates columns from data keys if omitted
 const spec = dataTable(data, { search: true, pagination: { pageSize: 20 } });
@@ -92,7 +92,7 @@ Sort cycling: clicking the same column cycles none -> asc -> desc -> none. Click
 ## Vanilla Instance API
 
 ```typescript
-import { createTable } from "@opendata-ai/vanilla";
+import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const table = createTable(container, spec, {
   responsive: true,
@@ -113,7 +113,7 @@ table.destroy();                        // cleanup
 Pass `sort`, `search`, or `page` props to control state externally:
 
 ```tsx
-import { DataTable } from '@opendata-ai/react';
+import { DataTable } from '@opendata-ai/openchart-react';
 
 <DataTable
   spec={tableSpec}

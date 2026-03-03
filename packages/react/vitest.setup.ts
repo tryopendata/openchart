@@ -3,7 +3,7 @@ import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
 // Ensure all chart renderers are registered (side-effect imports)
-import '@opendata-ai/engine';
+import '@opendata-ai/openchart-engine';
 
 afterEach(() => {
   cleanup();

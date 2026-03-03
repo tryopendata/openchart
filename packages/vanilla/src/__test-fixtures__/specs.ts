@@ -5,7 +5,7 @@
  * files don't need to duplicate spec definitions.
  */
 
-import type { ChartSpec, GraphSpec, TableSpec } from '@opendata-ai/engine';
+import type { ChartSpec, GraphSpec, TableSpec } from '@opendata-ai/openchart-engine';
 
 // ---------------------------------------------------------------------------
 // Line chart specs

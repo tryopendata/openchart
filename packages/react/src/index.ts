@@ -1,5 +1,5 @@
 /**
- * @opendata-ai/react
+ * @opendata-ai/openchart-react
  *
  * React adapter for openchart. Provides <Chart /> and <DataTable />
  * components that wrap the vanilla adapter with React lifecycle management.
@@ -13,7 +13,7 @@ export type {
   TableLayout,
   TableSpec,
   VizSpec,
-} from '@opendata-ai/engine';
+} from '@opendata-ai/openchart-engine';
 export type { ChartProps } from './Chart';
 // Components
 export { Chart } from './Chart';

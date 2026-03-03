@@ -5,7 +5,7 @@ import type {
   RefLineAnnotation,
   TableSpec,
   TextAnnotation,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { normalizeSpec } from '../normalize';
 import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } from '../types';

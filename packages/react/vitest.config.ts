@@ -18,9 +18,9 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
     alias: [
       // Workspace packages -> source (so side-effect imports fire)
-      { find: '@opendata-ai/core', replacement: `${packages}/core/src/index.ts` },
-      { find: '@opendata-ai/engine', replacement: `${packages}/engine/src/index.ts` },
-      { find: '@opendata-ai/vanilla', replacement: `${packages}/vanilla/src/index.ts` },
+      { find: '@opendata-ai/openchart-core', replacement: `${packages}/core/src/index.ts` },
+      { find: '@opendata-ai/openchart-engine', replacement: `${packages}/engine/src/index.ts` },
+      { find: '@opendata-ai/openchart-vanilla', replacement: `${packages}/vanilla/src/index.ts` },
       // React dedup: use react-dom's own copy so CJS require('react') matches
       { find: /^react\/(.*)/, replacement: `${reactFromDom}/$1` },
       { find: /^react$/, replacement: reactFromDom },

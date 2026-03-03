@@ -5,7 +5,7 @@
  * vertical gridlines at x-axis tick positions.
  */
 
-import type { Rect } from '@opendata-ai/core';
+import type { Rect } from '@opendata-ai/openchart-core';
 import type { AxesResult } from './axes';
 
 // ---------------------------------------------------------------------------

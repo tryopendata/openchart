@@ -6,7 +6,14 @@
  * grouping into "Other", and donut variant with inner radius.
  */
 
-import type { ArcMark, DataRow, Encoding, LayoutStrategy, MarkAria, Rect } from '@opendata-ai/core';
+import type {
+  ArcMark,
+  DataRow,
+  Encoding,
+  LayoutStrategy,
+  MarkAria,
+  Rect,
+} from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
 

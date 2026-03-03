@@ -4,7 +4,7 @@
  * Exports the column chart renderer and computation functions.
  */
 
-import type { Mark } from '@opendata-ai/core';
+import type { Mark } from '@opendata-ai/openchart-core';
 import type { ChartRenderer } from '../registry';
 import { computeColumnMarks } from './compute';
 import { computeColumnLabels } from './labels';

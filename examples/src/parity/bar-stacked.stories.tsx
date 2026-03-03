@@ -5,8 +5,8 @@
  * horizontally. Data is pre-normalized to percentages.
  */
 
-import type { ChartSpec } from '@opendata-ai/core';
-import { Chart } from '@opendata-ai/react';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
+import { Chart } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
 // Household Spending by Income Bracket: Stacked horizontal bars

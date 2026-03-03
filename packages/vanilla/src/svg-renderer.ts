@@ -23,8 +23,8 @@ import type {
   ResolvedAnnotation,
   ResolvedChromeElement,
   TextStyle,
-} from '@opendata-ai/core';
-import { estimateTextWidth } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 

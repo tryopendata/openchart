@@ -1,4 +1,4 @@
-import type { TableSpec } from '@opendata-ai/core';
+import type { TableSpec } from '@opendata-ai/openchart-core';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { DataTable } from '../DataTable';

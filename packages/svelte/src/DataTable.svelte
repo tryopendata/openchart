@@ -6,8 +6,12 @@
   for sort, search, and pagination state.
 -->
 <script lang="ts">
-import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/core';
-import { createTable, type TableInstance, type TableMountOptions } from '@opendata-ai/vanilla';
+import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import {
+  createTable,
+  type TableInstance,
+  type TableMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
 

@@ -8,8 +8,12 @@
  * Exposes imperative methods via defineExpose for use with useGraph().
  */
 
-import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/core';
-import { createGraph, type GraphInstance, type GraphMountOptions } from '@opendata-ai/vanilla';
+import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import {
+  createGraph,
+  type GraphInstance,
+  type GraphMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   defineComponent,

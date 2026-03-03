@@ -6,7 +6,7 @@
  * `theme` or `darkMode` prop is passed.
  */
 
-import type { DarkMode, ThemeConfig } from '@opendata-ai/core';
+import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
 import { computed, defineComponent, type PropType, provide } from 'vue';
 import { VizDarkModeKey, VizThemeKey } from './context';
 

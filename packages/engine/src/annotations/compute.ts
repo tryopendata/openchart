@@ -23,8 +23,8 @@ import type {
   ResolvedLabel,
   TextAnnotation,
   TextStyle,
-} from '@opendata-ai/core';
-import { estimateTextWidth } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScaleTime } from 'd3-scale';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';

@@ -5,7 +5,7 @@
  * Each factory returns a fresh object to prevent cross-test contamination.
  */
 
-import type { LayoutStrategy, Rect } from '@opendata-ai/core';
+import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 
 // ---------------------------------------------------------------------------

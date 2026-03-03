@@ -8,7 +8,7 @@
  * using render + waitFor.
  */
 
-import type { ChartSpec } from '@opendata-ai/core';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useChart, useDarkMode } from '../hooks';

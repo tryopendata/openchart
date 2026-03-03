@@ -43,7 +43,7 @@ Correlation between two quantitative variables. Optional size and color for 3rd/
 ## Builder
 
 ```typescript
-import { scatterChart } from "@opendata-ai/core";
+import { scatterChart } from "@opendata-ai/openchart-core";
 
 const spec = scatterChart(data, "spending", "lifeExp", {
   size: "pop",

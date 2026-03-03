@@ -13,7 +13,7 @@ import type {
   ResolvedChrome,
   ResolvedTheme,
   TooltipContent,
-} from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
 
 /** A compiled graph node with resolved visual properties (no x/y position). */
 export interface CompiledGraphNode {

@@ -19,8 +19,8 @@ import type {
   GraphSpec,
   TableSpec,
   VizSpec,
-} from '@opendata-ai/core';
-import { isChartSpec, isGraphSpec, isTableSpec } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { isChartSpec, isGraphSpec, isTableSpec } from '@opendata-ai/openchart-core';
 
 import type {
   NormalizedChartSpec,

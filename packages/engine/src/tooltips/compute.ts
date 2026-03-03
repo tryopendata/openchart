@@ -17,8 +17,8 @@ import type {
   RectMark,
   TooltipContent,
   TooltipField,
-} from '@opendata-ai/core';
-import { formatDate, formatNumber } from '@opendata-ai/core';
+} from '@opendata-ai/openchart-core';
+import { formatDate, formatNumber } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';

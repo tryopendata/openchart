@@ -8,7 +8,7 @@
  * - Nulls: always sorted last regardless of direction
  */
 
-import type { SortState } from '@opendata-ai/core';
+import type { SortState } from '@opendata-ai/openchart-core';
 
 /** Result of sorting: sorted data rows with their original indices preserved. */
 export interface SortResult {

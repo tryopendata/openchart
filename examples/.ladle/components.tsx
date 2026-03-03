@@ -7,8 +7,8 @@ import '../../packages/core/src/styles/viz.css';
 import '../src/stories.css';
 
 import type { GlobalProvider } from '@ladle/react';
-import type { DarkMode, ThemeConfig } from '@opendata-ai/core';
-import { VizThemeProvider } from '@opendata-ai/react';
+import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
+import { VizThemeProvider } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
 // Theme registry

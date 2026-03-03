@@ -23,8 +23,8 @@ import type {
   ThemeConfig,
   TooltipContent,
   VizSpec,
-} from '@opendata-ai/core';
-import { compileChart } from '@opendata-ai/engine';
+} from '@opendata-ai/openchart-core';
+import { compileChart } from '@opendata-ai/openchart-engine';
 import { exportCSV, exportPNG, exportSVG, type PNGExportOptions } from './export';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
@@ -243,7 +243,7 @@ function buildMarkDataMap(
 function wireChartEvents(
   svg: SVGElement,
   layout: ChartLayout,
-  specAnnotations: import('@opendata-ai/core').Annotation[],
+  specAnnotations: import('@opendata-ai/openchart-core').Annotation[],
   handlers: ChartEventHandlers,
 ): () => void {
   const cleanups: Array<() => void> = [];
@@ -1456,7 +1456,7 @@ export function createChart(
       options?.onMarkLeave ||
       options?.onAnnotationClick
     ) {
-      const specAnnotations: import('@opendata-ai/core').Annotation[] =
+      const specAnnotations: import('@opendata-ai/openchart-core').Annotation[] =
         'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
           ? currentSpec.annotations
           : [];

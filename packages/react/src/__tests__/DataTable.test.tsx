@@ -1,4 +1,4 @@
-import type { TableSpec } from '@opendata-ai/core';
+import type { TableSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DataTable } from '../DataTable';

@@ -1,5 +1,5 @@
 /**
- * @opendata-ai/vue
+ * @opendata-ai/openchart-vue
  *
  * Vue 3 adapter for openchart. Provides <Chart />, <DataTable />, <Graph />,
  * and <VizThemeProvider /> components that wrap the vanilla adapter with
@@ -14,7 +14,7 @@ export type {
   TableLayout,
   TableSpec,
   VizSpec,
-} from '@opendata-ai/engine';
+} from '@opendata-ai/openchart-engine';
 
 // Components
 export type { ChartProps } from './Chart';

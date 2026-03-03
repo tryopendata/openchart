@@ -1,5 +1,5 @@
 {
-  "name": "@opendata-ai/vanilla",
+  "name": "@opendata-ai/openchart-vanilla",
   "version": "1.1.0",
   "description": "Vanilla JS renderer for openchart: SVG charts, HTML tables, force-directed graphs",
   "license": "Apache-2.0",
@@ -46,8 +46,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@opendata-ai/core": "workspace:*",
-    "@opendata-ai/engine": "workspace:*",
+    "@opendata-ai/openchart-core": "workspace:*",
+    "@opendata-ai/openchart-engine": "workspace:*",
     "d3-force": "^3.0.0",
     "d3-quadtree": "^3.0.1"
   },

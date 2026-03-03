@@ -7,9 +7,9 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: [
-    '@opendata-ai/core',
-    '@opendata-ai/engine',
-    '@opendata-ai/vanilla',
+    '@opendata-ai/openchart-core',
+    '@opendata-ai/openchart-engine',
+    '@opendata-ai/openchart-vanilla',
     'react',
     'react-dom',
     'react/jsx-runtime',

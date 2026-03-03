@@ -9,7 +9,7 @@
  * is limited in Svelte 5, so we test the observable behavior through components.
  */
 
-import type { ChartSpec } from '@opendata-ai/core';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Chart from '../Chart.svelte';

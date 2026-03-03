@@ -6,8 +6,12 @@
  * for sort, search, and pagination state.
  */
 
-import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/core';
-import { createTable, type TableInstance, type TableMountOptions } from '@opendata-ai/vanilla';
+import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import {
+  createTable,
+  type TableInstance,
+  type TableMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   defineComponent,

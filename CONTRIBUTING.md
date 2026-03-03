@@ -67,8 +67,8 @@ packages/engine/src/charts/<type>/
 ```ts
 // packages/engine/src/charts/<type>/compute.ts
 
-import type { Rect } from "@opendata-ai/core";
-import type { LayoutStrategy } from "@opendata-ai/core";
+import type { Rect } from "@opendata-ai/openchart-core";
+import type { LayoutStrategy } from "@opendata-ai/openchart-core";
 import type { NormalizedChartSpec } from "../../compiler/types";
 import type { ResolvedScales } from "../../layout/scales";
 
@@ -92,7 +92,7 @@ Look at `charts/bar/compute.ts` for a concrete example.
 ```ts
 // packages/engine/src/charts/<type>/labels.ts
 
-import type { Rect, ResolvedLabel } from "@opendata-ai/core";
+import type { Rect, ResolvedLabel } from "@opendata-ai/openchart-core";
 
 export function computeMyTypeLabels(
   marks: MyMark[],
@@ -109,7 +109,7 @@ export function computeMyTypeLabels(
 ```ts
 // packages/engine/src/charts/<type>/index.ts
 
-import type { Mark } from "@opendata-ai/core";
+import type { Mark } from "@opendata-ai/openchart-core";
 import { registerChartRenderer } from "../registry";
 import type { ChartRenderer } from "../registry";
 import { computeMyTypeMarks } from "./compute";

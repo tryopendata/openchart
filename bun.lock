@@ -22,10 +22,10 @@
       "name": "@opendata-ai/examples",
       "version": "0.0.1",
       "dependencies": {
-        "@opendata-ai/core": "workspace:*",
-        "@opendata-ai/engine": "workspace:*",
-        "@opendata-ai/react": "workspace:*",
-        "@opendata-ai/vanilla": "workspace:*",
+        "@opendata-ai/openchart-core": "workspace:*",
+        "@opendata-ai/openchart-engine": "workspace:*",
+        "@opendata-ai/openchart-react": "workspace:*",
+        "@opendata-ai/openchart-vanilla": "workspace:*",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
       },
@@ -36,8 +36,8 @@
       },
     },
     "packages/core": {
-      "name": "@opendata-ai/core",
-      "version": "1.0.0",
+      "name": "@opendata-ai/openchart-core",
+      "version": "1.1.0",
       "dependencies": {
         "d3-color": "^3.1.0",
         "d3-format": "^3.1.0",
@@ -50,10 +50,10 @@
       },
     },
     "packages/engine": {
-      "name": "@opendata-ai/engine",
-      "version": "1.0.0",
+      "name": "@opendata-ai/openchart-engine",
+      "version": "1.1.0",
       "dependencies": {
-        "@opendata-ai/core": "workspace:*",
+        "@opendata-ai/openchart-core": "workspace:*",
         "d3-array": "^3.2.0",
         "d3-format": "^3.1.2",
         "d3-interpolate": "^3.0.0",
@@ -69,12 +69,12 @@
       },
     },
     "packages/react": {
-      "name": "@opendata-ai/react",
-      "version": "1.0.0",
+      "name": "@opendata-ai/openchart-react",
+      "version": "1.1.0",
       "dependencies": {
-        "@opendata-ai/core": "workspace:*",
-        "@opendata-ai/engine": "workspace:*",
-        "@opendata-ai/vanilla": "workspace:*",
+        "@opendata-ai/openchart-core": "workspace:*",
+        "@opendata-ai/openchart-engine": "workspace:*",
+        "@opendata-ai/openchart-vanilla": "workspace:*",
       },
       "devDependencies": {
         "@types/react": "^19.0.0",
@@ -88,12 +88,12 @@
       },
     },
     "packages/svelte": {
-      "name": "@opendata-ai/svelte",
-      "version": "1.0.0",
+      "name": "@opendata-ai/openchart-svelte",
+      "version": "1.1.0",
       "dependencies": {
-        "@opendata-ai/core": "workspace:*",
-        "@opendata-ai/engine": "workspace:*",
-        "@opendata-ai/vanilla": "workspace:*",
+        "@opendata-ai/openchart-core": "workspace:*",
+        "@opendata-ai/openchart-engine": "workspace:*",
+        "@opendata-ai/openchart-vanilla": "workspace:*",
       },
       "devDependencies": {
         "@sveltejs/package": "^2.3.0",
@@ -107,11 +107,11 @@
       },
     },
     "packages/vanilla": {
-      "name": "@opendata-ai/vanilla",
-      "version": "1.0.0",
+      "name": "@opendata-ai/openchart-vanilla",
+      "version": "1.1.0",
       "dependencies": {
-        "@opendata-ai/core": "workspace:*",
-        "@opendata-ai/engine": "workspace:*",
+        "@opendata-ai/openchart-core": "workspace:*",
+        "@opendata-ai/openchart-engine": "workspace:*",
         "d3-force": "^3.0.0",
         "d3-quadtree": "^3.0.1",
       },
@@ -121,12 +121,12 @@
       },
     },
     "packages/vue": {
-      "name": "@opendata-ai/vue",
-      "version": "1.0.0",
+      "name": "@opendata-ai/openchart-vue",
+      "version": "1.1.0",
       "dependencies": {
-        "@opendata-ai/core": "workspace:*",
-        "@opendata-ai/engine": "workspace:*",
-        "@opendata-ai/vanilla": "workspace:*",
+        "@opendata-ai/openchart-core": "workspace:*",
+        "@opendata-ai/openchart-engine": "workspace:*",
+        "@opendata-ai/openchart-vanilla": "workspace:*",
       },
       "devDependencies": {
         "@vue/test-utils": "^2.4.0",
@@ -302,19 +302,19 @@
 
     "@open-draft/until": ["@open-draft/until@2.1.0", "", {}, "sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg=="],
 
-    "@opendata-ai/core": ["@opendata-ai/core@workspace:packages/core"],
-
-    "@opendata-ai/engine": ["@opendata-ai/engine@workspace:packages/engine"],
-
     "@opendata-ai/examples": ["@opendata-ai/examples@workspace:examples"],
 
-    "@opendata-ai/react": ["@opendata-ai/react@workspace:packages/react"],
+    "@opendata-ai/openchart-core": ["@opendata-ai/openchart-core@workspace:packages/core"],
 
-    "@opendata-ai/svelte": ["@opendata-ai/svelte@workspace:packages/svelte"],
+    "@opendata-ai/openchart-engine": ["@opendata-ai/openchart-engine@workspace:packages/engine"],
 
-    "@opendata-ai/vanilla": ["@opendata-ai/vanilla@workspace:packages/vanilla"],
+    "@opendata-ai/openchart-react": ["@opendata-ai/openchart-react@workspace:packages/react"],
 
-    "@opendata-ai/vue": ["@opendata-ai/vue@workspace:packages/vue"],
+    "@opendata-ai/openchart-svelte": ["@opendata-ai/openchart-svelte@workspace:packages/svelte"],
+
+    "@opendata-ai/openchart-vanilla": ["@opendata-ai/openchart-vanilla@workspace:packages/vanilla"],
+
+    "@opendata-ai/openchart-vue": ["@opendata-ai/openchart-vue@workspace:packages/vue"],
 
     "@pkgjs/parseargs": ["@pkgjs/parseargs@0.11.0", "", {}, "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="],
 
