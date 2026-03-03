@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/tryopendata/openchart/compare/v1.1.0...v1.2.0) (2026-03-03)
+
+
+### Features
+
+* rename packages from @opendata-ai/* to @opendata-ai/openchart-* ([26f3e48](https://github.com/tryopendata/openchart/commit/26f3e484c58d43ee51b8dbd909f93765c14c8360))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.0.0
+
 ## [1.1.0](https://github.com/tryopendata/openchart/compare/v1.0.0...v1.1.0) (2026-03-02)
 
 
