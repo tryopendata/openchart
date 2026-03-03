@@ -20,7 +20,7 @@ import { curveMonotoneX, line } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, groupByField, scaleValue } from '../utils';
+import { getColor, groupByField, scaleValue, sortByField } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -64,6 +64,9 @@ export function computeLineMarks(
   for (const [seriesKey, rows] of groups) {
     const color = getColor(scales, seriesKey);
 
+    // Sort rows by x-axis field so lines draw left-to-right
+    const sortedRows = sortByField(rows, xChannel.field);
+
     // Compute pixel positions for each data point, preserving nulls
     // for line break handling
     const pointsWithData: {
@@ -76,7 +79,7 @@ export function computeLineMarks(
     const segments: { x: number; y: number }[][] = [];
     let currentSegment: { x: number; y: number }[] = [];
 
-    for (const row of rows) {
+    for (const row of sortedRows) {
       const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
       const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
 

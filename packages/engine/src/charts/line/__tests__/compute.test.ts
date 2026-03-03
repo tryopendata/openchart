@@ -218,6 +218,182 @@ describe('computeLineMarks', () => {
     });
   });
 
+  describe('x-axis sorting', () => {
+    it('sorts unsorted temporal data so points increase left-to-right', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30 },
+          { date: '2020-01-01', value: 10 },
+          { date: '2021-01-01', value: 40 },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
+      // Points should have monotonically increasing x pixel values
+      for (let i = 1; i < lineMark.points.length; i++) {
+        expect(lineMark.points[i].x).toBeGreaterThan(lineMark.points[i - 1].x);
+      }
+    });
+
+    it('sorts reverse-ordered dates correctly', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: '2025-01-01', value: 50 },
+          { date: '2024-01-01', value: 40 },
+          { date: '2023-01-01', value: 30 },
+          { date: '2022-01-01', value: 20 },
+          { date: '2021-01-01', value: 10 },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
+      expect(lineMark.points).toHaveLength(5);
+      for (let i = 1; i < lineMark.points.length; i++) {
+        expect(lineMark.points[i].x).toBeGreaterThan(lineMark.points[i - 1].x);
+      }
+    });
+
+    it('sorts unsorted numeric x-axis data', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: 2022, value: 30 },
+          { date: 2020, value: 10 },
+          { date: 2021, value: 40 },
+        ],
+        encoding: {
+          x: { field: 'date', type: 'quantitative' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
+      for (let i = 1; i < lineMark.points.length; i++) {
+        expect(lineMark.points[i].x).toBeGreaterThan(lineMark.points[i - 1].x);
+      }
+    });
+
+    it('sorts each series independently in multi-series', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeMultiSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30, country: 'US' },
+          { date: '2020-01-01', value: 10, country: 'US' },
+          { date: '2021-01-01', value: 40, country: 'US' },
+          { date: '2022-01-01', value: 45, country: 'UK' },
+          { date: '2020-01-01', value: 15, country: 'UK' },
+          { date: '2021-01-01', value: 35, country: 'UK' },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+      for (const lm of lineMarks) {
+        for (let i = 1; i < lm.points.length; i++) {
+          expect(lm.points[i].x).toBeGreaterThan(lm.points[i - 1].x);
+        }
+      }
+    });
+
+    it('attaches data rows in sorted order on marks', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30 },
+          { date: '2020-01-01', value: 10 },
+          { date: '2021-01-01', value: 40 },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
+      // The data array on the mark should be chronologically ordered
+      const dates = lineMark.data!.map((r) => r.date);
+      expect(dates).toEqual(['2020-01-01', '2021-01-01', '2022-01-01']);
+    });
+
+    it('sorts data before handling null y-value line breaks', () => {
+      // Unsorted data with a null in the middle chronologically.
+      // After sorting: 2020 (10), 2021 (null), 2022 (30) -> line breaks at 2021
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30 },
+          { date: '2021-01-01', value: null },
+          { date: '2020-01-01', value: 10 },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
+      // Null is excluded, so only 2 valid points
+      expect(lineMark.points).toHaveLength(2);
+      // The two valid points should still be left-to-right
+      expect(lineMark.points[1].x).toBeGreaterThan(lineMark.points[0].x);
+    });
+
+    it('produces identical output for already-sorted data', () => {
+      // Verify sorting doesn't break pre-sorted input (regression check)
+      const sorted = makeSingleSeriesSpec(); // already chronological
+      const shuffled: NormalizedChartSpec = {
+        ...sorted,
+        data: [
+          { date: '2021-01-01', value: 40 },
+          { date: '2020-01-01', value: 10 },
+          { date: '2022-01-01', value: 30 },
+        ],
+      };
+
+      const sortedScales = computeScales(sorted, chartArea, sorted.data);
+      const sortedMarks = computeLineMarks(sorted, sortedScales, chartArea, fullStrategy);
+
+      const shuffledScales = computeScales(shuffled, chartArea, shuffled.data);
+      const shuffledMarks = computeLineMarks(shuffled, shuffledScales, chartArea, fullStrategy);
+
+      const sortedLine = sortedMarks.find((m): m is LineMark => m.type === 'line')!;
+      const shuffledLine = shuffledMarks.find((m): m is LineMark => m.type === 'line')!;
+
+      // Both should produce the same pixel positions
+      expect(sortedLine.points).toEqual(shuffledLine.points);
+    });
+
+    it('sorts within-year dates by month in multi-series', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeMultiSeriesSpec(),
+        data: [
+          { date: '2020-12-01', value: 30, country: 'US' },
+          { date: '2020-03-01', value: 10, country: 'US' },
+          { date: '2020-07-01', value: 20, country: 'US' },
+          { date: '2020-12-01', value: 45, country: 'UK' },
+          { date: '2020-03-01', value: 15, country: 'UK' },
+          { date: '2020-07-01', value: 25, country: 'UK' },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+      const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+      expect(lineMarks).toHaveLength(2);
+
+      for (const lm of lineMarks) {
+        // Data rows should be Mar -> Jul -> Dec
+        const dates = lm.data!.map((r) => r.date);
+        expect(dates).toEqual(['2020-03-01', '2020-07-01', '2020-12-01']);
+      }
+    });
+  });
+
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
@@ -305,6 +481,122 @@ describe('computeAreaMarks', () => {
     const seriesKeys = marks.map((m) => m.seriesKey).filter(Boolean);
     expect(seriesKeys).toContain('US');
     expect(seriesKeys).toContain('UK');
+  });
+
+  describe('x-axis sorting', () => {
+    it('sorts unsorted temporal data for single area', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30 },
+          { date: '2020-01-01', value: 10 },
+          { date: '2021-01-01', value: 40 },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeAreaMarks(spec, scales, chartArea);
+
+      expect(marks).toHaveLength(1);
+      for (let i = 1; i < marks[0].topPoints.length; i++) {
+        expect(marks[0].topPoints[i].x).toBeGreaterThan(marks[0].topPoints[i - 1].x);
+      }
+    });
+
+    it('sorts unsorted temporal data for stacked area', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeMultiSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30, country: 'US' },
+          { date: '2020-01-01', value: 10, country: 'US' },
+          { date: '2021-01-01', value: 40, country: 'US' },
+          { date: '2022-01-01', value: 45, country: 'UK' },
+          { date: '2020-01-01', value: 15, country: 'UK' },
+          { date: '2021-01-01', value: 35, country: 'UK' },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeAreaMarks(spec, scales, chartArea);
+
+      for (const mark of marks) {
+        for (let i = 1; i < mark.topPoints.length; i++) {
+          expect(mark.topPoints[i].x).toBeGreaterThan(mark.topPoints[i - 1].x);
+        }
+      }
+    });
+
+    it('attaches sorted data rows on single area marks', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeSingleSeriesSpec(),
+        data: [
+          { date: '2022-01-01', value: 30 },
+          { date: '2020-01-01', value: 10 },
+          { date: '2021-01-01', value: 40 },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeAreaMarks(spec, scales, chartArea);
+
+      const dates = marks[0].data!.map((r) => r.date);
+      expect(dates).toEqual(['2020-01-01', '2021-01-01', '2022-01-01']);
+    });
+
+    it('sorts stacked area with 3+ series and shuffled dates', () => {
+      const spec: NormalizedChartSpec = {
+        type: 'line',
+        data: [
+          { date: '2022-01-01', value: 30, region: 'A' },
+          { date: '2020-01-01', value: 10, region: 'A' },
+          { date: '2021-01-01', value: 20, region: 'A' },
+          { date: '2021-01-01', value: 25, region: 'B' },
+          { date: '2022-01-01', value: 35, region: 'B' },
+          { date: '2020-01-01', value: 15, region: 'B' },
+          { date: '2022-01-01', value: 40, region: 'C' },
+          { date: '2020-01-01', value: 5, region: 'C' },
+          { date: '2021-01-01', value: 30, region: 'C' },
+        ],
+        encoding: {
+          x: { field: 'date', type: 'temporal' },
+          y: { field: 'value', type: 'quantitative' },
+          color: { field: 'region', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeAreaMarks(spec, scales, chartArea);
+
+      expect(marks).toHaveLength(3);
+      for (const mark of marks) {
+        for (let i = 1; i < mark.topPoints.length; i++) {
+          expect(mark.topPoints[i].x).toBeGreaterThan(mark.topPoints[i - 1].x);
+        }
+      }
+    });
+
+    it('produces identical output for pre-sorted and shuffled single area data', () => {
+      const preSorted = makeSingleSeriesSpec();
+      const shuffled: NormalizedChartSpec = {
+        ...preSorted,
+        data: [
+          { date: '2021-01-01', value: 40 },
+          { date: '2020-01-01', value: 10 },
+          { date: '2022-01-01', value: 30 },
+        ],
+      };
+
+      const preSortedScales = computeScales(preSorted, chartArea, preSorted.data);
+      const preSortedMarks = computeAreaMarks(preSorted, preSortedScales, chartArea);
+
+      const shuffledScales = computeScales(shuffled, chartArea, shuffled.data);
+      const shuffledMarks = computeAreaMarks(shuffled, shuffledScales, chartArea);
+
+      expect(preSortedMarks[0].topPoints).toEqual(shuffledMarks[0].topPoints);
+      expect(preSortedMarks[0].bottomPoints).toEqual(shuffledMarks[0].bottomPoints);
+    });
   });
 
   it('stacked areas: each layer has different baselines', () => {

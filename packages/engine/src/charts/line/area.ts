@@ -12,7 +12,7 @@ import { area, curveMonotoneX, line, stack, stackOffsetNone, stackOrderNone } fr
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, scaleValue } from '../utils';
+import { getColor, scaleValue, sortByField } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -64,10 +64,13 @@ function computeSingleArea(
   for (const [seriesKey, rows] of groups) {
     const color = getColor(scales, seriesKey);
 
+    // Sort rows by x-axis field so areas draw left-to-right
+    const sortedRows = sortByField(rows, xChannel.field);
+
     // Compute points, filtering out null values
     const validPoints: { x: number; yTop: number; yBottom: number; row: DataRow }[] = [];
 
-    for (const row of rows) {
+    for (const row of sortedRows) {
       const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
       const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
 
@@ -147,6 +150,9 @@ function computeStackedArea(
     return computeSingleArea(spec, scales, chartArea);
   }
 
+  // Sort data by x field so stacked areas render left-to-right
+  const sortedData = sortByField(spec.data, xChannel.field);
+
   // Collect unique series keys and x values, and build a lookup from
   // (x-value, series-key) -> original data row so stacked area marks
   // get original rows instead of pivot rows.
@@ -155,7 +161,7 @@ function computeStackedArea(
   const rowsByXSeries = new Map<string, DataRow>();
   const rowsByX = new Map<string, DataRow[]>();
 
-  for (const row of spec.data) {
+  for (const row of sortedData) {
     const xStr = String(row[xChannel.field]);
     const series = String(row[colorField]);
     seriesKeys.add(series);
