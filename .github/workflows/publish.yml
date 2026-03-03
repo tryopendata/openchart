@@ -66,38 +66,21 @@ jobs:
             exit 1
           fi
 
-      - name: Publish @opendata-ai/core
-        run: npm publish --provenance --access public || { sleep 5 && npm publish --provenance --access public; }
-        working-directory: packages/core
+      - name: Publish packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @opendata-ai/engine
-        run: npm publish --provenance --access public || { sleep 5 && npm publish --provenance --access public; }
-        working-directory: packages/engine
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @opendata-ai/vanilla
-        run: npm publish --provenance --access public || { sleep 5 && npm publish --provenance --access public; }
-        working-directory: packages/vanilla
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @opendata-ai/react
-        run: npm publish --provenance --access public || { sleep 5 && npm publish --provenance --access public; }
-        working-directory: packages/react
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @opendata-ai/vue
-        run: npm publish --provenance --access public || { sleep 5 && npm publish --provenance --access public; }
-        working-directory: packages/vue
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @opendata-ai/svelte
-        run: npm publish --provenance --access public || { sleep 5 && npm publish --provenance --access public; }
-        working-directory: packages/svelte
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          publish_pkg() {
+            local dir=$1
+            echo "Publishing $dir..."
+            output=$(npm publish --provenance --access public 2>&1) && echo "$output" && return 0
+            if echo "$output" | grep -qi "previously published\|already exists\|cannot publish over"; then
+              echo "Already published, skipping"
+              return 0
+            fi
+            echo "$output" >&2
+            return 1
+          }
+          for pkg in core engine vanilla react vue svelte; do
+            (cd "packages/$pkg" && publish_pkg "$pkg")
+          done
