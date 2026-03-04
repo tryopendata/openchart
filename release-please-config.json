@@ -4,7 +4,7 @@
   "include-component-in-tag": false,
   "separate-pull-requests": false,
   "pull-request-title-pattern": "chore: release ${version}",
-  "group-pull-request-title-pattern": "chore: release openchart",
+  "group-pull-request-title-pattern": "chore: release openchart v${version}",
   "changelog-sections": [
     { "type": "feat", "section": "Features" },
     { "type": "fix", "section": "Bug Fixes" },
