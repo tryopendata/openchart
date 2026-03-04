@@ -69,9 +69,19 @@ export const HouseholdSpending = () => (
   </div>
 );
 
+const compactSpendingSpec: ChartSpec = {
+  ...spendingSpec,
+  chrome: {
+    ...spendingSpec.chrome,
+    title: 'Housing Eats Poor Pay',
+    subtitle: 'Spending by category and income (%)',
+  },
+  labels: { density: 'none' },
+};
+
 export const HouseholdSpendingCompact = () => (
   <div style={{ width: 360, height: 380 }}>
-    <Chart spec={spendingSpec} />
+    <Chart spec={compactSpendingSpec} />
   </div>
 );
 

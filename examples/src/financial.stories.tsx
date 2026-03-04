@@ -468,9 +468,10 @@ function riskReturnSpec(dark: boolean): ChartSpec {
         type: 'text',
         x: 40,
         y: 24,
-        text: 'Bitcoin: highest return, highest risk',
+        text: 'Bitcoin: highest return,\nhighest risk',
         fontSize: 10,
         anchor: 'auto',
+        offset: { dx: -10, dy: -10 },
         connector: false,
       },
       {
@@ -480,7 +481,7 @@ function riskReturnSpec(dark: boolean): ChartSpec {
         text: 'T-Bills: stability\nat a cost',
         fontSize: 10,
         anchor: 'right',
-        offset: { dx: 65, dy: -28 },
+        offset: { dx: 65, dy: -40 },
       },
       {
         type: 'text',
@@ -488,8 +489,8 @@ function riskReturnSpec(dark: boolean): ChartSpec {
         y: 12.4,
         text: 'US Large Cap',
         fontSize: 10,
-        anchor: 'bottom',
-        offset: { dx: 18, dy: -22 },
+        anchor: 'top',
+        offset: { dx: 0, dy: -28 },
       },
       {
         type: 'refline',

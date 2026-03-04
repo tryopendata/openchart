@@ -155,9 +155,19 @@ export const WealthHealth = () => (
   </div>
 );
 
+const compactScatterSpec: ChartSpec = {
+  ...scatterSpec,
+  chrome: {
+    ...scatterSpec.chrome,
+    title: 'Wealth Drives Longevity',
+    subtitle: 'GDP per capita vs life expectancy',
+  },
+  labels: { density: 'none' },
+};
+
 export const WealthHealthCompact = () => (
   <div style={{ width: 320, height: 350 }}>
-    <Chart spec={scatterSpec} />
+    <Chart spec={compactScatterSpec} />
   </div>
 );
 

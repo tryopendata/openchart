@@ -89,8 +89,8 @@ const compactTempSpec: ChartSpec = {
   },
   chrome: {
     ...tempSpec.chrome,
-    title: 'Warming Accelerates After 1980',
-    subtitle: 'Temp anomaly vs. 20th c. average (°C)',
+    title: 'Warming Since 1980',
+    subtitle: 'Temp anomaly vs. 20th c. avg (°C)',
   },
 };
 

@@ -174,7 +174,7 @@ const negativeColumnSpec: ChartSpec = {
       y: -31.2,
       text: 'COVID lockdowns triggered\na historic -31.2% contraction',
       anchor: 'right',
-      offset: { dx: 80, dy: 60 },
+      offset: { dx: 120, dy: -60 },
       connector: true,
     },
     {
@@ -205,6 +205,16 @@ export const NegativeValues = () => (
 // Responsive demo
 // ---------------------------------------------------------------------------
 
+const compactGroupedColumnSpec: ChartSpec = {
+  ...groupedColumnSpec,
+  chrome: {
+    ...groupedColumnSpec.chrome,
+    title: 'Solar Leads Renewables',
+    subtitle: 'Capacity additions, 2019-2023 (GW)',
+    source: 'Source: IEA',
+  },
+};
+
 export const ResponsiveDemo = () => (
   <div className="story-column">
     <div>
@@ -216,7 +226,7 @@ export const ResponsiveDemo = () => (
     <div>
       <h3 className="story-heading">Compact (320px)</h3>
       <div className="story-debug-border" style={{ width: 320, height: 300 }}>
-        <Chart spec={groupedColumnSpec} />
+        <Chart spec={compactGroupedColumnSpec} />
       </div>
     </div>
   </div>

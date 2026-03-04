@@ -70,9 +70,10 @@ const singleLineSpec: ChartSpec = {
       x: '2020-04-01',
       y: 0.3,
       text: 'Pandemic\ndeflationary dip',
-      anchor: 'bottom',
-      offset: { dx: 0, dy: 30 },
+      anchor: 'top',
+      offset: { dx: 60, dy: -80 },
       connector: true,
+      background: '#ffffff',
     },
     {
       type: 'refline',
@@ -249,6 +250,7 @@ const fiveSeriesSpec: ChartSpec = {
       connector: true,
     },
   ],
+  legend: { position: 'top' },
   labels: { density: 'endpoints', format: ',.0f' },
   chrome: {
     title: 'Big Tech Roars Past $2 Trillion in Combined Revenue',
@@ -402,6 +404,15 @@ export const StackedArea = () => (
 // Responsive demo
 // ---------------------------------------------------------------------------
 
+const compactMultiSeriesSpec: ChartSpec = {
+  ...multiSeriesSpec,
+  chrome: {
+    ...multiSeriesSpec.chrome,
+    title: 'Three Recoveries',
+    subtitle: 'Real GDP growth, 2019-2024',
+  },
+};
+
 export const ResponsiveDemo = () => (
   <div className="story-column">
     <div>
@@ -419,7 +430,7 @@ export const ResponsiveDemo = () => (
     <div>
       <h3 className="story-heading">Compact (320px)</h3>
       <div className="story-debug-border" style={{ width: 320, height: 300 }}>
-        <Chart spec={multiSeriesSpec} />
+        <Chart spec={compactMultiSeriesSpec} />
       </div>
     </div>
   </div>

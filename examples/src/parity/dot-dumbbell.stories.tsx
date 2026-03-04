@@ -78,9 +78,19 @@ export const LifeExpectancy = () => (
   </div>
 );
 
+const compactLifeSpec: ChartSpec = {
+  ...lifeExpectancySpec,
+  chrome: {
+    ...lifeExpectancySpec.chrome,
+    title: 'Women Live Longer',
+    subtitle: 'Life expectancy by gender, 2023',
+  },
+  labels: { density: 'none' },
+};
+
 export const LifeExpectancyCompact = () => (
   <div style={{ width: 360, height: 500 }}>
-    <Chart spec={lifeExpectancySpec} />
+    <Chart spec={compactLifeSpec} />
   </div>
 );
 

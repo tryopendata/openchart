@@ -91,9 +91,19 @@ export const EmissionsVsRenewables = () => (
   </div>
 );
 
+const compactEmissionsSpec: ChartSpec = {
+  ...emissionsSpec,
+  chrome: {
+    ...emissionsSpec.chrome,
+    title: 'Clean Grids Are Rare',
+    subtitle: 'CO2 per capita vs renewables, 2023',
+  },
+  labels: { density: 'none' },
+};
+
 export const EmissionsVsRenewablesCompact = () => (
   <div style={{ width: 360, height: 400 }}>
-    <Chart spec={emissionsSpec} />
+    <Chart spec={compactEmissionsSpec} />
   </div>
 );
 

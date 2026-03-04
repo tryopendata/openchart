@@ -129,7 +129,7 @@ const lineSpec: ChartSpec = {
       connector: false,
     },
   ],
-  labels: { density: 'endpoints' },
+  labels: { density: 'all', offsets: { YouTube: { dx: -80, dy: 0 } } },
   legend: { position: 'bottom-right' },
   chrome: {
     title: "TikTok's Meteoric Rise Overtakes Instagram",
@@ -194,11 +194,11 @@ const stackedColumnSpec: ChartSpec = {
     {
       type: 'text',
       x: '2021',
-      y: 10,
+      y: 14,
       text: 'BEV overtakes hybrid\nfor first time',
       fontSize: 10,
-      anchor: 'top',
-      offset: { dx: 0, dy: -40 },
+      anchor: 'right',
+      offset: { dx: -70, dy: -50 },
       connector: true,
       background: '#ffffff',
     },

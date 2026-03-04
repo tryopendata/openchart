@@ -44,7 +44,7 @@ const compactDonutSpec: ChartSpec = {
   ...donutSpec,
   labels: { density: 'none' },
   chrome: {
-    title: 'Apple Reclaimed the Top Spot',
+    title: 'Apple Leads Phones',
     subtitle: 'Smartphone market share, Q4 2024 (%)',
     source: 'Source: IDC',
   },

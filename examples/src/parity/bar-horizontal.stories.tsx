@@ -52,9 +52,19 @@ export const PopulationBar = () => (
   </div>
 );
 
+const compactPopSpec: ChartSpec = {
+  ...populationBarSpec,
+  chrome: {
+    ...populationBarSpec.chrome,
+    title: 'India Overtakes China',
+    subtitle: 'Population by country, 2025',
+  },
+  labels: { density: 'none' },
+};
+
 export const PopulationBarCompact = () => (
   <div style={{ width: 320, height: 400 }}>
-    <Chart spec={populationBarSpec} />
+    <Chart spec={compactPopSpec} />
   </div>
 );
 

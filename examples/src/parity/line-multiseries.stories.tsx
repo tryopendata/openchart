@@ -92,9 +92,19 @@ export const GDPGrowth = () => (
   </div>
 );
 
+const compactGdpSpec: ChartSpec = {
+  ...gdpLineSpec,
+  chrome: {
+    ...gdpLineSpec.chrome,
+    title: 'US Keeps Pace With China',
+    subtitle: 'GDP growth rate, 2018-2024',
+  },
+  labels: { density: 'none' },
+};
+
 export const GDPGrowthCompact = () => (
   <div style={{ width: 320, height: 300 }}>
-    <Chart spec={gdpLineSpec} />
+    <Chart spec={compactGdpSpec} />
   </div>
 );
 
