@@ -2,6 +2,8 @@
 
 How to build apps on top of the viz library. Covers the interface contract: spec mutation, event handling, controlled components, responsive behavior, and export.
 
+This guide shows React, Vue, and Svelte examples for key integration patterns. The vanilla JS API is covered in its own sections since the interface is different (imperative rather than declarative).
+
 For field-by-field type details, see the [spec reference](spec-reference.md). For a tutorial, see [getting started](getting-started.md).
 
 ## Core concept: specs are plain objects
@@ -21,7 +23,7 @@ The library uses an immutable update pattern: every spec change triggers a full 
 
 Switch chart types by changing the `type` field. If the encoding channels are compatible (see [encoding by chart type](spec-reference.md#encoding-by-chart-type)), the same spec works across types.
 
-### React example
+### React
 
 ```tsx
 import { useState } from "react";
@@ -56,7 +58,56 @@ function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
 }
 ```
 
-The `<Chart>` component detects the spec change via `JSON.stringify` comparison and calls `chart.update(spec)` internally. No manual lifecycle management needed.
+### Vue
+
+```vue
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { Chart } from "@opendata-ai/openchart-vue";
+import type { ChartType, ChartSpec } from "@opendata-ai/openchart-core";
+
+const props = defineProps<{ baseSpec: ChartSpec }>();
+const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
+const chartType = ref<ChartType>(props.baseSpec.type);
+
+const spec = computed(() => ({ ...props.baseSpec, type: chartType.value }));
+</script>
+
+<template>
+  <select v-model="chartType">
+    <option v-for="t in CHART_TYPES" :key="t" :value="t">{{ t }}</option>
+  </select>
+  <div style="width: 100%; height: 400px">
+    <Chart :spec="spec" />
+  </div>
+</template>
+```
+
+### Svelte
+
+```svelte
+<script lang="ts">
+import { Chart } from "@opendata-ai/openchart-svelte";
+import type { ChartType, ChartSpec } from "@opendata-ai/openchart-core";
+
+let { baseSpec }: { baseSpec: ChartSpec } = $props();
+const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
+let chartType: ChartType = $state(baseSpec.type);
+
+const spec = $derived({ ...baseSpec, type: chartType });
+</script>
+
+<select bind:value={chartType}>
+  {#each CHART_TYPES as t}
+    <option value={t}>{t}</option>
+  {/each}
+</select>
+<div style="width: 100%; height: 400px">
+  <Chart {spec} />
+</div>
+```
+
+All framework components detect spec changes and call `chart.update(spec)` internally. No manual lifecycle management needed.
 
 ### Encoding compatibility
 
@@ -98,7 +149,50 @@ function ChartWithDarkMode({ spec }: { spec: ChartSpec }) {
 }
 ```
 
-The `darkMode` prop is a dependency of the mount effect. Changing it destroys and recreates the chart instance with the new dark mode setting. The engine handles all color adaptations automatically (background swap, text inversion, palette brightness adjustment).
+### Vue
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { Chart } from "@opendata-ai/openchart-vue";
+import type { DarkMode } from "@opendata-ai/openchart-core";
+
+const darkMode = ref<DarkMode>("off");
+</script>
+
+<template>
+  <select v-model="darkMode">
+    <option value="off">Light</option>
+    <option value="force">Dark</option>
+    <option value="auto">System</option>
+  </select>
+  <div style="width: 100%; height: 400px">
+    <Chart :spec="spec" :dark-mode="darkMode" />
+  </div>
+</template>
+```
+
+### Svelte
+
+```svelte
+<script lang="ts">
+import { Chart } from "@opendata-ai/openchart-svelte";
+import type { DarkMode } from "@opendata-ai/openchart-core";
+
+let darkMode: DarkMode = $state("off");
+</script>
+
+<select bind:value={darkMode}>
+  <option value="off">Light</option>
+  <option value="force">Dark</option>
+  <option value="auto">System</option>
+</select>
+<div style="width: 100%; height: 400px">
+  <Chart {spec} {darkMode} />
+</div>
+```
+
+The `darkMode` prop is reactive. Changing it destroys and recreates the chart instance with the new dark mode setting. The engine handles all color adaptations automatically (background swap, text inversion, palette brightness adjustment).
 
 ### Vanilla
 
@@ -108,28 +202,44 @@ import { createChart } from "@opendata-ai/openchart-vanilla";
 const chart = createChart(container, spec, { darkMode: "auto" });
 ```
 
-In vanilla mode, `darkMode: 'auto'` checks `window.matchMedia('(prefers-color-scheme: dark)')` at mount time. To react to live system preference changes, destroy and recreate the chart, or use the React wrapper which handles this for you.
+In vanilla mode, `darkMode: 'auto'` checks `window.matchMedia('(prefers-color-scheme: dark)')` at mount time. To react to live system preference changes, destroy and recreate the chart, or use a framework wrapper which handles this for you.
 
-### Using the useDarkMode hook
+### useDarkMode hook
 
-For more control over dark mode in React:
+For more control over dark mode, all three frameworks provide a `useDarkMode` hook/composable that reactively tracks system preference:
+
+**React:**
 
 ```tsx
 import { useDarkMode } from "@opendata-ai/openchart-react";
 
 function App() {
-  // Reactively tracks system preference when mode is 'auto'
   const isDark = useDarkMode("auto");
-
-  return (
-    <div className={isDark ? "dark-bg" : "light-bg"}>
-      <Chart spec={spec} darkMode="auto" />
-    </div>
-  );
+  return <div className={isDark ? "dark-bg" : "light-bg"}>...</div>;
 }
 ```
 
-`useDarkMode` subscribes to `matchMedia` change events, so `isDark` updates automatically when the user switches their system preference.
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { useDarkMode } from "@opendata-ai/openchart-vue";
+
+const isDark = useDarkMode("auto");
+</script>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { useDarkMode } from "@opendata-ai/openchart-svelte";
+
+const isDark = useDarkMode("auto");
+</script>
+```
+
+`useDarkMode` subscribes to `matchMedia` change events, so the value updates automatically when the user switches their system preference.
 
 ---
 
@@ -145,57 +255,87 @@ Pass `theme` as a prop. It's deep-merged onto `DEFAULT_THEME` during compilation
 
 ### Global theme via provider
 
-`VizThemeProvider` sets a theme for all descendant `<Chart>` and `<DataTable>` components. Individual components can still override with their own `theme` prop.
+`VizThemeProvider` sets a theme for all descendant components. Individual components can still override with their own `theme` prop.
+
+**React:**
 
 ```tsx
 import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/openchart-react";
-import type { ThemeConfig } from "@opendata-ai/openchart-core";
 
-const brandTheme: ThemeConfig = {
-  colors: {
-    categorical: ["#1a73e8", "#ea4335", "#34a853", "#fbbc04"],
-    background: "#fafafa",
-  },
-  fonts: { family: '"Roboto", sans-serif' },
-};
-
-function Dashboard() {
-  return (
-    <VizThemeProvider theme={brandTheme}>
-      <Chart spec={revenueSpec} />
-      <Chart spec={usersSpec} />
-      <DataTable spec={tableSpec} />
-    </VizThemeProvider>
-  );
-}
+<VizThemeProvider theme={brandTheme}>
+  <Chart spec={revenueSpec} />
+  <DataTable spec={tableSpec} />
+</VizThemeProvider>
 ```
 
-The provider uses React context. Components read it via the `useVizTheme()` hook internally. A `theme` prop on a component takes precedence over the context theme.
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/openchart-vue";
+</script>
+
+<template>
+  <VizThemeProvider :theme="brandTheme">
+    <Chart :spec="revenueSpec" />
+    <DataTable :spec="tableSpec" />
+  </VizThemeProvider>
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/openchart-svelte";
+</script>
+
+<VizThemeProvider theme={brandTheme}>
+  <Chart spec={revenueSpec} />
+  <DataTable spec={tableSpec} />
+</VizThemeProvider>
+```
+
+Each framework uses its native context system (React context, Vue provide/inject, Svelte context). A `theme` prop on a component takes precedence over the context theme.
 
 ### Reading the theme in custom components
 
-If you're building UI that should match the chart theme (custom legends, data cards, etc.), read the theme from context with `useVizTheme()`:
+If you're building UI that should match the chart theme (custom legends, data cards, etc.), read the theme from context:
+
+**React:** `useVizTheme()` and `useVizDarkMode()`
 
 ```tsx
 import { useVizTheme } from "@opendata-ai/openchart-react";
 
 function DataCard({ label, value }: { label: string; value: string }) {
   const theme = useVizTheme();
-  // Returns ThemeConfig | undefined from the nearest VizThemeProvider
-
   return (
-    <div
-      style={{
-        fontFamily: theme?.fonts?.family,
-        background: theme?.colors?.background,
-        color: theme?.colors?.text,
-      }}
-    >
+    <div style={{ fontFamily: theme?.fonts?.family, color: theme?.colors?.text }}>
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
   );
 }
+```
+
+**Vue:** `useVizTheme()` and `useVizDarkMode()`
+
+```vue
+<script setup lang="ts">
+import { useVizTheme } from "@opendata-ai/openchart-vue";
+
+const theme = useVizTheme();
+</script>
+```
+
+**Svelte:** `getVizTheme()` and `getVizDarkMode()`
+
+```svelte
+<script lang="ts">
+import { getVizTheme } from "@opendata-ai/openchart-svelte";
+
+const theme = getVizTheme();
+</script>
 ```
 
 ---
@@ -250,9 +390,11 @@ function filterData(
 }
 ```
 
-### React performance tip
+### Performance tips
 
-Use `useMemo` to avoid unnecessary recompiles when the parent re-renders but the spec hasn't actually changed:
+The `<Chart>` component compares specs via `JSON.stringify`. If the serialized form hasn't changed, it skips the update. But avoiding unnecessary object allocations is still good practice for complex component trees.
+
+**React:** Use `useMemo` to stabilize the spec reference:
 
 ```tsx
 const spec = useMemo(
@@ -264,11 +406,29 @@ const spec = useMemo(
   }),
   [filteredData, xChannel, yChannel, chartTitle],
 );
-
-<Chart spec={spec} />;
 ```
 
-The `<Chart>` component compares specs via `JSON.stringify`. If the serialized form hasn't changed, it skips the update. But avoiding unnecessary object allocations is still good practice for complex parent trees.
+**Vue:** Use `computed` for the same effect:
+
+```ts
+const spec = computed(() => ({
+  type: "line" as const,
+  data: filteredData.value,
+  encoding: { x: xChannel.value, y: yChannel.value },
+  chrome: { title: chartTitle.value },
+}));
+```
+
+**Svelte:** Use `$derived` to avoid recalculating on every render:
+
+```ts
+const spec = $derived({
+  type: "line" as const,
+  data: filteredData,
+  encoding: { x: xChannel, y: yChannel },
+  chrome: { title: chartTitle },
+});
+```
 
 ---
 
@@ -276,37 +436,50 @@ The `<Chart>` component compares specs via `JSON.stringify`. If the serialized f
 
 ### Chart mark events
 
-Handle clicks on data marks (bars, points, lines, arcs):
+Handle clicks on data marks (bars, points, lines, arcs). All three frameworks expose the same event handlers:
+
+**React:**
 
 ```tsx
-import { Chart } from "@opendata-ai/openchart-react";
+<Chart
+  spec={spec}
+  onMarkClick={(event) => console.log(event.datum)}
+  onMarkHover={(event) => setHighlighted(event.datum)}
+  onMarkLeave={() => setHighlighted(null)}
+/>
+```
+
+**Vue:**
+
+```vue
+<Chart
+  :spec="spec"
+  @mark-click="(event) => console.log(event.datum)"
+  @mark-hover="(event) => highlighted = event.datum"
+  @mark-leave="() => highlighted = null"
+/>
+```
+
+**Svelte:**
+
+```svelte
+<Chart
+  {spec}
+  onMarkClick={(event) => console.log(event.datum)}
+  onMarkHover={(event) => highlighted = event.datum}
+  onMarkLeave={() => highlighted = null}
+/>
+```
+
+The `MarkEvent` object contains:
+
+```tsx
 import type { MarkEvent } from "@opendata-ai/openchart-core";
 
-function InteractiveChart({ spec }: { spec: ChartSpec }) {
-  const handleMarkClick = (event: MarkEvent) => {
-    console.log("Clicked data:", event.datum);
-    console.log("Series:", event.series);
-    console.log("Position:", event.position);
-  };
-
-  const handleMarkHover = (event: MarkEvent) => {
-    // Show custom tooltip or highlight related data
-    setHighlightedRow(event.datum);
-  };
-
-  const handleMarkLeave = () => {
-    setHighlightedRow(null);
-  };
-
-  return (
-    <Chart
-      spec={spec}
-      onMarkClick={handleMarkClick}
-      onMarkHover={handleMarkHover}
-      onMarkLeave={handleMarkLeave}
-    />
-  );
-}
+// event.datum   - the data row for this mark
+// event.series  - series identifier (color field value)
+// event.position - { x, y } relative to chart container
+// event.event   - the raw browser MouseEvent
 ```
 
 ### Click-to-drill-down pattern
@@ -415,7 +588,9 @@ The vanilla adapter handles the DOM toggling (setting `display: none` on matchin
 
 ### Uncontrolled (default)
 
-The table manages its own sort, search, and pagination state internally. You get callbacks when state changes but don't need to manage state yourself:
+The table manages its own sort, search, and pagination state internally. You get callbacks when state changes but don't need to manage state yourself.
+
+**React:**
 
 ```tsx
 import { DataTable } from "@opendata-ai/openchart-react";
@@ -428,9 +603,35 @@ import { DataTable } from "@opendata-ai/openchart-react";
 />;
 ```
 
+**Vue:**
+
+```vue
+<template>
+  <DataTable
+    :spec="tableSpec"
+    @sort-change="(sort) => console.log('Sort changed:', sort)"
+    @search-change="(query) => console.log('Search:', query)"
+    @page-change="(page) => console.log('Page:', page)"
+  />
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<DataTable
+  spec={tableSpec}
+  onSortChange={(sort) => console.log("Sort changed:", sort)}
+  onSearchChange={(query) => console.log("Search:", query)}
+  onPageChange={(page) => console.log("Page:", page)}
+/>
+```
+
 ### Controlled
 
-Pass `sort`, `search`, and/or `page` props to take over state management. When any of these are provided, the table reads state from props instead of managing it internally:
+Pass `sort`, `search`, and/or `page` props to take over state management. When any of these are provided, the table reads state from props instead of managing it internally.
+
+**React:**
 
 ```tsx
 import { useState } from "react";
@@ -444,7 +645,6 @@ function ControlledTable({ spec }: { spec: TableSpec }) {
 
   return (
     <div>
-      {/* External search input */}
       <input
         value={search}
         onChange={(e) => {
@@ -453,8 +653,6 @@ function ControlledTable({ spec }: { spec: TableSpec }) {
         }}
         placeholder="Search..."
       />
-
-      {/* External sort controls */}
       <button onClick={() => setSort({ column: "name", direction: "asc" })}>
         Sort by name
       </button>
@@ -474,9 +672,78 @@ function ControlledTable({ spec }: { spec: TableSpec }) {
 }
 ```
 
-### useTableState hook
+**Vue:**
 
-For a quick way to get controlled state without wiring it all manually:
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { DataTable } from "@opendata-ai/openchart-vue";
+import type { SortState } from "@opendata-ai/openchart-core";
+
+const sort = ref<SortState | null>(null);
+const search = ref("");
+const page = ref(0);
+
+function onSearch(value: string) {
+  search.value = value;
+  page.value = 0; // Reset to first page on search
+}
+</script>
+
+<template>
+  <input :value="search" @input="onSearch($event.target.value)" placeholder="Search..." />
+  <button @click="sort = { column: 'name', direction: 'asc' }">Sort by name</button>
+  <button @click="sort = null">Clear sort</button>
+
+  <DataTable
+    :spec="spec"
+    :sort="sort"
+    :search="search"
+    :page="page"
+    @sort-change="(s) => sort = s"
+    @search-change="(q) => search = q"
+    @page-change="(p) => page = p"
+  />
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { DataTable } from "@opendata-ai/openchart-svelte";
+import type { SortState } from "@opendata-ai/openchart-core";
+
+let sort: SortState | null = $state(null);
+let search = $state("");
+let page = $state(0);
+
+function onSearch(value: string) {
+  search = value;
+  page = 0; // Reset to first page on search
+}
+</script>
+
+<input value={search} oninput={(e) => onSearch(e.target.value)} placeholder="Search..." />
+<button onclick={() => sort = { column: "name", direction: "asc" }}>Sort by name</button>
+<button onclick={() => sort = null}>Clear sort</button>
+
+<DataTable
+  {spec}
+  {sort}
+  {search}
+  {page}
+  onSortChange={(s) => sort = s}
+  onSearchChange={(q) => search = q}
+  onPageChange={(p) => page = p}
+/>
+```
+
+### useTableState hook/composable
+
+For a quick way to get controlled state without wiring it all manually. Available in all three frameworks:
+
+**React:**
 
 ```tsx
 import { DataTable, useTableState } from "@opendata-ai/openchart-react";
@@ -502,9 +769,55 @@ function TableWithManagedState({ spec }: { spec: TableSpec }) {
 }
 ```
 
-`useTableState` accepts optional initial values:
+**Vue:**
 
-```tsx
+```vue
+<script setup lang="ts">
+import { DataTable, useTableState } from "@opendata-ai/openchart-vue";
+
+const { sort, search, page, setSort, setSearch, setPage, resetState } =
+  useTableState();
+</script>
+
+<template>
+  <button @click="resetState">Reset</button>
+  <DataTable
+    :spec="spec"
+    :sort="sort"
+    :search="search"
+    :page="page"
+    @sort-change="setSort"
+    @search-change="setSearch"
+    @page-change="setPage"
+  />
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { DataTable, useTableState } from "@opendata-ai/openchart-svelte";
+
+const { sort, search, page, setSort, setSearch, setPage, resetState } =
+  useTableState();
+</script>
+
+<button onclick={resetState}>Reset</button>
+<DataTable
+  {spec}
+  sort={sort}
+  search={search}
+  page={page}
+  onSortChange={setSort}
+  onSearchChange={setSearch}
+  onPageChange={setPage}
+/>
+```
+
+All versions accept optional initial values:
+
+```ts
 const state = useTableState({
   sort: { column: "name", direction: "asc" },
   search: "",
@@ -512,9 +825,11 @@ const state = useTableState({
 });
 ```
 
-### useTable hook (advanced)
+### useTable hook/composable (advanced)
 
 For cases where you need direct access to the vanilla `TableInstance`:
+
+**React:**
 
 ```tsx
 import { useTable } from "@opendata-ai/openchart-react";
@@ -534,6 +849,40 @@ function AdvancedTable({ spec }: { spec: TableSpec }) {
     </div>
   );
 }
+```
+
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { useTable } from "@opendata-ai/openchart-vue";
+
+const { containerRef, table, layout } = useTable(spec, {
+  onRowClick: (row) => console.log("Clicked:", row),
+  responsive: true,
+});
+</script>
+
+<template>
+  <button @click="table?.export('csv')">Export CSV</button>
+  <div ref="containerRef" style="width: 100%; height: 500px" />
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { useTable } from "@opendata-ai/openchart-svelte";
+
+const { action, table, layout } = useTable(spec, {
+  onRowClick: (row) => console.log("Clicked:", row),
+  responsive: true,
+});
+</script>
+
+<button onclick={() => table?.export("csv")}>Export CSV</button>
+<div use:action style="width: 100%; height: 500px"></div>
 ```
 
 ### Table sort cycling
@@ -685,9 +1034,11 @@ const csvString = chart.export("csv");
 downloadString(csvString, "data.csv", "text/csv");
 ```
 
-### React export
+### Framework export
 
-The `<Chart>` component doesn't expose the instance directly. For export access, use the `useChart` hook:
+The `<Chart>` component doesn't expose the instance directly. For export access, use the `useChart` hook/composable:
+
+**React:**
 
 ```tsx
 import { useChart } from "@opendata-ai/openchart-react";
@@ -697,13 +1048,12 @@ function ExportableChart({ spec }: { spec: ChartSpec }) {
 
   const handleExport = async (format: "svg" | "png" | "csv") => {
     if (!chart) return;
-
     if (format === "png") {
       const blob = await chart.export("png");
-      // Download or process the blob
+      downloadBlob(blob, "chart.png");
     } else {
       const str = chart.export(format);
-      // Download or process the string
+      downloadString(str, `chart.${format}`, format === "svg" ? "image/svg+xml" : "text/csv");
     }
   };
 
@@ -717,11 +1067,62 @@ function ExportableChart({ spec }: { spec: ChartSpec }) {
 }
 ```
 
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { useChart } from "@opendata-ai/openchart-vue";
+
+const { containerRef, chart } = useChart(spec, { darkMode: "off" });
+
+async function handleExport(format: "svg" | "png" | "csv") {
+  if (!chart.value) return;
+  if (format === "png") {
+    const blob = await chart.value.export("png");
+    downloadBlob(blob, "chart.png");
+  } else {
+    const str = chart.value.export(format);
+    downloadString(str, `chart.${format}`, format === "svg" ? "image/svg+xml" : "text/csv");
+  }
+}
+</script>
+
+<template>
+  <button @click="handleExport('svg')">Export SVG</button>
+  <button @click="handleExport('png')">Export PNG</button>
+  <div ref="containerRef" style="width: 100%; height: 400px" />
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { useChart } from "@opendata-ai/openchart-svelte";
+
+const { action, chart } = useChart(spec, { darkMode: "off" });
+
+async function handleExport(format: "svg" | "png" | "csv") {
+  if (!chart) return;
+  if (format === "png") {
+    const blob = await chart.export("png");
+    downloadBlob(blob, "chart.png");
+  } else {
+    const str = chart.export(format);
+    downloadString(str, `chart.${format}`, format === "svg" ? "image/svg+xml" : "text/csv");
+  }
+</script>
+
+<button onclick={() => handleExport("svg")}>Export SVG</button>
+<button onclick={() => handleExport("png")}>Export PNG</button>
+<div use:action style="width: 100%; height: 400px"></div>
+```
+
 ---
 
 ## Vanilla lifecycle
 
-For non-React usage, the vanilla adapter provides direct instance control.
+For usage without a framework, the vanilla adapter provides direct instance control.
 
 ### Chart lifecycle
 
@@ -808,7 +1209,7 @@ The library generates accessibility features automatically:
 - **ARIA attributes**: Role, roledescription, and label on the chart container
 - **Keyboard navigation**: Arrow keys navigate between marks, Enter/Space shows tooltip, Escape hides it
 
-These are built into the vanilla adapter and inherited by React components. No extra configuration needed.
+These are built into the vanilla adapter and inherited by all framework components (React, Vue, Svelte). No extra configuration needed.
 
 For tables, the HTML structure uses semantic elements (`<table>`, `<thead>`, `<th scope="col">`, `<tbody>`) with ARIA grid roles, sort state attributes, and a live region that announces sort/search changes to screen readers.
 
@@ -822,7 +1223,6 @@ Graphs render force-directed network visualizations on canvas. The input is a `G
 
 ```tsx
 import { Graph } from "@opendata-ai/openchart-react";
-import type { GraphSpec } from "@opendata-ai/openchart-core";
 
 <Graph
   spec={graphSpec}
@@ -831,10 +1231,49 @@ import type { GraphSpec } from "@opendata-ai/openchart-core";
   onNodeClick={(node) => console.log("Clicked:", node)}
   onNodeDoubleClick={(node) => console.log("Double-clicked:", node)}
   onSelectionChange={(nodeIds) => console.log("Selected:", nodeIds)}
-  className="my-graph"
   style={{ width: "100%", height: 500 }}
 />;
 ```
+
+### Vue
+
+```vue
+<script setup lang="ts">
+import { Graph } from "@opendata-ai/openchart-vue";
+</script>
+
+<template>
+  <Graph
+    :spec="graphSpec"
+    :theme="theme"
+    dark-mode="auto"
+    @node-click="(node) => console.log('Clicked:', node)"
+    @node-double-click="(node) => console.log('Double-clicked:', node)"
+    @selection-change="(nodeIds) => console.log('Selected:', nodeIds)"
+    style="width: 100%; height: 500px"
+  />
+</template>
+```
+
+### Svelte
+
+```svelte
+<script lang="ts">
+import { Graph } from "@opendata-ai/openchart-svelte";
+</script>
+
+<Graph
+  spec={graphSpec}
+  theme={theme}
+  darkMode="auto"
+  onNodeClick={(node) => console.log("Clicked:", node)}
+  onNodeDoubleClick={(node) => console.log("Double-clicked:", node)}
+  onSelectionChange={(nodeIds) => console.log("Selected:", nodeIds)}
+  style="width: 100%; height: 500px"
+/>
+```
+
+### Graph props
 
 | Prop                | Type                                      | Description                                 |
 | ------------------- | ----------------------------------------- | ------------------------------------------- |
@@ -844,12 +1283,12 @@ import type { GraphSpec } from "@opendata-ai/openchart-core";
 | `onNodeClick`       | `(node: Record<string, unknown>) => void` | Fires when a node is clicked.               |
 | `onNodeDoubleClick` | `(node: Record<string, unknown>) => void` | Fires when a node is double-clicked.        |
 | `onSelectionChange` | `(nodeIds: string[]) => void`             | Fires when the selected nodes change.       |
-| `className`         | `string`                                  | CSS class for the wrapper div.              |
-| `style`             | `CSSProperties`                           | Inline styles for the wrapper div.          |
 
-### useGraph hook
+### useGraph hook/composable
 
-For imperative control over the graph (search, zoom, selection), use the `useGraph()` hook with a forwarded ref:
+For imperative control over the graph (search, zoom, selection), each framework provides a hook/composable:
+
+**React:**
 
 ```tsx
 import { Graph, useGraph } from "@opendata-ai/openchart-react";
@@ -874,7 +1313,40 @@ function SearchableGraph({ spec }: { spec: GraphSpec }) {
 }
 ```
 
-`useGraph()` returns:
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { Graph, useGraph } from "@opendata-ai/openchart-vue";
+
+const { componentRef, search, clearSearch, zoomToFit } = useGraph();
+</script>
+
+<template>
+  <input @input="(e) => search(e.target.value)" placeholder="Search nodes..." />
+  <button @click="zoomToFit">Fit all</button>
+  <div style="width: 100%; height: 500px">
+    <Graph ref="componentRef" :spec="spec" />
+  </div>
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { Graph, useGraph } from "@opendata-ai/openchart-svelte";
+
+const { action, search, clearSearch, zoomToFit } = useGraph(spec, {});
+</script>
+
+<input oninput={(e) => search(e.target.value)} placeholder="Search nodes..." />
+<button onclick={zoomToFit}>Fit all</button>
+<div style="width: 100%; height: 500px" use:action>
+</div>
+```
+
+All frameworks return the same control methods:
 
 | Property             | Type               | Description                         |
 | -------------------- | ------------------ | ----------------------------------- |

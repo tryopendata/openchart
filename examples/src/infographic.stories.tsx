@@ -129,7 +129,7 @@ const lineSpec: ChartSpec = {
       connector: false,
     },
   ],
-  labels: { density: 'all', offsets: { YouTube: { dx: -80, dy: 0 } } },
+  labels: { density: 'endpoints', offsets: { YouTube: { dy: 16 } } },
   legend: { position: 'bottom-right' },
   chrome: {
     title: "TikTok's Meteoric Rise Overtakes Instagram",

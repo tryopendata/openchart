@@ -1,8 +1,23 @@
-# Agent Patterns Cookbook
+# Visualization patterns cookbook
 
 Visualization patterns organized by data storytelling intent. Each pattern includes when to use it, the data shape it expects, a complete working spec, and annotation examples.
 
 All specs use realistic data with plausible numbers. Copy and adapt.
+
+## Contents
+
+- [1. Trend over time](#1-trend-over-time) (line, area, multi-series)
+- [2. Ranking / comparison](#2-ranking--comparison) (horizontal bar, stacked)
+- [3. Part-to-whole](#3-part-to-whole) (donut, stacked column)
+- [4. Correlation](#4-correlation) (scatter, bubble)
+- [5. Periodic comparison](#5-periodic-comparison) (column, year-over-year)
+- [6. Distribution](#6-distribution) (dot/strip plot)
+- [7. Data table with context](#7-data-table-with-context) (table with visual features)
+- [8. Annotated infographic](#8-annotated-infographic) (layered annotations)
+- [9. Grouped lines without color](#9-grouped-lines-without-color-detail-channel) (detail channel)
+- [10. Aggregation](#10-aggregation) (sum, mean, count)
+- [Network graphs](#network-graphs)
+- [Spec quality rubric](#spec-quality-rubric)
 
 ---
 

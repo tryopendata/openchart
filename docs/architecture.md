@@ -5,7 +5,9 @@ How the openchart packages fit together, what the compilation pipeline does, and
 ## Package dependency graph
 
 ```
-core  <--  engine  <--  vanilla  <--  react
+                              ┌── react
+core  <──  engine  <──  vanilla  <──┤── vue
+                              └── svelte
 ```
 
 | Package | Responsibility | DOM? |
@@ -14,8 +16,10 @@ core  <--  engine  <--  vanilla  <--  react
 | `engine` | Headless compiler. Spec in, layout out. Pure math and data transformation. | No |
 | `vanilla` | Imperative DOM rendering. SVG charts, HTML tables, canvas graphs, tooltips, resize observer. | Yes |
 | `react` | Thin React wrappers around vanilla with lifecycle management. | Yes |
+| `vue` | Vue 3 components with composition API. Same contract as react, different reactivity system. | Yes |
+| `svelte` | Svelte 5 components using rune-based reactivity. Same contract as react, different framework. | Yes |
 
-Dependencies are strictly one-directional. Core imports from nothing. Engine imports from core. Vanilla imports from engine and core. React imports from vanilla, engine, and core. If you find yourself importing upstream, the design is wrong.
+Dependencies are strictly one-directional. Core imports from nothing. Engine imports from core. Vanilla imports from engine and core. The framework packages (react, vue, svelte) import from vanilla, engine, and core. If you find yourself importing upstream, the design is wrong.
 
 Each package re-exports core types for consumer convenience, so users typically only import from one package.
 
@@ -119,10 +123,14 @@ The engine knows nothing about the DOM, React, or any rendering target. This is 
 
 - **SSR**: The engine runs in Node.js. You can compile specs server-side for static generation.
 - **Testing**: Engine output is pure data. Test chart layout math without a browser.
-- **Multiple renderers**: The same spec and layout can be rendered by the vanilla SVG adapter, the React wrapper, or a hypothetical Canvas/WebGL renderer.
+- **Multiple renderers**: The same spec and layout can be rendered by the vanilla SVG adapter, the React wrapper, the Vue wrapper, the Svelte wrapper, or a hypothetical Canvas/WebGL renderer.
 - **LLM generation**: Specs are plain JSON. An LLM writes data, the engine does the math, an adapter renders.
 
 The boundary between "compute" and "render" is the layout type. Everything before it is engine territory. Everything after is adapter territory.
+
+### Why three framework packages?
+
+React, Vue, and Svelte all wrap the same vanilla adapter. The framework packages are thin: they manage lifecycle (mount, update, destroy), wire up reactivity, and provide framework-idiomatic APIs (React hooks, Vue composables, Svelte actions). The rendering logic lives entirely in vanilla. If vanilla gets a new feature, all three frameworks get it automatically.
 
 ## Chart registry pattern
 

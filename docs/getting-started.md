@@ -4,13 +4,27 @@ A hands-on walkthrough building from a bare chart to themed, annotated visualiza
 
 ## Your first chart
 
-Install the React package (it pulls in everything else as dependencies):
+Install the package for your framework:
 
 ```bash
+# React
 bun add @opendata-ai/openchart-react
+
+# Vue 3
+bun add @opendata-ai/openchart-vue
+
+# Svelte 5
+bun add @opendata-ai/openchart-svelte
+
+# Vanilla JS
+bun add @opendata-ai/openchart-vanilla
 ```
 
-Create a line chart with a few data points:
+Each framework package pulls in `core` and `engine` as dependencies. You don't need to install them separately.
+
+Create a line chart with a few data points. The spec is the same across all frameworks, only the component import changes.
+
+### React
 
 ```tsx
 import { Chart } from "@opendata-ai/openchart-react";
@@ -38,9 +52,65 @@ function App() {
 }
 ```
 
+### Vue
+
+```vue
+<script setup lang="ts">
+import { Chart } from "@opendata-ai/openchart-vue";
+
+const spec = {
+  type: "line",
+  data: [
+    { date: "2023-01-01", value: 12 },
+    { date: "2023-04-01", value: 28 },
+    { date: "2023-07-01", value: 35 },
+    { date: "2023-10-01", value: 42 },
+  ],
+  encoding: {
+    x: { field: "date", type: "temporal" },
+    y: { field: "value", type: "quantitative" },
+  },
+};
+</script>
+
+<template>
+  <div style="width: 600px; height: 400px">
+    <Chart :spec="spec" />
+  </div>
+</template>
+```
+
+### Svelte
+
+```svelte
+<script lang="ts">
+import { Chart } from "@opendata-ai/openchart-svelte";
+
+const spec = {
+  type: "line",
+  data: [
+    { date: "2023-01-01", value: 12 },
+    { date: "2023-04-01", value: 28 },
+    { date: "2023-07-01", value: 35 },
+    { date: "2023-10-01", value: 42 },
+  ],
+  encoding: {
+    x: { field: "date", type: "temporal" },
+    y: { field: "value", type: "quantitative" },
+  },
+};
+</script>
+
+<div style="width: 600px; height: 400px">
+  <Chart {spec} />
+</div>
+```
+
 The `encoding` object maps data fields to visual channels. `type` tells the engine how to interpret the values: `temporal` for dates, `quantitative` for numbers, `nominal` for categories.
 
-The `<Chart>` component fills its parent container. Set width and height on the wrapper div.
+The chart component fills its parent container. Set width and height on the wrapper element.
+
+**The rest of this guide uses React for code examples.** The spec is always the same. For Vue, swap the import to `@opendata-ai/openchart-vue` and use `<Chart :spec="spec" />`. For Svelte, import from `@opendata-ai/openchart-svelte` and use `<Chart {spec} />`.
 
 ## Add chrome
 
@@ -237,11 +307,35 @@ const warmTheme: ThemeConfig = {
 
 Apply a theme per-component or to all descendants via the provider:
 
+**React:**
+
 ```tsx
+import { Chart, VizThemeProvider } from "@opendata-ai/openchart-react";
+
 // Per-component
 <Chart spec={spec} theme={warmTheme} />
 
 // All descendants
+<VizThemeProvider theme={warmTheme}>
+  <Chart spec={chartSpec} />
+  <DataTable spec={tableSpec} />
+</VizThemeProvider>
+```
+
+**Vue:**
+
+```vue
+<template>
+  <VizThemeProvider :theme="warmTheme">
+    <Chart :spec="chartSpec" />
+    <DataTable :spec="tableSpec" />
+  </VizThemeProvider>
+</template>
+```
+
+**Svelte:**
+
+```svelte
 <VizThemeProvider theme={warmTheme}>
   <Chart spec={chartSpec} />
   <DataTable spec={tableSpec} />
@@ -399,10 +493,9 @@ const spec: TableSpec = {
 
 Graphs render force-directed network visualizations from nodes and edges. Instead of `data` and `encoding`, you provide `nodes` (with `id` fields), `edges` (with `source`/`target`), and a graph-specific `encoding` that maps node data to visual properties.
 
-```tsx
-import { Graph } from "@opendata-ai/openchart-react";
-import type { GraphSpec } from "@opendata-ai/openchart-core";
+The spec is the same across all frameworks:
 
+```ts
 const spec: GraphSpec = {
   type: "graph",
   nodes: [
@@ -424,17 +517,45 @@ const spec: GraphSpec = {
   layout: { type: "force" },
   chrome: { title: "Team connections" },
 };
-
-function App() {
-  return (
-    <div style={{ width: 600, height: 400 }}>
-      <Graph spec={spec} />
-    </div>
-  );
-}
 ```
 
-Graphs render on canvas (not SVG) and use a force simulation to position nodes. They support click, drag, double-click interaction, text search across nodes, zoom/pan, and keyboard navigation. See the [integration guide](integration-guide.md) for imperative control via the `useGraph()` hook.
+**React:**
+
+```tsx
+import { Graph } from "@opendata-ai/openchart-react";
+
+<div style={{ width: 600, height: 400 }}>
+  <Graph spec={spec} />
+</div>
+```
+
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { Graph } from "@opendata-ai/openchart-vue";
+</script>
+
+<template>
+  <div style="width: 600px; height: 400px">
+    <Graph :spec="spec" />
+  </div>
+</template>
+```
+
+**Svelte:**
+
+```svelte
+<script lang="ts">
+import { Graph } from "@opendata-ai/openchart-svelte";
+</script>
+
+<div style="width: 600px; height: 400px">
+  <Graph {spec} />
+</div>
+```
+
+Graphs render on canvas (not SVG) and use a force simulation to position nodes. They support click, drag, double-click interaction, text search across nodes, zoom/pan, and keyboard navigation. See the [integration guide](integration-guide.md) for imperative control via the `useGraph()` hook (React), composable (Vue), or action (Svelte).
 
 ## Vanilla JS
 

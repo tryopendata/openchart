@@ -2,7 +2,24 @@
 
 The definitive field-by-field reference for every type in `VizSpec`. Cross-referenced against the TypeScript source in `@opendata-ai/openchart-core/src/types/`.
 
-All types are importable from `@opendata-ai/openchart-core` or from the convenience re-exports in `@opendata-ai/openchart-react` and `@opendata-ai/openchart-engine`.
+All types are importable from `@opendata-ai/openchart-core` or from the convenience re-exports in `@opendata-ai/openchart-react`, `@opendata-ai/openchart-vue`, `@opendata-ai/openchart-svelte`, and `@opendata-ai/openchart-engine`.
+
+## Contents
+
+- [VizSpec](#vizspec) (top-level union type)
+- [ChartSpec](#chartspec) (line, area, bar, column, pie, donut, dot, scatter)
+- [Encoding](#encoding) (x, y, color, size, detail channels)
+- [Annotations](#annotations) (refline, text, range)
+- [Labels](#labels) (density, format, position)
+- [Chrome](#chrome) (title, subtitle, source, byline, footer)
+- [ThemeConfig](#themeconfig) (colors, fonts, spacing)
+- [DarkMode](#darkmode) (auto, force, off)
+- [TableSpec](#tablespec) (data tables with visual features)
+- [ColumnConfig](#columnconfig) (column definitions and visual types)
+- [Event handlers](#event-handlers) (chart and table interaction callbacks)
+- [GraphSpec](#graphspec) (network/relationship visualizations)
+- [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
+- [Validation](#validation) (validateSpec, error codes)
 
 ## VizSpec
 
@@ -855,9 +872,12 @@ All builders accept field names as strings (auto-infer type from data) or full `
 | Builder        | Signature                           | Produces                                                             |
 | -------------- | ----------------------------------- | -------------------------------------------------------------------- |
 | `lineChart`    | `(data, x, y, options?)`            | `ChartSpec` with `type: 'line'`                                      |
+| `areaChart`    | `(data, x, y, options?)`            | `ChartSpec` with `type: 'area'`                                      |
 | `barChart`     | `(data, category, value, options?)` | `ChartSpec` with `type: 'bar'`. category -> y, value -> x            |
 | `columnChart`  | `(data, x, y, options?)`            | `ChartSpec` with `type: 'column'`                                    |
 | `pieChart`     | `(data, category, value, options?)` | `ChartSpec` with `type: 'pie'`. category -> color, value -> y        |
+| `donutChart`   | `(data, category, value, options?)` | `ChartSpec` with `type: 'donut'`. category -> color, value -> y      |
+| `dotChart`     | `(data, x, y, options?)`            | `ChartSpec` with `type: 'dot'`                                       |
 | `scatterChart` | `(data, x, y, options?)`            | `ChartSpec` with `type: 'scatter'`                                   |
 | `dataTable`    | `(data, options?)`                  | `TableSpec`. Auto-generates columns from data keys if none provided. |
 
