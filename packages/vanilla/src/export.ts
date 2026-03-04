@@ -74,6 +74,76 @@ export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptio
   });
 }
 
+export interface JPGExportOptions extends PNGExportOptions {
+  /** JPEG quality from 0 to 1. Defaults to 0.92. */
+  quality?: number;
+}
+
+/**
+ * Render an SVG element to a JPEG Blob via a canvas.
+ *
+ * Same pipeline as exportPNG but outputs JPEG with configurable quality.
+ * The canvas is filled with white before drawing to avoid transparent
+ * backgrounds rendering as black in JPEG format.
+ *
+ * @param svgElement - The rendered SVG element.
+ * @param options - Optional DPI scaling and JPEG quality.
+ * @returns A Promise resolving to the JPEG Blob.
+ */
+export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptions): Promise<Blob> {
+  const dpi = options?.dpi ?? 2;
+  const quality = options?.quality ?? 0.92;
+  const svgString = exportSVG(svgElement);
+
+  const width = parseFloat(svgElement.getAttribute('width') || '600');
+  const height = parseFloat(svgElement.getAttribute('height') || '400');
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width * dpi;
+  canvas.height = height * dpi;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas 2D context not available');
+  }
+
+  // Fill white background since JPEG doesn't support transparency
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.scale(dpi, dpi);
+
+  const img = new Image();
+  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  return new Promise<Blob>((resolve, reject) => {
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      canvas.toBlob(
+        (result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(new Error('Canvas toBlob returned null'));
+          }
+        },
+        'image/jpeg',
+        quality,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load SVG as image'));
+    };
+
+    img.src = url;
+  });
+}
+
 /**
  * Convert an array of data objects to a CSV string.
  *

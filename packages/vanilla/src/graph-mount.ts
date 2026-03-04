@@ -37,11 +37,15 @@ export interface GraphMountOptions {
   responsive?: boolean;
   onNodeClick?: (node: Record<string, unknown>) => void;
   onNodeDoubleClick?: (node: Record<string, unknown>) => void;
+  onNodeHover?: (node: Record<string, unknown> | null) => void;
+  onEdgeHover?: (edge: Record<string, unknown> | null) => void;
   onSelectionChange?: (nodeIds: string[]) => void;
 }
 
 export interface GraphInstance {
   update(spec: GraphSpec): void;
+  /** Re-compile encoding/legend/chrome without restarting the simulation. Preserves node positions. */
+  updateVisuals(spec: GraphSpec): void;
   search(query: string): void;
   clearSearch(): void;
   zoomToFit(): void;
@@ -107,6 +111,7 @@ export function createGraph(
   let positionedEdges: PositionedEdge[] = [];
   let adjacencyMap = new Map<string, Set<string>>();
   let hoveredNodeId: string | null = null;
+  let hoveredEdgeId: string | null = null;
   let selectedNodeIds = new Set<string>();
   let animFrameId: number | null = null;
   let needsRender = false;
@@ -183,6 +188,61 @@ export function createGraph(
   function nodeDataById(nodeId: string): Record<string, unknown> {
     const node = compilation.nodes.find((n) => n.id === nodeId);
     return node?.data ?? {};
+  }
+
+  /**
+   * Point-to-line-segment distance for edge hit testing.
+   * Returns the shortest distance from point (px, py) to the segment (ax, ay)-(bx, by).
+   */
+  function pointToSegmentDist(
+    px: number,
+    py: number,
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+  ): number {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - ax, py - ay);
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
+  /**
+   * Find the edge closest to a graph-space point, within a threshold.
+   * Returns an edge key "source->target" or null.
+   */
+  function hitTestEdge(graphX: number, graphY: number, threshold: number): string | null {
+    let bestDist = threshold;
+    let bestEdgeId: string | null = null;
+
+    for (const edge of positionedEdges) {
+      const dist = pointToSegmentDist(
+        graphX,
+        graphY,
+        edge.sourceX,
+        edge.sourceY,
+        edge.targetX,
+        edge.targetY,
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestEdgeId = `${edge.source}->${edge.target}`;
+      }
+    }
+
+    return bestEdgeId;
+  }
+
+  /**
+   * Look up edge data by edge id ("source->target").
+   */
+  function edgeDataById(edgeId: string): Record<string, unknown> | null {
+    const [source, target] = edgeId.split('->');
+    const edge = compilation.edges.find((e) => e.source === source && e.target === target);
+    return edge?.data ?? null;
   }
 
   // ---------------------------------------------------------------------------
@@ -289,6 +349,9 @@ export function createGraph(
       alphaDecay: config.alphaDecay,
       velocityDecay: config.velocityDecay,
       collisionRadius: config.collisionRadius,
+      collisionPadding: config.collisionPadding,
+      linkStrength: config.linkStrength,
+      centerForce: config.centerForce,
     });
 
     simulation.onTick((positions, _alpha) => {
@@ -365,6 +428,7 @@ export function createGraph(
         edges: positionedEdges,
         transform: { x: transform.x, y: transform.y, k: transform.k },
         hoveredNodeId,
+        hoveredEdgeId,
         selectedNodeIds,
         adjacencyMap,
         theme: compilation.theme,
@@ -396,8 +460,20 @@ export function createGraph(
         needsRender = true;
         scheduleRender();
 
+        // Fire onNodeHover callback
+        if (nodeId) {
+          options?.onNodeHover?.(nodeDataById(nodeId));
+        } else {
+          options?.onNodeHover?.(null);
+        }
+
         // Show or hide tooltip
         if (nodeId && tooltipManager) {
+          // Clear edge hover when hovering a node
+          if (hoveredEdgeId) {
+            hoveredEdgeId = null;
+            options?.onEdgeHover?.(null);
+          }
           const content = compilation.tooltipDescriptors.get(nodeId);
           if (content) {
             const node = positionedNodes.find((n) => n.id === nodeId);
@@ -406,8 +482,44 @@ export function createGraph(
               tooltipManager.show(content, screen.x, screen.y);
             }
           }
-        } else {
+        } else if (!nodeId) {
+          // Tooltip hiding handled in onBackgroundHover (edge may show tooltip)
+          // If no edge hover happens, tooltip stays hidden
           tooltipManager?.hide();
+        }
+      },
+      onBackgroundHover(graphX, graphY, screenX, screenY) {
+        // Edge hit testing: check proximity to edge line segments
+        const transform = interactionManager?.getTransform();
+        const threshold = 5 / (transform?.k ?? 1); // 5px in screen space
+        const edgeId = hitTestEdge(graphX, graphY, threshold);
+
+        if (edgeId !== hoveredEdgeId) {
+          hoveredEdgeId = edgeId;
+          needsRender = true;
+          scheduleRender();
+
+          if (edgeId) {
+            const data = edgeDataById(edgeId);
+            options?.onEdgeHover?.(data);
+
+            // Show edge tooltip
+            if (tooltipManager && data) {
+              const fields = Object.entries(data)
+                .filter(([key]) => key !== 'source' && key !== 'target')
+                .filter(([, value]) => value != null)
+                .map(([key, value]) => ({
+                  label: key,
+                  value: typeof value === 'number' ? value.toLocaleString() : String(value),
+                }));
+
+              const [source, target] = edgeId.split('->');
+              tooltipManager.show({ title: `${source} → ${target}`, fields }, screenX, screenY);
+            }
+          } else {
+            options?.onEdgeHover?.(null);
+            tooltipManager?.hide();
+          }
         }
       },
       onSelectionChange(nodeIds) {
@@ -567,8 +679,54 @@ export function createGraph(
 
     // Reset state
     hoveredNodeId = null;
+    hoveredEdgeId = null;
     selectedNodeIds = new Set();
     searchManager.clearSearch();
+  }
+
+  function updateVisuals(newSpec: GraphSpec): void {
+    if (destroyed) return;
+    currentSpec = newSpec;
+
+    // Build a position lookup from current positioned nodes
+    const posMap = new Map<string, { x: number; y: number }>();
+    for (const node of positionedNodes) {
+      posMap.set(node.id, { x: node.x, y: node.y });
+    }
+
+    // Recompile with new spec (encoding, chrome, nodeOverrides, etc.)
+    compilation = compile();
+    adjacencyMap = buildAdjacencyMap(compilation.edges);
+
+    // Transfer positions to new compiled nodes
+    positionedNodes = compilation.nodes.map((node) => {
+      const pos = posMap.get(node.id) ?? { x: 0, y: 0 };
+      return { ...node, x: pos.x, y: pos.y };
+    });
+
+    // Rebuild positioned edges from existing positions
+    positionedEdges = compilation.edges.map((edge) => {
+      const src = posMap.get(edge.source) ?? { x: 0, y: 0 };
+      const tgt = posMap.get(edge.target) ?? { x: 0, y: 0 };
+      return {
+        ...edge,
+        sourceX: src.x,
+        sourceY: src.y,
+        targetX: tgt.x,
+        targetY: tgt.y,
+      };
+    });
+
+    // Rebuild spatial index with updated visuals
+    spatialIndex.rebuild(positionedNodes);
+
+    // Update DOM chrome/legend
+    renderChrome();
+    renderLegend();
+
+    // Re-render canvas without restarting simulation
+    needsRender = true;
+    scheduleRender();
   }
 
   function teardownSubsystems(): void {
@@ -631,6 +789,7 @@ export function createGraph(
     // Return a no-op instance so callers don't crash
     return {
       update() {},
+      updateVisuals() {},
       search() {},
       clearSearch() {},
       zoomToFit() {},
@@ -651,6 +810,7 @@ export function createGraph(
 
   return {
     update,
+    updateVisuals,
     search,
     clearSearch,
     zoomToFit,

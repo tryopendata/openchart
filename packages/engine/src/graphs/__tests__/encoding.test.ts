@@ -216,6 +216,60 @@ describe('resolveNodeVisuals', () => {
 });
 
 // ---------------------------------------------------------------------------
+// nodeOverrides tests
+// ---------------------------------------------------------------------------
+
+describe('nodeOverrides', () => {
+  it('overrides fill color for a specific node', () => {
+    const overrides = { a: { fill: '#ff0000' } };
+    const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme, overrides);
+
+    const nodeA = nodes.find((n) => n.id === 'a')!;
+    expect(nodeA.fill).toBe('#ff0000');
+
+    // Other nodes should not be affected
+    const nodeB = nodes.find((n) => n.id === 'b')!;
+    expect(nodeB.fill).not.toBe('#ff0000');
+  });
+
+  it('overrides radius for a specific node', () => {
+    const overrides = { b: { radius: 15 } };
+    const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme, overrides);
+
+    const nodeB = nodes.find((n) => n.id === 'b')!;
+    expect(nodeB.radius).toBe(15);
+  });
+
+  it('overrides strokeWidth and stroke', () => {
+    const overrides = { c: { strokeWidth: 3, stroke: '#00ff00' } };
+    const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme, overrides);
+
+    const nodeC = nodes.find((n) => n.id === 'c')!;
+    expect(nodeC.strokeWidth).toBe(3);
+    expect(nodeC.stroke).toBe('#00ff00');
+  });
+
+  it('alwaysShowLabel sets labelPriority to Infinity', () => {
+    const overrides = { a: { alwaysShowLabel: true } };
+    const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme, overrides);
+
+    const nodeA = nodes.find((n) => n.id === 'a')!;
+    expect(nodeA.labelPriority).toBe(Infinity);
+  });
+
+  it('does not affect nodes without overrides', () => {
+    const overrides = { a: { fill: '#ff0000', radius: 25 } };
+    const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme, overrides);
+
+    const nodeB = nodes.find((n) => n.id === 'b')!;
+    const nodeC = nodes.find((n) => n.id === 'c')!;
+    // Default radius
+    expect(nodeB.radius).toBe(5);
+    expect(nodeC.radius).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // resolveEdgeVisuals tests
 // ---------------------------------------------------------------------------
 
@@ -277,6 +331,53 @@ describe('resolveEdgeVisuals', () => {
 
       expect(edges[0].source).toBe('a');
       expect(edges[0].target).toBe('b');
+    });
+  });
+
+  describe('edge style mapping', () => {
+    it('maps field values to solid/dashed/dotted via ordinal mapping', () => {
+      const styledEdges: GraphEdge[] = [
+        { source: 'a', target: 'b', kind: 'friend' },
+        { source: 'b', target: 'c', kind: 'colleague' },
+        { source: 'a', target: 'c', kind: 'family' },
+      ];
+      const encoding: GraphEncoding = {
+        edgeStyle: { field: 'kind' },
+      };
+
+      const edges = resolveEdgeVisuals(styledEdges, encoding, theme);
+
+      // Three unique values should map to solid, dashed, dotted
+      const styles = edges.map((e) => e.style);
+      expect(styles).toContain('solid');
+      expect(styles).toContain('dashed');
+      expect(styles).toContain('dotted');
+    });
+
+    it('wraps around when more unique values than style options', () => {
+      const styledEdges: GraphEdge[] = [
+        { source: 'a', target: 'b', kind: 'one' },
+        { source: 'b', target: 'c', kind: 'two' },
+        { source: 'a', target: 'c', kind: 'three' },
+        { source: 'a', target: 'b', kind: 'four' },
+      ];
+      const encoding: GraphEncoding = {
+        edgeStyle: { field: 'kind' },
+      };
+
+      const edges = resolveEdgeVisuals(styledEdges, encoding, theme);
+
+      // 4th unique value wraps back to 'solid'
+      const fourthEdge = edges.find((e) => e.data.kind === 'four')!;
+      expect(fourthEdge.style).toBe('solid');
+    });
+
+    it('defaults to solid when no edgeStyle encoding', () => {
+      const edges = resolveEdgeVisuals(basicEdges, {}, theme);
+
+      for (const edge of edges) {
+        expect(edge.style).toBe('solid');
+      }
     });
   });
 

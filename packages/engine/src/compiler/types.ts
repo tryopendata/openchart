@@ -22,6 +22,7 @@ import type {
   GraphSpec,
   LabelConfig,
   LegendConfig,
+  NodeOverride,
   ScaleConfig,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
@@ -70,6 +71,8 @@ export interface NormalizedChartSpec {
   responsive: boolean;
   theme: ThemeConfig;
   darkMode: DarkMode;
+  /** Series names to hide from rendering. */
+  hiddenSeries: string[];
 }
 
 /** A TableSpec with all optional fields filled with sensible defaults. */
@@ -95,6 +98,7 @@ export interface NormalizedGraphSpec {
   edges: GraphSpec['edges'];
   encoding: GraphEncoding;
   layout: GraphLayoutConfig;
+  nodeOverrides?: Record<string, NodeOverride>;
   chrome: NormalizedChrome;
   annotations: Annotation[];
   theme: ThemeConfig;

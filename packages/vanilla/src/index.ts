@@ -17,9 +17,9 @@ export type {
   TableSpec,
   VizSpec,
 } from '@opendata-ai/openchart-engine';
-export type { PNGExportOptions } from './export';
+export type { JPGExportOptions, PNGExportOptions } from './export';
 // Export utilities
-export { exportCSV, exportPNG, exportSVG } from './export';
+export { exportCSV, exportJPG, exportPNG, exportSVG } from './export';
 // Graph simulation worker
 export { createSimulationWorker } from './graph/simulation-worker-url';
 export type { GraphInstance, GraphMountOptions } from './graph-mount';

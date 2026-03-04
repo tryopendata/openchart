@@ -33,6 +33,8 @@ export interface GraphHandle {
   zoomToNode: (nodeId: string) => void;
   selectNode: (nodeId: string) => void;
   getSelectedNodes: () => string[];
+  /** Re-compile encoding/legend/chrome without restarting the simulation. */
+  updateVisuals: (spec: import('@opendata-ai/openchart-core').GraphSpec) => void;
   /** The underlying GraphInstance from the vanilla adapter. */
   instance: GraphInstance | null;
 }

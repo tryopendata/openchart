@@ -26,7 +26,7 @@ import type {
   TooltipContent,
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
-import { exportCSV, exportPNG, exportSVG, type PNGExportOptions } from './export';
+import { exportCSV, exportJPG, exportPNG, exportSVG, type JPGExportOptions } from './export';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
@@ -46,8 +46,8 @@ export interface MountOptions extends ChartEventHandlers {
   responsive?: boolean;
 }
 
-export interface ExportOptions extends PNGExportOptions {
-  // Extensible for future formats
+export interface ExportOptions extends JPGExportOptions {
+  // Extensible for future formats (extends JPGExportOptions which extends PNGExportOptions)
 }
 
 export interface ChartInstance {
@@ -58,8 +58,9 @@ export interface ChartInstance {
   /** Export the chart. */
   export(format: 'svg'): string;
   export(format: 'png', options?: ExportOptions): Promise<Blob>;
+  export(format: 'jpg', options?: ExportOptions): Promise<Blob>;
   export(format: 'csv'): string;
-  export(format: 'svg' | 'png' | 'csv', options?: ExportOptions): string | Promise<Blob>;
+  export(format: 'svg' | 'png' | 'jpg' | 'csv', options?: ExportOptions): string | Promise<Blob>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
   /** The current compiled layout (for hooks / debugging). */
@@ -1096,13 +1097,16 @@ function wireSeriesLabelDrag(
 
 /**
  * Wire click handlers on legend entries to toggle series visibility.
- * Optionally calls onLegendToggle when a series is toggled.
+ * Fires onEdit with { type: 'legend-toggle', series, hidden } for each toggle,
+ * and optionally calls the legacy onLegendToggle callback.
+ * Legend entries for hidden series stay visible but dimmed (opacity 0.3).
  * Returns a cleanup function.
  */
 function wireLegendInteraction(
   svg: SVGElement,
   _layout: ChartLayout,
   onLegendToggle?: (series: string, visible: boolean) => void,
+  onEdit?: (edit: ElementEdit) => void,
 ): () => void {
   const legendEntries = svg.querySelectorAll('[data-legend-index]');
   const cleanups: Array<() => void> = [];
@@ -1120,11 +1124,13 @@ function wireLegendInteraction(
         entry.setAttribute('opacity', '1');
         entry.setAttribute('aria-label', `${label}: visible`);
         onLegendToggle?.(label, true);
+        onEdit?.({ type: 'legend-toggle', series: label, hidden: false });
       } else {
         hiddenSeries.add(label);
         entry.setAttribute('opacity', '0.3');
         entry.setAttribute('aria-label', `${label}: hidden`);
         onLegendToggle?.(label, false);
+        onEdit?.({ type: 'legend-toggle', series: label, hidden: true });
       }
 
       // Toggle visibility of marks with matching series.
@@ -1448,7 +1454,12 @@ export function createChart(
     );
 
     // Wire legend interactivity
-    cleanupLegend = wireLegendInteraction(svgElement, currentLayout, options?.onLegendToggle);
+    cleanupLegend = wireLegendInteraction(
+      svgElement,
+      currentLayout,
+      options?.onLegendToggle,
+      options?.onEdit,
+    );
 
     // Wire chart event handlers (mark click/hover/leave, annotation click)
     if (
@@ -1546,9 +1557,10 @@ export function createChart(
 
   function doExport(format: 'svg'): string;
   function doExport(format: 'png', exportOptions?: ExportOptions): Promise<Blob>;
+  function doExport(format: 'jpg', exportOptions?: ExportOptions): Promise<Blob>;
   function doExport(format: 'csv'): string;
   function doExport(
-    format: 'svg' | 'png' | 'csv',
+    format: 'svg' | 'png' | 'jpg' | 'csv',
     exportOptions?: ExportOptions,
   ): string | Promise<Blob> {
     if (!svgElement) {
@@ -1560,6 +1572,8 @@ export function createChart(
         return exportSVG(svgElement);
       case 'png':
         return exportPNG(svgElement, exportOptions);
+      case 'jpg':
+        return exportJPG(svgElement, exportOptions);
       case 'csv':
         return exportCSV(
           'data' in currentSpec && Array.isArray(currentSpec.data) ? currentSpec.data : [],

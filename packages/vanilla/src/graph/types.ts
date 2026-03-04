@@ -35,6 +35,7 @@ export interface GraphRenderState {
   edges: PositionedEdge[];
   transform: { x: number; y: number; k: number };
   hoveredNodeId: string | null;
+  hoveredEdgeId: string | null;
   selectedNodeIds: Set<string>;
   adjacencyMap: Map<string, Set<string>>;
   theme: ResolvedTheme;

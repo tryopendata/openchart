@@ -60,6 +60,9 @@ interface SimConfig {
   alphaDecay: number;
   velocityDecay: number;
   collisionRadius: number;
+  collisionPadding?: number;
+  linkStrength?: number;
+  centerForce?: boolean;
 }
 
 type InMessage =
@@ -173,24 +176,32 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
 
         const { config } = msg;
 
+        const linkForce = forceLink(msg.edges.map((e) => ({ ...e })))
+          .id((d) => (d as InternalNode).id)
+          .distance(config.linkDistance);
+        if (config.linkStrength != null) {
+          linkForce.strength(config.linkStrength);
+        }
+
+        const padding = config.collisionPadding ?? 2;
+
         simulation = forceSimulation<InternalNode>(internalNodes)
-          .force(
-            'link',
-            forceLink(msg.edges.map((e) => ({ ...e })))
-              .id((d) => (d as InternalNode).id)
-              .distance(config.linkDistance),
-          )
+          .force('link', linkForce)
           .force('charge', forceManyBody().strength(config.chargeStrength))
-          .force('center', forceCenter(0, 0))
           .force(
             'collide',
-            forceCollide<InternalNode>().radius((d) => d.radius + 1),
+            forceCollide<InternalNode>().radius((d) => d.radius + padding),
           )
           // Weak gravity keeps disconnected nodes from drifting far from center
           .force('gravityX', forceX<InternalNode>(0).strength(0.05))
           .force('gravityY', forceY<InternalNode>(0).strength(0.05))
           .alphaDecay(config.alphaDecay)
           .velocityDecay(config.velocityDecay);
+
+        // Center force (default true)
+        if (config.centerForce !== false) {
+          simulation.force('center', forceCenter(0, 0));
+        }
 
         // Add clustering force if configured
         if (config.clustering) {

@@ -278,18 +278,21 @@ export class SimulationManager {
 
     this.syncNodeMap = new Map(this.syncNodes.map((n) => [n.id, n]));
 
+    const linkForce = forceLink(edges.map((e) => ({ ...e })))
+      .id((d) => (d as SyncNode).id)
+      .distance(config.linkDistance);
+    if (config.linkStrength != null) {
+      linkForce.strength(config.linkStrength);
+    }
+
+    const padding = config.collisionPadding ?? 2;
+
     this.syncSim = forceSimulation<SyncNode>(this.syncNodes)
-      .force(
-        'link',
-        forceLink(edges.map((e) => ({ ...e })))
-          .id((d) => (d as SyncNode).id)
-          .distance(config.linkDistance),
-      )
+      .force('link', linkForce)
       .force('charge', forceManyBody().strength(config.chargeStrength))
-      .force('center', forceCenter(0, 0))
       .force(
         'collide',
-        forceCollide<SyncNode>().radius((d) => d.radius + 1),
+        forceCollide<SyncNode>().radius((d) => d.radius + padding),
       )
       // Weak gravity keeps disconnected nodes from drifting far from center
       .force('gravityX', forceX<SyncNode>(0).strength(0.05))
@@ -297,6 +300,11 @@ export class SimulationManager {
       .alphaDecay(config.alphaDecay)
       .velocityDecay(config.velocityDecay)
       .stop(); // Don't auto-run; we tick manually
+
+    // Center force (default true)
+    if (config.centerForce !== false) {
+      this.syncSim.force('center', forceCenter(0, 0));
+    }
 
     // Add clustering force if configured
     if (config.clustering) {

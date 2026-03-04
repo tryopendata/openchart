@@ -51,6 +51,8 @@ export interface ScaleConfig {
   nice?: boolean;
   /** Whether the domain should include zero. Defaults to true for quantitative. */
   zero?: boolean;
+  /** When true and domain is set, filter out data rows with values outside the domain range. */
+  clip?: boolean;
 }
 
 /**
@@ -119,6 +121,8 @@ export interface GraphEncoding {
   edgeColor?: GraphEncodingChannel;
   /** Width mapping for edges. */
   edgeWidth?: GraphEncodingChannel;
+  /** Style mapping for edges (solid, dashed, dotted). */
+  edgeStyle?: GraphEncodingChannel;
   /** Label field for nodes. */
   nodeLabel?: GraphEncodingChannel;
 }
@@ -136,6 +140,12 @@ export interface GraphLayoutConfig {
   chargeStrength?: number;
   /** Target distance between linked nodes. */
   linkDistance?: number;
+  /** Extra px added to node radius for collision detection (default 2). */
+  collisionPadding?: number;
+  /** Link force strength override. */
+  linkStrength?: number;
+  /** Whether to apply center force (default true). */
+  centerForce?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -414,6 +424,8 @@ export interface ChartSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
+  /** Series names to hide from rendering. Hidden series remain in the legend but are visually dimmed. */
+  hiddenSeries?: string[];
 }
 
 /**
@@ -474,6 +486,20 @@ export interface GraphEdge {
  * used by chart types. The graph type is defined here for forward compatibility
  * but rendering is deferred to a future phase.
  */
+/** Per-node visual overrides, keyed by node id. */
+export interface NodeOverride {
+  /** Override fill color. */
+  fill?: string;
+  /** Override radius. */
+  radius?: number;
+  /** Override stroke width. */
+  strokeWidth?: number;
+  /** Override stroke color. */
+  stroke?: string;
+  /** Force label to always show regardless of zoom/priority. */
+  alwaysShowLabel?: boolean;
+}
+
 export interface GraphSpec {
   /** Discriminant: always "graph". */
   type: 'graph';
@@ -485,6 +511,8 @@ export interface GraphSpec {
   encoding?: GraphEncoding;
   /** Layout algorithm configuration. */
   layout?: GraphLayoutConfig;
+  /** Per-node visual overrides, keyed by node id. */
+  nodeOverrides?: Record<string, NodeOverride>;
   /** Editorial chrome. */
   chrome?: Chrome;
   /** Annotations. */

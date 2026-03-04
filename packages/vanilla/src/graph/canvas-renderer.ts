@@ -141,6 +141,7 @@ export class GraphCanvasRenderer {
       edges,
       transform,
       hoveredNodeId,
+      hoveredEdgeId,
       selectedNodeIds,
       adjacencyMap,
       theme,
@@ -193,6 +194,7 @@ export class GraphCanvasRenderer {
       hasActiveNode,
       connectedNodeIds,
       isGesturing ? null : searchMatches,
+      hoveredEdgeId,
     );
 
     // -- Draw nodes (batched by fill color) --
@@ -263,13 +265,21 @@ export class GraphCanvasRenderer {
     hasActiveNode: boolean,
     connectedNodeIds: Set<string>,
     searchMatches: Set<string> | null,
+    hoveredEdgeId: string | null,
   ): void {
     // Classify edges by alpha level, then batch by visual style within each level
     const dimmedEdges: PositionedEdge[] = [];
     const defaultEdges: PositionedEdge[] = [];
     const connectedEdges: PositionedEdge[] = [];
+    let hoveredEdge: PositionedEdge | null = null;
 
     for (const edge of edges) {
+      const edgeId = `${edge.source}->${edge.target}`;
+      if (edgeId === hoveredEdgeId) {
+        hoveredEdge = edge;
+        continue; // Draw hovered edge last, on top
+      }
+
       const isConnected =
         hasActiveNode && connectedNodeIds.has(edge.source) && connectedNodeIds.has(edge.target);
       const isDimmed = hasActiveNode && !isConnected;
@@ -287,6 +297,21 @@ export class GraphCanvasRenderer {
     this.drawEdgeGroupBatched(ctx, dimmedEdges, EDGE_ALPHA_DIMMED, searchMatches);
     this.drawEdgeGroupBatched(ctx, defaultEdges, EDGE_ALPHA_DEFAULT, searchMatches);
     this.drawEdgeGroupBatched(ctx, connectedEdges, EDGE_ALPHA_CONNECTED, searchMatches);
+
+    // Draw hovered edge on top with highlight
+    if (hoveredEdge) {
+      const dash = DASH_PATTERNS[hoveredEdge.style] ?? DASH_PATTERNS.solid;
+      ctx.setLineDash(dash);
+      ctx.strokeStyle = hoveredEdge.stroke;
+      ctx.lineWidth = hoveredEdge.strokeWidth * 2;
+      ctx.globalAlpha = EDGE_ALPHA_CONNECTED;
+      ctx.beginPath();
+      ctx.moveTo(hoveredEdge.sourceX, hoveredEdge.sourceY);
+      ctx.lineTo(hoveredEdge.targetX, hoveredEdge.targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
   }
 
   /**

@@ -209,8 +209,37 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
   const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea);
 
+  // Apply data filtering after legend (so legend retains all series), but before
+  // scale computation (so hidden/clipped data doesn't affect domains or marks).
+  let renderData = chartSpec.data;
+
+  // Filter hidden series: removed from rendering but kept in legend (dimmed in the adapter)
+  if (chartSpec.hiddenSeries.length > 0 && chartSpec.encoding.color) {
+    const colorField = chartSpec.encoding.color.field;
+    const hiddenSet = new Set(chartSpec.hiddenSeries);
+    renderData = renderData.filter((row) => !hiddenSet.has(String(row[colorField])));
+  }
+
+  // Filter clipped scale domains: when scale.clip is true, exclude rows outside the domain
+  for (const channel of ['x', 'y'] as const) {
+    const enc = chartSpec.encoding[channel];
+    if (!enc?.scale?.clip || !enc.scale.domain) continue;
+    const domain = enc.scale.domain;
+    const field = enc.field;
+    if (Array.isArray(domain) && domain.length === 2 && typeof domain[0] === 'number') {
+      const [lo, hi] = domain as [number, number];
+      renderData = renderData.filter((row) => {
+        const v = Number(row[field]);
+        return Number.isFinite(v) && v >= lo && v <= hi;
+      });
+    }
+  }
+
+  // Build a filtered spec for scales and marks, keeping all other properties intact
+  const renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
+
   // Compute scales
-  const scales = computeScales(chartSpec, chartArea, chartSpec.data);
+  const scales = computeScales(renderSpec, chartArea, renderSpec.data);
 
   // Update color scale to use theme palette
   if (scales.color) {
@@ -244,9 +273,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     computeGridlines(axes, chartArea);
   }
 
-  // Get chart renderer and compute marks
-  const renderer = getChartRenderer(chartSpec.type);
-  const marks: Mark[] = renderer ? renderer(chartSpec, scales, chartArea, strategy, theme) : [];
+  // Get chart renderer and compute marks (using filtered data)
+  const renderer = getChartRenderer(renderSpec.type);
+  const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
 
   // Compute annotations from spec, passing legend + mark bounds as obstacles for collision avoidance
   const obstacles: Rect[] = [];

@@ -99,6 +99,7 @@ export type {
   LabelConfig,
   LabelDensity,
   LegendConfig,
+  NodeOverride,
   RangeAnnotation,
   RefLineAnnotation,
   ScaleConfig,

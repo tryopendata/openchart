@@ -34,6 +34,9 @@ export interface WorkerSimulationConfig {
   alphaDecay: number;
   velocityDecay: number;
   collisionRadius: number;
+  collisionPadding?: number;
+  linkStrength?: number;
+  centerForce?: boolean;
 }
 
 // ---------------------------------------------------------------------------

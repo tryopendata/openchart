@@ -11,6 +11,7 @@ import type {
   GraphEdge,
   GraphEncoding,
   GraphNode,
+  NodeOverride,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
@@ -119,6 +120,7 @@ export function resolveNodeVisuals(
   encoding: GraphEncoding,
   edges: GraphEdge[],
   theme: ResolvedTheme,
+  nodeOverrides?: Record<string, NodeOverride>,
 ): CompiledGraphNode[] {
   const degrees = computeDegrees(nodes, edges);
   const maxDegree = Math.max(1, ...degrees.values());
@@ -203,14 +205,22 @@ export function resolveNodeVisuals(
     const { id: _id, ...rest } = node;
     const data: Record<string, unknown> = { id: node.id, ...rest };
 
+    // Apply per-node overrides if present
+    const override = nodeOverrides?.[node.id];
+    const finalFill = override?.fill ?? fill;
+    const finalRadius = override?.radius ?? radius;
+    const finalStrokeWidth = override?.strokeWidth ?? DEFAULT_STROKE_WIDTH;
+    const finalStroke = override?.stroke ?? stroke;
+    const finalLabelPriority = override?.alwaysShowLabel ? Infinity : labelPriority;
+
     return {
       id: node.id,
-      radius,
-      fill,
-      stroke,
-      strokeWidth: DEFAULT_STROKE_WIDTH,
+      radius: finalRadius,
+      fill: finalFill,
+      stroke: finalStroke,
+      strokeWidth: finalStrokeWidth,
       label,
-      labelPriority,
+      labelPriority: finalLabelPriority,
       community: undefined,
       data,
     };
@@ -277,6 +287,19 @@ export function resolveEdgeVisuals(
 
   const defaultEdgeColor = hexWithOpacity(theme.colors.axis, 0.4);
 
+  // Edge style mapping (ordinal: map unique field values to solid/dashed/dotted)
+  const EDGE_STYLES: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
+  let styleFn: ((edge: GraphEdge) => 'solid' | 'dashed' | 'dotted') | undefined;
+  if (encoding.edgeStyle?.field) {
+    const field = encoding.edgeStyle.field;
+    const uniqueValues = [...new Set(edges.map((e) => String(e[field] ?? '')))];
+    const styleMap = new Map<string, 'solid' | 'dashed' | 'dotted'>();
+    for (let i = 0; i < uniqueValues.length; i++) {
+      styleMap.set(uniqueValues[i], EDGE_STYLES[i % EDGE_STYLES.length]);
+    }
+    styleFn = (edge: GraphEdge) => styleMap.get(String(edge[field] ?? '')) ?? 'solid';
+  }
+
   return edges.map((edge) => {
     const { source, target, ...rest } = edge;
 
@@ -289,13 +312,14 @@ export function resolveEdgeVisuals(
     }
 
     const stroke = edgeColorFn ? edgeColorFn(edge) : defaultEdgeColor;
+    const style = styleFn ? styleFn(edge) : ('solid' as const);
 
     return {
       source,
       target,
       stroke,
       strokeWidth,
-      style: 'solid' as const,
+      style,
       data: { source, target, ...rest } as Record<string, unknown>,
     };
   });

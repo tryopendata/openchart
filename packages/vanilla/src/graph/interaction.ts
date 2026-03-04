@@ -26,6 +26,8 @@ const HIT_DISTANCE = 5;
 export interface InteractionCallbacks {
   onTransformChange(transform: ZoomTransform): void;
   onHoverChange(nodeId: string | null): void;
+  /** Called during mouse move when no node is hit, with graph-space coordinates for edge hit testing. */
+  onBackgroundHover?(graphX: number, graphY: number, screenX: number, screenY: number): void;
   onSelectionChange(nodeIds: string[]): void;
   onNodeDragStart(nodeId: string): void;
   onNodeDrag(nodeId: string, x: number, y: number): void;
@@ -197,6 +199,12 @@ export class GraphInteractionManager {
     // Hover detection
     const hitId = this.hitTest(x, y);
     this.callbacks.onHoverChange(hitId);
+
+    // If no node hit, check edges via callback
+    if (!hitId) {
+      const graph = this.transform.screenToGraph(x, y);
+      this.callbacks.onBackgroundHover?.(graph.x, graph.y, x, y);
+    }
 
     // Update cursor
     this.canvas.style.cursor = hitId ? 'pointer' : 'default';

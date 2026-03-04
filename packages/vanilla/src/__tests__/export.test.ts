@@ -1,8 +1,8 @@
 /**
  * Export utility tests.
  *
- * Tests exportSVG and exportCSV functions directly, verifying SVG string
- * validity and CSV formatting with headers and proper escaping.
+ * Tests exportSVG, exportCSV, and exportJPG functions directly, verifying SVG string
+ * validity, CSV formatting with headers and proper escaping, and JPG export interface.
  */
 
 import type { CompileOptions } from '@opendata-ai/openchart-engine';
@@ -10,7 +10,7 @@ import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
-import { exportCSV, exportSVG } from '../export';
+import { exportCSV, exportJPG, exportSVG } from '../export';
 import { renderChartSVG } from '../svg-renderer';
 
 // ---------------------------------------------------------------------------
@@ -146,5 +146,31 @@ describe('exportCSV', () => {
     ];
     const result = exportCSV(data);
     expect(result.split('\n')[0]).toBe('x,y,z');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exportJPG
+// ---------------------------------------------------------------------------
+
+describe('exportJPG', () => {
+  it('is a function that accepts an SVG element and options', () => {
+    expect(typeof exportJPG).toBe('function');
+    expect(exportJPG.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('returns a Promise when called with a rendered SVG element', () => {
+    const svg = renderToSVG();
+    const result = exportJPG(svg);
+    expect(result).toBeInstanceOf(Promise);
+    // Clean up: catch any rejection from happy-dom canvas limitations
+    result.catch(() => {});
+  });
+
+  it('accepts quality option between 0 and 1', () => {
+    const svg = renderToSVG();
+    const result = exportJPG(svg, { quality: 0.5, dpi: 1 });
+    expect(result).toBeInstanceOf(Promise);
+    result.catch(() => {});
   });
 });

@@ -45,7 +45,8 @@ export type ElementEdit =
   | { type: 'refline-label'; annotation: RefLineAnnotation; labelOffset: AnnotationOffset }
   | { type: 'chrome'; key: ChromeKey; text: string; offset: AnnotationOffset }
   | { type: 'series-label'; series: string; offset: AnnotationOffset }
-  | { type: 'legend'; offset: AnnotationOffset };
+  | { type: 'legend'; offset: AnnotationOffset }
+  | { type: 'legend-toggle'; series: string; hidden: boolean };
 
 // ---------------------------------------------------------------------------
 // Mark events

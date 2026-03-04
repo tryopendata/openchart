@@ -260,6 +260,129 @@ describe('compileChart', () => {
       ),
     ).toThrow('compileTable');
   });
+
+  // ---------------------------------------------------------------------------
+  // hiddenSeries
+  // ---------------------------------------------------------------------------
+
+  it('hiddenSeries filters out data for hidden series from marks', () => {
+    const spec = {
+      ...lineSpec,
+      hiddenSeries: ['UK'],
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+
+    // With UK hidden, only US marks should be present.
+    // Line marks carry a series property.
+    const lineMarks = layout.marks.filter((m) => m.type === 'line');
+    for (const mark of lineMarks) {
+      if (mark.type === 'line') {
+        expect(mark.series).not.toBe('UK');
+      }
+    }
+
+    // Legend should still have entries for both series (hidden ones are dimmed, not removed)
+    expect(layout.legend.entries.length).toBe(2);
+    expect(layout.legend.entries.some((e) => e.label === 'US')).toBe(true);
+    expect(layout.legend.entries.some((e) => e.label === 'UK')).toBe(true);
+  });
+
+  it('hiddenSeries with all series hidden produces no marks', () => {
+    const spec = {
+      ...lineSpec,
+      hiddenSeries: ['US', 'UK'],
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    // No data left means no marks
+    expect(layout.marks.length).toBe(0);
+  });
+
+  it('hiddenSeries with empty array behaves normally', () => {
+    const spec = {
+      ...lineSpec,
+      hiddenSeries: [],
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.marks.length).toBeGreaterThan(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // scale.clip
+  // ---------------------------------------------------------------------------
+
+  it('scale.clip filters data rows outside the y-axis domain', () => {
+    const spec = {
+      type: 'scatter' as const,
+      data: [
+        { x: 1, y: 5 },
+        { x: 2, y: 15 },
+        { x: 3, y: 25 },
+        { x: 4, y: 35 },
+      ],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' as const },
+        y: {
+          field: 'y',
+          type: 'quantitative' as const,
+          scale: { domain: [10, 30] as [number, number], clip: true },
+        },
+      },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+
+    // Only y=15 and y=25 should remain (y=5 and y=35 are outside [10,30])
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(pointMarks.length).toBe(2);
+  });
+
+  it('scale.clip filters data rows outside the x-axis domain', () => {
+    const spec = {
+      type: 'scatter' as const,
+      data: [
+        { x: 1, y: 10 },
+        { x: 5, y: 20 },
+        { x: 10, y: 30 },
+        { x: 15, y: 40 },
+      ],
+      encoding: {
+        x: {
+          field: 'x',
+          type: 'quantitative' as const,
+          scale: { domain: [3, 12] as [number, number], clip: true },
+        },
+        y: { field: 'y', type: 'quantitative' as const },
+      },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+
+    // Only x=5 and x=10 should remain
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(pointMarks.length).toBe(2);
+  });
+
+  it('scale.clip=false does not filter data even with domain set', () => {
+    const spec = {
+      type: 'scatter' as const,
+      data: [
+        { x: 1, y: 5 },
+        { x: 2, y: 15 },
+        { x: 3, y: 25 },
+      ],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' as const },
+        y: {
+          field: 'y',
+          type: 'quantitative' as const,
+          scale: { domain: [10, 20] as [number, number], clip: false },
+        },
+      },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+
+    // All 3 points should still be present (clip is false)
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(pointMarks.length).toBe(3);
+  });
 });
 
 describe('compileTable', () => {

@@ -66,6 +66,7 @@ export function makeLineSpec(): NormalizedChartSpec {
     theme: {},
     darkMode: 'off',
     labels: { density: 'auto', format: '' },
+    hiddenSeries: [],
   };
 }
 
@@ -92,6 +93,7 @@ export function makeBarSpec(): NormalizedChartSpec {
     theme: {},
     darkMode: 'off',
     labels: { density: 'auto', format: '' },
+    hiddenSeries: [],
   };
 }
 
@@ -120,5 +122,6 @@ export function makeScatterSpec(): NormalizedChartSpec {
     theme: {},
     darkMode: 'off',
     labels: { density: 'auto', format: '' },
+    hiddenSeries: [],
   };
 }

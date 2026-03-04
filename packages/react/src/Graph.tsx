@@ -36,6 +36,10 @@ export interface GraphProps {
   onNodeClick?: (node: Record<string, unknown>) => void;
   /** Callback when a node is double-clicked. */
   onNodeDoubleClick?: (node: Record<string, unknown>) => void;
+  /** Callback when a node is hovered (null when hover ends). */
+  onNodeHover?: (node: Record<string, unknown> | null) => void;
+  /** Callback when an edge is hovered (null when hover ends). */
+  onEdgeHover?: (edge: Record<string, unknown> | null) => void;
   /** Callback when selection changes. */
   onSelectionChange?: (nodeIds: string[]) => void;
   /** CSS class name for the wrapper div. */
@@ -64,6 +68,8 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     darkMode,
     onNodeClick,
     onNodeDoubleClick,
+    onNodeHover,
+    onEdgeHover,
     onSelectionChange,
     className,
     style,
@@ -84,9 +90,17 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   const handlersRef = useRef<{
     onNodeClick?: GraphProps['onNodeClick'];
     onNodeDoubleClick?: GraphProps['onNodeDoubleClick'];
+    onNodeHover?: GraphProps['onNodeHover'];
+    onEdgeHover?: GraphProps['onEdgeHover'];
     onSelectionChange?: GraphProps['onSelectionChange'];
   }>({});
-  handlersRef.current = { onNodeClick, onNodeDoubleClick, onSelectionChange };
+  handlersRef.current = {
+    onNodeClick,
+    onNodeDoubleClick,
+    onNodeHover,
+    onEdgeHover,
+    onSelectionChange,
+  };
 
   // Stable callback wrappers that read from refs
   const stableOnNodeClick = useCallback(
@@ -95,6 +109,14 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   );
   const stableOnNodeDoubleClick = useCallback(
     (node: Record<string, unknown>) => handlersRef.current.onNodeDoubleClick?.(node),
+    [],
+  );
+  const stableOnNodeHover = useCallback(
+    (node: Record<string, unknown> | null) => handlersRef.current.onNodeHover?.(node),
+    [],
+  );
+  const stableOnEdgeHover = useCallback(
+    (edge: Record<string, unknown> | null) => handlersRef.current.onEdgeHover?.(edge),
     [],
   );
   const stableOnSelectionChange = useCallback(
@@ -124,6 +146,9 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       getSelectedNodes() {
         return graphRef.current?.getSelectedNodes() ?? [];
       },
+      updateVisuals(spec: GraphSpec) {
+        graphRef.current?.updateVisuals(spec);
+      },
       get instance() {
         return graphRef.current;
       },
@@ -143,6 +168,8 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       darkMode: resolvedDarkMode,
       onNodeClick: stableOnNodeClick,
       onNodeDoubleClick: stableOnNodeDoubleClick,
+      onNodeHover: stableOnNodeHover,
+      onEdgeHover: stableOnEdgeHover,
       onSelectionChange: stableOnSelectionChange,
       responsive: true,
     };
@@ -161,19 +188,47 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     resolvedDarkMode,
     stableOnNodeClick,
     stableOnNodeDoubleClick,
+    stableOnNodeHover,
+    stableOnEdgeHover,
     stableOnSelectionChange,
   ]);
 
-  // Update graph when spec changes
+  // Update graph when spec changes.
+  // If only encoding/chrome/nodeOverrides changed (same node/edge IDs), use
+  // updateVisuals() to avoid restarting the simulation.
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
 
     const specString = JSON.stringify(spec);
-    if (specString !== specRef.current) {
-      specRef.current = specString;
-      graph.update(spec);
+    if (specString === specRef.current) return;
+
+    // Check if this is a visual-only change (same node/edge IDs)
+    const prevSpec = specRef.current;
+    specRef.current = specString;
+
+    if (prevSpec) {
+      try {
+        const prev = JSON.parse(prevSpec) as GraphSpec;
+        const sameNodes =
+          prev.nodes.length === spec.nodes.length &&
+          prev.nodes.every((n, i) => n.id === spec.nodes[i].id);
+        const sameEdges =
+          prev.edges.length === spec.edges.length &&
+          prev.edges.every(
+            (e, i) => e.source === spec.edges[i].source && e.target === spec.edges[i].target,
+          );
+
+        if (sameNodes && sameEdges) {
+          graph.updateVisuals(spec);
+          return;
+        }
+      } catch {
+        // Parse failed, fall through to full update
+      }
     }
+
+    graph.update(spec);
   }, [spec]);
 
   return (

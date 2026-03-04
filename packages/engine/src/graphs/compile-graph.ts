@@ -204,6 +204,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     graphSpec.encoding,
     graphSpec.edges,
     theme,
+    graphSpec.nodeOverrides,
   );
 
   // 4. Assign communities
@@ -243,6 +244,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   };
 
   // 10. Build simulation config
+  const collisionPadding = graphSpec.layout.collisionPadding ?? 2;
   const maxRadius =
     compiledNodes.length > 0
       ? Math.max(...compiledNodes.map((n) => n.radius))
@@ -253,7 +255,10 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     clustering: clusteringField ? { field: clusteringField, strength: 0.5 } : null,
     alphaDecay: 0.0228,
     velocityDecay: 0.4,
-    collisionRadius: maxRadius + 2,
+    collisionRadius: maxRadius + collisionPadding,
+    collisionPadding,
+    linkStrength: graphSpec.layout.linkStrength,
+    centerForce: graphSpec.layout.centerForce,
   };
 
   // 11. Build chrome

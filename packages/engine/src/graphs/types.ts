@@ -67,6 +67,12 @@ export interface SimulationConfig {
   velocityDecay: number;
   /** Collision radius: max node radius + padding. */
   collisionRadius: number;
+  /** Extra px added to node radius for collision (default 2). */
+  collisionPadding?: number;
+  /** Link force strength override. */
+  linkStrength?: number;
+  /** Whether to apply center force (default true). */
+  centerForce?: boolean;
 }
 
 /**

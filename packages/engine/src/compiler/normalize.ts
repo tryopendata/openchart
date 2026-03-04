@@ -196,6 +196,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     responsive: spec.responsive ?? true,
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
+    hiddenSeries: spec.hiddenSeries ?? [],
   };
 }
 
@@ -236,6 +237,7 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
     edges: spec.edges,
     encoding: spec.encoding ?? {},
     layout,
+    nodeOverrides: spec.nodeOverrides,
     chrome: normalizeChrome(spec.chrome),
     annotations: normalizeAnnotations(spec.annotations),
     theme: spec.theme ?? {},
