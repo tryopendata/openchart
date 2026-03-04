@@ -65,7 +65,8 @@ const emissionsSpec: ChartSpec = {
       y: 21,
       text: 'The US has high emissions\nbut modest renewables',
       connector: true,
-      anchor: 'bottom',
+      anchor: 'left',
+      offset: { dx: -140, dy: -60 },
     },
     {
       type: 'text',
@@ -85,7 +86,7 @@ const emissionsSpec: ChartSpec = {
 };
 
 export const EmissionsVsRenewables = () => (
-  <div style={{ width: 750, height: 500 }}>
+  <div className="story-chart" style={{ height: 500 }}>
     <Chart spec={emissionsSpec} />
   </div>
 );
@@ -99,11 +100,5 @@ export const EmissionsVsRenewablesCompact = () => (
 export const EmissionsVsRenewablesWide = () => (
   <div style={{ width: 1200, height: 550 }}>
     <Chart spec={emissionsSpec} />
-  </div>
-);
-
-export const EmissionsVsRenewablesDarkMode = () => (
-  <div style={{ width: 750, height: 500 }}>
-    <Chart spec={emissionsSpec} darkMode="force" />
   </div>
 );

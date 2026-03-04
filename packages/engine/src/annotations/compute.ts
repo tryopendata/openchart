@@ -35,6 +35,7 @@ import type { ResolvedScales } from '../layout/scales';
 
 const DEFAULT_ANNOTATION_FONT_SIZE = 12;
 const DEFAULT_ANNOTATION_FONT_WEIGHT = 400;
+const DEFAULT_LINE_HEIGHT = 1.3;
 const DEFAULT_RANGE_FILL = '#f0c040';
 const DEFAULT_RANGE_OPACITY = 0.15;
 const DEFAULT_REFLINE_DASH = '4 3';
@@ -97,8 +98,33 @@ function makeAnnotationLabelStyle(
     fontSize: fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE,
     fontWeight: fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT,
     fill: fill ?? defaultFill,
-    lineHeight: 1.3,
+    lineHeight: DEFAULT_LINE_HEIGHT,
     textAnchor: 'start',
+  };
+}
+
+/**
+ * Compute the bounding box of annotation text at a given label position.
+ * Multi-line text is centered at labelX; single-line starts at labelX.
+ */
+function computeTextBounds(
+  labelX: number,
+  labelY: number,
+  text: string,
+  fontSize: number,
+  fontWeight: number,
+): Rect {
+  const lines = text.split('\n');
+  const isMultiLine = lines.length > 1;
+  const maxWidth = Math.max(...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)));
+  const totalHeight = lines.length * fontSize * DEFAULT_LINE_HEIGHT;
+  const x = isMultiLine ? labelX - maxWidth / 2 : labelX;
+
+  return {
+    x,
+    y: labelY - fontSize,
+    width: maxWidth,
+    height: totalHeight,
   };
 }
 
@@ -145,6 +171,57 @@ function applyOffset(
 }
 
 // ---------------------------------------------------------------------------
+// Connector origin: pick the edge midpoint closest to the data point
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the connector origin point on the text bounding box.
+ * For straight connectors, finds the edge midpoint (top, bottom, left, right)
+ * closest to the data point. For curve connectors, always uses the right edge.
+ */
+function computeConnectorOrigin(
+  labelX: number,
+  labelY: number,
+  text: string,
+  fontSize: number,
+  fontWeight: number,
+  targetX: number,
+  targetY: number,
+  connectorStyle: 'straight' | 'curve',
+): { x: number; y: number } {
+  const box = computeTextBounds(labelX, labelY, text, fontSize, fontWeight);
+  const boxCenterX = box.x + box.width / 2;
+  const boxCenterY = box.y + box.height / 2;
+
+  // Curve connectors always start from the right edge
+  if (connectorStyle === 'curve') {
+    return {
+      x: box.x + box.width,
+      y: boxCenterY,
+    };
+  }
+
+  // Normalize the vector from box center to target by the box half-dimensions.
+  // This accounts for the box aspect ratio: a wide text box should prefer
+  // top/bottom exits even when the target is also offset horizontally.
+  const halfW = box.width / 2 || 1;
+  const halfH = box.height / 2 || 1;
+  const ndx = (targetX - boxCenterX) / halfW;
+  const ndy = (targetY - boxCenterY) / halfH;
+
+  if (Math.abs(ndy) >= Math.abs(ndx)) {
+    // Target is more above/below than left/right → use top or bottom edge
+    return ndy < 0
+      ? { x: boxCenterX, y: box.y } // top
+      : { x: boxCenterX, y: box.y + box.height }; // bottom
+  }
+  // Target is more left/right → use left or right edge
+  return ndx < 0
+    ? { x: box.x, y: boxCenterY } // left
+    : { x: box.x + box.width, y: boxCenterY }; // right
+}
+
+// ---------------------------------------------------------------------------
 // Text annotation
 // ---------------------------------------------------------------------------
 
@@ -178,25 +255,19 @@ function resolveTextAnnotation(
   const showConnector = annotation.connector !== false;
   const connectorStyle = annotation.connector === 'curve' ? 'curve' : 'straight';
 
-  // Compute connector origin based on style and text layout
+  // Compute connector origin: pick the edge midpoint closest to the data point
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
-  const lines = annotation.text.split('\n');
-  const lineHeight = 1.3;
-  let connectorFromX: number;
-  if (connectorStyle === 'curve') {
-    // Curved connectors start from the right edge of the text
-    connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight);
-  } else if (lines.length > 1) {
-    // Multi-line text uses text-anchor: middle, so labelX is already the center
-    connectorFromX = labelX;
-  } else {
-    // Straight connectors start from the horizontal center of the text
-    connectorFromX = labelX + estimateTextWidth(annotation.text, fontSize, fontWeight) / 2;
-  }
-
-  // Connector from.y sits at the bottom of the text block
-  const connectorFromY = labelY + (lines.length - 1) * fontSize * lineHeight + fontSize * 0.3;
+  const { x: connectorFromX, y: connectorFromY } = computeConnectorOrigin(
+    labelX,
+    labelY,
+    annotation.text,
+    fontSize,
+    fontWeight,
+    px,
+    py,
+    connectorStyle,
+  );
 
   // Apply user-provided connector endpoint offsets
   const baseFrom = { x: connectorFromX, y: connectorFromY };
@@ -402,25 +473,9 @@ function resolveRefLineAnnotation(
 
 /** Estimate the bounding box of an annotation label. */
 function estimateLabelBounds(label: ResolvedLabel): Rect {
-  const lines = label.text.split('\n');
   const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
-  const lineHeight = label.style.lineHeight ?? 1.3;
-
-  const maxWidth = Math.max(...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)));
-  const totalHeight = lines.length * fontSize * lineHeight;
-
-  // Multi-line text is rendered with text-anchor: middle by the SVG renderer,
-  // so the text is centered at label.x. Single-line uses the style's textAnchor.
-  const isMultiLine = lines.length > 1;
-  const anchorX = isMultiLine ? label.x - maxWidth / 2 : label.x;
-
-  return {
-    x: anchorX,
-    y: label.y - fontSize,
-    width: maxWidth,
-    height: totalHeight,
-  };
+  return computeTextBounds(label.x, label.y, label.text, fontSize, fontWeight);
 }
 
 /** Check if two rects overlap. */
@@ -491,19 +546,34 @@ function nudgeAnnotationFromObstacles(
   candidates.sort((a, b) => a.distance - b.distance);
 
   for (const { dx, dy } of candidates) {
+    const newLabelX = annotation.label.x + dx;
+    const newLabelY = annotation.label.y + dy;
+
+    // Recompute connector origin for the new label position so the connector
+    // exits from the edge closest to the data point after nudging.
+    let newConnector = annotation.label.connector;
+    if (newConnector) {
+      const annFontSize = annotation.label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+      const annFontWeight = annotation.label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
+      const connStyle = newConnector.style === 'curve' ? ('curve' as const) : ('straight' as const);
+      const newFrom = computeConnectorOrigin(
+        newLabelX,
+        newLabelY,
+        annotation.label.text,
+        annFontSize,
+        annFontWeight,
+        px,
+        py,
+        connStyle,
+      );
+      newConnector = { ...newConnector, from: newFrom };
+    }
+
     const candidateLabel: ResolvedLabel = {
       ...annotation.label,
-      x: annotation.label.x + dx,
-      y: annotation.label.y + dy,
-      connector: annotation.label.connector
-        ? {
-            ...annotation.label.connector,
-            from: {
-              x: annotation.label.connector.from.x + dx,
-              y: annotation.label.connector.from.y + dy,
-            },
-          }
-        : undefined,
+      x: newLabelX,
+      y: newLabelY,
+      connector: newConnector,
     };
 
     const candidateBounds = estimateLabelBounds(candidateLabel);

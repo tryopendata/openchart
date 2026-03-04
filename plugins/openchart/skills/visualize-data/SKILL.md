@@ -58,6 +58,7 @@ Each type has a detailed reference with full spec, encoding rules, and examples.
 | Titles, subtitles, annotations | Editorial writing | [references/editorial-writing.md](references/editorial-writing.md) |
 | Type sizing, hierarchy | Typography | [references/typography.md](references/typography.md) |
 | Whether a chart is "done" | Design review | [references/design-review.md](references/design-review.md) |
+| Rendered output QA | Visual defect scanning | [references/visual-qa.md](references/visual-qa.md) |
 
 ## Shared Spec Structure
 

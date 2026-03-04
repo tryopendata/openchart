@@ -1,10 +1,9 @@
 /**
- * Infrographic Parity showcase.
+ * Infographic showcase.
  *
- * Demonstrates the visual polish improvements made to match Infrographic-level
- * editorial chart quality. Each story highlights a specific improvement area:
- * tighter spacing, refined typography, cleaner axes (no y-axis line, no tick
- * marks), proper stacking, subtle area fills, and polished table styling.
+ * Publication-quality editorial charts with annotations, storytelling titles,
+ * and real-world data. Each story demonstrates a different chart type with
+ * the kind of polish you'd see in a newspaper or research report.
  */
 
 import type { Story } from '@ladle/react';
@@ -12,134 +11,214 @@ import type { ChartSpec, TableSpec } from '@opendata-ai/openchart-core';
 import { Chart, DataTable } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
-// 1. Simple Horizontal Bar Chart
+// 1. Horizontal Bar Chart - Global Military Spending
 // ---------------------------------------------------------------------------
 
 const barSpec: ChartSpec = {
   type: 'bar',
   data: [
-    { language: 'Python', usage: 30.7 },
-    { language: 'JavaScript', usage: 18.4 },
-    { language: 'Java', usage: 13.1 },
-    { language: 'C/C++', usage: 11.8 },
-    { language: 'TypeScript', usage: 8.6 },
+    { country: 'United States', spending: 997 },
+    { country: 'China', spending: 314 },
+    { country: 'Russia', spending: 149 },
+    { country: 'Germany', spending: 88.5 },
+    { country: 'India', spending: 86.1 },
+    { country: 'United Kingdom', spending: 82.0 },
+    { country: 'Saudi Arabia', spending: 80.3 },
+    { country: 'France', spending: 64.7 },
   ],
   encoding: {
-    x: { field: 'usage', type: 'quantitative', axis: { label: 'Usage share (%)' } },
-    y: { field: 'language', type: 'nominal' },
+    x: {
+      field: 'spending',
+      type: 'quantitative',
+      axis: { label: 'Annual spending ($ billions)' },
+    },
+    y: { field: 'country', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: 997,
+      y: 'United States',
+      text: 'The US alone accounts\nfor 37% of global total',
+      fontSize: 11,
+      anchor: 'left',
+      offset: { dx: -250, dy: -80 },
+      connector: 'curve',
+      stroke: '#475569',
+      background: '#ffffff',
+    },
+  ],
   chrome: {
-    title: 'Top 5 Programming Languages by Usage',
-    subtitle: 'TIOBE Index, January 2025',
-    source: 'Source: TIOBE Software',
+    title: 'The US Outspends the Next Seven Nations Combined',
+    subtitle: 'Top 8 countries by military expenditure, 2024',
+    source: 'Source: SIPRI Military Expenditure Database',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const HorizontalBar: Story = () => (
-  <div style={{ width: 700, height: 350 }}>
+  <div className="story-chart" style={{ height: 400 }}>
     <Chart spec={barSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// 2. Multi-Series Line Chart
+// 2. Multi-Series Line Chart - Social Media MAU
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
   type: 'line',
   data: [
     // YouTube
-    { date: '2023-01-01', mau: 2200, platform: 'YouTube' },
-    { date: '2023-04-01', mau: 2240, platform: 'YouTube' },
-    { date: '2023-07-01', mau: 2310, platform: 'YouTube' },
-    { date: '2023-10-01', mau: 2350, platform: 'YouTube' },
-    { date: '2024-01-01', mau: 2410, platform: 'YouTube' },
-    { date: '2024-04-01', mau: 2460, platform: 'YouTube' },
-    { date: '2024-07-01', mau: 2500, platform: 'YouTube' },
-    { date: '2024-10-01', mau: 2530, platform: 'YouTube' },
+    { date: '2023-01-01', mau: 2300, platform: 'YouTube' },
+    { date: '2023-04-01', mau: 2340, platform: 'YouTube' },
+    { date: '2023-07-01', mau: 2390, platform: 'YouTube' },
+    { date: '2023-10-01', mau: 2420, platform: 'YouTube' },
+    { date: '2024-01-01', mau: 2460, platform: 'YouTube' },
+    { date: '2024-04-01', mau: 2500, platform: 'YouTube' },
+    { date: '2024-07-01', mau: 2540, platform: 'YouTube' },
+    { date: '2024-10-01', mau: 2580, platform: 'YouTube' },
     // Instagram
-    { date: '2023-01-01', mau: 1400, platform: 'Instagram' },
-    { date: '2023-04-01', mau: 1430, platform: 'Instagram' },
-    { date: '2023-07-01', mau: 1470, platform: 'Instagram' },
-    { date: '2023-10-01', mau: 1520, platform: 'Instagram' },
-    { date: '2024-01-01', mau: 1560, platform: 'Instagram' },
-    { date: '2024-04-01', mau: 1600, platform: 'Instagram' },
-    { date: '2024-07-01', mau: 1650, platform: 'Instagram' },
-    { date: '2024-10-01', mau: 1700, platform: 'Instagram' },
+    { date: '2023-01-01', mau: 1480, platform: 'Instagram' },
+    { date: '2023-04-01', mau: 1520, platform: 'Instagram' },
+    { date: '2023-07-01', mau: 1550, platform: 'Instagram' },
+    { date: '2023-10-01', mau: 1580, platform: 'Instagram' },
+    { date: '2024-01-01', mau: 1600, platform: 'Instagram' },
+    { date: '2024-04-01', mau: 1620, platform: 'Instagram' },
+    { date: '2024-07-01', mau: 1640, platform: 'Instagram' },
+    { date: '2024-10-01', mau: 1630, platform: 'Instagram' },
     // TikTok
-    { date: '2023-01-01', mau: 1050, platform: 'TikTok' },
-    { date: '2023-04-01', mau: 1120, platform: 'TikTok' },
-    { date: '2023-07-01', mau: 1190, platform: 'TikTok' },
-    { date: '2023-10-01', mau: 1260, platform: 'TikTok' },
-    { date: '2024-01-01', mau: 1340, platform: 'TikTok' },
-    { date: '2024-04-01', mau: 1410, platform: 'TikTok' },
-    { date: '2024-07-01', mau: 1480, platform: 'TikTok' },
-    { date: '2024-10-01', mau: 1560, platform: 'TikTok' },
+    { date: '2023-01-01', mau: 1200, platform: 'TikTok' },
+    { date: '2023-04-01', mau: 1310, platform: 'TikTok' },
+    { date: '2023-07-01', mau: 1420, platform: 'TikTok' },
+    { date: '2023-10-01', mau: 1500, platform: 'TikTok' },
+    { date: '2024-01-01', mau: 1580, platform: 'TikTok' },
+    { date: '2024-04-01', mau: 1680, platform: 'TikTok' },
+    { date: '2024-07-01', mau: 1790, platform: 'TikTok' },
+    { date: '2024-10-01', mau: 1880, platform: 'TikTok' },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'mau', type: 'quantitative', axis: { label: 'MAU (millions)' } },
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 4 } },
+    y: {
+      field: 'mau',
+      type: 'quantitative',
+      axis: { label: 'Monthly active users (millions)' },
+    },
     color: { field: 'platform', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2024-04-01',
+      y: 1650,
+      text: 'TikTok overtakes Instagram\nin Q2 2024',
+      fontSize: 11,
+      anchor: 'bottom',
+      offset: { dx: -40, dy: -20 },
+      connector: true,
+      background: '#ffffff',
+    },
+    {
+      type: 'text',
+      x: '2023-07-01',
+      y: 2390,
+      text: 'YouTube holds steady\nabove 2.5B',
+      fontSize: 11,
+      anchor: 'bottom',
+      offset: { dx: 0, dy: 10 },
+      connector: false,
+    },
+  ],
+  labels: { density: 'endpoints' },
+  legend: { position: 'bottom-right' },
   chrome: {
-    title: 'Monthly Active Users by Platform',
-    subtitle: 'Quarterly figures, 2023-2024',
+    title: "TikTok's Meteoric Rise Overtakes Instagram",
+    subtitle: 'Monthly active users by platform, quarterly 2023-2024',
     source: 'Source: Data.ai, company reports',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const MultiSeriesLine: Story = () => (
-  <div style={{ width: 700, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={lineSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// 3. Stacked Column Chart
+// 3. Stacked Column Chart - Global EV Sales by Powertrain
 // ---------------------------------------------------------------------------
 
 const stackedColumnSpec: ChartSpec = {
   type: 'column',
   data: [
-    // Electric
-    { year: '2019', sales: 2.1, fuel: 'Electric' },
-    { year: '2020', sales: 3.0, fuel: 'Electric' },
-    { year: '2021', sales: 6.6, fuel: 'Electric' },
-    { year: '2022', sales: 10.5, fuel: 'Electric' },
-    { year: '2023', sales: 14.2, fuel: 'Electric' },
+    // Battery Electric
+    { year: '2019', sales: 2.1, fuel: 'Battery Electric' },
+    { year: '2020', sales: 3.0, fuel: 'Battery Electric' },
+    { year: '2021', sales: 6.6, fuel: 'Battery Electric' },
+    { year: '2022', sales: 10.5, fuel: 'Battery Electric' },
+    { year: '2023', sales: 14.2, fuel: 'Battery Electric' },
+    { year: '2024', sales: 17.1, fuel: 'Battery Electric' },
     // Plug-in Hybrid
     { year: '2019', sales: 1.4, fuel: 'Plug-in Hybrid' },
     { year: '2020', sales: 1.8, fuel: 'Plug-in Hybrid' },
     { year: '2021', sales: 3.2, fuel: 'Plug-in Hybrid' },
     { year: '2022', sales: 3.8, fuel: 'Plug-in Hybrid' },
     { year: '2023', sales: 4.1, fuel: 'Plug-in Hybrid' },
+    { year: '2024', sales: 6.4, fuel: 'Plug-in Hybrid' },
     // Hybrid
     { year: '2019', sales: 3.6, fuel: 'Hybrid' },
     { year: '2020', sales: 3.4, fuel: 'Hybrid' },
     { year: '2021', sales: 4.1, fuel: 'Hybrid' },
     { year: '2022', sales: 4.7, fuel: 'Hybrid' },
     { year: '2023', sales: 5.5, fuel: 'Hybrid' },
+    { year: '2024', sales: 6.3, fuel: 'Hybrid' },
   ],
   encoding: {
     x: { field: 'year', type: 'ordinal' },
     y: { field: 'sales', type: 'quantitative', axis: { label: 'Sales (millions)' } },
     color: { field: 'fuel', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2024',
+      y: 25,
+      text: 'Total: 29.8M units\n(+25% year-over-year)',
+      fontSize: 11,
+      anchor: 'left',
+      offset: { dx: -160, dy: -40 },
+      connector: true,
+      background: '#ffffff',
+    },
+    {
+      type: 'text',
+      x: '2021',
+      y: 10,
+      text: 'BEV overtakes hybrid\nfor first time',
+      fontSize: 10,
+      anchor: 'top',
+      offset: { dx: 0, dy: -40 },
+      connector: true,
+      background: '#ffffff',
+    },
+  ],
   chrome: {
-    title: 'Global EV Sales by Powertrain',
-    subtitle: 'Electric, plug-in hybrid, and hybrid vehicle sales, 2019-2023',
-    source: 'Source: International Energy Agency',
+    title: 'Electric Vehicles Dominate as Sales Quadruple in Five Years',
+    subtitle: 'Global electrified vehicle sales by powertrain type, 2019-2024',
+    source: 'Source: IEA Global EV Outlook 2025, Rho Motion',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const StackedColumn: Story = () => (
-  <div style={{ width: 700, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={stackedColumnSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// 4. Stacked Area Chart
+// 4. Stacked Area Chart - Global Renewable Electricity Generation
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
@@ -152,6 +231,7 @@ const stackedAreaSpec: ChartSpec = {
     { date: '2021-01-01', generation: 1023, source: 'Solar' },
     { date: '2022-01-01', generation: 1284, source: 'Solar' },
     { date: '2023-01-01', generation: 1631, source: 'Solar' },
+    { date: '2024-01-01', generation: 2105, source: 'Solar' },
     // Wind
     { date: '2018-01-01', generation: 1270, source: 'Wind' },
     { date: '2019-01-01', generation: 1420, source: 'Wind' },
@@ -159,6 +239,7 @@ const stackedAreaSpec: ChartSpec = {
     { date: '2021-01-01', generation: 1862, source: 'Wind' },
     { date: '2022-01-01', generation: 2100, source: 'Wind' },
     { date: '2023-01-01', generation: 2304, source: 'Wind' },
+    { date: '2024-01-01', generation: 2494, source: 'Wind' },
     // Hydro
     { date: '2018-01-01', generation: 4210, source: 'Hydro' },
     { date: '2019-01-01', generation: 4306, source: 'Hydro' },
@@ -166,21 +247,47 @@ const stackedAreaSpec: ChartSpec = {
     { date: '2021-01-01', generation: 4273, source: 'Hydro' },
     { date: '2022-01-01', generation: 4334, source: 'Hydro' },
     { date: '2023-01-01', generation: 4410, source: 'Hydro' },
+    { date: '2024-01-01', generation: 4578, source: 'Hydro' },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 6 } },
     y: { field: 'generation', type: 'quantitative', axis: { label: 'TWh' } },
     color: { field: 'source', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2022-01-01',
+      y: 1284,
+      text: 'Solar doubles from\n1,023 to 2,105 TWh\nin just three years',
+      fontSize: 10,
+      anchor: 'top',
+      offset: { dx: 0, dy: -60 },
+      connector: true,
+      background: '#ffffff',
+    },
+    {
+      type: 'text',
+      x: '2024-01-01',
+      y: 7500,
+      text: 'Renewables surpass\n9,100 TWh in 2024',
+      fontSize: 11,
+      anchor: 'left',
+      offset: { dx: -170, dy: -30 },
+      connector: true,
+      background: '#ffffff',
+    },
+  ],
   chrome: {
-    title: 'Global Renewable Electricity Generation',
-    subtitle: 'Solar, wind, and hydro generation in terawatt-hours, 2018-2023',
-    source: 'Source: IRENA Renewable Energy Statistics',
+    title: 'Solar Surge Drives Renewable Generation Past 9,000 TWh',
+    subtitle: 'Global electricity generation from solar, wind, and hydro, 2018-2024',
+    source: 'Source: Ember Global Electricity Review 2025, IRENA',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const StackedArea: Story = () => (
-  <div style={{ width: 700, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={stackedAreaSpec} />
   </div>
 );
@@ -338,9 +445,10 @@ const tableSpec: TableSpec = {
     { key: 'trend', label: 'CO2 Trend', sparkline: { type: 'line' } },
   ],
   chrome: {
-    title: 'Global Country Indicators',
-    subtitle: 'Population, economic output, health, and emissions',
+    title: 'Wealth Grows but Emissions Tell a Different Story',
+    subtitle: 'Key indicators for 15 major economies, 2024 estimates',
     source: 'Source: World Bank, Global Carbon Project',
+    byline: 'Table: OpenChart',
   },
   search: true,
   pagination: { pageSize: 10 },

@@ -612,6 +612,78 @@ describe('computeAreaMarks', () => {
       expect(firstBottom).not.toBe(secondBottom);
     }
   });
+
+  it('stacked areas: y-domain covers the stacked sum, not individual max', () => {
+    // Three series each with value 100 at the same x point. The stacked sum
+    // is 300, so the y-scale domain must go up to at least 300. Without the
+    // stacked domain fix, the domain only reaches 100 and the top layers clip.
+    const spec: NormalizedChartSpec = {
+      type: 'area',
+      data: [
+        { date: '2020-01-01', value: 100, group: 'A' },
+        { date: '2021-01-01', value: 100, group: 'A' },
+        { date: '2020-01-01', value: 100, group: 'B' },
+        { date: '2021-01-01', value: 100, group: 'B' },
+        { date: '2020-01-01', value: 100, group: 'C' },
+        { date: '2021-01-01', value: 100, group: 'C' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'group', type: 'nominal' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '' },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(3);
+
+    // The topmost layer's top points should be within the chart area, not
+    // clipped beyond it. With a proper stacked domain the y-scale covers
+    // 0..300 (niced), so all pixel positions stay within bounds.
+    const lastLayer = marks[marks.length - 1];
+    for (const pt of lastLayer.topPoints) {
+      expect(pt.y).toBeGreaterThanOrEqual(chartArea.y);
+      expect(pt.y).toBeLessThanOrEqual(chartArea.y + chartArea.height);
+    }
+  });
+
+  it('returns empty marks for unparseable temporal data', () => {
+    // Quarterly strings like '2022-Q1' are not valid Date strings. The engine
+    // should handle this gracefully (empty marks) rather than crashing or
+    // producing NaN-filled paths.
+    const spec: NormalizedChartSpec = {
+      type: 'area',
+      data: [
+        { quarter: '2022-Q1', revenue: 45, segment: 'Services' },
+        { quarter: '2022-Q2', revenue: 52, segment: 'Services' },
+        { quarter: '2022-Q1', revenue: 120, segment: 'Products' },
+        { quarter: '2022-Q2', revenue: 135, segment: 'Products' },
+      ],
+      encoding: {
+        x: { field: 'quarter', type: 'temporal' },
+        y: { field: 'revenue', type: 'quantitative' },
+        color: { field: 'segment', type: 'nominal' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '' },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    // Should produce empty marks since dates can't be parsed, not crash
+    expect(marks).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -73,8 +73,10 @@ const scatterSpec: ChartSpec = {
       type: 'text',
       x: 63544,
       y: 77.3,
-      text: 'US',
+      text: 'United States',
       fontSize: 10,
+      connector: false,
+      offset: { dx: 8, dy: -8 },
     },
     {
       type: 'text',
@@ -82,6 +84,35 @@ const scatterSpec: ChartSpec = {
       y: 84.6,
       text: 'Japan',
       fontSize: 10,
+      connector: false,
+      offset: { dx: 8, dy: -4 },
+    },
+    {
+      type: 'text',
+      x: 10500,
+      y: 78.2,
+      text: 'China',
+      fontSize: 10,
+      connector: false,
+      offset: { dx: 10, dy: -4 },
+    },
+    {
+      type: 'text',
+      x: 1901,
+      y: 70.2,
+      text: 'India',
+      fontSize: 10,
+      connector: false,
+      offset: { dx: 10, dy: -4 },
+    },
+    {
+      type: 'text',
+      x: 2066,
+      y: 54.7,
+      text: 'Nigeria',
+      fontSize: 10,
+      connector: false,
+      offset: { dx: 8, dy: -4 },
     },
     {
       type: 'text',
@@ -89,17 +120,37 @@ const scatterSpec: ChartSpec = {
       y: 66.6,
       text: 'Ethiopia',
       fontSize: 10,
+      connector: false,
+      offset: { dx: 8, dy: -4 },
+    },
+    {
+      type: 'text',
+      x: 6797,
+      y: 75.9,
+      text: 'Brazil',
+      fontSize: 10,
+      connector: false,
+      offset: { dx: 8, dy: -4 },
+    },
+    {
+      type: 'text',
+      x: 45724,
+      y: 81.0,
+      text: 'Germany',
+      fontSize: 10,
+      connector: false,
+      offset: { dx: 8, dy: -4 },
     },
   ],
   chrome: {
-    title: 'Wealth and Health of Nations',
-    subtitle: 'GDP per capita vs life expectancy, bubble size represents population',
-    source: 'Source: World Bank Development Indicators, 2021',
+    title: 'Richer countries live longer, but America is a notable outlier',
+    subtitle: 'GDP per capita vs life expectancy, bubble size represents population, 2022',
+    source: 'Source: World Bank Development Indicators',
   },
 };
 
 export const WealthHealth = () => (
-  <div style={{ width: 750, height: 500 }}>
+  <div className="story-chart" style={{ height: 500 }}>
     <Chart spec={scatterSpec} />
   </div>
 );
@@ -113,11 +164,5 @@ export const WealthHealthCompact = () => (
 export const WealthHealthWide = () => (
   <div style={{ width: 1200, height: 600 }}>
     <Chart spec={scatterSpec} />
-  </div>
-);
-
-export const WealthHealthDarkMode = () => (
-  <div style={{ width: 750, height: 500 }}>
-    <Chart spec={scatterSpec} darkMode="force" />
   </div>
 );

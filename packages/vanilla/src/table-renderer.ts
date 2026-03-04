@@ -345,6 +345,20 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
   liveRegion.setAttribute('role', 'status');
   wrapper.appendChild(liveRegion);
 
+  // Brand watermark
+  const brandColor = theme ? theme.colors.axis : '#999999';
+  const brand = document.createElement('div');
+  brand.className = 'viz-table-ref';
+  brand.style.cssText = 'text-align: right; padding: 4px 8px;';
+  const brandLink = document.createElement('a');
+  brandLink.href = 'https://tryopendata.ai';
+  brandLink.target = '_blank';
+  brandLink.rel = 'noopener';
+  brandLink.style.cssText = `font-size: 20px; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
+  brandLink.textContent = 'OpenData';
+  brand.appendChild(brandLink);
+  wrapper.appendChild(brand);
+
   container.appendChild(wrapper);
   return wrapper;
 }

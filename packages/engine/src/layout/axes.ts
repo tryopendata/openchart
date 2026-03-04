@@ -56,12 +56,13 @@ function continuousTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity
 function categoricalTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
   const domain: string[] = scale.domain();
-  const maxTicks = TICK_COUNTS[density];
+  const explicitTickCount = resolvedScale.channel.axis?.tickCount;
+  const maxTicks = explicitTickCount ?? TICK_COUNTS[density];
 
-  // Band scales (bar charts) should always show all category labels.
-  // Only thin point/ordinal scales used for continuous-like axes (e.g. line charts).
+  // Band scales (bar charts) show all category labels by default.
+  // Only thin when there's an explicit tickCount override or for point/ordinal scales.
   let selectedValues = domain;
-  if (resolvedScale.type !== 'band' && domain.length > maxTicks) {
+  if ((resolvedScale.type !== 'band' || explicitTickCount) && domain.length > maxTicks) {
     const step = Math.ceil(domain.length / maxTicks);
     selectedValues = domain.filter((_: string, i: number) => i % step === 0);
   }

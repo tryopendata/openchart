@@ -32,7 +32,7 @@ const spec: ChartSpec = {
 };
 
 export const ChromeWithTitleSubtitleSource = () => (
-  <div style={{ width: 600, height: 400 }}>
+  <div className="story-chart" style={{ height: 400 }}>
     <Chart spec={spec} />
   </div>
 );
@@ -54,7 +54,7 @@ const minimalSpec: ChartSpec = {
 };
 
 export const ChromeTitleOnly = () => (
-  <div style={{ width: 600, height: 300 }}>
+  <div className="story-chart" style={{ height: 300 }}>
     <Chart spec={minimalSpec} />
   </div>
 );
@@ -71,7 +71,7 @@ const fullChromeSpec: ChartSpec = {
 };
 
 export const ChromeAllElements = () => (
-  <div style={{ width: 600, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={fullChromeSpec} />
   </div>
 );

@@ -9,128 +9,132 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
-// Basic pie (5 categories)
+// Basic pie — global smartphone OS market share
 // ---------------------------------------------------------------------------
 
 const basicPieSpec: ChartSpec = {
   type: 'pie',
   data: [
-    { browser: 'Chrome', share: 65 },
-    { browser: 'Safari', share: 18 },
-    { browser: 'Firefox', share: 8 },
-    { browser: 'Edge', share: 5 },
-    { browser: 'Other', share: 4 },
+    { os: 'Android', share: 71 },
+    { os: 'iOS', share: 28 },
+    { os: 'Other', share: 1 },
   ],
   encoding: {
     y: { field: 'share', type: 'quantitative' },
-    color: { field: 'browser', type: 'nominal' },
+    color: { field: 'os', type: 'nominal' },
   },
   chrome: {
-    title: 'Browser Market Share',
-    subtitle: 'Global desktop browser usage, 2024',
-    source: 'Source: StatCounter',
+    title: 'Android Runs 7 in 10 Smartphones Worldwide',
+    subtitle: 'Global mobile operating system market share, 2024',
+    source: 'Source: StatCounter Global Stats',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const BasicPie = () => (
-  <div style={{ width: 500, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={basicPieSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Donut with center label
+// Donut — US federal budget breakdown
 // ---------------------------------------------------------------------------
 
 const donutSpec: ChartSpec = {
   type: 'donut',
   data: [
-    { segment: 'Subscriptions', revenue: 45 },
-    { segment: 'Advertising', revenue: 30 },
-    { segment: 'Services', revenue: 15 },
-    { segment: 'Hardware', revenue: 10 },
+    { category: 'Healthcare', spending: 24 },
+    { category: 'Social Security', spending: 21 },
+    { category: 'Defense', spending: 13 },
+    { category: 'Net Interest', spending: 13 },
+    { category: 'All Other', spending: 29 },
   ],
   encoding: {
-    y: { field: 'revenue', type: 'quantitative' },
-    color: { field: 'segment', type: 'nominal' },
+    y: { field: 'spending', type: 'quantitative' },
+    color: { field: 'category', type: 'nominal' },
   },
   chrome: {
-    title: 'Revenue by Segment',
-    subtitle: 'Annual breakdown showing subscription dominance',
-    source: 'Source: Annual Report',
+    title: 'Healthcare and Social Security Eat Nearly Half the Federal Budget',
+    subtitle: 'Share of $6.9 trillion in federal spending, fiscal year 2024',
+    source: 'Source: Congressional Budget Office',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const DonutChart = () => (
-  <div style={{ width: 500, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={donutSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Small-slice grouping ("Other")
+// Small-slice grouping ("Other") — global CO2 emissions
 // ---------------------------------------------------------------------------
 
 const smallSliceSpec: ChartSpec = {
   type: 'pie',
   data: [
-    { country: 'United States', emissions: 5000 },
-    { country: 'China', emissions: 10000 },
-    { country: 'India', emissions: 2600 },
-    { country: 'Russia', emissions: 1700 },
-    { country: 'Japan', emissions: 1100 },
-    { country: 'Germany', emissions: 700 },
-    { country: 'South Korea', emissions: 600 },
-    { country: 'Iran', emissions: 500 },
-    { country: 'Canada', emissions: 400 },
-    { country: 'Indonesia', emissions: 350 },
-    { country: 'Turkey', emissions: 300 },
-    { country: 'Mexico', emissions: 250 },
+    { country: 'China', emissions: 12600 },
+    { country: 'United States', emissions: 4500 },
+    { country: 'India', emissions: 3000 },
+    { country: 'Russia', emissions: 1900 },
+    { country: 'Japan', emissions: 1000 },
+    { country: 'Germany', emissions: 620 },
+    { country: 'South Korea', emissions: 590 },
+    { country: 'Iran', emissions: 580 },
+    { country: 'Canada', emissions: 530 },
+    { country: 'Indonesia', emissions: 490 },
+    { country: 'Saudi Arabia', emissions: 480 },
+    { country: 'Turkey', emissions: 420 },
   ],
   encoding: {
     y: { field: 'emissions', type: 'quantitative' },
     color: { field: 'country', type: 'nominal' },
   },
   chrome: {
-    title: 'CO2 Emissions by Country',
-    subtitle: 'Small contributors automatically grouped into "Other"',
+    title: 'China and the US Alone Account for 45% of Global CO\u2082',
+    subtitle:
+      'Annual CO\u2082 emissions in million tonnes, 2024. Small emitters auto-grouped into "Other".',
     source: 'Source: Global Carbon Project',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const SmallSliceGrouping = () => (
-  <div style={{ width: 550, height: 500 }}>
+  <div className="story-chart" style={{ height: 500 }}>
     <Chart spec={smallSliceSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// 7-category pie
+// 6-category pie — global energy mix
 // ---------------------------------------------------------------------------
 
-const sevenCategorySpec: ChartSpec = {
+const energyMixSpec: ChartSpec = {
   type: 'pie',
   data: [
-    { day: 'Monday', hours: 8 },
-    { day: 'Tuesday', hours: 7 },
-    { day: 'Wednesday', hours: 9 },
-    { day: 'Thursday', hours: 8 },
-    { day: 'Friday', hours: 6 },
-    { day: 'Saturday', hours: 3 },
-    { day: 'Sunday', hours: 2 },
+    { source: 'Oil', share: 31 },
+    { source: 'Natural Gas', share: 23 },
+    { source: 'Coal', share: 26 },
+    { source: 'Hydropower', share: 7 },
+    { source: 'Nuclear', share: 5 },
+    { source: 'Solar & Wind', share: 8 },
   ],
   encoding: {
-    y: { field: 'hours', type: 'quantitative' },
-    color: { field: 'day', type: 'nominal' },
+    y: { field: 'share', type: 'quantitative' },
+    color: { field: 'source', type: 'nominal' },
   },
   chrome: {
-    title: 'Working Hours by Day',
-    subtitle: 'Average weekly distribution',
+    title: 'Fossil Fuels Still Power 80% of the World',
+    subtitle: 'Share of global primary energy consumption by source, 2024',
+    source: 'Source: Energy Institute Statistical Review of World Energy',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const SevenCategories = () => (
-  <div style={{ width: 500, height: 450 }}>
-    <Chart spec={sevenCategorySpec} />
+  <div className="story-chart" style={{ height: 450 }}>
+    <Chart spec={energyMixSpec} />
   </div>
 );

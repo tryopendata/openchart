@@ -607,3 +607,50 @@ describe('targeted mark snapshots', () => {
     expect(path!.getAttribute('d')).not.toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Brand watermark
+// ---------------------------------------------------------------------------
+
+describe('brand watermark', () => {
+  it('renders "Open" and "Data" text elements', () => {
+    const { svg } = renderSpec(lineSpec);
+    const openLink = svg.querySelector('.viz-axis-ref');
+    const dataLink = svg.querySelector('.viz-chrome-ref');
+    expect(openLink).not.toBeNull();
+    expect(dataLink).not.toBeNull();
+    expect(openLink!.querySelector('text')!.textContent).toBe('Open');
+    expect(dataLink!.querySelector('text')!.textContent).toBe('Data');
+  });
+
+  it('both elements link to tryopendata.ai', () => {
+    const { svg } = renderSpec(lineSpec);
+    const links = svg.querySelectorAll('a[href="https://tryopendata.ai"]');
+    expect(links.length).toBe(2);
+  });
+
+  it('elements are direct children of SVG root (no shared group)', () => {
+    const { svg } = renderSpec(lineSpec);
+    const openLink = svg.querySelector('.viz-axis-ref');
+    const dataLink = svg.querySelector('.viz-chrome-ref');
+    expect(openLink!.parentElement).toBe(svg);
+    expect(dataLink!.parentElement).toBe(svg);
+  });
+
+  it('elements are interleaved with other chart layers', () => {
+    const { svg } = renderSpec(lineSpec);
+    const children = Array.from(svg.children);
+    const openIdx = children.findIndex((el) => el.classList.contains('viz-axis-ref'));
+    const chromeIdx = children.findIndex((el) => el.classList.contains('viz-chrome'));
+    const dataIdx = children.findIndex((el) => el.classList.contains('viz-chrome-ref'));
+    // "Open" should come before chrome, "Data" after chrome
+    expect(openIdx).toBeLessThan(chromeIdx);
+    expect(dataIdx).toBeGreaterThan(chromeIdx);
+  });
+
+  it('skips watermark on very small charts', () => {
+    const { svg } = renderSpec(lineSpec, { width: 100, height: 80 });
+    const openLink = svg.querySelector('.viz-axis-ref');
+    expect(openLink).toBeNull();
+  });
+});

@@ -134,12 +134,6 @@ export const Basic: Story = () => (
   </div>
 );
 
-export const BasicDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 900 }}>
-    <DataTable spec={spec} darkMode="force" />
-  </div>
-);
-
 export const BasicCompact: Story = () => (
   <div className="story-centered" style={{ maxWidth: 380 }}>
     <DataTable spec={spec} />

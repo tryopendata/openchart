@@ -9,112 +9,196 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
-// Basic scatter (x vs y)
+// Basic scatter — education spending vs PISA math scores
 // ---------------------------------------------------------------------------
 
 const basicScatterSpec: ChartSpec = {
   type: 'scatter',
   data: [
-    { hours: 2, score: 55 },
-    { hours: 3, score: 62 },
-    { hours: 4, score: 68 },
-    { hours: 5, score: 71 },
-    { hours: 6, score: 78 },
-    { hours: 7, score: 82 },
-    { hours: 8, score: 85 },
-    { hours: 9, score: 88 },
-    { hours: 4, score: 60 },
-    { hours: 6, score: 73 },
-    { hours: 3, score: 58 },
-    { hours: 8, score: 90 },
-    { hours: 5, score: 65 },
-    { hours: 7, score: 76 },
-    { hours: 10, score: 92 },
+    { country: 'Singapore', spending: 14.5, math: 575 },
+    { country: 'Japan', spending: 10.1, math: 536 },
+    { country: 'South Korea', spending: 12.2, math: 527 },
+    { country: 'Estonia', spending: 8.4, math: 510 },
+    { country: 'Switzerland', spending: 17.8, math: 508 },
+    { country: 'Netherlands', spending: 13.2, math: 493 },
+    { country: 'Canada', spending: 12.4, math: 497 },
+    { country: 'Poland', spending: 7.8, math: 489 },
+    { country: 'Denmark', spending: 14.1, math: 489 },
+    { country: 'Ireland', spending: 11.3, math: 492 },
+    { country: 'Australia', spending: 12.8, math: 487 },
+    { country: 'United Kingdom', spending: 12.6, math: 489 },
+    { country: 'Finland', spending: 12.0, math: 484 },
+    { country: 'United States', spending: 14.3, math: 465 },
+    { country: 'France', spending: 11.4, math: 474 },
+    { country: 'Germany', spending: 13.7, math: 475 },
+    { country: 'Italy', spending: 10.2, math: 471 },
+    { country: 'Norway', spending: 16.2, math: 468 },
+    { country: 'Israel', spending: 10.6, math: 458 },
+    { country: 'Chile', spending: 6.1, math: 412 },
+    { country: 'Mexico', spending: 3.3, math: 395 },
+    { country: 'Colombia', spending: 3.8, math: 383 },
   ],
   encoding: {
-    x: { field: 'hours', type: 'quantitative', axis: { label: 'Study Hours' } },
-    y: { field: 'score', type: 'quantitative', axis: { label: 'Test Score' } },
+    x: {
+      field: 'spending',
+      type: 'quantitative',
+      axis: { label: 'Spending per student ($K, PPP)' },
+    },
+    y: {
+      field: 'math',
+      type: 'quantitative',
+      axis: { label: 'PISA math score' },
+    },
   },
+  annotations: [
+    { type: 'text', x: 14.5, y: 575, text: 'Singapore', anchor: 'left', fontSize: 10 },
+    { type: 'text', x: 14.3, y: 465, text: 'United States', anchor: 'right', fontSize: 10 },
+    { type: 'text', x: 8.4, y: 510, text: 'Estonia', anchor: 'left', fontSize: 10 },
+    { type: 'refline', y: 472, label: 'OECD avg', style: 'dashed' },
+  ],
   chrome: {
-    title: 'Study Hours vs Test Scores',
-    subtitle: 'Each point represents a student',
-    source: 'Source: Education Research Lab',
+    title: "Spending More on Schools Doesn't Guarantee Better Math Scores",
+    subtitle: 'Cumulative per-student spending vs. PISA 2022 math performance, OECD countries',
+    source: 'Source: OECD PISA 2022, Education at a Glance',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const BasicScatter = () => (
-  <div style={{ width: 600, height: 400 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={basicScatterSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Bubble chart (size encoding)
+// Bubble chart — Gapminder-style wealth vs health
 // ---------------------------------------------------------------------------
 
 const bubbleSpec: ChartSpec = {
   type: 'scatter',
   data: [
-    { gdp: 10, lifeExpectancy: 62, population: 1400, country: 'India' },
-    { gdp: 18, lifeExpectancy: 78, population: 330, country: 'USA' },
-    { gdp: 12, lifeExpectancy: 77, population: 1400, country: 'China' },
-    { gdp: 45, lifeExpectancy: 82, population: 125, country: 'Japan' },
-    { gdp: 48, lifeExpectancy: 83, population: 83, country: 'Germany' },
-    { gdp: 8, lifeExpectancy: 72, population: 210, country: 'Brazil' },
-    { gdp: 5, lifeExpectancy: 55, population: 220, country: 'Nigeria' },
-    { gdp: 35, lifeExpectancy: 82, population: 25, country: 'Australia' },
+    { country: 'China', gdp: 12.7, lifeExp: 79, pop: 1412, region: 'Asia' },
+    { country: 'India', gdp: 7.3, lifeExp: 73, pop: 1408, region: 'Asia' },
+    { country: 'United States', gdp: 76.3, lifeExp: 78.4, pop: 335, region: 'Americas' },
+    { country: 'Indonesia', gdp: 13.1, lifeExp: 72, pop: 277, region: 'Asia' },
+    { country: 'Brazil', gdp: 10.4, lifeExp: 76, pop: 216, region: 'Americas' },
+    { country: 'Nigeria', gdp: 2.2, lifeExp: 55, pop: 224, region: 'Africa' },
+    { country: 'Bangladesh', gdp: 6.6, lifeExp: 73, pop: 170, region: 'Asia' },
+    { country: 'Japan', gdp: 42.4, lifeExp: 84.8, pop: 124, region: 'Asia' },
+    { country: 'Mexico', gdp: 12.6, lifeExp: 75, pop: 129, region: 'Americas' },
+    { country: 'Germany', gdp: 54.3, lifeExp: 81.7, pop: 84, region: 'Europe' },
+    { country: 'France', gdp: 46.3, lifeExp: 82.5, pop: 68, region: 'Europe' },
+    { country: 'United Kingdom', gdp: 48.9, lifeExp: 81.8, pop: 67, region: 'Europe' },
+    { country: 'South Korea', gdp: 34.2, lifeExp: 83.7, pop: 52, region: 'Asia' },
+    { country: 'South Africa', gdp: 7.1, lifeExp: 65, pop: 60, region: 'Africa' },
+    { country: 'Australia', gdp: 64.7, lifeExp: 83.5, pop: 26, region: 'Asia' },
+    { country: 'Ethiopia', gdp: 2.8, lifeExp: 67, pop: 126, region: 'Africa' },
+    { country: 'Canada', gdp: 53.2, lifeExp: 82, pop: 40, region: 'Americas' },
   ],
   encoding: {
-    x: { field: 'gdp', type: 'quantitative', axis: { label: 'GDP per Capita ($K)' } },
-    y: { field: 'lifeExpectancy', type: 'quantitative', axis: { label: 'Life Expectancy' } },
-    size: { field: 'population', type: 'quantitative' },
+    x: {
+      field: 'gdp',
+      type: 'quantitative',
+      axis: { label: 'GDP per capita ($K, PPP)' },
+    },
+    y: {
+      field: 'lifeExp',
+      type: 'quantitative',
+      axis: { label: 'Life expectancy (years)' },
+    },
+    size: { field: 'pop', type: 'quantitative' },
+    color: { field: 'region', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: 76.3,
+      y: 78.4,
+      text: 'US: rich but\ndies younger',
+      anchor: 'bottom',
+      fontSize: 10,
+    },
+    { type: 'text', x: 42.4, y: 84.8, text: 'Japan', anchor: 'left', fontSize: 10 },
+    { type: 'text', x: 2.2, y: 55, text: 'Nigeria', anchor: 'top', fontSize: 10 },
+    { type: 'refline', y: 73.4, label: 'World avg life expectancy', style: 'dashed' },
+  ],
   chrome: {
-    title: 'Wealth vs Health',
-    subtitle: 'GDP per capita, life expectancy, bubble size = population (millions)',
-    source: 'Source: World Bank 2023',
+    title: 'Money Buys Health, Up to a Point',
+    subtitle: 'GDP per capita vs. life expectancy. Bubble size = population (millions), 2023.',
+    source: 'Source: World Bank, Gapminder',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const BubbleChart = () => (
-  <div style={{ width: 700, height: 450 }}>
+  <div className="story-chart" style={{ height: 480 }}>
     <Chart spec={bubbleSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Color grouping by category
+// Color grouping — global cities: cost of living vs quality of life
 // ---------------------------------------------------------------------------
 
 const colorScatterSpec: ChartSpec = {
   type: 'scatter',
   data: [
-    { x: 2, y: 4, category: 'Type A' },
-    { x: 3, y: 8, category: 'Type A' },
-    { x: 5, y: 12, category: 'Type A' },
-    { x: 7, y: 14, category: 'Type A' },
-    { x: 1, y: 10, category: 'Type B' },
-    { x: 4, y: 15, category: 'Type B' },
-    { x: 6, y: 20, category: 'Type B' },
-    { x: 8, y: 22, category: 'Type B' },
-    { x: 2, y: 18, category: 'Type C' },
-    { x: 5, y: 25, category: 'Type C' },
-    { x: 7, y: 28, category: 'Type C' },
-    { x: 9, y: 30, category: 'Type C' },
+    { city: 'Zurich', cost: 131, quality: 98, region: 'Europe' },
+    { city: 'Vienna', cost: 79, quality: 97, region: 'Europe' },
+    { city: 'Geneva', cost: 124, quality: 96, region: 'Europe' },
+    { city: 'Copenhagen', cost: 89, quality: 95, region: 'Europe' },
+    { city: 'Singapore', cost: 107, quality: 93, region: 'Asia' },
+    { city: 'Sydney', cost: 83, quality: 92, region: 'Asia-Pacific' },
+    { city: 'Montreal', cost: 64, quality: 91, region: 'Americas' },
+    { city: 'Tokyo', cost: 78, quality: 90, region: 'Asia' },
+    { city: 'Hong Kong', cost: 120, quality: 78, region: 'Asia' },
+    { city: 'London', cost: 101, quality: 89, region: 'Europe' },
+    { city: 'New York', cost: 100, quality: 85, region: 'Americas' },
+    { city: 'Dubai', cost: 76, quality: 82, region: 'Middle East' },
+    { city: 'Seoul', cost: 82, quality: 86, region: 'Asia' },
+    { city: 'Warsaw', cost: 51, quality: 88, region: 'Europe' },
+    { city: 'Kuala Lumpur', cost: 40, quality: 83, region: 'Asia' },
+    { city: 'Buenos Aires', cost: 38, quality: 72, region: 'Americas' },
+    { city: 'Bangkok', cost: 44, quality: 70, region: 'Asia' },
+    { city: 'Santiago', cost: 47, quality: 79, region: 'Americas' },
+    { city: 'Budapest', cost: 52, quality: 87, region: 'Europe' },
   ],
   encoding: {
-    x: { field: 'x', type: 'quantitative' },
-    y: { field: 'y', type: 'quantitative' },
-    color: { field: 'category', type: 'nominal' },
+    x: {
+      field: 'cost',
+      type: 'quantitative',
+      axis: { label: 'Cost of living index' },
+    },
+    y: {
+      field: 'quality',
+      type: 'quantitative',
+      axis: { label: 'Quality of living index' },
+    },
+    color: { field: 'region', type: 'nominal' },
   },
+  annotations: [
+    { type: 'text', x: 131, y: 98, text: 'Zurich', anchor: 'left', fontSize: 10 },
+    { type: 'text', x: 64, y: 91, text: 'Montreal', anchor: 'right', fontSize: 10 },
+    {
+      type: 'text',
+      x: 120,
+      y: 78,
+      text: 'Hong Kong:\npricey, lower quality',
+      anchor: 'bottom',
+      fontSize: 10,
+    },
+    { type: 'text', x: 51, y: 88, text: 'Warsaw', anchor: 'right', fontSize: 10 },
+  ],
   chrome: {
-    title: 'Categorized Scatter Plot',
-    subtitle: 'Three distinct groups with color encoding',
+    title: "You Don't Have to Pay a Fortune to Live Well",
+    subtitle: 'Cost of living vs. quality of living in global cities, 2024',
+    source: 'Source: Mercer Quality of Living & Cost of Living surveys',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const ColorGrouping = () => (
-  <div style={{ width: 600, height: 400 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={colorScatterSpec} />
   </div>
 );

@@ -9,101 +9,113 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
-// Simple dot plot
+// Simple dot plot — commute times by major US city
 // ---------------------------------------------------------------------------
 
 const simpleDotSpec: ChartSpec = {
   type: 'dot',
   data: [
-    { country: 'Norway', index: 96 },
-    { country: 'Switzerland', index: 95 },
-    { country: 'Ireland', index: 94 },
-    { country: 'Iceland', index: 94 },
-    { country: 'Germany', index: 93 },
-    { country: 'Sweden', index: 93 },
-    { country: 'Australia', index: 92 },
-    { country: 'Netherlands', index: 92 },
-    { country: 'Denmark', index: 91 },
-    { country: 'United Kingdom', index: 91 },
+    { city: 'New York', minutes: 40.6 },
+    { city: 'Chicago', minutes: 33.5 },
+    { city: 'Philadelphia', minutes: 33.2 },
+    { city: 'San Francisco', minutes: 32.2 },
+    { city: 'Boston', minutes: 31.7 },
+    { city: 'Los Angeles', minutes: 31.7 },
+    { city: 'Baltimore', minutes: 30.2 },
+    { city: 'Seattle', minutes: 28.8 },
+    { city: 'Houston', minutes: 28.4 },
+    { city: 'Denver', minutes: 26.1 },
+    { city: 'Phoenix', minutes: 25.8 },
+    { city: 'Tulsa', minutes: 19.7 },
   ],
   encoding: {
-    x: { field: 'index', type: 'quantitative', axis: { label: 'HDI Score' } },
-    y: { field: 'country', type: 'nominal' },
+    x: { field: 'minutes', type: 'quantitative', axis: { label: 'Minutes' } },
+    y: { field: 'city', type: 'nominal' },
   },
   chrome: {
-    title: 'Human Development Index',
-    subtitle: 'Top 10 countries by HDI, 2023',
-    source: 'Source: UNDP',
+    title: 'New Yorkers Commute Twice as Long as Tulsans',
+    subtitle: 'Average one-way commute time by major US metro area, 2024',
+    source: 'Source: U.S. Census Bureau, American Community Survey',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const SimpleDotPlot = () => (
-  <div style={{ width: 600, height: 400 }}>
+  <div className="story-chart" style={{ height: 440 }}>
     <Chart spec={simpleDotSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Colored dots (lollipop with categories)
+// Colored dots — airline on-time performance
 // ---------------------------------------------------------------------------
 
 const coloredDotSpec: ChartSpec = {
   type: 'dot',
   data: [
-    { metric: 'Customer Satisfaction', score: 87, status: 'above target' },
-    { metric: 'Employee Engagement', score: 72, status: 'on target' },
-    { metric: 'Revenue Growth', score: 94, status: 'above target' },
-    { metric: 'Cost Efficiency', score: 58, status: 'below target' },
-    { metric: 'Innovation Index', score: 81, status: 'on target' },
-    { metric: 'Market Share', score: 45, status: 'below target' },
-    { metric: 'Brand Perception', score: 78, status: 'on target' },
+    { airline: 'Delta', onTime: 83.5, rating: 'Above average' },
+    { airline: 'United', onTime: 80.9, rating: 'Above average' },
+    { airline: 'Alaska', onTime: 80.2, rating: 'Above average' },
+    { airline: 'American', onTime: 77.8, rating: 'Below average' },
+    { airline: 'Spirit', onTime: 69.1, rating: 'Below average' },
+    { airline: 'Southwest', onTime: 74.6, rating: 'Below average' },
+    { airline: 'JetBlue', onTime: 71.2, rating: 'Below average' },
+    { airline: 'Frontier', onTime: 73.8, rating: 'Below average' },
   ],
   encoding: {
-    x: { field: 'score', type: 'quantitative', axis: { label: 'Score (0-100)' } },
-    y: { field: 'metric', type: 'nominal' },
-    color: { field: 'status', type: 'nominal' },
+    x: { field: 'onTime', type: 'quantitative', axis: { label: 'On-time arrival rate (%)' } },
+    y: { field: 'airline', type: 'nominal' },
+    color: { field: 'rating', type: 'nominal' },
   },
   chrome: {
-    title: 'KPI Scorecard',
-    subtitle: 'Performance against targets, Q4 2024',
-    source: 'Source: Executive Dashboard',
+    title: 'Delta Leads the Pack in Getting You There on Time',
+    subtitle: 'Percentage of flights arriving within 15 minutes of schedule, full year 2024',
+    source: 'Source: U.S. Dept. of Transportation, Cirium',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const ColoredDots = () => (
-  <div style={{ width: 650, height: 380 }}>
+  <div className="story-chart" style={{ height: 380 }}>
     <Chart spec={coloredDotSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Negative values (diverging lollipop)
+// Diverging lollipop — US state population change 2020-2024
 // ---------------------------------------------------------------------------
 
 const divergingDotSpec: ChartSpec = {
   type: 'dot',
   data: [
-    { category: 'Technology', change: 18 },
-    { category: 'Healthcare', change: 12 },
-    { category: 'Finance', change: 5 },
-    { category: 'Energy', change: -8 },
-    { category: 'Retail', change: -3 },
-    { category: 'Real Estate', change: -15 },
-    { category: 'Manufacturing', change: 2 },
+    { state: 'Idaho', change: 10.4 },
+    { state: 'Texas', change: 8.8 },
+    { state: 'Florida', change: 8.9 },
+    { state: 'Montana', change: 7.5 },
+    { state: 'South Carolina', change: 6.8 },
+    { state: 'North Carolina', change: 5.9 },
+    { state: 'Georgia', change: 4.1 },
+    { state: 'Colorado', change: 3.2 },
+    { state: 'California', change: -0.5 },
+    { state: 'Illinois', change: -0.8 },
+    { state: 'New York', change: -1.0 },
+    { state: 'West Virginia', change: -1.5 },
+    { state: 'Hawaii', change: -1.5 },
   ],
   encoding: {
-    x: { field: 'change', type: 'quantitative', axis: { label: 'YoY Change (%)' } },
-    y: { field: 'category', type: 'nominal' },
+    x: { field: 'change', type: 'quantitative', axis: { label: 'Population change (%)' } },
+    y: { field: 'state', type: 'nominal' },
   },
   chrome: {
-    title: 'Sector Performance',
-    subtitle: 'Year-over-year change by industry sector',
-    source: 'Source: Market Analysis',
+    title: 'Americans Keep Moving South',
+    subtitle: 'Percent population change by state, April 2020 to July 2024',
+    source: 'Source: U.S. Census Bureau Population Estimates',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const DivergingLollipop = () => (
-  <div style={{ width: 600, height: 350 }}>
+  <div className="story-chart" style={{ height: 440 }}>
     <Chart spec={divergingDotSpec} />
   </div>
 );

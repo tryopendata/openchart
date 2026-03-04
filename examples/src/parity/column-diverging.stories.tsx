@@ -29,6 +29,7 @@ const tempSpec: ChartSpec = {
     { year: '2000', anomaly: 0.61, trend: 'Warmer' },
     { year: '2010', anomaly: 0.72, trend: 'Warmer' },
     { year: '2020', anomaly: 1.02, trend: 'Warmer' },
+    { year: '2025', anomaly: 1.17, trend: 'Warmer' },
   ],
   encoding: {
     x: { field: 'year', type: 'ordinal' },
@@ -48,13 +49,13 @@ const tempSpec: ChartSpec = {
       text: 'Coldest decade on record\nat 0.42°C below average',
       connector: true,
       anchor: 'top',
-      offset: { dx: 0, dy: -150 },
+      offset: { dx: 200, dy: -20 },
     },
     {
       type: 'text',
-      x: '2020',
-      y: 1.02,
-      text: 'By 2020, temperatures\nwere 1°C above baseline',
+      x: '2025',
+      y: 1.17,
+      text: '2025 hit 1.17°C above\nthe 20th century average',
       connector: true,
       anchor: 'left',
       offset: { dx: -180, dy: 20 },
@@ -68,31 +69,39 @@ const tempSpec: ChartSpec = {
   ],
   chrome: {
     title: 'Since 1980, every half-decade has been warmer than average',
-    subtitle: 'Global surface temperature anomaly relative to 20th century average, °C',
+    subtitle:
+      'Global surface temperature anomaly relative to 20th century average, °C, by half-decade',
     source: 'Source: NOAA National Centers for Environmental Information',
   },
 };
 
 export const TemperatureAnomaly = () => (
-  <div style={{ width: 750, height: 450 }}>
+  <div className="story-chart" style={{ height: 450 }}>
     <Chart spec={tempSpec} />
   </div>
 );
 
+const compactTempSpec: ChartSpec = {
+  ...tempSpec,
+  encoding: {
+    ...tempSpec.encoding,
+    x: { field: 'year', type: 'ordinal', axis: { tickCount: 5 } },
+  },
+  chrome: {
+    ...tempSpec.chrome,
+    title: 'Warming Accelerates After 1980',
+    subtitle: 'Temp anomaly vs. 20th c. average (°C)',
+  },
+};
+
 export const TemperatureAnomalyCompact = () => (
   <div style={{ width: 360, height: 380 }}>
-    <Chart spec={tempSpec} />
+    <Chart spec={compactTempSpec} />
   </div>
 );
 
 export const TemperatureAnomalyWide = () => (
   <div style={{ width: 1200, height: 500 }}>
     <Chart spec={tempSpec} />
-  </div>
-);
-
-export const TemperatureAnomalyDarkMode = () => (
-  <div style={{ width: 750, height: 450 }}>
-    <Chart spec={tempSpec} darkMode="force" />
   </div>
 );

@@ -367,10 +367,15 @@ export function computeScales(
   }
 
   if (encoding.y) {
-    // For stacked columns, the y-domain needs the max category sum, not max individual value.
-    // Without this, stacked bars would clip above the chart area.
+    // For stacked columns and stacked areas, the y-domain needs the max category
+    // sum, not the max individual value. Without this, stacked marks would clip
+    // above the chart area.
     let yData = data;
-    if (spec.type === 'column' && encoding.color && encoding.y.type === 'quantitative') {
+    if (
+      (spec.type === 'column' || spec.type === 'area') &&
+      encoding.color &&
+      encoding.y.type === 'quantitative'
+    ) {
       const xField = encoding.x?.field;
       const yField = encoding.y.field;
       if (xField) {

@@ -222,6 +222,35 @@ export class GraphCanvasRenderer {
     }
 
     ctx.restore();
+
+    // Brand watermark in screen coordinates (unaffected by pan/zoom)
+    this.drawBrand(ctx, cssWidth, cssHeight, theme);
+  }
+
+  // -------------------------------------------------------------------------
+  // Brand rendering
+  // -------------------------------------------------------------------------
+
+  private drawBrand(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    theme: GraphRenderState['theme'],
+  ): void {
+    if (w < 120) return;
+    const { dpr } = this;
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const padding = theme.spacing.padding;
+    const x = w - padding;
+    const y = h - 4;
+    ctx.font = `600 20px ${theme.fonts.family}`;
+    ctx.fillStyle = theme.colors.axis;
+    ctx.globalAlpha = 0.5;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('OpenData', x, y);
+    ctx.restore();
   }
 
   // -------------------------------------------------------------------------

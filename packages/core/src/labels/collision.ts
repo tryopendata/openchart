@@ -121,7 +121,14 @@ export function resolveCollisions(labels: LabelCandidate[]): ResolvedLabel[] {
 
     if (bestRect) {
       placed.push(bestRect);
-      const needsConnector = bestX !== label.anchorX || bestY !== label.anchorY;
+      const nudgeDx = bestX - label.anchorX;
+      const nudgeDy = bestY - label.anchorY;
+      const nudgeDist = Math.sqrt(nudgeDx * nudgeDx + nudgeDy * nudgeDy);
+      // Only show a connector when the label is nudged far enough that the
+      // reader can't tell which data point it belongs to. Short nudges between
+      // adjacent series labels produce visual noise without aiding comprehension.
+      const MIN_CONNECTOR_DISTANCE = 20;
+      const needsConnector = nudgeDist >= MIN_CONNECTOR_DISTANCE;
 
       results.push({
         text: label.text,

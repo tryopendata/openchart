@@ -81,12 +81,6 @@ export const Heatmap: Story = () => (
   </div>
 );
 
-export const HeatmapDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 700 }}>
-    <DataTable spec={spec} darkMode="force" />
-  </div>
-);
-
 // Election-style results with category colors
 const electionData = [
   { state: 'California', winner: 'Democrat', margin: 29.2, electoralVotes: 54 },
@@ -133,11 +127,5 @@ const electionSpec: TableSpec = {
 export const ElectionResults: Story = () => (
   <div className="story-centered" style={{ maxWidth: 650 }}>
     <DataTable spec={electionSpec} />
-  </div>
-);
-
-export const ElectionResultsDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 650 }}>
-    <DataTable spec={electionSpec} darkMode="force" />
   </div>
 );

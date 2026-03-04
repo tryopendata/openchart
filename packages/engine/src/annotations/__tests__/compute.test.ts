@@ -451,4 +451,230 @@ describe('computeAnnotations', () => {
       expect(dy).toBe(-10);
     });
   });
+
+  // -----------------------------------------------------------------
+  // Connector origin auto-selection
+  // -----------------------------------------------------------------
+
+  describe('connector origin auto-selection', () => {
+    it('connector starts from top edge when data point is above label', () => {
+      // Push label far below AND to the right so the top-center is unambiguously closest
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Below point',
+          anchor: 'bottom',
+          offset: { dx: 0, dy: 150 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      const connector = label.connector!;
+      const fontSize = 12; // DEFAULT_ANNOTATION_FONT_SIZE
+
+      // Data point is far above the label, so connector should exit from the top edge
+      const topEdgeY = label.y - fontSize;
+      expect(connector.from.y).toBeCloseTo(topEdgeY, 0);
+    });
+
+    it('connector starts from bottom edge when data point is below label', () => {
+      // Push label far above the data point
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Above point',
+          anchor: 'top',
+          offset: { dx: 0, dy: -80 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      const connector = label.connector!;
+      const fontSize = 12;
+      const lineHeight = 1.3;
+      const lines = label.text.split('\n');
+
+      // Data point is below the label, so connector should exit from the bottom edge
+      const bottomEdgeY = label.y - fontSize + lines.length * fontSize * lineHeight;
+      expect(connector.from.y).toBeCloseTo(bottomEdgeY, 0);
+    });
+
+    it('connector starts from left edge when data point is left of label', () => {
+      // Push label far to the right of the data point
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Right of point',
+          anchor: 'right',
+          offset: { dx: 120, dy: 0 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      const connector = label.connector!;
+
+      // Data point is to the left, so connector should exit from the left edge
+      // For single-line text, left edge x = label.x
+      expect(connector.from.x).toBeCloseTo(label.x, 0);
+    });
+
+    it('connector starts from right edge when data point is right of label', () => {
+      // Push label far to the left of the data point
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2021-01-01',
+          y: 20,
+          text: 'Left of point',
+          anchor: 'left',
+          offset: { dx: -120, dy: 0 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      const connector = label.connector!;
+
+      // Data point is to the right, so connector should exit from the right edge
+      // Right edge is at label.x + textWidth
+      // For single-line "Left of point" with fontSize=12, weight=400:
+      // textWidth = 14 chars * 12 * 0.55 * 1.0 = 92.4
+      expect(connector.from.x).toBeGreaterThan(label.x + 50); // well past the center
+    });
+
+    it('multi-line text connector uses correct centered bounding box', () => {
+      // Multi-line text with label pushed below data point
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'First line\nSecond line',
+          anchor: 'bottom',
+          offset: { dx: 0, dy: 80 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      const connector = label.connector!;
+
+      // For multi-line, labelX is the center. The connector should exit
+      // from the top-center since data point is above.
+      // Top-center x should be at labelX (the center of the multi-line text)
+      expect(connector.from.x).toBeCloseTo(label.x, 0);
+    });
+
+    it('connector origin changes when label moves to the other side', () => {
+      // Same data point, label pushed right vs left
+      const specRight = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Test label',
+          anchor: 'right',
+          offset: { dx: 120, dy: 0 },
+        },
+      ]);
+      const specLeft = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Test label',
+          anchor: 'left',
+          offset: { dx: -120, dy: 0 },
+        },
+      ]);
+      const scalesRight = computeScales(specRight, chartArea, specRight.data);
+      const scalesLeft = computeScales(specLeft, chartArea, specLeft.data);
+
+      const annotationsRight = computeAnnotations(specRight, scalesRight, chartArea, fullStrategy);
+      const annotationsLeft = computeAnnotations(specLeft, scalesLeft, chartArea, fullStrategy);
+
+      const labelRight = annotationsRight[0].label!;
+      const labelLeft = annotationsLeft[0].label!;
+      const fromRight = labelRight.connector!.from;
+      const fromLeft = labelLeft.connector!.from;
+
+      // When label is to the right of data, connector exits from left edge (= label.x)
+      expect(fromRight.x).toBeCloseTo(labelRight.x, 0);
+      // When label is to the left of data, connector exits from right edge (label.x + textWidth)
+      expect(fromLeft.x).toBeGreaterThan(labelLeft.x + 30); // well past the left edge
+    });
+
+    it('connectorOffset is still applied on top of auto-selected origin', () => {
+      const specWithOffset = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Offset test',
+          anchor: 'bottom',
+          offset: { dx: 0, dy: 80 },
+          connectorOffset: { from: { dx: 10, dy: 5 } },
+        },
+      ]);
+      const specNoOffset = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Offset test',
+          anchor: 'bottom',
+          offset: { dx: 0, dy: 80 },
+        },
+      ]);
+      const scales = computeScales(specWithOffset, chartArea, specWithOffset.data);
+
+      const withOffset = computeAnnotations(specWithOffset, scales, chartArea, fullStrategy);
+      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+
+      const fromWith = withOffset[0].label!.connector!.from;
+      const fromWithout = withoutOffset[0].label!.connector!.from;
+
+      expect(fromWith.x - fromWithout.x).toBeCloseTo(10, 0);
+      expect(fromWith.y - fromWithout.y).toBeCloseTo(5, 0);
+    });
+
+    it('curve connector still uses right edge regardless of data point position', () => {
+      // Push label below and to the right, but curve should still start from right edge
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Curve test',
+          anchor: 'bottom',
+          offset: { dx: 0, dy: 80 },
+          connector: 'curve',
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      const connector = label.connector!;
+
+      // Curve should start from right edge of text, not top edge
+      // Right edge x ≈ label.x + textWidth
+      // "Curve test" = 10 chars * 12 * 0.55 = 66
+      expect(connector.from.x).toBeCloseTo(label.x + 66, 1);
+    });
+  });
 });

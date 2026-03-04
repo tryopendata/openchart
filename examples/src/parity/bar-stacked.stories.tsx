@@ -57,14 +57,14 @@ const spendingSpec: ChartSpec = {
   },
   labels: { density: 'all' },
   chrome: {
-    title: 'Housing dominates spending for lower-income households',
-    subtitle: 'Share of annual household expenditure by category and income bracket, 2022',
+    title: 'The poorer you are, the more housing eats your paycheck',
+    subtitle: 'Share of annual household expenditure by category and income bracket, 2022 (%)',
     source: 'Source: Bureau of Labor Statistics, Consumer Expenditure Survey',
   },
 };
 
 export const HouseholdSpending = () => (
-  <div style={{ width: 700, height: 420 }}>
+  <div className="story-chart" style={{ height: 420 }}>
     <Chart spec={spendingSpec} />
   </div>
 );
@@ -78,11 +78,5 @@ export const HouseholdSpendingCompact = () => (
 export const HouseholdSpendingWide = () => (
   <div style={{ width: 1200, height: 500 }}>
     <Chart spec={spendingSpec} />
-  </div>
-);
-
-export const HouseholdSpendingDarkMode = () => (
-  <div style={{ width: 700, height: 420 }}>
-    <Chart spec={spendingSpec} darkMode="force" />
   </div>
 );

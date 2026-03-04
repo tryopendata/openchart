@@ -67,12 +67,6 @@ export const Flags: Story = () => (
   </div>
 );
 
-export const FlagsDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 750 }}>
-    <DataTable spec={spec} darkMode="force" />
-  </div>
-);
-
 // Compact variant for small screens
 export const FlagsCompact: Story = () => (
   <div className="story-centered" style={{ maxWidth: 380 }}>
@@ -119,11 +113,5 @@ const countryCompareSpec: TableSpec = {
 export const CountryComparison: Story = () => (
   <div className="story-centered" style={{ maxWidth: 750 }}>
     <DataTable spec={countryCompareSpec} />
-  </div>
-);
-
-export const CountryComparisonDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 750 }}>
-    <DataTable spec={countryCompareSpec} darkMode="force" />
   </div>
 );

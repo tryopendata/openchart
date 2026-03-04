@@ -67,6 +67,22 @@ If the reader looks at this chart for 5 seconds and walks away, what's the one t
 | Pie with 7+ slices | Switch to horizontal bar chart |
 | Chart feels cluttered | Remove background fill, reduce gridlines, increase whitespace |
 
+## Rendered Output Verification
+
+The checklist above covers the spec. After rendering, also verify the actual screenshot. Load [visual-qa.md](visual-qa.md) for the full defect catalog. Quick version:
+
+| Zone | Check | Fail example |
+| --- | --- | --- |
+| Chrome | Title/subtitle fully visible, not overlapping plot | Title truncated at container edge |
+| X-axis | Tick labels spaced with visible gaps between them | "Apr 2023Jul 2023Oct 2023" touching |
+| Y-axis | Category labels fully visible, not overlapping | Long names clipped at left edge |
+| Plot area | No text-on-text overlap (labels, annotations) | Annotation sitting on top of subtitle |
+| Legend | Not colliding with labels, axis ticks, or data | Legend overlapping endpoint labels |
+| Edges | No content clipped at container boundaries | Last data label cut off at right edge |
+| Connectors | Pointing from label toward data point, not crossing text | Connector line crossing through its own annotation text |
+
+**For compact variants** (< 400px wide): verify separately. Titles clip, ticks crowd, labels collide. Create a separate `compactSpec` with shorter chrome, explicit `tickCount`, and `labels: { density: "none" }`.
+
 ## Ship It
 
 All 14 checks pass: it's publication-ready.

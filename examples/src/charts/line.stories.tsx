@@ -3,197 +3,397 @@
  *
  * Demonstrates single line, multi-series, area, stacked area,
  * and responsive behavior using the Chart component.
+ * All data reflects real-world sources for editorial quality.
  */
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
 // ---------------------------------------------------------------------------
-// Single line with date axis
+// Single line: US Inflation Rate (CPI Year-over-Year), 2019-2024
 // ---------------------------------------------------------------------------
 
 const singleLineSpec: ChartSpec = {
   type: 'line',
   data: [
-    { date: '2020-01-01', value: 12 },
-    { date: '2020-04-01', value: 8 },
-    { date: '2020-07-01', value: 22 },
-    { date: '2020-10-01', value: 18 },
-    { date: '2021-01-01', value: 28 },
-    { date: '2021-04-01', value: 35 },
-    { date: '2021-07-01', value: 32 },
-    { date: '2021-10-01', value: 42 },
-    { date: '2022-01-01', value: 38 },
-    { date: '2022-04-01', value: 45 },
+    // 2019 (quarterly samples)
+    { date: '2019-01-01', rate: 1.6 },
+    { date: '2019-04-01', rate: 2.0 },
+    { date: '2019-07-01', rate: 1.8 },
+    { date: '2019-10-01', rate: 1.8 },
+    // 2020
+    { date: '2020-01-01', rate: 2.5 },
+    { date: '2020-04-01', rate: 0.3 },
+    { date: '2020-07-01', rate: 1.0 },
+    { date: '2020-10-01', rate: 1.2 },
+    // 2021
+    { date: '2021-01-01', rate: 1.4 },
+    { date: '2021-04-01', rate: 4.2 },
+    { date: '2021-07-01', rate: 5.4 },
+    { date: '2021-10-01', rate: 6.2 },
+    // 2022
+    { date: '2022-01-01', rate: 7.5 },
+    { date: '2022-04-01', rate: 8.3 },
+    { date: '2022-07-01', rate: 8.5 },
+    { date: '2022-10-01', rate: 7.7 },
+    // 2023
+    { date: '2023-01-01', rate: 6.4 },
+    { date: '2023-04-01', rate: 4.9 },
+    { date: '2023-07-01', rate: 3.2 },
+    { date: '2023-10-01', rate: 3.2 },
+    // 2024
+    { date: '2024-01-01', rate: 3.1 },
+    { date: '2024-04-01', rate: 3.4 },
+    { date: '2024-07-01', rate: 2.9 },
+    { date: '2024-10-01', rate: 2.6 },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'value', type: 'quantitative' },
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 6 } },
+    y: {
+      field: 'rate',
+      type: 'quantitative',
+      axis: { label: 'CPI (year-over-year %)', format: '.1f', grid: true },
+    },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2022-07-01',
+      y: 8.5,
+      text: 'Peak: 8.5%',
+      anchor: 'top',
+      offset: { dx: 0, dy: -20 },
+      connector: true,
+    },
+    {
+      type: 'text',
+      x: '2020-04-01',
+      y: 0.3,
+      text: 'Pandemic\ndeflationary dip',
+      anchor: 'bottom',
+      offset: { dx: 0, dy: 30 },
+      connector: true,
+    },
+    {
+      type: 'refline',
+      y: 2,
+      label: 'Fed 2% target',
+      style: 'dashed',
+      stroke: '#64748b',
+      strokeWidth: 1,
+    },
+    {
+      type: 'range',
+      x1: '2021-04-01',
+      x2: '2023-01-01',
+      label: 'Above 4%',
+      fill: '#dc2626',
+      opacity: 0.06,
+    },
+  ],
+  labels: { density: 'endpoints', format: '.1f' },
   chrome: {
-    title: 'Monthly Active Users',
-    subtitle: 'Quarterly growth, 2020-2022',
-    source: 'Source: Internal Analytics',
+    title: "Inflation's Wild Ride: From 1% to 9% and Back",
+    subtitle: 'US Consumer Price Index, year-over-year % change, quarterly 2019-2024',
+    source: 'Source: Bureau of Labor Statistics',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const SingleLine = () => (
-  <div style={{ width: 600, height: 400 }}>
+  <div className="story-chart" style={{ height: 420 }}>
     <Chart spec={singleLineSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Multi-series comparison (3 series)
+// Multi-series: GDP Growth Comparison (US, China, Germany), 2019-2024
 // ---------------------------------------------------------------------------
 
 const multiSeriesSpec: ChartSpec = {
   type: 'line',
   data: [
-    // US
-    { date: '2020-01-01', gdp: 2.3, country: 'United States' },
-    { date: '2020-07-01', gdp: -3.5, country: 'United States' },
-    { date: '2021-01-01', gdp: 5.7, country: 'United States' },
-    { date: '2021-07-01', gdp: 4.9, country: 'United States' },
-    { date: '2022-01-01', gdp: 2.1, country: 'United States' },
-    // UK
-    { date: '2020-01-01', gdp: 1.4, country: 'United Kingdom' },
-    { date: '2020-07-01', gdp: -9.9, country: 'United Kingdom' },
-    { date: '2021-01-01', gdp: 7.4, country: 'United Kingdom' },
-    { date: '2021-07-01', gdp: 6.5, country: 'United Kingdom' },
-    { date: '2022-01-01', gdp: 3.7, country: 'United Kingdom' },
+    // United States (annual GDP growth %)
+    { date: '2019-01-01', gdp: 2.5, country: 'United States' },
+    { date: '2020-01-01', gdp: -2.2, country: 'United States' },
+    { date: '2021-01-01', gdp: 6.1, country: 'United States' },
+    { date: '2022-01-01', gdp: 2.5, country: 'United States' },
+    { date: '2023-01-01', gdp: 2.9, country: 'United States' },
+    { date: '2024-01-01', gdp: 2.8, country: 'United States' },
+    // China
+    { date: '2019-01-01', gdp: 6.0, country: 'China' },
+    { date: '2020-01-01', gdp: 2.2, country: 'China' },
+    { date: '2021-01-01', gdp: 8.4, country: 'China' },
+    { date: '2022-01-01', gdp: 3.0, country: 'China' },
+    { date: '2023-01-01', gdp: 5.2, country: 'China' },
+    { date: '2024-01-01', gdp: 4.9, country: 'China' },
     // Germany
-    { date: '2020-01-01', gdp: 0.6, country: 'Germany' },
-    { date: '2020-07-01', gdp: -4.6, country: 'Germany' },
-    { date: '2021-01-01', gdp: 2.9, country: 'Germany' },
-    { date: '2021-07-01', gdp: 2.6, country: 'Germany' },
-    { date: '2022-01-01', gdp: 1.8, country: 'Germany' },
+    { date: '2019-01-01', gdp: 1.1, country: 'Germany' },
+    { date: '2020-01-01', gdp: -3.8, country: 'Germany' },
+    { date: '2021-01-01', gdp: 3.2, country: 'Germany' },
+    { date: '2022-01-01', gdp: 1.4, country: 'Germany' },
+    { date: '2023-01-01', gdp: -0.3, country: 'Germany' },
+    { date: '2024-01-01', gdp: 0.1, country: 'Germany' },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
-    y: { field: 'gdp', type: 'quantitative', axis: { label: 'GDP Growth (%)' } },
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 6 } },
+    y: {
+      field: 'gdp',
+      type: 'quantitative',
+      axis: { label: 'GDP Growth (%)', format: '+.1f', grid: true },
+    },
     color: { field: 'country', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'refline',
+      y: 0,
+      label: 'Zero growth',
+      style: 'solid',
+      stroke: '#64748b',
+      strokeWidth: 1,
+    },
+    {
+      type: 'text',
+      x: '2020-01-01',
+      y: -3.8,
+      text: 'COVID crash',
+      anchor: 'bottom',
+      offset: { dx: 0, dy: 28 },
+      connector: true,
+    },
+    {
+      type: 'range',
+      x1: '2019-09-01',
+      x2: '2020-06-01',
+      label: 'Pandemic',
+      fill: '#dc2626',
+      opacity: 0.07,
+    },
+  ],
+  labels: { density: 'endpoints', format: '.1f' },
   chrome: {
-    title: 'GDP Growth Comparison',
-    subtitle: 'Quarterly GDP growth rate, 2020-2022',
-    source: 'Source: World Bank',
+    title: 'The Great Divergence: Three Economies, Three Recoveries',
+    subtitle: 'Annual real GDP growth rate, 2019-2024',
+    source: 'Source: World Bank, IMF',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const MultiSeries = () => (
-  <div style={{ width: 700, height: 420 }}>
+  <div className="story-chart" style={{ height: 440 }}>
     <Chart spec={multiSeriesSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Five series comparison
+// Five series: Big Tech Annual Revenue, 2019-2024
 // ---------------------------------------------------------------------------
 
 const fiveSeriesSpec: ChartSpec = {
   type: 'line',
   data: [
-    // Generate 5 series with 4 points each
-    ...['Apple', 'Google', 'Microsoft', 'Amazon', 'Meta'].flatMap((company, ci) =>
-      [2020, 2021, 2022, 2023].map((year) => ({
-        year: `${year}-01-01`,
-        revenue: Math.round(
-          100 + ci * 30 + (year - 2020) * (15 + ci * 5) + Math.sin(ci + year) * 10,
-        ),
-        company,
-      })),
-    ),
+    // Amazon (calendar year revenue, $B)
+    { year: '2019-01-01', revenue: 281, company: 'Amazon' },
+    { year: '2020-01-01', revenue: 386, company: 'Amazon' },
+    { year: '2021-01-01', revenue: 470, company: 'Amazon' },
+    { year: '2022-01-01', revenue: 514, company: 'Amazon' },
+    { year: '2023-01-01', revenue: 575, company: 'Amazon' },
+    { year: '2024-01-01', revenue: 638, company: 'Amazon' },
+    // Apple (fiscal year ending Sep, $B)
+    { year: '2019-01-01', revenue: 260, company: 'Apple' },
+    { year: '2020-01-01', revenue: 275, company: 'Apple' },
+    { year: '2021-01-01', revenue: 366, company: 'Apple' },
+    { year: '2022-01-01', revenue: 394, company: 'Apple' },
+    { year: '2023-01-01', revenue: 383, company: 'Apple' },
+    { year: '2024-01-01', revenue: 391, company: 'Apple' },
+    // Alphabet/Google (calendar year revenue, $B)
+    { year: '2019-01-01', revenue: 162, company: 'Alphabet' },
+    { year: '2020-01-01', revenue: 183, company: 'Alphabet' },
+    { year: '2021-01-01', revenue: 258, company: 'Alphabet' },
+    { year: '2022-01-01', revenue: 283, company: 'Alphabet' },
+    { year: '2023-01-01', revenue: 307, company: 'Alphabet' },
+    { year: '2024-01-01', revenue: 350, company: 'Alphabet' },
+    // Microsoft (fiscal year ending Jun, $B)
+    { year: '2019-01-01', revenue: 126, company: 'Microsoft' },
+    { year: '2020-01-01', revenue: 143, company: 'Microsoft' },
+    { year: '2021-01-01', revenue: 168, company: 'Microsoft' },
+    { year: '2022-01-01', revenue: 198, company: 'Microsoft' },
+    { year: '2023-01-01', revenue: 212, company: 'Microsoft' },
+    { year: '2024-01-01', revenue: 245, company: 'Microsoft' },
+    // Meta (calendar year revenue, $B)
+    { year: '2019-01-01', revenue: 71, company: 'Meta' },
+    { year: '2020-01-01', revenue: 86, company: 'Meta' },
+    { year: '2021-01-01', revenue: 118, company: 'Meta' },
+    { year: '2022-01-01', revenue: 117, company: 'Meta' },
+    { year: '2023-01-01', revenue: 135, company: 'Meta' },
+    { year: '2024-01-01', revenue: 165, company: 'Meta' },
   ],
   encoding: {
-    x: { field: 'year', type: 'temporal' },
-    y: { field: 'revenue', type: 'quantitative', axis: { label: 'Revenue ($B)' } },
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 4 } },
+    y: {
+      field: 'revenue',
+      type: 'quantitative',
+      axis: { label: 'Revenue ($B)', format: ',.0f', grid: true },
+    },
     color: { field: 'company', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2020-01-01',
+      y: 386,
+      text: 'Pandemic\ne-commerce boom',
+      anchor: 'left',
+      offset: { dx: -70, dy: -30 },
+      connector: true,
+    },
+  ],
+  labels: { density: 'endpoints', format: ',.0f' },
   chrome: {
-    title: 'Big Tech Revenue',
-    subtitle: 'Annual revenue in billions, 2020-2023',
-    source: 'Source: Company filings',
+    title: 'Big Tech Roars Past $2 Trillion in Combined Revenue',
+    subtitle: 'Annual revenue in billions USD, 2019-2024',
+    source: 'Source: Company filings (SEC 10-K)',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const FiveSeries = () => (
-  <div style={{ width: 800, height: 450 }}>
+  <div className="story-chart" style={{ height: 460 }}>
     <Chart spec={fiveSeriesSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Area chart (single)
+// Area chart: Cumulative Global EV Sales, 2015-2024
 // ---------------------------------------------------------------------------
 
 const singleAreaSpec: ChartSpec = {
   type: 'area',
   data: [
-    { month: '2023-01-01', users: 1200 },
-    { month: '2023-02-01', users: 1800 },
-    { month: '2023-03-01', users: 2400 },
-    { month: '2023-04-01', users: 2100 },
-    { month: '2023-05-01', users: 3200 },
-    { month: '2023-06-01', users: 3800 },
-    { month: '2023-07-01', users: 4100 },
-    { month: '2023-08-01', users: 3900 },
-    { month: '2023-09-01', users: 4500 },
-    { month: '2023-10-01', users: 5200 },
-    { month: '2023-11-01', users: 5800 },
-    { month: '2023-12-01', users: 6200 },
+    { year: '2015-01-01', sales: 1.3 },
+    { year: '2016-01-01', sales: 2.1 },
+    { year: '2017-01-01', sales: 3.2 },
+    { year: '2018-01-01', sales: 5.4 },
+    { year: '2019-01-01', sales: 7.5 },
+    { year: '2020-01-01', sales: 10.5 },
+    { year: '2021-01-01', sales: 17.1 },
+    { year: '2022-01-01', sales: 27.0 },
+    { year: '2023-01-01', sales: 41.0 },
+    { year: '2024-01-01', sales: 58.0 },
   ],
   encoding: {
-    x: { field: 'month', type: 'temporal' },
-    y: { field: 'users', type: 'quantitative', axis: { label: 'Active Users' } },
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 5 } },
+    y: {
+      field: 'sales',
+      type: 'quantitative',
+      axis: { label: 'Cumulative EV Fleet (millions)', format: ',.0f', grid: true },
+    },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2024-01-01',
+      y: 58,
+      text: '58M EVs\non the road',
+      anchor: 'left',
+      offset: { dx: -80, dy: -20 },
+      connector: true,
+    },
+    {
+      type: 'text',
+      x: '2020-01-01',
+      y: 10.5,
+      text: '10M milestone',
+      anchor: 'top',
+      offset: { dx: 0, dy: -22 },
+      connector: true,
+    },
+  ],
+  labels: { density: 'endpoints', format: ',.1f' },
   chrome: {
-    title: 'User Growth',
-    subtitle: 'Monthly active users throughout 2023',
-    source: 'Source: Platform Analytics',
+    title: 'The Electric Surge: From Niche to 58 Million on the Road',
+    subtitle: 'Cumulative global electric car fleet, 2015-2024 (BEV + PHEV)',
+    source: 'Source: IEA Global EV Outlook 2025',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const AreaChart = () => (
-  <div style={{ width: 600, height: 400 }}>
+  <div className="story-chart" style={{ height: 420 }}>
     <Chart spec={singleAreaSpec} />
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Stacked area chart
+// Stacked area: Global Electricity Generation by Source, 2015-2024
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
   type: 'area',
   data: [
-    { quarter: '2022-Q1', revenue: 45, segment: 'Services' },
-    { quarter: '2022-Q2', revenue: 52, segment: 'Services' },
-    { quarter: '2022-Q3', revenue: 58, segment: 'Services' },
-    { quarter: '2022-Q4', revenue: 63, segment: 'Services' },
-    { quarter: '2022-Q1', revenue: 120, segment: 'Products' },
-    { quarter: '2022-Q2', revenue: 135, segment: 'Products' },
-    { quarter: '2022-Q3', revenue: 128, segment: 'Products' },
-    { quarter: '2022-Q4', revenue: 145, segment: 'Products' },
-    { quarter: '2022-Q1', revenue: 30, segment: 'Subscriptions' },
-    { quarter: '2022-Q2', revenue: 38, segment: 'Subscriptions' },
-    { quarter: '2022-Q3', revenue: 42, segment: 'Subscriptions' },
-    { quarter: '2022-Q4', revenue: 48, segment: 'Subscriptions' },
+    // Coal (TWh)
+    { year: '2015-01-01', generation: 9538, source: 'Coal' },
+    { year: '2017-01-01', generation: 9863, source: 'Coal' },
+    { year: '2019-01-01', generation: 9824, source: 'Coal' },
+    { year: '2021-01-01', generation: 10244, source: 'Coal' },
+    { year: '2023-01-01', generation: 10434, source: 'Coal' },
+    // Natural Gas (TWh)
+    { year: '2015-01-01', generation: 5542, source: 'Natural Gas' },
+    { year: '2017-01-01', generation: 5882, source: 'Natural Gas' },
+    { year: '2019-01-01', generation: 6298, source: 'Natural Gas' },
+    { year: '2021-01-01', generation: 6490, source: 'Natural Gas' },
+    { year: '2023-01-01', generation: 6634, source: 'Natural Gas' },
+    // Nuclear (TWh)
+    { year: '2015-01-01', generation: 2572, source: 'Nuclear' },
+    { year: '2017-01-01', generation: 2636, source: 'Nuclear' },
+    { year: '2019-01-01', generation: 2790, source: 'Nuclear' },
+    { year: '2021-01-01', generation: 2800, source: 'Nuclear' },
+    { year: '2023-01-01', generation: 2686, source: 'Nuclear' },
+    // Hydro (TWh)
+    { year: '2015-01-01', generation: 3896, source: 'Hydro' },
+    { year: '2017-01-01', generation: 4060, source: 'Hydro' },
+    { year: '2019-01-01', generation: 4222, source: 'Hydro' },
+    { year: '2021-01-01', generation: 4273, source: 'Hydro' },
+    { year: '2023-01-01', generation: 4210, source: 'Hydro' },
+    // Wind + Solar (TWh combined)
+    { year: '2015-01-01', generation: 1083, source: 'Wind & Solar' },
+    { year: '2017-01-01', generation: 1593, source: 'Wind & Solar' },
+    { year: '2019-01-01', generation: 2200, source: 'Wind & Solar' },
+    { year: '2021-01-01', generation: 2895, source: 'Wind & Solar' },
+    { year: '2023-01-01', generation: 3935, source: 'Wind & Solar' },
   ],
   encoding: {
-    x: { field: 'quarter', type: 'temporal' },
-    y: { field: 'revenue', type: 'quantitative', axis: { label: 'Revenue ($M)' } },
-    color: { field: 'segment', type: 'nominal' },
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 5 } },
+    y: {
+      field: 'generation',
+      type: 'quantitative',
+      axis: { label: 'Generation (TWh)', format: ',.0f', grid: true },
+    },
+    color: { field: 'source', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'text',
+      x: '2023-01-01',
+      y: 3935,
+      text: 'Wind & Solar\nhit 13.4%',
+      anchor: 'left',
+      offset: { dx: -85, dy: -15 },
+      connector: true,
+      background: '#ffffff',
+    },
+  ],
   chrome: {
-    title: 'Revenue by Segment',
-    subtitle: 'Quarterly breakdown showing composition',
-    source: 'Source: Financial Reports',
+    title: 'Renewables Rising, but Fossil Fuels Still Dominate',
+    subtitle: 'Global electricity generation by source, biennial 2015-2023 (TWh)',
+    source: 'Source: Ember Global Electricity Review 2025',
+    byline: 'Chart: OpenChart',
   },
 };
 
 export const StackedArea = () => (
-  <div style={{ width: 700, height: 420 }}>
+  <div className="story-chart" style={{ height: 460 }}>
     <Chart spec={stackedAreaSpec} />
   </div>
 );

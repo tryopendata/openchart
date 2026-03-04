@@ -13,3 +13,5 @@ coverage/
 .playwright-cli
 ./claude/worktrees
 .npmrc
+*.png
+

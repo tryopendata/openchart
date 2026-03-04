@@ -15,46 +15,50 @@ import { Chart } from '@opendata-ai/openchart-react';
 const donutSpec: ChartSpec = {
   type: 'donut',
   data: [
-    { brand: 'Samsung', share: 20.0 },
-    { brand: 'Apple', share: 24.1 },
-    { brand: 'Xiaomi', share: 12.5 },
-    { brand: 'OPPO', share: 8.8 },
-    { brand: 'vivo', share: 8.1 },
-    { brand: 'Transsion', share: 7.3 },
-    { brand: 'Others', share: 19.2 },
+    { brand: 'Apple', share: 23.0 },
+    { brand: 'Samsung', share: 16.0 },
+    { brand: 'Xiaomi', share: 14.0 },
+    { brand: 'Transsion', share: 9.0 },
+    { brand: 'vivo', share: 8.5 },
+    { brand: 'OPPO', share: 8.0 },
+    { brand: 'Others', share: 21.5 },
   ],
   encoding: {
     y: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
-    title: 'Global Smartphone Market Share',
-    subtitle: 'Market share by vendor, Q3 2023',
+    title: 'Apple reclaimed the top spot from Samsung in Q4',
+    subtitle: 'Global smartphone market share by vendor, Q4 2024 (%)',
     source: 'Source: IDC Worldwide Quarterly Mobile Phone Tracker',
   },
 };
 
 export const SmartphoneMarket = () => (
-  <div style={{ width: 550, height: 500 }}>
+  <div className="story-chart" style={{ height: 500 }}>
     <Chart spec={donutSpec} />
   </div>
 );
 
+const compactDonutSpec: ChartSpec = {
+  ...donutSpec,
+  labels: { density: 'none' },
+  chrome: {
+    title: 'Apple Reclaimed the Top Spot',
+    subtitle: 'Smartphone market share, Q4 2024 (%)',
+    source: 'Source: IDC',
+  },
+};
+
 export const SmartphoneMarketCompact = () => (
   <div style={{ width: 320, height: 380 }}>
-    <Chart spec={donutSpec} />
+    <Chart spec={compactDonutSpec} />
   </div>
 );
 
 export const SmartphoneMarketWide = () => (
   <div style={{ width: 1200, height: 600 }}>
     <Chart spec={donutSpec} />
-  </div>
-);
-
-export const SmartphoneMarketDarkMode = () => (
-  <div style={{ width: 550, height: 500 }}>
-    <Chart spec={donutSpec} darkMode="force" />
   </div>
 );
 
@@ -78,14 +82,14 @@ const pieSpec: ChartSpec = {
     color: { field: 'browser', type: 'nominal' },
   },
   chrome: {
-    title: 'Web Browser Market Share',
-    subtitle: 'Global desktop and mobile combined, January 2024',
+    title: 'Chrome dominates with nearly two-thirds of the browser market',
+    subtitle: 'Global desktop and mobile browser share, January 2024 (%)',
     source: 'Source: StatCounter Global Stats',
   },
 };
 
 export const BrowserMarket = () => (
-  <div style={{ width: 550, height: 500 }}>
+  <div className="story-chart" style={{ height: 500 }}>
     <Chart spec={pieSpec} />
   </div>
 );

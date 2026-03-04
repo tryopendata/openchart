@@ -2,11 +2,11 @@
  * Graph stories.
  *
  * Force-directed graphs: basic layouts, community clusters, visual encodings,
- * chrome elements, search, dark mode, and scale/performance tests.
+ * chrome elements, search, and scale/performance tests.
  */
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
-import { Graph, VizThemeProvider } from '@opendata-ai/openchart-react';
+import { Graph } from '@opendata-ai/openchart-react';
 import { useEffect, useRef, useState } from 'react';
 import { generateRandomGraph } from './graphs/helpers';
 
@@ -36,7 +36,7 @@ const basicSpec: GraphSpec = {
 };
 
 export const BasicGraph = () => (
-  <div style={{ width: 800, height: 600 }}>
+  <div className="story-chart" style={{ height: 600 }}>
     <Graph spec={basicSpec} />
   </div>
 );
@@ -52,7 +52,7 @@ communitySpec.chrome = {
 };
 
 export const CommunityClusters = () => (
-  <div style={{ width: 800, height: 600 }}>
+  <div className="story-chart" style={{ height: 600 }}>
     <Graph spec={communitySpec} />
   </div>
 );
@@ -89,7 +89,7 @@ const encodedSpec: GraphSpec = {
 };
 
 export const EncodedGraph = () => (
-  <div style={{ width: 800, height: 600 }}>
+  <div className="story-chart" style={{ height: 600 }}>
     <Graph spec={encodedSpec} />
   </div>
 );
@@ -126,7 +126,7 @@ const chromeSpec: GraphSpec = {
 };
 
 export const WithChrome = () => (
-  <div style={{ width: 800, height: 600 }}>
+  <div className="story-chart" style={{ height: 600 }}>
     <Graph spec={chromeSpec} />
   </div>
 );
@@ -148,32 +148,8 @@ searchSpec.chrome = {
 };
 
 export const SearchDemo = () => (
-  <div style={{ width: 800, height: 600 }}>
+  <div className="story-chart" style={{ height: 600 }}>
     <Graph spec={searchSpec} />
-  </div>
-);
-
-// ---------------------------------------------------------------------------
-// Dark Mode
-// ---------------------------------------------------------------------------
-
-const darkSpec = generateRandomGraph(50, 1.6, 4);
-darkSpec.chrome = {
-  title: 'Dark Mode Graph',
-  subtitle: '50 nodes, 4 communities',
-};
-
-export const DarkMode = () => (
-  <VizThemeProvider darkMode="force">
-    <div style={{ width: 800, height: 600, background: '#0d1117' }}>
-      <Graph spec={darkSpec} darkMode="force" />
-    </div>
-  </VizThemeProvider>
-);
-
-export const LightMode = () => (
-  <div style={{ width: 800, height: 600 }}>
-    <Graph spec={darkSpec} darkMode="off" />
   </div>
 );
 
@@ -188,7 +164,7 @@ spec1k.chrome = {
 };
 
 export const Scale1kNodes = () => (
-  <div style={{ width: 900, height: 700 }}>
+  <div className="story-chart" style={{ height: 700 }}>
     <Graph spec={spec1k} />
   </div>
 );
@@ -200,7 +176,7 @@ spec5k.chrome = {
 };
 
 export const Scale5kNodes = () => (
-  <div style={{ width: 900, height: 700 }}>
+  <div className="story-chart" style={{ height: 700 }}>
     <Graph spec={spec5k} />
   </div>
 );
@@ -256,7 +232,7 @@ function FPSCounter() {
 }
 
 export const Scale10kNodes = () => (
-  <div style={{ width: 900, height: 700, position: 'relative' }}>
+  <div className="story-chart" style={{ height: 700, position: 'relative' }}>
     <FPSCounter />
     <Graph spec={spec10k} />
   </div>

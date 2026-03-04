@@ -26,7 +26,7 @@
   margin: 0 auto;
 }
 
-.story-dark-bg {
-  background: #1a1a2e;
-  padding: 24px;
+.story-chart {
+  width: 100%;
+  max-width: 1000px;
 }

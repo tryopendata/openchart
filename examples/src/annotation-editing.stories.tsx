@@ -338,9 +338,9 @@ function makeInitialEditingState(): EditingState {
         y: 71.42,
         text: 'Holiday peak:\n$71.4B devices',
         fontSize: 11,
-        anchor: 'left',
+        anchor: 'top',
         connector: true,
-        offset: { dx: -120, dy: -20 },
+        offset: { dx: 0, dy: -30 },
       },
       {
         type: 'text',

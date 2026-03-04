@@ -431,10 +431,17 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
 
   useLadleOverrides();
 
-  // Set .ladle-main background to match theme so padding area isn't white
+  // Set backgrounds on html/body/.ladle-main to match theme so no white
+  // border shows through. Must use setProperty with 'important' to beat the
+  // !important in the Ladle CSS overrides above.
   useEffect(() => {
-    const main = document.querySelector('.ladle-main') as HTMLElement | null;
-    if (main) main.style.background = bg;
+    for (const el of [
+      document.documentElement,
+      document.body,
+      document.querySelector('.ladle-main') as HTMLElement | null,
+    ]) {
+      el?.style.setProperty('background', bg, 'important');
+    }
   }, [bg]);
 
   return (

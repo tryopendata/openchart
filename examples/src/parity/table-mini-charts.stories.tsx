@@ -177,12 +177,6 @@ export const StockSparklines: Story = () => (
   </div>
 );
 
-export const StockSparklinesDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 800 }}>
-    <DataTable spec={spec} darkMode="force" />
-  </div>
-);
-
 // Column sparkline variant: quarterly revenue
 const revenueData = [
   {
@@ -241,11 +235,5 @@ const revenueSpec: TableSpec = {
 export const RevenueColumns: Story = () => (
   <div className="story-centered" style={{ maxWidth: 750 }}>
     <DataTable spec={revenueSpec} />
-  </div>
-);
-
-export const RevenueColumnsDark: Story = () => (
-  <div className="story-centered story-dark-bg" style={{ maxWidth: 750 }}>
-    <DataTable spec={revenueSpec} darkMode="force" />
   </div>
 );

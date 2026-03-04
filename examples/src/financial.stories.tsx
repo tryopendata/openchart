@@ -16,22 +16,22 @@ import { Chart, DataTable, useDarkMode, useVizDarkMode } from '@opendata-ai/open
 
 function FinancialShell({
   children,
-  width,
   height,
   maxWidth,
+  className,
 }: {
   children: (dark: boolean) => React.ReactNode;
-  width?: number;
   height?: number;
   maxWidth?: number;
+  className?: string;
 }) {
   const contextDarkMode = useVizDarkMode();
   const dark = useDarkMode(contextDarkMode);
 
   return (
     <div
+      className={className}
       style={{
-        width,
         height,
         maxWidth,
         padding: 24,
@@ -44,34 +44,46 @@ function FinancialShell({
 }
 
 // ---------------------------------------------------------------------------
-// Viz 1: Stock Price Area Chart
+// Viz 1: NVIDIA Stock Price Area Chart — The AI Boom Story
 // ---------------------------------------------------------------------------
 
 const stockData = [
-  { date: '2023-01-01', price: 130.21 },
-  { date: '2023-02-01', price: 147.41 },
-  { date: '2023-03-01', price: 125.07 },
-  { date: '2023-04-01', price: 169.68 },
-  { date: '2023-05-01', price: 177.25 },
-  { date: '2023-06-01', price: 193.97 },
-  { date: '2023-07-01', price: 196.45 },
-  { date: '2023-08-01', price: 187.87 },
-  { date: '2023-09-01', price: 171.21 },
-  { date: '2023-10-01', price: 170.77 },
-  { date: '2023-11-01', price: 189.95 },
-  { date: '2023-12-01', price: 192.53 },
-  { date: '2024-01-01', price: 185.85 },
-  { date: '2024-02-01', price: 188.28 },
-  { date: '2024-03-01', price: 171.48 },
-  { date: '2024-04-01', price: 170.33 },
-  { date: '2024-05-01', price: 192.35 },
-  { date: '2024-06-01', price: 210.62 },
-  { date: '2024-07-01', price: 222.08 },
-  { date: '2024-08-01', price: 226.84 },
-  { date: '2024-09-01', price: 226.21 },
-  { date: '2024-10-01', price: 225.91 },
-  { date: '2024-11-01', price: 237.33 },
-  { date: '2024-12-01', price: 242.84 },
+  { date: '2023-01-01', price: 19.52 },
+  { date: '2023-02-01', price: 23.19 },
+  { date: '2023-03-01', price: 27.75 },
+  { date: '2023-04-01', price: 27.73 },
+  { date: '2023-05-01', price: 37.8 },
+  { date: '2023-06-01', price: 42.27 },
+  { date: '2023-07-01', price: 46.7 },
+  { date: '2023-08-01', price: 49.32 },
+  { date: '2023-09-01', price: 43.47 },
+  { date: '2023-10-01', price: 40.75 },
+  { date: '2023-11-01', price: 46.74 },
+  { date: '2023-12-01', price: 49.49 },
+  { date: '2024-01-01', price: 61.49 },
+  { date: '2024-02-01', price: 79.07 },
+  { date: '2024-03-01', price: 90.31 },
+  { date: '2024-04-01', price: 86.36 },
+  { date: '2024-05-01', price: 109.58 },
+  { date: '2024-06-01', price: 123.49 },
+  { date: '2024-07-01', price: 116.97 },
+  { date: '2024-08-01', price: 119.32 },
+  { date: '2024-09-01', price: 121.4 },
+  { date: '2024-10-01', price: 132.72 },
+  { date: '2024-11-01', price: 138.2 },
+  { date: '2024-12-01', price: 134.25 },
+  { date: '2025-01-01', price: 120.04 },
+  { date: '2025-02-01', price: 124.89 },
+  { date: '2025-03-01', price: 108.36 },
+  { date: '2025-04-01', price: 108.9 },
+  { date: '2025-05-01', price: 135.11 },
+  { date: '2025-06-01', price: 157.97 },
+  { date: '2025-07-01', price: 177.85 },
+  { date: '2025-08-01', price: 174.16 },
+  { date: '2025-09-01', price: 186.57 },
+  { date: '2025-10-01', price: 202.48 },
+  { date: '2025-11-01', price: 176.99 },
+  { date: '2025-12-01', price: 186.5 },
 ];
 
 function stockPriceSpec(dark: boolean): ChartSpec {
@@ -79,7 +91,7 @@ function stockPriceSpec(dark: boolean): ChartSpec {
     type: 'area',
     data: stockData,
     encoding: {
-      x: { field: 'date', type: 'temporal' },
+      x: { field: 'date', type: 'temporal', axis: { tickCount: 4 } },
       y: {
         field: 'price',
         type: 'quantitative',
@@ -90,34 +102,34 @@ function stockPriceSpec(dark: boolean): ChartSpec {
     annotations: [
       {
         type: 'range',
-        x1: '2023-02-15',
-        x2: '2023-04-01',
-        label: 'SVB collapse triggers 12% selloff',
-        fill: dark ? '#fca5a5' : '#dc2626',
+        x1: '2023-04-15',
+        x2: '2023-06-15',
+        label: 'ChatGPT mania lifts AI names',
+        fill: dark ? '#86efac' : '#15803d',
         opacity: dark ? 0.15 : 0.08,
       },
       {
         type: 'refline',
-        y: 181,
-        label: '2-yr avg: $181',
+        y: 105,
+        label: '3-yr avg: $105',
         style: 'dashed',
         stroke: dark ? '#64748b' : '#94a3b8',
         strokeWidth: 1,
       },
       {
         type: 'text',
-        x: '2024-12-01',
-        y: 243,
-        text: 'Record close: $243',
+        x: '2025-10-01',
+        y: 202,
+        text: 'All-time high: $202',
         fontSize: 11,
         anchor: 'left',
-        offset: { dx: -100, dy: -12 },
+        offset: { dx: -110, dy: -12 },
       },
     ],
     labels: { density: 'none' },
     chrome: {
-      title: 'Apple Shares Hit Record After AI-Fuelled Rally',
-      subtitle: 'AAPL monthly closing price, January 2023 to December 2024',
+      title: 'NVIDIA Rides the AI Wave to a 10x Rally',
+      subtitle: 'NVDA monthly closing price (split-adjusted), January 2023 to December 2025',
       source: 'Source: Nasdaq historical data',
       byline: 'Chart: OpenChart',
     },
@@ -125,7 +137,7 @@ function stockPriceSpec(dark: boolean): ChartSpec {
 }
 
 export const StockPrice: Story = () => (
-  <FinancialShell width={700} height={450}>
+  <FinancialShell className="story-chart" height={450}>
     {(dark) => <Chart spec={stockPriceSpec(dark)} />}
   </FinancialShell>
 );
@@ -134,59 +146,82 @@ export const StockPrice: Story = () => (
 // Viz 2: Index Performance Comparison (Multi-series Line)
 // ---------------------------------------------------------------------------
 
+// Cumulative total return rebased to Jan 1 2022 = 0%.
+// Computed from annual returns:
+//   S&P 500:  2022 -18.1%, 2023 +26.3%, 2024 +25.0%, 2025 +17.9%
+//   NASDAQ:   2022 -33.1%, 2023 +43.4%, 2024 +28.6%, 2025 +20.4%
+//   Dow:      2022 -7.0%,  2023 +16.0%, 2024 +14.8%, 2025 +14.9%
+//   Russell:  2022 -20.5%, 2023 +16.8%, 2024 +10.0%, 2025 +12.1%
+
 const benchmarkData = [
   // S&P 500
   { date: '2022-01-01', totalReturn: 0, index: 'S&P 500' },
   { date: '2022-04-01', totalReturn: -5.3, index: 'S&P 500' },
   { date: '2022-07-01', totalReturn: -13.1, index: 'S&P 500' },
   { date: '2022-10-01', totalReturn: -17.7, index: 'S&P 500' },
-  { date: '2023-01-01', totalReturn: -12.5, index: 'S&P 500' },
-  { date: '2023-04-01', totalReturn: -5.8, index: 'S&P 500' },
-  { date: '2023-07-01', totalReturn: 2.4, index: 'S&P 500' },
-  { date: '2023-10-01', totalReturn: 0.1, index: 'S&P 500' },
-  { date: '2024-01-01', totalReturn: 6.8, index: 'S&P 500' },
-  { date: '2024-04-01', totalReturn: 15.3, index: 'S&P 500' },
-  { date: '2024-07-01', totalReturn: 22.1, index: 'S&P 500' },
-  { date: '2024-10-01', totalReturn: 28.7, index: 'S&P 500' },
+  { date: '2023-01-01', totalReturn: -18.1, index: 'S&P 500' },
+  { date: '2023-04-01', totalReturn: -8.2, index: 'S&P 500' },
+  { date: '2023-07-01', totalReturn: 1.5, index: 'S&P 500' },
+  { date: '2023-10-01', totalReturn: -0.8, index: 'S&P 500' },
+  { date: '2024-01-01', totalReturn: 3.4, index: 'S&P 500' },
+  { date: '2024-04-01', totalReturn: 12.8, index: 'S&P 500' },
+  { date: '2024-07-01', totalReturn: 20.6, index: 'S&P 500' },
+  { date: '2024-10-01', totalReturn: 29.2, index: 'S&P 500' },
+  { date: '2025-01-01', totalReturn: 29.3, index: 'S&P 500' },
+  { date: '2025-04-01', totalReturn: 33.5, index: 'S&P 500' },
+  { date: '2025-07-01', totalReturn: 39.8, index: 'S&P 500' },
+  { date: '2025-10-01', totalReturn: 46.2, index: 'S&P 500' },
   // NASDAQ
   { date: '2022-01-01', totalReturn: 0, index: 'NASDAQ' },
   { date: '2022-04-01', totalReturn: -9.1, index: 'NASDAQ' },
   { date: '2022-07-01', totalReturn: -22.4, index: 'NASDAQ' },
   { date: '2022-10-01', totalReturn: -29.5, index: 'NASDAQ' },
-  { date: '2023-01-01', totalReturn: -18.2, index: 'NASDAQ' },
-  { date: '2023-04-01', totalReturn: -8.5, index: 'NASDAQ' },
-  { date: '2023-07-01', totalReturn: 7.8, index: 'NASDAQ' },
-  { date: '2023-10-01', totalReturn: 3.2, index: 'NASDAQ' },
-  { date: '2024-01-01', totalReturn: 15.4, index: 'NASDAQ' },
-  { date: '2024-04-01', totalReturn: 28.6, index: 'NASDAQ' },
-  { date: '2024-07-01', totalReturn: 36.2, index: 'NASDAQ' },
-  { date: '2024-10-01', totalReturn: 43.5, index: 'NASDAQ' },
+  { date: '2023-01-01', totalReturn: -33.1, index: 'NASDAQ' },
+  { date: '2023-04-01', totalReturn: -15.8, index: 'NASDAQ' },
+  { date: '2023-07-01', totalReturn: 2.5, index: 'NASDAQ' },
+  { date: '2023-10-01', totalReturn: -3.6, index: 'NASDAQ' },
+  { date: '2024-01-01', totalReturn: -4.1, index: 'NASDAQ' },
+  { date: '2024-04-01', totalReturn: 12.4, index: 'NASDAQ' },
+  { date: '2024-07-01', totalReturn: 24.8, index: 'NASDAQ' },
+  { date: '2024-10-01', totalReturn: 36.9, index: 'NASDAQ' },
+  { date: '2025-01-01', totalReturn: 39.1, index: 'NASDAQ' },
+  { date: '2025-04-01', totalReturn: 48.2, index: 'NASDAQ' },
+  { date: '2025-07-01', totalReturn: 56.8, index: 'NASDAQ' },
+  { date: '2025-10-01', totalReturn: 64.7, index: 'NASDAQ' },
   // Dow Jones
   { date: '2022-01-01', totalReturn: 0, index: 'Dow Jones' },
   { date: '2022-04-01', totalReturn: -4.1, index: 'Dow Jones' },
   { date: '2022-07-01', totalReturn: -9.5, index: 'Dow Jones' },
   { date: '2022-10-01', totalReturn: -13.2, index: 'Dow Jones' },
-  { date: '2023-01-01', totalReturn: -8.4, index: 'Dow Jones' },
-  { date: '2023-04-01', totalReturn: -2.1, index: 'Dow Jones' },
-  { date: '2023-07-01', totalReturn: 4.2, index: 'Dow Jones' },
-  { date: '2023-10-01', totalReturn: 2.8, index: 'Dow Jones' },
-  { date: '2024-01-01', totalReturn: 8.1, index: 'Dow Jones' },
-  { date: '2024-04-01', totalReturn: 12.6, index: 'Dow Jones' },
-  { date: '2024-07-01', totalReturn: 16.8, index: 'Dow Jones' },
-  { date: '2024-10-01', totalReturn: 21.3, index: 'Dow Jones' },
+  { date: '2023-01-01', totalReturn: -7.0, index: 'Dow Jones' },
+  { date: '2023-04-01', totalReturn: -1.8, index: 'Dow Jones' },
+  { date: '2023-07-01', totalReturn: 4.5, index: 'Dow Jones' },
+  { date: '2023-10-01', totalReturn: 2.2, index: 'Dow Jones' },
+  { date: '2024-01-01', totalReturn: 7.9, index: 'Dow Jones' },
+  { date: '2024-04-01', totalReturn: 12.1, index: 'Dow Jones' },
+  { date: '2024-07-01', totalReturn: 17.4, index: 'Dow Jones' },
+  { date: '2024-10-01', totalReturn: 24.0, index: 'Dow Jones' },
+  { date: '2025-01-01', totalReturn: 25.8, index: 'Dow Jones' },
+  { date: '2025-04-01', totalReturn: 30.4, index: 'Dow Jones' },
+  { date: '2025-07-01', totalReturn: 36.1, index: 'Dow Jones' },
+  { date: '2025-10-01', totalReturn: 42.5, index: 'Dow Jones' },
   // Russell 2000
   { date: '2022-01-01', totalReturn: 0, index: 'Russell 2000' },
   { date: '2022-04-01', totalReturn: -7.8, index: 'Russell 2000' },
   { date: '2022-07-01', totalReturn: -17.2, index: 'Russell 2000' },
   { date: '2022-10-01', totalReturn: -21.5, index: 'Russell 2000' },
-  { date: '2023-01-01', totalReturn: -16.8, index: 'Russell 2000' },
-  { date: '2023-04-01', totalReturn: -11.3, index: 'Russell 2000' },
-  { date: '2023-07-01', totalReturn: -2.1, index: 'Russell 2000' },
-  { date: '2023-10-01', totalReturn: -5.4, index: 'Russell 2000' },
-  { date: '2024-01-01', totalReturn: 1.2, index: 'Russell 2000' },
-  { date: '2024-04-01', totalReturn: 6.8, index: 'Russell 2000' },
-  { date: '2024-07-01', totalReturn: 10.3, index: 'Russell 2000' },
-  { date: '2024-10-01', totalReturn: 14.1, index: 'Russell 2000' },
+  { date: '2023-01-01', totalReturn: -20.5, index: 'Russell 2000' },
+  { date: '2023-04-01', totalReturn: -13.2, index: 'Russell 2000' },
+  { date: '2023-07-01', totalReturn: -4.5, index: 'Russell 2000' },
+  { date: '2023-10-01', totalReturn: -8.1, index: 'Russell 2000' },
+  { date: '2024-01-01', totalReturn: -7.1, index: 'Russell 2000' },
+  { date: '2024-04-01', totalReturn: -1.8, index: 'Russell 2000' },
+  { date: '2024-07-01', totalReturn: 3.5, index: 'Russell 2000' },
+  { date: '2024-10-01', totalReturn: 8.2, index: 'Russell 2000' },
+  { date: '2025-01-01', totalReturn: 8.4, index: 'Russell 2000' },
+  { date: '2025-04-01', totalReturn: 12.8, index: 'Russell 2000' },
+  { date: '2025-07-01', totalReturn: 17.5, index: 'Russell 2000' },
+  { date: '2025-10-01', totalReturn: 21.5, index: 'Russell 2000' },
 ];
 
 function benchmarkSpec(dark: boolean): ChartSpec {
@@ -194,7 +229,7 @@ function benchmarkSpec(dark: boolean): ChartSpec {
     type: 'line',
     data: benchmarkData,
     encoding: {
-      x: { field: 'date', type: 'temporal', axis: { tickCount: 6 } },
+      x: { field: 'date', type: 'temporal', axis: { tickCount: 8 } },
       y: {
         field: 'totalReturn',
         type: 'quantitative',
@@ -206,7 +241,7 @@ function benchmarkSpec(dark: boolean): ChartSpec {
       {
         type: 'range',
         x1: '2022-01-01',
-        x2: '2022-12-01',
+        x2: '2023-01-01',
         label: 'Fed rate hikes hammer growth stocks',
         fill: dark ? '#fca5a5' : '#dc2626',
         opacity: dark ? 0.12 : 0.06,
@@ -221,9 +256,9 @@ function benchmarkSpec(dark: boolean): ChartSpec {
       },
       {
         type: 'text',
-        x: '2024-04-01',
-        y: 37,
-        text: 'NASDAQ opens 26pp gap\nover small caps',
+        x: '2025-01-01',
+        y: 52,
+        text: 'NASDAQ opens 43pp gap\nover small caps',
         fontSize: 10,
         connector: false,
         background: dark ? '#1e293b' : '#ffffff',
@@ -241,27 +276,27 @@ function benchmarkSpec(dark: boolean): ChartSpec {
 }
 
 export const BenchmarkComparison: Story = () => (
-  <FinancialShell width={750} height={450}>
+  <FinancialShell className="story-chart" height={450}>
     {(dark) => <Chart spec={benchmarkSpec(dark)} />}
   </FinancialShell>
 );
 
 // ---------------------------------------------------------------------------
-// Viz 3: Sector Performance Horizontal Bar
+// Viz 3: Sector Performance Horizontal Bar — Full Year 2025
 // ---------------------------------------------------------------------------
 
 const sectorData = [
-  { sector: 'Information Technology', performance: 35.7 },
-  { sector: 'Communication Services', performance: 31.2 },
-  { sector: 'Consumer Discretionary', performance: 18.4 },
-  { sector: 'Financials', performance: 14.8 },
-  { sector: 'Industrials', performance: 11.3 },
-  { sector: 'Health Care', performance: 6.2 },
-  { sector: 'Materials', performance: 3.1 },
-  { sector: 'Consumer Staples', performance: -1.4 },
-  { sector: 'Real Estate', performance: -3.8 },
-  { sector: 'Utilities', performance: -5.2 },
-  { sector: 'Energy', performance: -7.6 },
+  { sector: 'Communication Services', performance: 33.7 },
+  { sector: 'Information Technology', performance: 24.0 },
+  { sector: 'Industrials', performance: 19.4 },
+  { sector: 'Utilities', performance: 16.0 },
+  { sector: 'Financials', performance: 15.0 },
+  { sector: 'Health Care', performance: 14.6 },
+  { sector: 'Energy', performance: 8.3 },
+  { sector: 'Consumer Discretionary', performance: 6.0 },
+  { sector: 'Consumer Staples', performance: 3.9 },
+  { sector: 'Real Estate', performance: 3.2 },
+  { sector: 'Materials', performance: -10.5 },
 ];
 
 function sectorSpec(dark: boolean): ChartSpec {
@@ -272,7 +307,7 @@ function sectorSpec(dark: boolean): ChartSpec {
       x: {
         field: 'performance',
         type: 'quantitative',
-        axis: { label: 'Year-to-Date Return (%)', format: '+.1f' },
+        axis: { label: 'Full-Year Return (%)', format: '+.1f' },
       },
       y: { field: 'sector', type: 'nominal' },
     },
@@ -286,17 +321,17 @@ function sectorSpec(dark: boolean): ChartSpec {
       },
       {
         type: 'refline',
-        x: 12.5,
-        label: 'S&P 500 avg: +12.5%',
+        x: 18.0,
+        label: 'S&P 500 avg: +18.0%',
         style: 'dashed',
         stroke: dark ? '#94a3b8' : '#64748b',
         strokeWidth: 1,
       },
       {
         type: 'text',
-        x: 35.7,
-        y: 'Information Technology',
-        text: 'AI boom drives tech premium',
+        x: 33.7,
+        y: 'Communication Services',
+        text: 'Meta + Google drive Comm Services',
         fontSize: 11,
         anchor: 'top',
         offset: { dx: -180, dy: -68 },
@@ -306,8 +341,8 @@ function sectorSpec(dark: boolean): ChartSpec {
     ],
     labels: { density: 'all', format: '+.1f' },
     chrome: {
-      title: 'Tech Leads by a Mile, Energy Sinks on Oversupply',
-      subtitle: 'S&P 500 sector total returns, year-to-date 2024',
+      title: 'Comms & Tech Lead as Materials Sink',
+      subtitle: 'S&P 500 sector total returns, full year 2025',
       source: 'Source: S&P Dow Jones Indices',
       footer: 'Note: Returns include dividends reinvested',
       byline: 'Chart: OpenChart',
@@ -316,7 +351,7 @@ function sectorSpec(dark: boolean): ChartSpec {
 }
 
 export const SectorReturns: Story = () => (
-  <FinancialShell width={700} height={420}>
+  <FinancialShell className="story-chart" height={420}>
     {(dark) => <Chart spec={sectorSpec(dark)} />}
   </FinancialShell>
 );
@@ -422,9 +457,9 @@ function riskReturnSpec(dark: boolean): ChartSpec {
       {
         type: 'range',
         x1: 0,
-        x2: 10,
-        y1: 7,
-        y2: 15,
+        x2: 8,
+        y1: 8,
+        y2: 16,
         label: 'Sweet spot: low risk, high return',
         fill: dark ? '#4ade80' : '#15803d',
         opacity: dark ? 0.1 : 0.06,
@@ -442,10 +477,10 @@ function riskReturnSpec(dark: boolean): ChartSpec {
         type: 'text',
         x: 0.8,
         y: 1.4,
-        text: 'T-Bills: stability at a cost',
+        text: 'T-Bills: stability\nat a cost',
         fontSize: 10,
         anchor: 'right',
-        offset: { dx: 12, dy: -12 },
+        offset: { dx: 65, dy: -28 },
       },
       {
         type: 'text',
@@ -454,7 +489,7 @@ function riskReturnSpec(dark: boolean): ChartSpec {
         text: 'US Large Cap',
         fontSize: 10,
         anchor: 'bottom',
-        offset: { dy: -14 },
+        offset: { dx: 18, dy: -22 },
       },
       {
         type: 'refline',
@@ -477,135 +512,135 @@ function riskReturnSpec(dark: boolean): ChartSpec {
 }
 
 export const RiskReturn: Story = () => (
-  <FinancialShell width={750} height={520}>
+  <FinancialShell className="story-chart" height={520}>
     {(dark) => <Chart spec={riskReturnSpec(dark)} />}
   </FinancialShell>
 );
 
 // ---------------------------------------------------------------------------
-// Viz 5: Earnings Season Table — "The Scorecard"
+// Viz 5: Earnings Season Table — Q4 2024 Scorecard
 // ---------------------------------------------------------------------------
 
 const earningsData = [
   {
     ticker: 'NVDA',
     company: 'NVIDIA',
-    epsEstimate: 4.64,
-    epsActual: 5.66,
-    surprise: 22.0,
+    epsEstimate: 0.85,
+    epsActual: 0.89,
+    surprise: 4.7,
     result: 'Beat',
-    revenue: 22.1,
-    epsTrend: [3.71, 4.02, 4.38, 5.66],
+    revenue: 39.3,
+    epsTrend: [0.57, 0.68, 0.81, 0.89],
   },
   {
     ticker: 'AAPL',
     company: 'Apple',
-    epsEstimate: 2.1,
-    epsActual: 2.18,
-    surprise: 3.8,
+    epsEstimate: 2.35,
+    epsActual: 2.4,
+    surprise: 2.1,
     result: 'Beat',
-    revenue: 119.6,
-    epsTrend: [1.52, 1.46, 1.64, 2.18],
+    revenue: 124.3,
+    epsTrend: [1.53, 1.4, 1.64, 2.4],
   },
   {
     ticker: 'MSFT',
     company: 'Microsoft',
-    epsEstimate: 2.78,
-    epsActual: 2.93,
-    surprise: 5.4,
+    epsEstimate: 3.11,
+    epsActual: 3.23,
+    surprise: 3.9,
     result: 'Beat',
-    revenue: 62.0,
-    epsTrend: [2.45, 2.69, 2.99, 2.93],
+    revenue: 69.6,
+    epsTrend: [2.93, 2.95, 3.3, 3.23],
   },
   {
     ticker: 'GOOGL',
     company: 'Alphabet',
-    epsEstimate: 1.72,
-    epsActual: 1.89,
-    surprise: 9.9,
-    result: 'Beat',
-    revenue: 86.3,
-    epsTrend: [1.17, 1.44, 1.55, 1.89],
+    epsEstimate: 2.13,
+    epsActual: 2.15,
+    surprise: 0.9,
+    result: 'Inline',
+    revenue: 96.5,
+    epsTrend: [1.44, 1.89, 2.12, 2.15],
   },
   {
     ticker: 'AMZN',
     company: 'Amazon',
-    epsEstimate: 0.8,
-    epsActual: 1.0,
-    surprise: 25.0,
+    epsEstimate: 1.49,
+    epsActual: 1.86,
+    surprise: 24.8,
     result: 'Beat',
-    revenue: 170.0,
-    epsTrend: [0.31, 0.65, 0.94, 1.0],
+    revenue: 187.8,
+    epsTrend: [0.98, 1.26, 1.43, 1.86],
   },
   {
     ticker: 'META',
     company: 'Meta Platforms',
-    epsEstimate: 4.96,
-    epsActual: 5.33,
-    surprise: 7.5,
+    epsEstimate: 6.77,
+    epsActual: 8.02,
+    surprise: 18.5,
     result: 'Beat',
-    revenue: 40.1,
-    epsTrend: [3.39, 4.39, 4.71, 5.33],
+    revenue: 48.4,
+    epsTrend: [4.71, 5.16, 6.03, 8.02],
   },
   {
     ticker: 'TSLA',
     company: 'Tesla',
-    epsEstimate: 0.74,
-    epsActual: 0.71,
-    surprise: -4.1,
+    epsEstimate: 0.76,
+    epsActual: 0.73,
+    surprise: -3.9,
     result: 'Miss',
-    revenue: 25.2,
-    epsTrend: [0.85, 0.78, 0.66, 0.71],
+    revenue: 25.7,
+    epsTrend: [0.45, 0.52, 0.72, 0.73],
   },
   {
     ticker: 'JPM',
     company: 'JPMorgan Chase',
-    epsEstimate: 3.32,
-    epsActual: 3.97,
-    surprise: 19.6,
+    epsEstimate: 4.11,
+    epsActual: 4.81,
+    surprise: 17.0,
     result: 'Beat',
-    revenue: 39.9,
-    epsTrend: [3.04, 3.44, 3.12, 3.97],
+    revenue: 43.7,
+    epsTrend: [3.04, 4.4, 4.37, 4.81],
   },
   {
     ticker: 'BAC',
     company: 'Bank of America',
-    epsEstimate: 0.68,
-    epsActual: 0.7,
-    surprise: 2.9,
+    epsEstimate: 0.77,
+    epsActual: 0.82,
+    surprise: 6.5,
     result: 'Beat',
-    revenue: 23.5,
-    epsTrend: [0.64, 0.72, 0.73, 0.7],
+    revenue: 25.3,
+    epsTrend: [0.64, 0.83, 0.81, 0.82],
   },
   {
     ticker: 'JNJ',
     company: 'Johnson & Johnson',
-    epsEstimate: 2.28,
-    epsActual: 2.29,
-    surprise: 0.4,
-    result: 'Inline',
-    revenue: 21.4,
-    epsTrend: [2.68, 2.35, 2.33, 2.29],
+    epsEstimate: 2.21,
+    epsActual: 2.42,
+    surprise: 9.5,
+    result: 'Beat',
+    revenue: 22.5,
+    epsTrend: [2.35, 2.82, 2.42, 2.42],
   },
   {
     ticker: 'PFE',
     company: 'Pfizer',
     epsEstimate: 0.48,
-    epsActual: 0.38,
-    surprise: -20.8,
-    result: 'Miss',
-    revenue: 14.2,
-    epsTrend: [1.23, 0.67, 0.41, 0.38],
+    epsActual: 0.63,
+    surprise: 31.3,
+    result: 'Beat',
+    revenue: 17.8,
+    epsTrend: [0.82, 0.6, 0.78, 0.63],
   },
   {
     ticker: 'UNH',
     company: 'UnitedHealth',
-    epsEstimate: 6.14,
-    epsActual: 6.16,
-    surprise: 0.3,
-    result: 'Inline',
-    revenue: 94.4,
-    epsTrend: [5.96, 5.82, 6.56, 6.16],
+    epsEstimate: 6.72,
+    epsActual: 6.81,
+    surprise: 1.3,
+    result: 'Beat',
+    revenue: 102.3,
+    epsTrend: [6.91, 6.8, 7.15, 6.81],
   },
   {
     ticker: 'HD',
@@ -614,18 +649,18 @@ const earningsData = [
     epsActual: 3.13,
     surprise: 3.3,
     result: 'Beat',
-    revenue: 34.8,
+    revenue: 39.7,
     epsTrend: [3.82, 4.65, 3.81, 3.13],
   },
   {
     ticker: 'CRM',
     company: 'Salesforce',
-    epsEstimate: 2.27,
-    epsActual: 2.44,
-    surprise: 7.5,
+    epsEstimate: 2.61,
+    epsActual: 2.78,
+    surprise: 6.5,
     result: 'Beat',
-    revenue: 9.3,
-    epsTrend: [1.68, 2.12, 2.11, 2.44],
+    revenue: 10.0,
+    epsTrend: [2.11, 2.56, 2.72, 2.78],
   },
   {
     ticker: 'NFLX',
@@ -634,18 +669,18 @@ const earningsData = [
     epsActual: 4.27,
     surprise: 1.7,
     result: 'Beat',
-    revenue: 8.8,
-    epsTrend: [2.88, 3.29, 3.73, 4.27],
+    revenue: 10.2,
+    epsTrend: [2.88, 4.88, 5.4, 4.27],
   },
   {
     ticker: 'DIS',
     company: 'Walt Disney',
-    epsEstimate: 1.1,
-    epsActual: 1.06,
-    surprise: -3.6,
-    result: 'Miss',
-    revenue: 23.5,
-    epsTrend: [0.93, 1.03, 0.82, 1.06],
+    epsEstimate: 1.45,
+    epsActual: 1.76,
+    surprise: 21.4,
+    result: 'Beat',
+    revenue: 24.7,
+    epsTrend: [0.93, 1.03, 1.14, 1.76],
   },
 ];
 
@@ -678,8 +713,8 @@ const earningsSpec: TableSpec = {
     { key: 'epsTrend', label: 'EPS Trend', sparkline: { type: 'column' } },
   ],
   chrome: {
-    title: 'NVIDIA Crushes Estimates as Pfizer Stumbles',
-    subtitle: 'Q4 2024 earnings results: EPS estimates vs actuals for S&P 500 companies',
+    title: 'Amazon and Meta Crush Estimates, Tesla Stumbles',
+    subtitle: 'Q4 2024 earnings results: EPS estimates vs actuals for major S&P 500 companies',
     source: 'Source: Company filings, analyst consensus via FactSet',
     byline: 'Table: OpenChart',
   },

@@ -842,6 +842,97 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 }
 
 // ---------------------------------------------------------------------------
+// Brand rendering
+// ---------------------------------------------------------------------------
+
+const BRAND_FONT_SIZE = 20;
+const BRAND_MIN_WIDTH = 120;
+const BRAND_URL = 'https://tryopendata.ai';
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
+/** Compute shared brand positioning from layout dimensions and theme. */
+function brandPosition(layout: ChartLayout) {
+  const { width } = layout.dimensions;
+  const padding = layout.theme.spacing.padding;
+  const rightEdge = width - padding;
+
+  // Vertically align with the first bottom chrome element (source/byline/footer).
+  // This uses the same Y computation as renderChrome so the watermark sits on the
+  // same baseline row as the source attribution text.
+  const { chrome } = layout;
+  const xAxisExtent = layout.axes.x ? (layout.axes.x.label ? 48 : 26) : 0;
+  const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
+  const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
+  // Chrome text uses dominant-baseline:hanging (Y = top of text) while the
+  // brand uses the default alphabetic baseline (Y = baseline). Shift Y down
+  // by the brand font size so the visual tops align.
+  const chromeY = firstBottom
+    ? bottomOffset + firstBottom.y
+    : bottomOffset + layout.theme.spacing.chartToFooter;
+  const y = chromeY + BRAND_FONT_SIZE;
+
+  const dataWidth = estimateTextWidth('Data', BRAND_FONT_SIZE, 600);
+  // "Open" text-anchor:end sits at the same x where "Data" text-anchor:start begins
+  const dataX = rightEdge - dataWidth;
+  const openX = dataX;
+  return { openX, dataX, y, fill: layout.theme.colors.axis };
+}
+
+function renderBrandOpen(parent: SVGElement, layout: ChartLayout): void {
+  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
+  const { openX, y, fill } = brandPosition(layout);
+
+  const a = createSVGElement('a');
+  a.setAttribute('href', BRAND_URL);
+  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
+  a.setAttribute('target', '_blank');
+  a.setAttribute('rel', 'noopener');
+  a.setAttribute('class', 'viz-axis-ref');
+
+  const text = createSVGElement('text');
+  setAttrs(text, {
+    x: openX,
+    y,
+    'font-family': layout.theme.fonts.family,
+    'font-size': BRAND_FONT_SIZE,
+    'font-weight': 500,
+    'text-anchor': 'end',
+    'fill-opacity': 0.55,
+  });
+  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
+  text.textContent = 'Open';
+  a.appendChild(text);
+  parent.appendChild(a);
+}
+
+function renderBrandData(parent: SVGElement, layout: ChartLayout): void {
+  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
+  const { dataX, y, fill } = brandPosition(layout);
+
+  const a = createSVGElement('a');
+  a.setAttribute('href', BRAND_URL);
+  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
+  a.setAttribute('target', '_blank');
+  a.setAttribute('rel', 'noopener');
+  a.setAttribute('class', 'viz-chrome-ref');
+
+  const text = createSVGElement('text');
+  setAttrs(text, {
+    x: dataX,
+    y,
+    'font-family': layout.theme.fonts.family,
+    'font-size': BRAND_FONT_SIZE,
+    'font-weight': 600,
+    'text-anchor': 'start',
+    'fill-opacity': 0.55,
+  });
+  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
+  text.textContent = 'Data';
+  a.appendChild(text);
+  parent.appendChild(a);
+}
+
+// ---------------------------------------------------------------------------
 // Main render function
 // ---------------------------------------------------------------------------
 
@@ -906,8 +997,12 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
   renderAnnotations(svg, layout);
   renderLegend(svg, layout.legend);
 
+  renderBrandOpen(svg, layout);
+
   // Chrome renders on top so titles are never obscured by chart elements
   renderChrome(svg, layout);
+
+  renderBrandData(svg, layout);
 
   container.appendChild(svg);
   return svg;

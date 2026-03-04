@@ -15,16 +15,16 @@ import { Chart } from '@opendata-ai/openchart-react';
 const populationBarSpec: ChartSpec = {
   type: 'bar',
   data: [
-    { country: 'India', population: 1_428_000_000 },
-    { country: 'China', population: 1_425_000_000 },
-    { country: 'United States', population: 339_000_000 },
-    { country: 'Indonesia', population: 277_000_000 },
-    { country: 'Pakistan', population: 230_000_000 },
-    { country: 'Nigeria', population: 223_000_000 },
-    { country: 'Brazil', population: 216_000_000 },
-    { country: 'Bangladesh', population: 173_000_000 },
+    { country: 'India', population: 1_463_000_000 },
+    { country: 'China', population: 1_410_000_000 },
+    { country: 'United States', population: 347_000_000 },
+    { country: 'Indonesia', population: 285_000_000 },
+    { country: 'Pakistan', population: 255_000_000 },
+    { country: 'Nigeria', population: 240_000_000 },
+    { country: 'Brazil', population: 217_000_000 },
+    { country: 'Bangladesh', population: 175_000_000 },
     { country: 'Russia', population: 144_000_000 },
-    { country: 'Ethiopia', population: 126_000_000 },
+    { country: 'Ethiopia', population: 135_000_000 },
   ],
   encoding: {
     x: { field: 'population', type: 'quantitative', axis: { label: 'Population' } },
@@ -40,14 +40,14 @@ const populationBarSpec: ChartSpec = {
     },
   ],
   chrome: {
-    title: "World's Most Populous Countries",
-    subtitle: 'Population, 2023 estimates',
-    source: 'Source: United Nations Population Division',
+    title: 'India has overtaken China as the most populous country',
+    subtitle: 'Population by country, 2025 estimates',
+    source: 'Source: United Nations Population Division, World Population Prospects 2024',
   },
 };
 
 export const PopulationBar = () => (
-  <div style={{ width: 650, height: 480 }}>
+  <div className="story-chart" style={{ height: 480 }}>
     <Chart spec={populationBarSpec} />
   </div>
 );
@@ -61,11 +61,5 @@ export const PopulationBarCompact = () => (
 export const PopulationBarWide = () => (
   <div style={{ width: 1200, height: 500 }}>
     <Chart spec={populationBarSpec} />
-  </div>
-);
-
-export const PopulationBarDarkMode = () => (
-  <div style={{ width: 650, height: 480 }}>
-    <Chart spec={populationBarSpec} darkMode="force" />
   </div>
 );

@@ -27,6 +27,8 @@ const gdpLineSpec: ChartSpec = {
     { date: '2022-01-01', gdp: 2.1, country: 'United States' },
     { date: '2022-07-01', gdp: 1.9, country: 'United States' },
     { date: '2023-01-01', gdp: 2.5, country: 'United States' },
+    { date: '2023-07-01', gdp: 2.9, country: 'United States' },
+    { date: '2024-01-01', gdp: 2.8, country: 'United States' },
     // Euro Area
     { date: '2018-01-01', gdp: 1.8, country: 'Euro Area' },
     { date: '2018-07-01', gdp: 1.6, country: 'Euro Area' },
@@ -39,6 +41,8 @@ const gdpLineSpec: ChartSpec = {
     { date: '2022-01-01', gdp: 3.4, country: 'Euro Area' },
     { date: '2022-07-01', gdp: 2.3, country: 'Euro Area' },
     { date: '2023-01-01', gdp: 0.5, country: 'Euro Area' },
+    { date: '2023-07-01', gdp: 0.4, country: 'Euro Area' },
+    { date: '2024-01-01', gdp: 0.8, country: 'Euro Area' },
     // China
     { date: '2018-01-01', gdp: 6.8, country: 'China' },
     { date: '2018-07-01', gdp: 6.5, country: 'China' },
@@ -51,6 +55,8 @@ const gdpLineSpec: ChartSpec = {
     { date: '2022-01-01', gdp: 3.0, country: 'China' },
     { date: '2022-07-01', gdp: 2.9, country: 'China' },
     { date: '2023-01-01', gdp: 5.2, country: 'China' },
+    { date: '2023-07-01', gdp: 4.9, country: 'China' },
+    { date: '2024-01-01', gdp: 5.0, country: 'China' },
   ],
   encoding: {
     x: { field: 'date', type: 'temporal' },
@@ -69,20 +75,19 @@ const gdpLineSpec: ChartSpec = {
     {
       type: 'refline',
       y: 0,
-      label: 'Zero growth',
       style: 'dashed',
       stroke: '#999999',
     },
   ],
   chrome: {
-    title: 'GDP Growth Divergence',
-    subtitle: 'Annual GDP growth rate by major economy, 2018-2023',
-    source: 'Source: World Bank, IMF World Economic Outlook',
+    title: 'America kept pace with China in 2024, Europe fell behind',
+    subtitle: 'Annual GDP growth rate by major economy, 2018-2024',
+    source: 'Source: IMF World Economic Outlook, World Bank',
   },
 };
 
 export const GDPGrowth = () => (
-  <div style={{ width: 700, height: 440 }}>
+  <div className="story-chart" style={{ height: 440 }}>
     <Chart spec={gdpLineSpec} />
   </div>
 );
@@ -96,11 +101,5 @@ export const GDPGrowthCompact = () => (
 export const GDPGrowthWide = () => (
   <div style={{ width: 1200, height: 500 }}>
     <Chart spec={gdpLineSpec} />
-  </div>
-);
-
-export const GDPGrowthDarkMode = () => (
-  <div style={{ width: 700, height: 440 }}>
-    <Chart spec={gdpLineSpec} darkMode="force" />
   </div>
 );
