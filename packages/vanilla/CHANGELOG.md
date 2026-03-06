@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/tryopendata/openchart/compare/v2.3.0...v2.3.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* increase bottom padding on graph watermark to match right padding ([904bb3c](https://github.com/tryopendata/openchart/commit/904bb3c55b01918f70cfc4bd8808f65247c7a8b6))
+
 ## [2.3.0](https://github.com/tryopendata/openchart/compare/v2.2.1...v2.3.0) (2026-03-06)
 
 ### Features
