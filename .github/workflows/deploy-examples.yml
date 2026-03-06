@@ -18,6 +18,8 @@ permissions: {}
 jobs:
   build:
     name: Build examples
+    # Skip on release commits - only version bumps, no example changes
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore: release') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
