@@ -662,14 +662,16 @@ export class GraphCanvasRenderer {
 
       const labelY = node.y + node.radius + 3;
 
-      // Dark halo for readability (fall back to semi-transparent black when bg is transparent)
-      ctx.strokeStyle =
-        theme.colors.background === 'transparent' ? 'rgba(0, 0, 0, 0.7)' : theme.colors.background;
-      ctx.lineWidth = 3;
+      // Halo for readability: use contrasting color against the text
+      if (theme.colors.background === 'transparent') {
+        ctx.strokeStyle = theme.isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+      } else {
+        ctx.strokeStyle = theme.colors.background;
+      }
+      ctx.lineWidth = 4;
       ctx.lineJoin = 'round';
       ctx.strokeText(node.label, node.x, labelY);
 
-      // White/light text
       ctx.fillStyle = theme.colors.text;
       ctx.fillText(node.label, node.x, labelY);
     }
