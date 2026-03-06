@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.4](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.3...vanilla-v2.3.4) (2026-03-06)
+
+
+### Bug Fixes
+
+* align canvas brand watermark opacity with SVG and table renderers ([0aaa19b](https://github.com/tryopendata/openchart/commit/0aaa19b269bdf109e8d05bdcaa6d74aac981c9b8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.3.4
+    * @opendata-ai/openchart-engine bumped to 2.3.4
+
 ## [2.3.3](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.2...vanilla-v2.3.3) (2026-03-06)
 
 
