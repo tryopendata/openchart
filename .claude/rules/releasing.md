@@ -5,38 +5,39 @@ This project uses [release-please](https://github.com/googleapis/release-please)
 ## How it works
 
 1. Push conventional commits to `main` (e.g. `fix:`, `feat:`, `perf:`)
-2. release-please automatically creates/updates a release PR with version bumps and changelogs
-3. Merging that PR triggers release-please again, which creates a git tag and GitHub release
-4. The `publish.yml` workflow triggers on the tag and publishes all packages to npm
+2. release-please creates/updates a release PR with version bumps and changelogs for ALL 6 packages (linked-versions keeps them in sync)
+3. Merging that PR triggers release-please again, which auto-creates component tags (e.g. `core-v2.3.3`) and GitHub releases
+4. The publish job in the same workflow runs automatically when releases are created, publishing all packages to npm
 
 ## What to do when releasing
 
-- Just merge the release-please PR. That's it.
-- If release-please hasn't created a PR, check the workflow run logs for errors.
+- Just merge the release-please PR. Everything else is automated.
+- If release-please hasn't created a PR, check the workflow run logs.
+
+## Key config details
+
+- `include-component-in-tag: true` is REQUIRED for `linked-versions` to work (without it, `getComponent()` returns empty string and the plugin can't match components)
+- `group-pull-request-title-pattern` must NOT use `${version}` (known bug #1456 - version can't resolve for linked groups). Use `${scope}` for branch detection instead.
+- Publishing is chained directly from the release-please workflow via `releases_created` output, not via tag-triggered workflows (GitHub API-created tags don't fire push events)
 
 ## Troubleshooting
 
-- **"untagged, merged release PRs outstanding - aborting"**: A merged release PR still has the `autorelease: pending` label. Change it to `autorelease: tagged` on the stuck PR.
-- **PR title missing version**: The `group-pull-request-title-pattern` in `release-please-config.json` must NOT use `${version}` - it's a known bug (#1456) where version can't resolve for linked-versions groups. The current config uses a static title pattern instead.
-- **Packages not all bumped**: The `linked-versions` plugin should sync all 6 packages. If some are skipped, check that the plugin's `preconfigure` step ran (look for "Replacing strategy for path" in logs).
+- **"untagged, merged release PRs outstanding - aborting"**: A merged release PR still has `autorelease: pending` label. Change it to `autorelease: tagged`.
+- **Packages not all bumped**: Check that `include-component-in-tag` is `true` in `release-please-config.json`.
 
 ## What NOT to do
 
 - Don't manually edit `package.json` versions, `CHANGELOG.md`, or `.release-please-manifest.json`
 - Don't manually create release commits or tags
 - Don't push version bump commits directly to main
-- Don't use `${version}` in `group-pull-request-title-pattern` (known bug with linked-versions)
 
-## Commit conventions matter
+## Commit conventions
 
-release-please only bumps versions for commits with recognized prefixes:
 - `fix:` -> patch bump
 - `feat:` -> minor bump
 - `feat!:` or `BREAKING CHANGE:` -> major bump
-- `chore:`, `test:`, `ci:`, `build:` -> hidden (no version bump on their own)
+- `chore:`, `test:`, `ci:`, `build:` -> hidden (no version bump)
 
-If a commit uses `chore:` when it should be `fix:`, release-please won't include it in the release.
+## CI on release merges
 
-## CI behavior on release merges
-
-CI and deploy-examples skip on release commits (prefix `chore: release`). The publish workflow already runs build/typecheck/test. Release-please still runs to create tags and GitHub releases.
+CI and deploy-examples skip on release commits (prefix `chore`). The publish job in the release-please workflow handles build/typecheck/test verification.
