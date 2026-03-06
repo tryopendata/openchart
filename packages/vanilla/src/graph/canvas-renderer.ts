@@ -662,14 +662,20 @@ export class GraphCanvasRenderer {
 
       const labelY = node.y + node.radius + 3;
 
-      // Halo for readability: use contrasting color against the text
-      if (theme.colors.background === 'transparent') {
-        ctx.strokeStyle = theme.isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.9)';
-      } else {
+      // Halo for readability: stroke behind text in the background color
+      // so labels stay legible over edges and other nodes.
+      if (theme.colors.background !== 'transparent') {
         ctx.strokeStyle = theme.colors.background;
+      } else {
+        // Transparent bg: infer page background from text luminance.
+        // Light text = dark page, dark text = light page.
+        ctx.strokeStyle = isLightColor(theme.colors.text)
+          ? 'rgba(0, 0, 0, 0.7)'
+          : 'rgba(255, 255, 255, 0.85)';
       }
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
       ctx.strokeText(node.label, node.x, labelY);
 
       ctx.fillStyle = theme.colors.text;
@@ -716,4 +722,25 @@ function brighten(color: string): string {
   }
 
   return color;
+}
+
+/**
+ * Returns true if a color is perceptually light (luminance > 0.5).
+ * Used to pick a contrasting halo color for labels on transparent backgrounds.
+ */
+function isLightColor(color: string): boolean {
+  const hex = color.replace('#', '');
+  const full =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : hex;
+  if (full.length !== 6) return false;
+  const r = parseInt(full.slice(0, 2), 16) / 255;
+  const g = parseInt(full.slice(2, 4), 16) / 255;
+  const b = parseInt(full.slice(4, 6), 16) / 255;
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b) > 0.5;
 }
