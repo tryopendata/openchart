@@ -1,8 +1,8 @@
 {
-  "packages/core": "2.3.1",
-  "packages/engine": "2.3.1",
-  "packages/vanilla": "2.3.1",
-  "packages/react": "2.3.1",
-  "packages/vue": "2.3.1",
-  "packages/svelte": "2.3.1"
+  "packages/core": "2.3.2",
+  "packages/engine": "2.3.2",
+  "packages/vanilla": "2.3.2",
+  "packages/react": "2.3.2",
+  "packages/vue": "2.3.2",
+  "packages/svelte": "2.3.2"
 }

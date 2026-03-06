@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.3.2](https://github.com/tryopendata/openchart/compare/engine-v2.3.1...engine-v2.3.2) (2026-03-06)
+
+
+* **engine:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.3.2
+
 ## [2.3.1](https://github.com/tryopendata/openchart/compare/v2.3.0...v2.3.1) (2026-03-06)
 
 ### Bug Fixes
