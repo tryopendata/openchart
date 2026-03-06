@@ -33,6 +33,9 @@ const TWO_PI = Math.PI * 2;
 /** Minimum node radius in screen pixels. Keeps nodes visible when zoomed out. */
 const MIN_SCREEN_RADIUS = 2.5;
 
+/** Minimum canvas width to render the brand watermark. */
+const BRAND_MIN_WIDTH = 120;
+
 // ---------------------------------------------------------------------------
 // Helpers (exported for testing)
 // ---------------------------------------------------------------------------
@@ -241,7 +244,7 @@ export class GraphCanvasRenderer {
     h: number,
     theme: GraphRenderState['theme'],
   ): void {
-    if (w < 120) return;
+    if (w < BRAND_MIN_WIDTH) return;
     const { dpr } = this;
     ctx.save();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
