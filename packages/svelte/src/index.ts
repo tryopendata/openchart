@@ -4,17 +4,56 @@
  * Svelte 5 adapter for openchart. Provides <Chart />, <DataTable />,
  * and <Graph /> components that wrap the vanilla adapter with Svelte
  * lifecycle management using runes.
+ *
+ * Re-exports the full core type system and utilities so Svelte consumers
+ * only need a single @opendata-ai/openchart-svelte dependency.
  */
 
-// Re-export core types for convenience
+// ---------------------------------------------------------------------------
+// Core: full type system, theme, colors, locale, accessibility, helpers
+// ---------------------------------------------------------------------------
+
+export * from '@opendata-ai/openchart-core';
+
+// ---------------------------------------------------------------------------
+// Vanilla: export utilities (SVG/PNG/JPG/CSV)
+// ---------------------------------------------------------------------------
+
+export type { JPGExportOptions, PNGExportOptions } from '@opendata-ai/openchart-vanilla';
+export { exportCSV, exportJPG, exportPNG, exportSVG } from '@opendata-ai/openchart-vanilla';
+
+// ---------------------------------------------------------------------------
+// Engine: compile API and types not covered by core
+// ---------------------------------------------------------------------------
+
 export type {
-  ChartLayout,
-  ChartSpec,
-  CompileOptions,
-  TableLayout,
-  TableSpec,
-  VizSpec,
+  ChartRenderer,
+  CompiledGraphEdge,
+  CompiledGraphNode,
+  CompileResult,
+  GraphCompilation,
+  NormalizedChartSpec,
+  NormalizedChrome,
+  NormalizedGraphSpec,
+  NormalizedSpec,
+  NormalizedTableSpec,
+  SimulationConfig,
+  ValidationError,
+  ValidationErrorCode,
+  ValidationResult,
 } from '@opendata-ai/openchart-engine';
+export {
+  clearRenderers,
+  compile,
+  compileChart,
+  compileGraph,
+  compileTable,
+  getChartRenderer,
+  normalizeSpec,
+  registerChartRenderer,
+  validateSpec,
+} from '@opendata-ai/openchart-engine';
+
 // Components
 export { default as Chart } from './Chart.svelte';
 export type { UseChartOptions, UseChartReturn } from './composables/useChart.svelte.js';
