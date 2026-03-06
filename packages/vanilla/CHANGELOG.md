@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.2](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.1...vanilla-v2.3.2) (2026-03-06)
+
+
+### Bug Fixes
+
+* add missing font-weight to table brand watermark ([f651ec7](https://github.com/tryopendata/openchart/commit/f651ec78cc2b8774059c955464a87138e139d7e1))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.3.2
+    * @opendata-ai/openchart-engine bumped to 2.3.2
+
 ## [2.3.1](https://github.com/tryopendata/openchart/compare/v2.3.0...v2.3.1) (2026-03-06)
 
 

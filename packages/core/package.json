@@ -1,6 +1,6 @@
 {
   "name": "@opendata-ai/openchart-core",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Types, theme, colors, accessibility, and utilities for openchart",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",
