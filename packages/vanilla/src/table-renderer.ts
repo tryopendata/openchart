@@ -10,6 +10,13 @@ import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/opencha
 import { renderCell } from './renderers/table-cells';
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const BRAND_URL = 'https://tryopendata.ai';
+const BRAND_FONT_SIZE = 20;
+
+// ---------------------------------------------------------------------------
 // Chrome rendering
 // ---------------------------------------------------------------------------
 
@@ -351,10 +358,10 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
   brand.className = 'viz-table-ref';
   brand.style.cssText = 'text-align: right; padding: 4px 8px;';
   const brandLink = document.createElement('a');
-  brandLink.href = 'https://tryopendata.ai';
+  brandLink.href = BRAND_URL;
   brandLink.target = '_blank';
   brandLink.rel = 'noopener';
-  brandLink.style.cssText = `font-size: 20px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
+  brandLink.style.cssText = `font-size: ${BRAND_FONT_SIZE}px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
   brandLink.textContent = 'OpenData';
   brand.appendChild(brandLink);
   wrapper.appendChild(brand);
