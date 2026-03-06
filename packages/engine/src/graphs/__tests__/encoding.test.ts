@@ -55,8 +55,8 @@ describe('resolveNodeVisuals', () => {
 
       // Min value should get min radius (3px)
       expect(minNode.radius).toBeCloseTo(3, 0);
-      // Max value should get max radius (20px)
-      expect(maxNode.radius).toBeCloseTo(20, 0);
+      // Max value should get max radius (12px)
+      expect(maxNode.radius).toBeCloseTo(12, 0);
     });
 
     it('uses default radius when no nodeSize encoding', () => {

@@ -42,6 +42,10 @@ export interface GraphProps {
   onEdgeHover?: (edge: Record<string, unknown> | null) => void;
   /** Callback when selection changes. */
   onSelectionChange?: (nodeIds: string[]) => void;
+  /** Show built-in tooltip on node/edge hover. Defaults to true. */
+  tooltip?: boolean;
+  /** Show built-in legend. Defaults to true. */
+  legend?: boolean;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -71,6 +75,8 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     onNodeHover,
     onEdgeHover,
     onSelectionChange,
+    tooltip,
+    legend,
     className,
     style,
   },
@@ -166,6 +172,8 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     const options: GraphMountOptions = {
       theme,
       darkMode: resolvedDarkMode,
+      tooltip,
+      legend,
       onNodeClick: stableOnNodeClick,
       onNodeDoubleClick: stableOnNodeDoubleClick,
       onNodeHover: stableOnNodeHover,
@@ -186,6 +194,8 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   }, [
     theme,
     resolvedDarkMode,
+    tooltip,
+    legend,
     stableOnNodeClick,
     stableOnNodeDoubleClick,
     stableOnNodeHover,

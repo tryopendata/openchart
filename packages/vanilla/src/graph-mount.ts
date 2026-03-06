@@ -35,6 +35,10 @@ export interface GraphMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   responsive?: boolean;
+  /** Show the built-in tooltip on node/edge hover. Defaults to true. */
+  tooltip?: boolean;
+  /** Show the built-in legend. Defaults to true. */
+  legend?: boolean;
   onNodeClick?: (node: Record<string, unknown>) => void;
   onNodeDoubleClick?: (node: Record<string, unknown>) => void;
   onNodeHover?: (node: Record<string, unknown> | null) => void;
@@ -278,10 +282,12 @@ export function createGraph(
     wrapper.appendChild(canvas);
 
     // Legend
-    legendEl = document.createElement('div');
-    legendEl.className = 'viz-graph-legend';
-    renderLegend();
-    wrapper.appendChild(legendEl);
+    if (options?.legend !== false) {
+      legendEl = document.createElement('div');
+      legendEl.className = 'viz-graph-legend';
+      renderLegend();
+      wrapper.appendChild(legendEl);
+    }
 
     container.appendChild(wrapper);
 
@@ -447,7 +453,9 @@ export function createGraph(
   function initInteraction(): void {
     if (!canvas) return;
 
-    tooltipManager = createTooltipManager(wrapper!);
+    if (options?.tooltip !== false) {
+      tooltipManager = createTooltipManager(wrapper!);
+    }
 
     interactionManager = new GraphInteractionManager(canvas, spatialIndex, {
       onTransformChange(_transform) {

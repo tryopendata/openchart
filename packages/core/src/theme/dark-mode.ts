@@ -93,8 +93,21 @@ function _luminanceFromHex(color: string): number {
  * adjusts gridline and axis colors for the dark background.
  */
 export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
-  const lightBg = theme.colors.background;
-  const darkBg = DARK_BG;
+  const inputBg = theme.colors.background;
+  // Treat transparent as "already dark" to preserve user intent
+  const alreadyDark = inputBg === 'transparent' || _luminanceFromHex(inputBg) < 0.2;
+
+  // If the theme already has a dark background, preserve user-provided colors
+  // instead of overwriting with library defaults.
+  const darkBg = alreadyDark ? inputBg : DARK_BG;
+  const darkText = alreadyDark ? theme.colors.text : DARK_TEXT;
+  const darkGridline = alreadyDark ? theme.colors.gridline : '#333344';
+  const darkAxis = alreadyDark ? theme.colors.axis : '#888899';
+
+  // Only adapt categorical colors when switching from light to dark
+  const categorical = alreadyDark
+    ? theme.colors.categorical
+    : theme.colors.categorical.map((c) => adaptColorForDarkMode(c, inputBg, darkBg));
 
   return {
     ...theme,
@@ -102,18 +115,15 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
     colors: {
       ...theme.colors,
       background: darkBg,
-      text: DARK_TEXT,
-      gridline: '#333344',
-      axis: '#888899',
+      text: darkText,
+      gridline: darkGridline,
+      axis: darkAxis,
       annotationFill: 'rgba(255,255,255,0.08)',
       annotationText: '#bbbbcc',
-      categorical: theme.colors.categorical.map((c) => adaptColorForDarkMode(c, lightBg, darkBg)),
-      // Sequential and diverging palettes are kept as-is since they're
-      // typically used for fills where the lightness range still works.
-      // If a specific use case needs adaptation, it can be done per-color.
+      categorical,
     },
     chrome: {
-      title: { ...theme.chrome.title, color: DARK_TEXT },
+      title: { ...theme.chrome.title, color: darkText },
       subtitle: { ...theme.chrome.subtitle, color: '#aaaaaa' },
       source: { ...theme.chrome.source, color: '#888888' },
       byline: { ...theme.chrome.byline, color: '#888888' },

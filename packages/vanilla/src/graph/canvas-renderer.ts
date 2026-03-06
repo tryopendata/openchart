@@ -18,15 +18,15 @@ import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 // Constants
 // ---------------------------------------------------------------------------
 
-const LABEL_FONT_MIN = 10;
-const LABEL_FONT_MAX = 14;
+const LABEL_FONT_MIN = 8;
+const LABEL_FONT_MAX = 12;
 const EDGE_ALPHA_DEFAULT = 0.35;
 const EDGE_ALPHA_CONNECTED = 1.0;
 const EDGE_ALPHA_DIMMED = 0.05;
 const SEARCH_NON_MATCH_ALPHA = 0.15;
 const GLOW_NODE_THRESHOLD = 2000;
-const GLOW_RADIUS_MULTIPLIER = 1.5;
-const GLOW_ALPHA = 0.2;
+const GLOW_RADIUS_MULTIPLIER = 1.3;
+const GLOW_ALPHA = 0.15;
 const CULL_MARGIN = 50;
 const TWO_PI = Math.PI * 2;
 
@@ -180,9 +180,11 @@ export class GraphCanvasRenderer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-    // Fill background
-    ctx.fillStyle = theme.colors.background;
-    ctx.fillRect(0, 0, cssWidth, cssHeight);
+    // Fill background (skip if transparent to let page background show through)
+    if (theme.colors.background !== 'transparent') {
+      ctx.fillStyle = theme.colors.background;
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+    }
 
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.k, transform.k);
@@ -638,7 +640,7 @@ export class GraphCanvasRenderer {
     theme: GraphRenderState['theme'],
   ): void {
     // Font size inversely scaled by zoom, clamped to readable range
-    const rawSize = 12 / zoom;
+    const rawSize = 10 / zoom;
     const fontSize = Math.max(LABEL_FONT_MIN, Math.min(LABEL_FONT_MAX, rawSize));
 
     ctx.font = `${fontSize}px ${theme.fonts.family}`;
@@ -660,8 +662,9 @@ export class GraphCanvasRenderer {
 
       const labelY = node.y + node.radius + 3;
 
-      // Dark halo for readability
-      ctx.strokeStyle = theme.colors.background;
+      // Dark halo for readability (fall back to semi-transparent black when bg is transparent)
+      ctx.strokeStyle =
+        theme.colors.background === 'transparent' ? 'rgba(0, 0, 0, 0.7)' : theme.colors.background;
       ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
       ctx.strokeText(node.label, node.x, labelY);

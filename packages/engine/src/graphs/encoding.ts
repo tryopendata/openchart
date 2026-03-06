@@ -25,7 +25,7 @@ import type { CompiledGraphEdge, CompiledGraphNode } from './types';
 
 const DEFAULT_NODE_RADIUS = 5;
 const MIN_NODE_RADIUS = 3;
-const MAX_NODE_RADIUS = 20;
+const MAX_NODE_RADIUS = 12;
 
 const DEFAULT_EDGE_WIDTH = 1;
 const MIN_EDGE_WIDTH = 0.5;
