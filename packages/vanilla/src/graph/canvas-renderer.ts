@@ -253,7 +253,7 @@ export class GraphCanvasRenderer {
     const y = h - padding;
     ctx.font = `600 20px ${theme.fonts.family}`;
     ctx.fillStyle = theme.colors.axis;
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.55;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText('OpenData', x, y);
