@@ -1,6 +1,6 @@
 {
-  "packages/core": "2.3.0",
-  "packages/engine": "2.3.0",
+  "packages/core": "2.3.1",
+  "packages/engine": "2.3.1",
   "packages/vanilla": "2.3.1",
   "packages/react": "2.3.1",
   "packages/vue": "2.3.1",
