@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.3](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.2...vanilla-v2.3.3) (2026-03-06)
+
+
+### Bug Fixes
+
+* extract brand min-width constant in canvas renderer ([34b0c57](https://github.com/tryopendata/openchart/commit/34b0c578b1fe9129f03f8347c8b0c2cfdd8e9ce2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.3.3
+    * @opendata-ai/openchart-engine bumped to 2.3.3
+
 ## [2.3.2](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.1...vanilla-v2.3.2) (2026-03-06)
 
 
