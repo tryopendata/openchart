@@ -247,7 +247,7 @@ export class GraphCanvasRenderer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const padding = theme.spacing.padding;
     const x = w - padding;
-    const y = h - 4;
+    const y = h - padding;
     ctx.font = `600 20px ${theme.fonts.family}`;
     ctx.fillStyle = theme.colors.axis;
     ctx.globalAlpha = 0.5;
