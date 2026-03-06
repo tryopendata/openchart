@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.5](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.4...vanilla-v2.3.5) (2026-03-06)
+
+
+### Bug Fixes
+
+* extract brand constants in table renderer ([1a504ad](https://github.com/tryopendata/openchart/commit/1a504ad7cbde1f559d6046c70dadb403ba499391))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.3.5
+    * @opendata-ai/openchart-engine bumped to 2.3.5
+
 ## [2.3.4](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.3...vanilla-v2.3.4) (2026-03-06)
 
 
