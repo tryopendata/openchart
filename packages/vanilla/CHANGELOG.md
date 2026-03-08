@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.4.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.5...vanilla-v2.4.0) (2026-03-08)
+
+
+### Features
+
+* space-aware axis tick density and rotated label support ([5a39a02](https://github.com/tryopendata/openchart/commit/5a39a02fa684736bf73ffaacde0032400d7c7796))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.4.0
+    * @opendata-ai/openchart-engine bumped to 2.4.0
+
 ## [2.3.5](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.4...vanilla-v2.3.5) (2026-03-06)
 
 
