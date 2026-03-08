@@ -39,6 +39,8 @@ export interface AxisConfig {
   tickCount?: number;
   /** Whether to show gridlines for this axis. */
   grid?: boolean;
+  /** Rotation angle in degrees for tick labels. Common values: -45, -90, 90. */
+  tickAngle?: number;
 }
 
 /** Scale configuration for an encoding channel. */

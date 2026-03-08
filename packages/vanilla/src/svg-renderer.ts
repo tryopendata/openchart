@@ -28,6 +28,31 @@ import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/**
+ * Compute the vertical extent of x-axis labels below the chart area.
+ * Accounts for rotated tick labels which need more vertical space.
+ */
+function computeXAxisExtent(layout: ChartLayout): number {
+  const xAxis = layout.axes.x;
+  if (!xAxis) return 0;
+
+  if (xAxis.tickAngle && Math.abs(xAxis.tickAngle) > 10) {
+    // Rotated labels: estimate height from the longest tick label.
+    const fontSize = xAxis.tickLabelStyle.fontSize;
+    const fontWeight = xAxis.tickLabelStyle.fontWeight;
+    const angleRad = Math.abs(xAxis.tickAngle) * (Math.PI / 180);
+    let maxLabelWidth = 40;
+    for (const tick of xAxis.ticks) {
+      const w = estimateTextWidth(tick.label, fontSize, fontWeight);
+      if (w > maxLabelWidth) maxLabelWidth = w;
+    }
+    const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
+    return xAxis.label ? rotatedHeight + 20 : rotatedHeight;
+  }
+
+  return xAxis.label ? 48 : 26;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -96,9 +121,8 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   }
 
   // Bottom chrome starts below x-axis labels/title, not at chart area bottom.
-  // X-axis tick labels render at +14, axis title at +35. Account for that
-  // so source/byline/footer don't overlap axis content.
-  const xAxisExtent = layout.axes.x ? (layout.axes.x.label ? 48 : 26) : 0;
+  // Accounts for rotated tick labels which need more vertical space.
+  const xAxisExtent = computeXAxisExtent(layout);
   const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
   if (chrome.source) {
     renderChromeElement(
@@ -168,11 +192,26 @@ function renderAxis(
       // Label (no tick marks -- gridlines provide sufficient reference)
       const label = createSVGElement('text');
       label.setAttribute('class', 'viz-axis-tick');
-      setAttrs(label, {
-        x: tick.position,
-        y: area.y + area.height + 14,
-        'text-anchor': 'middle',
-      });
+
+      if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
+        // Rotated labels: anchor at the rotation pivot point
+        const labelX = tick.position;
+        const labelY = area.y + area.height + 6;
+        setAttrs(label, {
+          x: labelX,
+          y: labelY,
+          'text-anchor': axis.tickAngle < 0 ? 'end' : 'start',
+          'dominant-baseline': 'central',
+          transform: `rotate(${axis.tickAngle}, ${labelX}, ${labelY})`,
+        });
+      } else {
+        setAttrs(label, {
+          x: tick.position,
+          y: area.y + area.height + 14,
+          'text-anchor': 'middle',
+        });
+      }
+
       applyTextStyle(label, axis.tickLabelStyle);
       label.textContent = tick.label;
       g.appendChild(label);
@@ -228,9 +267,26 @@ function renderAxis(
     axisLabel.textContent = axis.label;
 
     if (orientation === 'x') {
+      // Position axis title below tick labels. For rotated labels, compute
+      // the vertical extent of the rotated ticks and place the title below.
+      let titleY = area.y + area.height + 35;
+      if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
+        const angleRad = Math.abs(axis.tickAngle) * (Math.PI / 180);
+        let maxLabelWidth = 40;
+        for (const tick of axis.ticks) {
+          const w = estimateTextWidth(
+            tick.label,
+            axis.tickLabelStyle.fontSize,
+            axis.tickLabelStyle.fontWeight,
+          );
+          if (w > maxLabelWidth) maxLabelWidth = w;
+        }
+        const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
+        titleY = area.y + area.height + rotatedHeight + 14;
+      }
       setAttrs(axisLabel, {
         x: area.x + area.width / 2,
-        y: area.y + area.height + 35,
+        y: titleY,
         'text-anchor': 'middle',
       });
     } else {
@@ -860,7 +916,7 @@ function brandPosition(layout: ChartLayout) {
   // This uses the same Y computation as renderChrome so the watermark sits on the
   // same baseline row as the source attribution text.
   const { chrome } = layout;
-  const xAxisExtent = layout.axes.x ? (layout.axes.x.label ? 48 : 26) : 0;
+  const xAxisExtent = computeXAxisExtent(layout);
   const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
   const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
   // Chrome text uses dominant-baseline:hanging (Y = top of text) while the

@@ -35,6 +35,60 @@ const TICK_COUNTS: Record<AxisLabelDensity, number> = {
   minimal: 3,
 };
 
+/**
+ * Height thresholds for reducing y-axis tick density.
+ * Below these pixel heights, we step down the density regardless of the
+ * width-based strategy. This prevents overlapping y-axis labels in short
+ * containers like thumbnail previews.
+ */
+const HEIGHT_MINIMAL_THRESHOLD = 120;
+const HEIGHT_REDUCED_THRESHOLD = 200;
+
+/**
+ * Width thresholds for reducing x-axis tick density.
+ * Mirrors the height logic for the x-axis: narrow containers get fewer ticks.
+ */
+const WIDTH_MINIMAL_THRESHOLD = 150;
+const WIDTH_REDUCED_THRESHOLD = 300;
+
+/** Ordered densities from most to fewest ticks. */
+const DENSITY_ORDER: AxisLabelDensity[] = ['full', 'reduced', 'minimal'];
+
+/**
+ * Compute effective axis tick density by considering available space.
+ *
+ * The width-based breakpoint system sets a base density, but it doesn't know
+ * about the actual chart area dimensions (which shrink after chrome/legend
+ * allocation). This function steps density down further when the axis
+ * dimension is too small for the requested tick count.
+ *
+ * @param baseDensity - The density from the responsive layout strategy.
+ * @param axisLength - Available pixels along this axis (height for y, width for x).
+ * @param minimalThreshold - Below this pixel size, force minimal density.
+ * @param reducedThreshold - Below this pixel size, cap at reduced density.
+ * @returns The effective density, never looser than the base.
+ */
+export function effectiveDensity(
+  baseDensity: AxisLabelDensity,
+  axisLength: number,
+  minimalThreshold: number,
+  reducedThreshold: number,
+): AxisLabelDensity {
+  let density = baseDensity;
+
+  if (axisLength < minimalThreshold) {
+    density = 'minimal';
+  } else if (axisLength < reducedThreshold) {
+    // Don't increase density beyond what the base strategy allows.
+    // If base is already 'minimal', keep it.
+    const baseIdx = DENSITY_ORDER.indexOf(baseDensity);
+    const reducedIdx = DENSITY_ORDER.indexOf('reduced');
+    density = DENSITY_ORDER[Math.max(baseIdx, reducedIdx)];
+  }
+
+  return density;
+}
+
 // ---------------------------------------------------------------------------
 // Tick generation
 // ---------------------------------------------------------------------------
@@ -127,7 +181,22 @@ export function computeAxes(
   theme: ResolvedTheme,
 ): AxesResult {
   const result: AxesResult = {};
-  const density = strategy.axisLabelDensity;
+  const baseDensity = strategy.axisLabelDensity;
+
+  // Compute per-axis density based on available space.
+  // Y-axis density adapts to chart height; X-axis density adapts to chart width.
+  const yDensity = effectiveDensity(
+    baseDensity,
+    chartArea.height,
+    HEIGHT_MINIMAL_THRESHOLD,
+    HEIGHT_REDUCED_THRESHOLD,
+  );
+  const xDensity = effectiveDensity(
+    baseDensity,
+    chartArea.width,
+    WIDTH_MINIMAL_THRESHOLD,
+    WIDTH_REDUCED_THRESHOLD,
+  );
 
   const tickLabelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -149,8 +218,8 @@ export function computeAxes(
   if (scales.x) {
     const ticks =
       scales.x.type === 'band' || scales.x.type === 'point' || scales.x.type === 'ordinal'
-        ? categoricalTicks(scales.x, density)
-        : continuousTicks(scales.x, density);
+        ? categoricalTicks(scales.x, xDensity)
+        : continuousTicks(scales.x, xDensity);
 
     const gridlines: Gridline[] = ticks.map((t) => ({
       position: t.position,
@@ -163,6 +232,7 @@ export function computeAxes(
       label: scales.x.channel.axis?.label,
       labelStyle: axisLabelStyle,
       tickLabelStyle,
+      tickAngle: scales.x.channel.axis?.tickAngle,
       start: { x: chartArea.x, y: chartArea.y + chartArea.height },
       end: { x: chartArea.x + chartArea.width, y: chartArea.y + chartArea.height },
     };
@@ -171,8 +241,8 @@ export function computeAxes(
   if (scales.y) {
     const ticks =
       scales.y.type === 'band' || scales.y.type === 'point' || scales.y.type === 'ordinal'
-        ? categoricalTicks(scales.y, density)
-        : continuousTicks(scales.y, density);
+        ? categoricalTicks(scales.y, yDensity)
+        : continuousTicks(scales.y, yDensity);
 
     const gridlines: Gridline[] = ticks.map((t) => ({
       position: t.position,
@@ -186,6 +256,7 @@ export function computeAxes(
       label: scales.y.channel.axis?.label,
       labelStyle: axisLabelStyle,
       tickLabelStyle,
+      tickAngle: scales.y.channel.axis?.tickAngle,
       start: { x: chartArea.x, y: chartArea.y },
       end: { x: chartArea.x, y: chartArea.y + chartArea.height },
     };

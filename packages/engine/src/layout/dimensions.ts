@@ -90,8 +90,34 @@ export function computeDimensions(
   // Estimate x-axis height below chart area: tick labels sit 14px below,
   // axis title sits 35px below. These extend past the chart area bottom
   // and source/footer chrome must be positioned below them.
-  const hasXAxisLabel = !!(encoding.x?.axis as Record<string, unknown> | undefined)?.label;
-  const xAxisHeight = isRadial ? 0 : hasXAxisLabel ? 48 : 26;
+  const xAxis = encoding.x?.axis as (Record<string, unknown> & { tickAngle?: number }) | undefined;
+  const hasXAxisLabel = !!xAxis?.label;
+  const xTickAngle = xAxis?.tickAngle;
+
+  let xAxisHeight: number;
+  if (isRadial) {
+    xAxisHeight = 0;
+  } else if (xTickAngle && Math.abs(xTickAngle) > 10) {
+    // Rotated labels: estimate height from the longest label text.
+    // At -90 degrees, the label height = text width. At -45, it's width * sin(45).
+    const angleRad = Math.abs(xTickAngle) * (Math.PI / 180);
+    const xField = encoding.x?.field;
+    let maxLabelWidth = 40; // fallback
+    if (xField) {
+      for (const row of spec.data) {
+        const label = String(row[xField] ?? '');
+        const w = estimateTextWidth(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
+        if (w > maxLabelWidth) maxLabelWidth = w;
+      }
+    }
+    // Rotated label height: width * sin(angle), plus a small gap
+    const rotatedHeight = maxLabelWidth * Math.sin(angleRad) + 6;
+    // Cap at a reasonable max to avoid absurd margins
+    const labelHeight = Math.min(rotatedHeight, 120);
+    xAxisHeight = hasXAxisLabel ? labelHeight + 20 : labelHeight;
+  } else {
+    xAxisHeight = hasXAxisLabel ? 48 : 26;
+  }
 
   // Build margins: padding + chrome + axis space
   const margins: Margins = {

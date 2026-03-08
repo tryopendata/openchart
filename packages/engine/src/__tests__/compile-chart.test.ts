@@ -457,4 +457,56 @@ describe('compileGraph', () => {
       ),
     ).toThrow('compileGraph received a scatter spec');
   });
+
+  it('propagates tickAngle through the full compilation pipeline', () => {
+    const columnSpec = {
+      type: 'column' as const,
+      data: [
+        { state: 'California', pop: 39000000 },
+        { state: 'Texas', pop: 29000000 },
+        { state: 'Florida', pop: 22000000 },
+        { state: 'New York', pop: 20000000 },
+        { state: 'Pennsylvania', pop: 13000000 },
+      ],
+      encoding: {
+        x: { field: 'state', type: 'nominal' as const, axis: { tickAngle: -90 } },
+        y: { field: 'pop', type: 'quantitative' as const },
+      },
+    };
+
+    const layout = compileChart(columnSpec, { width: 400, height: 300 });
+
+    // tickAngle should be propagated to the x-axis layout
+    expect(layout.axes.x!.tickAngle).toBe(-90);
+    // y-axis should not have a tickAngle
+    expect(layout.axes.y!.tickAngle).toBeUndefined();
+  });
+
+  it('reserves extra bottom margin for rotated x-axis labels', () => {
+    const baseColumnSpec = {
+      type: 'column' as const,
+      data: [
+        { state: 'California', pop: 39000000 },
+        { state: 'Texas', pop: 29000000 },
+        { state: 'Massachusetts', pop: 7000000 },
+      ],
+      encoding: {
+        x: { field: 'state', type: 'nominal' as const },
+        y: { field: 'pop', type: 'quantitative' as const },
+      },
+    };
+    const rotatedColumnSpec = {
+      ...baseColumnSpec,
+      encoding: {
+        x: { field: 'state', type: 'nominal' as const, axis: { tickAngle: -90 } },
+        y: { field: 'pop', type: 'quantitative' as const },
+      },
+    };
+
+    const layoutNormal = compileChart(baseColumnSpec, { width: 400, height: 300 });
+    const layoutRotated = compileChart(rotatedColumnSpec, { width: 400, height: 300 });
+
+    // Rotated labels should shrink the chart area height
+    expect(layoutRotated.area.height).toBeLessThan(layoutNormal.area.height);
+  });
 });

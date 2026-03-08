@@ -148,4 +148,72 @@ describe('computeDimensions', () => {
     expect(dims.chartArea.width).toBeGreaterThanOrEqual(0);
     expect(dims.chartArea.height).toBeGreaterThanOrEqual(0);
   });
+
+  it('reserves extra bottom space for rotated x-axis labels', () => {
+    const rotatedSpec: NormalizedChartSpec = {
+      ...baseSpec,
+      type: 'column',
+      data: [
+        { category: 'California', value: 10 },
+        { category: 'New York', value: 20 },
+        { category: 'Massachusetts', value: 15 },
+      ],
+      encoding: {
+        x: { field: 'category', type: 'nominal', axis: { tickAngle: -90 } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const normalSpec: NormalizedChartSpec = {
+      ...baseSpec,
+      type: 'column',
+      data: rotatedSpec.data,
+      encoding: {
+        x: { field: 'category', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const dimsRotated = computeDimensions(
+      rotatedSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const dimsNormal = computeDimensions(
+      normalSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // Rotated labels should reserve more bottom space, shrinking the chart area
+    expect(dimsRotated.chartArea.height).toBeLessThan(dimsNormal.chartArea.height);
+    expect(dimsRotated.margins.bottom).toBeGreaterThan(dimsNormal.margins.bottom);
+  });
+
+  it('does not change bottom space for small tick angles', () => {
+    const smallAngleSpec: NormalizedChartSpec = {
+      ...baseSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { tickAngle: 5 } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const dimsSmall = computeDimensions(
+      smallAngleSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const dimsNone = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // Small angles (< 10 degrees) should not trigger rotated label logic
+    expect(dimsSmall.margins.bottom).toBe(dimsNone.margins.bottom);
+  });
 });

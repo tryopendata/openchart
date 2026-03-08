@@ -142,6 +142,8 @@ export interface AxisLayout {
   labelStyle?: TextStyle;
   /** Tick label style. */
   tickLabelStyle: TextStyle;
+  /** Rotation angle in degrees for tick labels. */
+  tickAngle?: number;
   /** Axis line start position. */
   start: Point;
   /** Axis line end position. */

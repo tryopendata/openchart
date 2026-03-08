@@ -2,7 +2,7 @@ import type { LayoutStrategy } from '@opendata-ai/openchart-core';
 import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
-import { computeAxes } from '../layout/axes';
+import { computeAxes, effectiveDensity } from '../layout/axes';
 import { computeScales } from '../layout/scales';
 
 const lineSpec: NormalizedChartSpec = {
@@ -110,5 +110,189 @@ describe('computeAxes', () => {
     // Y axis sits at the left of the chart area
     expect(axes.y!.start.x).toBe(chartArea.x);
     expect(axes.y!.end.x).toBe(chartArea.x);
+  });
+
+  // -------------------------------------------------------------------------
+  // Height-aware y-axis tick reduction
+  // -------------------------------------------------------------------------
+
+  it('reduces y-axis ticks for very short chart areas (< 120px)', () => {
+    const shortArea = { x: 50, y: 50, width: 500, height: 80 };
+    const scales = computeScales(lineSpec, shortArea, lineSpec.data);
+    const axesShort = computeAxes(scales, shortArea, fullStrategy, theme);
+
+    // Even though the strategy says 'full', height < 120 forces minimal (3 ticks)
+    expect(axesShort.y!.ticks.length).toBeLessThanOrEqual(3);
+  });
+
+  it('reduces y-axis ticks for medium-short chart areas (120-200px)', () => {
+    const mediumArea = { x: 50, y: 50, width: 500, height: 160 };
+    const tallArea = { x: 50, y: 50, width: 500, height: 400 };
+
+    const scalesMedium = computeScales(lineSpec, mediumArea, lineSpec.data);
+    const scalesTall = computeScales(lineSpec, tallArea, lineSpec.data);
+
+    const axesMedium = computeAxes(scalesMedium, mediumArea, fullStrategy, theme);
+    const axesTall = computeAxes(scalesTall, tallArea, fullStrategy, theme);
+
+    // Medium height should have fewer ticks than a tall chart with same 'full' density
+    expect(axesMedium.y!.ticks.length).toBeLessThanOrEqual(axesTall.y!.ticks.length);
+  });
+
+  it('does not increase y-axis ticks beyond base density for short charts', () => {
+    const shortArea = { x: 50, y: 50, width: 500, height: 80 };
+    const scales = computeScales(lineSpec, shortArea, lineSpec.data);
+
+    // Strategy already says minimal - short height shouldn't change anything
+    const axes = computeAxes(scales, shortArea, minimalStrategy, theme);
+    expect(axes.y!.ticks.length).toBeLessThanOrEqual(3);
+  });
+
+  // -------------------------------------------------------------------------
+  // Width-aware x-axis tick reduction
+  // -------------------------------------------------------------------------
+
+  it('reduces x-axis ticks for very narrow chart areas (< 150px)', () => {
+    const narrowArea = { x: 50, y: 50, width: 100, height: 300 };
+    const scales = computeScales(lineSpec, narrowArea, lineSpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
+
+    // Width < 150 forces minimal density for x-axis
+    expect(axes.x!.ticks.length).toBeLessThanOrEqual(3);
+  });
+
+  it('reduces x-axis ticks for medium-narrow chart areas (150-300px)', () => {
+    const mediumArea = { x: 50, y: 50, width: 250, height: 300 };
+    const wideArea = { x: 50, y: 50, width: 600, height: 300 };
+
+    const scalesMedium = computeScales(lineSpec, mediumArea, lineSpec.data);
+    const scalesWide = computeScales(lineSpec, wideArea, lineSpec.data);
+
+    const axesMedium = computeAxes(scalesMedium, mediumArea, fullStrategy, theme);
+    const axesWide = computeAxes(scalesWide, wideArea, fullStrategy, theme);
+
+    expect(axesMedium.x!.ticks.length).toBeLessThanOrEqual(axesWide.x!.ticks.length);
+  });
+
+  // -------------------------------------------------------------------------
+  // Both axes constrained simultaneously (thumbnail scenario)
+  // -------------------------------------------------------------------------
+
+  it('reduces ticks on both axes for thumbnail-sized charts', () => {
+    const thumbnailArea = { x: 10, y: 10, width: 120, height: 80 };
+    const fullArea = { x: 50, y: 50, width: 600, height: 400 };
+
+    const scalesThumb = computeScales(lineSpec, thumbnailArea, lineSpec.data);
+    const scalesFull = computeScales(lineSpec, fullArea, lineSpec.data);
+
+    const axesThumb = computeAxes(scalesThumb, thumbnailArea, fullStrategy, theme);
+    const axesFull = computeAxes(scalesFull, fullArea, fullStrategy, theme);
+
+    // Both axes should have minimal ticks in a thumbnail
+    expect(axesThumb.x!.ticks.length).toBeLessThanOrEqual(3);
+    expect(axesThumb.y!.ticks.length).toBeLessThanOrEqual(3);
+
+    // And fewer than full-size
+    expect(axesThumb.x!.ticks.length).toBeLessThanOrEqual(axesFull.x!.ticks.length);
+    expect(axesThumb.y!.ticks.length).toBeLessThanOrEqual(axesFull.y!.ticks.length);
+  });
+
+  // -------------------------------------------------------------------------
+  // tickAngle propagation
+  // -------------------------------------------------------------------------
+
+  it('propagates tickAngle from encoding to x-axis layout', () => {
+    const specWithAngle: NormalizedChartSpec = {
+      ...lineSpec,
+      type: 'column',
+      data: [
+        { cat: 'California', val: 10 },
+        { cat: 'New York', val: 20 },
+      ],
+      encoding: {
+        x: { field: 'cat', type: 'nominal', axis: { tickAngle: -90 } },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(specWithAngle, chartArea, specWithAngle.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.tickAngle).toBe(-90);
+  });
+
+  it('leaves tickAngle undefined when not specified', () => {
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.tickAngle).toBeUndefined();
+    expect(axes.y!.tickAngle).toBeUndefined();
+  });
+
+  it('propagates tickAngle to y-axis layout', () => {
+    const specWithAngle: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', axis: { tickAngle: -45 } },
+      },
+    };
+    const scales = computeScales(specWithAngle, chartArea, specWithAngle.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.y!.tickAngle).toBe(-45);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// effectiveDensity unit tests
+// ---------------------------------------------------------------------------
+
+describe('effectiveDensity', () => {
+  const MINIMAL_THRESHOLD = 120;
+  const REDUCED_THRESHOLD = 200;
+
+  it('returns base density when axis length exceeds all thresholds', () => {
+    expect(effectiveDensity('full', 500, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('full');
+    expect(effectiveDensity('reduced', 500, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('reduced');
+    expect(effectiveDensity('minimal', 500, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+  });
+
+  it('forces minimal density below the minimal threshold', () => {
+    expect(effectiveDensity('full', 80, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+    expect(effectiveDensity('reduced', 80, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+    expect(effectiveDensity('minimal', 80, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+  });
+
+  it('caps at reduced density between thresholds', () => {
+    // 'full' base should step down to 'reduced'
+    expect(effectiveDensity('full', 160, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('reduced');
+  });
+
+  it('does not increase density beyond base when between thresholds', () => {
+    // 'minimal' base should stay 'minimal' even between thresholds
+    expect(effectiveDensity('minimal', 160, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+    // 'reduced' base should stay 'reduced'
+    expect(effectiveDensity('reduced', 160, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('reduced');
+  });
+
+  it('handles exact threshold boundaries', () => {
+    // At exactly the minimal threshold, we're NOT below it
+    expect(effectiveDensity('full', 120, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('reduced');
+    // At exactly the reduced threshold, we're NOT below it
+    expect(effectiveDensity('full', 200, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('full');
+  });
+
+  it('handles zero and negative lengths', () => {
+    expect(effectiveDensity('full', 0, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+    expect(effectiveDensity('full', -10, MINIMAL_THRESHOLD, REDUCED_THRESHOLD)).toBe('minimal');
+  });
+
+  it('works with custom thresholds (x-axis uses different values)', () => {
+    const X_MINIMAL = 150;
+    const X_REDUCED = 300;
+
+    expect(effectiveDensity('full', 100, X_MINIMAL, X_REDUCED)).toBe('minimal');
+    expect(effectiveDensity('full', 200, X_MINIMAL, X_REDUCED)).toBe('reduced');
+    expect(effectiveDensity('full', 400, X_MINIMAL, X_REDUCED)).toBe('full');
   });
 });
