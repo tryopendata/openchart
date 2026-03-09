@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/tryopendata/openchart/compare/svelte-v2.6.0...svelte-v2.7.0) (2026-03-09)
+
+
+* **svelte:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.7.0
+    * @opendata-ai/openchart-engine bumped to 2.7.0
+    * @opendata-ai/openchart-vanilla bumped to 2.7.0
+
 ## [2.6.0](https://github.com/tryopendata/openchart/compare/svelte-v2.5.0...svelte-v2.6.0) (2026-03-09)
 
 

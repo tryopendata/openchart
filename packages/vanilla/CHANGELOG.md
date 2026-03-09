@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.7.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.6.0...vanilla-v2.7.0) (2026-03-09)
+
+
+* **vanilla:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.7.0
+    * @opendata-ai/openchart-engine bumped to 2.7.0
+
 ## [2.6.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.5.0...vanilla-v2.6.0) (2026-03-09)
 
 
