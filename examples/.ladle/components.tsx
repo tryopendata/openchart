@@ -3,7 +3,7 @@
  * theme switcher, and injects CSS overrides for Ladle's sidebar.
  */
 import { useEffect, useRef, useState } from 'react';
-import '@opendata-ai/openchart-react/styles.css';
+import '@opendata-ai/openchart-core/styles.css';
 import '../src/stories.css';
 
 import type { GlobalProvider } from '@ladle/react';
