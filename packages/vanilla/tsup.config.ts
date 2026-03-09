@@ -1,4 +1,6 @@
 import { defineConfig } from 'tsup';
+import { copyFileSync, mkdirSync } from 'fs';
+import { resolve, dirname } from 'path';
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -7,4 +9,11 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: ['@opendata-ai/openchart-engine', '@opendata-ai/openchart-core', 'd3-force', 'd3-quadtree'],
+  onSuccess: async () => {
+    // Copy core styles so consumers can import from this package directly
+    const src = resolve('node_modules/@opendata-ai/openchart-core/dist/styles.css');
+    const dest = resolve('dist/styles.css');
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(src, dest);
+  },
 });

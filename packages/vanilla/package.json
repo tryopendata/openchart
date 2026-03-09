@@ -25,13 +25,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./styles.css": "./dist/styles.css",
     "./simulation-worker": "./dist/simulation-worker.js"
   },
   "files": [
     "dist",
     "src"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
   "keywords": [
     "chart",
     "visualization",

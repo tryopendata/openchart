@@ -2,9 +2,27 @@
 
 Framework-specific rendering, event handlers, and builder functions.
 
+## Styles
+
+**Required.** Import the stylesheet from whichever package you installed. Without it, tooltips, legends, accessibility elements, and typography won't render correctly.
+
+```typescript
+// Import from your framework package:
+import '@opendata-ai/openchart-react/styles.css';
+// or
+import '@opendata-ai/openchart-vue/styles.css';
+// or
+import '@opendata-ai/openchart-svelte/styles.css';
+// or (vanilla JS)
+import '@opendata-ai/openchart-vanilla/styles.css';
+```
+
+Import once at your app's entry point (e.g. `main.tsx`, `app.css`, `layout.svelte`). The stylesheet is plain CSS with `viz-` prefixed class names and CSS custom properties for theming. It includes dark mode overrides via the `.viz-dark` class, which the components manage automatically.
+
 ## React
 
 ```tsx
+import '@opendata-ai/openchart-react/styles.css';
 import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/openchart-react';
 
 <Chart spec={chartSpec} darkMode="auto" />
