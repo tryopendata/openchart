@@ -16,6 +16,18 @@ Most editorial charts use this approach because it forces a story. When one elem
 
 Use categorical palettes only when the story genuinely requires distinguishing multiple groups equally. If one group is the protagonist, highlight it and gray the rest.
 
+**Implementation:** Set `theme.colors` to an array where the protagonist gets a saturated color and every other entry is `"#94a3b8"` (slate-400). The order matches the data array order.
+
+```json
+{
+  "theme": {
+    "colors": ["#0d9488", "#94a3b8", "#94a3b8", "#94a3b8", "#94a3b8"]
+  }
+}
+```
+
+The first data row gets `#0d9488` (teal), the rest get gray. Sort data so the protagonist is first (or last, depending on chart type and visual weight).
+
 ## How Many Colors
 
 | Count | Guidance |

@@ -27,6 +27,20 @@ theme?: {
 }
 ```
 
+**Shorthand:** `theme.colors` can also be a flat `string[]` instead of the nested object. It maps to `colors.categorical`:
+
+```json
+{ "theme": { "colors": ["#0d9488", "#94a3b8", "#94a3b8"] } }
+```
+
+is equivalent to:
+
+```json
+{ "theme": { "colors": { "categorical": ["#0d9488", "#94a3b8", "#94a3b8"] } } }
+```
+
+The flat form is more convenient for highlight+gray patterns where you just need to set ordered colors matching your data array.
+
 ## Dark Mode
 
 ```typescript

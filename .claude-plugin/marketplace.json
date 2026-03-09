@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Visualization skill for generating @opendata-ai chart, table, and graph specs",
-    "version": "1.1.1"
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "openchart",
       "source": "./plugins/openchart/",
       "description": "Generates @opendata-ai chart, table, and graph specs from data, and guides editorial design decisions",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "author": {
         "name": "Riley Hilliard",
         "url": "https://github.com/rileyhilliard"
