@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.6.0](https://github.com/tryopendata/openchart/compare/engine-v2.5.0...engine-v2.6.0) (2026-03-09)
+
+
+### Features
+
+* add format strings, label anchors, series styles, and dark mode docs ([f4af8d6](https://github.com/tryopendata/openchart/commit/f4af8d6e53c7525193e7e35e29006f33e403cbef))
+
+
+### Bug Fixes
+
+* resolve lint warnings in bar labels formatter ([ce0bb7f](https://github.com/tryopendata/openchart/commit/ce0bb7fbc7cb0267b83ec0fd48aaa71309a7141c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.6.0
+
 ## [2.5.0](https://github.com/tryopendata/openchart/compare/engine-v2.4.0...engine-v2.5.0) (2026-03-09)
 
 

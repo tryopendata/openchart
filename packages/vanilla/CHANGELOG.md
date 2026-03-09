@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.6.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.5.0...vanilla-v2.6.0) (2026-03-09)
+
+
+### Features
+
+* add format strings, label anchors, series styles, and dark mode docs ([f4af8d6](https://github.com/tryopendata/openchart/commit/f4af8d6e53c7525193e7e35e29006f33e403cbef))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.6.0
+    * @opendata-ai/openchart-engine bumped to 2.6.0
+
 ## [2.5.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.4.0...vanilla-v2.5.0) (2026-03-09)
 
 
