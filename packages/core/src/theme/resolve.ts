@@ -53,13 +53,18 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
 
   if (config.colors) {
     const colors: Partial<Theme['colors']> = {};
-    if (config.colors.categorical) colors.categorical = config.colors.categorical;
-    if (config.colors.sequential) colors.sequential = config.colors.sequential;
-    if (config.colors.diverging) colors.diverging = config.colors.diverging;
-    if (config.colors.background) colors.background = config.colors.background;
-    if (config.colors.text) colors.text = config.colors.text;
-    if (config.colors.gridline) colors.gridline = config.colors.gridline;
-    if (config.colors.axis) colors.axis = config.colors.axis;
+    // Shorthand: flat string[] is treated as categorical palette
+    if (Array.isArray(config.colors)) {
+      colors.categorical = config.colors;
+    } else {
+      if (config.colors.categorical) colors.categorical = config.colors.categorical;
+      if (config.colors.sequential) colors.sequential = config.colors.sequential;
+      if (config.colors.diverging) colors.diverging = config.colors.diverging;
+      if (config.colors.background) colors.background = config.colors.background;
+      if (config.colors.text) colors.text = config.colors.text;
+      if (config.colors.gridline) colors.gridline = config.colors.gridline;
+      if (config.colors.axis) colors.axis = config.colors.axis;
+    }
     partial.colors = colors as Theme['colors'];
   }
 

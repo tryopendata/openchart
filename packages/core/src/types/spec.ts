@@ -321,23 +321,29 @@ export type DarkMode = 'auto' | 'force' | 'off';
  * All fields are optional. The engine deep-merges these onto the default theme.
  */
 export interface ThemeConfig {
-  /** Color palette overrides. */
-  colors?: {
-    /** Categorical palette for nominal data (array of CSS color strings). */
-    categorical?: string[];
-    /** Sequential palettes keyed by name. Each is an array of color stops. */
-    sequential?: Record<string, string[]>;
-    /** Diverging palettes keyed by name. Each is an array of color stops with a neutral midpoint. */
-    diverging?: Record<string, string[]>;
-    /** Background color. */
-    background?: string;
-    /** Default text color. */
-    text?: string;
-    /** Gridline color. */
-    gridline?: string;
-    /** Axis line and tick color. */
-    axis?: string;
-  };
+  /**
+   * Color palette overrides.
+   * Pass a flat string[] as shorthand for categorical colors,
+   * or an object for full control over categorical, sequential, diverging, etc.
+   */
+  colors?:
+    | string[]
+    | {
+        /** Categorical palette for nominal data (array of CSS color strings). */
+        categorical?: string[];
+        /** Sequential palettes keyed by name. Each is an array of color stops. */
+        sequential?: Record<string, string[]>;
+        /** Diverging palettes keyed by name. Each is an array of color stops with a neutral midpoint. */
+        diverging?: Record<string, string[]>;
+        /** Background color. */
+        background?: string;
+        /** Default text color. */
+        text?: string;
+        /** Gridline color. */
+        gridline?: string;
+        /** Axis line and tick color. */
+        axis?: string;
+      };
   /** Font overrides. */
   fonts?: {
     /** Primary font family. */
