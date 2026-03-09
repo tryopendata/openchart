@@ -92,6 +92,7 @@ export { resolveCollisions } from './labels/index';
 export type { DateGranularity } from './locale/index';
 export {
   abbreviateNumber,
+  buildD3Formatter,
   formatDate,
   formatNumber,
 } from './locale/index';

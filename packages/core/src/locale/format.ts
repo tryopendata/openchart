@@ -70,6 +70,49 @@ export function abbreviateNumber(value: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// d3-format with suffix support
+// ---------------------------------------------------------------------------
+
+/**
+ * Regex that matches a valid d3-format specifier (with optional ~ trim flag)
+ * followed by a literal suffix. The first capture group is the d3 format part,
+ * the second is the trailing literal suffix (e.g. "T", "pp", etc.).
+ *
+ * Examples:
+ * - "$,.2~fT"  -> ["$,.2~f", "T"]
+ * - ".0f%"     -> [".0f", "%"]  (% here is literal, not d3 percent type)
+ * - "$,.0f"    -> no match (valid d3 format, no suffix)
+ */
+const D3_FORMAT_SUFFIX_RE = /^(.*~?[efgsrdxXobcnp%])(.+)$/;
+
+/**
+ * Build a number formatter from a d3-format string, with support for a
+ * trailing literal suffix that d3-format itself would reject.
+ *
+ * Returns null if the format string is falsy or unparseable.
+ */
+export function buildD3Formatter(formatStr: string | undefined): ((v: number) => string) | null {
+  if (!formatStr) return null;
+
+  try {
+    return d3Format(formatStr);
+  } catch {
+    // If d3-format rejects it, try stripping a trailing literal suffix
+    const m = formatStr.match(D3_FORMAT_SUFFIX_RE);
+    if (m) {
+      try {
+        const fmt = d3Format(m[1]);
+        const suffix = m[2];
+        return (v: number) => fmt(v) + suffix;
+      } catch {
+        // Unparseable even after suffix stripping
+      }
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Date formatting
 // ---------------------------------------------------------------------------
 

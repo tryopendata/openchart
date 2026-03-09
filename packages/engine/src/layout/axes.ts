@@ -15,8 +15,12 @@ import type {
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { abbreviateNumber, formatDate, formatNumber } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
+import {
+  abbreviateNumber,
+  buildD3Formatter,
+  formatDate,
+  formatNumber,
+} from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
 import type {
   D3CategoricalScale,
@@ -149,19 +153,8 @@ function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
   if (resolvedScale.type === 'linear' || resolvedScale.type === 'log') {
     const num = value as number;
     if (formatStr) {
-      try {
-        return d3Format(formatStr)(num);
-      } catch {
-        // Support literal suffix after d3 format, e.g. ".1f%" → d3(".1f") + "%"
-        const suffixMatch = formatStr.match(/^(.+[a-z])([^a-z]+)$/i);
-        if (suffixMatch) {
-          try {
-            return d3Format(suffixMatch[1])(num) + suffixMatch[2];
-          } catch {
-            // Fall through to default formatting
-          }
-        }
-      }
+      const fmt = buildD3Formatter(formatStr);
+      if (fmt) return fmt(num);
     }
     // Abbreviate large numbers for axis labels
     if (Math.abs(num) >= 1000) return abbreviateNumber(num);

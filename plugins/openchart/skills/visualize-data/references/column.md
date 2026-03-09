@@ -37,6 +37,8 @@ Periodic data and categorical comparisons. Vertical bars with category labels on
 
 Use `color` with a nominal/ordinal field to create stacked or grouped columns.
 
+**Format strings:** Both `axis.format` and `labels.format` support d3-format strings with an optional literal suffix (e.g., `"$,.2~f"` outputs `$3.1` with trailing zeros trimmed, `".1f%"` outputs `12.5%`). Set both to keep axis ticks and column value labels consistent. See SKILL.md for the full format string reference.
+
 ## Builder
 
 ```typescript
@@ -71,6 +73,7 @@ const spec = columnChart(data, "quarter", "revenue", {
     "title": "Q4 sales outpaced the rest of the year",
     "subtitle": "Quarterly sales in thousands, 2024",
     "source": "Source: Internal sales data"
-  }
+  },
+  "labels": { "density": "all", "format": "$,.0f" }
 }
 ```

@@ -17,8 +17,11 @@ import type {
   RectMark,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, resolveCollisions } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
+import {
+  buildD3Formatter,
+  estimateTextWidth,
+  resolveCollisions,
+} from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,27 +58,7 @@ export function computeBarLabels(
 
   const candidates: LabelCandidate[] = [];
 
-  // Build a d3 formatter if a label format string was provided.
-  // Supports a literal suffix after the d3 format, e.g. ".1f%" formats as "12.5%"
-  // (the trailing "%" is appended literally, not d3's multiply-by-100 percent type).
-  let formatter: ((v: number) => string) | null = null;
-  if (labelFormat) {
-    try {
-      formatter = d3Format(labelFormat);
-    } catch {
-      // If d3-format rejects it, try stripping a trailing suffix
-      const suffixMatch = labelFormat.match(/^(.+[a-z])([^a-z]+)$/i);
-      if (suffixMatch) {
-        try {
-          const d3Fmt = d3Format(suffixMatch[1]);
-          const suffix = suffixMatch[2];
-          formatter = (v: number) => d3Fmt(v) + suffix;
-        } catch {
-          // Give up on formatting
-        }
-      }
-    }
-  }
+  const formatter = buildD3Formatter(labelFormat);
 
   for (const mark of targetMarks) {
     // Extract the display value from the aria label.

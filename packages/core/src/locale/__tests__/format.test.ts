@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abbreviateNumber, formatDate, formatNumber } from '../format';
+import { abbreviateNumber, buildD3Formatter, formatDate, formatNumber } from '../format';
 
 describe('formatNumber', () => {
   it('formats integers with commas', () => {
@@ -56,6 +56,45 @@ describe('abbreviateNumber', () => {
 
   it('abbreviates trillions', () => {
     expect(abbreviateNumber(1_200_000_000_000)).toBe('1.2T');
+  });
+});
+
+describe('buildD3Formatter', () => {
+  it('returns a formatter for a valid d3 format string', () => {
+    const fmt = buildD3Formatter('$,.0f');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(1234)).toBe('$1,234');
+  });
+
+  it('handles tilde trim modifier', () => {
+    const fmt = buildD3Formatter('$,.2~f');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(3.1)).toBe('$3.1');
+    expect(fmt!(3.75)).toBe('$3.75');
+  });
+
+  it('handles literal alpha suffix after d3 format', () => {
+    const fmt = buildD3Formatter('$,.2~fT');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(3.75)).toBe('$3.75T');
+  });
+
+  it('handles non-alpha suffix like %', () => {
+    const fmt = buildD3Formatter('.0f%');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(50)).toBe('50%');
+  });
+
+  it('returns null for undefined input', () => {
+    expect(buildD3Formatter(undefined)).toBeNull();
+  });
+
+  it('returns null for empty string', () => {
+    expect(buildD3Formatter('')).toBeNull();
+  });
+
+  it('returns null for completely invalid format', () => {
+    expect(buildD3Formatter('not-a-format!!!')).toBeNull();
   });
 });
 

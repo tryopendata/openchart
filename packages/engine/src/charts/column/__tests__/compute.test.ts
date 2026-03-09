@@ -274,4 +274,80 @@ describe('computeColumnLabels', () => {
     expect(texts).toContain('120');
     expect(texts).toContain('200');
   });
+
+  it('applies d3 label format string', () => {
+    const spec = makeSimpleColumnSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeColumnLabels(marks, chartArea, 'auto', '$,.0f');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('$120');
+    expect(texts).toContain('$200');
+  });
+
+  it('applies format with trailing zero trim (~)', () => {
+    const spec: NormalizedChartSpec = {
+      type: 'column',
+      data: [
+        { company: 'A', cap: 3.1 },
+        { company: 'B', cap: 2.85 },
+      ],
+      encoding: {
+        x: { field: 'company', type: 'nominal' },
+        y: { field: 'cap', type: 'quantitative' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'all', format: '$,.2~f' },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeColumnLabels(marks, chartArea, 'all', '$,.2~f');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('$3.1');
+    expect(texts).toContain('$2.85');
+  });
+
+  it('applies format with literal alpha suffix (e.g. "T")', () => {
+    const spec: NormalizedChartSpec = {
+      type: 'column',
+      data: [
+        { company: 'Apple', cap: 3.75 },
+        { company: 'Meta', cap: 1.63 },
+      ],
+      encoding: {
+        x: { field: 'company', type: 'nominal' },
+        y: { field: 'cap', type: 'quantitative' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'all', format: '$,.2~fT' },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeColumnLabels(marks, chartArea, 'all', '$,.2~fT');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('$3.75T');
+    expect(texts).toContain('$1.63T');
+  });
+
+  it('applies format with non-alpha suffix (e.g. "%")', () => {
+    const spec = makeSimpleColumnSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeColumnLabels(marks, chartArea, 'auto', '.0f%');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('120%');
+    expect(texts).toContain('200%');
+  });
 });

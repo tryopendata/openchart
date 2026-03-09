@@ -291,4 +291,55 @@ describe('computeBarLabels', () => {
     expect(texts).toContain('30');
     expect(texts).toContain('70');
   });
+
+  it('applies d3 label format string', () => {
+    const spec = makeSimpleBarSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeBarLabels(marks, chartArea, 'auto', '$,.0f');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('$50');
+    expect(texts).toContain('$30');
+    expect(texts).toContain('$70');
+  });
+
+  it('applies format with literal alpha suffix (e.g. "T")', () => {
+    const spec: NormalizedChartSpec = {
+      type: 'bar',
+      data: [
+        { company: 'Apple', cap: 3.75 },
+        { company: 'Meta', cap: 1.63 },
+      ],
+      encoding: {
+        x: { field: 'cap', type: 'quantitative' },
+        y: { field: 'company', type: 'nominal' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'all', format: '$,.2~fT' },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeBarLabels(marks, chartArea, 'all', '$,.2~fT');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('$3.75T');
+    expect(texts).toContain('$1.63T');
+  });
+
+  it('applies format with non-alpha suffix (e.g. "%")', () => {
+    const spec = makeSimpleBarSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const labels = computeBarLabels(marks, chartArea, 'auto', '.0f%');
+
+    const texts = labels.map((l) => l.text);
+    expect(texts).toContain('50%');
+    expect(texts).toContain('30%');
+    expect(texts).toContain('70%');
+  });
 });

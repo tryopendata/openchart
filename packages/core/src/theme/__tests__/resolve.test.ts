@@ -58,4 +58,19 @@ describe('resolveTheme', () => {
     const resolved = resolveTheme(undefined, customBase);
     expect(resolved.borderRadius).toBe(12);
   });
+
+  it('accepts flat string[] as shorthand for categorical colors', () => {
+    const colors = ['#ff0000', '#94a3b8', '#94a3b8'];
+    const resolved = resolveTheme({ colors });
+    expect(resolved.colors.categorical).toEqual(colors);
+    // Other color fields preserved from defaults
+    expect(resolved.colors.background).toBe(DEFAULT_THEME.colors.background);
+    expect(resolved.colors.text).toBe(DEFAULT_THEME.colors.text);
+  });
+
+  it('flat color array does not clobber non-color theme fields', () => {
+    const resolved = resolveTheme({ colors: ['#ff0000'] });
+    expect(resolved.fonts.family).toBe(DEFAULT_THEME.fonts.family);
+    expect(resolved.spacing.padding).toBe(DEFAULT_THEME.spacing.padding);
+  });
 });

@@ -17,7 +17,11 @@ import type {
   RectMark,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, resolveCollisions } from '@opendata-ai/openchart-core';
+import {
+  buildD3Formatter,
+  estimateTextWidth,
+  resolveCollisions,
+} from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -40,6 +44,7 @@ export function computeColumnLabels(
   marks: RectMark[],
   _chartArea: { x: number; y: number; width: number; height: number },
   density: LabelDensity = 'auto',
+  labelFormat?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -47,6 +52,8 @@ export function computeColumnLabels(
   // Filter marks for 'endpoints' density
   const targetMarks =
     density === 'endpoints' && marks.length > 1 ? [marks[0], marks[marks.length - 1]] : marks;
+
+  const formatter = buildD3Formatter(labelFormat);
 
   const candidates: LabelCandidate[] = [];
 
@@ -56,8 +63,15 @@ export function computeColumnLabels(
     // Use the last colon to split, which handles colons in category names.
     const ariaLabel = mark.aria.label;
     const lastColon = ariaLabel.lastIndexOf(':');
-    const valuePart = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
-    if (!valuePart) continue;
+    const rawValue = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
+    if (!rawValue) continue;
+
+    // Apply label format if provided (re-parse the number from the aria string)
+    let valuePart = rawValue;
+    if (formatter) {
+      const num = Number(rawValue.replace(/[^0-9.-]/g, ''));
+      if (!Number.isNaN(num)) valuePart = formatter(num);
+    }
 
     const numericValue = parseFloat(valuePart);
     const isNegative = Number.isFinite(numericValue) && numericValue < 0;
@@ -67,7 +81,7 @@ export function computeColumnLabels(
 
     // For positive values, place label above the column top.
     // For negative values, place label below the column bottom.
-    const anchorX = mark.x + mark.width / 2 - textWidth / 2;
+    const anchorX = mark.x + mark.width / 2;
     const anchorY = isNegative
       ? mark.y + mark.height + LABEL_OFFSET_Y
       : mark.y - LABEL_OFFSET_Y - textHeight;
