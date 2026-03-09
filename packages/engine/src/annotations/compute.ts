@@ -356,18 +356,33 @@ function resolveRangeAnnotation(
 
   const rect: Rect = { x, y, width, height };
 
-  // Label at the top-left of the range, with optional offset
+  // Label positioned within the range, with optional offset.
+  // labelAnchor controls horizontal placement:
+  //   "left" (default): left edge, text-anchor start
+  //   "top"/"auto": horizontally centered, text-anchor middle
+  //   "right": right edge, text-anchor end
   let label: ResolvedLabel | undefined;
   if (annotation.label) {
-    const baseDx = 4;
+    const anchor = annotation.labelAnchor ?? 'left';
+    const centered = anchor === 'top' || anchor === 'bottom' || anchor === 'auto';
+    const baseDx = centered ? 0 : anchor === 'right' ? -4 : 4;
     const baseDy = 14;
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
+    const style = makeAnnotationLabelStyle(11, 500, undefined, isDark);
+    if (centered) {
+      style.textAnchor = 'middle';
+    } else if (anchor === 'right') {
+      style.textAnchor = 'end';
+    }
+
+    const baseX = centered ? x + width / 2 : anchor === 'right' ? x + width : x;
+
     label = {
       text: annotation.label,
-      x: x + labelDelta.dx,
+      x: baseX + labelDelta.dx,
       y: y + labelDelta.dy,
-      style: makeAnnotationLabelStyle(11, 500, undefined, isDark),
+      style,
       visible: true,
     };
   }
@@ -428,11 +443,15 @@ function resolveRefLineAnnotation(
 
   // Label at the right end for horizontal, top end for vertical, with optional offset.
   // Horizontal refline labels use text-anchor 'end' so text stays inside the chart.
+  // labelAnchor controls which side of the line the label sits on:
+  //   "top" (default): above horizontal, left of vertical
+  //   "bottom": below horizontal, right of vertical
   let label: ResolvedLabel | undefined;
   if (annotation.label) {
     const isHorizontal = annotation.y !== undefined;
+    const anchor = annotation.labelAnchor ?? 'top';
     const baseDx = isHorizontal ? -4 : 4;
-    const baseDy = -4;
+    const baseDy = anchor === 'bottom' ? 14 : -4;
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
     const defaultStroke = isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE;

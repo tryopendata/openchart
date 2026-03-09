@@ -37,6 +37,8 @@ Rankings and comparisons. Horizontal bars with category labels on the y-axis.
 
 Use `color` with a nominal/ordinal field to create stacked bars.
 
+**Format strings:** Both `axis.format` and `labels.format` support d3-format strings with an optional literal suffix (e.g., `".1f%"` outputs `12.5%`). Set both to keep axis ticks and bar value labels consistent. See SKILL.md for the full format string reference.
+
 ## Builder
 
 ```typescript

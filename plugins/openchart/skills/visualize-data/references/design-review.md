@@ -61,7 +61,8 @@ If the reader looks at this chart for 5 seconds and walks away, what's the one t
 | Title is a chart description | Rewrite: state the finding, not the chart type |
 | Too many colors | Switch to highlight+gray or group categories |
 | Labels overlapping | Reduce label density to `"auto"` or `"endpoints"`, abbreviate text |
-| Axis not formatted | Add `axis: { format: "$,.0f" }` or `".1%"` |
+| Axis not formatted | Add `axis: { format: "$,.0f" }` or `".1f%"` (literal suffix) or `".1%"` (d3 native, data in 0-1) |
+| Labels missing units | Add `labels: { format: ".1f%" }` to append `%`, or `"$,.0f"` for currency |
 | Missing source | Add `chrome: { source: "Source: Organization Name" }` |
 | Too many annotations | Keep the 1-2 most important, move rest to subtitle or remove |
 | Pie with 7+ slices | Switch to horizontal bar chart |

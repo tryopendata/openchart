@@ -173,6 +173,9 @@ const multiSeriesSpec: ChartSpec = {
     },
   ],
   labels: { density: 'endpoints', format: '.1f' },
+  seriesStyles: {
+    Germany: { lineStyle: 'dotted', strokeWidth: 1.5, opacity: 0.65 },
+  },
   chrome: {
     title: 'The Great Divergence: Three Economies, Three Recoveries',
     subtitle: 'Annual real GDP growth rate, 2019-2024',

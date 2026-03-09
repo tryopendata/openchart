@@ -904,7 +904,7 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 // Brand rendering
 // ---------------------------------------------------------------------------
 
-const BRAND_FONT_SIZE = 11;
+const BRAND_FONT_SIZE = 20;
 const BRAND_MIN_WIDTH = 120;
 const BRAND_URL = 'https://tryopendata.ai';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';

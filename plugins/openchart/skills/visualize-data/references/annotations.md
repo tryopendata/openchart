@@ -64,6 +64,7 @@ Highlighted region of the chart.
 - Set only `y1`/`y2` for a horizontal band
 - Set all four for a rectangle
 - Use low `opacity` (0.1-0.2) so the data shows through
+- **Centering labels:** Use `labelAnchor: "top"`, `"bottom"`, or `"auto"` to center the label horizontally over the range. `"left"` (default) and `"right"` position the label at the corresponding edge.
 
 ## Reference Line
 
@@ -84,6 +85,7 @@ Horizontal or vertical threshold/baseline line.
 - Set `x` for a vertical reference line
 - Set `y` for a horizontal reference line
 - Use `style: "dashed"` for targets/thresholds
+- **Label placement:** `labelAnchor: "top"` (default) places the label above the line; `"bottom"` places it below. Use `labelOffset: { dy: N }` for fine-tuning.
 
 ## Annotation Editing
 

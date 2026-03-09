@@ -132,7 +132,7 @@ Position is responsive by default (the engine picks based on container width). S
 ```typescript
 labels?: {
   density?: "all"|"auto"|"endpoints"|"none",  // default: "auto"
-  format?: string,           // d3-format for label values
+  format?: string,           // d3-format for label values (supports literal suffix, see below)
 }
 ```
 
@@ -142,6 +142,52 @@ labels?: {
 | `all` | Show every label, no collision detection | Few data points, precise values matter |
 | `endpoints` | First and last per series only | Line charts, emphasize start/end |
 | `none` | No labels (tooltips + legend only) | Dense data, clean look |
+
+## Format Strings
+
+Both `axis.format` and `labels.format` accept [d3-format](https://d3js.org/d3-format) strings, plus a literal suffix extension.
+
+**Literal suffix pattern:** Append non-format characters after a valid d3-format specifier. The engine tries d3-format first; if it fails, it splits off the trailing suffix and applies d3-format to the rest.
+
+| Format | Input | Output | Use case |
+| --- | --- | --- | --- |
+| `".1f"` | 12.5 | `12.5` | One decimal, no units |
+| `".1f%"` | 12.5 | `12.5%` | Percentage (data already in %, not 0-1) |
+| `".0f%"` | 12 | `12%` | Whole-number percentage |
+| `"$,.0f"` | 1234 | `$1,234` | Currency |
+| `"$,.2f"` | 3.75 | `$3.75` | Currency with cents |
+| `".1%"` | 0.125 | `12.5%` | d3 native percent (multiplies by 100) |
+
+**When data is already in percentage form** (e.g., `12.5` meaning 12.5%), use `".1f%"` not `".1%"`. The d3 `%` type multiplies by 100, so `0.125` becomes `12.5%` but `12.5` becomes `1,250.0%`.
+
+## Per-Series Styling (Charts Only)
+
+Override visual properties for individual series by name. Useful for making reference series visually distinct from primary data.
+
+```typescript
+seriesStyles?: Record<string, {
+  lineStyle?: "solid"|"dashed"|"dotted",
+  showPoints?: boolean,
+  strokeWidth?: number,
+  opacity?: number,
+}>
+```
+
+**Example:** Show "Fed funds rate" as a dashed reference line alongside solid CPI data:
+```json
+{
+  "seriesStyles": {
+    "Fed funds rate": {
+      "lineStyle": "dashed",
+      "showPoints": false,
+      "strokeWidth": 1.5,
+      "opacity": 0.6
+    }
+  }
+}
+```
+
+Series names come from the `color` encoding field values. Only specified series get overrides; others render normally.
 
 ## Spec Anti-Patterns
 
@@ -153,6 +199,9 @@ labels?: {
 | Forgetting encoding.color for multi-series | Line/bar with groups needs `color` channel |
 | Bar chart for time series | Use line or column for temporal data |
 | Using chart for network data | Use `type: "graph"` with nodes + edges |
-| Not specifying axis format for currency/pct | Add `axis: { format: "$,.0f" }` or `".1%"` |
+| Not specifying axis format for currency/pct | Add `axis: { format: "$,.0f" }` or `".1f%"` |
+| Using `".1%"` when data is already in percent form | `".1%"` multiplies by 100 (d3 convention). If data is `12.5` meaning 12.5%, use `".1f%"` (literal suffix) |
+| Axis format and label format inconsistent | Set both `axis.format` and `labels.format` to the same pattern so ticks and data labels match |
+| Using `darkMode: "auto"` in class-based dark mode apps | `"auto"` checks `prefers-color-scheme` only. For class-based toggles (Astro, Next.js), observe DOM and map to `"force"`/`"off"`. See [rendering](references/rendering.md) |
 
 For design anti-patterns (titles, color, annotations), see [design review](references/design-review.md).

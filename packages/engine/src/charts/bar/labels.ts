@@ -18,6 +18,7 @@ import type {
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, resolveCollisions } from '@opendata-ai/openchart-core';
+import { format as d3Format } from 'd3-format';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -43,6 +44,7 @@ export function computeBarLabels(
   marks: RectMark[],
   _chartArea: { x: number; y: number; width: number; height: number },
   density: LabelDensity = 'auto',
+  labelFormat?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -53,14 +55,43 @@ export function computeBarLabels(
 
   const candidates: LabelCandidate[] = [];
 
+  // Build a d3 formatter if a label format string was provided.
+  // Supports a literal suffix after the d3 format, e.g. ".1f%" formats as "12.5%"
+  // (the trailing "%" is appended literally, not d3's multiply-by-100 percent type).
+  let formatter: ((v: number) => string) | null = null;
+  if (labelFormat) {
+    try {
+      formatter = d3Format(labelFormat);
+    } catch {
+      // If d3-format rejects it, try stripping a trailing suffix
+      const suffixMatch = labelFormat.match(/^(.+[a-z])([^a-z]+)$/i);
+      if (suffixMatch) {
+        try {
+          const d3Fmt = d3Format(suffixMatch[1]);
+          const suffix = suffixMatch[2];
+          formatter = (v: number) => d3Fmt(v) + suffix;
+        } catch {
+          // Give up on formatting
+        }
+      }
+    }
+  }
+
   for (const mark of targetMarks) {
     // Extract the display value from the aria label.
     // Format is "category: value" or "category, group: value".
     // Use the last colon to split, which handles colons in category names.
     const ariaLabel = mark.aria.label;
     const lastColon = ariaLabel.lastIndexOf(':');
-    const valuePart = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
-    if (!valuePart) continue;
+    const rawValue = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
+    if (!rawValue) continue;
+
+    // Apply label format if provided (re-parse the number from the aria string)
+    let valuePart = rawValue;
+    if (formatter) {
+      const num = Number(rawValue.replace(/[^0-9.\-]/g, ''));
+      if (!isNaN(num)) valuePart = formatter(num);
+    }
 
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;

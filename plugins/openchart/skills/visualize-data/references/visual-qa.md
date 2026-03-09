@@ -64,6 +64,8 @@ Scan the screenshot in this order. For each zone, check the listed defect types 
 | **Connector length** | Very long diagonal connector crossing through unrelated data | Move annotation closer to data point, or use `connector: false` with proximity-based placement |
 | **Refline label collision** | Refline label overlapping data labels or marks | Adjust `labelOffset` to position in whitespace gap |
 | **Endpoint label overlap** | Series endpoint labels overlapping each other when lines converge | Adjust label offset, reduce label count, or switch to legend |
+| **Data point clipping** | Dots/marks at extreme y-values cut off by the chart clip-path | Expand `scale.domain` to add headroom (e.g., `[-1, 10]` instead of `[0, 9.1]`) |
+| **Dead space** | Large empty area on the right/left of chart with no data | Check `scale.domain` for overly wide ranges; for line charts, check `labels.density` is `"none"` if endpoint labels are reserving space |
 
 ### Zone 5: Legend
 

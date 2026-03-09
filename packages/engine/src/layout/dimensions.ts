@@ -127,8 +127,10 @@ export function computeDimensions(
     left: padding + (isRadial ? padding : axisMargin),
   };
 
-  // Dynamic right margin for line/area end-of-line labels
-  if (spec.type === 'line' || spec.type === 'area') {
+  // Dynamic right margin for line/area end-of-line labels.
+  // Only reserve space when labels will actually render (density != 'none').
+  const labelDensity = spec.labels.density;
+  if ((spec.type === 'line' || spec.type === 'area') && labelDensity !== 'none') {
     // Estimate label width from longest series name (color encoding domain)
     const colorField = encoding.color?.field;
     if (colorField) {

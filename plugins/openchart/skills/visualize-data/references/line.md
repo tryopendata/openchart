@@ -39,6 +39,8 @@ Use `color` to differentiate 2-5 series. For 6+ series, filter to the top 5 or u
 
 **Tip:** Use `labels: { density: "endpoints" }` for line charts to show only the first and last value per series.
 
+**Per-series styling:** Use `seriesStyles` to differentiate reference series from primary data (e.g., dashed lines for benchmarks, reduced opacity for context series). See the main SKILL.md for the full `seriesStyles` spec.
+
 ## Builder
 
 ```typescript

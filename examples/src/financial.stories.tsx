@@ -266,6 +266,9 @@ function benchmarkSpec(dark: boolean): ChartSpec {
     ],
     labels: { density: 'endpoints', format: '+.1f' },
     legend: { position: 'bottom-right' },
+    seriesStyles: {
+      'Russell 2000': { lineStyle: 'dashed', opacity: 0.7 },
+    },
     chrome: {
       title: 'Big Tech Roars Back While Small Caps Stall',
       subtitle: 'Cumulative total return by index, rebased to January 1, 2022',

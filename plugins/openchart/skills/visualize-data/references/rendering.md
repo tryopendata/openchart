@@ -35,6 +35,48 @@ import { Chart, DataTable, Graph, VizThemeProvider } from '@opendata-ai/openchar
 </VizThemeProvider>
 ```
 
+### Dark Mode
+
+The `darkMode` prop controls chart color scheme:
+
+| Value | Behavior |
+| --- | --- |
+| `"off"` | Always light (default) |
+| `"auto"` | Follows `prefers-color-scheme` media query |
+| `"force"` | Always dark |
+
+**Class-based dark mode (Astro, Next.js, etc.):** If your app toggles dark mode via a CSS class on `<html>` instead of relying on `prefers-color-scheme`, `darkMode: "auto"` won't react to theme changes. Create a wrapper component that reads the theme from the DOM and maps it to `"force"` or `"off"`:
+
+```tsx
+import { useEffect, useState } from "react";
+import { Chart } from "@opendata-ai/openchart-react";
+
+function ThemedChart({ spec, darkMode = "auto", ...props }) {
+  const [docTheme, setDocTheme] = useState(() =>
+    typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark") ? "dark" : "light"
+      : "dark"
+  );
+
+  useEffect(() => {
+    setDocTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    const observer = new MutationObserver(() => {
+      setDocTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const resolved = darkMode === "auto"
+    ? docTheme === "dark" ? "force" : "off"
+    : darkMode;
+
+  return <Chart spec={spec} darkMode={resolved} {...props} />;
+}
+```
+
+**Do NOT use React context** (e.g., `useContext(ThemeContext)`) for this in Astro or other island-based frameworks. Each `client:only` component is its own React tree with no shared context. Read theme state from the DOM instead.
+
 ## Vue
 
 ```vue
