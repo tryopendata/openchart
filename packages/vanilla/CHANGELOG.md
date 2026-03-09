@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.8.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.7.0...vanilla-v2.8.0) (2026-03-09)
+
+
+### Features
+
+* add responsive overrides, legend hiding, and chrome text wrapping ([2eb0236](https://github.com/tryopendata/openchart/commit/2eb02366bfbd51b15341708c912da8897adbc98a))
+
+
+### Bug Fixes
+
+* move bun-symlink-resolver to scripts/ so it's not gitignored ([c2cee52](https://github.com/tryopendata/openchart/commit/c2cee5275480ef36e11ea81aa195068875f375e5))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.8.0
+    * @opendata-ai/openchart-engine bumped to 2.8.0
+
 ## [2.7.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.6.0...vanilla-v2.7.0) (2026-03-09)
 
 
