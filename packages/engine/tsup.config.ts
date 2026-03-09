@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import { bunSymlinkResolver } from '../../build/bun-symlink-resolver';
+import { bunSymlinkResolver } from '../../scripts/bun-symlink-resolver';
 
 export default defineConfig({
   entry: ['src/index.ts'],

@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 import { copyFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
-import { bunSymlinkResolver } from '../../build/bun-symlink-resolver';
+import { bunSymlinkResolver } from '../../scripts/bun-symlink-resolver';
 
 export default defineConfig({
   entry: ['src/index.ts'],
