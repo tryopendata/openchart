@@ -89,8 +89,8 @@ export function computeBarLabels(
     // Apply label format if provided (re-parse the number from the aria string)
     let valuePart = rawValue;
     if (formatter) {
-      const num = Number(rawValue.replace(/[^0-9.\-]/g, ''));
-      if (!isNaN(num)) valuePart = formatter(num);
+      const num = Number(rawValue.replace(/[^0-9.-]/g, ''));
+      if (!Number.isNaN(num)) valuePart = formatter(num);
     }
 
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
