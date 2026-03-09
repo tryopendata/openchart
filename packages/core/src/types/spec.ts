@@ -398,6 +398,18 @@ export interface LegendConfig {
 /** Data row: a plain object with string keys. */
 export type DataRow = Record<string, unknown>;
 
+/** Per-series visual style overrides for line/area charts. */
+export interface SeriesStyle {
+  /** Line dash style. Defaults to 'solid'. */
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  /** Whether to show data point markers. Defaults to true. */
+  showPoints?: boolean;
+  /** Stroke width override. */
+  strokeWidth?: number;
+  /** Opacity override (0-1). */
+  opacity?: number;
+}
+
 /**
  * Chart specification: the primary input for standard chart types.
  *
@@ -428,6 +440,8 @@ export interface ChartSpec {
   darkMode?: DarkMode;
   /** Series names to hide from rendering. Hidden series remain in the legend but are visually dimmed. */
   hiddenSeries?: string[];
+  /** Per-series visual overrides, keyed by series name (the color field value). */
+  seriesStyles?: Record<string, SeriesStyle>;
 }
 
 /**
