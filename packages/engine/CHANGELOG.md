@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/tryopendata/openchart/compare/engine-v2.6.0...engine-v2.7.0) (2026-03-09)
+
+
+### Features
+
+* add label format support to column charts and extract shared formatter ([16305b1](https://github.com/tryopendata/openchart/commit/16305b1e878fd4d9861aa932f17bc745f1f19beb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.7.0
+
 ## [2.6.0](https://github.com/tryopendata/openchart/compare/engine-v2.5.0...engine-v2.6.0) (2026-03-09)
 
 
