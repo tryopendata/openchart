@@ -181,6 +181,8 @@ export interface LineMark {
   strokeWidth: number;
   /** Line dash pattern (empty for solid). */
   strokeDasharray?: string;
+  /** Overall opacity for the line (0-1). */
+  opacity?: number;
   /** Series identifier (for multi-series charts). */
   seriesKey?: string;
   /** Original data rows for this series. */

@@ -103,6 +103,7 @@ export type {
   RangeAnnotation,
   RefLineAnnotation,
   ScaleConfig,
+  SeriesStyle,
   StoredVizSpec,
   TableSpec,
   TableSpecWithoutData,

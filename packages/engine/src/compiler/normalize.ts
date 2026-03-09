@@ -197,6 +197,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     hiddenSeries: spec.hiddenSeries ?? [],
+    seriesStyles: spec.seriesStyles ?? {},
   };
 }
 

@@ -140,6 +140,15 @@ export function computeLineMarks(
     // segments are created by starting a new M command.
     const combinedPath = pathParts.join(' ');
 
+    // Look up per-series style overrides
+    const seriesStyleKey = seriesKey === '__default__' ? undefined : seriesKey;
+    const styleOverride = seriesStyleKey ? spec.seriesStyles?.[seriesStyleKey] : undefined;
+
+    // Map lineStyle to SVG strokeDasharray
+    let strokeDasharray: string | undefined;
+    if (styleOverride?.lineStyle === 'dashed') strokeDasharray = '6 4';
+    else if (styleOverride?.lineStyle === 'dotted') strokeDasharray = '2 3';
+
     // Create the LineMark with the combined path points.
     // The points array includes all valid points across all segments.
     const lineMark: LineMark = {
@@ -147,25 +156,28 @@ export function computeLineMarks(
       points: allPoints,
       path: combinedPath,
       stroke: color,
-      strokeWidth: DEFAULT_STROKE_WIDTH,
-      seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
+      strokeWidth: styleOverride?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+      strokeDasharray,
+      opacity: styleOverride?.opacity,
+      seriesKey: seriesStyleKey,
       data: pointsWithData.map((p) => p.row),
       aria,
     };
 
     marks.push(lineMark);
 
-    // Create point marks for hover targets
+    // Create point marks for hover targets (skip if showPoints is false)
+    const showPoints = styleOverride?.showPoints !== false;
     for (let i = 0; i < pointsWithData.length; i++) {
       const p = pointsWithData[i];
       const pointMark: PointMark = {
         type: 'point',
         cx: p.x,
         cy: p.y,
-        r: DEFAULT_POINT_RADIUS,
+        r: showPoints ? DEFAULT_POINT_RADIUS : 0,
         fill: color,
-        stroke: '#ffffff',
-        strokeWidth: 1.5,
+        stroke: showPoints ? '#ffffff' : 'transparent',
+        strokeWidth: showPoints ? 1.5 : 0,
         fillOpacity: 0,
         data: p.row,
         aria: {

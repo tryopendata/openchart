@@ -799,3 +799,112 @@ describe('computeLineLabels', () => {
     expect(labelMap.size).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// seriesStyles tests
+// ---------------------------------------------------------------------------
+
+describe('seriesStyles', () => {
+  it('applies dashed line style to a specific series', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = { UK: { lineStyle: 'dashed' } };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+    const ukLine = lineMarks.find((m) => m.seriesKey === 'UK');
+    const usLine = lineMarks.find((m) => m.seriesKey === 'US');
+
+    expect(ukLine?.strokeDasharray).toBe('6 4');
+    expect(usLine?.strokeDasharray).toBeUndefined();
+  });
+
+  it('applies dotted line style', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = { US: { lineStyle: 'dotted' } };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const usLine = marks.find((m): m is LineMark => m.type === 'line' && m.seriesKey === 'US');
+    expect(usLine?.strokeDasharray).toBe('2 3');
+  });
+
+  it('hides point markers when showPoints is false', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = { UK: { showPoints: false } };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const ukPoints = marks.filter(
+      (m): m is PointMark => m.type === 'point' && m.data.country === 'UK',
+    );
+    const usPoints = marks.filter(
+      (m): m is PointMark => m.type === 'point' && m.data.country === 'US',
+    );
+
+    // UK points should have r=0 (hidden)
+    expect(ukPoints.every((p) => p.r === 0)).toBe(true);
+    // US points should still have default radius
+    expect(usPoints.every((p) => p.r > 0)).toBe(true);
+  });
+
+  it('overrides strokeWidth for a series', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = { UK: { strokeWidth: 1.5 } };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+    const ukLine = lineMarks.find((m) => m.seriesKey === 'UK');
+    const usLine = lineMarks.find((m) => m.seriesKey === 'US');
+
+    expect(ukLine?.strokeWidth).toBe(1.5);
+    expect(usLine?.strokeWidth).toBe(2.5); // default
+  });
+
+  it('sets opacity on a series', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = { UK: { opacity: 0.5 } };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const ukLine = marks.find((m): m is LineMark => m.type === 'line' && m.seriesKey === 'UK');
+    const usLine = marks.find((m): m is LineMark => m.type === 'line' && m.seriesKey === 'US');
+
+    expect(ukLine?.opacity).toBe(0.5);
+    expect(usLine?.opacity).toBeUndefined();
+  });
+
+  it('combines multiple style overrides on the same series', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = {
+      UK: { lineStyle: 'dashed', showPoints: false, strokeWidth: 1, opacity: 0.6 },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const ukLine = marks.find((m): m is LineMark => m.type === 'line' && m.seriesKey === 'UK');
+    expect(ukLine?.strokeDasharray).toBe('6 4');
+    expect(ukLine?.strokeWidth).toBe(1);
+    expect(ukLine?.opacity).toBe(0.6);
+
+    const ukPoints = marks.filter(
+      (m): m is PointMark => m.type === 'point' && m.data.country === 'UK',
+    );
+    expect(ukPoints.every((p) => p.r === 0)).toBe(true);
+  });
+
+  it('does not apply styles when seriesStyles is empty', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.seriesStyles = {};
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+    for (const line of lineMarks) {
+      expect(line.strokeDasharray).toBeUndefined();
+      expect(line.opacity).toBeUndefined();
+      expect(line.strokeWidth).toBe(2.5);
+    }
+  });
+});

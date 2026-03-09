@@ -73,6 +73,8 @@ export interface NormalizedChartSpec {
   darkMode: DarkMode;
   /** Series names to hide from rendering. */
   hiddenSeries: string[];
+  /** Per-series visual style overrides. */
+  seriesStyles: Record<string, import('@opendata-ai/openchart-core').SeriesStyle>;
 }
 
 /** A TableSpec with all optional fields filled with sensible defaults. */
