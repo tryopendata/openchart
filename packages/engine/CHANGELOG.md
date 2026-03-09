@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.5.0](https://github.com/tryopendata/openchart/compare/engine-v2.4.0...engine-v2.5.0) (2026-03-09)
+
+
+### Features
+
+* add SeriesStyle type for per-series visual overrides ([67ac80e](https://github.com/tryopendata/openchart/commit/67ac80ec002e0786ae8ed8607e583389aed4323c))
+* implement seriesStyles in line chart compute pipeline ([54feb7c](https://github.com/tryopendata/openchart/commit/54feb7c266a90885bf218df6275449c17920f229))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.5.0
+
 ## [2.4.0](https://github.com/tryopendata/openchart/compare/engine-v2.3.5...engine-v2.4.0) (2026-03-08)
 
 

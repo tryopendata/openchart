@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.5.0](https://github.com/tryopendata/openchart/compare/svelte-v2.4.0...svelte-v2.5.0) (2026-03-09)
+
+
+### Features
+
+* export styles.css from all framework packages ([358f8e3](https://github.com/tryopendata/openchart/commit/358f8e32fdddd60a3917200111a8d1b1fe717ca8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.5.0
+    * @opendata-ai/openchart-engine bumped to 2.5.0
+    * @opendata-ai/openchart-vanilla bumped to 2.5.0
+
 ## [2.4.0](https://github.com/tryopendata/openchart/compare/svelte-v2.3.5...svelte-v2.4.0) (2026-03-08)
 
 

@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.5.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.4.0...vanilla-v2.5.0) (2026-03-09)
+
+
+### Features
+
+* export styles.css from all framework packages ([358f8e3](https://github.com/tryopendata/openchart/commit/358f8e32fdddd60a3917200111a8d1b1fe717ca8))
+
+
+### Bug Fixes
+
+* consolidate brand watermark into single tspan-based text element ([91fbca7](https://github.com/tryopendata/openchart/commit/91fbca78ff050a793e308c355117dbd236b525d5))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.5.0
+    * @opendata-ai/openchart-engine bumped to 2.5.0
+
 ## [2.4.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.3.5...vanilla-v2.4.0) (2026-03-08)
 
 
