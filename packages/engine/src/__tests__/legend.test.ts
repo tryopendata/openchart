@@ -82,6 +82,30 @@ describe('computeLegend', () => {
     expect(legend.bounds.height).toBeGreaterThan(0);
   });
 
+  it('returns empty entries when show is false', () => {
+    const specHidden: NormalizedChartSpec = {
+      ...specWithColor,
+      legend: { show: false },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(specHidden, fullStrategy, theme, chartArea);
+    expect(legend.entries).toHaveLength(0);
+    expect(legend.bounds.width).toBe(0);
+    expect(legend.bounds.height).toBe(0);
+  });
+
+  it('still shows legend when show is true', () => {
+    const specShown: NormalizedChartSpec = {
+      ...specWithColor,
+      legend: { show: true },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(specShown, fullStrategy, theme, chartArea);
+    expect(legend.entries).toHaveLength(3);
+  });
+
   it('uses correct swatch shape for chart type', () => {
     const lineLegend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
     expect(lineLegend.entries[0].shape).toBe('line');

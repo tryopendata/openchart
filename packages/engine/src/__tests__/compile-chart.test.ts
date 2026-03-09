@@ -509,4 +509,82 @@ describe('compileGraph', () => {
     // Rotated labels should shrink the chart area height
     expect(layoutRotated.area.height).toBeLessThan(layoutNormal.area.height);
   });
+
+  it('hides legend when legend.show is false', () => {
+    const spec = {
+      ...lineSpec,
+      legend: { show: false },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.legend.entries).toHaveLength(0);
+    expect(layout.legend.bounds.width).toBe(0);
+    expect(layout.legend.bounds.height).toBe(0);
+  });
+
+  it('applies compact breakpoint overrides to chrome', () => {
+    const spec = {
+      ...lineSpec,
+      chrome: {
+        title: 'Full width title with extra context',
+        subtitle: 'Long subtitle with methodology details',
+      },
+      overrides: {
+        compact: {
+          chrome: {
+            title: 'Short title',
+            subtitle: 'Short sub',
+          },
+        },
+      },
+    };
+
+    // At compact width (< 400), overrides should apply
+    const compactLayout = compileChart(spec, { width: 350, height: 400 });
+    expect(compactLayout.chrome.title!.text).toBe('Short title');
+    expect(compactLayout.chrome.subtitle!.text).toBe('Short sub');
+
+    // At full width, base spec should apply
+    const fullLayout = compileChart(spec, { width: 800, height: 400 });
+    expect(fullLayout.chrome.title!.text).toBe('Full width title with extra context');
+    expect(fullLayout.chrome.subtitle!.text).toBe('Long subtitle with methodology details');
+  });
+
+  it('applies medium breakpoint overrides', () => {
+    const spec = {
+      ...lineSpec,
+      chrome: { title: 'Full title' },
+      overrides: {
+        medium: {
+          chrome: { title: 'Medium title' },
+        },
+      },
+    };
+
+    // At medium width (400-700), override should apply
+    const mediumLayout = compileChart(spec, { width: 500, height: 400 });
+    expect(mediumLayout.chrome.title!.text).toBe('Medium title');
+
+    // At full width, base spec should apply
+    const fullLayout = compileChart(spec, { width: 800, height: 400 });
+    expect(fullLayout.chrome.title!.text).toBe('Full title');
+  });
+
+  it('applies breakpoint override for legend show', () => {
+    const spec = {
+      ...lineSpec,
+      overrides: {
+        compact: {
+          legend: { show: false },
+        },
+      },
+    };
+
+    // At compact, legend hidden
+    const compactLayout = compileChart(spec, { width: 350, height: 400 });
+    expect(compactLayout.legend.entries).toHaveLength(0);
+
+    // At full, legend shown
+    const fullLayout = compileChart(spec, { width: 800, height: 400 });
+    expect(fullLayout.legend.entries.length).toBeGreaterThan(0);
+  });
 });

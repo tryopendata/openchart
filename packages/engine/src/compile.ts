@@ -159,7 +159,58 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     throw new Error('compileChart received a graph spec. Use compileGraph instead.');
   }
 
-  const chartSpec = normalized as NormalizedChartSpec;
+  let chartSpec = normalized as NormalizedChartSpec;
+
+  // Responsive strategy
+  const breakpoint = getBreakpoint(options.width);
+  const strategy = getLayoutStrategy(breakpoint);
+
+  // Apply breakpoint-conditional overrides from the original spec
+  const rawSpec = spec as Record<string, unknown>;
+  const overrides = rawSpec.overrides as
+    | Partial<
+        Record<
+          string,
+          { chrome?: unknown; labels?: unknown; legend?: unknown; annotations?: unknown }
+        >
+      >
+    | undefined;
+  if (overrides?.[breakpoint]) {
+    const bp = overrides[breakpoint]!;
+    if (bp.chrome) {
+      chartSpec = {
+        ...chartSpec,
+        chrome: {
+          ...chartSpec.chrome,
+          ...(bp.chrome as NormalizedChartSpec['chrome']),
+        },
+      };
+    }
+    if (bp.labels) {
+      chartSpec = {
+        ...chartSpec,
+        labels: {
+          ...chartSpec.labels,
+          ...(bp.labels as NormalizedChartSpec['labels']),
+        },
+      };
+    }
+    if (bp.legend) {
+      chartSpec = {
+        ...chartSpec,
+        legend: {
+          ...chartSpec.legend,
+          ...(bp.legend as NormalizedChartSpec['legend']),
+        },
+      };
+    }
+    if (bp.annotations) {
+      chartSpec = {
+        ...chartSpec,
+        annotations: bp.annotations as NormalizedChartSpec['annotations'],
+      };
+    }
+  }
 
   // Resolve theme: merge spec-level theme with options-level overrides
   const mergedThemeConfig = options.theme
@@ -169,10 +220,6 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   if (options.darkMode) {
     theme = adaptTheme(theme);
   }
-
-  // Responsive strategy
-  const breakpoint = getBreakpoint(options.width);
-  const strategy = getLayoutStrategy(breakpoint);
 
   // Compute legend first (needs to reserve space)
   const preliminaryArea: Rect = {

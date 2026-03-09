@@ -354,6 +354,46 @@ describe('chart chrome rendering', () => {
     expect(fontSize).toBeGreaterThan(0);
   });
 
+  it('wraps long title text into tspan elements at narrow widths', () => {
+    const longTitleSpec: ChartSpec = {
+      type: 'bar',
+      data: [
+        { name: 'A', value: 10 },
+        { name: 'B', value: 20 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'name', type: 'nominal' },
+      },
+      chrome: {
+        title: 'This is a very long chart title that should definitely wrap at narrow widths',
+      },
+    };
+    // Render at a very narrow width to force wrapping
+    const { svg } = renderSpec(longTitleSpec, { width: 250, height: 300 });
+    const title = svg.querySelector('.viz-title');
+    expect(title).not.toBeNull();
+    const tspans = title!.querySelectorAll('tspan');
+    expect(tspans.length).toBeGreaterThan(1);
+    // Full text should be preserved across tspans
+    const fullText = Array.from(tspans)
+      .map((t) => t.textContent)
+      .join(' ');
+    expect(fullText).toBe(
+      'This is a very long chart title that should definitely wrap at narrow widths',
+    );
+  });
+
+  it('does not wrap short title text', () => {
+    const { svg } = renderSpec(lineSpec);
+    const title = svg.querySelector('.viz-title');
+    expect(title).not.toBeNull();
+    // Short title should have no tspan children, just direct textContent
+    const tspans = title!.querySelectorAll('tspan');
+    expect(tspans.length).toBe(0);
+    expect(title!.textContent).toBe('GDP Growth');
+  });
+
   it('chart with no chrome specified renders no chrome text elements', () => {
     const noChrome: ChartSpec = {
       type: 'bar',

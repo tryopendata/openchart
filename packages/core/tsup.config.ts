@@ -1,6 +1,7 @@
 import { defineConfig } from 'tsup';
 import { copyFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
+import { bunSymlinkResolver } from '../../build/bun-symlink-resolver';
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -8,9 +9,9 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ['d3-color', 'd3-format', 'd3-time-format'],
+  noExternal: [/^d3-/, 'internmap'],
+  esbuildPlugins: [bunSymlinkResolver()],
   onSuccess: async () => {
-    // Copy viz.css to dist/styles.css
     const src = resolve('src/styles/viz.css');
     const dest = resolve('dist/styles.css');
     mkdirSync(dirname(dest), { recursive: true });

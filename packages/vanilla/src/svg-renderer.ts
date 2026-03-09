@@ -91,6 +91,50 @@ function applyTextStyle(el: SVGElement, style: TextStyle): void {
 // Chrome rendering
 // ---------------------------------------------------------------------------
 
+/**
+ * Break text into lines that fit within maxWidth using word wrapping.
+ * Uses a character-width heuristic (same as text-measure.ts).
+ */
+function wrapText(text: string, fontSize: number, fontWeight: number, maxWidth: number): string[] {
+  if (maxWidth <= 0) return [text];
+
+  // Heuristic character width matching text-measure.ts
+  const AVG_CHAR_WIDTH = 0.55;
+  const WEIGHT_FACTORS: Record<number, number> = {
+    100: 0.9,
+    200: 0.92,
+    300: 0.95,
+    400: 1.0,
+    500: 1.02,
+    600: 1.05,
+    700: 1.08,
+    800: 1.1,
+    900: 1.12,
+  };
+  const weightFactor = WEIGHT_FACTORS[fontWeight] ?? 1.0;
+  const charWidth = fontSize * AVG_CHAR_WIDTH * weightFactor;
+  const maxChars = Math.floor(maxWidth / charWidth);
+
+  if (text.length <= maxChars) return [text];
+
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+
+  return lines;
+}
+
 function renderChromeElement(
   parent: SVGElement,
   element: ResolvedChromeElement,
@@ -102,7 +146,26 @@ function renderChromeElement(
   applyTextStyle(text, element.style);
   text.setAttribute('class', className);
   text.setAttribute('data-chrome-key', chromeKey);
-  text.textContent = element.text;
+
+  const lines = wrapText(
+    element.text,
+    element.style.fontSize,
+    element.style.fontWeight,
+    element.maxWidth,
+  );
+
+  if (lines.length === 1) {
+    text.textContent = element.text;
+  } else {
+    const lineHeight = element.style.fontSize * (element.style.lineHeight ?? 1.3);
+    for (let i = 0; i < lines.length; i++) {
+      const tspan = createSVGElement('tspan');
+      setAttrs(tspan, { x: element.x, dy: i === 0 ? 0 : lineHeight });
+      tspan.textContent = lines[i];
+      text.appendChild(tspan);
+    }
+  }
+
   parent.appendChild(text);
 }
 

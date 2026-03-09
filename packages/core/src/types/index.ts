@@ -79,6 +79,7 @@ export type {
   AnnotationOffset,
   AxisConfig,
   ChartSpec,
+  ChartSpecOverride,
   ChartSpecWithoutData,
   ChartType,
   Chrome,

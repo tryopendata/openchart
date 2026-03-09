@@ -8,8 +8,8 @@
  * with editorial extensions for chrome, annotations, responsive, and dark mode.
  */
 
-// Re-import for use in LegendConfig (avoids circular by importing from sibling)
-import type { LegendPosition } from '../responsive/breakpoints';
+// Re-import for use in LegendConfig and overrides (avoids circular by importing from sibling)
+import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
 import type { ColumnConfig } from './table';
 
 // ---------------------------------------------------------------------------
@@ -395,6 +395,8 @@ export interface LegendConfig {
   position?: LegendPosition;
   /** Pixel offset for fine-tuning legend position. */
   offset?: AnnotationOffset;
+  /** Whether to show the legend. Defaults to true. Set to false to hide. */
+  show?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -414,6 +416,24 @@ export interface SeriesStyle {
   strokeWidth?: number;
   /** Opacity override (0-1). */
   opacity?: number;
+}
+
+/**
+ * Breakpoint-conditional overrides for chart specs.
+ *
+ * Allows specifying different chrome, labels, legend, or annotations
+ * per breakpoint. Merged shallowly into the base spec at compile time
+ * when the container matches the breakpoint.
+ */
+export interface ChartSpecOverride {
+  /** Override editorial chrome at this breakpoint. */
+  chrome?: Chrome;
+  /** Override label configuration at this breakpoint. */
+  labels?: LabelConfig;
+  /** Override legend configuration at this breakpoint. */
+  legend?: LegendConfig;
+  /** Override annotations at this breakpoint. */
+  annotations?: Annotation[];
 }
 
 /**
@@ -448,6 +468,12 @@ export interface ChartSpec {
   hiddenSeries?: string[];
   /** Per-series visual overrides, keyed by series name (the color field value). */
   seriesStyles?: Record<string, SeriesStyle>;
+  /**
+   * Breakpoint-conditional overrides. Keys are breakpoint names.
+   * At compile time, if the container matches a breakpoint, its overrides
+   * are shallow-merged into the spec before layout computation.
+   */
+  overrides?: Partial<Record<Breakpoint, ChartSpecOverride>>;
 }
 
 /**

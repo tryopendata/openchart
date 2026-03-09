@@ -87,6 +87,25 @@ export function computeLegend(
   theme: ResolvedTheme,
   chartArea: Rect,
 ): LegendLayout {
+  // Legend explicitly hidden via show: false
+  if (spec.legend?.show === false) {
+    return {
+      position: 'top',
+      entries: [],
+      bounds: { x: 0, y: 0, width: 0, height: 0 },
+      labelStyle: {
+        fontFamily: theme.fonts.family,
+        fontSize: theme.fonts.sizes.small,
+        fontWeight: theme.fonts.weights.normal,
+        fill: theme.colors.text,
+        lineHeight: 1.3,
+      },
+      swatchSize: SWATCH_SIZE,
+      swatchGap: SWATCH_GAP,
+      entryGap: ENTRY_GAP,
+    };
+  }
+
   const entries = extractColorEntries(spec, theme);
 
   const labelStyle: TextStyle = {

@@ -46,6 +46,7 @@ Each type has a detailed reference with full spec, encoding rules, and examples.
 **Cross-cutting references:**
 - [Annotations](references/annotations.md) (spec syntax for text callouts, ranges, reference lines)
 - [Editing](references/editing.md) (onEdit callback, ElementEdit type, persisting drag positions for all elements)
+- [Responsive](references/responsive.md) (breakpoints, layout strategies, designing for mobile)
 - [Theme customization](references/theme.md) (colors, fonts, spacing config)
 - [Rendering & APIs](references/rendering.md) (React, Vue, Svelte, Vanilla JS, events, builders)
 
@@ -59,6 +60,7 @@ Each type has a detailed reference with full spec, encoding rules, and examples.
 | Type sizing, hierarchy | Typography | [references/typography.md](references/typography.md) |
 | Whether a chart is "done" | Design review | [references/design-review.md](references/design-review.md) |
 | Rendered output QA | Visual defect scanning | [references/visual-qa.md](references/visual-qa.md) |
+| Mobile / narrow containers | Responsive design | [references/responsive.md](references/responsive.md) |
 
 ## Shared Spec Structure
 
@@ -122,10 +124,11 @@ encoding: {
 ```typescript
 legend?: {
   position?: "top"|"right"|"bottom"|"bottom-right"|"inline",
+  show?: boolean,  // default: true. Set false to hide legend entirely.
 }
 ```
 
-Position is responsive by default (the engine picks based on container width). Set explicitly to override.
+Position is responsive by default (the engine picks based on container width). Set explicitly to override. Use `show: false` to hide the legend when it's redundant (e.g., bar charts where the y-axis already labels each category).
 
 ## Label Density (Charts Only)
 
@@ -188,6 +191,31 @@ seriesStyles?: Record<string, {
 ```
 
 Series names come from the `color` encoding field values. Only specified series get overrides; others render normally.
+
+## Breakpoint Overrides (Charts Only)
+
+Override chrome, labels, legend, or annotations per breakpoint. See [responsive reference](references/responsive.md) for full details.
+
+```typescript
+overrides?: {
+  compact?: { chrome?, labels?, legend?, annotations? },
+  medium?: { chrome?, labels?, legend?, annotations? },
+  full?: { chrome?, labels?, legend?, annotations? },
+}
+```
+
+**Example:** Shorter title and hidden legend at mobile:
+```json
+{
+  "chrome": { "title": "Inflation hit a 40-year high in June 2022" },
+  "overrides": {
+    "compact": {
+      "chrome": { "title": "Inflation hit a 40-year high" },
+      "legend": { "show": false }
+    }
+  }
+}
+```
 
 ## Spec Anti-Patterns
 
