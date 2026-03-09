@@ -352,6 +352,9 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
     if (mark.strokeDasharray) {
       path.setAttribute('stroke-dasharray', mark.strokeDasharray);
     }
+    if (mark.opacity != null) {
+      path.setAttribute('opacity', String(mark.opacity));
+    }
     g.appendChild(path);
   }
 
@@ -901,69 +904,33 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 // Brand rendering
 // ---------------------------------------------------------------------------
 
-const BRAND_FONT_SIZE = 20;
+const BRAND_FONT_SIZE = 11;
 const BRAND_MIN_WIDTH = 120;
 const BRAND_URL = 'https://tryopendata.ai';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
-/** Compute shared brand positioning from layout dimensions and theme. */
-function brandPosition(layout: ChartLayout) {
+/**
+ * Render the "OpenData" brand as a footer-row element, right-aligned on the
+ * same baseline as the first bottom chrome text (source/byline/footer).
+ * Uses the same font size as chrome source text so it blends in as a subtle
+ * footer item rather than occupying independent visual space.
+ */
+function renderBrand(parent: SVGElement, layout: ChartLayout): void {
+  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
+
   const { width } = layout.dimensions;
   const padding = layout.theme.spacing.padding;
   const rightEdge = width - padding;
+  const fill = layout.theme.colors.axis;
 
-  // Vertically align with the first bottom chrome element (source/byline/footer).
-  // This uses the same Y computation as renderChrome so the watermark sits on the
-  // same baseline row as the source attribution text.
+  // Vertically align with the first bottom chrome element.
   const { chrome } = layout;
   const xAxisExtent = computeXAxisExtent(layout);
   const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
   const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
-  // Chrome text uses dominant-baseline:hanging (Y = top of text) while the
-  // brand uses the default alphabetic baseline (Y = baseline). Shift Y down
-  // by the brand font size so the visual tops align.
   const chromeY = firstBottom
     ? bottomOffset + firstBottom.y
     : bottomOffset + layout.theme.spacing.chartToFooter;
-  const y = chromeY + BRAND_FONT_SIZE;
-
-  const dataWidth = estimateTextWidth('Data', BRAND_FONT_SIZE, 600);
-  // "Open" text-anchor:end sits at the same x where "Data" text-anchor:start begins
-  const dataX = rightEdge - dataWidth;
-  const openX = dataX;
-  return { openX, dataX, y, fill: layout.theme.colors.axis };
-}
-
-function renderBrandOpen(parent: SVGElement, layout: ChartLayout): void {
-  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
-  const { openX, y, fill } = brandPosition(layout);
-
-  const a = createSVGElement('a');
-  a.setAttribute('href', BRAND_URL);
-  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
-  a.setAttribute('target', '_blank');
-  a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'viz-axis-ref');
-
-  const text = createSVGElement('text');
-  setAttrs(text, {
-    x: openX,
-    y,
-    'font-family': layout.theme.fonts.family,
-    'font-size': BRAND_FONT_SIZE,
-    'font-weight': 500,
-    'text-anchor': 'end',
-    'fill-opacity': 0.55,
-  });
-  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-  text.textContent = 'Open';
-  a.appendChild(text);
-  parent.appendChild(a);
-}
-
-function renderBrandData(parent: SVGElement, layout: ChartLayout): void {
-  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
-  const { dataX, y, fill } = brandPosition(layout);
 
   const a = createSVGElement('a');
   a.setAttribute('href', BRAND_URL);
@@ -972,18 +939,30 @@ function renderBrandData(parent: SVGElement, layout: ChartLayout): void {
   a.setAttribute('rel', 'noopener');
   a.setAttribute('class', 'viz-chrome-ref');
 
+  // "Open" in normal weight, "Data" in semibold, rendered as a single
+  // right-aligned text element with two tspans.
   const text = createSVGElement('text');
   setAttrs(text, {
-    x: dataX,
-    y,
+    x: rightEdge,
+    y: chromeY,
     'font-family': layout.theme.fonts.family,
     'font-size': BRAND_FONT_SIZE,
-    'font-weight': 600,
-    'text-anchor': 'start',
+    'text-anchor': 'end',
+    'dominant-baseline': 'hanging',
     'fill-opacity': 0.55,
   });
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-  text.textContent = 'Data';
+
+  const openSpan = createSVGElement('tspan');
+  openSpan.setAttribute('font-weight', '500');
+  openSpan.textContent = 'Open';
+  text.appendChild(openSpan);
+
+  const dataSpan = createSVGElement('tspan');
+  dataSpan.setAttribute('font-weight', '600');
+  dataSpan.textContent = 'Data';
+  text.appendChild(dataSpan);
+
   a.appendChild(text);
   parent.appendChild(a);
 }
@@ -1053,12 +1032,11 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
   renderAnnotations(svg, layout);
   renderLegend(svg, layout.legend);
 
-  renderBrandOpen(svg, layout);
-
   // Chrome renders on top so titles are never obscured by chart elements
   renderChrome(svg, layout);
 
-  renderBrandData(svg, layout);
+  // Brand renders as a footer item, right-aligned on the source/footer row
+  renderBrand(svg, layout);
 
   container.appendChild(svg);
   return svg;

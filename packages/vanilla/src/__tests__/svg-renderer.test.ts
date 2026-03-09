@@ -613,44 +613,41 @@ describe('targeted mark snapshots', () => {
 // ---------------------------------------------------------------------------
 
 describe('brand watermark', () => {
-  it('renders "Open" and "Data" text elements', () => {
+  it('renders "OpenData" as a single text element with two tspans', () => {
     const { svg } = renderSpec(lineSpec);
-    const openLink = svg.querySelector('.viz-axis-ref');
-    const dataLink = svg.querySelector('.viz-chrome-ref');
-    expect(openLink).not.toBeNull();
-    expect(dataLink).not.toBeNull();
-    expect(openLink!.querySelector('text')!.textContent).toBe('Open');
-    expect(dataLink!.querySelector('text')!.textContent).toBe('Data');
+    const brandLink = svg.querySelector('.viz-chrome-ref');
+    expect(brandLink).not.toBeNull();
+    const text = brandLink!.querySelector('text')!;
+    expect(text.textContent).toBe('OpenData');
+    const tspans = text.querySelectorAll('tspan');
+    expect(tspans.length).toBe(2);
+    expect(tspans[0].textContent).toBe('Open');
+    expect(tspans[1].textContent).toBe('Data');
   });
 
-  it('both elements link to tryopendata.ai', () => {
+  it('links to tryopendata.ai', () => {
     const { svg } = renderSpec(lineSpec);
     const links = svg.querySelectorAll('a[href="https://tryopendata.ai"]');
-    expect(links.length).toBe(2);
+    expect(links.length).toBe(1);
   });
 
-  it('elements are direct children of SVG root (no shared group)', () => {
+  it('is a direct child of SVG root', () => {
     const { svg } = renderSpec(lineSpec);
-    const openLink = svg.querySelector('.viz-axis-ref');
-    const dataLink = svg.querySelector('.viz-chrome-ref');
-    expect(openLink!.parentElement).toBe(svg);
-    expect(dataLink!.parentElement).toBe(svg);
+    const brandLink = svg.querySelector('.viz-chrome-ref');
+    expect(brandLink!.parentElement).toBe(svg);
   });
 
-  it('elements are interleaved with other chart layers', () => {
+  it('renders after chrome (in the footer row)', () => {
     const { svg } = renderSpec(lineSpec);
     const children = Array.from(svg.children);
-    const openIdx = children.findIndex((el) => el.classList.contains('viz-axis-ref'));
     const chromeIdx = children.findIndex((el) => el.classList.contains('viz-chrome'));
-    const dataIdx = children.findIndex((el) => el.classList.contains('viz-chrome-ref'));
-    // "Open" should come before chrome, "Data" after chrome
-    expect(openIdx).toBeLessThan(chromeIdx);
-    expect(dataIdx).toBeGreaterThan(chromeIdx);
+    const brandIdx = children.findIndex((el) => el.classList.contains('viz-chrome-ref'));
+    expect(brandIdx).toBeGreaterThan(chromeIdx);
   });
 
   it('skips watermark on very small charts', () => {
     const { svg } = renderSpec(lineSpec, { width: 100, height: 80 });
-    const openLink = svg.querySelector('.viz-axis-ref');
-    expect(openLink).toBeNull();
+    const brandLink = svg.querySelector('.viz-chrome-ref');
+    expect(brandLink).toBeNull();
   });
 });
