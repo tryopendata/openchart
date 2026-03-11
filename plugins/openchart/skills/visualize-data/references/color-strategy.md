@@ -28,6 +28,14 @@ Use categorical palettes only when the story genuinely requires distinguishing m
 
 The first data row gets `#0d9488` (teal), the rest get gray. Sort data so the protagonist is first (or last, depending on chart type and visual weight).
 
+## Double-Encoding: Color That Reinforces Position
+
+When a quantitative axis already tells the story (e.g., poverty rate on x-axis), **use color to reinforce the same variable**. Bucket the continuous dimension into 3-4 ordinal tiers and map them to a cool-to-warm gradient. This makes the pattern legible at a glance even before the reader processes axis values.
+
+This is not the same as categorical color (where hues are arbitrary). Here, the color progression has semantic meaning: blue = low, red = high. The reader sees the gradient and understands the narrative without reading a single number.
+
+When to use: scatter plots, bubble charts, or any chart where a quantitative dimension is the primary story. Don't leave dots monochrome when the data has a strong gradient to show.
+
 ## How Many Colors
 
 | Count | Guidance |

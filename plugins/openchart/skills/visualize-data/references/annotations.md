@@ -44,6 +44,25 @@ Callout at a specific data point.
 - `"curve"` connector draws a curved arrow with arrowhead
 - `anchor: "auto"` lets the engine pick the best position
 
+## Placement on Dense or Bubble Charts
+
+Scatter/bubble charts create unique annotation challenges because circles are large and clustered. Small offsets (10-20px) almost always land on top of nearby dots. Follow these rules:
+
+**Use large offsets.** On bubble charts, `offset: { dy: -50 }` or more is normal. Think of the annotation as living in the empty quadrant of the chart, not next to its data point. The connector line handles the visual link back.
+
+**Anchor at the data point, offset into empty space.** Always set `x`/`y` to the actual data coordinates so the connector points to the right dot. Then use `offset` to push the text into a clear zone. Don't move the `x`/`y` anchor to approximate the label position (this disconnects the connector from the data).
+
+**Scan for empty quadrants.** Before placing annotations, identify the chart's empty zones. Scatter plots typically have open corners (upper-left for low-x/high-y, lower-right for high-x/low-y). Place labels there with connectors back to their data points.
+
+**Budget for bubble radius.** A dot with 13,000 enrollment and a dot with 400 enrollment have very different radii. The label for the larger dot needs to clear a bigger circle. When in doubt, overshoot the offset and let the connector do the work.
+
+| Mistake | Fix |
+| --- | --- |
+| Small offset lands on adjacent dots | Use 40-100px offsets into empty chart regions |
+| Annotation near chart edge gets clipped | Pull label inward with negative dx or dy |
+| Anchor set to approximate position, not data point | Set x/y to actual data coords; use offset for visual position |
+| Label in lower-left corner colliding with axes | Move to upper-left or use larger dy to clear axis labels |
+
 ## Range Annotation
 
 Highlighted region of the chart.

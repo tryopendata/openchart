@@ -1,7 +1,7 @@
 {
   "name": "openchart",
   "description": "Generates @opendata-ai chart, table, and graph specs from data, and guides editorial design decisions",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": {
     "name": "Riley Hilliard"
   },

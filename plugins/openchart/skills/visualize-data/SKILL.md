@@ -157,9 +157,13 @@ Both `axis.format` and `labels.format` accept [d3-format](https://d3js.org/d3-fo
 | `".1f"` | 12.5 | `12.5` | One decimal, no units |
 | `".1f%"` | 12.5 | `12.5%` | Percentage (data already in %, not 0-1) |
 | `".0f%"` | 12 | `12%` | Whole-number percentage |
-| `"$,.0f"` | 1234 | `$1,234` | Currency |
+| `"$,.0f"` | 1234 | `$1,234` | Currency with commas |
 | `"$,.2f"` | 3.75 | `$3.75` | Currency with cents |
 | `".1%"` | 0.125 | `12.5%` | d3 native percent (multiplies by 100) |
+| `"~s"` | 10000 | `10k` | SI suffix (k, M, G) for large numbers |
+| `"~s"` | 1500000 | `1.5M` | SI suffix, auto-scales |
+| `"$~s"` | 78000 | `$78k` | Currency with SI suffix |
+| `",.0f"` | 132979 | `132,979` | Comma-separated, no decimals |
 
 **When data is already in percentage form** (e.g., `12.5` meaning 12.5%), use `".1f%"` not `".1%"`. The d3 `%` type multiplies by 100, so `0.125` becomes `12.5%` but `12.5` becomes `1,250.0%`.
 
@@ -216,6 +220,20 @@ overrides?: {
   }
 }
 ```
+
+## First Draft Checklist
+
+Run these checks before outputting a spec. These catch the issues that most often require iteration after rendering.
+
+| Check | What to verify |
+| --- | --- |
+| **Color encodes the story** | If one variable drives the narrative (poverty, time, severity), color should reinforce it. Don't leave a scatter plot monochrome when a gradient would make the pattern obvious. |
+| **Y-domain fits the data** | Domain ceiling should be ~5-10% above the highest data value. `[0, 55]` for data peaking at 48.8 wastes space. Use `[0, 52]`. |
+| **Annotations clear of data** | On bubble/scatter charts, use 40-100px offsets. Small offsets (10-20px) land on adjacent dots. Anchor at the data point, offset into empty chart quadrants, and use connectors. |
+| **Subtitle fits one line** | If the subtitle wraps, the orphaned fragment looks broken. Abbreviate or restructure. Use shorthand keys in the subtitle (e.g., `"LI = low-income"`) rather than spelling everything out. |
+| **Endpoint labels won't eat the chart** | `labels: { density: "endpoints" }` with series names > 15 chars reserves a huge right margin. Use `"none"` + `legend: { position: "top" }` instead, or abbreviate series names. |
+| **Axis ticks show units** | Percentages should show `10%` not `10`. Use `format: ".0f%"` when data is already in percent form (e.g., 10 meaning 10%). Use `format: ".0%"` only when data is in decimal form (0.10 meaning 10%). Large numbers should use SI suffixes: `format: "~s"` turns 10000 into `10k` and 1000000 into `1M`. For currency: `format: "$~s"` gives `$10k`, `$1M`. See the format table below. |
+| **Consistent color palette across related charts** | If multiple charts in the same article cover the same dimension (e.g., poverty), use the same color mapping (blue = low, red = high) so the reader builds a mental model. |
 
 ## Spec Anti-Patterns
 

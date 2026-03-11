@@ -39,6 +39,12 @@ Use `color` to differentiate 2-5 series. For 6+ series, filter to the top 5 or u
 
 **Tip:** Use `labels: { density: "endpoints" }` for line charts to show only the first and last value per series.
 
+**Caution with `endpoints` and long series names:** Endpoint labels include the series name from the `color` field. Long names like `"Waukegan (68% low-income)"` reserve a large right margin, creating dead space. If series names are more than ~15 characters, either abbreviate them or use `labels: { density: "none" }` with `legend: { position: "top" }` instead.
+
+## Y-Domain Sizing
+
+Set the y-domain ceiling to roughly 5-10% above the highest data value. A chart with data peaking at 48.8 should use `domain: [0, 52]`, not `[0, 55]`. Too much headroom wastes chart space and compresses the visual differences between series. Leave just enough room for any annotation text that sits above the peak.
+
 **Per-series styling:** Use `seriesStyles` to differentiate reference series from primary data (e.g., dashed lines for benchmarks, reduced opacity for context series). See the main SKILL.md for the full `seriesStyles` spec.
 
 ## Builder

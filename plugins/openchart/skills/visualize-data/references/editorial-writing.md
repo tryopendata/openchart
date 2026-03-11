@@ -28,11 +28,13 @@ Carry what the title can't: units, time range, geographic scope, methodology not
 - Format: sentence case, not title case. "Percentage of total workforce, 2015-2024"
 - Keep it under one line when possible
 - If the subtitle needs two lines, the title is probably carrying too little context
+- **Avoid orphaned words.** If the subtitle wraps, make sure the last line has at least 3-4 words, not just "2018-2025" stranded alone. Restructure the sentence or use abbreviations (e.g., "LI" for "low-income") to keep the subtitle on one line. A short abbreviation key in the subtitle (e.g., `"LI = low-income students"`) is better than a two-line subtitle with a dangling fragment.
 
 Examples:
 - "Indexed to 100 at January 2020"
 - "Share of total energy generation, gigawatt-hours"
 - "Survey of 2,400 respondents, margin of error +/- 3%"
+- "Chronic absence rate by district, 2018-2025 (LI = low-income students)"
 
 ## Source Lines
 

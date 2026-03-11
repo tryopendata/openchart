@@ -40,6 +40,16 @@ Correlation between two quantitative variables. Optional size and color for 3rd/
 - Use `labels: { density: "none" }` for dense scatter plots
 - Use `scale: { zero: false }` on axes to zoom into the data range when zero is irrelevant
 
+## Color Should Reinforce the Story
+
+When the x-axis already encodes a meaningful variable (e.g., poverty rate), **use color to double-encode the same narrative**. Don't leave all dots the same color. Bucket the data into 3-4 tiers and map them to an ordinal color scale that progresses from cool (low) to warm (high). This makes the pattern legible at a glance, even before the reader processes axis positions.
+
+Example: a scatter of poverty vs. chronic absence should color-code dots by poverty tier (e.g., `<15%` = blue, `15-40%` = pink, `40-60%` = green, `60%+` = orange/red). The color gradient reinforces the x-axis position and makes the correlation visible as a color gradient, not just a spatial pattern.
+
+## Annotation Placement
+
+Bubble charts need especially large annotation offsets because circles are big and often clustered. See the [annotations reference](annotations.md) for specific guidance on offset sizing and connector usage on dense charts.
+
 ## Builder
 
 ```typescript
