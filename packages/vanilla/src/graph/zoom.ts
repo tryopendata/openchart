@@ -88,11 +88,12 @@ export class ZoomTransform {
     const availH = canvasH - padding * 2;
     const k = Math.min(availW / graphW, availH / graphH);
 
-    // Center the graph in the canvas
+    // Center horizontally, top-align vertically.
+    // Centering both axes leaves dead space below compact clusters
+    // on mobile/portrait containers.
     const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
     const tx = canvasW / 2 - cx * k;
-    const ty = canvasH / 2 - cy * k;
+    const ty = padding - minY * k;
 
     return new ZoomTransform(tx, ty, k);
   }
