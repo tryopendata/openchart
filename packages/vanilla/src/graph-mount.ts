@@ -259,11 +259,26 @@ export function createGraph(
 
     // Wrapper
     wrapper = document.createElement('div');
-    wrapper.className = 'viz-graph-wrapper';
+    wrapper.className = isDark ? 'viz-graph-wrapper viz-dark' : 'viz-graph-wrapper';
     if (isDark) {
       container.classList.add('viz-dark');
     } else {
       container.classList.remove('viz-dark');
+    }
+
+    // Apply theme colors as CSS custom properties so chrome HTML picks them up.
+    // Without this, consumer-supplied theme.colors.text only affects canvas-drawn
+    // labels but not the HTML title/subtitle which read from --viz-text.
+    const resolvedTheme = compilation.theme;
+    if (resolvedTheme) {
+      const s = wrapper.style;
+      if (resolvedTheme.colors.background && resolvedTheme.colors.background !== 'transparent') {
+        s.setProperty('--viz-bg', resolvedTheme.colors.background);
+      }
+      s.setProperty('--viz-text', resolvedTheme.colors.text);
+      s.setProperty('--viz-text-secondary', resolvedTheme.colors.axis ?? resolvedTheme.colors.text);
+      s.setProperty('--viz-font-family', resolvedTheme.fonts.family);
+      s.fontFamily = resolvedTheme.fonts.family;
     }
 
     // Chrome (title, subtitle)
