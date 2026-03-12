@@ -742,11 +742,13 @@ th[aria-sort="descending"] .viz-table-sort-btn::before {
 }
 
 /* Dark mode graph overrides (darker bg for canvas-based rendering) */
-.viz-dark .viz-graph-wrapper {
+.viz-dark .viz-graph-wrapper,
+.viz-graph-wrapper.viz-dark {
   --viz-bg: #0d1117;
 }
 
-.viz-dark .viz-graph-legend {
+.viz-dark .viz-graph-legend,
+.viz-dark.viz-graph-wrapper .viz-graph-legend {
   background: rgba(13, 17, 23, 0.85);
   border-color: rgba(255, 255, 255, 0.1);
 }

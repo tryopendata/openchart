@@ -272,9 +272,7 @@ export function createGraph(
     const resolvedTheme = compilation.theme;
     if (resolvedTheme) {
       const s = wrapper.style;
-      if (resolvedTheme.colors.background && resolvedTheme.colors.background !== 'transparent') {
-        s.setProperty('--viz-bg', resolvedTheme.colors.background);
-      }
+      s.setProperty('--viz-bg', resolvedTheme.colors.background);
       s.setProperty('--viz-text', resolvedTheme.colors.text);
       s.setProperty('--viz-text-secondary', resolvedTheme.colors.axis ?? resolvedTheme.colors.text);
       s.setProperty('--viz-font-family', resolvedTheme.fonts.family);
