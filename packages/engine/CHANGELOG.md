@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.10.0](https://github.com/tryopendata/openchart/compare/engine-v2.9.1...engine-v2.10.0) (2026-03-12)
+
+
+### Features
+
+* **responsive:** height-aware layout, chrome compression, and legend overflow ([41362f5](https://github.com/tryopendata/openchart/commit/41362f5dc08077a9e2661415e370c58972be089b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.10.0
+
 ## [2.9.1](https://github.com/tryopendata/openchart/compare/engine-v2.9.0...engine-v2.9.1) (2026-03-12)
 
 

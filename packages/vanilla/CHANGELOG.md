@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.10.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.9.1...vanilla-v2.10.0) (2026-03-12)
+
+
+### Features
+
+* **responsive:** height-aware layout, chrome compression, and legend overflow ([41362f5](https://github.com/tryopendata/openchart/commit/41362f5dc08077a9e2661415e370c58972be089b))
+
+
+### Bug Fixes
+
+* **graph:** use fit-content to collapse container after canvas shrink ([1d477fd](https://github.com/tryopendata/openchart/commit/1d477fd35c30410e090494be79e37b616425ebda))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.10.0
+    * @opendata-ai/openchart-engine bumped to 2.10.0
+
 ## [2.9.1](https://github.com/tryopendata/openchart/compare/vanilla-v2.9.0...vanilla-v2.9.1) (2026-03-12)
 
 
