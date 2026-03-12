@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.9.1](https://github.com/tryopendata/openchart/compare/vanilla-v2.9.0...vanilla-v2.9.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* **graph:** top-align fitBounds to eliminate dead space on mobile ([d879597](https://github.com/tryopendata/openchart/commit/d879597d5659811d7347d0926edf8b4ff75cba3a))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.9.1
+    * @opendata-ai/openchart-engine bumped to 2.9.1
+
 ## [2.9.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.8.1...vanilla-v2.9.0) (2026-03-12)
 
 
