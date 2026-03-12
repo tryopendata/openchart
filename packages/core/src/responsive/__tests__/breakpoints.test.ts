@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getBreakpoint, getLayoutStrategy } from '../breakpoints';
+import { getBreakpoint, getHeightClass, getLayoutStrategy } from '../breakpoints';
 
 describe('getBreakpoint', () => {
   it('returns compact for widths below 400', () => {
@@ -54,5 +54,93 @@ describe('getLayoutStrategy', () => {
     const full = getLayoutStrategy(getBreakpoint(800));
     expect(compact.legendPosition).not.toBe(full.legendPosition);
     expect(compact.labelMode).not.toBe(full.labelMode);
+  });
+
+  it('includes chromeMode and legendMaxHeight at normal height', () => {
+    const strategy = getLayoutStrategy('full');
+    expect(strategy.chromeMode).toBe('full');
+    expect(strategy.legendMaxHeight).toBe(-1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Height class detection
+// ---------------------------------------------------------------------------
+
+describe('getHeightClass', () => {
+  it('returns cramped for heights below 200', () => {
+    expect(getHeightClass(100)).toBe('cramped');
+    expect(getHeightClass(199)).toBe('cramped');
+  });
+
+  it('returns short for heights 200-350', () => {
+    expect(getHeightClass(200)).toBe('short');
+    expect(getHeightClass(280)).toBe('short');
+    expect(getHeightClass(350)).toBe('short');
+  });
+
+  it('returns normal for heights above 350', () => {
+    expect(getHeightClass(351)).toBe('normal');
+    expect(getHeightClass(800)).toBe('normal');
+  });
+
+  it('handles edge cases', () => {
+    expect(getHeightClass(0)).toBe('cramped');
+    expect(getHeightClass(-10)).toBe('cramped');
+    expect(getHeightClass(5000)).toBe('normal');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Height-aware layout strategy
+// ---------------------------------------------------------------------------
+
+describe('getLayoutStrategy with height class', () => {
+  it('normal height does not modify the width strategy', () => {
+    const withoutHeight = getLayoutStrategy('full');
+    const withNormal = getLayoutStrategy('full', 'normal');
+    expect(withoutHeight).toEqual(withNormal);
+  });
+
+  it('cramped height hides chrome and labels', () => {
+    const strategy = getLayoutStrategy('full', 'cramped');
+    expect(strategy.chromeMode).toBe('hidden');
+    expect(strategy.legendMaxHeight).toBe(0);
+    expect(strategy.labelMode).toBe('none');
+    expect(strategy.annotationPosition).toBe('tooltip-only');
+  });
+
+  it('cramped overrides even compact width strategy', () => {
+    const strategy = getLayoutStrategy('compact', 'cramped');
+    expect(strategy.chromeMode).toBe('hidden');
+    expect(strategy.legendMaxHeight).toBe(0);
+    expect(strategy.labelMode).toBe('none');
+  });
+
+  it('short height compresses chrome and caps legend', () => {
+    const strategy = getLayoutStrategy('full', 'short');
+    expect(strategy.chromeMode).toBe('compact');
+    expect(strategy.legendMaxHeight).toBe(0.15);
+  });
+
+  it('short height preserves width-based label and legend settings', () => {
+    const strategy = getLayoutStrategy('full', 'short');
+    // Width strategy for 'full' sets these; short only touches chromeMode and legendMaxHeight
+    expect(strategy.labelMode).toBe('all');
+    expect(strategy.legendPosition).toBe('right');
+    expect(strategy.axisLabelDensity).toBe('full');
+  });
+
+  it('short height preserves compact width label settings', () => {
+    const strategy = getLayoutStrategy('compact', 'short');
+    expect(strategy.labelMode).toBe('none');
+    expect(strategy.legendPosition).toBe('top');
+    expect(strategy.chromeMode).toBe('compact');
+  });
+
+  it('defaults heightClass to normal when omitted', () => {
+    const strategy = getLayoutStrategy('medium');
+    expect(strategy.chromeMode).toBe('full');
+    expect(strategy.legendMaxHeight).toBe(-1);
   });
 });

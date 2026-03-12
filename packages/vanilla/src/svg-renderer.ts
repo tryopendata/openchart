@@ -873,15 +873,21 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     entryG.setAttribute('role', 'listitem');
     entryG.setAttribute('data-legend-index', String(i));
     entryG.setAttribute('data-legend-label', entry.label);
-    entryG.setAttribute(
-      'aria-label',
-      `${entry.label}: ${entry.active !== false ? 'visible' : 'hidden'}`,
-    );
-    entryG.setAttribute('style', 'cursor: pointer');
+    if (entry.overflow) {
+      entryG.setAttribute('data-legend-overflow', 'true');
+      entryG.setAttribute('aria-label', entry.label);
+      entryG.setAttribute('opacity', '0.5');
+    } else {
+      entryG.setAttribute(
+        'aria-label',
+        `${entry.label}: ${entry.active !== false ? 'visible' : 'hidden'}`,
+      );
+      entryG.setAttribute('style', 'cursor: pointer');
 
-    // Apply dimming for inactive entries
-    if (entry.active === false) {
-      entryG.setAttribute('opacity', '0.3');
+      // Apply dimming for inactive entries
+      if (entry.active === false) {
+        entryG.setAttribute('opacity', '0.3');
+      }
     }
 
     // Swatch

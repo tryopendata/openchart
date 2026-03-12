@@ -28,6 +28,7 @@ import {
   generateAltText,
   generateDataTable,
   getBreakpoint,
+  getHeightClass,
   getLayoutStrategy,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
@@ -163,7 +164,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   // Responsive strategy
   const breakpoint = getBreakpoint(options.width);
-  const strategy = getLayoutStrategy(breakpoint);
+  const heightClass = getHeightClass(options.height);
+  const strategy = getLayoutStrategy(breakpoint, heightClass);
 
   // Apply breakpoint-conditional overrides from the original spec
   const rawSpec = spec as Record<string, unknown>;
@@ -230,8 +232,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   };
   const legendLayout = computeLegend(chartSpec, strategy, theme, preliminaryArea);
 
-  // Compute dimensions (accounts for chrome + legend)
-  const dims = computeDimensions(chartSpec, options, legendLayout, theme);
+  // Compute dimensions (accounts for chrome + legend + responsive strategy)
+  const dims = computeDimensions(chartSpec, options, legendLayout, theme, strategy);
   const chartArea = dims.chartArea;
 
   // Recompute legend bounds relative to actual chart area.

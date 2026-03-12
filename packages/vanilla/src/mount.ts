@@ -1115,6 +1115,9 @@ function wireLegendInteraction(
   const hiddenSeries = new Set<string>();
 
   for (const entry of legendEntries) {
+    // Skip overflow indicator entries ("+N more")
+    if (entry.getAttribute('data-legend-overflow') === 'true') continue;
+
     const handleClick = () => {
       const label = entry.getAttribute('data-legend-label');
       if (!label) return;

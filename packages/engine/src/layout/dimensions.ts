@@ -5,11 +5,16 @@
  * LayoutDimensions with the total area, chrome layout, chart drawing area,
  * and margins. The chart area is what's left after subtracting chrome,
  * legend space, and axis margins.
+ *
+ * Padding and chrome scale down at smaller container sizes to maximize
+ * the usable chart area. When the chart area is still too small after
+ * scaling, chrome is progressively stripped as a fallback.
  */
 
 import type {
   CompileOptions,
   Encoding,
+  LayoutStrategy,
   LegendLayout,
   Margins,
   Rect,
@@ -53,6 +58,23 @@ function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/openchart
   };
 }
 
+/**
+ * Scale padding based on the smaller container dimension.
+ * At >= 500px, padding is unchanged. At <= 200px, padding is halved (min 4px).
+ * Linear interpolation between 200-500px.
+ */
+function scalePadding(basePadding: number, width: number, height: number): number {
+  const minDim = Math.min(width, height);
+  if (minDim >= 500) return basePadding;
+  if (minDim <= 200) return Math.max(Math.round(basePadding * 0.5), 4);
+  const t = (minDim - 200) / 300;
+  return Math.max(Math.round(basePadding * (0.5 + t * 0.5)), 4);
+}
+
+/** Minimum chart area dimensions before guardrails kick in. */
+const MIN_CHART_WIDTH = 60;
+const MIN_CHART_HEIGHT = 40;
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -64,6 +86,7 @@ function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/openchart
  * @param options - Compile options (width, height, theme, darkMode).
  * @param legendLayout - Pre-computed legend layout (used to reserve space).
  * @param theme - Already-resolved theme (resolved once in compileChart).
+ * @param strategy - Responsive layout strategy (controls chrome mode).
  * @returns LayoutDimensions with chart area rect.
  */
 export function computeDimensions(
@@ -71,14 +94,23 @@ export function computeDimensions(
   options: CompileOptions,
   legendLayout: LegendLayout,
   theme: ResolvedTheme,
+  strategy?: LayoutStrategy,
 ): LayoutDimensions {
   const { width, height } = options;
 
-  const padding = theme.spacing.padding;
+  const padding = scalePadding(theme.spacing.padding, width, height);
   const axisMargin = theme.spacing.axisMargin;
+  const chromeMode = strategy?.chromeMode ?? 'full';
 
-  // Compute chrome
-  const chrome = computeChrome(chromeToInput(spec.chrome), theme, width, options.measureText);
+  // Compute chrome with mode and scaled padding
+  const chrome = computeChrome(
+    chromeToInput(spec.chrome),
+    theme,
+    width,
+    options.measureText,
+    chromeMode,
+    padding,
+  );
 
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
@@ -216,12 +248,53 @@ export function computeDimensions(
   }
 
   // Chart area is what's left after margins
-  const chartArea: Rect = {
+  let chartArea: Rect = {
     x: margins.left,
     y: margins.top,
     width: Math.max(0, width - margins.left - margins.right),
     height: Math.max(0, height - margins.top - margins.bottom),
   };
+
+  // Guardrail: if chart area is too small, progressively strip chrome
+  if (
+    (chartArea.width < MIN_CHART_WIDTH || chartArea.height < MIN_CHART_HEIGHT) &&
+    chromeMode !== 'hidden'
+  ) {
+    // Try compact first, then hidden
+    const fallbackMode = chromeMode === 'full' ? 'compact' : 'hidden';
+    const fallbackChrome = computeChrome(
+      chromeToInput(spec.chrome),
+      theme,
+      width,
+      options.measureText,
+      fallbackMode as 'compact' | 'hidden',
+      padding,
+    );
+
+    // Recalculate top/bottom margins with stripped chrome
+    const newTop = padding + fallbackChrome.topHeight + axisMargin;
+    const topDelta = margins.top - newTop;
+    const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
+    const bottomDelta = margins.bottom - newBottom;
+
+    if (topDelta > 0 || bottomDelta > 0) {
+      margins.top =
+        newTop +
+        (legendLayout.entries.length > 0 && legendLayout.position === 'top'
+          ? legendLayout.bounds.height + 4
+          : 0);
+      margins.bottom = newBottom;
+
+      chartArea = {
+        x: margins.left,
+        y: margins.top,
+        width: Math.max(0, width - margins.left - margins.right),
+        height: Math.max(0, height - margins.top - margins.bottom),
+      };
+
+      return { total, chrome: fallbackChrome, chartArea, margins, theme };
+    }
+  }
 
   return { total, chrome, chartArea, margins, theme };
 }

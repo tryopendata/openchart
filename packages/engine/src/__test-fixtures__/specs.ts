@@ -24,6 +24,8 @@ export function makeFullStrategy(): LayoutStrategy {
     legendPosition: 'right',
     annotationPosition: 'inline',
     axisLabelDensity: 'full',
+    chromeMode: 'full',
+    legendMaxHeight: -1,
   };
 }
 
@@ -34,6 +36,8 @@ export function makeCompactStrategy(): LayoutStrategy {
     legendPosition: 'top',
     annotationPosition: 'tooltip-only',
     axisLabelDensity: 'minimal',
+    chromeMode: 'full',
+    legendMaxHeight: -1,
   };
 }
 

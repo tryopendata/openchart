@@ -32,6 +32,8 @@ const fullStrategy: LayoutStrategy = {
   legendPosition: 'right',
   annotationPosition: 'inline',
   axisLabelDensity: 'full',
+  chromeMode: 'full',
+  legendMaxHeight: -1,
 };
 
 const minimalStrategy: LayoutStrategy = {
@@ -39,6 +41,8 @@ const minimalStrategy: LayoutStrategy = {
   legendPosition: 'top',
   annotationPosition: 'tooltip-only',
   axisLabelDensity: 'minimal',
+  chromeMode: 'full',
+  legendMaxHeight: -1,
 };
 
 describe('computeAxes', () => {

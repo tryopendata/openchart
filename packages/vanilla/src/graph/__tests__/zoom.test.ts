@@ -141,7 +141,7 @@ describe('ZoomTransform', () => {
 
   describe('fitBounds', () => {
     it('returns identity for empty node array', () => {
-      const t = ZoomTransform.fitBounds([], 800, 600);
+      const { transform: t } = ZoomTransform.fitBounds([], 800, 600);
       expect(t.x).toBe(0);
       expect(t.y).toBe(0);
       expect(t.k).toBe(1);
@@ -149,7 +149,7 @@ describe('ZoomTransform', () => {
 
     it('centers a single node', () => {
       const nodes = [makeNode('a', 0, 0)];
-      const t = ZoomTransform.fitBounds(nodes, 800, 600, 40);
+      const { transform: t } = ZoomTransform.fitBounds(nodes, 800, 600, 40);
       // Single node at origin should be centered
       // Transform should put graph origin at screen center
       const screen = t.graphToScreen(0, 0);
@@ -159,7 +159,7 @@ describe('ZoomTransform', () => {
 
     it('fits a spread of nodes within the canvas', () => {
       const nodes = [makeNode('a', -200, -100), makeNode('b', 200, 100)];
-      const t = ZoomTransform.fitBounds(nodes, 800, 600, 40);
+      const { transform: t } = ZoomTransform.fitBounds(nodes, 800, 600, 40);
 
       // Both nodes should map to within the canvas bounds (with padding)
       const sa = t.graphToScreen(-200, -100);
@@ -174,9 +174,17 @@ describe('ZoomTransform', () => {
     it('produces correct scale for known graph bounds', () => {
       // Graph spans 400x200, canvas 800x600, padding 0
       const nodes = [makeNode('a', 0, 0, 0), makeNode('b', 400, 200, 0)];
-      const t = ZoomTransform.fitBounds(nodes, 800, 600, 0);
+      const { transform: t } = ZoomTransform.fitBounds(nodes, 800, 600, 0);
       // Scale should be min(800/400, 600/200) = min(2, 3) = 2
       expect(t.k).toBeCloseTo(2);
+    });
+
+    it('returns contentHeight matching scaled graph bounds plus padding', () => {
+      const nodes = [makeNode('a', 0, 0, 0), makeNode('b', 400, 200, 0)];
+      const { contentHeight } = ZoomTransform.fitBounds(nodes, 800, 600, 40);
+      // k = min(720/400, 520/200) = min(1.8, 2.6) = 1.8
+      // contentHeight = 200 * 1.8 + 80 = 440
+      expect(contentHeight).toBeCloseTo(440);
     });
   });
 

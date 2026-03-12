@@ -121,6 +121,7 @@ export function createGraph(
   let needsRender = false;
   let isGesturing = false;
   let gestureTimeout: ReturnType<typeof setTimeout> | null = null;
+  let selfResizing = false;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -410,10 +411,36 @@ export function createGraph(
 
     simulation.onSettled(() => {
       // One final fit after simulation settles
-      if (canvas && positionedNodes.length > 0 && interactionManager) {
+      if (canvas && positionedNodes.length > 0 && interactionManager && renderer) {
         const { width: cw, height: ch } = getCanvasDimensions();
-        const fitTransform = ZoomTransform.fitBounds(positionedNodes, cw, ch);
+        const { transform: fitTransform, contentHeight } = ZoomTransform.fitBounds(
+          positionedNodes,
+          cw,
+          ch,
+        );
         interactionManager.setTransform(fitTransform);
+
+        // Shrink canvas + container to actual content height to eliminate dead space.
+        // The chrome (title/subtitle) sits above the canvas, so total height includes both.
+        const chromeH = chromeEl?.getBoundingClientRect().height || 0;
+        const totalContentHeight = Math.ceil(contentHeight) + chromeH;
+        const containerH = container.getBoundingClientRect().height;
+
+        if (totalContentHeight < containerH) {
+          selfResizing = true;
+          const targetCanvasH = Math.ceil(contentHeight);
+          renderer.resize(cw, targetCanvasH);
+          // Re-fit with the new canvas height
+          const refit = ZoomTransform.fitBounds(positionedNodes, cw, targetCanvasH);
+          interactionManager.setTransform(refit.transform);
+          // Shrink the container so the parent layout collapses dead space
+          container.style.height = `${totalContentHeight}px`;
+          // Let the resize observer ignore this self-triggered change
+          requestAnimationFrame(() => {
+            selfResizing = false;
+          });
+        }
+
         needsRender = true;
         scheduleRender();
       }
@@ -635,7 +662,7 @@ export function createGraph(
   function zoomToFit(): void {
     if (destroyed || !interactionManager || positionedNodes.length === 0) return;
     const { width: cw, height: ch } = getCanvasDimensions();
-    const fitTransform = ZoomTransform.fitBounds(positionedNodes, cw, ch);
+    const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
     interactionManager.setTransform(fitTransform);
     needsRender = true;
     scheduleRender();
@@ -670,7 +697,9 @@ export function createGraph(
   }
 
   function doResize(): void {
-    if (destroyed || !canvas || !renderer || !wrapper) return;
+    if (destroyed || !canvas || !renderer || !wrapper || selfResizing) return;
+    // Clear any content-fit height override so we read the parent's actual size
+    container.style.height = '';
     const { width, height } = getContainerDimensions();
     const chromeHeight = chromeEl?.getBoundingClientRect().height || 0;
     const canvasHeight = Math.max(height - chromeHeight, 200);

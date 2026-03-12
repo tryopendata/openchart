@@ -7,6 +7,9 @@
  *
  * The legend is computed early (before marks) so the chartArea accounts
  * for legend space. Entries come from data + encoding, not marks.
+ *
+ * Overflow protection: when there are too many entries for the available
+ * space, entries are truncated and a "+N more" indicator is appended.
  */
 
 import type {
@@ -30,6 +33,12 @@ const SWATCH_GAP = 6;
 const ENTRY_GAP = 16;
 const LEGEND_PADDING = 8;
 const LEGEND_RIGHT_WIDTH = 120;
+
+/** Max fraction of chart area height for right-positioned legends. */
+const RIGHT_LEGEND_MAX_HEIGHT_RATIO = 0.4;
+
+/** Max number of rows for top-positioned legends before truncation. */
+const TOP_LEGEND_MAX_ROWS = 2;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -68,6 +77,57 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   }));
 }
 
+/**
+ * Calculate how many entries fit within a given number of horizontal rows.
+ */
+function entriesThatFit(
+  entries: LegendEntry[],
+  maxWidth: number,
+  maxRows: number,
+  labelStyle: TextStyle,
+): number {
+  let row = 1;
+  let rowWidth = 0;
+
+  for (let i = 0; i < entries.length; i++) {
+    const labelWidth = estimateTextWidth(
+      entries[i].label,
+      labelStyle.fontSize,
+      labelStyle.fontWeight,
+    );
+    const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
+
+    if (rowWidth + entryWidth > maxWidth && rowWidth > 0) {
+      row++;
+      rowWidth = entryWidth;
+      if (row > maxRows) return i;
+    } else {
+      rowWidth += entryWidth;
+    }
+  }
+
+  return entries.length;
+}
+
+/**
+ * Truncate entries and add a "+N more" indicator if needed.
+ */
+function truncateEntries(entries: LegendEntry[], maxCount: number): LegendEntry[] {
+  if (maxCount >= entries.length || maxCount <= 0) return entries;
+
+  const truncated = entries.slice(0, maxCount);
+  const remaining = entries.length - maxCount;
+  truncated.push({
+    label: `+${remaining} more`,
+    color: '#999999',
+    shape: 'square',
+    active: false,
+    overflow: true,
+  });
+
+  return truncated;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -87,8 +147,8 @@ export function computeLegend(
   theme: ResolvedTheme,
   chartArea: Rect,
 ): LegendLayout {
-  // Legend explicitly hidden via show: false
-  if (spec.legend?.show === false) {
+  // Legend explicitly hidden via show: false, or height strategy says no legend
+  if (spec.legend?.show === false || strategy.legendMaxHeight === 0) {
     return {
       position: 'top',
       entries: [],
@@ -106,7 +166,7 @@ export function computeLegend(
     };
   }
 
-  const entries = extractColorEntries(spec, theme);
+  let entries = extractColorEntries(spec, theme);
 
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -143,6 +203,21 @@ export function computeLegend(
       SWATCH_SIZE + SWATCH_GAP + maxLabelWidth + LEGEND_PADDING * 2,
     );
     const entryHeight = Math.max(SWATCH_SIZE, labelStyle.fontSize * labelStyle.lineHeight);
+
+    // Apply max height ratio (default 40% of chart area, strategy can override)
+    const maxHeightRatio =
+      strategy.legendMaxHeight > 0 ? strategy.legendMaxHeight : RIGHT_LEGEND_MAX_HEIGHT_RATIO;
+    const maxLegendHeight = chartArea.height * maxHeightRatio;
+
+    // Calculate how many entries fit
+    const maxEntries = Math.max(
+      1,
+      Math.floor((maxLegendHeight - LEGEND_PADDING * 2) / (entryHeight + 4)),
+    );
+    if (entries.length > maxEntries) {
+      entries = truncateEntries(entries, maxEntries);
+    }
+
     const legendHeight =
       entries.length * entryHeight + (entries.length - 1) * 4 + LEGEND_PADDING * 2;
     const clampedHeight = Math.min(legendHeight, chartArea.height);
@@ -173,13 +248,35 @@ export function computeLegend(
     };
   }
 
-  // Top/bottom-positioned legend: horizontal flow
+  // Top/bottom-positioned legend: horizontal flow with overflow protection
+  const availableWidth = chartArea.width - LEGEND_PADDING * 2;
+  const maxFit = entriesThatFit(entries, availableWidth, TOP_LEGEND_MAX_ROWS, labelStyle);
+
+  if (maxFit < entries.length) {
+    entries = truncateEntries(entries, maxFit);
+  }
+
   const totalWidth = entries.reduce((sum, entry) => {
     const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
     return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
   }, 0);
 
-  const legendHeight = SWATCH_SIZE + LEGEND_PADDING * 2;
+  // Calculate actual row count for height
+  let rowCount = 1;
+  let rowWidth = 0;
+  for (const entry of entries) {
+    const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
+    const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
+    if (rowWidth + entryWidth > availableWidth && rowWidth > 0) {
+      rowCount++;
+      rowWidth = entryWidth;
+    } else {
+      rowWidth += entryWidth;
+    }
+  }
+
+  const rowHeight = SWATCH_SIZE + 4;
+  const legendHeight = rowCount * rowHeight + LEGEND_PADDING * 2;
 
   // Apply user-provided legend offset
   const offsetDx = spec.legend?.offset?.dx ?? 0;

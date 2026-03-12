@@ -394,6 +394,8 @@ export interface LegendEntry {
   shape: 'circle' | 'square' | 'line';
   /** Whether this entry is currently highlighted/active. */
   active?: boolean;
+  /** True for overflow indicator entries ("+N more"). Not interactive. */
+  overflow?: boolean;
 }
 
 /** Resolved legend layout with position and entries. */

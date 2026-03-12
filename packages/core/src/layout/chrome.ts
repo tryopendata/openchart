@@ -3,8 +3,17 @@
  *
  * Takes a Chrome spec + resolved theme and produces a ResolvedChrome
  * with computed text positions, styles, and total chrome heights.
+ *
+ * Supports three chrome modes:
+ * - full: all chrome elements rendered at normal size
+ * - compact: title only, no subtitle/source/byline/footer
+ * - hidden: no chrome at all (maximizes chart area)
+ *
+ * Font sizes scale down continuously at narrow widths to keep
+ * chrome proportional to the container.
  */
 
+import type { ChromeMode } from '../responsive/breakpoints';
 import type {
   MeasureTextFn,
   ResolvedChrome,
@@ -28,16 +37,32 @@ function normalizeChromeText(
   return { text: value.text, style: value.style, offset: value.offset };
 }
 
-/** Build a TextStyle from chrome defaults + optional overrides. */
+/**
+ * Scale a font size based on container width. Only applies to default sizes
+ * (not user overrides). Scales from 100% at >= 500px down to 72% at <= 250px.
+ */
+function scaleFontSize(baseFontSize: number, width: number): number {
+  if (width >= 500) return baseFontSize;
+  if (width <= 250) return Math.max(Math.round(baseFontSize * 0.72), 10);
+  const t = (width - 250) / 250;
+  return Math.max(Math.round(baseFontSize * (0.72 + t * 0.28)), 10);
+}
+
+/** Build a TextStyle from chrome defaults + optional overrides, with width-based scaling. */
 function buildTextStyle(
   defaults: ChromeDefaults,
   fontFamily: string,
   textColor: string,
+  width: number,
   overrides?: ChromeText['style'],
 ): TextStyle {
+  const hasExplicitSize = overrides?.fontSize !== undefined;
+  const baseFontSize = overrides?.fontSize ?? defaults.fontSize;
+  const fontSize = hasExplicitSize ? baseFontSize : scaleFontSize(baseFontSize, width);
+
   return {
     fontFamily: overrides?.fontFamily ?? fontFamily,
-    fontSize: overrides?.fontSize ?? defaults.fontSize,
+    fontSize,
     fontWeight: overrides?.fontWeight ?? defaults.fontWeight,
     fill: overrides?.color ?? textColor ?? defaults.color,
     lineHeight: defaults.lineHeight,
@@ -83,24 +108,28 @@ function estimateLineCount(
  * @param theme - The fully resolved theme.
  * @param width - Total available width in pixels.
  * @param measureText - Optional real text measurement function from the adapter.
+ * @param chromeMode - Chrome display mode: full, compact (title only), or hidden.
+ * @param padding - Override padding (for scaled padding from dimensions).
  */
 export function computeChrome(
   chrome: Chrome | undefined,
   theme: ResolvedTheme,
   width: number,
   measureText?: MeasureTextFn,
+  chromeMode: ChromeMode = 'full',
+  padding?: number,
 ): ResolvedChrome {
-  if (!chrome) {
+  if (!chrome || chromeMode === 'hidden') {
     return { topHeight: 0, bottomHeight: 0 };
   }
 
-  const padding = theme.spacing.padding;
+  const pad = padding ?? theme.spacing.padding;
   const chromeGap = theme.spacing.chromeGap;
-  const maxWidth = width - padding * 2;
+  const maxWidth = width - pad * 2;
   const fontFamily = theme.fonts.family;
 
   // Track vertical cursor for top elements
-  let topY = padding;
+  let topY = pad;
   const topElements: Partial<Pick<ResolvedChrome, 'title' | 'subtitle'>> = {};
 
   // Title
@@ -110,12 +139,13 @@ export function computeChrome(
       theme.chrome.title,
       fontFamily,
       theme.chrome.title.color,
+      width,
       titleNorm.style,
     );
     const lineCount = estimateLineCount(titleNorm.text, style, maxWidth, measureText);
     const element: ResolvedChromeElement = {
       text: titleNorm.text,
-      x: padding + (titleNorm.offset?.dx ?? 0),
+      x: pad + (titleNorm.offset?.dx ?? 0),
       y: topY + (titleNorm.offset?.dy ?? 0),
       maxWidth,
       style,
@@ -124,19 +154,20 @@ export function computeChrome(
     topY += estimateTextHeight(style.fontSize, lineCount, style.lineHeight) + chromeGap;
   }
 
-  // Subtitle
-  const subtitleNorm = normalizeChromeText(chrome.subtitle);
+  // Subtitle (hidden in compact mode)
+  const subtitleNorm = chromeMode === 'compact' ? null : normalizeChromeText(chrome.subtitle);
   if (subtitleNorm) {
     const style = buildTextStyle(
       theme.chrome.subtitle,
       fontFamily,
       theme.chrome.subtitle.color,
+      width,
       subtitleNorm.style,
     );
     const lineCount = estimateLineCount(subtitleNorm.text, style, maxWidth, measureText);
     const element: ResolvedChromeElement = {
       text: subtitleNorm.text,
-      x: padding + (subtitleNorm.offset?.dx ?? 0),
+      x: pad + (subtitleNorm.offset?.dx ?? 0),
       y: topY + (subtitleNorm.offset?.dy ?? 0),
       maxWidth,
       style,
@@ -147,10 +178,18 @@ export function computeChrome(
 
   // Add chromeToChart gap if there are any top elements
   const hasTopChrome = titleNorm || subtitleNorm;
-  const topHeight = hasTopChrome ? topY - padding + theme.spacing.chromeToChart - chromeGap : 0;
+  const topHeight = hasTopChrome ? topY - pad + theme.spacing.chromeToChart - chromeGap : 0;
+
+  // Bottom elements hidden in compact mode
+  if (chromeMode === 'compact') {
+    return {
+      topHeight,
+      bottomHeight: 0,
+      ...topElements,
+    };
+  }
 
   // Bottom elements: source, byline, footer
-  // We compute heights bottom-up but position them after knowing total
   const bottomElements: Partial<Pick<ResolvedChrome, 'source' | 'byline' | 'footer'>> = {};
   let bottomHeight = 0;
 
@@ -191,7 +230,13 @@ export function computeChrome(
     bottomHeight += theme.spacing.chartToFooter;
 
     for (const item of bottomItems) {
-      const style = buildTextStyle(item.defaults, fontFamily, item.defaults.color, item.norm.style);
+      const style = buildTextStyle(
+        item.defaults,
+        fontFamily,
+        item.defaults.color,
+        width,
+        item.norm.style,
+      );
       const lineCount = estimateLineCount(item.norm.text, style, maxWidth, measureText);
       const height = estimateTextHeight(style.fontSize, lineCount, style.lineHeight);
 
@@ -199,7 +244,7 @@ export function computeChrome(
       // chart area by the engine. We store offsets from bottom start.
       bottomElements[item.key] = {
         text: item.norm.text,
-        x: padding + (item.norm.offset?.dx ?? 0),
+        x: pad + (item.norm.offset?.dx ?? 0),
         y: bottomHeight + (item.norm.offset?.dy ?? 0), // offset from where bottom chrome starts
         maxWidth,
         style,
@@ -211,7 +256,7 @@ export function computeChrome(
     // Remove trailing gap
     bottomHeight -= chromeGap;
     // Add bottom padding
-    bottomHeight += padding;
+    bottomHeight += pad;
   }
 
   return {

@@ -52,15 +52,18 @@ export class ZoomTransform {
   /**
    * Compute a transform that fits all nodes within the given canvas
    * dimensions with the specified padding.
+   *
+   * Returns the transform and the ideal content height (in screen pixels)
+   * so callers can shrink the canvas to eliminate dead space.
    */
   static fitBounds(
     nodes: PositionedNode[],
     canvasW: number,
     canvasH: number,
     padding: number = 40,
-  ): ZoomTransform {
+  ): { transform: ZoomTransform; contentHeight: number } {
     if (nodes.length === 0) {
-      return ZoomTransform.identity();
+      return { transform: ZoomTransform.identity(), contentHeight: canvasH };
     }
 
     let minX = Infinity;
@@ -81,7 +84,10 @@ export class ZoomTransform {
 
     if (graphW === 0 && graphH === 0) {
       // All nodes at the same point; just center
-      return new ZoomTransform(canvasW / 2 - minX, canvasH / 2 - minY, 1);
+      return {
+        transform: new ZoomTransform(canvasW / 2 - minX, canvasH / 2 - minY, 1),
+        contentHeight: padding * 2,
+      };
     }
 
     const availW = canvasW - padding * 2;
@@ -95,7 +101,13 @@ export class ZoomTransform {
     const tx = canvasW / 2 - cx * k;
     const ty = padding - minY * k;
 
-    return new ZoomTransform(tx, ty, k);
+    // Content height = scaled graph extent + top and bottom padding
+    const contentHeight = graphH * k + padding * 2;
+
+    return {
+      transform: new ZoomTransform(tx, ty, k),
+      contentHeight,
+    };
   }
 
   /** Identity transform (no pan, no zoom). */

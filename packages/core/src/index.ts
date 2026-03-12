@@ -66,12 +66,15 @@ export type {
   AnnotationPosition,
   AxisLabelDensity,
   Breakpoint,
+  ChromeMode,
+  HeightClass,
   LabelMode,
   LayoutStrategy,
   LegendPosition,
 } from './responsive/index';
 export {
   getBreakpoint,
+  getHeightClass,
   getLayoutStrategy,
 } from './responsive/index';
 

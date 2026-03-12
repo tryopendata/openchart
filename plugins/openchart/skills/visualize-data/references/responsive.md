@@ -1,8 +1,8 @@
 # Responsive Charts
 
-Charts are responsive by default (`responsive: true`). The engine uses a ResizeObserver to detect container size changes and recompiles the full layout at the new dimensions. No CSS media queries are involved - everything is computed at compile time based on container width.
+Charts are responsive by default (`responsive: true`). The engine uses a ResizeObserver to detect container size changes and recompiles the full layout at the new dimensions. No CSS media queries are involved - everything is computed at compile time based on container width and height.
 
-## Breakpoints
+## Width Breakpoints
 
 Three breakpoints based on container width:
 
@@ -12,16 +12,60 @@ Three breakpoints based on container width:
 | `medium` | 400-700px | Tablet, half-width layouts |
 | `full` | > 700px | Desktop, full-width |
 
+## Height Classes
+
+Three height classes based on container height:
+
+| Height Class | Height | Typical context |
+| --- | --- | --- |
+| `cramped` | < 200px | Dashboard widgets, thumbnails, ultra-short embeds |
+| `short` | 200-350px | Embedded panels, short containers |
+| `normal` | > 350px | Standard containers |
+
 ## What the Engine Auto-Handles
 
-Each breakpoint applies a **layout strategy** that adjusts these properties automatically:
+The layout strategy combines width breakpoints and height classes to adjust these properties automatically:
+
+### Width-Based Adaptation
 
 | Property | Compact | Medium | Full |
 | --- | --- | --- | --- |
 | Data labels | Hidden | Important only | All shown |
 | Legend position | Top | Top | Right |
 | Annotations | Tooltip-only | Inline | Inline |
-| Axis tick density | Minimal | Reduced | Full |
+| Axis tick density | Minimal (3) | Reduced (5) | Full (8) |
+
+### Height-Based Adaptation
+
+| Property | Cramped (< 200px) | Short (200-350px) | Normal (> 350px) |
+| --- | --- | --- | --- |
+| Chrome | Hidden entirely | Compact (title only) | Full |
+| Legend | Hidden | Max 15% of height | Unlimited |
+| Data labels | Hidden | (uses width strategy) | (uses width strategy) |
+| Annotations | Tooltip-only | (uses width strategy) | (uses width strategy) |
+
+### Continuous Scaling
+
+These properties scale continuously rather than stepping at breakpoints:
+
+| Property | Behavior |
+| --- | --- |
+| **Padding** | Full at >= 500px (min dimension), scales down to 50% at <= 200px, floor of 4px |
+| **Chrome font sizes** | Full at >= 500px wide, scales down to 72% at <= 250px wide (min 10px) |
+| **Axis tick density** | Further reduced when chart area is very small, independent of breakpoint |
+
+Font scaling only applies to default theme sizes. Explicit `style: { fontSize: 18 }` overrides on chrome elements are respected and not scaled.
+
+### Auto-Rotation of Axis Labels
+
+Column charts with band scales auto-rotate x-axis labels to -45 degrees when labels would overlap (average label width > 85% of bandwidth). This is automatic and only triggers when no explicit `tickAngle` is set. It handles the common case of column charts with many categories at narrow widths.
+
+### Legend Overflow Protection
+
+When there are many series:
+- **Top-positioned legends** truncate after 2 rows, showing "+N more"
+- **Right-positioned legends** cap at 40% of chart area height, truncating with "+N more"
+- **Cramped height** hides the legend entirely
 
 These are defaults. Explicit spec values (like `legend: { position: "top" }` or `labels: { density: "all" }`) override the responsive strategy.
 
@@ -84,6 +128,16 @@ overrides: {
 }
 ```
 
+## Chrome Compression
+
+The engine automatically compresses chrome at small heights:
+
+- **Normal** (> 350px): Full chrome - title, subtitle, source, byline, footer
+- **Short** (200-350px): Compact mode - title only, subtitle and bottom chrome hidden
+- **Cramped** (< 200px): Chrome hidden entirely to maximize chart area
+
+Additionally, if the computed chart area is smaller than 60x40px even after height-based compression, the engine automatically strips chrome as a fallback (stepping from full to compact to hidden until the chart area is usable).
+
 ## Chrome Text Wrapping
 
 Long chrome text (titles, subtitles, source) automatically wraps to multiple lines based on container width. The engine uses word-boundary wrapping with the same character-width heuristics used for layout computation.
@@ -98,7 +152,6 @@ While wrapping works, shorter text is still preferable. Wrapped titles lose the 
 
 - Switch chart types (e.g., column to bar) at small sizes
 - Reduce data point count for dense series
-- Rotate axis labels to fit
 
 ## Designing for Multiple Sizes
 
@@ -127,21 +180,21 @@ Horizontal bar charts handle narrow containers better than column charts when yo
 // Good for narrow containers - 7 categories read fine
 { type: "bar", encoding: { x: { field: "value" }, y: { field: "category" } } }
 
-// Problematic narrow - 7 x-axis labels overlap
+// Works now with auto-rotation, but bar is still better for 7+ categories
 { type: "column", encoding: { x: { field: "category" }, y: { field: "value" } } }
 ```
 
-Column charts work fine with few categories (2-5) or when x-axis labels are short.
+Column charts work fine with few categories (2-5) or when x-axis labels are short. With many categories, labels auto-rotate to -45 degrees to avoid overlap.
 
 ### Shorten axis labels
 
-Long category labels on the x-axis of column charts overlap at compact widths. Use abbreviations:
+Long category labels on the x-axis of column charts auto-rotate at narrow widths. Use abbreviations when possible for cleaner results:
 
 ```js
 // Good
 { quarter: "Q1 '24" }
 
-// Bad at compact
+// Acceptable - auto-rotates at narrow widths
 { quarter: "Q1 2024" }
 ```
 
@@ -152,6 +205,8 @@ For temporal x-axes, the engine reduces tick count automatically via `axisLabelD
 The legend auto-positions to "top" at compact/medium and "right" at full. For bar charts where the y-axis already labels each category, hide the legend with `legend: { show: false }` to reclaim vertical space. You can also hide it only at compact widths via `overrides: { compact: { legend: { show: false } } }`.
 
 When color encoding is needed for emphasis (e.g., highlight one bar in red, rest gray), keep series names short to reduce legend clutter.
+
+With 8+ series, the legend truncates to 2 rows at top position and shows "+N more". At cramped heights, the legend is hidden entirely.
 
 ### Reduce annotation density
 
@@ -165,6 +220,10 @@ At compact, annotations switch to tooltip-only automatically. But explicitly pla
 
 The most common mobile viewport is 375px (iPhone). Before publishing, verify your chart renders cleanly at this width. The three-second test applies double at mobile: if the title clips or labels overlap, the chart fails.
 
+### Test at short heights
+
+If your chart will appear in a dashboard widget or constrained panel, also test at 200-300px height. The engine will automatically compress chrome and adapt, but verify the result looks right.
+
 ## Spec Properties That Affect Responsiveness
 
 | Property | Effect |
@@ -176,11 +235,13 @@ The most common mobile viewport is 375px (iPhone). Before publishing, verify you
 | `labels: { density: "none" }` | Forces labels off regardless of breakpoint |
 | `labels: { density: "all" }` | Forces labels on regardless of breakpoint (may overlap at compact) |
 | `encoding.x.axis.tickCount` | Overrides responsive tick reduction |
+| `encoding.x.axis.tickAngle` | Overrides auto-rotation (set explicitly to prevent or force rotation) |
 | `encoding.x.scale.nice: false` | Prevents padding at axis ends (saves space) |
 | `overrides: { compact: { ... } }` | Breakpoint-conditional spec values |
 
 ## Known Limitations
 
 1. **Overrides are shallow-merged** - You can override chrome, labels, legend, and annotations per breakpoint, but not encoding or data. Chart type and data are fixed across breakpoints.
-2. **No axis label rotation** - Labels that don't fit are dropped, not rotated.
-3. **Text wrapping is heuristic** - Word wrapping uses estimated character widths (~0.55× font size). Actual rendered widths may differ slightly from estimates.
+2. **Text wrapping is heuristic** - Word wrapping uses estimated character widths (~0.55x font size). Actual rendered widths may differ slightly from estimates.
+3. **Height overrides are not per-height-class** - The `overrides` field keys on width breakpoints (compact/medium/full), not height classes. Height adaptation is automatic only.
+4. **Auto-rotation is band scales only** - Continuous and temporal scales use tick thinning, not rotation.

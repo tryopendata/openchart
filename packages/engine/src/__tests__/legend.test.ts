@@ -40,6 +40,8 @@ const fullStrategy: LayoutStrategy = {
   legendPosition: 'right',
   annotationPosition: 'inline',
   axisLabelDensity: 'full',
+  chromeMode: 'full',
+  legendMaxHeight: -1,
 };
 
 const compactStrategy: LayoutStrategy = {
@@ -47,6 +49,8 @@ const compactStrategy: LayoutStrategy = {
   legendPosition: 'top',
   annotationPosition: 'tooltip-only',
   axisLabelDensity: 'minimal',
+  chromeMode: 'full',
+  legendMaxHeight: -1,
 };
 
 describe('computeLegend', () => {

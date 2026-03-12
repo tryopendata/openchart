@@ -18,6 +18,7 @@ import type {
 import {
   abbreviateNumber,
   buildD3Formatter,
+  estimateTextWidth,
   formatDate,
   formatNumber,
 } from '@opendata-ai/openchart-core';
@@ -234,13 +235,33 @@ export function computeAxes(
       major: true,
     }));
 
+    // Auto-rotate labels when band scale labels would overlap.
+    // Uses max label width (not average) since one long label is enough to overlap.
+    let tickAngle = scales.x.channel.axis?.tickAngle;
+    if (tickAngle === undefined && scales.x.type === 'band' && ticks.length > 1) {
+      const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
+      let maxLabelWidth = 0;
+      for (const t of ticks) {
+        const w = estimateTextWidth(
+          t.label,
+          theme.fonts.sizes.axisTick,
+          theme.fonts.weights.normal,
+        );
+        if (w > maxLabelWidth) maxLabelWidth = w;
+      }
+      // If the widest label exceeds 85% of the bandwidth, rotate to avoid overlap
+      if (maxLabelWidth > bandwidth * 0.85) {
+        tickAngle = -45;
+      }
+    }
+
     result.x = {
       ticks,
       gridlines: scales.x.channel.axis?.grid ? gridlines : [],
       label: scales.x.channel.axis?.label,
       labelStyle: axisLabelStyle,
       tickLabelStyle,
-      tickAngle: scales.x.channel.axis?.tickAngle,
+      tickAngle,
       start: { x: chartArea.x, y: chartArea.y + chartArea.height },
       end: { x: chartArea.x + chartArea.width, y: chartArea.y + chartArea.height },
     };
