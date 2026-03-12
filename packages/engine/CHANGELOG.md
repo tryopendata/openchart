@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.0](https://github.com/tryopendata/openchart/compare/engine-v2.8.1...engine-v2.9.0) (2026-03-12)
+
+
+### Features
+
+* **annotations:** interpolate positions for out-of-domain values on categorical scales ([0898bfd](https://github.com/tryopendata/openchart/commit/0898bfd249cdae270b4c82556bb6aa6be506f84b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.9.0
+
 ## [2.8.1](https://github.com/tryopendata/openchart/compare/engine-v2.8.0...engine-v2.8.1) (2026-03-12)
 
 
