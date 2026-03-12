@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.8.1](https://github.com/tryopendata/openchart/compare/vanilla-v2.8.0...vanilla-v2.8.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* **graph:** apply theme colors and dark mode class to graph wrapper ([eac120b](https://github.com/tryopendata/openchart/commit/eac120bd3432c66c292927aeff7c8ac73a805c3a))
+* **graph:** support viz-dark class on wrapper element in CSS selectors ([9fff114](https://github.com/tryopendata/openchart/commit/9fff1146ab24c24ff34baa980107c4dc3218056d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.8.1
+    * @opendata-ai/openchart-engine bumped to 2.8.1
+
 ## [2.8.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.7.0...vanilla-v2.8.0) (2026-03-09)
 
 

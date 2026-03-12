@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/tryopendata/openchart/compare/core-v2.8.0...core-v2.8.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* **graph:** support viz-dark class on wrapper element in CSS selectors ([9fff114](https://github.com/tryopendata/openchart/commit/9fff1146ab24c24ff34baa980107c4dc3218056d))
+
 ## [2.8.0](https://github.com/tryopendata/openchart/compare/core-v2.7.0...core-v2.8.0) (2026-03-09)
 
 
