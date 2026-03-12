@@ -136,6 +136,102 @@ describe('computeAnnotations', () => {
       expect(annotations[0].fill).toBeDefined();
       expect(annotations[0].opacity).toBeDefined();
     });
+
+    it('interpolates range position for values between ordinal data points', () => {
+      const ordinalSpec: NormalizedChartSpec = {
+        type: 'line',
+        data: [
+          { year: '2005', value: 10 },
+          { year: '2007', value: 20 },
+          { year: '2009', value: 30 },
+          { year: '2012', value: 40 },
+        ],
+        encoding: {
+          x: { field: 'year', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [{ type: 'range', x1: '2008', x2: '2010', label: 'Interpolated' }],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
+      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(1);
+      expect(annotations[0].rect).toBeDefined();
+      expect(annotations[0].rect!.width).toBeGreaterThan(0);
+
+      // Also verify the interpolated range sits between the known data points
+      const rangeWithKnownPoints: NormalizedChartSpec = {
+        ...ordinalSpec,
+        annotations: [{ type: 'range', x1: '2007', x2: '2012', label: 'Known' }],
+      };
+      const knownAnnotations = computeAnnotations(
+        rangeWithKnownPoints,
+        scales,
+        chartArea,
+        fullStrategy,
+      );
+      // The interpolated range (2008-2010) should be narrower than and inside (2007-2012)
+      expect(annotations[0].rect!.width).toBeLessThan(knownAnnotations[0].rect!.width);
+      expect(annotations[0].rect!.x).toBeGreaterThan(knownAnnotations[0].rect!.x);
+    });
+
+    it('clamps interpolation for values outside the ordinal domain range', () => {
+      const ordinalSpec: NormalizedChartSpec = {
+        type: 'line',
+        data: [
+          { year: '2005', value: 10 },
+          { year: '2007', value: 20 },
+          { year: '2009', value: 30 },
+        ],
+        encoding: {
+          x: { field: 'year', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [{ type: 'range', x1: '2003', x2: '2011', label: 'Outside range' }],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
+      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(1);
+      expect(annotations[0].rect).toBeDefined();
+      expect(annotations[0].rect!.width).toBeGreaterThan(0);
+    });
+
+    it('returns null for non-numeric ordinal domain values', () => {
+      const catSpec: NormalizedChartSpec = {
+        type: 'column',
+        data: [
+          { category: 'Jan', value: 10 },
+          { category: 'Feb', value: 20 },
+          { category: 'Mar', value: 30 },
+        ],
+        encoding: {
+          x: { field: 'category', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [{ type: 'range', x1: 'Jan-15', x2: 'Feb-15', label: 'Non-numeric' }],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(catSpec, chartArea, catSpec.data);
+      const annotations = computeAnnotations(catSpec, scales, chartArea, fullStrategy);
+
+      // Non-numeric domain can't interpolate, annotation is dropped
+      expect(annotations).toHaveLength(0);
+    });
   });
 
   describe('reference line annotations', () => {
