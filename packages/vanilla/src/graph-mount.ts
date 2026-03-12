@@ -433,12 +433,14 @@ export function createGraph(
           // Re-fit with the new canvas height
           const refit = ZoomTransform.fitBounds(positionedNodes, cw, targetCanvasH);
           interactionManager.setTransform(refit.transform);
-          // Shrink the container so the parent layout collapses dead space
-          container.style.height = `${totalContentHeight}px`;
-          // Let the resize observer ignore this self-triggered change
-          requestAnimationFrame(() => {
+          // Collapse the container to content height instead of filling the parent.
+          // This eliminates dead space below compact graphs in tall containers.
+          container.style.height = 'fit-content';
+          // Hold selfResizing long enough for the ResizeObserver (debounced ~16ms)
+          // to see it and skip the doResize that would clear our height override.
+          setTimeout(() => {
             selfResizing = false;
-          });
+          }, 100);
         }
 
         needsRender = true;
