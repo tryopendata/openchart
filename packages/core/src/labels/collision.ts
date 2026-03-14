@@ -6,6 +6,7 @@
  * Targeting ~60% of Infrographic quality for Phase 0.
  */
 
+import { estimateTextWidth } from '../layout/text-measure';
 import type { Rect, ResolvedLabel, TextStyle } from '../types/layout';
 
 // ---------------------------------------------------------------------------
@@ -158,4 +159,29 @@ export function resolveCollisions(labels: LabelCandidate[]): ResolvedLabel[] {
   }
 
   return results;
+}
+
+// ---------------------------------------------------------------------------
+// Label bounds estimation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the bounding rect of a resolved label from its position and text.
+ * Uses heuristic text measurement so it works without DOM access.
+ */
+export function computeLabelBounds(label: ResolvedLabel): Rect {
+  const fontSize = label.style.fontSize;
+  const fontWeight = label.style.fontWeight;
+  const width = estimateTextWidth(label.text, fontSize, fontWeight);
+  const height = fontSize * (label.style.lineHeight ?? 1.2);
+
+  // Adjust x based on text anchor
+  let x = label.x;
+  if (label.style.textAnchor === 'middle') {
+    x = label.x - width / 2;
+  } else if (label.style.textAnchor === 'end') {
+    x = label.x - width;
+  }
+
+  return { x, y: label.y, width, height };
 }

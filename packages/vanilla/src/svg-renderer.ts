@@ -868,6 +868,20 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 
   for (let i = 0; i < legend.entries.length; i++) {
     const entry = legend.entries[i];
+
+    // Pre-check: wrap to next line if this entry would overflow bounds
+    if (isHorizontal && i > 0) {
+      const labelWidth = estimateTextWidth(
+        entry.label,
+        legend.labelStyle.fontSize,
+        legend.labelStyle.fontWeight,
+      );
+      const entryWidth = legend.swatchSize + legend.swatchGap + labelWidth + legend.entryGap;
+      if (offsetX + entryWidth > legend.bounds.x + legend.bounds.width) {
+        offsetX = legend.bounds.x;
+        offsetY += legend.swatchSize + 6;
+      }
+    }
     const entryG = createSVGElement('g');
     entryG.setAttribute('class', 'viz-legend-entry');
     entryG.setAttribute('role', 'listitem');
@@ -956,11 +970,6 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       );
       const entryWidth = legend.swatchSize + legend.swatchGap + labelWidth + legend.entryGap;
       offsetX += entryWidth;
-      // Wrap to next line if exceeding bounds
-      if (offsetX > legend.bounds.x + legend.bounds.width && i < legend.entries.length - 1) {
-        offsetX = legend.bounds.x;
-        offsetY += legend.swatchSize + 6;
-      }
     } else {
       offsetY += legend.swatchSize + legend.entryGap;
     }

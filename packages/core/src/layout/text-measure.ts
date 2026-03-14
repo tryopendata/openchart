@@ -28,6 +28,15 @@ const WEIGHT_ADJUSTMENT: Record<number, number> = {
 };
 
 /**
+ * Estimate the average character width for a given font size and weight.
+ * Used by both text width estimation and word-wrap line counting.
+ */
+export function estimateCharWidth(fontSize: number, fontWeight = 400): number {
+  const weightFactor = WEIGHT_ADJUSTMENT[fontWeight] ?? 1.0;
+  return fontSize * AVG_CHAR_WIDTH_RATIO * weightFactor;
+}
+
+/**
  * Estimate the rendered width of a text string.
  *
  * Uses a per-character average width based on font size, adjusted
@@ -38,9 +47,16 @@ const WEIGHT_ADJUSTMENT: Record<number, number> = {
  * @param fontWeight - Font weight (100-900). Defaults to 400.
  */
 export function estimateTextWidth(text: string, fontSize: number, fontWeight = 400): number {
-  const weightFactor = WEIGHT_ADJUSTMENT[fontWeight] ?? 1.0;
-  return text.length * fontSize * AVG_CHAR_WIDTH_RATIO * weightFactor;
+  return text.length * estimateCharWidth(fontSize, fontWeight);
 }
+
+/**
+ * Width reserved for the "OpenData" brand watermark in the bottom-right corner.
+ * Accounts for ~8 chars at font size 20 with mixed 500/600 weight, plus a gap
+ * so adjacent text doesn't crowd it. Used by chrome and legend layout to avoid
+ * overlapping the brand.
+ */
+export const BRAND_RESERVE_WIDTH = 110;
 
 /**
  * Estimate the rendered height of a text block.

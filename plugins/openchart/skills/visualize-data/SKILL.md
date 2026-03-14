@@ -61,6 +61,7 @@ Each type has a detailed reference with full spec, encoding rules, and examples.
 | Whether a chart is "done" | Design review | [references/design-review.md](references/design-review.md) |
 | Rendered output QA | Visual defect scanning | [references/visual-qa.md](references/visual-qa.md) |
 | Mobile / narrow containers | Responsive design | [references/responsive.md](references/responsive.md) |
+| Rendered output verification | Visual defect scanning | [references/visual-qa.md](references/visual-qa.md) |
 
 ## Shared Spec Structure
 
@@ -227,9 +228,9 @@ Run these checks before outputting a spec. These catch the issues that most ofte
 
 | Check | What to verify |
 | --- | --- |
-| **Color encodes the story** | If one variable drives the narrative (poverty, time, severity), color should reinforce it. Don't leave a scatter plot monochrome when a gradient would make the pattern obvious. |
+| **Color encodes the story** | If one variable drives the narrative, color should reinforce it. Use the decision table in [color-strategy.md](references/color-strategy.md) to pick the right strategy and `theme.colors` array. Don't leave a scatter plot monochrome when a gradient would make the pattern obvious. |
 | **Y-domain fits the data** | Domain ceiling should be ~5-10% above the highest data value. `[0, 55]` for data peaking at 48.8 wastes space. Use `[0, 52]`. |
-| **Annotations clear of data** | On bubble/scatter charts, use 40-100px offsets. Small offsets (10-20px) land on adjacent dots. Anchor at the data point, offset into empty chart quadrants, and use connectors. |
+| **Annotations clear of data AND each other** | The engine auto-resolves annotation-to-annotation collisions, but start with good separation for cleaner results. Prefer 0-2 text annotations; use reflines for additional callouts. On scatter/bubble, use 40-100px offsets into empty quadrants with connectors. When using 2+ text annotations, verify with `playwright-cli`. |
 | **Subtitle fits one line** | If the subtitle wraps, the orphaned fragment looks broken. Abbreviate or restructure. Use shorthand keys in the subtitle (e.g., `"LI = low-income"`) rather than spelling everything out. |
 | **Endpoint labels won't eat the chart** | `labels: { density: "endpoints" }` with series names > 15 chars reserves a huge right margin. Use `"none"` + `legend: { position: "top" }` instead, or abbreviate series names. |
 | **Axis ticks show units** | Percentages should show `10%` not `10`. Use `format: ".0f%"` when data is already in percent form (e.g., 10 meaning 10%). Use `format: ".0%"` only when data is in decimal form (0.10 meaning 10%). Large numbers should use SI suffixes: `format: "~s"` turns 10000 into `10k` and 1000000 into `1M`. For currency: `format: "$~s"` gives `$10k`, `$1M`. See the format table below. |

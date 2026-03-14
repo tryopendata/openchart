@@ -84,6 +84,8 @@ The checklist above covers the spec. After rendering, also verify the actual scr
 
 **For compact variants** (< 400px wide): verify separately. Titles clip, ticks crowd, labels collide. Create a separate `compactSpec` with shorter chrome, explicit `tickCount`, and `labels: { density: "none" }`.
 
+When a spec has 2+ text annotations on scatter/bubble charts, use the `playwright-cli` skill to screenshot and scan for annotation placement issues before finalizing.
+
 ## Ship It
 
 All 14 checks pass: it's publication-ready.

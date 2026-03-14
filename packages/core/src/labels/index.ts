@@ -3,4 +3,4 @@
  */
 
 export type { LabelCandidate, LabelPriority } from './collision';
-export { detectCollision, resolveCollisions } from './collision';
+export { computeLabelBounds, detectCollision, resolveCollisions } from './collision';

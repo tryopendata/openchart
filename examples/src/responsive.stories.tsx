@@ -83,6 +83,62 @@ const columnSpec: ChartSpec = {
   },
 };
 
+// Long title spec for wrapping/collision testing
+const longTitleSpec: ChartSpec = {
+  type: 'line',
+  data: [
+    { date: '2020-01-01', value: 10, category: 'Alpha' },
+    { date: '2021-01-01', value: 30, category: 'Alpha' },
+    { date: '2022-01-01', value: 25, category: 'Alpha' },
+    { date: '2023-01-01', value: 45, category: 'Alpha' },
+    { date: '2020-01-01', value: 20, category: 'Beta' },
+    { date: '2021-01-01', value: 15, category: 'Beta' },
+    { date: '2022-01-01', value: 35, category: 'Beta' },
+    { date: '2023-01-01', value: 30, category: 'Beta' },
+  ],
+  encoding: {
+    x: { field: 'date', type: 'temporal' },
+    y: { field: 'value', type: 'quantitative' },
+    color: { field: 'category', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Global Economic Recovery Trends Show Surprising Resilience Across Major Markets',
+    subtitle: 'Year-over-year comparison of key economic indicators',
+    source: 'Source: International Monetary Fund, 2024',
+  },
+};
+
+export const LongTitleWrapping = () => (
+  <div className="story-column-tight">
+    <div>
+      <h3 className="story-heading">
+        Long title at 320px - Title wraps, no collision with subtitle
+      </h3>
+      <div className="story-debug-border" style={{ width: 320, height: 350 }}>
+        <Chart spec={longTitleSpec} />
+      </div>
+    </div>
+    <div>
+      <h3 className="story-heading">Long title at 400px - Title may wrap</h3>
+      <div className="story-debug-border" style={{ width: 400, height: 350 }}>
+        <Chart spec={longTitleSpec} />
+      </div>
+    </div>
+    <div>
+      <h3 className="story-heading">Long title at 600px - Title fits on one line</h3>
+      <div className="story-debug-border" style={{ width: 600, height: 350 }}>
+        <Chart spec={longTitleSpec} />
+      </div>
+    </div>
+    <div>
+      <h3 className="story-heading">Long title at 800px - Full width</h3>
+      <div className="story-debug-border" style={{ width: 800, height: 400 }}>
+        <Chart spec={longTitleSpec} />
+      </div>
+    </div>
+  </div>
+);
+
 export const FixedWidths = () => (
   <div className="story-column-tight">
     <div>

@@ -20,6 +20,7 @@ The react package wraps vanilla renderers. Key components:
 
 - `<Chart spec={spec} />` - renders a chart from a VizSpec
 - `<DataTable spec={spec} />` - renders a data table from a TableSpec
+- `<Graph spec={spec} />` - renders a network graph from a GraphSpec
 - `<VizThemeProvider theme={theme}>` - provides theme context to descendants
 
 ## Testing Components

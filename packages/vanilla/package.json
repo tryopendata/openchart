@@ -49,6 +49,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
     "@opendata-ai/openchart-core": "workspace:*",
     "@opendata-ai/openchart-engine": "workspace:*",
     "d3-force": "^3.0.0",

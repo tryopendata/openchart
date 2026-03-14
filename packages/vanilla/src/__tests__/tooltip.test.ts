@@ -5,16 +5,46 @@
  * and cleanup behavior.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
-import { createTooltipManager } from '../tooltip';
+
+const mockComputePosition = vi.fn();
+
+vi.mock('@floating-ui/dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@floating-ui/dom')>();
+  return {
+    ...actual,
+    computePosition: (...args: unknown[]) => mockComputePosition(...args),
+  };
+});
+
+// Import after mock so the module picks up the mock
+const { createTooltipManager } = await import('../tooltip');
+
+/**
+ * Flush the microtask queue so computePosition's .then() resolves.
+ */
+const flushPositioning = () => vi.waitFor(() => Promise.resolve());
 
 // ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
 
+const defaultPositionResult = {
+  x: 0,
+  y: 0,
+  placement: 'bottom-start' as const,
+  strategy: 'absolute' as const,
+  middlewareData: {},
+};
+
+beforeEach(() => {
+  mockComputePosition.mockResolvedValue(defaultPositionResult);
+});
+
 afterEach(() => {
   document.body.innerHTML = '';
+  mockComputePosition.mockReset();
 });
 
 // ---------------------------------------------------------------------------
@@ -131,19 +161,99 @@ describe('createTooltipManager lifecycle', () => {
 // ---------------------------------------------------------------------------
 
 describe('tooltip positioning', () => {
-  it('positions tooltip at offset from given coordinates', () => {
+  it('positions tooltip via computePosition with flip and shift', async () => {
+    mockComputePosition.mockResolvedValueOnce({
+      x: 112,
+      y: 212,
+      placement: 'bottom-start',
+      strategy: 'absolute',
+      middlewareData: {},
+    });
+
     const container = createContainer();
     const manager = createTooltipManager(container);
 
     manager.show({ title: 'Test', fields: [{ label: 'V', value: '1' }] }, 100, 200);
+    await flushPositioning();
+
+    // computePosition should have been called with the tooltip element
+    expect(mockComputePosition).toHaveBeenCalledOnce();
+    const [ref, tooltipEl, options] = mockComputePosition.mock.calls[0];
+    expect(tooltipEl).toBeInstanceOf(HTMLElement);
+    expect(options?.placement).toBe('bottom-start');
+    // Should include offset, flip, and shift middleware
+    expect(options?.middleware).toHaveLength(3);
+
+    // Virtual reference should return a rect at the mouse position
+    const rect = (ref as { getBoundingClientRect: () => DOMRect }).getBoundingClientRect();
+    expect(rect.width).toBe(0);
+    expect(rect.height).toBe(0);
+
+    // Position should be applied from computePosition result
+    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    expect(tooltip.style.left).toContain('px');
+    expect(tooltip.style.top).toContain('px');
+
+    manager.destroy();
+  });
+
+  it('discards stale position callbacks on rapid show() calls', async () => {
+    type PosResult = {
+      x: number;
+      y: number;
+      placement: string;
+      strategy: string;
+      middlewareData: Record<string, never>;
+    };
+    let resolveFirst!: (val: PosResult) => void;
+    let resolveSecond!: (val: PosResult) => void;
+
+    mockComputePosition
+      .mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            resolveFirst = r;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            resolveSecond = r;
+          }),
+      );
+
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+
+    // Two rapid show() calls
+    manager.show({ title: 'A', fields: [{ label: 'V', value: '1' }] }, 10, 10);
+    manager.show({ title: 'B', fields: [{ label: 'V', value: '2' }] }, 200, 200);
+
+    // Resolve the second (latest) first
+    resolveSecond({
+      x: 212,
+      y: 212,
+      placement: 'bottom-start',
+      strategy: 'absolute',
+      middlewareData: {},
+    });
+    await flushPositioning();
 
     const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
-    // Tooltip should be positioned (the exact offset is TOOLTIP_OFFSET = 12)
-    const left = parseInt(tooltip.style.left, 10);
-    const top = parseInt(tooltip.style.top, 10);
-    // Should be near the given coordinates (offset by 12)
-    expect(left).toBeGreaterThanOrEqual(0);
-    expect(top).toBeGreaterThanOrEqual(0);
+    const posAfterSecond = tooltip.style.left;
+
+    // Now resolve the first (stale) - should be discarded
+    resolveFirst({
+      x: 22,
+      y: 22,
+      placement: 'bottom-start',
+      strategy: 'absolute',
+      middlewareData: {},
+    });
+    await flushPositioning();
+
+    // Position should not have changed (stale callback was discarded)
+    expect(tooltip.style.left).toBe(posAfterSecond);
 
     manager.destroy();
   });

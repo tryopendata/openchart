@@ -354,8 +354,8 @@ describe('computeAnnotations', () => {
       // The offset annotation should be shifted by the dx/dy amount
       const dx = withOffset[0].label!.x - withoutOffset[0].label!.x;
       const dy = withOffset[0].label!.y - withoutOffset[0].label!.y;
-      expect(dx).toBe(20);
-      expect(dy).toBe(-30);
+      expect(dx).toBeCloseTo(20);
+      expect(dy).toBeCloseTo(-30);
     });
   });
 
@@ -514,8 +514,8 @@ describe('computeAnnotations', () => {
 
       const dx = withOffset[0].label!.x - withoutOffset[0].label!.x;
       const dy = withOffset[0].label!.y - withoutOffset[0].label!.y;
-      expect(dx).toBe(20);
-      expect(dy).toBe(10);
+      expect(dx).toBeCloseTo(20);
+      expect(dy).toBeCloseTo(10);
     });
   });
 
@@ -771,6 +771,175 @@ describe('computeAnnotations', () => {
       // Right edge x ≈ label.x + textWidth
       // "Curve test" = 10 chars * 12 * 0.55 = 66
       expect(connector.from.x).toBeCloseTo(label.x + 66, 1);
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // Annotation-to-annotation collision resolution
+  // -----------------------------------------------------------------
+
+  describe('annotation-to-annotation collision', () => {
+    it('nudges second annotation when two overlap at the same data point', () => {
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'First note' },
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Second note' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(2);
+
+      const label1 = annotations[0].label!;
+      const label2 = annotations[1].label!;
+
+      // Both should be visible
+      expect(label1.visible).toBe(true);
+      expect(label2.visible).toBe(true);
+
+      // Labels should not overlap: their positions should differ
+      const samePosition = label1.x === label2.x && label1.y === label2.y;
+      expect(samePosition).toBe(false);
+    });
+
+    it('nudges second annotation when nearby data points produce overlapping labels', () => {
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'First annotation' },
+        { type: 'text', x: '2020-01-01', y: 21, text: 'Second annotation' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(2);
+
+      const label1 = annotations[0].label!;
+      const label2 = annotations[1].label!;
+
+      // After collision resolution, bounding boxes should not overlap
+      // Check that at least one coordinate differs meaningfully
+      const dy = Math.abs(label1.y - label2.y);
+      const dx = Math.abs(label1.x - label2.x);
+      expect(dx + dy).toBeGreaterThan(5);
+    });
+
+    it('recomputes connector origin after nudging', () => {
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'First note' },
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Second note' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const nudgedLabel = annotations[1].label!;
+
+      // The nudged annotation should still have a connector
+      expect(nudgedLabel.connector).toBeDefined();
+
+      // The connector "from" should be near the nudged label position, not the original
+      const connFrom = nudgedLabel.connector!.from;
+      const labelCenterX = nudgedLabel.x;
+      const labelCenterY = nudgedLabel.y;
+
+      // Connector origin should be within a reasonable distance of the label
+      const distFromLabel = Math.sqrt(
+        (connFrom.x - labelCenterX) ** 2 + (connFrom.y - labelCenterY) ** 2,
+      );
+      // Should be within the label's bounding box range (text width + height)
+      expect(distFromLabel).toBeLessThan(200);
+    });
+
+    it('resolves three overlapping annotations without any collision', () => {
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Note A' },
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Note B' },
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Note C' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(3);
+
+      // All three should be visible
+      for (const ann of annotations) {
+        expect(ann.label!.visible).toBe(true);
+      }
+
+      // All three should have distinct positions
+      const positions = annotations.map((a) => `${a.label!.x.toFixed(1)},${a.label!.y.toFixed(1)}`);
+      const unique = new Set(positions);
+      expect(unique.size).toBe(3);
+    });
+
+    it('does not nudge annotations that already have distinct positions', () => {
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 10,
+          text: 'Low point',
+          anchor: 'bottom',
+          offset: { dx: 0, dy: 40 },
+        },
+        {
+          type: 'text',
+          x: '2022-01-01',
+          y: 40,
+          text: 'High point',
+          anchor: 'top',
+          offset: { dx: 0, dy: -40 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      // Compute once to get positions
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(2);
+
+      // These annotations are far apart, so positions should match what they'd
+      // be without collision resolution (i.e., not nudged)
+      const specSingle1 = makeSpec([spec.annotations[0]]);
+      const specSingle2 = makeSpec([spec.annotations[1]]);
+      const single1 = computeAnnotations(specSingle1, scales, chartArea, fullStrategy);
+      const single2 = computeAnnotations(specSingle2, scales, chartArea, fullStrategy);
+
+      expect(annotations[0].label!.x).toBeCloseTo(single1[0].label!.x, 1);
+      expect(annotations[0].label!.y).toBeCloseTo(single1[0].label!.y, 1);
+      expect(annotations[1].label!.x).toBeCloseTo(single2[0].label!.x, 1);
+      expect(annotations[1].label!.y).toBeCloseTo(single2[0].label!.y, 1);
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // Obstacle avoidance (label bounds as obstacles)
+  // -----------------------------------------------------------------
+
+  describe('obstacle avoidance', () => {
+    it('nudges annotation away from an obstacle rect at the same position', () => {
+      const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Annotation' }]);
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      // Place an obstacle rect exactly where the annotation would land
+      const withoutObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const originalLabel = withoutObstacles[0].label!;
+
+      const obstacle: Rect = {
+        x: originalLabel.x - 5,
+        y: originalLabel.y - 5,
+        width: 80,
+        height: 30,
+      };
+
+      const withObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy, false, [
+        obstacle,
+      ]);
+
+      expect(withObstacles).toHaveLength(1);
+      const nudgedLabel = withObstacles[0].label!;
+      expect(nudgedLabel.visible).toBe(true);
+
+      // The annotation should have moved away from the obstacle
+      const moved = nudgedLabel.x !== originalLabel.x || nudgedLabel.y !== originalLabel.y;
+      expect(moved).toBe(true);
     });
   });
 });

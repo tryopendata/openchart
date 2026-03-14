@@ -21,12 +21,38 @@ Use categorical palettes only when the story genuinely requires distinguishing m
 ```json
 {
   "theme": {
-    "colors": ["#0d9488", "#94a3b8", "#94a3b8", "#94a3b8", "#94a3b8"]
+    "colors": ["#1b7fa3", "#94a3b8", "#94a3b8", "#94a3b8", "#94a3b8"]
   }
 }
 ```
 
-The first data row gets `#0d9488` (teal), the rest get gray. Sort data so the protagonist is first (or last, depending on chart type and visual weight).
+The first data row gets `#1b7fa3` (teal-blue, the default palette primary), the rest get gray. Sort data so the protagonist is first (or last, depending on chart type and visual weight).
+
+## Decision Table: Story to Color Strategy
+
+When choosing colors, find the row that best describes your data story:
+
+| Data story | Strategy | theme.colors |
+| --- | --- | --- |
+| One group stands out from the rest | Highlight + gray | `["#1b7fa3", "#94a3b8", "#94a3b8", "#94a3b8"]` |
+| Comparing 2-3 groups equally | Categorical | `["#1b7fa3", "#c44e52", "#6a9f58"]` |
+| Showing intensity or magnitude gradient | Sequential | Use `encoding.color` with `type: "quantitative"` |
+| Above/below a meaningful threshold | Diverging | `["#c44e52", "#e8e8e8", "#1b7fa3"]` |
+| Positive vs. negative change | Semantic red/green | `["#c44e52", "#6a9f58"]` |
+| One protagonist + one antagonist | Two-color highlight | `["#1b7fa3", "#c44e52", "#94a3b8"]` |
+| No particular group matters more | Default palette | Omit `theme.colors` entirely |
+
+## How theme.colors Maps to Series
+
+`theme.colors` (flat array shorthand) sets the categorical palette. The engine assigns colors by order of unique values encountered in the `color` encoding field's data:
+
+- First unique value in data -> `colors[0]`
+- Second unique value -> `colors[1]`
+- Third -> `colors[2]`, etc.
+
+To highlight a specific series, sort data so the protagonist appears first, then set `theme.colors` to `["#accent", "#94a3b8", "#94a3b8", ...]`.
+
+**Caveat:** "first unique value" depends on chart type and data order. For bar charts, the first data row renders as the topmost bar. For line charts, the first unique value in the `color` field (based on row order) gets `colors[0]`. If data comes from an external source and row order isn't controlled, explicitly set enough entries in `theme.colors` to cover all series, placing the accent color at the correct index position.
 
 ## Double-Encoding: Color That Reinforces Position
 
@@ -35,6 +61,23 @@ When a quantitative axis already tells the story (e.g., poverty rate on x-axis),
 This is not the same as categorical color (where hues are arbitrary). Here, the color progression has semantic meaning: blue = low, red = high. The reader sees the gradient and understands the narrative without reading a single number.
 
 When to use: scatter plots, bubble charts, or any chart where a quantitative dimension is the primary story. Don't leave dots monochrome when the data has a strong gradient to show.
+
+**Implementation:** Bucket the continuous variable into ordinal tiers in your data before passing to the spec, then map those tiers to a cool-to-warm gradient:
+
+```json
+{
+  "encoding": {
+    "x": { "field": "poverty_rate", "type": "quantitative" },
+    "y": { "field": "graduation_rate", "type": "quantitative" },
+    "color": { "field": "poverty_tier", "type": "ordinal" }
+  },
+  "theme": {
+    "colors": ["#1b7fa3", "#d47215", "#c44e52"]
+  }
+}
+```
+
+Where `poverty_tier` is a derived field with values like "Low", "Medium", "High" bucketed from the continuous `poverty_rate`.
 
 ## How Many Colors
 
@@ -84,3 +127,16 @@ When supporting dark mode:
 - Sequential ramps may need inversion (dark-to-light instead of light-to-dark)
 - Gray context elements need higher lightness to remain visible
 - Test the full palette in both modes before shipping
+
+## Ready-Made Palettes
+
+Copy-paste-ready `theme.colors` arrays for common scenarios. All colors come from or complement the default categorical palette.
+
+| Scenario | theme.colors |
+| --- | --- |
+| Highlight + gray (1 accent) | `["#1b7fa3", "#94a3b8", "#94a3b8", "#94a3b8", "#94a3b8"]` |
+| Two-group comparison | `["#1b7fa3", "#c44e52"]` |
+| Three-group comparison | `["#1b7fa3", "#c44e52", "#6a9f58"]` |
+| Positive / negative (green = growth) | `["#6a9f58", "#c44e52"]` |
+| Cool-to-warm gradient (3 tiers) | `["#1b7fa3", "#d47215", "#c44e52"]` |
+| De-emphasis gray | `"#94a3b8"` (slate-400, use for context series) |

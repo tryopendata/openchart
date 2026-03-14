@@ -2,9 +2,11 @@
  * Tooltip manager: creates and positions a floating tooltip element.
  *
  * Shows tooltip content near the mouse/touch position with viewport
- * edge avoidance. Touch support via tap-to-show, tap-outside-to-hide.
+ * edge avoidance via @floating-ui/dom. Touch support via tap-to-show,
+ * tap-outside-to-hide.
  */
 
+import { computePosition, flip, offset, shift } from '@floating-ui/dom';
 import type { TooltipContent } from '@opendata-ai/openchart-core';
 
 export interface TooltipManager {
@@ -36,6 +38,11 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
   container.style.position = container.style.position || 'relative';
   container.appendChild(tooltip);
 
+  // Track last content to skip innerHTML when only position changes
+  let lastContentKey = '';
+  // Generation counter to discard stale async position callbacks
+  let currentPositionId = 0;
+
   // Hide on tap-outside for touch devices
   const handleDocumentTouch = (e: Event): void => {
     if (!container.contains(e.target as Node)) {
@@ -45,60 +52,78 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
   document.addEventListener('touchstart', handleDocumentTouch);
 
   function show(content: TooltipContent, x: number, y: number): void {
-    let html = '';
+    // Fast content identity check: title + field count + first/last field values
+    const contentKey = `${content.title}|${content.fields.length}|${content.fields[0]?.value}|${content.fields[content.fields.length - 1]?.value}`;
 
-    // Title row: optional color dot + title text
-    if (content.title) {
-      const titleColor = content.fields.find((f) => f.color)?.color;
-      html += '<div class="viz-tooltip-header">';
-      if (titleColor) {
-        html += `<span class="viz-tooltip-dot" style="background:${esc(titleColor)}"></span>`;
-      }
-      html += `<span class="viz-tooltip-title">${esc(content.title)}</span>`;
-      html += '</div>';
-    }
+    if (contentKey !== lastContentKey) {
+      lastContentKey = contentKey;
 
-    // Field rows
-    if (content.fields.length > 0) {
-      html += '<div class="viz-tooltip-body">';
-      for (const field of content.fields) {
-        html += '<div class="viz-tooltip-row">';
-        html += `<span class="viz-tooltip-label">${esc(field.label)}</span>`;
-        html += `<span class="viz-tooltip-value">${esc(field.value)}</span>`;
+      let html = '';
+
+      // Title row: optional color dot + title text
+      if (content.title) {
+        const titleColor = content.fields.find((f) => f.color)?.color;
+        html += '<div class="viz-tooltip-header">';
+        if (titleColor) {
+          html += `<span class="viz-tooltip-dot" style="background:${esc(titleColor)}"></span>`;
+        }
+        html += `<span class="viz-tooltip-title">${esc(content.title)}</span>`;
         html += '</div>';
       }
-      html += '</div>';
+
+      // Field rows
+      if (content.fields.length > 0) {
+        html += '<div class="viz-tooltip-body">';
+        for (const field of content.fields) {
+          html += '<div class="viz-tooltip-row">';
+          html += `<span class="viz-tooltip-label">${esc(field.label)}</span>`;
+          html += `<span class="viz-tooltip-value">${esc(field.value)}</span>`;
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+
+      tooltip.innerHTML = html;
     }
 
-    tooltip.innerHTML = html;
     tooltip.style.display = 'block';
 
-    // Position with viewport edge avoidance
-    const containerRect = container.getBoundingClientRect();
-    const tooltipRect = tooltip.getBoundingClientRect();
+    // Position with viewport-aware edge avoidance via @floating-ui/dom.
+    // Uses a virtual element since the reference point is a coordinate,
+    // not a DOM element.
+    const positionId = ++currentPositionId;
+    const virtualRef = {
+      getBoundingClientRect() {
+        const rect = container.getBoundingClientRect();
+        return {
+          x: rect.left + x,
+          y: rect.top + y,
+          width: 0,
+          height: 0,
+          top: rect.top + y,
+          left: rect.left + x,
+          right: rect.left + x,
+          bottom: rect.top + y,
+        };
+      },
+    };
 
-    let left = x + TOOLTIP_OFFSET;
-    let top = y + TOOLTIP_OFFSET;
-
-    // Flip horizontal if overflowing right
-    if (left + tooltipRect.width > containerRect.width) {
-      left = x - tooltipRect.width - TOOLTIP_OFFSET;
-    }
-    // Flip vertical if overflowing bottom
-    if (top + tooltipRect.height > containerRect.height) {
-      top = y - tooltipRect.height - TOOLTIP_OFFSET;
-    }
-
-    // Clamp to container bounds
-    left = Math.max(0, Math.min(left, containerRect.width - tooltipRect.width));
-    top = Math.max(0, Math.min(top, containerRect.height - tooltipRect.height));
-
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
+    computePosition(virtualRef, tooltip, {
+      placement: 'bottom-start',
+      middleware: [offset(TOOLTIP_OFFSET), flip(), shift({ padding: 5 })],
+    }).then(({ x: fx, y: fy }) => {
+      // Discard stale callbacks from earlier show() calls
+      if (positionId !== currentPositionId) return;
+      // computePosition returns coordinates relative to the tooltip's offset
+      // parent (the container with position: relative), so apply directly.
+      tooltip.style.left = `${fx}px`;
+      tooltip.style.top = `${fy}px`;
+    });
   }
 
   function hide(): void {
     tooltip.style.display = 'none';
+    lastContentKey = '';
   }
 
   function destroy(): void {
@@ -116,5 +141,6 @@ function esc(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 }

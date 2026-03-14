@@ -8,8 +8,8 @@ Data visualization library monorepo. Declarative chart and table specs rendered 
 packages/
 ├── core/       # Types, spec builders, formatters, palettes (d3-color, d3-format)
 ├── engine/     # Spec validation, data compilation, scale/layout (d3-scale, d3-shape, d3-array)
-├── vanilla/    # DOM rendering: createChart(), createTable() (d3-force for graphs)
-├── react/      # React wrappers: <Chart />, <DataTable />, <VizThemeProvider />
+├── vanilla/    # DOM rendering: createChart(), createTable(), createGraph() (d3-force for graphs)
+├── react/      # React wrappers: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />
 ├── vue/        # Vue 3 wrappers: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />
 └── svelte/     # Svelte 5 wrappers: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />
 examples/       # Ladle stories for interactive development
@@ -22,7 +22,7 @@ Build order matters: core -> engine -> vanilla + react + vue + svelte (parallel)
 ```bash
 bun run build             # Build all packages (respects order)
 bun run test              # Run all tests (vitest)
-bun run lint              # ESLint across all packages
+bun run lint              # Biome across all packages
 bun run typecheck         # TypeScript --noEmit across all packages
 bun run dev               # Ladle dev server (examples)
 ```

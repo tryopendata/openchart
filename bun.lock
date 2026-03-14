@@ -37,7 +37,7 @@
     },
     "packages/core": {
       "name": "@opendata-ai/openchart-core",
-      "version": "1.1.0",
+      "version": "2.10.0",
       "dependencies": {
         "d3-color": "^3.1.0",
         "d3-format": "^3.1.0",
@@ -51,7 +51,7 @@
     },
     "packages/engine": {
       "name": "@opendata-ai/openchart-engine",
-      "version": "1.1.0",
+      "version": "2.10.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "d3-array": "^3.2.0",
@@ -70,7 +70,7 @@
     },
     "packages/react": {
       "name": "@opendata-ai/openchart-react",
-      "version": "1.1.0",
+      "version": "2.10.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -89,7 +89,7 @@
     },
     "packages/svelte": {
       "name": "@opendata-ai/openchart-svelte",
-      "version": "1.1.0",
+      "version": "2.10.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -108,8 +108,9 @@
     },
     "packages/vanilla": {
       "name": "@opendata-ai/openchart-vanilla",
-      "version": "1.1.0",
+      "version": "2.10.0",
       "dependencies": {
+        "@floating-ui/dom": "^1.7.6",
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
         "d3-force": "^3.0.0",
@@ -122,7 +123,7 @@
     },
     "packages/vue": {
       "name": "@opendata-ai/openchart-vue",
-      "version": "1.1.0",
+      "version": "2.10.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -255,6 +256,12 @@
     "@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.27.3", "", { "os": "win32", "cpu": "ia32" }, "sha512-QLKSFeXNS8+tHW7tZpMtjlNb7HKau0QDpwm49u0vUp9y1WOF+PEzkU84y9GqYaAVW8aH8f3GcBck26jh54cX4Q=="],
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.27.3", "", { "os": "win32", "cpu": "x64" }, "sha512-4uJGhsxuptu3OcpVAzli+/gWusVGwZZHTlS63hh++ehExkVT8SgiEf7/uC/PclrPPkLhZqGgCTjd0VWLo6xMqA=="],
+
+    "@floating-ui/core": ["@floating-ui/core@1.7.5", "", { "dependencies": { "@floating-ui/utils": "^0.2.11" } }, "sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ=="],
+
+    "@floating-ui/dom": ["@floating-ui/dom@1.7.6", "", { "dependencies": { "@floating-ui/core": "^1.7.5", "@floating-ui/utils": "^0.2.11" } }, "sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ=="],
+
+    "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@inquirer/ansi": ["@inquirer/ansi@1.0.2", "", {}, "sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ=="],
 

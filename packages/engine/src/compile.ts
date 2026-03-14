@@ -25,6 +25,8 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
+  BRAND_RESERVE_WIDTH,
+  computeLabelBounds,
   generateAltText,
   generateDataTable,
   getBreakpoint,
@@ -75,14 +77,41 @@ import { computeTooltipDescriptors } from './tooltips/compute';
 // ---------------------------------------------------------------------------
 
 /**
- * Compute per-row bounding rects for band-scale charts (dot, bar).
- * Each obstacle covers the full band height and x-range of marks in that row,
- * giving the annotation nudge system awareness of data marks.
+ * Compute bounding rects from marks to use as obstacles for annotation nudging.
+ *
+ * For band-scale charts (bar, dot): groups marks by band row and returns
+ * a single obstacle per row spanning the full band height and x-range.
+ *
+ * For other charts (column, scatter): returns individual mark bounds so
+ * annotations avoid overlapping any visible data mark.
  */
-function computeRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
-  if (!scales.y || scales.y.type !== 'band') return [];
+function computeMarkObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
+  // Band-scale y-axis: group marks by row for efficient obstacle computation
+  if (scales.y?.type === 'band') {
+    return computeBandRowObstacles(marks, scales);
+  }
 
-  // Group marks by their y-center (rounded), compute x-extent per group
+  // All other charts: use individual rect/point mark bounds as obstacles
+  const obstacles: Rect[] = [];
+  for (const mark of marks) {
+    if (mark.type === 'rect') {
+      const rm = mark as RectMark;
+      obstacles.push({ x: rm.x, y: rm.y, width: rm.width, height: rm.height });
+    } else if (mark.type === 'point') {
+      const pm = mark as PointMark;
+      obstacles.push({
+        x: pm.cx - pm.r,
+        y: pm.cy - pm.r,
+        width: pm.r * 2,
+        height: pm.r * 2,
+      });
+    }
+  }
+  return obstacles;
+}
+
+/** Group band-scale marks by row, returning one obstacle per band. */
+function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
   const rows = new Map<number, { minX: number; maxX: number; bandY: number }>();
 
   for (const mark of marks) {
@@ -116,7 +145,7 @@ function computeRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
   }
 
   // Get bandwidth from the band scale
-  const bandScale = scales.y.scale as { bandwidth?: () => number };
+  const bandScale = scales.y!.scale as { bandwidth?: () => number };
   const bandwidth = bandScale.bandwidth?.() ?? 0;
   if (bandwidth === 0) return [];
 
@@ -326,12 +355,31 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const renderer = getChartRenderer(renderSpec.type);
   const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
 
-  // Compute annotations from spec, passing legend + mark bounds as obstacles for collision avoidance
+  // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
   const obstacles: Rect[] = [];
   if (finalLegend.bounds.width > 0) {
     obstacles.push(finalLegend.bounds);
   }
-  obstacles.push(...computeRowObstacles(marks, scales));
+  obstacles.push(...computeMarkObstacles(marks, scales));
+
+  // Add visible data label bounds as obstacles so annotations avoid overlapping them
+  for (const mark of marks) {
+    if (mark.type !== 'area' && mark.label?.visible) {
+      obstacles.push(computeLabelBounds(mark.label));
+    }
+  }
+
+  // Add brand watermark as an obstacle so annotations avoid overlapping it.
+  // The brand is right-aligned on the same baseline as the first bottom chrome element,
+  // offset below the chart area by x-axis extent (tick labels + axis title).
+  const brandPadding = theme.spacing.padding;
+  const brandX = dims.total.width - brandPadding - BRAND_RESERVE_WIDTH;
+  const xAxisExtent = axes.x?.label ? 48 : axes.x ? 26 : 0;
+  const firstBottomChrome = dims.chrome.source ?? dims.chrome.byline ?? dims.chrome.footer;
+  const brandY = firstBottomChrome
+    ? chartArea.y + chartArea.height + xAxisExtent + firstBottomChrome.y
+    : chartArea.y + chartArea.height + xAxisExtent + theme.spacing.chartToFooter;
+  obstacles.push({ x: brandX, y: brandY, width: BRAND_RESERVE_WIDTH, height: 30 });
   const annotations: ResolvedAnnotation[] = computeAnnotations(
     chartSpec,
     scales,

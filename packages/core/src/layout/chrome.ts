@@ -22,7 +22,7 @@ import type {
 } from '../types/layout';
 import type { Chrome, ChromeText } from '../types/spec';
 import type { ChromeDefaults, ResolvedTheme } from '../types/theme';
-import { estimateTextHeight, estimateTextWidth } from './text-measure';
+import { BRAND_RESERVE_WIDTH, estimateCharWidth, estimateTextHeight } from './text-measure';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,27 +71,40 @@ function buildTextStyle(
   };
 }
 
-/** Measure text width using the provided function or heuristic fallback. */
-function measureWidth(text: string, style: TextStyle, measureText?: MeasureTextFn): number {
-  if (measureText) {
-    return measureText(text, style.fontSize, style.fontWeight).width;
-  }
-  return estimateTextWidth(text, style.fontSize, style.fontWeight);
-}
-
 /**
  * Estimate how many lines text will wrap to, given a max width.
+ * Uses character-count word-wrapping that matches the SVG renderer's
+ * wrapText behavior (word-boundary breaks, same charWidth heuristic).
  * Returns at least 1.
  */
 function estimateLineCount(
   text: string,
   style: TextStyle,
   maxWidth: number,
-  measureText?: MeasureTextFn,
+  _measureText?: MeasureTextFn,
 ): number {
-  const fullWidth = measureWidth(text, style, measureText);
-  if (fullWidth <= maxWidth) return 1;
-  return Math.ceil(fullWidth / maxWidth);
+  if (maxWidth <= 0) return 1;
+
+  const charWidth = estimateCharWidth(style.fontSize, style.fontWeight);
+  const maxChars = Math.floor(maxWidth / charWidth);
+
+  if (text.length <= maxChars) return 1;
+
+  const words = text.split(' ');
+  let lines = 1;
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxChars && current) {
+      lines++;
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +203,8 @@ export function computeChrome(
   }
 
   // Bottom elements: source, byline, footer
+  // Reserve space on the right for the brand watermark so text doesn't overlap it
+  const bottomMaxWidth = maxWidth - BRAND_RESERVE_WIDTH;
   const bottomElements: Partial<Pick<ResolvedChrome, 'source' | 'byline' | 'footer'>> = {};
   let bottomHeight = 0;
 
@@ -237,7 +252,7 @@ export function computeChrome(
         width,
         item.norm.style,
       );
-      const lineCount = estimateLineCount(item.norm.text, style, maxWidth, measureText);
+      const lineCount = estimateLineCount(item.norm.text, style, bottomMaxWidth, measureText);
       const height = estimateTextHeight(style.fontSize, lineCount, style.lineHeight);
 
       // y positions will be computed relative to the bottom of the
@@ -246,7 +261,7 @@ export function computeChrome(
         text: item.norm.text,
         x: pad + (item.norm.offset?.dx ?? 0),
         y: bottomHeight + (item.norm.offset?.dy ?? 0), // offset from where bottom chrome starts
-        maxWidth,
+        maxWidth: bottomMaxWidth,
         style,
       };
 

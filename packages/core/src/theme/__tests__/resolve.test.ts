@@ -74,3 +74,60 @@ describe('resolveTheme', () => {
     expect(resolved.spacing.padding).toBe(DEFAULT_THEME.spacing.padding);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Deep merge behavior hardening
+// ---------------------------------------------------------------------------
+
+describe('resolveTheme deep merge edge cases', () => {
+  it('replaces categorical array entirely, does not concatenate', () => {
+    const custom = ['#aaa', '#bbb'];
+    const resolved = resolveTheme({ colors: { categorical: custom } });
+    expect(resolved.colors.categorical).toEqual(custom);
+    expect(resolved.colors.categorical).toHaveLength(2);
+  });
+
+  it('skips undefined values, preserving defaults', () => {
+    const resolved = resolveTheme({ borderRadius: undefined });
+    expect(resolved.borderRadius).toBe(DEFAULT_THEME.borderRadius);
+  });
+
+  it('applies multiple overrides at different depths in one call', () => {
+    const resolved = resolveTheme({
+      colors: { background: '#222222', text: '#eeeeee' },
+      fonts: { family: 'Georgia' },
+      spacing: { padding: 32 },
+      borderRadius: 4,
+    });
+    expect(resolved.colors.background).toBe('#222222');
+    expect(resolved.colors.text).toBe('#eeeeee');
+    expect(resolved.fonts.family).toBe('Georgia');
+    expect(resolved.spacing.padding).toBe(32);
+    expect(resolved.borderRadius).toBe(4);
+    // Non-overridden values preserved
+    expect(resolved.fonts.mono).toBe(DEFAULT_THEME.fonts.mono);
+    expect(resolved.spacing.chromeGap).toBe(DEFAULT_THEME.spacing.chromeGap);
+    expect(resolved.colors.categorical).toEqual(DEFAULT_THEME.colors.categorical);
+  });
+
+  it('empty object override returns defaults unchanged', () => {
+    const resolved = resolveTheme({});
+    expect(resolved.colors).toEqual(expect.objectContaining(DEFAULT_THEME.colors));
+    expect(resolved.fonts).toEqual(DEFAULT_THEME.fonts);
+    expect(resolved.spacing).toEqual(DEFAULT_THEME.spacing);
+    expect(resolved.borderRadius).toBe(DEFAULT_THEME.borderRadius);
+  });
+
+  it('dark background adapts chrome colors without losing chrome structure', () => {
+    const resolved = resolveTheme({ colors: { background: '#111111', text: '#ffffff' } });
+    expect(resolved.isDark).toBe(true);
+    // Chrome structure should still be fully populated
+    expect(resolved.chrome.title).toBeDefined();
+    expect(resolved.chrome.subtitle).toBeDefined();
+    expect(resolved.chrome.source).toBeDefined();
+    expect(resolved.chrome.byline).toBeDefined();
+    expect(resolved.chrome.footer).toBeDefined();
+    // Title color should be adapted (not the light-mode default)
+    expect(resolved.chrome.title.color).not.toBe(DEFAULT_THEME.chrome.title.color);
+  });
+});

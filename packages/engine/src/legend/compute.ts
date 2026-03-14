@@ -20,7 +20,7 @@ import type {
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { BRAND_RESERVE_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 
@@ -248,8 +248,9 @@ export function computeLegend(
     };
   }
 
-  // Top/bottom-positioned legend: horizontal flow with overflow protection
-  const availableWidth = chartArea.width - LEGEND_PADDING * 2;
+  // Top/bottom-positioned legend: horizontal flow with overflow protection.
+  // Reserve space on the right so legend entries don't overlap the brand watermark.
+  const availableWidth = chartArea.width - LEGEND_PADDING * 2 - BRAND_RESERVE_WIDTH;
   const maxFit = entriesThatFit(entries, availableWidth, TOP_LEGEND_MAX_ROWS, labelStyle);
 
   if (maxFit < entries.length) {
@@ -291,7 +292,7 @@ export function computeLegend(
         (resolvedPosition === 'bottom'
           ? chartArea.y + chartArea.height - legendHeight
           : chartArea.y) + offsetDy,
-      width: Math.min(totalWidth, chartArea.width),
+      width: Math.min(totalWidth, availableWidth),
       height: legendHeight,
     },
     labelStyle,

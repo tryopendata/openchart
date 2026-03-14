@@ -42,7 +42,7 @@ Callout at a specific data point.
 - Set `background` to improve readability over chart lines
 - `connector` defaults to `true` (straight line from label to point)
 - `"curve"` connector draws a curved arrow with arrowhead
-- `anchor: "auto"` lets the engine pick the best position
+- `anchor: "auto"` lets the engine pick a position (see details below)
 
 ## Placement on Dense or Bubble Charts
 
@@ -62,6 +62,38 @@ Scatter/bubble charts create unique annotation challenges because circles are la
 | Annotation near chart edge gets clipped | Pull label inward with negative dx or dy |
 | Anchor set to approximate position, not data point | Set x/y to actual data coords; use offset for visual position |
 | Label in lower-left corner colliding with axes | Move to upper-left or use larger dy to clear axis labels |
+
+## How the Engine Handles Placement
+
+Understanding what the engine does (and doesn't do) helps you write annotations that render correctly on the first try.
+
+**What the engine does automatically:**
+- Resolves annotation `x`/`y` data coordinates to pixel positions via the same d3 scales used for data points
+- Nudges text annotations away from obstacle rects (legend bounds, band-scale mark bounds) so annotations don't land on the legend
+- Resolves annotation-to-annotation collisions using a greedy algorithm: if two text annotations overlap, the second one is repositioned to the nearest non-colliding spot (below, above, left, or right)
+- Recomputes connector origins after any nudging so connectors still point correctly
+- Hides all annotations at compact breakpoints (< 400px width)
+
+**What `anchor: "auto"` actually does:** Checks if the data point is in the upper or lower half of the chart area. Upper half places the label below-right with an 8px offset; lower half places it above-right with an 8px offset. This is simple heuristic placement, not intelligent whitespace detection. For predictable results, always specify explicit `anchor` and `offset` values.
+
+**Practical limits of auto-collision resolution:** The engine's greedy algorithm works best when annotations start in different areas of the chart. If all annotations cluster in the same region, the nudging can push labels into awkward positions. Give the engine a head start by placing annotations in distinct zones.
+
+## Estimating Annotation Size
+
+These rough estimates help you reason about whether annotations will fit. They match the engine's internal text measurement.
+
+- **Text width:** `characters * fontSize * 0.55` (default fontSize is 12). A 20-character annotation is roughly `20 * 12 * 0.55 = 132px`. Bold text (fontWeight 700) adds ~8% width.
+- **Text height:** `lines * fontSize * 1.3`. A single line at 12px = ~16px tall.
+- **Multi-line text** (`\n`): the widest line determines bounding box width. Multi-line text is center-aligned.
+
+These are heuristic estimates. The engine can't know the precise rendered width without a real font metric context. When placement is critical (scatter/bubble with multiple annotations), use the `playwright-cli` skill to screenshot and verify.
+
+## Practical Rules for Multiple Annotations
+
+- **Prefer 0-2 text annotations per chart.** Use reflines with labels for additional callouts. Refline labels are simpler and less collision-prone.
+- When using 2+ text annotations, aim for different areas of the chart. The engine auto-resolves collisions, but good initial separation produces cleaner results.
+- **Never use `anchor: "auto"` with 2+ text annotations.** Specify explicit anchors and offsets for each one.
+- For scatter/bubble charts, use 40-100px offsets to push labels into empty quadrants, with connectors back to data points.
 
 ## Range Annotation
 
@@ -114,6 +146,8 @@ See [editing reference](editing.md) for the full `onEdit` API, `ElementEdit` typ
 
 ## Example: Annotated Line Chart
 
+Two text annotations placed on opposite sides of the chart. The trough annotation uses `anchor: "bottom"` to push below the data; the peak uses `anchor: "top"` to push above. This gives the engine's collision resolver a good starting position for each label.
+
 ```json
 {
   "type": "line",
@@ -149,20 +183,22 @@ See [editing reference](editing.md) for the full `onEdit` API, `ElementEdit` typ
       "stroke": "#c44e52"
     },
     {
-      "type": "range",
-      "x1": "2024-01",
-      "x2": "2024-04",
-      "label": "Post-ETF rally",
-      "fill": "#1b7fa3",
-      "opacity": 0.1
+      "type": "text",
+      "x": "2023-04",
+      "y": 29100,
+      "text": "Crypto winter trough",
+      "anchor": "bottom",
+      "offset": { "dx": 0, "dy": 25 },
+      "connector": true
     },
     {
       "type": "text",
       "x": "2024-10",
       "y": 72800,
-      "text": "New ATH",
-      "anchor": "left",
-      "offset": { "dx": -10, "dy": -5 }
+      "text": "New all-time high",
+      "anchor": "top",
+      "offset": { "dx": 0, "dy": -25 },
+      "connector": true
     }
   ]
 }

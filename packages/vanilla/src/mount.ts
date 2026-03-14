@@ -1367,6 +1367,7 @@ export function createChart(
   let destroyed = false;
   let isDragging = false;
   let pendingRender = false;
+  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 
   const measureText = createMeasureText();
 
@@ -1590,6 +1591,10 @@ export function createChart(
     if (destroyed) return;
     destroyed = true;
 
+    if (resizeTimer !== null) {
+      clearTimeout(resizeTimer);
+      resizeTimer = null;
+    }
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();
       cleanupTooltipEvents = null;
@@ -1637,10 +1642,14 @@ export function createChart(
   // Initial render
   render();
 
-  // Set up responsive resize
+  // Set up responsive resize with debounce to avoid full SVG rebuild on every frame
   if (options?.responsive !== false) {
     disconnectResize = observeResize(container, () => {
-      resize();
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        resizeTimer = null;
+        resize();
+      }, 100);
     });
   }
 

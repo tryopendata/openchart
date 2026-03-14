@@ -24,7 +24,7 @@ import type {
   TextAnnotation,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { detectCollision, estimateTextWidth } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScaleTime } from 'd3-scale';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
@@ -549,13 +549,42 @@ function estimateLabelBounds(label: ResolvedLabel): Rect {
   return computeTextBounds(label.x, label.y, label.text, fontSize, fontWeight);
 }
 
-/** Check if two rects overlap. */
-function rectsOverlap(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-}
-
 /** Padding between annotation and obstacle when nudging. */
 const NUDGE_PADDING = 6;
+
+/**
+ * Generate candidate displacement vectors to move `selfBounds` clear of each
+ * obstacle in 4 directions (below, above, left, right), sorted by smallest
+ * movement first.
+ */
+function generateNudgeCandidates(
+  selfBounds: Rect,
+  obstacles: Rect[],
+  padding: number,
+): { dx: number; dy: number; distance: number }[] {
+  const candidates: { dx: number; dy: number; distance: number }[] = [];
+
+  for (const obs of obstacles) {
+    // Below: shift self so its top edge clears the obstacle bottom
+    const belowDy = obs.y + obs.height + padding - selfBounds.y;
+    candidates.push({ dx: 0, dy: belowDy, distance: Math.abs(belowDy) });
+
+    // Above: shift self so its bottom edge clears the obstacle top
+    const aboveDy = obs.y - padding - (selfBounds.y + selfBounds.height);
+    candidates.push({ dx: 0, dy: aboveDy, distance: Math.abs(aboveDy) });
+
+    // Left: shift self so its right edge clears the obstacle left
+    const leftDx = obs.x - padding - (selfBounds.x + selfBounds.width);
+    candidates.push({ dx: leftDx, dy: 0, distance: Math.abs(leftDx) });
+
+    // Right: shift self so its left edge clears the obstacle right
+    const rightDx = obs.x + obs.width + padding - selfBounds.x;
+    candidates.push({ dx: rightDx, dy: 0, distance: Math.abs(rightDx) });
+  }
+
+  candidates.sort((a, b) => a.distance - b.distance);
+  return candidates;
+}
 
 /**
  * Try to reposition a text annotation to avoid overlapping with obstacle rects
@@ -573,7 +602,7 @@ function nudgeAnnotationFromObstacles(
 
   const labelBounds = estimateLabelBounds(annotation.label);
   const collidingObs = obstacles.filter(
-    (obs) => obs.width > 0 && obs.height > 0 && rectsOverlap(labelBounds, obs),
+    (obs) => obs.width > 0 && obs.height > 0 && detectCollision(labelBounds, obs),
   );
 
   if (collidingObs.length === 0) return false;
@@ -583,38 +612,8 @@ function nudgeAnnotationFromObstacles(
   const py = resolvePosition(originalAnnotation.y, scales.y);
   if (px === null || py === null) return false;
 
-  // Generate candidate positions: calculated offsets to clear each obstacle
-  const candidates: { dx: number; dy: number; distance: number }[] = [];
+  const candidates = generateNudgeCandidates(labelBounds, collidingObs, NUDGE_PADDING);
   const fontSize = labelBounds.height / Math.max(1, annotation.label.text.split('\n').length);
-
-  for (const obs of collidingObs) {
-    // Below obstacle: shift label so its top edge clears the obstacle bottom
-    const currentLabelTop = labelBounds.y;
-    const targetLabelTop = obs.y + obs.height + NUDGE_PADDING;
-    const belowDy = targetLabelTop - currentLabelTop;
-    candidates.push({ dx: 0, dy: belowDy, distance: Math.abs(belowDy) });
-
-    // Above obstacle: shift label so its bottom edge clears the obstacle top
-    const currentLabelBottom = labelBounds.y + labelBounds.height;
-    const targetLabelBottom = obs.y - NUDGE_PADDING;
-    const aboveDy = targetLabelBottom - currentLabelBottom;
-    candidates.push({ dx: 0, dy: aboveDy, distance: Math.abs(aboveDy) });
-
-    // Left of obstacle: shift label so its right edge clears the obstacle left
-    const currentLabelRight = labelBounds.x + labelBounds.width;
-    const targetLabelRight = obs.x - NUDGE_PADDING;
-    const leftDx = targetLabelRight - currentLabelRight;
-    candidates.push({ dx: leftDx, dy: 0, distance: Math.abs(leftDx) });
-
-    // Right of obstacle: shift label so its left edge clears the obstacle right
-    const currentLabelLeft = labelBounds.x;
-    const targetLabelLeft = obs.x + obs.width + NUDGE_PADDING;
-    const rightDx = targetLabelLeft - currentLabelLeft;
-    candidates.push({ dx: rightDx, dy: 0, distance: Math.abs(rightDx) });
-  }
-
-  // Sort candidates by distance (prefer smallest movement)
-  candidates.sort((a, b) => a.distance - b.distance);
 
   for (const { dx, dy } of candidates) {
     const newLabelX = annotation.label.x + dx;
@@ -651,7 +650,7 @@ function nudgeAnnotationFromObstacles(
 
     // Check no collisions with any obstacle
     const stillCollides = obstacles.some(
-      (obs) => obs.width > 0 && obs.height > 0 && rectsOverlap(candidateBounds, obs),
+      (obs) => obs.width > 0 && obs.height > 0 && detectCollision(candidateBounds, obs),
     );
     if (stillCollides) continue;
 
@@ -660,11 +659,14 @@ function nudgeAnnotationFromObstacles(
     // the text doesn't go completely off-screen.
     const labelCenterX = candidateBounds.x + candidateBounds.width / 2;
     const labelCenterY = candidateBounds.y + candidateBounds.height / 2;
+    // Allow nudged labels to extend into the chrome region below the chart
+    // (source/footer area) since annotations near the bottom edge often
+    // need to shift into that space to avoid marks or the brand watermark.
     const inBounds =
       labelCenterX >= chartArea.x &&
       labelCenterX <= chartArea.x + chartArea.width + 100 &&
       labelCenterY >= chartArea.y - fontSize &&
-      labelCenterY <= chartArea.y + chartArea.height + fontSize;
+      labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
     if (inBounds) {
       // When nudged vertically (directly above/below the data), use a caret
@@ -684,6 +686,117 @@ function nudgeAnnotationFromObstacles(
 }
 
 // ---------------------------------------------------------------------------
+// Annotation-to-annotation collision resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve collisions between text annotation labels using a greedy algorithm.
+ *
+ * Iterates through text annotations in order, building a list of "placed"
+ * bounding rects. When a later annotation overlaps an already-placed one,
+ * it tries offset positions (below, above, left, right) to find a
+ * non-colliding spot. Recomputes the connector origin after nudging.
+ */
+function resolveAnnotationCollisions(
+  annotations: ResolvedAnnotation[],
+  originalSpecs: NormalizedChartSpec['annotations'],
+  scales: ResolvedScales,
+  chartArea: Rect,
+): void {
+  const placedBounds: Rect[] = [];
+
+  for (let i = 0; i < annotations.length; i++) {
+    const annotation = annotations[i];
+    if (annotation.type !== 'text' || !annotation.label) {
+      continue;
+    }
+
+    const bounds = estimateLabelBounds(annotation.label);
+
+    // Check against all previously placed annotation labels
+    const collidingBounds = placedBounds.filter(
+      (pb) => pb.width > 0 && pb.height > 0 && detectCollision(bounds, pb),
+    );
+
+    if (collidingBounds.length > 0) {
+      // Find the original spec to get data point coordinates for connector recomputation
+      const originalSpec = originalSpecs[i];
+
+      if (originalSpec?.type === 'text') {
+        const px = resolvePosition(originalSpec.x, scales.x);
+        const py = resolvePosition(originalSpec.y, scales.y);
+
+        if (px !== null && py !== null) {
+          const candidates = generateNudgeCandidates(bounds, collidingBounds, NUDGE_PADDING);
+          const fontSize = bounds.height / Math.max(1, annotation.label.text.split('\n').length);
+
+          for (const { dx, dy } of candidates) {
+            const newLabelX = annotation.label.x + dx;
+            const newLabelY = annotation.label.y + dy;
+
+            const candidateLabel: ResolvedLabel = {
+              ...annotation.label,
+              x: newLabelX,
+              y: newLabelY,
+            };
+            const candidateBounds = estimateLabelBounds(candidateLabel);
+
+            // Check no collisions with any placed label
+            const stillCollides = placedBounds.some(
+              (pb) => pb.width > 0 && pb.height > 0 && detectCollision(candidateBounds, pb),
+            );
+            if (stillCollides) continue;
+
+            // Check the label center stays reasonably in bounds
+            const labelCenterX = candidateBounds.x + candidateBounds.width / 2;
+            const labelCenterY = candidateBounds.y + candidateBounds.height / 2;
+            const inBounds =
+              labelCenterX >= chartArea.x &&
+              labelCenterX <= chartArea.x + chartArea.width + 100 &&
+              labelCenterY >= chartArea.y - fontSize &&
+              labelCenterY <= chartArea.y + chartArea.height + fontSize;
+
+            if (inBounds) {
+              // Recompute connector origin for the new position
+              let newConnector = annotation.label.connector;
+              if (newConnector) {
+                const annFontSize = annotation.label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+                const annFontWeight =
+                  annotation.label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
+                const connStyle =
+                  newConnector.style === 'curve' ? ('curve' as const) : ('straight' as const);
+                const newFrom = computeConnectorOrigin(
+                  newLabelX,
+                  newLabelY,
+                  annotation.label.text,
+                  annFontSize,
+                  annFontWeight,
+                  px,
+                  py,
+                  connStyle,
+                );
+                newConnector = { ...newConnector, from: newFrom };
+              }
+
+              annotation.label = {
+                ...annotation.label,
+                x: newLabelX,
+                y: newLabelY,
+                connector: newConnector,
+              };
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Add this annotation's final bounds to the placed list
+    placedBounds.push(estimateLabelBounds(annotation.label));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -696,7 +809,8 @@ function nudgeAnnotationFromObstacles(
  *
  * When obstacle rects are provided (e.g. legend bounds), text annotations
  * that overlap with them are automatically repositioned using alternate
- * anchor directions.
+ * anchor directions. After individual obstacle avoidance, annotation-to-
+ * annotation collisions are resolved using a greedy placement algorithm.
  */
 export function computeAnnotations(
   spec: NormalizedChartSpec,
@@ -736,6 +850,9 @@ export function computeAnnotations(
       annotations.push(resolved);
     }
   }
+
+  // Resolve annotation-to-annotation collisions (greedy, order-preserving)
+  resolveAnnotationCollisions(annotations, spec.annotations, scales, chartArea);
 
   // Sort by zIndex (lower first, undefined treated as 0)
   annotations.sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));

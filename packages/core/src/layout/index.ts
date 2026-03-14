@@ -3,4 +3,9 @@
  */
 
 export { computeChrome } from './chrome';
-export { estimateTextHeight, estimateTextWidth } from './text-measure';
+export {
+  BRAND_RESERVE_WIDTH,
+  estimateCharWidth,
+  estimateTextHeight,
+  estimateTextWidth,
+} from './text-measure';

@@ -100,6 +100,23 @@ describe('computeChrome', () => {
     expect(result.bottomHeight).toBeGreaterThan(0);
   });
 
+  it('reserves extra height when title wraps to multiple lines at narrow widths', () => {
+    const longTitle =
+      'Global Economic Recovery Trends Show Surprising Resilience Across Major Markets';
+    const chrome: Chrome = { title: longTitle, subtitle: 'Subtitle text' };
+
+    // At wide width, title fits on one line
+    const wide = computeChrome(chrome, theme, 800);
+    // At narrow width, title wraps to multiple lines
+    const narrow = computeChrome(chrome, theme, 300);
+
+    // Narrow should reserve more top height due to title wrapping
+    expect(narrow.topHeight).toBeGreaterThan(wide.topHeight);
+
+    // Subtitle should be pushed further down to avoid collision
+    expect(narrow.subtitle!.y).toBeGreaterThan(wide.subtitle!.y);
+  });
+
   it('uses measureText function when provided', () => {
     const measureText = (text: string, fontSize: number) => ({
       width: text.length * fontSize * 0.6,

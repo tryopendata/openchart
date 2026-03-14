@@ -54,6 +54,7 @@ export {
 // ---------------------------------------------------------------------------
 
 export {
+  BRAND_RESERVE_WIDTH,
   computeChrome,
   estimateTextWidth,
 } from './layout/index';
@@ -86,7 +87,7 @@ export type {
   LabelCandidate,
   LabelPriority,
 } from './labels/index';
-export { resolveCollisions } from './labels/index';
+export { computeLabelBounds, detectCollision, resolveCollisions } from './labels/index';
 
 // ---------------------------------------------------------------------------
 // Locale: number and date formatting

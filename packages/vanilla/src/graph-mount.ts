@@ -114,6 +114,8 @@ export function createGraph(
   let positionedNodes: PositionedNode[] = [];
   let positionedEdges: PositionedEdge[] = [];
   let adjacencyMap = new Map<string, Set<string>>();
+  let nodeDataMap = new Map<string, Record<string, unknown>>();
+  let edgeDataMap = new Map<string, Record<string, unknown>>();
   let hoveredNodeId: string | null = null;
   let hoveredEdgeId: string | null = null;
   let selectedNodeIds = new Set<string>();
@@ -121,7 +123,7 @@ export function createGraph(
   let needsRender = false;
   let isGesturing = false;
   let gestureTimeout: ReturnType<typeof setTimeout> | null = null;
-  let selfResizing = false;
+  let lastEdgeHitTime = 0;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -160,6 +162,11 @@ export function createGraph(
     return compileGraph(currentSpec, compileOpts);
   }
 
+  function buildDataMaps(): void {
+    nodeDataMap = new Map(compilation.nodes.map((n) => [n.id, n.data ?? {}]));
+    edgeDataMap = new Map(compilation.edges.map((e) => [`${e.source}->${e.target}`, e.data ?? {}]));
+  }
+
   function buildAdjacencyMap(edges: CompiledGraphEdge[]): Map<string, Set<string>> {
     const map = new Map<string, Set<string>>();
     for (const edge of edges) {
@@ -191,8 +198,7 @@ export function createGraph(
    * Falls back to an empty object if not found.
    */
   function nodeDataById(nodeId: string): Record<string, unknown> {
-    const node = compilation.nodes.find((n) => n.id === nodeId);
-    return node?.data ?? {};
+    return nodeDataMap.get(nodeId) ?? {};
   }
 
   /**
@@ -245,9 +251,7 @@ export function createGraph(
    * Look up edge data by edge id ("source->target").
    */
   function edgeDataById(edgeId: string): Record<string, unknown> | null {
-    const [source, target] = edgeId.split('->');
-    const edge = compilation.edges.find((e) => e.source === source && e.target === target);
-    return edge?.data ?? null;
+    return edgeDataMap.get(edgeId) ?? null;
   }
 
   // ---------------------------------------------------------------------------
@@ -413,36 +417,8 @@ export function createGraph(
       // One final fit after simulation settles
       if (canvas && positionedNodes.length > 0 && interactionManager && renderer) {
         const { width: cw, height: ch } = getCanvasDimensions();
-        const { transform: fitTransform, contentHeight } = ZoomTransform.fitBounds(
-          positionedNodes,
-          cw,
-          ch,
-        );
+        const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
         interactionManager.setTransform(fitTransform);
-
-        // Shrink canvas + container to actual content height to eliminate dead space.
-        // The chrome (title/subtitle) sits above the canvas, so total height includes both.
-        const chromeH = chromeEl?.getBoundingClientRect().height || 0;
-        const totalContentHeight = Math.ceil(contentHeight) + chromeH;
-        const containerH = container.getBoundingClientRect().height;
-
-        if (totalContentHeight < containerH) {
-          selfResizing = true;
-          const targetCanvasH = Math.ceil(contentHeight);
-          renderer.resize(cw, targetCanvasH);
-          // Re-fit with the new canvas height
-          const refit = ZoomTransform.fitBounds(positionedNodes, cw, targetCanvasH);
-          interactionManager.setTransform(refit.transform);
-          // Collapse the container to content height instead of filling the parent.
-          // This eliminates dead space below compact graphs in tall containers.
-          container.style.height = 'fit-content';
-          // Hold selfResizing long enough for the ResizeObserver (debounced ~16ms)
-          // to see it and skip the doResize that would clear our height override.
-          setTimeout(() => {
-            selfResizing = false;
-          }, 100);
-        }
-
         needsRender = true;
         scheduleRender();
       }
@@ -539,6 +515,21 @@ export function createGraph(
         }
       },
       onBackgroundHover(graphX, graphY, screenX, screenY) {
+        // Throttle edge hit testing to avoid O(n) scan on every mousemove
+        const now = performance.now();
+        if (now - lastEdgeHitTime < 32) {
+          // When throttled, clear edge hover so hover-off transitions stay snappy
+          if (hoveredEdgeId) {
+            hoveredEdgeId = null;
+            needsRender = true;
+            scheduleRender();
+            options?.onEdgeHover?.(null);
+            tooltipManager?.hide();
+          }
+          return;
+        }
+        lastEdgeHitTime = now;
+
         // Edge hit testing: check proximity to edge line segments
         const transform = interactionManager?.getTransform();
         const threshold = 5 / (transform?.k ?? 1); // 5px in screen space
@@ -699,9 +690,7 @@ export function createGraph(
   }
 
   function doResize(): void {
-    if (destroyed || !canvas || !renderer || !wrapper || selfResizing) return;
-    // Clear any content-fit height override so we read the parent's actual size
-    container.style.height = '';
+    if (destroyed || !canvas || !renderer || !wrapper) return;
     const { width, height } = getContainerDimensions();
     const chromeHeight = chromeEl?.getBoundingClientRect().height || 0;
     const canvasHeight = Math.max(height - chromeHeight, 200);
@@ -720,6 +709,7 @@ export function createGraph(
     // Recompile
     compilation = compile();
     adjacencyMap = buildAdjacencyMap(compilation.edges);
+    buildDataMaps();
 
     // Update DOM chrome/legend
     renderChrome();
@@ -749,6 +739,7 @@ export function createGraph(
     // Recompile with new spec (encoding, chrome, nodeOverrides, etc.)
     compilation = compile();
     adjacencyMap = buildAdjacencyMap(compilation.edges);
+    buildDataMaps();
 
     // Transfer positions to new compiled nodes
     positionedNodes = compilation.nodes.map((node) => {
@@ -833,6 +824,7 @@ export function createGraph(
   try {
     compilation = compile();
     adjacencyMap = buildAdjacencyMap(compilation.edges);
+    buildDataMaps();
     createDOM();
     initSimulation();
     initInteraction();
