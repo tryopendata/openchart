@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0](https://github.com/tryopendata/openchart/compare/core-v2.10.0...core-v2.11.0) (2026-03-14)
+
+
+### Features
+
+* **layout:** prevent annotation/label/brand overlap with improved obstacle detection ([74650ae](https://github.com/tryopendata/openchart/commit/74650aeef1bb386f90f5f1c0c81a9255ed3b21e2))
+
 ## [2.10.0](https://github.com/tryopendata/openchart/compare/core-v2.9.1...core-v2.10.0) (2026-03-12)
 
 
