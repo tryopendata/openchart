@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.11.0](https://github.com/tryopendata/openchart/compare/engine-v2.10.0...engine-v2.11.0) (2026-03-14)
+
+
+### Features
+
+* **axes:** text-aware tick density prevents label overlap ([bc9f461](https://github.com/tryopendata/openchart/commit/bc9f46135c12ccf318738a291fcc02d28b670611))
+* **layout:** prevent annotation/label/brand overlap with improved obstacle detection ([74650ae](https://github.com/tryopendata/openchart/commit/74650aeef1bb386f90f5f1c0c81a9255ed3b21e2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.11.0
+
 ## [2.10.0](https://github.com/tryopendata/openchart/compare/engine-v2.9.1...engine-v2.10.0) (2026-03-12)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.11.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.10.0...vanilla-v2.11.0) (2026-03-14)
+
+
+### Features
+
+* **layout:** prevent annotation/label/brand overlap with improved obstacle detection ([74650ae](https://github.com/tryopendata/openchart/commit/74650aeef1bb386f90f5f1c0c81a9255ed3b21e2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.11.0
+    * @opendata-ai/openchart-engine bumped to 2.11.0
+
 ## [2.10.0](https://github.com/tryopendata/openchart/compare/vanilla-v2.9.1...vanilla-v2.10.0) (2026-03-12)
 
 
