@@ -11,6 +11,7 @@ import type {
   AxisTick,
   Gridline,
   LayoutStrategy,
+  MeasureTextFn,
   Rect,
   ResolvedTheme,
   TextStyle,
@@ -57,6 +58,15 @@ const HEIGHT_REDUCED_THRESHOLD = 200;
 const WIDTH_MINIMAL_THRESHOLD = 150;
 const WIDTH_REDUCED_THRESHOLD = 300;
 
+/**
+ * Minimum gap between adjacent tick labels as a multiple of font size.
+ * At the default 12px axis font, this yields ~12px of breathing room.
+ */
+const MIN_TICK_GAP_FACTOR = 1.0;
+
+/** Always show at least this many ticks, even if they overlap. */
+const MIN_TICK_COUNT = 2;
+
 /** Ordered densities from most to fewest ticks. */
 const DENSITY_ORDER: AxisLabelDensity[] = ['full', 'reduced', 'minimal'];
 
@@ -96,24 +106,105 @@ export function effectiveDensity(
 }
 
 // ---------------------------------------------------------------------------
+// Label overlap detection and thinning
+// ---------------------------------------------------------------------------
+
+/** Measure a single label's width using real measurement or heuristic fallback. */
+function measureLabel(
+  text: string,
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): number {
+  return measureText
+    ? measureText(text, fontSize, fontWeight).width
+    : estimateTextWidth(text, fontSize, fontWeight);
+}
+
+/** Check whether any adjacent tick labels overlap horizontally. */
+export function ticksOverlap(
+  ticks: AxisTick[],
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): boolean {
+  if (ticks.length < 2) return false;
+  const minGap = fontSize * MIN_TICK_GAP_FACTOR;
+  for (let i = 0; i < ticks.length - 1; i++) {
+    const aWidth = measureLabel(ticks[i].label, fontSize, fontWeight, measureText);
+    const bWidth = measureLabel(ticks[i + 1].label, fontSize, fontWeight, measureText);
+    const aRight = ticks[i].position + aWidth / 2;
+    const bLeft = ticks[i + 1].position - bWidth / 2;
+    if (aRight + minGap > bLeft) return true;
+  }
+  return false;
+}
+
+/**
+ * Thin a tick array by removing every other tick until labels don't overlap.
+ * Always keeps first and last tick. O(log n) iterations max.
+ * Returns the original array if no thinning is needed.
+ */
+export function thinTicksUntilFit(
+  ticks: AxisTick[],
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): AxisTick[] {
+  if (!ticksOverlap(ticks, fontSize, fontWeight, measureText)) return ticks;
+
+  let current = ticks;
+  while (current.length > MIN_TICK_COUNT) {
+    // Keep first, last, and every other tick in between
+    const thinned = [current[0]];
+    for (let i = 2; i < current.length - 1; i += 2) {
+      thinned.push(current[i]);
+    }
+    if (current.length > 1) thinned.push(current[current.length - 1]);
+    current = thinned;
+
+    if (!ticksOverlap(current, fontSize, fontWeight, measureText)) break;
+  }
+  return current;
+}
+
+// ---------------------------------------------------------------------------
 // Tick generation
 // ---------------------------------------------------------------------------
 
 /** Generate ticks for a continuous scale (linear, time, log). */
-function continuousTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity): AxisTick[] {
+function continuousTicks(
+  resolvedScale: ResolvedScale,
+  density: AxisLabelDensity,
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): AxisTick[] {
   const scale = resolvedScale.scale as D3ContinuousScale;
-  const count = resolvedScale.channel.axis?.tickCount ?? TICK_COUNTS[density];
-  const ticks: unknown[] = scale.ticks(count);
+  const explicitCount = resolvedScale.channel.axis?.tickCount;
+  const count = explicitCount ?? TICK_COUNTS[density];
+  const rawTicks: unknown[] = scale.ticks(count);
 
-  return ticks.map((value: unknown) => ({
+  const ticks = rawTicks.map((value: unknown) => ({
     value,
     position: scale(value as number & Date) as number,
     label: formatTickLabel(value, resolvedScale),
   }));
+
+  // Respect explicit tickCount: user asked for this many, don't override
+  if (explicitCount) return ticks;
+
+  return thinTicksUntilFit(ticks, fontSize, fontWeight, measureText);
 }
 
 /** Generate ticks for a band/point/ordinal scale. */
-function categoricalTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity): AxisTick[] {
+function categoricalTicks(
+  resolvedScale: ResolvedScale,
+  density: AxisLabelDensity,
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
   const domain: string[] = scale.domain();
   const explicitTickCount = resolvedScale.channel.axis?.tickCount;
@@ -127,7 +218,7 @@ function categoricalTicks(resolvedScale: ResolvedScale, density: AxisLabelDensit
     selectedValues = domain.filter((_: string, i: number) => i % step === 0);
   }
 
-  return selectedValues.map((value: string) => {
+  const ticks = selectedValues.map((value: string) => {
     // Band scales: use the center of the band
     const bandScale = resolvedScale.type === 'band' ? (scale as ScaleBand<string>) : null;
     const pos = bandScale
@@ -140,6 +231,13 @@ function categoricalTicks(resolvedScale: ResolvedScale, density: AxisLabelDensit
       label: value,
     };
   });
+
+  // For non-band scales without explicit tickCount, thin based on label width
+  if (resolvedScale.type !== 'band' && !explicitTickCount) {
+    return thinTicksUntilFit(ticks, fontSize, fontWeight, measureText);
+  }
+
+  return ticks;
 }
 
 /** Format a tick value based on the scale type. */
@@ -182,12 +280,14 @@ export interface AxesResult {
  * @param chartArea - The chart drawing area.
  * @param strategy - Responsive layout strategy.
  * @param theme - Resolved theme for styling.
+ * @param measureText - Optional real text measurement from the adapter.
  */
 export function computeAxes(
   scales: ResolvedScales,
   chartArea: Rect,
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
+  measureText?: MeasureTextFn,
 ): AxesResult {
   const result: AxesResult = {};
   const baseDensity = strategy.axisLabelDensity;
@@ -224,11 +324,14 @@ export function computeAxes(
     lineHeight: 1.3,
   };
 
+  const { fontSize } = tickLabelStyle;
+  const { fontWeight } = tickLabelStyle;
+
   if (scales.x) {
     const ticks =
       scales.x.type === 'band' || scales.x.type === 'point' || scales.x.type === 'ordinal'
-        ? categoricalTicks(scales.x, xDensity)
-        : continuousTicks(scales.x, xDensity);
+        ? categoricalTicks(scales.x, xDensity, fontSize, fontWeight, measureText)
+        : continuousTicks(scales.x, xDensity, fontSize, fontWeight, measureText);
 
     const gridlines: Gridline[] = ticks.map((t) => ({
       position: t.position,
@@ -242,11 +345,7 @@ export function computeAxes(
       const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
       let maxLabelWidth = 0;
       for (const t of ticks) {
-        const w = estimateTextWidth(
-          t.label,
-          theme.fonts.sizes.axisTick,
-          theme.fonts.weights.normal,
-        );
+        const w = measureLabel(t.label, fontSize, fontWeight, measureText);
         if (w > maxLabelWidth) maxLabelWidth = w;
       }
       // If the widest label exceeds 85% of the bandwidth, rotate to avoid overlap
@@ -270,8 +369,8 @@ export function computeAxes(
   if (scales.y) {
     const ticks =
       scales.y.type === 'band' || scales.y.type === 'point' || scales.y.type === 'ordinal'
-        ? categoricalTicks(scales.y, yDensity)
-        : continuousTicks(scales.y, yDensity);
+        ? categoricalTicks(scales.y, yDensity, fontSize, fontWeight, measureText)
+        : continuousTicks(scales.y, yDensity, fontSize, fontWeight, measureText);
 
     const gridlines: Gridline[] = ticks.map((t) => ({
       position: t.position,

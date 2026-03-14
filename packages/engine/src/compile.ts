@@ -315,7 +315,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute axes (skip for radial charts)
   const axes = isRadial
     ? { x: undefined, y: undefined }
-    : computeAxes(scales, chartArea, strategy, theme);
+    : computeAxes(scales, chartArea, strategy, theme, options.measureText);
 
   // Compute gridlines (stored in axes, used by adapters via axes.y.gridlines)
   if (!isRadial) {

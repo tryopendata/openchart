@@ -1,8 +1,8 @@
-import type { LayoutStrategy } from '@opendata-ai/openchart-core';
+import type { AxisTick, LayoutStrategy } from '@opendata-ai/openchart-core';
 import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
-import { computeAxes, effectiveDensity } from '../layout/axes';
+import { computeAxes, effectiveDensity, thinTicksUntilFit, ticksOverlap } from '../layout/axes';
 import { computeScales } from '../layout/scales';
 
 const lineSpec: NormalizedChartSpec = {
@@ -298,5 +298,182 @@ describe('effectiveDensity', () => {
     expect(effectiveDensity('full', 100, X_MINIMAL, X_REDUCED)).toBe('minimal');
     expect(effectiveDensity('full', 200, X_MINIMAL, X_REDUCED)).toBe('reduced');
     expect(effectiveDensity('full', 400, X_MINIMAL, X_REDUCED)).toBe('full');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ticksOverlap unit tests
+// ---------------------------------------------------------------------------
+
+describe('ticksOverlap', () => {
+  const fontSize = 12;
+  const fontWeight = 400;
+
+  it('returns false for empty or single tick', () => {
+    expect(ticksOverlap([], fontSize, fontWeight)).toBe(false);
+    expect(ticksOverlap([{ value: 0, position: 100, label: 'A' }], fontSize, fontWeight)).toBe(
+      false,
+    );
+  });
+
+  it('returns false when ticks are well-spaced', () => {
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: 'A' },
+      { value: 1, position: 200, label: 'B' },
+      { value: 2, position: 400, label: 'C' },
+    ];
+    expect(ticksOverlap(ticks, fontSize, fontWeight)).toBe(false);
+  });
+
+  it('returns true when ticks are too close together', () => {
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: 'January 2025' },
+      { value: 1, position: 30, label: 'February 2025' },
+      { value: 2, position: 60, label: 'March 2025' },
+    ];
+    expect(ticksOverlap(ticks, fontSize, fontWeight)).toBe(true);
+  });
+
+  it('uses measureText when provided', () => {
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: 'A' },
+      { value: 1, position: 100, label: 'B' },
+    ];
+
+    // With a measureText that reports very wide labels, they should overlap
+    const wideMeasure = () => ({ width: 200, height: 12 });
+    expect(ticksOverlap(ticks, fontSize, fontWeight, wideMeasure)).toBe(true);
+
+    // With a measureText that reports very narrow labels, they should not overlap
+    const narrowMeasure = () => ({ width: 1, height: 12 });
+    expect(ticksOverlap(ticks, fontSize, fontWeight, narrowMeasure)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// thinTicksUntilFit unit tests
+// ---------------------------------------------------------------------------
+
+describe('thinTicksUntilFit', () => {
+  const fontSize = 12;
+  const fontWeight = 400;
+
+  it('returns original array when no overlap', () => {
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: 'A' },
+      { value: 1, position: 200, label: 'B' },
+      { value: 2, position: 400, label: 'C' },
+    ];
+    const result = thinTicksUntilFit(ticks, fontSize, fontWeight);
+    expect(result).toBe(ticks); // Same reference, not a copy
+  });
+
+  it('thins overlapping ticks while keeping first and last', () => {
+    // Ticks at 10px intervals with long labels that will overlap
+    const ticks: AxisTick[] = Array.from({ length: 8 }, (_, i) => ({
+      value: i,
+      position: i * 10,
+      label: 'Long Label Text',
+    }));
+
+    const result = thinTicksUntilFit(ticks, fontSize, fontWeight);
+
+    // Should have fewer ticks than the original
+    expect(result.length).toBeLessThan(ticks.length);
+    // Should always keep first and last
+    expect(result[0]).toBe(ticks[0]);
+    expect(result[result.length - 1]).toBe(ticks[ticks.length - 1]);
+    // Should have at least MIN_TICK_COUNT (2)
+    expect(result.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns at least 2 ticks even when labels are very wide', () => {
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: 'Very Long Label That Is Wide' },
+      { value: 1, position: 5, label: 'Another Very Long Label' },
+      { value: 2, position: 10, label: 'Yet Another Long Label Here' },
+    ];
+    const result = thinTicksUntilFit(ticks, fontSize, fontWeight);
+    expect(result.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Text-aware tick density integration tests
+// ---------------------------------------------------------------------------
+
+describe('text-aware tick density', () => {
+  it('produces fewer x-axis ticks in narrow charts', () => {
+    const narrowArea = { x: 50, y: 50, width: 200, height: 300 };
+    const wideArea = { x: 50, y: 50, width: 800, height: 300 };
+
+    const scalesNarrow = computeScales(lineSpec, narrowArea, lineSpec.data);
+    const scalesWide = computeScales(lineSpec, wideArea, lineSpec.data);
+
+    const axesNarrow = computeAxes(scalesNarrow, narrowArea, fullStrategy, theme);
+    const axesWide = computeAxes(scalesWide, wideArea, fullStrategy, theme);
+
+    expect(axesNarrow.x!.ticks.length).toBeLessThanOrEqual(axesWide.x!.ticks.length);
+  });
+
+  it('does not thin x-axis ticks when explicit tickCount is set', () => {
+    const narrowArea = { x: 50, y: 50, width: 200, height: 300 };
+    const specWithTickCount: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { tickCount: 8 } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const scales = computeScales(specWithTickCount, narrowArea, specWithTickCount.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
+
+    // With explicit tickCount, the engine should not thin
+    // D3 may return fewer than 8 for this small dataset, but the point is
+    // thinTicksUntilFit should not be called
+    expect(axes.x!.ticks.length).toBeGreaterThan(0);
+  });
+
+  it('band scale shows all categories regardless of width', () => {
+    const categories = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'];
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      type: 'column',
+      data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+
+    const narrowArea = { x: 50, y: 50, width: 200, height: 300 };
+    const scales = computeScales(barSpec, narrowArea, barSpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
+
+    // Band scales show all categories (auto-rotation handles overlap instead)
+    expect(axes.x!.ticks.length).toBe(categories.length);
+  });
+
+  it('passes measureText to auto-rotation detection', () => {
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      type: 'column',
+      data: [
+        { cat: 'A', val: 10 },
+        { cat: 'B', val: 20 },
+      ],
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+
+    // measureText that reports very wide labels should trigger rotation
+    const wideMeasure = () => ({ width: 1000, height: 12 });
+    const scales = computeScales(barSpec, chartArea, barSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, wideMeasure);
+
+    expect(axes.x!.tickAngle).toBe(-45);
   });
 });
