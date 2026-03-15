@@ -27,7 +27,7 @@ After every screenshot, check these zones in order:
 
 **If you find any defect, fix it before reporting "looks good."**
 
-For the full defect catalog with specific fix patterns, load `Skill(openchart:visualize-data)` and read [references/visual-qa.md](references/visual-qa.md).
+For the full defect catalog with specific fix patterns, load `Skill(openchart:openchart)` and read [references/visual-qa.md](references/visual-qa.md).
 
 ## When Positioning Text Annotations
 

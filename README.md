@@ -108,15 +108,17 @@ Each package re-exports the types you need, so you typically only install one.
 
 Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. No lateral imports.
 
-## Claude Code plugin
+## Claude Code skill
 
-If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the OpenChart plugin gives Claude knowledge of the spec grammar, encoding rules, and design best practices so it can generate publication-quality specs from your data.
+If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the OpenChart skill gives Claude knowledge of the spec grammar, encoding rules, and design best practices so it can generate publication-quality specs from your data.
 
 ```shell
-/plugin marketplace add tryopendata/openchart
+/plugin marketplace add tryopendata/skills
 /plugin install openchart@openchart
-/visualize-data
+/openchart
 ```
+
+Or reference it in your Claude Code rules and prompts: `Skill(openchart:openchart)`
 
 ## Part of the OpenData ecosystem
 

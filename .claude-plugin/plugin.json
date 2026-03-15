@@ -1,9 +1,0 @@
-{
-  "name": "openchart",
-  "description": "Data visualization skill for @opendata-ai charts, tables, and graphs",
-  "version": "1.5.0",
-  "author": {
-    "name": "Riley Hilliard"
-  },
-  "license": "MIT"
-}

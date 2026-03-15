@@ -25,4 +25,4 @@ Every design decision should serve reader comprehension first.
 
 ## Detailed Guidance
 
-For chart selection reasoning, color strategy, editorial writing, typography hierarchy, and design review checklists, load `Skill(openchart:visualize-data)` and consult its design philosophy references.
+For chart selection reasoning, color strategy, editorial writing, typography hierarchy, and design review checklists, load `Skill(openchart:openchart)` and consult its design philosophy references.
