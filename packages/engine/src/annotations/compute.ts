@@ -410,12 +410,13 @@ function resolveRangeAnnotation(
 
   // Label positioned within the range, with optional offset.
   // labelAnchor controls horizontal placement:
-  //   "left" (default): left edge, text-anchor start
-  //   "top"/"auto": horizontally centered, text-anchor middle
+  //   "top" (default): horizontally centered, text-anchor middle
+  //   "left": left edge, text-anchor start
   //   "right": right edge, text-anchor end
+  //   "bottom"/"auto": horizontally centered, text-anchor middle
   let label: ResolvedLabel | undefined;
   if (annotation.label) {
-    const anchor = annotation.labelAnchor ?? 'left';
+    const anchor = annotation.labelAnchor ?? 'top';
     const centered = anchor === 'top' || anchor === 'bottom' || anchor === 'auto';
     const baseDx = centered ? 0 : anchor === 'right' ? -4 : 4;
     const baseDy = 14;
@@ -428,6 +429,8 @@ function resolveRangeAnnotation(
       style.textAnchor = 'end';
     }
 
+    // Position label horizontally centered within the range band by default.
+    // For left/right anchors, position at the respective edge.
     const baseX = centered ? x + width / 2 : anchor === 'right' ? x + width : x;
 
     label = {

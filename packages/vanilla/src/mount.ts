@@ -1297,6 +1297,17 @@ function createScreenReaderTable(
 
   const table = document.createElement('table');
   table.className = 'viz-sr-only';
+  // Inline critical SR-only styles so the table stays hidden even when the
+  // external stylesheet isn't loaded (e.g. CDN / esm.sh usage).
+  table.style.position = 'absolute';
+  table.style.width = '1px';
+  table.style.height = '1px';
+  table.style.padding = '0';
+  table.style.margin = '-1px';
+  table.style.overflow = 'hidden';
+  table.style.clipPath = 'inset(50%)';
+  table.style.whiteSpace = 'nowrap';
+  table.style.borderWidth = '0';
   table.setAttribute('role', 'table');
   table.setAttribute('aria-label', `Data table: ${layout.a11y.altText}`);
 

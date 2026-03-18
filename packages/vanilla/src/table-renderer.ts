@@ -316,9 +316,19 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
       table.classList.add('viz-table--sticky');
     }
 
-    // Caption (screen reader only)
+    // Caption (screen reader only – inline styles ensure hiding even without
+    // the external stylesheet, e.g. CDN / esm.sh usage)
     const caption = document.createElement('caption');
     caption.className = 'viz-sr-only';
+    caption.style.position = 'absolute';
+    caption.style.width = '1px';
+    caption.style.height = '1px';
+    caption.style.padding = '0';
+    caption.style.margin = '-1px';
+    caption.style.overflow = 'hidden';
+    caption.style.clipPath = 'inset(50%)';
+    caption.style.whiteSpace = 'nowrap';
+    caption.style.borderWidth = '0';
     caption.textContent = layout.a11y.summary;
     table.appendChild(caption);
 
@@ -347,6 +357,15 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
   // Live region for screen reader announcements (sort changes, search results)
   const liveRegion = document.createElement('div');
   liveRegion.className = 'viz-table-live-region viz-sr-only';
+  liveRegion.style.position = 'absolute';
+  liveRegion.style.width = '1px';
+  liveRegion.style.height = '1px';
+  liveRegion.style.padding = '0';
+  liveRegion.style.margin = '-1px';
+  liveRegion.style.overflow = 'hidden';
+  liveRegion.style.clipPath = 'inset(50%)';
+  liveRegion.style.whiteSpace = 'nowrap';
+  liveRegion.style.borderWidth = '0';
   liveRegion.setAttribute('aria-live', 'polite');
   liveRegion.setAttribute('aria-atomic', 'true');
   liveRegion.setAttribute('role', 'status');
