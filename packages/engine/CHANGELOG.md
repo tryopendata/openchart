@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.12.0](https://github.com/tryopendata/openchart/compare/engine-v2.11.0...engine-v2.12.0) (2026-03-18)
+
+
+### Features
+
+* **tooltips:** use detail encoding as tooltip title ([3f0db09](https://github.com/tryopendata/openchart/commit/3f0db09b3e8c4a607561b47abf47f65e47e25608))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.12.0
+
 ## [2.11.0](https://github.com/tryopendata/openchart/compare/engine-v2.10.0...engine-v2.11.0) (2026-03-14)
 
 
