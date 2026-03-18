@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.12.1](https://github.com/tryopendata/openchart/compare/core-v2.12.0...core-v2.12.1) (2026-03-18)
+
+
+* **core:** Synchronize openchart versions
+
 ## [2.12.0](https://github.com/tryopendata/openchart/compare/core-v2.11.0...core-v2.12.0) (2026-03-18)
 
 

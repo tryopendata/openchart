@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.12.1](https://github.com/tryopendata/openchart/compare/engine-v2.12.0...engine-v2.12.1) (2026-03-18)
+
+
+### Bug Fixes
+
+* inline SR-only styles and center range annotation labels ([46064fe](https://github.com/tryopendata/openchart/commit/46064fed4f3a3b617c11809a18ce7c3d4e5a3346))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.12.1
+
 ## [2.12.0](https://github.com/tryopendata/openchart/compare/engine-v2.11.0...engine-v2.12.0) (2026-03-18)
 
 
