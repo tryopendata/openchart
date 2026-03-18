@@ -83,6 +83,11 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
 
 /** Determine the title for a tooltip based on encoding. */
 function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
+  // Detail channel provides an explicit label (e.g. district name in scatter)
+  if (encoding.detail) {
+    return String(row[encoding.detail.field] ?? '');
+  }
+
   // For charts with a temporal x-axis, use the date as the title
   if (encoding.x?.type === 'temporal') {
     return formatValue(row[encoding.x.field], 'temporal');
