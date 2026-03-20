@@ -173,13 +173,7 @@ export function thinTicksUntilFit(
 // ---------------------------------------------------------------------------
 
 /** Generate ticks for a continuous scale (linear, time, log). */
-function continuousTicks(
-  resolvedScale: ResolvedScale,
-  density: AxisLabelDensity,
-  fontSize: number,
-  fontWeight: number,
-  measureText?: MeasureTextFn,
-): AxisTick[] {
+function continuousTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity): AxisTick[] {
   const scale = resolvedScale.scale as D3ContinuousScale;
   const explicitCount = resolvedScale.channel.axis?.tickCount;
   const count = explicitCount ?? TICK_COUNTS[density];
@@ -191,20 +185,11 @@ function continuousTicks(
     label: formatTickLabel(value, resolvedScale),
   }));
 
-  // Respect explicit tickCount: user asked for this many, don't override
-  if (explicitCount) return ticks;
-
-  return thinTicksUntilFit(ticks, fontSize, fontWeight, measureText);
+  return ticks;
 }
 
 /** Generate ticks for a band/point/ordinal scale. */
-function categoricalTicks(
-  resolvedScale: ResolvedScale,
-  density: AxisLabelDensity,
-  fontSize: number,
-  fontWeight: number,
-  measureText?: MeasureTextFn,
-): AxisTick[] {
+function categoricalTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
   const domain: string[] = scale.domain();
   const explicitTickCount = resolvedScale.channel.axis?.tickCount;
@@ -231,11 +216,6 @@ function categoricalTicks(
       label: value,
     };
   });
-
-  // For non-band scales without explicit tickCount, thin based on label width
-  if (resolvedScale.type !== 'band' && !explicitTickCount) {
-    return thinTicksUntilFit(ticks, fontSize, fontWeight, measureText);
-  }
 
   return ticks;
 }
@@ -328,15 +308,24 @@ export function computeAxes(
   const { fontWeight } = tickLabelStyle;
 
   if (scales.x) {
-    const ticks =
+    const allTicks =
       scales.x.type === 'band' || scales.x.type === 'point' || scales.x.type === 'ordinal'
-        ? categoricalTicks(scales.x, xDensity, fontSize, fontWeight, measureText)
-        : continuousTicks(scales.x, xDensity, fontSize, fontWeight, measureText);
+        ? categoricalTicks(scales.x, xDensity)
+        : continuousTicks(scales.x, xDensity);
 
-    const gridlines: Gridline[] = ticks.map((t) => ({
+    // Gridlines use the full tick set so they remain visible even when labels
+    // are thinned to prevent overlap.
+    const gridlines: Gridline[] = allTicks.map((t) => ({
       position: t.position,
       major: true,
     }));
+
+    // Thin tick labels to prevent overlap (skip for band scales which use
+    // auto-rotation, and when the user set an explicit tickCount).
+    const shouldThin = scales.x.type !== 'band' && !scales.x.channel.axis?.tickCount;
+    const ticks = shouldThin
+      ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText)
+      : allTicks;
 
     // Auto-rotate labels when band scale labels would overlap.
     // Uses max label width (not average) since one long label is enough to overlap.
@@ -367,15 +356,22 @@ export function computeAxes(
   }
 
   if (scales.y) {
-    const ticks =
+    const allTicks =
       scales.y.type === 'band' || scales.y.type === 'point' || scales.y.type === 'ordinal'
-        ? categoricalTicks(scales.y, yDensity, fontSize, fontWeight, measureText)
-        : continuousTicks(scales.y, yDensity, fontSize, fontWeight, measureText);
+        ? categoricalTicks(scales.y, yDensity)
+        : continuousTicks(scales.y, yDensity);
 
-    const gridlines: Gridline[] = ticks.map((t) => ({
+    // Gridlines use the full tick set (label thinning shouldn't remove gridlines).
+    const gridlines: Gridline[] = allTicks.map((t) => ({
       position: t.position,
       major: true,
     }));
+
+    // Thin tick labels to prevent overlap (skip for band scales and explicit tickCount).
+    const shouldThin = scales.y.type !== 'band' && !scales.y.channel.axis?.tickCount;
+    const ticks = shouldThin
+      ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText)
+      : allTicks;
 
     result.y = {
       ticks,

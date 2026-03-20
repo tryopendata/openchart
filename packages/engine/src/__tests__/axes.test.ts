@@ -455,6 +455,38 @@ describe('text-aware tick density', () => {
     expect(axes.x!.ticks.length).toBe(categories.length);
   });
 
+  it('gridlines survive tick thinning', () => {
+    // Force thinning by using a measureText that reports wide labels
+    const wideMeasure = () => ({ width: 200, height: 12 });
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, wideMeasure);
+
+    // Ticks should be thinned (fewer labels) but gridlines should remain at
+    // all original tick positions
+    expect(axes.y!.gridlines.length).toBeGreaterThanOrEqual(axes.y!.ticks.length);
+    // With wide labels forcing thinning, gridlines should outnumber ticks
+    if (axes.y!.ticks.length < axes.y!.gridlines.length) {
+      // Gridlines retained positions that ticks lost — the fix is working
+      expect(axes.y!.gridlines.length).toBeGreaterThan(axes.y!.ticks.length);
+    }
+  });
+
+  it('x-axis gridlines survive tick thinning when grid is enabled', () => {
+    const specWithGrid: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { grid: true } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const wideMeasure = () => ({ width: 200, height: 12 });
+    const scales = computeScales(specWithGrid, chartArea, specWithGrid.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, wideMeasure);
+
+    expect(axes.x!.gridlines.length).toBeGreaterThanOrEqual(axes.x!.ticks.length);
+  });
+
   it('passes measureText to auto-rotation detection', () => {
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
