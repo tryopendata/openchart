@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.12.2](https://github.com/tryopendata/openchart/compare/engine-v2.12.1...engine-v2.12.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* **axes:** decouple gridlines from tick label thinning ([9a79786](https://github.com/tryopendata/openchart/commit/9a79786dfd4d900182cbcc4a09b91e890ec995c3))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.12.2
+
 ## [2.12.1](https://github.com/tryopendata/openchart/compare/engine-v2.12.0...engine-v2.12.1) (2026-03-18)
 
 
