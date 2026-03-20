@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.12.2](https://github.com/tryopendata/openchart/compare/vue-v2.12.1...vue-v2.12.2) (2026-03-20)
+
+
+* **vue:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.12.2
+    * @opendata-ai/openchart-engine bumped to 2.12.2
+    * @opendata-ai/openchart-vanilla bumped to 2.12.2
+
 ## [2.12.1](https://github.com/tryopendata/openchart/compare/vue-v2.12.0...vue-v2.12.1) (2026-03-18)
 
 
