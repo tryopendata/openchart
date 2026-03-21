@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.0.0](https://github.com/tryopendata/openchart/compare/engine-v3.0.0...engine-v4.0.0) (2026-03-21)
+
+
+* **engine:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 4.0.0
+
 ## [3.0.0](https://github.com/tryopendata/openchart/compare/engine-v2.13.2...engine-v3.0.0) (2026-03-21)
 
 
