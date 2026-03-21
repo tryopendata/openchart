@@ -1064,6 +1064,10 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
     viewBox: `0 0 ${width} ${height}`,
     xmlns: SVG_NS,
   });
+  // Set explicit pixel height via inline style. iOS Safari misresolves CSS
+  // height:100% when the ancestor chain uses minHeight instead of height,
+  // causing the top of the chart (title) to clip on real mobile devices.
+  svg.style.height = `${height}px`;
   svg.setAttribute('role', layout.a11y.role);
   svg.setAttribute('aria-label', layout.a11y.altText);
   svg.setAttribute('class', 'viz-chart');
