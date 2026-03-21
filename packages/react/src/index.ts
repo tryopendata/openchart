@@ -18,8 +18,18 @@ export * from '@opendata-ai/openchart-core';
 // Vanilla: export utilities (SVG/PNG/JPG/CSV)
 // ---------------------------------------------------------------------------
 
-export type { JPGExportOptions, PNGExportOptions } from '@opendata-ai/openchart-vanilla';
-export { exportCSV, exportJPG, exportPNG, exportSVG } from '@opendata-ai/openchart-vanilla';
+export type {
+  JPGExportOptions,
+  PNGExportOptions,
+  SVGExportOptions,
+} from '@opendata-ai/openchart-vanilla';
+export {
+  exportCSV,
+  exportJPG,
+  exportPNG,
+  exportSVG,
+  exportSVGWithFonts,
+} from '@opendata-ai/openchart-vanilla';
 
 // ---------------------------------------------------------------------------
 // Engine: compile API and types not covered by core

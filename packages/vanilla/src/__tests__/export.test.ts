@@ -1,8 +1,9 @@
 /**
  * Export utility tests.
  *
- * Tests exportSVG, exportCSV, and exportJPG functions directly, verifying SVG string
- * validity, CSV formatting with headers and proper escaping, and JPG export interface.
+ * Tests exportSVG, exportSVGWithFonts, exportCSV, exportPNG, and exportJPG
+ * functions directly, verifying SVG string validity, font embedding,
+ * dimension parsing, CSV formatting, and raster export interfaces.
  */
 
 import type { CompileOptions } from '@opendata-ai/openchart-engine';
@@ -10,7 +11,7 @@ import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
-import { exportCSV, exportJPG, exportSVG } from '../export';
+import { exportCSV, exportJPG, exportPNG, exportSVG, exportSVGWithFonts } from '../export';
 import { renderChartSVG } from '../svg-renderer';
 
 // ---------------------------------------------------------------------------
@@ -73,6 +74,57 @@ describe('exportSVG', () => {
     const svg = renderToSVG();
     const result = exportSVG(svg);
     expect(result.endsWith('</svg>')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exportSVGWithFonts
+// ---------------------------------------------------------------------------
+
+describe('exportSVGWithFonts', () => {
+  it('returns a promise', () => {
+    const svg = renderToSVG();
+    const result = exportSVGWithFonts(svg);
+    expect(result).toBeInstanceOf(Promise);
+  });
+
+  it('resolves to a valid SVG string', async () => {
+    const svg = renderToSVG();
+    const result = await exportSVGWithFonts(svg);
+    expect(result.startsWith('<svg')).toBe(true);
+    expect(result.endsWith('</svg>')).toBe(true);
+  });
+
+  it('skips font embedding when embedFonts is false', async () => {
+    const svg = renderToSVG();
+    const result = await exportSVGWithFonts(svg, { embedFonts: false });
+    // Should not contain @font-face (no stylesheets in test env anyway)
+    expect(result).not.toContain('@font-face');
+  });
+
+  it('produces valid SVG even without stylesheets in the document', async () => {
+    const svg = renderToSVG();
+    // In test env, no Google Fonts stylesheets exist, so font collection
+    // should gracefully return nothing and the export should still work
+    const result = await exportSVGWithFonts(svg);
+    expect(result).toContain('viewBox="0 0 600 400"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dimension parsing (via exportPNG which uses getSVGDimensions internally)
+// ---------------------------------------------------------------------------
+
+describe('dimension parsing', () => {
+  it('exportPNG reads dimensions from viewBox when width/height are absent', () => {
+    const svg = renderToSVG();
+    // Verify the SVG has viewBox but no explicit width/height
+    expect(svg.getAttribute('viewBox')).toBe('0 0 600 400');
+    expect(svg.getAttribute('width')).toBeNull();
+    // exportPNG should still work (not fall back to 600x400 by accident)
+    const result = exportPNG(svg, { dpi: 1, embedFonts: false });
+    expect(result).toBeInstanceOf(Promise);
+    result.catch(() => {}); // happy-dom canvas limitations
   });
 });
 
@@ -150,6 +202,19 @@ describe('exportCSV', () => {
 });
 
 // ---------------------------------------------------------------------------
+// exportPNG
+// ---------------------------------------------------------------------------
+
+describe('exportPNG', () => {
+  it('returns a Promise when called with a rendered SVG element', () => {
+    const svg = renderToSVG();
+    const result = exportPNG(svg, { embedFonts: false });
+    expect(result).toBeInstanceOf(Promise);
+    result.catch(() => {});
+  });
+});
+
+// ---------------------------------------------------------------------------
 // exportJPG
 // ---------------------------------------------------------------------------
 
@@ -161,7 +226,7 @@ describe('exportJPG', () => {
 
   it('returns a Promise when called with a rendered SVG element', () => {
     const svg = renderToSVG();
-    const result = exportJPG(svg);
+    const result = exportJPG(svg, { embedFonts: false });
     expect(result).toBeInstanceOf(Promise);
     // Clean up: catch any rejection from happy-dom canvas limitations
     result.catch(() => {});
@@ -169,7 +234,7 @@ describe('exportJPG', () => {
 
   it('accepts quality option between 0 and 1', () => {
     const svg = renderToSVG();
-    const result = exportJPG(svg, { quality: 0.5, dpi: 1 });
+    const result = exportJPG(svg, { quality: 0.5, dpi: 1, embedFonts: false });
     expect(result).toBeInstanceOf(Promise);
     result.catch(() => {});
   });

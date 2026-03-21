@@ -26,7 +26,15 @@ import type {
   TooltipContent,
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
-import { exportCSV, exportJPG, exportPNG, exportSVG, type JPGExportOptions } from './export';
+import {
+  exportCSV,
+  exportJPG,
+  exportPNG,
+  exportSVG,
+  exportSVGWithFonts,
+  type JPGExportOptions,
+  type SVGExportOptions,
+} from './export';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
@@ -57,10 +65,14 @@ export interface ChartInstance {
   resize(): void;
   /** Export the chart. */
   export(format: 'svg'): string;
+  export(format: 'svg-with-fonts', options?: SVGExportOptions): Promise<string>;
   export(format: 'png', options?: ExportOptions): Promise<Blob>;
   export(format: 'jpg', options?: ExportOptions): Promise<Blob>;
   export(format: 'csv'): string;
-  export(format: 'svg' | 'png' | 'jpg' | 'csv', options?: ExportOptions): string | Promise<Blob>;
+  export(
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'csv',
+    options?: ExportOptions,
+  ): string | Promise<Blob> | Promise<string>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
   /** The current compiled layout (for hooks / debugging). */
@@ -1571,13 +1583,14 @@ export function createChart(
   }
 
   function doExport(format: 'svg'): string;
+  function doExport(format: 'svg-with-fonts', exportOptions?: SVGExportOptions): Promise<string>;
   function doExport(format: 'png', exportOptions?: ExportOptions): Promise<Blob>;
   function doExport(format: 'jpg', exportOptions?: ExportOptions): Promise<Blob>;
   function doExport(format: 'csv'): string;
   function doExport(
-    format: 'svg' | 'png' | 'jpg' | 'csv',
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'csv',
     exportOptions?: ExportOptions,
-  ): string | Promise<Blob> {
+  ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) {
       throw new Error('Chart is not rendered yet');
     }
@@ -1585,6 +1598,8 @@ export function createChart(
     switch (format) {
       case 'svg':
         return exportSVG(svgElement);
+      case 'svg-with-fonts':
+        return exportSVGWithFonts(svgElement, exportOptions);
       case 'png':
         return exportPNG(svgElement, exportOptions);
       case 'jpg':
