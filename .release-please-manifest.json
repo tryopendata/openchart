@@ -1,8 +1,8 @@
 {
-  "packages/core": "4.0.0",
-  "packages/engine": "4.0.0",
-  "packages/vanilla": "4.0.0",
-  "packages/react": "4.0.0",
-  "packages/vue": "4.0.0",
-  "packages/svelte": "4.0.0"
+  "packages/core": "5.0.0",
+  "packages/engine": "5.0.0",
+  "packages/vanilla": "5.0.0",
+  "packages/react": "5.0.0",
+  "packages/vue": "5.0.0",
+  "packages/svelte": "5.0.0"
 }
