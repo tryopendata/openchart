@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.0.0](https://github.com/tryopendata/openchart/compare/react-v2.13.2...react-v3.0.0) (2026-03-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* `createChart` and `ChartInstance.update()` now accept `ChartSpec | GraphSpec` instead of `VizSpec`. Passing a `TableSpec` to `createChart` was always a runtime error - this makes it a compile error. The same narrowing applies to `<Chart>` component props and `useChart` hooks across React, Vue, and Svelte.
+
+### Features
+
+* add hiddenSeries filtering, graph edge hover/styles, JPG export, and simulation config ([52cd15e](https://github.com/tryopendata/openchart/commit/52cd15e292b11ced6a8e0f680e78cb4a5cd22fd6))
+* coderbbit and npm publish ([b857251](https://github.com/tryopendata/openchart/commit/b85725110f3ef05d94707b4f92e91811bd7acb20))
+* export core and engine dependencies from client libs, so only single dependencies are needed for consumers ([7ae2e41](https://github.com/tryopendata/openchart/commit/7ae2e41d0e75c2c4895130846758b28d72cc17c2))
+* export styles.css from all framework packages ([358f8e3](https://github.com/tryopendata/openchart/commit/358f8e32fdddd60a3917200111a8d1b1fe717ca8))
+* **export:** embed fonts and fix dimension/background bugs ([65556cc](https://github.com/tryopendata/openchart/commit/65556ccabdcd04911fea4ab705eb9f0018d34e53))
+* narrow createChart types, fix remount bugs, add Visualization component ([d7e0c3f](https://github.com/tryopendata/openchart/commit/d7e0c3f52041686206afb18542f18ca6318ed1a3))
+* rename packages from @opendata-ai/* to @opendata-ai/openchart-* ([26f3e48](https://github.com/tryopendata/openchart/commit/26f3e484c58d43ee51b8dbd909f93765c14c8360))
+* unified chart element editing system ([9fd5521](https://github.com/tryopendata/openchart/commit/9fd5521f809c6932a4060b7b47b43001a0111dfc))
+
+
+### Bug Fixes
+
+* dark-mode theme preservation, graph visual tuning, and tooltip/legend toggle ([6a746cc](https://github.com/tryopendata/openchart/commit/6a746cc1c984a55ea2c0887f0790b20d96e9e5f7))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 3.0.0
+    * @opendata-ai/openchart-engine bumped to 3.0.0
+    * @opendata-ai/openchart-vanilla bumped to 3.0.0
+
 ## [2.13.2](https://github.com/tryopendata/openchart/compare/react-v2.13.1...react-v2.13.2) (2026-03-21)
 
 
