@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.1](https://github.com/tryopendata/openchart/compare/core-v2.13.0...core-v2.13.1) (2026-03-21)
+
+
+### Bug Fixes
+
+* **svg:** prevent chart title clipping on iOS Safari ([dee6431](https://github.com/tryopendata/openchart/commit/dee643182491ba1570bb50429fe48b33404ae08b))
+
 ## [2.13.0](https://github.com/tryopendata/openchart/compare/core-v2.12.2...core-v2.13.0) (2026-03-21)
 
 
