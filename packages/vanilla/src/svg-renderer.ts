@@ -80,15 +80,7 @@ function applyTextStyle(el: SVGElement, style: TextStyle): void {
     el.setAttribute('text-anchor', style.textAnchor);
   }
   if (style.dominantBaseline) {
-    // WebKit/iOS Safari has a getBBox() bug with dominant-baseline: hanging
-    // where the bounding box extends above y=0, causing the SVG's default
-    // overflow:hidden to clip the text. Use a dy offset instead, which
-    // achieves the same visual positioning without the bbox issue.
-    if (style.dominantBaseline === 'hanging') {
-      el.setAttribute('dy', `${style.fontSize * 0.8}px`);
-    } else {
-      el.setAttribute('dominant-baseline', style.dominantBaseline);
-    }
+    el.setAttribute('dominant-baseline', style.dominantBaseline);
   }
   if (style.fontVariant) {
     el.setAttribute('font-variant', style.fontVariant);
@@ -1031,7 +1023,7 @@ function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   setAttrs(text, {
     x: rightEdge,
     y: chromeY,
-    dy: BRAND_FONT_SIZE * 0.8,
+    'dominant-baseline': 'hanging',
     'font-family': layout.theme.fonts.family,
     'font-size': BRAND_FONT_SIZE,
     'text-anchor': 'end',
@@ -1071,6 +1063,12 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
   setAttrs(svg, {
     viewBox: `0 0 ${width} ${height}`,
     xmlns: SVG_NS,
+    // WebKit/iOS Safari getBBox() bug: text with dominant-baseline:hanging
+    // reports bounding boxes extending above y=0. The SVG spec default
+    // overflow is "hidden", which clips this phantom extent. Setting
+    // overflow:visible prevents the clipping. Chart marks are already
+    // constrained by a clipPath, so nothing bleeds out.
+    overflow: 'visible',
   });
   // Set explicit pixel height via inline style. iOS Safari misresolves CSS
   // height:100% when the ancestor chain uses minHeight instead of height,
