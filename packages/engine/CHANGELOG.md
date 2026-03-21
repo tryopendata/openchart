@@ -1,5 +1,47 @@
 # Changelog
 
+## [6.0.0](https://github.com/tryopendata/openchart/compare/engine-v5.0.0...engine-v6.0.0) (2026-03-21)
+
+
+### Features
+
+* add format strings, label anchors, series styles, and dark mode docs ([f4af8d6](https://github.com/tryopendata/openchart/commit/f4af8d6e53c7525193e7e35e29006f33e403cbef))
+* add hiddenSeries filtering, graph edge hover/styles, JPG export, and simulation config ([52cd15e](https://github.com/tryopendata/openchart/commit/52cd15e292b11ced6a8e0f680e78cb4a5cd22fd6))
+* add label format support to column charts and extract shared formatter ([16305b1](https://github.com/tryopendata/openchart/commit/16305b1e878fd4d9861aa932f17bc745f1f19beb))
+* add responsive overrides, legend hiding, and chrome text wrapping ([2eb0236](https://github.com/tryopendata/openchart/commit/2eb02366bfbd51b15341708c912da8897adbc98a))
+* add SeriesStyle type for per-series visual overrides ([67ac80e](https://github.com/tryopendata/openchart/commit/67ac80ec002e0786ae8ed8607e583389aed4323c))
+* **annotations:** interpolate positions for out-of-domain values on categorical scales ([0898bfd](https://github.com/tryopendata/openchart/commit/0898bfd249cdae270b4c82556bb6aa6be506f84b))
+* auto-sort line and area chart data by x-axis ([186b81f](https://github.com/tryopendata/openchart/commit/186b81f9cbd40beecdb8a387227a69895404a7bb))
+* **axes:** text-aware tick density prevents label overlap ([bc9f461](https://github.com/tryopendata/openchart/commit/bc9f46135c12ccf318738a291fcc02d28b670611))
+* coderbbit and npm publish ([b857251](https://github.com/tryopendata/openchart/commit/b85725110f3ef05d94707b4f92e91811bd7acb20))
+* implement seriesStyles in line chart compute pipeline ([54feb7c](https://github.com/tryopendata/openchart/commit/54feb7c266a90885bf218df6275449c17920f229))
+* **layout:** prevent annotation/label/brand overlap with improved obstacle detection ([74650ae](https://github.com/tryopendata/openchart/commit/74650aeef1bb386f90f5f1c0c81a9255ed3b21e2))
+* new visualize-data skill marketplace plugin ([dde291a](https://github.com/tryopendata/openchart/commit/dde291a66813e4c6071f5662373ab3f5ca8250ea))
+* rename packages from @opendata-ai/* to @opendata-ai/openchart-* ([26f3e48](https://github.com/tryopendata/openchart/commit/26f3e484c58d43ee51b8dbd909f93765c14c8360))
+* **responsive:** height-aware layout, chrome compression, and legend overflow ([41362f5](https://github.com/tryopendata/openchart/commit/41362f5dc08077a9e2661415e370c58972be089b))
+* space-aware axis tick density and rotated label support ([5a39a02](https://github.com/tryopendata/openchart/commit/5a39a02fa684736bf73ffaacde0032400d7c7796))
+* **tooltips:** use detail encoding as tooltip title ([3f0db09](https://github.com/tryopendata/openchart/commit/3f0db09b3e8c4a607561b47abf47f65e47e25608))
+* unified chart element editing system ([9fd5521](https://github.com/tryopendata/openchart/commit/9fd5521f809c6932a4060b7b47b43001a0111dfc))
+* visual QA audit fixes and documentation improvements ([5b77092](https://github.com/tryopendata/openchart/commit/5b77092d4f8bcf91b736e5ec1f391af4a762528e))
+
+
+### Bug Fixes
+
+* **axes:** decouple gridlines from tick label thinning ([9a79786](https://github.com/tryopendata/openchart/commit/9a79786dfd4d900182cbcc4a09b91e890ec995c3))
+* bump engine to 2.0.0 (release-please linked-versions missed it) ([5aae3da](https://github.com/tryopendata/openchart/commit/5aae3dafd4d2ace3b72c5ff82cd16ddb9bdfbf2f))
+* dark-mode theme preservation, graph visual tuning, and tooltip/legend toggle ([6a746cc](https://github.com/tryopendata/openchart/commit/6a746cc1c984a55ea2c0887f0790b20d96e9e5f7))
+* inline SR-only styles and center range annotation labels ([46064fe](https://github.com/tryopendata/openchart/commit/46064fed4f3a3b617c11809a18ce7c3d4e5a3346))
+* move bun-symlink-resolver to scripts/ so it's not gitignored ([c2cee52](https://github.com/tryopendata/openchart/commit/c2cee5275480ef36e11ea81aa195068875f375e5))
+* replace as any with proper types in engine tests, tone down Claude hook ([705c274](https://github.com/tryopendata/openchart/commit/705c274080c9c25efceab006e885418ad1cb1bd1))
+* resolve lint warnings in bar labels formatter ([ce0bb7f](https://github.com/tryopendata/openchart/commit/ce0bb7fbc7cb0267b83ec0fd48aaa71309a7141c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.0.0
+
 ## [5.0.0](https://github.com/tryopendata/openchart/compare/engine-v4.0.0...engine-v5.0.0) (2026-03-21)
 
 
