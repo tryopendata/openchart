@@ -1,5 +1,30 @@
 # Changelog
 
+## [5.0.0](https://github.com/tryopendata/openchart/compare/svelte-v4.0.0...svelte-v5.0.0) (2026-03-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* `createChart` and `ChartInstance.update()` now accept `ChartSpec | GraphSpec` instead of `VizSpec`. Passing a `TableSpec` to `createChart` was always a runtime error - this makes it a compile error. The same narrowing applies to `<Chart>` component props and `useChart` hooks across React, Vue, and Svelte.
+
+### Features
+
+* coderbbit and npm publish ([b857251](https://github.com/tryopendata/openchart/commit/b85725110f3ef05d94707b4f92e91811bd7acb20))
+* export core and engine dependencies from client libs, so only single dependencies are needed for consumers ([7ae2e41](https://github.com/tryopendata/openchart/commit/7ae2e41d0e75c2c4895130846758b28d72cc17c2))
+* export styles.css from all framework packages ([358f8e3](https://github.com/tryopendata/openchart/commit/358f8e32fdddd60a3917200111a8d1b1fe717ca8))
+* narrow createChart types, fix remount bugs, add Visualization component ([d7e0c3f](https://github.com/tryopendata/openchart/commit/d7e0c3f52041686206afb18542f18ca6318ed1a3))
+* rename packages from @opendata-ai/* to @opendata-ai/openchart-* ([26f3e48](https://github.com/tryopendata/openchart/commit/26f3e484c58d43ee51b8dbd909f93765c14c8360))
+* unified chart element editing system ([9fd5521](https://github.com/tryopendata/openchart/commit/9fd5521f809c6932a4060b7b47b43001a0111dfc))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 5.0.0
+    * @opendata-ai/openchart-engine bumped to 5.0.0
+    * @opendata-ai/openchart-vanilla bumped to 5.0.0
+
 ## [4.0.0](https://github.com/tryopendata/openchart/compare/svelte-v3.0.0...svelte-v4.0.0) (2026-03-21)
 
 

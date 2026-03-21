@@ -1,5 +1,19 @@
 # Changelog
 
+## [5.0.0](https://github.com/tryopendata/openchart/compare/react-v4.0.0...react-v5.0.0) (2026-03-21)
+
+
+* **react:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 5.0.0
+    * @opendata-ai/openchart-engine bumped to 5.0.0
+    * @opendata-ai/openchart-vanilla bumped to 5.0.0
+
 ## [4.0.0](https://github.com/tryopendata/openchart/compare/react-v3.0.0...react-v4.0.0) (2026-03-21)
 
 
