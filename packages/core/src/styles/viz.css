@@ -224,7 +224,10 @@
  * React wrapper roots
  * --------------------------------------------------------------------------- */
 
-.viz-chart-root,
+.viz-chart-root {
+  width: 100%;
+}
+
 .viz-table-root,
 .viz-graph-root {
   width: 100%;
