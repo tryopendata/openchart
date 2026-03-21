@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.13.1](https://github.com/tryopendata/openchart/compare/react-v2.13.0...react-v2.13.1) (2026-03-21)
+
+
+* **react:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 2.13.1
+    * @opendata-ai/openchart-engine bumped to 2.13.1
+    * @opendata-ai/openchart-vanilla bumped to 2.13.1
+
 ## [2.13.0](https://github.com/tryopendata/openchart/compare/react-v2.12.2...react-v2.13.0) (2026-03-21)
 
 
