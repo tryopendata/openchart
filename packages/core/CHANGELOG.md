@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.2](https://github.com/tryopendata/openchart/compare/core-v2.13.1...core-v2.13.2) (2026-03-21)
+
+
+### Bug Fixes
+
+* **css:** remove height:100% from chart container to fix iOS clipping ([86f0f32](https://github.com/tryopendata/openchart/commit/86f0f32b9df84ad7f9989f0c34f8ffc074e4bf9d))
+
 ## [2.13.1](https://github.com/tryopendata/openchart/compare/core-v2.13.0...core-v2.13.1) (2026-03-21)
 
 
