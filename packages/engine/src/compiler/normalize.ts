@@ -122,9 +122,12 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
     const spec = result[channel];
     if (!spec) continue;
 
+    // Skip conditional value definitions - they don't have field/type at the top level
+    if ('condition' in spec) continue;
+
     if (!spec.type) {
       const inferred = inferFieldType(data, spec.field);
-      result[channel] = { ...spec, type: inferred };
+      (result as Record<string, unknown>)[channel] = { ...spec, type: inferred };
       warnings.push(
         `Inferred encoding.${channel}.type as "${inferred}" from data values for field "${spec.field}"`,
       );

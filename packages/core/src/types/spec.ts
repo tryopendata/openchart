@@ -237,18 +237,18 @@ export interface Encoding {
   x?: EncodingChannel;
   /** Vertical position channel. */
   y?: EncodingChannel;
-  /** Color channel (series differentiation or heatmap). */
-  color?: EncodingChannel;
-  /** Size channel (bubble charts, dot plots). */
-  size?: EncodingChannel;
+  /** Color channel (series differentiation or heatmap). Accepts conditional definitions. */
+  color?: EncodingChannel | ConditionalValueDef;
+  /** Size channel (bubble charts, dot plots). Accepts conditional definitions. */
+  size?: EncodingChannel | ConditionalValueDef;
   /** Detail channel (group without encoding to a visual property). */
   detail?: EncodingChannel;
   /** Secondary x position (for ranges, error bars). */
   x2?: EncodingChannel;
   /** Secondary y position (for ranges, error bars). */
   y2?: EncodingChannel;
-  /** Data-driven opacity (0-1). */
-  opacity?: EncodingChannel;
+  /** Data-driven opacity (0-1). Accepts conditional definitions. */
+  opacity?: EncodingChannel | ConditionalValueDef;
   /** Point shape encoding (circle, square, diamond, triangle-up, etc.). */
   shape?: EncodingChannel;
   /** Data-driven stroke dash patterns. */
@@ -620,6 +620,8 @@ export interface ChartSpec {
   mark: MarkType | MarkDef;
   /** Data array: each element is a row with field values. */
   data: DataRow[];
+  /** Data transforms applied in order before encoding (filter, bin, calculate, timeUnit). */
+  transform?: Transform[];
   /** Encoding mapping data fields to visual channels. */
   encoding: Encoding;
   /** Editorial chrome (title, subtitle, source, etc.). */
@@ -754,6 +756,181 @@ export type TableSpecWithoutData = Omit<TableSpec, 'data' | 'columns'>;
 export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
 /** Union of data-stripped spec types for persistence/storage. */
 export type StoredVizSpec = ChartSpecWithoutData | TableSpecWithoutData | GraphSpecWithoutData;
+
+// ---------------------------------------------------------------------------
+// Transforms (Vega-Lite aligned)
+// ---------------------------------------------------------------------------
+
+/** Logical AND combinator for filter predicates. */
+export interface LogicalAnd<T> {
+  and: T[];
+}
+
+/** Logical OR combinator for filter predicates. */
+export interface LogicalOr<T> {
+  or: T[];
+}
+
+/** Logical NOT combinator for filter predicates. */
+export interface LogicalNot<T> {
+  not: T;
+}
+
+/** A predicate that tests a field value against a condition. */
+export interface FieldPredicate {
+  /** Data field to test. */
+  field: string;
+  /** Equals comparison. */
+  equal?: unknown;
+  /** Less than. */
+  lt?: number;
+  /** Less than or equal. */
+  lte?: number;
+  /** Greater than. */
+  gt?: number;
+  /** Greater than or equal. */
+  gte?: number;
+  /** Inclusive range [min, max]. */
+  range?: [number, number];
+  /** Value is one of these. */
+  oneOf?: unknown[];
+  /** Whether the value is valid (non-null, non-undefined, non-NaN). */
+  valid?: boolean;
+}
+
+/**
+ * A filter predicate: a field predicate or logical combination of predicates.
+ */
+export type FilterPredicate =
+  | FieldPredicate
+  | LogicalAnd<FilterPredicate>
+  | LogicalOr<FilterPredicate>
+  | LogicalNot<FilterPredicate>;
+
+/** Parameters for binning a field. */
+export interface BinParams {
+  /** Maximum number of bins. */
+  maxbins?: number;
+  /** Exact step size between bins. */
+  step?: number;
+  /** Whether to nice-ify bin boundaries. */
+  nice?: boolean;
+  /** Explicit extent [min, max] for binning. */
+  extent?: [number, number];
+}
+
+/** Expression for calculate transforms. */
+export interface CalculateExpression {
+  /** Arithmetic operation to apply. */
+  op: '+' | '-' | '*' | '/' | 'abs' | 'round' | 'floor' | 'ceil' | 'log' | 'sqrt';
+  /** Primary field to operate on. */
+  field: string;
+  /** Secondary field for binary operations (+, -, *, /). */
+  field2?: string;
+  /** Constant value for binary operations when field2 is not provided. */
+  value?: number;
+}
+
+/**
+ * Time unit granularity for temporal field transformations.
+ * Follows Vega-Lite conventions.
+ */
+export type TimeUnit =
+  | 'year'
+  | 'quarter'
+  | 'month'
+  | 'week'
+  | 'day'
+  | 'dayofyear'
+  | 'date'
+  | 'hours'
+  | 'minutes'
+  | 'seconds'
+  | 'milliseconds'
+  | 'yearmonth'
+  | 'yearmonthdate'
+  | 'monthdate'
+  | 'hoursminutes';
+
+/** Filter transform: removes rows that don't match the predicate. */
+export interface FilterTransform {
+  filter: FilterPredicate;
+}
+
+/** Bin transform: adds binned field(s) to each row. */
+export interface BinTransform {
+  bin: true | BinParams;
+  field: string;
+  as: string | [string, string];
+}
+
+/** Calculate transform: adds a computed field to each row. */
+export interface CalculateTransform {
+  calculate: CalculateExpression;
+  as: string;
+}
+
+/** Time unit transform: extracts a time unit from a temporal field. */
+export interface TimeUnitTransform {
+  timeUnit: TimeUnit;
+  field: string;
+  as: string;
+}
+
+/** Discriminated union of all transform types. */
+export type Transform = FilterTransform | BinTransform | CalculateTransform | TimeUnitTransform;
+
+// ---------------------------------------------------------------------------
+// Conditional encoding (Vega-Lite aligned)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single condition with a test predicate and resulting value/field.
+ * When the test passes for a datum, the condition's value/field is used.
+ */
+export interface Condition {
+  /** Predicate to test against each datum. */
+  test: FilterPredicate;
+  /** Static value to use when the condition is true. */
+  value?: unknown;
+  /** Data field to use when the condition is true. */
+  field?: string;
+  /** Field type for the conditional field. */
+  type?: FieldType;
+}
+
+/**
+ * A conditional value definition for an encoding channel.
+ * Evaluates conditions in order, falling back to the default value.
+ */
+export interface ConditionalValueDef {
+  /** One or more conditions to evaluate. */
+  condition: Condition | Condition[];
+  /** Default value when no condition matches. */
+  value?: unknown;
+}
+
+/**
+ * Check if a channel definition is a regular EncodingChannel (has 'field' at top level).
+ * Use this to narrow `EncodingChannel | ConditionalValueDef` in encoding channels
+ * that support conditional encoding (color, size, opacity).
+ */
+export function isEncodingChannel(
+  def: EncodingChannel | ConditionalValueDef | undefined,
+): def is EncodingChannel {
+  if (!def) return false;
+  return 'field' in def && !('condition' in def);
+}
+
+/**
+ * Check if a channel definition is a ConditionalValueDef.
+ */
+export function isConditionalDef(
+  def: EncodingChannel | ConditionalValueDef | undefined,
+): def is ConditionalValueDef {
+  if (!def) return false;
+  return 'condition' in def;
+}
 
 // ---------------------------------------------------------------------------
 // Mark type helpers

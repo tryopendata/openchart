@@ -58,8 +58,8 @@ export function computeScatterMarks(
   const xScale = scales.x.scale as ScaleLinear<number, number>;
   const yScale = scales.y.scale as ScaleLinear<number, number>;
 
-  const colorField = encoding.color?.field;
-  const sizeField = encoding.size?.field;
+  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
+  const sizeField = encoding.size && 'field' in encoding.size ? encoding.size.field : undefined;
 
   // Build a size scale for bubble variant
   let sizeScale: ((v: number) => number) | undefined;

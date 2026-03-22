@@ -68,7 +68,7 @@ export function computeDotMarks(
 
   const bandwidth = yScale.bandwidth();
   const baseline = xScale(0);
-  const colorField = encoding.color?.field;
+  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
 
   // Multi-series: dumbbell chart with connecting bars
   if (colorField) {

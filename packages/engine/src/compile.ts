@@ -41,7 +41,10 @@ import { dotRenderer } from './charts/dot';
 import { areaRenderer, lineRenderer } from './charts/line';
 import { donutRenderer, pieRenderer } from './charts/pie';
 import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
+import { ruleRenderer } from './charts/rule';
 import { scatterRenderer } from './charts/scatter';
+import { textRenderer } from './charts/text';
+import { tickRenderer } from './charts/tick';
 import { compile as compileSpec } from './compiler/index';
 
 // Register all built-in chart renderers under the new Vega-Lite mark type names.
@@ -54,6 +57,7 @@ import { compile as compileSpec } from './compiler/index';
 // - 'point' -> scatterRenderer (old 'scatter')
 // - 'circle' -> dotRenderer (old 'dot')
 // - 'line' and 'area' unchanged
+// - 'text', 'rule', 'tick' are new Vega-Lite mark types
 //
 // For 'bar', orientation is resolved at compile time to dispatch to the right renderer.
 // We register both barRenderer and columnRenderer; the compile function picks based on orientation.
@@ -66,6 +70,9 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
   'arc:donut': donutRenderer, // old 'donut'
   circle: dotRenderer, // old 'dot'
+  text: textRenderer,
+  rule: ruleRenderer,
+  tick: tickRenderer,
 };
 for (const [type, renderer] of Object.entries(builtinRenderers)) {
   registerChartRenderer(type, renderer);
@@ -81,6 +88,7 @@ import { computeScales, type ResolvedScales } from './layout/scales';
 import { computeLegend } from './legend/compute';
 import { compileTableLayout } from './tables/compile-table';
 import { computeTooltipDescriptors } from './tooltips/compute';
+import { runTransforms } from './transforms';
 
 // ---------------------------------------------------------------------------
 // Mark obstacles for annotation collision avoidance
@@ -297,12 +305,26 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
   const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea);
 
+  // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
+  // Transforms are defined on the original spec, not the normalized spec, since
+  // NormalizedChartSpec doesn't carry the transform field.
+  const rawTransforms = (spec as Record<string, unknown>).transform as
+    | import('@opendata-ai/openchart-core').Transform[]
+    | undefined;
+  if (rawTransforms && rawTransforms.length > 0) {
+    chartSpec = { ...chartSpec, data: runTransforms(chartSpec.data, rawTransforms) };
+  }
+
   // Apply data filtering after legend (so legend retains all series), but before
   // scale computation (so hidden/clipped data doesn't affect domains or marks).
   let renderData = chartSpec.data;
 
   // Filter hidden series: removed from rendering but kept in legend (dimmed in the adapter)
-  if (chartSpec.hiddenSeries.length > 0 && chartSpec.encoding.color) {
+  if (
+    chartSpec.hiddenSeries.length > 0 &&
+    chartSpec.encoding.color &&
+    'field' in chartSpec.encoding.color
+  ) {
     const colorField = chartSpec.encoding.color.field;
     const hiddenSet = new Set(chartSpec.hiddenSeries);
     renderData = renderData.filter((row) => !hiddenSet.has(String(row[colorField])));
@@ -394,7 +416,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   // Add visible data label bounds as obstacles so annotations avoid overlapping them
   for (const mark of marks) {
-    if (mark.type !== 'area' && mark.label?.visible) {
+    if ('label' in mark && mark.label?.visible) {
       obstacles.push(computeLabelBounds(mark.label));
     }
   }
