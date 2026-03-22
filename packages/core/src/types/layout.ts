@@ -148,6 +148,22 @@ export interface AxisLayout {
   start: Point;
   /** Axis line end position. */
   end: Point;
+  /** Axis orientation (which side it appears on). */
+  orient?: 'top' | 'bottom' | 'left' | 'right';
+  /** Whether to show the axis domain line. Defaults to true. */
+  domainLine?: boolean;
+  /** Whether to show tick marks. Defaults to true. */
+  tickMarks?: boolean;
+  /** Axis position offset in pixels. */
+  offset?: number;
+  /** Padding between axis title and axis in pixels. */
+  titlePadding?: number;
+  /** Padding between tick labels and axis in pixels. */
+  labelPadding?: number;
+  /** How overlapping labels should be handled. */
+  labelOverlap?: boolean | 'parity' | 'greedy';
+  /** Whether to flush labels to the axis edges. */
+  labelFlush?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,6 +203,16 @@ export interface LineMark {
   seriesKey?: string;
   /** Original data rows for this series. */
   data: Record<string, unknown>[];
+  /**
+   * Pixel-coordinate data points for spatial tooltip lookup (voronoi overlay).
+   * Each entry pairs a pixel position with its original data row.
+   */
+  dataPoints?: Array<{
+    x: number;
+    y: number;
+    datum: Record<string, unknown>;
+    tooltip?: TooltipContent;
+  }>;
   /** Resolved label after collision detection. */
   label?: ResolvedLabel;
   /** Accessibility attributes. */
@@ -219,6 +245,16 @@ export interface AreaMark {
   seriesKey?: string;
   /** Original data rows. */
   data: Record<string, unknown>[];
+  /**
+   * Pixel-coordinate data points for spatial tooltip lookup (voronoi overlay).
+   * Each entry pairs a pixel position with its original data row.
+   */
+  dataPoints?: Array<{
+    x: number;
+    y: number;
+    datum: Record<string, unknown>;
+    tooltip?: TooltipContent;
+  }>;
   /** Accessibility attributes. */
   aria: MarkAria;
 }
@@ -315,8 +351,102 @@ export interface PointMark {
   aria: MarkAria;
 }
 
+/**
+ * Text mark: data-positioned text label.
+ * Used by text charts for showing values directly at data coordinates.
+ */
+export interface TextMarkLayout {
+  type: 'textMark';
+  /** X position. */
+  x: number;
+  /** Y position. */
+  y: number;
+  /** Text content to display. */
+  text: string;
+  /** Fill color. */
+  fill: string;
+  /** Font size in pixels. */
+  fontSize: number;
+  /** Font weight. */
+  fontWeight?: number;
+  /** Font family override. */
+  fontFamily?: string;
+  /** Horizontal text alignment. */
+  textAnchor: 'start' | 'middle' | 'end';
+  /** Rotation angle in degrees. */
+  angle?: number;
+  /** Original data row. */
+  data: Record<string, unknown>;
+  /** Resolved label. */
+  label?: ResolvedLabel;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+}
+
+/**
+ * Rule mark: a line segment between two points.
+ * Used for reference lines rendered as data marks.
+ */
+export interface RuleMarkLayout {
+  type: 'rule';
+  /** Start x position. */
+  x1: number;
+  /** Start y position. */
+  y1: number;
+  /** End x position. */
+  x2: number;
+  /** End y position. */
+  y2: number;
+  /** Stroke color. */
+  stroke: string;
+  /** Stroke width in pixels. */
+  strokeWidth: number;
+  /** Stroke dash pattern (e.g. "4 2"). */
+  strokeDasharray?: string;
+  /** Opacity (0-1). */
+  opacity?: number;
+  /** Original data row. */
+  data: Record<string, unknown>;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+}
+
+/**
+ * Tick mark: a short line segment at a data coordinate.
+ * Used for strip plots and rug plots.
+ */
+export interface TickMarkLayout {
+  type: 'tick';
+  /** X position. */
+  x: number;
+  /** Y position. */
+  y: number;
+  /** Length of the tick mark in pixels. */
+  length: number;
+  /** Whether the tick is horizontal or vertical. */
+  orient: 'horizontal' | 'vertical';
+  /** Stroke color. */
+  stroke: string;
+  /** Stroke width in pixels. */
+  strokeWidth: number;
+  /** Opacity (0-1). */
+  opacity?: number;
+  /** Original data row. */
+  data: Record<string, unknown>;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+}
+
 /** Discriminated union of all mark types. */
-export type Mark = LineMark | AreaMark | RectMark | ArcMark | PointMark;
+export type Mark =
+  | LineMark
+  | AreaMark
+  | RectMark
+  | ArcMark
+  | PointMark
+  | TextMarkLayout
+  | RuleMarkLayout
+  | TickMarkLayout;
 
 // ---------------------------------------------------------------------------
 // Labels
