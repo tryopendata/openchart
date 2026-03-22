@@ -123,12 +123,28 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
+  // Collect fields that transforms will create, so we don't reject them
+  const transformFields = new Set<string>();
+  if (Array.isArray(spec.transform)) {
+    for (const t of spec.transform as Record<string, unknown>[]) {
+      if (typeof t.as === 'string') transformFields.add(t.as);
+      if (Array.isArray(t.as)) {
+        for (const f of t.as) {
+          if (typeof f === 'string') transformFields.add(f);
+        }
+      }
+    }
+  }
+
   // Validate provided channels
   for (const [channel, channelSpec] of Object.entries(encoding)) {
     if (!channelSpec || typeof channelSpec !== 'object') continue;
 
     const channelObj = channelSpec as Record<string, unknown>;
     const channelRule = rules[channel as keyof typeof rules];
+
+    // Skip ConditionalValueDef channels (they have 'condition' instead of 'field')
+    if ('condition' in channelObj) continue;
 
     // Check field exists
     if (!channelObj.field || typeof channelObj.field !== 'string') {
@@ -141,8 +157,8 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
       continue;
     }
 
-    // Check field references a column in data
-    if (!dataColumns.has(channelObj.field)) {
+    // Check field references a column in data (or will be created by a transform)
+    if (!dataColumns.has(channelObj.field) && !transformFields.has(channelObj.field)) {
       errors.push({
         message: `Spec error: encoding.${channel}.field "${channelObj.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,

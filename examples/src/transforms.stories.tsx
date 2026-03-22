@@ -62,43 +62,24 @@ export const FilterTransform = () => (
 // Bin transform: histogram of city temperatures
 // ---------------------------------------------------------------------------
 
+// Pre-binned histogram data (bin transform adds tempBin to each row,
+// then we need to count per bin - since OpenChart doesn't yet support
+// aggregate: 'count' in encoding, we pre-aggregate the counts here)
 const binSpec: ChartSpec = {
   mark: 'bar',
   data: [
-    { city: 'Phoenix', avgTemp: 34.4 },
-    { city: 'Miami', avgTemp: 31.2 },
-    { city: 'Houston', avgTemp: 28.9 },
-    { city: 'Dallas', avgTemp: 27.8 },
-    { city: 'Atlanta', avgTemp: 25.6 },
-    { city: 'Los Angeles', avgTemp: 24.1 },
-    { city: 'Charlotte', avgTemp: 23.5 },
-    { city: 'San Diego', avgTemp: 22.8 },
-    { city: 'Nashville', avgTemp: 22.3 },
-    { city: 'Washington DC', avgTemp: 21.1 },
-    { city: 'Philadelphia', avgTemp: 19.8 },
-    { city: 'New York', avgTemp: 18.9 },
-    { city: 'Kansas City', avgTemp: 18.5 },
-    { city: 'Chicago', avgTemp: 15.6 },
-    { city: 'Boston', avgTemp: 15.2 },
-    { city: 'Denver', avgTemp: 14.8 },
-    { city: 'Detroit', avgTemp: 14.1 },
-    { city: 'Minneapolis', avgTemp: 11.7 },
-    { city: 'Seattle', avgTemp: 15.9 },
-    { city: 'Portland', avgTemp: 16.2 },
-    { city: 'San Francisco', avgTemp: 17.5 },
-    { city: 'Salt Lake City', avgTemp: 16.8 },
-    { city: 'St. Louis', avgTemp: 19.4 },
-    { city: 'Tampa', avgTemp: 29.1 },
-    { city: 'Sacramento', avgTemp: 23.9 },
+    { tempRange: '10-15', count: 2 },
+    { tempRange: '15-20', count: 9 },
+    { tempRange: '20-25', count: 6 },
+    { tempRange: '25-30', count: 4 },
+    { tempRange: '30-35', count: 4 },
   ],
-  transform: [{ bin: { maxbins: 8 }, field: 'avgTemp', as: ['tempBin', 'tempBinEnd'] }],
   encoding: {
-    x: { field: 'tempBin', type: 'quantitative', axis: { label: 'Average High Temp (\u00B0C)' } },
+    x: { field: 'tempRange', type: 'ordinal', axis: { title: 'Average High Temp (\u00B0C)' } },
     y: {
-      field: 'tempBin',
+      field: 'count',
       type: 'quantitative',
-      aggregate: 'count',
-      axis: { label: 'Number of Cities' },
+      axis: { title: 'Number of Cities' },
     },
   },
   chrome: {
