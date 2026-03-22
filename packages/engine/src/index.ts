@@ -12,7 +12,7 @@
 // Main compile API
 // ---------------------------------------------------------------------------
 
-export { compileChart, compileGraph, compileTable } from './compile';
+export { compileChart, compileGraph, compileLayer, compileTable } from './compile';
 
 // ---------------------------------------------------------------------------
 // Graph compilation types
@@ -83,6 +83,7 @@ export type {
   CompileTableOptions,
   GraphLayout,
   GraphSpec,
+  LayerSpec,
   TableLayout,
   TableSpec,
   VizSpec,

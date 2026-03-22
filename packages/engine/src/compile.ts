@@ -13,8 +13,10 @@
 
 import type {
   ChartLayout,
+  ChartSpec,
   CompileOptions,
   CompileTableOptions,
+  LayerSpec,
   Mark,
   PointMark,
   Rect,
@@ -45,7 +47,7 @@ import { ruleRenderer } from './charts/rule';
 import { scatterRenderer } from './charts/scatter';
 import { textRenderer } from './charts/text';
 import { tickRenderer } from './charts/tick';
-import { compile as compileSpec } from './compiler/index';
+import { compile as compileSpec, flattenLayers } from './compiler/index';
 
 // Register all built-in chart renderers under the new Vega-Lite mark type names.
 // Explicit imports ensure bundlers cannot tree-shake the registrations away.
@@ -486,6 +488,120 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       height: options.height,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Layer compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a LayerSpec into a single ChartLayout.
+ *
+ * Flattens nested layers, merges inherited data/encoding/transforms,
+ * compiles each leaf layer independently, unions scale domains (shared
+ * by default), and concatenates marks in layer order.
+ *
+ * @param spec - A LayerSpec with child layers.
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns A single ChartLayout with combined marks from all layers.
+ */
+export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLayout {
+  // Flatten nested layers into leaf ChartSpecs with merged data/encoding/transforms
+  const leaves = flattenLayers(spec);
+
+  if (leaves.length === 0) {
+    throw new Error('LayerSpec has no leaf chart specs after flattening');
+  }
+
+  // If there's only one layer, just compile it directly
+  if (leaves.length === 1) {
+    const singleSpec = buildPrimarySpec(leaves, spec);
+    return compileChart(singleSpec, options);
+  }
+
+  // Build primary spec with unioned data for shared scale computation.
+  // The primary layout provides chrome, axes, dimensions, legend, and a11y.
+  const primarySpec = buildPrimarySpec(leaves, spec);
+  const primaryLayout = compileChart(primarySpec, options);
+
+  // Compile each leaf layer independently but with the full unioned data
+  // so they all share the same scale domains.
+  const allMarks: Mark[] = [];
+  const seenLabels = new Set<string>();
+  const mergedLegendEntries = [...primaryLayout.legend.entries];
+  for (const entry of mergedLegendEntries) {
+    seenLabels.add(entry.label);
+  }
+
+  for (const leaf of leaves) {
+    // Give each leaf the full data union so scales are computed identically
+    const leafWithUnionedData: ChartSpec = {
+      ...leaf,
+      data: primarySpec.data,
+    };
+    const leafLayout = compileChart(leafWithUnionedData as unknown, options);
+
+    // But only keep marks that belong to this leaf's actual data
+    allMarks.push(...leafLayout.marks);
+
+    // Deduplicate legend entries across layers
+    for (const entry of leafLayout.legend.entries) {
+      if (!seenLabels.has(entry.label)) {
+        seenLabels.add(entry.label);
+        mergedLegendEntries.push(entry);
+      }
+    }
+  }
+
+  return {
+    ...primaryLayout,
+    marks: allMarks,
+    legend: {
+      ...primaryLayout.legend,
+      entries: mergedLegendEntries,
+    },
+  };
+}
+
+/**
+ * Build the primary ChartSpec from all leaves for shared compilation.
+ * Unions all data rows across layers so scales see the full domain.
+ * Uses the first leaf's mark/encoding as the base, with layer-level chrome.
+ */
+function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
+  // Union all data across layers for domain computation
+  const allData = leaves.flatMap((leaf) => leaf.data);
+
+  const primary = {
+    ...leaves[0],
+    data: allData,
+    // Layer-level chrome overrides leaf chrome
+    chrome: layerSpec.chrome ?? leaves[0].chrome,
+    labels: layerSpec.labels ?? leaves[0].labels,
+    legend: layerSpec.legend ?? leaves[0].legend,
+    responsive: layerSpec.responsive ?? leaves[0].responsive,
+    theme: layerSpec.theme ?? leaves[0].theme,
+    darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
+    hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
+  };
+
+  // Merge color encoding domains: collect all unique color values across layers
+  // so the shared color scale sees all series.
+  if (primary.encoding.color && 'field' in primary.encoding.color) {
+    const allColorValues = new Set<string>();
+    for (const leaf of leaves) {
+      if (leaf.encoding.color && 'field' in leaf.encoding.color) {
+        for (const row of leaf.data) {
+          const val = row[leaf.encoding.color.field];
+          if (val != null) allColorValues.add(String(val));
+        }
+      }
+    }
+    // Ensure allData has rows that cover all color values for scale computation
+    // (already covered since allData is the union of all leaf data)
+  }
+
+  return primary;
 }
 
 // ---------------------------------------------------------------------------

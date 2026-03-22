@@ -11,6 +11,7 @@ import type {
   ChartSpec,
   DarkMode,
   GraphSpec,
+  LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
@@ -19,7 +20,7 @@ import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
 export interface ChartProps extends ChartEventHandlers {
   /** The visualization spec to render. */
-  spec: ChartSpec | GraphSpec;
+  spec: ChartSpec | LayerSpec | GraphSpec;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */

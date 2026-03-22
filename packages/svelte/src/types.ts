@@ -12,6 +12,7 @@ import type {
   DarkMode,
   ElementEdit,
   GraphSpec,
+  LayerSpec,
   MarkEvent,
   SortState,
   TableSpec,
@@ -22,7 +23,7 @@ import type {
 import type { Snippet } from 'svelte';
 
 export interface ChartProps {
-  spec: ChartSpec | GraphSpec;
+  spec: ChartSpec | LayerSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   onmarkclick?: (event: MarkEvent) => void;

@@ -17,7 +17,7 @@ function computeStep(extent: [number, number], maxbins: number, nice: boolean): 
 
   if (nice) {
     // Round to a nice step: 1, 2, 5, 10, 20, 50, etc.
-    const magnitude = Math.pow(10, Math.floor(Math.log10(step)));
+    const magnitude = 10 ** Math.floor(Math.log10(step));
     const residual = step / magnitude;
 
     if (residual <= 1.5) {
