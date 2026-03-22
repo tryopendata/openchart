@@ -1,5 +1,32 @@
 # Changelog
 
+## [7.0.0](https://github.com/tryopendata/openchart/compare/engine-v6.0.0...engine-v7.0.0) (2026-03-22)
+
+
+### Features
+
+* add data transforms and conditional encoding (Chunks 6-7) ([c140084](https://github.com/tryopendata/openchart/commit/c1400845b8bbbf767b68a6ed8cc1b294bf4d4534))
+* add LayerSpec compilation for multi-layer chart composition (Chunk 8) ([87b51c3](https://github.com/tryopendata/openchart/commit/87b51c3e31a2defbf71296724540e6904f7feae2))
+* add mark interpolation, conditional points, and voronoi tooltip overlay (Chunks 2-3) ([c31129a](https://github.com/tryopendata/openchart/commit/c31129ae7de2cfa9b713c940aad7d6e82048bc71))
+* add new encoding channels and mark type renderers (Chunks 4-5) ([bd40fac](https://github.com/tryopendata/openchart/commit/bd40facb298f0dd063aadbd779ed05d01267fff9))
+* align spec with Vega-Lite conventions (Chunk 1 - core type system) ([0e40caa](https://github.com/tryopendata/openchart/commit/0e40caaca2fdc9940c99d50d2a821e99e7afe55e))
+* expand scale types and axis config (Chunk 9) ([04a8161](https://github.com/tryopendata/openchart/commit/04a8161ef77bbc61776762cfb0d3f307997d4810))
+* Vega-Lite spec alignment and inline style cleanup ([f3ed3e0](https://github.com/tryopendata/openchart/commit/f3ed3e0353d3e0656ad14af65ddc2e822d5a905d))
+
+
+### Bug Fixes
+
+* address code review findings ([c1a5248](https://github.com/tryopendata/openchart/commit/c1a5248001aaba271fafc22b52966eb9d3e7a0c9))
+* address code review findings (utc scale, dead code, type safety) ([943e81b](https://github.com/tryopendata/openchart/commit/943e81b99430d0644c8685e16d124576f9b9146b))
+* validator accepts conditional encoding and transform-created fields ([7aa4865](https://github.com/tryopendata/openchart/commit/7aa4865badc879cdeab6e96186df89c88f3a1cc3))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 7.0.0
+
 ## [6.0.0](https://github.com/tryopendata/openchart/compare/engine-v5.0.0...engine-v6.0.0) (2026-03-21)
 
 
