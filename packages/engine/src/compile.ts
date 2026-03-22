@@ -75,6 +75,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   text: textRenderer,
   rule: ruleRenderer,
   tick: tickRenderer,
+  rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
 };
 for (const [type, renderer] of Object.entries(builtinRenderers)) {
   registerChartRenderer(type, renderer);
@@ -211,6 +212,16 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   let chartSpec = normalized as NormalizedChartSpec;
 
+  // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
+  // Transforms are defined on the original spec, not the normalized spec, since
+  // NormalizedChartSpec doesn't carry the transform field.
+  const rawTransforms = (spec as Record<string, unknown>).transform as
+    | import('@opendata-ai/openchart-core').Transform[]
+    | undefined;
+  if (rawTransforms && rawTransforms.length > 0) {
+    chartSpec = { ...chartSpec, data: runTransforms(chartSpec.data, rawTransforms) };
+  }
+
   // Responsive strategy
   const breakpoint = getBreakpoint(options.width);
   const heightClass = getHeightClass(options.height);
@@ -306,16 +317,6 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     }
   }
   const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea);
-
-  // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
-  // Transforms are defined on the original spec, not the normalized spec, since
-  // NormalizedChartSpec doesn't carry the transform field.
-  const rawTransforms = (spec as Record<string, unknown>).transform as
-    | import('@opendata-ai/openchart-core').Transform[]
-    | undefined;
-  if (rawTransforms && rawTransforms.length > 0) {
-    chartSpec = { ...chartSpec, data: runTransforms(chartSpec.data, rawTransforms) };
-  }
 
   // Apply data filtering after legend (so legend retains all series), but before
   // scale computation (so hidden/clipped data doesn't affect domains or marks).
@@ -534,14 +535,11 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
   }
 
   for (const leaf of leaves) {
-    // Give each leaf the full data union so scales are computed identically
-    const leafWithUnionedData: ChartSpec = {
-      ...leaf,
-      data: primarySpec.data,
-    };
-    const leafLayout = compileChart(leafWithUnionedData as unknown, options);
+    // Compile each leaf with its own data so marks correspond to its rows only.
+    // Scale domains may differ slightly between layers, but this prevents
+    // duplicate marks from feeding unioned data into every renderer.
+    const leafLayout = compileChart(leaf as unknown, options);
 
-    // But only keep marks that belong to this leaf's actual data
     allMarks.push(...leafLayout.marks);
 
     // Deduplicate legend entries across layers
