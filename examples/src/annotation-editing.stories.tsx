@@ -326,8 +326,8 @@ function makeInitialEditingState(): EditingState {
       },
       {
         type: 'refline',
-        y: 50,
-        label: 'Revenue target: $50B',
+        y: 45,
+        label: 'Revenue target: $45B',
         style: 'dashed',
         stroke: '#94a3b8',
         strokeWidth: 1,
@@ -784,7 +784,7 @@ function ChartEditingDemo() {
           transition: 'background 0.25s ease, border-color 0.25s ease',
         }}
       >
-        <div style={{ height: 480 }}>
+        <div>
           <Chart spec={spec} onEdit={editing ? handleEdit : undefined} />
         </div>
       </div>
