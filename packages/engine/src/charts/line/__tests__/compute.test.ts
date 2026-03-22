@@ -29,7 +29,7 @@ const compactStrategy: LayoutStrategy = {
 function makeSingleSeriesSpec(): NormalizedChartSpec {
   return {
     markType: 'line',
-    markDef: { type: 'line' },
+    markDef: { type: 'line', point: true },
     data: [
       { date: '2020-01-01', value: 10 },
       { date: '2021-01-01', value: 40 },
@@ -51,7 +51,7 @@ function makeSingleSeriesSpec(): NormalizedChartSpec {
 function makeMultiSeriesSpec(): NormalizedChartSpec {
   return {
     markType: 'line',
-    markDef: { type: 'line' },
+    markDef: { type: 'line', point: true },
     data: [
       { date: '2020-01-01', value: 10, country: 'US' },
       { date: '2021-01-01', value: 40, country: 'US' },
@@ -77,7 +77,7 @@ function makeMultiSeriesSpec(): NormalizedChartSpec {
 function makeMissingDataSpec(): NormalizedChartSpec {
   return {
     markType: 'line',
-    markDef: { type: 'line' },
+    markDef: { type: 'line', point: true },
     data: [
       { date: '2020-01-01', value: 10 },
       { date: '2021-01-01', value: null },
@@ -401,7 +401,7 @@ describe('computeLineMarks', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
         markType: 'line',
-        markDef: { type: 'line' },
+        markDef: { type: 'line', point: true },
         data: [{ value: 10 }],
         encoding: {
           y: { field: 'value', type: 'quantitative' },
@@ -421,7 +421,7 @@ describe('computeLineMarks', () => {
     it('returns empty array for empty data', () => {
       const spec: NormalizedChartSpec = {
         markType: 'line',
-        markDef: { type: 'line' },
+        markDef: { type: 'line', point: true },
         data: [],
         encoding: {
           x: { field: 'date', type: 'temporal' },
@@ -548,7 +548,7 @@ describe('computeAreaMarks', () => {
     it('sorts stacked area with 3+ series and shuffled dates', () => {
       const spec: NormalizedChartSpec = {
         markType: 'line',
-        markDef: { type: 'line' },
+        markDef: { type: 'line', point: true },
         data: [
           { date: '2022-01-01', value: 30, region: 'A' },
           { date: '2020-01-01', value: 10, region: 'A' },
@@ -759,7 +759,7 @@ describe('computeLineLabels', () => {
     // Create a spec where series end at the same y position
     const spec: NormalizedChartSpec = {
       markType: 'line',
-      markDef: { type: 'line' },
+      markDef: { type: 'line', point: true },
       data: [
         { date: '2020-01-01', value: 10, country: 'A' },
         { date: '2021-01-01', value: 30, country: 'A' },
