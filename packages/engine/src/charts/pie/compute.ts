@@ -107,7 +107,8 @@ export function computePieMarks(
   // For pie/donut charts, we need a value field (typically y or x) and
   // a category field (typically color). The value field provides the slice sizes.
   const valueChannel = encoding.y ?? encoding.x;
-  const categoryField = encoding.color?.field;
+  const categoryField =
+    encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
 
   if (!valueChannel) return [];
 

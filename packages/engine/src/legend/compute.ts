@@ -44,13 +44,13 @@ const TOP_LEGEND_MAX_ROWS = 2;
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Determine the swatch shape based on chart type. */
-function swatchShapeForType(chartType: string): LegendEntry['shape'] {
-  switch (chartType) {
+/** Determine the swatch shape based on mark type. */
+function swatchShapeForType(markType: string): LegendEntry['shape'] {
+  switch (markType) {
     case 'line':
       return 'line';
-    case 'scatter':
-    case 'dot':
+    case 'point':
+    case 'circle':
       return 'circle';
     default:
       return 'square';
@@ -62,12 +62,15 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   const colorEnc = spec.encoding.color;
   if (!colorEnc) return [];
 
+  // Conditional color definitions don't produce legend entries
+  if ('condition' in colorEnc) return [];
+
   // Sequential (quantitative) color doesn't produce discrete legend entries
   if (colorEnc.type === 'quantitative') return [];
 
   const uniqueValues = [...new Set(spec.data.map((d) => String(d[colorEnc.field])))];
   const palette = theme.colors.categorical;
-  const shape = swatchShapeForType(spec.type);
+  const shape = swatchShapeForType(spec.markType);
 
   return uniqueValues.map((value, i) => ({
     label: value,

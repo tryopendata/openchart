@@ -22,7 +22,7 @@ import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, groupByField } from '../utils';
+import { getColor, getSequentialColor, groupByField } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,9 +68,11 @@ export function computeDotMarks(
 
   const bandwidth = yScale.bandwidth();
   const baseline = xScale(0);
-  const colorField = encoding.color?.field;
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const isSequentialColor = colorEnc?.type === 'quantitative';
+  const colorField = isSequentialColor ? undefined : colorEnc?.field;
 
-  // Multi-series: dumbbell chart with connecting bars
+  // Multi-series (categorical): dumbbell chart with connecting bars
   if (colorField) {
     return computeDumbbellMarks(
       spec.data,
@@ -94,6 +96,7 @@ export function computeDotMarks(
     bandwidth,
     baseline,
     scales,
+    isSequentialColor,
   );
 }
 
@@ -198,6 +201,7 @@ function computeLollipopMarks(
   bandwidth: number,
   baseline: number,
   scales: ResolvedScales,
+  isSequentialColor = false,
 ): (PointMark | RectMark)[] {
   const marks: (PointMark | RectMark)[] = [];
 
@@ -212,7 +216,9 @@ function computeLollipopMarks(
     const cx = xScale(value);
     const cy = bandY + bandwidth / 2;
 
-    const color = getColor(scales, '__default__');
+    const color = isSequentialColor
+      ? getSequentialColor(scales, value)
+      : getColor(scales, '__default__');
 
     // Stem: thin rectangle from baseline to dot center
     const stemX = Math.min(baseline, cx);

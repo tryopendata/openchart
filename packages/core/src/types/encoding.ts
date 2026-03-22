@@ -1,12 +1,12 @@
 /**
- * Per-chart-type encoding validation rules.
+ * Per-mark-type encoding validation rules.
  *
- * Defines which encoding channels are required vs optional for each chart type.
+ * Defines which encoding channels are required vs optional for each mark type.
  * The engine compiler uses these rules to validate specs at runtime (TypeScript
  * catches compile-time errors; these catch runtime JSON from Claude or APIs).
  */
 
-import type { ChartType, FieldType } from './spec';
+import type { FieldType, MarkType } from './spec';
 
 // ---------------------------------------------------------------------------
 // Encoding rule types
@@ -24,13 +24,24 @@ export interface ChannelRule {
 export interface EncodingRule {
   x: ChannelRule;
   y: ChannelRule;
+  x2?: ChannelRule;
+  y2?: ChannelRule;
   color: ChannelRule;
   size: ChannelRule;
+  shape?: ChannelRule;
+  opacity?: ChannelRule;
+  strokeDash?: ChannelRule;
+  text?: ChannelRule;
+  tooltip?: ChannelRule;
+  href?: ChannelRule;
+  order?: ChannelRule;
+  theta?: ChannelRule;
+  radius?: ChannelRule;
   detail: ChannelRule;
 }
 
 // ---------------------------------------------------------------------------
-// Chart encoding rules
+// Mark encoding rules
 // ---------------------------------------------------------------------------
 
 /** Helper to create a required channel rule. */
@@ -44,77 +55,147 @@ function optional(...types: FieldType[]): ChannelRule {
 }
 
 /**
- * Encoding rules per chart type.
+ * Encoding rules per mark type.
  *
  * Defines which channels are required and what field types they accept.
  * The compiler uses this map to validate user specs at runtime.
  *
  * Key design decisions:
  * - line/area: x is temporal/ordinal (the axis), y is quantitative (the value)
- * - bar: horizontal bars, so y is the category axis, x is the value
- * - column: vertical columns, so x is the category axis, y is the value
- * - pie/donut: no x axis; y is the value (quantitative), color is the category
- * - dot: y is the category, x is quantitative
- * - scatter: both axes are quantitative
+ * - bar: covers both horizontal and vertical orientations, so both axes accept
+ *   all relevant types. The engine validates the combination later (one axis
+ *   must be quantitative).
+ * - arc: no x axis; y is the value (quantitative), color is the category
+ * - circle: y is the category, x is quantitative
+ * - point: both axes are quantitative
+ * - text/rule: fully optional positioning
+ * - tick/rect: both axes required, any type
  */
-export const CHART_ENCODING_RULES: Record<ChartType, EncodingRule> = {
+export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
+  bar: {
+    x: required('quantitative', 'nominal', 'ordinal', 'temporal'),
+    y: required('quantitative', 'nominal', 'ordinal'),
+    x2: optional('quantitative'),
+    y2: optional('quantitative'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
   line: {
     x: required('temporal', 'ordinal'),
     y: required('quantitative'),
-    color: optional('nominal', 'ordinal'),
-    size: optional('quantitative'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    strokeDash: optional('nominal', 'ordinal'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   area: {
     x: required('temporal', 'ordinal'),
     y: required('quantitative'),
-    color: optional('nominal', 'ordinal'),
-    size: optional('quantitative'),
+    y2: optional('quantitative'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
-  bar: {
+  point: {
+    x: required('quantitative'),
+    y: required('quantitative'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional('quantitative'),
+    shape: optional('nominal', 'ordinal'),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
+  circle: {
     x: required('quantitative'),
     y: required('nominal', 'ordinal'),
     color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
-  column: {
-    x: required('nominal', 'ordinal', 'temporal'),
-    y: required('quantitative'),
-    color: optional('nominal', 'ordinal', 'quantitative'),
-    size: optional('quantitative'),
-    detail: optional('nominal'),
-  },
-  pie: {
+  arc: {
     x: optional(),
     y: required('quantitative'),
     color: required('nominal', 'ordinal'),
-    size: optional('quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    theta: optional('quantitative'),
+    radius: optional('quantitative'),
     detail: optional('nominal'),
   },
-  donut: {
+  text: {
     x: optional(),
-    y: required('quantitative'),
-    color: required('nominal', 'ordinal'),
+    y: optional(),
+    color: optional(),
     size: optional('quantitative'),
+    opacity: optional('quantitative'),
+    text: required(),
+    tooltip: optional(),
+    href: optional(),
     detail: optional('nominal'),
   },
-  dot: {
-    x: required('quantitative'),
-    y: required('nominal', 'ordinal'),
-    color: optional('nominal', 'ordinal'),
-    size: optional('quantitative'),
+  rule: {
+    x: optional(),
+    y: optional(),
+    x2: optional(),
+    y2: optional(),
+    color: optional(),
+    size: optional(),
+    opacity: optional('quantitative'),
+    strokeDash: optional('nominal', 'ordinal'),
+    tooltip: optional(),
+    href: optional(),
     detail: optional('nominal'),
   },
-  scatter: {
-    x: required('quantitative'),
-    y: required('quantitative'),
-    color: optional('nominal', 'ordinal'),
-    size: optional('quantitative'),
+  tick: {
+    x: required(),
+    y: required(),
+    color: optional(),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    detail: optional('nominal'),
+  },
+  rect: {
+    x: required(),
+    y: required(),
+    x2: optional(),
+    y2: optional(),
+    color: optional(),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
 };
+
+/** @deprecated Use MARK_ENCODING_RULES instead. */
+export const CHART_ENCODING_RULES = MARK_ENCODING_RULES;
 
 // ---------------------------------------------------------------------------
 // Graph encoding rules

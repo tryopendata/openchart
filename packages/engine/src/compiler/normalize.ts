@@ -17,10 +17,18 @@ import type {
   Encoding,
   FieldType,
   GraphSpec,
+  LayerSpec,
   TableSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
-import { isChartSpec, isGraphSpec, isTableSpec } from '@opendata-ai/openchart-core';
+import {
+  isChartSpec,
+  isGraphSpec,
+  isLayerSpec,
+  isTableSpec,
+  resolveMarkDef,
+  resolveMarkType,
+} from '@opendata-ai/openchart-core';
 
 import type {
   NormalizedChartSpec,
@@ -116,9 +124,12 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
     const spec = result[channel];
     if (!spec) continue;
 
+    // Skip conditional value definitions - they don't have field/type at the top level
+    if ('condition' in spec) continue;
+
     if (!spec.type) {
       const inferred = inferFieldType(data, spec.field);
-      result[channel] = { ...spec, type: inferred };
+      (result as Record<string, unknown>)[channel] = { ...spec, type: inferred };
       warnings.push(
         `Inferred encoding.${channel}.type as "${inferred}" from data values for field "${spec.field}"`,
       );
@@ -180,9 +191,12 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
 
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
   const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
+  const markType = resolveMarkType(spec.mark);
+  const markDef = resolveMarkDef(spec.mark);
 
   return {
-    type: spec.type,
+    markType,
+    markDef,
     data: spec.data,
     encoding,
     chrome: normalizeChrome(spec.chrome),
@@ -258,6 +272,16 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
  * @returns A NormalizedSpec with all optionals filled.
  */
 export function normalizeSpec(spec: VizSpec, warnings: string[] = []): NormalizedSpec {
+  if (isLayerSpec(spec)) {
+    // For LayerSpec, we flatten and normalize the first leaf to get a valid NormalizedChartSpec.
+    // The actual layer compilation happens in compileLayer, not here.
+    // This path exists so the generic compile() pipeline doesn't reject layer specs.
+    const leaves = flattenLayers(spec);
+    if (leaves.length === 0) {
+      throw new Error('LayerSpec has no leaf chart specs after flattening');
+    }
+    return normalizeChartSpec(leaves[0], warnings);
+  }
   if (isChartSpec(spec)) {
     return normalizeChartSpec(spec, warnings);
   }
@@ -268,5 +292,54 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
     return normalizeGraphSpec(spec, warnings);
   }
   // Should never happen after validation
-  throw new Error(`Unknown spec type: ${(spec as Record<string, unknown>).type}`);
+  throw new Error(
+    `Unknown spec shape. Expected mark (chart), layer, type: 'table', or type: 'graph'.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Layer flattening (used by compileLayer in compile.ts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively flatten a LayerSpec into leaf ChartSpecs.
+ * Merges parent data, encoding, and transforms down to children.
+ */
+export function flattenLayers(
+  spec: LayerSpec,
+  parentData?: DataRow[],
+  parentEncoding?: Encoding,
+  parentTransforms?: import('@opendata-ai/openchart-core').Transform[],
+): ChartSpec[] {
+  const resolvedData = spec.data ?? parentData;
+  const resolvedEncoding: Encoding | undefined =
+    parentEncoding && spec.encoding
+      ? { ...parentEncoding, ...spec.encoding }
+      : (spec.encoding ?? parentEncoding);
+  const resolvedTransforms = [...(parentTransforms ?? []), ...(spec.transform ?? [])];
+
+  const leaves: ChartSpec[] = [];
+
+  for (const child of spec.layer) {
+    if (isLayerSpec(child)) {
+      // Nested layer: recurse with merged context
+      leaves.push(...flattenLayers(child, resolvedData, resolvedEncoding, resolvedTransforms));
+    } else {
+      // Leaf ChartSpec: merge inherited properties
+      const mergedData = child.data ?? resolvedData ?? [];
+      const mergedEncoding = resolvedEncoding
+        ? { ...resolvedEncoding, ...child.encoding }
+        : child.encoding;
+      const mergedTransforms = [...resolvedTransforms, ...(child.transform ?? [])];
+
+      leaves.push({
+        ...child,
+        data: mergedData,
+        encoding: mergedEncoding,
+        transform: mergedTransforms.length > 0 ? mergedTransforms : undefined,
+      });
+    }
+  }
+
+  return leaves;
 }

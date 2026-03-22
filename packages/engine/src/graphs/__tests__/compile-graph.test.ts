@@ -295,7 +295,7 @@ describe('compileGraph', () => {
   describe('error handling', () => {
     it('throws for non-graph specs', () => {
       const chartSpec = {
-        type: 'scatter' as const,
+        mark: 'point' as const,
         data: [{ x: 1, y: 2 }],
         encoding: {
           x: { field: 'x', type: 'quantitative' as const },
@@ -304,7 +304,7 @@ describe('compileGraph', () => {
       };
 
       expect(() => compileGraph(chartSpec, compileOptions)).toThrow(
-        /compileGraph received a scatter spec/,
+        /compileGraph received a non-graph spec/,
       );
     });
 

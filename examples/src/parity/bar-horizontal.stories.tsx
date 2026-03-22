@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const populationBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'India', population: 1_463_000_000 },
     { country: 'China', population: 1_410_000_000 },
@@ -47,7 +47,7 @@ const populationBarSpec: ChartSpec = {
 };
 
 export const PopulationBar = () => (
-  <div className="story-chart" style={{ height: 480 }}>
+  <div className="story-chart story-h-480">
     <Chart spec={populationBarSpec} />
   </div>
 );
@@ -63,13 +63,19 @@ const compactPopSpec: ChartSpec = {
 };
 
 export const PopulationBarCompact = () => (
-  <div style={{ width: 320, height: 400 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '320px', '--h': '400px' } as React.CSSProperties}
+  >
     <Chart spec={compactPopSpec} />
   </div>
 );
 
 export const PopulationBarWide = () => (
-  <div style={{ width: 1200, height: 500 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '500px' } as React.CSSProperties}
+  >
     <Chart spec={populationBarSpec} />
   </div>
 );

@@ -7,6 +7,7 @@
  */
 
 import type {
+  ConditionalValueDef,
   DataRow,
   Encoding,
   LayoutStrategy,
@@ -19,6 +20,7 @@ import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
+import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { getColor, getSequentialColor, groupByField } from '../utils';
 
 // ---------------------------------------------------------------------------
@@ -68,8 +70,13 @@ export function computeBarMarks(
 
   const bandwidth = yScale.bandwidth();
   const baseline = xScale(0);
-  const colorField = encoding.color?.field;
-  const isSequentialColor = encoding.color?.type === 'quantitative';
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const conditionalColor =
+    encoding.color && isConditionalValueDef(encoding.color)
+      ? (encoding.color as ConditionalValueDef)
+      : undefined;
+  const colorField = colorEnc?.field;
+  const isSequentialColor = colorEnc?.type === 'quantitative';
 
   // If no color encoding, or sequential color (value-based gradient), render simple bars
   if (!colorField || isSequentialColor) {
@@ -83,6 +90,7 @@ export function computeBarMarks(
       baseline,
       scales,
       isSequentialColor,
+      conditionalColor,
     );
   }
 
@@ -167,6 +175,7 @@ function computeSimpleBars(
   baseline: number,
   scales: ResolvedScales,
   sequentialColor = false,
+  conditionalColor?: ConditionalValueDef,
 ): RectMark[] {
   const marks: RectMark[] = [];
 
@@ -178,9 +187,16 @@ function computeSimpleBars(
     const bandY = yScale(category);
     if (bandY === undefined) continue;
 
-    const color = sequentialColor
-      ? getSequentialColor(scales, value)
-      : getColor(scales, '__default__');
+    let color: string;
+    if (conditionalColor) {
+      color = String(
+        resolveConditionalValue(row, conditionalColor) ?? getColor(scales, '__default__'),
+      );
+    } else if (sequentialColor) {
+      color = getSequentialColor(scales, value);
+    } else {
+      color = getColor(scales, '__default__');
+    }
     const xPos = value >= 0 ? baseline : xScale(value);
     const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
 

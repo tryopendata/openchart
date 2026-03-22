@@ -115,8 +115,8 @@ export function computeDimensions(
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
 
-  // Radial charts (pie/donut) don't have axes, so skip axis space
-  const isRadial = spec.type === 'pie' || spec.type === 'donut';
+  // Radial charts (arc) don't have axes, so skip axis space
+  const isRadial = spec.markType === 'arc';
   const encoding = spec.encoding as Encoding;
 
   // Estimate x-axis height below chart area: tick labels sit 14px below,
@@ -151,9 +151,13 @@ export function computeDimensions(
     xAxisHeight = hasXAxisLabel ? 48 : 26;
   }
 
-  // Build margins: padding + chrome + axis space
+  // Build margins: padding + chrome + axis space.
+  // For radial charts (arc/donut), axes don't exist, so axisMargin is only
+  // added when there's actual chrome content that needs separation from the
+  // chart area. When chrome is empty the margin is just padding.
+  const topAxisGap = isRadial && chrome.topHeight === 0 ? 0 : axisMargin;
   const margins: Margins = {
-    top: padding + chrome.topHeight + axisMargin,
+    top: padding + chrome.topHeight + topAxisGap,
     right: padding + (isRadial ? padding : axisMargin),
     bottom: padding + chrome.bottomHeight + xAxisHeight,
     left: padding + (isRadial ? padding : axisMargin),
@@ -162,9 +166,10 @@ export function computeDimensions(
   // Dynamic right margin for line/area end-of-line labels.
   // Only reserve space when labels will actually render (density != 'none').
   const labelDensity = spec.labels.density;
-  if ((spec.type === 'line' || spec.type === 'area') && labelDensity !== 'none') {
+  if ((spec.markType === 'line' || spec.markType === 'area') && labelDensity !== 'none') {
     // Estimate label width from longest series name (color encoding domain)
-    const colorField = encoding.color?.field;
+    const colorEnc = encoding.color;
+    const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
     if (colorField) {
       let maxLabelWidth = 0;
       const seen = new Set<string>();
@@ -185,8 +190,8 @@ export function computeDimensions(
   // Dynamic left margin for y-axis labels
   if (encoding.y && !isRadial) {
     if (
-      spec.type === 'bar' ||
-      spec.type === 'dot' ||
+      spec.markType === 'bar' ||
+      spec.markType === 'circle' ||
       encoding.y.type === 'nominal' ||
       encoding.y.type === 'ordinal'
     ) {
@@ -272,7 +277,8 @@ export function computeDimensions(
     );
 
     // Recalculate top/bottom margins with stripped chrome
-    const newTop = padding + fallbackChrome.topHeight + axisMargin;
+    const fallbackTopAxisGap = isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin;
+    const newTop = padding + fallbackChrome.topHeight + fallbackTopAxisGap;
     const topDelta = margins.top - newTop;
     const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;

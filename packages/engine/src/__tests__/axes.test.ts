@@ -6,7 +6,8 @@ import { computeAxes, effectiveDensity, thinTicksUntilFit, ticksOverlap } from '
 import { computeScales } from '../layout/scales';
 
 const lineSpec: NormalizedChartSpec = {
-  type: 'line',
+  markType: 'line',
+  markDef: { type: 'line' },
   data: [
     { date: '2020-01-01', value: 100 },
     { date: '2021-01-01', value: 500 },
@@ -208,7 +209,8 @@ describe('computeAxes', () => {
   it('propagates tickAngle from encoding to x-axis layout', () => {
     const specWithAngle: NormalizedChartSpec = {
       ...lineSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { cat: 'California', val: 10 },
         { cat: 'New York', val: 20 },
@@ -439,7 +441,8 @@ describe('text-aware tick density', () => {
     const categories = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'];
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
       encoding: {
         x: { field: 'cat', type: 'nominal' },
@@ -490,7 +493,8 @@ describe('text-aware tick density', () => {
   it('passes measureText to auto-rotation detection', () => {
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { cat: 'A', val: 10 },
         { cat: 'B', val: 20 },
@@ -507,5 +511,165 @@ describe('text-aware tick density', () => {
     const axes = computeAxes(scales, chartArea, fullStrategy, theme, wideMeasure);
 
     expect(axes.x!.tickAngle).toBe(-45);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Axis config expansion tests
+// ---------------------------------------------------------------------------
+
+describe('axis config properties', () => {
+  it('uses title instead of deprecated label', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { title: 'Year' } },
+        y: { field: 'value', type: 'quantitative', axis: { title: 'Amount ($)' } },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.label).toBe('Year');
+    expect(axes.y!.label).toBe('Amount ($)');
+  });
+
+  it('falls back to deprecated label when title is not set', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { label: 'Old Label' } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.label).toBe('Old Label');
+  });
+
+  it('prefers labelAngle over deprecated tickAngle', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: {
+          field: 'date',
+          type: 'temporal',
+          axis: { labelAngle: -30, tickAngle: -90 },
+        },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    // labelAngle takes precedence
+    expect(axes.x!.tickAngle).toBe(-30);
+  });
+
+  it('passes orient config to axis layout', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { orient: 'top' } },
+        y: { field: 'value', type: 'quantitative', axis: { orient: 'right' } },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.orient).toBe('top');
+    expect(axes.y!.orient).toBe('right');
+  });
+
+  it('passes domain and ticks visibility to axis layout', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal', axis: { domain: false, ticks: false } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.domainLine).toBe(false);
+    expect(axes.x!.tickMarks).toBe(false);
+  });
+
+  it('passes offset and padding configs to axis layout', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: {
+          field: 'date',
+          type: 'temporal',
+          axis: { offset: 10, titlePadding: 8, labelPadding: 4 },
+        },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.offset).toBe(10);
+    expect(axes.x!.titlePadding).toBe(8);
+    expect(axes.x!.labelPadding).toBe(4);
+  });
+
+  it('passes labelOverlap and labelFlush to axis layout', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: {
+          field: 'date',
+          type: 'temporal',
+          axis: { labelOverlap: 'parity', labelFlush: true },
+        },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.labelOverlap).toBe('parity');
+    expect(axes.x!.labelFlush).toBe(true);
+  });
+
+  it('uses explicit tick values when provided', () => {
+    const spec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: {
+          field: 'value',
+          type: 'quantitative',
+          axis: { values: [0, 250, 500] },
+        },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    // Should produce exactly 3 ticks matching our explicit values
+    expect(axes.y!.ticks.length).toBe(3);
+    expect(axes.y!.ticks[0].value).toBe(0);
+    expect(axes.y!.ticks[1].value).toBe(250);
+    expect(axes.y!.ticks[2].value).toBe(500);
+  });
+
+  it('defaults are undefined when axis config properties are not set', () => {
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    // All new properties should be undefined when not set
+    expect(axes.x!.orient).toBeUndefined();
+    expect(axes.x!.domainLine).toBeUndefined();
+    expect(axes.x!.tickMarks).toBeUndefined();
+    expect(axes.x!.offset).toBeUndefined();
+    expect(axes.x!.titlePadding).toBeUndefined();
+    expect(axes.x!.labelPadding).toBeUndefined();
+    expect(axes.x!.labelOverlap).toBeUndefined();
+    expect(axes.x!.labelFlush).toBeUndefined();
   });
 });

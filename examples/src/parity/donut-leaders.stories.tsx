@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const donutSpec: ChartSpec = {
-  type: 'donut',
+  mark: { type: 'arc', innerRadius: 40 },
   data: [
     { brand: 'Apple', share: 23.0 },
     { brand: 'Samsung', share: 16.0 },
@@ -35,7 +35,7 @@ const donutSpec: ChartSpec = {
 };
 
 export const SmartphoneMarket = () => (
-  <div className="story-chart" style={{ height: 500 }}>
+  <div className="story-chart story-h-500">
     <Chart spec={donutSpec} />
   </div>
 );
@@ -51,13 +51,19 @@ const compactDonutSpec: ChartSpec = {
 };
 
 export const SmartphoneMarketCompact = () => (
-  <div style={{ width: 320, height: 380 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '320px', '--h': '380px' } as React.CSSProperties}
+  >
     <Chart spec={compactDonutSpec} />
   </div>
 );
 
 export const SmartphoneMarketWide = () => (
-  <div style={{ width: 1200, height: 600 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '600px' } as React.CSSProperties}
+  >
     <Chart spec={donutSpec} />
   </div>
 );
@@ -67,7 +73,7 @@ export const SmartphoneMarketWide = () => (
 // ---------------------------------------------------------------------------
 
 const pieSpec: ChartSpec = {
-  type: 'pie',
+  mark: 'arc',
   data: [
     { browser: 'Chrome', share: 63.6 },
     { browser: 'Safari', share: 19.8 },
@@ -89,7 +95,7 @@ const pieSpec: ChartSpec = {
 };
 
 export const BrowserMarket = () => (
-  <div className="story-chart" style={{ height: 500 }}>
+  <div className="story-chart story-h-500">
     <Chart spec={pieSpec} />
   </div>
 );

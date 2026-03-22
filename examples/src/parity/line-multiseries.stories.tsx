@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const gdpLineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // United States
     { date: '2018-01-01', gdp: 3.0, country: 'United States' },
@@ -87,7 +87,7 @@ const gdpLineSpec: ChartSpec = {
 };
 
 export const GDPGrowth = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={gdpLineSpec} />
   </div>
 );
@@ -103,13 +103,19 @@ const compactGdpSpec: ChartSpec = {
 };
 
 export const GDPGrowthCompact = () => (
-  <div style={{ width: 320, height: 300 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '320px', '--h': '300px' } as React.CSSProperties}
+  >
     <Chart spec={compactGdpSpec} />
   </div>
 );
 
 export const GDPGrowthWide = () => (
-  <div style={{ width: 1200, height: 500 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '500px' } as React.CSSProperties}
+  >
     <Chart spec={gdpLineSpec} />
   </div>
 );

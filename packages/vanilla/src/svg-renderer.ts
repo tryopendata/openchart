@@ -22,7 +22,10 @@ import type {
   RectMark,
   ResolvedAnnotation,
   ResolvedChromeElement,
+  RuleMarkLayout,
+  TextMarkLayout,
   TextStyle,
+  TickMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
@@ -306,7 +309,7 @@ function renderAxis(
         y2: gridline.position,
         stroke: layout.theme.colors.gridline,
         'stroke-width': 1,
-        'stroke-opacity': 0.35,
+        'stroke-opacity': 0.6,
       });
     } else {
       setAttrs(gl, {
@@ -316,7 +319,7 @@ function renderAxis(
         y2: area.y + area.height,
         stroke: layout.theme.colors.gridline,
         'stroke-width': 1,
-        'stroke-opacity': 0.35,
+        'stroke-opacity': 0.6,
       });
     }
     g.appendChild(gl);
@@ -573,12 +576,93 @@ function renderPointMark(mark: PointMark, index: number): SVGElement {
   return circle;
 }
 
+function renderTextMark(mark: TextMarkLayout, index: number): SVGElement {
+  const text = createSVGElement('text');
+  text.setAttribute('data-mark-id', `textMark-${index}`);
+  text.setAttribute('class', 'viz-mark viz-mark-text');
+  setAttrs(text, {
+    x: mark.x,
+    y: mark.y,
+    'font-size': mark.fontSize,
+    'text-anchor': mark.textAnchor,
+  });
+  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', mark.fill);
+  if (mark.fontWeight) {
+    text.setAttribute('font-weight', String(mark.fontWeight));
+  }
+  if (mark.fontFamily) {
+    text.setAttribute('font-family', mark.fontFamily);
+  }
+  if (mark.angle) {
+    text.setAttribute('transform', `rotate(${mark.angle}, ${mark.x}, ${mark.y})`);
+  }
+  text.textContent = mark.text;
+  return text;
+}
+
+function renderRuleMark(mark: RuleMarkLayout, index: number): SVGElement {
+  const line = createSVGElement('line');
+  line.setAttribute('data-mark-id', `rule-${index}`);
+  line.setAttribute('class', 'viz-mark viz-mark-rule');
+  setAttrs(line, {
+    x1: mark.x1,
+    y1: mark.y1,
+    x2: mark.x2,
+    y2: mark.y2,
+    stroke: mark.stroke,
+    'stroke-width': mark.strokeWidth,
+  });
+  if (mark.strokeDasharray) {
+    line.setAttribute('stroke-dasharray', mark.strokeDasharray);
+  }
+  if (mark.opacity != null) {
+    line.setAttribute('opacity', String(mark.opacity));
+  }
+  return line;
+}
+
+function renderTickMark(mark: TickMarkLayout, index: number): SVGElement {
+  const line = createSVGElement('line');
+  line.setAttribute('data-mark-id', `tick-${index}`);
+  line.setAttribute('class', 'viz-mark viz-mark-tick');
+
+  // Tick is a short line segment centered at (x, y)
+  const half = mark.length / 2;
+  if (mark.orient === 'vertical') {
+    setAttrs(line, {
+      x1: mark.x,
+      y1: mark.y - half,
+      x2: mark.x,
+      y2: mark.y + half,
+      stroke: mark.stroke,
+      'stroke-width': mark.strokeWidth,
+    });
+  } else {
+    setAttrs(line, {
+      x1: mark.x - half,
+      y1: mark.y,
+      x2: mark.x + half,
+      y2: mark.y,
+      stroke: mark.stroke,
+      'stroke-width': mark.strokeWidth,
+    });
+  }
+
+  if (mark.opacity != null) {
+    line.setAttribute('opacity', String(mark.opacity));
+  }
+  return line;
+}
+
 // Register built-in renderers
 registerMarkRenderer('line', renderLineMark as MarkRenderer<Mark>);
 registerMarkRenderer('area', renderAreaMark as MarkRenderer<Mark>);
 registerMarkRenderer('rect', renderRectMark as MarkRenderer<Mark>);
 registerMarkRenderer('arc', renderArcMark as MarkRenderer<Mark>);
 registerMarkRenderer('point', renderPointMark as MarkRenderer<Mark>);
+registerMarkRenderer('textMark', renderTextMark as MarkRenderer<Mark>);
+registerMarkRenderer('rule', renderRuleMark as MarkRenderer<Mark>);
+registerMarkRenderer('tick', renderTickMark as MarkRenderer<Mark>);
 
 /** Extract series name from a mark for legend toggle matching. */
 function getMarkSeries(mark: Mark): string | undefined {
@@ -1115,6 +1199,28 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
   const clippedGroup = createSVGElement('g');
   clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
   renderMarks(clippedGroup, layout);
+
+  // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
+  // Only added when there are line or area marks with dataPoints, and no explicit
+  // PointMark objects (which use per-element event handling instead).
+  const hasLineOrAreaWithDataPoints = layout.marks.some(
+    (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
+  );
+  const hasPointMarks = layout.marks.some((m) => m.type === 'point');
+  if (hasLineOrAreaWithDataPoints && !hasPointMarks) {
+    const overlay = createSVGElement('rect');
+    setAttrs(overlay, {
+      x: layout.area.x,
+      y: layout.area.y,
+      width: layout.area.width,
+      height: layout.area.height,
+      fill: 'transparent',
+    });
+    overlay.setAttribute('class', 'viz-voronoi-overlay');
+    overlay.setAttribute('data-voronoi-overlay', 'true');
+    clippedGroup.appendChild(overlay);
+  }
+
   svg.appendChild(clippedGroup);
 
   renderAnnotations(svg, layout);

@@ -30,3 +30,180 @@
   width: 100%;
   max-width: 1000px;
 }
+
+/* Height utilities */
+
+.story-h-280 {
+  height: 280px;
+}
+.story-h-300 {
+  height: 300px;
+}
+.story-h-320 {
+  height: 320px;
+}
+.story-h-350 {
+  height: 350px;
+}
+.story-h-360 {
+  height: 360px;
+}
+.story-h-380 {
+  height: 380px;
+}
+.story-h-400 {
+  height: 400px;
+}
+.story-h-420 {
+  height: 420px;
+}
+.story-h-440 {
+  height: 440px;
+}
+.story-h-450 {
+  height: 450px;
+}
+.story-h-460 {
+  height: 460px;
+}
+.story-h-480 {
+  height: 480px;
+}
+.story-h-500 {
+  height: 500px;
+}
+.story-h-520 {
+  height: 520px;
+}
+.story-h-550 {
+  height: 550px;
+}
+.story-h-600 {
+  height: 600px;
+}
+.story-h-700 {
+  height: 700px;
+}
+
+/* Flex layout utilities */
+
+.story-flex {
+  display: flex;
+}
+.story-flex-gap-8 {
+  display: flex;
+  gap: 8px;
+}
+.story-flex-gap-16 {
+  display: flex;
+  gap: 16px;
+}
+.story-flex-gap-24 {
+  display: flex;
+  gap: 24px;
+}
+.story-flex-gap-32 {
+  display: flex;
+  gap: 32px;
+}
+.story-flex-1 {
+  flex: 1;
+}
+
+/* Grid layout */
+
+.story-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Editorial typography */
+
+.story-editorial {
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 16px;
+}
+
+.story-editorial-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.story-editorial-title-sm {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.story-editorial-subtitle {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.55;
+}
+
+.story-editorial-subtitle-sm {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.story-editorial-source {
+  font-size: 12px;
+  opacity: 0.4;
+  margin: 0;
+  padding-top: 4px;
+}
+
+/* Responsive test fixed-size containers */
+
+.story-fixed-size {
+  width: var(--w);
+  height: var(--h);
+}
+
+/* Max-width utilities */
+
+.story-max-w-380 {
+  max-width: 380px;
+}
+.story-max-w-500 {
+  max-width: 500px;
+}
+.story-max-w-650 {
+  max-width: 650px;
+}
+.story-max-w-700 {
+  max-width: 700px;
+}
+.story-max-w-750 {
+  max-width: 750px;
+}
+.story-max-w-800 {
+  max-width: 800px;
+}
+.story-max-w-900 {
+  max-width: 900px;
+}
+.story-max-w-920 {
+  max-width: 920px;
+}
+.story-max-w-1200 {
+  max-width: 1200px;
+}
+
+/* Padding utilities */
+
+.story-pad {
+  padding: 16px;
+}
+.story-pad-24 {
+  padding: 24px;
+}
+.story-pad-top {
+  padding: 16px 16px 0;
+}
+.story-pad-sides {
+  padding: 0 16px;
+}

@@ -10,10 +10,10 @@
  */
 
 import {
-  CHART_ENCODING_RULES,
-  CHART_TYPES,
-  type ChartType,
   type FieldType,
+  MARK_ENCODING_RULES,
+  MARK_TYPES,
+  type MarkType,
   type VizSpec,
 } from '@opendata-ai/openchart-core';
 
@@ -53,7 +53,8 @@ function isNumeric(value: unknown): boolean {
 // ---------------------------------------------------------------------------
 
 function validateChartSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
-  const chartType = spec.type as ChartType;
+  const markType =
+    typeof spec.mark === 'string' ? spec.mark : (spec.mark as Record<string, unknown>)?.type;
 
   // Check data
   if (!Array.isArray(spec.data)) {
@@ -91,12 +92,12 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
 
   // Check encoding exists
   if (!spec.encoding || typeof spec.encoding !== 'object') {
-    const rules = CHART_ENCODING_RULES[chartType];
+    const rules = MARK_ENCODING_RULES[markType as MarkType];
     const requiredChannels = Object.entries(rules)
       .filter(([, rule]) => rule.required)
       .map(([ch]) => ch);
     errors.push({
-      message: `Spec error: ${chartType} chart requires an "encoding" object`,
+      message: `Spec error: ${markType} chart requires an "encoding" object`,
       path: 'encoding',
       code: 'MISSING_FIELD',
       suggestion: `Add an encoding object with required channels: ${requiredChannels.join(', ')}. Example: encoding: { ${requiredChannels.map((ch) => `${ch}: { field: "...", type: "..." }`).join(', ')} }`,
@@ -104,7 +105,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     return;
   }
 
-  const rules = CHART_ENCODING_RULES[chartType];
+  const rules = MARK_ENCODING_RULES[markType as MarkType];
   const encoding = spec.encoding as Record<string, unknown>;
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
   const availableColumns = [...dataColumns].join(', ');
@@ -114,11 +115,24 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     if (rule.required && !encoding[channel]) {
       const allowedTypes = rule.allowedTypes.join(' or ');
       errors.push({
-        message: `Spec error: ${chartType} chart requires encoding.${channel} but none was provided`,
+        message: `Spec error: ${markType} chart requires encoding.${channel} but none was provided`,
         path: `encoding.${channel}`,
         code: 'MISSING_FIELD',
         suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}) and type (${allowedTypes}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${rule.allowedTypes[0]}" }`,
       });
+    }
+  }
+
+  // Collect fields that transforms will create, so we don't reject them
+  const transformFields = new Set<string>();
+  if (Array.isArray(spec.transform)) {
+    for (const t of spec.transform as Record<string, unknown>[]) {
+      if (typeof t.as === 'string') transformFields.add(t.as);
+      if (Array.isArray(t.as)) {
+        for (const f of t.as) {
+          if (typeof f === 'string') transformFields.add(f);
+        }
+      }
     }
   }
 
@@ -128,6 +142,9 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
 
     const channelObj = channelSpec as Record<string, unknown>;
     const channelRule = rules[channel as keyof typeof rules];
+
+    // Skip ConditionalValueDef channels (they have 'condition' instead of 'field')
+    if ('condition' in channelObj) continue;
 
     // Check field exists
     if (!channelObj.field || typeof channelObj.field !== 'string') {
@@ -140,8 +157,8 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
       continue;
     }
 
-    // Check field references a column in data
-    if (!dataColumns.has(channelObj.field)) {
+    // Check field references a column in data (or will be created by a transform)
+    if (!dataColumns.has(channelObj.field) && !transformFields.has(channelObj.field)) {
       errors.push({
         message: `Spec error: encoding.${channel}.field "${channelObj.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,
@@ -164,7 +181,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     if (channelRule && channelObj.type && channelRule.allowedTypes.length > 0) {
       if (!channelRule.allowedTypes.includes(channelObj.type as FieldType)) {
         errors.push({
-          message: `Spec error: encoding.${channel} for ${chartType} chart does not accept type "${channelObj.type}". Allowed types: ${channelRule.allowedTypes.join(', ')}`,
+          message: `Spec error: encoding.${channel} for ${markType} chart does not accept type "${channelObj.type}". Allowed types: ${channelRule.allowedTypes.join(', ')}`,
           path: `encoding.${channel}.type`,
           code: 'ENCODING_MISMATCH',
           suggestion: `Change encoding.${channel}.type to one of: ${channelRule.allowedTypes.join(', ')}`,
@@ -494,6 +511,99 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
 }
 
 // ---------------------------------------------------------------------------
+// Layer validation
+// ---------------------------------------------------------------------------
+
+function validateLayerSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const layer = spec.layer as unknown[];
+
+  if (layer.length === 0) {
+    errors.push({
+      message: 'Spec error: "layer" must be a non-empty array',
+      path: 'layer',
+      code: 'EMPTY_DATA',
+      suggestion: 'Add at least one layer with a mark and encoding',
+    });
+    return;
+  }
+
+  for (let i = 0; i < layer.length; i++) {
+    const child = layer[i];
+    if (!child || typeof child !== 'object' || Array.isArray(child)) {
+      errors.push({
+        message: `Spec error: layer[${i}] must be an object`,
+        path: `layer[${i}]`,
+        code: 'INVALID_TYPE',
+        suggestion:
+          'Each layer must be a chart spec (with mark) or a nested layer spec (with layer)',
+      });
+      continue;
+    }
+
+    const childObj = child as Record<string, unknown>;
+    const isNestedLayer = 'layer' in childObj && Array.isArray(childObj.layer);
+    const isChildChart = 'mark' in childObj;
+
+    if (!isNestedLayer && !isChildChart) {
+      errors.push({
+        message: `Spec error: layer[${i}] must have a "mark" field or a "layer" array`,
+        path: `layer[${i}]`,
+        code: 'MISSING_FIELD',
+        suggestion:
+          'Each layer must be a chart spec (with mark + encoding) or a nested layer spec (with layer array)',
+      });
+      continue;
+    }
+
+    if (isNestedLayer) {
+      validateLayerSpec(childObj, errors);
+    } else if (isChildChart) {
+      // Validate mark type
+      const mark = childObj.mark;
+      let markValue: string | undefined;
+      if (typeof mark === 'string') {
+        markValue = mark;
+      } else if (mark && typeof mark === 'object' && !Array.isArray(mark)) {
+        markValue = (mark as Record<string, unknown>).type as string | undefined;
+      }
+
+      if (!markValue || !MARK_TYPES.has(markValue)) {
+        errors.push({
+          message: `Spec error: layer[${i}].mark "${markValue ?? String(mark)}" is not a valid mark type`,
+          path: `layer[${i}].mark`,
+          code: 'INVALID_VALUE',
+          suggestion: `Change mark to one of: ${[...MARK_TYPES].join(', ')}`,
+        });
+        continue;
+      }
+
+      // Child layers can inherit data and encoding from parent, so only validate
+      // if the child has its own data (or the parent provides shared data).
+      const hasOwnData = Array.isArray(childObj.data) && (childObj.data as unknown[]).length > 0;
+      const parentHasData = Array.isArray(spec.data) && (spec.data as unknown[]).length > 0;
+
+      if (hasOwnData || parentHasData) {
+        // Build a merged spec for validation purposes
+        const mergedForValidation = { ...childObj };
+        if (!hasOwnData && parentHasData) {
+          mergedForValidation.data = spec.data;
+        }
+        // Merge encoding: parent fields are inherited unless child overrides
+        if (spec.encoding && typeof spec.encoding === 'object') {
+          mergedForValidation.encoding = {
+            ...(spec.encoding as Record<string, unknown>),
+            ...((childObj.encoding as Record<string, unknown>) ?? {}),
+          };
+        }
+        if (mergedForValidation.data && mergedForValidation.encoding) {
+          validateChartSpec(mergedForValidation, errors);
+        }
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -516,7 +626,7 @@ export function validateSpec(spec: unknown): ValidationResult {
           message: 'Spec error: spec must be a non-null object',
           code: 'INVALID_TYPE',
           suggestion:
-            'Pass a spec object with at least a "type" field, e.g. { type: "line", data: [...], encoding: {...} }',
+            'Pass a spec object with at least a "mark" field for charts, e.g. { mark: "line", data: [...], encoding: {...} }',
         },
       ],
       normalized: null,
@@ -525,43 +635,65 @@ export function validateSpec(spec: unknown): ValidationResult {
 
   const obj = spec as Record<string, unknown>;
 
-  // Type check
-  if (!obj.type || typeof obj.type !== 'string') {
-    return {
-      valid: false,
-      errors: [
-        {
-          message: 'Spec error: spec must have a "type" field',
-          path: 'type',
-          code: 'MISSING_FIELD',
-          suggestion: `Add a type field. Valid types: ${[...CHART_TYPES].join(', ')}, table, graph`,
-        },
-      ],
-      normalized: null,
-    };
-  }
-
-  const isChart = CHART_TYPES.has(obj.type);
+  // Determine spec type via structural discrimination:
+  // - Layer specs have a 'layer' array
+  // - Chart specs have a 'mark' field (string or object with type property)
+  // - Table specs have type: 'table'
+  // - Graph specs have type: 'graph'
+  const hasLayer = 'layer' in obj && Array.isArray(obj.layer);
+  const hasMark = 'mark' in obj;
   const isTable = obj.type === 'table';
   const isGraph = obj.type === 'graph';
+  const isLayer = hasLayer && !isTable && !isGraph;
+  const isChart = hasMark && !hasLayer && !isTable && !isGraph;
 
-  if (!isChart && !isTable && !isGraph) {
+  if (!isChart && !isTable && !isGraph && !isLayer) {
     return {
       valid: false,
       errors: [
         {
-          message: `Spec error: "${obj.type}" is not a valid type. Valid types: ${[...CHART_TYPES].join(', ')}, table, graph`,
-          path: 'type',
-          code: 'INVALID_VALUE',
-          suggestion: `Change type to one of: ${[...CHART_TYPES].join(', ')}, table, graph`,
+          message:
+            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs',
+          path: 'mark',
+          code: 'MISSING_FIELD',
+          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field for tables/graphs (type: "table" or type: "graph"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
         },
       ],
       normalized: null,
     };
   }
 
-  // Type-specific validation
+  // For layer specs, validate each child layer recursively
+  if (isLayer) {
+    validateLayerSpec(obj, errors);
+  }
+
+  // For chart specs, validate the mark field
   if (isChart) {
+    const mark = obj.mark;
+    let markValue: string | undefined;
+
+    if (typeof mark === 'string') {
+      markValue = mark;
+    } else if (mark && typeof mark === 'object' && !Array.isArray(mark)) {
+      markValue = (mark as Record<string, unknown>).type as string | undefined;
+    }
+
+    if (!markValue || !MARK_TYPES.has(markValue)) {
+      return {
+        valid: false,
+        errors: [
+          {
+            message: `Spec error: "${markValue ?? String(mark)}" is not a valid mark type. Valid mark types: ${[...MARK_TYPES].join(', ')}`,
+            path: 'mark',
+            code: 'INVALID_VALUE',
+            suggestion: `Change mark to one of: ${[...MARK_TYPES].join(', ')}`,
+          },
+        ],
+        normalized: null,
+      };
+    }
+
     validateChartSpec(obj, errors);
   } else if (isTable) {
     validateTableSpec(obj, errors);

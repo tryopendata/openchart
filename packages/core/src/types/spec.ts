@@ -4,7 +4,7 @@
  * These types define what a user (or Claude) writes to describe a visualization.
  * The engine validates, normalizes, and compiles specs into layout objects.
  *
- * Encoding vocabulary follows Vega-Lite conventions (field/type/aggregate)
+ * Encoding vocabulary follows Vega-Lite conventions (field/type/aggregate/mark)
  * with editorial extensions for chrome, annotations, responsive, and dark mode.
  */
 
@@ -13,11 +13,97 @@ import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
 import type { ColumnConfig } from './table';
 
 // ---------------------------------------------------------------------------
-// Chart type union
+// Mark type union (Vega-Lite aligned)
 // ---------------------------------------------------------------------------
 
-/** Supported chart types. Graph is separate since it uses nodes/edges, not data + encoding. */
-export type ChartType = 'line' | 'area' | 'bar' | 'column' | 'pie' | 'donut' | 'dot' | 'scatter';
+/**
+ * Supported mark types, following Vega-Lite conventions.
+ *
+ * Mapping from previous OpenChart chart types:
+ * - 'bar' covers both horizontal bars (old 'bar') and vertical columns (old 'column')
+ * - 'arc' covers both pie (old 'pie') and donut (old 'donut')
+ * - 'point' replaces old 'scatter'
+ * - 'circle' replaces old 'dot'
+ * - 'line' and 'area' unchanged
+ *
+ * New mark types not in previous OpenChart:
+ * - 'text': data-positioned text labels
+ * - 'rule': reference lines as data marks
+ * - 'tick': strip/rug plot marks
+ * - 'rect': heatmaps and 2D binned plots
+ */
+export type MarkType =
+  | 'bar'
+  | 'line'
+  | 'area'
+  | 'point'
+  | 'circle'
+  | 'arc'
+  | 'text'
+  | 'rule'
+  | 'tick'
+  | 'rect';
+
+/** @deprecated Use MarkType instead. Kept for internal migration references. */
+export type ChartType = MarkType;
+
+// ---------------------------------------------------------------------------
+// Mark definition (Vega-Lite aligned)
+// ---------------------------------------------------------------------------
+
+/**
+ * Mark definition object with visual properties.
+ *
+ * When `mark` is a string, it's shorthand for `{ type: markString }`.
+ * When it's an object, it can include properties like interpolation,
+ * point markers, orientation, and more.
+ */
+export interface MarkDef {
+  /** The mark type. */
+  type: MarkType;
+  /**
+   * Show point markers on line/area marks.
+   * - true: filled circles at each data point
+   * - 'transparent': invisible hover targets (legacy behavior)
+   * - false: no point marks (default; uses voronoi overlay for tooltips)
+   */
+  point?: boolean | 'transparent';
+  /**
+   * Curve interpolation for line/area marks.
+   * Maps to d3-shape curve factories.
+   */
+  interpolate?:
+    | 'linear'
+    | 'monotone'
+    | 'step'
+    | 'step-before'
+    | 'step-after'
+    | 'basis'
+    | 'cardinal'
+    | 'natural';
+  /** Explicit orientation override for bar marks. */
+  orient?: 'horizontal' | 'vertical';
+  /** Inner radius for arc marks. >0 produces a donut, 0 or omitted produces a pie. */
+  innerRadius?: number;
+  /** Outer radius for arc marks. */
+  outerRadius?: number;
+  /** Corner radius for rect/bar marks. */
+  cornerRadius?: number;
+  /** Whether the mark is filled (vs stroked only). */
+  filled?: boolean;
+  /** Default opacity (0-1). */
+  opacity?: number;
+  /** Default fill color. */
+  fill?: string;
+  /** Default stroke color. */
+  stroke?: string;
+  /** Default stroke width. */
+  strokeWidth?: number;
+  /** Tooltip behavior. null disables tooltips. */
+  tooltip?: boolean | null;
+  /** Clip marks to the chart area. */
+  clip?: boolean;
+}
 
 // ---------------------------------------------------------------------------
 // Encoding
@@ -31,8 +117,8 @@ export type AggregateOp = 'count' | 'sum' | 'mean' | 'median' | 'min' | 'max';
 
 /** Axis configuration for an encoding channel. */
 export interface AxisConfig {
-  /** Axis label text. If omitted, the field name is used. */
-  label?: string;
+  /** Axis title text. If omitted, the field name is used. */
+  title?: string;
   /** Number format string (d3-format). e.g. ",.0f" for comma-separated integers. */
   format?: string;
   /** Override tick count. Engine picks a sensible default if omitted. */
@@ -40,6 +126,30 @@ export interface AxisConfig {
   /** Whether to show gridlines for this axis. */
   grid?: boolean;
   /** Rotation angle in degrees for tick labels. Common values: -45, -90, 90. */
+  labelAngle?: number;
+  /** Axis orientation override. */
+  orient?: 'top' | 'bottom' | 'left' | 'right';
+  /** Explicit tick values. */
+  values?: unknown[];
+  /** How to handle overlapping labels. */
+  labelOverlap?: boolean | 'parity' | 'greedy';
+  /** Whether to flush labels to the axis edges. */
+  labelFlush?: boolean;
+  /** Whether to show the axis domain line. */
+  domain?: boolean;
+  /** Whether to show tick marks. */
+  ticks?: boolean;
+  /** Axis position offset in pixels. */
+  offset?: number;
+  /** Padding between axis title and axis. */
+  titlePadding?: number;
+  /** Padding between tick labels and axis. */
+  labelPadding?: number;
+
+  // --- Deprecated aliases (will be removed) ---
+  /** @deprecated Use `title` instead. */
+  label?: string;
+  /** @deprecated Use `labelAngle` instead. */
   tickAngle?: number;
 }
 
@@ -48,14 +158,48 @@ export interface ScaleConfig {
   /** Explicit domain override. Auto-derived from data if omitted. */
   domain?: [number, number] | string[];
   /** Scale type override. Usually inferred from field type. */
-  type?: 'linear' | 'log' | 'time' | 'band' | 'point' | 'ordinal';
+  type?: ScaleType;
   /** Whether to nice-ify the domain for clean tick values. Defaults to true. */
   nice?: boolean;
   /** Whether the domain should include zero. Defaults to true for quantitative. */
   zero?: boolean;
   /** When true and domain is set, filter out data rows with values outside the domain range. */
   clip?: boolean;
+  /** Explicit range override. */
+  range?: unknown[];
+  /** Reverse the range direction. */
+  reverse?: boolean;
+  /** Clamp output to the range. */
+  clamp?: boolean;
+  /** Padding for band/point scales. */
+  padding?: number;
+  /** Inner padding for band scales. */
+  paddingInner?: number;
+  /** Outer padding for band scales. */
+  paddingOuter?: number;
+  /** Exponent for pow scales. */
+  exponent?: number;
+  /** Base for log scales (default 10). */
+  base?: number;
+  /** Constant for symlog scales. */
+  constant?: number;
 }
+
+/** Scale type, following Vega-Lite conventions. */
+export type ScaleType =
+  | 'linear'
+  | 'log'
+  | 'pow'
+  | 'sqrt'
+  | 'symlog'
+  | 'time'
+  | 'utc'
+  | 'ordinal'
+  | 'band'
+  | 'point'
+  | 'quantile'
+  | 'quantize'
+  | 'threshold';
 
 /**
  * A single encoding channel mapping a data field to a visual property.
@@ -85,20 +229,44 @@ export interface EncodingChannel {
 
 /**
  * Encoding object mapping visual channels to data fields.
- * Which channels are required depends on the chart type.
- * See ChartEncodingRules in encoding.ts for per-type requirements.
+ * Which channels are required depends on the mark type.
+ * See MARK_ENCODING_RULES in encoding.ts for per-type requirements.
  */
 export interface Encoding {
   /** Horizontal position channel. */
   x?: EncodingChannel;
   /** Vertical position channel. */
   y?: EncodingChannel;
-  /** Color channel (series differentiation or heatmap). */
-  color?: EncodingChannel;
-  /** Size channel (bubble charts, dot plots). */
-  size?: EncodingChannel;
+  /** Color channel (series differentiation or heatmap). Accepts conditional definitions. */
+  color?: EncodingChannel | ConditionalValueDef;
+  /** Size channel (bubble charts, dot plots). Accepts conditional definitions. */
+  size?: EncodingChannel | ConditionalValueDef;
   /** Detail channel (group without encoding to a visual property). */
   detail?: EncodingChannel;
+  /** Secondary x position (for ranges, error bars). */
+  x2?: EncodingChannel;
+  /** Secondary y position (for ranges, error bars). */
+  y2?: EncodingChannel;
+  /** Data-driven opacity (0-1). Accepts conditional definitions. */
+  opacity?: EncodingChannel | ConditionalValueDef;
+  /** Point shape encoding (circle, square, diamond, triangle-up, etc.). */
+  shape?: EncodingChannel;
+  /** Data-driven stroke dash patterns. */
+  strokeDash?: EncodingChannel;
+  /** Rotation angle encoding. */
+  angle?: EncodingChannel;
+  /** Text content for text marks. */
+  text?: EncodingChannel;
+  /** Tooltip field(s). Can be a single channel or array. */
+  tooltip?: EncodingChannel | EncodingChannel[];
+  /** Hyperlink encoding. */
+  href?: EncodingChannel;
+  /** Stacking/drawing order. */
+  order?: EncodingChannel;
+  /** Angular position for arc marks. */
+  theta?: EncodingChannel;
+  /** Radial position for arc marks. */
+  radius?: EncodingChannel;
 }
 
 // ---------------------------------------------------------------------------
@@ -439,15 +607,21 @@ export interface ChartSpecOverride {
 /**
  * Chart specification: the primary input for standard chart types.
  *
- * Combines a chart type with data, encoding channels, editorial chrome,
- * annotations, and configuration. The engine validates, normalizes, and
- * compiles this into a ChartLayout.
+ * Uses the Vega-Lite `mark` property instead of `type` to specify
+ * the visualization mark. The mark can be a string shorthand or an
+ * object with additional properties (interpolation, point markers, etc.).
  */
 export interface ChartSpec {
-  /** The chart type to render. */
-  type: ChartType;
+  /**
+   * The mark type to render.
+   * String shorthand: `mark: 'bar'`
+   * Object with properties: `mark: { type: 'line', interpolate: 'step' }`
+   */
+  mark: MarkType | MarkDef;
   /** Data array: each element is a row with field values. */
   data: DataRow[];
+  /** Data transforms applied in order before encoding (filter, bin, calculate, timeUnit). */
+  transform?: Transform[];
   /** Encoding mapping data fields to visual channels. */
   encoding: Encoding;
   /** Editorial chrome (title, subtitle, source, etc.). */
@@ -527,13 +701,6 @@ export interface GraphEdge {
   [key: string]: unknown;
 }
 
-/**
- * Graph specification: input for network/relationship visualizations.
- *
- * Uses a nodes + edges data model instead of the flat data + encoding model
- * used by chart types. The graph type is defined here for forward compatibility
- * but rendering is deferred to a future phase.
- */
 /** Per-node visual overrides, keyed by node id. */
 export interface NodeOverride {
   /** Override fill color. */
@@ -571,13 +738,72 @@ export interface GraphSpec {
   darkMode?: DarkMode;
 }
 
+// ---------------------------------------------------------------------------
+// Layer spec (multi-layer composition)
+// ---------------------------------------------------------------------------
+
 /**
- * Top-level visualization spec: discriminated union on the `type` field.
- *
- * This is the primary API contract. Users (and Claude) write VizSpec objects,
- * the engine validates and compiles them into layout objects for rendering.
+ * Resolution strategy for shared resources across layers.
+ * 'shared' (default): union domains, single axis/legend.
+ * 'independent': each layer gets its own scale/axis/legend.
  */
-export type VizSpec = ChartSpec | TableSpec | GraphSpec;
+export type ResolveMode = 'shared' | 'independent';
+
+/**
+ * Per-channel resolution config. Controls whether scales, axes, and legends
+ * are shared or independent across layers.
+ */
+export interface ResolveConfig {
+  scale?: Partial<Record<'x' | 'y' | 'color' | 'size', ResolveMode>>;
+  axis?: Partial<Record<'x' | 'y', ResolveMode>>;
+  legend?: Partial<Record<'color' | 'size', ResolveMode>>;
+}
+
+/**
+ * Layer specification: composites multiple chart layers into a single view.
+ *
+ * Each element in `layer` is either a ChartSpec or another LayerSpec (nested).
+ * Shared data, encoding, and transforms at the LayerSpec level are inherited
+ * by children that don't define their own.
+ */
+export interface LayerSpec {
+  /** Array of child layers (ChartSpec or nested LayerSpec). */
+  layer: (ChartSpec | LayerSpec)[];
+  /** Shared data inherited by children without their own data. */
+  data?: DataRow[];
+  /** Shared encoding inherited by children (overridden per-channel by child). */
+  encoding?: Encoding;
+  /** Shared transforms. Parent transforms run before child transforms. */
+  transform?: Transform[];
+  /** Editorial chrome (title, subtitle, source, etc.). */
+  chrome?: Chrome;
+  /** Annotations on the layered view. */
+  annotations?: Annotation[];
+  /** Label display configuration. */
+  labels?: LabelConfig;
+  /** Legend display configuration. */
+  legend?: LegendConfig;
+  /** Whether the chart adapts to container width. Defaults to true. */
+  responsive?: boolean;
+  /** Theme configuration overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode behavior. Defaults to "off". */
+  darkMode?: DarkMode;
+  /** Resolution strategy for shared scales/axes/legends. */
+  resolve?: ResolveConfig;
+  /** Hidden series names. */
+  hiddenSeries?: string[];
+}
+
+/**
+ * Top-level visualization spec: union discriminated by structural shape.
+ *
+ * - ChartSpec: has `mark` field (no `type`, no `layer`)
+ * - LayerSpec: has `layer` field
+ * - TableSpec: has `type: 'table'`
+ * - GraphSpec: has `type: 'graph'`
+ */
+export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec;
 
 /** Chart spec without runtime data, for persistence/storage. */
 export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
@@ -589,34 +815,237 @@ export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
 export type StoredVizSpec = ChartSpecWithoutData | TableSpecWithoutData | GraphSpecWithoutData;
 
 // ---------------------------------------------------------------------------
+// Transforms (Vega-Lite aligned)
+// ---------------------------------------------------------------------------
+
+/** Logical AND combinator for filter predicates. */
+export interface LogicalAnd<T> {
+  and: T[];
+}
+
+/** Logical OR combinator for filter predicates. */
+export interface LogicalOr<T> {
+  or: T[];
+}
+
+/** Logical NOT combinator for filter predicates. */
+export interface LogicalNot<T> {
+  not: T;
+}
+
+/** A predicate that tests a field value against a condition. */
+export interface FieldPredicate {
+  /** Data field to test. */
+  field: string;
+  /** Equals comparison. */
+  equal?: unknown;
+  /** Less than. */
+  lt?: number;
+  /** Less than or equal. */
+  lte?: number;
+  /** Greater than. */
+  gt?: number;
+  /** Greater than or equal. */
+  gte?: number;
+  /** Inclusive range [min, max]. */
+  range?: [number, number];
+  /** Value is one of these. */
+  oneOf?: unknown[];
+  /** Whether the value is valid (non-null, non-undefined, non-NaN). */
+  valid?: boolean;
+}
+
+/**
+ * A filter predicate: a field predicate or logical combination of predicates.
+ */
+export type FilterPredicate =
+  | FieldPredicate
+  | LogicalAnd<FilterPredicate>
+  | LogicalOr<FilterPredicate>
+  | LogicalNot<FilterPredicate>;
+
+/** Parameters for binning a field. */
+export interface BinParams {
+  /** Maximum number of bins. */
+  maxbins?: number;
+  /** Exact step size between bins. */
+  step?: number;
+  /** Whether to nice-ify bin boundaries. */
+  nice?: boolean;
+  /** Explicit extent [min, max] for binning. */
+  extent?: [number, number];
+}
+
+/** Expression for calculate transforms. */
+export interface CalculateExpression {
+  /** Arithmetic operation to apply. */
+  op: '+' | '-' | '*' | '/' | 'abs' | 'round' | 'floor' | 'ceil' | 'log' | 'sqrt';
+  /** Primary field to operate on. */
+  field: string;
+  /** Secondary field for binary operations (+, -, *, /). */
+  field2?: string;
+  /** Constant value for binary operations when field2 is not provided. */
+  value?: number;
+}
+
+/**
+ * Time unit granularity for temporal field transformations.
+ * Follows Vega-Lite conventions.
+ */
+export type TimeUnit =
+  | 'year'
+  | 'quarter'
+  | 'month'
+  | 'week'
+  | 'day'
+  | 'dayofyear'
+  | 'date'
+  | 'hours'
+  | 'minutes'
+  | 'seconds'
+  | 'milliseconds'
+  | 'yearmonth'
+  | 'yearmonthdate'
+  | 'monthdate'
+  | 'hoursminutes';
+
+/** Filter transform: removes rows that don't match the predicate. */
+export interface FilterTransform {
+  filter: FilterPredicate;
+}
+
+/** Bin transform: adds binned field(s) to each row. */
+export interface BinTransform {
+  bin: true | BinParams;
+  field: string;
+  as: string | [string, string];
+}
+
+/** Calculate transform: adds a computed field to each row. */
+export interface CalculateTransform {
+  calculate: CalculateExpression;
+  as: string;
+}
+
+/** Time unit transform: extracts a time unit from a temporal field. */
+export interface TimeUnitTransform {
+  timeUnit: TimeUnit;
+  field: string;
+  as: string;
+}
+
+/** Discriminated union of all transform types. */
+export type Transform = FilterTransform | BinTransform | CalculateTransform | TimeUnitTransform;
+
+// ---------------------------------------------------------------------------
+// Conditional encoding (Vega-Lite aligned)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single condition with a test predicate and resulting value/field.
+ * When the test passes for a datum, the condition's value/field is used.
+ */
+export interface Condition {
+  /** Predicate to test against each datum. */
+  test: FilterPredicate;
+  /** Static value to use when the condition is true. */
+  value?: unknown;
+  /** Data field to use when the condition is true. */
+  field?: string;
+  /** Field type for the conditional field. */
+  type?: FieldType;
+}
+
+/**
+ * A conditional value definition for an encoding channel.
+ * Evaluates conditions in order, falling back to the default value.
+ */
+export interface ConditionalValueDef {
+  /** One or more conditions to evaluate. */
+  condition: Condition | Condition[];
+  /** Default value when no condition matches. */
+  value?: unknown;
+}
+
+/**
+ * Check if a channel definition is a regular EncodingChannel (has 'field' at top level).
+ * Use this to narrow `EncodingChannel | ConditionalValueDef` in encoding channels
+ * that support conditional encoding (color, size, opacity).
+ */
+export function isEncodingChannel(
+  def: EncodingChannel | ConditionalValueDef | undefined,
+): def is EncodingChannel {
+  if (!def) return false;
+  return 'field' in def && !('condition' in def);
+}
+
+/**
+ * Check if a channel definition is a ConditionalValueDef.
+ */
+export function isConditionalDef(
+  def: EncodingChannel | ConditionalValueDef | undefined,
+): def is ConditionalValueDef {
+  if (!def) return false;
+  return 'condition' in def;
+}
+
+// ---------------------------------------------------------------------------
+// Mark type helpers
+// ---------------------------------------------------------------------------
+
+/** All valid mark type strings for runtime checking. */
+export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
+  'bar',
+  'line',
+  'area',
+  'point',
+  'circle',
+  'arc',
+  'text',
+  'rule',
+  'tick',
+  'rect',
+]);
+
+/** @deprecated Use MARK_TYPES instead. */
+export const CHART_TYPES = MARK_TYPES;
+
+/**
+ * Extract the mark type string from a mark field (string or MarkDef).
+ */
+export function resolveMarkType(mark: MarkType | MarkDef): MarkType {
+  return typeof mark === 'string' ? mark : mark.type;
+}
+
+/**
+ * Extract the full MarkDef from a mark field, filling in defaults for string shorthand.
+ */
+export function resolveMarkDef(mark: MarkType | MarkDef): MarkDef {
+  return typeof mark === 'string' ? { type: mark } : mark;
+}
+
+// ---------------------------------------------------------------------------
 // Type guards
 // ---------------------------------------------------------------------------
 
-/** All valid chart type strings for runtime checking. */
-export const CHART_TYPES: ReadonlySet<string> = new Set<ChartType>([
-  'line',
-  'area',
-  'bar',
-  'column',
-  'pie',
-  'donut',
-  'dot',
-  'scatter',
-]);
+/** Check if a spec is a ChartSpec (has `mark` field, not a layer/table/graph). */
+export function isChartSpec(spec: VizSpec | Record<string, unknown>): spec is ChartSpec {
+  return 'mark' in spec && !('layer' in spec);
+}
 
-/** Check if a spec is a ChartSpec (any standard chart type). */
-export function isChartSpec(spec: VizSpec): spec is ChartSpec {
-  return CHART_TYPES.has(spec.type);
+/** Check if a spec is a LayerSpec (has `layer` array). */
+export function isLayerSpec(spec: VizSpec | Record<string, unknown>): spec is LayerSpec {
+  return 'layer' in spec && Array.isArray((spec as Record<string, unknown>).layer);
 }
 
 /** Check if a spec is a TableSpec. */
-export function isTableSpec(spec: VizSpec): spec is TableSpec {
-  return spec.type === 'table';
+export function isTableSpec(spec: VizSpec | Record<string, unknown>): spec is TableSpec {
+  return 'type' in spec && (spec as Record<string, unknown>).type === 'table';
 }
 
 /** Check if a spec is a GraphSpec. */
-export function isGraphSpec(spec: VizSpec): spec is GraphSpec {
-  return spec.type === 'graph';
+export function isGraphSpec(spec: VizSpec | Record<string, unknown>): spec is GraphSpec {
+  return 'type' in spec && (spec as Record<string, unknown>).type === 'graph';
 }
 
 // ---------------------------------------------------------------------------
@@ -637,3 +1066,21 @@ export function isRangeAnnotation(annotation: Annotation): annotation is RangeAn
 export function isRefLineAnnotation(annotation: Annotation): annotation is RefLineAnnotation {
   return annotation.type === 'refline';
 }
+
+// ---------------------------------------------------------------------------
+// Display name mapping for accessibility
+// ---------------------------------------------------------------------------
+
+/** Human-readable display names for mark types (used in alt text, error messages). */
+export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
+  bar: 'Bar chart',
+  line: 'Line chart',
+  area: 'Area chart',
+  point: 'Scatter plot',
+  circle: 'Dot plot',
+  arc: 'Pie chart', // overridden to "Donut chart" when innerRadius > 0
+  text: 'Text chart',
+  rule: 'Rule chart',
+  tick: 'Tick plot',
+  rect: 'Heatmap',
+};

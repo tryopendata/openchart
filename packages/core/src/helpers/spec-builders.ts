@@ -12,13 +12,14 @@
 import type {
   Annotation,
   ChartSpec,
-  ChartType,
   Chrome,
   DarkMode,
   DataRow,
   Encoding,
   EncodingChannel,
   FieldType,
+  MarkDef,
+  MarkType,
   TableSpec,
   ThemeConfig,
 } from '../types/spec';
@@ -156,12 +157,12 @@ function buildEncoding(
 
 /** Build a ChartSpec from the resolved pieces. */
 function buildChartSpec(
-  type: ChartType,
+  mark: MarkType | MarkDef,
   data: DataRow[],
   encoding: Encoding,
   options?: ChartBuilderOptions,
 ): ChartSpec {
-  const spec: ChartSpec = { type, data, encoding };
+  const spec: ChartSpec = { mark, data, encoding };
   if (options?.chrome) spec.chrome = options.chrome;
   if (options?.annotations) spec.annotations = options.annotations;
   if (options?.responsive !== undefined) spec.responsive = options.responsive;
@@ -236,7 +237,7 @@ export function columnChart(
   const xChannel = resolveField(x, data);
   const yChannel = resolveField(y, data);
   const encoding = buildEncoding({ x: xChannel, y: yChannel }, options, data);
-  return buildChartSpec('column', data, encoding, options);
+  return buildChartSpec({ type: 'bar' } as MarkDef, data, encoding, options);
 }
 
 /**
@@ -269,7 +270,7 @@ export function pieChart(
     encoding.size = resolveField(options.size, data);
   }
 
-  return buildChartSpec('pie', data, encoding, options);
+  return buildChartSpec('arc', data, encoding, options);
 }
 
 /**
@@ -321,7 +322,7 @@ export function donutChart(
     encoding.size = resolveField(options.size, data);
   }
 
-  return buildChartSpec('donut', data, encoding, options);
+  return buildChartSpec({ type: 'arc', innerRadius: 40 } as MarkDef, data, encoding, options);
 }
 
 /**
@@ -341,7 +342,7 @@ export function dotChart(
   const xChannel = resolveField(x, data);
   const yChannel = resolveField(y, data);
   const encoding = buildEncoding({ x: xChannel, y: yChannel }, options, data);
-  return buildChartSpec('dot', data, encoding, options);
+  return buildChartSpec('circle', data, encoding, options);
 }
 
 /**
@@ -361,7 +362,7 @@ export function scatterChart(
   const xChannel = resolveField(x, data);
   const yChannel = resolveField(y, data);
   const encoding = buildEncoding({ x: xChannel, y: yChannel }, options, data);
-  return buildChartSpec('scatter', data, encoding, options);
+  return buildChartSpec('point', data, encoding, options);
 }
 
 /**

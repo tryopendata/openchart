@@ -48,7 +48,8 @@ export function makeCompactStrategy(): LayoutStrategy {
 /** Single-series line chart with temporal x-axis. */
 export function makeLineSpec(): NormalizedChartSpec {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line' },
     data: [
       { date: '2020-01-01', value: 10, country: 'US' },
       { date: '2021-01-01', value: 40, country: 'US' },
@@ -82,7 +83,8 @@ export function makeLineSpec(): NormalizedChartSpec {
 /** Basic bar chart (horizontal) with nominal y and quantitative x. */
 export function makeBarSpec(): NormalizedChartSpec {
   return {
-    type: 'bar',
+    markType: 'bar',
+    markDef: { type: 'bar' },
     data: [
       { name: 'A', value: 10 },
       { name: 'B', value: 30 },
@@ -110,7 +112,8 @@ export function makeBarSpec(): NormalizedChartSpec {
 /** Basic scatter chart with quantitative x and y. */
 export function makeScatterSpec(): NormalizedChartSpec {
   return {
-    type: 'scatter',
+    markType: 'point',
+    markDef: { type: 'point' },
     data: [
       { x: 10, y: 20 },
       { x: 30, y: 50 },

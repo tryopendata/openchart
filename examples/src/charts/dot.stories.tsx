@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const simpleDotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { city: 'New York', minutes: 40.6 },
     { city: 'Chicago', minutes: 33.5 },
@@ -41,7 +41,7 @@ const simpleDotSpec: ChartSpec = {
 };
 
 export const SimpleDotPlot = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={simpleDotSpec} />
   </div>
 );
@@ -51,7 +51,7 @@ export const SimpleDotPlot = () => (
 // ---------------------------------------------------------------------------
 
 const coloredDotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { airline: 'Delta', onTime: 83.5, rating: 'Above average' },
     { airline: 'United', onTime: 80.9, rating: 'Above average' },
@@ -76,7 +76,7 @@ const coloredDotSpec: ChartSpec = {
 };
 
 export const ColoredDots = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={coloredDotSpec} />
   </div>
 );
@@ -86,7 +86,7 @@ export const ColoredDots = () => (
 // ---------------------------------------------------------------------------
 
 const divergingDotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { state: 'Idaho', change: 10.4 },
     { state: 'Texas', change: 8.8 },
@@ -115,7 +115,7 @@ const divergingDotSpec: ChartSpec = {
 };
 
 export const DivergingLollipop = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={divergingDotSpec} />
   </div>
 );

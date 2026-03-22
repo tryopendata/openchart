@@ -14,7 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const singleLineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // 2019 (quarterly samples)
     { date: '2019-01-01', rate: 1.6 },
@@ -102,7 +102,7 @@ const singleLineSpec: ChartSpec = {
 };
 
 export const SingleLine = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={singleLineSpec} />
   </div>
 );
@@ -112,7 +112,7 @@ export const SingleLine = () => (
 // ---------------------------------------------------------------------------
 
 const multiSeriesSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // United States (annual GDP growth %)
     { date: '2019-01-01', gdp: 2.5, country: 'United States' },
@@ -185,7 +185,7 @@ const multiSeriesSpec: ChartSpec = {
 };
 
 export const MultiSeries = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={multiSeriesSpec} />
   </div>
 );
@@ -195,7 +195,7 @@ export const MultiSeries = () => (
 // ---------------------------------------------------------------------------
 
 const fiveSeriesSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // Amazon (calendar year revenue, $B)
     { year: '2019-01-01', revenue: 281, company: 'Amazon' },
@@ -264,7 +264,7 @@ const fiveSeriesSpec: ChartSpec = {
 };
 
 export const FiveSeries = () => (
-  <div className="story-chart" style={{ height: 460 }}>
+  <div className="story-chart story-h-460">
     <Chart spec={fiveSeriesSpec} />
   </div>
 );
@@ -274,7 +274,7 @@ export const FiveSeries = () => (
 // ---------------------------------------------------------------------------
 
 const singleAreaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     { year: '2015-01-01', sales: 1.3 },
     { year: '2016-01-01', sales: 2.1 },
@@ -325,7 +325,7 @@ const singleAreaSpec: ChartSpec = {
 };
 
 export const AreaChart = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={singleAreaSpec} />
   </div>
 );
@@ -335,7 +335,7 @@ export const AreaChart = () => (
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     // Coal (TWh)
     { year: '2015-01-01', generation: 9538, source: 'Coal' },
@@ -398,7 +398,7 @@ const stackedAreaSpec: ChartSpec = {
 };
 
 export const StackedArea = () => (
-  <div className="story-chart" style={{ height: 460 }}>
+  <div className="story-chart story-h-460">
     <Chart spec={stackedAreaSpec} />
   </div>
 );
@@ -420,21 +420,133 @@ export const ResponsiveDemo = () => (
   <div className="story-column">
     <div>
       <h3 className="story-heading">Full width (800px)</h3>
-      <div className="story-debug-border" style={{ width: 800, height: 350 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '800px', '--h': '350px' } as React.CSSProperties}
+      >
         <Chart spec={multiSeriesSpec} />
       </div>
     </div>
     <div>
       <h3 className="story-heading">Medium (500px)</h3>
-      <div className="story-debug-border" style={{ width: 500, height: 350 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '500px', '--h': '350px' } as React.CSSProperties}
+      >
         <Chart spec={multiSeriesSpec} />
       </div>
     </div>
     <div>
       <h3 className="story-heading">Compact (320px)</h3>
-      <div className="story-debug-border" style={{ width: 320, height: 300 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '320px', '--h': '300px' } as React.CSSProperties}
+      >
         <Chart spec={compactMultiSeriesSpec} />
       </div>
     </div>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Interpolation modes: same data rendered with different curve types
+// ---------------------------------------------------------------------------
+
+const interpolationData = [
+  { month: 'Jan', temp: 2.1 },
+  { month: 'Feb', temp: 3.5 },
+  { month: 'Mar', temp: 7.8 },
+  { month: 'Apr', temp: 12.4 },
+  { month: 'May', temp: 17.2 },
+  { month: 'Jun', temp: 21.0 },
+  { month: 'Jul', temp: 23.5 },
+  { month: 'Aug', temp: 22.8 },
+  { month: 'Sep', temp: 18.6 },
+  { month: 'Oct', temp: 12.9 },
+  { month: 'Nov', temp: 7.1 },
+  { month: 'Dec', temp: 3.2 },
+];
+
+function interpolationSpec(
+  mode: 'linear' | 'step' | 'monotone' | 'natural' | 'cardinal',
+  title: string,
+): ChartSpec {
+  return {
+    mark: { type: 'line', interpolate: mode, point: true },
+    data: interpolationData,
+    encoding: {
+      x: { field: 'month', type: 'ordinal' },
+      y: {
+        field: 'temp',
+        type: 'quantitative',
+        axis: { label: 'Temp (\u00B0C)', grid: true },
+      },
+    },
+    labels: { density: 'none' },
+    chrome: {
+      title,
+      subtitle: `interpolate: "${mode}"`,
+    },
+  };
+}
+
+export const InterpolationModes = () => (
+  <div className="story-column">
+    <div className="story-grid-2">
+      <div className="story-debug-border story-h-280">
+        <Chart spec={interpolationSpec('linear', 'Linear (default)')} />
+      </div>
+      <div className="story-debug-border story-h-280">
+        <Chart spec={interpolationSpec('step', 'Step')} />
+      </div>
+      <div className="story-debug-border story-h-280">
+        <Chart spec={interpolationSpec('monotone', 'Monotone')} />
+      </div>
+      <div className="story-debug-border story-h-280">
+        <Chart spec={interpolationSpec('natural', 'Natural')} />
+      </div>
+      <div className="story-debug-border story-h-280">
+        <Chart spec={interpolationSpec('cardinal', 'Cardinal')} />
+      </div>
+    </div>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Step area: EV charging station growth with step interpolation
+// ---------------------------------------------------------------------------
+
+const stepAreaSpec: ChartSpec = {
+  mark: { type: 'area', interpolate: 'step' },
+  data: [
+    { year: '2018-01-01', stations: 54 },
+    { year: '2019-01-01', stations: 67 },
+    { year: '2020-01-01', stations: 92 },
+    { year: '2021-01-01', stations: 129 },
+    { year: '2022-01-01', stations: 162 },
+    { year: '2023-01-01', stations: 186 },
+    { year: '2024-01-01', stations: 214 },
+  ],
+  encoding: {
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 7 } },
+    y: {
+      field: 'stations',
+      type: 'quantitative',
+      axis: { label: 'Public Charging Stations (thousands)', format: ',.0f', grid: true },
+    },
+  },
+  labels: { density: 'all', format: ',.0f' },
+  chrome: {
+    title: 'US Public EV Charging Network Has Quadrupled Since 2018',
+    subtitle:
+      'Number of public EV charging stations (thousands), step interpolation shows discrete annual jumps',
+    source: 'Source: Alternative Fuels Station Locator, DOE',
+    byline: 'Chart: OpenChart',
+  },
+};
+
+export const StepArea = () => (
+  <div className="story-chart story-h-400">
+    <Chart spec={stepAreaSpec} />
   </div>
 );

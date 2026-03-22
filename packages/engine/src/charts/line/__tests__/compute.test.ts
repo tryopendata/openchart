@@ -28,7 +28,8 @@ const compactStrategy: LayoutStrategy = {
 
 function makeSingleSeriesSpec(): NormalizedChartSpec {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line', point: true },
     data: [
       { date: '2020-01-01', value: 10 },
       { date: '2021-01-01', value: 40 },
@@ -49,7 +50,8 @@ function makeSingleSeriesSpec(): NormalizedChartSpec {
 
 function makeMultiSeriesSpec(): NormalizedChartSpec {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line', point: true },
     data: [
       { date: '2020-01-01', value: 10, country: 'US' },
       { date: '2021-01-01', value: 40, country: 'US' },
@@ -74,7 +76,8 @@ function makeMultiSeriesSpec(): NormalizedChartSpec {
 
 function makeMissingDataSpec(): NormalizedChartSpec {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line', point: true },
     data: [
       { date: '2020-01-01', value: 10 },
       { date: '2021-01-01', value: null },
@@ -144,14 +147,14 @@ describe('computeLineMarks', () => {
       expect(lineMark.seriesKey).toBeUndefined();
     });
 
-    it('point marks have invisible fill (for hover only)', () => {
+    it('visible point marks have filled opacity when point: true', () => {
       const spec = makeSingleSeriesSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
 
       const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
       for (const pm of pointMarks) {
-        expect(pm.fillOpacity).toBe(0);
+        expect(pm.fillOpacity).toBe(1);
       }
     });
   });
@@ -397,7 +400,8 @@ describe('computeLineMarks', () => {
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
-        type: 'line',
+        markType: 'line',
+        markDef: { type: 'line', point: true },
         data: [{ value: 10 }],
         encoding: {
           y: { field: 'value', type: 'quantitative' },
@@ -416,7 +420,8 @@ describe('computeLineMarks', () => {
 
     it('returns empty array for empty data', () => {
       const spec: NormalizedChartSpec = {
-        type: 'line',
+        markType: 'line',
+        markDef: { type: 'line', point: true },
         data: [],
         encoding: {
           x: { field: 'date', type: 'temporal' },
@@ -542,7 +547,8 @@ describe('computeAreaMarks', () => {
 
     it('sorts stacked area with 3+ series and shuffled dates', () => {
       const spec: NormalizedChartSpec = {
-        type: 'line',
+        markType: 'line',
+        markDef: { type: 'line', point: true },
         data: [
           { date: '2022-01-01', value: 30, region: 'A' },
           { date: '2020-01-01', value: 10, region: 'A' },
@@ -618,7 +624,8 @@ describe('computeAreaMarks', () => {
     // is 300, so the y-scale domain must go up to at least 300. Without the
     // stacked domain fix, the domain only reaches 100 and the top layers clip.
     const spec: NormalizedChartSpec = {
-      type: 'area',
+      markType: 'area',
+      markDef: { type: 'area' },
       data: [
         { date: '2020-01-01', value: 100, group: 'A' },
         { date: '2021-01-01', value: 100, group: 'A' },
@@ -659,7 +666,8 @@ describe('computeAreaMarks', () => {
     // should handle this gracefully (empty marks) rather than crashing or
     // producing NaN-filled paths.
     const spec: NormalizedChartSpec = {
-      type: 'area',
+      markType: 'area',
+      markDef: { type: 'area' },
       data: [
         { quarter: '2022-Q1', revenue: 45, segment: 'Services' },
         { quarter: '2022-Q2', revenue: 52, segment: 'Services' },
@@ -750,7 +758,8 @@ describe('computeLineLabels', () => {
   it('collision detection resolves overlapping labels', () => {
     // Create a spec where series end at the same y position
     const spec: NormalizedChartSpec = {
-      type: 'line',
+      markType: 'line',
+      markDef: { type: 'line', point: true },
       data: [
         { date: '2020-01-01', value: 10, country: 'A' },
         { date: '2021-01-01', value: 30, country: 'A' },
@@ -905,6 +914,88 @@ describe('seriesStyles', () => {
       expect(line.strokeDasharray).toBeUndefined();
       expect(line.opacity).toBeUndefined();
       expect(line.strokeWidth).toBe(2.5);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sequential (quantitative) color
+// ---------------------------------------------------------------------------
+
+describe('sequential color encoding', () => {
+  function makeSequentialColorSpec(): NormalizedChartSpec {
+    return {
+      markType: 'line',
+      markDef: { type: 'line' },
+      data: [
+        { date: '2020-01-01', value: 10 },
+        { date: '2021-01-01', value: 40 },
+        { date: '2022-01-01', value: 30 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'value', type: 'quantitative' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '' },
+    };
+  }
+
+  it('produces a single line mark (no grouping) with sequential color', () => {
+    const spec = makeSequentialColorSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+    expect(lineMarks).toHaveLength(1);
+    // Should not group into multiple series
+    expect(lineMarks[0].seriesKey).toBeUndefined();
+  });
+
+  it('auto-shows point marks for sequential color', () => {
+    const spec = makeSequentialColorSpec();
+    // markDef.point is NOT set, but points should appear anyway for sequential color
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+    expect(pointMarks).toHaveLength(3);
+    // Points should be visible (r > 0)
+    expect(pointMarks.every((p) => p.r > 0)).toBe(true);
+  });
+
+  it('assigns different colors to points based on data value', () => {
+    const spec = makeSequentialColorSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+    // The three points have values 10, 40, 30 so should get distinct colors
+    const colors = pointMarks.map((p) => p.fill);
+    // Min (10) and max (40) should definitely differ
+    expect(colors[0]).not.toBe(colors[1]);
+  });
+
+  it('handles NaN values gracefully in sequential color', () => {
+    const spec = makeSequentialColorSpec();
+    spec.data = [
+      { date: '2020-01-01', value: 10 },
+      { date: '2021-01-01', value: 'not a number' },
+      { date: '2022-01-01', value: 30 },
+    ];
+    const scales = computeScales(spec, chartArea, spec.data);
+    // Should not throw
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+    const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+    // All points should have a valid fill color (string)
+    for (const p of pointMarks) {
+      expect(typeof p.fill).toBe('string');
+      expect(p.fill.length).toBeGreaterThan(0);
     }
   });
 });

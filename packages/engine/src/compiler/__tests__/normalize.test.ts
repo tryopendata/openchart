@@ -15,7 +15,7 @@ import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } fr
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 20, country: 'UK' },
@@ -76,7 +76,7 @@ describe('normalizeSpec', () => {
     it('infers encoding types from data when not specified', () => {
       const warnings: string[] = [];
       const spec: ChartSpec = {
-        type: 'scatter',
+        mark: 'point',
         data: [
           { x: 10, y: 20 },
           { x: 30, y: 40 },
@@ -97,7 +97,7 @@ describe('normalizeSpec', () => {
     it('infers temporal type from date strings', () => {
       const warnings: string[] = [];
       const spec: ChartSpec = {
-        type: 'line',
+        mark: 'line',
         data: [
           { date: '2020-01-01', value: 10 },
           { date: '2021-06-15', value: 20 },
@@ -116,7 +116,7 @@ describe('normalizeSpec', () => {
     it('warns on type mismatch (temporal declared as nominal)', () => {
       const warnings: string[] = [];
       const spec: ChartSpec = {
-        type: 'line',
+        mark: 'line',
         data: [
           { date: '2020-01-01', value: 10 },
           { date: '2021-06-15', value: 20 },

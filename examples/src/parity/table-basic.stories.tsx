@@ -129,13 +129,13 @@ const spec: TableSpec = {
 };
 
 export const Basic: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 900 }}>
+  <div className="story-centered story-max-w-900">
     <DataTable spec={spec} />
   </div>
 );
 
 export const BasicCompact: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 380 }}>
+  <div className="story-centered story-max-w-380">
     <DataTable spec={spec} />
   </div>
 );

@@ -6,7 +6,13 @@
  * nominal/ordinal -> scaleBand() or scaleOrdinal(), depending on context.
  */
 
-import type { DataRow, Encoding, EncodingChannel, Rect } from '@opendata-ai/openchart-core';
+import type {
+  DataRow,
+  Encoding,
+  EncodingChannel,
+  Rect,
+  ScaleType,
+} from '@opendata-ai/openchart-core';
 import { extent, max, min } from 'd3-array';
 import type {
   ScaleBand,
@@ -14,9 +20,28 @@ import type {
   ScaleLogarithmic,
   ScaleOrdinal,
   ScalePoint,
+  ScalePower,
+  ScaleQuantile,
+  ScaleQuantize,
+  ScaleSymLog,
+  ScaleThreshold,
   ScaleTime,
 } from 'd3-scale';
-import { scaleBand, scaleLinear, scaleLog, scaleOrdinal, scalePoint, scaleTime } from 'd3-scale';
+import {
+  scaleBand,
+  scaleLinear,
+  scaleLog,
+  scaleOrdinal,
+  scalePoint,
+  scalePow,
+  scaleQuantile,
+  scaleQuantize,
+  scaleSqrt,
+  scaleSymlog,
+  scaleThreshold,
+  scaleTime,
+  scaleUtc,
+} from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 
@@ -24,11 +49,19 @@ import type { NormalizedChartSpec } from '../compiler/types';
 // Types
 // ---------------------------------------------------------------------------
 
-/** Continuous D3 scales (linear, time, log) that support .ticks() and .nice(). */
+/** Continuous D3 scales (linear, time, log, pow, sqrt, symlog) that support .ticks() and .nice(). */
 export type D3ContinuousScale =
   | ScaleLinear<number, number>
   | ScaleTime<number, number>
-  | ScaleLogarithmic<number, number>;
+  | ScaleLogarithmic<number, number>
+  | ScalePower<number, number>
+  | ScaleSymLog<number, number>;
+
+/** Discretizing D3 scales (quantile, quantize, threshold). */
+export type D3DiscretizingScale =
+  | ScaleQuantile<number>
+  | ScaleQuantize<number>
+  | ScaleThreshold<number, number>;
 
 /** Categorical D3 scales (band, point, ordinal) that support .domain() as string[]. */
 export type D3CategoricalScale =
@@ -37,10 +70,13 @@ export type D3CategoricalScale =
   | ScaleOrdinal<string, string>;
 
 /** Union of all D3 scale types used by the engine. */
-export type D3Scale = D3ContinuousScale | D3CategoricalScale;
+export type D3Scale = D3ContinuousScale | D3CategoricalScale | D3DiscretizingScale;
 
 /** A sequential color scale mapping numbers to color strings. */
 export type D3SequentialColorScale = ScaleLinear<string, string>;
+
+/** All resolved scale type identifiers. */
+export type ResolvedScaleType = ScaleType | 'sequential';
 
 /**
  * A resolved scale wrapping a d3 scale with type metadata.
@@ -52,7 +88,7 @@ export interface ResolvedScale {
   /** The d3 scale function. Maps domain value -> pixel position or color. */
   scale: D3Scale;
   /** The scale type for downstream use. */
-  type: 'linear' | 'time' | 'band' | 'ordinal' | 'point' | 'log' | 'sequential';
+  type: ResolvedScaleType;
   /** The encoding channel this scale was derived from. */
   channel: EncodingChannel;
 }
@@ -105,6 +141,24 @@ function uniqueStrings(values: unknown[]): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers: apply common scale config
+// ---------------------------------------------------------------------------
+
+/** Apply clamp and reverse config to a continuous scale. */
+function applyContinuousConfig(
+  scale: { clamp(v: boolean): unknown; range(): number[]; range(r: number[]): unknown },
+  channel: EncodingChannel,
+): void {
+  if (channel.scale?.clamp) {
+    scale.clamp(true);
+  }
+  if (channel.scale?.reverse) {
+    const [r0, r1] = scale.range() as number[];
+    scale.range([r1, r0]);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Scale builders
 // ---------------------------------------------------------------------------
 
@@ -124,8 +178,30 @@ function buildTimeScale(
   if (channel.scale?.nice !== false) {
     scale.nice();
   }
+  applyContinuousConfig(scale, channel);
 
   return { scale, type: 'time', channel };
+}
+
+function buildUtcScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  const values = parseDates(fieldValues(data, channel.field));
+  const domain = channel.scale?.domain
+    ? [new Date(channel.scale.domain[0] as string), new Date(channel.scale.domain[1] as string)]
+    : (extent(values) as [Date, Date]);
+
+  const scale = scaleUtc().domain(domain).range([rangeStart, rangeEnd]);
+
+  if (channel.scale?.nice !== false) {
+    scale.nice();
+  }
+  applyContinuousConfig(scale, channel);
+
+  return { scale, type: 'utc', channel };
 }
 
 function buildLinearScale(
@@ -159,6 +235,7 @@ function buildLinearScale(
   if (channel.scale?.nice !== false) {
     scale.nice();
   }
+  applyContinuousConfig(scale, channel);
 
   return { scale, type: 'linear', channel };
 }
@@ -170,12 +247,188 @@ function buildLogScale(
   rangeEnd: number,
 ): ResolvedScale {
   const values = parseNumbers(fieldValues(data, channel.field)).filter((v) => v > 0);
-  const domainMin = min(values) ?? 1;
-  const domainMax = max(values) ?? 10;
+  const domainMin = channel.scale?.domain
+    ? (channel.scale.domain as [number, number])[0]
+    : (min(values) ?? 1);
+  const domainMax = channel.scale?.domain
+    ? (channel.scale.domain as [number, number])[1]
+    : (max(values) ?? 10);
 
-  const scale = scaleLog().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]).nice();
+  const scale = scaleLog().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]);
+
+  if (channel.scale?.base !== undefined) {
+    scale.base(channel.scale.base);
+  }
+  if (channel.scale?.nice !== false) {
+    scale.nice();
+  }
+  applyContinuousConfig(scale, channel);
 
   return { scale, type: 'log', channel };
+}
+
+function buildPowScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+
+  let domainMin: number;
+  let domainMax: number;
+
+  if (channel.scale?.domain) {
+    [domainMin, domainMax] = channel.scale.domain as [number, number];
+  } else {
+    domainMin = min(values) ?? 0;
+    domainMax = max(values) ?? 1;
+    if (channel.scale?.zero !== false) {
+      domainMin = Math.min(0, domainMin);
+      domainMax = Math.max(0, domainMax);
+    }
+  }
+
+  const scale = scalePow().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]);
+
+  if (channel.scale?.exponent !== undefined) {
+    scale.exponent(channel.scale.exponent);
+  }
+  if (channel.scale?.nice !== false) {
+    scale.nice();
+  }
+  applyContinuousConfig(scale, channel);
+
+  return { scale, type: 'pow', channel };
+}
+
+function buildSqrtScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+
+  let domainMin: number;
+  let domainMax: number;
+
+  if (channel.scale?.domain) {
+    [domainMin, domainMax] = channel.scale.domain as [number, number];
+  } else {
+    domainMin = min(values) ?? 0;
+    domainMax = max(values) ?? 1;
+    if (channel.scale?.zero !== false) {
+      domainMin = Math.min(0, domainMin);
+      domainMax = Math.max(0, domainMax);
+    }
+  }
+
+  const scale = scaleSqrt().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]);
+
+  if (channel.scale?.nice !== false) {
+    scale.nice();
+  }
+  applyContinuousConfig(scale, channel);
+
+  return { scale, type: 'sqrt', channel };
+}
+
+function buildSymlogScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+
+  let domainMin: number;
+  let domainMax: number;
+
+  if (channel.scale?.domain) {
+    [domainMin, domainMax] = channel.scale.domain as [number, number];
+  } else {
+    domainMin = min(values) ?? 0;
+    domainMax = max(values) ?? 1;
+    if (channel.scale?.zero !== false) {
+      domainMin = Math.min(0, domainMin);
+      domainMax = Math.max(0, domainMax);
+    }
+  }
+
+  const scale = scaleSymlog().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]);
+
+  if (channel.scale?.constant !== undefined) {
+    scale.constant(channel.scale.constant);
+  }
+  if (channel.scale?.nice !== false) {
+    scale.nice();
+  }
+  applyContinuousConfig(scale, channel);
+
+  return { scale, type: 'symlog', channel };
+}
+
+function buildQuantileScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+  const range = channel.scale?.range
+    ? (channel.scale.range as number[])
+    : evenRange(rangeStart, rangeEnd, 4);
+
+  const scale = scaleQuantile<number>().domain(values).range(range);
+
+  return { scale: scale as unknown as D3Scale, type: 'quantile', channel };
+}
+
+function buildQuantizeScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+  const domainMin = channel.scale?.domain
+    ? (channel.scale.domain as [number, number])[0]
+    : (min(values) ?? 0);
+  const domainMax = channel.scale?.domain
+    ? (channel.scale.domain as [number, number])[1]
+    : (max(values) ?? 1);
+  const range = channel.scale?.range
+    ? (channel.scale.range as number[])
+    : evenRange(rangeStart, rangeEnd, 4);
+
+  const scale = scaleQuantize<number>().domain([domainMin, domainMax]).range(range);
+
+  return { scale: scale as unknown as D3Scale, type: 'quantize', channel };
+}
+
+function buildThresholdScale(
+  channel: EncodingChannel,
+  _data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+): ResolvedScale {
+  // Threshold scales require explicit domain breakpoints
+  const domainBreaks = channel.scale?.domain ? (channel.scale.domain as number[]) : [0.5];
+  const range = channel.scale?.range
+    ? (channel.scale.range as number[])
+    : evenRange(rangeStart, rangeEnd, domainBreaks.length + 1);
+
+  const scale = scaleThreshold<number, number>().domain(domainBreaks).range(range);
+
+  return { scale: scale as unknown as D3Scale, type: 'threshold', channel };
+}
+
+/** Generate an evenly-spaced range of `count` values between start and end. */
+function evenRange(start: number, end: number, count: number): number[] {
+  if (count <= 1) return [start];
+  const step = (end - start) / (count - 1);
+  return Array.from({ length: count }, (_, i) => start + step * i);
 }
 
 function buildBandScale(
@@ -188,7 +441,19 @@ function buildBandScale(
     ? (channel.scale.domain as string[])
     : uniqueStrings(fieldValues(data, channel.field));
 
-  const scale = scaleBand().domain(values).range([rangeStart, rangeEnd]).padding(0.35);
+  const padding = channel.scale?.padding ?? 0.35;
+  const scale = scaleBand().domain(values).range([rangeStart, rangeEnd]).padding(padding);
+
+  if (channel.scale?.paddingInner !== undefined) {
+    scale.paddingInner(channel.scale.paddingInner);
+  }
+  if (channel.scale?.paddingOuter !== undefined) {
+    scale.paddingOuter(channel.scale.paddingOuter);
+  }
+  if (channel.scale?.reverse) {
+    const [r0, r1] = scale.range();
+    scale.range([r1, r0]);
+  }
 
   return { scale, type: 'band', channel };
 }
@@ -203,7 +468,13 @@ function buildPointScale(
     ? (channel.scale.domain as string[])
     : uniqueStrings(fieldValues(data, channel.field));
 
-  const scale = scalePoint().domain(values).range([rangeStart, rangeEnd]).padding(0.5);
+  const padding = channel.scale?.padding ?? 0.5;
+  const scale = scalePoint().domain(values).range([rangeStart, rangeEnd]).padding(padding);
+
+  if (channel.scale?.reverse) {
+    const [r0, r1] = scale.range();
+    scale.range([r1, r0]);
+  }
 
   return { scale, type: 'point', channel };
 }
@@ -261,10 +532,24 @@ function buildPositionalScale(
     switch (channel.scale.type) {
       case 'time':
         return buildTimeScale(channel, data, rangeStart, rangeEnd);
+      case 'utc':
+        return buildUtcScale(channel, data, rangeStart, rangeEnd);
       case 'linear':
         return buildLinearScale(channel, data, rangeStart, rangeEnd);
       case 'log':
         return buildLogScale(channel, data, rangeStart, rangeEnd);
+      case 'pow':
+        return buildPowScale(channel, data, rangeStart, rangeEnd);
+      case 'sqrt':
+        return buildSqrtScale(channel, data, rangeStart, rangeEnd);
+      case 'symlog':
+        return buildSymlogScale(channel, data, rangeStart, rangeEnd);
+      case 'quantile':
+        return buildQuantileScale(channel, data, rangeStart, rangeEnd);
+      case 'quantize':
+        return buildQuantizeScale(channel, data, rangeStart, rangeEnd);
+      case 'threshold':
+        return buildThresholdScale(channel, data, rangeStart, rangeEnd);
       case 'band':
         return buildBandScale(channel, data, rangeStart, rangeEnd);
       case 'point':
@@ -282,12 +567,8 @@ function buildPositionalScale(
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
     case 'ordinal':
-      // Bar/column charts use band scales for their categorical axis
-      if (
-        (chartType === 'bar' && axis === 'y') ||
-        (chartType === 'column' && axis === 'x') ||
-        (chartType === 'dot' && axis === 'y')
-      ) {
+      // Bar charts use band scales for their categorical axis (both orientations)
+      if (chartType === 'bar' || (chartType === 'circle' && axis === 'y')) {
         return buildBandScale(channel, data, rangeStart, rangeEnd);
       }
       return buildPointScale(channel, data, rangeStart, rangeEnd);
@@ -317,7 +598,7 @@ export function computeScales(
   const encoding = spec.encoding as Encoding;
 
   // Scatter/bubble charts should NOT include zero by default (tight domain fits data range)
-  if (spec.type === 'scatter') {
+  if (spec.markType === 'point') {
     if (encoding.x?.type === 'quantitative' && encoding.x.scale?.zero === undefined) {
       if (!encoding.x.scale) {
         (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };
@@ -338,7 +619,7 @@ export function computeScales(
     // For stacked bars, the x-domain needs the max category sum, not max individual value.
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
-    if (spec.type === 'bar' && encoding.color && encoding.x.type === 'quantitative') {
+    if (spec.markType === 'bar' && encoding.color && encoding.x.type === 'quantitative') {
       const yField = encoding.y?.field;
       const xField = encoding.x.field;
       if (yField) {
@@ -361,18 +642,23 @@ export function computeScales(
       xData,
       chartArea.x,
       chartArea.x + chartArea.width,
-      spec.type,
+      spec.markType,
       'x',
     );
   }
 
   if (encoding.y) {
-    // For stacked columns and stacked areas, the y-domain needs the max category
-    // sum, not the max individual value. Without this, stacked marks would clip
-    // above the chart area.
+    // For stacked vertical bars and stacked areas, the y-domain needs the max
+    // category sum, not the max individual value. Without this, stacked marks
+    // would clip above the chart area.
+    // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
+    const isVerticalBar =
+      spec.markType === 'bar' &&
+      (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
+      encoding.y.type === 'quantitative';
     if (
-      (spec.type === 'column' || spec.type === 'area') &&
+      (isVerticalBar || spec.markType === 'area') &&
       encoding.color &&
       encoding.y.type === 'quantitative'
     ) {
@@ -399,7 +685,7 @@ export function computeScales(
       yData,
       chartArea.y + chartArea.height,
       chartArea.y,
-      spec.type,
+      spec.markType,
       'y',
     );
   }
@@ -418,12 +704,15 @@ export function computeScales(
       '#858078',
     ];
 
-    if (encoding.color.type === 'quantitative') {
-      // Sequential color scale for value-based coloring
-      result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
-    } else {
-      // Categorical color scale for nominal/ordinal grouping
-      result.color = buildOrdinalColorScale(encoding.color, data, defaultPalette);
+    // Only build color scales for field-based encodings, not conditional value defs
+    if ('field' in encoding.color) {
+      if (encoding.color.type === 'quantitative') {
+        // Sequential color scale for value-based coloring
+        result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
+      } else {
+        // Categorical color scale for nominal/ordinal grouping
+        result.color = buildOrdinalColorScale(encoding.color, data, defaultPalette);
+      }
     }
   }
 

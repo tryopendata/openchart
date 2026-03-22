@@ -12,7 +12,7 @@ const validLineData = [
 ];
 
 const validLineSpec = {
-  type: 'line',
+  mark: 'line',
   data: validLineData,
   encoding: {
     x: { field: 'date', type: 'temporal' },
@@ -23,7 +23,7 @@ const validLineSpec = {
 };
 
 const validBarSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { category: 'A', count: 10 },
     { category: 'B', count: 20 },
@@ -34,8 +34,8 @@ const validBarSpec = {
   },
 };
 
-const validPieSpec = {
-  type: 'pie',
+const validArcSpec = {
+  mark: 'arc',
   data: [
     { label: 'Apples', amount: 30 },
     { label: 'Oranges', amount: 50 },
@@ -73,18 +73,17 @@ describe('validateSpec', () => {
       expect(result.errors[0].code).toBe('INVALID_TYPE');
     });
 
-    it('rejects objects without type with MISSING_FIELD code', () => {
+    it('rejects objects without mark or type with MISSING_FIELD code', () => {
       const result = validateSpec({ data: [] });
       expect(result.valid).toBe(false);
-      expect(result.errors[0].message).toContain('"type" field');
       expect(result.errors[0].code).toBe('MISSING_FIELD');
-      expect(result.errors[0].suggestion).toContain('line');
+      expect(result.errors[0].suggestion).toContain('bar');
     });
 
-    it('rejects invalid type values with INVALID_VALUE code', () => {
-      const result = validateSpec({ type: 'waterfall' });
+    it('rejects invalid mark values with INVALID_VALUE code', () => {
+      const result = validateSpec({ mark: 'waterfall' });
       expect(result.valid).toBe(false);
-      expect(result.errors[0].message).toContain('"waterfall" is not a valid type');
+      expect(result.errors[0].message).toContain('"waterfall" is not a valid mark type');
       expect(result.errors[0].code).toBe('INVALID_VALUE');
       expect(result.errors[0].suggestion).toContain('line');
     });
@@ -103,8 +102,8 @@ describe('validateSpec', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('accepts a valid pie spec', () => {
-      const result = validateSpec(validPieSpec);
+    it('accepts a valid arc spec', () => {
+      const result = validateSpec(validArcSpec);
       expect(result.valid).toBe(true);
     });
 
@@ -125,7 +124,7 @@ describe('validateSpec', () => {
 
     it('rejects missing encoding with MISSING_FIELD code and channel suggestion', () => {
       const result = validateSpec({
-        type: 'line',
+        mark: 'line',
         data: validLineData,
       });
       expect(result.valid).toBe(false);
@@ -137,7 +136,7 @@ describe('validateSpec', () => {
 
     it('rejects missing required channel with MISSING_FIELD code', () => {
       const result = validateSpec({
-        type: 'line',
+        mark: 'line',
         data: validLineData,
         encoding: {
           x: { field: 'date', type: 'temporal' },
@@ -155,7 +154,7 @@ describe('validateSpec', () => {
 
     it('rejects field referencing non-existent column with DATA_FIELD_MISSING code', () => {
       const result = validateSpec({
-        type: 'line',
+        mark: 'line',
         data: validLineData,
         encoding: {
           x: { field: 'nonexistent', type: 'temporal' },
@@ -175,7 +174,7 @@ describe('validateSpec', () => {
 
     it('rejects invalid field type with INVALID_VALUE code', () => {
       const result = validateSpec({
-        type: 'line',
+        mark: 'line',
         data: validLineData,
         encoding: {
           x: { field: 'date', type: 'bogus' },
@@ -192,7 +191,7 @@ describe('validateSpec', () => {
 
     it('rejects disallowed type for channel with ENCODING_MISMATCH code', () => {
       const result = validateSpec({
-        type: 'line',
+        mark: 'line',
         data: validLineData,
         encoding: {
           x: { field: 'date', type: 'quantitative' },
@@ -208,7 +207,7 @@ describe('validateSpec', () => {
 
     it('catches temporal field with non-date values with ENCODING_MISMATCH', () => {
       const result = validateSpec({
-        type: 'line',
+        mark: 'line',
         data: [
           { x: 'not-a-date', y: 10 },
           { x: 'also-not-a-date', y: 20 },
@@ -227,7 +226,7 @@ describe('validateSpec', () => {
 
     it('catches quantitative field with non-numeric values with ENCODING_MISMATCH', () => {
       const result = validateSpec({
-        type: 'scatter',
+        mark: 'point',
         data: [
           { x: 'hello', y: 10 },
           { x: 'world', y: 20 },
@@ -258,7 +257,7 @@ describe('validateSpec', () => {
 
     it('rejects missing encoding channel field with MISSING_FIELD code', () => {
       const result = validateSpec({
-        type: 'bar',
+        mark: 'bar',
         data: [{ a: 1, b: 2 }],
         encoding: {
           x: { type: 'quantitative' },
@@ -386,10 +385,10 @@ describe('validateSpec', () => {
       const results = [
         validateSpec(null),
         validateSpec({ data: [] }),
-        validateSpec({ type: 'waterfall' }),
-        validateSpec({ type: 'line', data: [] }),
+        validateSpec({ mark: 'waterfall' }),
+        validateSpec({ mark: 'line', data: [] }),
         validateSpec({
-          type: 'line',
+          mark: 'line',
           data: [{ x: 1 }],
           encoding: { x: { field: 'missing', type: 'quantitative' } },
         }),
@@ -407,8 +406,8 @@ describe('validateSpec', () => {
       const results = [
         validateSpec(null),
         validateSpec({ data: [] }),
-        validateSpec({ type: 'waterfall' }),
-        validateSpec({ type: 'line', data: [] }),
+        validateSpec({ mark: 'waterfall' }),
+        validateSpec({ mark: 'line', data: [] }),
       ];
 
       for (const result of results) {
@@ -422,7 +421,7 @@ describe('validateSpec', () => {
 
     it('DATA_FIELD_MISSING suggestion lists available fields', () => {
       const result = validateSpec({
-        type: 'bar',
+        mark: 'bar',
         data: [{ alpha: 1, beta: 2, gamma: 3 }],
         encoding: {
           x: { field: 'nonexistent', type: 'quantitative' },

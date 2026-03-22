@@ -13,8 +13,10 @@
 
 import type {
   ChartLayout,
+  ChartSpec,
   CompileOptions,
   CompileTableOptions,
+  LayerSpec,
   Mark,
   PointMark,
   Rect,
@@ -41,21 +43,39 @@ import { dotRenderer } from './charts/dot';
 import { areaRenderer, lineRenderer } from './charts/line';
 import { donutRenderer, pieRenderer } from './charts/pie';
 import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
+import { ruleRenderer } from './charts/rule';
 import { scatterRenderer } from './charts/scatter';
-import { compile as compileSpec } from './compiler/index';
+import { textRenderer } from './charts/text';
+import { tickRenderer } from './charts/tick';
+import { compile as compileSpec, flattenLayers } from './compiler/index';
 
-// Register all built-in chart renderers. Explicit imports ensure bundlers
-// cannot tree-shake the registrations away (bare side-effect imports are
-// treated as dead code by esbuild).
+// Register all built-in chart renderers under the new Vega-Lite mark type names.
+// Explicit imports ensure bundlers cannot tree-shake the registrations away.
+//
+// Mark type mapping from old chart types:
+// - 'bar' -> barRenderer (horizontal bars, old 'bar')
+// - 'bar:vertical' is handled by columnRenderer (old 'column')
+// - 'arc' -> pieRenderer (old 'pie'); donutRenderer is also registered
+// - 'point' -> scatterRenderer (old 'scatter')
+// - 'circle' -> dotRenderer (old 'dot')
+// - 'line' and 'area' unchanged
+// - 'text', 'rule', 'tick' are new Vega-Lite mark types
+//
+// For 'bar', orientation is resolved at compile time to dispatch to the right renderer.
+// We register both barRenderer and columnRenderer; the compile function picks based on orientation.
 const builtinRenderers: Record<string, ChartRenderer> = {
   line: lineRenderer,
   area: areaRenderer,
-  bar: barRenderer,
-  column: columnRenderer,
-  scatter: scatterRenderer,
-  pie: pieRenderer,
-  donut: donutRenderer,
-  dot: dotRenderer,
+  bar: barRenderer, // horizontal bars
+  'bar:vertical': columnRenderer, // vertical bars (old 'column')
+  point: scatterRenderer, // old 'scatter'
+  arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
+  'arc:donut': donutRenderer, // old 'donut'
+  circle: dotRenderer, // old 'dot'
+  text: textRenderer,
+  rule: ruleRenderer,
+  tick: tickRenderer,
+  rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
 };
 for (const [type, renderer] of Object.entries(builtinRenderers)) {
   registerChartRenderer(type, renderer);
@@ -71,6 +91,7 @@ import { computeScales, type ResolvedScales } from './layout/scales';
 import { computeLegend } from './legend/compute';
 import { compileTableLayout } from './tables/compile-table';
 import { computeTooltipDescriptors } from './tooltips/compute';
+import { runTransforms } from './transforms';
 
 // ---------------------------------------------------------------------------
 // Mark obstacles for annotation collision avoidance
@@ -182,14 +203,24 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Validate + normalize
   const { spec: normalized } = compileSpec(spec);
 
-  if (normalized.type === 'table') {
+  if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');
   }
-  if (normalized.type === 'graph') {
+  if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'graph') {
     throw new Error('compileChart received a graph spec. Use compileGraph instead.');
   }
 
   let chartSpec = normalized as NormalizedChartSpec;
+
+  // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
+  // Transforms are defined on the original spec, not the normalized spec, since
+  // NormalizedChartSpec doesn't carry the transform field.
+  const rawTransforms = (spec as Record<string, unknown>).transform as
+    | import('@opendata-ai/openchart-core').Transform[]
+    | undefined;
+  if (rawTransforms && rawTransforms.length > 0) {
+    chartSpec = { ...chartSpec, data: runTransforms(chartSpec.data, rawTransforms) };
+  }
 
   // Responsive strategy
   const breakpoint = getBreakpoint(options.width);
@@ -292,7 +323,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   let renderData = chartSpec.data;
 
   // Filter hidden series: removed from rendering but kept in legend (dimmed in the adapter)
-  if (chartSpec.hiddenSeries.length > 0 && chartSpec.encoding.color) {
+  if (
+    chartSpec.hiddenSeries.length > 0 &&
+    chartSpec.encoding.color &&
+    'field' in chartSpec.encoding.color
+  ) {
     const colorField = chartSpec.encoding.color.field;
     const hiddenSet = new Set(chartSpec.hiddenSeries);
     renderData = renderData.filter((row) => !hiddenSet.has(String(row[colorField])));
@@ -338,8 +373,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Set default color for single-series charts (no color encoding)
   scales.defaultColor = theme.colors.categorical[0];
 
-  // Pie/donut charts don't use axes or gridlines
-  const isRadial = chartSpec.type === 'pie' || chartSpec.type === 'donut';
+  // Arc charts (pie/donut) don't use axes or gridlines
+  const isRadial = chartSpec.markType === 'arc';
 
   // Compute axes (skip for radial charts)
   const axes = isRadial
@@ -351,8 +386,28 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     computeGridlines(axes, chartArea);
   }
 
-  // Get chart renderer and compute marks (using filtered data)
-  const renderer = getChartRenderer(renderSpec.type);
+  // Get chart renderer and compute marks (using filtered data).
+  // For 'bar' mark, resolve orientation to pick horizontal vs vertical renderer.
+  // For 'arc' mark, resolve innerRadius to pick pie vs donut renderer.
+  let rendererKey = renderSpec.markType as string;
+  if (rendererKey === 'bar') {
+    // Infer orientation from encoding: if x is quantitative and y is categorical, horizontal (default)
+    // If x is categorical and y is quantitative, vertical (old 'column')
+    const xType = renderSpec.encoding.x?.type;
+    const yType = renderSpec.encoding.y?.type;
+    const isVertical =
+      (xType === 'nominal' || xType === 'ordinal' || xType === 'temporal') &&
+      yType === 'quantitative';
+    if (isVertical) {
+      rendererKey = 'bar:vertical';
+    }
+  } else if (rendererKey === 'arc') {
+    const innerRadius = renderSpec.markDef.innerRadius;
+    if (innerRadius && innerRadius > 0) {
+      rendererKey = 'arc:donut';
+    }
+  }
+  const renderer = getChartRenderer(rendererKey);
   const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
 
   // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
@@ -364,7 +419,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   // Add visible data label bounds as obstacles so annotations avoid overlapping them
   for (const mark of marks) {
-    if (mark.type !== 'area' && mark.label?.visible) {
+    if ('label' in mark && mark.label?.visible) {
       obstacles.push(computeLabelBounds(mark.label));
     }
   }
@@ -395,7 +450,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute accessibility
   const altText = generateAltText(
     {
-      type: chartSpec.type,
+      mark: chartSpec.markType,
       data: chartSpec.data,
       encoding: chartSpec.encoding,
       chrome: chartSpec.chrome,
@@ -404,7 +459,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   );
   const dataTableFallback = generateDataTable(
     {
-      type: chartSpec.type,
+      mark: chartSpec.markType,
       data: chartSpec.data,
       encoding: chartSpec.encoding,
     },
@@ -437,6 +492,101 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 }
 
 // ---------------------------------------------------------------------------
+// Layer compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a LayerSpec into a single ChartLayout.
+ *
+ * Flattens nested layers, merges inherited data/encoding/transforms,
+ * compiles each leaf layer independently, unions scale domains (shared
+ * by default), and concatenates marks in layer order.
+ *
+ * @param spec - A LayerSpec with child layers.
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns A single ChartLayout with combined marks from all layers.
+ */
+export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLayout {
+  // Flatten nested layers into leaf ChartSpecs with merged data/encoding/transforms
+  const leaves = flattenLayers(spec);
+
+  if (leaves.length === 0) {
+    throw new Error('LayerSpec has no leaf chart specs after flattening');
+  }
+
+  // If there's only one layer, just compile it directly
+  if (leaves.length === 1) {
+    const singleSpec = buildPrimarySpec(leaves, spec);
+    return compileChart(singleSpec, options);
+  }
+
+  // Build primary spec with unioned data for shared scale computation.
+  // The primary layout provides chrome, axes, dimensions, legend, and a11y.
+  const primarySpec = buildPrimarySpec(leaves, spec);
+  const primaryLayout = compileChart(primarySpec, options);
+
+  // Compile each leaf layer independently but with the full unioned data
+  // so they all share the same scale domains.
+  const allMarks: Mark[] = [];
+  const seenLabels = new Set<string>();
+  const mergedLegendEntries = [...primaryLayout.legend.entries];
+  for (const entry of mergedLegendEntries) {
+    seenLabels.add(entry.label);
+  }
+
+  for (const leaf of leaves) {
+    // Compile each leaf with its own data so marks correspond to its rows only.
+    // Scale domains may differ slightly between layers, but this prevents
+    // duplicate marks from feeding unioned data into every renderer.
+    const leafLayout = compileChart(leaf as unknown, options);
+
+    allMarks.push(...leafLayout.marks);
+
+    // Deduplicate legend entries across layers
+    for (const entry of leafLayout.legend.entries) {
+      if (!seenLabels.has(entry.label)) {
+        seenLabels.add(entry.label);
+        mergedLegendEntries.push(entry);
+      }
+    }
+  }
+
+  return {
+    ...primaryLayout,
+    marks: allMarks,
+    legend: {
+      ...primaryLayout.legend,
+      entries: mergedLegendEntries,
+    },
+  };
+}
+
+/**
+ * Build the primary ChartSpec from all leaves for shared compilation.
+ * Unions all data rows across layers so scales see the full domain.
+ * Uses the first leaf's mark/encoding as the base, with layer-level chrome.
+ */
+function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
+  // Union all data across layers for domain computation
+  const allData = leaves.flatMap((leaf) => leaf.data);
+
+  const primary = {
+    ...leaves[0],
+    data: allData,
+    // Layer-level chrome overrides leaf chrome
+    chrome: layerSpec.chrome ?? leaves[0].chrome,
+    labels: layerSpec.labels ?? leaves[0].labels,
+    legend: layerSpec.legend ?? leaves[0].legend,
+    responsive: layerSpec.responsive ?? leaves[0].responsive,
+    theme: layerSpec.theme ?? leaves[0].theme,
+    darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
+    hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
+  };
+
+  return primary;
+}
+
+// ---------------------------------------------------------------------------
 // Table compilation
 // ---------------------------------------------------------------------------
 
@@ -454,8 +604,10 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 export function compileTable(spec: unknown, options: CompileTableOptions): TableLayout {
   const { spec: normalized } = compileSpec(spec);
 
-  if (normalized.type !== 'table') {
-    throw new Error(`compileTable received a ${normalized.type} spec. Use compileChart instead.`);
+  const normType =
+    'type' in normalized ? (normalized as unknown as Record<string, unknown>).type : undefined;
+  if (normType !== 'table') {
+    throw new Error(`compileTable received a non-table spec. Use compileChart instead.`);
   }
 
   const tableSpec = normalized as NormalizedTableSpec;

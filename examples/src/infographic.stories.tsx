@@ -15,7 +15,7 @@ import { Chart, DataTable } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'United States', spending: 997 },
     { country: 'China', spending: 314 },
@@ -57,7 +57,7 @@ const barSpec: ChartSpec = {
 };
 
 export const HorizontalBar: Story = () => (
-  <div className="story-chart" style={{ height: 400 }}>
+  <div className="story-chart story-h-400">
     <Chart spec={barSpec} />
   </div>
 );
@@ -67,7 +67,7 @@ export const HorizontalBar: Story = () => (
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // YouTube
     { date: '2023-01-01', mau: 2300, platform: 'YouTube' },
@@ -140,7 +140,7 @@ const lineSpec: ChartSpec = {
 };
 
 export const MultiSeriesLine: Story = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={lineSpec} />
   </div>
 );
@@ -150,7 +150,7 @@ export const MultiSeriesLine: Story = () => (
 // ---------------------------------------------------------------------------
 
 const stackedColumnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     // Battery Electric
     { year: '2019', sales: 2.1, fuel: 'Battery Electric' },
@@ -212,7 +212,7 @@ const stackedColumnSpec: ChartSpec = {
 };
 
 export const StackedColumn: Story = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={stackedColumnSpec} />
   </div>
 );
@@ -222,7 +222,7 @@ export const StackedColumn: Story = () => (
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     // Solar
     { date: '2018-01-01', generation: 585, source: 'Solar' },
@@ -287,7 +287,7 @@ const stackedAreaSpec: ChartSpec = {
 };
 
 export const StackedArea: Story = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={stackedAreaSpec} />
   </div>
 );
@@ -455,7 +455,7 @@ const tableSpec: TableSpec = {
 };
 
 export const DataTableShowcase: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 900 }}>
+  <div className="story-centered story-max-w-900">
     <DataTable spec={tableSpec} />
   </div>
 );

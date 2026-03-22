@@ -6,7 +6,7 @@ import { compileChart, compileGraph, compileTable } from '../compile';
 // ---------------------------------------------------------------------------
 
 const lineSpec = {
-  type: 'line' as const,
+  mark: 'line' as const,
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 40, country: 'US' },
@@ -26,7 +26,7 @@ const lineSpec = {
 };
 
 const barSpec = {
-  type: 'bar' as const,
+  mark: 'bar' as const,
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 30 },
@@ -172,23 +172,34 @@ describe('compileChart', () => {
     expect(layout.legend.position).toBe('top');
   });
 
-  it('produces line and point marks with the registered renderer', () => {
+  it('produces line marks with dataPoints (no PointMarks by default)', () => {
     const layout = compileChart(lineSpec, { width: 600, height: 400 });
     expect(layout.marks.length).toBeGreaterThan(0);
 
     const lineMarks = layout.marks.filter((m) => m.type === 'line');
     const pointMarks = layout.marks.filter((m) => m.type === 'point');
     expect(lineMarks.length).toBeGreaterThan(0);
-    expect(pointMarks.length).toBeGreaterThan(0);
+    // Default: no PointMarks (voronoi overlay handles tooltips)
+    expect(pointMarks.length).toBe(0);
 
-    // Line marks should have points with valid coordinates
+    // Line marks should have points and dataPoints with valid coordinates
     for (const mark of lineMarks) {
       if (mark.type === 'line') {
         expect(mark.points.length).toBeGreaterThan(0);
         expect(mark.stroke).toBeTruthy();
         expect(mark.strokeWidth).toBeGreaterThan(0);
+        expect(mark.dataPoints).toBeDefined();
+        expect(mark.dataPoints!.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('produces PointMarks when mark.point is true', () => {
+    const specWithPoints = { ...lineSpec, mark: { type: 'line' as const, point: true as const } };
+    const layout = compileChart(specWithPoints, { width: 600, height: 400 });
+
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(pointMarks.length).toBeGreaterThan(0);
   });
 
   it('includes accessibility metadata with meaningful content', () => {
@@ -312,7 +323,7 @@ describe('compileChart', () => {
 
   it('scale.clip filters data rows outside the y-axis domain', () => {
     const spec = {
-      type: 'scatter' as const,
+      mark: 'point' as const,
       data: [
         { x: 1, y: 5 },
         { x: 2, y: 15 },
@@ -337,7 +348,7 @@ describe('compileChart', () => {
 
   it('scale.clip filters data rows outside the x-axis domain', () => {
     const spec = {
-      type: 'scatter' as const,
+      mark: 'point' as const,
       data: [
         { x: 1, y: 10 },
         { x: 5, y: 20 },
@@ -362,7 +373,7 @@ describe('compileChart', () => {
 
   it('scale.clip=false does not filter data even with domain set', () => {
     const spec = {
-      type: 'scatter' as const,
+      mark: 'point' as const,
       data: [
         { x: 1, y: 5 },
         { x: 2, y: 15 },
@@ -446,7 +457,7 @@ describe('compileGraph', () => {
     expect(() =>
       compileGraph(
         {
-          type: 'scatter',
+          mark: 'point',
           data: [{ x: 1, y: 2 }],
           encoding: {
             x: { field: 'x', type: 'quantitative' },
@@ -455,12 +466,12 @@ describe('compileGraph', () => {
         },
         { width: 600, height: 400 },
       ),
-    ).toThrow('compileGraph received a scatter spec');
+    ).toThrow('compileGraph received a non-graph spec');
   });
 
   it('propagates tickAngle through the full compilation pipeline', () => {
     const columnSpec = {
-      type: 'column' as const,
+      mark: 'bar' as const,
       data: [
         { state: 'California', pop: 39000000 },
         { state: 'Texas', pop: 29000000 },
@@ -484,7 +495,7 @@ describe('compileGraph', () => {
 
   it('reserves extra bottom margin for rotated x-axis labels', () => {
     const baseColumnSpec = {
-      type: 'column' as const,
+      mark: 'bar' as const,
       data: [
         { state: 'California', pop: 39000000 },
         { state: 'Texas', pop: 29000000 },

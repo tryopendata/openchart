@@ -14,7 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const lifeExpectancySpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { country: 'Japan', years: 81.9, gender: 'Male' },
     { country: 'Japan', years: 87.9, gender: 'Female' },
@@ -73,7 +73,7 @@ const lifeExpectancySpec: ChartSpec = {
 };
 
 export const LifeExpectancy = () => (
-  <div className="story-chart" style={{ height: 550 }}>
+  <div className="story-chart story-h-550">
     <Chart spec={lifeExpectancySpec} />
   </div>
 );
@@ -89,13 +89,19 @@ const compactLifeSpec: ChartSpec = {
 };
 
 export const LifeExpectancyCompact = () => (
-  <div style={{ width: 360, height: 500 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '360px', '--h': '500px' } as React.CSSProperties}
+  >
     <Chart spec={compactLifeSpec} />
   </div>
 );
 
 export const LifeExpectancyWide = () => (
-  <div style={{ width: 1200, height: 600 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '600px' } as React.CSSProperties}
+  >
     <Chart spec={lifeExpectancySpec} />
   </div>
 );

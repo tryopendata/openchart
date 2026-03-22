@@ -6,22 +6,11 @@
  */
 
 import type { ChartSpec, DataRow } from '../types/spec';
+import { MARK_DISPLAY_NAMES, resolveMarkDef, resolveMarkType } from '../types/spec';
 
 // ---------------------------------------------------------------------------
 // Alt text generation
 // ---------------------------------------------------------------------------
-
-/** Friendly display names for chart types. */
-const CHART_TYPE_NAMES: Record<string, string> = {
-  line: 'Line chart',
-  area: 'Area chart',
-  bar: 'Bar chart',
-  column: 'Column chart',
-  pie: 'Pie chart',
-  donut: 'Donut chart',
-  dot: 'Dot plot',
-  scatter: 'Scatter plot',
-};
 
 /**
  * Generate alt text describing a chart's content.
@@ -33,7 +22,15 @@ const CHART_TYPE_NAMES: Record<string, string> = {
  * @param data - The data array.
  */
 export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
-  const chartName = CHART_TYPE_NAMES[spec.type] ?? `${spec.type} chart`;
+  const markType = resolveMarkType(spec.mark);
+  const markDef = resolveMarkDef(spec.mark);
+  let chartName = MARK_DISPLAY_NAMES[markType] ?? `${markType} chart`;
+
+  // Special case: donut detection
+  if (markType === 'arc' && markDef.innerRadius && markDef.innerRadius > 0) {
+    chartName = 'Donut chart';
+  }
+
   const parts: string[] = [chartName];
 
   // Add title context if present
@@ -68,7 +65,7 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
   }
 
   // Describe series if color encoding is present
-  if (spec.encoding.color && data.length > 0) {
+  if (spec.encoding.color && 'field' in spec.encoding.color && data.length > 0) {
     const colorField = spec.encoding.color.field;
     const uniqueSeries = [...new Set(data.map((d) => String(d[colorField])).filter(Boolean))];
     if (uniqueSeries.length > 0) {
@@ -102,8 +99,8 @@ export function generateDataTable(spec: ChartSpec, data: DataRow[]): unknown[][]
 
   if (encoding.x) fields.push(encoding.x.field);
   if (encoding.y) fields.push(encoding.y.field);
-  if (encoding.color) fields.push(encoding.color.field);
-  if (encoding.size) fields.push(encoding.size.field);
+  if (encoding.color && 'field' in encoding.color) fields.push(encoding.color.field);
+  if (encoding.size && 'field' in encoding.size) fields.push(encoding.size.field);
 
   // Deduplicate
   const uniqueFields = [...new Set(fields)];

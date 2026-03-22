@@ -172,9 +172,21 @@ export function thinTicksUntilFit(
 // Tick generation
 // ---------------------------------------------------------------------------
 
-/** Generate ticks for a continuous scale (linear, time, log). */
+/** Generate ticks for a continuous scale (linear, time, log, pow, sqrt, symlog). */
 function continuousTicks(resolvedScale: ResolvedScale, density: AxisLabelDensity): AxisTick[] {
   const scale = resolvedScale.scale as D3ContinuousScale;
+
+  // Discretizing scales (quantile, quantize, threshold) don't have .ticks().
+  // Use their domain thresholds as ticks instead.
+  if (!('ticks' in scale) || typeof scale.ticks !== 'function') {
+    const domain = scale.domain() as unknown[];
+    return domain.map((value: unknown) => ({
+      value,
+      position: (scale as D3ContinuousScale)(value as number & Date) as number,
+      label: formatTickLabel(value, resolvedScale),
+    }));
+  }
+
   const explicitCount = resolvedScale.channel.axis?.tickCount;
   const count = explicitCount ?? TICK_COUNTS[density];
   const rawTicks: unknown[] = scale.ticks(count);
@@ -220,16 +232,31 @@ function categoricalTicks(resolvedScale: ResolvedScale, density: AxisLabelDensit
   return ticks;
 }
 
+/** Set of continuous numeric scale types that should format as numbers. */
+const NUMERIC_SCALE_TYPES = new Set([
+  'linear',
+  'log',
+  'pow',
+  'sqrt',
+  'symlog',
+  'quantile',
+  'quantize',
+  'threshold',
+]);
+
+/** Set of temporal scale types. */
+const TEMPORAL_SCALE_TYPES = new Set(['time', 'utc']);
+
 /** Format a tick value based on the scale type. */
 function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
   const formatStr = resolvedScale.channel.axis?.format;
 
-  if (resolvedScale.type === 'time') {
+  if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
     if (formatStr) return String(value); // Custom format not implemented yet
     return formatDate(value as Date);
   }
 
-  if (resolvedScale.type === 'linear' || resolvedScale.type === 'log') {
+  if (NUMERIC_SCALE_TYPES.has(resolvedScale.type)) {
     const num = value as number;
     if (formatStr) {
       const fmt = buildD3Formatter(formatStr);
@@ -241,6 +268,35 @@ function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
   }
 
   return String(value);
+}
+
+/** Resolve explicit tick values from axis config into positioned ticks. */
+function resolveExplicitTicks(values: unknown[], resolvedScale: ResolvedScale): AxisTick[] {
+  const scale = resolvedScale.scale;
+  return values.map((value) => {
+    let position: number;
+    if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
+      const d = value instanceof Date ? value : new Date(String(value));
+      position = (scale as D3ContinuousScale)(d as number & Date) as number;
+    } else if (
+      resolvedScale.type === 'band' ||
+      resolvedScale.type === 'point' ||
+      resolvedScale.type === 'ordinal'
+    ) {
+      const s = String(value);
+      const bandScale = resolvedScale.type === 'band' ? (scale as ScaleBand<string>) : null;
+      position = bandScale
+        ? (bandScale(s) ?? 0) + bandScale.bandwidth() / 2
+        : ((scale(s as string & number) as number | undefined) ?? 0);
+    } else {
+      position = (scale as D3ContinuousScale)(value as number & Date) as number;
+    }
+    return {
+      value,
+      position,
+      label: formatTickLabel(value, resolvedScale),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -308,10 +364,21 @@ export function computeAxes(
   const { fontWeight } = tickLabelStyle;
 
   if (scales.x) {
-    const allTicks =
-      scales.x.type === 'band' || scales.x.type === 'point' || scales.x.type === 'ordinal'
-        ? categoricalTicks(scales.x, xDensity)
-        : continuousTicks(scales.x, xDensity);
+    const axisConfig = scales.x.channel.axis;
+
+    // Use explicit tick values from axis config if provided
+    let allTicks: AxisTick[];
+    if (axisConfig?.values) {
+      allTicks = resolveExplicitTicks(axisConfig.values, scales.x);
+    } else if (
+      scales.x.type === 'band' ||
+      scales.x.type === 'point' ||
+      scales.x.type === 'ordinal'
+    ) {
+      allTicks = categoricalTicks(scales.x, xDensity);
+    } else {
+      allTicks = continuousTicks(scales.x, xDensity);
+    }
 
     // Gridlines use the full tick set so they remain visible even when labels
     // are thinned to prevent overlap.
@@ -321,15 +388,16 @@ export function computeAxes(
     }));
 
     // Thin tick labels to prevent overlap (skip for band scales which use
-    // auto-rotation, and when the user set an explicit tickCount).
-    const shouldThin = scales.x.type !== 'band' && !scales.x.channel.axis?.tickCount;
+    // auto-rotation, and when the user set an explicit tickCount or values).
+    const shouldThin = scales.x.type !== 'band' && !axisConfig?.tickCount && !axisConfig?.values;
     const ticks = shouldThin
       ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText)
       : allTicks;
 
     // Auto-rotate labels when band scale labels would overlap.
     // Uses max label width (not average) since one long label is enough to overlap.
-    let tickAngle = scales.x.channel.axis?.tickAngle;
+    // Prefer labelAngle over deprecated tickAngle
+    let tickAngle = axisConfig?.labelAngle ?? axisConfig?.tickAngle;
     if (tickAngle === undefined && scales.x.type === 'band' && ticks.length > 1) {
       const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
       let maxLabelWidth = 0;
@@ -343,23 +411,45 @@ export function computeAxes(
       }
     }
 
+    // Prefer title over deprecated label
+    const axisTitle = axisConfig?.title ?? axisConfig?.label;
+
     result.x = {
       ticks,
-      gridlines: scales.x.channel.axis?.grid ? gridlines : [],
-      label: scales.x.channel.axis?.label,
+      gridlines: axisConfig?.grid ? gridlines : [],
+      label: axisTitle,
       labelStyle: axisLabelStyle,
       tickLabelStyle,
       tickAngle,
       start: { x: chartArea.x, y: chartArea.y + chartArea.height },
       end: { x: chartArea.x + chartArea.width, y: chartArea.y + chartArea.height },
+      orient: axisConfig?.orient,
+      domainLine: axisConfig?.domain,
+      tickMarks: axisConfig?.ticks,
+      offset: axisConfig?.offset,
+      titlePadding: axisConfig?.titlePadding,
+      labelPadding: axisConfig?.labelPadding,
+      labelOverlap: axisConfig?.labelOverlap,
+      labelFlush: axisConfig?.labelFlush,
     };
   }
 
   if (scales.y) {
-    const allTicks =
-      scales.y.type === 'band' || scales.y.type === 'point' || scales.y.type === 'ordinal'
-        ? categoricalTicks(scales.y, yDensity)
-        : continuousTicks(scales.y, yDensity);
+    const axisConfig = scales.y.channel.axis;
+
+    // Use explicit tick values from axis config if provided
+    let allTicks: AxisTick[];
+    if (axisConfig?.values) {
+      allTicks = resolveExplicitTicks(axisConfig.values, scales.y);
+    } else if (
+      scales.y.type === 'band' ||
+      scales.y.type === 'point' ||
+      scales.y.type === 'ordinal'
+    ) {
+      allTicks = categoricalTicks(scales.y, yDensity);
+    } else {
+      allTicks = continuousTicks(scales.y, yDensity);
+    }
 
     // Gridlines use the full tick set (label thinning shouldn't remove gridlines).
     const gridlines: Gridline[] = allTicks.map((t) => ({
@@ -367,22 +457,34 @@ export function computeAxes(
       major: true,
     }));
 
-    // Thin tick labels to prevent overlap (skip for band scales and explicit tickCount).
-    const shouldThin = scales.y.type !== 'band' && !scales.y.channel.axis?.tickCount;
+    // Thin tick labels to prevent overlap (skip for band scales, explicit tickCount, and values).
+    const shouldThin = scales.y.type !== 'band' && !axisConfig?.tickCount && !axisConfig?.values;
     const ticks = shouldThin
       ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText)
       : allTicks;
+
+    // Prefer title over deprecated label, labelAngle over deprecated tickAngle
+    const axisTitle = axisConfig?.title ?? axisConfig?.label;
+    const tickAngle = axisConfig?.labelAngle ?? axisConfig?.tickAngle;
 
     result.y = {
       ticks,
       // Y-axis gridlines are shown by default (standard editorial practice)
       gridlines,
-      label: scales.y.channel.axis?.label,
+      label: axisTitle,
       labelStyle: axisLabelStyle,
       tickLabelStyle,
-      tickAngle: scales.y.channel.axis?.tickAngle,
+      tickAngle,
       start: { x: chartArea.x, y: chartArea.y },
       end: { x: chartArea.x, y: chartArea.y + chartArea.height },
+      orient: axisConfig?.orient,
+      domainLine: axisConfig?.domain,
+      tickMarks: axisConfig?.ticks,
+      offset: axisConfig?.offset,
+      titlePadding: axisConfig?.titlePadding,
+      labelPadding: axisConfig?.labelPadding,
+      labelOverlap: axisConfig?.labelOverlap,
+      labelFlush: axisConfig?.labelFlush,
     };
   }
 

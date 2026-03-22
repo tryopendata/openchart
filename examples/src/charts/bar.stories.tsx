@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const simpleBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { cause: 'Ischaemic heart disease', deaths: 9.0 },
     { cause: 'COVID-19', deaths: 8.8 },
@@ -64,7 +64,7 @@ const simpleBarSpec: ChartSpec = {
 };
 
 export const SimpleBars = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={simpleBarSpec} />
   </div>
 );
@@ -74,7 +74,7 @@ export const SimpleBars = () => (
 // ---------------------------------------------------------------------------
 
 const groupedBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'USA', medals: 40, type: 'Gold' },
     { country: 'USA', medals: 44, type: 'Silver' },
@@ -128,7 +128,7 @@ const groupedBarSpec: ChartSpec = {
 };
 
 export const GroupedBars = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={groupedBarSpec} />
   </div>
 );
@@ -138,7 +138,7 @@ export const GroupedBars = () => (
 // ---------------------------------------------------------------------------
 
 const negativeBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { sector: 'Communication Services', return: 39.7 },
     { sector: 'Information Technology', return: 37.6 },
@@ -187,7 +187,7 @@ const negativeBarSpec: ChartSpec = {
 };
 
 export const NegativeValues = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={negativeBarSpec} />
   </div>
 );

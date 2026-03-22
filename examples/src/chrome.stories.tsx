@@ -10,7 +10,7 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
 const spec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 40, country: 'US' },
@@ -32,13 +32,13 @@ const spec: ChartSpec = {
 };
 
 export const ChromeWithTitleSubtitleSource = () => (
-  <div className="story-chart" style={{ height: 400 }}>
+  <div className="story-chart story-h-400">
     <Chart spec={spec} />
   </div>
 );
 
 const minimalSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'Apples', value: 30 },
     { name: 'Bananas', value: 50 },
@@ -54,7 +54,7 @@ const minimalSpec: ChartSpec = {
 };
 
 export const ChromeTitleOnly = () => (
-  <div className="story-chart" style={{ height: 300 }}>
+  <div className="story-chart story-h-300">
     <Chart spec={minimalSpec} />
   </div>
 );
@@ -71,7 +71,7 @@ const fullChromeSpec: ChartSpec = {
 };
 
 export const ChromeAllElements = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={fullChromeSpec} />
   </div>
 );

@@ -31,7 +31,7 @@ export function compile(spec: unknown): CompileResult {
   return { spec: normalized, warnings };
 }
 
-export { normalizeSpec } from './normalize';
+export { flattenLayers, normalizeSpec } from './normalize';
 export type {
   CompileResult,
   NormalizedChartSpec,

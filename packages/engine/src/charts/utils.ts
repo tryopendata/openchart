@@ -32,7 +32,7 @@ export const DEFAULT_COLOR = '#1b7fa3';
 export function scaleValue(scale: D3Scale, scaleType: string, value: unknown): number | null {
   if (value == null) return null;
 
-  if (scaleType === 'time') {
+  if (scaleType === 'time' || scaleType === 'utc') {
     const date = value instanceof Date ? value : new Date(String(value));
     if (Number.isNaN(date.getTime())) return null;
     return (scale as ScaleTime<number, number>)(date);

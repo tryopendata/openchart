@@ -20,7 +20,7 @@ import { scaleSqrt } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor } from '../utils';
+import { getColor, getSequentialColor } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -58,8 +58,10 @@ export function computeScatterMarks(
   const xScale = scales.x.scale as ScaleLinear<number, number>;
   const yScale = scales.y.scale as ScaleLinear<number, number>;
 
-  const colorField = encoding.color?.field;
-  const sizeField = encoding.size?.field;
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const isSequentialColor = colorEnc?.type === 'quantitative';
+  const colorField = colorEnc?.field;
+  const sizeField = encoding.size && 'field' in encoding.size ? encoding.size.field : undefined;
 
   // Build a size scale for bubble variant
   let sizeScale: ((v: number) => number) | undefined;
@@ -85,8 +87,16 @@ export function computeScatterMarks(
     const cx = xScale(xVal);
     const cy = yScale(yVal);
 
-    const category = colorField ? String(row[colorField] ?? '') : undefined;
-    const color = getColor(scales, category ?? '__default__');
+    const category = colorField && !isSequentialColor ? String(row[colorField] ?? '') : undefined;
+    let color: string;
+    if (isSequentialColor && colorField) {
+      const val = Number(row[colorField]);
+      color = Number.isFinite(val)
+        ? getSequentialColor(scales, val)
+        : getColor(scales, '__default__');
+    } else {
+      color = getColor(scales, category ?? '__default__');
+    }
 
     let radius = DEFAULT_POINT_RADIUS;
     if (sizeScale && sizeField) {

@@ -12,7 +12,7 @@
 // Main compile API
 // ---------------------------------------------------------------------------
 
-export { compileChart, compileGraph, compileTable } from './compile';
+export { compileChart, compileGraph, compileLayer, compileTable } from './compile';
 
 // ---------------------------------------------------------------------------
 // Graph compilation types
@@ -58,6 +58,21 @@ export {
 } from './charts/registry';
 
 // ---------------------------------------------------------------------------
+// Data transforms
+// ---------------------------------------------------------------------------
+
+export {
+  evaluatePredicate,
+  isConditionalValueDef,
+  resolveConditionalValue,
+  runBin,
+  runCalculate,
+  runFilter,
+  runTimeUnit,
+  runTransforms,
+} from './transforms';
+
+// ---------------------------------------------------------------------------
 // Re-export core types for convenience
 // ---------------------------------------------------------------------------
 
@@ -68,6 +83,7 @@ export type {
   CompileTableOptions,
   GraphLayout,
   GraphSpec,
+  LayerSpec,
   TableLayout,
   TableSpec,
   VizSpec,

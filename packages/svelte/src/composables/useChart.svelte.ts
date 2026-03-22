@@ -16,7 +16,7 @@
  * .svelte components.
  */
 
-import type { ChartLayout, ChartSpec, GraphSpec } from '@opendata-ai/openchart-core';
+import type { ChartLayout, ChartSpec, GraphSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { untrack } from 'svelte';
 
@@ -41,7 +41,7 @@ export interface UseChartReturn {
 }
 
 export function useChart(
-  spec: () => ChartSpec | GraphSpec,
+  spec: () => ChartSpec | LayerSpec | GraphSpec,
   options?: () => UseChartOptions | undefined,
 ): UseChartReturn {
   let chart = $state<ChartInstance | null>(null);

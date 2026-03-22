@@ -12,7 +12,7 @@ Every visualization starts as a plain JavaScript object (a `VizSpec`). There's n
 
 ```ts
 // This is the whole interface contract
-const spec = { type: 'line', data: [...], encoding: {...} };
+const spec = { mark: 'line', data: [...], encoding: {...} };
 ```
 
 The library uses an immutable update pattern: every spec change triggers a full recompile. The engine is fast enough that this is the intended workflow. Don't try to mutate the layout directly.
@@ -21,7 +21,7 @@ The library uses an immutable update pattern: every spec change triggers a full 
 
 ## Chart type switching
 
-Switch chart types by changing the `type` field. If the encoding channels are compatible (see [encoding by chart type](spec-reference.md#encoding-by-chart-type)), the same spec works across types.
+Switch chart types by changing the `mark` field. If the encoding channels are compatible (see [encoding by chart type](spec-reference.md#encoding-by-chart-type)), the same spec works across types.
 
 ### React
 
@@ -399,7 +399,7 @@ The `<Chart>` component compares specs via `JSON.stringify`. If the serialized f
 ```tsx
 const spec = useMemo(
   () => ({
-    type: "line" as const,
+    mark: "line" as const,
     data: filteredData,
     encoding: { x: xChannel, y: yChannel },
     chrome: { title: chartTitle },
@@ -412,7 +412,7 @@ const spec = useMemo(
 
 ```ts
 const spec = computed(() => ({
-  type: "line" as const,
+  mark: "line" as const,
   data: filteredData.value,
   encoding: { x: xChannel.value, y: yChannel.value },
   chrome: { title: chartTitle.value },
@@ -423,7 +423,7 @@ const spec = computed(() => ({
 
 ```ts
 const spec = $derived({
-  type: "line" as const,
+  mark: "line" as const,
   data: filteredData,
   encoding: { x: xChannel, y: yChannel },
   chrome: { title: chartTitle },
@@ -505,7 +505,7 @@ function DrillDownChart({ data }: { data: SalesData[] }) {
         (d) => d.region === selectedRegion && d.city,
       );
       return {
-        type: "bar",
+        mark: "bar",
         data: cityData,
         encoding: {
           x: { field: "revenue", type: "quantitative" },
@@ -521,7 +521,7 @@ function DrillDownChart({ data }: { data: SalesData[] }) {
     // Top-level view: revenue by region
     const regionData = data.filter((d) => !d.city);
     return {
-      type: "bar",
+      mark: "bar",
       data: regionData,
       encoding: {
         x: { field: "revenue", type: "quantitative" },
@@ -950,7 +950,7 @@ Set `responsive: false` on the spec or component prop to disable ResizeObserver.
 
 ```tsx
 // Spec-level
-const spec = { type: "line", data, encoding, responsive: false };
+const spec = { mark: "line", data, encoding, responsive: false };
 
 // Vanilla adapter
 createChart(container, spec, { responsive: false });

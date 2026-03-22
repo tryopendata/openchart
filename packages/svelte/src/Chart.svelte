@@ -13,6 +13,7 @@ import type {
   DarkMode,
   ElementEdit,
   GraphSpec,
+  LayerSpec,
   MarkEvent,
   TextAnnotation,
   ThemeConfig,
@@ -36,7 +37,7 @@ let {
   class: className,
   style,
 }: {
-  spec: ChartSpec | GraphSpec;
+  spec: ChartSpec | LayerSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   onmarkclick?: (event: MarkEvent) => void;

@@ -5,7 +5,8 @@ import type { NormalizedChartSpec } from '../compiler/types';
 import { computeLegend } from '../legend/compute';
 
 const specWithColor: NormalizedChartSpec = {
-  type: 'line',
+  markType: 'line',
+  markDef: { type: 'line' },
   data: [
     { date: '2020', value: 10, country: 'US' },
     { date: '2021', value: 20, country: 'UK' },
@@ -116,7 +117,8 @@ describe('computeLegend', () => {
 
     const barSpec: NormalizedChartSpec = {
       ...specWithColor,
-      type: 'bar',
+      markType: 'bar',
+      markDef: { type: 'bar' },
       encoding: {
         x: { field: 'value', type: 'quantitative' },
         y: { field: 'date', type: 'nominal' },
@@ -128,7 +130,8 @@ describe('computeLegend', () => {
 
     const scatterSpec: NormalizedChartSpec = {
       ...specWithColor,
-      type: 'scatter',
+      markType: 'point',
+      markDef: { type: 'point' },
       encoding: {
         x: { field: 'value', type: 'quantitative' },
         y: { field: 'value', type: 'quantitative' },
