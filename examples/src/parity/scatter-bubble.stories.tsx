@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const emissionsSpec: ChartSpec = {
-  type: 'scatter',
+  mark: 'point',
   data: [
     // Asia
     { country: 'China', co2: 8.0, renewables: 16, pop: 1425, continent: 'Asia' },

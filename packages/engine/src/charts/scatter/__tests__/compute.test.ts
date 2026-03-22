@@ -20,7 +20,8 @@ const fullStrategy: LayoutStrategy = {
 
 function makeBasicScatterSpec(): NormalizedChartSpec {
   return {
-    type: 'scatter',
+    markType: 'point',
+    markDef: { type: 'point' },
     data: [
       { x: 10, y: 20 },
       { x: 30, y: 50 },
@@ -43,7 +44,8 @@ function makeBasicScatterSpec(): NormalizedChartSpec {
 
 function makeBubbleSpec(): NormalizedChartSpec {
   return {
-    type: 'scatter',
+    markType: 'point',
+    markDef: { type: 'point' },
     data: [
       { gdp: 10, life: 60, population: 1000 },
       { gdp: 30, life: 70, population: 5000 },
@@ -66,7 +68,8 @@ function makeBubbleSpec(): NormalizedChartSpec {
 
 function makeColoredScatterSpec(): NormalizedChartSpec {
   return {
-    type: 'scatter',
+    markType: 'point',
+    markDef: { type: 'point' },
     data: [
       { x: 10, y: 20, group: 'A' },
       { x: 30, y: 50, group: 'A' },
@@ -202,7 +205,8 @@ describe('computeScatterMarks', () => {
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
-        type: 'scatter',
+        markType: 'point',
+        markDef: { type: 'point' },
         data: [{ y: 10 }],
         encoding: {
           y: { field: 'y', type: 'quantitative' },
@@ -221,7 +225,8 @@ describe('computeScatterMarks', () => {
 
     it('skips rows with non-finite values', () => {
       const spec: NormalizedChartSpec = {
-        type: 'scatter',
+        markType: 'point',
+        markDef: { type: 'point' },
         data: [
           { x: 10, y: 20 },
           { x: NaN, y: 30 },

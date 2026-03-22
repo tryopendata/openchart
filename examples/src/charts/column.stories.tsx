@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const simpleColumnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     { month: 'Jan', jobs: 353 },
     { month: 'Feb', jobs: 275 },
@@ -77,7 +77,7 @@ export const SimpleColumns = () => (
 // ---------------------------------------------------------------------------
 
 const groupedColumnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     { year: '2019', capacity: 98, type: 'Solar' },
     { year: '2019', capacity: 58, type: 'Wind' },
@@ -135,7 +135,7 @@ export const GroupedColumns = () => (
 // ---------------------------------------------------------------------------
 
 const negativeColumnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     { quarter: "Q1 '20", growth: -5.3 },
     { quarter: "Q2 '20", growth: -31.2 },

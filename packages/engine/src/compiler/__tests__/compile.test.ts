@@ -4,7 +4,7 @@ import type { NormalizedChartSpec } from '../types';
 
 describe('compile (validate + normalize pipeline)', () => {
   const validSpec = {
-    type: 'line',
+    mark: 'line',
     data: [
       { date: '2020-01-01', value: 10 },
       { date: '2021-01-01', value: 20 },
@@ -19,7 +19,7 @@ describe('compile (validate + normalize pipeline)', () => {
   it('returns a normalized spec for valid input', () => {
     const result = compile(validSpec);
     expect(result.spec).toBeDefined();
-    expect(result.spec.type).toBe('line');
+    expect((result.spec as NormalizedChartSpec).markType).toBe('line');
     expect(result.warnings).toBeInstanceOf(Array);
   });
 
@@ -42,7 +42,7 @@ describe('compile (validate + normalize pipeline)', () => {
     expect(() => compile({})).toThrow('Invalid spec');
     expect(() =>
       compile({
-        type: 'line',
+        mark: 'line',
         data: [],
         encoding: {},
       }),
@@ -51,7 +51,7 @@ describe('compile (validate + normalize pipeline)', () => {
 
   it('produces warnings for inferred types', () => {
     const spec = {
-      type: 'scatter',
+      mark: 'point',
       data: [
         { x: 10, y: 20 },
         { x: 30, y: 40 },

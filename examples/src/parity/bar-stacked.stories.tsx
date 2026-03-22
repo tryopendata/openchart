@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const spendingSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     // Lowest bracket
     { bracket: 'Under $30K', pct: 40, category: 'Housing' },

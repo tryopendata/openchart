@@ -115,8 +115,8 @@ export function computeDimensions(
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
 
-  // Radial charts (pie/donut) don't have axes, so skip axis space
-  const isRadial = spec.type === 'pie' || spec.type === 'donut';
+  // Radial charts (arc) don't have axes, so skip axis space
+  const isRadial = spec.markType === 'arc';
   const encoding = spec.encoding as Encoding;
 
   // Estimate x-axis height below chart area: tick labels sit 14px below,
@@ -162,7 +162,7 @@ export function computeDimensions(
   // Dynamic right margin for line/area end-of-line labels.
   // Only reserve space when labels will actually render (density != 'none').
   const labelDensity = spec.labels.density;
-  if ((spec.type === 'line' || spec.type === 'area') && labelDensity !== 'none') {
+  if ((spec.markType === 'line' || spec.markType === 'area') && labelDensity !== 'none') {
     // Estimate label width from longest series name (color encoding domain)
     const colorField = encoding.color?.field;
     if (colorField) {
@@ -185,8 +185,8 @@ export function computeDimensions(
   // Dynamic left margin for y-axis labels
   if (encoding.y && !isRadial) {
     if (
-      spec.type === 'bar' ||
-      spec.type === 'dot' ||
+      spec.markType === 'bar' ||
+      spec.markType === 'circle' ||
       encoding.y.type === 'nominal' ||
       encoding.y.type === 'ordinal'
     ) {

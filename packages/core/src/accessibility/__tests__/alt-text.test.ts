@@ -3,7 +3,7 @@ import type { ChartSpec } from '../../types/spec';
 import { generateAltText, generateDataTable } from '../alt-text';
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 20, country: 'US' },
@@ -19,7 +19,7 @@ const lineSpec: ChartSpec = {
 };
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { category: 'A', value: 10 },
     { category: 'B', value: 20 },
@@ -86,7 +86,7 @@ describe('generateDataTable', () => {
 
   it('only includes encoded fields', () => {
     const spec: ChartSpec = {
-      type: 'bar',
+      mark: 'bar',
       data: [{ category: 'A', value: 10, extra: 'ignored' }],
       encoding: {
         x: { field: 'category', type: 'nominal' },
@@ -100,7 +100,7 @@ describe('generateDataTable', () => {
 
   it('returns empty for spec with no encoding fields', () => {
     const spec: ChartSpec = {
-      type: 'pie',
+      mark: 'arc',
       data: [{ value: 10 }],
       encoding: {},
     };

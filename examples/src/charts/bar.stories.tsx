@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const simpleBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { cause: 'Ischaemic heart disease', deaths: 9.0 },
     { cause: 'COVID-19', deaths: 8.8 },
@@ -74,7 +74,7 @@ export const SimpleBars = () => (
 // ---------------------------------------------------------------------------
 
 const groupedBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'USA', medals: 40, type: 'Gold' },
     { country: 'USA', medals: 44, type: 'Silver' },
@@ -138,7 +138,7 @@ export const GroupedBars = () => (
 // ---------------------------------------------------------------------------
 
 const negativeBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { sector: 'Communication Services', return: 39.7 },
     { sector: 'Information Technology', return: 37.6 },

@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const populationBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'India', population: 1_463_000_000 },
     { country: 'China', population: 1_410_000_000 },

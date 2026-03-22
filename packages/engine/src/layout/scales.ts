@@ -282,12 +282,8 @@ function buildPositionalScale(
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
     case 'ordinal':
-      // Bar/column charts use band scales for their categorical axis
-      if (
-        (chartType === 'bar' && axis === 'y') ||
-        (chartType === 'column' && axis === 'x') ||
-        (chartType === 'dot' && axis === 'y')
-      ) {
+      // Bar charts use band scales for their categorical axis (both orientations)
+      if (chartType === 'bar' || (chartType === 'circle' && axis === 'y')) {
         return buildBandScale(channel, data, rangeStart, rangeEnd);
       }
       return buildPointScale(channel, data, rangeStart, rangeEnd);
@@ -317,7 +313,7 @@ export function computeScales(
   const encoding = spec.encoding as Encoding;
 
   // Scatter/bubble charts should NOT include zero by default (tight domain fits data range)
-  if (spec.type === 'scatter') {
+  if (spec.markType === 'point') {
     if (encoding.x?.type === 'quantitative' && encoding.x.scale?.zero === undefined) {
       if (!encoding.x.scale) {
         (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };
@@ -338,7 +334,7 @@ export function computeScales(
     // For stacked bars, the x-domain needs the max category sum, not max individual value.
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
-    if (spec.type === 'bar' && encoding.color && encoding.x.type === 'quantitative') {
+    if (spec.markType === 'bar' && encoding.color && encoding.x.type === 'quantitative') {
       const yField = encoding.y?.field;
       const xField = encoding.x.field;
       if (yField) {
@@ -361,18 +357,23 @@ export function computeScales(
       xData,
       chartArea.x,
       chartArea.x + chartArea.width,
-      spec.type,
+      spec.markType,
       'x',
     );
   }
 
   if (encoding.y) {
-    // For stacked columns and stacked areas, the y-domain needs the max category
-    // sum, not the max individual value. Without this, stacked marks would clip
-    // above the chart area.
+    // For stacked vertical bars and stacked areas, the y-domain needs the max
+    // category sum, not the max individual value. Without this, stacked marks
+    // would clip above the chart area.
+    // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
+    const isVerticalBar =
+      spec.markType === 'bar' &&
+      (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
+      encoding.y.type === 'quantitative';
     if (
-      (spec.type === 'column' || spec.type === 'area') &&
+      (isVerticalBar || spec.markType === 'area') &&
       encoding.color &&
       encoding.y.type === 'quantitative'
     ) {
@@ -399,7 +400,7 @@ export function computeScales(
       yData,
       chartArea.y + chartArea.height,
       chartArea.y,
-      spec.type,
+      spec.markType,
       'y',
     );
   }

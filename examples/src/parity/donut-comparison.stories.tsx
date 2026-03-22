@@ -17,7 +17,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 const highlightPalette = ['#b0b0b0', '#c8c8c8', '#a0a0a0', '#d0d0d0', '#2d8a4e', '#e0e0e0'];
 
 const electricity2010: ChartSpec = {
-  type: 'donut',
+  mark: { type: 'arc', innerRadius: 40 },
   data: [
     { source: 'Coal', share: 40.6 },
     { source: 'Natural Gas', share: 22.2 },
@@ -38,7 +38,7 @@ const electricity2010: ChartSpec = {
 };
 
 const electricity2023: ChartSpec = {
-  type: 'donut',
+  mark: { type: 'arc', innerRadius: 40 },
   data: [
     { source: 'Coal', share: 35.2 },
     { source: 'Natural Gas', share: 22.5 },

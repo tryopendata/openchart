@@ -20,7 +20,13 @@ import type {
   TableSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
-import { isChartSpec, isGraphSpec, isTableSpec } from '@opendata-ai/openchart-core';
+import {
+  isChartSpec,
+  isGraphSpec,
+  isTableSpec,
+  resolveMarkDef,
+  resolveMarkType,
+} from '@opendata-ai/openchart-core';
 
 import type {
   NormalizedChartSpec,
@@ -180,9 +186,12 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
 
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
   const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
+  const markType = resolveMarkType(spec.mark);
+  const markDef = resolveMarkDef(spec.mark);
 
   return {
-    type: spec.type,
+    markType,
+    markDef,
     data: spec.data,
     encoding,
     chrome: normalizeChrome(spec.chrome),
@@ -268,5 +277,5 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
     return normalizeGraphSpec(spec, warnings);
   }
   // Should never happen after validation
-  throw new Error(`Unknown spec type: ${(spec as Record<string, unknown>).type}`);
+  throw new Error(`Unknown spec shape. Expected mark (chart), type: 'table', or type: 'graph'.`);
 }

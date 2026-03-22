@@ -6,7 +6,7 @@ import { compileChart, compileGraph, compileTable } from '../compile';
 // ---------------------------------------------------------------------------
 
 const lineSpec = {
-  type: 'line' as const,
+  mark: 'line' as const,
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 40, country: 'US' },
@@ -26,7 +26,7 @@ const lineSpec = {
 };
 
 const barSpec = {
-  type: 'bar' as const,
+  mark: 'bar' as const,
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 30 },
@@ -312,7 +312,7 @@ describe('compileChart', () => {
 
   it('scale.clip filters data rows outside the y-axis domain', () => {
     const spec = {
-      type: 'scatter' as const,
+      mark: 'point' as const,
       data: [
         { x: 1, y: 5 },
         { x: 2, y: 15 },
@@ -337,7 +337,7 @@ describe('compileChart', () => {
 
   it('scale.clip filters data rows outside the x-axis domain', () => {
     const spec = {
-      type: 'scatter' as const,
+      mark: 'point' as const,
       data: [
         { x: 1, y: 10 },
         { x: 5, y: 20 },
@@ -362,7 +362,7 @@ describe('compileChart', () => {
 
   it('scale.clip=false does not filter data even with domain set', () => {
     const spec = {
-      type: 'scatter' as const,
+      mark: 'point' as const,
       data: [
         { x: 1, y: 5 },
         { x: 2, y: 15 },
@@ -446,7 +446,7 @@ describe('compileGraph', () => {
     expect(() =>
       compileGraph(
         {
-          type: 'scatter',
+          mark: 'point',
           data: [{ x: 1, y: 2 }],
           encoding: {
             x: { field: 'x', type: 'quantitative' },
@@ -455,12 +455,12 @@ describe('compileGraph', () => {
         },
         { width: 600, height: 400 },
       ),
-    ).toThrow('compileGraph received a scatter spec');
+    ).toThrow('compileGraph received a non-graph spec');
   });
 
   it('propagates tickAngle through the full compilation pipeline', () => {
     const columnSpec = {
-      type: 'column' as const,
+      mark: 'bar' as const,
       data: [
         { state: 'California', pop: 39000000 },
         { state: 'Texas', pop: 29000000 },
@@ -484,7 +484,7 @@ describe('compileGraph', () => {
 
   it('reserves extra bottom margin for rotated x-axis labels', () => {
     const baseColumnSpec = {
-      type: 'column' as const,
+      mark: 'bar' as const,
       data: [
         { state: 'California', pop: 39000000 },
         { state: 'Texas', pop: 29000000 },

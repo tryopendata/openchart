@@ -15,7 +15,7 @@ import { Chart, DataTable } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'United States', spending: 997 },
     { country: 'China', spending: 314 },
@@ -67,7 +67,7 @@ export const HorizontalBar: Story = () => (
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // YouTube
     { date: '2023-01-01', mau: 2300, platform: 'YouTube' },
@@ -150,7 +150,7 @@ export const MultiSeriesLine: Story = () => (
 // ---------------------------------------------------------------------------
 
 const stackedColumnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     // Battery Electric
     { year: '2019', sales: 2.1, fuel: 'Battery Electric' },
@@ -222,7 +222,7 @@ export const StackedColumn: Story = () => (
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     // Solar
     { date: '2018-01-01', generation: 585, source: 'Solar' },

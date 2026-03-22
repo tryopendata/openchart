@@ -10,7 +10,6 @@ import type {
   AggregateOp,
   Annotation,
   AxisConfig,
-  ChartType,
   ChromeText,
   ColumnConfig,
   DarkMode,
@@ -22,6 +21,8 @@ import type {
   GraphSpec,
   LabelConfig,
   LegendConfig,
+  MarkDef,
+  MarkType,
   NodeOverride,
   ScaleConfig,
   ThemeConfig,
@@ -59,7 +60,10 @@ export interface NormalizedEncodingChannel {
 
 /** A ChartSpec with all optional fields filled with sensible defaults. */
 export interface NormalizedChartSpec {
-  type: ChartType;
+  /** Resolved mark type string (extracted from spec.mark). */
+  markType: MarkType;
+  /** Resolved mark definition with defaults filled in. */
+  markDef: MarkDef;
   data: DataRow[];
   encoding: Encoding;
   chrome: NormalizedChrome;

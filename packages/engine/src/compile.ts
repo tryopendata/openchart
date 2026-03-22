@@ -44,18 +44,28 @@ import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './c
 import { scatterRenderer } from './charts/scatter';
 import { compile as compileSpec } from './compiler/index';
 
-// Register all built-in chart renderers. Explicit imports ensure bundlers
-// cannot tree-shake the registrations away (bare side-effect imports are
-// treated as dead code by esbuild).
+// Register all built-in chart renderers under the new Vega-Lite mark type names.
+// Explicit imports ensure bundlers cannot tree-shake the registrations away.
+//
+// Mark type mapping from old chart types:
+// - 'bar' -> barRenderer (horizontal bars, old 'bar')
+// - 'bar:vertical' is handled by columnRenderer (old 'column')
+// - 'arc' -> pieRenderer (old 'pie'); donutRenderer is also registered
+// - 'point' -> scatterRenderer (old 'scatter')
+// - 'circle' -> dotRenderer (old 'dot')
+// - 'line' and 'area' unchanged
+//
+// For 'bar', orientation is resolved at compile time to dispatch to the right renderer.
+// We register both barRenderer and columnRenderer; the compile function picks based on orientation.
 const builtinRenderers: Record<string, ChartRenderer> = {
   line: lineRenderer,
   area: areaRenderer,
-  bar: barRenderer,
-  column: columnRenderer,
-  scatter: scatterRenderer,
-  pie: pieRenderer,
-  donut: donutRenderer,
-  dot: dotRenderer,
+  bar: barRenderer, // horizontal bars
+  'bar:vertical': columnRenderer, // vertical bars (old 'column')
+  point: scatterRenderer, // old 'scatter'
+  arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
+  'arc:donut': donutRenderer, // old 'donut'
+  circle: dotRenderer, // old 'dot'
 };
 for (const [type, renderer] of Object.entries(builtinRenderers)) {
   registerChartRenderer(type, renderer);
@@ -182,10 +192,10 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Validate + normalize
   const { spec: normalized } = compileSpec(spec);
 
-  if (normalized.type === 'table') {
+  if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');
   }
-  if (normalized.type === 'graph') {
+  if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'graph') {
     throw new Error('compileChart received a graph spec. Use compileGraph instead.');
   }
 
@@ -338,8 +348,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Set default color for single-series charts (no color encoding)
   scales.defaultColor = theme.colors.categorical[0];
 
-  // Pie/donut charts don't use axes or gridlines
-  const isRadial = chartSpec.type === 'pie' || chartSpec.type === 'donut';
+  // Arc charts (pie/donut) don't use axes or gridlines
+  const isRadial = chartSpec.markType === 'arc';
 
   // Compute axes (skip for radial charts)
   const axes = isRadial
@@ -351,8 +361,28 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     computeGridlines(axes, chartArea);
   }
 
-  // Get chart renderer and compute marks (using filtered data)
-  const renderer = getChartRenderer(renderSpec.type);
+  // Get chart renderer and compute marks (using filtered data).
+  // For 'bar' mark, resolve orientation to pick horizontal vs vertical renderer.
+  // For 'arc' mark, resolve innerRadius to pick pie vs donut renderer.
+  let rendererKey = renderSpec.markType as string;
+  if (rendererKey === 'bar') {
+    // Infer orientation from encoding: if x is quantitative and y is categorical, horizontal (default)
+    // If x is categorical and y is quantitative, vertical (old 'column')
+    const xType = renderSpec.encoding.x?.type;
+    const yType = renderSpec.encoding.y?.type;
+    const isVertical =
+      (xType === 'nominal' || xType === 'ordinal' || xType === 'temporal') &&
+      yType === 'quantitative';
+    if (isVertical) {
+      rendererKey = 'bar:vertical';
+    }
+  } else if (rendererKey === 'arc') {
+    const innerRadius = renderSpec.markDef.innerRadius;
+    if (innerRadius && innerRadius > 0) {
+      rendererKey = 'arc:donut';
+    }
+  }
+  const renderer = getChartRenderer(rendererKey);
   const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
 
   // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
@@ -395,7 +425,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute accessibility
   const altText = generateAltText(
     {
-      type: chartSpec.type,
+      mark: chartSpec.markType,
       data: chartSpec.data,
       encoding: chartSpec.encoding,
       chrome: chartSpec.chrome,
@@ -404,7 +434,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   );
   const dataTableFallback = generateDataTable(
     {
-      type: chartSpec.type,
+      mark: chartSpec.markType,
       data: chartSpec.data,
       encoding: chartSpec.encoding,
     },
@@ -454,8 +484,10 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 export function compileTable(spec: unknown, options: CompileTableOptions): TableLayout {
   const { spec: normalized } = compileSpec(spec);
 
-  if (normalized.type !== 'table') {
-    throw new Error(`compileTable received a ${normalized.type} spec. Use compileChart instead.`);
+  const normType =
+    'type' in normalized ? (normalized as unknown as Record<string, unknown>).type : undefined;
+  if (normType !== 'table') {
+    throw new Error(`compileTable received a non-table spec. Use compileChart instead.`);
   }
 
   const tableSpec = normalized as NormalizedTableSpec;

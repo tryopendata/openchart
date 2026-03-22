@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const simpleDotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { city: 'New York', minutes: 40.6 },
     { city: 'Chicago', minutes: 33.5 },
@@ -51,7 +51,7 @@ export const SimpleDotPlot = () => (
 // ---------------------------------------------------------------------------
 
 const coloredDotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { airline: 'Delta', onTime: 83.5, rating: 'Above average' },
     { airline: 'United', onTime: 80.9, rating: 'Above average' },
@@ -86,7 +86,7 @@ export const ColoredDots = () => (
 // ---------------------------------------------------------------------------
 
 const divergingDotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { state: 'Idaho', change: 10.4 },
     { state: 'Texas', change: 8.8 },

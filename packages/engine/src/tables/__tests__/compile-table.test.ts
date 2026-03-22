@@ -154,7 +154,7 @@ describe('compileTable', () => {
     expect(() =>
       compileTable(
         {
-          type: 'line',
+          mark: 'line',
           data: [
             { date: '2020-01-01', y: 2 },
             { date: '2021-01-01', y: 4 },

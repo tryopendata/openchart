@@ -3,7 +3,8 @@ import type { NormalizedChartSpec } from '../compiler/types';
 import { computeScales } from '../layout/scales';
 
 const lineSpec: NormalizedChartSpec = {
-  type: 'line',
+  markType: 'line',
+  markDef: { type: 'line' },
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 50, country: 'US' },
@@ -23,7 +24,8 @@ const lineSpec: NormalizedChartSpec = {
 };
 
 const barSpec: NormalizedChartSpec = {
-  type: 'bar',
+  markType: 'bar',
+  markDef: { type: 'bar' },
   data: [
     { category: 'A', count: 10 },
     { category: 'B', count: 30 },

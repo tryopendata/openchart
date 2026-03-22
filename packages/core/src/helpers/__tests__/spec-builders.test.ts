@@ -102,7 +102,7 @@ describe('lineChart', () => {
   it('creates a line chart spec with string field names', () => {
     const spec = lineChart(timeSeriesData, 'date', 'value');
 
-    expect(spec.type).toBe('line');
+    expect(spec.mark).toBe('line');
     expect(spec.data).toBe(timeSeriesData);
     expect(spec.encoding.x).toEqual({ field: 'date', type: 'temporal' });
     expect(spec.encoding.y).toEqual({ field: 'value', type: 'quantitative' });
@@ -163,7 +163,7 @@ describe('barChart', () => {
   it('maps category to y-axis and value to x-axis', () => {
     const spec = barChart(categoricalData, 'name', 'count');
 
-    expect(spec.type).toBe('bar');
+    expect(spec.mark).toBe('bar');
     // Bar chart convention: category on y, value on x
     expect(spec.encoding.y).toEqual({ field: 'name', type: 'nominal' });
     expect(spec.encoding.x).toEqual({ field: 'count', type: 'quantitative' });
@@ -190,7 +190,9 @@ describe('columnChart', () => {
   it('creates a column chart spec with x and y', () => {
     const spec = columnChart(categoricalData, 'name', 'count');
 
-    expect(spec.type).toBe('column');
+    // columnChart now produces mark: 'bar' (vertical orientation inferred from encoding)
+    expect(typeof spec.mark).toBe('object');
+    expect((spec.mark as Record<string, unknown>).type).toBe('bar');
     expect(spec.encoding.x).toEqual({ field: 'name', type: 'nominal' });
     expect(spec.encoding.y).toEqual({ field: 'count', type: 'quantitative' });
   });
@@ -204,8 +206,8 @@ describe('pieChart', () => {
   it('maps category to color channel and value to y', () => {
     const spec = pieChart(categoricalData, 'name', 'count');
 
-    expect(spec.type).toBe('pie');
-    // Pie chart convention: value on y, category on color, no x
+    expect(spec.mark).toBe('arc');
+    // Arc (pie) convention: value on y, category on color, no x
     expect(spec.encoding.y).toEqual({ field: 'count', type: 'quantitative' });
     expect(spec.encoding.color).toEqual({ field: 'name', type: 'nominal' });
     expect(spec.encoding.x).toBeUndefined();
@@ -226,7 +228,7 @@ describe('scatterChart', () => {
   it('creates a scatter chart with both axes quantitative', () => {
     const spec = scatterChart(numericData, 'x', 'y');
 
-    expect(spec.type).toBe('scatter');
+    expect(spec.mark).toBe('point');
     expect(spec.encoding.x).toEqual({ field: 'x', type: 'quantitative' });
     expect(spec.encoding.y).toEqual({ field: 'y', type: 'quantitative' });
   });

@@ -20,7 +20,8 @@ const fullStrategy: LayoutStrategy = {
 
 function makeSimpleBarSpec(): NormalizedChartSpec {
   return {
-    type: 'bar',
+    markType: 'bar',
+    markDef: { type: 'bar' },
     data: [
       { category: 'Apple', value: 50 },
       { category: 'Banana', value: 30 },
@@ -41,7 +42,8 @@ function makeSimpleBarSpec(): NormalizedChartSpec {
 
 function makeGroupedBarSpec(): NormalizedChartSpec {
   return {
-    type: 'bar',
+    markType: 'bar',
+    markDef: { type: 'bar' },
     data: [
       { category: 'Q1', value: 50, region: 'East' },
       { category: 'Q1', value: 40, region: 'West' },
@@ -66,7 +68,8 @@ function makeGroupedBarSpec(): NormalizedChartSpec {
 
 function makeNegativeBarSpec(): NormalizedChartSpec {
   return {
-    type: 'bar',
+    markType: 'bar',
+    markDef: { type: 'bar' },
     data: [
       { category: 'Growth', value: 15 },
       { category: 'Decline', value: -10 },
@@ -227,7 +230,8 @@ describe('computeBarMarks', () => {
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
-        type: 'bar',
+        markType: 'bar',
+        markDef: { type: 'bar' },
         data: [{ category: 'A', value: 10 }],
         encoding: {
           y: { field: 'category', type: 'nominal' },
@@ -246,7 +250,8 @@ describe('computeBarMarks', () => {
 
     it('returns empty array for empty data', () => {
       const spec: NormalizedChartSpec = {
-        type: 'bar',
+        markType: 'bar',
+        markDef: { type: 'bar' },
         data: [],
         encoding: {
           x: { field: 'value', type: 'quantitative' },
@@ -306,7 +311,8 @@ describe('computeBarLabels', () => {
 
   it('applies format with literal alpha suffix (e.g. "T")', () => {
     const spec: NormalizedChartSpec = {
-      type: 'bar',
+      markType: 'bar',
+      markDef: { type: 'bar' },
       data: [
         { company: 'Apple', cap: 3.75 },
         { company: 'Meta', cap: 1.63 },

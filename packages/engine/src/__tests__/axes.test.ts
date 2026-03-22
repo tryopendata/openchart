@@ -6,7 +6,8 @@ import { computeAxes, effectiveDensity, thinTicksUntilFit, ticksOverlap } from '
 import { computeScales } from '../layout/scales';
 
 const lineSpec: NormalizedChartSpec = {
-  type: 'line',
+  markType: 'line',
+  markDef: { type: 'line' },
   data: [
     { date: '2020-01-01', value: 100 },
     { date: '2021-01-01', value: 500 },
@@ -208,7 +209,8 @@ describe('computeAxes', () => {
   it('propagates tickAngle from encoding to x-axis layout', () => {
     const specWithAngle: NormalizedChartSpec = {
       ...lineSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { cat: 'California', val: 10 },
         { cat: 'New York', val: 20 },
@@ -439,7 +441,8 @@ describe('text-aware tick density', () => {
     const categories = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'];
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
       encoding: {
         x: { field: 'cat', type: 'nominal' },
@@ -490,7 +493,8 @@ describe('text-aware tick density', () => {
   it('passes measureText to auto-rotation detection', () => {
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { cat: 'A', val: 10 },
         { cat: 'B', val: 20 },

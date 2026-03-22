@@ -20,7 +20,8 @@ const fullStrategy: LayoutStrategy = {
 
 function makeSimpleDotSpec(): NormalizedChartSpec {
   return {
-    type: 'dot',
+    markType: 'circle',
+    markDef: { type: 'circle' },
     data: [
       { country: 'USA', score: 85 },
       { country: 'UK', score: 72 },
@@ -42,7 +43,8 @@ function makeSimpleDotSpec(): NormalizedChartSpec {
 
 function makeColoredDotSpec(): NormalizedChartSpec {
   return {
-    type: 'dot',
+    markType: 'circle',
+    markDef: { type: 'circle' },
     data: [
       { item: 'Revenue', value: 120, status: 'good' },
       { item: 'Costs', value: 80, status: 'neutral' },
@@ -142,7 +144,8 @@ describe('computeDotMarks', () => {
   describe('dumbbell (multi-series)', () => {
     function makeDumbbellSpec(): NormalizedChartSpec {
       return {
-        type: 'dot',
+        markType: 'circle',
+        markDef: { type: 'circle' },
         data: [
           { country: 'USA', rate: 78, gender: 'Male' },
           { country: 'USA', rate: 82, gender: 'Female' },
@@ -264,7 +267,8 @@ describe('computeDotMarks', () => {
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
-        type: 'dot',
+        markType: 'circle',
+        markDef: { type: 'circle' },
         data: [{ country: 'USA', score: 85 }],
         encoding: {
           y: { field: 'country', type: 'nominal' },
@@ -283,7 +287,8 @@ describe('computeDotMarks', () => {
 
     it('returns empty array for empty data', () => {
       const spec: NormalizedChartSpec = {
-        type: 'dot',
+        markType: 'circle',
+        markDef: { type: 'circle' },
         data: [],
         encoding: {
           x: { field: 'score', type: 'quantitative' },

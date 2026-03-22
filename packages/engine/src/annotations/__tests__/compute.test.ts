@@ -26,7 +26,8 @@ const compactStrategy: LayoutStrategy = {
 
 function makeSpec(annotations: Annotation[]): NormalizedChartSpec {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line' },
     data: [
       { date: '2019-01-01', value: 10 },
       { date: '2020-01-01', value: 20 },
@@ -139,7 +140,8 @@ describe('computeAnnotations', () => {
 
     it('interpolates range position for values between ordinal data points', () => {
       const ordinalSpec: NormalizedChartSpec = {
-        type: 'line',
+        markType: 'line',
+        markDef: { type: 'line' },
         data: [
           { year: '2005', value: 10 },
           { year: '2007', value: 20 },
@@ -182,7 +184,8 @@ describe('computeAnnotations', () => {
 
     it('clamps interpolation for values outside the ordinal domain range', () => {
       const ordinalSpec: NormalizedChartSpec = {
-        type: 'line',
+        markType: 'line',
+        markDef: { type: 'line' },
         data: [
           { year: '2005', value: 10 },
           { year: '2007', value: 20 },
@@ -209,7 +212,8 @@ describe('computeAnnotations', () => {
 
     it('returns null for non-numeric ordinal domain values', () => {
       const catSpec: NormalizedChartSpec = {
-        type: 'column',
+        markType: 'bar',
+        markDef: { type: 'bar', orient: 'vertical' },
         data: [
           { category: 'Jan', value: 10 },
           { category: 'Feb', value: 20 },

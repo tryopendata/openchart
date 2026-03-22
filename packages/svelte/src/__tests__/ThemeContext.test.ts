@@ -20,7 +20,7 @@ import { DARK_MODE_KEY, THEME_KEY } from '../context.js';
 // ---------------------------------------------------------------------------
 
 const minimalSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 20 },

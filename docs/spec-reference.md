@@ -641,7 +641,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 
 ```ts
 const spec: ChartSpec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2023-01-01", revenue: 42000, region: "North" },
     { date: "2023-04-01", revenue: 58000, region: "North" },
@@ -675,7 +675,7 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: "area",
+  mark: "area",
   data: [
     { month: "2024-01", users: 1200 },
     { month: "2024-02", users: 1800 },
@@ -694,7 +694,7 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: "bar",
+  mark: "bar",
   data: [
     { language: "Python", popularity: 29 },
     { language: "JavaScript", popularity: 24 },
@@ -710,11 +710,11 @@ const spec: ChartSpec = {
 };
 ```
 
-### Column chart (vertical)
+### Column chart (vertical bars)
 
 ```ts
 const spec: ChartSpec = {
-  type: "column",
+  mark: "bar",
   data: [
     { month: "Jan", sales: 120 },
     { month: "Feb", sales: 180 },
@@ -734,7 +734,7 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: "pie",
+  mark: "arc",
   data: [
     { category: "Desktop", share: 58 },
     { category: "Mobile", share: 35 },
@@ -752,7 +752,7 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: "donut",
+  mark: { type: "arc", innerRadius: 40 },
   data: [
     { status: "Complete", count: 42 },
     { status: "In Progress", count: 18 },
@@ -770,7 +770,7 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: "scatter",
+  mark: "point",
   data: [
     { gdp: 21400, lifeExp: 78.9, country: "USA", pop: 331 },
     { gdp: 40300, lifeExp: 83.4, country: "Switzerland", pop: 8.6 },
@@ -799,7 +799,7 @@ const spec: ChartSpec = {
 
 ```ts
 const spec: ChartSpec = {
-  type: "dot",
+  mark: "circle",
   data: [
     { team: "Engineering", satisfaction: 8.2 },
     { team: "Design", satisfaction: 7.9 },
@@ -871,14 +871,14 @@ All builders accept field names as strings (auto-infer type from data) or full `
 
 | Builder        | Signature                           | Produces                                                             |
 | -------------- | ----------------------------------- | -------------------------------------------------------------------- |
-| `lineChart`    | `(data, x, y, options?)`            | `ChartSpec` with `type: 'line'`                                      |
-| `areaChart`    | `(data, x, y, options?)`            | `ChartSpec` with `type: 'area'`                                      |
-| `barChart`     | `(data, category, value, options?)` | `ChartSpec` with `type: 'bar'`. category -> y, value -> x            |
-| `columnChart`  | `(data, x, y, options?)`            | `ChartSpec` with `type: 'column'`                                    |
-| `pieChart`     | `(data, category, value, options?)` | `ChartSpec` with `type: 'pie'`. category -> color, value -> y        |
-| `donutChart`   | `(data, category, value, options?)` | `ChartSpec` with `type: 'donut'`. category -> color, value -> y      |
-| `dotChart`     | `(data, x, y, options?)`            | `ChartSpec` with `type: 'dot'`                                       |
-| `scatterChart` | `(data, x, y, options?)`            | `ChartSpec` with `type: 'scatter'`                                   |
+| `lineChart`    | `(data, x, y, options?)`            | `ChartSpec` with `mark: 'line'`                                      |
+| `areaChart`    | `(data, x, y, options?)`            | `ChartSpec` with `mark: 'area'`                                      |
+| `barChart`     | `(data, category, value, options?)` | `ChartSpec` with `mark: 'bar'`. category -> y, value -> x            |
+| `columnChart`  | `(data, x, y, options?)`            | `ChartSpec` with `mark: 'bar'`. x nominal, y quantitative            |
+| `pieChart`     | `(data, category, value, options?)` | `ChartSpec` with `mark: 'arc'`. category -> color, value -> y        |
+| `donutChart`   | `(data, category, value, options?)` | `ChartSpec` with `mark: { type: 'arc', innerRadius: 40 }`. category -> color, value -> y |
+| `dotChart`     | `(data, x, y, options?)`            | `ChartSpec` with `mark: 'circle'`                                    |
+| `scatterChart` | `(data, x, y, options?)`            | `ChartSpec` with `mark: 'point'`                                     |
 | `dataTable`    | `(data, options?)`                  | `TableSpec`. Auto-generates columns from data keys if none provided. |
 
 ### ChartBuilderOptions

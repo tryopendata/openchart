@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const basicScatterSpec: ChartSpec = {
-  type: 'scatter',
+  mark: 'point',
   data: [
     { country: 'Singapore', spending: 14.5, math: 575 },
     { country: 'Japan', spending: 10.1, math: 536 },
@@ -75,7 +75,7 @@ export const BasicScatter = () => (
 // ---------------------------------------------------------------------------
 
 const bubbleSpec: ChartSpec = {
-  type: 'scatter',
+  mark: 'point',
   data: [
     { country: 'China', gdp: 12.7, lifeExp: 79, pop: 1412, region: 'Asia' },
     { country: 'India', gdp: 7.3, lifeExp: 73, pop: 1408, region: 'Asia' },
@@ -151,7 +151,7 @@ export const BubbleChart = () => (
 // ---------------------------------------------------------------------------
 
 const colorScatterSpec: ChartSpec = {
-  type: 'scatter',
+  mark: 'point',
   data: [
     { city: 'Zurich', cost: 131, quality: 98, region: 'Europe' },
     { city: 'Vienna', cost: 79, quality: 97, region: 'Europe' },

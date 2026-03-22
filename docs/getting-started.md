@@ -30,7 +30,7 @@ Create a line chart with a few data points. The spec is the same across all fram
 import { Chart } from "@opendata-ai/openchart-react";
 
 const spec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2023-01-01", value: 12 },
     { date: "2023-04-01", value: 28 },
@@ -59,7 +59,7 @@ function App() {
 import { Chart } from "@opendata-ai/openchart-vue";
 
 const spec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2023-01-01", value: 12 },
     { date: "2023-04-01", value: 28 },
@@ -87,7 +87,7 @@ const spec = {
 import { Chart } from "@opendata-ai/openchart-svelte";
 
 const spec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2023-01-01", value: 12 },
     { date: "2023-04-01", value: 28 },
@@ -118,7 +118,7 @@ Chrome is the editorial text around the chart: title, subtitle, source attributi
 
 ```tsx
 const spec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2023-01-01", value: 12 },
     { date: "2023-04-01", value: 28 },
@@ -147,13 +147,13 @@ chrome: {
 }
 ```
 
-## Change chart type
+## Change mark type
 
-Swap `type: 'line'` for any supported chart type. The encoding channels stay the same, the engine handles the rest.
+Swap `mark: 'line'` for any supported mark type. The encoding channels stay the same, the engine handles the rest.
 
 ```tsx
 const spec = {
-  type: "bar",
+  mark: "bar",
   data: [
     { language: "Python", popularity: 29 },
     { language: "JavaScript", popularity: 24 },
@@ -172,9 +172,9 @@ const spec = {
 };
 ```
 
-Supported types: `line`, `area`, `bar` (horizontal), `column` (vertical), `scatter`, `dot`, `pie`, `donut`.
+Supported marks: `line`, `area`, `bar`, `point`, `circle`, `arc`.
 
-**Bar vs column**: `bar` draws horizontal bars (categories on y-axis). `column` draws vertical bars (categories on x-axis). Pick the one that matches your data layout.
+**Vertical vs horizontal bars**: The engine infers orientation from the encoding. When x is categorical/temporal and y is quantitative, bars render vertically. When y is categorical and x is quantitative, bars render horizontally.
 
 ## Multi-series
 
@@ -182,7 +182,7 @@ Add a `color` encoding channel to split data into series. The engine assigns col
 
 ```tsx
 const spec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2020-01-01", gdp: 2.3, country: "United States" },
     { date: "2021-01-01", gdp: 5.7, country: "United States" },
@@ -219,7 +219,7 @@ Add reference lines, highlighted ranges, or text callouts to draw attention to s
 
 ```tsx
 const spec = {
-  type: "line",
+  mark: "line",
   data: [
     { date: "2020-01-01", gdp: 2.3, country: "United States" },
     { date: "2021-01-01", gdp: 5.7, country: "United States" },
@@ -575,7 +575,7 @@ const container = document.getElementById("chart")!;
 const chart = createChart(
   container,
   {
-    type: "column",
+    mark: "bar",
     data: [
       { month: "Jan", sales: 120 },
       { month: "Feb", sales: 180 },

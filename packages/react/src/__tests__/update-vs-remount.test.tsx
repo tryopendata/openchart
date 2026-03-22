@@ -42,7 +42,7 @@ const { createChart, createTable } = await import('@opendata-ai/openchart-vanill
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { x: '2020', y: 10 },
     { x: '2021', y: 20 },
@@ -54,7 +54,7 @@ const lineSpec: ChartSpec = {
 };
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 20 },

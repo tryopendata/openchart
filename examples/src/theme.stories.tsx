@@ -16,7 +16,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, series: 'Revenue' },
     { date: '2021-01-01', value: 25, series: 'Revenue' },
@@ -39,7 +39,7 @@ const lineSpec: ChartSpec = {
 };
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { language: 'Python', popularity: 29 },
     { language: 'JavaScript', popularity: 24 },
@@ -60,7 +60,7 @@ const barSpec: ChartSpec = {
 };
 
 const donutSpec: ChartSpec = {
-  type: 'donut',
+  mark: { type: 'arc', innerRadius: 40 },
   data: [
     { segment: 'Cloud', revenue: 42 },
     { segment: 'Enterprise', revenue: 28 },
@@ -612,7 +612,7 @@ const unemploymentData = [
 
 // Default spec with all ChartSpec options demonstrated
 const defaultEditorSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: unemploymentData,
   encoding: {
     x: {
@@ -687,7 +687,7 @@ const defaultEditorSpec: ChartSpec = {
 
 // IMF World Economic Outlook, Oct 2024: nominal GDP (USD trillions)
 const gdpBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { country: 'United States', gdp: 28.78 },
     { country: 'China', gdp: 18.53 },
@@ -718,7 +718,7 @@ const gdpBarSpec: ChartSpec = {
 
 // BLS: US monthly nonfarm payroll gains (thousands), 2024
 const columnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     { month: 'Jan', jobs: 256 },
     { month: 'Feb', jobs: 270 },
@@ -746,7 +746,7 @@ const columnSpec: ChartSpec = {
 
 // IDC Worldwide Quarterly Mobile Phone Tracker, Q3 2024
 const _smartphoneDonutSpec: ChartSpec = {
-  type: 'donut',
+  mark: { type: 'arc', innerRadius: 40 },
   data: [
     { vendor: 'Samsung', share: 18.4 },
     { vendor: 'Apple', share: 17.7 },
@@ -768,7 +768,7 @@ const _smartphoneDonutSpec: ChartSpec = {
 
 // World Bank: life expectancy vs GDP per capita (select countries, 2022)
 const _scatterSpec: ChartSpec = {
-  type: 'scatter',
+  mark: 'point',
   data: [
     { country: 'Norway', gdpPerCapita: 82832, lifeExpectancy: 83.3 },
     { country: 'United States', gdpPerCapita: 76330, lifeExpectancy: 77.5 },
@@ -806,7 +806,7 @@ const _scatterSpec: ChartSpec = {
 
 // US Census Bureau: 2023 population estimates for largest cities
 const _dotSpec: ChartSpec = {
-  type: 'dot',
+  mark: 'circle',
   data: [
     { city: 'New York', population: 8258035 },
     { city: 'Los Angeles', population: 3820914 },
@@ -832,7 +832,7 @@ const _dotSpec: ChartSpec = {
 
 // EIA: US electricity generation by source (billion kWh), 2020-2024
 const _areaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     { year: '2020-01-01', source: 'Natural Gas', generation: 1617 },
     { year: '2021-01-01', source: 'Natural Gas', generation: 1575 },

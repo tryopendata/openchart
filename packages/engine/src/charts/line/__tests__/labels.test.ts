@@ -22,7 +22,8 @@ const compactStrategy: LayoutStrategy = {
 
 function makeLine(series: string, color: string, yOffset: number): LineMark {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line' },
     points: [
       { x: 50, y: 100 + yOffset },
       { x: 150, y: 80 + yOffset },
