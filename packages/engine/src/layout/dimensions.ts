@@ -22,6 +22,7 @@ import type {
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
+import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
 
@@ -187,6 +188,27 @@ export function computeDimensions(
     }
   }
 
+  // Reserve right margin for text annotations near the chart's right edge.
+  // Without this, annotation text at the last data point clips outside the SVG.
+  if (spec.annotations.length > 0 && encoding.x) {
+    const xField = encoding.x.field;
+    // Find the maximum x value in the data
+    let maxX: string | number | undefined;
+    for (const row of spec.data) {
+      const v = row[xField];
+      if (v != null && (maxX == null || String(v) >= String(maxX))) maxX = v as string | number;
+    }
+    if (maxX != null) {
+      const maxXStr = String(maxX);
+      for (const ann of spec.annotations) {
+        if (ann.type === 'text' && String(ann.x) === maxXStr) {
+          const textWidth = estimateTextWidth(ann.text, ann.fontSize ?? 11, ann.fontWeight ?? 600);
+          margins.right = Math.max(margins.right, padding + textWidth + 12);
+        }
+      }
+    }
+  }
+
   // Dynamic left margin for y-axis labels
   if (encoding.y && !isRadial) {
     if (
@@ -209,19 +231,33 @@ export function computeDimensions(
     } else if (encoding.y.type === 'quantitative' || encoding.y.type === 'temporal') {
       // Numeric tick labels on the left. Estimate width from the data range.
       const yField = encoding.y.field;
+      const yAxisFormat = (encoding.y.axis as Record<string, unknown> | undefined)?.format as
+        | string
+        | undefined;
       let maxAbsVal = 0;
       for (const row of spec.data) {
         const v = Number(row[yField]);
         if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
       }
-      // Estimate the formatted label: abbreviateNumber for >= 1000, formatNumber otherwise
+
       let sampleLabel: string;
-      if (maxAbsVal >= 1_000_000_000) sampleLabel = '1.5B';
-      else if (maxAbsVal >= 1_000_000) sampleLabel = '1.5M';
-      else if (maxAbsVal >= 1_000) sampleLabel = '1.5K';
-      else if (maxAbsVal >= 100) sampleLabel = '100';
-      else if (maxAbsVal >= 10) sampleLabel = '10';
-      else sampleLabel = '0.0';
+      if (yAxisFormat) {
+        // Use the actual d3-format to produce a realistic label estimate
+        try {
+          const fmt = d3Format(yAxisFormat);
+          sampleLabel = fmt(maxAbsVal);
+        } catch {
+          sampleLabel = String(maxAbsVal);
+        }
+      } else {
+        // Fallback: estimate from magnitude
+        if (maxAbsVal >= 1_000_000_000) sampleLabel = '1.5B';
+        else if (maxAbsVal >= 1_000_000) sampleLabel = '1.5M';
+        else if (maxAbsVal >= 1_000) sampleLabel = '1.5K';
+        else if (maxAbsVal >= 100) sampleLabel = '100';
+        else if (maxAbsVal >= 10) sampleLabel = '10';
+        else sampleLabel = '0.0';
+      }
       // Account for negative sign
       const negPrefix = spec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
       const labelEst = negPrefix + sampleLabel;

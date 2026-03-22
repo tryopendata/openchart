@@ -43,7 +43,7 @@ export const DEFAULT_THEME: Theme = {
     },
   },
   spacing: {
-    padding: 16,
+    padding: 20,
     chromeGap: 4,
     chromeToChart: 8,
     chartToFooter: 8,
