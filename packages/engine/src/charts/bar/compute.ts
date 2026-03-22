@@ -68,8 +68,9 @@ export function computeBarMarks(
 
   const bandwidth = yScale.bandwidth();
   const baseline = xScale(0);
-  const colorField = encoding.color?.field;
-  const isSequentialColor = encoding.color?.type === 'quantitative';
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const colorField = colorEnc?.field;
+  const isSequentialColor = colorEnc?.type === 'quantitative';
 
   // If no color encoding, or sequential color (value-based gradient), render simple bars
   if (!colorField || isSequentialColor) {

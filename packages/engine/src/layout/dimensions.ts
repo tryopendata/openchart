@@ -164,7 +164,8 @@ export function computeDimensions(
   const labelDensity = spec.labels.density;
   if ((spec.markType === 'line' || spec.markType === 'area') && labelDensity !== 'none') {
     // Estimate label width from longest series name (color encoding domain)
-    const colorField = encoding.color?.field;
+    const colorEnc = encoding.color;
+    const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
     if (colorField) {
       let maxLabelWidth = 0;
       const seen = new Set<string>();

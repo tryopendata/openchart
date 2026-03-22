@@ -62,6 +62,9 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   const colorEnc = spec.encoding.color;
   if (!colorEnc) return [];
 
+  // Conditional color definitions don't produce legend entries
+  if ('condition' in colorEnc) return [];
+
   // Sequential (quantitative) color doesn't produce discrete legend entries
   if (colorEnc.type === 'quantitative') return [];
 

@@ -70,7 +70,18 @@ function makeGraphSpec(overrides?: Partial<GraphSpec>): GraphSpec {
 
 describe('isChartSpec', () => {
   it('returns true for all mark types', () => {
-    const markTypes = ['line', 'area', 'bar', 'point', 'circle', 'arc'] as const;
+    const markTypes = [
+      'line',
+      'area',
+      'bar',
+      'point',
+      'circle',
+      'arc',
+      'text',
+      'rule',
+      'tick',
+      'rect',
+    ] as const;
 
     for (const markType of markTypes) {
       const spec = makeChartSpec({ mark: markType });

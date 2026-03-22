@@ -58,6 +58,21 @@ export {
 } from './charts/registry';
 
 // ---------------------------------------------------------------------------
+// Data transforms
+// ---------------------------------------------------------------------------
+
+export {
+  evaluatePredicate,
+  isConditionalValueDef,
+  resolveConditionalValue,
+  runBin,
+  runCalculate,
+  runFilter,
+  runTimeUnit,
+  runTransforms,
+} from './transforms';
+
+// ---------------------------------------------------------------------------
 // Re-export core types for convenience
 // ---------------------------------------------------------------------------
 

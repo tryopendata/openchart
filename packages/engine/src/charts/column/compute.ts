@@ -71,9 +71,10 @@ export function computeColumnMarks(
 
   const bandwidth = xScale.bandwidth();
   const baseline = yScale(0);
-  const colorField = encoding.color?.field;
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const colorField = colorEnc?.field;
 
-  const isSequentialColor = encoding.color?.type === 'quantitative';
+  const isSequentialColor = colorEnc?.type === 'quantitative';
 
   // Color encoding present: decide between colored simple columns vs stacked
   if (colorField && !isSequentialColor) {
