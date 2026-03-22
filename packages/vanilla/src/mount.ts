@@ -828,10 +828,10 @@ function wireConnectorEndpointDrag(
     // Determine connector endpoint positions from the connector element
     let fromX: number, fromY: number, toX: number, toY: number;
     if (connectorLine) {
-      fromX = Number(connectorLine.getAttribute('x1'));
-      fromY = Number(connectorLine.getAttribute('y1'));
-      toX = Number(connectorLine.getAttribute('x2'));
-      toY = Number(connectorLine.getAttribute('y2'));
+      fromX = Number(connectorLine.getAttribute('x1')) || 0;
+      fromY = Number(connectorLine.getAttribute('y1')) || 0;
+      toX = Number(connectorLine.getAttribute('x2')) || 0;
+      toY = Number(connectorLine.getAttribute('y2')) || 0;
     } else {
       // For curved connectors, get positions from the path data
       // The path starts at M x y, so parse the first coordinates
