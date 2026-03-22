@@ -583,22 +583,6 @@ function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec 
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
   };
 
-  // Merge color encoding domains: collect all unique color values across layers
-  // so the shared color scale sees all series.
-  if (primary.encoding.color && 'field' in primary.encoding.color) {
-    const allColorValues = new Set<string>();
-    for (const leaf of leaves) {
-      if (leaf.encoding.color && 'field' in leaf.encoding.color) {
-        for (const row of leaf.data) {
-          const val = row[leaf.encoding.color.field];
-          if (val != null) allColorValues.add(String(val));
-        }
-      }
-    }
-    // Ensure allData has rows that cover all color values for scale computation
-    // (already covered since allData is the union of all leaf data)
-  }
-
   return primary;
 }
 

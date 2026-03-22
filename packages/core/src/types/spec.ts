@@ -1072,7 +1072,7 @@ export function isRefLineAnnotation(annotation: Annotation): annotation is RefLi
 // ---------------------------------------------------------------------------
 
 /** Human-readable display names for mark types (used in alt text, error messages). */
-export const MARK_DISPLAY_NAMES: Record<string, string> = {
+export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   bar: 'Bar chart',
   line: 'Line chart',
   area: 'Area chart',
