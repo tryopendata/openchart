@@ -53,7 +53,7 @@ const filterSpec: ChartSpec = {
 };
 
 export const FilterTransform = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={filterSpec} />
   </div>
 );
@@ -91,7 +91,7 @@ const binSpec: ChartSpec = {
 };
 
 export const BinTransform = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={binSpec} />
   </div>
 );
@@ -142,7 +142,7 @@ const calculateSpec: ChartSpec = {
 };
 
 export const CalculateTransform = () => (
-  <div className="story-chart" style={{ height: 360 }}>
+  <div className="story-chart story-h-360">
     <Chart spec={calculateSpec} />
   </div>
 );
@@ -188,7 +188,7 @@ const timeUnitSpec: ChartSpec = {
 };
 
 export const TimeUnitTransform = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={timeUnitSpec} />
   </div>
 );

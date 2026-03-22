@@ -16,31 +16,15 @@ import { Chart, DataTable, useDarkMode, useVizDarkMode } from '@opendata-ai/open
 
 function FinancialShell({
   children,
-  height,
-  maxWidth,
   className,
 }: {
   children: (dark: boolean) => React.ReactNode;
-  height?: number;
-  maxWidth?: number;
   className?: string;
 }) {
   const contextDarkMode = useVizDarkMode();
   const dark = useDarkMode(contextDarkMode);
 
-  return (
-    <div
-      className={className}
-      style={{
-        height,
-        maxWidth,
-        padding: 24,
-        borderRadius: 4,
-      }}
-    >
-      {children(dark)}
-    </div>
-  );
+  return <div className={`story-pad-24 ${className ?? ''}`}>{children(dark)}</div>;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +121,7 @@ function stockPriceSpec(dark: boolean): ChartSpec {
 }
 
 export const StockPrice: Story = () => (
-  <FinancialShell className="story-chart" height={450}>
+  <FinancialShell className="story-chart story-h-450">
     {(dark) => <Chart spec={stockPriceSpec(dark)} />}
   </FinancialShell>
 );
@@ -279,7 +263,7 @@ function benchmarkSpec(dark: boolean): ChartSpec {
 }
 
 export const BenchmarkComparison: Story = () => (
-  <FinancialShell className="story-chart" height={450}>
+  <FinancialShell className="story-chart story-h-450">
     {(dark) => <Chart spec={benchmarkSpec(dark)} />}
   </FinancialShell>
 );
@@ -354,7 +338,7 @@ function sectorSpec(dark: boolean): ChartSpec {
 }
 
 export const SectorReturns: Story = () => (
-  <FinancialShell className="story-chart" height={420}>
+  <FinancialShell className="story-chart story-h-420">
     {(dark) => <Chart spec={sectorSpec(dark)} />}
   </FinancialShell>
 );
@@ -516,7 +500,7 @@ function riskReturnSpec(dark: boolean): ChartSpec {
 }
 
 export const RiskReturn: Story = () => (
-  <FinancialShell className="story-chart" height={520}>
+  <FinancialShell className="story-chart story-h-520">
     {(dark) => <Chart spec={riskReturnSpec(dark)} />}
   </FinancialShell>
 );
@@ -728,5 +712,7 @@ const earningsSpec: TableSpec = {
 };
 
 export const EarningsSeason: Story = () => (
-  <FinancialShell maxWidth={920}>{(_dark) => <DataTable spec={earningsSpec} />}</FinancialShell>
+  <FinancialShell className="story-max-w-920">
+    {(_dark) => <DataTable spec={earningsSpec} />}
+  </FinancialShell>
 );

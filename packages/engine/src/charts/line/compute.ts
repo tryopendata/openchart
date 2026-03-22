@@ -20,7 +20,7 @@ import { line } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, groupByField, scaleValue, sortByField } from '../utils';
+import { getColor, getSequentialColor, groupByField, scaleValue, sortByField } from '../utils';
 import { resolveCurve } from './curves';
 
 // ---------------------------------------------------------------------------
@@ -58,12 +58,19 @@ export function computeLineMarks(
     return [];
   }
 
-  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const isSequentialColor = colorEnc?.type === 'quantitative';
+  // Sequential color: single series, per-point coloring. Categorical: group by color field.
+  const colorField = isSequentialColor ? undefined : colorEnc?.field;
+  const sequentialColorField = isSequentialColor ? colorEnc.field : undefined;
   const groups = groupByField(spec.data, colorField);
   const marks: (LineMark | PointMark)[] = [];
 
   for (const [seriesKey, rows] of groups) {
-    const color = getColor(scales, seriesKey);
+    // For sequential color, use a mid-range color for the line stroke
+    const color = isSequentialColor
+      ? getSequentialColor(scales, _getMidValue(rows, sequentialColorField!))
+      : getColor(scales, seriesKey);
 
     // Sort rows by x-axis field so lines draw left-to-right
     const sortedRows = sortByField(rows, xChannel.field);
@@ -170,10 +177,10 @@ export function computeLineMarks(
 
     marks.push(lineMark);
 
-    // Only emit PointMark objects when markDef.point is truthy.
-    // When point is false or undefined, the voronoi overlay handles tooltips instead.
+    // Emit PointMark objects when markDef.point is truthy, or when sequential
+    // color is active (points carry the gradient since SVG paths are single-color).
     const markPoint = spec.markDef.point;
-    const showPoints = markPoint === true || markPoint === 'transparent';
+    const showPoints = markPoint === true || markPoint === 'transparent' || isSequentialColor;
 
     if (showPoints) {
       const isTransparent = markPoint === 'transparent';
@@ -183,12 +190,16 @@ export function computeLineMarks(
       for (let i = 0; i < pointsWithData.length; i++) {
         const p = pointsWithData[i];
         const visible = seriesShowPoints && !isTransparent;
+        // Sequential color: each point gets colored by its data value
+        const pointColor = isSequentialColor
+          ? getSequentialColor(scales, Number(p.row[sequentialColorField!] ?? 0))
+          : color;
         const pointMark: PointMark = {
           type: 'point',
           cx: p.x,
           cy: p.y,
           r: visible ? DEFAULT_POINT_RADIUS : 0,
-          fill: color,
+          fill: pointColor,
           stroke: visible ? '#ffffff' : 'transparent',
           strokeWidth: visible ? 1.5 : 0,
           fillOpacity: isTransparent ? 0 : 1,
@@ -203,4 +214,16 @@ export function computeLineMarks(
   }
 
   return marks;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Get the midpoint numeric value of a field across rows (for sequential line stroke). */
+function _getMidValue(rows: DataRow[], field: string): number {
+  const values = rows.map((r) => Number(r[field])).filter(Number.isFinite);
+  if (values.length === 0) return 0;
+  const sorted = values.sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
 }

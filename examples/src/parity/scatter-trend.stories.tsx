@@ -150,7 +150,7 @@ const scatterSpec: ChartSpec = {
 };
 
 export const WealthHealth = () => (
-  <div className="story-chart" style={{ height: 500 }}>
+  <div className="story-chart story-h-500">
     <Chart spec={scatterSpec} />
   </div>
 );
@@ -166,13 +166,19 @@ const compactScatterSpec: ChartSpec = {
 };
 
 export const WealthHealthCompact = () => (
-  <div style={{ width: 320, height: 350 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '320px', '--h': '350px' } as React.CSSProperties}
+  >
     <Chart spec={compactScatterSpec} />
   </div>
 );
 
 export const WealthHealthWide = () => (
-  <div style={{ width: 1200, height: 600 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '600px' } as React.CSSProperties}
+  >
     <Chart spec={scatterSpec} />
   </div>
 );

@@ -51,7 +51,7 @@ const textMarkSpec: ChartSpec = {
 };
 
 export const TextMark = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={textMarkSpec} />
   </div>
 );
@@ -86,7 +86,7 @@ const ruleMarkSpec: ChartSpec = {
 };
 
 export const RuleMark = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={ruleMarkSpec} />
   </div>
 );
@@ -161,7 +161,7 @@ const tickMarkSpec: ChartSpec = {
 };
 
 export const TickMark = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={tickMarkSpec} />
   </div>
 );

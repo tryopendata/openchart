@@ -64,7 +64,7 @@ const spendingSpec: ChartSpec = {
 };
 
 export const HouseholdSpending = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={spendingSpec} />
   </div>
 );
@@ -80,13 +80,19 @@ const compactSpendingSpec: ChartSpec = {
 };
 
 export const HouseholdSpendingCompact = () => (
-  <div style={{ width: 360, height: 380 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '360px', '--h': '380px' } as React.CSSProperties}
+  >
     <Chart spec={compactSpendingSpec} />
   </div>
 );
 
 export const HouseholdSpendingWide = () => (
-  <div style={{ width: 1200, height: 500 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '500px' } as React.CSSProperties}
+  >
     <Chart spec={spendingSpec} />
   </div>
 );

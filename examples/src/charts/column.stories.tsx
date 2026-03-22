@@ -67,7 +67,7 @@ const simpleColumnSpec: ChartSpec = {
 };
 
 export const SimpleColumns = () => (
-  <div className="story-chart" style={{ height: 400 }}>
+  <div className="story-chart story-h-400">
     <Chart spec={simpleColumnSpec} />
   </div>
 );
@@ -125,7 +125,7 @@ const groupedColumnSpec: ChartSpec = {
 };
 
 export const GroupedColumns = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={groupedColumnSpec} />
   </div>
 );
@@ -196,7 +196,7 @@ const negativeColumnSpec: ChartSpec = {
 };
 
 export const NegativeValues = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={negativeColumnSpec} />
   </div>
 );
@@ -219,13 +219,19 @@ export const ResponsiveDemo = () => (
   <div className="story-column">
     <div>
       <h3 className="story-heading">Full width (700px)</h3>
-      <div className="story-debug-border" style={{ width: 700, height: 400 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '700px', '--h': '400px' } as React.CSSProperties}
+      >
         <Chart spec={groupedColumnSpec} />
       </div>
     </div>
     <div>
       <h3 className="story-heading">Compact (320px)</h3>
-      <div className="story-debug-border" style={{ width: 320, height: 300 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '320px', '--h': '300px' } as React.CSSProperties}
+      >
         <Chart spec={compactGroupedColumnSpec} />
       </div>
     </div>

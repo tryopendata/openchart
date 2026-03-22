@@ -60,7 +60,7 @@ const conditionalBarSpec: ChartSpec = {
 };
 
 export const PositiveNegativeBars = () => (
-  <div className="story-chart" style={{ height: 400 }}>
+  <div className="story-chart story-h-400">
     <Chart spec={conditionalBarSpec} />
   </div>
 );

@@ -76,7 +76,7 @@ const spec: TableSpec = {
 };
 
 export const Heatmap: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 700 }}>
+  <div className="story-centered story-max-w-700">
     <DataTable spec={spec} />
   </div>
 );
@@ -125,7 +125,7 @@ const electionSpec: TableSpec = {
 };
 
 export const ElectionResults: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 650 }}>
+  <div className="story-centered story-max-w-650">
     <DataTable spec={electionSpec} />
   </div>
 );

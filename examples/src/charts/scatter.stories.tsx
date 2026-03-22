@@ -65,7 +65,7 @@ const basicScatterSpec: ChartSpec = {
 };
 
 export const BasicScatter = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={basicScatterSpec} />
   </div>
 );
@@ -141,7 +141,7 @@ const bubbleSpec: ChartSpec = {
 };
 
 export const BubbleChart = () => (
-  <div className="story-chart" style={{ height: 480 }}>
+  <div className="story-chart story-h-480">
     <Chart spec={bubbleSpec} />
   </div>
 );
@@ -208,7 +208,7 @@ const colorScatterSpec: ChartSpec = {
 };
 
 export const ColorGrouping = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={colorScatterSpec} />
   </div>
 );

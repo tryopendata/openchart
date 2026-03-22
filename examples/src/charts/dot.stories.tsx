@@ -41,7 +41,7 @@ const simpleDotSpec: ChartSpec = {
 };
 
 export const SimpleDotPlot = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={simpleDotSpec} />
   </div>
 );
@@ -76,7 +76,7 @@ const coloredDotSpec: ChartSpec = {
 };
 
 export const ColoredDots = () => (
-  <div className="story-chart" style={{ height: 380 }}>
+  <div className="story-chart story-h-380">
     <Chart spec={coloredDotSpec} />
   </div>
 );
@@ -115,7 +115,7 @@ const divergingDotSpec: ChartSpec = {
 };
 
 export const DivergingLollipop = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={divergingDotSpec} />
   </div>
 );

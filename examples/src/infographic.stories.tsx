@@ -57,7 +57,7 @@ const barSpec: ChartSpec = {
 };
 
 export const HorizontalBar: Story = () => (
-  <div className="story-chart" style={{ height: 400 }}>
+  <div className="story-chart story-h-400">
     <Chart spec={barSpec} />
   </div>
 );
@@ -140,7 +140,7 @@ const lineSpec: ChartSpec = {
 };
 
 export const MultiSeriesLine: Story = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={lineSpec} />
   </div>
 );
@@ -212,7 +212,7 @@ const stackedColumnSpec: ChartSpec = {
 };
 
 export const StackedColumn: Story = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={stackedColumnSpec} />
   </div>
 );
@@ -287,7 +287,7 @@ const stackedAreaSpec: ChartSpec = {
 };
 
 export const StackedArea: Story = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={stackedAreaSpec} />
   </div>
 );
@@ -455,7 +455,7 @@ const tableSpec: TableSpec = {
 };
 
 export const DataTableShowcase: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 900 }}>
+  <div className="story-centered story-max-w-900">
     <DataTable spec={tableSpec} />
   </div>
 );

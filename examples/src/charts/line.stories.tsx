@@ -102,7 +102,7 @@ const singleLineSpec: ChartSpec = {
 };
 
 export const SingleLine = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={singleLineSpec} />
   </div>
 );
@@ -185,7 +185,7 @@ const multiSeriesSpec: ChartSpec = {
 };
 
 export const MultiSeries = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={multiSeriesSpec} />
   </div>
 );
@@ -264,7 +264,7 @@ const fiveSeriesSpec: ChartSpec = {
 };
 
 export const FiveSeries = () => (
-  <div className="story-chart" style={{ height: 460 }}>
+  <div className="story-chart story-h-460">
     <Chart spec={fiveSeriesSpec} />
   </div>
 );
@@ -325,7 +325,7 @@ const singleAreaSpec: ChartSpec = {
 };
 
 export const AreaChart = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={singleAreaSpec} />
   </div>
 );
@@ -398,7 +398,7 @@ const stackedAreaSpec: ChartSpec = {
 };
 
 export const StackedArea = () => (
-  <div className="story-chart" style={{ height: 460 }}>
+  <div className="story-chart story-h-460">
     <Chart spec={stackedAreaSpec} />
   </div>
 );
@@ -420,19 +420,28 @@ export const ResponsiveDemo = () => (
   <div className="story-column">
     <div>
       <h3 className="story-heading">Full width (800px)</h3>
-      <div className="story-debug-border" style={{ width: 800, height: 350 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '800px', '--h': '350px' } as React.CSSProperties}
+      >
         <Chart spec={multiSeriesSpec} />
       </div>
     </div>
     <div>
       <h3 className="story-heading">Medium (500px)</h3>
-      <div className="story-debug-border" style={{ width: 500, height: 350 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '500px', '--h': '350px' } as React.CSSProperties}
+      >
         <Chart spec={multiSeriesSpec} />
       </div>
     </div>
     <div>
       <h3 className="story-heading">Compact (320px)</h3>
-      <div className="story-debug-border" style={{ width: 320, height: 300 }}>
+      <div
+        className="story-debug-border story-fixed-size"
+        style={{ '--w': '320px', '--h': '300px' } as React.CSSProperties}
+      >
         <Chart spec={compactMultiSeriesSpec} />
       </div>
     </div>
@@ -483,20 +492,20 @@ function interpolationSpec(
 
 export const InterpolationModes = () => (
   <div className="story-column">
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-      <div className="story-debug-border" style={{ height: 280 }}>
+    <div className="story-grid-2">
+      <div className="story-debug-border story-h-280">
         <Chart spec={interpolationSpec('linear', 'Linear (default)')} />
       </div>
-      <div className="story-debug-border" style={{ height: 280 }}>
+      <div className="story-debug-border story-h-280">
         <Chart spec={interpolationSpec('step', 'Step')} />
       </div>
-      <div className="story-debug-border" style={{ height: 280 }}>
+      <div className="story-debug-border story-h-280">
         <Chart spec={interpolationSpec('monotone', 'Monotone')} />
       </div>
-      <div className="story-debug-border" style={{ height: 280 }}>
+      <div className="story-debug-border story-h-280">
         <Chart spec={interpolationSpec('natural', 'Natural')} />
       </div>
-      <div className="story-debug-border" style={{ height: 280 }}>
+      <div className="story-debug-border story-h-280">
         <Chart spec={interpolationSpec('cardinal', 'Cardinal')} />
       </div>
     </div>
@@ -537,7 +546,7 @@ const stepAreaSpec: ChartSpec = {
 };
 
 export const StepArea = () => (
-  <div className="story-chart" style={{ height: 400 }}>
+  <div className="story-chart story-h-400">
     <Chart spec={stepAreaSpec} />
   </div>
 );

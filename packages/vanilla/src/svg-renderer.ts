@@ -309,7 +309,7 @@ function renderAxis(
         y2: gridline.position,
         stroke: layout.theme.colors.gridline,
         'stroke-width': 1,
-        'stroke-opacity': 0.35,
+        'stroke-opacity': 0.6,
       });
     } else {
       setAttrs(gl, {
@@ -319,7 +319,7 @@ function renderAxis(
         y2: area.y + area.height,
         stroke: layout.theme.colors.gridline,
         'stroke-width': 1,
-        'stroke-opacity': 0.35,
+        'stroke-opacity': 0.6,
       });
     }
     g.appendChild(gl);
