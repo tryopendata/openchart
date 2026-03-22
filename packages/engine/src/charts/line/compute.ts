@@ -191,7 +191,7 @@ export function computeLineMarks(
           fill: color,
           stroke: visible ? '#ffffff' : 'transparent',
           strokeWidth: visible ? 1.5 : 0,
-          fillOpacity: isTransparent ? 0 : 0,
+          fillOpacity: isTransparent ? 0 : 1,
           data: p.row,
           aria: {
             label: `Data point: ${xChannel.field}=${String(p.row[xChannel.field])}, ${yChannel.field}=${String(p.row[yChannel.field])}`,

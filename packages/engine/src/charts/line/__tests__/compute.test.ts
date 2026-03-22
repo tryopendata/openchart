@@ -147,14 +147,14 @@ describe('computeLineMarks', () => {
       expect(lineMark.seriesKey).toBeUndefined();
     });
 
-    it('point marks have invisible fill (for hover only)', () => {
+    it('visible point marks have filled opacity when point: true', () => {
       const spec = makeSingleSeriesSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
 
       const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
       for (const pm of pointMarks) {
-        expect(pm.fillOpacity).toBe(0);
+        expect(pm.fillOpacity).toBe(1);
       }
     });
   });
