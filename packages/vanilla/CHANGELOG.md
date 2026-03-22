@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.1.1](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.0...vanilla-v6.1.1) (2026-03-22)
+
+
+### Bug Fixes
+
+* **vanilla:** handle carriage returns in CSV export escaping ([137fde7](https://github.com/tryopendata/openchart/commit/137fde70752c10b928c422ede97152ccf41e505b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.1
+    * @opendata-ai/openchart-engine bumped to 6.1.1
+
 ## [6.0.0](https://github.com/tryopendata/openchart/compare/vanilla-v5.0.0...vanilla-v6.0.0) (2026-03-21)
 
 
