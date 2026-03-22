@@ -10,6 +10,7 @@
  */
 
 import type {
+  ConditionalValueDef,
   DataRow,
   Encoding,
   LayoutStrategy,
@@ -19,9 +20,9 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { abbreviateNumber, formatNumber } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
+import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { getColor, getSequentialColor, groupByField } from '../utils';
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,10 @@ export function computeColumnMarks(
   const bandwidth = xScale.bandwidth();
   const baseline = yScale(0);
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const conditionalColor =
+    encoding.color && isConditionalValueDef(encoding.color)
+      ? (encoding.color as ConditionalValueDef)
+      : undefined;
   const colorField = colorEnc?.field;
 
   const isSequentialColor = colorEnc?.type === 'quantitative';
@@ -120,6 +125,7 @@ export function computeColumnMarks(
     baseline,
     scales,
     isSequentialColor,
+    conditionalColor,
   );
 }
 
@@ -134,6 +140,7 @@ function computeSimpleColumns(
   baseline: number,
   scales: ResolvedScales,
   sequentialColor = false,
+  conditionalColor?: ConditionalValueDef,
 ): RectMark[] {
   const marks: RectMark[] = [];
 
@@ -145,9 +152,16 @@ function computeSimpleColumns(
     const bandX = xScale(category);
     if (bandX === undefined) continue;
 
-    const color = sequentialColor
-      ? getSequentialColor(scales, value)
-      : getColor(scales, '__default__');
+    let color: string;
+    if (conditionalColor) {
+      color = String(
+        resolveConditionalValue(row, conditionalColor) ?? getColor(scales, '__default__'),
+      );
+    } else if (sequentialColor) {
+      color = getSequentialColor(scales, value);
+    } else {
+      color = getColor(scales, '__default__');
+    }
     const yPos = yScale(value);
     const columnHeight = Math.max(Math.abs(baseline - yPos), MIN_COLUMN_HEIGHT);
 
