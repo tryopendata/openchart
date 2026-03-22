@@ -191,9 +191,11 @@ export function computeLineMarks(
         const p = pointsWithData[i];
         const visible = seriesShowPoints && !isTransparent;
         // Sequential color: each point gets colored by its data value
-        const pointColor = isSequentialColor
-          ? getSequentialColor(scales, Number(p.row[sequentialColorField!] ?? 0))
-          : color;
+        let pointColor = color;
+        if (isSequentialColor) {
+          const val = Number(p.row[sequentialColorField!]);
+          pointColor = Number.isFinite(val) ? getSequentialColor(scales, val) : color;
+        }
         const pointMark: PointMark = {
           type: 'point',
           cx: p.x,

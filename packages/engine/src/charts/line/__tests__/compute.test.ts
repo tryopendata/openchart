@@ -917,3 +917,85 @@ describe('seriesStyles', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sequential (quantitative) color
+// ---------------------------------------------------------------------------
+
+describe('sequential color encoding', () => {
+  function makeSequentialColorSpec(): NormalizedChartSpec {
+    return {
+      markType: 'line',
+      markDef: { type: 'line' },
+      data: [
+        { date: '2020-01-01', value: 10 },
+        { date: '2021-01-01', value: 40 },
+        { date: '2022-01-01', value: 30 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'value', type: 'quantitative' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '' },
+    };
+  }
+
+  it('produces a single line mark (no grouping) with sequential color', () => {
+    const spec = makeSequentialColorSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
+    expect(lineMarks).toHaveLength(1);
+    // Should not group into multiple series
+    expect(lineMarks[0].seriesKey).toBeUndefined();
+  });
+
+  it('auto-shows point marks for sequential color', () => {
+    const spec = makeSequentialColorSpec();
+    // markDef.point is NOT set, but points should appear anyway for sequential color
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+    expect(pointMarks).toHaveLength(3);
+    // Points should be visible (r > 0)
+    expect(pointMarks.every((p) => p.r > 0)).toBe(true);
+  });
+
+  it('assigns different colors to points based on data value', () => {
+    const spec = makeSequentialColorSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+
+    const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+    // The three points have values 10, 40, 30 so should get distinct colors
+    const colors = pointMarks.map((p) => p.fill);
+    // Min (10) and max (40) should definitely differ
+    expect(colors[0]).not.toBe(colors[1]);
+  });
+
+  it('handles NaN values gracefully in sequential color', () => {
+    const spec = makeSequentialColorSpec();
+    spec.data = [
+      { date: '2020-01-01', value: 10 },
+      { date: '2021-01-01', value: 'not a number' },
+      { date: '2022-01-01', value: 30 },
+    ];
+    const scales = computeScales(spec, chartArea, spec.data);
+    // Should not throw
+    const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
+    const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+    // All points should have a valid fill color (string)
+    for (const p of pointMarks) {
+      expect(typeof p.fill).toBe('string');
+      expect(p.fill.length).toBeGreaterThan(0);
+    }
+  });
+});
