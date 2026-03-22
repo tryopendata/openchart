@@ -32,7 +32,7 @@ const basicPieSpec: ChartSpec = {
 };
 
 export const BasicPie = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={basicPieSpec} />
   </div>
 );
@@ -63,7 +63,7 @@ const donutSpec: ChartSpec = {
 };
 
 export const DonutChart = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={donutSpec} />
   </div>
 );
@@ -102,7 +102,7 @@ const smallSliceSpec: ChartSpec = {
 };
 
 export const SmallSliceGrouping = () => (
-  <div className="story-chart" style={{ height: 500 }}>
+  <div className="story-chart story-h-500">
     <Chart spec={smallSliceSpec} />
   </div>
 );
@@ -134,7 +134,7 @@ const energyMixSpec: ChartSpec = {
 };
 
 export const SevenCategories = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={energyMixSpec} />
   </div>
 );

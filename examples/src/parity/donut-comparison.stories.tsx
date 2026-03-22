@@ -59,118 +59,73 @@ const electricity2023: ChartSpec = {
 };
 
 export const ElectricityMix = () => (
-  <div className="story-chart">
-    <div
-      style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        padding: '16px 16px 0',
-      }}
-    >
-      <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700 }}>
-        Renewables have quadrupled their share since 2010
-      </h2>
-      <p style={{ margin: 0, fontSize: 14, opacity: 0.55 }}>
+  <div className="story-chart story-editorial">
+    <div className="story-pad-top">
+      <h2 className="story-editorial-title">Renewables have quadrupled their share since 2010</h2>
+      <p className="story-editorial-subtitle">
         Share of global electricity generation by source (%)
       </p>
     </div>
-    <div style={{ display: 'flex', gap: 16, padding: '0 16px' }}>
-      <div style={{ flex: 1, height: 360 }}>
+    <div className="story-flex-gap-16 story-pad-sides">
+      <div className="story-flex-1 story-h-400">
         <Chart spec={electricity2010} />
       </div>
-      <div style={{ flex: 1, height: 360 }}>
+      <div className="story-flex-1 story-h-400">
         <Chart spec={electricity2023} />
       </div>
     </div>
-    <p
-      style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: 12,
-        opacity: 0.4,
-        padding: '0 16px 16px',
-        margin: 0,
-      }}
-    >
-      Source: IEA World Energy Outlook
-    </p>
+    <p className="story-editorial-source story-pad-sides">Source: IEA World Energy Outlook</p>
   </div>
 );
 
-const compactSpec: ChartSpec = {
-  ...electricity2023,
-  labels: { density: 'none' },
+const compactBase = {
+  labels: { density: 'none' as const },
+  legend: { show: false },
 };
-const compact2010: ChartSpec = { ...compactSpec, ...electricity2010, labels: { density: 'none' } };
+const compact2010: ChartSpec = {
+  ...electricity2010,
+  ...compactBase,
+  chrome: { subtitle: 'in 2010', source: 'IEA World Energy Outlook' },
+};
+const compact2023: ChartSpec = {
+  ...electricity2023,
+  ...compactBase,
+  chrome: { subtitle: 'in 2023', source: 'IEA World Energy Outlook' },
+};
 
 export const ElectricityMixCompact = () => (
-  <div style={{ maxWidth: 500 }}>
-    <div
-      style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        padding: '16px 16px 0',
-      }}
-    >
-      <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>
-        Renewables quadrupled since 2010
-      </h2>
-      <p style={{ margin: 0, fontSize: 12, opacity: 0.55 }}>
-        Global electricity generation by source (%)
-      </p>
+  <div className="story-max-w-500 story-editorial">
+    <div className="story-pad-top">
+      <h2 className="story-editorial-title-sm">Renewables quadrupled since 2010</h2>
+      <p className="story-editorial-subtitle-sm">Global electricity generation by source (%)</p>
     </div>
-    <div style={{ display: 'flex', gap: 8, padding: '0 16px' }}>
-      <div style={{ flex: 1, height: 260 }}>
+    <div className="story-flex-gap-8 story-pad-sides">
+      <div className="story-flex-1 story-h-280">
         <Chart spec={compact2010} />
       </div>
-      <div style={{ flex: 1, height: 260 }}>
-        <Chart spec={compactSpec} />
+      <div className="story-flex-1 story-h-280">
+        <Chart spec={compact2023} />
       </div>
     </div>
-    <p
-      style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: 11,
-        opacity: 0.4,
-        padding: '0 16px 16px',
-        margin: 0,
-      }}
-    >
-      Source: IEA World Energy Outlook
-    </p>
   </div>
 );
 
 export const ElectricityMixWide = () => (
-  <div style={{ maxWidth: 1200 }}>
-    <div
-      style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        padding: '16px 16px 0',
-      }}
-    >
-      <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700 }}>
-        Renewables have quadrupled their share since 2010
-      </h2>
-      <p style={{ margin: 0, fontSize: 14, opacity: 0.55 }}>
+  <div className="story-max-w-1200 story-editorial">
+    <div className="story-pad-top">
+      <h2 className="story-editorial-title">Renewables have quadrupled their share since 2010</h2>
+      <p className="story-editorial-subtitle">
         Share of global electricity generation by source (%)
       </p>
     </div>
-    <div style={{ display: 'flex', gap: 32, padding: '0 16px' }}>
-      <div style={{ flex: 1, height: 420 }}>
+    <div className="story-flex-gap-32 story-pad-sides">
+      <div className="story-flex-1 story-h-420">
         <Chart spec={electricity2010} />
       </div>
-      <div style={{ flex: 1, height: 420 }}>
+      <div className="story-flex-1 story-h-420">
         <Chart spec={electricity2023} />
       </div>
     </div>
-    <p
-      style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: 12,
-        opacity: 0.4,
-        padding: '0 16px 16px',
-        margin: 0,
-      }}
-    >
-      Source: IEA World Energy Outlook
-    </p>
+    <p className="story-editorial-source story-pad-sides">Source: IEA World Energy Outlook</p>
   </div>
 );

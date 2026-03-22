@@ -35,7 +35,7 @@ const donutSpec: ChartSpec = {
 };
 
 export const SmartphoneMarket = () => (
-  <div className="story-chart" style={{ height: 500 }}>
+  <div className="story-chart story-h-500">
     <Chart spec={donutSpec} />
   </div>
 );
@@ -51,13 +51,19 @@ const compactDonutSpec: ChartSpec = {
 };
 
 export const SmartphoneMarketCompact = () => (
-  <div style={{ width: 320, height: 380 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '320px', '--h': '380px' } as React.CSSProperties}
+  >
     <Chart spec={compactDonutSpec} />
   </div>
 );
 
 export const SmartphoneMarketWide = () => (
-  <div style={{ width: 1200, height: 600 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '600px' } as React.CSSProperties}
+  >
     <Chart spec={donutSpec} />
   </div>
 );
@@ -89,7 +95,7 @@ const pieSpec: ChartSpec = {
 };
 
 export const BrowserMarket = () => (
-  <div className="story-chart" style={{ height: 500 }}>
+  <div className="story-chart story-h-500">
     <Chart spec={pieSpec} />
   </div>
 );

@@ -172,7 +172,7 @@ const spec: TableSpec = {
 };
 
 export const StockSparklines: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 800 }}>
+  <div className="story-centered story-max-w-800">
     <DataTable spec={spec} />
   </div>
 );
@@ -233,7 +233,7 @@ const revenueSpec: TableSpec = {
 };
 
 export const RevenueColumns: Story = () => (
-  <div className="story-centered" style={{ maxWidth: 750 }}>
+  <div className="story-centered story-max-w-750">
     <DataTable spec={revenueSpec} />
   </div>
 );

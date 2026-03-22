@@ -151,9 +151,13 @@ export function computeDimensions(
     xAxisHeight = hasXAxisLabel ? 48 : 26;
   }
 
-  // Build margins: padding + chrome + axis space
+  // Build margins: padding + chrome + axis space.
+  // For radial charts (arc/donut), axes don't exist, so axisMargin is only
+  // added when there's actual chrome content that needs separation from the
+  // chart area. When chrome is empty the margin is just padding.
+  const topAxisGap = isRadial && chrome.topHeight === 0 ? 0 : axisMargin;
   const margins: Margins = {
-    top: padding + chrome.topHeight + axisMargin,
+    top: padding + chrome.topHeight + topAxisGap,
     right: padding + (isRadial ? padding : axisMargin),
     bottom: padding + chrome.bottomHeight + xAxisHeight,
     left: padding + (isRadial ? padding : axisMargin),
@@ -273,7 +277,8 @@ export function computeDimensions(
     );
 
     // Recalculate top/bottom margins with stripped chrome
-    const newTop = padding + fallbackChrome.topHeight + axisMargin;
+    const fallbackTopAxisGap = isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin;
+    const newTop = padding + fallbackChrome.topHeight + fallbackTopAxisGap;
     const topDelta = margins.top - newTop;
     const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;

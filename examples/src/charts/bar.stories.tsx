@@ -64,7 +64,7 @@ const simpleBarSpec: ChartSpec = {
 };
 
 export const SimpleBars = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={simpleBarSpec} />
   </div>
 );
@@ -128,7 +128,7 @@ const groupedBarSpec: ChartSpec = {
 };
 
 export const GroupedBars = () => (
-  <div className="story-chart" style={{ height: 420 }}>
+  <div className="story-chart story-h-420">
     <Chart spec={groupedBarSpec} />
   </div>
 );
@@ -187,7 +187,7 @@ const negativeBarSpec: ChartSpec = {
 };
 
 export const NegativeValues = () => (
-  <div className="story-chart" style={{ height: 440 }}>
+  <div className="story-chart story-h-440">
     <Chart spec={negativeBarSpec} />
   </div>
 );

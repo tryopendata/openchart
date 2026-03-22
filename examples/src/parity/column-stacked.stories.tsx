@@ -75,7 +75,7 @@ const energyColumnSpec: ChartSpec = {
 };
 
 export const EnergyMix = () => (
-  <div className="story-chart" style={{ height: 450 }}>
+  <div className="story-chart story-h-450">
     <Chart spec={energyColumnSpec} />
   </div>
 );
@@ -95,13 +95,19 @@ const compactEnergySpec: ChartSpec = {
 };
 
 export const EnergyMixCompact = () => (
-  <div style={{ width: 320, height: 350 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '320px', '--h': '350px' } as React.CSSProperties}
+  >
     <Chart spec={compactEnergySpec} />
   </div>
 );
 
 export const EnergyMixWide = () => (
-  <div style={{ width: 1200, height: 500 }}>
+  <div
+    className="story-debug-border story-fixed-size"
+    style={{ '--w': '1200px', '--h': '500px' } as React.CSSProperties}
+  >
     <Chart spec={energyColumnSpec} />
   </div>
 );

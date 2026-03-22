@@ -88,7 +88,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   line: {
     x: required('temporal', 'ordinal'),
     y: required('quantitative'),
-    color: optional('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional(),
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
@@ -101,7 +101,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     x: required('temporal', 'ordinal'),
     y: required('quantitative'),
     y2: optional('quantitative'),
-    color: optional('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
@@ -112,7 +112,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   point: {
     x: required('quantitative'),
     y: required('quantitative'),
-    color: optional('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
     shape: optional('nominal', 'ordinal'),
     opacity: optional('quantitative'),
@@ -124,7 +124,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   circle: {
     x: required('quantitative'),
     y: required('nominal', 'ordinal'),
-    color: optional('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
