@@ -10,6 +10,7 @@ import type {
   ChartSpec,
   DarkMode,
   GraphSpec,
+  LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
@@ -42,7 +43,7 @@ export interface UseChartReturn {
  * The chart mounts automatically and updates when the spec changes.
  */
 export function useChart(
-  spec: Ref<ChartSpec | GraphSpec>,
+  spec: Ref<ChartSpec | LayerSpec | GraphSpec>,
   options?: UseChartOptions,
 ): UseChartReturn {
   const containerRef = ref<HTMLDivElement | null>(null);

@@ -738,15 +738,72 @@ export interface GraphSpec {
   darkMode?: DarkMode;
 }
 
+// ---------------------------------------------------------------------------
+// Layer spec (multi-layer composition)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolution strategy for shared resources across layers.
+ * 'shared' (default): union domains, single axis/legend.
+ * 'independent': each layer gets its own scale/axis/legend.
+ */
+export type ResolveMode = 'shared' | 'independent';
+
+/**
+ * Per-channel resolution config. Controls whether scales, axes, and legends
+ * are shared or independent across layers.
+ */
+export interface ResolveConfig {
+  scale?: Partial<Record<'x' | 'y' | 'color' | 'size', ResolveMode>>;
+  axis?: Partial<Record<'x' | 'y', ResolveMode>>;
+  legend?: Partial<Record<'color' | 'size', ResolveMode>>;
+}
+
+/**
+ * Layer specification: composites multiple chart layers into a single view.
+ *
+ * Each element in `layer` is either a ChartSpec or another LayerSpec (nested).
+ * Shared data, encoding, and transforms at the LayerSpec level are inherited
+ * by children that don't define their own.
+ */
+export interface LayerSpec {
+  /** Array of child layers (ChartSpec or nested LayerSpec). */
+  layer: (ChartSpec | LayerSpec)[];
+  /** Shared data inherited by children without their own data. */
+  data?: DataRow[];
+  /** Shared encoding inherited by children (overridden per-channel by child). */
+  encoding?: Encoding;
+  /** Shared transforms. Parent transforms run before child transforms. */
+  transform?: Transform[];
+  /** Editorial chrome (title, subtitle, source, etc.). */
+  chrome?: Chrome;
+  /** Annotations on the layered view. */
+  annotations?: Annotation[];
+  /** Label display configuration. */
+  labels?: LabelConfig;
+  /** Legend display configuration. */
+  legend?: LegendConfig;
+  /** Whether the chart adapts to container width. Defaults to true. */
+  responsive?: boolean;
+  /** Theme configuration overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode behavior. Defaults to "off". */
+  darkMode?: DarkMode;
+  /** Resolution strategy for shared scales/axes/legends. */
+  resolve?: ResolveConfig;
+  /** Hidden series names. */
+  hiddenSeries?: string[];
+}
+
 /**
  * Top-level visualization spec: union discriminated by structural shape.
  *
  * - ChartSpec: has `mark` field (no `type`, no `layer`)
- * - LayerSpec: has `layer` field (future)
+ * - LayerSpec: has `layer` field
  * - TableSpec: has `type: 'table'`
  * - GraphSpec: has `type: 'graph'`
  */
-export type VizSpec = ChartSpec | TableSpec | GraphSpec;
+export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec;
 
 /** Chart spec without runtime data, for persistence/storage. */
 export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
@@ -974,6 +1031,11 @@ export function resolveMarkDef(mark: MarkType | MarkDef): MarkDef {
 /** Check if a spec is a ChartSpec (has `mark` field, not a layer/table/graph). */
 export function isChartSpec(spec: VizSpec | Record<string, unknown>): spec is ChartSpec {
   return 'mark' in spec && !('layer' in spec);
+}
+
+/** Check if a spec is a LayerSpec (has `layer` array). */
+export function isLayerSpec(spec: VizSpec | Record<string, unknown>): spec is LayerSpec {
+  return 'layer' in spec && Array.isArray((spec as Record<string, unknown>).layer);
 }
 
 /** Check if a spec is a TableSpec. */

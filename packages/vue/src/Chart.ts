@@ -13,6 +13,7 @@ import type {
   DarkMode,
   ElementEdit,
   GraphSpec,
+  LayerSpec,
   MarkEvent,
   TextAnnotation,
   ThemeConfig,
@@ -33,7 +34,7 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface ChartProps {
-  spec: ChartSpec | GraphSpec;
+  spec: ChartSpec | LayerSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   class?: string;
@@ -44,7 +45,7 @@ export const Chart = defineComponent({
   name: 'Chart',
   props: {
     spec: {
-      type: Object as PropType<ChartSpec | GraphSpec>,
+      type: Object as PropType<ChartSpec | LayerSpec | GraphSpec>,
       required: true,
     },
     theme: {

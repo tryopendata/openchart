@@ -5,7 +5,13 @@
  * useDarkMode: resolves the DarkMode preference to a boolean.
  */
 
-import type { ChartLayout, ChartSpec, DarkMode, GraphSpec } from '@opendata-ai/openchart-core';
+import type {
+  ChartLayout,
+  ChartSpec,
+  DarkMode,
+  GraphSpec,
+  LayerSpec,
+} from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { useEffect, useRef, useState } from 'react';
 
@@ -43,7 +49,10 @@ export interface UseChartReturn {
  * @param options - Mount options.
  * @returns { ref, chart, layout }
  */
-export function useChart(spec: ChartSpec | GraphSpec, options?: UseChartOptions): UseChartReturn {
+export function useChart(
+  spec: ChartSpec | LayerSpec | GraphSpec,
+  options?: UseChartOptions,
+): UseChartReturn {
   const ref = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const [layout, setLayout] = useState<ChartLayout | null>(null);

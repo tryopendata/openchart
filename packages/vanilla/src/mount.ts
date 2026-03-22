@@ -18,6 +18,7 @@ import type {
   DarkMode,
   ElementEdit,
   GraphSpec,
+  LayerSpec,
   MeasureTextFn,
   RangeAnnotation,
   RefLineAnnotation,
@@ -25,7 +26,8 @@ import type {
   ThemeConfig,
   TooltipContent,
 } from '@opendata-ai/openchart-core';
-import { compileChart } from '@opendata-ai/openchart-engine';
+import { isLayerSpec } from '@opendata-ai/openchart-core';
+import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import {
   exportCSV,
   exportJPG,
@@ -60,7 +62,7 @@ export interface ExportOptions extends JPGExportOptions {
 
 export interface ChartInstance {
   /** Re-compile and re-render with a new spec. */
-  update(spec: ChartSpec | GraphSpec): void;
+  update(spec: ChartSpec | LayerSpec | GraphSpec): void;
   /** Re-compile at current container dimensions. */
   resize(): void;
   /** Export the chart. */
@@ -1506,10 +1508,10 @@ function createScreenReaderTable(
  */
 export function createChart(
   container: HTMLElement,
-  spec: ChartSpec | GraphSpec,
+  spec: ChartSpec | LayerSpec | GraphSpec,
   options?: MountOptions,
 ): ChartInstance {
-  let currentSpec: ChartSpec | GraphSpec = spec;
+  let currentSpec: ChartSpec | LayerSpec | GraphSpec = spec;
   let currentLayout: ChartLayout;
   let svgElement: SVGElement | null = null;
   let tooltipManager: TooltipManager | null = null;
@@ -1541,7 +1543,10 @@ export function createChart(
       measureText,
     };
 
-    return compileChart(currentSpec, compileOpts);
+    if (isLayerSpec(currentSpec)) {
+      return compileLayer(currentSpec as LayerSpec, compileOpts);
+    }
+    return compileChart(currentSpec as ChartSpec | GraphSpec, compileOpts);
   }
 
   function getContainerDimensions(): { width: number; height: number } {
@@ -1685,13 +1690,14 @@ export function createChart(
       );
 
       // Chrome text drag
-      editCleanups.push(wireChromeDrag(svgElement, currentSpec, options.onEdit, setDragging));
+      const editSpec = currentSpec as ChartSpec | GraphSpec;
+      editCleanups.push(wireChromeDrag(svgElement, editSpec, options.onEdit, setDragging));
 
       // Legend drag
-      editCleanups.push(wireLegendDrag(svgElement, currentSpec, options.onEdit, setDragging));
+      editCleanups.push(wireLegendDrag(svgElement, editSpec, options.onEdit, setDragging));
 
       // Series label drag
-      editCleanups.push(wireSeriesLabelDrag(svgElement, currentSpec, options.onEdit, setDragging));
+      editCleanups.push(wireSeriesLabelDrag(svgElement, editSpec, options.onEdit, setDragging));
 
       cleanupEditDrags = () => {
         for (const cleanup of editCleanups) {

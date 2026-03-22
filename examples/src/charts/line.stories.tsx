@@ -438,3 +438,106 @@ export const ResponsiveDemo = () => (
     </div>
   </div>
 );
+
+// ---------------------------------------------------------------------------
+// Interpolation modes: same data rendered with different curve types
+// ---------------------------------------------------------------------------
+
+const interpolationData = [
+  { month: 'Jan', temp: 2.1 },
+  { month: 'Feb', temp: 3.5 },
+  { month: 'Mar', temp: 7.8 },
+  { month: 'Apr', temp: 12.4 },
+  { month: 'May', temp: 17.2 },
+  { month: 'Jun', temp: 21.0 },
+  { month: 'Jul', temp: 23.5 },
+  { month: 'Aug', temp: 22.8 },
+  { month: 'Sep', temp: 18.6 },
+  { month: 'Oct', temp: 12.9 },
+  { month: 'Nov', temp: 7.1 },
+  { month: 'Dec', temp: 3.2 },
+];
+
+function interpolationSpec(
+  mode: 'linear' | 'step' | 'monotone' | 'natural' | 'cardinal',
+  title: string,
+): ChartSpec {
+  return {
+    mark: { type: 'line', interpolate: mode, point: true },
+    data: interpolationData,
+    encoding: {
+      x: { field: 'month', type: 'ordinal' },
+      y: {
+        field: 'temp',
+        type: 'quantitative',
+        axis: { label: 'Temp (\u00B0C)', grid: true },
+      },
+    },
+    labels: { density: 'none' },
+    chrome: {
+      title,
+      subtitle: `interpolate: "${mode}"`,
+    },
+  };
+}
+
+export const InterpolationModes = () => (
+  <div className="story-column">
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+      <div className="story-debug-border" style={{ height: 280 }}>
+        <Chart spec={interpolationSpec('linear', 'Linear (default)')} />
+      </div>
+      <div className="story-debug-border" style={{ height: 280 }}>
+        <Chart spec={interpolationSpec('step', 'Step')} />
+      </div>
+      <div className="story-debug-border" style={{ height: 280 }}>
+        <Chart spec={interpolationSpec('monotone', 'Monotone')} />
+      </div>
+      <div className="story-debug-border" style={{ height: 280 }}>
+        <Chart spec={interpolationSpec('natural', 'Natural')} />
+      </div>
+      <div className="story-debug-border" style={{ height: 280 }}>
+        <Chart spec={interpolationSpec('cardinal', 'Cardinal')} />
+      </div>
+    </div>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Step area: EV charging station growth with step interpolation
+// ---------------------------------------------------------------------------
+
+const stepAreaSpec: ChartSpec = {
+  mark: { type: 'area', interpolate: 'step' },
+  data: [
+    { year: '2018-01-01', stations: 54 },
+    { year: '2019-01-01', stations: 67 },
+    { year: '2020-01-01', stations: 92 },
+    { year: '2021-01-01', stations: 129 },
+    { year: '2022-01-01', stations: 162 },
+    { year: '2023-01-01', stations: 186 },
+    { year: '2024-01-01', stations: 214 },
+  ],
+  encoding: {
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 7 } },
+    y: {
+      field: 'stations',
+      type: 'quantitative',
+      axis: { label: 'Public Charging Stations (thousands)', format: ',.0f', grid: true },
+    },
+  },
+  labels: { density: 'all', format: ',.0f' },
+  chrome: {
+    title: 'US Public EV Charging Network Has Quadrupled Since 2018',
+    subtitle:
+      'Number of public EV charging stations (thousands), step interpolation shows discrete annual jumps',
+    source: 'Source: Alternative Fuels Station Locator, DOE',
+    byline: 'Chart: OpenChart',
+  },
+};
+
+export const StepArea = () => (
+  <div className="story-chart" style={{ height: 400 }}>
+    <Chart spec={stepAreaSpec} />
+  </div>
+);
