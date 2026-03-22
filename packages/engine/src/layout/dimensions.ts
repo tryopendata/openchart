@@ -236,7 +236,8 @@ export function computeDimensions(
   }
 
   // Rotated y-axis label needs extra left margin (rendered at area.x - 45 in SVG)
-  if (encoding.y?.axis && (encoding.y.axis as Record<string, unknown>).label && !isRadial) {
+  const yAxis = encoding.y?.axis as Record<string, unknown> | undefined;
+  if (yAxis && (yAxis.title || yAxis.label) && !isRadial) {
     const rotatedLabelMargin = 45 + Math.ceil(theme.fonts.sizes.body / 2) + 4;
     margins.left = Math.max(margins.left, padding + rotatedLabelMargin);
   }
