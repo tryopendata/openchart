@@ -14,7 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const singleLineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // 2019 (quarterly samples)
     { date: '2019-01-01', rate: 1.6 },
@@ -112,7 +112,7 @@ export const SingleLine = () => (
 // ---------------------------------------------------------------------------
 
 const multiSeriesSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // United States (annual GDP growth %)
     { date: '2019-01-01', gdp: 2.5, country: 'United States' },
@@ -195,7 +195,7 @@ export const MultiSeries = () => (
 // ---------------------------------------------------------------------------
 
 const fiveSeriesSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     // Amazon (calendar year revenue, $B)
     { year: '2019-01-01', revenue: 281, company: 'Amazon' },
@@ -274,7 +274,7 @@ export const FiveSeries = () => (
 // ---------------------------------------------------------------------------
 
 const singleAreaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     { year: '2015-01-01', sales: 1.3 },
     { year: '2016-01-01', sales: 2.1 },
@@ -335,7 +335,7 @@ export const AreaChart = () => (
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
-  type: 'area',
+  mark: 'area',
   data: [
     // Coal (TWh)
     { year: '2015-01-01', generation: 9538, source: 'Coal' },

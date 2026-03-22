@@ -20,7 +20,8 @@ const fullStrategy: LayoutStrategy = {
 
 function makeSimpleColumnSpec(): NormalizedChartSpec {
   return {
-    type: 'column',
+    markType: 'bar',
+    markDef: { type: 'bar', orient: 'vertical' },
     data: [
       { month: 'Jan', sales: 120 },
       { month: 'Feb', sales: 80 },
@@ -42,7 +43,8 @@ function makeSimpleColumnSpec(): NormalizedChartSpec {
 
 function makeGroupedColumnSpec(): NormalizedChartSpec {
   return {
-    type: 'column',
+    markType: 'bar',
+    markDef: { type: 'bar', orient: 'vertical' },
     data: [
       { month: 'Jan', sales: 120, region: 'North' },
       { month: 'Jan', sales: 80, region: 'South' },
@@ -67,7 +69,8 @@ function makeGroupedColumnSpec(): NormalizedChartSpec {
 
 function makeNegativeColumnSpec(): NormalizedChartSpec {
   return {
-    type: 'column',
+    markType: 'bar',
+    markDef: { type: 'bar', orient: 'vertical' },
     data: [
       { quarter: 'Q1', growth: 5 },
       { quarter: 'Q2', growth: -3 },
@@ -211,7 +214,8 @@ describe('computeColumnMarks', () => {
   describe('edge cases', () => {
     it('returns empty array when no y encoding', () => {
       const spec: NormalizedChartSpec = {
-        type: 'column',
+        markType: 'bar',
+        markDef: { type: 'bar', orient: 'vertical' },
         data: [{ month: 'Jan', sales: 100 }],
         encoding: {
           x: { field: 'month', type: 'nominal' },
@@ -230,7 +234,8 @@ describe('computeColumnMarks', () => {
 
     it('returns empty array for empty data', () => {
       const spec: NormalizedChartSpec = {
-        type: 'column',
+        markType: 'bar',
+        markDef: { type: 'bar', orient: 'vertical' },
         data: [],
         encoding: {
           x: { field: 'month', type: 'nominal' },
@@ -288,7 +293,8 @@ describe('computeColumnLabels', () => {
 
   it('applies format with trailing zero trim (~)', () => {
     const spec: NormalizedChartSpec = {
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { company: 'A', cap: 3.1 },
         { company: 'B', cap: 2.85 },
@@ -315,7 +321,8 @@ describe('computeColumnLabels', () => {
 
   it('applies format with literal alpha suffix (e.g. "T")', () => {
     const spec: NormalizedChartSpec = {
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { company: 'Apple', cap: 3.75 },
         { company: 'Meta', cap: 1.63 },

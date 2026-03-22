@@ -14,6 +14,7 @@ export type {
 export {
   CHART_ENCODING_RULES,
   GRAPH_ENCODING_RULES,
+  MARK_ENCODING_RULES,
 } from './encoding';
 // Event types (chart interaction callbacks)
 export type {
@@ -100,10 +101,13 @@ export type {
   LabelConfig,
   LabelDensity,
   LegendConfig,
+  MarkDef,
+  MarkType,
   NodeOverride,
   RangeAnnotation,
   RefLineAnnotation,
   ScaleConfig,
+  ScaleType,
   SeriesStyle,
   StoredVizSpec,
   TableSpec,
@@ -120,6 +124,10 @@ export {
   isRefLineAnnotation,
   isTableSpec,
   isTextAnnotation,
+  MARK_DISPLAY_NAMES,
+  MARK_TYPES,
+  resolveMarkDef,
+  resolveMarkType,
 } from './spec';
 // Table types
 export type {

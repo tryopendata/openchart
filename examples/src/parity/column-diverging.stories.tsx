@@ -14,7 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const tempSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     { year: '1900', anomaly: -0.08, trend: 'Cooler' },
     { year: '1910', anomaly: -0.42, trend: 'Cooler' },

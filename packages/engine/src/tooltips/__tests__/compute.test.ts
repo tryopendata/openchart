@@ -11,7 +11,8 @@ const _chartArea: Rect = { x: 50, y: 20, width: 500, height: 300 };
 
 function makeLineSpec(): NormalizedChartSpec {
   return {
-    type: 'line',
+    markType: 'line',
+    markDef: { type: 'line' },
     data: [
       { date: '2020-01-01', value: 10, country: 'US' },
       { date: '2021-01-01', value: 40, country: 'US' },
@@ -34,7 +35,8 @@ function makeLineSpec(): NormalizedChartSpec {
 
 function makeBarSpec(): NormalizedChartSpec {
   return {
-    type: 'bar',
+    markType: 'bar',
+    markDef: { type: 'bar' },
     data: [
       { category: 'A', value: 100 },
       { category: 'B', value: 200 },
@@ -55,7 +57,8 @@ function makeBarSpec(): NormalizedChartSpec {
 
 function makePieSpec(): NormalizedChartSpec {
   return {
-    type: 'pie',
+    markType: 'arc',
+    markDef: { type: 'arc' },
     data: [
       { segment: 'Alpha', amount: 30 },
       { segment: 'Beta', amount: 50 },
@@ -282,7 +285,8 @@ describe('computeTooltipDescriptors', () => {
       const spec = makeLineSpec();
       const marks: Mark[] = [
         {
-          type: 'line',
+          markType: 'line',
+          markDef: { type: 'line' },
           points: [
             { x: 100, y: 200 },
             { x: 300, y: 100 },
@@ -302,7 +306,8 @@ describe('computeTooltipDescriptors', () => {
       const spec = makeLineSpec();
       const marks: Mark[] = [
         {
-          type: 'area',
+          markType: 'area',
+          markDef: { type: 'area' },
           topPoints: [{ x: 100, y: 200 }],
           bottomPoints: [{ x: 100, y: 300 }],
           path: 'M0,0',

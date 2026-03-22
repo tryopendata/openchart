@@ -356,7 +356,7 @@ describe('chart chrome rendering', () => {
 
   it('wraps long title text into tspan elements at narrow widths', () => {
     const longTitleSpec: ChartSpec = {
-      type: 'bar',
+      mark: 'bar',
       data: [
         { name: 'A', value: 10 },
         { name: 'B', value: 20 },
@@ -396,7 +396,7 @@ describe('chart chrome rendering', () => {
 
   it('chart with no chrome specified renders no chrome text elements', () => {
     const noChrome: ChartSpec = {
-      type: 'bar',
+      mark: 'bar',
       data: [{ name: 'A', value: 10 }],
       encoding: {
         x: { field: 'value', type: 'quantitative' },

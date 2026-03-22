@@ -88,7 +88,7 @@ const stockData = [
 
 function stockPriceSpec(dark: boolean): ChartSpec {
   return {
-    type: 'area',
+    mark: 'area',
     data: stockData,
     encoding: {
       x: { field: 'date', type: 'temporal', axis: { tickCount: 4 } },
@@ -226,7 +226,7 @@ const benchmarkData = [
 
 function benchmarkSpec(dark: boolean): ChartSpec {
   return {
-    type: 'line',
+    mark: 'line',
     data: benchmarkData,
     encoding: {
       x: { field: 'date', type: 'temporal', axis: { tickCount: 8 } },
@@ -304,7 +304,7 @@ const sectorData = [
 
 function sectorSpec(dark: boolean): ChartSpec {
   return {
-    type: 'bar',
+    mark: 'bar',
     data: sectorData,
     encoding: {
       x: {
@@ -440,7 +440,7 @@ const riskReturnData = [
 
 function riskReturnSpec(dark: boolean): ChartSpec {
   return {
-    type: 'scatter',
+    mark: 'point',
     data: riskReturnData,
     encoding: {
       x: {

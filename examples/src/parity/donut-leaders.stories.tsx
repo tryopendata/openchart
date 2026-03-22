@@ -13,7 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const donutSpec: ChartSpec = {
-  type: 'donut',
+  mark: { type: 'arc', innerRadius: 40 },
   data: [
     { brand: 'Apple', share: 23.0 },
     { brand: 'Samsung', share: 16.0 },
@@ -67,7 +67,7 @@ export const SmartphoneMarketWide = () => (
 // ---------------------------------------------------------------------------
 
 const pieSpec: ChartSpec = {
-  type: 'pie',
+  mark: 'arc',
   data: [
     { browser: 'Chrome', share: 63.6 },
     { browser: 'Safari', share: 19.8 },

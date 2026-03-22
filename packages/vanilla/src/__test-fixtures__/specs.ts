@@ -12,7 +12,7 @@ import type { ChartSpec, GraphSpec, TableSpec } from '@opendata-ai/openchart-eng
 // ---------------------------------------------------------------------------
 
 export const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 40, country: 'US' },
@@ -32,7 +32,7 @@ export const lineSpec: ChartSpec = {
 };
 
 export const singleSeriesLineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10 },
     { date: '2021-01-01', value: 40 },
@@ -49,7 +49,7 @@ export const singleSeriesLineSpec: ChartSpec = {
 // ---------------------------------------------------------------------------
 
 export const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 30 },
@@ -69,7 +69,7 @@ export const barSpec: ChartSpec = {
 // ---------------------------------------------------------------------------
 
 export const columnSpec: ChartSpec = {
-  type: 'column',
+  mark: 'bar',
   data: [
     { category: 'Q1', revenue: 100 },
     { category: 'Q2', revenue: 200 },
@@ -89,7 +89,7 @@ export const columnSpec: ChartSpec = {
 // ---------------------------------------------------------------------------
 
 export const scatterSpec: ChartSpec = {
-  type: 'scatter',
+  mark: 'point',
   data: [
     { x: 10, y: 20, group: 'A' },
     { x: 30, y: 40, group: 'A' },
@@ -111,7 +111,7 @@ export const scatterSpec: ChartSpec = {
 // ---------------------------------------------------------------------------
 
 export const pieSpec: ChartSpec = {
-  type: 'pie',
+  mark: 'arc',
   data: [
     { category: 'Red', value: 30 },
     { category: 'Blue', value: 50 },
@@ -131,7 +131,7 @@ export const pieSpec: ChartSpec = {
 // ---------------------------------------------------------------------------
 
 export const multiSeriesBarSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'A', value: 10, group: 'X' },
     { name: 'B', value: 30, group: 'X' },

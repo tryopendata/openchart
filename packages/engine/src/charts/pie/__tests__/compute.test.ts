@@ -20,7 +20,8 @@ const fullStrategy: LayoutStrategy = {
 
 function makeBasicPieSpec(): NormalizedChartSpec {
   return {
-    type: 'pie',
+    markType: 'arc',
+    markDef: { type: 'arc' },
     data: [
       { category: 'A', value: 40 },
       { category: 'B', value: 30 },
@@ -42,7 +43,8 @@ function makeBasicPieSpec(): NormalizedChartSpec {
 
 function makeSmallSlicePieSpec(): NormalizedChartSpec {
   return {
-    type: 'pie',
+    markType: 'arc',
+    markDef: { type: 'arc' },
     data: [
       { category: 'Big', value: 90 },
       { category: 'Medium', value: 7 },
@@ -65,7 +67,8 @@ function makeSmallSlicePieSpec(): NormalizedChartSpec {
 
 function makeDonutSpec(): NormalizedChartSpec {
   return {
-    type: 'donut',
+    markType: 'arc',
+    markDef: { type: 'arc', innerRadius: 0.5 },
     data: [
       { segment: 'Desktop', users: 55 },
       { segment: 'Mobile', users: 35 },
@@ -209,7 +212,8 @@ describe('computePieMarks', () => {
   describe('edge cases', () => {
     it('returns empty array when no value encoding', () => {
       const spec: NormalizedChartSpec = {
-        type: 'pie',
+        markType: 'arc',
+        markDef: { type: 'arc' },
         data: [{ category: 'A' }],
         encoding: {
           color: { field: 'category', type: 'nominal' },
@@ -228,7 +232,8 @@ describe('computePieMarks', () => {
 
     it('returns empty array for empty data', () => {
       const spec: NormalizedChartSpec = {
-        type: 'pie',
+        markType: 'arc',
+        markDef: { type: 'arc' },
         data: [],
         encoding: {
           y: { field: 'value', type: 'quantitative' },

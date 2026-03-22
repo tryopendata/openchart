@@ -5,7 +5,8 @@ import type { NormalizedChartSpec } from '../compiler/types';
 import { computeDimensions } from '../layout/dimensions';
 
 const baseSpec: NormalizedChartSpec = {
-  type: 'line',
+  markType: 'line',
+  markDef: { type: 'line' },
   data: [
     { date: '2020-01-01', value: 10 },
     { date: '2021-01-01', value: 20 },
@@ -152,7 +153,8 @@ describe('computeDimensions', () => {
   it('reserves extra bottom space for rotated x-axis labels', () => {
     const rotatedSpec: NormalizedChartSpec = {
       ...baseSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: [
         { category: 'California', value: 10 },
         { category: 'New York', value: 20 },
@@ -165,7 +167,8 @@ describe('computeDimensions', () => {
     };
     const normalSpec: NormalizedChartSpec = {
       ...baseSpec,
-      type: 'column',
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
       data: rotatedSpec.data,
       encoding: {
         x: { field: 'category', type: 'nominal' },

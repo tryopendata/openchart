@@ -181,9 +181,9 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   // 1. Validate + normalize
   const { spec: normalized } = compileSpec(spec);
 
-  if (normalized.type !== 'graph') {
+  if (!('type' in normalized) || normalized.type !== 'graph') {
     throw new Error(
-      `compileGraph received a ${normalized.type} spec. Use compileChart or compileTable instead.`,
+      'compileGraph received a non-graph spec. Use compileChart or compileTable instead.',
     );
   }
 

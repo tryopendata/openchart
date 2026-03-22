@@ -5,7 +5,6 @@ import type {
   GraphSpec,
   RangeAnnotation,
   TableSpec,
-  TextAnnotation,
   VizSpec,
 } from '../spec';
 import {
@@ -16,6 +15,7 @@ import {
   isRefLineAnnotation,
   isTableSpec,
   isTextAnnotation,
+  MARK_TYPES,
 } from '../spec';
 
 // ---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ import {
 
 function makeChartSpec(overrides?: Partial<ChartSpec>): ChartSpec {
   return {
-    type: 'line',
+    mark: 'line',
     data: [
       { date: '2020-01', value: 42 },
       { date: '2020-02', value: 45 },
@@ -69,11 +69,11 @@ function makeGraphSpec(overrides?: Partial<GraphSpec>): GraphSpec {
 // ---------------------------------------------------------------------------
 
 describe('isChartSpec', () => {
-  it('returns true for all chart types', () => {
-    const chartTypes = ['line', 'area', 'bar', 'column', 'pie', 'donut', 'dot', 'scatter'] as const;
+  it('returns true for all mark types', () => {
+    const markTypes = ['line', 'area', 'bar', 'point', 'circle', 'arc'] as const;
 
-    for (const chartType of chartTypes) {
-      const spec = makeChartSpec({ type: chartType });
+    for (const markType of markTypes) {
+      const spec = makeChartSpec({ mark: markType });
       expect(isChartSpec(spec)).toBe(true);
     }
   });
@@ -136,25 +136,40 @@ describe('type guard mutual exclusivity', () => {
 });
 
 // ---------------------------------------------------------------------------
-// CHART_TYPES constant tests
+// MARK_TYPES constant tests
 // ---------------------------------------------------------------------------
 
-describe('CHART_TYPES', () => {
-  it('contains all 8 chart types', () => {
-    expect(CHART_TYPES.size).toBe(8);
+describe('MARK_TYPES', () => {
+  it('contains all 10 mark types', () => {
+    expect(MARK_TYPES.size).toBe(10);
   });
 
   it('contains expected types', () => {
-    const expected = ['line', 'area', 'bar', 'column', 'pie', 'donut', 'dot', 'scatter'];
+    const expected = [
+      'line',
+      'area',
+      'bar',
+      'point',
+      'circle',
+      'arc',
+      'text',
+      'rule',
+      'tick',
+      'rect',
+    ];
     for (const t of expected) {
-      expect(CHART_TYPES.has(t)).toBe(true);
+      expect(MARK_TYPES.has(t)).toBe(true);
     }
   });
 
-  it('does not contain non-chart types', () => {
-    expect(CHART_TYPES.has('table')).toBe(false);
-    expect(CHART_TYPES.has('graph')).toBe(false);
-    expect(CHART_TYPES.has('map')).toBe(false);
+  it('does not contain non-mark types', () => {
+    expect(MARK_TYPES.has('table')).toBe(false);
+    expect(MARK_TYPES.has('graph')).toBe(false);
+    expect(MARK_TYPES.has('map')).toBe(false);
+  });
+
+  it('CHART_TYPES is an alias for MARK_TYPES', () => {
+    expect(CHART_TYPES).toBe(MARK_TYPES);
   });
 });
 
@@ -205,7 +220,7 @@ describe('isRangeAnnotation', () => {
   });
 
   it('returns false for text annotations', () => {
-    const annotation: TextAnnotation = {
+    const annotation: Annotation = {
       type: 'text',
       x: 10,
       y: 20,
@@ -227,7 +242,7 @@ describe('isRefLineAnnotation', () => {
   });
 
   it('returns false for text annotations', () => {
-    const annotation: TextAnnotation = {
+    const annotation: Annotation = {
       type: 'text',
       x: 10,
       y: 20,
@@ -273,14 +288,14 @@ describe('annotation type guard mutual exclusivity', () => {
 describe('type-level spec construction', () => {
   it('allows a fully featured chart spec', () => {
     const spec: ChartSpec = {
-      type: 'line',
+      mark: 'line',
       data: [{ date: '2020-01', value: 42, series: 'US' }],
       encoding: {
         x: { field: 'date', type: 'temporal' },
         y: {
           field: 'value',
           type: 'quantitative',
-          axis: { label: 'GDP Growth (%)' },
+          axis: { title: 'GDP Growth (%)' },
           scale: { zero: true, nice: true },
         },
         color: { field: 'series', type: 'nominal' },
@@ -322,10 +337,23 @@ describe('type-level spec construction', () => {
     };
 
     // If this compiles and type-checks, the types are correct.
-    expect(spec.type).toBe('line');
+    expect(spec.mark).toBe('line');
     expect(spec.data).toHaveLength(1);
     expect(spec.encoding.x?.field).toBe('date');
     expect(spec.annotations).toHaveLength(3);
+  });
+
+  it('allows a chart spec with mark object', () => {
+    const spec: ChartSpec = {
+      mark: { type: 'line', interpolate: 'step', point: true },
+      data: [{ x: 1, y: 2 }],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+    };
+
+    expect(typeof spec.mark).toBe('object');
   });
 
   it('allows a table spec with column configs', () => {

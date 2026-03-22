@@ -618,7 +618,7 @@ function ChartEditingDemo() {
 
   // Build the spec
   const spec: ChartSpec = {
-    type: 'line',
+    mark: 'line',
     data: flatRevenueData,
     encoding: {
       x: { field: 'quarter', type: 'ordinal', axis: { tickCount: 6 } },

@@ -18,7 +18,7 @@ import { useChart, useDarkMode } from '../hooks';
 // ---------------------------------------------------------------------------
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 30 },

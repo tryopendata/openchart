@@ -8,7 +8,7 @@ import { Chart } from '../Chart';
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
-  type: 'line',
+  mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
     { date: '2021-01-01', value: 40, country: 'US' },
@@ -28,7 +28,7 @@ const lineSpec: ChartSpec = {
 };
 
 const barSpec: ChartSpec = {
-  type: 'bar',
+  mark: 'bar',
   data: [
     { name: 'A', value: 10 },
     { name: 'B', value: 30 },
