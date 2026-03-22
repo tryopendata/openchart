@@ -16,11 +16,12 @@ import type {
   PointMark,
   Rect,
 } from '@opendata-ai/openchart-core';
-import { curveMonotoneX, line } from 'd3-shape';
+import { line } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, groupByField, scaleValue, sortByField } from '../utils';
+import { resolveCurve } from './curves';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,7 +58,7 @@ export function computeLineMarks(
     return [];
   }
 
-  const colorField = encoding.color?.field;
+  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
   const groups = groupByField(spec.data, colorField);
   const marks: (LineMark | PointMark)[] = [];
 
@@ -102,11 +103,12 @@ export function computeLineMarks(
       segments.push(currentSegment);
     }
 
-    // Build the D3 line generator with monotone interpolation
+    // Build the D3 line generator with configured interpolation
+    const curve = resolveCurve(spec.markDef.interpolate);
     const lineGenerator = line<{ x: number; y: number }>()
       .x((d) => d.x)
       .y((d) => d.y)
-      .curve(curveMonotoneX);
+      .curve(curve);
 
     // Combine all segments into a single path string with M/L commands.
     // Each segment starts a new M (moveto) command, creating line breaks
@@ -151,6 +153,7 @@ export function computeLineMarks(
 
     // Create the LineMark with the combined path points.
     // The points array includes all valid points across all segments.
+    // dataPoints carries pixel coordinates + original data for voronoi tooltip overlay.
     const lineMark: LineMark = {
       type: 'line',
       points: allPoints,
@@ -161,30 +164,41 @@ export function computeLineMarks(
       opacity: styleOverride?.opacity,
       seriesKey: seriesStyleKey,
       data: pointsWithData.map((p) => p.row),
+      dataPoints: pointsWithData.map((p) => ({ x: p.x, y: p.y, datum: p.row })),
       aria,
     };
 
     marks.push(lineMark);
 
-    // Create point marks for hover targets (skip if showPoints is false)
-    const showPoints = styleOverride?.showPoints !== false;
-    for (let i = 0; i < pointsWithData.length; i++) {
-      const p = pointsWithData[i];
-      const pointMark: PointMark = {
-        type: 'point',
-        cx: p.x,
-        cy: p.y,
-        r: showPoints ? DEFAULT_POINT_RADIUS : 0,
-        fill: color,
-        stroke: showPoints ? '#ffffff' : 'transparent',
-        strokeWidth: showPoints ? 1.5 : 0,
-        fillOpacity: 0,
-        data: p.row,
-        aria: {
-          label: `Data point: ${xChannel.field}=${String(p.row[xChannel.field])}, ${yChannel.field}=${String(p.row[yChannel.field])}`,
-        },
-      };
-      marks.push(pointMark);
+    // Only emit PointMark objects when markDef.point is truthy.
+    // When point is false or undefined, the voronoi overlay handles tooltips instead.
+    const markPoint = spec.markDef.point;
+    const showPoints = markPoint === true || markPoint === 'transparent';
+
+    if (showPoints) {
+      const isTransparent = markPoint === 'transparent';
+      // Also respect per-series showPoints override
+      const seriesShowPoints = styleOverride?.showPoints !== false;
+
+      for (let i = 0; i < pointsWithData.length; i++) {
+        const p = pointsWithData[i];
+        const visible = seriesShowPoints && !isTransparent;
+        const pointMark: PointMark = {
+          type: 'point',
+          cx: p.x,
+          cy: p.y,
+          r: visible ? DEFAULT_POINT_RADIUS : 0,
+          fill: color,
+          stroke: visible ? '#ffffff' : 'transparent',
+          strokeWidth: visible ? 1.5 : 0,
+          fillOpacity: isTransparent ? 0 : 0,
+          data: p.row,
+          aria: {
+            label: `Data point: ${xChannel.field}=${String(p.row[xChannel.field])}, ${yChannel.field}=${String(p.row[yChannel.field])}`,
+          },
+        };
+        marks.push(pointMark);
+      }
     }
   }
 

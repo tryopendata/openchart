@@ -204,6 +204,140 @@ function wireTooltipEvents(
 }
 
 // ---------------------------------------------------------------------------
+// Voronoi overlay tooltip wiring (nearest-point lookup for line/area charts)
+// ---------------------------------------------------------------------------
+
+/** A single data point with pixel coordinates, datum, and pre-computed tooltip. */
+interface VoronoiPoint {
+  x: number;
+  y: number;
+  datum: Record<string, unknown>;
+  tooltip?: TooltipContent;
+  color: string;
+}
+
+/**
+ * Collect all dataPoints from line and area marks for nearest-point lookup.
+ */
+function collectVoronoiPoints(layout: ChartLayout): VoronoiPoint[] {
+  const points: VoronoiPoint[] = [];
+  for (const mark of layout.marks) {
+    if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints) {
+      const color = mark.type === 'line' ? mark.stroke : mark.fill;
+      for (const dp of mark.dataPoints) {
+        points.push({ ...dp, color });
+      }
+    }
+  }
+  return points;
+}
+
+/**
+ * Find the nearest VoronoiPoint to a given (x, y) position using linear scan.
+ * Returns null if no points exist.
+ */
+function findNearestPoint(points: VoronoiPoint[], x: number, y: number): VoronoiPoint | null {
+  if (points.length === 0) return null;
+
+  let nearest = points[0];
+  let minDist = (points[0].x - x) ** 2 + (points[0].y - y) ** 2;
+
+  for (let i = 1; i < points.length; i++) {
+    const dist = (points[i].x - x) ** 2 + (points[i].y - y) ** 2;
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = points[i];
+    }
+  }
+
+  return nearest;
+}
+
+/**
+ * Wire voronoi overlay tooltip events for line/area charts.
+ * Uses a transparent overlay rect with nearest-point lookup instead of
+ * per-point event listeners, eliminating DOM bloat.
+ * Returns a cleanup function.
+ */
+function wireVoronoiTooltipEvents(
+  svg: SVGElement,
+  layout: ChartLayout,
+  tooltipManager: TooltipManager,
+): () => void {
+  const overlay = svg.querySelector('[data-voronoi-overlay]');
+  if (!overlay) return () => {};
+
+  const voronoiPoints = collectVoronoiPoints(layout);
+  if (voronoiPoints.length === 0) return () => {};
+
+  const cleanups: Array<() => void> = [];
+
+  const handleMouseMove = (e: Event) => {
+    const mouseEvent = e as MouseEvent;
+    const svgEl = svg as unknown as SVGSVGElement;
+    const svgRect = svgEl.getBoundingClientRect();
+    const viewBox = svgEl.viewBox?.baseVal;
+
+    // Convert client coordinates to SVG viewBox coordinates
+    const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
+    const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
+    const svgX = (mouseEvent.clientX - svgRect.left) * scaleX;
+    const svgY = (mouseEvent.clientY - svgRect.top) * scaleY;
+
+    const nearest = findNearestPoint(voronoiPoints, svgX, svgY);
+    if (!nearest?.tooltip) return;
+
+    // Show tooltip at the mouse position (relative to container, not SVG viewBox)
+    const containerX = mouseEvent.clientX - svgRect.left;
+    const containerY = mouseEvent.clientY - svgRect.top;
+    tooltipManager.show(nearest.tooltip, containerX, containerY);
+  };
+
+  const handleMouseLeave = () => {
+    tooltipManager.hide();
+  };
+
+  // Touch support
+  const handleTouchStart = (e: Event) => {
+    const touchEvent = e as TouchEvent;
+    if (touchEvent.touches.length > 0) {
+      const touch = touchEvent.touches[0];
+      const svgEl = svg as unknown as SVGSVGElement;
+      const svgRect = svgEl.getBoundingClientRect();
+      const viewBox = svgEl.viewBox?.baseVal;
+
+      const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
+      const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
+      const svgX = (touch.clientX - svgRect.left) * scaleX;
+      const svgY = (touch.clientY - svgRect.top) * scaleY;
+
+      const nearest = findNearestPoint(voronoiPoints, svgX, svgY);
+      if (!nearest?.tooltip) return;
+
+      const containerX = touch.clientX - svgRect.left;
+      const containerY = touch.clientY - svgRect.top;
+      tooltipManager.show(nearest.tooltip, containerX, containerY);
+    }
+  };
+
+  overlay.addEventListener('mousemove', handleMouseMove);
+  overlay.addEventListener('mouseleave', handleMouseLeave);
+  overlay.addEventListener('touchstart', handleTouchStart);
+
+  cleanups.push(() => {
+    overlay.removeEventListener('mousemove', handleMouseMove);
+    overlay.removeEventListener('mouseleave', handleMouseLeave);
+    overlay.removeEventListener('touchstart', handleTouchStart);
+  });
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Chart event wiring (click, hover, leave on marks; legend toggle; annotation click)
 // ---------------------------------------------------------------------------
 
@@ -1381,6 +1515,7 @@ export function createChart(
   let tooltipManager: TooltipManager | null = null;
   let disconnectResize: (() => void) | null = null;
   let cleanupTooltipEvents: (() => void) | null = null;
+  let cleanupVoronoiEvents: (() => void) | null = null;
   let cleanupKeyboardNav: (() => void) | null = null;
   let cleanupLegend: (() => void) | null = null;
   let cleanupChartEvents: (() => void) | null = null;
@@ -1429,6 +1564,10 @@ export function createChart(
       cleanupTooltipEvents();
       cleanupTooltipEvents = null;
     }
+    if (cleanupVoronoiEvents) {
+      cleanupVoronoiEvents();
+      cleanupVoronoiEvents = null;
+    }
     if (cleanupKeyboardNav) {
       cleanupKeyboardNav();
       cleanupKeyboardNav = null;
@@ -1470,6 +1609,9 @@ export function createChart(
       currentLayout.tooltipDescriptors,
       tooltipManager,
     );
+
+    // Wire voronoi overlay tooltip events for line/area charts
+    cleanupVoronoiEvents = wireVoronoiTooltipEvents(svgElement, currentLayout, tooltipManager);
 
     // Wire keyboard navigation
     cleanupKeyboardNav = wireKeyboardNav(
@@ -1624,6 +1766,10 @@ export function createChart(
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();
       cleanupTooltipEvents = null;
+    }
+    if (cleanupVoronoiEvents) {
+      cleanupVoronoiEvents();
+      cleanupVoronoiEvents = null;
     }
     if (cleanupKeyboardNav) {
       cleanupKeyboardNav();

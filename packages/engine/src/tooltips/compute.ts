@@ -70,8 +70,8 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
     });
   }
 
-  // Size (for scatter/bubble)
-  if (encoding.size) {
+  // Size (for scatter/bubble) - skip conditional size definitions
+  if (encoding.size && 'field' in encoding.size) {
     fields.push({
       label: encoding.size.axis?.label ?? encoding.size.field,
       value: formatValue(row[encoding.size.field], encoding.size.type, encoding.size.axis?.format),
@@ -103,8 +103,8 @@ function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
     return String(row[encoding.y.field] ?? '');
   }
 
-  // For color-encoded series, use the series name
-  if (encoding.color) {
+  // For color-encoded series, use the series name (skip conditional defs)
+  if (encoding.color && 'field' in encoding.color) {
     return String(row[encoding.color.field] ?? '');
   }
 
@@ -116,12 +116,20 @@ function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
 // ---------------------------------------------------------------------------
 
 function tooltipsForLine(
-  _mark: LineMark,
-  _encoding: Encoding,
+  mark: LineMark,
+  encoding: Encoding,
   _markIndex: number,
 ): Array<[string, TooltipContent]> {
-  // Line marks themselves don't get individual tooltips.
-  // The point marks at each data point handle that.
+  // Populate tooltip content on each dataPoint for voronoi overlay lookup.
+  // Line marks don't emit per-mark tooltip descriptors (the overlay handles it).
+  if (mark.dataPoints) {
+    for (const dp of mark.dataPoints) {
+      dp.tooltip = {
+        title: getTooltipTitle(dp.datum, encoding),
+        fields: buildFields(dp.datum, encoding, mark.stroke),
+      };
+    }
+  }
   return [];
 }
 
@@ -156,8 +164,9 @@ function tooltipsForArc(
   const fields: TooltipField[] = [];
 
   // For pie/donut, show the category and its value
-  if (encoding.color) {
-    const categoryName = String(row[encoding.color.field] ?? '');
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  if (colorEnc) {
+    const categoryName = String(row[colorEnc.field] ?? '');
     if (encoding.y) {
       fields.push({
         label: categoryName,
@@ -173,17 +182,26 @@ function tooltipsForArc(
     });
   }
 
-  const title = encoding.color ? String(row[encoding.color.field] ?? '') : undefined;
+  const title = colorEnc ? String(row[colorEnc.field] ?? '') : undefined;
 
   return [[`arc-${markIndex}`, { title, fields }]];
 }
 
 function tooltipsForArea(
-  _mark: AreaMark,
-  _encoding: Encoding,
+  mark: AreaMark,
+  encoding: Encoding,
   _markIndex: number,
 ): Array<[string, TooltipContent]> {
-  // Area marks are background fills; point marks on top handle tooltips.
+  // Populate tooltip content on each dataPoint for voronoi overlay lookup.
+  // Area marks don't emit per-mark tooltip descriptors (the overlay handles it).
+  if (mark.dataPoints) {
+    for (const dp of mark.dataPoints) {
+      dp.tooltip = {
+        title: getTooltipTitle(dp.datum, encoding),
+        fields: buildFields(dp.datum, encoding, mark.fill),
+      };
+    }
+  }
   return [];
 }
 

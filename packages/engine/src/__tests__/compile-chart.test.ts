@@ -172,23 +172,34 @@ describe('compileChart', () => {
     expect(layout.legend.position).toBe('top');
   });
 
-  it('produces line and point marks with the registered renderer', () => {
+  it('produces line marks with dataPoints (no PointMarks by default)', () => {
     const layout = compileChart(lineSpec, { width: 600, height: 400 });
     expect(layout.marks.length).toBeGreaterThan(0);
 
     const lineMarks = layout.marks.filter((m) => m.type === 'line');
     const pointMarks = layout.marks.filter((m) => m.type === 'point');
     expect(lineMarks.length).toBeGreaterThan(0);
-    expect(pointMarks.length).toBeGreaterThan(0);
+    // Default: no PointMarks (voronoi overlay handles tooltips)
+    expect(pointMarks.length).toBe(0);
 
-    // Line marks should have points with valid coordinates
+    // Line marks should have points and dataPoints with valid coordinates
     for (const mark of lineMarks) {
       if (mark.type === 'line') {
         expect(mark.points.length).toBeGreaterThan(0);
         expect(mark.stroke).toBeTruthy();
         expect(mark.strokeWidth).toBeGreaterThan(0);
+        expect(mark.dataPoints).toBeDefined();
+        expect(mark.dataPoints!.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('produces PointMarks when mark.point is true', () => {
+    const specWithPoints = { ...lineSpec, mark: { type: 'line' as const, point: true as const } };
+    const layout = compileChart(specWithPoints, { width: 600, height: 400 });
+
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(pointMarks.length).toBeGreaterThan(0);
   });
 
   it('includes accessibility metadata with meaningful content', () => {

@@ -8,11 +8,12 @@
 
 import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
-import { area, curveMonotoneX, line, stack, stackOffsetNone, stackOrderNone } from 'd3-shape';
+import { area, line, stack, stackOffsetNone, stackOrderNone } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, scaleValue, sortByField } from '../utils';
+import { resolveCurve } from './curves';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -42,7 +43,7 @@ function computeSingleArea(
   const baselineY = yScale(Math.min(domain[0], domain[1]));
 
   // Group by color field
-  const colorField = encoding.color?.field;
+  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
   const groups = new Map<string, DataRow[]>();
 
   if (!colorField) {
@@ -86,12 +87,13 @@ function computeSingleArea(
 
     if (validPoints.length === 0) continue;
 
-    // Build the area path
+    // Build the area path with configured interpolation
+    const curve = resolveCurve(spec.markDef.interpolate);
     const areaGenerator = area<{ x: number; yTop: number; yBottom: number }>()
       .x((d) => d.x)
       .y0((d) => d.yBottom)
       .y1((d) => d.yTop)
-      .curve(curveMonotoneX);
+      .curve(curve);
 
     const pathStr = areaGenerator(validPoints) ?? '';
 
@@ -99,7 +101,7 @@ function computeSingleArea(
     const topLineGenerator = line<{ x: number; yTop: number }>()
       .x((d) => d.x)
       .y((d) => d.yTop)
-      .curve(curveMonotoneX);
+      .curve(curve);
     const topPathStr = topLineGenerator(validPoints) ?? '';
 
     const topPoints = validPoints.map((p) => ({ x: p.x, y: p.yTop }));
@@ -124,6 +126,7 @@ function computeSingleArea(
       strokeWidth: 2,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
+      dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row })),
       aria,
     });
   }
@@ -143,7 +146,7 @@ function computeStackedArea(
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
   const yChannel = encoding.y;
-  const colorField = encoding.color?.field;
+  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
 
   if (!xChannel || !yChannel || !scales.x || !scales.y || !colorField) {
     // If no color field, can't stack -- fall back to single area
@@ -225,18 +228,19 @@ function computeStackedArea(
 
     if (validPoints.length === 0) continue;
 
+    const stackCurve = resolveCurve(spec.markDef.interpolate);
     const areaGenerator = area<{ x: number; yTop: number; yBottom: number }>()
       .x((p) => p.x)
       .y0((p) => p.yBottom)
       .y1((p) => p.yTop)
-      .curve(curveMonotoneX);
+      .curve(stackCurve);
 
     const pathStr = areaGenerator(validPoints) ?? '';
 
     const topLineGenerator = line<{ x: number; yTop: number }>()
       .x((p) => p.x)
       .y((p) => p.yTop)
-      .curve(curveMonotoneX);
+      .curve(stackCurve);
     const topPathStr = topLineGenerator(validPoints) ?? '';
 
     const topPoints = validPoints.map((p) => ({ x: p.x, y: p.yTop }));
@@ -260,6 +264,13 @@ function computeStackedArea(
       data: layer.map((d) => {
         const xStr = String(d.data.__x__);
         return (rowsByXSeries.get(`${xStr}::${seriesKey}`) ?? d.data) as Record<string, unknown>;
+      }),
+      dataPoints: validPoints.map((p, idx) => {
+        const xStr = String(layer[idx]?.data.__x__);
+        const datum = (rowsByXSeries.get(`${xStr}::${seriesKey}`) ??
+          layer[idx]?.data ??
+          {}) as Record<string, unknown>;
+        return { x: p.x, y: p.yTop, datum };
       }),
       aria,
     });
