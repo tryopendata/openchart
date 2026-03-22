@@ -844,8 +844,8 @@ function wireConnectorEndpointDrag(
       const points = arrowhead?.getAttribute('points') ?? '';
       const firstPoint = points.split(' ')[0] ?? '0,0';
       const [px, py] = firstPoint.split(',');
-      toX = Number(px);
-      toY = Number(py);
+      toX = Number(px) || 0;
+      toY = Number(py) || 0;
     }
 
     // Create handles dynamically
@@ -857,6 +857,9 @@ function wireConnectorEndpointDrag(
     const createdHandles: SVGCircleElement[] = [];
 
     for (const ep of endpoints) {
+      // Skip endpoints with invalid coordinates to prevent NaN in SVG attributes
+      if (!Number.isFinite(ep.cx) || !Number.isFinite(ep.cy)) continue;
+
       const handleEl = document.createElementNS(SVG_NS, 'circle') as SVGCircleElement;
       handleEl.setAttribute('class', 'viz-connector-handle');
       handleEl.setAttribute('data-endpoint', ep.name);
