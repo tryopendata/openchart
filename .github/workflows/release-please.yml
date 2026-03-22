@@ -17,7 +17,6 @@ jobs:
 
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      core_version: ${{ steps.release.outputs['packages/core--version'] }}
 
     steps:
       - uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
@@ -61,20 +60,29 @@ jobs:
 
       - name: Rewrite workspace dependencies to real versions
         run: |
-          VERSION="${{ needs.release-please.outputs.core_version }}"
-          for pkg in packages/core packages/engine packages/vanilla packages/react packages/vue packages/svelte; do
-            node -e "
-              const fs = require('fs');
-              const p = '$pkg/package.json';
-              const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+          node -e "
+            const fs = require('fs');
+            const pkgs = ['core', 'engine', 'vanilla', 'react', 'vue', 'svelte'];
+            const versions = {};
+            for (const pkg of pkgs) {
+              const p = JSON.parse(fs.readFileSync('packages/' + pkg + '/package.json', 'utf8'));
+              versions[p.name] = p.version;
+            }
+            for (const pkg of pkgs) {
+              const path = 'packages/' + pkg + '/package.json';
+              const p = JSON.parse(fs.readFileSync(path, 'utf8'));
               for (const field of ['dependencies', 'peerDependencies', 'devDependencies']) {
-                for (const [k, v] of Object.entries(j[field] || {})) {
-                  if (v === 'workspace:*') j[field][k] = '${VERSION}';
+                for (const [k, v] of Object.entries(p[field] || {})) {
+                  if (v === 'workspace:*') {
+                    if (!versions[k]) throw new Error(k + ' not found in workspace');
+                    p[field][k] = versions[k];
+                  }
                 }
               }
-              fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-            "
-          done
+              fs.writeFileSync(path, JSON.stringify(p, null, 2) + '\n');
+            }
+            console.log('Resolved workspace versions:', versions);
+          "
 
       - name: Verify no workspace references remain
         run: |
