@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.2.0](https://github.com/tryopendata/openchart/compare/core-v6.1.5...core-v6.2.0) (2026-03-23)
+
+
+### Features
+
+* **graph:** add scale config to graph encoding channels and fix color precedence ([a52efce](https://github.com/tryopendata/openchart/commit/a52efceea6e0750ad53e42ad6084e9b75ce4e27b))
+
 ## [6.1.5](https://github.com/tryopendata/openchart/compare/core-v6.1.4...core-v6.1.5) (2026-03-23)
 
 
