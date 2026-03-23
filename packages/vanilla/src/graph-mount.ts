@@ -379,6 +379,7 @@ export function createGraph(
     });
 
     let initialSettleDone = false;
+    let initialFitDone = false;
 
     simulation.onTick((positions, _alpha) => {
       if (destroyed) return;
@@ -411,10 +412,11 @@ export function createGraph(
       // Rebuild spatial index
       spatialIndex.rebuild(positionedNodes);
 
-      // During initial simulation, continuously fit the viewport so the graph
-      // is visible and centered as it forms. This replaces the jarring single
-      // snap at settle time with a smooth progressive fit.
-      if (!initialSettleDone && positionedNodes.length > 0 && interactionManager) {
+      // Fit the viewport once on the first tick so the graph is visible and
+      // centered immediately. After that, let the user interact freely while
+      // the simulation continues settling in the background.
+      if (!initialFitDone && positionedNodes.length > 0 && interactionManager) {
+        initialFitDone = true;
         const { width: cw, height: ch } = getCanvasDimensions();
         const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
         interactionManager.setTransform(fitTransform);
