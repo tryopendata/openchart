@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.2.1](https://github.com/tryopendata/openchart/compare/core-v6.2.0...core-v6.2.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* match temporal tick formatting to scale timezone ([13bc19e](https://github.com/tryopendata/openchart/commit/13bc19ebd1c4cf741634119c102b1d2804291885))
+
 ## [6.2.0](https://github.com/tryopendata/openchart/compare/core-v6.1.5...core-v6.2.0) (2026-03-23)
 
 
