@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.1.4](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.3...vanilla-v6.1.4) (2026-03-23)
+
+
+### Bug Fixes
+
+* prevent bundlers from resolving .ts worker fallback URL ([db9c397](https://github.com/tryopendata/openchart/commit/db9c3971e7bd6a3a876e41452975a44ebdc6755e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.4
+    * @opendata-ai/openchart-engine bumped to 6.1.4
+
 ## [6.1.3](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.2...vanilla-v6.1.3) (2026-03-23)
 
 
