@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { abbreviateNumber, buildD3Formatter, formatDate, formatNumber } from '../format';
+import {
+  abbreviateNumber,
+  buildD3Formatter,
+  buildTemporalFormatter,
+  formatDate,
+  formatNumber,
+} from '../format';
 
 describe('formatNumber', () => {
   it('formats integers with commas', () => {
@@ -125,5 +131,77 @@ describe('formatDate', () => {
   it('handles invalid dates gracefully', () => {
     const result = formatDate('not-a-date');
     expect(result).toBe('not-a-date');
+  });
+
+  it('infers year granularity for bare year strings regardless of timezone', () => {
+    // "2020" parses as 2020-01-01T00:00:00Z. In negative-offset timezones,
+    // local getHours()/getDate() would see Dec 31 2019 — the UTC fix prevents that.
+    const result = formatDate('2020');
+    expect(result).toBe('2020');
+  });
+
+  it('infers year granularity for Jan 1 ISO dates', () => {
+    const result = formatDate('2020-01-01');
+    expect(result).toBe('2020');
+  });
+
+  it('infers month granularity for first-of-month dates', () => {
+    const result = formatDate('2020-06-01');
+    expect(result).toContain('Jun');
+    expect(result).toContain('2020');
+  });
+
+  it('infers day granularity for mid-month dates', () => {
+    const result = formatDate('2020-06-15');
+    expect(result).toContain('15');
+    expect(result).toContain('Jun');
+  });
+});
+
+describe('buildTemporalFormatter', () => {
+  it('returns null for undefined format', () => {
+    expect(buildTemporalFormatter(undefined)).toBeNull();
+  });
+
+  it('returns null for empty string', () => {
+    expect(buildTemporalFormatter('')).toBeNull();
+  });
+
+  it('formats dates with %Y to just the year', () => {
+    const fmt = buildTemporalFormatter('%Y');
+    expect(fmt).not.toBeNull();
+    expect(fmt!('2020-01-01')).toBe('2020');
+    expect(fmt!(new Date('2020-06-15'))).toBe('2020');
+  });
+
+  it('formats dates with %b %Y to month and year', () => {
+    const fmt = buildTemporalFormatter('%b %Y');
+    expect(fmt).not.toBeNull();
+    expect(fmt!('2020-06-01')).toBe('Jun 2020');
+  });
+
+  it('formats dates with full date format', () => {
+    const fmt = buildTemporalFormatter('%Y-%m-%d');
+    expect(fmt).not.toBeNull();
+    expect(fmt!('2020-06-15')).toBe('2020-06-15');
+  });
+
+  it('handles invalid date input gracefully', () => {
+    const fmt = buildTemporalFormatter('%Y');
+    expect(fmt).not.toBeNull();
+    expect(fmt!('not-a-date')).toBe('not-a-date');
+  });
+
+  it('handles Date objects', () => {
+    const fmt = buildTemporalFormatter('%Y');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(new Date('2025-01-01T00:00:00Z'))).toBe('2025');
+  });
+
+  it('handles numeric timestamps', () => {
+    const fmt = buildTemporalFormatter('%Y');
+    expect(fmt).not.toBeNull();
+    // 2020-01-01T00:00:00Z
+    expect(fmt!(1577836800000)).toBe('2020');
   });
 });

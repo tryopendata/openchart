@@ -18,7 +18,7 @@ import type {
   TooltipContent,
   TooltipField,
 } from '@opendata-ai/openchart-core';
-import { formatDate, formatNumber } from '@opendata-ai/openchart-core';
+import { buildTemporalFormatter, formatDate, formatNumber } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -32,6 +32,8 @@ function formatValue(value: unknown, fieldType?: string, format?: string): strin
   if (value == null) return '';
 
   if (fieldType === 'temporal' || value instanceof Date) {
+    const temporalFmt = buildTemporalFormatter(format);
+    if (temporalFmt) return temporalFmt(value as Date | string | number);
     return formatDate(value as Date | string | number);
   }
 

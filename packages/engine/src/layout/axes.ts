@@ -19,6 +19,7 @@ import type {
 import {
   abbreviateNumber,
   buildD3Formatter,
+  buildTemporalFormatter,
   estimateTextWidth,
   formatDate,
   formatNumber,
@@ -252,7 +253,8 @@ function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
   const formatStr = resolvedScale.channel.axis?.format;
 
   if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
-    if (formatStr) return String(value); // Custom format not implemented yet
+    const temporalFmt = buildTemporalFormatter(formatStr);
+    if (temporalFmt) return temporalFmt(value as Date);
     return formatDate(value as Date);
   }
 

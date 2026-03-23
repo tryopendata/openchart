@@ -99,6 +99,7 @@ export type { DateGranularity } from './locale/index';
 export {
   abbreviateNumber,
   buildD3Formatter,
+  buildTemporalFormatter,
   formatDate,
   formatNumber,
 } from './locale/index';

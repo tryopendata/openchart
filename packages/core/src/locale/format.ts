@@ -162,14 +162,31 @@ export function formatDate(
 }
 
 /**
+ * Build a formatter for temporal values using a d3-time-format string (e.g. "%Y", "%b %Y").
+ * Returns a function that accepts a Date, string, or number and returns the formatted string.
+ * Returns null if the format string is falsy.
+ */
+export function buildTemporalFormatter(
+  formatStr: string | undefined,
+): ((value: Date | string | number) => string) | null {
+  if (!formatStr) return null;
+  const fmt = utcFormat(formatStr);
+  return (value: Date | string | number) => {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return fmt(date);
+  };
+}
+
+/**
  * Infer the appropriate granularity from a date value.
  * If time components are all zero, assume day or higher.
  */
 function inferGranularity(date: Date): DateGranularity {
-  if (date.getHours() !== 0 || date.getMinutes() !== 0) {
-    return date.getMinutes() !== 0 ? 'minute' : 'hour';
+  if (date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0) {
+    return date.getUTCMinutes() !== 0 ? 'minute' : 'hour';
   }
-  if (date.getDate() !== 1) return 'day';
-  if (date.getMonth() !== 0) return 'month';
+  if (date.getUTCDate() !== 1) return 'day';
+  if (date.getUTCMonth() !== 0) return 'month';
   return 'year';
 }
