@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.1.3](https://github.com/tryopendata/openchart/compare/react-v6.1.2...react-v6.1.3) (2026-03-23)
+
+
+* **react:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.3
+    * @opendata-ai/openchart-engine bumped to 6.1.3
+    * @opendata-ai/openchart-vanilla bumped to 6.1.3
+
 ## [6.1.2](https://github.com/tryopendata/openchart/compare/react-v6.1.1...react-v6.1.2) (2026-03-23)
 
 

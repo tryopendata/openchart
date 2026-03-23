@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.1.3](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.2...vanilla-v6.1.3) (2026-03-23)
+
+
+### Bug Fixes
+
+* resolve graph worker loading failures and improve simulation UX ([de1a8e2](https://github.com/tryopendata/openchart/commit/de1a8e2a341af223df45b11b268b4d75dd706d6d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.3
+    * @opendata-ai/openchart-engine bumped to 6.1.3
+
 ## [6.1.2](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.1...vanilla-v6.1.2) (2026-03-23)
 
 
