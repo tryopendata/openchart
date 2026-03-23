@@ -255,7 +255,8 @@ function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
   if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
     const temporalFmt = buildTemporalFormatter(formatStr);
     if (temporalFmt) return temporalFmt(value as Date);
-    return formatDate(value as Date);
+    const useUtc = resolvedScale.type === 'utc';
+    return formatDate(value as Date, undefined, undefined, useUtc);
   }
 
   if (NUMERIC_SCALE_TYPES.has(resolvedScale.type)) {

@@ -136,26 +136,32 @@ const GRANULARITY_FORMATS: Record<DateGranularity, string> = {
  * @param value - Date object, ISO string, or timestamp number.
  * @param locale - Locale string (currently unused, reserved for i18n).
  * @param granularity - Time granularity for format selection.
+ * @param useUtc - Whether to infer granularity and format using UTC methods.
+ *   Pass `false` when formatting ticks from a local-time scale (d3 scaleTime),
+ *   so that e.g. midnight local isn't misread as an intra-day UTC time.
+ *   Defaults to `true` for backward compatibility.
  */
 export function formatDate(
   value: Date | string | number,
   _locale?: string,
   granularity?: DateGranularity,
+  useUtc: boolean = true,
 ): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
-  const gran = granularity ?? inferGranularity(date);
+  const gran = granularity ?? inferGranularity(date, useUtc);
 
   // Special handling for quarter (not a d3 format token)
   if (gran === 'quarter') {
-    const q = Math.ceil((date.getMonth() + 1) / 3);
+    const q = useUtc
+      ? Math.ceil((date.getUTCMonth() + 1) / 3)
+      : Math.ceil((date.getMonth() + 1) / 3);
     return `Q${q} ${date.getFullYear()}`;
   }
 
   const formatStr = GRANULARITY_FORMATS[gran];
-  // Use UTC format for year/month/day to avoid timezone shifts
-  if (['year', 'month', 'day'].includes(gran)) {
+  if (useUtc) {
     return utcFormat(formatStr)(date);
   }
   return timeFormat(formatStr)(date);
@@ -181,12 +187,20 @@ export function buildTemporalFormatter(
 /**
  * Infer the appropriate granularity from a date value.
  * If time components are all zero, assume day or higher.
+ *
+ * @param useUtc - When true, inspect UTC fields. When false, inspect local-time
+ *   fields. This must match the D3 scale type: scaleUtc -> true, scaleTime -> false.
  */
-function inferGranularity(date: Date): DateGranularity {
-  if (date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0) {
-    return date.getUTCMinutes() !== 0 ? 'minute' : 'hour';
+function inferGranularity(date: Date, useUtc: boolean = true): DateGranularity {
+  const hours = useUtc ? date.getUTCHours() : date.getHours();
+  const minutes = useUtc ? date.getUTCMinutes() : date.getMinutes();
+  const day = useUtc ? date.getUTCDate() : date.getDate();
+  const month = useUtc ? date.getUTCMonth() : date.getMonth();
+
+  if (hours !== 0 || minutes !== 0) {
+    return minutes !== 0 ? 'minute' : 'hour';
   }
-  if (date.getUTCDate() !== 1) return 'day';
-  if (date.getUTCMonth() !== 0) return 'month';
+  if (day !== 1) return 'day';
+  if (month !== 0) return 'month';
   return 'year';
 }
