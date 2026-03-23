@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.1.2](https://github.com/tryopendata/openchart/compare/core-v6.1.1...core-v6.1.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* improve chart margin computation for labels and annotations ([58cdea8](https://github.com/tryopendata/openchart/commit/58cdea859507750017301c41a22b44492cc32722))
+* reserve bottom space for brand watermark in chrome layout ([ca72868](https://github.com/tryopendata/openchart/commit/ca7286808edace47c020a07e4bbd1cac6f221e55))
+* y-axis title margin and default padding ([96d0385](https://github.com/tryopendata/openchart/commit/96d03851612c685762a50dd5cc2f6bf7d412845f))
+
 ## [6.1.1](https://github.com/tryopendata/openchart/compare/core-v6.1.0...core-v6.1.1) (2026-03-22)
 
 
