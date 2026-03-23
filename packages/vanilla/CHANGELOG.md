@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.2.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.5...vanilla-v6.2.0) (2026-03-23)
+
+
+### Bug Fixes
+
+* only fit viewport once on first tick instead of every tick during settling ([806e9eb](https://github.com/tryopendata/openchart/commit/806e9eb3dfec212e01a3bd4af36ac828babde87f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.2.0
+    * @opendata-ai/openchart-engine bumped to 6.2.0
+
 ## [6.1.5](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.4...vanilla-v6.1.5) (2026-03-23)
 
 
