@@ -54,6 +54,7 @@ function buildGraphLegend(
   communityColorMap: Map<string, string>,
   hasCommunities: boolean,
   theme: ResolvedTheme,
+  nodeColorField?: string,
 ): LegendLayout {
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -74,20 +75,24 @@ function buildGraphLegend(
       active: true,
     }));
   } else {
-    // Collect unique colors from nodes (for nodeColor encoding)
-    const colorLabels = new Map<string, string>();
+    // Build legend from nodeColor encoding: group by the color field value
+    // so each legend entry shows the categorical value (e.g. "Dataset", "bls")
+    // rather than an arbitrary node label.
+    const categoryColors = new Map<string, string>();
     for (const node of nodes) {
-      if (!colorLabels.has(node.fill)) {
-        // Use the first node with this color as the label representative
-        colorLabels.set(node.fill, node.label ?? node.id);
+      const category = nodeColorField
+        ? String(node.data[nodeColorField] ?? node.label ?? node.id)
+        : (node.label ?? node.id);
+      if (!categoryColors.has(category)) {
+        categoryColors.set(category, node.fill);
       }
     }
 
-    // Only show legend if there are multiple colors
-    if (colorLabels.size <= 1) {
+    // Only show legend if there are multiple categories
+    if (categoryColors.size <= 1) {
       entries = [];
     } else {
-      entries = [...colorLabels.entries()].map(([color, label]) => ({
+      entries = [...categoryColors.entries()].map(([label, color]) => ({
         label,
         color,
         shape: 'circle' as const,
@@ -207,14 +212,17 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     graphSpec.nodeOverrides,
   );
 
-  // 4. Assign communities
+  // 4. Assign communities (for force simulation grouping)
   const clusteringField = graphSpec.layout.clustering?.field;
   const hasCommunities = !!clusteringField;
   assignCommunities(compiledNodes, clusteringField);
 
-  // 5. Apply community colors
+  // 5. Apply community colors only when no explicit nodeColor encoding is set.
+  // When the consumer specifies nodeColor (e.g. by nodeType or provider), that
+  // encoding should drive both fill colors and legend entries.
+  const hasNodeColorEncoding = !!graphSpec.encoding.nodeColor?.field;
   let communityColorMap = new Map<string, string>();
-  if (hasCommunities) {
+  if (hasCommunities && !hasNodeColorEncoding) {
     communityColorMap = buildCommunityColorMap(compiledNodes, theme);
     applyCommunityColors(compiledNodes, communityColorMap);
   }
@@ -222,8 +230,15 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   // 6. Resolve edge visuals
   const compiledEdges = resolveEdgeVisuals(graphSpec.edges, graphSpec.encoding, theme);
 
-  // 7. Build legend
-  const legend = buildGraphLegend(compiledNodes, communityColorMap, hasCommunities, theme);
+  // 7. Build legend (use nodeColor encoding colors when present, community otherwise)
+  const useCommunitiesForLegend = hasCommunities && !hasNodeColorEncoding;
+  const legend = buildGraphLegend(
+    compiledNodes,
+    communityColorMap,
+    useCommunitiesForLegend,
+    theme,
+    graphSpec.encoding.nodeColor?.field,
+  );
 
   // 8. Build tooltips
   const tooltipDescriptors = buildGraphTooltips(compiledNodes);

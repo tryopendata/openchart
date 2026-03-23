@@ -229,7 +229,9 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
             (e, i) => e.source === spec.edges[i].source && e.target === spec.edges[i].target,
           );
 
-        if (sameNodes && sameEdges) {
+        const sameLayout = prev.layout?.clustering?.field === spec.layout?.clustering?.field;
+
+        if (sameNodes && sameEdges && sameLayout) {
           graph.updateVisuals(spec);
           return;
         }

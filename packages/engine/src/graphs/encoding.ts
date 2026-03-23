@@ -142,6 +142,7 @@ export function resolveNodeVisuals(
   if (encoding.nodeColor?.field) {
     const field = encoding.nodeColor.field;
     const fieldType = encoding.nodeColor.type ?? 'nominal';
+    const scaleConfig = encoding.nodeColor.scale;
 
     if (fieldType === 'quantitative') {
       const values = nodes.map((n) => Number(n[field])).filter((v) => Number.isFinite(v));
@@ -151,9 +152,17 @@ export function resolveNodeVisuals(
       // Use first sequential palette
       const seqPalettes = Object.values(theme.colors.sequential);
       const palette = seqPalettes.length > 0 ? seqPalettes[0] : ['#ccc', '#333'];
-      const colorScale = scaleLinear<string>()
-        .domain([colorMin, colorMax])
-        .range([palette[0], palette[palette.length - 1]]);
+
+      const domain =
+        scaleConfig?.domain && scaleConfig.domain.length === 2
+          ? (scaleConfig.domain as [number, number])
+          : [colorMin, colorMax];
+      const range =
+        scaleConfig?.range && scaleConfig.range.length >= 2
+          ? (scaleConfig.range as string[])
+          : [palette[0], palette[palette.length - 1]];
+
+      const colorScale = scaleLinear<string>().domain(domain).range(range);
 
       colorFn = (node: GraphNode) => {
         const val = Number(node[field]);
@@ -161,10 +170,16 @@ export function resolveNodeVisuals(
       };
     } else {
       // nominal/ordinal
-      const uniqueValues = [...new Set(nodes.map((n) => String(n[field] ?? '')))];
-      const ordinalScale = scaleOrdinal<string>()
-        .domain(uniqueValues)
-        .range(theme.colors.categorical);
+      const domain =
+        scaleConfig?.domain && Array.isArray(scaleConfig.domain)
+          ? (scaleConfig.domain as string[])
+          : [...new Set(nodes.map((n) => String(n[field] ?? '')))];
+      const range =
+        scaleConfig?.range && scaleConfig.range.length > 0
+          ? (scaleConfig.range as string[])
+          : theme.colors.categorical;
+
+      const ordinalScale = scaleOrdinal<string>().domain(domain).range(range);
 
       colorFn = (node: GraphNode) => ordinalScale(String(node[field] ?? ''));
     }
@@ -259,6 +274,7 @@ export function resolveEdgeVisuals(
   if (encoding.edgeColor?.field) {
     const field = encoding.edgeColor.field;
     const fieldType = encoding.edgeColor.type ?? 'nominal';
+    const scaleConfig = encoding.edgeColor.scale;
 
     if (fieldType === 'quantitative') {
       const values = edges.map((e) => Number(e[field])).filter((v) => Number.isFinite(v));
@@ -267,19 +283,33 @@ export function resolveEdgeVisuals(
 
       const seqPalettes = Object.values(theme.colors.sequential);
       const palette = seqPalettes.length > 0 ? seqPalettes[0] : ['#ccc', '#333'];
-      const colorScale = scaleLinear<string>()
-        .domain([colorMin, colorMax])
-        .range([palette[0], palette[palette.length - 1]]);
+
+      const domain =
+        scaleConfig?.domain && scaleConfig.domain.length === 2
+          ? (scaleConfig.domain as [number, number])
+          : [colorMin, colorMax];
+      const range =
+        scaleConfig?.range && scaleConfig.range.length >= 2
+          ? (scaleConfig.range as string[])
+          : [palette[0], palette[palette.length - 1]];
+
+      const colorScale = scaleLinear<string>().domain(domain).range(range);
 
       edgeColorFn = (edge: GraphEdge) => {
         const val = Number(edge[field]);
         return Number.isFinite(val) ? colorScale(val) : hexWithOpacity(theme.colors.axis, 0.4);
       };
     } else {
-      const uniqueValues = [...new Set(edges.map((e) => String(e[field] ?? '')))];
-      const ordinalScale = scaleOrdinal<string>()
-        .domain(uniqueValues)
-        .range(theme.colors.categorical);
+      const domain =
+        scaleConfig?.domain && Array.isArray(scaleConfig.domain)
+          ? (scaleConfig.domain as string[])
+          : [...new Set(edges.map((e) => String(e[field] ?? '')))];
+      const range =
+        scaleConfig?.range && scaleConfig.range.length > 0
+          ? (scaleConfig.range as string[])
+          : theme.colors.categorical;
+
+      const ordinalScale = scaleOrdinal<string>().domain(domain).range(range);
 
       edgeColorFn = (edge: GraphEdge) => ordinalScale(String(edge[field] ?? ''));
     }

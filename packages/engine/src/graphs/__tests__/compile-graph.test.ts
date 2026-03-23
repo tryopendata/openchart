@@ -141,6 +141,62 @@ describe('compileGraph', () => {
     });
   });
 
+  describe('with explicit scale domain/range', () => {
+    it('uses explicit domain and range for nominal nodeColor', () => {
+      const spec = {
+        ...makeBasicGraphSpec(),
+        encoding: {
+          nodeColor: {
+            field: 'group',
+            type: 'nominal' as const,
+            scale: {
+              domain: ['X', 'Y'],
+              range: ['#ff0000', '#00ff00'],
+            },
+          },
+        },
+      };
+      const result = compileGraph(spec, compileOptions);
+
+      const xNode = result.nodes.find((n) => n.data.group === 'X')!;
+      const yNode = result.nodes.find((n) => n.data.group === 'Y')!;
+      expect(xNode.fill).toBe('#ff0000');
+      expect(yNode.fill).toBe('#00ff00');
+    });
+
+    it('falls back to auto-derived domain when scale is omitted', () => {
+      const result = compileGraph(makeEncodedGraphSpec(), compileOptions);
+
+      const xNode = result.nodes.find((n) => n.data.group === 'X')!;
+      const yNode = result.nodes.find((n) => n.data.group === 'Y')!;
+      // Should still produce different colors (auto-derived)
+      expect(xNode.fill).not.toBe(yNode.fill);
+    });
+
+    it('explicit domain controls color ordering', () => {
+      // Reversed domain order should swap colors
+      const spec = {
+        ...makeBasicGraphSpec(),
+        encoding: {
+          nodeColor: {
+            field: 'group',
+            type: 'nominal' as const,
+            scale: {
+              domain: ['Y', 'X'],
+              range: ['#ff0000', '#00ff00'],
+            },
+          },
+        },
+      };
+      const result = compileGraph(spec, compileOptions);
+
+      const xNode = result.nodes.find((n) => n.data.group === 'X')!;
+      const yNode = result.nodes.find((n) => n.data.group === 'Y')!;
+      expect(xNode.fill).toBe('#00ff00');
+      expect(yNode.fill).toBe('#ff0000');
+    });
+  });
+
   describe('with community clustering', () => {
     it('assigns communities to nodes', () => {
       const result = compileGraph(makeClusteredGraphSpec(), compileOptions);

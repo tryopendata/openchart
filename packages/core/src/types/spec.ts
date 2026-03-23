@@ -273,12 +273,14 @@ export interface Encoding {
 // Graph-specific encoding
 // ---------------------------------------------------------------------------
 
-/** Encoding channel for graph nodes and edges. Same structure as EncodingChannel. */
+/** Encoding channel for graph nodes and edges. */
 export interface GraphEncodingChannel {
   /** Data field name on the node/edge object. */
   field: string;
   /** How to interpret the field values. */
   type?: FieldType;
+  /** Scale configuration. Auto-derived from data if omitted. */
+  scale?: ScaleConfig;
 }
 
 /** Graph-specific encoding mapping visual properties to node/edge data fields. */
