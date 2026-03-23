@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.2.1](https://github.com/tryopendata/openchart/compare/engine-v6.2.0...engine-v6.2.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* match temporal tick formatting to scale timezone ([13bc19e](https://github.com/tryopendata/openchart/commit/13bc19ebd1c4cf741634119c102b1d2804291885))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.2.1
+
 ## [6.2.0](https://github.com/tryopendata/openchart/compare/engine-v6.1.5...engine-v6.2.0) (2026-03-23)
 
 
