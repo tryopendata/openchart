@@ -272,14 +272,16 @@ export class SimulationManager {
 
       w.onerror = () => {
         // .js failed (likely Vite dev with source aliases). Try .ts.
+        // The URL is constructed dynamically to prevent bundlers (Rollup)
+        // from statically analyzing it and trying to resolve the .ts file
+        // as an asset entry point in production builds.
         if (this.destroyed) return;
         w.terminate();
         this.worker = null;
 
         try {
-          const w2 = new Worker(new URL('./simulation-worker.ts', import.meta.url), {
-            type: 'module',
-          });
+          const tsUrl = new URL(import.meta.url.replace(/\/[^/]+$/, '/simulation-worker.ts'));
+          const w2 = new Worker(tsUrl, { type: 'module' });
 
           w2.onerror = () => {
             // Both .js and .ts failed - fall back to sync.
