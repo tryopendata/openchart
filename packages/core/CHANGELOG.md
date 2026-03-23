@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.1.5](https://github.com/tryopendata/openchart/compare/core-v6.1.4...core-v6.1.5) (2026-03-23)
+
+
+### Bug Fixes
+
+* use UTC methods for temporal granularity and support custom axis/tooltip date formats ([18dfc8e](https://github.com/tryopendata/openchart/commit/18dfc8ec76bb1e45a93bc89fe89bee71fb633420))
+
 ## [6.1.4](https://github.com/tryopendata/openchart/compare/core-v6.1.3...core-v6.1.4) (2026-03-23)
 
 

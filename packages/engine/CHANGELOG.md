@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.1.5](https://github.com/tryopendata/openchart/compare/engine-v6.1.4...engine-v6.1.5) (2026-03-23)
+
+
+### Bug Fixes
+
+* use UTC methods for temporal granularity and support custom axis/tooltip date formats ([18dfc8e](https://github.com/tryopendata/openchart/commit/18dfc8ec76bb1e45a93bc89fe89bee71fb633420))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.5
+
 ## [6.1.4](https://github.com/tryopendata/openchart/compare/engine-v6.1.3...engine-v6.1.4) (2026-03-23)
 
 
