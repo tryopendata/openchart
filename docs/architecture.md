@@ -105,11 +105,12 @@ The output is a `TableLayout` with resolved columns, formatted rows, cell styles
 
 Graphs follow the same validate-normalize-theme pipeline as charts, then run a different set of computations:
 
-1. Node visual resolution (size, color from encoding, label text)
-2. Community assignment (grouping nodes by color encoding field)
-3. Edge visual resolution (width, color, opacity)
-4. Simulation config (charge strength, link distance, clustering parameters)
-5. Legend, tooltips, and a11y metadata
+1. Node visual resolution (size, color from encoding with optional explicit scale, label text)
+2. Community assignment (grouping nodes by clustering field for spatial layout)
+3. Community coloring (only when no `nodeColor` encoding is set; encoding takes precedence)
+4. Edge visual resolution (width, color, style)
+5. Simulation config (charge strength, link distance, clustering parameters)
+6. Legend, tooltips, and a11y metadata
 
 The key difference from charts: the engine output does **not** include x/y positions. Node positioning is handled by a force simulation running in a web worker inside the vanilla adapter. The engine resolves visual properties and simulation parameters, then the adapter runs the physics at runtime.
 

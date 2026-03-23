@@ -602,36 +602,57 @@ Input for network/relationship visualizations. Source: `core/src/types/spec.ts`.
 
 Graphs render force-directed network visualizations on canvas. They support node interaction (click, drag, double-click), search, zoom/pan, keyboard navigation, and selection. Nodes are positioned by a force simulation running in a web worker.
 
-| Field         | Type                | Default     | Description                                                                           |
-| ------------- | ------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `type`        | `'graph'`           | (required)  | Discriminant.                                                                         |
-| `nodes`       | `GraphNode[]`       | (required)  | Node array. Each node must have an `id: string` field plus arbitrary data fields.     |
-| `edges`       | `GraphEdge[]`       | (required)  | Edge array. Each edge has `source: string` and `target: string` referencing node ids. |
-| `encoding`    | `GraphEncoding`     | `undefined` | Visual property mappings for nodes/edges.                                             |
-| `layout`      | `GraphLayoutConfig` | `undefined` | Layout algorithm configuration.                                                       |
-| `chrome`      | `Chrome`            | `undefined` | Editorial text.                                                                       |
-| `annotations` | `Annotation[]`      | `undefined` | Annotations.                                                                          |
-| `theme`       | `ThemeConfig`       | `undefined` | Theme overrides.                                                                      |
-| `darkMode`    | `DarkMode`          | `'off'`     | Dark mode behavior.                                                                   |
+| Field            | Type                             | Default     | Description                                                                           |
+| ---------------- | -------------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `type`           | `'graph'`                        | (required)  | Discriminant.                                                                         |
+| `nodes`          | `GraphNode[]`                    | (required)  | Node array. Each node must have an `id: string` field plus arbitrary data fields.     |
+| `edges`          | `GraphEdge[]`                    | (required)  | Edge array. Each edge has `source: string` and `target: string` referencing node ids. |
+| `encoding`       | `GraphEncoding`                  | `undefined` | Visual property mappings for nodes/edges.                                             |
+| `layout`         | `GraphLayoutConfig`              | `undefined` | Layout algorithm configuration.                                                       |
+| `nodeOverrides`  | `Record<string, NodeOverride>`   | `undefined` | Per-node visual overrides keyed by node id. See [NodeOverride](#nodeoverride).        |
+| `chrome`         | `Chrome`                         | `undefined` | Editorial text.                                                                       |
+| `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
+| `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
+| `darkMode`       | `DarkMode`                       | `'off'`     | Dark mode behavior.                                                                   |
 
 ### GraphEncoding
 
-| Channel     | Field type constraint | Purpose                  |
-| ----------- | --------------------- | ------------------------ |
-| `nodeColor` | nominal, ordinal      | Color mapping for nodes. |
-| `nodeSize`  | quantitative          | Size mapping for nodes.  |
-| `edgeColor` | nominal, ordinal      | Color mapping for edges. |
-| `edgeWidth` | quantitative          | Width mapping for edges. |
-| `nodeLabel` | any                   | Label field for nodes.   |
+Each channel is a `GraphEncodingChannel` with `field`, optional `type`, and optional `scale` (same `ScaleConfig` as chart encodings). When `scale.domain` and `scale.range` are provided, the engine uses them directly instead of auto-deriving from the data. This is useful for controlling deterministic color assignment.
+
+| Channel     | Field type constraint          | Purpose                                  |
+| ----------- | ------------------------------ | ---------------------------------------- |
+| `nodeColor` | nominal, ordinal, quantitative | Color mapping for nodes.                 |
+| `nodeSize`  | quantitative                   | Size mapping for nodes (3-12px radius).  |
+| `edgeColor` | nominal, ordinal, quantitative | Color mapping for edges.                 |
+| `edgeWidth` | quantitative                   | Width mapping for edges (0.5-4px).       |
+| `edgeStyle` | nominal, ordinal               | Line style mapping (solid/dashed/dotted).|
+| `nodeLabel` | any                            | Label field for nodes.                   |
+
+When `nodeColor` encoding is set, it takes precedence over community-based coloring from `layout.clustering`. Community assignment still affects spatial grouping, but colors are driven by the encoding.
+
+### NodeOverride
+
+Per-node visual overrides. Useful for highlighting seed nodes, selected nodes, or applying custom styling to specific nodes.
+
+| Field            | Type      | Description                                        |
+| ---------------- | --------- | -------------------------------------------------- |
+| `fill`           | `string`  | Override fill color.                               |
+| `radius`         | `number`  | Override node radius.                              |
+| `strokeWidth`    | `number`  | Override stroke width.                             |
+| `stroke`         | `string`  | Override stroke color.                             |
+| `alwaysShowLabel` | `boolean` | Force label to always show regardless of zoom/priority. |
 
 ### GraphLayoutConfig
 
-| Field            | Type                                    | Default         | Description                                             |
-| ---------------- | --------------------------------------- | --------------- | ------------------------------------------------------- |
-| `type`           | `'force' \| 'radial' \| 'hierarchical'` | (required)      | Layout algorithm.                                       |
-| `clustering`     | `{ field: string }`                     | `undefined`     | Group nodes by a field for cluster forces.              |
-| `chargeStrength` | `number`                                | library default | Charge strength for force layout. Negative = repulsion. |
-| `linkDistance`   | `number`                                | library default | Target distance between linked nodes.                   |
+| Field              | Type                                    | Default         | Description                                             |
+| ------------------ | --------------------------------------- | --------------- | ------------------------------------------------------- |
+| `type`             | `'force' \| 'radial' \| 'hierarchical'` | (required)      | Layout algorithm.                                       |
+| `clustering`       | `{ field: string }`                     | `undefined`     | Group nodes by a field for cluster forces.              |
+| `chargeStrength`   | `number`                                | library default | Charge strength for force layout. Negative = repulsion. |
+| `linkDistance`      | `number`                                | library default | Target distance between linked nodes.                   |
+| `collisionPadding` | `number`                                | `2`             | Extra pixels added to node radius for collision detection. |
+| `linkStrength`     | `number`                                | `undefined`     | Link force strength override.                           |
+| `centerForce`      | `boolean`                               | `true`          | Whether to apply center force to keep graph centered.   |
 
 ---
 
