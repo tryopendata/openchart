@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.1.2](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.1...vanilla-v6.1.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* reserve bottom space for brand watermark in chrome layout ([ca72868](https://github.com/tryopendata/openchart/commit/ca7286808edace47c020a07e4bbd1cac6f221e55))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.2
+    * @opendata-ai/openchart-engine bumped to 6.1.2
+
 ## [6.1.1](https://github.com/tryopendata/openchart/compare/vanilla-v6.1.0...vanilla-v6.1.1) (2026-03-22)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.1.2](https://github.com/tryopendata/openchart/compare/engine-v6.1.1...engine-v6.1.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* improve chart margin computation for labels and annotations ([58cdea8](https://github.com/tryopendata/openchart/commit/58cdea859507750017301c41a22b44492cc32722))
+* y-axis title margin and default padding ([96d0385](https://github.com/tryopendata/openchart/commit/96d03851612c685762a50dd5cc2f6bf7d412845f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.2
+
 ## [6.1.1](https://github.com/tryopendata/openchart/compare/engine-v6.1.0...engine-v6.1.1) (2026-03-22)
 
 
