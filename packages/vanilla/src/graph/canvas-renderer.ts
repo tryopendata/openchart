@@ -12,6 +12,7 @@
  * - Labels and glow skipped during active pan/zoom gestures
  */
 
+import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH } from '@opendata-ai/openchart-core';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 
 // ---------------------------------------------------------------------------
@@ -32,9 +33,6 @@ const TWO_PI = Math.PI * 2;
 
 /** Minimum node radius in screen pixels. Keeps nodes visible when zoomed out. */
 const MIN_SCREEN_RADIUS = 2.5;
-
-/** Minimum canvas width to render the brand watermark. */
-const BRAND_MIN_WIDTH = 120;
 
 // ---------------------------------------------------------------------------
 // Helpers (exported for testing)
@@ -251,7 +249,7 @@ export class GraphCanvasRenderer {
     const padding = theme.spacing.padding;
     const x = w - padding;
     const y = h - padding;
-    ctx.font = `600 20px ${theme.fonts.family}`;
+    ctx.font = `600 ${BRAND_FONT_SIZE}px ${theme.fonts.family}`;
     ctx.fillStyle = theme.colors.axis;
     ctx.globalAlpha = 0.55;
     ctx.textAlign = 'right';

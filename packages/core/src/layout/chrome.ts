@@ -22,7 +22,13 @@ import type {
 } from '../types/layout';
 import type { Chrome, ChromeText } from '../types/spec';
 import type { ChromeDefaults, ResolvedTheme } from '../types/theme';
-import { BRAND_RESERVE_WIDTH, estimateCharWidth, estimateTextHeight } from './text-measure';
+import {
+  BRAND_FONT_SIZE,
+  BRAND_MIN_WIDTH,
+  BRAND_RESERVE_WIDTH,
+  estimateCharWidth,
+  estimateTextHeight,
+} from './text-measure';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -133,6 +139,9 @@ export function computeChrome(
   padding?: number,
 ): ResolvedChrome {
   if (!chrome || chromeMode === 'hidden') {
+    // Brand watermark is also skipped at cramped sizes (height < 200px triggers
+    // hidden mode, and those containers are typically < BRAND_MIN_WIDTH), so
+    // bottomHeight: 0 is safe here.
     return { topHeight: 0, bottomHeight: 0 };
   }
 
@@ -193,11 +202,17 @@ export function computeChrome(
   const hasTopChrome = titleNorm || subtitleNorm;
   const topHeight = hasTopChrome ? topY - pad + theme.spacing.chromeToChart - chromeGap : 0;
 
-  // Bottom elements hidden in compact mode
+  // Bottom chrome text hidden in compact mode, but brand watermark still
+  // renders for wide-enough charts. Reserve space so it doesn't overflow.
   if (chromeMode === 'compact') {
+    let compactBottom = 0;
+    if (width >= BRAND_MIN_WIDTH) {
+      const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
+      compactBottom = theme.spacing.chartToFooter + brandHeight + pad;
+    }
     return {
       topHeight,
-      bottomHeight: 0,
+      bottomHeight: compactBottom,
       ...topElements,
     };
   }
@@ -270,8 +285,28 @@ export function computeChrome(
 
     // Remove trailing gap
     bottomHeight -= chromeGap;
+
+    // Ensure bottom height accommodates the brand watermark, which renders
+    // at the same Y as the first bottom chrome item but is taller (20px font
+    // vs 12px source). Without this, the brand overflows the SVG viewBox.
+    if (width >= BRAND_MIN_WIDTH) {
+      const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
+      // firstItemY is chartToFooter (the Y offset of the first bottom item).
+      // The brand needs brandHeight below that point; bottom chrome content
+      // needs (bottomHeight - chartToFooter). Take the max.
+      const contentBelowFirstItem = bottomHeight - theme.spacing.chartToFooter;
+      if (brandHeight > contentBelowFirstItem) {
+        bottomHeight += brandHeight - contentBelowFirstItem;
+      }
+    }
+
     // Add bottom padding
     bottomHeight += pad;
+  } else if (width >= BRAND_MIN_WIDTH) {
+    // No bottom chrome items, but brand watermark still renders.
+    // Reserve space: chartToFooter gap + brand text height + padding.
+    const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
+    bottomHeight = theme.spacing.chartToFooter + brandHeight + pad;
   }
 
   return {

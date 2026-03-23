@@ -58,6 +58,12 @@ export function estimateTextWidth(text: string, fontSize: number, fontWeight = 4
  */
 export const BRAND_RESERVE_WIDTH = 110;
 
+/** Font size of the brand watermark (px). Shared between layout and renderer. */
+export const BRAND_FONT_SIZE = 20;
+
+/** Minimum chart width to render the brand watermark (px). */
+export const BRAND_MIN_WIDTH = 120;
+
 /**
  * Estimate the rendered height of a text block.
  *

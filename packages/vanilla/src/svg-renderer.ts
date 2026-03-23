@@ -27,7 +27,7 @@ import type {
   TextStyle,
   TickMarkLayout,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -1066,8 +1066,6 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 // Brand rendering
 // ---------------------------------------------------------------------------
 
-const BRAND_FONT_SIZE = 20;
-const BRAND_MIN_WIDTH = 120;
 const BRAND_URL = 'https://tryopendata.ai';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 

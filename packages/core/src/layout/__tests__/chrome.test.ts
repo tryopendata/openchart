@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveTheme } from '../../theme/resolve';
 import type { Chrome } from '../../types/spec';
 import { computeChrome } from '../chrome';
+import { BRAND_FONT_SIZE, estimateTextHeight } from '../text-measure';
 
 const theme = resolveTheme();
 
@@ -14,9 +15,35 @@ describe('computeChrome', () => {
     expect(result.subtitle).toBeUndefined();
   });
 
-  it('returns zero heights when chrome is empty', () => {
+  it('reserves brand height when chrome is empty but chart is wide enough', () => {
     const result = computeChrome({}, theme, 600);
+    const pad = theme.spacing.padding;
+    const expectedBottom =
+      theme.spacing.chartToFooter + estimateTextHeight(BRAND_FONT_SIZE, 1) + pad;
     expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(expectedBottom);
+  });
+
+  it('returns zero bottom height when chrome is empty and chart is too narrow for brand', () => {
+    const result = computeChrome({}, theme, 100);
+    expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(0);
+  });
+
+  it('reserves brand height in compact mode for wide charts', () => {
+    const chrome: Chrome = { title: 'Title', source: 'Source' };
+    const result = computeChrome(chrome, theme, 600, undefined, 'compact');
+    const pad = theme.spacing.padding;
+    const expectedBottom =
+      theme.spacing.chartToFooter + estimateTextHeight(BRAND_FONT_SIZE, 1) + pad;
+    expect(result.topHeight).toBeGreaterThan(0);
+    expect(result.source).toBeUndefined(); // compact hides bottom chrome text
+    expect(result.bottomHeight).toBe(expectedBottom);
+  });
+
+  it('returns zero bottom height in compact mode for narrow charts', () => {
+    const chrome: Chrome = { title: 'Title', source: 'Source' };
+    const result = computeChrome(chrome, theme, 100, undefined, 'compact');
     expect(result.bottomHeight).toBe(0);
   });
 

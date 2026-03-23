@@ -7,6 +7,7 @@
  */
 
 import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
+import { BRAND_FONT_SIZE } from '@opendata-ai/openchart-core';
 import { renderCell } from './renderers/table-cells';
 
 // ---------------------------------------------------------------------------
@@ -14,7 +15,6 @@ import { renderCell } from './renderers/table-cells';
 // ---------------------------------------------------------------------------
 
 const BRAND_URL = 'https://tryopendata.ai';
-const BRAND_FONT_SIZE = 20;
 
 // ---------------------------------------------------------------------------
 // Chrome rendering
