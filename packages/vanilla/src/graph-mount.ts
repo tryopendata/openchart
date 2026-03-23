@@ -378,6 +378,8 @@ export function createGraph(
       centerForce: config.centerForce,
     });
 
+    let initialSettleDone = false;
+
     simulation.onTick((positions, _alpha) => {
       if (destroyed) return;
 
@@ -409,19 +411,22 @@ export function createGraph(
       // Rebuild spatial index
       spatialIndex.rebuild(positionedNodes);
 
+      // During initial simulation, continuously fit the viewport so the graph
+      // is visible and centered as it forms. This replaces the jarring single
+      // snap at settle time with a smooth progressive fit.
+      if (!initialSettleDone && positionedNodes.length > 0 && interactionManager) {
+        const { width: cw, height: ch } = getCanvasDimensions();
+        const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
+        interactionManager.setTransform(fitTransform);
+      }
+
       needsRender = true;
       scheduleRender();
     });
 
     simulation.onSettled(() => {
-      // One final fit after simulation settles
-      if (canvas && positionedNodes.length > 0 && interactionManager && renderer) {
-        const { width: cw, height: ch } = getCanvasDimensions();
-        const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
-        interactionManager.setTransform(fitTransform);
-        needsRender = true;
-        scheduleRender();
-      }
+      if (initialSettleDone) return;
+      initialSettleDone = true;
     });
   }
 

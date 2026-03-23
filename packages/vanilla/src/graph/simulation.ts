@@ -2,11 +2,10 @@
  * SimulationManager: spawns a Web Worker for the force simulation,
  * or falls back to synchronous d3-force on the main thread.
  *
- * Synchronous fallback is used when:
- * - Web Workers are unavailable (SSR, test environments)
- * - Node count is below 200 (worker overhead not worth it)
- *
- * The sync path caps at 300 ticks to prevent blocking the main thread.
+ * The worker is always preferred when available. Synchronous fallback
+ * is only used when Web Workers are unavailable (SSR, test environments).
+ * The sync path batches ticks via requestAnimationFrame to avoid
+ * blocking the main thread.
  */
 
 import {
@@ -27,8 +26,8 @@ import type { SimEdge, SimNode, WorkerOutMessage, WorkerSimulationConfig } from 
 // Constants
 // ---------------------------------------------------------------------------
 
-const SYNC_THRESHOLD = 200;
 const SYNC_MAX_TICKS = 300;
+const SYNC_TICKS_PER_BATCH = 15;
 
 // ---------------------------------------------------------------------------
 // Internal node shape for sync simulation
@@ -93,6 +92,7 @@ export class SimulationManager {
   private tickCb: TickCallback | null = null;
   private settledCb: SettledCallback | null = null;
   private destroyed = false;
+  private syncRafId: number | null = null;
 
   // Stored for worker->sync fallback
   private initNodes: SimNode[] = [];
@@ -112,7 +112,7 @@ export class SimulationManager {
   ): SimulationManager {
     const mgr = new SimulationManager();
 
-    const useWorker = typeof Worker !== 'undefined' && nodes.length >= SYNC_THRESHOLD;
+    const useWorker = typeof Worker !== 'undefined';
 
     if (useWorker) {
       mgr.initWorker(nodes, edges, config);
@@ -160,7 +160,7 @@ export class SimulationManager {
     }
   }
 
-  /** Unpin a node (free it from fixed position). */
+  /** Unpin a node and reheat so forces settle it into equilibrium. */
   unpinNode(id: string): void {
     if (this.destroyed) return;
 
@@ -171,6 +171,10 @@ export class SimulationManager {
       if (node) {
         node.fx = null;
         node.fy = null;
+      }
+      if (this.syncSim && this.syncSim.alpha() < 0.1) {
+        this.syncSim.alpha(0.1).restart();
+        this.runSyncTicks();
       }
     }
   }
@@ -198,6 +202,11 @@ export class SimulationManager {
   destroy(): void {
     this.destroyed = true;
 
+    if (this.syncRafId !== null) {
+      cancelAnimationFrame(this.syncRafId);
+      this.syncRafId = null;
+    }
+
     if (this.worker) {
       this.worker.postMessage({ type: 'stop' });
       this.worker.terminate();
@@ -223,44 +232,77 @@ export class SimulationManager {
     this.initEdges = edges;
     this.initConfig = config;
 
+    // Worker URL resolution:
+    // - Built dist/ consumers: import.meta.url points at dist/index.js,
+    //   so ./simulation-worker.js resolves to dist/simulation-worker.js.
+    // - Vite dev with source aliases (Ladle): import.meta.url points at
+    //   src/graph/simulation.ts, so ./simulation-worker.js doesn't exist.
+    //   The .js worker fails to load, and the onerror handler retries
+    //   with .ts which Vite transforms on the fly.
+    // - Vite production build: detects `new Worker(new URL(...))` and
+    //   bundles the worker as a hashed .js asset.
+    const initMsg = { type: 'init' as const, nodes, edges, config };
+    const wireWorker = (worker: Worker) => {
+      this.worker = worker;
+
+      worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
+        if (this.destroyed) return;
+        const msg = event.data;
+
+        switch (msg.type) {
+          case 'positions':
+            this.tickCb?.(msg.nodes, msg.alpha);
+            break;
+          case 'settled':
+            this.settledCb?.();
+            break;
+          case 'error':
+            console.error('[SimulationManager] Worker error:', msg.message);
+            break;
+        }
+      };
+
+      worker.postMessage(initMsg);
+    };
+
     try {
-      const workerUrl = new URL('./simulation-worker.ts', import.meta.url);
-      this.worker = new Worker(workerUrl, { type: 'module' });
+      const w = new Worker(new URL('./simulation-worker.js', import.meta.url), {
+        type: 'module',
+      });
+
+      w.onerror = () => {
+        // .js failed (likely Vite dev with source aliases). Try .ts.
+        if (this.destroyed) return;
+        w.terminate();
+        this.worker = null;
+
+        try {
+          const w2 = new Worker(new URL('./simulation-worker.ts', import.meta.url), {
+            type: 'module',
+          });
+
+          w2.onerror = () => {
+            // Both .js and .ts failed - fall back to sync.
+            if (this.destroyed) return;
+            console.warn('[SimulationManager] Worker failed to load, falling back to sync');
+            w2.terminate();
+            this.worker = null;
+            this.initSync(this.initNodes, this.initEdges, this.initConfig!);
+          };
+
+          wireWorker(w2);
+        } catch {
+          console.warn('[SimulationManager] Worker creation failed, using sync fallback');
+          this.initSync(this.initNodes, this.initEdges, this.initConfig!);
+        }
+      };
+
+      wireWorker(w);
     } catch {
       // Worker construction failed (e.g. SSR or restrictive CSP)
       console.warn('[SimulationManager] Worker creation failed, using sync fallback');
       this.initSync(nodes, edges, config);
-      return;
     }
-
-    this.worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
-      if (this.destroyed) return;
-      const msg = event.data;
-
-      switch (msg.type) {
-        case 'positions':
-          this.tickCb?.(msg.nodes, msg.alpha);
-          break;
-        case 'settled':
-          this.settledCb?.();
-          break;
-        case 'error':
-          console.error('[SimulationManager] Worker error:', msg.message);
-          break;
-      }
-    };
-
-    this.worker.onerror = () => {
-      // Worker failed to load (e.g. MIME type error in dev, missing file).
-      // Terminate and fall back to synchronous simulation.
-      if (this.destroyed) return;
-      console.warn('[SimulationManager] Worker failed to load, falling back to sync');
-      this.worker?.terminate();
-      this.worker = null;
-      this.initSync(this.initNodes, this.initEdges, this.initConfig!);
-    };
-
-    this.worker.postMessage({ type: 'init', nodes, edges, config });
   }
 
   // -------------------------------------------------------------------------
@@ -318,41 +360,61 @@ export class SimulationManager {
   }
 
   /**
-   * Run ticks synchronously and fire callbacks.
-   * @param deferred - When true, deliver results via microtask. Used for the
-   *   initial run where callbacks haven't been registered yet. Subsequent
-   *   calls (reheat, drag) fire synchronously since callbacks are already set.
+   * Run simulation ticks in batches, yielding to the main thread between
+   * batches via requestAnimationFrame. This prevents a multi-second freeze
+   * when the sync fallback handles large graphs (1k+ nodes).
+   *
+   * Each batch runs SYNC_TICKS_PER_BATCH ticks, emits positions for
+   * progressive rendering, then schedules the next batch.
+   *
+   * @param deferred - When true, start via microtask (initial run where
+   *   callbacks aren't wired yet). Otherwise start immediately.
    */
   private runSyncTicks(deferred = false): void {
     if (!this.syncSim || this.destroyed) return;
 
-    const sim = this.syncSim;
-    for (let i = 0; i < SYNC_MAX_TICKS; i++) {
-      sim.tick();
-      if (sim.alpha() < 0.001) break;
+    // Cancel any in-flight batched run (e.g. from a previous reheat)
+    if (this.syncRafId !== null) {
+      cancelAnimationFrame(this.syncRafId);
+      this.syncRafId = null;
     }
 
-    const positions = this.syncNodes.map((n) => ({
-      id: n.id,
-      x: n.x ?? 0,
-      y: n.y ?? 0,
-    }));
-    const alpha = sim.alpha();
-    const settled = alpha < 0.001;
+    const sim = this.syncSim;
+    let tickCount = 0;
 
-    const deliver = () => {
-      if (this.destroyed) return;
+    const runBatch = () => {
+      if (this.destroyed || !this.syncSim) return;
+      this.syncRafId = null;
+
+      for (let i = 0; i < SYNC_TICKS_PER_BATCH && tickCount < SYNC_MAX_TICKS; i++, tickCount++) {
+        sim.tick();
+        if (sim.alpha() < 0.001) {
+          tickCount = SYNC_MAX_TICKS;
+          break;
+        }
+      }
+
+      const positions = this.syncNodes.map((n) => ({
+        id: n.id,
+        x: n.x ?? 0,
+        y: n.y ?? 0,
+      }));
+      const alpha = sim.alpha();
+      const settled = alpha < 0.001 || tickCount >= SYNC_MAX_TICKS;
+
       this.tickCb?.(positions, alpha);
+
       if (settled) {
         this.settledCb?.();
+      } else {
+        this.syncRafId = requestAnimationFrame(runBatch);
       }
     };
 
     if (deferred) {
-      // Initial run: callbacks not registered yet, defer to microtask
-      queueMicrotask(deliver);
+      queueMicrotask(runBatch);
     } else {
-      deliver();
+      runBatch();
     }
   }
 }

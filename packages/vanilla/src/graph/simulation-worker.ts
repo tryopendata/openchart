@@ -18,10 +18,6 @@ declare const self: WorkerSelf;
  * IMPORTANT: This file cannot import from workspace packages (@opendata-ai/*).
  * All needed types are defined inline or duplicated from worker-protocol.ts.
  * The bun build step bundles this as an isolated IIFE.
- *
- * The companion simulation-worker-url.ts provides createSimulationWorker()
- * which uses `new URL('./simulation-worker.ts', import.meta.url)` for Vite dev,
- * while production consumers load the pre-built dist/simulation-worker.js.
  */
 
 import {
@@ -245,6 +241,12 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
         if (node) {
           node.fx = null;
           node.fy = null;
+        }
+        // Gentle reheat so the released node settles into equilibrium
+        // without destabilizing the whole graph. 0.1 is enough for
+        // local settling without triggering large-scale reorganization.
+        if (simulation && simulation.alpha() < 0.1) {
+          simulation.alpha(0.1).restart();
         }
         break;
       }
