@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.5.1](https://github.com/tryopendata/openchart/compare/core-v6.5.0...core-v6.5.1) (2026-03-26)
+
+
+### Bug Fixes
+
+* correct AnimationStagger.delay default in JSDoc (30 -&gt; 80) ([9a11aed](https://github.com/tryopendata/openchart/commit/9a11aed9dbac314ae3e926f2ba6f1eb1cf17269c))
+
 ## [6.5.0](https://github.com/tryopendata/openchart/compare/core-v6.4.1...core-v6.5.0) (2026-03-26)
 
 
