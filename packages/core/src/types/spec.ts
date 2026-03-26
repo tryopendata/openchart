@@ -607,7 +607,7 @@ export type AnimationEase = 'smooth' | 'snappy';
 
 /** Stagger configuration for sequential element reveal. */
 export interface AnimationStagger {
-  /** Delay between each element in ms. Default: 30 */
+  /** Delay between each element in ms. Default: 80 */
   delay?: number;
   /** Ordering strategy. Default: 'index' (DOM order) */
   order?: 'index' | 'value' | 'reverse';
