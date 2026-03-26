@@ -140,6 +140,40 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   for (const [channel, channelSpec] of Object.entries(encoding)) {
     if (!channelSpec || typeof channelSpec !== 'object') continue;
 
+    // Tooltip can be an array of encoding channels
+    if (channel === 'tooltip' && Array.isArray(channelSpec)) {
+      for (let i = 0; i < channelSpec.length; i++) {
+        const elem = channelSpec[i] as Record<string, unknown> | null;
+        if (!elem || typeof elem !== 'object') continue;
+        if (!elem.field || typeof elem.field !== 'string') {
+          errors.push({
+            message: `Spec error: encoding.tooltip[${i}] must have a "field" string`,
+            path: `encoding.tooltip[${i}].field`,
+            code: 'MISSING_FIELD',
+            suggestion: `Add a field name from your data columns: ${availableColumns}`,
+          });
+          continue;
+        }
+        if (!dataColumns.has(elem.field) && !transformFields.has(elem.field)) {
+          errors.push({
+            message: `Spec error: encoding.tooltip[${i}].field "${elem.field}" does not exist in data. Available columns: ${availableColumns}`,
+            path: `encoding.tooltip[${i}].field`,
+            code: 'DATA_FIELD_MISSING',
+            suggestion: `Use one of the available data columns: ${availableColumns}`,
+          });
+        }
+        if (elem.type && !VALID_FIELD_TYPES.has(elem.type as string)) {
+          errors.push({
+            message: `Spec error: encoding.tooltip[${i}].type "${elem.type}" is not valid. Must be one of: ${[...VALID_FIELD_TYPES].join(', ')}`,
+            path: `encoding.tooltip[${i}].type`,
+            code: 'INVALID_VALUE',
+            suggestion: `Use one of: ${[...VALID_FIELD_TYPES].join(', ')}`,
+          });
+        }
+      }
+      continue;
+    }
+
     const channelObj = channelSpec as Record<string, unknown>;
     const channelRule = rules[channel as keyof typeof rules];
 

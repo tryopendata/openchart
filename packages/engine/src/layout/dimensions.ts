@@ -231,6 +231,7 @@ export function computeDimensions(
     if (
       spec.markType === 'bar' ||
       spec.markType === 'circle' ||
+      spec.markType === 'lollipop' ||
       encoding.y.type === 'nominal' ||
       encoding.y.type === 'ordinal'
     ) {

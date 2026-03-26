@@ -946,4 +946,111 @@ describe('computeAnnotations', () => {
       expect(moved).toBe(true);
     });
   });
+
+  // -----------------------------------------------------------------
+  // Boundary clamping (SVG edge overflow prevention)
+  // -----------------------------------------------------------------
+
+  describe('boundary clamping', () => {
+    const svgDimensions = { width: 600, height: 400 };
+
+    it('shifts annotation left when it overflows the right SVG edge', () => {
+      // Place annotation at the far right of the chart area so the label
+      // text extends past the SVG boundary.
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2022-01-01',
+          y: 40,
+          text: 'This is a long annotation label',
+          anchor: 'right',
+          offset: { dx: 80, dy: 0 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(
+        spec,
+        scales,
+        chartArea,
+        fullStrategy,
+        false,
+        [],
+        svgDimensions,
+      );
+
+      expect(annotations).toHaveLength(1);
+      const label = annotations[0].label!;
+      const fontSize = label.style.fontSize ?? 12;
+      const fontWeight = label.style.fontWeight ?? 400;
+      // Estimate bounds to verify the right edge is within SVG
+      const textWidth = label.text
+        .split('\n')
+        .reduce(
+          (max, line) => Math.max(max, line.length * fontSize * (fontWeight >= 600 ? 0.65 : 0.55)),
+          0,
+        );
+      // The label's right edge should not exceed the SVG width
+      expect(label.x + textWidth).toBeLessThanOrEqual(svgDimensions.width);
+    });
+
+    it('shifts annotation down when it overflows the top SVG edge', () => {
+      // Place annotation near the top of the chart and push it upward
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 40,
+          text: 'Top overflow',
+          anchor: 'top',
+          offset: { dx: 0, dy: -80 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(
+        spec,
+        scales,
+        chartArea,
+        fullStrategy,
+        false,
+        [],
+        svgDimensions,
+      );
+
+      expect(annotations).toHaveLength(1);
+      const label = annotations[0].label!;
+      const fontSize = label.style.fontSize ?? 12;
+      // The top of the label bounds (y - fontSize) should be >= 0
+      expect(label.y - fontSize).toBeGreaterThanOrEqual(0);
+    });
+
+    it('does not modify annotation that is well within bounds', () => {
+      // Place annotation in the center of the chart
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-06-01',
+          y: 25,
+          text: 'Centered',
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      // Compute with and without SVG dimensions to verify no change
+      const withClamping = computeAnnotations(
+        spec,
+        scales,
+        chartArea,
+        fullStrategy,
+        false,
+        [],
+        svgDimensions,
+      );
+      const withoutClamping = computeAnnotations(spec, scales, chartArea, fullStrategy, false, []);
+
+      expect(withClamping).toHaveLength(1);
+      expect(withoutClamping).toHaveLength(1);
+      expect(withClamping[0].label!.x).toBe(withoutClamping[0].label!.x);
+      expect(withClamping[0].label!.y).toBe(withoutClamping[0].label!.y);
+    });
+  });
 });

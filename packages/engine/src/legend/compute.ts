@@ -51,6 +51,7 @@ function swatchShapeForType(markType: string): LegendEntry['shape'] {
       return 'line';
     case 'point':
     case 'circle':
+    case 'lollipop':
       return 'circle';
     default:
       return 'square';
@@ -213,10 +214,15 @@ export function computeLegend(
     const maxLegendHeight = chartArea.height * maxHeightRatio;
 
     // Calculate how many entries fit
-    const maxEntries = Math.max(
+    const maxFromSpace = Math.max(
       1,
       Math.floor((maxLegendHeight - LEGEND_PADDING * 2) / (entryHeight + 4)),
     );
+    // symbolLimit overrides the space-based limit when set
+    const maxEntries =
+      spec.legend?.symbolLimit != null
+        ? Math.min(spec.legend.symbolLimit, maxFromSpace)
+        : maxFromSpace;
     if (entries.length > maxEntries) {
       entries = truncateEntries(entries, maxEntries);
     }
@@ -254,7 +260,18 @@ export function computeLegend(
   // Top/bottom-positioned legend: horizontal flow with overflow protection.
   // Reserve space on the right so legend entries don't overlap the brand watermark.
   const availableWidth = chartArea.width - LEGEND_PADDING * 2 - BRAND_RESERVE_WIDTH;
-  const maxFit = entriesThatFit(entries, availableWidth, TOP_LEGEND_MAX_ROWS, labelStyle);
+
+  // Apply symbolLimit first if set, then fit remaining entries to available rows.
+  if (spec.legend?.symbolLimit != null && spec.legend.symbolLimit < entries.length) {
+    entries = truncateEntries(entries, spec.legend.symbolLimit);
+  }
+
+  // When columns is explicitly set, allow that many rows instead of the default max.
+  const maxRows =
+    spec.legend?.columns != null
+      ? Math.ceil(entries.length / spec.legend.columns)
+      : TOP_LEGEND_MAX_ROWS;
+  const maxFit = entriesThatFit(entries, availableWidth, maxRows, labelStyle);
 
   if (maxFit < entries.length) {
     entries = truncateEntries(entries, maxFit);

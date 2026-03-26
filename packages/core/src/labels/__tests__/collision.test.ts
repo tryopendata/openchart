@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TextStyle } from '../../types/layout';
-import type { LabelCandidate } from '../collision';
-import { detectCollision, resolveCollisions } from '../collision';
+import {
+  detectCollision,
+  EXTENDED_OFFSET_STRATEGIES,
+  type LabelCandidate,
+  OFFSET_STRATEGIES,
+  resolveCollisions,
+} from '../collision';
 
 const defaultStyle: TextStyle = {
   fontFamily: 'Inter',
@@ -193,5 +198,65 @@ describe('resolveCollisions', () => {
 
   it('handles empty input', () => {
     expect(resolveCollisions([])).toEqual([]);
+  });
+
+  it('accepts custom strategies without breaking default behavior', () => {
+    const labels: LabelCandidate[] = [
+      {
+        text: 'A',
+        anchorX: 0,
+        anchorY: 0,
+        width: 20,
+        height: 14,
+        priority: 'data',
+        style: defaultStyle,
+      },
+      {
+        text: 'B',
+        anchorX: 100,
+        anchorY: 100,
+        width: 20,
+        height: 14,
+        priority: 'data',
+        style: defaultStyle,
+      },
+    ];
+
+    // Explicit default strategies should behave the same as no parameter
+    const defaultResults = resolveCollisions(labels);
+    const explicitResults = resolveCollisions(labels, OFFSET_STRATEGIES);
+    expect(explicitResults).toEqual(defaultResults);
+  });
+
+  it('resolves more dense labels with extended strategies than default', () => {
+    // 10 labels at the exact same position, simulating many converging line endpoints.
+    // The default 7 strategies can place at most 7; extended strategies should place more.
+    const labels: LabelCandidate[] = Array.from({ length: 10 }, (_, i) => ({
+      text: `Series ${i}`,
+      anchorX: 400,
+      anchorY: 200,
+      width: 60,
+      height: 14,
+      priority: 'data' as const,
+      style: defaultStyle,
+    }));
+
+    const defaultResults = resolveCollisions(labels);
+    const extendedResults = resolveCollisions(labels, EXTENDED_OFFSET_STRATEGIES);
+
+    const defaultVisible = defaultResults.filter((r) => r.visible).length;
+    const extendedVisible = extendedResults.filter((r) => r.visible).length;
+
+    // Default has 7 strategies, so at most 7 can be placed
+    expect(defaultVisible).toBeLessThanOrEqual(OFFSET_STRATEGIES.length);
+    // Extended strategies should place more labels than default
+    expect(extendedVisible).toBeGreaterThan(defaultVisible);
+  });
+
+  it('EXTENDED_OFFSET_STRATEGIES includes all base strategies', () => {
+    for (const strategy of OFFSET_STRATEGIES) {
+      expect(EXTENDED_OFFSET_STRATEGIES).toContainEqual(strategy);
+    }
+    expect(EXTENDED_OFFSET_STRATEGIES.length).toBeGreaterThan(OFFSET_STRATEGIES.length);
   });
 });

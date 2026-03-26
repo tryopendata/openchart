@@ -111,6 +111,71 @@ describe('computeLegend', () => {
     expect(legend.entries).toHaveLength(3);
   });
 
+  it('with columns: 3 and 6 series, shows all 6 entries across 2 rows', () => {
+    const sixSeriesSpec: NormalizedChartSpec = {
+      ...specWithColor,
+      data: [
+        { date: '2020', value: 10, country: 'A' },
+        { date: '2020', value: 10, country: 'B' },
+        { date: '2020', value: 10, country: 'C' },
+        { date: '2020', value: 10, country: 'D' },
+        { date: '2020', value: 10, country: 'E' },
+        { date: '2020', value: 10, country: 'F' },
+      ],
+      legend: { columns: 3 },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(sixSeriesSpec, compactStrategy, theme, chartArea);
+    // All 6 entries visible (no overflow indicator)
+    expect(legend.entries).toHaveLength(6);
+    expect(legend.entries.every((e) => !e.overflow)).toBe(true);
+  });
+
+  it('with symbolLimit: 3 and 6 series, truncates to 3 entries + overflow', () => {
+    const sixSeriesSpec: NormalizedChartSpec = {
+      ...specWithColor,
+      data: [
+        { date: '2020', value: 10, country: 'A' },
+        { date: '2020', value: 10, country: 'B' },
+        { date: '2020', value: 10, country: 'C' },
+        { date: '2020', value: 10, country: 'D' },
+        { date: '2020', value: 10, country: 'E' },
+        { date: '2020', value: 10, country: 'F' },
+      ],
+      legend: { symbolLimit: 3 },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(sixSeriesSpec, compactStrategy, theme, chartArea);
+    // 3 real entries + 1 overflow indicator
+    expect(legend.entries).toHaveLength(4);
+    expect(legend.entries[3].label).toBe('+3 more');
+    expect(legend.entries[3].overflow).toBe(true);
+  });
+
+  it('with symbolLimit on right-positioned legend, truncates entries', () => {
+    const sixSeriesSpec: NormalizedChartSpec = {
+      ...specWithColor,
+      data: [
+        { date: '2020', value: 10, country: 'A' },
+        { date: '2020', value: 10, country: 'B' },
+        { date: '2020', value: 10, country: 'C' },
+        { date: '2020', value: 10, country: 'D' },
+        { date: '2020', value: 10, country: 'E' },
+        { date: '2020', value: 10, country: 'F' },
+      ],
+      legend: { symbolLimit: 2 },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(sixSeriesSpec, fullStrategy, theme, chartArea);
+    // 2 real entries + 1 overflow indicator
+    expect(legend.entries).toHaveLength(3);
+    expect(legend.entries[2].label).toBe('+4 more');
+    expect(legend.entries[2].overflow).toBe(true);
+  });
+
   it('uses correct swatch shape for chart type', () => {
     const lineLegend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
     expect(lineLegend.entries[0].shape).toBe('line');

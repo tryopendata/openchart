@@ -568,7 +568,10 @@ function buildPositionalScale(
     case 'nominal':
     case 'ordinal':
       // Bar charts use band scales for their categorical axis (both orientations)
-      if (chartType === 'bar' || (chartType === 'circle' && axis === 'y')) {
+      if (
+        chartType === 'bar' ||
+        ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
+      ) {
         return buildBandScale(channel, data, rangeStart, rangeEnd);
       }
       return buildPointScale(channel, data, rangeStart, rangeEnd);

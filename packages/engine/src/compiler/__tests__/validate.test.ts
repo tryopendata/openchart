@@ -272,6 +272,40 @@ describe('validateSpec', () => {
       expect(fieldError!.code).toBe('MISSING_FIELD');
       expect(fieldError!.suggestion).toContain('a');
     });
+
+    it('accepts tooltip as an array of valid encoding channels', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: [{ a: 1, b: 2, c: 3 }],
+        encoding: {
+          x: { field: 'a', type: 'quantitative' },
+          y: { field: 'b', type: 'nominal' },
+          tooltip: [
+            { field: 'a', type: 'quantitative' },
+            { field: 'c', type: 'quantitative' },
+          ],
+        },
+      });
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('rejects tooltip array element with missing field', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: [{ a: 1, b: 2 }],
+        encoding: {
+          x: { field: 'a', type: 'quantitative' },
+          y: { field: 'b', type: 'nominal' },
+          tooltip: [{ field: 'a', type: 'quantitative' }, { type: 'quantitative' }],
+        },
+      });
+      expect(result.valid).toBe(false);
+      const err = result.errors.find((e) => e.message.includes('tooltip[1]'));
+      expect(err).toBeDefined();
+      expect(err!.code).toBe('MISSING_FIELD');
+      expect(err!.path).toBe('encoding.tooltip[1].field');
+    });
   });
 
   describe('table specs', () => {

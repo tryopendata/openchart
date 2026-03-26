@@ -248,6 +248,127 @@ describe('computeScatterMarks', () => {
       expect(marks).toHaveLength(2);
     });
   });
+
+  describe('nominal y axis', () => {
+    function makeNominalYSpec(): NormalizedChartSpec {
+      return {
+        markType: 'point',
+        markDef: { type: 'point' },
+        data: [
+          { value: 10, category: 'A' },
+          { value: 30, category: 'B' },
+          { value: 50, category: 'C' },
+        ],
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'category', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+    }
+
+    it('produces one PointMark per data row', () => {
+      const spec = makeNominalYSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(3);
+      expect(marks.every((m) => m.type === 'point')).toBe(true);
+    });
+
+    it('positions are within chart area bounds', () => {
+      const spec = makeNominalYSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      for (const mark of marks) {
+        expect(mark.cx).toBeGreaterThanOrEqual(chartArea.x);
+        expect(mark.cx).toBeLessThanOrEqual(chartArea.x + chartArea.width);
+        expect(mark.cy).toBeGreaterThanOrEqual(chartArea.y);
+        expect(mark.cy).toBeLessThanOrEqual(chartArea.y + chartArea.height);
+      }
+    });
+
+    it('different categories get different y positions', () => {
+      const spec = makeNominalYSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      const yPositions = marks.map((m) => m.cy);
+      const uniqueYs = new Set(yPositions);
+      expect(uniqueYs.size).toBe(3);
+    });
+  });
+
+  describe('temporal x axis', () => {
+    it('produces marks for temporal x with quantitative y', () => {
+      const spec: NormalizedChartSpec = {
+        markType: 'point',
+        markDef: { type: 'point' },
+        data: [
+          { date: '2020-01-01', value: 10 },
+          { date: '2021-01-01', value: 30 },
+          { date: '2022-01-01', value: 20 },
+        ],
+        encoding: {
+          x: { field: 'date', type: 'temporal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(3);
+      for (const mark of marks) {
+        expect(mark.cx).toBeGreaterThanOrEqual(chartArea.x);
+        expect(mark.cx).toBeLessThanOrEqual(chartArea.x + chartArea.width);
+      }
+    });
+  });
+
+  describe('nominal x axis', () => {
+    it('produces marks for nominal x with quantitative y', () => {
+      const spec: NormalizedChartSpec = {
+        markType: 'point',
+        markDef: { type: 'point' },
+        data: [
+          { category: 'X', value: 10 },
+          { category: 'Y', value: 30 },
+          { category: 'Z', value: 20 },
+        ],
+        encoding: {
+          x: { field: 'category', type: 'nominal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(3);
+
+      // Different categories should produce different x positions
+      const xPositions = marks.map((m) => m.cx);
+      const uniqueXs = new Set(xPositions);
+      expect(uniqueXs.size).toBe(3);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

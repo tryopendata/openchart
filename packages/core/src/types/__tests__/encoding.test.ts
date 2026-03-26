@@ -27,7 +27,7 @@ function getOptionalChannels(markType: MarkType): string[] {
 // ---------------------------------------------------------------------------
 
 describe('MARK_ENCODING_RULES', () => {
-  it('has entries for all 10 mark types', () => {
+  it('has entries for all 11 mark types', () => {
     const expectedTypes: MarkType[] = [
       'bar',
       'line',
@@ -39,6 +39,7 @@ describe('MARK_ENCODING_RULES', () => {
       'rule',
       'tick',
       'rect',
+      'lollipop',
     ];
     for (const type of expectedTypes) {
       expect(MARK_ENCODING_RULES[type]).toBeDefined();
@@ -110,6 +111,17 @@ describe('line encoding rules', () => {
 });
 
 describe('point encoding rules', () => {
+  it('accepts all four field types on x and y', () => {
+    const rules = MARK_ENCODING_RULES.point;
+    for (const axis of ['x', 'y'] as const) {
+      expect(rules[axis].required).toBe(true);
+      expect(rules[axis].allowedTypes).toContain('quantitative');
+      expect(rules[axis].allowedTypes).toContain('temporal');
+      expect(rules[axis].allowedTypes).toContain('nominal');
+      expect(rules[axis].allowedTypes).toContain('ordinal');
+    }
+  });
+
   it('supports shape as optional', () => {
     expect(getOptionalChannels('point')).toContain('shape');
   });
@@ -200,6 +212,23 @@ describe('rect encoding rules', () => {
   });
 });
 
+describe('lollipop encoding rules', () => {
+  it('has the same rules as circle (semantic alias)', () => {
+    const lollipopRules = MARK_ENCODING_RULES.lollipop;
+    const circleRules = MARK_ENCODING_RULES.circle;
+    expect(lollipopRules).toEqual(circleRules);
+  });
+
+  it('requires x (quantitative) and y (nominal/ordinal)', () => {
+    const rules = MARK_ENCODING_RULES.lollipop;
+    expect(rules.x.required).toBe(true);
+    expect(rules.x.allowedTypes).toEqual(['quantitative']);
+    expect(rules.y.required).toBe(true);
+    expect(rules.y.allowedTypes).toContain('nominal');
+    expect(rules.y.allowedTypes).toContain('ordinal');
+  });
+});
+
 describe('common channels across marks', () => {
   it('tooltip is optional on all mark types', () => {
     const allTypes: MarkType[] = [
@@ -213,6 +242,7 @@ describe('common channels across marks', () => {
       'rule',
       'tick',
       'rect',
+      'lollipop',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];
@@ -234,6 +264,7 @@ describe('common channels across marks', () => {
       'rule',
       'tick',
       'rect',
+      'lollipop',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];
@@ -255,6 +286,7 @@ describe('common channels across marks', () => {
       'rule',
       'tick',
       'rect',
+      'lollipop',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];

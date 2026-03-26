@@ -19,7 +19,11 @@ import type {
   LineMark,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, resolveCollisions } from '@opendata-ai/openchart-core';
+import {
+  EXTENDED_OFFSET_STRATEGIES,
+  estimateTextWidth,
+  resolveCollisions,
+} from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -127,7 +131,7 @@ export function computeLineLabels(
   // label (which is what we already compute). This is the same as 'auto' for lines
   // since we only compute the endpoint label per series.
 
-  const resolved = resolveCollisions(candidates);
+  const resolved = resolveCollisions(candidates, EXTENDED_OFFSET_STRATEGIES);
   for (let i = 0; i < resolved.length; i++) {
     const seriesKey = seriesOrder[i];
     const label = resolved[i];

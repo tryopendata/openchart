@@ -323,6 +323,67 @@ describe('computeTooltipDescriptors', () => {
     });
   });
 
+  describe('explicit tooltip encoding', () => {
+    it('uses tooltip array fields instead of auto-generated defaults', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          ...makeBarSpec().encoding,
+          tooltip: [
+            { field: 'category', type: 'nominal' },
+            { field: 'value', type: 'quantitative' },
+          ],
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 100 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      expect(content.fields).toHaveLength(2);
+      expect(content.fields[0].label).toBe('category');
+      expect(content.fields[0].value).toBe('A');
+      expect(content.fields[1].label).toBe('value');
+      expect(content.fields[1].value).toBe('100');
+    });
+
+    it('auto-generates tooltip fields when encoding.tooltip is not set', () => {
+      const spec = makeBarSpec();
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 100 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      // Default: y field first, then x field
+      expect(content.fields.length).toBeGreaterThanOrEqual(1);
+      const labels = content.fields.map((f) => f.label);
+      expect(labels).toContain('value');
+      expect(labels).toContain('category');
+    });
+  });
+
   describe('empty data', () => {
     it('returns empty map for no marks', () => {
       const spec = makeLineSpec();

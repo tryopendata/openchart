@@ -2,7 +2,7 @@
  * Scatter / bubble chart mark computation.
  *
  * Takes a normalized chart spec with resolved scales and produces
- * PointMark[] for rendering scatter plots. Both axes are quantitative.
+ * PointMark[] for rendering scatter plots. Axes can be any field type.
  * Optional size encoding produces area-proportional bubbles via sqrt
  * scaling, and color encoding groups points by category.
  */
@@ -15,7 +15,7 @@ import type {
   Rect,
 } from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
-import type { ScaleLinear } from 'd3-scale';
+import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import { scaleSqrt } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -31,14 +31,52 @@ const MIN_BUBBLE_RADIUS = 3;
 const MAX_BUBBLE_RADIUS = 30;
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Resolve a data value to a pixel position based on channel type and scale. */
+function resolvePosition(
+  value: unknown,
+  channelType: string,
+  scale:
+    | ScaleLinear<number, number>
+    | ScaleTime<number, number>
+    | ScaleBand<string>
+    | ScalePoint<string>,
+): number | undefined {
+  switch (channelType) {
+    case 'nominal':
+    case 'ordinal': {
+      const s = String(value);
+      if ('bandwidth' in scale && typeof scale.bandwidth === 'function') {
+        const pos = (scale as ScaleBand<string>)(s);
+        if (pos === undefined) return undefined;
+        return pos + (scale as ScaleBand<string>).bandwidth() / 2;
+      }
+      // ScalePoint - no bandwidth, position is the point itself
+      const pos = (scale as ScalePoint<string>)(s);
+      return pos;
+    }
+    case 'temporal':
+      return (scale as ScaleTime<number, number>)(new Date(value as string | number));
+    default: {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return undefined;
+      return (scale as ScaleLinear<number, number>)(num);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
  * Compute scatter/bubble marks from a normalized chart spec.
  *
- * Both x and y are quantitative (linear scales). Optional size encoding
- * maps a data field to point radius using sqrt scale (area-proportional).
+ * Axes accept any field type: quantitative (linear), temporal (time),
+ * nominal/ordinal (band or point scale). Optional size encoding maps a
+ * data field to point radius using sqrt scale (area-proportional).
  * Optional color encoding groups points by category with distinct colors.
  */
 export function computeScatterMarks(
@@ -55,8 +93,18 @@ export function computeScatterMarks(
     return [];
   }
 
-  const xScale = scales.x.scale as ScaleLinear<number, number>;
-  const yScale = scales.y.scale as ScaleLinear<number, number>;
+  const xScale = scales.x.scale as
+    | ScaleLinear<number, number>
+    | ScaleTime<number, number>
+    | ScaleBand<string>
+    | ScalePoint<string>;
+  const yScale = scales.y.scale as
+    | ScaleLinear<number, number>
+    | ScaleTime<number, number>
+    | ScaleBand<string>
+    | ScalePoint<string>;
+  const xType = xChannel.type;
+  const yType = yChannel.type;
 
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   const isSequentialColor = colorEnc?.type === 'quantitative';
@@ -79,13 +127,13 @@ export function computeScatterMarks(
   const marks: PointMark[] = [];
 
   for (const row of spec.data) {
-    const xVal = Number(row[xChannel.field]);
-    const yVal = Number(row[yChannel.field]);
+    const rawX = row[xChannel.field];
+    const rawY = row[yChannel.field];
 
-    if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+    const cx = resolvePosition(rawX, xType, xScale);
+    const cy = resolvePosition(rawY, yType, yScale);
 
-    const cx = xScale(xVal);
-    const cy = yScale(yVal);
+    if (cx === undefined || cy === undefined) continue;
 
     const category = colorField && !isSequentialColor ? String(row[colorField] ?? '') : undefined;
     let color: string;
@@ -106,7 +154,7 @@ export function computeScatterMarks(
       }
     }
 
-    const labelParts = [`${xChannel.field}=${xVal}`, `${yChannel.field}=${yVal}`];
+    const labelParts = [`${xChannel.field}=${rawX}`, `${yChannel.field}=${rawY}`];
     if (category) labelParts.push(`${colorField}=${category}`);
     if (sizeField && row[sizeField] != null) {
       labelParts.push(`${sizeField}=${row[sizeField]}`);

@@ -24,6 +24,40 @@ import {
 } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Suffix multipliers used by abbreviateNumber in core. */
+const SUFFIX_MULTIPLIERS: Record<string, number> = {
+  K: 1_000,
+  M: 1_000_000,
+  B: 1_000_000_000,
+  T: 1_000_000_000_000,
+};
+
+/**
+ * Parse a numeric string that may include comma separators and/or a
+ * K/M/B/T abbreviation suffix (as produced by `abbreviateNumber`).
+ * Returns NaN when the string cannot be parsed.
+ */
+function parseDisplayNumber(raw: string): number {
+  const trimmed = raw.trim();
+  if (!trimmed) return NaN;
+
+  // Check for trailing abbreviation suffix (case-insensitive)
+  const last = trimmed[trimmed.length - 1].toUpperCase();
+  const multiplier = SUFFIX_MULTIPLIERS[last];
+  if (multiplier) {
+    const numPart = trimmed.slice(0, -1).replace(/,/g, '');
+    const n = Number(numPart);
+    return Number.isNaN(n) ? NaN : n * multiplier;
+  }
+
+  // No suffix — strip commas and parse
+  return Number(trimmed.replace(/,/g, ''));
+}
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
@@ -57,6 +91,9 @@ export function computeBarLabels(
     density === 'endpoints' && marks.length > 1 ? [marks[0], marks[marks.length - 1]] : marks;
 
   const candidates: LabelCandidate[] = [];
+  // Track whether each candidate fits within its stacked segment.
+  // Non-stacked bars are always considered fitting (undefined = fits).
+  const fitsInSegment: boolean[] = [];
 
   const formatter = buildD3Formatter(labelFormat);
 
@@ -72,7 +109,7 @@ export function computeBarLabels(
     // Apply label format if provided (re-parse the number from the aria string)
     let valuePart = rawValue;
     if (formatter) {
-      const num = Number(rawValue.replace(/[^0-9.-]/g, ''));
+      const num = parseDisplayNumber(rawValue);
       if (!Number.isNaN(num)) valuePart = formatter(num);
     }
 
@@ -110,6 +147,10 @@ export function computeBarLabels(
     // SVG places the text center at this y coordinate.
     const anchorY = mark.y + mark.height / 2;
 
+    // Check if label text fits within the stacked segment
+    const fits = !(isStacked && textWidth > mark.width - 2 * LABEL_PADDING);
+
+    fitsInSegment.push(fits);
     candidates.push({
       text: valuePart,
       anchorX,
@@ -132,15 +173,47 @@ export function computeBarLabels(
   if (candidates.length === 0) return [];
 
   // 'all': skip collision detection, mark everything visible
+  // (but hide labels that don't fit in their stacked segment)
   if (density === 'all') {
-    return candidates.map((c) => ({
+    return candidates.map((c, i) => ({
       text: c.text,
       x: c.anchorX,
       y: c.anchorY,
       style: c.style,
-      visible: true,
+      visible: fitsInSegment[i] !== false,
     }));
   }
 
-  return resolveCollisions(candidates);
+  // For 'auto' and 'endpoints': pre-mark candidates that don't fit their
+  // stacked segment as hidden before running collision detection.
+  const fittingCandidates: LabelCandidate[] = [];
+  const unfittingIndices = new Set<number>();
+  for (let i = 0; i < candidates.length; i++) {
+    if (fitsInSegment[i] === false) {
+      unfittingIndices.add(i);
+    } else {
+      fittingCandidates.push(candidates[i]);
+    }
+  }
+
+  const resolved = resolveCollisions(fittingCandidates);
+
+  // Re-insert hidden labels for candidates that didn't fit, preserving order
+  const results: ResolvedLabel[] = [];
+  let resolvedIdx = 0;
+  for (let i = 0; i < candidates.length; i++) {
+    if (unfittingIndices.has(i)) {
+      results.push({
+        text: candidates[i].text,
+        x: candidates[i].anchorX,
+        y: candidates[i].anchorY,
+        style: candidates[i].style,
+        visible: false,
+      });
+    } else {
+      results.push(resolved[resolvedIdx++]);
+    }
+  }
+
+  return results;
 }

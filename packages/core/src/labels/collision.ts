@@ -59,8 +59,14 @@ export function detectCollision(a: Rect, b: Rect): boolean {
 // Offset strategies
 // ---------------------------------------------------------------------------
 
+/** An offset position to try when resolving a label collision. */
+export interface OffsetStrategy {
+  dx: number;
+  dy: number;
+}
+
 /** Offsets to try when a label collides with an existing placement. */
-const OFFSET_STRATEGIES = [
+export const OFFSET_STRATEGIES: readonly OffsetStrategy[] = [
   { dx: 0, dy: 0 }, // original position
   { dx: 0, dy: -1.2 }, // above (factor of height)
   { dx: 0, dy: 1.2 }, // below
@@ -68,6 +74,20 @@ const OFFSET_STRATEGIES = [
   { dx: -1.1, dy: 0 }, // left
   { dx: 1.1, dy: -1.2 }, // upper-right
   { dx: -1.1, dy: -1.2 }, // upper-left
+];
+
+/**
+ * Extended offset strategies with additional vertical spread for dense
+ * multi-series endpoints (e.g. 5+ line series converging at similar y-values).
+ */
+export const EXTENDED_OFFSET_STRATEGIES: readonly OffsetStrategy[] = [
+  ...OFFSET_STRATEGIES,
+  { dx: 0, dy: -2.4 }, // further above
+  { dx: 0, dy: 2.4 }, // further below
+  { dx: 0, dy: -3.6 }, // even further above
+  { dx: 0, dy: 3.6 }, // even further below
+  { dx: 1.1, dy: -2.4 }, // upper-right far
+  { dx: 1.1, dy: 2.4 }, // lower-right far
 ];
 
 // ---------------------------------------------------------------------------
@@ -83,9 +103,13 @@ const OFFSET_STRATEGIES = [
  * demoted to tooltip-only (visible: false).
  *
  * @param labels - Array of label candidates to position.
+ * @param strategies - Optional offset strategies to use (defaults to OFFSET_STRATEGIES).
  * @returns Array of resolved labels with computed positions and visibility.
  */
-export function resolveCollisions(labels: LabelCandidate[]): ResolvedLabel[] {
+export function resolveCollisions(
+  labels: LabelCandidate[],
+  strategies: readonly OffsetStrategy[] = OFFSET_STRATEGIES,
+): ResolvedLabel[] {
   // Sort by priority (highest first)
   const sorted = [...labels].sort(
     (a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
@@ -100,7 +124,7 @@ export function resolveCollisions(labels: LabelCandidate[]): ResolvedLabel[] {
     let bestY = label.anchorY;
 
     // Try each offset strategy
-    for (const offset of OFFSET_STRATEGIES) {
+    for (const offset of strategies) {
       const candidateX = label.anchorX + offset.dx * label.width;
       const candidateY = label.anchorY + offset.dy * label.height;
       const candidateRect: Rect = {

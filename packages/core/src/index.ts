@@ -88,8 +88,15 @@ export {
 export type {
   LabelCandidate,
   LabelPriority,
+  OffsetStrategy,
 } from './labels/index';
-export { computeLabelBounds, detectCollision, resolveCollisions } from './labels/index';
+export {
+  computeLabelBounds,
+  detectCollision,
+  EXTENDED_OFFSET_STRATEGIES,
+  OFFSET_STRATEGIES,
+  resolveCollisions,
+} from './labels/index';
 
 // ---------------------------------------------------------------------------
 // Locale: number and date formatting

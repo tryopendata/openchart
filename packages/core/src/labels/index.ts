@@ -2,5 +2,11 @@
  * Labels module barrel export.
  */
 
-export type { LabelCandidate, LabelPriority } from './collision';
-export { computeLabelBounds, detectCollision, resolveCollisions } from './collision';
+export type { LabelCandidate, LabelPriority, OffsetStrategy } from './collision';
+export {
+  computeLabelBounds,
+  detectCollision,
+  EXTENDED_OFFSET_STRATEGIES,
+  OFFSET_STRATEGIES,
+  resolveCollisions,
+} from './collision';

@@ -102,6 +102,14 @@ describe('buildD3Formatter', () => {
   it('returns null for completely invalid format', () => {
     expect(buildD3Formatter('not-a-format!!!')).toBeNull();
   });
+
+  it('$~s formats low thousands with SI suffix', () => {
+    const fmt = buildD3Formatter('$~s');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(6000)).toBe('$6k');
+    expect(fmt!(7000)).toBe('$7k');
+    expect(fmt!(14000)).toBe('$14k');
+  });
 });
 
 describe('formatDate', () => {

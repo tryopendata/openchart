@@ -11,6 +11,7 @@ import type {
   AreaMark,
   DataRow,
   Encoding,
+  EncodingChannel,
   LineMark,
   Mark,
   PointMark,
@@ -51,8 +52,21 @@ function formatValue(value: unknown, fieldType?: string, format?: string): strin
   return String(value);
 }
 
+/** Build tooltip fields from explicit tooltip encoding channels. */
+function buildExplicitTooltipFields(row: DataRow, channels: EncodingChannel[]): TooltipField[] {
+  return channels.map((ch) => ({
+    label: ch.axis?.label ?? ch.field,
+    value: formatValue(row[ch.field], ch.type, ch.axis?.format),
+  }));
+}
+
 /** Build tooltip fields from a data row based on the spec encoding. */
 function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipField[] {
+  if (encoding.tooltip) {
+    const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+    return buildExplicitTooltipFields(row, channels);
+  }
+
   const fields: TooltipField[] = [];
 
   // Y-axis value (the "main" value in most charts)

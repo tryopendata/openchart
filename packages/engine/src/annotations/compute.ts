@@ -667,7 +667,7 @@ function nudgeAnnotationFromObstacles(
     // need to shift into that space to avoid marks or the brand watermark.
     const inBounds =
       labelCenterX >= chartArea.x &&
-      labelCenterX <= chartArea.x + chartArea.width + 100 &&
+      labelCenterX <= chartArea.x + chartArea.width + 10 &&
       labelCenterY >= chartArea.y - fontSize &&
       labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
@@ -755,7 +755,7 @@ function resolveAnnotationCollisions(
             const labelCenterY = candidateBounds.y + candidateBounds.height / 2;
             const inBounds =
               labelCenterX >= chartArea.x &&
-              labelCenterX <= chartArea.x + chartArea.width + 100 &&
+              labelCenterX <= chartArea.x + chartArea.width + 10 &&
               labelCenterY >= chartArea.y - fontSize &&
               labelCenterY <= chartArea.y + chartArea.height + fontSize;
 
@@ -800,6 +800,81 @@ function resolveAnnotationCollisions(
 }
 
 // ---------------------------------------------------------------------------
+// Boundary clamping
+// ---------------------------------------------------------------------------
+
+/** Small inset margin so labels don't touch the SVG edge. */
+const CLAMP_MARGIN = 4;
+
+/**
+ * Shift text annotation labels so they stay within the total SVG bounds.
+ * If a label overflows the right, left, top, or bottom edge, its position
+ * is adjusted inward by the overflow amount. Connector geometry is updated
+ * to match.
+ */
+function clampAnnotationsToBounds(
+  annotations: ResolvedAnnotation[],
+  svgWidth: number,
+  svgHeight: number,
+): void {
+  for (const annotation of annotations) {
+    if (annotation.type !== 'text' || !annotation.label) continue;
+
+    const bounds = estimateLabelBounds(annotation.label);
+    let dx = 0;
+    let dy = 0;
+
+    // Right overflow
+    if (bounds.x + bounds.width > svgWidth - CLAMP_MARGIN) {
+      dx = svgWidth - CLAMP_MARGIN - (bounds.x + bounds.width);
+    }
+    // Left overflow
+    if (bounds.x + dx < CLAMP_MARGIN) {
+      dx = CLAMP_MARGIN - bounds.x;
+    }
+    // Top overflow
+    if (bounds.y < CLAMP_MARGIN) {
+      dy = CLAMP_MARGIN - bounds.y;
+    }
+    // Bottom overflow
+    if (bounds.y + bounds.height + dy > svgHeight - CLAMP_MARGIN) {
+      dy = svgHeight - CLAMP_MARGIN - (bounds.y + bounds.height);
+    }
+
+    if (dx === 0 && dy === 0) continue;
+
+    const newX = annotation.label.x + dx;
+    const newY = annotation.label.y + dy;
+
+    // Update connector origin if present
+    let newConnector = annotation.label.connector;
+    if (newConnector) {
+      const fontSize = annotation.label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+      const fontWeight = annotation.label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
+      const connStyle = newConnector.style === 'curve' ? ('curve' as const) : ('straight' as const);
+      const newFrom = computeConnectorOrigin(
+        newX,
+        newY,
+        annotation.label.text,
+        fontSize,
+        fontWeight,
+        newConnector.to.x,
+        newConnector.to.y,
+        connStyle,
+      );
+      newConnector = { ...newConnector, from: newFrom };
+    }
+
+    annotation.label = {
+      ...annotation.label,
+      x: newX,
+      y: newY,
+      connector: newConnector,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -814,6 +889,7 @@ function resolveAnnotationCollisions(
  * that overlap with them are automatically repositioned using alternate
  * anchor directions. After individual obstacle avoidance, annotation-to-
  * annotation collisions are resolved using a greedy placement algorithm.
+ * Finally, labels are clamped to stay within the total SVG bounds.
  */
 export function computeAnnotations(
   spec: NormalizedChartSpec,
@@ -822,6 +898,7 @@ export function computeAnnotations(
   strategy: LayoutStrategy,
   isDark = false,
   obstacles: Rect[] = [],
+  svgDimensions?: { width: number; height: number },
 ): ResolvedAnnotation[] {
   // At compact breakpoints, skip all annotations
   if (strategy.annotationPosition === 'tooltip-only') {
@@ -856,6 +933,11 @@ export function computeAnnotations(
 
   // Resolve annotation-to-annotation collisions (greedy, order-preserving)
   resolveAnnotationCollisions(annotations, spec.annotations, scales, chartArea);
+
+  // Clamp labels that overflow the SVG boundary back inside
+  if (svgDimensions) {
+    clampAnnotationsToBounds(annotations, svgDimensions.width, svgDimensions.height);
+  }
 
   // Sort by zIndex (lower first, undefined treated as 0)
   annotations.sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));

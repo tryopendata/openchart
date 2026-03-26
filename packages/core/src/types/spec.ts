@@ -42,7 +42,8 @@ export type MarkType =
   | 'text'
   | 'rule'
   | 'tick'
-  | 'rect';
+  | 'rect'
+  | 'lollipop';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -567,6 +568,10 @@ export interface LegendConfig {
   offset?: AnnotationOffset;
   /** Whether to show the legend. Defaults to true. Set to false to hide. */
   show?: boolean;
+  /** Number of columns for horizontal legend layout. Overrides the default row limit. */
+  columns?: number;
+  /** Max number of legend entries before truncation. Remaining entries show as "+N more". */
+  symbolLimit?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -1007,6 +1012,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'rule',
   'tick',
   'rect',
+  'lollipop',
 ]);
 
 /** @deprecated Use MARK_TYPES instead. */
@@ -1085,4 +1091,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   rule: 'Rule chart',
   tick: 'Tick plot',
   rect: 'Heatmap',
+  lollipop: 'Lollipop chart',
 };

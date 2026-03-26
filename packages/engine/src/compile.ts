@@ -72,6 +72,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
   'arc:donut': donutRenderer, // old 'donut'
   circle: dotRenderer, // old 'dot'
+  lollipop: dotRenderer, // semantic alias for dot/circle
   text: textRenderer,
   rule: ruleRenderer,
   tick: tickRenderer,
@@ -442,6 +443,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     strategy,
     theme.isDark,
     obstacles,
+    { width: dims.total.width, height: dims.total.height },
   );
 
   // Compute tooltip descriptors from marks and encoding

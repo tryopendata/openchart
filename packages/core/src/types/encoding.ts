@@ -110,8 +110,8 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     detail: optional('nominal'),
   },
   point: {
-    x: required('quantitative'),
-    y: required('quantitative'),
+    x: required('quantitative', 'temporal', 'nominal', 'ordinal'),
+    y: required('quantitative', 'temporal', 'nominal', 'ordinal'),
     color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
     shape: optional('nominal', 'ordinal'),
@@ -122,6 +122,17 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     detail: optional('nominal'),
   },
   circle: {
+    x: required('quantitative'),
+    y: required('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional('quantitative'),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
+  lollipop: {
     x: required('quantitative'),
     y: required('nominal', 'ordinal'),
     color: optional('nominal', 'ordinal', 'quantitative'),

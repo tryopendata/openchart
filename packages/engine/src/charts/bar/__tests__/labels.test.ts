@@ -73,3 +73,115 @@ describe('computeBarLabels density modes', () => {
     expect(withDefault.length).toBe(withAuto.length);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stacked bar segment-fit tests (BUG-4)
+// ---------------------------------------------------------------------------
+
+function makeStackedMark(index: number, value: number, width: number): RectMark {
+  return {
+    type: 'rect',
+    x: index * 50,
+    y: 0,
+    width,
+    height: 25,
+    fill: '#4e79a7',
+    cornerRadius: 0, // cornerRadius 0 = stacked segment
+    data: { category: `Cat${index}`, value },
+    aria: { label: `Cat${index}: ${value}` },
+  };
+}
+
+describe('stacked bar label segment-fit', () => {
+  it('density "all" hides labels that do not fit in narrow stacked segments', () => {
+    const stackedMarks: RectMark[] = [
+      // Narrow segment: 30px wide, label for "8003" will be wider than 30 - 12 = 18px
+      makeStackedMark(0, 8003, 30),
+      // Wide segment: 200px wide, label should fit easily
+      makeStackedMark(1, 5000, 200),
+    ];
+    const labels = computeBarLabels(stackedMarks, chartArea, 'all');
+    expect(labels).toHaveLength(2);
+    // Narrow segment label should be hidden
+    expect(labels[0].visible).toBe(false);
+    // Wide segment label should still be visible
+    expect(labels[1].visible).toBe(true);
+  });
+
+  it('density "auto" hides labels that do not fit in narrow stacked segments', () => {
+    const stackedMarks: RectMark[] = [makeStackedMark(0, 8003, 30), makeStackedMark(1, 5000, 200)];
+    const labels = computeBarLabels(stackedMarks, chartArea, 'auto');
+    expect(labels).toHaveLength(2);
+    // Narrow segment label should be hidden
+    expect(labels[0].visible).toBe(false);
+    // Wide segment label should still be visible
+    expect(labels[1].visible).toBe(true);
+  });
+
+  it('non-stacked bars still show labels regardless of width', () => {
+    // Non-stacked marks (no cornerRadius = undefined, not 0)
+    const nonStackedMarks: RectMark[] = [
+      makeMark(0, 10), // width = 50
+      makeMark(1, 20), // width = 100
+    ];
+    const labels = computeBarLabels(nonStackedMarks, chartArea, 'all');
+    expect(labels).toHaveLength(2);
+    expect(labels.every((l) => l.visible === true)).toBe(true);
+  });
+
+  it('wide stacked segments still show labels', () => {
+    const wideStacked: RectMark[] = [makeStackedMark(0, 42, 200), makeStackedMark(1, 99, 200)];
+    const labels = computeBarLabels(wideStacked, chartArea, 'all');
+    expect(labels).toHaveLength(2);
+    expect(labels.every((l) => l.visible === true)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Format with abbreviated aria values (BUG-3)
+// ---------------------------------------------------------------------------
+
+describe('computeBarLabels with $~s format and abbreviated aria values', () => {
+  function makeAbbreviatedMark(index: number, value: number, abbr: string): RectMark {
+    return {
+      type: 'rect',
+      x: 0,
+      y: index * 30,
+      width: 200,
+      height: 25,
+      fill: '#4e79a7',
+      data: { category: `Cat${index}`, value },
+      aria: { label: `Cat${index}: ${abbr}` },
+    };
+  }
+
+  it('$~s format preserves SI suffix for low thousands', () => {
+    const thousandMarks: RectMark[] = [
+      makeAbbreviatedMark(0, 6000, '6K'),
+      makeAbbreviatedMark(1, 7000, '7K'),
+      makeAbbreviatedMark(2, 14000, '14K'),
+    ];
+
+    const labels = computeBarLabels(thousandMarks, chartArea, 'all', '$~s');
+    expect(labels).toHaveLength(3);
+    expect(labels[0].text).toBe('$6k');
+    expect(labels[1].text).toBe('$7k');
+    expect(labels[2].text).toBe('$14k');
+  });
+
+  it('$~s format works for millions', () => {
+    const millionMarks: RectMark[] = [makeAbbreviatedMark(0, 1500000, '1.5M')];
+
+    const labels = computeBarLabels(millionMarks, chartArea, 'all', '$~s');
+    expect(labels).toHaveLength(1);
+    expect(labels[0].text).toBe('$1.5M');
+  });
+
+  it('handles comma-formatted aria values', () => {
+    const commaMarks: RectMark[] = [makeAbbreviatedMark(0, 500, '500')];
+
+    const labels = computeBarLabels(commaMarks, chartArea, 'all', '$,.0f');
+    expect(labels).toHaveLength(1);
+    expect(labels[0].text).toBe('$500');
+  });
+});

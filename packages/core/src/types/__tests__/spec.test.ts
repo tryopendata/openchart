@@ -81,6 +81,7 @@ describe('isChartSpec', () => {
       'rule',
       'tick',
       'rect',
+      'lollipop',
     ] as const;
 
     for (const markType of markTypes) {
@@ -151,8 +152,8 @@ describe('type guard mutual exclusivity', () => {
 // ---------------------------------------------------------------------------
 
 describe('MARK_TYPES', () => {
-  it('contains all 10 mark types', () => {
-    expect(MARK_TYPES.size).toBe(10);
+  it('contains all 11 mark types', () => {
+    expect(MARK_TYPES.size).toBe(11);
   });
 
   it('contains expected types', () => {
@@ -167,6 +168,7 @@ describe('MARK_TYPES', () => {
       'rule',
       'tick',
       'rect',
+      'lollipop',
     ];
     for (const t of expected) {
       expect(MARK_TYPES.has(t)).toBe(true);
