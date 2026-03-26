@@ -73,23 +73,23 @@ describe('<Graph />', () => {
   it('renders chrome text elements', async () => {
     const { container } = await renderGraph({ spec: basicSpec });
 
-    const title = container.querySelector('.viz-title');
+    const title = container.querySelector('.oc-title');
     expect(title).not.toBeNull();
     expect(title?.textContent).toBe('Test Graph');
 
-    const subtitle = container.querySelector('.viz-subtitle');
+    const subtitle = container.querySelector('.oc-subtitle');
     expect(subtitle?.textContent).toBe('A simple test graph');
   });
 
   it('spec changes trigger re-render', async () => {
     const { container, rerender } = await renderGraph({ spec: basicSpec });
 
-    const titleBefore = container.querySelector('.viz-title');
+    const titleBefore = container.querySelector('.oc-title');
     expect(titleBefore?.textContent).toBe('Test Graph');
 
     await rerender({ spec: updatedSpec });
     await waitFor(() => {
-      expect(container.querySelector('.viz-title')?.textContent).toBe('Updated Graph');
+      expect(container.querySelector('.oc-title')?.textContent).toBe('Updated Graph');
     });
   });
 

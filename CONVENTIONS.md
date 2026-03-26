@@ -89,7 +89,7 @@ Table cells use a discriminated union on the `cellType` field. Each cell type ha
 4. Write computation in `engine/src/tables/<name>.ts` (returns a `Map<number, CellStyle>` or type-specific data)
 5. Wire it into `engine/src/tables/compile-table.ts` (follows the existing precedence chain)
 6. Write the renderer in `vanilla/src/renderers/table-cells.ts`
-7. Add CSS classes (prefixed `viz-table-<name>`) to `core/src/styles/viz.css`
+7. Add CSS classes (prefixed `oc-table-<name>`) to CSS partials in `core/src/styles/`
 8. If there's a user-facing config, add it to `core/src/types/table.ts` as a `ColumnConfig` field
 
 **Reference**: `BarTableCell` for a cell with extra computed fields. `HeatmapTableCell` for a cell that only needs styling.
@@ -130,21 +130,21 @@ Run all tests: `bun run test` from the repo root.
 
 The theme system has two layers:
 
-1. **CSS custom properties** in `core/src/styles/viz.css` for visual styling
+1. **CSS custom properties** in `core/src/styles/tokens.css` for visual styling
 2. **TypeScript theme objects** in `core/src/theme/` for computed values the engine needs
 
-**CSS custom property naming**: Always prefix with `--viz-`. Use descriptive names: `--viz-tooltip-bg`, `--viz-text-secondary`. Dark mode overrides go in the `.viz-dark` class.
+**CSS custom property naming**: Always prefix with `--oc-`. Use descriptive names: `--oc-tooltip-bg`, `--oc-text-secondary`. Dark mode overrides go in the `.oc-dark` class.
 
-**CSS class naming**: Always prefix with `viz-`. Use `viz-[block]-[element]` for children (e.g. `viz-table-sort-btn`) and `viz-[block]--[modifier]` for modifiers (e.g. `viz-table--compact`).
+**CSS class naming**: Always prefix with `oc-`. Use `oc-[block]-[element]` for children (e.g. `oc-table-sort-btn`) and `oc-[block]--[modifier]` for modifiers (e.g. `oc-table--compact`).
 
 **Adding a theme property**:
 
-1. Add the CSS custom property to `.viz-root, .viz-table-wrapper` (light default) and `.viz-dark` in `viz.css`
+1. Add the CSS custom property to `.oc-root, .oc-table-wrapper` (light default) in `tokens.css` and `.oc-dark` in `dark.css`
 2. If the engine needs the value for computation, add it to the `Theme`/`ResolvedTheme` types in `core/src/types/theme.ts`
 3. Set the default in `core/src/theme/defaults.ts`
 4. Handle dark mode adaptation in `core/src/theme/dark-mode.ts`
 
-**Font stack**: Inter as the primary font, system-ui fallback. Monospace uses JetBrains Mono with fallbacks. Defined in `--viz-font-family` and `--viz-font-mono`.
+**Font stack**: Inter as the primary font, system-ui fallback. Monospace uses JetBrains Mono with fallbacks. Defined in `--oc-font-family` and `--oc-font-mono`.
 
 ## Build and tooling
 

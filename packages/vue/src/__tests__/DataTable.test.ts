@@ -79,13 +79,13 @@ describe('DataTable', () => {
   it('spec changes trigger re-render', async () => {
     const wrapper = await mountTable({ spec: tableSpec });
 
-    const titleBefore = wrapper.find('.viz-table-title');
+    const titleBefore = wrapper.find('.oc-table-title');
     expect(titleBefore.text()).toBe('People Table');
 
     await wrapper.setProps({ spec: updatedSpec });
     await flushPromises();
 
-    const titleAfter = wrapper.find('.viz-table-title');
+    const titleAfter = wrapper.find('.oc-table-title');
     expect(titleAfter.text()).toBe('Updated Table');
 
     const headersAfter = wrapper.findAll('thead th');

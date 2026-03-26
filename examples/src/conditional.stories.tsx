@@ -14,6 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const conditionalBarSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     { quarter: "Q1 '23", surprise: 6.5 },

@@ -91,30 +91,30 @@ describe('createGraph', () => {
     const graph = createGraph(container, basicSpec);
 
     // Wrapper
-    const wrapper = container.querySelector('.viz-graph-wrapper');
+    const wrapper = container.querySelector('.oc-graph-wrapper');
     expect(wrapper).not.toBeNull();
 
     // Canvas
-    const canvas = container.querySelector('.viz-graph-canvas');
+    const canvas = container.querySelector('.oc-graph-canvas');
     expect(canvas).not.toBeNull();
     expect(canvas?.tagName.toLowerCase()).toBe('canvas');
 
     // Chrome
-    const chrome = container.querySelector('.viz-graph-chrome');
+    const chrome = container.querySelector('.oc-graph-chrome');
     expect(chrome).not.toBeNull();
 
     // Title
-    const title = container.querySelector('.viz-title');
+    const title = container.querySelector('.oc-title');
     expect(title).not.toBeNull();
     expect(title?.textContent).toBe('Test Graph');
 
     // Subtitle
-    const subtitle = container.querySelector('.viz-subtitle');
+    const subtitle = container.querySelector('.oc-subtitle');
     expect(subtitle).not.toBeNull();
     expect(subtitle?.textContent).toBe('A simple test graph');
 
     // Legend exists (even if hidden for non-community graphs)
-    const legend = container.querySelector('.viz-graph-legend');
+    const legend = container.querySelector('.oc-graph-legend');
     expect(legend).not.toBeNull();
 
     graph.destroy();
@@ -124,12 +124,12 @@ describe('createGraph', () => {
     container = makeContainer();
     const graph = createGraph(container, basicSpec);
 
-    expect(container.querySelector('.viz-graph-wrapper')).not.toBeNull();
+    expect(container.querySelector('.oc-graph-wrapper')).not.toBeNull();
 
     graph.destroy();
 
-    expect(container.querySelector('.viz-graph-wrapper')).toBeNull();
-    expect(container.querySelector('.viz-graph-canvas')).toBeNull();
+    expect(container.querySelector('.oc-graph-wrapper')).toBeNull();
+    expect(container.querySelector('.oc-graph-canvas')).toBeNull();
 
     // Calling destroy again should not throw
     expect(() => graph.destroy()).not.toThrow();
@@ -146,12 +146,12 @@ describe('createGraph', () => {
     container = makeContainer();
     const graph = createGraph(container, basicSpec);
 
-    const titleBefore = container.querySelector('.viz-title');
+    const titleBefore = container.querySelector('.oc-title');
     expect(titleBefore?.textContent).toBe('Test Graph');
 
     graph.update(communitySpec);
 
-    const titleAfter = container.querySelector('.viz-title');
+    const titleAfter = container.querySelector('.oc-title');
     expect(titleAfter?.textContent).toBe('Community Graph');
 
     graph.destroy();
@@ -161,10 +161,10 @@ describe('createGraph', () => {
     container = makeContainer();
     const graph = createGraph(container, communitySpec);
 
-    const legend = container.querySelector('.viz-graph-legend');
+    const legend = container.querySelector('.oc-graph-legend');
     expect(legend).not.toBeNull();
     // Community graph should have visible legend items
-    const items = container.querySelectorAll('.viz-graph-legend-item');
+    const items = container.querySelectorAll('.oc-graph-legend-item');
     expect(items.length).toBeGreaterThan(0);
 
     graph.destroy();
@@ -190,14 +190,14 @@ describe('createGraph', () => {
     graph.destroy();
   });
 
-  it('applies viz-dark class in dark mode', () => {
+  it('applies oc-dark class in dark mode', () => {
     container = makeContainer();
     const graph = createGraph(container, basicSpec, { darkMode: 'force' });
 
-    expect(container.classList.contains('viz-dark')).toBe(true);
+    expect(container.classList.contains('oc-dark')).toBe(true);
 
     graph.destroy();
-    expect(container.classList.contains('viz-dark')).toBe(false);
+    expect(container.classList.contains('oc-dark')).toBe(false);
   });
 
   it('onSelectionChange callback fires on selectNode', () => {

@@ -1,0 +1,53 @@
+/* ---------------------------------------------------------------------------
+ * Wrapper roots
+ * --------------------------------------------------------------------------- */
+
+.oc-chart-root {
+  width: 100%;
+}
+
+.oc-table-root,
+.oc-graph-root {
+  width: 100%;
+  height: 100%;
+}
+
+.oc-table-root {
+  overflow: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * Chart container
+ * --------------------------------------------------------------------------- */
+
+.oc-chart {
+  font-family: var(--oc-font-family);
+  display: block;
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Screen reader only utility
+ * --------------------------------------------------------------------------- */
+
+.oc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Editable hover feedback
+ * --------------------------------------------------------------------------- */
+
+.oc-editable-hover {
+  outline: 1.5px solid rgba(79, 70, 229, 0.35);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

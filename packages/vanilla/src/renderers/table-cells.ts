@@ -148,6 +148,7 @@ export function renderTextCell(cell: TextTableCell): HTMLTableCellElement {
 /** Render a heatmap-colored cell. */
 export function renderHeatmapCell(cell: HeatmapTableCell): HTMLTableCellElement {
   const td = document.createElement('td');
+  td.className = 'oc-table-heatmap';
   td.textContent = cell.formattedValue;
   applyCellStyle(td, cell);
   return td;
@@ -156,6 +157,7 @@ export function renderHeatmapCell(cell: HeatmapTableCell): HTMLTableCellElement 
 /** Render a category-colored cell. */
 export function renderCategoryCell(cell: CategoryTableCell): HTMLTableCellElement {
   const td = document.createElement('td');
+  td.className = 'oc-table-category';
   td.textContent = cell.formattedValue;
   applyCellStyle(td, cell);
   return td;
@@ -164,18 +166,18 @@ export function renderCategoryCell(cell: CategoryTableCell): HTMLTableCellElemen
 /** Render a cell with an inline bar visualization. */
 export function renderBarCell(cell: BarTableCell): HTMLTableCellElement {
   const td = document.createElement('td');
-  td.className = 'viz-table-bar';
+  td.className = 'oc-table-bar';
   applyCellStyle(td, cell);
 
   const fill = document.createElement('div');
-  fill.className = 'viz-table-bar-fill';
+  fill.className = 'oc-table-bar-fill';
   fill.style.width = `${Math.round(cell.barWidth * 100)}%`;
   fill.style.left = `${Math.round(cell.barOffset * 100)}%`;
   fill.style.background = cell.barColor;
   td.appendChild(fill);
 
   const valueSpan = document.createElement('span');
-  valueSpan.className = 'viz-table-bar-value';
+  valueSpan.className = 'oc-table-bar-value';
   valueSpan.textContent = cell.formattedValue;
   td.appendChild(valueSpan);
 
@@ -214,7 +216,7 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
   }
 
   const wrapper = document.createElement('span');
-  wrapper.className = 'viz-table-sparkline';
+  wrapper.className = 'oc-table-sparkline';
 
   const svgNS = 'http://www.w3.org/2000/svg';
 
@@ -266,14 +268,14 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
     const dotSize = 5;
 
     const startDot = document.createElement('span');
-    startDot.className = 'viz-table-sparkline-dot';
+    startDot.className = 'oc-table-sparkline-dot';
     startDot.style.left = '0';
     startDot.style.top = `${firstY - dotSize / 2}px`;
     startDot.style.background = sparklineData.color;
     wrapper.appendChild(startDot);
 
     const endDot = document.createElement('span');
-    endDot.className = 'viz-table-sparkline-dot';
+    endDot.className = 'oc-table-sparkline-dot';
     endDot.style.right = '0';
     endDot.style.top = `${lastY - dotSize / 2}px`;
     endDot.style.background = sparklineData.color;
@@ -281,7 +283,7 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
 
     // HTML labels below the SVG, positioned at left and right edges
     const labelsRow = document.createElement('span');
-    labelsRow.className = 'viz-table-sparkline-labels';
+    labelsRow.className = 'oc-table-sparkline-labels';
     labelsRow.style.color = sparklineData.color;
 
     const startLabel = document.createElement('span');
@@ -378,7 +380,7 @@ export function renderImageCell(cell: ImageTableCell): HTMLTableCellElement {
   applyCellStyle(td, cell);
 
   const wrapper = document.createElement('span');
-  wrapper.className = `viz-table-image${cell.rounded ? ' viz-table-image-rounded' : ''}`;
+  wrapper.className = `oc-table-image${cell.rounded ? ' oc-table-image-rounded' : ''}`;
 
   const img = document.createElement('img');
   img.src = cell.src;
@@ -399,7 +401,7 @@ export function renderFlagCell(cell: FlagTableCell): HTMLTableCellElement {
   applyCellStyle(td, cell);
 
   const span = document.createElement('span');
-  span.className = 'viz-table-flag';
+  span.className = 'oc-table-flag';
   span.setAttribute('role', 'img');
 
   if (cell.countryCode && cell.countryCode.length === 2) {

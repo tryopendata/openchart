@@ -29,6 +29,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { elementRef, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
+import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
   exportCSV,
   exportJPG,
@@ -477,7 +478,7 @@ function wireChartEvents(
 
   // Wire annotation click events
   if (handlers.onAnnotationClick) {
-    const annotationElements = svg.querySelectorAll('.viz-annotation');
+    const annotationElements = svg.querySelectorAll('.oc-annotation');
 
     for (let i = 0; i < annotationElements.length; i++) {
       const el = annotationElements[i];
@@ -713,7 +714,7 @@ function wireAnnotationDrag(
   onEdit: ((edit: ElementEdit) => void) | undefined,
   setDragging: (dragging: boolean) => void,
 ): () => void {
-  const annotationElements = svg.querySelectorAll('.viz-annotation-text');
+  const annotationElements = svg.querySelectorAll('.oc-annotation-text');
   const cleanups: Array<() => void> = [];
 
   for (const el of annotationElements) {
@@ -731,13 +732,13 @@ function wireAnnotationDrag(
     annotationG.style.cursor = 'grab';
 
     // Stash connector info for real-time updates during drag
-    const connectorLine = annotationG.querySelector('line.viz-annotation-connector');
+    const connectorLine = annotationG.querySelector('line.oc-annotation-connector');
     const origX2 = connectorLine ? Number(connectorLine.getAttribute('x2')) : 0;
     const origY2 = connectorLine ? Number(connectorLine.getAttribute('y2')) : 0;
 
     // For curved connectors, stash path/polygon elements to hide during drag
-    const curvedPath = annotationG.querySelector('path.viz-annotation-connector');
-    const arrowhead = annotationG.querySelector('polygon.viz-annotation-connector');
+    const curvedPath = annotationG.querySelector('path.oc-annotation-connector');
+    const arrowhead = annotationG.querySelector('polygon.oc-annotation-connector');
     const hasCurvedConnector = curvedPath !== null;
 
     const origDx = textAnnotation.offset?.dx ?? 0;
@@ -824,7 +825,7 @@ function wireConnectorEndpointDrag(
 ): () => void {
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const cleanups: Array<() => void> = [];
-  const annotationGroups = svg.querySelectorAll('.viz-annotation-text');
+  const annotationGroups = svg.querySelectorAll('.oc-annotation-text');
 
   for (const el of annotationGroups) {
     const annotationG = el as SVGGElement;
@@ -838,8 +839,8 @@ function wireConnectorEndpointDrag(
     const textAnnotation = specAnnotation as TextAnnotation;
 
     // Find connector line or curved connector to determine endpoints
-    const connectorLine = annotationG.querySelector('line.viz-annotation-connector');
-    const curvedPath = annotationG.querySelector('path.viz-annotation-connector');
+    const connectorLine = annotationG.querySelector('line.oc-annotation-connector');
+    const curvedPath = annotationG.querySelector('path.oc-annotation-connector');
     if (!connectorLine && !curvedPath) continue;
 
     // Determine connector endpoint positions from the connector element
@@ -857,7 +858,7 @@ function wireConnectorEndpointDrag(
       fromX = mMatch ? Number(mMatch[1]) : 0;
       fromY = mMatch ? Number(mMatch[2]) : 0;
       // For curved connectors, the arrow polygon has the target
-      const arrowhead = annotationG.querySelector('polygon.viz-annotation-connector');
+      const arrowhead = annotationG.querySelector('polygon.oc-annotation-connector');
       const points = arrowhead?.getAttribute('points') ?? '';
       const firstPoint = points.split(' ')[0] ?? '0,0';
       const [px, py] = firstPoint.split(',');
@@ -878,7 +879,7 @@ function wireConnectorEndpointDrag(
       if (!Number.isFinite(ep.cx) || !Number.isFinite(ep.cy)) continue;
 
       const handleEl = document.createElementNS(SVG_NS, 'circle') as SVGCircleElement;
-      handleEl.setAttribute('class', 'viz-connector-handle');
+      handleEl.setAttribute('class', 'oc-connector-handle');
       handleEl.setAttribute('data-endpoint', ep.name);
       handleEl.setAttribute('cx', String(ep.cx));
       handleEl.setAttribute('cy', String(ep.cy));
@@ -1002,15 +1003,15 @@ function wireAnnotationLabelDrag(
 
   // Target range and refline annotation labels
   const selectors = [
-    '.viz-annotation-range .viz-annotation-label',
-    '.viz-annotation-refline .viz-annotation-label',
+    '.oc-annotation-range .oc-annotation-label',
+    '.oc-annotation-refline .oc-annotation-label',
   ];
 
   for (const selector of selectors) {
     const labels = svg.querySelectorAll(selector);
 
     for (const label of labels) {
-      const annotationG = label.closest('.viz-annotation') as SVGGElement | null;
+      const annotationG = label.closest('.oc-annotation') as SVGGElement | null;
       if (!annotationG) continue;
 
       const indexStr = annotationG.getAttribute('data-annotation-index');
@@ -1085,7 +1086,7 @@ function wireChromeDrag(
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
-  const chromeTexts = svg.querySelectorAll('.viz-chrome text[data-chrome-key]');
+  const chromeTexts = svg.querySelectorAll('.oc-chrome text[data-chrome-key]');
   const cleanups: Array<() => void> = [];
 
   // Read existing chrome offsets from the spec
@@ -1153,7 +1154,7 @@ function wireLegendDrag(
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
-  const legendG = svg.querySelector('.viz-legend') as SVGGElement | null;
+  const legendG = svg.querySelector('.oc-legend') as SVGGElement | null;
   if (!legendG) return () => {};
 
   const cleanups: Array<() => void> = [];
@@ -1197,7 +1198,7 @@ function wireLegendDrag(
 // ---------------------------------------------------------------------------
 
 /**
- * Wire drag on series label elements (.viz-mark-label[data-series]).
+ * Wire drag on series label elements (.oc-mark-label[data-series]).
  * On drag end, fires onEdit with the series name and offset.
  * Returns a cleanup function.
  */
@@ -1207,7 +1208,7 @@ function wireSeriesLabelDrag(
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
-  const labels = svg.querySelectorAll('.viz-mark-label');
+  const labels = svg.querySelectorAll('.oc-mark-label');
   const cleanups: Array<() => void> = [];
 
   // Read existing label offsets from the spec
@@ -1307,7 +1308,7 @@ function wireLegendInteraction(
       // Toggle visibility of marks with matching series.
       // Uses the data-series attribute set by the SVG renderer, which works
       // for all mark types (line, area, rect, arc, point).
-      const marks = svg.querySelectorAll('.viz-mark');
+      const marks = svg.querySelectorAll('.oc-mark');
       for (const mark of marks) {
         const seriesName = mark.getAttribute('data-series');
         if (!seriesName) continue;
@@ -1367,7 +1368,7 @@ function wireKeyboardNav(
   function highlightMark(index: number): void {
     // Remove previous highlight
     if (focusIndex >= 0 && focusIndex < markElements.length) {
-      markElements[focusIndex].classList.remove('viz-mark-focused');
+      markElements[focusIndex].classList.remove('oc-mark-focused');
       markElements[focusIndex].removeAttribute('aria-selected');
     }
 
@@ -1375,7 +1376,7 @@ function wireKeyboardNav(
 
     if (focusIndex >= 0 && focusIndex < markElements.length) {
       const el = markElements[focusIndex];
-      el.classList.add('viz-mark-focused');
+      el.classList.add('oc-mark-focused');
       el.setAttribute('aria-selected', 'true');
     }
   }
@@ -1464,7 +1465,7 @@ function createScreenReaderTable(
   if (!data || data.length === 0) return null;
 
   const table = document.createElement('table');
-  table.className = 'viz-sr-only';
+  table.className = 'oc-sr-only';
   // Inline critical SR-only styles so the table stays hidden even when the
   // external stylesheet isn't loaded (e.g. CDN / esm.sh usage).
   table.style.position = 'absolute';
@@ -1520,7 +1521,7 @@ function createScreenReaderTable(
 
 /** CSS for editable hover feedback, injected into the SVG as a <style> element. */
 const EDITABLE_HOVER_CSS = `
-.viz-editable-hover {
+.oc-editable-hover {
   outline: 1.5px solid rgba(79, 70, 229, 0.35);
   outline-offset: 2px;
   border-radius: 2px;
@@ -1564,9 +1565,9 @@ function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement | null {
     case 'chrome':
       return svg.querySelector(`[data-chrome-key="${ref.key}"]`) as SVGElement | null;
     case 'series-label':
-      return svg.querySelector(`.viz-mark-label[data-series="${ref.series}"]`) as SVGElement | null;
+      return svg.querySelector(`.oc-mark-label[data-series="${ref.series}"]`) as SVGElement | null;
     case 'legend':
-      return svg.querySelector('.viz-legend') as SVGElement | null;
+      return svg.querySelector('.oc-legend') as SVGElement | null;
     case 'legend-entry':
       return svg.querySelector(`[data-legend-index="${ref.index}"]`) as SVGElement | null;
   }
@@ -1593,7 +1594,7 @@ function buildElementRef(element: Element, _specAnnotations: Annotation[]): Elem
   }
 
   // Check for series label
-  const seriesLabelEl = element.closest('.viz-mark-label[data-series]');
+  const seriesLabelEl = element.closest('.oc-mark-label[data-series]');
   if (seriesLabelEl) {
     const series = seriesLabelEl.getAttribute('data-series');
     if (series) return elementRef.seriesLabel(series);
@@ -1608,7 +1609,7 @@ function buildElementRef(element: Element, _specAnnotations: Annotation[]): Elem
   }
 
   // Check for legend group
-  const legendEl = element.closest('.viz-legend');
+  const legendEl = element.closest('.oc-legend');
   if (legendEl) return elementRef.legend();
 
   return null;
@@ -1741,7 +1742,7 @@ function renderSelectionOverlay(
   const accentColor = layout.theme.colors.categorical?.[0] ?? '#4f46e5';
 
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  g.setAttribute('class', 'viz-selection-overlay');
+  g.setAttribute('class', 'oc-selection-overlay');
 
   const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   rect.setAttribute('x', String(bbox.x - padding));
@@ -1796,6 +1797,10 @@ export function createChart(
   let isDragging = false;
   let pendingRender = false;
   let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Animation state
+  let isFirstRender = true;
+  let cleanupAnimations: (() => void) | null = null;
 
   // Selection and text editing state
   let selectedElement: ElementRef | null = options?.selectedElement ?? null;
@@ -1967,17 +1972,17 @@ export function createChart(
     // Hover feedback on editable elements
     const handleMouseEnter = (e: Event) => {
       const target = (e.target as Element).closest(
-        '[data-annotation-index], [data-chrome-key], .viz-mark-label[data-series], .viz-legend, [data-legend-index]',
+        '[data-annotation-index], [data-chrome-key], .oc-mark-label[data-series], .oc-legend, [data-legend-index]',
       );
       if (target) {
-        (target as SVGElement).classList.add('viz-editable-hover');
+        (target as SVGElement).classList.add('oc-editable-hover');
       }
     };
 
     const handleMouseLeave = (e: Event) => {
-      const target = (e.target as Element).closest('.viz-editable-hover');
+      const target = (e.target as Element).closest('.oc-editable-hover');
       if (target) {
-        (target as SVGElement).classList.remove('viz-editable-hover');
+        (target as SVGElement).classList.remove('oc-editable-hover');
       }
     };
 
@@ -2106,6 +2111,13 @@ export function createChart(
       return;
     }
 
+    // Cancel any in-progress entrance animations before tearing down
+    if (cleanupAnimations) {
+      cleanupAnimations();
+      cleanupAnimations = null;
+    }
+    cancelAnimations(svgElement);
+
     // Clean up previous render
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();
@@ -2161,7 +2173,8 @@ export function createChart(
     }
 
     currentLayout = compile();
-    svgElement = renderChartSVG(currentLayout, container);
+    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
+    svgElement = renderChartSVG(currentLayout, container, { animate: shouldAnimate });
     tooltipManager = createTooltipManager(container);
 
     // Wire tooltip events on mark elements
@@ -2285,12 +2298,20 @@ export function createChart(
     srTable = createScreenReaderTable(currentLayout, container);
 
     // Apply container classes for CSS variable scoping and dark mode
-    container.classList.add('viz-root');
+    container.classList.add('oc-root');
     const isDark = resolveDarkMode(options?.darkMode);
     if (isDark) {
-      container.classList.add('viz-dark');
+      container.classList.add('oc-dark');
     } else {
-      container.classList.remove('viz-dark');
+      container.classList.remove('oc-dark');
+    }
+
+    // Set up animation cleanup on first render only.
+    if (shouldAnimate && svgElement) {
+      cleanupAnimations = setupAnimationCleanup(svgElement);
+    }
+    if (isFirstRender) {
+      isFirstRender = false;
     }
   }
 
@@ -2305,6 +2326,12 @@ export function createChart(
 
   function resize(): void {
     if (destroyed) return;
+    // Skip resize during entrance animation. The resize observer fires
+    // immediately when the container first enters DOM layout, and re-rendering
+    // would destroy the animated SVG. This also blocks genuine resizes during
+    // the animation window (~1s), but catches up on the next resize event
+    // after the cleanup timeout fires.
+    if (cleanupAnimations) return;
     render();
   }
 
@@ -2342,6 +2369,13 @@ export function createChart(
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
+
+    // Cancel entrance animations
+    if (cleanupAnimations) {
+      cleanupAnimations();
+      cleanupAnimations = null;
+    }
+    cancelAnimations(svgElement);
 
     if (resizeTimer !== null) {
       clearTimeout(resizeTimer);
@@ -2406,8 +2440,8 @@ export function createChart(
       srTable.parentNode.removeChild(srTable);
       srTable = null;
     }
-    container.classList.remove('viz-dark');
-    container.classList.remove('viz-root');
+    container.classList.remove('oc-dark');
+    container.classList.remove('oc-root');
   }
 
   // Initial render

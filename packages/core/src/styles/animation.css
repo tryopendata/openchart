@@ -1,0 +1,117 @@
+/* ---------------------------------------------------------------------------
+ * Animation scoped rules (.oc-animate enables animation on the chart root)
+ * --------------------------------------------------------------------------- */
+
+.oc-animate {
+  /* Vertical bars (default): smooth ease-out, no overshoot.
+     oc-mark-bar is reserved for future mark type aliases. */
+  & .oc-mark-rect rect,
+  & .oc-mark-bar rect {
+    animation: oc-enter-bar var(--oc-animation-duration) var(--oc-ease-smooth) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Horizontal bars (data-orient is on the mark group, not the SVG root) */
+  & .oc-mark-rect[data-orient="horizontal"] rect,
+  & .oc-mark-bar[data-orient="horizontal"] rect {
+    animation-name: oc-enter-bar-h;
+  }
+
+  /* Stacked bar/column segments: chain sequentially so each segment starts
+     right when the previous one finishes, creating one fluid reveal.
+     Uses linear easing so handoffs between segments are seamless (no
+     deceleration/acceleration stutter at segment boundaries). */
+  & .oc-mark-rect[data-stack-pos] rect {
+    animation-duration: var(--oc-stack-segment-duration, 150ms);
+    animation-timing-function: linear;
+    animation-delay: calc(
+      var(--oc-animation-stagger) *
+      var(--oc-mark-index, 0) +
+      var(--oc-stack-pos, 0) *
+      var(--oc-stack-segment-duration, 150ms)
+    );
+  }
+
+  /* Line marks: entire group clips left-to-right (no WAAPI needed) */
+  & .oc-mark-line {
+    animation: oc-enter-line var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Area marks: entire group clips left-to-right + fades in */
+  & .oc-mark-area {
+    animation: oc-enter-line var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Arc marks (pie/donut slices): simple fade in.
+     Scale transforms break arc positioning because arcs use translate()
+     on parent groups. A clean fade is more elegant for pie/donut anyway. */
+  & .oc-mark-arc {
+    animation: oc-enter-fade-only var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Point marks (scatter, dot).
+     Points render as bare <circle> elements with class oc-mark-point directly,
+     not wrapped in a group, so we target circle.oc-mark-point (not descendant).
+     Duration is 40% of the configured duration (quick pop-in relative to other marks). */
+  & circle.oc-mark-point,
+  & circle.oc-mark-circle {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.4)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Points on line/area charts: delay so they pop in as the line draws through. */
+  & .oc-mark-line ~ circle.oc-mark-point,
+  & .oc-mark-area ~ circle.oc-mark-point {
+    animation-delay: calc(
+      var(--oc-animation-duration) *
+      0.35 +
+      var(--oc-animation-stagger) *
+      var(--oc-mark-index, 0)
+    );
+  }
+
+  /* Text marks: fade + slight slide up */
+  & .oc-mark-text text {
+    animation: oc-enter-fade calc(var(--oc-animation-duration) * 0.6)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Rule marks: fade in */
+  & .oc-mark-rule line {
+    animation: oc-enter-fade calc(var(--oc-animation-duration) * 0.5)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Tick marks: fade in */
+  & .oc-mark-tick line {
+    animation: oc-enter-fade calc(var(--oc-animation-duration) * 0.5)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Data labels: fade after their parent mark */
+  & .oc-mark-label {
+    animation: oc-enter-fade 300ms var(--oc-ease-smooth) both;
+    animation-delay: calc(
+      var(--oc-animation-stagger) *
+      var(--oc-mark-index, 0) +
+      var(--oc-animation-duration) *
+      0.7
+    );
+  }
+
+  /* Annotations: fade in after marks finish */
+  & .oc-annotation {
+    animation: oc-enter-fade 400ms var(--oc-ease-smooth) both;
+    animation-delay: calc(var(--oc-animation-duration) + var(--oc-annotation-delay, 200ms));
+  }
+}

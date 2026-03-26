@@ -77,12 +77,12 @@ describe('<DataTable />', () => {
   it('spec changes trigger re-render', async () => {
     const { container, rerender } = await renderTable({ spec: tableSpec });
 
-    const titleBefore = container.querySelector('.viz-table-title');
+    const titleBefore = container.querySelector('.oc-table-title');
     expect(titleBefore?.textContent).toBe('People Table');
 
     await rerender({ spec: updatedSpec });
     await waitFor(() => {
-      expect(container.querySelector('.viz-table-title')?.textContent).toBe('Updated Table');
+      expect(container.querySelector('.oc-table-title')?.textContent).toBe('Updated Table');
     });
 
     const headersAfter = container.querySelectorAll('thead th');

@@ -142,7 +142,7 @@ describe('chart event handlers', () => {
       const onAnnotationClick = vi.fn();
       const chart = createChart(container, annotatedSpec, { onAnnotationClick });
 
-      const annotation = container.querySelector('.viz-annotation');
+      const annotation = container.querySelector('.oc-annotation');
       if (!annotation) {
         // Refline at y=0 may resolve outside the chart area in test env
         chart.destroy();
@@ -166,7 +166,7 @@ describe('chart event handlers', () => {
       const onAnnotationEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -180,7 +180,7 @@ describe('chart event handlers', () => {
       const onAnnotationEdit = vi.fn();
       const chart = createChart(container, annotatedSpec, { onAnnotationEdit });
 
-      const annotation = container.querySelector('.viz-annotation-refline') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-refline') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -194,7 +194,7 @@ describe('chart event handlers', () => {
       const onAnnotationEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -220,7 +220,7 @@ describe('chart event handlers', () => {
       const onAnnotationEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -243,7 +243,7 @@ describe('chart event handlers', () => {
         onAnnotationEdit,
       });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -268,7 +268,7 @@ describe('chart event handlers', () => {
       const onAnnotationEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;

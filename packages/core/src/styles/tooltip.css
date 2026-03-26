@@ -1,0 +1,88 @@
+/* ---------------------------------------------------------------------------
+ * Tooltip
+ * --------------------------------------------------------------------------- */
+
+.oc-tooltip {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  z-index: 1000;
+  background: var(--oc-tooltip-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--oc-tooltip-border);
+  border-radius: 8px;
+  box-shadow: var(--oc-tooltip-shadow);
+  color: var(--oc-tooltip-text);
+  font-family: var(--oc-font-family);
+  font-size: 12px;
+  padding: 0;
+  max-width: 260px;
+  min-width: 140px;
+  line-height: 1.4;
+  animation: oc-tooltip-in 120ms ease-out;
+
+  & .oc-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 6px;
+  }
+
+  & .oc-tooltip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  & .oc-tooltip-title {
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: -0.01em;
+    color: var(--oc-tooltip-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & .oc-tooltip-body {
+    padding: 4px 12px 8px;
+    border-top: 1px solid var(--oc-tooltip-border);
+  }
+
+  /* Only add separator when header is present */
+  & .oc-tooltip-header + .oc-tooltip-body {
+    padding-top: 6px;
+  }
+
+  /* No separator when body is the only child */
+  & .oc-tooltip-body:first-child {
+    border-top: none;
+    padding-top: 8px;
+  }
+
+  & .oc-tooltip-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 1px 0;
+  }
+
+  & .oc-tooltip-label {
+    color: var(--oc-text-muted);
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  & .oc-tooltip-value {
+    font-weight: 500;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

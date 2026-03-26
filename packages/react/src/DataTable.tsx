@@ -158,7 +158,7 @@ export function DataTable({
   return (
     <div
       ref={containerRef}
-      className={className ? `viz-table-root ${className}` : 'viz-table-root'}
+      className={className ? `oc-table-root ${className}` : 'oc-table-root'}
       style={style}
     />
   );

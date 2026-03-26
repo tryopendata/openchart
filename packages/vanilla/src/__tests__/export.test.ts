@@ -67,7 +67,7 @@ describe('exportSVG', () => {
     const result = exportSVG(svg);
     // Bar chart should have rect elements
     expect(result).toContain('<rect');
-    expect(result).toContain('viz-mark-rect');
+    expect(result).toContain('oc-mark-rect');
   });
 
   it('returned string is well-formed XML (ends with closing svg tag)', () => {

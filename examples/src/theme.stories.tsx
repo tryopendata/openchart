@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, series: 'Revenue' },
@@ -39,6 +40,7 @@ const lineSpec: ChartSpec = {
 };
 
 const barSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     { language: 'Python', popularity: 29 },
@@ -60,6 +62,7 @@ const barSpec: ChartSpec = {
 };
 
 const donutSpec: ChartSpec = {
+  animation: true,
   mark: { type: 'arc', innerRadius: 40 },
   data: [
     { segment: 'Cloud', revenue: 42 },

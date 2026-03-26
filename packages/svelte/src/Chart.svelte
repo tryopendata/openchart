@@ -176,6 +176,6 @@ export function deselect(): void {
 
 <div
   bind:this={containerEl}
-  class={className ? `viz-chart-root ${className}` : 'viz-chart-root'}
+  class={className ? `oc-chart-root ${className}` : 'oc-chart-root'}
   {style}
 ></div>

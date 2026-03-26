@@ -56,7 +56,7 @@ describe('createTooltipManager lifecycle', () => {
     const container = createContainer();
     createTooltipManager(container);
 
-    const tooltip = container.querySelector('.viz-tooltip');
+    const tooltip = container.querySelector('.oc-tooltip');
     expect(tooltip).not.toBeNull();
     expect(tooltip!.getAttribute('role')).toBe('tooltip');
   });
@@ -67,7 +67,7 @@ describe('createTooltipManager lifecycle', () => {
 
     manager.show({ title: 'Point A', fields: [{ label: 'Value', value: '42' }] }, 100, 100);
 
-    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     expect(tooltip.style.display).toBe('block');
   });
 
@@ -87,7 +87,7 @@ describe('createTooltipManager lifecycle', () => {
       100,
     );
 
-    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     expect(tooltip.innerHTML).toContain('2021-Q1');
     expect(tooltip.innerHTML).toContain('Revenue');
     expect(tooltip.innerHTML).toContain('$1.2M');
@@ -108,7 +108,7 @@ describe('createTooltipManager lifecycle', () => {
       50,
     );
 
-    const dot = container.querySelector('.viz-tooltip-dot') as HTMLElement;
+    const dot = container.querySelector('.oc-tooltip-dot') as HTMLElement;
     expect(dot).not.toBeNull();
     expect(dot.style.background).toBe('#ff0000');
   });
@@ -120,7 +120,7 @@ describe('createTooltipManager lifecycle', () => {
     manager.show({ title: 'Test', fields: [{ label: 'V', value: '1' }] }, 100, 100);
     manager.hide();
 
-    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     expect(tooltip.style.display).toBe('none');
   });
 
@@ -129,11 +129,11 @@ describe('createTooltipManager lifecycle', () => {
     const manager = createTooltipManager(container);
 
     // Verify it exists
-    expect(container.querySelector('.viz-tooltip')).not.toBeNull();
+    expect(container.querySelector('.oc-tooltip')).not.toBeNull();
 
     manager.destroy();
 
-    expect(container.querySelector('.viz-tooltip')).toBeNull();
+    expect(container.querySelector('.oc-tooltip')).toBeNull();
   });
 
   it('show() updates content when called again', () => {
@@ -142,12 +142,12 @@ describe('createTooltipManager lifecycle', () => {
 
     manager.show({ title: 'First', fields: [{ label: 'A', value: '1' }] }, 50, 50);
 
-    let tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    let tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     expect(tooltip.innerHTML).toContain('First');
 
     manager.show({ title: 'Second', fields: [{ label: 'B', value: '2' }] }, 100, 100);
 
-    tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     expect(tooltip.innerHTML).toContain('Second');
     // First content should be replaced
     expect(tooltip.innerHTML).not.toContain('First');
@@ -190,7 +190,7 @@ describe('tooltip positioning', () => {
     expect(rect.height).toBe(0);
 
     // Position should be applied from computePosition result
-    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     expect(tooltip.style.left).toContain('px');
     expect(tooltip.style.top).toContain('px');
 
@@ -239,7 +239,7 @@ describe('tooltip positioning', () => {
     });
     await flushPositioning();
 
-    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     const posAfterSecond = tooltip.style.left;
 
     // Now resolve the first (stale) - should be discarded
@@ -297,7 +297,7 @@ describe('tooltip content escaping', () => {
       50,
     );
 
-    const tooltip = container.querySelector('.viz-tooltip') as HTMLElement;
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
     // Should not contain raw HTML tags - the <script> should be escaped
     expect(tooltip.innerHTML).not.toContain('<script>');
     // Should contain escaped versions of angle brackets and ampersands

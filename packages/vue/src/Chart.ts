@@ -227,7 +227,7 @@ export const Chart = defineComponent({
     );
 
     const rootClass = () => {
-      const base = 'viz-chart-root';
+      const base = 'oc-chart-root';
       return props.class ? `${base} ${props.class}` : base;
     };
 

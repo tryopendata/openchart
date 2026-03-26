@@ -595,6 +595,62 @@ export interface SeriesStyle {
   opacity?: number;
 }
 
+// ---------------------------------------------------------------------------
+// Animation
+// ---------------------------------------------------------------------------
+
+/**
+ * Named easing presets for entrance animations.
+ * Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention.
+ */
+export type AnimationEase = 'smooth' | 'snappy';
+
+/** Stagger configuration for sequential element reveal. */
+export interface AnimationStagger {
+  /** Delay between each element in ms. Default: 30 */
+  delay?: number;
+  /** Ordering strategy. Default: 'index' (DOM order) */
+  order?: 'index' | 'value' | 'reverse';
+}
+
+/**
+ * Animation phase config. Follows Vega's enter/update/exit model.
+ * Each phase can be true (use defaults) or a config object.
+ */
+export interface AnimationPhaseConfig {
+  /** Duration in ms. Default: 500 for enter. */
+  duration?: number;
+  /** Easing preset. Default: 'smooth'. */
+  ease?: AnimationEase;
+  /** Stagger config. true = defaults, false = no stagger. Default: true for enter. */
+  stagger?: AnimationStagger | boolean;
+}
+
+/**
+ * Full animation config object. Structured as enter/update/exit phases
+ * following Vega's encoding set model.
+ *
+ * v1 implements enter only. update and exit reserved for v2.
+ */
+export interface AnimationConfig {
+  /** Entrance animation when chart first renders. */
+  enter?: AnimationPhaseConfig | boolean;
+  /** Transition animation when data updates. Reserved for v2. */
+  update?: AnimationPhaseConfig | boolean;
+  /** Exit animation when marks are removed. Reserved for v2. */
+  exit?: AnimationPhaseConfig | boolean;
+  /** Delay before annotations animate in (ms after marks). Default: 200. */
+  annotationDelay?: number;
+}
+
+/**
+ * Animation spec property.
+ * - true: enable entrance animation with sensible defaults
+ * - false/omitted: no animation (current behavior)
+ * - AnimationConfig: full control via enter/update/exit phases
+ */
+export type AnimationSpec = boolean | AnimationConfig;
+
 /**
  * Breakpoint-conditional overrides for chart specs.
  *
@@ -611,6 +667,8 @@ export interface ChartSpecOverride {
   legend?: LegendConfig;
   /** Override annotations at this breakpoint. */
   annotations?: Annotation[];
+  /** Override animation at this breakpoint. */
+  animation?: AnimationSpec;
 }
 
 /**
@@ -657,6 +715,13 @@ export interface ChartSpec {
    * are shallow-merged into the spec before layout computation.
    */
   overrides?: Partial<Record<Breakpoint, ChartSpecOverride>>;
+  /**
+   * Animation configuration.
+   * - true: enable entrance animation with sensible defaults
+   * - false/omitted: no animation (current behavior)
+   * - AnimationConfig: full control via enter/update/exit phases
+   */
+  animation?: AnimationSpec;
 }
 
 /**
@@ -690,6 +755,8 @@ export interface TableSpec {
   compact?: boolean;
   /** Whether the table adapts to container width. Defaults to true. */
   responsive?: boolean;
+  /** Animation configuration for entrance animations. */
+  animation?: AnimationSpec;
 }
 
 /** Graph node: must have an id, plus arbitrary data fields. */
@@ -802,6 +869,8 @@ export interface LayerSpec {
   resolve?: ResolveConfig;
   /** Hidden series names. */
   hiddenSeries?: string[];
+  /** Animation configuration. */
+  animation?: AnimationSpec;
 }
 
 /**

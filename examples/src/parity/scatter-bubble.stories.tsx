@@ -13,6 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const emissionsSpec: ChartSpec = {
+  animation: true,
   mark: 'point',
   data: [
     // Asia

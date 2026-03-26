@@ -1,0 +1,36 @@
+/* ---------------------------------------------------------------------------
+ * Chrome (title, subtitle, source, footer)
+ * --------------------------------------------------------------------------- */
+
+.oc-chrome {
+  font-family: var(--oc-font-family);
+}
+
+.oc-title {
+  font-size: var(--oc-title-size);
+  font-weight: var(--oc-title-weight);
+  letter-spacing: var(--oc-title-tracking);
+  fill: var(--oc-text);
+}
+
+.oc-subtitle {
+  font-size: var(--oc-subtitle-size);
+  font-weight: var(--oc-subtitle-weight);
+  fill: var(--oc-text-secondary);
+}
+
+.oc-source,
+.oc-byline,
+.oc-footer {
+  font-size: var(--oc-source-size);
+  font-weight: var(--oc-source-weight);
+  fill: var(--oc-text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+ * Table footer chrome
+ * --------------------------------------------------------------------------- */
+
+.oc-chrome-footer {
+  padding-top: 16px;
+}

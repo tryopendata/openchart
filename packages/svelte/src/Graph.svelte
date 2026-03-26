@@ -114,6 +114,6 @@ export function getSelectedNodes(): string[] {
 
 <div
   bind:this={containerEl}
-  class={className ? `viz-graph-root ${className}` : 'viz-graph-root'}
+  class={className ? `oc-graph-root ${className}` : 'oc-graph-root'}
   {style}
 ></div>

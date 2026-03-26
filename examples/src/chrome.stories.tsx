@@ -10,6 +10,7 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
 const spec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, country: 'US' },
@@ -38,6 +39,7 @@ export const ChromeWithTitleSubtitleSource = () => (
 );
 
 const minimalSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     { name: 'Apples', value: 30 },

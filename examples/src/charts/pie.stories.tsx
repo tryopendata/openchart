@@ -13,6 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const basicPieSpec: ChartSpec = {
+  animation: true,
   mark: 'arc',
   data: [
     { os: 'Android', share: 71 },
@@ -42,6 +43,7 @@ export const BasicPie = () => (
 // ---------------------------------------------------------------------------
 
 const donutSpec: ChartSpec = {
+  animation: true,
   mark: { type: 'arc', innerRadius: 40 },
   data: [
     { category: 'Healthcare', spending: 24 },
@@ -73,6 +75,7 @@ export const DonutChart = () => (
 // ---------------------------------------------------------------------------
 
 const smallSliceSpec: ChartSpec = {
+  animation: true,
   mark: 'arc',
   data: [
     { country: 'China', emissions: 12600 },
@@ -112,6 +115,7 @@ export const SmallSliceGrouping = () => (
 // ---------------------------------------------------------------------------
 
 const energyMixSpec: ChartSpec = {
+  animation: true,
   mark: 'arc',
   data: [
     { source: 'Oil', share: 31 },

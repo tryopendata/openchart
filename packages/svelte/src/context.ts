@@ -10,9 +10,9 @@ import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
 import { getContext, setContext } from 'svelte';
 
 /** @internal Context key for theme (exported for test use). */
-export const THEME_KEY = Symbol('viz-theme');
+export const THEME_KEY = Symbol('oc-theme');
 /** @internal Context key for dark mode (exported for test use). */
-export const DARK_MODE_KEY = Symbol('viz-dark-mode');
+export const DARK_MODE_KEY = Symbol('oc-dark-mode');
 
 /** Set the theme context for descendant components. */
 export function setVizTheme(theme: () => ThemeConfig | undefined): void {

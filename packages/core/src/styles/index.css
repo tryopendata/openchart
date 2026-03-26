@@ -1,0 +1,22 @@
+/**
+ * @opendata-ai/openchart-core styles
+ *
+ * CSS with oc- prefix for all class names.
+ * CSS custom properties for theme overrides.
+ * Dark mode via .oc-dark class on the container.
+ */
+
+/* For optimal typography, load Inter: https://fonts.google.com/specimen/Inter */
+
+@import "./tokens.css";
+@import "./dark.css";
+@import "./base.css";
+@import "./chrome.css";
+@import "./tooltip.css";
+@import "./legend.css";
+@import "./table.css";
+@import "./table-animation.css";
+@import "./graph.css";
+@import "./keyframes.css";
+@import "./animation.css";
+@import "./reduced-motion.css";

@@ -246,7 +246,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   return (
     <div
       ref={containerRef}
-      className={className ? `viz-graph-root ${className}` : 'viz-graph-root'}
+      className={className ? `oc-graph-root ${className}` : 'oc-graph-root'}
       style={style}
     />
   );

@@ -13,6 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const spendingSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     // Lowest bracket

@@ -53,7 +53,7 @@ afterEach(() => {
 describe('line chart SVG rendering', () => {
   it('renders <path> elements with valid d attribute for each series', () => {
     const { svg } = renderSpec(lineSpec);
-    const paths = svg.querySelectorAll('.viz-mark-line path');
+    const paths = svg.querySelectorAll('.oc-mark-line path');
     expect(paths.length).toBeGreaterThan(0);
 
     for (const path of paths) {
@@ -67,14 +67,14 @@ describe('line chart SVG rendering', () => {
 
   it('creates a mark group per series in multi-series line chart', () => {
     const { svg } = renderSpec(lineSpec);
-    const lineGroups = svg.querySelectorAll('.viz-mark-line');
+    const lineGroups = svg.querySelectorAll('.oc-mark-line');
     // lineSpec has 2 series (US and UK)
     expect(lineGroups.length).toBe(2);
   });
 
   it('each line mark group has a data-mark-id attribute', () => {
     const { svg } = renderSpec(lineSpec);
-    const lineGroups = svg.querySelectorAll('.viz-mark-line');
+    const lineGroups = svg.querySelectorAll('.oc-mark-line');
     for (const group of lineGroups) {
       const markId = group.getAttribute('data-mark-id');
       expect(markId).not.toBeNull();
@@ -84,7 +84,7 @@ describe('line chart SVG rendering', () => {
 
   it('each line mark group has a data-series attribute', () => {
     const { svg } = renderSpec(lineSpec);
-    const lineGroups = svg.querySelectorAll('.viz-mark-line');
+    const lineGroups = svg.querySelectorAll('.oc-mark-line');
     const seriesNames = new Set<string>();
     for (const group of lineGroups) {
       const series = group.getAttribute('data-series');
@@ -97,7 +97,7 @@ describe('line chart SVG rendering', () => {
 
   it('paths have stroke color and non-zero stroke width', () => {
     const { svg } = renderSpec(lineSpec);
-    const paths = svg.querySelectorAll('.viz-mark-line path');
+    const paths = svg.querySelectorAll('.oc-mark-line path');
     for (const path of paths) {
       const stroke = path.getAttribute('stroke');
       expect(stroke).not.toBeNull();
@@ -115,14 +115,14 @@ describe('line chart SVG rendering', () => {
 describe('bar chart SVG rendering', () => {
   it('renders <rect> elements for each data point', () => {
     const { svg } = renderSpec(barSpec);
-    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const rects = svg.querySelectorAll('.oc-mark-rect rect');
     // barSpec has 3 data points
     expect(rects.length).toBe(3);
   });
 
   it('rect elements have width and height > 0', () => {
     const { svg } = renderSpec(barSpec);
-    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const rects = svg.querySelectorAll('.oc-mark-rect rect');
     for (const rect of rects) {
       const width = Number(rect.getAttribute('width'));
       const height = Number(rect.getAttribute('height'));
@@ -133,7 +133,7 @@ describe('bar chart SVG rendering', () => {
 
   it('rect marks have data-mark-id attributes', () => {
     const { svg } = renderSpec(barSpec);
-    const markGroups = svg.querySelectorAll('.viz-mark-rect');
+    const markGroups = svg.querySelectorAll('.oc-mark-rect');
     for (const group of markGroups) {
       const markId = group.getAttribute('data-mark-id');
       expect(markId).not.toBeNull();
@@ -143,7 +143,7 @@ describe('bar chart SVG rendering', () => {
 
   it('bar rects are oriented horizontally (width varies, y is categorical)', () => {
     const { svg } = renderSpec(barSpec);
-    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const rects = svg.querySelectorAll('.oc-mark-rect rect');
     const widths = Array.from(rects).map((r) => Number(r.getAttribute('width')));
     // Different data values should produce different widths
     const uniqueWidths = new Set(widths);
@@ -158,13 +158,13 @@ describe('bar chart SVG rendering', () => {
 describe('column chart SVG rendering', () => {
   it('renders <rect> elements oriented vertically', () => {
     const { svg } = renderSpec(columnSpec);
-    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const rects = svg.querySelectorAll('.oc-mark-rect rect');
     expect(rects.length).toBe(3);
   });
 
   it('column rects have varying heights (vertical orientation)', () => {
     const { svg } = renderSpec(columnSpec);
-    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const rects = svg.querySelectorAll('.oc-mark-rect rect');
     const heights = Array.from(rects).map((r) => Number(r.getAttribute('height')));
     // Different revenue values should produce different heights
     const uniqueHeights = new Set(heights);
@@ -177,7 +177,7 @@ describe('column chart SVG rendering', () => {
 
   it('column rects have positive width', () => {
     const { svg } = renderSpec(columnSpec);
-    const rects = svg.querySelectorAll('.viz-mark-rect rect');
+    const rects = svg.querySelectorAll('.oc-mark-rect rect');
     for (const rect of rects) {
       const width = Number(rect.getAttribute('width'));
       expect(width).toBeGreaterThan(0);
@@ -192,14 +192,14 @@ describe('column chart SVG rendering', () => {
 describe('scatter chart SVG rendering', () => {
   it('renders <circle> elements for each data point', () => {
     const { svg } = renderSpec(scatterSpec);
-    const circles = svg.querySelectorAll('.viz-mark-point');
+    const circles = svg.querySelectorAll('.oc-mark-point');
     // scatterSpec has 4 data points
     expect(circles.length).toBe(4);
   });
 
   it('circles have valid cx, cy, and r attributes', () => {
     const { svg } = renderSpec(scatterSpec);
-    const circles = svg.querySelectorAll('.viz-mark-point');
+    const circles = svg.querySelectorAll('.oc-mark-point');
     for (const circle of circles) {
       const cx = Number(circle.getAttribute('cx'));
       const cy = Number(circle.getAttribute('cy'));
@@ -215,7 +215,7 @@ describe('scatter chart SVG rendering', () => {
 
   it('scatter marks have data-mark-id attributes', () => {
     const { svg } = renderSpec(scatterSpec);
-    const circles = svg.querySelectorAll('.viz-mark-point');
+    const circles = svg.querySelectorAll('.oc-mark-point');
     for (const circle of circles) {
       const markId = circle.getAttribute('data-mark-id');
       expect(markId).not.toBeNull();
@@ -231,14 +231,14 @@ describe('scatter chart SVG rendering', () => {
 describe('pie chart SVG rendering', () => {
   it('renders <path> arc segments for each slice', () => {
     const { svg } = renderSpec(pieSpec);
-    const arcGroups = svg.querySelectorAll('.viz-mark-arc');
+    const arcGroups = svg.querySelectorAll('.oc-mark-arc');
     // pieSpec has 3 categories
     expect(arcGroups.length).toBe(3);
   });
 
   it('arc paths have valid d attribute with arc commands', () => {
     const { svg } = renderSpec(pieSpec);
-    const paths = svg.querySelectorAll('.viz-mark-arc path');
+    const paths = svg.querySelectorAll('.oc-mark-arc path');
     for (const path of paths) {
       const d = path.getAttribute('d');
       expect(d).not.toBeNull();
@@ -250,7 +250,7 @@ describe('pie chart SVG rendering', () => {
 
   it('arc groups are translated to the pie center', () => {
     const { svg } = renderSpec(pieSpec);
-    const arcGroups = svg.querySelectorAll('.viz-mark-arc');
+    const arcGroups = svg.querySelectorAll('.oc-mark-arc');
     for (const group of arcGroups) {
       const transform = group.getAttribute('transform');
       expect(transform).not.toBeNull();
@@ -260,7 +260,7 @@ describe('pie chart SVG rendering', () => {
 
   it('arc marks have fill colors', () => {
     const { svg } = renderSpec(pieSpec);
-    const paths = svg.querySelectorAll('.viz-mark-arc path');
+    const paths = svg.querySelectorAll('.oc-mark-arc path');
     for (const path of paths) {
       const fill = path.getAttribute('fill');
       expect(fill).not.toBeNull();
@@ -276,7 +276,7 @@ describe('pie chart SVG rendering', () => {
 describe('multi-series rendering', () => {
   it('multi-series line chart has distinct stroke colors per series', () => {
     const { svg } = renderSpec(lineSpec);
-    const paths = svg.querySelectorAll('.viz-mark-line path');
+    const paths = svg.querySelectorAll('.oc-mark-line path');
     const strokes = new Set<string>();
     for (const path of paths) {
       const stroke = path.getAttribute('stroke');
@@ -288,7 +288,7 @@ describe('multi-series rendering', () => {
 
   it('multi-series scatter chart has distinct fill colors per group', () => {
     const { svg } = renderSpec(scatterSpec);
-    const circles = svg.querySelectorAll('.viz-mark-point');
+    const circles = svg.querySelectorAll('.oc-mark-point');
     const fills = new Set<string>();
     for (const circle of circles) {
       const fill = circle.getAttribute('fill');
@@ -300,7 +300,7 @@ describe('multi-series rendering', () => {
 
   it('multi-series bar chart renders data-series attributes on rect marks', () => {
     const { svg } = renderSpec(multiSeriesBarSpec);
-    const marks = svg.querySelectorAll('.viz-mark-rect[data-series]');
+    const marks = svg.querySelectorAll('.oc-mark-rect[data-series]');
     const seriesNames = new Set<string>();
     for (const mark of marks) {
       const s = mark.getAttribute('data-series');
@@ -318,35 +318,35 @@ describe('multi-series rendering', () => {
 describe('chart chrome rendering', () => {
   it('renders title text with correct content', () => {
     const { svg } = renderSpec(lineSpec);
-    const title = svg.querySelector('.viz-title');
+    const title = svg.querySelector('.oc-title');
     expect(title).not.toBeNull();
     expect(title!.textContent).toBe('GDP Growth');
   });
 
   it('renders subtitle text with correct content', () => {
     const { svg } = renderSpec(lineSpec);
-    const subtitle = svg.querySelector('.viz-subtitle');
+    const subtitle = svg.querySelector('.oc-subtitle');
     expect(subtitle).not.toBeNull();
     expect(subtitle!.textContent).toBe('US vs UK over time');
   });
 
   it('renders source text with correct content', () => {
     const { svg } = renderSpec(lineSpec);
-    const source = svg.querySelector('.viz-source');
+    const source = svg.querySelector('.oc-source');
     expect(source).not.toBeNull();
     expect(source!.textContent).toBe('World Bank');
   });
 
-  it('chrome elements are inside a .viz-chrome group', () => {
+  it('chrome elements are inside a .oc-chrome group', () => {
     const { svg } = renderSpec(lineSpec);
-    const chromeGroup = svg.querySelector('.viz-chrome');
+    const chromeGroup = svg.querySelector('.oc-chrome');
     expect(chromeGroup).not.toBeNull();
-    expect(chromeGroup!.querySelector('.viz-title')).not.toBeNull();
+    expect(chromeGroup!.querySelector('.oc-title')).not.toBeNull();
   });
 
   it('title has font styling applied', () => {
     const { svg } = renderSpec(lineSpec);
-    const title = svg.querySelector('.viz-title');
+    const title = svg.querySelector('.oc-title');
     expect(title).not.toBeNull();
     const fontFamily = title!.getAttribute('font-family');
     const fontSize = Number(title!.getAttribute('font-size'));
@@ -371,7 +371,7 @@ describe('chart chrome rendering', () => {
     };
     // Render at a very narrow width to force wrapping
     const { svg } = renderSpec(longTitleSpec, { width: 250, height: 300 });
-    const title = svg.querySelector('.viz-title');
+    const title = svg.querySelector('.oc-title');
     expect(title).not.toBeNull();
     const tspans = title!.querySelectorAll('tspan');
     expect(tspans.length).toBeGreaterThan(1);
@@ -386,7 +386,7 @@ describe('chart chrome rendering', () => {
 
   it('does not wrap short title text', () => {
     const { svg } = renderSpec(lineSpec);
-    const title = svg.querySelector('.viz-title');
+    const title = svg.querySelector('.oc-title');
     expect(title).not.toBeNull();
     // Short title should have no tspan children, just direct textContent
     const tspans = title!.querySelectorAll('tspan');
@@ -404,12 +404,12 @@ describe('chart chrome rendering', () => {
       },
     };
     const { svg } = renderSpec(noChrome);
-    const chromeGroup = svg.querySelector('.viz-chrome');
+    const chromeGroup = svg.querySelector('.oc-chrome');
     expect(chromeGroup).not.toBeNull();
     // No title/subtitle/source should be in the chrome group
-    expect(chromeGroup!.querySelector('.viz-title')).toBeNull();
-    expect(chromeGroup!.querySelector('.viz-subtitle')).toBeNull();
-    expect(chromeGroup!.querySelector('.viz-source')).toBeNull();
+    expect(chromeGroup!.querySelector('.oc-title')).toBeNull();
+    expect(chromeGroup!.querySelector('.oc-subtitle')).toBeNull();
+    expect(chromeGroup!.querySelector('.oc-source')).toBeNull();
   });
 });
 
@@ -420,15 +420,15 @@ describe('chart chrome rendering', () => {
 describe('axis rendering', () => {
   it('renders x-axis and y-axis groups', () => {
     const { svg } = renderSpec(lineSpec);
-    const xAxis = svg.querySelector('.viz-axis-x');
-    const yAxis = svg.querySelector('.viz-axis-y');
+    const xAxis = svg.querySelector('.oc-axis-x');
+    const yAxis = svg.querySelector('.oc-axis-y');
     expect(xAxis).not.toBeNull();
     expect(yAxis).not.toBeNull();
   });
 
   it('x-axis has tick labels as text elements', () => {
     const { svg } = renderSpec(lineSpec);
-    const xAxis = svg.querySelector('.viz-axis-x');
+    const xAxis = svg.querySelector('.oc-axis-x');
     const labels = xAxis!.querySelectorAll('text');
     expect(labels.length).toBeGreaterThan(0);
     // Each label should have text content
@@ -439,14 +439,14 @@ describe('axis rendering', () => {
 
   it('y-axis has tick labels as text elements', () => {
     const { svg } = renderSpec(barSpec);
-    const yAxis = svg.querySelector('.viz-axis-y');
+    const yAxis = svg.querySelector('.oc-axis-y');
     const labels = yAxis!.querySelectorAll('text');
     expect(labels.length).toBeGreaterThan(0);
   });
 
   it('x-axis has a baseline line element', () => {
     const { svg } = renderSpec(lineSpec);
-    const xAxis = svg.querySelector('.viz-axis-x');
+    const xAxis = svg.querySelector('.oc-axis-x');
     const line = xAxis!.querySelector('line');
     // The renderer draws an axis line for x-axis
     expect(line).not.toBeNull();
@@ -461,14 +461,14 @@ describe('gridline rendering', () => {
   it('renders gridlines as line elements within axis groups', () => {
     const { svg } = renderSpec(lineSpec);
     // y-axis gridlines are horizontal lines
-    const yAxis = svg.querySelector('.viz-axis-y');
+    const yAxis = svg.querySelector('.oc-axis-y');
     const gridlines = yAxis!.querySelectorAll('line');
     expect(gridlines.length).toBeGreaterThan(0);
   });
 
   it('gridlines have stroke-opacity for subtlety', () => {
     const { svg } = renderSpec(lineSpec);
-    const yAxis = svg.querySelector('.viz-axis-y');
+    const yAxis = svg.querySelector('.oc-axis-y');
     const gridlines = yAxis!.querySelectorAll('line');
     for (const gl of gridlines) {
       const opacity = gl.getAttribute('stroke-opacity');
@@ -487,16 +487,16 @@ describe('gridline rendering', () => {
 describe('legend rendering', () => {
   it('multi-series chart renders legend entries', () => {
     const { svg } = renderSpec(lineSpec);
-    const legend = svg.querySelector('.viz-legend');
+    const legend = svg.querySelector('.oc-legend');
     expect(legend).not.toBeNull();
-    const entries = legend!.querySelectorAll('.viz-legend-entry');
+    const entries = legend!.querySelectorAll('.oc-legend-entry');
     // lineSpec has US and UK series
     expect(entries.length).toBe(2);
   });
 
   it('legend entries have labels with series names', () => {
     const { svg } = renderSpec(lineSpec);
-    const entries = svg.querySelectorAll('.viz-legend-entry');
+    const entries = svg.querySelectorAll('.oc-legend-entry');
     const labels: string[] = [];
     for (const entry of entries) {
       const text = entry.querySelector('text');
@@ -508,7 +508,7 @@ describe('legend rendering', () => {
 
   it('legend entries have data-legend-label attribute', () => {
     const { svg } = renderSpec(lineSpec);
-    const entries = svg.querySelectorAll('.viz-legend-entry');
+    const entries = svg.querySelectorAll('.oc-legend-entry');
     for (const entry of entries) {
       expect(entry.getAttribute('data-legend-label')).not.toBeNull();
     }
@@ -516,10 +516,10 @@ describe('legend rendering', () => {
 
   it('legend has ARIA attributes for accessibility', () => {
     const { svg } = renderSpec(lineSpec);
-    const legend = svg.querySelector('.viz-legend');
+    const legend = svg.querySelector('.oc-legend');
     expect(legend!.getAttribute('role')).toBe('list');
     expect(legend!.getAttribute('aria-label')).toBe('Chart legend');
-    const entries = legend!.querySelectorAll('.viz-legend-entry');
+    const entries = legend!.querySelectorAll('.oc-legend-entry');
     for (const entry of entries) {
       expect(entry.getAttribute('role')).toBe('listitem');
     }
@@ -527,13 +527,13 @@ describe('legend rendering', () => {
 
   it('single-series chart has no legend entries', () => {
     const { svg } = renderSpec(singleSeriesLineSpec);
-    const entries = svg.querySelectorAll('.viz-legend-entry');
+    const entries = svg.querySelectorAll('.oc-legend-entry');
     expect(entries.length).toBe(0);
   });
 
   it('pie chart renders legend entries for each slice', () => {
     const { svg } = renderSpec(pieSpec);
-    const entries = svg.querySelectorAll('.viz-legend-entry');
+    const entries = svg.querySelectorAll('.oc-legend-entry');
     // pieSpec has 3 slices
     expect(entries.length).toBe(3);
   });
@@ -558,9 +558,9 @@ describe('SVG root structure', () => {
     expect(ariaLabel!.length).toBeGreaterThan(0);
   });
 
-  it('SVG has viz-chart class', () => {
+  it('SVG has oc-chart class', () => {
     const { svg } = renderSpec(lineSpec);
-    expect(svg.getAttribute('class')).toBe('viz-chart');
+    expect(svg.getAttribute('class')).toBe('oc-chart');
   });
 
   it('SVG has a background rect as first child', () => {
@@ -577,14 +577,14 @@ describe('SVG root structure', () => {
     expect(defs).not.toBeNull();
     const clipPath = defs!.querySelector('clipPath');
     expect(clipPath).not.toBeNull();
-    expect(clipPath!.getAttribute('id')).toMatch(/^viz-clip-/);
+    expect(clipPath!.getAttribute('id')).toMatch(/^oc-clip-/);
   });
 
   it('marks group is clipped via clip-path attribute', () => {
     const { svg } = renderSpec(lineSpec);
     const clippedGroup = svg.querySelector('[clip-path]');
     expect(clippedGroup).not.toBeNull();
-    expect(clippedGroup!.getAttribute('clip-path')).toMatch(/url\(#viz-clip-/);
+    expect(clippedGroup!.getAttribute('clip-path')).toMatch(/url\(#oc-clip-/);
   });
 });
 
@@ -595,9 +595,9 @@ describe('SVG root structure', () => {
 describe('targeted mark snapshots', () => {
   it('line mark group has expected structure', () => {
     const { svg } = renderSpec(singleSeriesLineSpec);
-    const lineGroup = svg.querySelector('.viz-mark-line');
+    const lineGroup = svg.querySelector('.oc-mark-line');
     expect(lineGroup).not.toBeNull();
-    expect(lineGroup!.getAttribute('class')).toBe('viz-mark viz-mark-line');
+    expect(lineGroup!.getAttribute('class')).toBe('oc-mark oc-mark-line');
     expect(lineGroup!.getAttribute('data-mark-id')).toMatch(/^line-/);
 
     const path = lineGroup!.querySelector('path');
@@ -610,9 +610,9 @@ describe('targeted mark snapshots', () => {
 
   it('rect mark group has expected structure', () => {
     const { svg } = renderSpec(barSpec);
-    const rectGroup = svg.querySelector('.viz-mark-rect');
+    const rectGroup = svg.querySelector('.oc-mark-rect');
     expect(rectGroup).not.toBeNull();
-    expect(rectGroup!.getAttribute('class')).toBe('viz-mark viz-mark-rect');
+    expect(rectGroup!.getAttribute('class')).toBe('oc-mark oc-mark-rect');
     expect(rectGroup!.getAttribute('data-mark-id')).toMatch(/^rect-/);
 
     const rect = rectGroup!.querySelector('rect');
@@ -624,10 +624,10 @@ describe('targeted mark snapshots', () => {
 
   it('point mark has expected attributes', () => {
     const { svg } = renderSpec(scatterSpec);
-    const point = svg.querySelector('.viz-mark-point');
+    const point = svg.querySelector('.oc-mark-point');
     expect(point).not.toBeNull();
     expect(point!.tagName.toLowerCase()).toBe('circle');
-    expect(point!.getAttribute('class')).toBe('viz-mark viz-mark-point');
+    expect(point!.getAttribute('class')).toBe('oc-mark oc-mark-point');
     expect(point!.getAttribute('data-mark-id')).toMatch(/^point-/);
     expect(Number(point!.getAttribute('r'))).toBeGreaterThan(0);
     expect(point!.getAttribute('fill')).not.toBeNull();
@@ -635,9 +635,9 @@ describe('targeted mark snapshots', () => {
 
   it('arc mark group has expected structure', () => {
     const { svg } = renderSpec(pieSpec);
-    const arcGroup = svg.querySelector('.viz-mark-arc');
+    const arcGroup = svg.querySelector('.oc-mark-arc');
     expect(arcGroup).not.toBeNull();
-    expect(arcGroup!.getAttribute('class')).toBe('viz-mark viz-mark-arc');
+    expect(arcGroup!.getAttribute('class')).toBe('oc-mark oc-mark-arc');
     expect(arcGroup!.getAttribute('data-mark-id')).toMatch(/^arc-/);
     expect(arcGroup!.getAttribute('transform')).toMatch(/translate\(/);
 
@@ -655,7 +655,7 @@ describe('targeted mark snapshots', () => {
 describe('brand watermark', () => {
   it('renders "OpenData" as a single text element with two tspans', () => {
     const { svg } = renderSpec(lineSpec);
-    const brandLink = svg.querySelector('.viz-chrome-ref');
+    const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink).not.toBeNull();
     const text = brandLink!.querySelector('text')!;
     expect(text.textContent).toBe('OpenData');
@@ -673,21 +673,21 @@ describe('brand watermark', () => {
 
   it('is a direct child of SVG root', () => {
     const { svg } = renderSpec(lineSpec);
-    const brandLink = svg.querySelector('.viz-chrome-ref');
+    const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink!.parentElement).toBe(svg);
   });
 
   it('renders after chrome (in the footer row)', () => {
     const { svg } = renderSpec(lineSpec);
     const children = Array.from(svg.children);
-    const chromeIdx = children.findIndex((el) => el.classList.contains('viz-chrome'));
-    const brandIdx = children.findIndex((el) => el.classList.contains('viz-chrome-ref'));
+    const chromeIdx = children.findIndex((el) => el.classList.contains('oc-chrome'));
+    const brandIdx = children.findIndex((el) => el.classList.contains('oc-chrome-ref'));
     expect(brandIdx).toBeGreaterThan(chromeIdx);
   });
 
   it('skips watermark on very small charts', () => {
     const { svg } = renderSpec(lineSpec, { width: 100, height: 80 });
-    const brandLink = svg.querySelector('.viz-chrome-ref');
+    const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink).toBeNull();
   });
 });

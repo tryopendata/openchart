@@ -72,11 +72,11 @@ describe('Graph', () => {
   it('renders chrome text elements', async () => {
     const wrapper = await mountGraph({ spec: basicSpec });
 
-    const title = wrapper.find('.viz-title');
+    const title = wrapper.find('.oc-title');
     expect(title.exists()).toBe(true);
     expect(title.text()).toBe('Test Graph');
 
-    const subtitle = wrapper.find('.viz-subtitle');
+    const subtitle = wrapper.find('.oc-subtitle');
     expect(subtitle.text()).toBe('A simple test graph');
     wrapper.unmount();
   });
@@ -84,13 +84,13 @@ describe('Graph', () => {
   it('spec changes trigger re-render', async () => {
     const wrapper = await mountGraph({ spec: basicSpec });
 
-    const titleBefore = wrapper.find('.viz-title');
+    const titleBefore = wrapper.find('.oc-title');
     expect(titleBefore.text()).toBe('Test Graph');
 
     await wrapper.setProps({ spec: updatedSpec });
     await flushPromises();
 
-    const titleAfter = wrapper.find('.viz-title');
+    const titleAfter = wrapper.find('.oc-title');
     expect(titleAfter.text()).toBe('Updated Graph');
     wrapper.unmount();
   });

@@ -32,7 +32,7 @@ const TOOLTIP_OFFSET = 12;
  */
 export function createTooltipManager(container: HTMLElement): TooltipManager {
   const tooltip = document.createElement('div');
-  tooltip.className = 'viz-tooltip';
+  tooltip.className = 'oc-tooltip';
   tooltip.setAttribute('role', 'tooltip');
 
   container.style.position = container.style.position || 'relative';
@@ -63,21 +63,21 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
       // Title row: optional color dot + title text
       if (content.title) {
         const titleColor = content.fields.find((f) => f.color)?.color;
-        html += '<div class="viz-tooltip-header">';
+        html += '<div class="oc-tooltip-header">';
         if (titleColor) {
-          html += `<span class="viz-tooltip-dot" style="background:${esc(titleColor)}"></span>`;
+          html += `<span class="oc-tooltip-dot" style="background:${esc(titleColor)}"></span>`;
         }
-        html += `<span class="viz-tooltip-title">${esc(content.title)}</span>`;
+        html += `<span class="oc-tooltip-title">${esc(content.title)}</span>`;
         html += '</div>';
       }
 
       // Field rows
       if (content.fields.length > 0) {
-        html += '<div class="viz-tooltip-body">';
+        html += '<div class="oc-tooltip-body">';
         for (const field of content.fields) {
-          html += '<div class="viz-tooltip-row">';
-          html += `<span class="viz-tooltip-label">${esc(field.label)}</span>`;
-          html += `<span class="viz-tooltip-value">${esc(field.value)}</span>`;
+          html += '<div class="oc-tooltip-row">';
+          html += `<span class="oc-tooltip-label">${esc(field.label)}</span>`;
+          html += `<span class="oc-tooltip-value">${esc(field.value)}</span>`;
           html += '</div>';
         }
         html += '</div>';

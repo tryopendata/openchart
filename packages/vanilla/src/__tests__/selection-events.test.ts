@@ -319,7 +319,7 @@ describe('selection events', () => {
   // 3. Selection overlay
   // =========================================================================
   describe('selection overlay', () => {
-    it('viz-selection-overlay group appears after selection', () => {
+    it('oc-selection-overlay group appears after selection', () => {
       const onSelect = vi.fn();
       const chart = createChart(container, selectionSpec, { onSelect });
 
@@ -330,12 +330,12 @@ describe('selection events', () => {
       }
 
       // No overlay initially
-      expect(container.querySelector('.viz-selection-overlay')).toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).toBeNull();
 
       simulateClick(titleEl);
 
       // Overlay should now exist
-      expect(container.querySelector('.viz-selection-overlay')).not.toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).not.toBeNull();
 
       chart.destroy();
     });
@@ -353,13 +353,13 @@ describe('selection events', () => {
 
       // Select
       simulateClick(titleEl);
-      expect(container.querySelector('.viz-selection-overlay')).not.toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).not.toBeNull();
 
       // Deselect by clicking empty area
       const svg = getSvg(container);
       svg.dispatchEvent(new MouseEvent('click', { bubbles: false }));
 
-      expect(container.querySelector('.viz-selection-overlay')).toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).toBeNull();
 
       chart.destroy();
     });
@@ -538,13 +538,13 @@ describe('selection events', () => {
       }
 
       simulateClick(titleEl);
-      expect(container.querySelector('.viz-selection-overlay')).not.toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).not.toBeNull();
 
       // Update with same spec (should re-render but preserve selection)
       chart.update(selectionSpec);
 
       // Selection overlay should still be present
-      expect(container.querySelector('.viz-selection-overlay')).not.toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).not.toBeNull();
       expect(chart.getSelectedElement()?.type).toBe('chrome');
 
       chart.destroy();
@@ -573,7 +573,7 @@ describe('selection events', () => {
 
       // Selection should be cleared because source no longer exists
       expect(chart.getSelectedElement()).toBeNull();
-      expect(container.querySelector('.viz-selection-overlay')).toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).toBeNull();
 
       chart.destroy();
     });
@@ -614,7 +614,7 @@ describe('selection events', () => {
   // 7. Hover feedback
   // =========================================================================
   describe('hover feedback', () => {
-    it('mouse enter on editable element adds viz-editable-hover class', () => {
+    it('mouse enter on editable element adds oc-editable-hover class', () => {
       const onSelect = vi.fn();
       const chart = createChart(container, selectionSpec, { onSelect });
 
@@ -627,12 +627,12 @@ describe('selection events', () => {
       // Trigger mouseenter (uses capture so dispatch on the target itself)
       titleEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
 
-      expect(titleEl.classList.contains('viz-editable-hover')).toBe(true);
+      expect(titleEl.classList.contains('oc-editable-hover')).toBe(true);
 
       chart.destroy();
     });
 
-    it('mouse leave removes viz-editable-hover class', () => {
+    it('mouse leave removes oc-editable-hover class', () => {
       const onSelect = vi.fn();
       const chart = createChart(container, selectionSpec, { onSelect });
 
@@ -644,11 +644,11 @@ describe('selection events', () => {
 
       // Add hover class first
       titleEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-      expect(titleEl.classList.contains('viz-editable-hover')).toBe(true);
+      expect(titleEl.classList.contains('oc-editable-hover')).toBe(true);
 
       // Remove hover class
       titleEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-      expect(titleEl.classList.contains('viz-editable-hover')).toBe(false);
+      expect(titleEl.classList.contains('oc-editable-hover')).toBe(false);
 
       chart.destroy();
     });
@@ -834,7 +834,7 @@ describe('selection events', () => {
       });
 
       // The overlay should be rendered
-      expect(container.querySelector('.viz-selection-overlay')).not.toBeNull();
+      expect(container.querySelector('.oc-selection-overlay')).not.toBeNull();
       expect(chart.getSelectedElement()?.type).toBe('chrome');
 
       chart.destroy();

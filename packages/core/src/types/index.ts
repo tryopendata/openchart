@@ -57,6 +57,7 @@ export type {
   PointMark,
   Rect,
   RectMark,
+  ResolvedAnimation,
   ResolvedAnnotation,
   ResolvedChrome,
   ResolvedChromeElement,
@@ -80,6 +81,11 @@ export type {
 // Spec types (user input)
 export type {
   AggregateOp,
+  AnimationConfig,
+  AnimationEase,
+  AnimationPhaseConfig,
+  AnimationSpec,
+  AnimationStagger,
   Annotation,
   AnnotationAnchor,
   AnnotationOffset,

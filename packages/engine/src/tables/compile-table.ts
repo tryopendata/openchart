@@ -19,6 +19,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
 
+import { resolveAnimation } from '../compiler/animation';
 import type { NormalizedTableSpec } from '../compiler/types';
 import { computeBarCell, computeColumnMax, computeColumnMin } from './bar-column';
 import { computeCategoryColors } from './category-colors';
@@ -416,5 +417,6 @@ export function compileTableLayout(
       summary: `${resolvedColumns.length} columns, ${totalFiltered} rows`,
     },
     theme,
+    animation: resolveAnimation(spec.animation),
   };
 }

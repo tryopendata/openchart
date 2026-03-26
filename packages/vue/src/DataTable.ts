@@ -180,7 +180,7 @@ export const DataTable = defineComponent({
     });
 
     const rootClass = () => {
-      const base = 'viz-table-root';
+      const base = 'oc-table-root';
       return props.class ? `${base} ${props.class}` : base;
     };
 

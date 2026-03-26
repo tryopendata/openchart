@@ -11,6 +11,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 import { useState } from 'react';
 
 const spec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, category: 'Alpha' },
@@ -36,6 +37,7 @@ const spec: ChartSpec = {
 
 // Many-series spec for legend overflow testing
 const manySeriesSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: Array.from({ length: 8 }, (_, seriesIdx) =>
     Array.from({ length: 4 }, (_, i) => ({
@@ -57,6 +59,7 @@ const manySeriesSpec: ChartSpec = {
 
 // Column chart with many categories for label rotation testing
 const columnSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     'United States',
@@ -85,6 +88,7 @@ const columnSpec: ChartSpec = {
 
 // Long title spec for wrapping/collision testing
 const longTitleSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     { date: '2020-01-01', value: 10, category: 'Alpha' },

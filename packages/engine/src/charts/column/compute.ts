@@ -183,6 +183,7 @@ function computeSimpleColumns(
       cornerRadius: 2,
       data: row as Record<string, unknown>,
       aria,
+      orient: 'vertical',
     });
   }
 
@@ -233,6 +234,7 @@ function computeColoredColumns(
       cornerRadius: 2,
       data: row as Record<string, unknown>,
       aria,
+      orient: 'vertical',
     });
   }
 
@@ -287,6 +289,8 @@ function computeStackedColumns(
         cornerRadius: 0,
         data: row as Record<string, unknown>,
         aria,
+        orient: 'vertical',
+        stackGroup: category,
       });
 
       cumulativeValue += value;

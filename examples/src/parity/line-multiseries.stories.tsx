@@ -13,6 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const gdpLineSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     // United States

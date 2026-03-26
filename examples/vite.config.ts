@@ -12,7 +12,7 @@ import path from 'node:path';
 export default {
   resolve: {
     alias: {
-      '@opendata-ai/openchart-core/styles.css': path.resolve(__dirname, '../packages/core/src/styles/viz.css'),
+      '@opendata-ai/openchart-core/styles.css': path.resolve(__dirname, '../packages/core/src/styles/index.css'),
       '@opendata-ai/openchart-core': path.resolve(__dirname, '../packages/core/src/index.ts'),
       '@opendata-ai/openchart-engine': path.resolve(__dirname, '../packages/engine/src/index.ts'),
       '@opendata-ai/openchart-vanilla': path.resolve(__dirname, '../packages/vanilla/src/index.ts'),

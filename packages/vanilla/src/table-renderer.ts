@@ -8,7 +8,20 @@
 
 import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
 import { BRAND_FONT_SIZE } from '@opendata-ai/openchart-core';
+import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { renderCell } from './renderers/table-cells';
+
+/** Options for renderTable(). */
+export interface TableRenderOptions {
+  /** Whether to apply entrance animation on this render. */
+  animate?: boolean;
+}
+
+/** CSS easing preset map for animation custom properties. */
+const EASE_VAR_MAP: Record<string, string> = {
+  smooth: 'var(--oc-ease-smooth)',
+  snappy: 'var(--oc-ease-snappy)',
+};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -31,17 +44,17 @@ function renderChromeBlock(
     if (!chrome.title && !chrome.subtitle) return null;
 
     const div = document.createElement('div');
-    div.className = 'viz-chrome';
+    div.className = 'oc-chrome';
 
     if (chrome.title) {
       const h = document.createElement('div');
-      h.className = 'viz-table-title';
+      h.className = 'oc-table-title';
       h.textContent = chrome.title.text;
       div.appendChild(h);
     }
     if (chrome.subtitle) {
       const sub = document.createElement('div');
-      sub.className = 'viz-table-subtitle';
+      sub.className = 'oc-table-subtitle';
       sub.textContent = chrome.subtitle.text;
       div.appendChild(sub);
     }
@@ -53,17 +66,17 @@ function renderChromeBlock(
   if (!chrome.source && !chrome.footer) return null;
 
   const div = document.createElement('div');
-  div.className = 'viz-chrome viz-chrome-footer';
+  div.className = 'oc-chrome oc-chrome-footer';
 
   if (chrome.source) {
     const src = document.createElement('div');
-    src.className = 'viz-table-source';
+    src.className = 'oc-table-source';
     src.textContent = chrome.source.text;
     div.appendChild(src);
   }
   if (chrome.footer) {
     const foot = document.createElement('div');
-    foot.className = 'viz-table-footer-text';
+    foot.className = 'oc-table-footer-text';
     foot.textContent = chrome.footer.text;
     div.appendChild(foot);
   }
@@ -105,7 +118,7 @@ function renderThead(
     // Sort button
     if (col.sortable) {
       const btn = document.createElement('button');
-      btn.className = 'viz-table-sort-btn';
+      btn.className = 'oc-table-sort-btn';
       btn.setAttribute('aria-label', `Sort by ${col.label}`);
       btn.setAttribute('data-sort-column', col.key);
       btn.type = 'button';
@@ -131,6 +144,7 @@ function renderTbody(rows: TableRow[], columns: ResolvedColumn[]): HTMLTableSect
     const tr = document.createElement('tr');
     tr.setAttribute('role', 'row');
     tr.setAttribute('data-row-id', row.id);
+    tr.style.setProperty('--oc-row-index', String(r));
 
     for (let c = 0; c < columns.length; c++) {
       const cell = row.cells[c];
@@ -156,7 +170,7 @@ function renderSearchBar(layout: TableLayout): HTMLDivElement | null {
   if (!layout.search.enabled) return null;
 
   const div = document.createElement('div');
-  div.className = 'viz-table-search';
+  div.className = 'oc-table-search';
 
   const input = document.createElement('input');
   input.type = 'search';
@@ -178,10 +192,10 @@ function renderPagination(layout: TableLayout): HTMLDivElement | null {
   const { page, pageSize, totalRows, totalPages } = layout.pagination;
 
   const div = document.createElement('div');
-  div.className = 'viz-table-pagination';
+  div.className = 'oc-table-pagination';
 
   const info = document.createElement('span');
-  info.className = 'viz-table-pagination-info';
+  info.className = 'oc-table-pagination-info';
 
   if (totalRows === 0) {
     info.textContent = 'No results';
@@ -194,7 +208,7 @@ function renderPagination(layout: TableLayout): HTMLDivElement | null {
   div.appendChild(info);
 
   const btnGroup = document.createElement('span');
-  btnGroup.className = 'viz-table-pagination-btns';
+  btnGroup.className = 'oc-table-pagination-btns';
 
   const prevBtn = document.createElement('button');
   prevBtn.setAttribute('aria-label', 'Previous page');
@@ -220,7 +234,7 @@ function renderPagination(layout: TableLayout): HTMLDivElement | null {
 
 function renderEmptyState(message: string): HTMLDivElement {
   const div = document.createElement('div');
-  div.className = 'viz-table-empty';
+  div.className = 'oc-table-empty';
   div.setAttribute('aria-live', 'polite');
   div.textContent = message;
   return div;
@@ -237,53 +251,57 @@ function renderEmptyState(message: string): HTMLDivElement {
  * @param container - The container element to render into.
  * @returns The wrapper element that was created.
  */
-export function renderTable(layout: TableLayout, container: HTMLElement): HTMLElement {
+export function renderTable(
+  layout: TableLayout,
+  container: HTMLElement,
+  opts?: TableRenderOptions,
+): HTMLElement {
   const wrapper = document.createElement('div');
-  wrapper.className = 'viz-table-wrapper';
+  wrapper.className = 'oc-table-wrapper';
 
   // Apply theme colors as CSS custom properties so table CSS picks them up.
   // Without this, dark-background themes show invisible text since the
-  // CSS defaults (--viz-text etc.) are light-mode values.
+  // CSS defaults (--oc-text etc.) are light-mode values.
   const { theme, chrome } = layout;
   if (theme) {
     const s = wrapper.style;
-    s.setProperty('--viz-bg', theme.colors.background);
-    s.setProperty('--viz-text', theme.colors.text);
-    s.setProperty('--viz-text-secondary', theme.colors.axis ?? theme.colors.text);
-    s.setProperty('--viz-text-muted', theme.colors.axis ?? theme.colors.text);
-    s.setProperty('--viz-gridline', theme.colors.gridline);
-    s.setProperty('--viz-border', theme.colors.gridline);
-    s.setProperty('--viz-font-family', theme.fonts.family);
+    s.setProperty('--oc-bg', theme.colors.background);
+    s.setProperty('--oc-text', theme.colors.text);
+    s.setProperty('--oc-text-secondary', theme.colors.axis ?? theme.colors.text);
+    s.setProperty('--oc-text-muted', theme.colors.axis ?? theme.colors.text);
+    s.setProperty('--oc-gridline', theme.colors.gridline);
+    s.setProperty('--oc-border', theme.colors.gridline);
+    s.setProperty('--oc-font-family', theme.fonts.family);
     s.fontFamily = theme.fonts.family;
   }
 
   // Set computed chrome CSS custom properties so chrome elements pick up
-  // theme-resolved values via CSS fallbacks (e.g. --viz-title-computed-size).
+  // theme-resolved values via CSS fallbacks (e.g. --oc-title-computed-size).
   {
     const s = wrapper.style;
     if (chrome.title) {
-      s.setProperty('--viz-title-computed-size', `${chrome.title.style.fontSize}px`);
-      s.setProperty('--viz-title-computed-weight', String(chrome.title.style.fontWeight));
-      s.setProperty('--viz-title-computed-color', chrome.title.style.fill);
+      s.setProperty('--oc-title-computed-size', `${chrome.title.style.fontSize}px`);
+      s.setProperty('--oc-title-computed-weight', String(chrome.title.style.fontWeight));
+      s.setProperty('--oc-title-computed-color', chrome.title.style.fill);
     }
     if (chrome.subtitle) {
-      s.setProperty('--viz-subtitle-computed-size', `${chrome.subtitle.style.fontSize}px`);
-      s.setProperty('--viz-subtitle-computed-weight', String(chrome.subtitle.style.fontWeight));
-      s.setProperty('--viz-subtitle-computed-color', chrome.subtitle.style.fill);
+      s.setProperty('--oc-subtitle-computed-size', `${chrome.subtitle.style.fontSize}px`);
+      s.setProperty('--oc-subtitle-computed-weight', String(chrome.subtitle.style.fontWeight));
+      s.setProperty('--oc-subtitle-computed-color', chrome.subtitle.style.fill);
     }
     if (chrome.source) {
-      s.setProperty('--viz-source-computed-size', `${chrome.source.style.fontSize}px`);
-      s.setProperty('--viz-source-computed-color', chrome.source.style.fill);
+      s.setProperty('--oc-source-computed-size', `${chrome.source.style.fontSize}px`);
+      s.setProperty('--oc-source-computed-color', chrome.source.style.fill);
     }
     if (chrome.footer) {
-      s.setProperty('--viz-footer-computed-size', `${chrome.footer.style.fontSize}px`);
-      s.setProperty('--viz-footer-computed-color', chrome.footer.style.fill);
+      s.setProperty('--oc-footer-computed-size', `${chrome.footer.style.fontSize}px`);
+      s.setProperty('--oc-footer-computed-color', chrome.footer.style.fill);
     }
   }
 
   // Apply class modifiers
   if (layout.compact) {
-    wrapper.classList.add('viz-table--compact');
+    wrapper.classList.add('oc-table--compact');
   }
 
   // Header chrome
@@ -305,7 +323,7 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
   } else {
     // Scroll container
     const scroll = document.createElement('div');
-    scroll.className = 'viz-table-scroll';
+    scroll.className = 'oc-table-scroll';
 
     // Table
     const table = document.createElement('table');
@@ -313,13 +331,13 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
     table.setAttribute('aria-label', layout.a11y.caption);
 
     if (layout.stickyFirstColumn) {
-      table.classList.add('viz-table--sticky');
+      table.classList.add('oc-table--sticky');
     }
 
     // Caption (screen reader only – inline styles ensure hiding even without
     // the external stylesheet, e.g. CDN / esm.sh usage)
     const caption = document.createElement('caption');
-    caption.className = 'viz-sr-only';
+    caption.className = 'oc-sr-only';
     caption.style.position = 'absolute';
     caption.style.width = '1px';
     caption.style.height = '1px';
@@ -356,7 +374,7 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
 
   // Live region for screen reader announcements (sort changes, search results)
   const liveRegion = document.createElement('div');
-  liveRegion.className = 'viz-table-live-region viz-sr-only';
+  liveRegion.className = 'oc-table-live-region oc-sr-only';
   liveRegion.style.position = 'absolute';
   liveRegion.style.width = '1px';
   liveRegion.style.height = '1px';
@@ -374,7 +392,7 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
   // Brand watermark
   const brandColor = theme ? theme.colors.axis : '#999999';
   const brand = document.createElement('div');
-  brand.className = 'viz-table-ref';
+  brand.className = 'oc-table-ref';
   brand.style.cssText = 'text-align: right; padding: 4px 8px;';
   const brandLink = document.createElement('a');
   brandLink.href = BRAND_URL;
@@ -384,6 +402,19 @@ export function renderTable(layout: TableLayout, container: HTMLElement): HTMLEl
   brandLink.textContent = 'OpenData';
   brand.appendChild(brandLink);
   wrapper.appendChild(brand);
+
+  // Animation: stamp CSS custom properties and add oc-animate class BEFORE
+  // DOM insertion to avoid a flash of final state.
+  if (opts?.animate && layout.animation?.enabled) {
+    const anim = layout.animation;
+    const rowCount = layout.rows.length;
+    const stagger = clampStaggerDelay(anim.staggerDelay, rowCount);
+    const s = wrapper.style;
+    s.setProperty('--oc-animation-duration', `${anim.duration}ms`);
+    s.setProperty('--oc-animation-stagger', `${stagger}ms`);
+    s.setProperty('--oc-animation-ease', EASE_VAR_MAP[anim.ease] || EASE_VAR_MAP.smooth);
+    wrapper.classList.add('oc-animate');
+  }
 
   container.appendChild(wrapper);
   return wrapper;

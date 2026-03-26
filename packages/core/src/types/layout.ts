@@ -217,6 +217,8 @@ export interface LineMark {
   label?: ResolvedLabel;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /**
@@ -257,6 +259,8 @@ export interface AreaMark {
   }>;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /**
@@ -287,6 +291,14 @@ export interface RectMark {
   label?: ResolvedLabel;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
+  /** Bar orientation for animation direction. Set by the engine based on encoding. */
+  orient?: 'horizontal' | 'vertical';
+  /** Stacking group key (e.g. category name). Segments sharing this key animate together. */
+  stackGroup?: string;
+  /** Position of this segment within its stack group (0, 1, 2...). Set by engine for stacked bars. */
+  stackPos?: number;
 }
 
 /**
@@ -321,6 +333,8 @@ export interface ArcMark {
   label?: ResolvedLabel;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /**
@@ -349,6 +363,8 @@ export interface PointMark {
   label?: ResolvedLabel;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /**
@@ -381,6 +397,8 @@ export interface TextMarkLayout {
   label?: ResolvedLabel;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /**
@@ -409,6 +427,8 @@ export interface RuleMarkLayout {
   data: Record<string, unknown>;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /**
@@ -435,6 +455,8 @@ export interface TickMarkLayout {
   data: Record<string, unknown>;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
 }
 
 /** Discriminated union of all mark types. */
@@ -587,6 +609,26 @@ export interface A11yMetadata {
 }
 
 // ---------------------------------------------------------------------------
+// Animation (resolved)
+// ---------------------------------------------------------------------------
+
+/** Resolved entrance animation config with all defaults applied. */
+export interface ResolvedAnimation {
+  /** Whether entrance animation is enabled. */
+  enabled: boolean;
+  /** Duration in ms. */
+  duration: number;
+  /** Easing preset name. */
+  ease: import('./spec').AnimationEase;
+  /** Stagger delay between elements in ms. */
+  staggerDelay: number;
+  /** Stagger ordering. */
+  staggerOrder: 'index' | 'value' | 'reverse';
+  /** Delay before annotations animate in (ms after marks). */
+  annotationDelay: number;
+}
+
+// ---------------------------------------------------------------------------
 // ChartLayout (the main engine output for charts)
 // ---------------------------------------------------------------------------
 
@@ -622,6 +664,8 @@ export interface ChartLayout {
   theme: ResolvedTheme;
   /** Total SVG dimensions. */
   dimensions: { width: number; height: number };
+  /** Resolved animation config. Present only when animation is enabled. */
+  animation?: ResolvedAnimation;
 }
 
 // ---------------------------------------------------------------------------
@@ -796,6 +840,8 @@ export interface TableLayout {
   a11y: { caption: string; summary: string };
   /** The resolved theme. */
   theme: ResolvedTheme;
+  /** Resolved animation config. Present only when animation is enabled. */
+  animation?: ResolvedAnimation;
 }
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,12 @@
 export { compileChart, compileGraph, compileLayer, compileTable } from './compile';
 
 // ---------------------------------------------------------------------------
+// Animation resolution
+// ---------------------------------------------------------------------------
+
+export { clampStaggerDelay, resolveAnimation } from './compiler/animation';
+
+// ---------------------------------------------------------------------------
 // Graph compilation types
 // ---------------------------------------------------------------------------
 

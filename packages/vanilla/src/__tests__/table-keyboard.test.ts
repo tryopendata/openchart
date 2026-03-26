@@ -41,7 +41,7 @@ function createTableDOM(rows: number, cols: number, opts?: { search?: boolean })
   // Search input
   if (opts?.search) {
     const searchDiv = document.createElement('div');
-    searchDiv.className = 'viz-table-search';
+    searchDiv.className = 'oc-table-search';
     const input = document.createElement('input');
     searchDiv.appendChild(input);
     wrapper.appendChild(searchDiv);
@@ -147,8 +147,8 @@ describe('tbody arrow key navigation', () => {
 
   it('focus highlights first cell and sets aria-activedescendant', () => {
     const tbody = focusTbody(wrapper);
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-0');
-    const cell = wrapper.querySelector('.viz-table-cell-focus');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-0');
+    const cell = wrapper.querySelector('.oc-table-cell-focus');
     expect(cell).not.toBeNull();
     expect(cell?.textContent).toBe('R0C0');
   });
@@ -156,25 +156,25 @@ describe('tbody arrow key navigation', () => {
   it('ArrowDown moves focus down one row', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowDown');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-1-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-1-0');
   });
 
   it('ArrowDown does not go past last row', () => {
     const tbody = focusTbody(wrapper);
     for (let i = 0; i < 10; i++) keydown(tbody, 'ArrowDown');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-4-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-4-0');
   });
 
   it('ArrowRight moves focus right one column', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowRight');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-1');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-1');
   });
 
   it('ArrowRight does not go past last column', () => {
     const tbody = focusTbody(wrapper);
     for (let i = 0; i < 10; i++) keydown(tbody, 'ArrowRight');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-2');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-2');
   });
 
   it('ArrowLeft moves focus left', () => {
@@ -182,13 +182,13 @@ describe('tbody arrow key navigation', () => {
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'ArrowLeft');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-1');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-1');
   });
 
   it('ArrowLeft does not go past first column', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowLeft');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-0');
   });
 
   it('Home moves to first column in current row', () => {
@@ -196,19 +196,19 @@ describe('tbody arrow key navigation', () => {
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'Home');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-0');
   });
 
   it('End moves to last column in current row', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'End');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-2');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-2');
   });
 
   it('navigation clears previous focus highlight', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowDown');
-    const focused = wrapper.querySelectorAll('.viz-table-cell-focus');
+    const focused = wrapper.querySelectorAll('.oc-table-cell-focus');
     expect(focused.length).toBe(1);
     expect(focused[0].textContent).toBe('R1C0');
   });
@@ -274,7 +274,7 @@ describe('header keyboard navigation', () => {
     keydown(headers[1] as HTMLElement, 'ArrowDown');
     const tbody = wrapper.querySelector('tbody')!;
     // The tbody should have activedescendant set to first row, column 1
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('viz-cell-0-1');
+    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-1');
   });
 });
 
@@ -305,19 +305,19 @@ describe('search escape handling', () => {
   });
 
   it('Escape in search input calls onClearSearch', () => {
-    const input = wrapper.querySelector('.viz-table-search input')!;
+    const input = wrapper.querySelector('.oc-table-search input')!;
     keydown(input as HTMLElement, 'Escape');
     expect(onClearSearch).toHaveBeenCalledTimes(1);
   });
 
   it('Escape in search announces "Search cleared"', () => {
-    const input = wrapper.querySelector('.viz-table-search input')!;
+    const input = wrapper.querySelector('.oc-table-search input')!;
     keydown(input as HTMLElement, 'Escape');
     expect(onAnnounce).toHaveBeenCalledWith('Search cleared');
   });
 
   it('non-Escape keys in search do not trigger clear', () => {
-    const input = wrapper.querySelector('.viz-table-search input')!;
+    const input = wrapper.querySelector('.oc-table-search input')!;
     keydown(input as HTMLElement, 'a');
     keydown(input as HTMLElement, 'Enter');
     expect(onClearSearch).not.toHaveBeenCalled();
@@ -347,13 +347,13 @@ describe('cleanup', () => {
     tbody.dispatchEvent(new Event('focus'));
     keydown(tbody, 'ArrowDown');
 
-    const input = wrapper.querySelector('.viz-table-search input')!;
+    const input = wrapper.querySelector('.oc-table-search input')!;
     keydown(input as HTMLElement, 'Escape');
 
     expect(onClearSearch).not.toHaveBeenCalled();
 
     // Focus highlight should be cleared
-    const focused = wrapper.querySelectorAll('.viz-table-cell-focus');
+    const focused = wrapper.querySelectorAll('.oc-table-cell-focus');
     expect(focused.length).toBe(0);
 
     document.body.innerHTML = '';

@@ -199,7 +199,7 @@ describe('createTable', () => {
       const spec = makeSpec({ search: true });
       const table = createTable(container, spec);
 
-      const input = container.querySelector('.viz-table-search input') as HTMLInputElement;
+      const input = container.querySelector('.oc-table-search input') as HTMLInputElement;
       expect(input).not.toBeNull();
 
       // Type in a search query
@@ -223,7 +223,7 @@ describe('createTable', () => {
     const table = createTable(container, paginatedSpec);
 
     // Should show page 1 of 5 (10 per page, 50 total)
-    const info = container.querySelector('.viz-table-pagination-info');
+    const info = container.querySelector('.oc-table-pagination-info');
     expect(info?.textContent).toContain('Showing 1-10 of 50');
 
     const rows = container.querySelectorAll('tbody tr');
@@ -234,7 +234,7 @@ describe('createTable', () => {
     expect(nextBtn).not.toBeNull();
     nextBtn.dispatchEvent(new Event('click', { bubbles: true }));
 
-    const infoAfter = container.querySelector('.viz-table-pagination-info');
+    const infoAfter = container.querySelector('.oc-table-pagination-info');
     expect(infoAfter?.textContent).toContain('Showing 11-20 of 50');
 
     // Previous button should be enabled
@@ -248,7 +248,7 @@ describe('createTable', () => {
     const table = createTable(container, stickySpec);
 
     const tableEl = container.querySelector('table');
-    expect(tableEl?.classList.contains('viz-table--sticky')).toBe(true);
+    expect(tableEl?.classList.contains('oc-table--sticky')).toBe(true);
 
     table.destroy();
   });
@@ -272,7 +272,7 @@ describe('createTable', () => {
     const table = createTable(container, sparklineSpec);
 
     // Sparkline cells should be rendered with the sparkline class
-    const sparklineCells = container.querySelectorAll('.viz-table-sparkline');
+    const sparklineCells = container.querySelectorAll('.oc-table-sparkline');
     expect(sparklineCells.length).toBeGreaterThan(0);
 
     const svg = sparklineCells[0]?.querySelector('svg');
@@ -288,11 +288,11 @@ describe('createTable', () => {
   it('bar cells have proportional fill div', () => {
     const table = createTable(container, barSpec);
 
-    const barFills = container.querySelectorAll('.viz-table-bar-fill');
+    const barFills = container.querySelectorAll('.oc-table-bar-fill');
     expect(barFills.length).toBe(3);
 
     // The bar values should have width proportional to their data
-    const barValues = container.querySelectorAll('.viz-table-bar-value');
+    const barValues = container.querySelectorAll('.oc-table-bar-value');
     expect(barValues.length).toBe(3);
 
     table.destroy();
@@ -331,14 +331,14 @@ describe('createTable', () => {
       const table = createTable(container, spec);
 
       // Search for something that doesn't match any data
-      const input = container.querySelector('.viz-table-search input') as HTMLInputElement;
+      const input = container.querySelector('.oc-table-search input') as HTMLInputElement;
       input.value = 'zzzznonexistent';
       input.dispatchEvent(new Event('input', { bubbles: true }));
 
       // Advance past the 200ms debounce
       vi.advanceTimersByTime(200);
 
-      const empty = container.querySelector('.viz-table-empty');
+      const empty = container.querySelector('.oc-table-empty');
       expect(empty).not.toBeNull();
       expect(empty?.textContent).toBe('No results found');
 
@@ -421,21 +421,21 @@ describe('createTable', () => {
     table.destroy();
   });
 
-  it('compact mode applies viz-table--compact class', () => {
+  it('compact mode applies oc-table--compact class', () => {
     const spec = makeSpec({ compact: true });
     const table = createTable(container, spec);
 
-    const wrapper = container.querySelector('.viz-table-wrapper');
-    expect(wrapper?.classList.contains('viz-table--compact')).toBe(true);
+    const wrapper = container.querySelector('.oc-table-wrapper');
+    expect(wrapper?.classList.contains('oc-table--compact')).toBe(true);
 
     table.destroy();
   });
 
-  it('dark mode applies viz-dark class', () => {
+  it('dark mode applies oc-dark class', () => {
     const spec = makeSpec();
     const table = createTable(container, spec, { darkMode: 'force' });
 
-    expect(container.classList.contains('viz-dark')).toBe(true);
+    expect(container.classList.contains('oc-dark')).toBe(true);
 
     table.destroy();
   });
@@ -445,8 +445,8 @@ describe('createTable', () => {
     const spec = makeSpec();
     const table = createTable(container, spec, { onRowClick: onClick });
 
-    const wrapper = container.querySelector('.viz-table-wrapper');
-    expect(wrapper?.classList.contains('viz-table--clickable')).toBe(true);
+    const wrapper = container.querySelector('.oc-table-wrapper');
+    expect(wrapper?.classList.contains('oc-table--clickable')).toBe(true);
 
     // Click first row
     const firstRow = container.querySelector('tbody tr');
@@ -462,7 +462,7 @@ describe('createTable', () => {
     const spec = makeSpec();
     const table = createTable(container, spec);
 
-    const title = container.querySelector('.viz-table-title');
+    const title = container.querySelector('.oc-table-title');
     expect(title).not.toBeNull();
     expect(title?.textContent).toBe('People');
 
@@ -480,5 +480,126 @@ describe('createTable', () => {
     expect(tableEl).not.toBeNull();
 
     table.destroy();
+  });
+
+  // -------------------------------------------------------------------------
+  // Animation lifecycle
+  // -------------------------------------------------------------------------
+
+  describe('animation', () => {
+    it('adds oc-animate class on first render when animation is enabled', () => {
+      const spec = makeSpec({ animation: true });
+      const table = createTable(container, spec);
+
+      const wrapper = container.querySelector('.oc-table-wrapper');
+      expect(wrapper?.classList.contains('oc-animate')).toBe(true);
+
+      table.destroy();
+    });
+
+    it('does not add oc-animate when animation is not set', () => {
+      const table = createTable(container, makeSpec());
+
+      const wrapper = container.querySelector('.oc-table-wrapper');
+      expect(wrapper?.classList.contains('oc-animate')).toBe(false);
+
+      table.destroy();
+    });
+
+    it('sets --oc-animation-duration CSS custom property', () => {
+      const spec = makeSpec({ animation: { enter: { duration: 800 } } });
+      const table = createTable(container, spec);
+
+      const wrapper = container.querySelector('.oc-table-wrapper') as HTMLElement;
+      expect(wrapper.style.getPropertyValue('--oc-animation-duration')).toBe('800ms');
+
+      table.destroy();
+    });
+
+    it('sets --oc-animation-stagger CSS custom property', () => {
+      const spec = makeSpec({ animation: true });
+      const table = createTable(container, spec);
+
+      const wrapper = container.querySelector('.oc-table-wrapper') as HTMLElement;
+      const stagger = wrapper.style.getPropertyValue('--oc-animation-stagger');
+      expect(stagger).toMatch(/^\d+ms$/);
+
+      table.destroy();
+    });
+
+    it('stamps --oc-row-index on each tbody tr', () => {
+      const spec = makeSpec({ animation: true });
+      const table = createTable(container, spec);
+
+      const rows = container.querySelectorAll('tbody tr');
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] as HTMLElement;
+        expect(row.style.getPropertyValue('--oc-row-index')).toBe(String(i));
+      }
+
+      table.destroy();
+    });
+
+    it('does not re-animate on sort (only first render)', () => {
+      const spec = makeSpec({ animation: true });
+      const table = createTable(container, spec);
+
+      // Trigger sort via click
+      const sortBtn = container.querySelector('[data-sort-column]');
+      if (sortBtn) {
+        sortBtn.dispatchEvent(new Event('click', { bubbles: true }));
+      }
+
+      const wrapper = container.querySelector('.oc-table-wrapper');
+      expect(wrapper?.classList.contains('oc-animate')).toBe(false);
+
+      table.destroy();
+    });
+
+    it('does not re-animate on update()', () => {
+      const spec = makeSpec({ animation: true });
+      const table = createTable(container, spec);
+
+      table.update(makeSpec({ animation: true }));
+
+      const wrapper = container.querySelector('.oc-table-wrapper');
+      expect(wrapper?.classList.contains('oc-animate')).toBe(false);
+
+      table.destroy();
+    });
+
+    it('removes oc-animate after cleanup timeout', () => {
+      vi.useFakeTimers();
+      try {
+        const spec = makeSpec({ animation: true });
+        const table = createTable(container, spec);
+
+        const wrapper = container.querySelector('.oc-table-wrapper');
+        expect(wrapper?.classList.contains('oc-animate')).toBe(true);
+
+        // Advance past total animation time
+        vi.advanceTimersByTime(5000);
+
+        expect(wrapper?.classList.contains('oc-animate')).toBe(false);
+
+        table.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('destroy cancels animation cleanup without error', () => {
+      vi.useFakeTimers();
+      try {
+        const spec = makeSpec({ animation: true });
+        const table = createTable(container, spec);
+        table.destroy();
+
+        // Should not throw after timer fires
+        vi.advanceTimersByTime(5000);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

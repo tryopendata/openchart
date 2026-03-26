@@ -13,6 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const energyColumnSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     // Oil (normalized so each year sums to 100%)

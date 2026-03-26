@@ -165,7 +165,7 @@ export const Graph = defineComponent({
     );
 
     const rootClass = () => {
-      const base = 'viz-graph-root';
+      const base = 'oc-graph-root';
       return props.class ? `${base} ${props.class}` : base;
     };
 

@@ -47,6 +47,7 @@
         "@types/d3-color": "^3.1.3",
         "@types/d3-format": "^3.0.4",
         "@types/d3-time-format": "^4.0.3",
+        "lightningcss-cli": "^1.32.0",
       },
     },
     "packages/engine": {
@@ -709,6 +710,8 @@
 
     "destroy": ["destroy@1.2.0", "", {}, "sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg=="],
 
+    "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
+
     "devalue": ["devalue@5.6.3", "", {}, "sha512-nc7XjUU/2Lb+SvEFVGcWLiKkzfw8+qHI7zn8WYXKkLMgfGSHbgCEaR6bJpev8Cm6Rmrb19Gfd/tZvGqx9is3wg=="],
 
     "devlop": ["devlop@1.1.0", "", { "dependencies": { "dequal": "^2.0.0" } }, "sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA=="],
@@ -940,6 +943,30 @@
     "koa-compose": ["koa-compose@4.1.0", "", {}, "sha512-8ODW8TrDuMYvXRwra/Kh7/rJo9BtOfPc6qO8eAfC80CnCvSjSl0bkRM24X6/XBBEyj0v1nRUQ1LyOy3dbqOWXw=="],
 
     "koa-convert": ["koa-convert@2.0.0", "", { "dependencies": { "co": "^4.6.0", "koa-compose": "^4.1.0" } }, "sha512-asOvN6bFlSnxewce2e/DK3p4tltyfC4VM7ZwuTuepI7dEQVcvpyFuBcEARu1+Hxg8DIwytce2n7jrZtRlPrARA=="],
+
+    "lightningcss-cli": ["lightningcss-cli@1.32.0", "", { "dependencies": { "detect-libc": "^2.0.3" }, "optionalDependencies": { "lightningcss-cli-android-arm64": "1.32.0", "lightningcss-cli-darwin-arm64": "1.32.0", "lightningcss-cli-darwin-x64": "1.32.0", "lightningcss-cli-freebsd-x64": "1.32.0", "lightningcss-cli-linux-arm-gnueabihf": "1.32.0", "lightningcss-cli-linux-arm64-gnu": "1.32.0", "lightningcss-cli-linux-arm64-musl": "1.32.0", "lightningcss-cli-linux-x64-gnu": "1.32.0", "lightningcss-cli-linux-x64-musl": "1.32.0", "lightningcss-cli-win32-arm64-msvc": "1.32.0", "lightningcss-cli-win32-x64-msvc": "1.32.0" }, "bin": { "lightningcss": "lightningcss" } }, "sha512-IFb/ChmSEbeWU3xeRybR6WFlJXCvfDS84//PUzLrRACgvoWrwRJBmcPS9azSo7LMh5QqEuyKanPBByhKM5z01Q=="],
+
+    "lightningcss-cli-android-arm64": ["lightningcss-cli-android-arm64@1.32.0", "", { "os": "android", "cpu": "arm64" }, "sha512-4O3QY+VdgpBZLIq4crcKOEPVAXX0p7zDoykuTVstRtyolg9XU8CntdtbxcMPSC4SkzAuM/W4KsnPAzmv6Jb5LA=="],
+
+    "lightningcss-cli-darwin-arm64": ["lightningcss-cli-darwin-arm64@1.32.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Xx+zeD7bDKJZwbd1N63TJfIUHEtYspf+tqObdnQEJEvZAwmGfA4iEGrkCRT8R57tDRBDSXg3XHMDDvo/cq7gBQ=="],
+
+    "lightningcss-cli-darwin-x64": ["lightningcss-cli-darwin-x64@1.32.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-fYWANZ8RJDpI0tBcPQ7oBOYihfXmgDBHR4lZ6d4z7rcRLlZAOeI00mTO0IXAKfSm/UgnatjM4aBuNlLh8L9noA=="],
+
+    "lightningcss-cli-freebsd-x64": ["lightningcss-cli-freebsd-x64@1.32.0", "", { "os": "freebsd", "cpu": "x64" }, "sha512-TJm7z1Ghvo9FKAza2KvfkFgH/9rcV1xAhCYQZlLrV0CiuTZ17uzLobBWb9oelGWUG+wTnEs6XEl4h/ve61YySg=="],
+
+    "lightningcss-cli-linux-arm-gnueabihf": ["lightningcss-cli-linux-arm-gnueabihf@1.32.0", "", { "os": "linux", "cpu": "arm" }, "sha512-/jS9L5p3eexs5QJvARiDGxibz1umKJmmtff86fWXl3r7RbEUFrMAD4q1WhAR7DurRFgc1YWld6r0mX1YHEYttA=="],
+
+    "lightningcss-cli-linux-arm64-gnu": ["lightningcss-cli-linux-arm64-gnu@1.32.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-PSdjwcRtSrJpsaqnY3ebnCfDOJ5ePi8s/0ItL3CX1b1Eu0iy44xo7MjgES1ZOQ2ntOthPRqaGsbAiVBLbgFLYQ=="],
+
+    "lightningcss-cli-linux-arm64-musl": ["lightningcss-cli-linux-arm64-musl@1.32.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-t6DdpXFtEdonZHzRgH8cmqhC2o4tl0KrD33cDBBniJz5TmWS20MJxb4YEr4WqBLksqW8GE399HJo+g8/YVuKcA=="],
+
+    "lightningcss-cli-linux-x64-gnu": ["lightningcss-cli-linux-x64-gnu@1.32.0", "", { "os": "linux", "cpu": "x64" }, "sha512-QMQllbHYkbkQ4N+v8OGExQlGHBc3YZIcKlVkYucQQj66thkFQsRjmv8p5q3iCB0inNsCoSZ8lBspugkU1iPlPg=="],
+
+    "lightningcss-cli-linux-x64-musl": ["lightningcss-cli-linux-x64-musl@1.32.0", "", { "os": "linux", "cpu": "x64" }, "sha512-dMSWdk4kMAi5f+J1xetxRCDQOvPix2whT0UdjuwP8r/5Xcdl2SQU/c80MQzu1S82kVDEANs1vHVEHp/+26LUnA=="],
+
+    "lightningcss-cli-win32-arm64-msvc": ["lightningcss-cli-win32-arm64-msvc@1.32.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-MJo22OqSp9FLV10nTRDJQhP6zkEBFqBFQe9mnjfCs+G1Ft+QimIPmC+gBqZHFXveOBOsjFLzU72q0FPvRWFmZQ=="],
+
+    "lightningcss-cli-win32-x64-msvc": ["lightningcss-cli-win32-x64-msvc@1.32.0", "", { "os": "win32", "cpu": "x64" }, "sha512-nOBHLPeePXZpGR4Ptp+gkOIkr9pxlq2dFmO954ol5zBi/iOKxuD1hUTIQ7aG+ldKIx4eH9jwoTfZ6owUkm1paA=="],
 
     "lilconfig": ["lilconfig@3.1.3", "", {}, "sha512-/vlFKAoH5Cgt3Ie+JLhRbwOsCQePABiU3tJ1egGvyQ+33R/vcwM2Zl2QR/LzjsBeItPt3oSVXapn+m4nQDvpzw=="],
 

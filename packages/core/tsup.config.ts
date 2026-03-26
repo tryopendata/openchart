@@ -1,6 +1,7 @@
 import { defineConfig } from 'tsup';
-import { copyFileSync, mkdirSync } from 'fs';
+import { mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
+import { execSync } from 'child_process';
 import { bunSymlinkResolver } from '../../scripts/bun-symlink-resolver';
 
 export default defineConfig({
@@ -12,9 +13,12 @@ export default defineConfig({
   noExternal: [/^d3-/, 'internmap'],
   esbuildPlugins: [bunSymlinkResolver()],
   onSuccess: async () => {
-    const src = resolve('src/styles/viz.css');
+    const src = resolve('src/styles/index.css');
     const dest = resolve('dist/styles.css');
     mkdirSync(dirname(dest), { recursive: true });
-    copyFileSync(src, dest);
+    execSync(
+      `lightningcss --bundle --minify --targets '>= 0.25%' ${src} -o ${dest}`,
+      { stdio: 'inherit' },
+    );
   },
 });

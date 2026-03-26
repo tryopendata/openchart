@@ -205,4 +205,32 @@ describe('compileTable', () => {
     const layout = compileTable(baseSpec, { ...baseOptions, darkMode: true });
     expect(layout.theme.isDark).toBe(true);
   });
+
+  it('includes resolved animation when spec has animation: true', () => {
+    const layout = compileTable({ ...baseSpec, animation: true }, baseOptions);
+    expect(layout.animation).toBeDefined();
+    expect(layout.animation!.enabled).toBe(true);
+    expect(layout.animation!.duration).toBe(500);
+    expect(layout.animation!.staggerDelay).toBe(80);
+  });
+
+  it('includes resolved animation with custom config', () => {
+    const layout = compileTable(
+      { ...baseSpec, animation: { enter: { duration: 800, ease: 'snappy' } } },
+      baseOptions,
+    );
+    expect(layout.animation).toBeDefined();
+    expect(layout.animation!.duration).toBe(800);
+    expect(layout.animation!.ease).toBe('snappy');
+  });
+
+  it('does not include animation when spec omits it', () => {
+    const layout = compileTable(baseSpec, baseOptions);
+    expect(layout.animation).toBeUndefined();
+  });
+
+  it('does not include animation when spec has animation: false', () => {
+    const layout = compileTable({ ...baseSpec, animation: false }, baseOptions);
+    expect(layout.animation).toBeUndefined();
+  });
 });

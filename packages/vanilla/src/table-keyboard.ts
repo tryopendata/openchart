@@ -73,9 +73,9 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
   }
 
   function clearFocusHighlight(): void {
-    const prev = wrapper.querySelector('.viz-table-cell-focus');
+    const prev = wrapper.querySelector('.oc-table-cell-focus');
     if (prev) {
-      prev.classList.remove('viz-table-cell-focus');
+      prev.classList.remove('oc-table-cell-focus');
       prev.removeAttribute('id');
     }
   }
@@ -99,9 +99,9 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
     const cell = cells[col];
     if (!cell) return;
 
-    const cellId = `viz-cell-${row}-${col}`;
+    const cellId = `oc-cell-${row}-${col}`;
     cell.id = cellId;
-    cell.classList.add('viz-table-cell-focus');
+    cell.classList.add('oc-table-cell-focus');
     cell.setAttribute('data-row', String(row));
     cell.setAttribute('data-col', String(col));
 
@@ -219,7 +219,7 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
   }
 
   // Search escape handling
-  const searchInput = wrapper.querySelector('.viz-table-search input') as HTMLInputElement | null;
+  const searchInput = wrapper.querySelector('.oc-table-search input') as HTMLInputElement | null;
 
   function handleSearchKeydown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {

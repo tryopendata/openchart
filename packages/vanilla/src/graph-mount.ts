@@ -264,35 +264,35 @@ export function createGraph(
 
     // Wrapper
     wrapper = document.createElement('div');
-    wrapper.className = isDark ? 'viz-graph-wrapper viz-dark' : 'viz-graph-wrapper';
+    wrapper.className = isDark ? 'oc-graph-wrapper oc-dark' : 'oc-graph-wrapper';
     if (isDark) {
-      container.classList.add('viz-dark');
+      container.classList.add('oc-dark');
     } else {
-      container.classList.remove('viz-dark');
+      container.classList.remove('oc-dark');
     }
 
     // Apply theme colors as CSS custom properties so chrome HTML picks them up.
     // Without this, consumer-supplied theme.colors.text only affects canvas-drawn
-    // labels but not the HTML title/subtitle which read from --viz-text.
+    // labels but not the HTML title/subtitle which read from --oc-text.
     const resolvedTheme = compilation.theme;
     if (resolvedTheme) {
       const s = wrapper.style;
-      s.setProperty('--viz-bg', resolvedTheme.colors.background);
-      s.setProperty('--viz-text', resolvedTheme.colors.text);
-      s.setProperty('--viz-text-secondary', resolvedTheme.colors.axis ?? resolvedTheme.colors.text);
-      s.setProperty('--viz-font-family', resolvedTheme.fonts.family);
+      s.setProperty('--oc-bg', resolvedTheme.colors.background);
+      s.setProperty('--oc-text', resolvedTheme.colors.text);
+      s.setProperty('--oc-text-secondary', resolvedTheme.colors.axis ?? resolvedTheme.colors.text);
+      s.setProperty('--oc-font-family', resolvedTheme.fonts.family);
       s.fontFamily = resolvedTheme.fonts.family;
     }
 
     // Chrome (title, subtitle)
     chromeEl = document.createElement('div');
-    chromeEl.className = 'viz-graph-chrome';
+    chromeEl.className = 'oc-graph-chrome';
     renderChrome();
     wrapper.appendChild(chromeEl);
 
     // Canvas
     canvas = document.createElement('canvas');
-    canvas.className = 'viz-graph-canvas';
+    canvas.className = 'oc-graph-canvas';
     canvas.setAttribute('role', 'img');
     if (compilation.a11y?.altText) {
       canvas.setAttribute('aria-label', compilation.a11y.altText);
@@ -302,7 +302,7 @@ export function createGraph(
     // Legend
     if (options?.legend !== false) {
       legendEl = document.createElement('div');
-      legendEl.className = 'viz-graph-legend';
+      legendEl.className = 'oc-graph-legend';
       renderLegend();
       wrapper.appendChild(legendEl);
     }
@@ -321,10 +321,10 @@ export function createGraph(
     let html = '';
 
     if (compilation.chrome.title) {
-      html += `<h2 class="viz-title">${escapeHtml(compilation.chrome.title.text)}</h2>`;
+      html += `<h2 class="oc-title">${escapeHtml(compilation.chrome.title.text)}</h2>`;
     }
     if (compilation.chrome.subtitle) {
-      html += `<p class="viz-subtitle">${escapeHtml(compilation.chrome.subtitle.text)}</p>`;
+      html += `<p class="oc-subtitle">${escapeHtml(compilation.chrome.subtitle.text)}</p>`;
     }
 
     chromeEl.innerHTML = html;
@@ -349,8 +349,8 @@ export function createGraph(
     legendEl.style.display = '';
     let html = '';
     for (const entry of entries) {
-      html += '<div class="viz-graph-legend-item">';
-      html += `<span class="viz-graph-legend-swatch" style="background:${escapeHtml(entry.color)}"></span>`;
+      html += '<div class="oc-graph-legend-item">';
+      html += `<span class="oc-graph-legend-swatch" style="background:${escapeHtml(entry.color)}"></span>`;
       html += `<span>${escapeHtml(entry.label)}</span>`;
       html += '</div>';
     }
@@ -588,14 +588,14 @@ export function createGraph(
         const x = node?.x ?? 0;
         const y = node?.y ?? 0;
         simulation?.pinNode(nodeId, x, y);
-        canvas?.classList.add('viz-graph-canvas--dragging');
+        canvas?.classList.add('oc-graph-canvas--dragging');
       },
       onNodeDrag(nodeId, x, y) {
         simulation?.dragNode(nodeId, x, y);
       },
       onNodeDragEnd(nodeId) {
         simulation?.unpinNode(nodeId);
-        canvas?.classList.remove('viz-graph-canvas--dragging');
+        canvas?.classList.remove('oc-graph-canvas--dragging');
       },
       onDoubleClick(nodeId) {
         options?.onNodeDoubleClick?.(nodeDataById(nodeId));
@@ -821,7 +821,7 @@ export function createGraph(
     legendEl = null;
     renderer = null;
 
-    container.classList.remove('viz-dark');
+    container.classList.remove('oc-dark');
   }
 
   // ---------------------------------------------------------------------------

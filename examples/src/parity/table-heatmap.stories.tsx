@@ -73,6 +73,7 @@ const spec: TableSpec = {
     subtitle: 'Degrees Celsius by US city',
     source: 'NOAA Climate Data',
   },
+  animation: true,
 };
 
 export const Heatmap: Story = () => (
@@ -122,6 +123,7 @@ const electionSpec: TableSpec = {
     subtitle: 'Electoral results by margin of victory',
     source: 'Associated Press',
   },
+  animation: true,
 };
 
 export const ElectionResults: Story = () => (

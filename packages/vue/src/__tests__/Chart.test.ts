@@ -67,21 +67,21 @@ describe('Chart', () => {
     const wrapper = await mountChart({ spec: lineSpec });
     const svg = wrapper.find('svg');
     expect(svg.exists()).toBe(true);
-    expect(svg.attributes('class')).toBe('viz-chart');
+    expect(svg.attributes('class')).toBe('oc-chart');
     wrapper.unmount();
   });
 
   it('renders chrome text elements', async () => {
     const wrapper = await mountChart({ spec: lineSpec });
 
-    const title = wrapper.find('.viz-title');
+    const title = wrapper.find('.oc-title');
     expect(title.exists()).toBe(true);
     expect(title.text()).toBe('GDP Growth');
 
-    const subtitle = wrapper.find('.viz-subtitle');
+    const subtitle = wrapper.find('.oc-subtitle');
     expect(subtitle.text()).toBe('US vs UK over time');
 
-    const source = wrapper.find('.viz-source');
+    const source = wrapper.find('.oc-source');
     expect(source.text()).toBe('World Bank');
     wrapper.unmount();
   });
@@ -89,13 +89,13 @@ describe('Chart', () => {
   it('spec changes trigger re-render', async () => {
     const wrapper = await mountChart({ spec: lineSpec });
 
-    const titleBefore = wrapper.find('.viz-title');
+    const titleBefore = wrapper.find('.oc-title');
     expect(titleBefore.text()).toBe('GDP Growth');
 
     await wrapper.setProps({ spec: barSpec });
     await flushPromises();
 
-    const titleAfter = wrapper.find('.viz-title');
+    const titleAfter = wrapper.find('.oc-title');
     expect(titleAfter.text()).toBe('Updated Title');
     wrapper.unmount();
   });

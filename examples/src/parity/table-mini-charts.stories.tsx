@@ -169,6 +169,7 @@ const spec: TableSpec = {
   },
   search: true,
   pagination: { pageSize: 10 },
+  animation: true,
 };
 
 export const StockSparklines: Story = () => (
@@ -230,6 +231,7 @@ const revenueSpec: TableSpec = {
     subtitle: 'Revenue in billions USD, 2023',
     source: 'Company earnings reports',
   },
+  animation: true,
 };
 
 export const RevenueColumns: Story = () => (

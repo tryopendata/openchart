@@ -8,6 +8,7 @@
 
 import type {
   AggregateOp,
+  AnimationSpec,
   Annotation,
   AxisConfig,
   ChromeText,
@@ -95,6 +96,7 @@ export interface NormalizedTableSpec {
   stickyFirstColumn: boolean;
   compact: boolean;
   responsive: boolean;
+  animation?: AnimationSpec;
 }
 
 /** A GraphSpec with all optional fields filled with sensible defaults. */

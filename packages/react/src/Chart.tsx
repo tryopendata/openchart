@@ -271,7 +271,7 @@ export const Chart = forwardRef<ChartHandle, ChartProps>(function Chart(
   return (
     <div
       ref={containerRef}
-      className={className ? `viz-chart-root ${className}` : 'viz-chart-root'}
+      className={className ? `oc-chart-root ${className}` : 'oc-chart-root'}
       style={style}
     />
   );

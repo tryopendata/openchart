@@ -13,6 +13,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const scatterSpec: ChartSpec = {
+  animation: true,
   mark: 'point',
   data: [
     // Americas

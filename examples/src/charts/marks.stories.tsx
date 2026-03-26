@@ -15,6 +15,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const textMarkSpec: ChartSpec = {
+  animation: true,
   mark: 'text',
   data: [
     { state: 'California', gdp: 3.9, pop: 39.0, label: 'CA' },
@@ -61,6 +62,7 @@ export const TextMark = () => (
 // ---------------------------------------------------------------------------
 
 const ruleMarkSpec: ChartSpec = {
+  animation: true,
   mark: 'rule',
   data: [
     { rate: 5.33, label: 'Fed Funds Rate', category: 'Policy' },
@@ -96,6 +98,7 @@ export const RuleMark = () => (
 // ---------------------------------------------------------------------------
 
 const tickMarkSpec: ChartSpec = {
+  animation: true,
   mark: 'tick',
   data: [
     { income: 22, region: 'South' },

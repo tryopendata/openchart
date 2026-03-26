@@ -105,7 +105,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -119,7 +119,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -143,7 +143,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -161,7 +161,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationClick, onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -184,7 +184,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -227,19 +227,19 @@ describe('edit events', () => {
       const chart = createChart(container, fullEditSpec, {});
 
       // Chrome elements should not have grab cursor
-      const chromeTexts = container.querySelectorAll('.viz-chrome text[data-chrome-key]');
+      const chromeTexts = container.querySelectorAll('.oc-chrome text[data-chrome-key]');
       for (const el of chromeTexts) {
         expect((el as HTMLElement).style.cursor).not.toBe('grab');
       }
 
       // Legend should not have grab cursor
-      const legendG = container.querySelector('.viz-legend') as SVGGElement | null;
+      const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
       if (legendG) {
         expect(legendG.style.cursor).not.toBe('grab');
       }
 
       // Series labels should not have grab cursor
-      const seriesLabels = container.querySelectorAll('.viz-mark-label');
+      const seriesLabels = container.querySelectorAll('.oc-mark-label');
       for (const el of seriesLabels) {
         expect((el as HTMLElement).style.cursor).not.toBe('grab');
       }
@@ -252,19 +252,19 @@ describe('edit events', () => {
       const chart = createChart(container, fullEditSpec, { onEdit });
 
       // Chrome elements should have grab cursor
-      const chromeTexts = container.querySelectorAll('.viz-chrome text[data-chrome-key]');
+      const chromeTexts = container.querySelectorAll('.oc-chrome text[data-chrome-key]');
       for (const el of chromeTexts) {
         expect((el as HTMLElement).style.cursor).toBe('grab');
       }
 
       // Legend should have grab cursor (if present)
-      const legendG = container.querySelector('.viz-legend') as SVGGElement | null;
+      const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
       if (legendG) {
         expect(legendG.style.cursor).toBe('grab');
       }
 
       // Series labels should have grab cursor (if any rendered with data-series)
-      const seriesLabels = container.querySelectorAll('.viz-mark-label[data-series]');
+      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
       for (const el of seriesLabels) {
         expect((el as HTMLElement).style.cursor).toBe('grab');
       }
@@ -277,7 +277,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit, onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -311,7 +311,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotation = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotation) {
         chart.destroy();
         return;
@@ -336,7 +336,7 @@ describe('edit events', () => {
       const chart = createChart(container, rangeAnnotatedSpec, { onEdit });
 
       const rangeLabel = container.querySelector(
-        '.viz-annotation-range .viz-annotation-label',
+        '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
       if (!rangeLabel) {
         // Range may not render a visible label in test env
@@ -353,7 +353,7 @@ describe('edit events', () => {
       const chart = createChart(container, rangeAnnotatedSpec, { onEdit });
 
       const rangeLabel = container.querySelector(
-        '.viz-annotation-range .viz-annotation-label',
+        '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
       if (!rangeLabel) {
         chart.destroy();
@@ -380,7 +380,7 @@ describe('edit events', () => {
       const chart = createChart(container, reflineAnnotatedSpec, { onEdit });
 
       const reflineLabel = container.querySelector(
-        '.viz-annotation-refline .viz-annotation-label',
+        '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
       if (!reflineLabel) {
         chart.destroy();
@@ -396,7 +396,7 @@ describe('edit events', () => {
       const chart = createChart(container, reflineAnnotatedSpec, { onEdit });
 
       const reflineLabel = container.querySelector(
-        '.viz-annotation-refline .viz-annotation-label',
+        '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
       if (!reflineLabel) {
         chart.destroy();
@@ -427,7 +427,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, fullEditSpec, { onEdit });
 
-      const chromeTexts = container.querySelectorAll('.viz-chrome text[data-chrome-key]');
+      const chromeTexts = container.querySelectorAll('.oc-chrome text[data-chrome-key]');
       expect(chromeTexts.length).toBeGreaterThan(0);
 
       for (const el of chromeTexts) {
@@ -442,7 +442,7 @@ describe('edit events', () => {
       const chart = createChart(container, fullEditSpec, { onEdit });
 
       const titleEl = container.querySelector(
-        '.viz-chrome text[data-chrome-key="title"]',
+        '.oc-chrome text[data-chrome-key="title"]',
       ) as SVGTextElement | null;
       if (!titleEl) {
         chart.destroy();
@@ -474,7 +474,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, fullEditSpec, { onEdit });
 
-      const legendG = container.querySelector('.viz-legend') as SVGGElement | null;
+      const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
       if (!legendG) {
         chart.destroy();
         return;
@@ -488,7 +488,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, fullEditSpec, { onEdit });
 
-      const legendG = container.querySelector('.viz-legend') as SVGGElement | null;
+      const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
       if (!legendG) {
         chart.destroy();
         return;
@@ -512,7 +512,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, fullEditSpec, { onLegendToggle, onEdit });
 
-      const legendG = container.querySelector('.viz-legend') as SVGGElement | null;
+      const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
       if (!legendG) {
         chart.destroy();
         return;
@@ -540,16 +540,16 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotationG = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotationG) {
         chart.destroy();
         return;
       }
 
       // Check that connector handles exist within the annotation group
-      const handles = annotationG.querySelectorAll('.viz-connector-handle');
+      const handles = annotationG.querySelectorAll('.oc-connector-handle');
       // There should be 2 handles (from and to) if a connector is present
-      const connector = annotationG.querySelector('.viz-annotation-connector');
+      const connector = annotationG.querySelector('.oc-annotation-connector');
       if (connector) {
         expect(handles.length).toBe(2);
         // Verify they have the correct data-endpoint attributes
@@ -565,13 +565,13 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotationG = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotationG) {
         chart.destroy();
         return;
       }
 
-      const handles = annotationG.querySelectorAll('.viz-connector-handle');
+      const handles = annotationG.querySelectorAll('.oc-connector-handle');
       if (handles.length === 0) {
         chart.destroy();
         return;
@@ -597,13 +597,13 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotationG = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotationG) {
         chart.destroy();
         return;
       }
 
-      const handles = annotationG.querySelectorAll('.viz-connector-handle');
+      const handles = annotationG.querySelectorAll('.oc-connector-handle');
       if (handles.length === 0) {
         chart.destroy();
         return;
@@ -625,7 +625,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotationG = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotationG) {
         chart.destroy();
         return;
@@ -633,7 +633,7 @@ describe('edit events', () => {
 
       // Find the "from" handle
       const fromHandle = annotationG.querySelector(
-        '.viz-connector-handle[data-endpoint="from"]',
+        '.oc-connector-handle[data-endpoint="from"]',
       ) as SVGCircleElement | null;
 
       if (!fromHandle) {
@@ -661,14 +661,14 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
-      const annotationG = container.querySelector('.viz-annotation-text') as SVGGElement | null;
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
       if (!annotationG) {
         chart.destroy();
         return;
       }
 
       const toHandle = annotationG.querySelector(
-        '.viz-connector-handle[data-endpoint="to"]',
+        '.oc-connector-handle[data-endpoint="to"]',
       ) as SVGCircleElement | null;
 
       if (!toHandle) {
@@ -697,7 +697,7 @@ describe('edit events', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, fullEditSpec, { onEdit });
 
-      const seriesLabels = container.querySelectorAll('.viz-mark-label[data-series]');
+      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
       if (seriesLabels.length === 0) {
         // Labels may not render in the test env depending on layout
         chart.destroy();
@@ -716,7 +716,7 @@ describe('edit events', () => {
       const chart = createChart(container, fullEditSpec, { onEdit });
 
       const seriesLabel = container.querySelector(
-        '.viz-mark-label[data-series]',
+        '.oc-mark-label[data-series]',
       ) as SVGTextElement | null;
       if (!seriesLabel) {
         chart.destroy();

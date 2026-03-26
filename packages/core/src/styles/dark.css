@@ -1,0 +1,20 @@
+/* ---------------------------------------------------------------------------
+ * Dark mode overrides
+ * --------------------------------------------------------------------------- */
+
+.oc-dark {
+  --oc-bg: #1a1a2e;
+  --oc-text: #e0e0e0;
+  --oc-text-secondary: #b0b0b0;
+  --oc-text-muted: #808080;
+  --oc-gridline: #333355;
+  --oc-axis: #999999;
+  --oc-border: #444466;
+  --oc-focus: #60a5fa;
+  --oc-hover-bg: rgba(255, 255, 255, 0.05);
+  --oc-tooltip-bg: rgba(30, 30, 50, 0.85);
+  --oc-tooltip-border: rgba(255, 255, 255, 0.08);
+  --oc-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
+  --oc-tooltip-text: #e0e0e0;
+  --oc-legend-text: #b0b0b0;
+}

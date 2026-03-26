@@ -155,6 +155,8 @@ function computeStackedBars(
         cornerRadius: 0,
         data: row as Record<string, unknown>,
         aria,
+        orient: 'horizontal',
+        stackGroup: category,
       });
 
       cumulativeValue += value;
@@ -214,6 +216,7 @@ function computeSimpleBars(
       cornerRadius: 2,
       data: row as Record<string, unknown>,
       aria,
+      orient: 'horizontal',
     });
   }
 

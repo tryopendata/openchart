@@ -14,6 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const lifeExpectancySpec: ChartSpec = {
+  animation: true,
   mark: 'circle',
   data: [
     { country: 'Japan', years: 81.9, gender: 'Male' },

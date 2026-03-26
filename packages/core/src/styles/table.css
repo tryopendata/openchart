@@ -1,0 +1,380 @@
+/* ---------------------------------------------------------------------------
+ * Table base
+ * --------------------------------------------------------------------------- */
+
+.oc-table-wrapper {
+  font-family: var(--oc-font-family);
+  color: var(--oc-text);
+  background: var(--oc-bg);
+
+  & > .oc-chrome {
+    margin-bottom: 16px;
+  }
+
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  & th,
+  & td {
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--oc-border);
+  }
+
+  & th {
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--oc-text-secondary);
+    white-space: nowrap;
+  }
+
+  & thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--oc-bg);
+  }
+
+  & thead th {
+    border-bottom-width: 2px;
+  }
+
+  & td {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  & th:focus {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: -2px;
+  }
+
+  & tbody:focus {
+    outline: none;
+  }
+}
+
+.oc-table-title {
+  margin-bottom: 4px;
+  font-size: var(--oc-title-computed-size, var(--oc-title-size));
+  font-weight: var(--oc-title-computed-weight, var(--oc-title-weight));
+  color: var(--oc-title-computed-color, var(--oc-text));
+}
+
+.oc-table-subtitle {
+  margin-bottom: 8px;
+  font-size: var(--oc-subtitle-computed-size, var(--oc-subtitle-size));
+  font-weight: var(--oc-subtitle-computed-weight, var(--oc-subtitle-weight));
+  color: var(--oc-subtitle-computed-color, var(--oc-text-secondary));
+}
+
+.oc-table-source {
+  font-size: var(--oc-source-computed-size, var(--oc-source-size));
+  color: var(--oc-source-computed-color, var(--oc-text-muted));
+}
+
+.oc-table-footer-text {
+  font-size: var(--oc-footer-computed-size, var(--oc-source-size));
+  color: var(--oc-footer-computed-color, var(--oc-text-muted));
+}
+
+.oc-table-scroll {
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * Sticky first column
+ * --------------------------------------------------------------------------- */
+
+.oc-table--sticky {
+  & th:first-child,
+  & td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--oc-bg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Sort controls
+ * --------------------------------------------------------------------------- */
+
+.oc-table-sort-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 6px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  gap: 2px;
+
+  &::before,
+  &::after {
+    content: "";
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    transition:
+      opacity 0.15s,
+      border-color 0.15s;
+  }
+
+  &::before {
+    border-bottom: 4.5px solid var(--oc-text-secondary);
+    opacity: 0.45;
+  }
+
+  &::after {
+    border-top: 4.5px solid var(--oc-text-secondary);
+    opacity: 0.45;
+  }
+
+  &:hover::before,
+  &:hover::after {
+    opacity: 0.75;
+  }
+}
+
+th[aria-sort="ascending"] .oc-table-sort-btn {
+  &::before {
+    opacity: 1;
+    border-bottom-color: var(--oc-text);
+  }
+
+  &::after {
+    opacity: 0.15;
+  }
+}
+
+th[aria-sort="descending"] .oc-table-sort-btn {
+  &::after {
+    opacity: 1;
+    border-top-color: var(--oc-text);
+  }
+
+  &::before {
+    opacity: 0.15;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Search
+ * --------------------------------------------------------------------------- */
+
+.oc-table-search {
+  padding: 8px 0;
+
+  & input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--oc-border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--oc-bg);
+    color: var(--oc-text);
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+
+    &::placeholder {
+      color: var(--oc-text-muted);
+      font-size: 13px;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--oc-focus);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Pagination
+ * --------------------------------------------------------------------------- */
+
+.oc-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 4px;
+  font-size: 13px;
+  color: var(--oc-text-secondary);
+
+  & button {
+    padding: 6px 14px;
+    border: 1px solid var(--oc-border);
+    border-radius: 6px;
+    background: var(--oc-bg);
+    color: var(--oc-text);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--oc-hover-bg);
+      border-color: var(--oc-axis);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--oc-focus);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.oc-table-pagination-info {
+  font-variant-numeric: tabular-nums;
+}
+
+.oc-table-pagination-btns {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Bar cells
+ * --------------------------------------------------------------------------- */
+
+.oc-table-bar {
+  position: relative;
+}
+
+.oc-table-bar-fill {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  bottom: 6px;
+  border-radius: 2px;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.oc-table-bar-value {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Sparkline cells
+ * --------------------------------------------------------------------------- */
+
+.oc-table-sparkline {
+  display: block;
+  width: 100%;
+  position: relative;
+
+  & svg {
+    display: block;
+    width: 100%;
+    overflow: visible;
+  }
+}
+
+.oc-table-sparkline-dot {
+  position: absolute;
+  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+}
+
+.oc-table-sparkline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Image cells
+ * --------------------------------------------------------------------------- */
+
+.oc-table-image {
+  display: inline-block;
+  vertical-align: middle;
+
+  & img {
+    object-fit: cover;
+  }
+}
+
+.oc-table-image-rounded img {
+  border-radius: 50%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Flag cells
+ * --------------------------------------------------------------------------- */
+
+.oc-table-flag {
+  font-size: 1.2em;
+}
+
+/* ---------------------------------------------------------------------------
+ * Compact mode
+ * --------------------------------------------------------------------------- */
+
+.oc-table--compact {
+  & th,
+  & td {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+
+  & th {
+    font-size: 11px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Row hover (when onRowClick is set)
+ * --------------------------------------------------------------------------- */
+
+.oc-table--clickable tbody {
+  & tr {
+    cursor: pointer;
+  }
+
+  & tr:hover {
+    background: var(--oc-hover-bg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Keyboard cell focus indicator
+ * --------------------------------------------------------------------------- */
+
+.oc-table-cell-focus {
+  outline: 2px solid var(--oc-focus);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Empty state
+ * --------------------------------------------------------------------------- */
+
+.oc-table-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--oc-text-secondary);
+  font-size: 14px;
+  font-style: italic;
+}

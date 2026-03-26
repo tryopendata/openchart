@@ -1,0 +1,91 @@
+/* ---------------------------------------------------------------------------
+ * Table entrance animations (.oc-table-wrapper.oc-animate)
+ * --------------------------------------------------------------------------- */
+
+.oc-table-wrapper.oc-animate {
+  /* Chrome (title/subtitle): fade + slide up */
+  & > .oc-chrome {
+    animation: oc-enter-fade calc(var(--oc-animation-duration) * 0.6)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+  }
+
+  /* Table header: quick fade before rows start */
+  & thead {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.4)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+  }
+
+  /* Row entrance: slide up only, no opacity (cells handle their own fading
+     to avoid opacity compounding between row and cell animations) */
+  & tbody tr {
+    animation: oc-table-enter-row var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-row-index, 0));
+  }
+
+  /* Cell text: fade in synced with row slide */
+  & tbody td {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.5)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-row-index, 0));
+  }
+
+  /* Heatmap/category cell backgrounds: longer fade, delayed after row appears */
+  & td.oc-table-heatmap,
+  & td.oc-table-category {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.7)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(
+      var(--oc-animation-stagger) *
+      var(--oc-row-index, 0) +
+      var(--oc-animation-duration) *
+      0.3
+    );
+  }
+
+  /* Bar fill: clip-path grow only (no opacity change to preserve resting
+     opacity: 0.15 from table.css) */
+  & .oc-table-bar-fill {
+    animation: oc-table-enter-bar-fill calc(var(--oc-animation-duration) * 0.8)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(
+      var(--oc-animation-stagger) *
+      var(--oc-row-index, 0) +
+      var(--oc-animation-duration) *
+      0.3
+    );
+  }
+
+  /* Sparkline SVG: clip-path reveal left-to-right. Targets the SVG directly
+     (not the wrapper) to avoid clipping absolutely-positioned dots and labels. */
+  & .oc-table-sparkline > svg {
+    animation: oc-enter-line calc(var(--oc-animation-duration) * 0.8)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(
+      var(--oc-animation-stagger) *
+      var(--oc-row-index, 0) +
+      var(--oc-animation-duration) *
+      0.4
+    );
+  }
+
+  /* Sparkline dots and labels: fade in after the line draws through */
+  & .oc-table-sparkline-dot,
+  & .oc-table-sparkline-labels {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.3)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(
+      var(--oc-animation-stagger) *
+      var(--oc-row-index, 0) +
+      var(--oc-animation-duration) *
+      0.8
+    );
+  }
+
+  /* Search and pagination: quick fade on mount */
+  & .oc-table-search,
+  & .oc-table-pagination {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.5)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+  }
+}

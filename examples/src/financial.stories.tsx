@@ -72,6 +72,7 @@ const stockData = [
 
 function stockPriceSpec(dark: boolean): ChartSpec {
   return {
+    animation: true,
     mark: 'area',
     data: stockData,
     encoding: {
@@ -210,6 +211,7 @@ const benchmarkData = [
 
 function benchmarkSpec(dark: boolean): ChartSpec {
   return {
+    animation: true,
     mark: 'line',
     data: benchmarkData,
     encoding: {
@@ -288,6 +290,7 @@ const sectorData = [
 
 function sectorSpec(dark: boolean): ChartSpec {
   return {
+    animation: true,
     mark: 'bar',
     data: sectorData,
     encoding: {
@@ -424,6 +427,7 @@ const riskReturnData = [
 
 function riskReturnSpec(dark: boolean): ChartSpec {
   return {
+    animation: true,
     mark: 'point',
     data: riskReturnData,
     encoding: {

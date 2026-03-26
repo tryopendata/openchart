@@ -20,6 +20,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { getBreakpoint } from '@opendata-ai/openchart-core';
 import { compileTable } from '@opendata-ai/openchart-engine';
+import { setupTableAnimationCleanup } from './animation';
 import { observeResize } from './resize-observer';
 import { attachKeyboardNav } from './table-keyboard';
 import { renderTable } from './table-renderer';
@@ -117,6 +118,8 @@ export function createTable(
   let wrapperElement: HTMLElement | null = null;
   let disconnectResize: (() => void) | null = null;
   let cleanupKeyboard: (() => void) | null = null;
+  let cleanupAnimations: (() => void) | null = null;
+  let isFirstRender = true;
   let destroyed = false;
 
   // Internal state (used in uncontrolled mode)
@@ -193,7 +196,7 @@ export function createTable(
    */
   function announce(message: string): void {
     if (!wrapperElement) return;
-    const liveRegion = wrapperElement.querySelector('.viz-table-live-region');
+    const liveRegion = wrapperElement.querySelector('.oc-table-live-region');
     if (liveRegion) {
       liveRegion.textContent = message;
     }
@@ -210,10 +213,10 @@ export function createTable(
     const bp = getBreakpoint(width);
 
     if (bp === 'compact' || bp === 'medium') {
-      wrapperElement.classList.add('viz-table--compact');
+      wrapperElement.classList.add('oc-table--compact');
     } else if (!currentLayout?.compact) {
       // Only remove compact if the spec didn't explicitly request it
-      wrapperElement.classList.remove('viz-table--compact');
+      wrapperElement.classList.remove('oc-table--compact');
     }
   }
 
@@ -221,6 +224,12 @@ export function createTable(
     if (destroyed) return;
 
     try {
+      // Cancel any in-flight animations before re-rendering
+      if (cleanupAnimations) {
+        cleanupAnimations();
+        cleanupAnimations = null;
+      }
+
       // Clean up previous keyboard nav
       if (cleanupKeyboard) {
         cleanupKeyboard();
@@ -234,14 +243,23 @@ export function createTable(
       }
 
       currentLayout = compile();
-      wrapperElement = renderTable(currentLayout, container);
+      const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
+      wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
+
+      // Set up animation cleanup on first animated render
+      if (shouldAnimate && wrapperElement) {
+        cleanupAnimations = setupTableAnimationCleanup(wrapperElement);
+      }
+      if (isFirstRender) {
+        isFirstRender = false;
+      }
 
       // Apply dark mode class
       const isDark = resolveDarkMode(options?.darkMode);
       if (isDark) {
-        container.classList.add('viz-dark');
+        container.classList.add('oc-dark');
       } else {
-        container.classList.remove('viz-dark');
+        container.classList.remove('oc-dark');
       }
 
       // Apply responsive breakpoint
@@ -249,7 +267,7 @@ export function createTable(
 
       // Add clickable class if onRowClick is provided
       if (options?.onRowClick) {
-        wrapperElement.classList.add('viz-table--clickable');
+        wrapperElement.classList.add('oc-table--clickable');
       }
 
       // Wire up event handlers
@@ -301,7 +319,7 @@ export function createTable(
 
     // Search input
     const searchInput = wrapperElement.querySelector(
-      '.viz-table-search input',
+      '.oc-table-search input',
     ) as HTMLInputElement | null;
     if (searchInput) {
       searchInput.addEventListener('input', handleSearchInput);
@@ -403,7 +421,7 @@ export function createTable(
 
     // Capture current search input state before re-render
     const searchInput = wrapperElement?.querySelector(
-      '.viz-table-search input',
+      '.oc-table-search input',
     ) as HTMLInputElement | null;
     const hadFocus = searchInput && document.activeElement === searchInput;
     const selectionStart = searchInput?.selectionStart ?? 0;
@@ -414,7 +432,7 @@ export function createTable(
     // Restore search focus after re-render
     if (hadFocus) {
       const newInput = wrapperElement?.querySelector(
-        '.viz-table-search input',
+        '.oc-table-search input',
       ) as HTMLInputElement | null;
       if (newInput) {
         newInput.focus();
@@ -431,6 +449,7 @@ export function createTable(
 
   function resize(): void {
     if (destroyed) return;
+    if (cleanupAnimations) return; // Skip resize during entrance animation
     render();
   }
 
@@ -480,6 +499,10 @@ export function createTable(
     if (destroyed) return;
     destroyed = true;
 
+    if (cleanupAnimations) {
+      cleanupAnimations();
+      cleanupAnimations = null;
+    }
     if (cleanupKeyboard) {
       cleanupKeyboard();
       cleanupKeyboard = null;
@@ -500,7 +523,7 @@ export function createTable(
       wrapperElement.parentNode.removeChild(wrapperElement);
       wrapperElement = null;
     }
-    container.classList.remove('viz-dark');
+    container.classList.remove('oc-dark');
   }
 
   // Initial render

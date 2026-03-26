@@ -12,6 +12,7 @@
  */
 
 import type {
+  AnimationSpec,
   ChartLayout,
   ChartSpec,
   CompileOptions,
@@ -82,6 +83,7 @@ for (const [type, renderer] of Object.entries(builtinRenderers)) {
   registerChartRenderer(type, renderer);
 }
 
+import { resolveAnimation } from './compiler/animation';
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
@@ -274,6 +276,12 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       };
     }
   }
+
+  // Resolve animation spec. Breakpoint override wins over base spec (matching
+  // chrome, labels, legend, and annotation override precedence).
+  const rawAnimationSpec = ((overrides?.[breakpoint] as Record<string, unknown> | undefined)
+    ?.animation ?? rawSpec.animation) as AnimationSpec | undefined;
+  const resolvedAnimation = resolveAnimation(rawAnimationSpec);
 
   // Resolve theme: merge spec-level theme with options-level overrides
   const mergedThemeConfig = options.theme
@@ -468,6 +476,46 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     chartSpec.data,
   );
 
+  // Assign animationIndex for stagger ordering when animation is enabled
+  // Assign animationIndex for value-based stagger ordering. Skip stacked rects
+  // since they get group-based indices below (avoids wasted work that gets overwritten).
+  if (resolvedAnimation?.enabled && resolvedAnimation.staggerOrder === 'value') {
+    const indexed = marks.map((m, i) => ({ mark: m, idx: i }));
+    indexed.sort((a, b) => {
+      const av = getMarkPrimaryValue(a.mark);
+      const bv = getMarkPrimaryValue(b.mark);
+      return av - bv;
+    });
+    for (let i = 0; i < indexed.length; i++) {
+      const m = indexed[i].mark;
+      if (m.type === 'rect' && (m as RectMark).stackGroup) continue;
+      m.animationIndex = i;
+    }
+  }
+
+  // For stacked bars/columns, assign the same animationIndex to all segments
+  // sharing a stackGroup so they animate as one contiguous bar per category.
+  // Also compute stackPos (segment position within each group: 0, 1, 2...)
+  // so the renderer can chain segment animations sequentially.
+  if (resolvedAnimation?.enabled) {
+    const groupIndexMap = new Map<string, number>();
+    const groupStackPos = new Map<string, number>();
+    let nextGroupIndex = 0;
+    for (const mark of marks) {
+      if (mark.type === 'rect' && (mark as RectMark).stackGroup) {
+        const rect = mark as RectMark;
+        const group = rect.stackGroup!;
+        if (!groupIndexMap.has(group)) {
+          groupIndexMap.set(group, nextGroupIndex++);
+        }
+        rect.animationIndex = groupIndexMap.get(group)!;
+        const pos = groupStackPos.get(group) ?? 0;
+        rect.stackPos = pos;
+        groupStackPos.set(group, pos + 1);
+      }
+    }
+  }
+
   return {
     area: chartArea,
     chrome: dims.chrome,
@@ -490,7 +538,25 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       width: options.width,
       height: options.height,
     },
+    animation: resolvedAnimation,
   };
+}
+
+/** Extract the primary quantitative value from a mark for value-based stagger ordering. */
+function getMarkPrimaryValue(mark: Mark): number {
+  switch (mark.type) {
+    case 'rect':
+      return mark.height; // bar height is the primary value encoding
+    case 'point':
+      return mark.cy; // y position for scatter
+    case 'arc':
+      return mark.endAngle - mark.startAngle; // arc angle extent
+    case 'line':
+    case 'area':
+      return 0; // series marks don't have individual values
+    default:
+      return 0;
+  }
 }
 
 // ---------------------------------------------------------------------------

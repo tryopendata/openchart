@@ -23,7 +23,7 @@ describe('createChart', () => {
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
-    expect(svg?.getAttribute('class')).toBe('viz-chart');
+    expect(svg?.getAttribute('class')).toBe('oc-chart');
 
     chart.destroy();
   });
@@ -41,15 +41,15 @@ describe('createChart', () => {
   it('chrome text elements are present with correct content', () => {
     const chart = createChart(container, lineSpec);
 
-    const title = container.querySelector('.viz-title');
+    const title = container.querySelector('.oc-title');
     expect(title).not.toBeNull();
     expect(title?.textContent).toBe('GDP Growth');
 
-    const subtitle = container.querySelector('.viz-subtitle');
+    const subtitle = container.querySelector('.oc-subtitle');
     expect(subtitle).not.toBeNull();
     expect(subtitle?.textContent).toBe('US vs UK over time');
 
-    const source = container.querySelector('.viz-source');
+    const source = container.querySelector('.oc-source');
     expect(source).not.toBeNull();
     expect(source?.textContent).toBe('World Bank');
 
@@ -59,12 +59,12 @@ describe('createChart', () => {
   it('update() re-renders with new data', () => {
     const chart = createChart(container, lineSpec);
 
-    const titleBefore = container.querySelector('.viz-title');
+    const titleBefore = container.querySelector('.oc-title');
     expect(titleBefore?.textContent).toBe('GDP Growth');
 
     chart.update(barSpec);
 
-    const titleAfter = container.querySelector('.viz-title');
+    const titleAfter = container.querySelector('.oc-title');
     expect(titleAfter?.textContent).toBe('Updated Chart');
 
     chart.destroy();
@@ -82,7 +82,7 @@ describe('createChart', () => {
     expect(svgAfter).toBeNull();
 
     // Tooltip div should also be removed
-    const tooltip = container.querySelector('.viz-tooltip');
+    const tooltip = container.querySelector('.oc-tooltip');
     expect(tooltip).toBeNull();
   });
 
@@ -132,8 +132,8 @@ describe('createChart', () => {
   it('renders axis elements', () => {
     const chart = createChart(container, lineSpec);
 
-    const xAxis = container.querySelector('.viz-axis-x');
-    const yAxis = container.querySelector('.viz-axis-y');
+    const xAxis = container.querySelector('.oc-axis-x');
+    const yAxis = container.querySelector('.oc-axis-y');
     expect(xAxis).not.toBeNull();
     expect(yAxis).not.toBeNull();
 
@@ -143,7 +143,7 @@ describe('createChart', () => {
   it('renders chrome wrapper group', () => {
     const chart = createChart(container, lineSpec);
 
-    const chromeGroup = container.querySelector('.viz-chrome');
+    const chromeGroup = container.querySelector('.oc-chrome');
     expect(chromeGroup).not.toBeNull();
 
     chart.destroy();

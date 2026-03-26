@@ -68,32 +68,32 @@ describe('<Chart />', () => {
     const { container } = await renderChart({ spec: lineSpec });
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
-    expect(svg?.getAttribute('class')).toBe('viz-chart');
+    expect(svg?.getAttribute('class')).toBe('oc-chart');
   });
 
   it('renders chrome text elements', async () => {
     const { container } = await renderChart({ spec: lineSpec });
 
-    const title = container.querySelector('.viz-title');
+    const title = container.querySelector('.oc-title');
     expect(title).not.toBeNull();
     expect(title?.textContent).toBe('GDP Growth');
 
-    const subtitle = container.querySelector('.viz-subtitle');
+    const subtitle = container.querySelector('.oc-subtitle');
     expect(subtitle?.textContent).toBe('US vs UK over time');
 
-    const source = container.querySelector('.viz-source');
+    const source = container.querySelector('.oc-source');
     expect(source?.textContent).toBe('World Bank');
   });
 
   it('spec changes trigger re-render', async () => {
     const { container, rerender } = await renderChart({ spec: lineSpec });
 
-    const titleBefore = container.querySelector('.viz-title');
+    const titleBefore = container.querySelector('.oc-title');
     expect(titleBefore?.textContent).toBe('GDP Growth');
 
     await rerender({ spec: barSpec });
     await waitFor(() => {
-      expect(container.querySelector('.viz-title')?.textContent).toBe('Updated Title');
+      expect(container.querySelector('.oc-title')?.textContent).toBe('Updated Title');
     });
   });
 

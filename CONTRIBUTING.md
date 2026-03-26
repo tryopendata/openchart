@@ -244,7 +244,7 @@ export function renderMyFeatureCell(
 
 ### Step 5: Add CSS
 
-Add CSS classes (prefixed `viz-table-myFeature`) to `packages/core/src/styles/viz.css`. Include both light and dark mode variants (dark mode goes in the `.viz-dark` class).
+Add CSS classes (prefixed `oc-table-myFeature`) to the appropriate CSS partial in `packages/core/src/styles/`. Include both light and dark mode variants (dark mode goes in the `.oc-dark` class in `dark.css`).
 
 ## Writing tests
 
@@ -289,8 +289,8 @@ bun run test -- path/to/file    # Single file
 - **TypeScript strict mode**: All packages use strict configuration. No `any` types.
 - **Named exports only**: No default exports. Every export goes through the barrel `index.ts`.
 - **JSDoc**: Required on all public types and exported functions. Brief description, then `@param` / `@returns` where useful. Skip JSDoc on internal helpers unless the intent isn't obvious.
-- **CSS class naming**: Prefix with `viz-`. Use BEM-ish nesting: `viz-table-sort-btn`, `viz-tooltip-value`.
-- **CSS custom properties**: Prefix with `--viz-`. Dark mode overrides go in `.viz-dark`.
+- **CSS class naming**: Prefix with `oc-`. Use BEM-ish nesting: `oc-table-sort-btn`, `oc-tooltip-value`.
+- **CSS custom properties**: Prefix with `--oc-`. Dark mode overrides go in `.oc-dark`.
 
 See [CONVENTIONS.md](CONVENTIONS.md) for the full set of architectural decisions and patterns.
 

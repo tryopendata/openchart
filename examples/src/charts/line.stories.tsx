@@ -14,6 +14,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const singleLineSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     // 2019 (quarterly samples)
@@ -112,6 +113,7 @@ export const SingleLine = () => (
 // ---------------------------------------------------------------------------
 
 const multiSeriesSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     // United States (annual GDP growth %)
@@ -195,6 +197,7 @@ export const MultiSeries = () => (
 // ---------------------------------------------------------------------------
 
 const fiveSeriesSpec: ChartSpec = {
+  animation: true,
   mark: 'line',
   data: [
     // Amazon (calendar year revenue, $B)
@@ -274,6 +277,7 @@ export const FiveSeries = () => (
 // ---------------------------------------------------------------------------
 
 const singleAreaSpec: ChartSpec = {
+  animation: true,
   mark: 'area',
   data: [
     { year: '2015-01-01', sales: 1.3 },
@@ -335,6 +339,7 @@ export const AreaChart = () => (
 // ---------------------------------------------------------------------------
 
 const stackedAreaSpec: ChartSpec = {
+  animation: true,
   mark: 'area',
   data: [
     // Coal (TWh)
@@ -472,6 +477,7 @@ function interpolationSpec(
   title: string,
 ): ChartSpec {
   return {
+    animation: true,
     mark: { type: 'line', interpolate: mode, point: true },
     data: interpolationData,
     encoding: {
@@ -517,6 +523,7 @@ export const InterpolationModes = () => (
 // ---------------------------------------------------------------------------
 
 const stepAreaSpec: ChartSpec = {
+  animation: true,
   mark: { type: 'area', interpolate: 'step' },
   data: [
     { year: '2018-01-01', stations: 54 },

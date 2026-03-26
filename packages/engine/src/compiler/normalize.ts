@@ -229,6 +229,7 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
     stickyFirstColumn: spec.stickyFirstColumn ?? false,
     compact: spec.compact ?? false,
     responsive: spec.responsive ?? true,
+    animation: spec.animation,
   };
 }
 

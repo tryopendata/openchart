@@ -16,6 +16,7 @@ import { Chart } from '@opendata-ai/openchart-react';
 // ---------------------------------------------------------------------------
 
 const filterSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     { country: 'United States', gdp: 27.4 },
@@ -66,6 +67,7 @@ export const FilterTransform = () => (
 // then we need to count per bin - since OpenChart doesn't yet support
 // aggregate: 'count' in encoding, we pre-aggregate the counts here)
 const binSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     { tempRange: '10-15', count: 2 },
@@ -101,6 +103,7 @@ export const BinTransform = () => (
 // ---------------------------------------------------------------------------
 
 const calculateSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     { company: 'Apple', revenue: 394, cost: 223 },
@@ -152,6 +155,7 @@ export const CalculateTransform = () => (
 // ---------------------------------------------------------------------------
 
 const timeUnitSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: [
     // Simulated monthly retail sales data points

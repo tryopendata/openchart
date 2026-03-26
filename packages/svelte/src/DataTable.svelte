@@ -127,6 +127,6 @@ $effect(() => {
 
 <div
   bind:this={containerEl}
-  class={className ? `viz-table-root ${className}` : 'viz-table-root'}
+  class={className ? `oc-table-root ${className}` : 'oc-table-root'}
   {style}
 ></div>

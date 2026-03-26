@@ -20,6 +20,7 @@ import type {
   Point,
   PointMark,
   RectMark,
+  ResolvedAnimation,
   ResolvedAnnotation,
   ResolvedChromeElement,
   RuleMarkLayout,
@@ -28,8 +29,37 @@ import type {
   TickMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
+import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * Module-level animation state. Set by renderChartSVG before rendering marks
+ * so mark renderers can read it without changing their function signatures.
+ */
+let currentAnimation: ResolvedAnimation | undefined;
+
+/**
+ * Stamp animation index attributes on a mark element when animation is enabled.
+ * Sets `data-animation-index` (for querySelector) and `--oc-mark-index`
+ * (for CSS calc-based stagger delay).
+ */
+function stampAnimationAttrs(
+  el: SVGElement,
+  mark: { animationIndex?: number },
+  fallbackIndex: number,
+): void {
+  if (!currentAnimation?.enabled) return;
+  const idx = mark.animationIndex ?? fallbackIndex;
+  el.setAttribute('data-animation-index', String(idx));
+  (el as SVGElement & ElementCSSInlineStyle).style.setProperty('--oc-mark-index', String(idx));
+}
+
+/** CSS easing preset map for inline style custom properties. */
+const EASE_VAR_MAP: Record<string, string> = {
+  smooth: 'var(--oc-ease-smooth)',
+  snappy: 'var(--oc-ease-snappy)',
+};
 
 /**
  * Compute the vertical extent of x-axis labels below the chart area.
@@ -77,7 +107,7 @@ function applyTextStyle(el: SVGElement, style: TextStyle): void {
     'font-weight': style.fontWeight,
   });
   // Use inline style for fill so it takes priority over CSS class defaults
-  // (e.g. .viz-title { fill: var(--viz-text) } which would override attributes)
+  // (e.g. .oc-title { fill: var(--oc-text) } which would override attributes)
   (el as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', style.fill);
   if (style.textAnchor) {
     el.setAttribute('text-anchor', style.textAnchor);
@@ -174,16 +204,16 @@ function renderChromeElement(
 
 function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   const g = createSVGElement('g');
-  g.setAttribute('class', 'viz-chrome');
+  g.setAttribute('class', 'oc-chrome');
 
   const { chrome } = layout;
 
   // Top chrome: render at their stored y positions (already absolute)
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'viz-title', 'title');
+    renderChromeElement(g, chrome.title, 'oc-title', 'title');
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'viz-subtitle', 'subtitle');
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle');
   }
 
   // Bottom chrome starts below x-axis labels/title, not at chart area bottom.
@@ -194,7 +224,7 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
     renderChromeElement(
       g,
       { ...chrome.source, y: bottomOffset + chrome.source.y },
-      'viz-source',
+      'oc-source',
       'source',
     );
   }
@@ -202,7 +232,7 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
     renderChromeElement(
       g,
       { ...chrome.byline, y: bottomOffset + chrome.byline.y },
-      'viz-byline',
+      'oc-byline',
       'byline',
     );
   }
@@ -210,7 +240,7 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
     renderChromeElement(
       g,
       { ...chrome.footer, y: bottomOffset + chrome.footer.y },
-      'viz-footer',
+      'oc-footer',
       'footer',
     );
   }
@@ -229,7 +259,7 @@ function renderAxis(
   layout: ChartLayout,
 ): void {
   const g = createSVGElement('g');
-  g.setAttribute('class', `viz-axis viz-axis-${orientation}`);
+  g.setAttribute('class', `oc-axis oc-axis-${orientation}`);
 
   const { area } = layout;
 
@@ -237,7 +267,7 @@ function renderAxis(
   // Horizontal gridlines already guide y-values, so the vertical y-axis line is redundant.
   if (orientation === 'x') {
     const line = createSVGElement('line');
-    line.setAttribute('class', 'viz-axis-line');
+    line.setAttribute('class', 'oc-axis-line');
     setAttrs(line, {
       x1: axis.start.x,
       y1: axis.start.y,
@@ -257,7 +287,7 @@ function renderAxis(
     if (orientation === 'x') {
       // Label (no tick marks -- gridlines provide sufficient reference)
       const label = createSVGElement('text');
-      label.setAttribute('class', 'viz-axis-tick');
+      label.setAttribute('class', 'oc-axis-tick');
 
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         // Rotated labels: anchor at the rotation pivot point
@@ -284,7 +314,7 @@ function renderAxis(
     } else {
       // Label (no tick marks -- gridlines provide sufficient reference)
       const label = createSVGElement('text');
-      label.setAttribute('class', 'viz-axis-tick');
+      label.setAttribute('class', 'oc-axis-tick');
       setAttrs(label, {
         x: area.x - 6,
         y: tick.position,
@@ -300,7 +330,7 @@ function renderAxis(
   // Gridlines (positions are also absolute from the scales)
   for (const gridline of axis.gridlines) {
     const gl = createSVGElement('line');
-    gl.setAttribute('class', 'viz-gridline');
+    gl.setAttribute('class', 'oc-gridline');
     if (orientation === 'y') {
       setAttrs(gl, {
         x1: area.x,
@@ -328,7 +358,7 @@ function renderAxis(
   // Axis label
   if (axis.label && axis.labelStyle) {
     const axisLabel = createSVGElement('text');
-    axisLabel.setAttribute('class', 'viz-axis-title');
+    axisLabel.setAttribute('class', 'oc-axis-title');
     applyTextStyle(axisLabel, axis.labelStyle);
     axisLabel.textContent = axis.label;
 
@@ -401,7 +431,8 @@ export function registerMarkRenderer<T extends Mark>(
 function renderLineMark(mark: LineMark, index: number): SVGElement {
   const g = createSVGElement('g');
   g.setAttribute('data-mark-id', `line-${mark.seriesKey ?? index}`);
-  g.setAttribute('class', 'viz-mark viz-mark-line');
+  g.setAttribute('class', 'oc-mark oc-mark-line');
+  stampAnimationAttrs(g, mark, index);
 
   if (mark.points.length > 1) {
     const path = createSVGElement('path');
@@ -421,13 +452,15 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
     if (mark.opacity != null) {
       path.setAttribute('opacity', String(mark.opacity));
     }
+    // Note: line drawing animation is handled via CSS clip-path on the group,
+    // no inline dasharray/dashoffset needed.
     g.appendChild(path);
   }
 
   // Render end-of-line label if present and visible
   if (mark.label?.visible) {
     const label = createSVGElement('text');
-    label.setAttribute('class', 'viz-mark-label');
+    label.setAttribute('class', 'oc-mark-label');
     if (mark.seriesKey) {
       label.setAttribute('data-series', mark.seriesKey);
     }
@@ -439,7 +472,7 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
     // Render connector line if label was offset from anchor
     if (mark.label.connector) {
       const connector = createSVGElement('line');
-      connector.setAttribute('class', 'viz-mark-connector');
+      connector.setAttribute('class', 'oc-mark-connector');
       setAttrs(connector, {
         x1: mark.label.connector.from.x,
         y1: mark.label.connector.from.y,
@@ -459,7 +492,8 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
 function renderAreaMark(mark: AreaMark, index: number): SVGElement {
   const g = createSVGElement('g');
   g.setAttribute('data-mark-id', `area-${mark.seriesKey ?? index}`);
-  g.setAttribute('class', 'viz-mark viz-mark-area');
+  g.setAttribute('class', 'oc-mark oc-mark-area');
+  stampAnimationAttrs(g, mark, index);
 
   if (mark.path) {
     // Area fill: the full closed shape (top line + baseline), no stroke
@@ -475,12 +509,15 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
     // Top-line stroke: only along the data points, not the baseline
     if (mark.stroke && mark.topPath) {
       const strokePath = createSVGElement('path');
+      strokePath.setAttribute('class', 'oc-area-top');
       setAttrs(strokePath, {
         d: mark.topPath,
         fill: 'none',
         stroke: mark.stroke,
         'stroke-width': mark.strokeWidth ?? 1,
       });
+      // Note: area drawing animation is handled via CSS clip-path on the group,
+      // no inline dasharray/dashoffset needed.
       g.appendChild(strokePath);
     }
   }
@@ -491,7 +528,12 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
 function renderRectMark(mark: RectMark, index: number): SVGElement {
   const g = createSVGElement('g');
   g.setAttribute('data-mark-id', `rect-${index}`);
-  g.setAttribute('class', 'viz-mark viz-mark-rect');
+  g.setAttribute('class', 'oc-mark oc-mark-rect');
+  stampAnimationAttrs(g, mark, index);
+  // Use engine-provided orientation for animation direction
+  if (currentAnimation?.enabled && mark.orient === 'horizontal') {
+    g.setAttribute('data-orient', 'horizontal');
+  }
 
   const rect = createSVGElement('rect');
   setAttrs(rect, {
@@ -515,7 +557,7 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
   // Render value label if present and visible
   if (mark.label?.visible) {
     const label = createSVGElement('text');
-    label.setAttribute('class', 'viz-mark-label');
+    label.setAttribute('class', 'oc-mark-label');
     setAttrs(label, { x: mark.label.x, y: mark.label.y });
     applyTextStyle(label, mark.label.style);
     label.textContent = mark.label.text;
@@ -528,8 +570,9 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
 function renderArcMark(mark: ArcMark, index: number): SVGElement {
   const g = createSVGElement('g');
   g.setAttribute('data-mark-id', `arc-${index}`);
-  g.setAttribute('class', 'viz-mark viz-mark-arc');
+  g.setAttribute('class', 'oc-mark oc-mark-arc');
   g.setAttribute('transform', `translate(${mark.center.x},${mark.center.y})`);
+  stampAnimationAttrs(g, mark, index);
 
   const path = createSVGElement('path');
   setAttrs(path, {
@@ -543,7 +586,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
   // Render label if present and visible
   if (mark.label?.visible) {
     const label = createSVGElement('text');
-    label.setAttribute('class', 'viz-mark-label');
+    label.setAttribute('class', 'oc-mark-label');
     // Label position is in absolute coords, but we're in a translated group,
     // so subtract the center offset
     setAttrs(label, {
@@ -561,7 +604,9 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
 function renderPointMark(mark: PointMark, index: number): SVGElement {
   const circle = createSVGElement('circle');
   circle.setAttribute('data-mark-id', `point-${index}`);
-  circle.setAttribute('class', 'viz-mark viz-mark-point');
+  circle.setAttribute('class', 'oc-mark oc-mark-point');
+  stampAnimationAttrs(circle, mark, index);
+
   setAttrs(circle, {
     cx: mark.cx,
     cy: mark.cy,
@@ -579,7 +624,9 @@ function renderPointMark(mark: PointMark, index: number): SVGElement {
 function renderTextMark(mark: TextMarkLayout, index: number): SVGElement {
   const text = createSVGElement('text');
   text.setAttribute('data-mark-id', `textMark-${index}`);
-  text.setAttribute('class', 'viz-mark viz-mark-text');
+  text.setAttribute('class', 'oc-mark oc-mark-text');
+  stampAnimationAttrs(text, mark, index);
+
   setAttrs(text, {
     x: mark.x,
     y: mark.y,
@@ -603,7 +650,9 @@ function renderTextMark(mark: TextMarkLayout, index: number): SVGElement {
 function renderRuleMark(mark: RuleMarkLayout, index: number): SVGElement {
   const line = createSVGElement('line');
   line.setAttribute('data-mark-id', `rule-${index}`);
-  line.setAttribute('class', 'viz-mark viz-mark-rule');
+  line.setAttribute('class', 'oc-mark oc-mark-rule');
+  stampAnimationAttrs(line, mark, index);
+
   setAttrs(line, {
     x1: mark.x1,
     y1: mark.y1,
@@ -624,7 +673,8 @@ function renderRuleMark(mark: RuleMarkLayout, index: number): SVGElement {
 function renderTickMark(mark: TickMarkLayout, index: number): SVGElement {
   const line = createSVGElement('line');
   line.setAttribute('data-mark-id', `tick-${index}`);
-  line.setAttribute('class', 'viz-mark viz-mark-tick');
+  line.setAttribute('class', 'oc-mark oc-mark-tick');
+  stampAnimationAttrs(line, mark, index);
 
   // Tick is a short line segment centered at (x, y)
   const half = mark.length / 2;
@@ -685,24 +735,38 @@ function getMarkSeries(mark: Mark): string | undefined {
 
 function renderMarks(parent: SVGElement, layout: ChartLayout): void {
   const g = createSVGElement('g');
-  g.setAttribute('class', 'viz-marks');
+  g.setAttribute('class', 'oc-marks');
 
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
     const renderer = markRenderers[mark.type];
-    if (renderer) {
-      const el = renderer(mark, i);
-      // Add ARIA label if present
-      if (mark.aria?.label) {
-        el.setAttribute('aria-label', mark.aria.label);
-      }
-      // Add data-series attribute for legend toggle matching
-      const series = getMarkSeries(mark);
-      if (series) {
-        el.setAttribute('data-series', series);
-      }
-      g.appendChild(el);
+    if (!renderer) continue;
+
+    const el = renderer(mark, i);
+    // Add ARIA label if present
+    if (mark.aria?.label) {
+      el.setAttribute('aria-label', mark.aria.label);
     }
+    // Add data-series attribute for legend toggle matching
+    const series = getMarkSeries(mark);
+    if (series) {
+      el.setAttribute('data-series', series);
+    }
+
+    // For stacked segments, set stack position for sequential animation chaining.
+    // stackPos is computed by the engine on RectMark during compilation.
+    if (currentAnimation?.enabled && mark.type === 'rect') {
+      const rect = mark as RectMark;
+      if (rect.stackGroup && rect.stackPos !== undefined) {
+        el.setAttribute('data-stack-pos', String(rect.stackPos));
+        (el as SVGElement & ElementCSSInlineStyle).style.setProperty(
+          '--oc-stack-pos',
+          String(rect.stackPos),
+        );
+      }
+    }
+
+    g.appendChild(el);
   }
 
   parent.appendChild(g);
@@ -716,7 +780,7 @@ function renderAnnotations(parent: SVGElement, layout: ChartLayout): void {
   if (layout.annotations.length === 0) return;
 
   const g = createSVGElement('g');
-  g.setAttribute('class', 'viz-annotations');
+  g.setAttribute('class', 'oc-annotations');
 
   // Annotations are already sorted by zIndex from the engine, so render in order
   for (let i = 0; i < layout.annotations.length; i++) {
@@ -763,7 +827,7 @@ function renderCurvedArrow(parent: SVGElement, from: Point, to: Point, stroke: s
   const baseY = tipY - uy * arrowLen;
 
   const path = createSVGElement('path');
-  path.setAttribute('class', 'viz-annotation-connector');
+  path.setAttribute('class', 'oc-annotation-connector');
   setAttrs(path, {
     d: `M ${from.x} ${from.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${baseX} ${baseY}`,
     fill: 'none',
@@ -777,7 +841,7 @@ function renderCurvedArrow(parent: SVGElement, from: Point, to: Point, stroke: s
   const py = ux;
 
   const arrow = createSVGElement('polygon');
-  arrow.setAttribute('class', 'viz-annotation-connector');
+  arrow.setAttribute('class', 'oc-annotation-connector');
   setAttrs(arrow, {
     points: [
       `${to.x},${tipY}`,
@@ -791,7 +855,7 @@ function renderCurvedArrow(parent: SVGElement, from: Point, to: Point, stroke: s
 
 function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, index: number): void {
   const g = createSVGElement('g');
-  g.setAttribute('class', `viz-annotation viz-annotation-${annotation.type}`);
+  g.setAttribute('class', `oc-annotation oc-annotation-${annotation.type}`);
   g.setAttribute('data-annotation-index', String(index));
   if (annotation.id) {
     g.setAttribute('data-annotation-id', annotation.id);
@@ -800,7 +864,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
   // Range rect
   if (annotation.rect) {
     const rect = createSVGElement('rect');
-    rect.setAttribute('class', 'viz-annotation-range');
+    rect.setAttribute('class', 'oc-annotation-range');
     setAttrs(rect, {
       x: annotation.rect.x,
       y: annotation.rect.y,
@@ -817,7 +881,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
   // Reference line
   if (annotation.line) {
     const line = createSVGElement('line');
-    line.setAttribute('class', 'viz-annotation-line');
+    line.setAttribute('class', 'oc-annotation-line');
     setAttrs(line, {
       x1: annotation.line.start.x,
       y1: annotation.line.start.y,
@@ -857,7 +921,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
         const tipY = pointsDown ? midY + caretSize / 2 : midY - caretSize / 2;
         const baseY = pointsDown ? tipY - caretSize : tipY + caretSize;
         const path = createSVGElement('path');
-        path.setAttribute('class', 'viz-annotation-connector');
+        path.setAttribute('class', 'oc-annotation-connector');
         setAttrs(path, {
           d: `M${tipX - caretSize},${baseY} L${tipX},${tipY} L${tipX + caretSize},${baseY}`,
           fill: 'none',
@@ -872,7 +936,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
         renderCurvedArrow(g, c.from, c.to, c.stroke);
       } else {
         const connector = createSVGElement('line');
-        connector.setAttribute('class', 'viz-annotation-connector');
+        connector.setAttribute('class', 'oc-annotation-connector');
         setAttrs(connector, {
           x1: c.from.x,
           y1: c.from.y,
@@ -887,7 +951,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
     }
 
     const text = createSVGElement('text');
-    text.setAttribute('class', 'viz-annotation-label');
+    text.setAttribute('class', 'oc-annotation-label');
     setAttrs(text, { x: annotation.label.x, y: annotation.label.y });
     applyTextStyle(text, annotation.label.style);
 
@@ -919,7 +983,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
         ? annotation.label.x - maxLineWidth / 2 - pad
         : annotation.label.x - pad;
       const bgRect = createSVGElement('rect');
-      bgRect.setAttribute('class', 'viz-annotation-bg');
+      bgRect.setAttribute('class', 'oc-annotation-bg');
       setAttrs(bgRect, {
         x: bgX,
         y: annotation.label.y - fontSize + (lineHeight - fontSize) / 2 - pad,
@@ -945,7 +1009,7 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   if (legend.entries.length === 0) return;
 
   const g = createSVGElement('g');
-  g.setAttribute('class', 'viz-legend');
+  g.setAttribute('class', 'oc-legend');
   g.setAttribute('role', 'list');
   g.setAttribute('aria-label', 'Chart legend');
 
@@ -970,7 +1034,7 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       }
     }
     const entryG = createSVGElement('g');
-    entryG.setAttribute('class', 'viz-legend-entry');
+    entryG.setAttribute('class', 'oc-legend-entry');
     entryG.setAttribute('role', 'listitem');
     entryG.setAttribute('data-legend-index', String(i));
     entryG.setAttribute('data-legend-label', entry.label);
@@ -1100,7 +1164,7 @@ function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
   a.setAttribute('target', '_blank');
   a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'viz-chrome-ref');
+  a.setAttribute('class', 'oc-chrome-ref');
 
   // "Open" in normal weight, "Data" in semibold, rendered as a single
   // right-aligned text element with two tspans.
@@ -1141,8 +1205,16 @@ function renderBrand(parent: SVGElement, layout: ChartLayout): void {
  * @param container - DOM element to mount the SVG into.
  * @returns The created SVG element.
  */
-export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVGElement {
+export function renderChartSVG(
+  layout: ChartLayout,
+  container: HTMLElement,
+  opts?: { animate?: boolean },
+): SVGElement {
   const { width, height } = layout.dimensions;
+  const animation = layout.animation;
+
+  // Set module-level animation state so mark renderers can access it
+  currentAnimation = animation;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
   setAttrs(svg, {
@@ -1161,7 +1233,39 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
   svg.style.height = `${height}px`;
   svg.setAttribute('role', layout.a11y.role);
   svg.setAttribute('aria-label', layout.a11y.altText);
-  svg.setAttribute('class', 'viz-chart');
+
+  // oc-animate must be set before the SVG enters the DOM to prevent a flash
+  // of the final state. mount.ts passes animate: true only on genuine first render.
+  const classes = opts?.animate ? 'oc-chart oc-animate' : 'oc-chart';
+  svg.setAttribute('class', classes);
+
+  // Set animation CSS custom properties when enabled
+  if (animation?.enabled) {
+    const markCount = layout.marks.length;
+    const stagger = clampStaggerDelay(animation.staggerDelay, markCount);
+    svg.style.setProperty('--oc-animation-duration', `${animation.duration}ms`);
+    svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
+    svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
+    const easeVar = EASE_VAR_MAP[animation.ease] || EASE_VAR_MAP.smooth;
+    svg.style.setProperty('--oc-animation-ease', easeVar);
+
+    // Compute per-segment duration for stacked bars so the total bar animation
+    // time stays consistent regardless of segment count.
+    // stackPos is set by the engine (0-indexed position within each stack group).
+    let maxSegments = 0;
+    for (const m of layout.marks) {
+      if (m.type === 'rect') {
+        const pos = (m as RectMark).stackPos;
+        if (pos !== undefined && pos + 1 > maxSegments) {
+          maxSegments = pos + 1;
+        }
+      }
+    }
+    if (maxSegments > 0) {
+      const segDuration = Math.round(animation.duration / maxSegments);
+      svg.style.setProperty('--oc-stack-segment-duration', `${segDuration}ms`);
+    }
+  }
 
   // Background
   const bg = createSVGElement('rect');
@@ -1177,7 +1281,7 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
   // Clip path to prevent marks (especially area fills) from overflowing
   // into the chrome region (title/subtitle). Extends full width so
   // end-of-line labels aren't clipped, but constrains vertically.
-  const clipId = `viz-clip-${Math.random().toString(36).slice(2, 8)}`;
+  const clipId = `oc-clip-${Math.random().toString(36).slice(2, 8)}`;
   const defs = createSVGElement('defs');
   const clipPath = createSVGElement('clipPath');
   clipPath.setAttribute('id', clipId);
@@ -1217,7 +1321,7 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
       height: layout.area.height,
       fill: 'transparent',
     });
-    overlay.setAttribute('class', 'viz-voronoi-overlay');
+    overlay.setAttribute('class', 'oc-voronoi-overlay');
     overlay.setAttribute('data-voronoi-overlay', 'true');
     clippedGroup.appendChild(overlay);
   }
@@ -1232,6 +1336,9 @@ export function renderChartSVG(layout: ChartLayout, container: HTMLElement): SVG
 
   // Brand renders as a footer item, right-aligned on the source/footer row
   renderBrand(svg, layout);
+
+  // Reset module-level animation state after rendering
+  currentAnimation = undefined;
 
   container.appendChild(svg);
   return svg;
