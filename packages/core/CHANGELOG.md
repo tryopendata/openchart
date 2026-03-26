@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.5.0](https://github.com/tryopendata/openchart/compare/core-v6.4.1...core-v6.5.0) (2026-03-26)
+
+
+### Features
+
+* add CSS entrance animations and modularize styles ([dff701a](https://github.com/tryopendata/openchart/commit/dff701a073e2ac2f3f591be606064a5e9a771fb8))
+
 ## [6.4.1](https://github.com/tryopendata/openchart/compare/core-v6.4.0...core-v6.4.1) (2026-03-26)
 
 
