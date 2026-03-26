@@ -497,8 +497,8 @@ export interface ResolvedLabel {
     to: Point;
     /** Connector line color. */
     stroke: string;
-    /** Connector style: straight line, curved arrow, or directional caret. */
-    style: 'straight' | 'curve' | 'caret';
+    /** Connector style: straight line or curved arrow. */
+    style: 'straight' | 'curve';
   };
   /** Background color behind the label text. */
   background?: string;

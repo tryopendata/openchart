@@ -1801,6 +1801,7 @@ export function createChart(
   // Animation state
   let isFirstRender = true;
   let cleanupAnimations: (() => void) | null = null;
+  let pendingResize = false;
 
   // Selection and text editing state
   let selectedElement: ElementRef | null = options?.selectedElement ?? null;
@@ -2307,8 +2308,17 @@ export function createChart(
     }
 
     // Set up animation cleanup on first render only.
+    // onComplete fires when animations finish naturally (not on cancellation/destroy).
+    // It nulls out cleanupAnimations so resizes work after the animation window,
+    // and replays any resize that was skipped mid-animation.
     if (shouldAnimate && svgElement) {
-      cleanupAnimations = setupAnimationCleanup(svgElement);
+      cleanupAnimations = setupAnimationCleanup(svgElement, () => {
+        cleanupAnimations = null;
+        if (pendingResize) {
+          pendingResize = false;
+          resize();
+        }
+      });
     }
     if (isFirstRender) {
       isFirstRender = false;
@@ -2328,10 +2338,12 @@ export function createChart(
     if (destroyed) return;
     // Skip resize during entrance animation. The resize observer fires
     // immediately when the container first enters DOM layout, and re-rendering
-    // would destroy the animated SVG. This also blocks genuine resizes during
-    // the animation window (~1s), but catches up on the next resize event
-    // after the cleanup timeout fires.
-    if (cleanupAnimations) return;
+    // would destroy the animated SVG. Resizes during this window are queued
+    // and replayed once the animation completes via the onComplete callback.
+    if (cleanupAnimations) {
+      pendingResize = true;
+      return;
+    }
     render();
   }
 
@@ -2370,10 +2382,11 @@ export function createChart(
     if (destroyed) return;
     destroyed = true;
 
-    // Cancel entrance animations
+    // Cancel entrance animations (cancellation does not fire onComplete)
     if (cleanupAnimations) {
       cleanupAnimations();
       cleanupAnimations = null;
+      pendingResize = false;
     }
     cancelAnimations(svgElement);
 

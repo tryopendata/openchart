@@ -191,7 +191,12 @@ export function computeDimensions(
   // Reserve right margin for text annotations near the chart's right edge.
   // Without this, annotation text at the last data point clips outside the SVG.
   // Account for anchor direction and offset.dx to avoid over-reserving space.
-  if (spec.annotations.length > 0 && encoding.x) {
+  // Skip when annotations are hidden (tooltip-only at compact breakpoints).
+  if (
+    strategy?.annotationPosition !== 'tooltip-only' &&
+    spec.annotations.length > 0 &&
+    encoding.x
+  ) {
     const xField = encoding.x.field;
     // Find the maximum x value in the data
     let maxX: string | number | undefined;

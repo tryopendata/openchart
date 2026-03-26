@@ -30,6 +30,8 @@ These will bite you if you assume SVG elements behave like HTML elements.
 
 Don't use `animationend` events. The event fires per-element, so the first staggered element to finish would trigger cleanup while the rest are still running. Instead, compute total time: `lastElementStagger + duration + annotationDelay + 500ms buffer`, then `setTimeout` to remove `oc-animate`.
 
+`setupAnimationCleanup()` accepts an `onComplete` callback that fires only on natural completion (timer expiry), not on cancellation. Mount uses this to null out the cleanup reference and replay any resize that was skipped during the animation window. The cancellation path (returned cleanup function) clears the timer and cancels CSS animations but does not fire `onComplete`, so destroy logic stays simple and doesn't trigger resize side effects.
+
 ## Stacked Bar Sequencing
 
 Stacked bars chain segment animations so the full bar reveals as one fluid sweep. Each segment gets a `--oc-stack-pos` (0, 1, 2...) and the renderer computes `--oc-stack-segment-duration` as `duration / maxSegments`. Delay for each segment = category stagger + (position * segment duration).

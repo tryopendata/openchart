@@ -23,7 +23,7 @@ export function cancelAnimations(svg: SVGElement | null): void {
  * rather than animationend events, because animationend fires per-element and the first
  * element to finish would prematurely kill staggered animations still in progress.
  */
-export function setupAnimationCleanup(svg: SVGElement): () => void {
+export function setupAnimationCleanup(svg: SVGElement, onComplete?: () => void): () => void {
   // Read the animation timing from the CSS custom properties set by the renderer
   const style = svg.style;
   const duration = parseFloat(style.getPropertyValue('--oc-animation-duration')) || 600;
@@ -39,6 +39,7 @@ export function setupAnimationCleanup(svg: SVGElement): () => void {
 
   const timer = setTimeout(() => {
     svg.classList.remove('oc-animate');
+    onComplete?.();
   }, totalTime);
 
   return () => {

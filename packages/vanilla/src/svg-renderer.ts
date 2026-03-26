@@ -901,38 +901,7 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
     // Render connector first (behind the label text)
     if (annotation.label.connector) {
       const c = annotation.label.connector;
-      if (c.style === 'caret') {
-        // Small directional chevron centered in the gap between the label
-        // text and the data mark, pointing toward the data.
-        const pointsDown = c.to.y > c.from.y;
-        const caretSize = 4;
-        // c.from.y is near the text baseline, not the visual bottom.
-        // Estimate the text bottom from the label's line count and font size.
-        const labelLines = annotation.label.text.split('\n');
-        const labelFontSize = annotation.label.style.fontSize ?? 12;
-        const labelLineHeight = labelFontSize * (annotation.label.style.lineHeight ?? 1.3);
-        const textBottom =
-          annotation.label.y + (labelLines.length - 1) * labelLineHeight + labelFontSize * 0.25;
-        const textTop = annotation.label.y - labelFontSize;
-        // Center caret in the gap between text edge and data point
-        const gapEdge = pointsDown ? textBottom : textTop;
-        const midY = (gapEdge + c.to.y) / 2;
-        const tipX = c.to.x;
-        const tipY = pointsDown ? midY + caretSize / 2 : midY - caretSize / 2;
-        const baseY = pointsDown ? tipY - caretSize : tipY + caretSize;
-        const path = createSVGElement('path');
-        path.setAttribute('class', 'oc-annotation-connector');
-        setAttrs(path, {
-          d: `M${tipX - caretSize},${baseY} L${tipX},${tipY} L${tipX + caretSize},${baseY}`,
-          fill: 'none',
-          stroke: c.stroke,
-          'stroke-width': 1.5,
-          'stroke-opacity': 0.4,
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round',
-        });
-        g.appendChild(path);
-      } else if (c.style === 'curve') {
+      if (c.style === 'curve') {
         renderCurvedArrow(g, c.from, c.to, c.stroke);
       } else {
         const connector = createSVGElement('line');

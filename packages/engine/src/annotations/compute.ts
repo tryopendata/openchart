@@ -675,14 +675,6 @@ function nudgeAnnotationFromObstacles(
       labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
     if (inBounds) {
-      // When nudged vertically (directly above/below the data), use a caret
-      // instead of a connector line for a cleaner editorial look.
-      if (candidateLabel.connector && dx === 0 && dy !== 0) {
-        candidateLabel.connector = {
-          ...candidateLabel.connector,
-          style: 'caret',
-        };
-      }
       annotation.label = candidateLabel;
       return true;
     }
