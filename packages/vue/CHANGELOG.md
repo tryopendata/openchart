@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.4.1](https://github.com/tryopendata/openchart/compare/vue-v6.4.0...vue-v6.4.1) (2026-03-26)
+
+
+### Bug Fixes
+
+* move ignoreDeprecations to package tsconfigs ([bba54e9](https://github.com/tryopendata/openchart/commit/bba54e9f32e71cce26e34e2ccc29db5cde2df611))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.4.1
+    * @opendata-ai/openchart-engine bumped to 6.4.1
+    * @opendata-ai/openchart-vanilla bumped to 6.4.1
+
 ## [6.4.0](https://github.com/tryopendata/openchart/compare/vue-v6.3.0...vue-v6.4.0) (2026-03-26)
 
 
