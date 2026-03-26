@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.3.0](https://github.com/tryopendata/openchart/compare/core-v6.2.1...core-v6.3.0) (2026-03-26)
+
+
+### Features
+
+* address all FEATURE-REQUESTS.md bugs and feature requests ([771358b](https://github.com/tryopendata/openchart/commit/771358b8ea76d2842a8124ce220f24c3a39455e7))
+
 ## [6.2.1](https://github.com/tryopendata/openchart/compare/core-v6.2.0...core-v6.2.1) (2026-03-23)
 
 
