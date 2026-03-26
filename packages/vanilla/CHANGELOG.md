@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.4.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.3.0...vanilla-v6.4.0) (2026-03-26)
+
+
+### Features
+
+* add rich chart editing with selection, deletion, and inline text editing ([25d44f4](https://github.com/tryopendata/openchart/commit/25d44f4f7f747eba36cb31980f294fe1bf992b86))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.4.0
+    * @opendata-ai/openchart-engine bumped to 6.4.0
+
 ## [6.3.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.2.1...vanilla-v6.3.0) (2026-03-26)
 
 
