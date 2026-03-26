@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.5.2](https://github.com/tryopendata/openchart/compare/core-v6.5.1...core-v6.5.2) (2026-03-26)
+
+
+### Bug Fixes
+
+* skip annotation margin at compact breakpoints, remove caret connector, improve animation resize handling ([632e541](https://github.com/tryopendata/openchart/commit/632e541d7d681c0737c955256001ec0100aa10e5))
+
 ## [6.5.1](https://github.com/tryopendata/openchart/compare/core-v6.5.0...core-v6.5.1) (2026-03-26)
 
 
