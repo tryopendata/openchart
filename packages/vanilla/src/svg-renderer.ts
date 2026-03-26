@@ -793,6 +793,9 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
   const g = createSVGElement('g');
   g.setAttribute('class', `viz-annotation viz-annotation-${annotation.type}`);
   g.setAttribute('data-annotation-index', String(index));
+  if (annotation.id) {
+    g.setAttribute('data-annotation-id', annotation.id);
+  }
 
   // Range rect
   if (annotation.rect) {

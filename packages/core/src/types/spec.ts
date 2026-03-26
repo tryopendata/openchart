@@ -382,6 +382,8 @@ export type AnnotationAnchor = 'top' | 'bottom' | 'left' | 'right' | 'auto';
 
 /** Base properties shared by all annotation types. */
 interface AnnotationBase {
+  /** Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching. */
+  id?: string;
   /** Human-readable label for the annotation. */
   label?: string;
   /** Fill color for the annotation element. */

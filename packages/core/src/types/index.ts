@@ -21,8 +21,10 @@ export type {
   ChartEventHandlers,
   ChromeKey,
   ElementEdit,
+  ElementRef,
   MarkEvent,
 } from './events';
+export { elementRef } from './events';
 // Layout types (engine output)
 export type {
   A11yMetadata,

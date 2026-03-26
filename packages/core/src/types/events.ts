@@ -26,12 +26,44 @@ import type {
 export type ChromeKey = 'title' | 'subtitle' | 'source' | 'byline' | 'footer';
 
 // ---------------------------------------------------------------------------
+// Element references (identity for selection/edit callbacks)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reference to an editable chart element.
+ * Carries enough info to find the element in both the spec and the DOM.
+ * The `annotation` variant uses two-tier identity: `id` (when the consumer provides one)
+ * and `index` (always available, position in the spec's annotations array).
+ */
+export type ElementRef =
+  | { type: 'annotation'; index: number; id?: string }
+  | { type: 'chrome'; key: ChromeKey }
+  | { type: 'series-label'; series: string }
+  | { type: 'legend' }
+  | { type: 'legend-entry'; series: string; index: number };
+
+/** Helper constructors for ergonomic ElementRef creation. */
+export const elementRef = {
+  annotation: (index: number, id?: string): ElementRef => ({ type: 'annotation', index, id }),
+  chrome: (key: ChromeKey): ElementRef => ({ type: 'chrome', key }),
+  seriesLabel: (series: string): ElementRef => ({ type: 'series-label', series }),
+  legend: (): ElementRef => ({ type: 'legend' }),
+  legendEntry: (series: string, index: number): ElementRef => ({
+    type: 'legend-entry',
+    series,
+    index,
+  }),
+} as const;
+
+// ---------------------------------------------------------------------------
 // Element edit events
 // ---------------------------------------------------------------------------
 
 /**
  * Discriminated union of all element edit events.
- * Fired by the `onEdit` callback when any editable chart element is repositioned.
+ * Fired by the `onEdit` callback when any editable chart element is modified.
+ * Covers repositioning (drag), deletion (Delete key), and text editing (double-click).
+ * Selection events (onSelect/onDeselect) are separate callbacks, not part of this union.
  */
 export type ElementEdit =
   | { type: 'annotation'; annotation: TextAnnotation; offset: AnnotationOffset }
@@ -46,7 +78,9 @@ export type ElementEdit =
   | { type: 'chrome'; key: ChromeKey; text: string; offset: AnnotationOffset }
   | { type: 'series-label'; series: string; offset: AnnotationOffset }
   | { type: 'legend'; offset: AnnotationOffset }
-  | { type: 'legend-toggle'; series: string; hidden: boolean };
+  | { type: 'legend-toggle'; series: string; hidden: boolean }
+  | { type: 'delete'; element: ElementRef }
+  | { type: 'text-edit'; element: ElementRef; oldText: string; newText: string };
 
 // ---------------------------------------------------------------------------
 // Mark events
@@ -92,6 +126,12 @@ export interface ChartEventHandlers {
   onAnnotationClick?: (annotation: Annotation, event: MouseEvent) => void;
   /** Called when a text annotation label is dragged to a new position. */
   onAnnotationEdit?: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) => void;
-  /** Unified edit callback. Fires for any editable chart element (annotations, chrome, legend, series labels). */
+  /** Unified edit callback. Fires for any spec-modifying edit (repositioning, deletion, text editing). */
   onEdit?: (edit: ElementEdit) => void;
+  /** Fired when an element is selected via click or programmatic select(). */
+  onSelect?: (element: ElementRef) => void;
+  /** Fired when the current element is deselected (click empty, Escape, or new selection replaces old). */
+  onDeselect?: (element: ElementRef) => void;
+  /** Fired when inline text editing commits. Also flows through onEdit as a 'text-edit' event. */
+  onTextEdit?: (element: ElementRef, oldText: string, newText: string) => void;
 }

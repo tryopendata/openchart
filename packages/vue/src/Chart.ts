@@ -12,6 +12,7 @@ import type {
   ChartSpec,
   DarkMode,
   ElementEdit,
+  ElementRef,
   GraphSpec,
   LayerSpec,
   MarkEvent,
@@ -64,6 +65,10 @@ export const Chart = defineComponent({
       type: [String, Object] as PropType<string | CSSProperties>,
       default: undefined,
     },
+    selectedElement: {
+      type: Object as PropType<ElementRef>,
+      default: undefined,
+    },
   },
   emits: {
     'mark-click': (_event: MarkEvent) => true,
@@ -73,9 +78,12 @@ export const Chart = defineComponent({
     'annotation-click': (_annotation: Annotation, _event: MouseEvent) => true,
     'annotation-edit': (_annotation: TextAnnotation, _updatedOffset: AnnotationOffset) => true,
     edit: (_edit: ElementEdit) => true,
+    select: (_element: ElementRef) => true,
+    deselect: (_element: ElementRef) => true,
+    'text-edit': (_element: ElementRef, _oldText: string, _newText: string) => true,
     'data-point-click': (_data: Record<string, unknown>) => true,
   },
-  setup(props, { emit }) {
+  setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: ChartInstance | null = null;
     let prevSpec = '';
@@ -92,6 +100,9 @@ export const Chart = defineComponent({
     const hasAnnotationEditListener =
       'onAnnotation-edit' in vnodeProps || 'onAnnotationEdit' in vnodeProps;
     const hasEditListener = 'onEdit' in vnodeProps;
+    const hasSelectListener = 'onSelect' in vnodeProps;
+    const hasDeselectListener = 'onDeselect' in vnodeProps;
+    const hasTextEditListener = 'onText-edit' in vnodeProps || 'onTextEdit' in vnodeProps;
 
     function resolveTheme(): ThemeConfig | undefined {
       return props.theme ?? contextTheme?.value;
@@ -125,6 +136,19 @@ export const Chart = defineComponent({
             }
           : {}),
         ...(hasEditListener ? { onEdit: (edit: ElementEdit) => emit('edit', edit) } : {}),
+        ...(hasSelectListener
+          ? { onSelect: (element: ElementRef) => emit('select', element) }
+          : {}),
+        ...(hasDeselectListener
+          ? { onDeselect: (element: ElementRef) => emit('deselect', element) }
+          : {}),
+        ...(hasTextEditListener
+          ? {
+              onTextEdit: (element: ElementRef, oldText: string, newText: string) =>
+                emit('text-edit', element, oldText, newText),
+            }
+          : {}),
+        ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
         responsive: true,
       };
 
@@ -137,6 +161,22 @@ export const Chart = defineComponent({
       instance = null;
       prevSpec = '';
     }
+
+    // Expose imperative methods for parent ref access
+    expose({
+      getSelectedElement(): ElementRef | null {
+        return instance?.getSelectedElement() ?? null;
+      },
+      select(elementRef: ElementRef): void {
+        instance?.select(elementRef);
+      },
+      deselect(): void {
+        instance?.deselect();
+      },
+      get instance() {
+        return instance;
+      },
+    });
 
     onMounted(() => {
       mountChart();
@@ -153,7 +193,20 @@ export const Chart = defineComponent({
         if (!instance) return;
         if (newVal !== prevSpec) {
           prevSpec = newVal;
-          instance.update(props.spec);
+          instance.update(props.spec, { selectedElement: props.selectedElement });
+        }
+      },
+    );
+
+    // Watch selectedElement prop changes
+    watch(
+      () => props.selectedElement,
+      (newVal) => {
+        if (!instance) return;
+        if (newVal) {
+          instance.select(newVal);
+        } else {
+          instance.deselect();
         }
       },
     );
