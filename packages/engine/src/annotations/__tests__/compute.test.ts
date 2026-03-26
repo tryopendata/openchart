@@ -945,6 +945,34 @@ describe('computeAnnotations', () => {
       const moved = nudgedLabel.x !== originalLabel.x || nudgedLabel.y !== originalLabel.y;
       expect(moved).toBe(true);
     });
+
+    it('preserves connector style when nudged away from obstacle', () => {
+      // connector: true means "straight line" - obstacle avoidance should not change it
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Explicit connector', connector: true },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      const withoutObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const originalLabel = withoutObstacles[0].label!;
+      expect(originalLabel.connector).toBeDefined();
+      expect(originalLabel.connector!.style).toBe('straight');
+
+      // Place obstacle directly on the annotation to force a nudge
+      const obstacle: Rect = {
+        x: originalLabel.x - 5,
+        y: originalLabel.y - 5,
+        width: 80,
+        height: 30,
+      };
+
+      const withObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy, false, [
+        obstacle,
+      ]);
+      const nudgedLabel = withObstacles[0].label!;
+      expect(nudgedLabel.connector).toBeDefined();
+      expect(nudgedLabel.connector!.style).toBe('straight');
+    });
   });
 
   // -----------------------------------------------------------------

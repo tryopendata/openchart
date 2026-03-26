@@ -1,4 +1,4 @@
-import type { LegendLayout } from '@opendata-ai/openchart-core';
+import type { LayoutStrategy, LegendLayout } from '@opendata-ai/openchart-core';
 import { adaptTheme, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -218,5 +218,51 @@ describe('computeDimensions', () => {
 
     // Small angles (< 10 degrees) should not trigger rotated label logic
     expect(dimsSmall.margins.bottom).toBe(dimsNone.margins.bottom);
+  });
+
+  it('does not reserve annotation margin when strategy is tooltip-only', () => {
+    const specWithAnnotations: NormalizedChartSpec = {
+      ...baseSpec,
+      annotations: [{ type: 'text', x: '2021-01-01', y: 20, text: 'Right-edge annotation' }],
+    };
+
+    const inlineStrategy: LayoutStrategy = {
+      labelMode: 'all',
+      legendPosition: 'right',
+      annotationPosition: 'inline',
+      axisLabelDensity: 'full',
+    };
+    const tooltipOnlyStrategy: LayoutStrategy = {
+      labelMode: 'none',
+      legendPosition: 'top',
+      annotationPosition: 'tooltip-only',
+      axisLabelDensity: 'minimal',
+    };
+
+    const dimsInline = computeDimensions(
+      specWithAnnotations,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+      inlineStrategy,
+    );
+    const dimsTooltipOnly = computeDimensions(
+      specWithAnnotations,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+      tooltipOnlyStrategy,
+    );
+    const dimsNoAnnotations = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // Inline strategy should reserve extra right margin for the annotation
+    expect(dimsInline.margins.right).toBeGreaterThan(dimsNoAnnotations.margins.right);
+    // Tooltip-only should NOT reserve extra margin (annotations are hidden)
+    expect(dimsTooltipOnly.margins.right).toBe(dimsNoAnnotations.margins.right);
   });
 });
