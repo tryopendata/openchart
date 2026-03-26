@@ -176,6 +176,43 @@ describe('computeLegend', () => {
     expect(legend.entries[2].overflow).toBe(true);
   });
 
+  it('symbolLimit: 0 is clamped to 1 (minimum 1 entry)', () => {
+    const sixSeriesSpec: NormalizedChartSpec = {
+      ...specWithColor,
+      data: [
+        { date: '2020', value: 10, country: 'A' },
+        { date: '2020', value: 10, country: 'B' },
+        { date: '2020', value: 10, country: 'C' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'country', type: 'nominal' },
+      },
+    };
+    const compactStrategy: LayoutStrategy = {
+      legend: { symbolLimit: 0 },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(sixSeriesSpec, compactStrategy, theme, chartArea);
+    // symbolLimit: 0 gets clamped to 1, so 1 real entry + overflow
+    expect(legend.entries.length).toBeGreaterThanOrEqual(1);
+    expect(legend.entries.filter((e) => !e.overflow).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('symbolLimit greater than entry count shows all entries', () => {
+    const largeLimit: LayoutStrategy = {
+      legend: { symbolLimit: 100 },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const legend = computeLegend(specWithColor, largeLimit, theme, chartArea);
+    // All 3 entries shown, no overflow
+    expect(legend.entries).toHaveLength(3);
+    expect(legend.entries.every((e) => !e.overflow)).toBe(true);
+  });
+
   it('uses correct swatch shape for chart type', () => {
     const lineLegend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
     expect(lineLegend.entries[0].shape).toBe('line');

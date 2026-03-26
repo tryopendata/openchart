@@ -27,7 +27,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Suffix multipliers used by abbreviateNumber in core. */
+/** Suffix multipliers mirroring core's abbreviateNumber output (K/M/B/T). */
 const SUFFIX_MULTIPLIERS: Record<string, number> = {
   K: 1_000,
   M: 1_000_000,

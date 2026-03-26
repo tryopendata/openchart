@@ -9,6 +9,7 @@
 
 import type {
   Encoding,
+  FieldType,
   LayoutStrategy,
   MarkAria,
   PointMark,
@@ -37,7 +38,7 @@ const MAX_BUBBLE_RADIUS = 30;
 /** Resolve a data value to a pixel position based on channel type and scale. */
 function resolvePosition(
   value: unknown,
-  channelType: string,
+  channelType: FieldType,
   scale:
     | ScaleLinear<number, number>
     | ScaleTime<number, number>
@@ -49,16 +50,18 @@ function resolvePosition(
     case 'ordinal': {
       const s = String(value);
       if ('bandwidth' in scale && typeof scale.bandwidth === 'function') {
+        const bw = (scale as ScaleBand<string>).bandwidth();
         const pos = (scale as ScaleBand<string>)(s);
         if (pos === undefined) return undefined;
-        return pos + (scale as ScaleBand<string>).bandwidth() / 2;
+        // ScalePoint has bandwidth() === 0; ScaleBand has > 0.
+        return bw > 0 ? pos + bw / 2 : pos;
       }
-      // ScalePoint - no bandwidth, position is the point itself
-      const pos = (scale as ScalePoint<string>)(s);
-      return pos;
+      return (scale as ScalePoint<string>)(s);
     }
-    case 'temporal':
-      return (scale as ScaleTime<number, number>)(new Date(value as string | number));
+    case 'temporal': {
+      const px = (scale as ScaleTime<number, number>)(new Date(value as string | number));
+      return Number.isNaN(px) ? undefined : px;
+    }
     default: {
       const num = Number(value);
       if (!Number.isFinite(num)) return undefined;

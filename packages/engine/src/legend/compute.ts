@@ -218,10 +218,10 @@ export function computeLegend(
       1,
       Math.floor((maxLegendHeight - LEGEND_PADDING * 2) / (entryHeight + 4)),
     );
-    // symbolLimit overrides the space-based limit when set
+    // symbolLimit overrides the space-based limit when set (minimum 1)
     const maxEntries =
       spec.legend?.symbolLimit != null
-        ? Math.min(spec.legend.symbolLimit, maxFromSpace)
+        ? Math.min(Math.max(1, spec.legend.symbolLimit), maxFromSpace)
         : maxFromSpace;
     if (entries.length > maxEntries) {
       entries = truncateEntries(entries, maxEntries);
@@ -261,9 +261,12 @@ export function computeLegend(
   // Reserve space on the right so legend entries don't overlap the brand watermark.
   const availableWidth = chartArea.width - LEGEND_PADDING * 2 - BRAND_RESERVE_WIDTH;
 
-  // Apply symbolLimit first if set, then fit remaining entries to available rows.
-  if (spec.legend?.symbolLimit != null && spec.legend.symbolLimit < entries.length) {
-    entries = truncateEntries(entries, spec.legend.symbolLimit);
+  // Apply symbolLimit first if set (minimum 1), then fit remaining entries to available rows.
+  if (spec.legend?.symbolLimit != null) {
+    const limit = Math.max(1, spec.legend.symbolLimit);
+    if (limit < entries.length) {
+      entries = truncateEntries(entries, limit);
+    }
   }
 
   // When columns is explicitly set, allow that many rows instead of the default max.
