@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.5.1](https://github.com/tryopendata/openchart/compare/engine-v6.5.0...engine-v6.5.1) (2026-03-26)
+
+
+* **engine:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.5.1
+
 ## [6.5.0](https://github.com/tryopendata/openchart/compare/engine-v6.4.1...engine-v6.5.0) (2026-03-26)
 
 
