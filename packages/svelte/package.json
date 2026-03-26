@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@sveltejs/package": "^2.3.0",
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@testing-library/svelte": "^5.2.0",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0"
