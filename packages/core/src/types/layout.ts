@@ -490,6 +490,8 @@ export interface ResolvedLabel {
 export interface ResolvedAnnotation {
   /** Original annotation type. */
   type: 'text' | 'range' | 'refline';
+  /** Stable identifier from the spec annotation, for selection/edit callbacks. */
+  id?: string;
   /** Label text (if any). */
   label?: ResolvedLabel;
   /** For range: the highlighted rectangle in pixel coordinates. */

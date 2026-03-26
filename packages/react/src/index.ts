@@ -63,7 +63,7 @@ export {
   validateSpec,
 } from '@opendata-ai/openchart-engine';
 
-export type { ChartProps } from './Chart';
+export type { ChartHandle, ChartProps } from './Chart';
 // Components
 export { Chart } from './Chart';
 export type { DataTableProps } from './DataTable';

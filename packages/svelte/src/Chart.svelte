@@ -12,6 +12,7 @@ import type {
   ChartSpec,
   DarkMode,
   ElementEdit,
+  ElementRef,
   GraphSpec,
   LayerSpec,
   MarkEvent,
@@ -33,7 +34,11 @@ let {
   onannotationclick,
   onannotationedit,
   onedit,
+  onselect,
+  ondeselect,
+  ontextedit,
   ondatapointclick,
+  selectedElement: selectedElementProp,
   class: className,
   style,
 }: {
@@ -47,7 +52,11 @@ let {
   onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
   onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
   onedit?: (edit: ElementEdit) => void;
+  onselect?: (element: ElementRef) => void;
+  ondeselect?: (element: ElementRef) => void;
+  ontextedit?: (element: ElementRef, oldText: string, newText: string) => void;
   ondatapointclick?: (data: Record<string, unknown>) => void;
+  selectedElement?: ElementRef;
   class?: string;
   style?: string;
 } = $props();
@@ -84,6 +93,10 @@ const stableHandlers: MountOptions = {
 const stableOnAnnotationEdit = (annotation: TextAnnotation, offset: AnnotationOffset) =>
   untrack(() => onannotationedit)?.(annotation, offset);
 const stableOnEdit = (edit: ElementEdit) => untrack(() => onedit)?.(edit);
+const stableOnSelect = (element: ElementRef) => untrack(() => onselect)?.(element);
+const stableOnDeselect = (element: ElementRef) => untrack(() => ondeselect)?.(element);
+const stableOnTextEdit = (element: ElementRef, oldText: string, newText: string) =>
+  untrack(() => ontextedit)?.(element, oldText, newText);
 
 let prevSpec = '';
 
@@ -99,6 +112,10 @@ $effect(() => {
 
   const hasAnnotationEdit = untrack(() => onannotationedit) !== undefined;
   const hasEdit = untrack(() => onedit) !== undefined;
+  const hasSelect = untrack(() => onselect) !== undefined;
+  const hasDeselect = untrack(() => ondeselect) !== undefined;
+  const hasTextEdit = untrack(() => ontextedit) !== undefined;
+  const currentSelectedElement = untrack(() => selectedElementProp);
 
   const options: MountOptions = {
     theme: resolvedTheme,
@@ -107,6 +124,10 @@ $effect(() => {
     ...stableHandlers,
     ...(hasAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
     ...(hasEdit ? { onEdit: stableOnEdit } : {}),
+    ...(hasSelect ? { onSelect: stableOnSelect } : {}),
+    ...(hasDeselect ? { onDeselect: stableOnDeselect } : {}),
+    ...(hasTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
+    ...(currentSelectedElement ? { selectedElement: currentSelectedElement } : {}),
   };
 
   instance = createChart(containerEl, currentSpec, options);
@@ -121,9 +142,36 @@ $effect(() => {
   const specString = JSON.stringify(currentSpec);
   if (specString !== prevSpec) {
     prevSpec = specString;
-    instance.update(currentSpec);
+    instance.update(currentSpec, { selectedElement: untrack(() => selectedElementProp) });
   }
 });
+
+// Effect 3: Watch selectedElement prop changes.
+$effect(() => {
+  const sel = selectedElementProp;
+  // Read instance without tracking to avoid coupling to Effect 1
+  const inst = untrack(() => instance);
+  if (!inst) return;
+
+  if (sel) {
+    inst.select(sel);
+  } else {
+    inst.deselect();
+  }
+});
+
+// Imperative methods exposed via component exports
+export function getSelectedElement(): ElementRef | null {
+  return instance?.getSelectedElement() ?? null;
+}
+
+export function select(ref: ElementRef): void {
+  instance?.select(ref);
+}
+
+export function deselect(): void {
+  instance?.deselect();
+}
 </script>
 
 <div

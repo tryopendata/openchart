@@ -10,13 +10,32 @@ import type {
   ChartEventHandlers,
   ChartSpec,
   DarkMode,
+  ElementRef,
   GraphSpec,
   LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
-import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
+import {
+  type CSSProperties,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
+
+export interface ChartHandle {
+  /** Get the currently selected element, or null if none. */
+  getSelectedElement(): ElementRef | null;
+  /** Programmatically select an element. */
+  select(ref: ElementRef): void;
+  /** Deselect the current element. */
+  deselect(): void;
+  /** The underlying chart instance (null until mounted). */
+  readonly instance: ChartInstance | null;
+}
 
 export interface ChartProps extends ChartEventHandlers {
   /** The visualization spec to render. */
@@ -27,6 +46,8 @@ export interface ChartProps extends ChartEventHandlers {
   darkMode?: DarkMode;
   /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
   onDataPointClick?: (data: Record<string, unknown>) => void;
+  /** The currently selected element (controlled). */
+  selectedElement?: ElementRef;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -40,21 +61,28 @@ export interface ChartProps extends ChartEventHandlers {
  * as SVG inside a wrapper div. Spec changes trigger re-renders via the
  * vanilla adapter's update() method.
  */
-export function Chart({
-  spec,
-  theme: themeProp,
-  darkMode,
-  onDataPointClick,
-  onMarkClick,
-  onMarkHover,
-  onMarkLeave,
-  onLegendToggle,
-  onAnnotationClick,
-  onAnnotationEdit,
-  onEdit,
-  className,
-  style,
-}: ChartProps) {
+export const Chart = forwardRef<ChartHandle, ChartProps>(function Chart(
+  {
+    spec,
+    theme: themeProp,
+    darkMode,
+    onDataPointClick,
+    onMarkClick,
+    onMarkHover,
+    onMarkLeave,
+    onLegendToggle,
+    onAnnotationClick,
+    onAnnotationEdit,
+    onEdit,
+    onSelect,
+    onDeselect,
+    onTextEdit,
+    selectedElement: selectedElementProp,
+    className,
+    style,
+  },
+  ref,
+) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
   const theme = themeProp ?? contextTheme;
@@ -75,6 +103,9 @@ export function Chart({
     onAnnotationClick?: ChartProps['onAnnotationClick'];
     onAnnotationEdit?: ChartProps['onAnnotationEdit'];
     onEdit?: ChartProps['onEdit'];
+    onSelect?: ChartProps['onSelect'];
+    onDeselect?: ChartProps['onDeselect'];
+    onTextEdit?: ChartProps['onTextEdit'];
   }>({});
   handlersRef.current = {
     onDataPointClick,
@@ -85,6 +116,9 @@ export function Chart({
     onAnnotationClick,
     onAnnotationEdit,
     onEdit,
+    onSelect,
+    onDeselect,
+    onTextEdit,
   };
 
   // Stable callback wrappers that read from refs
@@ -123,6 +157,39 @@ export function Chart({
     (edit: import('@opendata-ai/openchart-core').ElementEdit) => handlersRef.current.onEdit?.(edit),
     [],
   );
+  const stableOnSelect = useCallback(
+    (element: ElementRef) => handlersRef.current.onSelect?.(element),
+    [],
+  );
+  const stableOnDeselect = useCallback(
+    (element: ElementRef) => handlersRef.current.onDeselect?.(element),
+    [],
+  );
+  const stableOnTextEdit = useCallback(
+    (element: ElementRef, oldText: string, newText: string) =>
+      handlersRef.current.onTextEdit?.(element, oldText, newText),
+    [],
+  );
+
+  // Expose imperative handle for ref-based control
+  useImperativeHandle(
+    ref,
+    () => ({
+      getSelectedElement() {
+        return chartRef.current?.getSelectedElement() ?? null;
+      },
+      select(elementRef: ElementRef) {
+        chartRef.current?.select(elementRef);
+      },
+      deselect() {
+        chartRef.current?.deselect();
+      },
+      get instance() {
+        return chartRef.current;
+      },
+    }),
+    [],
+  );
 
   // Mount chart and recreate when theme/darkMode change.
   // Event handlers use stable refs so they don't trigger recreation.
@@ -145,6 +212,10 @@ export function Chart({
       // avoids adding unstable prop references to the effect deps.
       ...(handlersRef.current.onAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
       ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
+      ...(handlersRef.current.onSelect ? { onSelect: stableOnSelect } : {}),
+      ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
+      ...(handlersRef.current.onTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
+      ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
       responsive: true,
     };
 
@@ -168,6 +239,9 @@ export function Chart({
     stableOnMarkHover,
     stableOnMarkLeave,
     stableOnAnnotationEdit,
+    stableOnSelect,
+    stableOnDeselect,
+    stableOnTextEdit,
   ]);
 
   // Update chart when spec changes
@@ -182,6 +256,18 @@ export function Chart({
     }
   }, [spec]);
 
+  // Handle selectedElement prop changes separately (like Vue/Svelte adapters)
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !chart.select) return;
+
+    if (selectedElementProp) {
+      chart.select(selectedElementProp);
+    } else if (chart.getSelectedElement?.()) {
+      chart.deselect();
+    }
+  }, [selectedElementProp]);
+
   return (
     <div
       ref={containerRef}
@@ -189,4 +275,4 @@ export function Chart({
       style={style}
     />
   );
-}
+});

@@ -1,6 +1,8 @@
 /**
  * Chart editing demo using the unified onEdit callback for all element types
  * (annotations, connectors, range/refline labels, chrome, legend, series labels).
+ * Also demonstrates selection (click), deletion (Delete/Backspace), and
+ * inline text editing (double-click) capabilities.
  */
 
 import type {
@@ -8,6 +10,7 @@ import type {
   ChartSpec,
   ChromeKey,
   ElementEdit,
+  ElementRef,
   RangeAnnotation,
   RefLineAnnotation,
   TextAnnotation,
@@ -290,6 +293,9 @@ const EDIT_TYPE_COLORS: Record<ElementEdit['type'], string> = {
   chrome: '#06b6d4',
   'series-label': '#10b981',
   legend: '#f97316',
+  'legend-toggle': '#f97316',
+  delete: '#ef4444',
+  'text-edit': '#8b5cf6',
 };
 
 const EDIT_TYPE_LABELS: Record<ElementEdit['type'], string> = {
@@ -300,6 +306,9 @@ const EDIT_TYPE_LABELS: Record<ElementEdit['type'], string> = {
   chrome: 'Chrome',
   'series-label': 'Series Label',
   legend: 'Legend',
+  'legend-toggle': 'Legend Toggle',
+  delete: 'Delete',
+  'text-edit': 'Text Edit',
 };
 
 // ---------------------------------------------------------------------------
@@ -428,11 +437,13 @@ function InspectorRow({
   offset,
   mono,
   c,
+  highlighted,
 }: {
   label: string;
   offset: AnnotationOffset | undefined;
   mono: string;
   c: Colors;
+  highlighted?: boolean;
 }) {
   return (
     <div
@@ -442,15 +453,17 @@ function InspectorRow({
         color: c.textSecondary,
         padding: '3px 8px',
         borderRadius: 4,
-        background: c.codeBg,
+        background: highlighted ? hexToRgba(c.accent, 0.12) : c.codeBg,
+        border: highlighted ? `1px solid ${hexToRgba(c.accent, 0.3)}` : '1px solid transparent',
         display: 'flex',
         alignItems: 'baseline',
         gap: 6,
+        transition: 'background 0.15s, border-color 0.15s',
       }}
     >
       <span
         style={{
-          color: c.text,
+          color: highlighted ? c.accent : c.text,
           fontWeight: 500,
           minWidth: 140,
           overflow: 'hidden',
@@ -478,6 +491,45 @@ interface EditLogEntry {
 }
 
 // ---------------------------------------------------------------------------
+// ElementRef display helper
+// ---------------------------------------------------------------------------
+
+function formatElementRef(ref: ElementRef): string {
+  switch (ref.type) {
+    case 'annotation':
+      return `annotation[${ref.index}]${ref.id ? ` (${ref.id})` : ''}`;
+    case 'chrome':
+      return `chrome.${ref.key}`;
+    case 'series-label':
+      return `series: ${ref.series}`;
+    case 'legend':
+      return 'legend';
+    case 'legend-entry':
+      return `legend[${ref.index}]: ${ref.series}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Selection matching helper
+// ---------------------------------------------------------------------------
+
+function isSelectedAnnotation(ref: ElementRef | null, index: number): boolean {
+  return ref?.type === 'annotation' && ref.index === index;
+}
+
+function isSelectedChrome(ref: ElementRef | null, key: ChromeKey): boolean {
+  return ref?.type === 'chrome' && ref.key === key;
+}
+
+function isSelectedSeriesLabel(ref: ElementRef | null, series: string): boolean {
+  return ref?.type === 'series-label' && ref.series === series;
+}
+
+function isSelectedLegend(ref: ElementRef | null): boolean {
+  return ref?.type === 'legend';
+}
+
+// ---------------------------------------------------------------------------
 // Chart Editing demo component
 // ---------------------------------------------------------------------------
 
@@ -490,6 +542,7 @@ function ChartEditingDemo() {
   const [editing, setEditing] = useState(true);
   const [state, setState] = useState<EditingState>(makeInitialEditingState);
   const [editLog, setEditLog] = useState<EditLogEntry[]>([]);
+  const [selectedRef, setSelectedRef] = useState<ElementRef | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   // Resolve a chrome value's offset
@@ -608,11 +661,100 @@ function ChartEditingDemo() {
         }));
         break;
       }
+      case 'legend-toggle': {
+        label = `${edit.series} ${edit.hidden ? 'hidden' : 'shown'}`;
+        break;
+      }
+      case 'delete': {
+        label = formatElementRef(edit.element);
+        // Remove the element from state based on its ref type
+        setState((prev) => {
+          switch (edit.element.type) {
+            case 'annotation': {
+              const annotations = [...(prev.annotations ?? [])];
+              annotations.splice(edit.element.index, 1);
+              return { ...prev, annotations };
+            }
+            case 'chrome': {
+              const chrome = { ...prev.chrome };
+              delete chrome[edit.element.key];
+              return { ...prev, chrome };
+            }
+            case 'series-label': {
+              const offsets = { ...prev.labels?.offsets };
+              delete offsets[edit.element.series];
+              return { ...prev, labels: { ...prev.labels, offsets } };
+            }
+            case 'legend':
+              return { ...prev, legend: undefined };
+            default:
+              return prev;
+          }
+        });
+        setSelectedRef(null);
+        break;
+      }
+      case 'text-edit': {
+        label = `"${edit.oldText.replace(/\n/g, ' ')}" -> "${edit.newText.replace(/\n/g, ' ')}"`;
+        // Update the text content of the element
+        setState((prev) => {
+          switch (edit.element.type) {
+            case 'annotation': {
+              const annotations = [...(prev.annotations ?? [])];
+              const ann = annotations[edit.element.index];
+              if (ann?.type === 'text') {
+                annotations[edit.element.index] = { ...ann, text: edit.newText };
+              } else if (ann?.type === 'range') {
+                annotations[edit.element.index] = { ...ann, label: edit.newText };
+              } else if (ann?.type === 'refline') {
+                annotations[edit.element.index] = { ...ann, label: edit.newText };
+              }
+              return { ...prev, annotations };
+            }
+            case 'chrome': {
+              const chromeVal = prev.chrome?.[edit.element.key];
+              const newVal =
+                chromeVal && typeof chromeVal === 'object'
+                  ? { ...chromeVal, text: edit.newText }
+                  : edit.newText;
+              return {
+                ...prev,
+                chrome: { ...prev.chrome, [edit.element.key]: newVal },
+              };
+            }
+            default:
+              return prev;
+          }
+        });
+        break;
+      }
     }
 
     setEditLog((prev) => [
       { type: edit.type, label, offset, timestamp: Date.now() },
       ...prev.slice(0, 19), // keep last 20 entries
+    ]);
+  };
+
+  // Selection handlers
+  const handleSelect = (element: ElementRef) => {
+    setSelectedRef(element);
+  };
+
+  const handleDeselect = (_element: ElementRef) => {
+    setSelectedRef(null);
+  };
+
+  // Text edit handler (also logged separately from onEdit)
+  const handleTextEdit = (_element: ElementRef, oldText: string, newText: string) => {
+    setEditLog((prev) => [
+      {
+        type: 'text-edit',
+        label: `"${oldText.replace(/\n/g, ' ')}" -> "${newText.replace(/\n/g, ' ')}"`,
+        offset: { dx: 0, dy: 0 },
+        timestamp: Date.now(),
+      },
+      ...prev.slice(0, 19),
     ]);
   };
 
@@ -640,16 +782,17 @@ function ChartEditingDemo() {
   const mono = "'IBM Plex Mono', 'SF Mono', ui-monospace, monospace";
   const display = "'Bricolage Grotesque', system-ui, sans-serif";
 
-  // Group annotations by type for the inspector
-  const textAnnotations = (state.annotations ?? []).filter(
-    (a) => a.type === 'text',
-  ) as TextAnnotation[];
-  const rangeAnnotations = (state.annotations ?? []).filter(
-    (a) => a.type === 'range',
-  ) as RangeAnnotation[];
-  const reflineAnnotations = (state.annotations ?? []).filter(
-    (a) => a.type === 'refline',
-  ) as RefLineAnnotation[];
+  // Group annotations by type for the inspector, preserving original indices
+  const allAnnotations = state.annotations ?? [];
+  const textAnnotations = allAnnotations
+    .map((a, i) => ({ annotation: a as TextAnnotation, index: i }))
+    .filter(({ annotation }) => annotation.type === 'text');
+  const rangeAnnotations = allAnnotations
+    .map((a, i) => ({ annotation: a as RangeAnnotation, index: i }))
+    .filter(({ annotation }) => annotation.type === 'range');
+  const reflineAnnotations = allAnnotations
+    .map((a, i) => ({ annotation: a as RefLineAnnotation, index: i }))
+    .filter(({ annotation }) => annotation.type === 'refline');
   const chromeKeys: ChromeKey[] = ['title', 'subtitle', 'source', 'byline'];
   const seriesNames = ['Services', 'Devices', 'Cloud'];
 
@@ -704,7 +847,8 @@ function ChartEditingDemo() {
             maxWidth: 560,
           }}
         >
-          Drag any chart element to reposition it. The unified{' '}
+          Click any element to select it, drag to reposition, press Delete to remove, or
+          double-click text to edit inline. The unified{' '}
           <code
             style={{
               fontFamily: mono,
@@ -718,8 +862,8 @@ function ChartEditingDemo() {
           >
             onEdit
           </code>{' '}
-          callback returns typed edit events for annotations, connectors, chrome, legend, and series
-          labels.
+          callback returns typed edit events for repositioning, deletion, and text editing across
+          annotations, connectors, chrome, legend, and series labels.
         </p>
       </div>
 
@@ -752,6 +896,7 @@ function ChartEditingDemo() {
           onClick={() => {
             setState(makeInitialEditingState());
             setEditLog([]);
+            setSelectedRef(null);
           }}
           label="Reset all positions"
           c={c}
@@ -769,7 +914,7 @@ function ChartEditingDemo() {
             whiteSpace: 'nowrap' as const,
           }}
         >
-          drag any element to reposition
+          click to select · drag to move · Delete to remove · double-click to edit text
         </span>
       </div>
 
@@ -785,7 +930,14 @@ function ChartEditingDemo() {
         }}
       >
         <div>
-          <Chart spec={spec} onEdit={editing ? handleEdit : undefined} />
+          <Chart
+            spec={spec}
+            onEdit={editing ? handleEdit : undefined}
+            onSelect={editing ? handleSelect : undefined}
+            onDeselect={editing ? handleDeselect : undefined}
+            onTextEdit={editing ? handleTextEdit : undefined}
+            selectedElement={selectedRef ?? undefined}
+          />
         </div>
       </div>
 
@@ -846,6 +998,37 @@ function ChartEditingDemo() {
           )}
         </div>
 
+        {/* Selected element */}
+        {selectedRef && (
+          <div
+            style={{
+              padding: '10px 16px',
+              background: hexToRgba(c.accent, 0.06),
+              borderBottom: `1px solid ${c.border}`,
+              borderLeft: `3px solid ${c.accent}`,
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 8,
+              fontFamily: mono,
+              fontSize: 12,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: c.accent,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase' as const,
+                flexShrink: 0,
+              }}
+            >
+              Selected
+            </span>
+            <span style={{ color: c.text, fontWeight: 500 }}>{formatElementRef(selectedRef)}</span>
+          </div>
+        )}
+
         {/* Last edit highlight */}
         {editLog.length > 0 && (
           <div
@@ -889,20 +1072,21 @@ function ChartEditingDemo() {
             mono={mono}
             c={c}
           >
-            {textAnnotations.map((t) => (
+            {textAnnotations.map(({ annotation: t, index: i }) => (
               <InspectorRow
                 key={t.text}
                 label={`"${t.text.replace(/\n/g, ' ')}"`}
                 offset={t.offset}
                 mono={mono}
                 c={c}
+                highlighted={isSelectedAnnotation(selectedRef, i)}
               />
             ))}
           </InspectorSection>
         )}
 
         {/* Connectors section */}
-        {textAnnotations.filter((t) => t.connector).length > 0 && (
+        {textAnnotations.filter(({ annotation: t }) => t.connector).length > 0 && (
           <InspectorSection
             title="Connectors"
             color={EDIT_TYPE_COLORS['annotation-connector']}
@@ -910,8 +1094,8 @@ function ChartEditingDemo() {
             c={c}
           >
             {textAnnotations
-              .filter((t) => t.connector)
-              .map((t) => (
+              .filter(({ annotation: t }) => t.connector)
+              .map(({ annotation: t, index: i }) => (
                 <div
                   key={`conn-${t.text}`}
                   style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}
@@ -921,12 +1105,14 @@ function ChartEditingDemo() {
                     offset={t.connectorOffset?.from}
                     mono={mono}
                     c={c}
+                    highlighted={isSelectedAnnotation(selectedRef, i)}
                   />
                   <InspectorRow
                     label={`"${t.text.replace(/\n/g, ' ')}" to`}
                     offset={t.connectorOffset?.to}
                     mono={mono}
                     c={c}
+                    highlighted={isSelectedAnnotation(selectedRef, i)}
                   />
                 </div>
               ))}
@@ -941,13 +1127,14 @@ function ChartEditingDemo() {
             mono={mono}
             c={c}
           >
-            {rangeAnnotations.map((r) => (
+            {rangeAnnotations.map(({ annotation: r, index: i }) => (
               <InspectorRow
                 key={`range-${r.label}`}
                 label={`"${r.label ?? 'range'}"`}
                 offset={r.labelOffset}
                 mono={mono}
                 c={c}
+                highlighted={isSelectedAnnotation(selectedRef, i)}
               />
             ))}
           </InspectorSection>
@@ -961,13 +1148,14 @@ function ChartEditingDemo() {
             mono={mono}
             c={c}
           >
-            {reflineAnnotations.map((r) => (
+            {reflineAnnotations.map(({ annotation: r, index: i }) => (
               <InspectorRow
                 key={`refline-${r.label}`}
                 label={`"${r.label ?? 'refline'}"`}
                 offset={r.labelOffset}
                 mono={mono}
                 c={c}
+                highlighted={isSelectedAnnotation(selectedRef, i)}
               />
             ))}
           </InspectorSection>
@@ -984,6 +1172,7 @@ function ChartEditingDemo() {
                 offset={getChromeOffset(state.chrome?.[key])}
                 mono={mono}
                 c={c}
+                highlighted={isSelectedChrome(selectedRef, key)}
               />
             ))}
         </InspectorSection>
@@ -1002,13 +1191,20 @@ function ChartEditingDemo() {
               offset={state.labels?.offsets?.[name]}
               mono={mono}
               c={c}
+              highlighted={isSelectedSeriesLabel(selectedRef, name)}
             />
           ))}
         </InspectorSection>
 
         {/* Legend section */}
         <InspectorSection title="Legend" color={EDIT_TYPE_COLORS.legend} mono={mono} c={c}>
-          <InspectorRow label="legend" offset={state.legend?.offset} mono={mono} c={c} />
+          <InspectorRow
+            label="legend"
+            offset={state.legend?.offset}
+            mono={mono}
+            c={c}
+            highlighted={isSelectedLegend(selectedRef)}
+          />
         </InspectorSection>
 
         {/* Edit log */}

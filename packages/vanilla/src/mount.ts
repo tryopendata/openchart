@@ -17,6 +17,7 @@ import type {
   CompileOptions,
   DarkMode,
   ElementEdit,
+  ElementRef,
   GraphSpec,
   LayerSpec,
   MeasureTextFn,
@@ -26,7 +27,7 @@ import type {
   ThemeConfig,
   TooltipContent,
 } from '@opendata-ai/openchart-core';
-import { isLayerSpec } from '@opendata-ai/openchart-core';
+import { elementRef, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import {
   exportCSV,
@@ -39,6 +40,7 @@ import {
 } from './export';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
+import { createTextEditOverlay } from './text-edit-overlay';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -54,6 +56,13 @@ export interface MountOptions extends ChartEventHandlers {
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** Enable responsive resizing. Defaults to true. */
   responsive?: boolean;
+  /** Initial selected element. */
+  selectedElement?: ElementRef;
+}
+
+export interface UpdateOptions {
+  /** Override the selected element after update. When omitted, preserves current selection. */
+  selectedElement?: ElementRef;
 }
 
 export interface ExportOptions extends JPGExportOptions {
@@ -62,7 +71,7 @@ export interface ExportOptions extends JPGExportOptions {
 
 export interface ChartInstance {
   /** Re-compile and re-render with a new spec. */
-  update(spec: ChartSpec | LayerSpec | GraphSpec): void;
+  update(spec: ChartSpec | LayerSpec | GraphSpec, options?: UpdateOptions): void;
   /** Re-compile at current container dimensions. */
   resize(): void;
   /** Export the chart. */
@@ -79,6 +88,14 @@ export interface ChartInstance {
   destroy(): void;
   /** The current compiled layout (for hooks / debugging). */
   readonly layout: ChartLayout;
+  /** Get the currently selected element, or null if none. */
+  getSelectedElement(): ElementRef | null;
+  /** Programmatically select an element. Silent no-op if element not found. */
+  select(ref: ElementRef): void;
+  /** Deselect the current element. */
+  deselect(): void;
+  /** Whether inline text editing is active. */
+  readonly isEditing: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1498,6 +1515,252 @@ function createScreenReaderTable(
 }
 
 // ---------------------------------------------------------------------------
+// Editable element helpers
+// ---------------------------------------------------------------------------
+
+/** CSS for editable hover feedback, injected into the SVG as a <style> element. */
+const EDITABLE_HOVER_CSS = `
+.viz-editable-hover {
+  outline: 1.5px solid rgba(79, 70, 229, 0.35);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+`;
+
+/**
+ * Inject editable styles into an SVG element and make it focusable.
+ * Called when any editing callback is provided.
+ */
+function makeEditable(svg: SVGElement): void {
+  svg.setAttribute('tabindex', '0');
+  svg.style.outline = 'none';
+
+  // Inject hover style into SVG defs
+  const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  style.textContent = EDITABLE_HOVER_CSS;
+  svg.insertBefore(style, svg.firstChild);
+}
+
+/**
+ * Check whether any editing-related callback is provided in the options.
+ */
+function hasEditingCallbacks(opts?: MountOptions): boolean {
+  return !!(opts?.onEdit || opts?.onSelect || opts?.onDeselect || opts?.onTextEdit);
+}
+
+/**
+ * Find a DOM element inside the SVG that matches the given ElementRef.
+ */
+function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement | null {
+  switch (ref.type) {
+    case 'annotation': {
+      // Prefer id-based lookup when available
+      if (ref.id) {
+        const byId = svg.querySelector(`[data-annotation-id="${ref.id}"]`);
+        if (byId) return byId as SVGElement;
+      }
+      return svg.querySelector(`[data-annotation-index="${ref.index}"]`) as SVGElement | null;
+    }
+    case 'chrome':
+      return svg.querySelector(`[data-chrome-key="${ref.key}"]`) as SVGElement | null;
+    case 'series-label':
+      return svg.querySelector(`.viz-mark-label[data-series="${ref.series}"]`) as SVGElement | null;
+    case 'legend':
+      return svg.querySelector('.viz-legend') as SVGElement | null;
+    case 'legend-entry':
+      return svg.querySelector(`[data-legend-index="${ref.index}"]`) as SVGElement | null;
+  }
+}
+
+/**
+ * Build an ElementRef from a DOM element's data attributes.
+ * Walks up the tree to find the closest editable ancestor if needed.
+ */
+function buildElementRef(element: Element, _specAnnotations: Annotation[]): ElementRef | null {
+  // Check for annotation
+  const annotationEl = element.closest('[data-annotation-index]');
+  if (annotationEl) {
+    const index = Number(annotationEl.getAttribute('data-annotation-index'));
+    const id = annotationEl.getAttribute('data-annotation-id') ?? undefined;
+    return elementRef.annotation(index, id);
+  }
+
+  // Check for chrome
+  const chromeEl = element.closest('[data-chrome-key]');
+  if (chromeEl) {
+    const key = chromeEl.getAttribute('data-chrome-key') as ChromeKey;
+    if (key) return elementRef.chrome(key);
+  }
+
+  // Check for series label
+  const seriesLabelEl = element.closest('.viz-mark-label[data-series]');
+  if (seriesLabelEl) {
+    const series = seriesLabelEl.getAttribute('data-series');
+    if (series) return elementRef.seriesLabel(series);
+  }
+
+  // Check for legend entry
+  const legendEntryEl = element.closest('[data-legend-index]');
+  if (legendEntryEl) {
+    const index = Number(legendEntryEl.getAttribute('data-legend-index'));
+    const series = legendEntryEl.getAttribute('data-legend-label') ?? '';
+    return elementRef.legendEntry(series, index);
+  }
+
+  // Check for legend group
+  const legendEl = element.closest('.viz-legend');
+  if (legendEl) return elementRef.legend();
+
+  return null;
+}
+
+/**
+ * Get an ordered list of all editable ElementRefs from the current spec and layout.
+ * Order: chrome (title, subtitle, source, byline, footer), annotations by index,
+ * series labels alphabetical, legend.
+ */
+function getEditableElements(
+  spec: ChartSpec | LayerSpec | GraphSpec,
+  layout: ChartLayout,
+): ElementRef[] {
+  const refs: ElementRef[] = [];
+
+  // Chrome keys in display order
+  const chromeKeys: ChromeKey[] = ['title', 'subtitle', 'source', 'byline', 'footer'];
+  for (const key of chromeKeys) {
+    if (layout.chrome[key]) {
+      refs.push(elementRef.chrome(key));
+    }
+  }
+
+  // Annotations by index
+  const annotations: Annotation[] =
+    'annotations' in spec && Array.isArray(spec.annotations) ? spec.annotations : [];
+  for (let i = 0; i < annotations.length; i++) {
+    refs.push(elementRef.annotation(i, annotations[i].id));
+  }
+
+  // Series labels (alphabetical)
+  const seriesLabels: string[] = [];
+  for (const mark of layout.marks) {
+    if (mark.type === 'line' && mark.label?.visible && mark.seriesKey) {
+      seriesLabels.push(mark.seriesKey);
+    }
+  }
+  seriesLabels.sort();
+  for (const series of seriesLabels) {
+    refs.push(elementRef.seriesLabel(series));
+  }
+
+  // Legend
+  if (layout.legend.entries.length > 0) {
+    refs.push(elementRef.legend());
+  }
+
+  return refs;
+}
+
+/**
+ * Check if an ElementRef points to a text-editable element (chrome text or text annotation).
+ */
+function isTextEditable(ref: ElementRef, specAnnotations: Annotation[]): boolean {
+  if (ref.type === 'chrome') return true;
+  if (ref.type === 'annotation') {
+    const annotation = specAnnotations[ref.index];
+    return annotation?.type === 'text';
+  }
+  return false;
+}
+
+/**
+ * Get the current text content for an element ref.
+ */
+function getElementText(ref: ElementRef, spec: ChartSpec | LayerSpec | GraphSpec): string | null {
+  if (ref.type === 'chrome') {
+    const chromeConfig = 'chrome' in spec ? spec.chrome : undefined;
+    if (!chromeConfig) return null;
+    const entry = chromeConfig[ref.key];
+    if (typeof entry === 'string') return entry;
+    if (typeof entry === 'object' && entry !== null && 'text' in entry) {
+      return (entry as { text: string }).text;
+    }
+    return null;
+  }
+  if (ref.type === 'annotation') {
+    const annotations: Annotation[] =
+      'annotations' in spec && Array.isArray(spec.annotations) ? spec.annotations : [];
+    const annotation = annotations[ref.index];
+    if (annotation?.type === 'text') return (annotation as TextAnnotation).text ?? null;
+    if (annotation?.label) return annotation.label;
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Compare two ElementRefs for equality.
+ */
+function refsEqual(a: ElementRef | null, b: ElementRef | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.type !== b.type) return false;
+  switch (a.type) {
+    case 'annotation': {
+      const bAnno = b as typeof a;
+      if (a.id && bAnno.id) return a.id === bAnno.id;
+      return a.index === bAnno.index;
+    }
+    case 'chrome':
+      return a.key === (b as typeof a).key;
+    case 'series-label':
+      return a.series === (b as typeof a).series;
+    case 'legend':
+      return true;
+    case 'legend-entry': {
+      const bEntry = b as typeof a;
+      return a.index === bEntry.index && a.series === bEntry.series;
+    }
+  }
+}
+
+/**
+ * Render a selection overlay rectangle around a target element.
+ * Returns the overlay group element.
+ */
+function renderSelectionOverlay(
+  svg: SVGElement,
+  ref: ElementRef,
+  layout: ChartLayout,
+): SVGGElement | null {
+  const target = findElementByRef(svg, ref);
+  if (!target) return null;
+
+  const bbox = (target as SVGGraphicsElement).getBBox();
+  const padding = 4;
+
+  // Resolve accent color from theme
+  const accentColor = layout.theme.colors.categorical?.[0] ?? '#4f46e5';
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'viz-selection-overlay');
+
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', String(bbox.x - padding));
+  rect.setAttribute('y', String(bbox.y - padding));
+  rect.setAttribute('width', String(bbox.width + padding * 2));
+  rect.setAttribute('height', String(bbox.height + padding * 2));
+  rect.setAttribute('rx', '3');
+  rect.setAttribute('fill', 'transparent');
+  rect.setAttribute('stroke', accentColor);
+  rect.setAttribute('stroke-width', '1.5');
+  rect.setAttribute('pointer-events', 'none');
+
+  g.appendChild(rect);
+  svg.appendChild(g);
+
+  return g;
+}
+
+// ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
 
@@ -1526,11 +1789,19 @@ export function createChart(
   let cleanupChartEvents: (() => void) | null = null;
   let cleanupAnnotationDrag: (() => void) | null = null;
   let cleanupEditDrags: (() => void) | null = null;
+  let cleanupSelection: (() => void) | null = null;
+  let cleanupKeyboardEdit: (() => void) | null = null;
   let srTable: HTMLTableElement | null = null;
   let destroyed = false;
   let isDragging = false;
   let pendingRender = false;
   let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Selection and text editing state
+  let selectedElement: ElementRef | null = options?.selectedElement ?? null;
+  let overlayElement: SVGGElement | null = null;
+  let isTextEditingActive = false;
+  let textEditCleanup: (() => void) | null = null;
 
   const measureText = createMeasureText();
 
@@ -1557,6 +1828,274 @@ export function createChart(
     return {
       width: Math.max(rect.width || 600, 100),
       height: Math.max(rect.height || 400, 100),
+    };
+  }
+
+  /** Get the current spec's annotations array. */
+  function getSpecAnnotations(): Annotation[] {
+    return 'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
+      ? currentSpec.annotations
+      : [];
+  }
+
+  /** Select an element: render overlay, fire onSelect, update state. */
+  function selectElement(ref: ElementRef): void {
+    if (!svgElement) return;
+
+    // Confirm the target element exists before deselecting the previous one
+    const target = findElementByRef(svgElement, ref);
+    if (!target) return;
+
+    // Deselect previous if different
+    if (selectedElement && !refsEqual(selectedElement, ref)) {
+      deselectElement();
+    }
+
+    selectedElement = ref;
+    overlayElement = renderSelectionOverlay(svgElement, ref, currentLayout);
+    options?.onSelect?.(ref);
+
+    // Focus SVG for keyboard events
+    (svgElement as SVGSVGElement).focus();
+  }
+
+  /** Deselect the current element: remove overlay, fire onDeselect, clear state. */
+  function deselectElement(): void {
+    if (!selectedElement) return;
+
+    // Cancel text editing if active
+    if (isTextEditingActive && textEditCleanup) {
+      textEditCleanup();
+      textEditCleanup = null;
+      isTextEditingActive = false;
+    }
+
+    const prev = selectedElement;
+    selectedElement = null;
+
+    if (overlayElement?.parentNode) {
+      overlayElement.parentNode.removeChild(overlayElement);
+    }
+    overlayElement = null;
+
+    options?.onDeselect?.(prev);
+  }
+
+  /** Enter text editing mode for the currently selected element. */
+  function enterTextEditing(): void {
+    if (!svgElement || !selectedElement || isTextEditingActive) return;
+
+    const specAnnotations = getSpecAnnotations();
+    if (!isTextEditable(selectedElement, specAnnotations)) return;
+
+    const currentText = getElementText(selectedElement, currentSpec);
+    if (currentText === null) return;
+
+    // Find the text element within the selected element
+    const target = findElementByRef(svgElement, selectedElement);
+    if (!target) return;
+
+    // The target might be a group; find the actual text element
+    const textEl = target.tagName === 'text' ? target : target.querySelector('text');
+    if (!textEl) return;
+
+    isTextEditingActive = true;
+    const editRef = selectedElement;
+
+    const overlay = createTextEditOverlay({
+      container,
+      svg: svgElement as SVGSVGElement,
+      targetElement: textEl as SVGElement,
+      currentText,
+      onCommit: (newText: string) => {
+        isTextEditingActive = false;
+        textEditCleanup = null;
+
+        if (newText !== currentText) {
+          // Fire text edit callbacks
+          options?.onTextEdit?.(editRef, currentText, newText);
+          options?.onEdit?.({
+            type: 'text-edit',
+            element: editRef,
+            oldText: currentText,
+            newText,
+          });
+        }
+      },
+      onCancel: () => {
+        isTextEditingActive = false;
+        textEditCleanup = null;
+      },
+    });
+
+    textEditCleanup = overlay.destroy;
+  }
+
+  /**
+   * Wire click-based selection events on the SVG.
+   * Uses event delegation for efficiency.
+   */
+  function wireSelectionEvents(): () => void {
+    if (!svgElement) return () => {};
+
+    const svg = svgElement;
+    const cleanups: Array<() => void> = [];
+
+    // Click handler for selection
+    const handleClick = (e: Event) => {
+      const mouseEvent = e as MouseEvent;
+      const target = mouseEvent.target as Element;
+
+      // Don't interfere with text editing
+      if (isTextEditingActive) return;
+
+      const specAnnotations = getSpecAnnotations();
+      const ref = buildElementRef(target, specAnnotations);
+
+      if (ref) {
+        // Clicked on an editable element
+        selectElement(ref);
+      } else {
+        // Clicked on empty area / non-editable element, deselect
+        deselectElement();
+      }
+    };
+
+    svg.addEventListener('click', handleClick);
+    cleanups.push(() => svg.removeEventListener('click', handleClick));
+
+    // Hover feedback on editable elements
+    const handleMouseEnter = (e: Event) => {
+      const target = (e.target as Element).closest(
+        '[data-annotation-index], [data-chrome-key], .viz-mark-label[data-series], .viz-legend, [data-legend-index]',
+      );
+      if (target) {
+        (target as SVGElement).classList.add('viz-editable-hover');
+      }
+    };
+
+    const handleMouseLeave = (e: Event) => {
+      const target = (e.target as Element).closest('.viz-editable-hover');
+      if (target) {
+        (target as SVGElement).classList.remove('viz-editable-hover');
+      }
+    };
+
+    svg.addEventListener('mouseenter', handleMouseEnter, true);
+    svg.addEventListener('mouseleave', handleMouseLeave, true);
+    cleanups.push(() => {
+      svg.removeEventListener('mouseenter', handleMouseEnter, true);
+      svg.removeEventListener('mouseleave', handleMouseLeave, true);
+    });
+
+    // Double-click to enter text editing
+    const handleDblClick = (e: Event) => {
+      const mouseEvent = e as MouseEvent;
+      const target = mouseEvent.target as Element;
+      const specAnnotations = getSpecAnnotations();
+      const ref = buildElementRef(target, specAnnotations);
+
+      if (ref && isTextEditable(ref, specAnnotations)) {
+        // Select first if not already selected
+        if (!refsEqual(selectedElement, ref)) {
+          selectElement(ref);
+        }
+        enterTextEditing();
+      }
+    };
+
+    svg.addEventListener('dblclick', handleDblClick);
+    cleanups.push(() => svg.removeEventListener('dblclick', handleDblClick));
+
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+    };
+  }
+
+  /**
+   * Wire keyboard events for edit actions on the SVG.
+   * Delete/Backspace -> delete, Escape -> cancel/deselect, Tab -> cycle, Enter -> text edit.
+   */
+  function wireKeyboardEditEvents(): () => void {
+    if (!svgElement) return () => {};
+
+    const svg = svgElement;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const specAnnotations = getSpecAnnotations();
+
+      switch (e.key) {
+        case 'Delete':
+        case 'Backspace': {
+          if (selectedElement && !isTextEditingActive) {
+            e.preventDefault();
+            options?.onEdit?.({ type: 'delete', element: selectedElement });
+            // Stay selected (consumer decides whether to remove the element)
+          }
+          break;
+        }
+
+        case 'Escape': {
+          e.preventDefault();
+          if (isTextEditingActive && textEditCleanup) {
+            // Cancel text editing, remain selected
+            textEditCleanup();
+            textEditCleanup = null;
+            isTextEditingActive = false;
+          } else if (selectedElement) {
+            deselectElement();
+          }
+          break;
+        }
+
+        case 'ArrowDown':
+        case 'ArrowRight': {
+          if (!isTextEditingActive && selectedElement) {
+            e.preventDefault();
+            const editables = getEditableElements(currentSpec, currentLayout);
+            if (editables.length === 0) break;
+
+            const currentIndex = editables.findIndex((r) => refsEqual(r, selectedElement));
+            const nextIndex = currentIndex >= editables.length - 1 ? 0 : currentIndex + 1;
+
+            selectElement(editables[nextIndex]);
+          }
+          break;
+        }
+
+        case 'ArrowUp':
+        case 'ArrowLeft': {
+          if (!isTextEditingActive && selectedElement) {
+            e.preventDefault();
+            const editables = getEditableElements(currentSpec, currentLayout);
+            if (editables.length === 0) break;
+
+            const currentIndex = editables.findIndex((r) => refsEqual(r, selectedElement));
+            const nextIndex = currentIndex <= 0 ? editables.length - 1 : currentIndex - 1;
+
+            selectElement(editables[nextIndex]);
+          }
+          break;
+        }
+
+        case 'Enter': {
+          if (selectedElement && !isTextEditingActive) {
+            if (isTextEditable(selectedElement, specAnnotations)) {
+              e.preventDefault();
+              enterTextEditing();
+            }
+          }
+          break;
+        }
+      }
+    };
+
+    svg.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      svg.removeEventListener('keydown', handleKeyDown);
     };
   }
 
@@ -1596,6 +2135,20 @@ export function createChart(
       cleanupEditDrags();
       cleanupEditDrags = null;
     }
+    if (cleanupSelection) {
+      cleanupSelection();
+      cleanupSelection = null;
+    }
+    if (cleanupKeyboardEdit) {
+      cleanupKeyboardEdit();
+      cleanupKeyboardEdit = null;
+    }
+    if (textEditCleanup) {
+      textEditCleanup();
+      textEditCleanup = null;
+      isTextEditingActive = false;
+    }
+    overlayElement = null;
     if (svgElement?.parentNode) {
       svgElement.parentNode.removeChild(svgElement);
     }
@@ -1709,6 +2262,25 @@ export function createChart(
       };
     }
 
+    // Wire selection and keyboard edit events when editing callbacks are provided
+    if (hasEditingCallbacks(options)) {
+      makeEditable(svgElement);
+      cleanupSelection = wireSelectionEvents();
+      cleanupKeyboardEdit = wireKeyboardEditEvents();
+
+      // Restore selection overlay after re-render
+      if (selectedElement) {
+        const target = findElementByRef(svgElement, selectedElement);
+        if (target) {
+          overlayElement = renderSelectionOverlay(svgElement, selectedElement, currentLayout);
+        } else {
+          // Element no longer exists in DOM, clear selection silently
+          selectedElement = null;
+          overlayElement = null;
+        }
+      }
+    }
+
     // Create hidden data table for screen readers
     srTable = createScreenReaderTable(currentLayout, container);
 
@@ -1722,9 +2294,12 @@ export function createChart(
     }
   }
 
-  function update(newSpec: ChartSpec | GraphSpec): void {
+  function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
     if (destroyed) return;
     currentSpec = newSpec;
+    if (updateOpts && 'selectedElement' in updateOpts) {
+      selectedElement = updateOpts.selectedElement ?? null;
+    }
     render();
   }
 
@@ -1800,6 +2375,21 @@ export function createChart(
       cleanupEditDrags();
       cleanupEditDrags = null;
     }
+    if (cleanupSelection) {
+      cleanupSelection();
+      cleanupSelection = null;
+    }
+    if (cleanupKeyboardEdit) {
+      cleanupKeyboardEdit();
+      cleanupKeyboardEdit = null;
+    }
+    if (textEditCleanup) {
+      textEditCleanup();
+      textEditCleanup = null;
+      isTextEditingActive = false;
+    }
+    selectedElement = null;
+    overlayElement = null;
     if (disconnectResize) {
       disconnectResize();
       disconnectResize = null;
@@ -1841,6 +2431,20 @@ export function createChart(
     destroy,
     get layout() {
       return currentLayout;
+    },
+    getSelectedElement(): ElementRef | null {
+      return selectedElement;
+    },
+    select(ref: ElementRef): void {
+      if (destroyed) return;
+      selectElement(ref);
+    },
+    deselect(): void {
+      if (destroyed) return;
+      deselectElement();
+    },
+    get isEditing(): boolean {
+      return isTextEditingActive;
     },
   };
 }

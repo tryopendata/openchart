@@ -363,6 +363,7 @@ function resolveTextAnnotation(
 
   return {
     type: 'text',
+    id: annotation.id,
     label,
     stroke: annotation.stroke,
     fill: annotation.fill,
@@ -447,6 +448,7 @@ function resolveRangeAnnotation(
 
   return {
     type: 'range',
+    id: annotation.id,
     rect,
     label,
     fill: annotation.fill ?? DEFAULT_RANGE_FILL,
@@ -528,6 +530,7 @@ function resolveRefLineAnnotation(
 
   return {
     type: 'refline',
+    id: annotation.id,
     line: { start, end },
     label,
     stroke: annotation.stroke ?? defaultStroke,

@@ -25,7 +25,7 @@ export { createSimulationWorker } from './graph/simulation-worker-url';
 export type { GraphInstance, GraphMountOptions } from './graph-mount';
 // Graph mount API
 export { createGraph } from './graph-mount';
-export type { ChartInstance, ExportOptions, MountOptions } from './mount';
+export type { ChartInstance, ExportOptions, MountOptions, UpdateOptions } from './mount';
 // Main mount API
 export { createChart } from './mount';
 // Cell renderers
@@ -51,6 +51,8 @@ export type { TableInstance, TableMountOptions, TableState } from './table-mount
 export { createTable } from './table-mount';
 // Table renderer (for advanced usage / custom rendering)
 export { renderTable } from './table-renderer';
+export type { TextEditOverlayConfig } from './text-edit-overlay';
+export { createTextEditOverlay } from './text-edit-overlay';
 export type { TooltipManager } from './tooltip';
 // Tooltip
 export { createTooltipManager } from './tooltip';
