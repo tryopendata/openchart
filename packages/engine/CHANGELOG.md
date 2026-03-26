@@ -1,5 +1,24 @@
 # Changelog
 
+## [6.3.0](https://github.com/tryopendata/openchart/compare/engine-v6.2.1...engine-v6.3.0) (2026-03-26)
+
+
+### Features
+
+* address all FEATURE-REQUESTS.md bugs and feature requests ([771358b](https://github.com/tryopendata/openchart/commit/771358b8ea76d2842a8124ce220f24c3a39455e7))
+
+
+### Bug Fixes
+
+* address code review findings ([c888e78](https://github.com/tryopendata/openchart/commit/c888e7855b3c8e7b34774074e817372aaf6db947))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.3.0
+
 ## [6.2.1](https://github.com/tryopendata/openchart/compare/engine-v6.2.0...engine-v6.2.1) (2026-03-23)
 
 
