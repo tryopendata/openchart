@@ -22,7 +22,9 @@
   .oc-animate .oc-mark-rule line,
   .oc-animate .oc-mark-tick line,
   .oc-animate .oc-mark-label,
-  .oc-animate .oc-annotation {
+  .oc-animate .oc-annotation,
+  .oc-animate .oc-sankey-node rect,
+  .oc-animate .oc-sankey-link path {
     animation: none;
   }
 

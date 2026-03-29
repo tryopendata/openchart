@@ -232,12 +232,13 @@ function renderBrand(parent: SVGElement, layout: SankeyLayout): void {
     'dominant-baseline': 'hanging',
     'text-anchor': 'end',
     'font-family': layout.theme.fonts.family,
-    'font-size': 11,
+    'font-size': 20,
+    'fill-opacity': 0.55,
   });
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
 
   const openSpan = createSVGElement('tspan');
-  setAttrs(openSpan, { 'font-weight': 400 });
+  setAttrs(openSpan, { 'font-weight': 500 });
   openSpan.textContent = 'Open';
 
   const dataSpan = createSVGElement('tspan');

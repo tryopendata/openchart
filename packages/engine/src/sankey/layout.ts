@@ -8,14 +8,7 @@
 
 import type { Rect, SankeyNodeAlign } from '@opendata-ai/openchart-core';
 import type { SankeyExtraProperties, SankeyGraph, SankeyLink, SankeyNode } from 'd3-sankey';
-import {
-  sankey,
-  sankeyCenter,
-  sankeyJustify,
-  sankeyLeft,
-  sankeyLinkHorizontal,
-  sankeyRight,
-} from 'd3-sankey';
+import { sankey, sankeyCenter, sankeyJustify, sankeyLeft, sankeyRight } from 'd3-sankey';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,10 +125,46 @@ export function computeSankeyLayout(
 }
 
 /**
- * Generate an SVG path string for a sankey link using d3-sankey's
- * horizontal link shape generator.
+ * Generate a filled ribbon SVG path for a sankey link.
+ *
+ * d3-sankey's sankeyLinkHorizontal() only produces a stroke centerline.
+ * This generates a closed area path with two cubic bezier edges (top and
+ * bottom) forming a ribbon whose width is proportional to flow value.
+ *
+ * The link object from d3-sankey provides:
+ *   - y0: center y at source side
+ *   - y1: center y at target side
+ *   - width: thickness of the ribbon
+ *   - source.x1: right edge of source node
+ *   - target.x0: left edge of target node
  */
 export function generateLinkPath(link: ComputedLink): string {
-  const pathGen = sankeyLinkHorizontal<NodeExtra, LinkExtra>();
-  return pathGen(link) ?? '';
+  const source = link.source as ComputedNode;
+  const target = link.target as ComputedNode;
+
+  const x0 = source.x1 ?? 0;
+  const x1 = target.x0 ?? 0;
+  const y0 = link.y0 ?? 0;
+  const y1 = link.y1 ?? 0;
+  const halfWidth0 = (link.width ?? 0) / 2;
+  const halfWidth1 = halfWidth0;
+
+  // Control point x at the horizontal midpoint for smooth S-curves
+  const mx = (x0 + x1) / 2;
+
+  // Top edge: left-to-right
+  const topY0 = y0 - halfWidth0;
+  const topY1 = y1 - halfWidth1;
+
+  // Bottom edge: right-to-left
+  const botY0 = y0 + halfWidth0;
+  const botY1 = y1 + halfWidth1;
+
+  return [
+    `M${x0},${topY0}`,
+    `C${mx},${topY0} ${mx},${topY1} ${x1},${topY1}`,
+    `L${x1},${botY1}`,
+    `C${mx},${botY1} ${mx},${botY0} ${x0},${botY0}`,
+    'Z',
+  ].join(' ');
 }

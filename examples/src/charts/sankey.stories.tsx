@@ -182,10 +182,10 @@ export const DarkMode = () => (
 
 const animatedSpec: SankeySpec = {
   ...energyFlowSpec,
-  animation: { enter: { duration: 1200 } },
+  animation: true,
   chrome: {
     title: 'Animated Energy Flow',
-    subtitle: 'Custom 1.2s entrance animation duration',
+    subtitle: 'Entrance animation with staggered fade-in',
     source: 'U.S. Energy Information Administration',
   },
 };

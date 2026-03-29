@@ -26,7 +26,13 @@ import type {
   TooltipContent,
   TooltipField,
 } from '@opendata-ai/openchart-core';
-import { adaptTheme, computeChrome, formatNumber, resolveTheme } from '@opendata-ai/openchart-core';
+import {
+  adaptTheme,
+  computeChrome,
+  estimateTextWidth,
+  formatNumber,
+  resolveTheme,
+} from '@opendata-ai/openchart-core';
 
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
@@ -57,9 +63,10 @@ function pickColor(palette: string[], index: number): string {
  * Build a color map for nodes.
  * If encoding.color is specified, groups by that field's value.
  * Otherwise, assigns by unique node ID cycling the palette.
+ * Accepts any array with `id` field (works with ComputedNode[] or plain objects).
  */
 function buildNodeColorMap(
-  nodes: ComputedNode[],
+  nodes: Array<{ id: string }>,
   palette: string[],
   colorField: string | undefined,
   data: Record<string, unknown>[],
@@ -219,7 +226,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
 
   // 4. Compute drawing area (total space minus chrome)
   const padding = theme.spacing.padding;
-  const area: Rect = {
+  const fullArea: Rect = {
     x: padding,
     y: padding + chrome.topHeight,
     width: options.width - padding * 2,
@@ -227,8 +234,8 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   };
 
   // Guard against negative dimensions
-  if (area.width <= 0 || area.height <= 0) {
-    return emptyLayout(area, chrome, theme, options);
+  if (fullArea.width <= 0 || fullArea.height <= 0) {
+    return emptyLayout(fullArea, chrome, theme, options);
   }
 
   // 5. Extract encoding fields
@@ -236,6 +243,44 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const targetField = sankeySpec.encoding.target.field;
   const valueField = sankeySpec.encoding.value.field;
   const colorField = sankeySpec.encoding.color?.field;
+
+  // 5b. Pre-compute legend to reserve vertical space
+  //     We need the color map first, so build a temporary one from raw data
+  const tempNodeIds = new Set<string>();
+  for (const row of sankeySpec.data) {
+    tempNodeIds.add(String(row[sourceField]));
+    tempNodeIds.add(String(row[targetField]));
+  }
+  const tempColorMap = buildNodeColorMap(
+    [...tempNodeIds].map((id) => ({ id })),
+    theme.colors.categorical,
+    colorField,
+    sankeySpec.data,
+    sourceField,
+    targetField,
+  );
+  const legend = buildSankeyLegend(
+    tempColorMap,
+    colorField,
+    sankeySpec.data,
+    sourceField,
+    targetField,
+    theme,
+    fullArea,
+  );
+
+  // Reserve legend space by shrinking the drawing area
+  const legendGap = legend.entries.length > 0 ? 4 : 0;
+  const area: Rect = {
+    x: fullArea.x,
+    y: fullArea.y + legend.bounds.height + legendGap,
+    width: fullArea.width,
+    height: fullArea.height - legend.bounds.height - legendGap,
+  };
+
+  if (area.height <= 0) {
+    return emptyLayout(area, chrome, theme, options);
+  }
 
   // 6. Run d3-sankey layout
   const { nodes, links } = computeSankeyLayout(
@@ -324,14 +369,15 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     };
   });
 
-  // 12. Build legend
-  const legend = buildSankeyLegend(
+  // 12. Rebuild legend with final color map (temp map may differ in node order)
+  const finalLegend = buildSankeyLegend(
     nodeColorMap,
     colorField,
     sankeySpec.data,
     sourceField,
     targetField,
     theme,
+    fullArea,
   );
 
   // 13. Build tooltip descriptors
@@ -353,7 +399,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     chrome,
     nodes: nodeMarks,
     links: linkMarks,
-    legend,
+    legend: finalLegend,
     tooltipDescriptors,
     a11y,
     theme,
@@ -376,6 +422,7 @@ function buildSankeyLegend(
   sourceField: string,
   targetField: string,
   theme: ResolvedTheme,
+  area: Rect,
 ): LegendLayout {
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -415,10 +462,43 @@ function buildSankeyLegend(
     entries = [];
   }
 
+  // Compute bounds for horizontal top legend
+  let bounds = { x: 0, y: 0, width: 0, height: 0 };
+
+  if (entries.length > 0) {
+    const ROW_HEIGHT = SWATCH_SIZE + 4;
+    const availableWidth = area.width;
+
+    // Compute row count by simulating horizontal wrapping
+    let rowCount = 1;
+    let rowX = 0;
+    for (const entry of entries) {
+      const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
+      const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
+      if (rowX > 0 && rowX + entryWidth > availableWidth) {
+        rowCount++;
+        rowX = entryWidth;
+      } else {
+        rowX += entryWidth;
+      }
+    }
+
+    // Cap at 2 rows max
+    rowCount = Math.min(rowCount, 2);
+    const legendHeight = rowCount * ROW_HEIGHT;
+
+    bounds = {
+      x: area.x,
+      y: area.y,
+      width: availableWidth,
+      height: legendHeight,
+    };
+  }
+
   return {
     position: 'top',
     entries,
-    bounds: { x: 0, y: 0, width: 0, height: 0 },
+    bounds,
     labelStyle,
     swatchSize: SWATCH_SIZE,
     swatchGap: SWATCH_GAP,
