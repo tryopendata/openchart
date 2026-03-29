@@ -44,6 +44,7 @@ export type {
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
+  NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
   SimulationConfig,
@@ -56,6 +57,7 @@ export {
   compile,
   compileChart,
   compileGraph,
+  compileSankey,
   compileTable,
   getChartRenderer,
   normalizeSpec,
@@ -79,6 +81,8 @@ export type { UseTableReturn } from './hooks/useTable';
 export { useTable } from './hooks/useTable';
 export type { UseTableStateOptions, UseTableStateReturn } from './hooks/useTableState';
 export { useTableState } from './hooks/useTableState';
+export type { SankeyHandle, SankeyProps } from './Sankey';
+export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeContext';
 // Theme context
 export { useVizDarkMode, useVizTheme, VizThemeProvider } from './ThemeContext';

@@ -545,6 +545,107 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
 }
 
 // ---------------------------------------------------------------------------
+// Sankey validation
+// ---------------------------------------------------------------------------
+
+function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  // Validate data
+  if (!Array.isArray(spec.data)) {
+    errors.push({
+      message: 'Spec error: sankey spec requires a "data" array',
+      path: 'data',
+      code: 'INVALID_TYPE',
+      suggestion:
+        'Provide data as an array of objects, e.g. data: [{ source: "A", target: "B", value: 10 }]',
+    });
+    return;
+  }
+
+  if (spec.data.length === 0) {
+    errors.push({
+      message: 'Spec error: "data" must be a non-empty array',
+      path: 'data',
+      code: 'EMPTY_DATA',
+      suggestion: 'Add at least one data row, e.g. data: [{ source: "A", target: "B", value: 10 }]',
+    });
+    return;
+  }
+
+  const firstRow = spec.data[0] as unknown;
+  if (typeof firstRow !== 'object' || firstRow === null || Array.isArray(firstRow)) {
+    errors.push({
+      message: 'Spec error: each item in "data" must be a plain object',
+      path: 'data[0]',
+      code: 'INVALID_TYPE',
+      suggestion:
+        'Each data item should be an object, e.g. { source: "A", target: "B", value: 10 }',
+    });
+    return;
+  }
+
+  // Validate encoding
+  if (!spec.encoding || typeof spec.encoding !== 'object') {
+    errors.push({
+      message:
+        'Spec error: sankey spec requires an "encoding" object with source, target, and value channels',
+      path: 'encoding',
+      code: 'MISSING_FIELD',
+      suggestion:
+        'Add an encoding object, e.g. encoding: { source: { field: "source", type: "nominal" }, target: { field: "target", type: "nominal" }, value: { field: "value", type: "quantitative" } }',
+    });
+    return;
+  }
+
+  const encoding = spec.encoding as Record<string, unknown>;
+  const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
+  const availableColumns = [...dataColumns].join(', ');
+
+  // Required channels
+  for (const channel of ['source', 'target', 'value'] as const) {
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (!ch || typeof ch !== 'object') {
+      errors.push({
+        message: `Spec error: sankey encoding requires "${channel}" channel`,
+        path: `encoding.${channel}`,
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
+      });
+      continue;
+    }
+
+    if (!ch.field || typeof ch.field !== 'string') {
+      errors.push({
+        message: `Spec error: encoding.${channel} must have a "field" string`,
+        path: `encoding.${channel}.field`,
+        code: 'MISSING_FIELD',
+        suggestion: `Add a field name from your data columns: ${availableColumns}`,
+      });
+      continue;
+    }
+
+    if (!dataColumns.has(ch.field as string)) {
+      errors.push({
+        message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist in data. Available columns: ${availableColumns}`,
+        path: `encoding.${channel}.field`,
+        code: 'DATA_FIELD_MISSING',
+        suggestion: `Use one of the available data columns: ${availableColumns}`,
+      });
+    }
+  }
+
+  // Validate darkMode if provided
+  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
+    errors.push({
+      message: 'Spec error: darkMode must be "auto", "force", or "off"',
+      path: 'darkMode',
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Layer validation
 // ---------------------------------------------------------------------------
 
@@ -678,19 +779,20 @@ export function validateSpec(spec: unknown): ValidationResult {
   const hasMark = 'mark' in obj;
   const isTable = obj.type === 'table';
   const isGraph = obj.type === 'graph';
-  const isLayer = hasLayer && !isTable && !isGraph;
-  const isChart = hasMark && !hasLayer && !isTable && !isGraph;
+  const isSankey = obj.type === 'sankey';
+  const isLayer = hasLayer && !isTable && !isGraph && !isSankey;
+  const isChart = hasMark && !hasLayer && !isTable && !isGraph && !isSankey;
 
-  if (!isChart && !isTable && !isGraph && !isLayer) {
+  if (!isChart && !isTable && !isGraph && !isSankey && !isLayer) {
     return {
       valid: false,
       errors: [
         {
           message:
-            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs',
+            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey',
           path: 'mark',
           code: 'MISSING_FIELD',
-          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field for tables/graphs (type: "table" or type: "graph"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
+          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field for tables/graphs/sankey (type: "table", type: "graph", or type: "sankey"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
         },
       ],
       normalized: null,
@@ -733,6 +835,8 @@ export function validateSpec(spec: unknown): ValidationResult {
     validateTableSpec(obj, errors);
   } else if (isGraph) {
     validateGraphSpec(obj, errors);
+  } else if (isSankey) {
+    validateSankeySpec(obj, errors);
   }
 
   if (errors.length > 0) {

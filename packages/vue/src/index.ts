@@ -35,6 +35,7 @@ export type {
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
+  NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
   SimulationConfig,
@@ -47,6 +48,7 @@ export {
   compile,
   compileChart,
   compileGraph,
+  compileSankey,
   compileTable,
   getChartRenderer,
   normalizeSpec,
@@ -73,6 +75,8 @@ export type { DataTableProps } from './DataTable';
 export { DataTable } from './DataTable';
 export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
+export type { SankeyProps } from './Sankey';
+export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeProvider';
 export { VizThemeProvider } from './ThemeProvider';
 export type { VisualizationProps } from './Visualization';

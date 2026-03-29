@@ -6,11 +6,12 @@
  */
 
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isTableSpec } from '@opendata-ai/openchart-core';
+import { isGraphSpec, isSankeySpec, isTableSpec } from '@opendata-ai/openchart-core';
 import type { CSSProperties } from 'react';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
+import { Sankey } from './Sankey';
 
 export interface VisualizationProps {
   /** The visualization spec to render. */
@@ -46,6 +47,11 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
   if (isGraphSpec(spec)) {
     return (
       <Graph spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
+    );
+  }
+  if (isSankeySpec(spec)) {
+    return (
+      <Sankey spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );
   }
   return (

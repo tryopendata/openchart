@@ -18,6 +18,7 @@ import type {
   FieldType,
   GraphSpec,
   LayerSpec,
+  SankeySpec,
   TableSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
@@ -25,11 +26,12 @@ import {
   isChartSpec,
   isGraphSpec,
   isLayerSpec,
+  isSankeySpec,
   isTableSpec,
   resolveMarkDef,
   resolveMarkType,
 } from '@opendata-ai/openchart-core';
-
+import type { NormalizedSankeySpec } from '../sankey/types';
 import type {
   NormalizedChartSpec,
   NormalizedChrome,
@@ -233,6 +235,24 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
   };
 }
 
+function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedSankeySpec {
+  return {
+    type: 'sankey',
+    data: spec.data,
+    encoding: spec.encoding,
+    nodeWidth: spec.nodeWidth ?? 12,
+    nodePadding: spec.nodePadding ?? 16,
+    nodeAlign: spec.nodeAlign ?? 'justify',
+    iterations: spec.iterations ?? 6,
+    linkStyle: spec.linkStyle ?? 'gradient',
+    chrome: normalizeChrome(spec.chrome),
+    legend: spec.legend,
+    theme: spec.theme ?? {},
+    darkMode: spec.darkMode ?? 'off',
+    animation: spec.animation,
+  };
+}
+
 function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGraphSpec {
   // Default layout with chargeStrength and linkDistance
   const defaultLayout = {
@@ -292,9 +312,12 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   if (isGraphSpec(spec)) {
     return normalizeGraphSpec(spec, warnings);
   }
+  if (isSankeySpec(spec)) {
+    return normalizeSankeySpec(spec, warnings);
+  }
   // Should never happen after validation
   throw new Error(
-    `Unknown spec shape. Expected mark (chart), layer, type: 'table', or type: 'graph'.`,
+    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', or type: 'sankey'.`,
   );
 }
 

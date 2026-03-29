@@ -926,6 +926,102 @@ export interface GraphLayout {
 }
 
 // ---------------------------------------------------------------------------
+// SankeyLayout (engine output for sankey diagrams)
+// ---------------------------------------------------------------------------
+
+/** A resolved sankey node with computed position and visual properties. */
+export interface SankeyNodeMark {
+  type: 'sankeyNode';
+  /** Left edge x position. */
+  x: number;
+  /** Top edge y position. */
+  y: number;
+  /** Node rectangle width. */
+  width: number;
+  /** Node rectangle height (proportional to throughput). */
+  height: number;
+  /** Fill color. */
+  fill: string;
+  /** Stroke color. */
+  stroke?: string;
+  /** Stroke width. */
+  strokeWidth?: number;
+  /** Corner radius for subtle rounding. */
+  cornerRadius: number;
+  /** Node label positioned outside the node. */
+  label: ResolvedLabel;
+  /** Node identifier (unique across the diagram). */
+  nodeId: string;
+  /** Total value flowing through this node. */
+  value: number;
+  /** Depth column (0 = leftmost). */
+  depth: number;
+  /** Original data associated with this node. */
+  data: Record<string, unknown>;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
+}
+
+/** A resolved sankey link with computed path and visual properties. */
+export interface SankeyLinkMark {
+  type: 'sankeyLink';
+  /** SVG path string for the curved ribbon. */
+  path: string;
+  /** Source node color (for gradient start). */
+  sourceColor: string;
+  /** Target node color (for gradient end). */
+  targetColor: string;
+  /** Fill opacity (0.35 default, increases on hover). */
+  fillOpacity: number;
+  /** Source node identifier. */
+  sourceId: string;
+  /** Target node identifier. */
+  targetId: string;
+  /** Link ribbon width at its thinnest point. */
+  width: number;
+  /** Flow value this link represents. */
+  value: number;
+  /** Original data row for this link. */
+  data: Record<string, unknown>;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
+}
+
+/**
+ * SankeyLayout: the complete engine output for sankey diagram visualizations.
+ *
+ * Contains everything an adapter needs to render the sankey: dimensions,
+ * chrome, nodes, links, legend, tooltip descriptors, and accessibility metadata.
+ * No axes (sankey has no traditional axis system).
+ */
+export interface SankeyLayout {
+  /** The sankey drawing area (after chrome and legend are subtracted). */
+  area: Rect;
+  /** Resolved chrome text elements with positions and styles. */
+  chrome: ResolvedChrome;
+  /** Resolved sankey node marks with positions and colors. */
+  nodes: SankeyNodeMark[];
+  /** Resolved sankey link marks with paths and gradient colors. */
+  links: SankeyLinkMark[];
+  /** Legend layout (position, entries, bounds). */
+  legend: LegendLayout;
+  /** Tooltip descriptors keyed by node/link identifier. */
+  tooltipDescriptors: Map<string, TooltipContent>;
+  /** Accessibility metadata. */
+  a11y: A11yMetadata;
+  /** The resolved theme used for rendering. */
+  theme: ResolvedTheme;
+  /** Total SVG dimensions. */
+  dimensions: { width: number; height: number };
+  /** Resolved animation config. Present only when animation is enabled. */
+  animation?: ResolvedAnimation;
+}
+
+// ---------------------------------------------------------------------------
 // Compile options (engine input)
 // ---------------------------------------------------------------------------
 

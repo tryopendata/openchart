@@ -873,6 +873,59 @@ export interface LayerSpec {
   animation?: AnimationSpec;
 }
 
+// ---------------------------------------------------------------------------
+// Sankey spec (encoding-centric flow diagram)
+// ---------------------------------------------------------------------------
+
+/** Node alignment strategy for sankey layout. */
+export type SankeyNodeAlign = 'left' | 'right' | 'center' | 'justify';
+
+/** Link coloring strategy for sankey diagrams. */
+export type SankeyLinkColor = 'gradient' | 'source' | 'target' | 'neutral';
+
+/** Encoding channels specific to sankey diagrams. */
+export interface SankeyEncoding {
+  /** Source node field (required, nominal). */
+  source: EncodingChannel;
+  /** Target node field (required, nominal). */
+  target: EncodingChannel;
+  /** Flow value field (required, quantitative). */
+  value: EncodingChannel;
+  /** Color encoding for nodes/links (optional, nominal). */
+  color?: EncodingChannel;
+  /** Tooltip encoding (optional). */
+  tooltip?: EncodingChannel | EncodingChannel[];
+}
+
+export interface SankeySpec {
+  /** Discriminant: always "sankey". */
+  type: 'sankey';
+  /** Tabular flow data. Each row is a source-target-value link. */
+  data: DataRow[];
+  /** Encoding channels mapping data fields to visual properties. */
+  encoding: SankeyEncoding;
+  /** Width of node rectangles in pixels. Defaults to 12. */
+  nodeWidth?: number;
+  /** Vertical padding between nodes in pixels. Defaults to 16. */
+  nodePadding?: number;
+  /** Node alignment algorithm. Defaults to 'justify'. */
+  nodeAlign?: SankeyNodeAlign;
+  /** Number of layout relaxation iterations. Defaults to 6. */
+  iterations?: number;
+  /** Link coloring strategy. Defaults to 'gradient'. */
+  linkStyle?: SankeyLinkColor;
+  /** Editorial chrome (title, subtitle, source, byline, footer). */
+  chrome?: Chrome;
+  /** Legend display configuration. */
+  legend?: LegendConfig;
+  /** Theme configuration overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode behavior. Defaults to "off". */
+  darkMode?: DarkMode;
+  /** Animation configuration for entrance animations. */
+  animation?: AnimationSpec;
+}
+
 /**
  * Top-level visualization spec: union discriminated by structural shape.
  *
@@ -880,8 +933,9 @@ export interface LayerSpec {
  * - LayerSpec: has `layer` field
  * - TableSpec: has `type: 'table'`
  * - GraphSpec: has `type: 'graph'`
+ * - SankeySpec: has `type: 'sankey'`
  */
-export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec;
+export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec | SankeySpec;
 
 /** Chart spec without runtime data, for persistence/storage. */
 export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
@@ -889,8 +943,14 @@ export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
 export type TableSpecWithoutData = Omit<TableSpec, 'data' | 'columns'>;
 /** Graph spec without runtime data, for persistence/storage. */
 export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
+/** Sankey spec without runtime data, for persistence/storage. */
+export type SankeySpecWithoutData = Omit<SankeySpec, 'data'>;
 /** Union of data-stripped spec types for persistence/storage. */
-export type StoredVizSpec = ChartSpecWithoutData | TableSpecWithoutData | GraphSpecWithoutData;
+export type StoredVizSpec =
+  | ChartSpecWithoutData
+  | TableSpecWithoutData
+  | GraphSpecWithoutData
+  | SankeySpecWithoutData;
 
 // ---------------------------------------------------------------------------
 // Transforms (Vega-Lite aligned)
@@ -1125,6 +1185,11 @@ export function isTableSpec(spec: VizSpec | Record<string, unknown>): spec is Ta
 /** Check if a spec is a GraphSpec. */
 export function isGraphSpec(spec: VizSpec | Record<string, unknown>): spec is GraphSpec {
   return 'type' in spec && (spec as Record<string, unknown>).type === 'graph';
+}
+
+/** Check if a spec is a SankeySpec. */
+export function isSankeySpec(spec: VizSpec | Record<string, unknown>): spec is SankeySpec {
+  return 'type' in spec && (spec as Record<string, unknown>).type === 'sankey';
 }
 
 // ---------------------------------------------------------------------------

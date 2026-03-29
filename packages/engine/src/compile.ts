@@ -92,6 +92,7 @@ import { computeDimensions } from './layout/dimensions';
 import { computeGridlines } from './layout/gridlines';
 import { computeScales, type ResolvedScales } from './layout/scales';
 import { computeLegend } from './legend/compute';
+import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
 import { computeTooltipDescriptors } from './tooltips/compute';
 import { runTransforms } from './transforms';
@@ -211,6 +212,12 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'graph') {
     throw new Error('compileChart received a graph spec. Use compileGraph instead.');
+  }
+  if (
+    'type' in normalized &&
+    (normalized as unknown as Record<string, unknown>).type === 'sankey'
+  ) {
+    throw new Error('compileChart received a sankey spec. Use compileSankey instead.');
   }
 
   let chartSpec = normalized as NormalizedChartSpec;
@@ -711,4 +718,27 @@ export function compileTable(spec: unknown, options: CompileTableOptions): Table
  */
 export function compileGraph(spec: unknown, options: CompileOptions): GraphCompilation {
   return compileGraphImpl(spec, options);
+}
+
+// ---------------------------------------------------------------------------
+// Sankey compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a sankey spec into a SankeyLayout.
+ *
+ * Takes a raw sankey spec, validates, normalizes, resolves theme and chrome,
+ * runs the d3-sankey layout algorithm, builds node/link marks with colors and
+ * labels, and returns a SankeyLayout ready for rendering.
+ *
+ * @param spec - Raw sankey spec (validated and normalized internally).
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns SankeyLayout with computed positions and visual properties.
+ * @throws Error if spec is invalid or not a sankey type.
+ */
+export function compileSankey(
+  spec: unknown,
+  options: CompileOptions,
+): import('@opendata-ai/openchart-core').SankeyLayout {
+  return compileSankeyImpl(spec, options);
 }

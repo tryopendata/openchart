@@ -12,7 +12,7 @@
 // Main compile API
 // ---------------------------------------------------------------------------
 
-export { compileChart, compileGraph, compileLayer, compileTable } from './compile';
+export { compileChart, compileGraph, compileLayer, compileSankey, compileTable } from './compile';
 
 // ---------------------------------------------------------------------------
 // Animation resolution
@@ -30,6 +30,12 @@ export type {
   GraphCompilation,
   SimulationConfig,
 } from './graphs/types';
+
+// ---------------------------------------------------------------------------
+// Sankey compilation types
+// ---------------------------------------------------------------------------
+
+export type { NormalizedSankeySpec } from './sankey/types';
 
 // ---------------------------------------------------------------------------
 // Compiler pipeline (spec validation, normalization, generic compile)
@@ -90,6 +96,8 @@ export type {
   GraphLayout,
   GraphSpec,
   LayerSpec,
+  SankeyLayout,
+  SankeySpec,
   TableLayout,
   TableSpec,
   VizSpec,

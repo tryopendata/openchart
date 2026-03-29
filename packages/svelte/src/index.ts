@@ -35,6 +35,7 @@ export type {
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
+  NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
   SimulationConfig,
@@ -47,6 +48,7 @@ export {
   compile,
   compileChart,
   compileGraph,
+  compileSankey,
   compileTable,
   getChartRenderer,
   normalizeSpec,
@@ -73,12 +75,14 @@ export { useTableState } from './composables/useTableState.svelte.js';
 export { getVizDarkMode, getVizTheme, setVizDarkMode, setVizTheme } from './context.js';
 export { default as DataTable } from './DataTable.svelte';
 export { default as Graph } from './Graph.svelte';
+export { default as Sankey } from './Sankey.svelte';
 export { default as VizThemeProvider } from './ThemeProvider.svelte';
 // Component prop types
 export type {
   ChartProps,
   DataTableProps,
   GraphProps,
+  SankeyProps,
   VisualizationProps,
   VizThemeProviderProps,
 } from './types.js';
