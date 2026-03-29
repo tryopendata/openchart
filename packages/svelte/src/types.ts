@@ -14,6 +14,7 @@ import type {
   GraphSpec,
   LayerSpec,
   MarkEvent,
+  SankeySpec,
   SortState,
   TableSpec,
   TextAnnotation,
@@ -60,6 +61,18 @@ export interface GraphProps {
   onnodeclick?: (node: Record<string, unknown>) => void;
   onnodedoubleclick?: (node: Record<string, unknown>) => void;
   onselectionchange?: (nodeIds: string[]) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface SankeyProps {
+  spec: SankeySpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  onnodeclick?: (node: Record<string, unknown>) => void;
+  onlinkclick?: (link: Record<string, unknown>) => void;
+  onnodehover?: (node: Record<string, unknown> | null) => void;
+  onlinkhover?: (link: Record<string, unknown> | null) => void;
   class?: string;
   style?: string;
 }

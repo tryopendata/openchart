@@ -41,6 +41,9 @@ export {
 } from './renderers/table-cells';
 // Resize observer
 export { observeResize } from './resize-observer';
+export type { SankeyInstance, SankeyMountOptions } from './sankey-mount';
+// Sankey mount API
+export { createSankey } from './sankey-mount';
 // SVG renderer (for advanced usage / custom rendering)
 export { registerMarkRenderer, renderChartSVG } from './svg-renderer';
 export type { KeyboardNavOptions } from './table-keyboard';

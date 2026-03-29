@@ -114,4 +114,24 @@
     animation: oc-enter-fade 400ms var(--oc-ease-smooth) both;
     animation-delay: calc(var(--oc-animation-duration) + var(--oc-annotation-delay, 200ms));
   }
+
+  /* Sankey nodes: fade in with stagger by column depth (left-to-right) */
+  & .oc-sankey-node rect {
+    animation: oc-enter-fade-only var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+  }
+
+  /* Sankey links: fade in after nodes, with stagger.
+     Links delay by 30% of duration so nodes appear first, then links flow in. */
+  & .oc-sankey-link path {
+    animation: oc-enter-fade-only var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    animation-delay: calc(
+      var(--oc-animation-duration) *
+      0.3 +
+      var(--oc-animation-stagger) *
+      var(--oc-mark-index, 0)
+    );
+  }
 }

@@ -1,0 +1,353 @@
+import { describe, expect, it } from 'vitest';
+import { compileSankey } from '../../compile';
+
+// ---------------------------------------------------------------------------
+// Shared fixtures
+// ---------------------------------------------------------------------------
+
+const basicSpec = {
+  type: 'sankey' as const,
+  data: [
+    { from: 'A', to: 'C', amount: 10 },
+    { from: 'B', to: 'C', amount: 20 },
+    { from: 'C', to: 'D', amount: 15 },
+    { from: 'C', to: 'E', amount: 15 },
+  ],
+  encoding: {
+    source: { field: 'from', type: 'nominal' as const },
+    target: { field: 'to', type: 'nominal' as const },
+    value: { field: 'amount', type: 'quantitative' as const },
+  },
+};
+
+const defaultOptions = { width: 600, height: 400 };
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('compileSankey', () => {
+  it('compiles a basic sankey and returns correct node/link counts', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+
+    // A, B, C, D, E = 5 nodes
+    expect(result.nodes).toHaveLength(5);
+    // A->C, B->C, C->D, C->E = 4 links
+    expect(result.links).toHaveLength(4);
+  });
+
+  it('infers nodes from unique source/target values in data', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+
+    const nodeIds = result.nodes.map((n) => n.nodeId).sort();
+    expect(nodeIds).toEqual(['A', 'B', 'C', 'D', 'E']);
+  });
+
+  it('node positions are valid (x >= 0, y >= 0, width > 0, height > 0)', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+
+    for (const node of result.nodes) {
+      expect(node.x).toBeGreaterThanOrEqual(0);
+      expect(node.y).toBeGreaterThanOrEqual(0);
+      expect(node.width).toBeGreaterThan(0);
+      expect(node.height).toBeGreaterThan(0);
+    }
+  });
+
+  it('link paths are valid SVG path strings starting with M', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+
+    for (const link of result.links) {
+      expect(link.path).toBeTruthy();
+      expect(link.path[0]).toBe('M');
+    }
+  });
+
+  it('nodes get default colors from theme categorical palette', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+
+    for (const node of result.nodes) {
+      expect(node.fill).toBeTruthy();
+      // Should be a color string (hex, rgb, etc.)
+      expect(typeof node.fill).toBe('string');
+    }
+
+    // With 5 nodes and no color encoding, each node gets a different palette slot
+    const fills = new Set(result.nodes.map((n) => n.fill));
+    expect(fills.size).toBe(5);
+  });
+
+  it('color encoding groups nodes by category value', () => {
+    const spec = {
+      ...basicSpec,
+      encoding: {
+        ...basicSpec.encoding,
+        color: { field: 'from', type: 'nominal' as const },
+      },
+    };
+    const result = compileSankey(spec, defaultOptions);
+
+    // Nodes that share the same color field value should share the same color.
+    // "from" field: A has "A", B has "B", C is a target (gets the color of
+    // the first row where it appears as source or target).
+    const nodeA = result.nodes.find((n) => n.nodeId === 'A')!;
+    const nodeB = result.nodes.find((n) => n.nodeId === 'B')!;
+    // A and B have different "from" categories, so different colors
+    expect(nodeA.fill).not.toBe(nodeB.fill);
+  });
+
+  describe('linkStyle', () => {
+    it('gradient: sourceColor and targetColor differ (match connected nodes)', () => {
+      const spec = { ...basicSpec, linkStyle: 'gradient' as const };
+      const result = compileSankey(spec, defaultOptions);
+
+      // Link from A->C: source and target have different colors
+      const acLink = result.links.find((l) => l.sourceId === 'A' && l.targetId === 'C')!;
+      const nodeA = result.nodes.find((n) => n.nodeId === 'A')!;
+      const nodeC = result.nodes.find((n) => n.nodeId === 'C')!;
+      expect(acLink.sourceColor).toBe(nodeA.fill);
+      expect(acLink.targetColor).toBe(nodeC.fill);
+    });
+
+    it('source: both colors equal source node fill', () => {
+      const spec = { ...basicSpec, linkStyle: 'source' as const };
+      const result = compileSankey(spec, defaultOptions);
+
+      const acLink = result.links.find((l) => l.sourceId === 'A' && l.targetId === 'C')!;
+      const nodeA = result.nodes.find((n) => n.nodeId === 'A')!;
+      expect(acLink.sourceColor).toBe(nodeA.fill);
+      expect(acLink.targetColor).toBe(nodeA.fill);
+    });
+
+    it('target: both colors equal target node fill', () => {
+      const spec = { ...basicSpec, linkStyle: 'target' as const };
+      const result = compileSankey(spec, defaultOptions);
+
+      const acLink = result.links.find((l) => l.sourceId === 'A' && l.targetId === 'C')!;
+      const nodeC = result.nodes.find((n) => n.nodeId === 'C')!;
+      expect(acLink.sourceColor).toBe(nodeC.fill);
+      expect(acLink.targetColor).toBe(nodeC.fill);
+    });
+
+    it('neutral: both colors are the same muted value', () => {
+      const spec = { ...basicSpec, linkStyle: 'neutral' as const };
+      const result = compileSankey(spec, defaultOptions);
+
+      for (const link of result.links) {
+        expect(link.sourceColor).toBe(link.targetColor);
+      }
+
+      // All neutral links share the same color
+      const colors = new Set(result.links.map((l) => l.sourceColor));
+      expect(colors.size).toBe(1);
+    });
+  });
+
+  describe('chrome', () => {
+    it('resolves title and subtitle in output', () => {
+      const spec = {
+        ...basicSpec,
+        chrome: {
+          title: 'Energy Flow',
+          subtitle: 'US energy sources to end uses',
+        },
+      };
+      const result = compileSankey(spec, defaultOptions);
+
+      expect(result.chrome.title).toBeDefined();
+      expect(result.chrome.title!.text).toBe('Energy Flow');
+      expect(result.chrome.subtitle).toBeDefined();
+      expect(result.chrome.subtitle!.text).toBe('US energy sources to end uses');
+    });
+  });
+
+  describe('legend', () => {
+    it('entries match unique node colors when color encoding is set', () => {
+      const spec = {
+        ...basicSpec,
+        encoding: {
+          ...basicSpec.encoding,
+          color: { field: 'from', type: 'nominal' as const },
+        },
+      };
+      const result = compileSankey(spec, defaultOptions);
+
+      // Legend should have entries for the unique color categories
+      expect(result.legend.entries.length).toBeGreaterThan(0);
+      for (const entry of result.legend.entries) {
+        expect(entry.label).toBeTruthy();
+        expect(entry.color).toBeTruthy();
+      }
+    });
+
+    it('has no legend entries when no color encoding is set', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      // Without color encoding, no legend needed
+      expect(result.legend.entries).toHaveLength(0);
+    });
+  });
+
+  describe('tooltip descriptors', () => {
+    it('contains entries for nodes keyed as node-{id}', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      expect(result.tooltipDescriptors.has('node-A')).toBe(true);
+      expect(result.tooltipDescriptors.has('node-B')).toBe(true);
+      expect(result.tooltipDescriptors.has('node-C')).toBe(true);
+      expect(result.tooltipDescriptors.has('node-D')).toBe(true);
+      expect(result.tooltipDescriptors.has('node-E')).toBe(true);
+    });
+
+    it('contains entries for links keyed as link-{source}-{target}', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      expect(result.tooltipDescriptors.has('link-A-C')).toBe(true);
+      expect(result.tooltipDescriptors.has('link-B-C')).toBe(true);
+      expect(result.tooltipDescriptors.has('link-C-D')).toBe(true);
+      expect(result.tooltipDescriptors.has('link-C-E')).toBe(true);
+    });
+
+    it('node tooltip has title and flow field', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      const tooltip = result.tooltipDescriptors.get('node-A')!;
+      expect(tooltip.title).toBeTruthy();
+      expect(tooltip.fields.length).toBeGreaterThan(0);
+      expect(tooltip.fields.some((f) => f.label === 'Total flow')).toBe(true);
+    });
+
+    it('link tooltip has title and flow field', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      const tooltip = result.tooltipDescriptors.get('link-A-C')!;
+      expect(tooltip.title).toContain('A');
+      expect(tooltip.title).toContain('C');
+      expect(tooltip.fields.some((f) => f.label === 'Flow')).toBe(true);
+    });
+  });
+
+  describe('animation', () => {
+    it('node animation indices increase left-to-right by column depth', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      // Group nodes by depth
+      const byDepth = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        const indices = byDepth.get(node.depth) ?? [];
+        indices.push(node.animationIndex);
+        byDepth.set(node.depth, indices);
+      }
+
+      // All indices in a shallower column should be less than all indices
+      // in a deeper column
+      const depths = [...byDepth.keys()].sort((a, b) => a - b);
+      for (let i = 0; i < depths.length - 1; i++) {
+        const currentMax = Math.max(...byDepth.get(depths[i])!);
+        const nextMin = Math.min(...byDepth.get(depths[i + 1])!);
+        expect(currentMax).toBeLessThan(nextMin);
+      }
+    });
+
+    it('link animation indices come after all node indices', () => {
+      const spec = { ...basicSpec, animation: true };
+      const result = compileSankey(spec, defaultOptions);
+
+      const maxNodeIndex = Math.max(...result.nodes.map((n) => n.animationIndex));
+      const minLinkIndex = Math.min(...result.links.map((l) => l.animationIndex));
+      expect(minLinkIndex).toBeGreaterThan(maxNodeIndex);
+    });
+  });
+
+  describe('a11y', () => {
+    it('generates descriptive alt text', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      expect(result.a11y.altText).toContain('5 nodes');
+      expect(result.a11y.altText).toContain('4 links');
+    });
+
+    it('has a data table fallback', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      expect(result.a11y.dataTableFallback.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('dimensions', () => {
+    it('reflects the compile options', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      expect(result.dimensions.width).toBe(600);
+      expect(result.dimensions.height).toBe(400);
+    });
+  });
+
+  describe('dark mode', () => {
+    it('applies dark mode theme when option is set', () => {
+      const result = compileSankey(basicSpec, { ...defaultOptions, darkMode: true });
+
+      expect(result.theme.isDark).toBe(true);
+    });
+  });
+
+  describe('validation', () => {
+    it('throws when data is empty', () => {
+      const spec = {
+        ...basicSpec,
+        data: [],
+      };
+
+      expect(() => compileSankey(spec, defaultOptions)).toThrow();
+    });
+
+    it('throws when source encoding is missing', () => {
+      const spec = {
+        ...basicSpec,
+        encoding: {
+          target: { field: 'to', type: 'nominal' as const },
+          value: { field: 'amount', type: 'quantitative' as const },
+        },
+      };
+
+      expect(() => compileSankey(spec, defaultOptions)).toThrow();
+    });
+
+    it('throws when target encoding is missing', () => {
+      const spec = {
+        ...basicSpec,
+        encoding: {
+          source: { field: 'from', type: 'nominal' as const },
+          value: { field: 'amount', type: 'quantitative' as const },
+        },
+      };
+
+      expect(() => compileSankey(spec, defaultOptions)).toThrow();
+    });
+
+    it('throws when value encoding is missing', () => {
+      const spec = {
+        ...basicSpec,
+        encoding: {
+          source: { field: 'from', type: 'nominal' as const },
+          target: { field: 'to', type: 'nominal' as const },
+        },
+      };
+
+      expect(() => compileSankey(spec, defaultOptions)).toThrow();
+    });
+
+    it('throws for non-sankey specs', () => {
+      const chartSpec = {
+        mark: 'bar' as const,
+        data: [{ x: 1, y: 2 }],
+        encoding: {
+          x: { field: 'x', type: 'quantitative' as const },
+          y: { field: 'y', type: 'quantitative' as const },
+        },
+      };
+
+      expect(() => compileSankey(chartSpec, defaultOptions)).toThrow(/non-sankey spec/);
+    });
+  });
+});

@@ -28,6 +28,7 @@ import type {
   ScaleConfig,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
+import type { NormalizedSankeySpec } from '../sankey/types';
 
 // ---------------------------------------------------------------------------
 // NormalizedChrome: all fields are ChromeText objects (not plain strings)
@@ -114,7 +115,11 @@ export interface NormalizedGraphSpec {
 }
 
 /** Discriminated union of all normalized spec types. */
-export type NormalizedSpec = NormalizedChartSpec | NormalizedTableSpec | NormalizedGraphSpec;
+export type NormalizedSpec =
+  | NormalizedChartSpec
+  | NormalizedTableSpec
+  | NormalizedGraphSpec
+  | NormalizedSankeySpec;
 
 // ---------------------------------------------------------------------------
 // Validation types
