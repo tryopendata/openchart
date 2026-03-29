@@ -1,8 +1,8 @@
 {
-  "packages/core": "6.5.2",
-  "packages/engine": "6.5.2",
-  "packages/vanilla": "6.5.2",
-  "packages/react": "6.5.2",
-  "packages/vue": "6.5.2",
-  "packages/svelte": "6.5.2"
+  "packages/core": "6.6.0",
+  "packages/engine": "6.6.0",
+  "packages/vanilla": "6.6.0",
+  "packages/react": "6.6.0",
+  "packages/vue": "6.6.0",
+  "packages/svelte": "6.6.0"
 }

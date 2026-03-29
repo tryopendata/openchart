@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.6.0](https://github.com/tryopendata/openchart/compare/react-v6.5.2...react-v6.6.0) (2026-03-29)
+
+
+### Features
+
+* add sankey diagram visualization type ([#52](https://github.com/tryopendata/openchart/issues/52)) ([816ce8a](https://github.com/tryopendata/openchart/commit/816ce8a55b2a1902facc1c4d1ae5d8e7261148aa))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.6.0
+    * @opendata-ai/openchart-engine bumped to 6.6.0
+    * @opendata-ai/openchart-vanilla bumped to 6.6.0
+
 ## [6.5.2](https://github.com/tryopendata/openchart/compare/react-v6.5.1...react-v6.5.2) (2026-03-26)
 
 
