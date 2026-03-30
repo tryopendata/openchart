@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.7.0](https://github.com/tryopendata/openchart/compare/vue-v6.6.0...vue-v6.7.0) (2026-03-30)
+
+
+* **vue:** Synchronize openchart versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.7.0
+    * @opendata-ai/openchart-engine bumped to 6.7.0
+    * @opendata-ai/openchart-vanilla bumped to 6.7.0
+
 ## [6.6.0](https://github.com/tryopendata/openchart/compare/vue-v6.5.2...vue-v6.6.0) (2026-03-29)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.7.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.6.0...vanilla-v6.7.0) (2026-03-30)
+
+
+### Features
+
+* add label prefix option and update brand watermark to tryOpenData.ai ([91e5d47](https://github.com/tryopendata/openchart/commit/91e5d4757e2d22a6ee4dabb54774e7061ce7c6c3))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.7.0
+    * @opendata-ai/openchart-engine bumped to 6.7.0
+
 ## [6.6.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.5.2...vanilla-v6.6.0) (2026-03-29)
 
 
