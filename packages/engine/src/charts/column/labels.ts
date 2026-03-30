@@ -45,6 +45,7 @@ export function computeColumnLabels(
   _chartArea: { x: number; y: number; width: number; height: number },
   density: LabelDensity = 'auto',
   labelFormat?: string,
+  labelPrefix?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -72,6 +73,7 @@ export function computeColumnLabels(
       const num = Number(rawValue.replace(/[^0-9.-]/g, ''));
       if (!Number.isNaN(num)) valuePart = formatter(num);
     }
+    if (labelPrefix) valuePart = labelPrefix + valuePart;
 
     const numericValue = parseFloat(valuePart);
     const isNegative = Number.isFinite(numericValue) && numericValue < 0;

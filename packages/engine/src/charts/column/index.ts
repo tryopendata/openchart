@@ -17,7 +17,13 @@ export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy,
   const marks = computeColumnMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
-  const labels = computeColumnLabels(marks, chartArea, spec.labels.density, spec.labels.format);
+  const labels = computeColumnLabels(
+    marks,
+    chartArea,
+    spec.labels.density,
+    spec.labels.format,
+    spec.labels.prefix,
+  );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];
   }

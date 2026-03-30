@@ -51,15 +51,15 @@ export function estimateTextWidth(text: string, fontSize: number, fontWeight = 4
 }
 
 /**
- * Width reserved for the "OpenData" brand watermark in the bottom-right corner.
- * Accounts for ~8 chars at font size 20 with mixed 500/600 weight, plus a gap
+ * Width reserved for the "tryOpenData.ai" brand watermark in the bottom-right corner.
+ * Accounts for ~14 chars at font size 12 with mixed weights, plus a gap
  * so adjacent text doesn't crowd it. Used by chrome and legend layout to avoid
  * overlapping the brand.
  */
 export const BRAND_RESERVE_WIDTH = 110;
 
 /** Font size of the brand watermark (px). Shared between layout and renderer. */
-export const BRAND_FONT_SIZE = 20;
+export const BRAND_FONT_SIZE = 12;
 
 /** Minimum chart width to render the brand watermark (px). */
 export const BRAND_MIN_WIDTH = 120;

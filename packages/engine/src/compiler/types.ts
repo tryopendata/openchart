@@ -70,8 +70,9 @@ export interface NormalizedChartSpec {
   encoding: Encoding;
   chrome: NormalizedChrome;
   annotations: Annotation[];
-  /** Normalized label configuration with defaults applied. density and format are always set; offsets stays optional. */
-  labels: Required<Pick<LabelConfig, 'density' | 'format'>> & Pick<LabelConfig, 'offsets'>;
+  /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets stays optional. */
+  labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
+    Pick<LabelConfig, 'offsets'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   responsive: boolean;

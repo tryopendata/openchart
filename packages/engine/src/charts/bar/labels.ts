@@ -82,6 +82,7 @@ export function computeBarLabels(
   _chartArea: { x: number; y: number; width: number; height: number },
   density: LabelDensity = 'auto',
   labelFormat?: string,
+  labelPrefix?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -112,6 +113,7 @@ export function computeBarLabels(
       const num = parseDisplayNumber(rawValue);
       if (!Number.isNaN(num)) valuePart = formatter(num);
     }
+    if (labelPrefix) valuePart = labelPrefix + valuePart;
 
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;

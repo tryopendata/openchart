@@ -17,7 +17,13 @@ export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _t
   const marks = computeBarMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
-  const labels = computeBarLabels(marks, chartArea, spec.labels.density, spec.labels.format);
+  const labels = computeBarLabels(
+    marks,
+    chartArea,
+    spec.labels.density,
+    spec.labels.format,
+    spec.labels.prefix,
+  );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];
   }

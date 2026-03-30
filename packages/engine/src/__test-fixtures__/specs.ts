@@ -70,7 +70,7 @@ export function makeLineSpec(): NormalizedChartSpec {
     responsive: true,
     theme: {},
     darkMode: 'off',
-    labels: { density: 'auto', format: '' },
+    labels: { density: 'auto', format: '', prefix: '' },
     hiddenSeries: [],
     seriesStyles: {},
   };
@@ -99,7 +99,7 @@ export function makeBarSpec(): NormalizedChartSpec {
     responsive: true,
     theme: {},
     darkMode: 'off',
-    labels: { density: 'auto', format: '' },
+    labels: { density: 'auto', format: '', prefix: '' },
     hiddenSeries: [],
     seriesStyles: {},
   };
@@ -130,7 +130,7 @@ export function makeScatterSpec(): NormalizedChartSpec {
     responsive: true,
     theme: {},
     darkMode: 'off',
-    labels: { density: 'auto', format: '' },
+    labels: { density: 'auto', format: '', prefix: '' },
     hiddenSeries: [],
     seriesStyles: {},
   };

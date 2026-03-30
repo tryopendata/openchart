@@ -40,6 +40,7 @@ export function computeDotLabels(
   marks: PointMark[],
   _chartArea: Rect,
   density: LabelDensity = 'auto',
+  labelPrefix?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -55,8 +56,9 @@ export function computeDotLabels(
     // Format is "category: value". Use the last colon to handle colons in category names.
     const ariaLabel = mark.aria.label;
     const lastColon = ariaLabel.lastIndexOf(':');
-    const valuePart = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
+    let valuePart = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
     if (!valuePart) continue;
+    if (labelPrefix) valuePart = labelPrefix + valuePart;
 
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;

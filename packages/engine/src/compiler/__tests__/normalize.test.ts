@@ -44,7 +44,12 @@ describe('normalizeSpec', () => {
       expect(result.darkMode).toBe('off');
       expect(result.annotations).toEqual([]);
       expect(result.theme).toEqual({});
-      expect(result.labels).toEqual({ density: 'auto', format: '', offsets: undefined });
+      expect(result.labels).toEqual({
+        density: 'auto',
+        format: '',
+        prefix: '',
+        offsets: undefined,
+      });
     });
 
     it('preserves explicit values', () => {
@@ -139,7 +144,12 @@ describe('normalizeSpec', () => {
         labels: { density: 'none', format: ',.0f' },
       };
       const result = normalizeSpec(spec) as NormalizedChartSpec;
-      expect(result.labels).toEqual({ density: 'none', format: ',.0f', offsets: undefined });
+      expect(result.labels).toEqual({
+        density: 'none',
+        format: ',.0f',
+        prefix: '',
+        offsets: undefined,
+      });
     });
 
     it('fills partial label config with defaults', () => {
@@ -148,7 +158,12 @@ describe('normalizeSpec', () => {
         labels: { density: 'endpoints' },
       };
       const result = normalizeSpec(spec) as NormalizedChartSpec;
-      expect(result.labels).toEqual({ density: 'endpoints', format: '', offsets: undefined });
+      expect(result.labels).toEqual({
+        density: 'endpoints',
+        format: '',
+        prefix: '',
+        offsets: undefined,
+      });
     });
 
     it('normalizes annotations with default styles', () => {

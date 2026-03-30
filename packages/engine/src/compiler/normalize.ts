@@ -206,6 +206,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     labels: {
       density: spec.labels?.density ?? 'auto',
       format: spec.labels?.format ?? '',
+      prefix: spec.labels?.prefix ?? '',
       offsets: spec.labels?.offsets,
     },
     legend: spec.legend,

@@ -1135,8 +1135,8 @@ function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   a.setAttribute('rel', 'noopener');
   a.setAttribute('class', 'oc-chrome-ref');
 
-  // "Open" in normal weight, "Data" in semibold, rendered as a single
-  // right-aligned text element with two tspans.
+  // "try" in normal weight, "OpenData" in semibold, ".ai" in normal weight,
+  // rendered as a single right-aligned text element with three tspans.
   const text = createSVGElement('text');
   setAttrs(text, {
     x: rightEdge,
@@ -1149,15 +1149,20 @@ function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   });
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
 
-  const openSpan = createSVGElement('tspan');
-  openSpan.setAttribute('font-weight', '500');
-  openSpan.textContent = 'Open';
-  text.appendChild(openSpan);
+  const trySpan = createSVGElement('tspan');
+  trySpan.setAttribute('font-weight', '500');
+  trySpan.textContent = 'try';
+  text.appendChild(trySpan);
 
-  const dataSpan = createSVGElement('tspan');
-  dataSpan.setAttribute('font-weight', '600');
-  dataSpan.textContent = 'Data';
-  text.appendChild(dataSpan);
+  const openDataSpan = createSVGElement('tspan');
+  openDataSpan.setAttribute('font-weight', '600');
+  openDataSpan.textContent = 'OpenData';
+  text.appendChild(openDataSpan);
+
+  const aiSpan = createSVGElement('tspan');
+  aiSpan.setAttribute('font-weight', '500');
+  aiSpan.textContent = '.ai';
+  text.appendChild(aiSpan);
 
   a.appendChild(text);
   parent.appendChild(a);

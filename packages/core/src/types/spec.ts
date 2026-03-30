@@ -554,6 +554,8 @@ export interface LabelConfig {
   density?: LabelDensity;
   /** Number format override for label values (d3-format string, e.g. ",.0f"). */
   format?: string;
+  /** Literal string prepended to each formatted label value (e.g. "-" or "$"). */
+  prefix?: string;
   /** Per-series pixel offsets for fine-tuning label positions, keyed by series name. */
   offsets?: Record<string, AnnotationOffset>;
 }
