@@ -9,6 +9,12 @@
 
   & > .oc-chrome {
     margin-bottom: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  & > .oc-chrome:first-child {
+    padding-top: 4px;
   }
 
   & table {
