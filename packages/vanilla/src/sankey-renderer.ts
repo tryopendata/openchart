@@ -15,12 +15,12 @@ import type {
   SankeyNodeMark,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { BRAND_MIN_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
+import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
-const BRAND_URL = 'https://opendata.ai';
+const BRAND_URL = 'https://tryopendata.ai';
 
 /** CSS easing preset map for inline style custom properties. */
 const EASE_VAR_MAP: Record<string, string> = {
@@ -225,28 +225,34 @@ function renderBrand(parent: SVGElement, layout: SankeyLayout): void {
   a.setAttribute('rel', 'noopener');
   a.setAttribute('class', 'oc-chrome-ref');
 
+  const BRAND_LARGE = 16;
   const text = createSVGElement('text');
   setAttrs(text, {
     x: rightEdge,
-    y: chromeY,
-    'dominant-baseline': 'hanging',
+    y: chromeY + BRAND_LARGE,
+    'dominant-baseline': 'alphabetic',
     'text-anchor': 'end',
     'font-family': layout.theme.fonts.family,
-    'font-size': 20,
+    'font-size': BRAND_FONT_SIZE,
     'fill-opacity': 0.55,
   });
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
 
-  const openSpan = createSVGElement('tspan');
-  setAttrs(openSpan, { 'font-weight': 500 });
-  openSpan.textContent = 'Open';
+  const trySpan = createSVGElement('tspan');
+  setAttrs(trySpan, { 'font-weight': 500 });
+  trySpan.textContent = 'try';
 
-  const dataSpan = createSVGElement('tspan');
-  setAttrs(dataSpan, { 'font-weight': 600 });
-  dataSpan.textContent = 'Data';
+  const openDataSpan = createSVGElement('tspan');
+  setAttrs(openDataSpan, { 'font-weight': 600, 'font-size': BRAND_LARGE });
+  openDataSpan.textContent = 'OpenData';
 
-  text.appendChild(openSpan);
-  text.appendChild(dataSpan);
+  const aiSpan = createSVGElement('tspan');
+  setAttrs(aiSpan, { 'font-weight': 500 });
+  aiSpan.textContent = '.ai';
+
+  text.appendChild(trySpan);
+  text.appendChild(openDataSpan);
+  text.appendChild(aiSpan);
   a.appendChild(text);
   parent.appendChild(a);
 }
