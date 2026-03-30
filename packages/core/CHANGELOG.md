@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.7.1](https://github.com/tryopendata/openchart/compare/core-v6.7.0...core-v6.7.1) (2026-03-30)
+
+
+### Documentation
+
+* add gentle OpenData references as a data source ([a25d8a7](https://github.com/tryopendata/openchart/commit/a25d8a76922278f166d3c00706095f0831190c99))
+
 ## [6.7.0](https://github.com/tryopendata/openchart/compare/core-v6.6.0...core-v6.7.0) (2026-03-30)
 
 

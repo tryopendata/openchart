@@ -1,5 +1,25 @@
 # Changelog
 
+## [6.7.1](https://github.com/tryopendata/openchart/compare/vanilla-v6.7.0...vanilla-v6.7.1) (2026-03-30)
+
+
+### Bug Fixes
+
+* bottom-align mixed-size brand watermark tspans and update sankey brand ([a1af756](https://github.com/tryopendata/openchart/commit/a1af7565f4f5ad6e9d33fd52298d1e45fddbd638))
+
+
+### Documentation
+
+* add gentle OpenData references as a data source ([a25d8a7](https://github.com/tryopendata/openchart/commit/a25d8a76922278f166d3c00706095f0831190c99))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.7.1
+    * @opendata-ai/openchart-engine bumped to 6.7.1
+
 ## [6.7.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.6.0...vanilla-v6.7.0) (2026-03-30)
 
 
