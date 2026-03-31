@@ -48,8 +48,8 @@ const SWATCH_SIZE = 12;
 const SWATCH_GAP = 6;
 const ENTRY_GAP = 16;
 const LABEL_GAP = 6;
-const LINK_OPACITY_LIGHT = 0.45;
-const LINK_OPACITY_DARK = 0.6;
+const LINK_OPACITY_LIGHT = 0.5;
+const LINK_OPACITY_DARK = 0.75;
 const NODE_CORNER_RADIUS = 2;
 
 // ---------------------------------------------------------------------------
