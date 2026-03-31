@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.8.0](https://github.com/tryopendata/openchart/compare/core-v6.7.1...core-v6.8.0) (2026-03-31)
+
+
+### Features
+
+* **sankey:** add linkOpacity spec option for user control ([6732603](https://github.com/tryopendata/openchart/commit/673260311be8269101e53012b5652dd4ed4e1b2e))
+* **sankey:** add valueFormat for tooltip and ARIA label formatting ([e90da0f](https://github.com/tryopendata/openchart/commit/e90da0f3fd637cf71eb52b730d37b67afb272c3c))
+
+
+### Bug Fixes
+
+* address 6 editorial feedback issues ([96b14f2](https://github.com/tryopendata/openchart/commit/96b14f2dd67dd1af63c6fd93cdeb08383b4fa602))
+* **sankey:** address code review findings ([33e4774](https://github.com/tryopendata/openchart/commit/33e4774328abd2daa5d5e925f9d52c91025a48fa))
+
 ## [6.7.1](https://github.com/tryopendata/openchart/compare/core-v6.7.0...core-v6.7.1) (2026-03-30)
 
 

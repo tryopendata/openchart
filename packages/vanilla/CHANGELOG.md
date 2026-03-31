@@ -1,5 +1,29 @@
 # Changelog
 
+## [6.8.0](https://github.com/tryopendata/openchart/compare/vanilla-v6.7.1...vanilla-v6.8.0) (2026-03-31)
+
+
+### Features
+
+* **sankey:** dim unconnected nodes on hover for focus ([f8f6e71](https://github.com/tryopendata/openchart/commit/f8f6e718c776768589765b361621fa3551ee4629))
+
+
+### Bug Fixes
+
+* address 6 editorial feedback issues ([96b14f2](https://github.com/tryopendata/openchart/commit/96b14f2dd67dd1af63c6fd93cdeb08383b4fa602))
+* prevent sankey label clipping and excess bottom padding ([5f1c748](https://github.com/tryopendata/openchart/commit/5f1c7483b0d6e0453b2926ccd107e68f34f8f1fc))
+* **sankey:** address code review findings ([33e4774](https://github.com/tryopendata/openchart/commit/33e4774328abd2daa5d5e925f9d52c91025a48fa))
+* **sankey:** address devil's advocate review findings ([265823e](https://github.com/tryopendata/openchart/commit/265823e5e7a65b23c86e1438463da0165e5ad515))
+* **sankey:** sanitize gradient IDs to fix broken url() references ([8e58b22](https://github.com/tryopendata/openchart/commit/8e58b220834c026dffd6460d7bdc076f04118364))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.8.0
+    * @opendata-ai/openchart-engine bumped to 6.8.0
+
 ## [6.7.1](https://github.com/tryopendata/openchart/compare/vanilla-v6.7.0...vanilla-v6.7.1) (2026-03-30)
 
 

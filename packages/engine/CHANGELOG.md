@@ -1,5 +1,32 @@
 # Changelog
 
+## [6.8.0](https://github.com/tryopendata/openchart/compare/engine-v6.7.1...engine-v6.8.0) (2026-03-31)
+
+
+### Features
+
+* **sankey:** add linkOpacity spec option for user control ([6732603](https://github.com/tryopendata/openchart/commit/673260311be8269101e53012b5652dd4ed4e1b2e))
+* **sankey:** add valueFormat for tooltip and ARIA label formatting ([e90da0f](https://github.com/tryopendata/openchart/commit/e90da0f3fd637cf71eb52b730d37b67afb272c3c))
+
+
+### Bug Fixes
+
+* address 6 editorial feedback issues ([96b14f2](https://github.com/tryopendata/openchart/commit/96b14f2dd67dd1af63c6fd93cdeb08383b4fa602))
+* prevent sankey label clipping and excess bottom padding ([5f1c748](https://github.com/tryopendata/openchart/commit/5f1c7483b0d6e0453b2926ccd107e68f34f8f1fc))
+* **sankey:** address devil's advocate review findings ([265823e](https://github.com/tryopendata/openchart/commit/265823e5e7a65b23c86e1438463da0165e5ad515))
+* **sankey:** commit and push ([0a0df9e](https://github.com/tryopendata/openchart/commit/0a0df9e93a0e83fbe7b8103d3b328781ee134d4f))
+* **sankey:** increase link opacity in dark mode for visibility ([6964460](https://github.com/tryopendata/openchart/commit/6964460f228dc1796bda9db64abf1d8c9fe12fb9))
+* **sankey:** raise base link opacity for better visibility ([8c35ee6](https://github.com/tryopendata/openchart/commit/8c35ee63df6b0a483943a83c893c7f2b1d7fe106))
+* **sankey:** use buildD3Formatter for literal suffix support, add tests ([4d19a7a](https://github.com/tryopendata/openchart/commit/4d19a7a77db0a741c7d84ee453f1f15f2465c11d))
+* **sankey:** use vivid colors for dark mode nodes and gradients ([911fb07](https://github.com/tryopendata/openchart/commit/911fb070df2df0993522981041f9b873a87f9d7e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.8.0
+
 ## [6.7.1](https://github.com/tryopendata/openchart/compare/engine-v6.7.0...engine-v6.7.1) (2026-03-30)
 
 
