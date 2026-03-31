@@ -379,7 +379,7 @@ function renderGradientDefs(
     // Only create gradients when source and target colors differ
     if (link.sourceColor === link.targetColor) continue;
 
-    const gradId = `oc-sg-${link.sourceId}-${link.targetId}-${i}`;
+    const gradId = `oc-sg-${i}`;
     const gradient = createSVGElement('linearGradient');
     gradient.setAttribute('id', gradId);
     gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
@@ -440,7 +440,7 @@ function renderLinks(
 
     // Use gradient fill when colors differ, otherwise solid fill
     if (link.sourceColor !== link.targetColor) {
-      const gradId = `oc-sg-${link.sourceId}-${link.targetId}-${i}`;
+      const gradId = `oc-sg-${i}`;
       path.setAttribute('fill', `url(#${gradId})`);
     } else {
       path.setAttribute('fill', link.sourceColor);
