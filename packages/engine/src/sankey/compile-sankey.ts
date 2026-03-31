@@ -207,9 +207,18 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const mergedThemeConfig = options.theme
     ? { ...sankeySpec.theme, ...options.theme }
     : sankeySpec.theme;
-  let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
+  const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
+  let theme: ResolvedTheme = lightTheme;
   if (options.darkMode) {
     theme = adaptTheme(theme);
+    // Sankey nodes and link gradients need vivid colors that stand out on dark
+    // backgrounds. The adapted palette preserves contrast ratios designed for
+    // text, but those contrast-matched colors are too dark for filled shapes.
+    // Use the original light-theme categorical palette for node/link colors.
+    theme = {
+      ...theme,
+      colors: { ...theme.colors, categorical: lightTheme.colors.categorical },
+    };
   }
 
   // 3. Compute chrome
