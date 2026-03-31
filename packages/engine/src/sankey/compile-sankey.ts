@@ -48,7 +48,8 @@ const SWATCH_SIZE = 12;
 const SWATCH_GAP = 6;
 const ENTRY_GAP = 16;
 const LABEL_GAP = 6;
-const LINK_OPACITY = 0.35;
+const LINK_OPACITY_LIGHT = 0.35;
+const LINK_OPACITY_DARK = 0.55;
 const NODE_CORNER_RADIUS = 2;
 
 // ---------------------------------------------------------------------------
@@ -398,7 +399,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       path: generateLinkPath(link),
       sourceColor: colors.sourceColor,
       targetColor: colors.targetColor,
-      fillOpacity: LINK_OPACITY,
+      fillOpacity: options.darkMode ? LINK_OPACITY_DARK : LINK_OPACITY_LIGHT,
       sourceId: sourceNode.id,
       targetId: targetNode.id,
       width: link.width ?? 0,
