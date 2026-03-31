@@ -394,6 +394,86 @@ describe('chart chrome rendering', () => {
     expect(title!.textContent).toBe('GDP Growth');
   });
 
+  it('splits subtitle on newline into multiple tspan lines', () => {
+    const spec: ChartSpec = {
+      mark: 'bar',
+      data: [
+        { name: 'A', value: 10 },
+        { name: 'B', value: 20 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'name', type: 'nominal' },
+      },
+      chrome: {
+        title: 'Title',
+        subtitle: 'Line one\nLine two',
+      },
+    };
+    const { svg } = renderSpec(spec, { width: 600, height: 400 });
+    const subtitle = svg.querySelector('.oc-subtitle');
+    expect(subtitle).not.toBeNull();
+    const tspans = subtitle!.querySelectorAll('tspan');
+    // Should produce at least 2 tspans for the two lines
+    expect(tspans.length).toBeGreaterThanOrEqual(2);
+    const fullText = Array.from(tspans)
+      .map((t) => t.textContent)
+      .join('\n');
+    expect(fullText).toContain('Line one');
+    expect(fullText).toContain('Line two');
+  });
+
+  it('handles short text with newline that would fit on one line without it', () => {
+    const spec: ChartSpec = {
+      mark: 'bar',
+      data: [
+        { name: 'A', value: 10 },
+        { name: 'B', value: 20 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'name', type: 'nominal' },
+      },
+      chrome: {
+        title: 'Hi\nThere',
+      },
+    };
+    // Wide enough that "Hi There" would fit on one line, but \n forces two
+    const { svg } = renderSpec(spec, { width: 600, height: 400 });
+    const title = svg.querySelector('.oc-title');
+    expect(title).not.toBeNull();
+    const tspans = title!.querySelectorAll('tspan');
+    expect(tspans.length).toBe(2);
+    expect(tspans[0].textContent).toBe('Hi');
+    expect(tspans[1].textContent).toBe('There');
+  });
+
+  it('handles consecutive newlines producing empty line segments', () => {
+    const spec: ChartSpec = {
+      mark: 'bar',
+      data: [
+        { name: 'A', value: 10 },
+        { name: 'B', value: 20 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'name', type: 'nominal' },
+      },
+      chrome: {
+        title: 'Above\n\nBelow',
+      },
+    };
+    const { svg } = renderSpec(spec, { width: 600, height: 400 });
+    const title = svg.querySelector('.oc-title');
+    expect(title).not.toBeNull();
+    const tspans = title!.querySelectorAll('tspan');
+    // 3 segments: "Above", "", "Below"
+    expect(tspans.length).toBe(3);
+    expect(tspans[0].textContent).toBe('Above');
+    expect(tspans[1].textContent).toBe('');
+    expect(tspans[2].textContent).toBe('Below');
+  });
+
   it('chart with no chrome specified renders no chrome text elements', () => {
     const noChrome: ChartSpec = {
       mark: 'bar',

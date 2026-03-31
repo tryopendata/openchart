@@ -7,8 +7,7 @@
  */
 
 import type { CellStyle, ColumnConfig, TableCellBase } from '@opendata-ai/openchart-core';
-import { formatDate, formatNumber } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
+import { buildD3Formatter, formatDate, formatNumber } from '@opendata-ai/openchart-core';
 
 /**
  * Check if a value is numeric (finite number or parseable numeric string).
@@ -49,15 +48,13 @@ export function formatCell(value: unknown, column: ColumnConfig): TableCellBase 
 
   // If column has a d3-format string and value is numeric
   if (column.format && isNumericValue(value)) {
-    try {
-      const formatter = d3Format(column.format);
+    const formatter = buildD3Formatter(column.format);
+    if (formatter) {
       return {
         value,
         formattedValue: formatter(value),
         style,
       };
-    } catch {
-      // Fall through to auto-format if format string is invalid
     }
   }
 
@@ -95,10 +92,9 @@ export function formatValueForSearch(value: unknown, column: ColumnConfig): stri
   if (value == null) return '';
 
   if (column.format && isNumericValue(value)) {
-    try {
-      return d3Format(column.format)(value);
-    } catch {
-      // Fall through
+    const formatter = buildD3Formatter(column.format);
+    if (formatter) {
+      return formatter(value);
     }
   }
 

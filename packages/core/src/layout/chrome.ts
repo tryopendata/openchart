@@ -91,6 +91,17 @@ function estimateLineCount(
 ): number {
   if (maxWidth <= 0) return 1;
 
+  // Split on explicit newlines first, then estimate wrapping per segment
+  const segments = text.split('\n');
+  if (segments.length > 1) {
+    return segments.reduce((total, segment) => {
+      return (
+        total +
+        (segment.length === 0 ? 1 : estimateLineCount(segment, style, maxWidth, _measureText))
+      );
+    }, 0);
+  }
+
   const charWidth = estimateCharWidth(style.fontSize, style.fontWeight);
   const maxChars = Math.floor(maxWidth / charWidth);
 

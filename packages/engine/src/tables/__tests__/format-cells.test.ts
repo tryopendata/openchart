@@ -106,6 +106,18 @@ describe('formatCell', () => {
     const result = formatCell('not a number', col);
     expect(result.formattedValue).toBe('not a number');
   });
+
+  it('supports literal suffix format .0f%', () => {
+    const col: ColumnConfig = { key: 'x', format: '.0f%' };
+    const result = formatCell(32.5, col);
+    expect(result.formattedValue).toBe('33%');
+  });
+
+  it('supports literal suffix format $,.2~fT', () => {
+    const col: ColumnConfig = { key: 'x', format: '$,.2~fT' };
+    const result = formatCell(3.75, col);
+    expect(result.formattedValue).toBe('$3.75T');
+  });
 });
 
 describe('formatValueForSearch', () => {
@@ -122,5 +134,10 @@ describe('formatValueForSearch', () => {
   it('falls back to String for non-numeric values', () => {
     const col: ColumnConfig = { key: 'x' };
     expect(formatValueForSearch('hello', col)).toBe('hello');
+  });
+
+  it('supports literal suffix format in search', () => {
+    const col: ColumnConfig = { key: 'x', format: '.0f%' };
+    expect(formatValueForSearch(32.5, col)).toBe('33%');
   });
 });

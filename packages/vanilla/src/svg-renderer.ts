@@ -131,6 +131,14 @@ function applyTextStyle(el: SVGElement, style: TextStyle): void {
 function wrapText(text: string, fontSize: number, fontWeight: number, maxWidth: number): string[] {
   if (maxWidth <= 0) return [text];
 
+  // Split on explicit newlines first
+  const segments = text.split('\n');
+  if (segments.length > 1) {
+    return segments.flatMap((segment) =>
+      segment.length === 0 ? [''] : wrapText(segment, fontSize, fontWeight, maxWidth),
+    );
+  }
+
   // Heuristic character width matching text-measure.ts
   const AVG_CHAR_WIDTH = 0.55;
   const WEIGHT_FACTORS: Record<number, number> = {

@@ -203,6 +203,73 @@ describe('computeBarMarks', () => {
     });
   });
 
+  describe('colored (non-stacked) bars', () => {
+    it('renders colored bars when each category has one row with color encoding', () => {
+      const spec: NormalizedChartSpec = {
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        data: [
+          { category: 'Apple', value: 50, type: 'Fruit' },
+          { category: 'Banana', value: 30, type: 'Tropical' },
+          { category: 'Cherry', value: 70, type: 'Berry' },
+        ],
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'category', type: 'nominal' },
+          color: { field: 'type', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(3);
+      // Each bar should have different colors
+      const colors = new Set(marks.map((m) => m.fill));
+      expect(colors.size).toBe(3);
+      // Non-stacked bars should have corner radius
+      expect(marks[0].cornerRadius).toBe(2);
+      // Bars should not be stacked (no stackGroup)
+      expect(marks[0].stackGroup).toBeUndefined();
+    });
+
+    it('handles negative values in colored bars', () => {
+      const spec: NormalizedChartSpec = {
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        data: [
+          { category: 'Growth', value: 15, status: 'positive' },
+          { category: 'Decline', value: -10, status: 'negative' },
+        ],
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'category', type: 'nominal' },
+          color: { field: 'status', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(2);
+      const decline = marks.find((m) => m.aria.label.includes('Decline'))!;
+      const growth = marks.find((m) => m.aria.label.includes('Growth'))!;
+      // Negative bar starts to the left of positive bar
+      expect(decline.x).toBeLessThan(growth.x);
+      expect(decline.width).toBeGreaterThan(0);
+    });
+  });
+
   describe('negative values', () => {
     it('negative bars extend leftward from baseline', () => {
       const spec = makeNegativeBarSpec();

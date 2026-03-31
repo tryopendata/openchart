@@ -498,29 +498,82 @@ function resolveRefLineAnnotation(
   }
   // 'solid' gets no dasharray
 
-  // Label at the right end for horizontal, top end for vertical, with optional offset.
-  // Horizontal refline labels use text-anchor 'end' so text stays inside the chart.
-  // labelAnchor controls which side of the line the label sits on:
-  //   "top" (default): above horizontal, left of vertical
-  //   "bottom": below horizontal, right of vertical
+  // Label placement on reflines. labelAnchor controls position:
+  //
+  // Horizontal reflines (y set):
+  //   "left":   left end of line, above        "right"/"top" (default): right end, above
+  //   "bottom": right end of line, below
+  //
+  // Vertical reflines (x set):
+  //   "right": label to the left of the line, near top
+  //   "bottom": label to the right of the line, near bottom
+  //   "left"/"top" (default): label to the right of the line, near top
   let label: ResolvedLabel | undefined;
   if (annotation.label) {
     const isHorizontal = annotation.y !== undefined;
-    const anchor = annotation.labelAnchor ?? 'top';
-    const baseDx = isHorizontal ? -4 : 4;
-    const baseDy = anchor === 'bottom' ? 14 : -4;
+    const anchor = annotation.labelAnchor ?? (isHorizontal ? 'top' : 'left');
+
+    let baseDx: number;
+    let baseDy: number;
+    let labelX: number;
+    let labelY: number;
+    let textAnchor: 'start' | 'middle' | 'end';
+
+    if (isHorizontal) {
+      if (anchor === 'left') {
+        baseDx = 4;
+        baseDy = -4;
+        labelX = start.x;
+        labelY = start.y;
+        textAnchor = 'start';
+      } else if (anchor === 'bottom') {
+        baseDx = -4;
+        baseDy = 14;
+        labelX = end.x;
+        labelY = end.y;
+        textAnchor = 'end';
+      } else {
+        // 'right', 'top' (default), 'auto'
+        baseDx = -4;
+        baseDy = -4;
+        labelX = end.x;
+        labelY = end.y;
+        textAnchor = 'end';
+      }
+    } else {
+      // Vertical refline
+      if (anchor === 'right') {
+        baseDx = -4;
+        baseDy = 14;
+        labelX = start.x;
+        labelY = start.y;
+        textAnchor = 'end';
+      } else if (anchor === 'bottom') {
+        baseDx = 4;
+        baseDy = -4;
+        labelX = start.x;
+        labelY = end.y;
+        textAnchor = 'start';
+      } else {
+        // 'left', 'top' (default), 'auto' — label to the right of the line, near top
+        baseDx = 4;
+        baseDy = 14;
+        labelX = start.x;
+        labelY = start.y;
+        textAnchor = 'start';
+      }
+    }
+
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
     const defaultStroke = isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE;
     const style = makeAnnotationLabelStyle(11, 400, annotation.stroke ?? defaultStroke, isDark);
-    if (isHorizontal) {
-      style.textAnchor = 'end';
-    }
+    style.textAnchor = textAnchor;
 
     label = {
       text: annotation.label,
-      x: (isHorizontal ? end.x : start.x) + labelDelta.dx,
-      y: (isHorizontal ? end.y : start.y) + labelDelta.dy,
+      x: labelX + labelDelta.dx,
+      y: labelY + labelDelta.dy,
       style,
       visible: true,
     };

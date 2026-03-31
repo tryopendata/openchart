@@ -144,6 +144,41 @@ describe('computeChrome', () => {
     expect(narrow.subtitle!.y).toBeGreaterThan(wide.subtitle!.y);
   });
 
+  it('reserves extra height when subtitle contains newline characters', () => {
+    const chrome: Chrome = { title: 'Title', subtitle: 'Line one\nLine two' };
+    const withNewline = computeChrome(chrome, theme, 600);
+
+    const chromeNoNewline: Chrome = { title: 'Title', subtitle: 'Line one Line two' };
+    const withoutNewline = computeChrome(chromeNoNewline, theme, 600);
+
+    // The newline version should reserve more top height since it forces two lines
+    expect(withNewline.topHeight).toBeGreaterThan(withoutNewline.topHeight);
+  });
+
+  it('handles consecutive newlines in chrome text', () => {
+    const chrome: Chrome = { title: 'Title', subtitle: 'Above\n\nBelow' };
+    const result = computeChrome(chrome, theme, 600);
+
+    // Three segments: "Above", "", "Below" -> 3 lines total
+    // This should be taller than a simple two-line subtitle
+    const twoLine: Chrome = { title: 'Title', subtitle: 'Above\nBelow' };
+    const twoLineResult = computeChrome(twoLine, theme, 600);
+
+    expect(result.topHeight).toBeGreaterThan(twoLineResult.topHeight);
+  });
+
+  it('handles newlines combined with long text that also word-wraps', () => {
+    const longSegment = 'This is a very long segment that should wrap at narrow widths on its own';
+    const chrome: Chrome = { title: 'Title', subtitle: `${longSegment}\nShort` };
+    const result = computeChrome(chrome, theme, 300);
+
+    // At narrow width, the long segment wraps AND the \n adds another line
+    const noNewline: Chrome = { title: 'Title', subtitle: longSegment };
+    const noNewlineResult = computeChrome(noNewline, theme, 300);
+
+    expect(result.topHeight).toBeGreaterThan(noNewlineResult.topHeight);
+  });
+
   it('uses measureText function when provided', () => {
     const measureText = (text: string, fontSize: number) => ({
       width: text.length * fontSize * 0.6,

@@ -94,8 +94,26 @@ export function computeBarMarks(
     );
   }
 
-  // Stacked bars when color is present
-  return computeStackedBars(
+  // Color encoding present: decide between colored simple bars vs stacked
+  const categoryGroups = groupByField(spec.data, yChannel.field);
+  const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
+
+  if (needsStacking) {
+    return computeStackedBars(
+      spec.data,
+      xChannel.field,
+      yChannel.field,
+      colorField,
+      xScale,
+      yScale,
+      bandwidth,
+      baseline,
+      scales,
+    );
+  }
+
+  // Single row per category: render like simple bars but with color from scale
+  return computeColoredBars(
     spec.data,
     xChannel.field,
     yChannel.field,
@@ -161,6 +179,55 @@ function computeStackedBars(
 
       cumulativeValue += value;
     }
+  }
+
+  return marks;
+}
+
+/** Compute colored (non-stacked) horizontal bars. Used when color encoding
+ *  is present but each category has only one row (e.g., diverging charts). */
+function computeColoredBars(
+  data: DataRow[],
+  valueField: string,
+  categoryField: string,
+  colorField: string,
+  xScale: ScaleLinear<number, number>,
+  yScale: ScaleBand<string>,
+  bandwidth: number,
+  baseline: number,
+  scales: ResolvedScales,
+): RectMark[] {
+  const marks: RectMark[] = [];
+
+  for (const row of data) {
+    const category = String(row[categoryField] ?? '');
+    const value = Number(row[valueField] ?? 0);
+    if (!Number.isFinite(value)) continue;
+
+    const bandY = yScale(category);
+    if (bandY === undefined) continue;
+
+    const groupKey = String(row[colorField] ?? '');
+    const color = getColor(scales, groupKey);
+    const xPos = value >= 0 ? baseline : xScale(value);
+    const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
+
+    const aria: MarkAria = {
+      label: `${category}, ${groupKey}: ${formatBarValue(value)}`,
+    };
+
+    marks.push({
+      type: 'rect',
+      x: xPos,
+      y: bandY,
+      width: barWidth,
+      height: bandwidth,
+      fill: color,
+      cornerRadius: 2,
+      data: row as Record<string, unknown>,
+      aria,
+      orient: 'horizontal',
+    });
   }
 
   return marks;

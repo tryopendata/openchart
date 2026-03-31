@@ -213,6 +213,36 @@ describe('computeLegend', () => {
     expect(legend.entries.every((e) => !e.overflow)).toBe(true);
   });
 
+  it('with maxRows: 3 and 8 long-named entries, shows more entries than default maxRows of 2', () => {
+    // Use long series names so entries overflow 2 rows but fit in 3
+    const longNameData = [
+      { date: '2020', value: 10, country: 'Home price to income ratio' },
+      { date: '2020', value: 10, country: 'Tuition to income ratio' },
+      { date: '2020', value: 10, country: 'Health premium to income' },
+      { date: '2020', value: 10, country: 'Childcare cost to income' },
+      { date: '2020', value: 10, country: 'Transportation expenses' },
+      { date: '2020', value: 10, country: 'Food and groceries cost' },
+      { date: '2020', value: 10, country: 'Utilities and services' },
+      { date: '2020', value: 10, country: 'Insurance and benefits' },
+    ];
+    const maxRowsSpec: NormalizedChartSpec = {
+      ...specWithColor,
+      data: longNameData,
+      legend: { maxRows: 3 },
+      hiddenSeries: [],
+      seriesStyles: {},
+    };
+    const defaultSpec: NormalizedChartSpec = {
+      ...specWithColor,
+      data: longNameData,
+    };
+    const legendDefault = computeLegend(defaultSpec, compactStrategy, theme, chartArea);
+    const legendMaxRows = computeLegend(maxRowsSpec, compactStrategy, theme, chartArea);
+    const defaultVisible = legendDefault.entries.filter((e) => !e.overflow).length;
+    const maxRowsVisible = legendMaxRows.entries.filter((e) => !e.overflow).length;
+    expect(maxRowsVisible).toBeGreaterThan(defaultVisible);
+  });
+
   it('uses correct swatch shape for chart type', () => {
     const lineLegend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
     expect(lineLegend.entries[0].shape).toBe('line');

@@ -483,9 +483,17 @@ export type Annotation = TextAnnotation | RangeAnnotation | RefLineAnnotation;
 
 /**
  * Dark mode behavior.
- * - "auto": respect system preference (prefers-color-scheme)
- * - "force": always render in dark mode
- * - "off": always render in light mode (default)
+ *
+ * - `"auto"` - Checks the `prefers-color-scheme` media query to detect the
+ *   user's system-level preference. This does NOT detect class-based dark mode
+ *   toggles (e.g. `document.documentElement.classList.toggle('dark')`). If your
+ *   app uses class-based dark mode, use VizThemeProvider with `"force"` or
+ *   `"off"` instead of `"auto"` and toggle based on your app's state.
+ * - `"force"` - Always render in dark mode regardless of system preference.
+ * - `"off"` - Always render in light mode (default).
+ *
+ * All components (Chart, Sankey, Graph) inherit darkMode from VizThemeProvider
+ * when no explicit prop is passed.
  */
 export type DarkMode = 'auto' | 'force' | 'off';
 
@@ -576,6 +584,8 @@ export interface LegendConfig {
   columns?: number;
   /** Max number of legend entries before truncation. Remaining entries show as "+N more". */
   symbolLimit?: number;
+  /** Maximum number of rows for top-positioned legends before truncation. Defaults to 2. */
+  maxRows?: number;
 }
 
 // ---------------------------------------------------------------------------

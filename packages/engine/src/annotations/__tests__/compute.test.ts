@@ -553,6 +553,99 @@ describe('computeAnnotations', () => {
   });
 
   // -----------------------------------------------------------------
+  // Refline labelAnchor positioning
+  // -----------------------------------------------------------------
+
+  describe('refline labelAnchor positioning', () => {
+    it('horizontal refline: "left" places label at start.x with text-anchor start', () => {
+      const spec = makeSpec([{ type: 'refline', y: 20, label: 'Left label', labelAnchor: 'left' }]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      // Label x should be near chartArea.x (start of line) + small offset
+      expect(label.x).toBeCloseTo(chartArea.x + 4, 0);
+      expect(label.style.textAnchor).toBe('start');
+    });
+
+    it('horizontal refline: default places label at end.x with text-anchor end', () => {
+      const spec = makeSpec([{ type: 'refline', y: 20, label: 'Default label' }]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      // Label x should be near chartArea.x + chartArea.width (end of line) - small offset
+      expect(label.x).toBeCloseTo(chartArea.x + chartArea.width - 4, 0);
+      expect(label.style.textAnchor).toBe('end');
+    });
+
+    it('horizontal refline: "bottom" places label below the line', () => {
+      const specTop = makeSpec([{ type: 'refline', y: 20, label: 'Top', labelAnchor: 'top' }]);
+      const specBottom = makeSpec([
+        { type: 'refline', y: 20, label: 'Bottom', labelAnchor: 'bottom' },
+      ]);
+      const scales = computeScales(specTop, chartArea, specTop.data);
+
+      const top = computeAnnotations(specTop, scales, chartArea, fullStrategy);
+      const bottom = computeAnnotations(specBottom, scales, chartArea, fullStrategy);
+
+      // Bottom label should be below top label (larger y value)
+      expect(bottom[0].label!.y).toBeGreaterThan(top[0].label!.y);
+    });
+
+    it('vertical refline: "right" places label with text-anchor end', () => {
+      const spec = makeSpec([
+        { type: 'refline', x: '2020-06-01', label: 'Right', labelAnchor: 'right' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const label = annotations[0].label!;
+      expect(label.style.textAnchor).toBe('end');
+    });
+
+    it('vertical refline: "bottom" places label near end.y', () => {
+      const specTop = makeSpec([
+        { type: 'refline', x: '2020-06-01', label: 'Top', labelAnchor: 'top' },
+      ]);
+      const specBottom = makeSpec([
+        { type: 'refline', x: '2020-06-01', label: 'Bottom', labelAnchor: 'bottom' },
+      ]);
+      const scales = computeScales(specTop, chartArea, specTop.data);
+
+      const top = computeAnnotations(specTop, scales, chartArea, fullStrategy);
+      const bottom = computeAnnotations(specBottom, scales, chartArea, fullStrategy);
+
+      // Bottom label should be further down (near end.y which is chartArea.y + chartArea.height)
+      expect(bottom[0].label!.y).toBeGreaterThan(top[0].label!.y);
+    });
+
+    it('labelOffset still applies on top of anchor positioning', () => {
+      const spec = makeSpec([
+        {
+          type: 'refline',
+          y: 20,
+          label: 'Offset left',
+          labelAnchor: 'left',
+          labelOffset: { dx: 10, dy: -5 },
+        },
+      ]);
+      const specNoOffset = makeSpec([
+        { type: 'refline', y: 20, label: 'No offset', labelAnchor: 'left' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      const withOffset = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+
+      const dx = withOffset[0].label!.x - withoutOffset[0].label!.x;
+      const dy = withOffset[0].label!.y - withoutOffset[0].label!.y;
+      expect(dx).toBe(10);
+      expect(dy).toBe(-5);
+    });
+  });
+
+  // -----------------------------------------------------------------
   // Connector origin auto-selection
   // -----------------------------------------------------------------
 

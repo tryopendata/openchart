@@ -269,11 +269,13 @@ export function computeLegend(
     }
   }
 
-  // When columns is explicitly set, allow that many rows instead of the default max.
+  // Resolve max rows: explicit maxRows wins, then columns-derived, then default.
   const maxRows =
-    spec.legend?.columns != null
-      ? Math.ceil(entries.length / spec.legend.columns)
-      : TOP_LEGEND_MAX_ROWS;
+    spec.legend?.maxRows != null
+      ? Math.max(1, spec.legend.maxRows)
+      : spec.legend?.columns != null
+        ? Math.ceil(entries.length / spec.legend.columns)
+        : TOP_LEGEND_MAX_ROWS;
   const maxFit = entriesThatFit(entries, availableWidth, maxRows, labelStyle);
 
   if (maxFit < entries.length) {
