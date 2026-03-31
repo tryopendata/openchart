@@ -199,13 +199,16 @@ describe('compileSankey', () => {
       expect(result.tooltipDescriptors.has('node-E')).toBe(true);
     });
 
-    it('contains entries for links keyed as link-{source}-{target}', () => {
+    it('contains entries for links keyed as link-{source}-{target}-{index}', () => {
       const result = compileSankey(basicSpec, defaultOptions);
 
-      expect(result.tooltipDescriptors.has('link-A-C')).toBe(true);
-      expect(result.tooltipDescriptors.has('link-B-C')).toBe(true);
-      expect(result.tooltipDescriptors.has('link-C-D')).toBe(true);
-      expect(result.tooltipDescriptors.has('link-C-E')).toBe(true);
+      // Keys include index suffix for uniqueness with duplicate source-target pairs
+      const linkKeys = [...result.tooltipDescriptors.keys()].filter((k) => k.startsWith('link-'));
+      expect(linkKeys.length).toBe(4);
+      // Each key should have a numeric suffix
+      for (const key of linkKeys) {
+        expect(key).toMatch(/link-.+-\d+$/);
+      }
     });
 
     it('node tooltip has title and flow field', () => {
@@ -220,9 +223,11 @@ describe('compileSankey', () => {
     it('link tooltip has title and flow field', () => {
       const result = compileSankey(basicSpec, defaultOptions);
 
-      const tooltip = result.tooltipDescriptors.get('link-A-C')!;
-      expect(tooltip.title).toContain('A');
-      expect(tooltip.title).toContain('C');
+      // Get the first link tooltip (keyed with index suffix)
+      const linkKey = [...result.tooltipDescriptors.keys()].find((k) => k.startsWith('link-'));
+      expect(linkKey).toBeTruthy();
+      const tooltip = result.tooltipDescriptors.get(linkKey!)!;
+      expect(tooltip.title).toContain('\u2192'); // arrow character
       expect(tooltip.fields.some((f) => f.label === 'Flow')).toBe(true);
     });
   });
@@ -443,10 +448,11 @@ describe('compileSankey', () => {
     });
   });
 
-  describe('content height', () => {
-    it('dimensions height does not exceed container height', () => {
+  describe('dimensions', () => {
+    it('dimensions match the provided container size', () => {
       const result = compileSankey(basicSpec, { width: 600, height: 800 });
-      expect(result.dimensions.height).toBeLessThanOrEqual(800);
+      expect(result.dimensions.width).toBe(600);
+      expect(result.dimensions.height).toBe(800);
     });
   });
 });

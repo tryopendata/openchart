@@ -449,15 +449,6 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   // 15. Resolve animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(sankeySpec.animation);
 
-  // 16. Compute actual content height to avoid excess bottom padding.
-  //     Find the lowest node bottom edge, then add chrome bottom + padding.
-  let contentBottom = 0;
-  for (const node of nodeMarks) {
-    const nodeBottom = node.y + node.height;
-    if (nodeBottom > contentBottom) contentBottom = nodeBottom;
-  }
-  const actualHeight = Math.min(options.height, contentBottom + chrome.bottomHeight + padding);
-
   return {
     area,
     chrome,
@@ -469,7 +460,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     theme,
     dimensions: {
       width: options.width,
-      height: actualHeight,
+      height: options.height,
     },
     animation: resolvedAnimation,
   };
@@ -604,14 +595,15 @@ function buildTooltipDescriptors(
   }
 
   // Link tooltips: keyed by "link-{sourceId}-{targetId}" to match renderer data-mark-id
-  for (const link of links) {
+  for (let i = 0; i < links.length; i++) {
+    const link = links[i];
     const fields: TooltipField[] = [
       {
         label: 'Flow',
         value: formatFlowValue(link.value, valueFormat),
       },
     ];
-    descriptors.set(`link-${link.sourceId}-${link.targetId}`, {
+    descriptors.set(`link-${link.sourceId}-${link.targetId}-${i}`, {
       title: `${link.sourceId} \u2192 ${link.targetId}`,
       fields,
     });

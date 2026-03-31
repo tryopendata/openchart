@@ -429,7 +429,7 @@ function renderLinks(
 
     const linkG = createSVGElement('g');
     linkG.setAttribute('class', 'oc-sankey-link');
-    linkG.setAttribute('data-mark-id', `link-${link.sourceId}-${link.targetId}`);
+    linkG.setAttribute('data-mark-id', `link-${link.sourceId}-${link.targetId}-${i}`);
     linkG.setAttribute('data-source', link.sourceId);
     linkG.setAttribute('data-target', link.targetId);
 
