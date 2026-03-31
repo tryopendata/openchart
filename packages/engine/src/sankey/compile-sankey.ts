@@ -34,6 +34,7 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 
+import { format as d3Format } from 'd3-format';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
@@ -371,7 +372,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       data: { id: node.id, label: node.label },
       aria: {
         role: 'img',
-        label: `${node.label}: ${formatNumber(node.value ?? 0)}`,
+        label: `${node.label}: ${formatFlowValue(node.value ?? 0, sankeySpec.valueFormat)}`,
       },
       animationIndex: 0, // Reassigned below after sorting by depth
     };
@@ -405,7 +406,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       data: (link as unknown as { data: Record<string, unknown> }).data ?? {},
       aria: {
         role: 'img',
-        label: `${sourceNode.label} to ${targetNode.label}: ${formatNumber(link.value)}`,
+        label: `${sourceNode.label} to ${targetNode.label}: ${formatFlowValue(link.value, sankeySpec.valueFormat)}`,
       },
       // Links animate after nodes
       animationIndex: nodeMarks.length + i,
@@ -424,7 +425,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   );
 
   // 13. Build tooltip descriptors
-  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks);
+  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, sankeySpec.valueFormat);
 
   // 14. Build a11y metadata
   const a11y = {
@@ -562,9 +563,21 @@ function buildSankeyLegend(
 // Tooltip builder
 // ---------------------------------------------------------------------------
 
+function formatFlowValue(value: number, valueFormat?: string): string {
+  if (valueFormat) {
+    try {
+      return d3Format(valueFormat)(value);
+    } catch {
+      return formatNumber(value);
+    }
+  }
+  return formatNumber(value);
+}
+
 function buildTooltipDescriptors(
   nodes: SankeyNodeMark[],
   links: SankeyLinkMark[],
+  valueFormat?: string,
 ): Map<string, TooltipContent> {
   const descriptors = new Map<string, TooltipContent>();
 
@@ -573,7 +586,7 @@ function buildTooltipDescriptors(
     const fields: TooltipField[] = [
       {
         label: 'Total flow',
-        value: formatNumber(node.value),
+        value: formatFlowValue(node.value, valueFormat),
       },
     ];
     descriptors.set(`node-${node.nodeId}`, {
@@ -587,7 +600,7 @@ function buildTooltipDescriptors(
     const fields: TooltipField[] = [
       {
         label: 'Flow',
-        value: formatNumber(link.value),
+        value: formatFlowValue(link.value, valueFormat),
       },
     ];
     descriptors.set(`link-${link.sourceId}-${link.targetId}`, {

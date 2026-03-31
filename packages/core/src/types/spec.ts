@@ -926,6 +926,12 @@ export interface SankeySpec {
   darkMode?: DarkMode;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
+  /**
+   * d3-format string applied to flow values in tooltips and ARIA labels.
+   * Examples: ".0f%" (append %), "$,.0f" (currency), "~s" (SI suffix).
+   * When not set, values use the default number formatter.
+   */
+  valueFormat?: string;
 }
 
 /**

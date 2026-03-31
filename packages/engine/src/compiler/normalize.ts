@@ -251,6 +251,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     animation: spec.animation,
+    valueFormat: spec.valueFormat,
   };
 }
 

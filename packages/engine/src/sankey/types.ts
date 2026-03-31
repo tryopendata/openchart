@@ -33,4 +33,5 @@ export interface NormalizedSankeySpec {
   theme: ThemeConfig;
   darkMode: DarkMode;
   animation?: AnimationSpec;
+  valueFormat?: string;
 }
