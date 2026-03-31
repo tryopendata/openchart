@@ -350,4 +350,103 @@ describe('compileSankey', () => {
       expect(() => compileSankey(chartSpec, defaultOptions)).toThrow(/non-sankey spec/);
     });
   });
+
+  describe('special characters in node names', () => {
+    it('compiles with spaces and $ in node names', () => {
+      const spec = {
+        type: 'sankey' as const,
+        data: [
+          { from: 'Income $104k', to: 'Essential costs', amount: 50 },
+          { from: 'Income $104k', to: 'Taxes & fees', amount: 20 },
+          { from: 'Essential costs', to: 'Housing #1', amount: 30 },
+          { from: 'Essential costs', to: 'Food (groceries)', amount: 20 },
+        ],
+        encoding: {
+          source: { field: 'from', type: 'nominal' as const },
+          target: { field: 'to', type: 'nominal' as const },
+          value: { field: 'amount', type: 'quantitative' as const },
+        },
+      };
+
+      const result = compileSankey(spec, defaultOptions);
+      expect(result.nodes.length).toBe(5);
+      expect(result.links.length).toBe(4);
+      // Node IDs should preserve the original names
+      expect(result.nodes.some((n) => n.nodeId === 'Income $104k')).toBe(true);
+      expect(result.nodes.some((n) => n.nodeId === 'Taxes & fees')).toBe(true);
+    });
+  });
+
+  describe('dark mode colors', () => {
+    it('preserves vivid categorical colors in dark mode', () => {
+      const spec = {
+        ...basicSpec,
+        theme: { colors: ['#38bdf8', '#f87171', '#4ade80'] },
+      };
+
+      const lightResult = compileSankey(spec, defaultOptions);
+      const darkResult = compileSankey(spec, { ...defaultOptions, darkMode: true });
+
+      // Dark mode should use the same vivid node colors, not dark-adapted ones
+      const lightColors = lightResult.nodes.map((n) => n.fill);
+      const darkColors = darkResult.nodes.map((n) => n.fill);
+      expect(darkColors).toEqual(lightColors);
+    });
+
+    it('uses higher link opacity in dark mode', () => {
+      const lightResult = compileSankey(basicSpec, defaultOptions);
+      const darkResult = compileSankey(basicSpec, { ...defaultOptions, darkMode: true });
+
+      const lightOpacity = lightResult.links[0].fillOpacity;
+      const darkOpacity = darkResult.links[0].fillOpacity;
+      expect(darkOpacity).toBeGreaterThan(lightOpacity);
+    });
+  });
+
+  describe('valueFormat', () => {
+    it('formats tooltip values when valueFormat is set', () => {
+      const spec = { ...basicSpec, valueFormat: '.0f%' };
+      const result = compileSankey(spec, defaultOptions);
+
+      // Check that node tooltips use the format
+      const nodeTooltip = result.tooltipDescriptors.get('node-C');
+      expect(nodeTooltip?.fields[0].value).toContain('%');
+    });
+
+    it('uses default formatting when valueFormat is undefined', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+
+      const nodeTooltip = result.tooltipDescriptors.get('node-C');
+      expect(nodeTooltip?.fields[0].value).not.toContain('%');
+    });
+
+    it('falls back to default on invalid format string', () => {
+      const spec = { ...basicSpec, valueFormat: 'not-a-format' };
+      // Should not throw
+      const result = compileSankey(spec, defaultOptions);
+      expect(result.nodes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('linkOpacity', () => {
+    it('uses custom linkOpacity when specified', () => {
+      const spec = { ...basicSpec, linkOpacity: 0.9 };
+      const result = compileSankey(spec, defaultOptions);
+
+      expect(result.links[0].fillOpacity).toBe(0.9);
+    });
+
+    it('uses default opacity when linkOpacity is not set', () => {
+      const result = compileSankey(basicSpec, defaultOptions);
+      // Light mode default
+      expect(result.links[0].fillOpacity).toBe(0.5);
+    });
+  });
+
+  describe('content height', () => {
+    it('dimensions height does not exceed container height', () => {
+      const result = compileSankey(basicSpec, { width: 600, height: 800 });
+      expect(result.dimensions.height).toBeLessThanOrEqual(800);
+    });
+  });
 });

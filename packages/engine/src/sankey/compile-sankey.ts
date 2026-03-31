@@ -28,13 +28,13 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
+  buildD3Formatter,
   computeChrome,
   estimateTextWidth,
   formatNumber,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 
-import { format as d3Format } from 'd3-format';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
@@ -576,11 +576,8 @@ function buildSankeyLegend(
 
 function formatFlowValue(value: number, valueFormat?: string): string {
   if (valueFormat) {
-    try {
-      return d3Format(valueFormat)(value);
-    } catch {
-      return formatNumber(value);
-    }
+    const fmt = buildD3Formatter(valueFormat);
+    if (fmt) return fmt(value);
   }
   return formatNumber(value);
 }
