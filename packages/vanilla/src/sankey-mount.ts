@@ -287,6 +287,8 @@ export function createSankey(
     nodeId: string,
     _layout: SankeyLayout,
   ): void {
+    // Collect connected node IDs (the hovered node + its direct neighbors)
+    const connectedNodeIds = new Set<string>([nodeId]);
     const linkElements = svg.querySelectorAll('.oc-sankey-link');
     for (const el of linkElements) {
       const source = el.getAttribute('data-source');
@@ -296,11 +298,24 @@ export function createSankey(
 
       const isConnected = source === nodeId || target === nodeId;
       path.setAttribute('fill-opacity', String(isConnected ? HIGHLIGHT_OPACITY : DIM_OPACITY));
+      if (isConnected) {
+        if (source) connectedNodeIds.add(source);
+        if (target) connectedNodeIds.add(target);
+      }
+    }
+
+    // Dim unconnected nodes (rect + label)
+    const nodeElements = svg.querySelectorAll('.oc-sankey-node');
+    for (const el of nodeElements) {
+      const nid = el.getAttribute('data-node-id');
+      if (!nid) continue;
+      const isConnected = connectedNodeIds.has(nid);
+      (el as SVGElement).style.opacity = isConnected ? '1' : '0.2';
     }
   }
 
   /**
-   * Reset all link opacities to their original values.
+   * Reset all link opacities and node opacities to their original values.
    */
   function resetLinkOpacity(svg: SVGSVGElement, layout: SankeyLayout): void {
     const linkElements = svg.querySelectorAll('.oc-sankey-link');
@@ -312,6 +327,12 @@ export function createSankey(
       const target = el.getAttribute('data-target');
       const link = layout.links.find((l) => l.sourceId === source && l.targetId === target);
       path.setAttribute('fill-opacity', String(link?.fillOpacity ?? 0.35));
+    }
+
+    // Restore all node opacities
+    const nodeElements = svg.querySelectorAll('.oc-sankey-node');
+    for (const el of nodeElements) {
+      (el as SVGElement).style.opacity = '1';
     }
   }
 
