@@ -408,7 +408,8 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       path: generateLinkPath(link),
       sourceColor: colors.sourceColor,
       targetColor: colors.targetColor,
-      fillOpacity: options.darkMode ? LINK_OPACITY_DARK : LINK_OPACITY_LIGHT,
+      fillOpacity:
+        sankeySpec.linkOpacity ?? (options.darkMode ? LINK_OPACITY_DARK : LINK_OPACITY_LIGHT),
       sourceId: sourceNode.id,
       targetId: targetNode.id,
       width: link.width ?? 0,

@@ -34,4 +34,5 @@ export interface NormalizedSankeySpec {
   darkMode: DarkMode;
   animation?: AnimationSpec;
   valueFormat?: string;
+  linkOpacity?: number;
 }

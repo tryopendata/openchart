@@ -916,6 +916,8 @@ export interface SankeySpec {
   iterations?: number;
   /** Link coloring strategy. Defaults to 'gradient'. */
   linkStyle?: SankeyLinkColor;
+  /** Link fill opacity (0-1). Defaults to 0.5 in light mode, 0.75 in dark mode. */
+  linkOpacity?: number;
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
   /** Legend display configuration. */
