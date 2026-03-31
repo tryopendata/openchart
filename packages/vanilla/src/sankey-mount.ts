@@ -87,6 +87,8 @@ function resolveDarkMode(mode?: DarkMode): boolean {
 const HIGHLIGHT_OPACITY = 0.7;
 /** Opacity for links NOT connected to hovered node. */
 const DIM_OPACITY = 0.15;
+/** Opacity for nodes NOT connected to hovered node. */
+const NODE_DIM_OPACITY = 0.2;
 
 // ---------------------------------------------------------------------------
 // Main API
@@ -310,7 +312,7 @@ export function createSankey(
       const nid = el.getAttribute('data-node-id');
       if (!nid) continue;
       const isConnected = connectedNodeIds.has(nid);
-      (el as SVGElement).style.opacity = isConnected ? '1' : '0.2';
+      (el as SVGElement).style.opacity = isConnected ? '1' : String(NODE_DIM_OPACITY);
     }
   }
 
@@ -326,7 +328,7 @@ export function createSankey(
       const source = el.getAttribute('data-source');
       const target = el.getAttribute('data-target');
       const link = layout.links.find((l) => l.sourceId === source && l.targetId === target);
-      path.setAttribute('fill-opacity', String(link?.fillOpacity ?? 0.35));
+      path.setAttribute('fill-opacity', String(link?.fillOpacity ?? 0.5));
     }
 
     // Restore all node opacities

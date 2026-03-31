@@ -928,8 +928,10 @@ export interface SankeySpec {
   animation?: AnimationSpec;
   /**
    * d3-format string applied to flow values in tooltips and ARIA labels.
-   * Examples: ".0f%" (append %), "$,.0f" (currency), "~s" (SI suffix).
-   * When not set, values use the default number formatter.
+   * Uses the literal suffix extension: ".0f%" appends "%" to the formatted
+   * number (data value 28 renders as "28%"). For currency: "$,.0f" or "$~s".
+   * For SI suffixes: "~s" (renders 1000 as "1k"). When not set, values use
+   * the default number formatter.
    */
   valueFormat?: string;
 }

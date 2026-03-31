@@ -369,6 +369,11 @@ function buildNodePositionMap(nodes: SankeyNodeMark[]): Map<string, { x: number;
   return map;
 }
 
+/** Sanitize a string for use as an SVG element ID (no spaces, $, or other invalid chars). */
+function sanitizeId(s: string): string {
+  return s.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
 function renderGradientDefs(
   defs: SVGElement,
   links: SankeyLinkMark[],
@@ -379,7 +384,8 @@ function renderGradientDefs(
     // Only create gradients when source and target colors differ
     if (link.sourceColor === link.targetColor) continue;
 
-    const gradId = `oc-sg-${i}`;
+    // Use sanitized node names for debuggability, with index suffix for uniqueness
+    const gradId = `oc-sg-${sanitizeId(link.sourceId)}-${sanitizeId(link.targetId)}-${i}`;
     const gradient = createSVGElement('linearGradient');
     gradient.setAttribute('id', gradId);
     gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
@@ -440,7 +446,7 @@ function renderLinks(
 
     // Use gradient fill when colors differ, otherwise solid fill
     if (link.sourceColor !== link.targetColor) {
-      const gradId = `oc-sg-${i}`;
+      const gradId = `oc-sg-${sanitizeId(link.sourceId)}-${sanitizeId(link.targetId)}-${i}`;
       path.setAttribute('fill', `url(#${gradId})`);
     } else {
       path.setAttribute('fill', link.sourceColor);

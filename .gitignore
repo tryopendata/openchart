@@ -16,3 +16,4 @@ coverage/
 .npmrc
 *.png
 
+*.tgz
