@@ -59,6 +59,21 @@ function getSVGDimensions(svg: SVGElement): { width: number; height: number } {
   return { width: 600, height: 400 };
 }
 
+/**
+ * Ensure an SVG string has explicit width/height attributes.
+ *
+ * When an SVG only has a viewBox (no width/height), browsers loading it as
+ * an Image blob may use 300x150 as the intrinsic size instead of the viewBox
+ * dimensions. This causes clipping at non-1x DPI scaling. Injecting explicit
+ * width/height into the root <svg> tag fixes the intrinsic size.
+ */
+function ensureSVGDimensions(svgString: string, width: number, height: number): string {
+  // If the <svg> already has a width attribute, leave it alone
+  if (/^<svg[^>]*\swidth\s*=/.test(svgString)) return svgString;
+  // Inject width and height right after <svg
+  return svgString.replace(/^(<svg)/, `$1 width="${width}" height="${height}"`);
+}
+
 // ---------------------------------------------------------------------------
 // Font embedding
 // ---------------------------------------------------------------------------
@@ -300,8 +315,13 @@ export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptio
     await embedFonts(svgElement);
   }
 
-  const svgString = exportSVG(svgElement);
   const { width, height } = getSVGDimensions(svgElement);
+
+  // Ensure the SVG has explicit width/height attributes so that when loaded
+  // as a standalone Image blob the browser knows the intrinsic size. Without
+  // these, browsers may default to 300x150 or use heuristics that break at
+  // non-1x DPI scaling.
+  const svgString = ensureSVGDimensions(exportSVG(svgElement), width, height);
 
   const canvas = document.createElement('canvas');
   canvas.width = width * dpi;
@@ -320,7 +340,7 @@ export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptio
 
   return new Promise<Blob>((resolve, reject) => {
     img.onload = () => {
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
 
       canvas.toBlob((result) => {
@@ -361,8 +381,8 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
     await embedFonts(svgElement);
   }
 
-  const svgString = exportSVG(svgElement);
   const { width, height } = getSVGDimensions(svgElement);
+  const svgString = ensureSVGDimensions(exportSVG(svgElement), width, height);
 
   const canvas = document.createElement('canvas');
   canvas.width = width * dpi;
@@ -385,7 +405,7 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
 
   return new Promise<Blob>((resolve, reject) => {
     img.onload = () => {
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
 
       canvas.toBlob(

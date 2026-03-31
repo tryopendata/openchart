@@ -282,18 +282,61 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     return emptyLayout(area, chrome, theme, options);
   }
 
-  // 6. Run d3-sankey layout
-  const { nodes, links } = computeSankeyLayout(
+  // 6. Run d3-sankey layout (may re-run once if labels overflow)
+  const labelFontSize = theme.fonts.sizes.small;
+  const labelFontWeight = theme.fonts.weights.normal;
+  const nodeWidth = sankeySpec.nodeWidth ?? 12;
+
+  let layoutArea: Rect = { ...area };
+  let { nodes, links } = computeSankeyLayout(
     sankeySpec.data,
     sourceField,
     targetField,
     valueField,
-    area,
+    layoutArea,
     sankeySpec.nodeWidth,
     sankeySpec.nodePadding,
     sankeySpec.nodeAlign,
     sankeySpec.iterations,
   );
+
+  // 6b. Check if any non-rightmost node labels overflow the right edge.
+  //     Non-rightmost nodes get labels to the right (textAnchor: start),
+  //     which can extend past the drawing area boundary.
+  const maxDepthFirst = nodes.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
+  const rightEdge = area.x + area.width;
+  let maxOverflow = 0;
+  for (const node of nodes) {
+    const depth = node.depth ?? 0;
+    if (depth === maxDepthFirst) continue; // rightmost labels go left, no overflow
+    const labelX = (node.x1 ?? nodeWidth) + LABEL_GAP;
+    const labelText = node.label ?? node.id;
+    const labelWidth = estimateTextWidth(labelText, labelFontSize, labelFontWeight);
+    const overflow = labelX + labelWidth - rightEdge;
+    if (overflow > maxOverflow) maxOverflow = overflow;
+  }
+
+  // Re-run layout with tighter width if labels would clip
+  if (maxOverflow > 0) {
+    const margin = Math.ceil(maxOverflow) + 4; // small extra buffer
+    layoutArea = {
+      x: area.x,
+      y: area.y,
+      width: Math.max(area.width - margin, 40),
+      height: area.height,
+    };
+    ({ nodes, links } = computeSankeyLayout(
+      sankeySpec.data,
+      sourceField,
+      targetField,
+      valueField,
+      layoutArea,
+      sankeySpec.nodeWidth,
+      sankeySpec.nodePadding,
+      sankeySpec.nodeAlign,
+      sankeySpec.iterations,
+    ));
+  }
 
   // 7. Build node color map
   const nodeColorMap = buildNodeColorMap(
@@ -394,6 +437,15 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   // 15. Resolve animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(sankeySpec.animation);
 
+  // 16. Compute actual content height to avoid excess bottom padding.
+  //     Find the lowest node bottom edge, then add chrome bottom + padding.
+  let contentBottom = 0;
+  for (const node of nodeMarks) {
+    const nodeBottom = node.y + node.height;
+    if (nodeBottom > contentBottom) contentBottom = nodeBottom;
+  }
+  const actualHeight = Math.min(options.height, contentBottom + chrome.bottomHeight + padding);
+
   return {
     area,
     chrome,
@@ -405,7 +457,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     theme,
     dimensions: {
       width: options.width,
-      height: options.height,
+      height: actualHeight,
     },
     animation: resolvedAnimation,
   };
