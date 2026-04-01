@@ -131,18 +131,28 @@ function getLinkColors(
 
 /**
  * Determine label position for a node based on its column depth.
- * Leftmost column: label to the right.
- * Rightmost column: label to the left.
- * Middle columns: label to the right (default).
+ * Default ('auto'): leftmost/middle columns label right, rightmost column labels left.
+ * 'right': all labels to the right.  'left': all labels to the left.
  */
 function computeNodeLabel(
   node: ComputedNode,
   maxDepth: number,
   theme: ResolvedTheme,
   nodeWidth: number,
+  nodeLabelAlign: 'auto' | 'left' | 'right' = 'auto',
 ): SankeyNodeMark['label'] {
   const depth = node.depth ?? 0;
-  const isRightmost = depth === maxDepth;
+
+  // Determine which side to place the label
+  let placeLeft: boolean;
+  if (nodeLabelAlign === 'left') {
+    placeLeft = true;
+  } else if (nodeLabelAlign === 'right') {
+    placeLeft = false;
+  } else {
+    // 'auto': rightmost column goes left, everything else goes right
+    placeLeft = depth === maxDepth;
+  }
 
   const style: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -158,8 +168,7 @@ function computeNodeLabel(
   const y1 = node.y1 ?? 0;
   const midY = (y0 + y1) / 2;
 
-  if (isRightmost) {
-    // Label to the left of the node
+  if (placeLeft) {
     return {
       text: node.label ?? node.id,
       x: x0 - LABEL_GAP,
@@ -169,7 +178,6 @@ function computeNodeLabel(
     };
   }
 
-  // Label to the right of the node (leftmost and middle columns)
   return {
     text: node.label ?? node.id,
     x: x1 + LABEL_GAP,
@@ -311,15 +319,17 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     sankeySpec.iterations,
   );
 
-  // 6b. Check if any non-rightmost node labels overflow the right edge.
-  //     Non-rightmost nodes get labels to the right (textAnchor: start),
-  //     which can extend past the drawing area boundary.
+  // 6b. Check if any right-side node labels overflow the right edge.
+  const nodeLabelAlign = sankeySpec.nodeLabelAlign ?? 'auto';
   const maxDepthFirst = nodes.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
   const rightEdge = area.x + area.width;
   let maxOverflow = 0;
   for (const node of nodes) {
     const depth = node.depth ?? 0;
-    if (depth === maxDepthFirst) continue; // rightmost labels go left, no overflow
+    // Skip nodes whose labels go left (they can't overflow the right edge)
+    const labelsLeft =
+      nodeLabelAlign === 'left' || (nodeLabelAlign === 'auto' && depth === maxDepthFirst);
+    if (labelsLeft) continue;
     const labelX = (node.x1 ?? nodeWidth) + LABEL_GAP;
     const labelText = node.label ?? node.id;
     const labelWidth = estimateTextWidth(labelText, labelFontSize, labelFontWeight);
@@ -375,7 +385,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       height: (node.y1 ?? 0) - (node.y0 ?? 0),
       fill,
       cornerRadius: NODE_CORNER_RADIUS,
-      label: computeNodeLabel(node, maxDepth, theme, sankeySpec.nodeWidth),
+      label: computeNodeLabel(node, maxDepth, theme, sankeySpec.nodeWidth, nodeLabelAlign),
       nodeId: node.id,
       value: node.value ?? 0,
       depth,

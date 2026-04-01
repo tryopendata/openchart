@@ -928,6 +928,13 @@ export interface SankeySpec {
   linkStyle?: SankeyLinkColor;
   /** Link fill opacity (0-1). Defaults to 0.5 in light mode, 0.75 in dark mode. */
   linkOpacity?: number;
+  /**
+   * Which side of each node to place labels. 'auto' uses the default heuristic
+   * (left-column right, right-column left, middle right). 'right' forces all
+   * labels to the right of their nodes. 'left' forces all labels to the left.
+   * Defaults to 'auto'.
+   */
+  nodeLabelAlign?: 'auto' | 'left' | 'right';
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
   /** Legend display configuration. */
