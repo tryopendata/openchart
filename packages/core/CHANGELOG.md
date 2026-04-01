@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.9.0](https://github.com/tryopendata/openchart/compare/core-v6.8.0...core-v6.9.0) (2026-04-01)
+
+
+### Features
+
+* sankey label positions spec ([77c1af8](https://github.com/tryopendata/openchart/commit/77c1af86ed50db6a8a9a27b7280fd89ea8973937))
+
 ## [6.8.0](https://github.com/tryopendata/openchart/compare/core-v6.7.1...core-v6.8.0) (2026-03-31)
 
 
