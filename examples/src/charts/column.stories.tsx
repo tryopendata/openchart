@@ -102,6 +102,7 @@ const groupedColumnSpec: ChartSpec = {
     y: {
       field: 'capacity',
       type: 'quantitative',
+      stack: null,
       axis: { label: 'Capacity added (GW)' },
     },
     color: { field: 'type', type: 'nominal' },

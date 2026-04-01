@@ -203,6 +203,98 @@ describe('computeBarMarks', () => {
     });
   });
 
+  describe('grouped bars (stack: null)', () => {
+    function makeDodgedBarSpec(): NormalizedChartSpec {
+      const spec = makeGroupedBarSpec();
+      (spec.encoding.x as { stack?: boolean | null }).stack = null;
+      return spec;
+    }
+
+    it('produces marks for all data rows', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(6);
+    });
+
+    it('grouped bars within a category have different y positions', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const q1East = marks.find(
+        (m) => m.aria.label.includes('Q1') && m.aria.label.includes('East'),
+      )!;
+      const q1West = marks.find(
+        (m) => m.aria.label.includes('Q1') && m.aria.label.includes('West'),
+      )!;
+
+      expect(q1East.y).not.toBe(q1West.y);
+    });
+
+    it('grouped bars all start from baseline (not cumulative)', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const q1East = marks.find(
+        (m) => m.aria.label.includes('Q1') && m.aria.label.includes('East'),
+      )!;
+      const q1West = marks.find(
+        (m) => m.aria.label.includes('Q1') && m.aria.label.includes('West'),
+      )!;
+
+      // Both bars start at the same x position (baseline)
+      expect(q1East.x).toBe(q1West.x);
+    });
+
+    it('grouped bars have cornerRadius 2', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      for (const mark of marks) {
+        expect(mark.cornerRadius).toBe(2);
+      }
+    });
+
+    it('grouped bars do not set stackGroup', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      for (const mark of marks) {
+        expect(mark.stackGroup).toBeUndefined();
+      }
+    });
+
+    it('sub-band heights are smaller than full bandwidth', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      // With 2 groups, each sub-bar should be less than the full bandwidth
+      const stackedSpec = makeGroupedBarSpec();
+      const stackedScales = computeScales(stackedSpec, chartArea, stackedSpec.data);
+      const stackedMarks = computeBarMarks(stackedSpec, stackedScales, chartArea, fullStrategy);
+
+      expect(marks[0].height).toBeLessThan(stackedMarks[0].height);
+      expect(marks[0].height).toBeGreaterThan(0);
+    });
+
+    it('scale domain covers max individual value, not stacked sum', () => {
+      const spec = makeDodgedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      // Max individual value is 70 (Q3 West), not 115 (Q3 stacked sum)
+      const xScale = scales.x!.scale;
+      const domain = xScale.domain() as number[];
+      // Domain should not extend to the stacked sum (115)
+      expect(domain[1]).toBeLessThanOrEqual(80); // some nice rounding above 70
+    });
+  });
+
   describe('colored (non-stacked) bars', () => {
     it('renders colored bars when each category has one row with color encoding', () => {
       const spec: NormalizedChartSpec = {

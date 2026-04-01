@@ -226,6 +226,12 @@ export interface EncodingChannel {
   axis?: AxisConfig;
   /** Scale configuration. */
   scale?: ScaleConfig;
+  /**
+   * Stacking behavior for quantitative channels (Vega-Lite aligned).
+   * - undefined | true | 'zero': stack (default, cumulative segments)
+   * - null | false: no stacking (grouped/dodged side-by-side)
+   */
+  stack?: boolean | 'zero' | null;
 }
 
 /**

@@ -99,6 +99,22 @@ export function computeBarMarks(
   const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
   if (needsStacking) {
+    const stackDisabled = xChannel.stack === null || xChannel.stack === false;
+
+    if (stackDisabled) {
+      return computeGroupedBars(
+        spec.data,
+        xChannel.field,
+        yChannel.field,
+        colorField,
+        xScale,
+        yScale,
+        bandwidth,
+        baseline,
+        scales,
+      );
+    }
+
     return computeStackedBars(
       spec.data,
       xChannel.field,
@@ -178,6 +194,73 @@ function computeStackedBars(
       });
 
       cumulativeValue += value;
+    }
+  }
+
+  return marks;
+}
+
+/** Compute grouped (dodged) horizontal bars -- side-by-side within each category band. */
+function computeGroupedBars(
+  data: DataRow[],
+  valueField: string,
+  categoryField: string,
+  colorField: string,
+  xScale: ScaleLinear<number, number>,
+  yScale: ScaleBand<string>,
+  bandwidth: number,
+  baseline: number,
+  scales: ResolvedScales,
+): RectMark[] {
+  const marks: RectMark[] = [];
+  const categoryGroups = groupByField(data, categoryField);
+
+  // Build a stable group order from first appearance in data (Map for O(1) lookup)
+  const groupIndexMap = new Map<string, number>();
+  for (const row of data) {
+    const key = String(row[colorField] ?? '');
+    if (!groupIndexMap.has(key)) {
+      groupIndexMap.set(key, groupIndexMap.size);
+    }
+  }
+  const groupCount = groupIndexMap.size;
+  if (groupCount === 0) return marks;
+
+  // Subdivide the band height by group count with a small gap
+  const gap = Math.min(1, bandwidth * 0.05);
+  const subBandHeight = Math.max((bandwidth - gap * (groupCount - 1)) / groupCount, MIN_BAR_WIDTH);
+
+  for (const [category, rows] of categoryGroups) {
+    const bandY = yScale(category);
+    if (bandY === undefined) continue;
+
+    for (const row of rows) {
+      const groupKey = String(row[colorField] ?? '');
+      const value = Number(row[valueField] ?? 0);
+      if (!Number.isFinite(value)) continue;
+
+      const groupIndex = groupIndexMap.get(groupKey) ?? 0;
+      const color = getColor(scales, groupKey);
+      const xPos = value >= 0 ? baseline : xScale(value);
+      const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
+      const subY = bandY + groupIndex * (subBandHeight + gap);
+
+      const aria: MarkAria = {
+        label: `${category}, ${groupKey}: ${formatBarValue(value)}`,
+      };
+
+      marks.push({
+        type: 'rect',
+        x: xPos,
+        y: subY,
+        width: barWidth,
+        height: subBandHeight,
+        fill: color,
+        cornerRadius: 2,
+        data: row as Record<string, unknown>,
+        aria,
+        orient: 'horizontal',
+      });
     }
   }
 

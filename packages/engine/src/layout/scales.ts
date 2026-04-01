@@ -622,7 +622,13 @@ export function computeScales(
     // For stacked bars, the x-domain needs the max category sum, not max individual value.
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
-    if (spec.markType === 'bar' && encoding.color && encoding.x.type === 'quantitative') {
+    const xStackDisabled = encoding.x.stack === null || encoding.x.stack === false;
+    if (
+      spec.markType === 'bar' &&
+      encoding.color &&
+      encoding.x.type === 'quantitative' &&
+      !xStackDisabled
+    ) {
       const yField = encoding.y?.field;
       const xField = encoding.x.field;
       if (yField) {
@@ -660,10 +666,12 @@ export function computeScales(
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
       encoding.y.type === 'quantitative';
+    const yStackDisabled = encoding.y.stack === null || encoding.y.stack === false;
     if (
       (isVerticalBar || spec.markType === 'area') &&
       encoding.color &&
-      encoding.y.type === 'quantitative'
+      encoding.y.type === 'quantitative' &&
+      !yStackDisabled
     ) {
       const xField = encoding.x?.field;
       const yField = encoding.y.field;

@@ -187,6 +187,72 @@ describe('computeColumnMarks', () => {
     });
   });
 
+  describe('grouped columns (stack: null)', () => {
+    function makeDodgedColumnSpec(): NormalizedChartSpec {
+      const spec = makeGroupedColumnSpec();
+      (spec.encoding.y as { stack?: boolean | null }).stack = null;
+      return spec;
+    }
+
+    it('produces marks for all data rows', () => {
+      const spec = makeDodgedColumnSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks).toHaveLength(6);
+    });
+
+    it('grouped columns within a category have different x positions', () => {
+      const spec = makeDodgedColumnSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+      const janNorth = marks.find(
+        (m) => m.aria.label.includes('Jan') && m.aria.label.includes('North'),
+      )!;
+      const janSouth = marks.find(
+        (m) => m.aria.label.includes('Jan') && m.aria.label.includes('South'),
+      )!;
+
+      expect(janNorth.x).not.toBe(janSouth.x);
+    });
+
+    it('grouped columns have subdivided widths', () => {
+      const spec = makeDodgedColumnSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+      // With 2 groups, each sub-column should be narrower than full bandwidth
+      const stackedSpec = makeGroupedColumnSpec();
+      const stackedScales = computeScales(stackedSpec, chartArea, stackedSpec.data);
+      const stackedMarks = computeColumnMarks(stackedSpec, stackedScales, chartArea, fullStrategy);
+
+      expect(marks[0].width).toBeLessThan(stackedMarks[0].width);
+      expect(marks[0].width).toBeGreaterThan(0);
+    });
+
+    it('grouped columns have cornerRadius 2 and no stackGroup', () => {
+      const spec = makeDodgedColumnSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+      for (const mark of marks) {
+        expect(mark.cornerRadius).toBe(2);
+        expect(mark.stackGroup).toBeUndefined();
+      }
+    });
+
+    it('scale domain covers max individual value, not stacked sum', () => {
+      const spec = makeDodgedColumnSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      // Max individual value is 150 (Mar North), not 280 (Mar stacked sum)
+      const yScale = scales.y!.scale;
+      const domain = yScale.domain() as number[];
+      expect(domain[1]).toBeLessThanOrEqual(170); // some nice rounding above 150
+    });
+  });
+
   describe('negative values', () => {
     it('negative columns extend downward from baseline', () => {
       const spec = makeNegativeColumnSpec();

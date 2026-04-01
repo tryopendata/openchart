@@ -3,7 +3,8 @@
  *
  * Takes a normalized chart spec with resolved scales and produces
  * RectMark[] for rendering vertical columns. When a color encoding
- * is present, columns are stacked (cumulative heights per category).
+ * is present, columns are either stacked (cumulative heights) or grouped
+ * (side-by-side) based on the `stack` property of the quantitative channel.
  *
  * Shares conceptual logic with bar chart but axes are swapped:
  * x-axis is categorical (band scale), y-axis is quantitative.
@@ -88,6 +89,22 @@ export function computeColumnMarks(
     const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
     if (needsStacking) {
+      const stackDisabled = yChannel.stack === null || yChannel.stack === false;
+
+      if (stackDisabled) {
+        return computeGroupedColumns(
+          spec.data,
+          xChannel.field,
+          yChannel.field,
+          colorField,
+          xScale,
+          yScale,
+          bandwidth,
+          baseline,
+          scales,
+        );
+      }
+
       return computeStackedColumns(
         spec.data,
         xChannel.field,
@@ -236,6 +253,77 @@ function computeColoredColumns(
       aria,
       orient: 'vertical',
     });
+  }
+
+  return marks;
+}
+
+/** Compute grouped (dodged) vertical columns -- side-by-side within each category band. */
+function computeGroupedColumns(
+  data: DataRow[],
+  categoryField: string,
+  valueField: string,
+  colorField: string,
+  xScale: ScaleBand<string>,
+  yScale: ScaleLinear<number, number>,
+  bandwidth: number,
+  baseline: number,
+  scales: ResolvedScales,
+): RectMark[] {
+  const marks: RectMark[] = [];
+  const categoryGroups = groupByField(data, categoryField);
+
+  // Build a stable group order from first appearance in data (Map for O(1) lookup)
+  const groupIndexMap = new Map<string, number>();
+  for (const row of data) {
+    const key = String(row[colorField] ?? '');
+    if (!groupIndexMap.has(key)) {
+      groupIndexMap.set(key, groupIndexMap.size);
+    }
+  }
+  const groupCount = groupIndexMap.size;
+  if (groupCount === 0) return marks;
+
+  // Subdivide the band width by group count with a small gap
+  const gap = Math.min(1, bandwidth * 0.05);
+  const subBandWidth = Math.max(
+    (bandwidth - gap * (groupCount - 1)) / groupCount,
+    MIN_COLUMN_HEIGHT,
+  );
+
+  for (const [category, rows] of categoryGroups) {
+    const bandX = xScale(category);
+    if (bandX === undefined) continue;
+
+    for (const row of rows) {
+      const groupKey = String(row[colorField] ?? '');
+      const value = Number(row[valueField] ?? 0);
+      if (!Number.isFinite(value)) continue;
+
+      const groupIndex = groupIndexMap.get(groupKey) ?? 0;
+      const color = getColor(scales, groupKey);
+      const yPos = yScale(value);
+      const columnHeight = Math.max(Math.abs(baseline - yPos), MIN_COLUMN_HEIGHT);
+      const y = value >= 0 ? yPos : baseline;
+      const subX = bandX + groupIndex * (subBandWidth + gap);
+
+      const aria: MarkAria = {
+        label: `${category}, ${groupKey}: ${formatColumnValue(value)}`,
+      };
+
+      marks.push({
+        type: 'rect',
+        x: subX,
+        y,
+        width: subBandWidth,
+        height: columnHeight,
+        fill: color,
+        cornerRadius: 2,
+        data: row as Record<string, unknown>,
+        aria,
+        orient: 'vertical',
+      });
+    }
   }
 
   return marks;
