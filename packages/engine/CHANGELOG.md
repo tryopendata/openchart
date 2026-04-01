@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.10.0](https://github.com/tryopendata/openchart/compare/engine-v6.9.0...engine-v6.10.0) (2026-04-01)
+
+
+### Features
+
+* add grouped/dodged bar and column charts via stack encoding ([860b499](https://github.com/tryopendata/openchart/commit/860b499fbd85484fe781238bbd29cfe0f76d7e7c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.10.0
+
 ## [6.9.0](https://github.com/tryopendata/openchart/compare/engine-v6.8.0...engine-v6.9.0) (2026-04-01)
 
 
