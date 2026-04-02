@@ -20,6 +20,7 @@ import type {
 import {
   buildD3Formatter,
   estimateTextWidth,
+  getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
 
@@ -141,7 +142,7 @@ export function computeBarLabels(
     } else {
       // Outside: just past the bar's right edge
       anchorX = mark.x + mark.width + LABEL_PADDING;
-      fill = mark.fill;
+      fill = getRepresentativeColor(mark.fill);
       textAnchor = 'start';
     }
 

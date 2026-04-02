@@ -7,6 +7,7 @@
  */
 
 import type { Encoding, Mark, MarkAria, TextMarkLayout } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -52,9 +53,11 @@ export function computeTextMarks(
     const text = String(row[textChannel.field] ?? '');
     if (!text) continue;
 
-    const color = colorField
-      ? getColor(scales, String(row[colorField] ?? '__default__'))
-      : getColor(scales, '__default__');
+    const color = getRepresentativeColor(
+      colorField
+        ? getColor(scales, String(row[colorField] ?? '__default__'))
+        : getColor(scales, '__default__'),
+    );
 
     const fontSize = sizeEncoding
       ? Math.max(8, Math.min(48, Number(row[sizeEncoding.field]) || 12))

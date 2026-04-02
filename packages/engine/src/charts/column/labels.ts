@@ -20,6 +20,7 @@ import type {
 import {
   buildD3Formatter,
   estimateTextWidth,
+  getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
 
@@ -99,7 +100,7 @@ export function computeColumnLabels(
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: LABEL_FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
-        fill: mark.fill,
+        fill: getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'middle',
         dominantBaseline: isNegative ? 'hanging' : 'auto',

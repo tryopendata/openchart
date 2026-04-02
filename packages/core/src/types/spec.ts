@@ -49,6 +49,87 @@ export type MarkType =
 export type ChartType = MarkType;
 
 // ---------------------------------------------------------------------------
+// Gradient definitions (Vega-aligned)
+// ---------------------------------------------------------------------------
+
+/** A single color stop in a gradient definition. */
+export interface GradientStop {
+  /** Position along the gradient, 0 to 1. */
+  offset: number;
+  /** CSS color string at this stop. */
+  color: string;
+  /** Opacity at this stop, 0 to 1. Maps to SVG stop-opacity. */
+  opacity?: number;
+}
+
+/**
+ * Linear gradient definition.
+ * Coordinates are in [0,1] normalized space relative to the mark's bounding box
+ * (maps to SVG gradientUnits="objectBoundingBox").
+ */
+export interface LinearGradient {
+  gradient: 'linear';
+  /** Color stops from start to end. */
+  stops: GradientStop[];
+  /** Start x coordinate (0-1). Default: 0. */
+  x1?: number;
+  /** Start y coordinate (0-1). Default: 0. */
+  y1?: number;
+  /** End x coordinate (0-1). Default: 0. */
+  x2?: number;
+  /** End y coordinate (0-1). Default: 1 (top-to-bottom). */
+  y2?: number;
+}
+
+/**
+ * Radial gradient definition.
+ * Coordinates are in [0,1] normalized space relative to the mark's bounding box.
+ */
+export interface RadialGradient {
+  gradient: 'radial';
+  /** Color stops from inner to outer. */
+  stops: GradientStop[];
+  /** Inner circle center x (0-1). Default: 0.5. */
+  x1?: number;
+  /** Inner circle center y (0-1). Default: 0.5. */
+  y1?: number;
+  /** Inner circle radius (0-1). Default: 0. */
+  r1?: number;
+  /** Outer circle center x (0-1). Default: 0.5. */
+  x2?: number;
+  /** Outer circle center y (0-1). Default: 0.5. */
+  y2?: number;
+  /** Outer circle radius (0-1). Default: 0.5. */
+  r2?: number;
+}
+
+/** A gradient definition, either linear or radial. */
+export type GradientDef = LinearGradient | RadialGradient;
+
+/** Type guard: check if a value is a GradientDef object. */
+export function isGradientDef(value: unknown): value is GradientDef {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'gradient' in value &&
+    'stops' in value &&
+    ((value as GradientDef).gradient === 'linear' || (value as GradientDef).gradient === 'radial')
+  );
+}
+
+/**
+ * Extract a single representative color from a fill value.
+ * Returns the fill directly if it's a string, or the last stop color
+ * if it's a gradient. Used by tooltips, labels, legends, and voronoi
+ * overlays that need a flat color.
+ */
+export function getRepresentativeColor(fill: string | GradientDef): string {
+  if (typeof fill === 'string') return fill;
+  const stops = fill.stops;
+  return stops.length > 0 ? stops[stops.length - 1].color : '#000000';
+}
+
+// ---------------------------------------------------------------------------
 // Mark definition (Vega-Lite aligned)
 // ---------------------------------------------------------------------------
 
@@ -94,8 +175,8 @@ export interface MarkDef {
   filled?: boolean;
   /** Default opacity (0-1). */
   opacity?: number;
-  /** Default fill color. */
-  fill?: string;
+  /** Default fill color or gradient. */
+  fill?: string | GradientDef;
   /** Default stroke color. */
   stroke?: string;
   /** Default stroke width. */

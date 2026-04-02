@@ -10,12 +10,14 @@
 import type {
   DataRow,
   Encoding,
+  GradientDef,
   LayoutStrategy,
   LineMark,
   MarkAria,
   PointMark,
   Rect,
 } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import { line } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -68,9 +70,10 @@ export function computeLineMarks(
 
   for (const [seriesKey, rows] of groups) {
     // For sequential color, use a mid-range color for the line stroke
-    const color = isSequentialColor
+    const color: string | GradientDef = isSequentialColor
       ? getSequentialColor(scales, _getMidValue(rows, sequentialColorField!))
       : getColor(scales, seriesKey);
+    const strokeColor = getRepresentativeColor(color);
 
     // Sort rows by x-axis field so lines draw left-to-right
     const sortedRows = sortByField(rows, xChannel.field);
@@ -165,7 +168,7 @@ export function computeLineMarks(
       type: 'line',
       points: allPoints,
       path: combinedPath,
-      stroke: color,
+      stroke: strokeColor,
       strokeWidth: styleOverride?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
       strokeDasharray,
       opacity: styleOverride?.opacity,

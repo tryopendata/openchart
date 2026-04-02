@@ -19,7 +19,12 @@ import type {
   TooltipContent,
   TooltipField,
 } from '@opendata-ai/openchart-core';
-import { buildTemporalFormatter, formatDate, formatNumber } from '@opendata-ai/openchart-core';
+import {
+  buildTemporalFormatter,
+  formatDate,
+  formatNumber,
+  getRepresentativeColor,
+} from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -155,7 +160,7 @@ function tooltipsForPoint(
   markIndex: number,
 ): Array<[string, TooltipContent]> {
   const title = getTooltipTitle(mark.data, encoding);
-  const fields = buildFields(mark.data, encoding, mark.fill);
+  const fields = buildFields(mark.data, encoding, getRepresentativeColor(mark.fill));
 
   return [[`point-${markIndex}`, { title, fields }]];
 }
@@ -166,7 +171,7 @@ function tooltipsForRect(
   markIndex: number,
 ): Array<[string, TooltipContent]> {
   const title = getTooltipTitle(mark.data, encoding);
-  const fields = buildFields(mark.data, encoding, mark.fill);
+  const fields = buildFields(mark.data, encoding, getRepresentativeColor(mark.fill));
 
   return [[`rect-${markIndex}`, { title, fields }]];
 }
@@ -187,14 +192,14 @@ function tooltipsForArc(
       fields.push({
         label: categoryName,
         value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
-        color: mark.fill,
+        color: getRepresentativeColor(mark.fill),
       });
     }
   } else if (encoding.y) {
     fields.push({
       label: encoding.y.field,
       value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
-      color: mark.fill,
+      color: getRepresentativeColor(mark.fill),
     });
   }
 
@@ -214,7 +219,7 @@ function tooltipsForArea(
     for (const dp of mark.dataPoints) {
       dp.tooltip = {
         title: getTooltipTitle(dp.datum, encoding),
-        fields: buildFields(dp.datum, encoding, mark.fill),
+        fields: buildFields(dp.datum, encoding, getRepresentativeColor(mark.fill)),
       };
     }
   }

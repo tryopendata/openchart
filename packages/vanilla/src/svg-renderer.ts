@@ -30,6 +30,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
+import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -38,6 +39,12 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  * so mark renderers can read it without changing their function signatures.
  */
 let currentAnimation: ResolvedAnimation | undefined;
+
+/**
+ * Module-level gradient map. Set by renderChartSVG after building gradient defs
+ * so mark renderers can resolve gradient fills without signature changes.
+ */
+let currentGradientMap: Map<string, string> = new Map();
 
 /**
  * Stamp animation index attributes on a mark element when animation is enabled.
@@ -508,7 +515,7 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
     const fill = createSVGElement('path');
     setAttrs(fill, {
       d: mark.path,
-      fill: mark.fill,
+      fill: resolveMarkFill(mark.fill, currentGradientMap),
       'fill-opacity': mark.fillOpacity,
       stroke: 'none',
     });
@@ -549,7 +556,7 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
     y: mark.y,
     width: mark.width,
     height: mark.height,
-    fill: mark.fill,
+    fill: resolveMarkFill(mark.fill, currentGradientMap),
   });
   if (mark.stroke) {
     rect.setAttribute('stroke', mark.stroke);
@@ -585,7 +592,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
   const path = createSVGElement('path');
   setAttrs(path, {
     d: mark.path,
-    fill: mark.fill,
+    fill: resolveMarkFill(mark.fill, currentGradientMap),
     stroke: mark.stroke,
     'stroke-width': mark.strokeWidth,
   });
@@ -619,7 +626,7 @@ function renderPointMark(mark: PointMark, index: number): SVGElement {
     cx: mark.cx,
     cy: mark.cy,
     r: mark.r,
-    fill: mark.fill,
+    fill: resolveMarkFill(mark.fill, currentGradientMap),
     stroke: mark.stroke,
     'stroke-width': mark.strokeWidth,
   });
@@ -1279,6 +1286,10 @@ export function renderChartSVG(
   });
   clipPath.appendChild(clipRect);
   defs.appendChild(clipPath);
+
+  // Build gradient defs for marks with gradient fills
+  currentGradientMap = buildGradientDefs(layout.marks as Array<{ fill?: unknown }>, defs);
+
   svg.appendChild(defs);
 
   // Render layers in order (back to front)
@@ -1322,8 +1333,9 @@ export function renderChartSVG(
   // Brand renders as a footer item, right-aligned on the source/footer row
   renderBrand(svg, layout);
 
-  // Reset module-level animation state after rendering
+  // Reset module-level state after rendering
   currentAnimation = undefined;
+  currentGradientMap = new Map();
 
   container.appendChild(svg);
   return svg;

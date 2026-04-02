@@ -27,7 +27,7 @@ import type {
   ThemeConfig,
   TooltipContent,
 } from '@opendata-ai/openchart-core';
-import { elementRef, isLayerSpec } from '@opendata-ai/openchart-core';
+import { elementRef, getRepresentativeColor, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
@@ -243,7 +243,7 @@ function collectVoronoiPoints(layout: ChartLayout): VoronoiPoint[] {
   const points: VoronoiPoint[] = [];
   for (const mark of layout.marks) {
     if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints) {
-      const color = mark.type === 'line' ? mark.stroke : mark.fill;
+      const color = mark.type === 'line' ? mark.stroke : getRepresentativeColor(mark.fill);
       for (const dp of mark.dataPoints) {
         points.push({ ...dp, color });
       }
