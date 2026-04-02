@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.11.0](https://github.com/tryopendata/openchart/compare/core-v6.10.0...core-v6.11.0) (2026-04-02)
+
+
+### Features
+
+* add gradient fill support for chart marks ([#60](https://github.com/tryopendata/openchart/issues/60)) ([fee85b2](https://github.com/tryopendata/openchart/commit/fee85b2ce756e07188a3d4461a224dc395cff0f8))
+
 ## [6.10.0](https://github.com/tryopendata/openchart/compare/core-v6.9.0...core-v6.10.0) (2026-04-01)
 
 
