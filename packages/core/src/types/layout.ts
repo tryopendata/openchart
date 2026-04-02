@@ -9,6 +9,7 @@
  * fully resolved with computed positions, colors, and dimensions.
  */
 
+import type { GradientDef } from './spec';
 import type { ResolvedTheme } from './theme';
 
 // ---------------------------------------------------------------------------
@@ -235,8 +236,8 @@ export interface AreaMark {
   path: string;
   /** SVG path string for just the top boundary (for stroking the data line only). */
   topPath: string;
-  /** Fill color. */
-  fill: string;
+  /** Fill color or gradient. */
+  fill: string | GradientDef;
   /** Fill opacity. */
   fillOpacity: number;
   /** Optional stroke for the top boundary. */
@@ -277,8 +278,8 @@ export interface RectMark {
   width: number;
   /** Height. */
   height: number;
-  /** Fill color. */
-  fill: string;
+  /** Fill color or gradient. */
+  fill: string | GradientDef;
   /** Stroke color. */
   stroke?: string;
   /** Stroke width. */
@@ -321,8 +322,8 @@ export interface ArcMark {
   startAngle: number;
   /** End angle in radians. */
   endAngle: number;
-  /** Fill color. */
-  fill: string;
+  /** Fill color or gradient. */
+  fill: string | GradientDef;
   /** Stroke color (usually white for slice separation). */
   stroke: string;
   /** Stroke width. */
@@ -349,8 +350,8 @@ export interface PointMark {
   cy: number;
   /** Radius in pixels. */
   r: number;
-  /** Fill color. */
-  fill: string;
+  /** Fill color or gradient. */
+  fill: string | GradientDef;
   /** Stroke color. */
   stroke: string;
   /** Stroke width. */

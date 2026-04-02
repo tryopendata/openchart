@@ -7,6 +7,7 @@
  */
 
 import type { Encoding, Mark, MarkAria, Rect, RuleMarkLayout } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -84,9 +85,11 @@ export function computeRuleMarks(
       if (y2Val != null) y2 = y2Val;
     }
 
-    const color = colorField
-      ? getColor(scales, String(row[colorField] ?? '__default__'))
-      : getColor(scales, '__default__');
+    const color = getRepresentativeColor(
+      colorField
+        ? getColor(scales, String(row[colorField] ?? '__default__'))
+        : getColor(scales, '__default__'),
+    );
 
     const strokeDashEncoding =
       encoding.strokeDash && 'field' in encoding.strokeDash ? encoding.strokeDash : undefined;

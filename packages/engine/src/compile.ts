@@ -386,8 +386,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     }
   }
 
-  // Set default color for single-series charts (no color encoding)
-  scales.defaultColor = theme.colors.categorical[0];
+  // Set default color for single-series charts. If the user set a fill on the mark def
+  // (string or gradient), that takes priority over the theme's first categorical color.
+  scales.defaultColor = chartSpec.markDef.fill ?? theme.colors.categorical[0];
 
   // Arc charts (pie/donut) don't use axes or gridlines
   const isRadial = chartSpec.markType === 'arc';

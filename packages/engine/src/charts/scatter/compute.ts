@@ -10,6 +10,7 @@
 import type {
   Encoding,
   FieldType,
+  GradientDef,
   LayoutStrategy,
   MarkAria,
   PointMark,
@@ -139,7 +140,7 @@ export function computeScatterMarks(
     if (cx === undefined || cy === undefined) continue;
 
     const category = colorField && !isSequentialColor ? String(row[colorField] ?? '') : undefined;
-    let color: string;
+    let color: string | GradientDef;
     if (isSequentialColor && colorField) {
       const val = Number(row[colorField]);
       color = Number.isFinite(val)

@@ -7,6 +7,7 @@
  */
 
 import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
 import { area, line, stack, stackOffsetNone, stackOrderNone } from 'd3-shape';
 
@@ -122,7 +123,7 @@ function computeSingleArea(
       topPath: topPathStr,
       fill: color,
       fillOpacity: DEFAULT_FILL_OPACITY,
-      stroke: color,
+      stroke: getRepresentativeColor(color),
       strokeWidth: 2,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
@@ -258,7 +259,7 @@ function computeStackedArea(
       topPath: topPathStr,
       fill: color,
       fillOpacity: 0.7, // Higher opacity for stacked so layers are visible
-      stroke: color,
+      stroke: getRepresentativeColor(color),
       strokeWidth: 1,
       seriesKey,
       data: layer.map((d) => {

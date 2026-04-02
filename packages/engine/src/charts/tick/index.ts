@@ -7,6 +7,7 @@
  */
 
 import type { Encoding, Mark, MarkAria, Rect, TickMarkLayout } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -48,9 +49,11 @@ export function computeTickMarks(
     const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
     if (xVal == null || yVal == null) continue;
 
-    const color = colorField
-      ? getColor(scales, String(row[colorField] ?? '__default__'))
-      : getColor(scales, '__default__');
+    const color = getRepresentativeColor(
+      colorField
+        ? getColor(scales, String(row[colorField] ?? '__default__'))
+        : getColor(scales, '__default__'),
+    );
 
     const aria: MarkAria = {
       label: `${row[xChannel.field]}, ${row[yChannel.field]}`,

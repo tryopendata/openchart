@@ -10,12 +10,13 @@ import type {
   ConditionalValueDef,
   DataRow,
   Encoding,
+  GradientDef,
   LayoutStrategy,
   MarkAria,
   Rect,
   RectMark,
 } from '@opendata-ai/openchart-core';
-import { abbreviateNumber, formatNumber } from '@opendata-ai/openchart-core';
+import { abbreviateNumber, formatNumber, isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -339,11 +340,14 @@ function computeSimpleBars(
     const bandY = yScale(category);
     if (bandY === undefined) continue;
 
-    let color: string;
+    let color: string | GradientDef;
     if (conditionalColor) {
-      color = String(
-        resolveConditionalValue(row, conditionalColor) ?? getColor(scales, '__default__'),
-      );
+      const resolved = resolveConditionalValue(row, conditionalColor);
+      if (resolved != null) {
+        color = isGradientDef(resolved) ? resolved : String(resolved);
+      } else {
+        color = getColor(scales, '__default__');
+      }
     } else if (sequentialColor) {
       color = getSequentialColor(scales, value);
     } else {

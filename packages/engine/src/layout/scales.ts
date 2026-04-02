@@ -99,8 +99,8 @@ export interface ResolvedScales {
   y?: ResolvedScale;
   color?: ResolvedScale;
   size?: ResolvedScale;
-  /** Default color for single-series charts (first categorical palette color). */
-  defaultColor?: string;
+  /** Default color for single-series charts (first categorical palette color or markDef.fill gradient). */
+  defaultColor?: string | import('@opendata-ai/openchart-core').GradientDef;
 }
 
 // ---------------------------------------------------------------------------

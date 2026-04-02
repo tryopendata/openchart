@@ -5,7 +5,7 @@
  * data grouping, color lookup, and shared constants.
  */
 
-import type { DataRow } from '@opendata-ai/openchart-core';
+import type { DataRow, GradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import type { D3Scale, ResolvedScales } from '../layout/scales';
 
@@ -143,7 +143,7 @@ export function getColor(
   key: string,
   _index?: number,
   fallback: string = DEFAULT_COLOR,
-): string {
+): string | GradientDef {
   if (scales.color && key !== '__default__') {
     const colorScale = scales.color.scale as (v: string) => string;
     return colorScale(key);
@@ -159,7 +159,7 @@ export function getSequentialColor(
   scales: ResolvedScales,
   value: number,
   fallback: string = DEFAULT_COLOR,
-): string {
+): string | GradientDef {
   if (scales.color?.type === 'sequential') {
     const colorScale = scales.color.scale as unknown as (v: number) => string;
     return colorScale(value);

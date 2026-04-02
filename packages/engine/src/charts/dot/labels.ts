@@ -17,7 +17,11 @@ import type {
   Rect,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, resolveCollisions } from '@opendata-ai/openchart-core';
+import {
+  estimateTextWidth,
+  getRepresentativeColor,
+  resolveCollisions,
+} from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -74,7 +78,7 @@ export function computeDotLabels(
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: LABEL_FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
-        fill: mark.fill,
+        fill: getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'start',
         dominantBaseline: 'central',

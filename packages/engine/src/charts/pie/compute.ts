@@ -8,17 +8,21 @@
 
 import type {
   ArcMark,
+  ConditionalValueDef,
   DataRow,
   Encoding,
+  GradientDef,
   LayoutStrategy,
   MarkAria,
   Rect,
 } from '@opendata-ai/openchart-core';
+import { isConditionalDef, isGradientDef } from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
+import { resolveConditionalValue } from '../../transforms/conditional';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -109,6 +113,10 @@ export function computePieMarks(
   const valueChannel = encoding.y ?? encoding.x;
   const categoryField =
     encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
+  const conditionalColor =
+    encoding.color && isConditionalDef(encoding.color)
+      ? (encoding.color as ConditionalValueDef)
+      : undefined;
 
   if (!valueChannel) return [];
 
@@ -190,9 +198,22 @@ export function computePieMarks(
     const arcDatum = arcs[i];
     const slice = arcDatum.data;
 
-    // Get color from scale or default palette
-    let color: string;
-    if (scales.color && categoryField) {
+    // Get color: conditional (supports gradients) > scale > default palette
+    let color: string | GradientDef;
+    if (conditionalColor) {
+      const resolved = resolveConditionalValue(
+        slice.originalRow as Record<string, unknown>,
+        conditionalColor,
+      );
+      if (resolved != null) {
+        color = isGradientDef(resolved) ? resolved : String(resolved);
+      } else if (scales.color && categoryField) {
+        const colorScale = scales.color.scale as (v: string) => string;
+        color = colorScale(slice.label);
+      } else {
+        color = DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+      }
+    } else if (scales.color && categoryField) {
       const colorScale = scales.color.scale as (v: string) => string;
       color = colorScale(slice.label);
     } else {
