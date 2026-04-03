@@ -54,6 +54,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `responsive`  | `boolean`      | `true`      | Whether the chart adapts to container width via ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
 | `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
+| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Set to `false` to hide it.                     |
 
 ### DataRow
 
@@ -481,6 +482,7 @@ Input for data table visualizations. Source: `core/src/types/spec.ts`.
 | `stickyFirstColumn` | `boolean`                         | `false`        | Freeze the first column during horizontal scroll.                                 |
 | `compact`           | `boolean`                         | `false`        | Reduced padding and font sizes.                                                   |
 | `responsive`        | `boolean`                         | `true`         | Whether the table adapts to container width.                                      |
+| `watermark`         | `boolean`                         | `true`         | Whether to show the tryOpenData.ai watermark.                                     |
 
 ### ColumnConfig
 
@@ -614,6 +616,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 | `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
 | `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
 | `darkMode`       | `DarkMode`                       | `'off'`     | Dark mode behavior.                                                                   |
+| `watermark`      | `boolean`                        | `true`      | Whether to show the tryOpenData.ai watermark.                                         |
 
 ### GraphEncoding
 
@@ -913,6 +916,7 @@ All builders accept field names as strings (auto-infer type from data) or full `
 | `responsive`  | `boolean`      | Responsive behavior.                       |
 | `theme`       | `ThemeConfig`  | Theme overrides.                           |
 | `darkMode`    | `DarkMode`     | Dark mode behavior.                        |
+| `watermark`   | `boolean`      | Whether to show the tryOpenData.ai watermark. Defaults to `true`. |
 
 `FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` samples up to 20 data values to determine the encoding type (quantitative, temporal, or nominal).
 

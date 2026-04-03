@@ -340,6 +340,32 @@ const theme = getVizTheme();
 
 ---
 
+## Watermark
+
+By default, all charts display a "tryOpenData.ai" watermark in the bottom-right corner. To hide it, set `watermark: false` on the spec:
+
+```ts
+const spec = {
+  mark: "bar",
+  data: [...],
+  encoding: { x: { field: "category" }, y: { field: "value" } },
+  watermark: false,
+};
+```
+
+To disable the watermark globally without modifying every spec, pass it as a mount option:
+
+```ts
+// Vanilla
+createChart(container, spec, { watermark: false });
+createTable(container, tableSpec, { watermark: false });
+createGraph(container, graphSpec, { watermark: false });
+```
+
+Spec-level `watermark` takes precedence over the mount option when both are set.
+
+---
+
 ## Spec mutation patterns
 
 Specs are plain objects. The library expects immutable updates: create a new object, don't mutate in place.
