@@ -771,4 +771,11 @@ describe('brand watermark', () => {
     const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink).toBeNull();
   });
+
+  it('does not render brand when layout.watermark is false', () => {
+    const spec: ChartSpec = { ...lineSpec, watermark: false };
+    const { svg } = renderSpec(spec);
+    const brandLink = svg.querySelector('.oc-chrome-ref');
+    expect(brandLink).toBeNull();
+  });
 });

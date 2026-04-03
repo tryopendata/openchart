@@ -190,4 +190,19 @@ describe('computeChrome', () => {
     expect(result.title).toBeDefined();
     // Just verify it runs without error; exact values depend on measure fn
   });
+
+  it('returns zero bottom height when watermark is false and no bottom chrome', () => {
+    const chrome: Chrome = { title: 'Title' };
+    const result = computeChrome(chrome, theme, 600, undefined, 'full', undefined, false);
+    expect(result.bottomHeight).toBe(0);
+  });
+
+  it('does not reserve brand width for bottom text when watermark is false', () => {
+    const chrome: Chrome = { source: 'Source: World Bank' };
+    const withWatermark = computeChrome(chrome, theme, 600, undefined, 'full', undefined, true);
+    const withoutWatermark = computeChrome(chrome, theme, 600, undefined, 'full', undefined, false);
+
+    // Without watermark, source text gets full width (not reduced by BRAND_RESERVE_WIDTH)
+    expect(withoutWatermark.source!.maxWidth).toBeGreaterThan(withWatermark.source!.maxWidth);
+  });
 });

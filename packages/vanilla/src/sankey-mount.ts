@@ -38,6 +38,8 @@ export interface SankeyMountOptions {
   darkMode?: DarkMode;
   /** Enable responsive resizing. Defaults to true. */
   responsive?: boolean;
+  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
   tooltip?: boolean;
   /** Callback when a node is clicked. */
@@ -140,6 +142,7 @@ export function createSankey(
       height,
       theme: options?.theme,
       darkMode,
+      watermark: options?.watermark,
     };
 
     return compileSankey(currentSpec, compileOpts);

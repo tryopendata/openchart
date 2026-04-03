@@ -667,6 +667,8 @@ export interface ChartLayout {
   dimensions: { width: number; height: number };
   /** Resolved animation config. Present only when animation is enabled. */
   animation?: ResolvedAnimation;
+  /** Whether the tryOpenData.ai watermark is enabled. */
+  watermark: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -843,6 +845,8 @@ export interface TableLayout {
   theme: ResolvedTheme;
   /** Resolved animation config. Present only when animation is enabled. */
   animation?: ResolvedAnimation;
+  /** Whether the tryOpenData.ai watermark is enabled. */
+  watermark: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1020,6 +1024,8 @@ export interface SankeyLayout {
   dimensions: { width: number; height: number };
   /** Resolved animation config. Present only when animation is enabled. */
   animation?: ResolvedAnimation;
+  /** Whether the tryOpenData.ai watermark is enabled. */
+  watermark: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1054,6 +1060,8 @@ export interface CompileOptions {
    * before calling compile. The engine always receives a resolved boolean.
    */
   darkMode?: boolean;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /**
    * Real text measurement function provided by the adapter.
    * Uses a hidden canvas or DOM element for accurate text dimensions.

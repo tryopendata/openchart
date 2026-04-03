@@ -96,6 +96,7 @@ export function computeDimensions(
   legendLayout: LegendLayout,
   theme: ResolvedTheme,
   strategy?: LayoutStrategy,
+  watermark: boolean = true,
 ): LayoutDimensions {
   const { width, height } = options;
 
@@ -111,6 +112,7 @@ export function computeDimensions(
     options.measureText,
     chromeMode,
     padding,
+    watermark,
   );
 
   // Start with the total rect
@@ -334,6 +336,7 @@ export function computeDimensions(
       options.measureText,
       fallbackMode as 'compact' | 'hidden',
       padding,
+      watermark,
     );
 
     // Recalculate top/bottom margins with stripped chrome

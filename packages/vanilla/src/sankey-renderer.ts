@@ -608,7 +608,9 @@ export function renderSankeySVG(
   renderChrome(svg, layout);
 
   // Brand
-  renderBrand(svg, layout);
+  if (layout.watermark) {
+    renderBrand(svg, layout);
+  }
 
   return svg;
 }

@@ -215,6 +215,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     darkMode: spec.darkMode ?? 'off',
     hiddenSeries: spec.hiddenSeries ?? [],
     seriesStyles: spec.seriesStyles ?? {},
+    watermark: spec.watermark ?? true,
   };
 }
 
@@ -233,6 +234,7 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
     compact: spec.compact ?? false,
     responsive: spec.responsive ?? true,
     animation: spec.animation,
+    watermark: spec.watermark ?? true,
   };
 }
 
@@ -254,6 +256,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
     animation: spec.animation,
     valueFormat: spec.valueFormat,
     linkOpacity: spec.linkOpacity,
+    watermark: spec.watermark ?? true,
   };
 }
 
@@ -282,6 +285,7 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
     annotations: normalizeAnnotations(spec.annotations),
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
+    watermark: spec.watermark ?? true,
   };
 }
 

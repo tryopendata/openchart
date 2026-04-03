@@ -194,6 +194,10 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
 
   const graphSpec = normalized as NormalizedGraphSpec;
 
+  // Resolve watermark: explicit spec value wins, then options fallback, then default true.
+  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const watermark = rawWatermark !== undefined ? graphSpec.watermark : (options.watermark ?? true);
+
   // 2. Resolve theme
   const mergedThemeConfig = options.theme
     ? { ...graphSpec.theme, ...options.theme }
@@ -288,6 +292,9 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     theme,
     options.width,
     options.measureText,
+    'full',
+    undefined,
+    watermark,
   );
 
   // 12. Return compilation
@@ -304,6 +311,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
       height: options.height,
     },
     simulationConfig,
+    watermark,
   };
 }
 

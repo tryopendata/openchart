@@ -1331,7 +1331,9 @@ export function renderChartSVG(
   renderChrome(svg, layout);
 
   // Brand renders as a footer item, right-aligned on the source/footer row
-  renderBrand(svg, layout);
+  if (layout.watermark) {
+    renderBrand(svg, layout);
+  }
 
   // Reset module-level state after rendering
   currentAnimation = undefined;

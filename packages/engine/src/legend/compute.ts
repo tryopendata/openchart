@@ -150,6 +150,7 @@ export function computeLegend(
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
   chartArea: Rect,
+  watermark: boolean = true,
 ): LegendLayout {
   // Legend explicitly hidden via show: false, or height strategy says no legend
   if (spec.legend?.show === false || strategy.legendMaxHeight === 0) {
@@ -259,7 +260,8 @@ export function computeLegend(
 
   // Top/bottom-positioned legend: horizontal flow with overflow protection.
   // Reserve space on the right so legend entries don't overlap the brand watermark.
-  const availableWidth = chartArea.width - LEGEND_PADDING * 2 - BRAND_RESERVE_WIDTH;
+  const availableWidth =
+    chartArea.width - LEGEND_PADDING * 2 - (watermark ? BRAND_RESERVE_WIDTH : 0);
 
   // Apply symbolLimit first if set (minimum 1), then fit remaining entries to available rows.
   if (spec.legend?.symbolLimit != null) {

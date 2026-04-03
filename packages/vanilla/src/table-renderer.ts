@@ -390,18 +390,20 @@ export function renderTable(
   wrapper.appendChild(liveRegion);
 
   // Brand watermark
-  const brandColor = theme ? theme.colors.axis : '#999999';
-  const brand = document.createElement('div');
-  brand.className = 'oc-table-ref';
-  brand.style.cssText = 'text-align: right; padding: 4px 8px;';
-  const brandLink = document.createElement('a');
-  brandLink.href = BRAND_URL;
-  brandLink.target = '_blank';
-  brandLink.rel = 'noopener';
-  brandLink.style.cssText = `font-size: ${BRAND_FONT_SIZE}px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
-  brandLink.textContent = 'tryOpenData.ai';
-  brand.appendChild(brandLink);
-  wrapper.appendChild(brand);
+  if (layout.watermark) {
+    const brandColor = theme ? theme.colors.axis : '#999999';
+    const brand = document.createElement('div');
+    brand.className = 'oc-table-ref';
+    brand.style.cssText = 'text-align: right; padding: 4px 8px;';
+    const brandLink = document.createElement('a');
+    brandLink.href = BRAND_URL;
+    brandLink.target = '_blank';
+    brandLink.rel = 'noopener';
+    brandLink.style.cssText = `font-size: ${BRAND_FONT_SIZE}px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
+    brandLink.textContent = 'tryOpenData.ai';
+    brand.appendChild(brandLink);
+    wrapper.appendChild(brand);
+  }
 
   // Animation: stamp CSS custom properties and add oc-animate class BEFORE
   // DOM insertion to avoid a flash of final state.

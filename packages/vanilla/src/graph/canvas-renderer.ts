@@ -229,7 +229,9 @@ export class GraphCanvasRenderer {
     ctx.restore();
 
     // Brand watermark in screen coordinates (unaffected by pan/zoom)
-    this.drawBrand(ctx, cssWidth, cssHeight, theme);
+    if (state.watermark) {
+      this.drawBrand(ctx, cssWidth, cssHeight, theme);
+    }
   }
 
   // -------------------------------------------------------------------------

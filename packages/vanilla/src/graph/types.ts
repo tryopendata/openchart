@@ -42,4 +42,6 @@ export interface GraphRenderState {
   searchMatches: Set<string> | null;
   /** True during active pan/zoom gestures. Renderer skips labels and glow. */
   isGesturing: boolean;
+  /** Whether the tryOpenData.ai watermark is enabled. */
+  watermark: boolean;
 }

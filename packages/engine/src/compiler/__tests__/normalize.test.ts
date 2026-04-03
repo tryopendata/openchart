@@ -52,6 +52,17 @@ describe('normalizeSpec', () => {
       });
     });
 
+    it('watermark defaults to true when not specified', () => {
+      const result = normalizeSpec(lineSpec) as NormalizedChartSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: ChartSpec = { ...lineSpec, watermark: false };
+      const result = normalizeSpec(spec) as NormalizedChartSpec;
+      expect(result.watermark).toBe(false);
+    });
+
     it('preserves explicit values', () => {
       const spec: ChartSpec = {
         ...lineSpec,
@@ -205,6 +216,27 @@ describe('normalizeSpec', () => {
       expect(result.responsive).toBe(true);
       expect(result.darkMode).toBe('off');
     });
+
+    it('watermark defaults to true when not specified', () => {
+      const spec: TableSpec = {
+        type: 'table',
+        data: [{ name: 'Alice', age: 30 }],
+        columns: [{ key: 'name' }, { key: 'age' }],
+      };
+      const result = normalizeSpec(spec) as NormalizedTableSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: TableSpec = {
+        type: 'table',
+        data: [{ name: 'Alice', age: 30 }],
+        columns: [{ key: 'name' }, { key: 'age' }],
+        watermark: false,
+      };
+      const result = normalizeSpec(spec) as NormalizedTableSpec;
+      expect(result.watermark).toBe(false);
+    });
   });
 
   describe('graph spec normalization', () => {
@@ -220,6 +252,27 @@ describe('normalizeSpec', () => {
       expect(result.layout).toEqual({ type: 'force', chargeStrength: -300, linkDistance: 30 });
       expect(result.annotations).toEqual([]);
       expect(result.darkMode).toBe('off');
+    });
+
+    it('watermark defaults to true when not specified', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+      };
+      const result = normalizeSpec(spec) as NormalizedGraphSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        watermark: false,
+      };
+      const result = normalizeSpec(spec) as NormalizedGraphSpec;
+      expect(result.watermark).toBe(false);
     });
   });
 });
