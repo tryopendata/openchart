@@ -231,7 +231,8 @@ export function computeChrome(
 
   // Bottom elements: source, byline, footer
   // Reserve space on the right for the brand watermark so text doesn't overlap it
-  const bottomMaxWidth = maxWidth - (watermark ? BRAND_RESERVE_WIDTH : 0);
+  const shouldReserveBrandWidth = watermark && width >= BRAND_MIN_WIDTH;
+  const bottomMaxWidth = maxWidth - (shouldReserveBrandWidth ? BRAND_RESERVE_WIDTH : 0);
   const bottomElements: Partial<Pick<ResolvedChrome, 'source' | 'byline' | 'footer'>> = {};
   let bottomHeight = 0;
 

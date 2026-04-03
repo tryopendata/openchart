@@ -342,6 +342,7 @@ export function flattenLayers(
   parentData?: DataRow[],
   parentEncoding?: Encoding,
   parentTransforms?: import('@opendata-ai/openchart-core').Transform[],
+  parentWatermark?: boolean,
 ): ChartSpec[] {
   const resolvedData = spec.data ?? parentData;
   const resolvedEncoding: Encoding | undefined =
@@ -349,13 +350,23 @@ export function flattenLayers(
       ? { ...parentEncoding, ...spec.encoding }
       : (spec.encoding ?? parentEncoding);
   const resolvedTransforms = [...(parentTransforms ?? []), ...(spec.transform ?? [])];
+  // Layer-level watermark propagates to children (child can still override)
+  const resolvedWatermark = spec.watermark ?? parentWatermark;
 
   const leaves: ChartSpec[] = [];
 
   for (const child of spec.layer) {
     if (isLayerSpec(child)) {
       // Nested layer: recurse with merged context
-      leaves.push(...flattenLayers(child, resolvedData, resolvedEncoding, resolvedTransforms));
+      leaves.push(
+        ...flattenLayers(
+          child,
+          resolvedData,
+          resolvedEncoding,
+          resolvedTransforms,
+          resolvedWatermark,
+        ),
+      );
     } else {
       // Leaf ChartSpec: merge inherited properties
       const mergedData = child.data ?? resolvedData ?? [];
@@ -369,6 +380,10 @@ export function flattenLayers(
         data: mergedData,
         encoding: mergedEncoding,
         transform: mergedTransforms.length > 0 ? mergedTransforms : undefined,
+        // Inherit parent watermark if child doesn't explicitly set one
+        ...(child.watermark === undefined && resolvedWatermark !== undefined
+          ? { watermark: resolvedWatermark }
+          : {}),
       });
     }
   }

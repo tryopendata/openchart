@@ -360,6 +360,7 @@ To disable the watermark globally without modifying every spec, pass it as a mou
 createChart(container, spec, { watermark: false });
 createTable(container, tableSpec, { watermark: false });
 createGraph(container, graphSpec, { watermark: false });
+createSankey(container, sankeySpec, { watermark: false });
 ```
 
 Spec-level `watermark` takes precedence over the mount option when both are set.
