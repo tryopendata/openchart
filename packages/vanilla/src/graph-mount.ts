@@ -35,6 +35,8 @@ export interface GraphMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   responsive?: boolean;
+  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /** Show the built-in tooltip on node/edge hover. Defaults to true. */
   tooltip?: boolean;
   /** Show the built-in legend. Defaults to true. */
@@ -157,6 +159,7 @@ export function createGraph(
       height,
       theme: options?.theme,
       darkMode,
+      watermark: options?.watermark,
     };
 
     return compileGraph(currentSpec, compileOpts);
@@ -465,6 +468,7 @@ export function createGraph(
         theme: compilation.theme,
         searchMatches: searchManager.getMatches(),
         isGesturing,
+        watermark: compilation.watermark,
       };
 
       renderer.render(state);

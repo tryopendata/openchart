@@ -222,6 +222,10 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   let chartSpec = normalized as NormalizedChartSpec;
 
+  // Resolve watermark: explicit spec value wins, then options fallback, then default true.
+  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const watermark = rawWatermark !== undefined ? chartSpec.watermark : (options.watermark ?? true);
+
   // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
   // Transforms are defined on the original spec, not the normalized spec, since
   // NormalizedChartSpec doesn't carry the transform field.
@@ -306,10 +310,10 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     width: options.width,
     height: options.height,
   };
-  const legendLayout = computeLegend(chartSpec, strategy, theme, preliminaryArea);
+  const legendLayout = computeLegend(chartSpec, strategy, theme, preliminaryArea, watermark);
 
   // Compute dimensions (accounts for chrome + legend + responsive strategy)
-  const dims = computeDimensions(chartSpec, options, legendLayout, theme, strategy);
+  const dims = computeDimensions(chartSpec, options, legendLayout, theme, strategy, watermark);
   const chartArea = dims.chartArea;
 
   // Recompute legend bounds relative to actual chart area.
@@ -332,7 +336,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         break;
     }
   }
-  const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea);
+  const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea, watermark);
 
   // Apply data filtering after legend (so legend retains all series), but before
   // scale computation (so hidden/clipped data doesn't affect domains or marks).
@@ -444,14 +448,16 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Add brand watermark as an obstacle so annotations avoid overlapping it.
   // The brand is right-aligned on the same baseline as the first bottom chrome element,
   // offset below the chart area by x-axis extent (tick labels + axis title).
-  const brandPadding = theme.spacing.padding;
-  const brandX = dims.total.width - brandPadding - BRAND_RESERVE_WIDTH;
-  const xAxisExtent = axes.x?.label ? 48 : axes.x ? 26 : 0;
-  const firstBottomChrome = dims.chrome.source ?? dims.chrome.byline ?? dims.chrome.footer;
-  const brandY = firstBottomChrome
-    ? chartArea.y + chartArea.height + xAxisExtent + firstBottomChrome.y
-    : chartArea.y + chartArea.height + xAxisExtent + theme.spacing.chartToFooter;
-  obstacles.push({ x: brandX, y: brandY, width: BRAND_RESERVE_WIDTH, height: 30 });
+  if (watermark) {
+    const brandPadding = theme.spacing.padding;
+    const brandX = dims.total.width - brandPadding - BRAND_RESERVE_WIDTH;
+    const xAxisExtent = axes.x?.label ? 48 : axes.x ? 26 : 0;
+    const firstBottomChrome = dims.chrome.source ?? dims.chrome.byline ?? dims.chrome.footer;
+    const brandY = firstBottomChrome
+      ? chartArea.y + chartArea.height + xAxisExtent + firstBottomChrome.y
+      : chartArea.y + chartArea.height + xAxisExtent + theme.spacing.chartToFooter;
+    obstacles.push({ x: brandX, y: brandY, width: BRAND_RESERVE_WIDTH, height: 30 });
+  }
   const annotations: ResolvedAnnotation[] = computeAnnotations(
     chartSpec,
     scales,
@@ -547,6 +553,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       height: options.height,
     },
     animation: resolvedAnimation,
+    watermark,
   };
 }
 
@@ -656,6 +663,7 @@ function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec 
     responsive: layerSpec.responsive ?? leaves[0].responsive,
     theme: layerSpec.theme ?? leaves[0].theme,
     darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
+    watermark: layerSpec.watermark ?? leaves[0].watermark,
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
   };
 
@@ -697,7 +705,11 @@ export function compileTable(spec: unknown, options: CompileTableOptions): Table
     theme = adaptTheme(theme);
   }
 
-  return compileTableLayout(tableSpec, options, theme);
+  // Resolve watermark: spec-level wins, then options, then default true
+  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const watermark = rawWatermark !== undefined ? tableSpec.watermark : (options.watermark ?? true);
+
+  return compileTableLayout({ ...tableSpec, watermark }, options, theme);
 }
 
 // ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ export interface NormalizedSankeySpec {
   legend?: LegendConfig;
   theme: ThemeConfig;
   darkMode: DarkMode;
+  watermark: boolean;
   animation?: AnimationSpec;
   valueFormat?: string;
   linkOpacity?: number;

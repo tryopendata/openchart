@@ -382,6 +382,7 @@ export function compileTableLayout(
   });
 
   // 9. Compute chrome
+  const watermark = spec.watermark;
   const chrome = computeChrome(
     {
       title: spec.chrome.title,
@@ -393,6 +394,9 @@ export function compileTableLayout(
     theme,
     options.width,
     options.measureText,
+    'full',
+    undefined,
+    watermark,
   );
 
   // 10. Build a11y
@@ -418,5 +422,6 @@ export function compileTableLayout(
     },
     theme,
     animation: resolveAnimation(spec.animation),
+    watermark,
   };
 }

@@ -101,4 +101,6 @@ export interface GraphCompilation {
   dimensions: { width: number; height: number };
   /** Force simulation configuration. */
   simulationConfig: SimulationConfig;
+  /** Whether to show the brand watermark. */
+  watermark: boolean;
 }

@@ -78,6 +78,8 @@ export interface NormalizedChartSpec {
   responsive: boolean;
   theme: ThemeConfig;
   darkMode: DarkMode;
+  /** Whether the tryOpenData.ai watermark is enabled. */
+  watermark: boolean;
   /** Series names to hide from rendering. */
   hiddenSeries: string[];
   /** Per-series visual style overrides. */
@@ -93,6 +95,7 @@ export interface NormalizedTableSpec {
   chrome: NormalizedChrome;
   theme: ThemeConfig;
   darkMode: DarkMode;
+  watermark: boolean;
   search: boolean;
   pagination: boolean | { pageSize: number };
   stickyFirstColumn: boolean;
@@ -113,6 +116,7 @@ export interface NormalizedGraphSpec {
   annotations: Annotation[];
   theme: ThemeConfig;
   darkMode: DarkMode;
+  watermark: boolean;
 }
 
 /** Discriminated union of all normalized spec types. */

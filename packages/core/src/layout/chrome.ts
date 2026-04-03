@@ -148,6 +148,7 @@ export function computeChrome(
   measureText?: MeasureTextFn,
   chromeMode: ChromeMode = 'full',
   padding?: number,
+  watermark: boolean = true,
 ): ResolvedChrome {
   if (!chrome || chromeMode === 'hidden') {
     // Brand watermark is also skipped at cramped sizes (height < 200px triggers
@@ -217,7 +218,7 @@ export function computeChrome(
   // renders for wide-enough charts. Reserve space so it doesn't overflow.
   if (chromeMode === 'compact') {
     let compactBottom = 0;
-    if (width >= BRAND_MIN_WIDTH) {
+    if (watermark && width >= BRAND_MIN_WIDTH) {
       const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
       compactBottom = theme.spacing.chartToFooter + brandHeight + pad;
     }
@@ -230,7 +231,8 @@ export function computeChrome(
 
   // Bottom elements: source, byline, footer
   // Reserve space on the right for the brand watermark so text doesn't overlap it
-  const bottomMaxWidth = maxWidth - BRAND_RESERVE_WIDTH;
+  const shouldReserveBrandWidth = watermark && width >= BRAND_MIN_WIDTH;
+  const bottomMaxWidth = maxWidth - (shouldReserveBrandWidth ? BRAND_RESERVE_WIDTH : 0);
   const bottomElements: Partial<Pick<ResolvedChrome, 'source' | 'byline' | 'footer'>> = {};
   let bottomHeight = 0;
 
@@ -300,7 +302,7 @@ export function computeChrome(
     // Ensure bottom height accommodates the brand watermark, which renders
     // at the same Y as the first bottom chrome item but is taller (20px font
     // vs 12px source). Without this, the brand overflows the SVG viewBox.
-    if (width >= BRAND_MIN_WIDTH) {
+    if (watermark && width >= BRAND_MIN_WIDTH) {
       const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
       // firstItemY is chartToFooter (the Y offset of the first bottom item).
       // The brand needs brandHeight below that point; bottom chrome content
@@ -313,7 +315,7 @@ export function computeChrome(
 
     // Add bottom padding
     bottomHeight += pad;
-  } else if (width >= BRAND_MIN_WIDTH) {
+  } else if (watermark && width >= BRAND_MIN_WIDTH) {
     // No bottom chrome items, but brand watermark still renders.
     // Reserve space: chartToFooter gap + brand text height + padding.
     const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);

@@ -804,6 +804,8 @@ export interface ChartSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /** Series names to hide from rendering. Hidden series remain in the legend but are visually dimmed. */
   hiddenSeries?: string[];
   /** Per-series visual overrides, keyed by series name (the color field value). */
@@ -844,6 +846,8 @@ export interface TableSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. */
   darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /** Enable client-side search/filter. */
   search?: boolean;
   /** Pagination configuration. True for defaults, or an object with pageSize. */
@@ -911,6 +915,8 @@ export interface GraphSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. */
   darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -964,6 +970,8 @@ export interface LayerSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /** Resolution strategy for shared scales/axes/legends. */
   resolve?: ResolveConfig;
   /** Hidden series names. */
@@ -1030,6 +1038,8 @@ export interface SankeySpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
   /**

@@ -211,6 +211,10 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
 
   const sankeySpec = normalized as NormalizedSankeySpec;
 
+  // Resolve watermark: explicit spec value wins, then options fallback, then default true.
+  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const watermark = rawWatermark !== undefined ? sankeySpec.watermark : (options.watermark ?? true);
+
   // 2. Resolve theme
   const mergedThemeConfig = options.theme
     ? { ...sankeySpec.theme, ...options.theme }
@@ -241,6 +245,9 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     theme,
     options.width,
     options.measureText,
+    'full',
+    undefined,
+    watermark,
   );
 
   // 4. Compute drawing area (total space minus chrome)
@@ -254,7 +261,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
 
   // Guard against negative dimensions
   if (fullArea.width <= 0 || fullArea.height <= 0) {
-    return emptyLayout(fullArea, chrome, theme, options);
+    return emptyLayout(fullArea, chrome, theme, options, watermark);
   }
 
   // 5. Extract encoding fields
@@ -298,7 +305,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   };
 
   if (area.height <= 0) {
-    return emptyLayout(area, chrome, theme, options);
+    return emptyLayout(area, chrome, theme, options, watermark);
   }
 
   // 6. Run d3-sankey layout (may re-run once if labels overflow)
@@ -473,6 +480,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       height: options.height,
     },
     animation: resolvedAnimation,
+    watermark,
   };
 }
 
@@ -631,6 +639,7 @@ function emptyLayout(
   chrome: ReturnType<typeof computeChrome>,
   theme: ResolvedTheme,
   options: CompileOptions,
+  watermark: boolean,
 ): SankeyLayout {
   return {
     area,
@@ -664,5 +673,6 @@ function emptyLayout(
       width: options.width,
       height: options.height,
     },
+    watermark,
   };
 }

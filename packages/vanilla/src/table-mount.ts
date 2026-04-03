@@ -39,6 +39,8 @@ export interface TableMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   responsive?: boolean;
+  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
   onRowClick?: (row: Record<string, unknown>) => void;
   onStateChange?: (state: TableState) => void;
   externalState?: { sort?: SortState | null; search?: string; page?: number };
@@ -175,6 +177,7 @@ export function createTable(
       height: 600,
       theme: options?.theme,
       darkMode,
+      watermark: options?.watermark,
       sort: state.sort ?? undefined,
       search: state.search || undefined,
       page: state.page,

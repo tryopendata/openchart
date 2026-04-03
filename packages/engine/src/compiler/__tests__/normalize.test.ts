@@ -1,12 +1,15 @@
 import type {
   ChartSpec,
   GraphSpec,
+  LayerSpec,
   RangeAnnotation,
   RefLineAnnotation,
+  SankeySpec,
   TableSpec,
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import type { NormalizedSankeySpec } from '../../sankey/types';
 import { normalizeSpec } from '../normalize';
 import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } from '../types';
 
@@ -50,6 +53,17 @@ describe('normalizeSpec', () => {
         prefix: '',
         offsets: undefined,
       });
+    });
+
+    it('watermark defaults to true when not specified', () => {
+      const result = normalizeSpec(lineSpec) as NormalizedChartSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: ChartSpec = { ...lineSpec, watermark: false };
+      const result = normalizeSpec(spec) as NormalizedChartSpec;
+      expect(result.watermark).toBe(false);
     });
 
     it('preserves explicit values', () => {
@@ -205,6 +219,27 @@ describe('normalizeSpec', () => {
       expect(result.responsive).toBe(true);
       expect(result.darkMode).toBe('off');
     });
+
+    it('watermark defaults to true when not specified', () => {
+      const spec: TableSpec = {
+        type: 'table',
+        data: [{ name: 'Alice', age: 30 }],
+        columns: [{ key: 'name' }, { key: 'age' }],
+      };
+      const result = normalizeSpec(spec) as NormalizedTableSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: TableSpec = {
+        type: 'table',
+        data: [{ name: 'Alice', age: 30 }],
+        columns: [{ key: 'name' }, { key: 'age' }],
+        watermark: false,
+      };
+      const result = normalizeSpec(spec) as NormalizedTableSpec;
+      expect(result.watermark).toBe(false);
+    });
   });
 
   describe('graph spec normalization', () => {
@@ -220,6 +255,81 @@ describe('normalizeSpec', () => {
       expect(result.layout).toEqual({ type: 'force', chargeStrength: -300, linkDistance: 30 });
       expect(result.annotations).toEqual([]);
       expect(result.darkMode).toBe('off');
+    });
+
+    it('watermark defaults to true when not specified', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+      };
+      const result = normalizeSpec(spec) as NormalizedGraphSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        watermark: false,
+      };
+      const result = normalizeSpec(spec) as NormalizedGraphSpec;
+      expect(result.watermark).toBe(false);
+    });
+  });
+
+  describe('sankey spec normalization', () => {
+    const baseSankeySpec: SankeySpec = {
+      type: 'sankey',
+      data: [{ source: 'A', target: 'B', value: 10 }],
+      encoding: {
+        source: { field: 'source' },
+        target: { field: 'target' },
+        value: { field: 'value' },
+      },
+    };
+
+    it('watermark defaults to true when not specified', () => {
+      const result = normalizeSpec(baseSankeySpec) as NormalizedSankeySpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('watermark respects explicit false', () => {
+      const spec: SankeySpec = { ...baseSankeySpec, watermark: false };
+      const result = normalizeSpec(spec) as NormalizedSankeySpec;
+      expect(result.watermark).toBe(false);
+    });
+  });
+
+  describe('layer spec normalization', () => {
+    const baseLeaf: ChartSpec = {
+      mark: 'line',
+      data: [{ x: 1, y: 2 }],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+    };
+
+    it('watermark defaults to true for layer leaves', () => {
+      const layerSpec: LayerSpec = { layer: [baseLeaf] };
+      const result = normalizeSpec(layerSpec) as NormalizedChartSpec;
+      expect(result.watermark).toBe(true);
+    });
+
+    it('layer-level watermark: false propagates to leaves', () => {
+      const layerSpec: LayerSpec = { layer: [baseLeaf], watermark: false };
+      const result = normalizeSpec(layerSpec) as NormalizedChartSpec;
+      expect(result.watermark).toBe(false);
+    });
+
+    it('leaf-level watermark overrides layer-level', () => {
+      const leaf: ChartSpec = { ...baseLeaf, watermark: true };
+      const layerSpec: LayerSpec = { layer: [leaf], watermark: false };
+      const result = normalizeSpec(layerSpec) as NormalizedChartSpec;
+      // Leaf explicitly sets true, which should be preserved
+      expect(result.watermark).toBe(true);
     });
   });
 });

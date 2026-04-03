@@ -73,6 +73,7 @@ export function makeLineSpec(): NormalizedChartSpec {
     labels: { density: 'auto', format: '', prefix: '' },
     hiddenSeries: [],
     seriesStyles: {},
+    watermark: true,
   };
 }
 
@@ -102,6 +103,7 @@ export function makeBarSpec(): NormalizedChartSpec {
     labels: { density: 'auto', format: '', prefix: '' },
     hiddenSeries: [],
     seriesStyles: {},
+    watermark: true,
   };
 }
 
@@ -133,5 +135,6 @@ export function makeScatterSpec(): NormalizedChartSpec {
     labels: { density: 'auto', format: '', prefix: '' },
     hiddenSeries: [],
     seriesStyles: {},
+    watermark: true,
   };
 }
