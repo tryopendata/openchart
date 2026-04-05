@@ -469,7 +469,7 @@ describe('compileGraph', () => {
     ).toThrow('compileGraph received a non-graph spec');
   });
 
-  it('propagates tickAngle through the full compilation pipeline', () => {
+  it('propagates labelAngle through the full compilation pipeline', () => {
     const columnSpec = {
       mark: 'bar' as const,
       data: [
@@ -480,14 +480,14 @@ describe('compileGraph', () => {
         { state: 'Pennsylvania', pop: 13000000 },
       ],
       encoding: {
-        x: { field: 'state', type: 'nominal' as const, axis: { tickAngle: -90 } },
+        x: { field: 'state', type: 'nominal' as const, axis: { labelAngle: -90 } },
         y: { field: 'pop', type: 'quantitative' as const },
       },
     };
 
     const layout = compileChart(columnSpec, { width: 400, height: 300 });
 
-    // tickAngle should be propagated to the x-axis layout
+    // labelAngle should be propagated to the x-axis layout as tickAngle
     expect(layout.axes.x!.tickAngle).toBe(-90);
     // y-axis should not have a tickAngle
     expect(layout.axes.y!.tickAngle).toBeUndefined();
@@ -509,7 +509,7 @@ describe('compileGraph', () => {
     const rotatedColumnSpec = {
       ...baseColumnSpec,
       encoding: {
-        x: { field: 'state', type: 'nominal' as const, axis: { tickAngle: -90 } },
+        x: { field: 'state', type: 'nominal' as const, axis: { labelAngle: -90 } },
         y: { field: 'pop', type: 'quantitative' as const },
       },
     };

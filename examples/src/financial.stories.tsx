@@ -80,7 +80,7 @@ function stockPriceSpec(dark: boolean): ChartSpec {
       y: {
         field: 'price',
         type: 'quantitative',
-        axis: { label: 'Share Price', format: '$,.0f' },
+        axis: { title: 'Share Price', format: '$,.0f' },
         scale: { zero: false },
       },
     },
@@ -219,7 +219,7 @@ function benchmarkSpec(dark: boolean): ChartSpec {
       y: {
         field: 'totalReturn',
         type: 'quantitative',
-        axis: { label: 'Cumulative Return (%)', format: '+.0f', grid: true },
+        axis: { title: 'Cumulative Return (%)', format: '+.0f', grid: true },
       },
       color: { field: 'index', type: 'nominal' },
     },
@@ -297,7 +297,7 @@ function sectorSpec(dark: boolean): ChartSpec {
       x: {
         field: 'performance',
         type: 'quantitative',
-        axis: { label: 'Full-Year Return (%)', format: '+.1f' },
+        axis: { title: 'Full-Year Return (%)', format: '+.1f' },
       },
       y: { field: 'sector', type: 'nominal' },
     },
@@ -434,12 +434,12 @@ function riskReturnSpec(dark: boolean): ChartSpec {
       x: {
         field: 'volatility',
         type: 'quantitative',
-        axis: { label: 'Annualized Volatility (%)', format: '.0f' },
+        axis: { title: 'Annualized Volatility (%)', format: '.0f' },
       },
       y: {
         field: 'annualReturn',
         type: 'quantitative',
-        axis: { label: 'Annualized Return (%)', format: '+.1f' },
+        axis: { title: 'Annualized Return (%)', format: '+.1f' },
       },
       color: { field: 'assetClass', type: 'nominal' },
       size: { field: 'allocation', type: 'quantitative' },

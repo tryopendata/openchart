@@ -34,7 +34,7 @@ const simpleColumnSpec: ChartSpec = {
     y: {
       field: 'jobs',
       type: 'quantitative',
-      axis: { label: 'Jobs added (thousands)' },
+      axis: { title: 'Jobs added (thousands)' },
     },
   },
   annotations: [
@@ -103,7 +103,7 @@ const groupedColumnSpec: ChartSpec = {
       field: 'capacity',
       type: 'quantitative',
       stack: null,
-      axis: { label: 'Capacity added (GW)' },
+      axis: { title: 'Capacity added (GW)' },
     },
     color: { field: 'type', type: 'nominal' },
   },
@@ -161,7 +161,7 @@ const negativeColumnSpec: ChartSpec = {
     y: {
       field: 'growth',
       type: 'quantitative',
-      axis: { label: 'Annualized GDP growth (%)', format: '+.0f' },
+      axis: { title: 'Annualized GDP growth (%)', format: '+.0f' },
     },
   },
   annotations: [

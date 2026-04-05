@@ -195,7 +195,18 @@ export interface MarkDef {
 export type FieldType = 'quantitative' | 'temporal' | 'nominal' | 'ordinal';
 
 /** Aggregate function applied to a field before encoding. */
-export type AggregateOp = 'count' | 'sum' | 'mean' | 'median' | 'min' | 'max';
+export type AggregateOp =
+  | 'count'
+  | 'sum'
+  | 'mean'
+  | 'median'
+  | 'min'
+  | 'max'
+  | 'variance'
+  | 'stdev'
+  | 'distinct'
+  | 'q1'
+  | 'q3';
 
 /** Axis configuration for an encoding channel. */
 export interface AxisConfig {
@@ -227,12 +238,6 @@ export interface AxisConfig {
   titlePadding?: number;
   /** Padding between tick labels and axis. */
   labelPadding?: number;
-
-  // --- Deprecated aliases (will be removed) ---
-  /** @deprecated Use `title` instead. */
-  label?: string;
-  /** @deprecated Use `labelAngle` instead. */
-  tickAngle?: number;
 }
 
 /** Scale configuration for an encoding channel. */
@@ -309,10 +314,47 @@ export interface EncodingChannel {
   scale?: ScaleConfig;
   /**
    * Stacking behavior for quantitative channels (Vega-Lite aligned).
-   * - undefined | true | 'zero': stack (default, cumulative segments)
+   * - undefined | true | 'zero': stack from zero baseline (default)
+   * - 'normalize': stack and normalize to fraction of total (0-1 per category)
+   * - 'center': center stacks around zero (streamgraph style)
    * - null | false: no stacking (grouped/dodged side-by-side)
    */
-  stack?: boolean | 'zero' | null;
+  stack?: boolean | 'zero' | 'normalize' | 'center' | null;
+  /**
+   * Encoding-level bin shorthand (Vega-Lite aligned).
+   * When set, auto-generates a BinTransform during normalization and updates
+   * the field reference to the binned output (convention: `bin_<fieldName>`).
+   * - true: bin with default params
+   * - BinParams: bin with custom params (maxbins, step, etc.)
+   */
+  bin?: boolean | BinParams;
+  /**
+   * Encoding-level timeUnit shorthand (Vega-Lite aligned).
+   * When set, auto-generates a TimeUnitTransform during normalization and
+   * updates the field reference to the output (convention: `<timeUnit>_<fieldName>`).
+   */
+  timeUnit?: TimeUnit;
+  /**
+   * Sort order for categorical (nominal/ordinal) scale domains (Vega-Lite aligned).
+   * - 'ascending': sort domain values ascending (default VL behavior)
+   * - 'descending': sort domain values descending
+   * - null: use data order (no sorting)
+   * - undefined: ascending (VL default)
+   */
+  sort?: 'ascending' | 'descending' | null;
+  /**
+   * Display title override (Vega-Lite aligned).
+   * Used as the label in tooltips instead of the raw field name.
+   * Also usable for axis titles, but `axis.title` takes precedence there.
+   */
+  title?: string;
+  /**
+   * Format string for values (Vega-Lite aligned).
+   * For quantitative fields: d3-format string (e.g. ",.0f", "$,.2f").
+   * For temporal fields: d3-time-format string (e.g. "%Y", "%b %d").
+   * Used in tooltips; `axis.format` takes precedence for axis tick labels.
+   */
+  format?: string;
 }
 
 /**
@@ -1198,8 +1240,34 @@ export interface TimeUnitTransform {
   as: string;
 }
 
+/**
+ * Aggregate transform: group rows and compute summary statistics (VL aligned).
+ * Produces one row per group with the groupby fields and computed aggregates.
+ */
+export interface AggregateTransform {
+  aggregate: Array<{ op: AggregateOp; field: string; as: string }>;
+  groupby: string[];
+}
+
+/**
+ * Fold transform: unpivot wide-format columns into key/value rows (VL aligned).
+ * For each input row, produces N output rows (one per fold field) with all
+ * non-fold fields copied plus a key column (field name) and value column (field value).
+ */
+export interface FoldTransform {
+  fold: string[];
+  /** Output field names for [key, value]. Defaults to ['key', 'value']. */
+  as?: [string, string];
+}
+
 /** Discriminated union of all transform types. */
-export type Transform = FilterTransform | BinTransform | CalculateTransform | TimeUnitTransform;
+export type Transform =
+  | FilterTransform
+  | BinTransform
+  | CalculateTransform
+  | TimeUnitTransform
+  | AggregateTransform
+  | FoldTransform;
 
 // ---------------------------------------------------------------------------
 // Conditional encoding (Vega-Lite aligned)

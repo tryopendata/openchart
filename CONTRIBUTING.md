@@ -10,7 +10,7 @@ How to set up the project, run tests, add chart types, add table cell types, and
 ## Setup
 
 ```bash
-cd viz
+cd openchart
 bun install
 ```
 

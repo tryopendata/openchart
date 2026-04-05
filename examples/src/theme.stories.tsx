@@ -71,7 +71,7 @@ const donutSpec: ChartSpec = {
     { segment: 'Other', revenue: 12 },
   ],
   encoding: {
-    y: { field: 'revenue', type: 'quantitative', axis: { format: '$,.0f', label: 'Revenue ($B)' } },
+    y: { field: 'revenue', type: 'quantitative', axis: { format: '$,.0f', title: 'Revenue ($B)' } },
     color: { field: 'segment', type: 'nominal' },
   },
   chrome: {
@@ -621,12 +621,12 @@ const defaultEditorSpec: ChartSpec = {
     x: {
       field: 'date',
       type: 'temporal',
-      axis: { label: 'Date' },
+      axis: { title: 'Date' },
     },
     y: {
       field: 'rate',
       type: 'quantitative',
-      axis: { label: 'Unemployment Rate (%)', format: '.1f' },
+      axis: { title: 'Unemployment Rate (%)', format: '.1f' },
       scale: { zero: true },
     },
   },
@@ -707,7 +707,7 @@ const gdpBarSpec: ChartSpec = {
     x: {
       field: 'gdp',
       type: 'quantitative',
-      axis: { label: 'GDP (USD trillions)', format: '$,.1f' },
+      axis: { title: 'GDP (USD trillions)', format: '$,.1f' },
     },
     y: { field: 'country', type: 'nominal' },
     color: { field: 'gdp', type: 'quantitative' },
@@ -738,7 +738,7 @@ const columnSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'month', type: 'ordinal' },
-    y: { field: 'jobs', type: 'quantitative', axis: { label: 'Jobs added (thousands)' } },
+    y: { field: 'jobs', type: 'quantitative', axis: { title: 'Jobs added (thousands)' } },
   },
   chrome: {
     title: 'A Bumpy Year for Hiring',
@@ -759,7 +759,7 @@ const _smartphoneDonutSpec: ChartSpec = {
     { vendor: 'Others', share: 33.1 },
   ],
   encoding: {
-    y: { field: 'share', type: 'quantitative', axis: { format: '.1f', label: 'Market share (%)' } },
+    y: { field: 'share', type: 'quantitative', axis: { format: '.1f', title: 'Market share (%)' } },
     color: { field: 'vendor', type: 'nominal' },
   },
   chrome: {
@@ -789,13 +789,13 @@ const _scatterSpec: ChartSpec = {
     x: {
       field: 'gdpPerCapita',
       type: 'quantitative',
-      axis: { label: 'GDP per capita (USD)', format: '$,.0f' },
+      axis: { title: 'GDP per capita (USD)', format: '$,.0f' },
       scale: { type: 'log' },
     },
     y: {
       field: 'lifeExpectancy',
       type: 'quantitative',
-      axis: { label: 'Life expectancy (years)', format: '.0f' },
+      axis: { title: 'Life expectancy (years)', format: '.0f' },
     },
     color: { field: 'country', type: 'nominal' },
   },
@@ -823,7 +823,7 @@ const _dotSpec: ChartSpec = {
     { city: 'Austin', population: 979882 },
   ],
   encoding: {
-    x: { field: 'population', type: 'quantitative', axis: { label: 'Population', format: ',.0f' } },
+    x: { field: 'population', type: 'quantitative', axis: { title: 'Population', format: ',.0f' } },
     y: { field: 'city', type: 'nominal' },
   },
   chrome: {
@@ -863,7 +863,7 @@ const _areaSpec: ChartSpec = {
     y: {
       field: 'generation',
       type: 'quantitative',
-      axis: { label: 'Generation (billion kWh)' },
+      axis: { title: 'Generation (billion kWh)' },
     },
     color: { field: 'source', type: 'nominal' },
   },

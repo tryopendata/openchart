@@ -40,7 +40,7 @@ const filterSpec: ChartSpec = {
     x: {
       field: 'gdp',
       type: 'quantitative',
-      axis: { label: 'GDP ($ trillions)', format: ',.1f' },
+      axis: { title: 'GDP ($ trillions)', format: ',.1f' },
     },
     y: { field: 'country', type: 'nominal' },
   },
@@ -131,7 +131,7 @@ const calculateSpec: ChartSpec = {
     x: {
       field: 'marginPct',
       type: 'quantitative',
-      axis: { label: 'Profit Margin (%)', format: '.0f' },
+      axis: { title: 'Profit Margin (%)', format: '.0f' },
     },
     y: { field: 'company', type: 'nominal' },
   },
@@ -178,7 +178,7 @@ const timeUnitSpec: ChartSpec = {
     y: {
       field: 'sales',
       type: 'quantitative',
-      axis: { label: 'Retail Sales ($B)', format: ',.0f', grid: true },
+      axis: { title: 'Retail Sales ($B)', format: ',.0f', grid: true },
     },
   },
   labels: { density: 'all', format: ',.0f' },

@@ -60,11 +60,11 @@ const scatterSpec: ChartSpec = {
     { country: 'Kenya', gdpPerCapita: 1838, lifeExpectancy: 66.7, region: 'Africa', pop: 54 },
   ],
   encoding: {
-    x: { field: 'gdpPerCapita', type: 'quantitative', axis: { label: 'GDP per Capita (USD)' } },
+    x: { field: 'gdpPerCapita', type: 'quantitative', axis: { title: 'GDP per Capita (USD)' } },
     y: {
       field: 'lifeExpectancy',
       type: 'quantitative',
-      axis: { label: 'Life Expectancy (years)' },
+      axis: { title: 'Life Expectancy (years)' },
     },
     color: { field: 'region', type: 'nominal' },
     size: { field: 'pop', type: 'quantitative' },

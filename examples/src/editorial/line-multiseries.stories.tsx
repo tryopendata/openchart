@@ -61,7 +61,7 @@ const gdpLineSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'date', type: 'temporal' },
-    y: { field: 'gdp', type: 'quantitative', axis: { label: 'GDP Growth (%)' } },
+    y: { field: 'gdp', type: 'quantitative', axis: { title: 'GDP Growth (%)' } },
     color: { field: 'country', type: 'nominal' },
   },
   annotations: [

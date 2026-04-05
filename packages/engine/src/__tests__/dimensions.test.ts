@@ -161,7 +161,7 @@ describe('computeDimensions', () => {
         { category: 'Massachusetts', value: 15 },
       ],
       encoding: {
-        x: { field: 'category', type: 'nominal', axis: { tickAngle: -90 } },
+        x: { field: 'category', type: 'nominal', axis: { labelAngle: -90 } },
         y: { field: 'value', type: 'quantitative' },
       },
     };
@@ -198,7 +198,7 @@ describe('computeDimensions', () => {
     const smallAngleSpec: NormalizedChartSpec = {
       ...baseSpec,
       encoding: {
-        x: { field: 'date', type: 'temporal', axis: { tickAngle: 5 } },
+        x: { field: 'date', type: 'temporal', axis: { labelAngle: 5 } },
         y: { field: 'value', type: 'quantitative' },
       },
     };

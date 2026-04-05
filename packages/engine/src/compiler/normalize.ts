@@ -69,8 +69,8 @@ function normalizeChrome(chrome: Chrome | undefined): NormalizedChrome {
 
 /** Sample values from a data column and infer the field type. */
 function inferFieldType(data: DataRow[], field: string): FieldType {
-  // Sample up to 10 rows
-  const sampleSize = Math.min(10, data.length);
+  // Sample up to 50 rows for more reliable inference on mixed/messy data
+  const sampleSize = Math.min(50, data.length);
   let numericCount = 0;
   let dateCount = 0;
   let totalNonNull = 0;

@@ -43,12 +43,12 @@ const basicScatterSpec: ChartSpec = {
     x: {
       field: 'spending',
       type: 'quantitative',
-      axis: { label: 'Spending per student ($K, PPP)' },
+      axis: { title: 'Spending per student ($K, PPP)' },
     },
     y: {
       field: 'math',
       type: 'quantitative',
-      axis: { label: 'PISA math score' },
+      axis: { title: 'PISA math score' },
     },
   },
   annotations: [
@@ -101,12 +101,12 @@ const bubbleSpec: ChartSpec = {
     x: {
       field: 'gdp',
       type: 'quantitative',
-      axis: { label: 'GDP per capita ($K, PPP)' },
+      axis: { title: 'GDP per capita ($K, PPP)' },
     },
     y: {
       field: 'lifeExp',
       type: 'quantitative',
-      axis: { label: 'Life expectancy (years)' },
+      axis: { title: 'Life expectancy (years)' },
     },
     size: { field: 'pop', type: 'quantitative' },
     color: { field: 'region', type: 'nominal' },
@@ -180,12 +180,12 @@ const colorScatterSpec: ChartSpec = {
     x: {
       field: 'cost',
       type: 'quantitative',
-      axis: { label: 'Cost of living index' },
+      axis: { title: 'Cost of living index' },
     },
     y: {
       field: 'quality',
       type: 'quantitative',
-      axis: { label: 'Quality of living index' },
+      axis: { title: 'Quality of living index' },
     },
     color: { field: 'region', type: 'nominal' },
   },
