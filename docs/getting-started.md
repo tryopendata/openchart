@@ -110,6 +110,8 @@ The `encoding` object maps data fields to visual channels. `type` tells the engi
 
 The chart component fills its parent container. Set width and height on the wrapper element.
 
+See this running: [live example](https://tryopendata.github.io/openchart/?story=line--single-line)
+
 **The rest of this guide uses React for code examples.** The spec is always the same. For Vue, swap the import to `@opendata-ai/openchart-vue` and use `<Chart :spec="spec" />`. For Svelte, import from `@opendata-ai/openchart-svelte` and use `<Chart {spec} />`.
 
 ## Add chrome
@@ -653,6 +655,9 @@ table.destroy();
 
 ## Next steps
 
+- [Chart types](chart-types.md) for a visual gallery of every chart type with boilerplate specs and live examples
+- [Tables](tables.md) for data tables with heatmaps, sparklines, flags, and more
+- [Graphs](graphs.md) for network/relationship visualizations
 - [Spec reference](spec-reference.md) for field-by-field type details on every spec property
 - [Integration guide](integration-guide.md) for building apps: events, controlled tables, export, responsive, graphs
 - [Agent patterns](agent-patterns.md) for a cookbook of visualization patterns with realistic data

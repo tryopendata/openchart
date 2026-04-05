@@ -22,9 +22,7 @@ import type {
   EncodingChannel,
   LayerSpec,
   Mark,
-  PointMark,
   Rect,
-  RectMark,
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
@@ -49,6 +47,11 @@ import { columnRenderer } from './charts/column';
 import { dotRenderer } from './charts/dot';
 import { areaRenderer, lineRenderer } from './charts/line';
 import { donutRenderer, pieRenderer } from './charts/pie';
+import {
+  assignAnimationIndices,
+  computeMarkObstacles,
+  resolveRendererKey,
+} from './charts/post-process';
 import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
 import { ruleRenderer } from './charts/rule';
 import { scatterRenderer } from './charts/scatter';
@@ -96,102 +99,12 @@ import type { GraphCompilation } from './graphs/types';
 import { computeAxes } from './layout/axes';
 import { computeDimensions } from './layout/dimensions';
 import { computeGridlines } from './layout/gridlines';
-import { computeScales, type ResolvedScales } from './layout/scales';
+import { computeScales } from './layout/scales';
 import { computeLegend } from './legend/compute';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
 import { computeTooltipDescriptors } from './tooltips/compute';
 import { runTransforms } from './transforms';
-
-// ---------------------------------------------------------------------------
-// Mark obstacles for annotation collision avoidance
-// ---------------------------------------------------------------------------
-
-/**
- * Compute bounding rects from marks to use as obstacles for annotation nudging.
- *
- * For band-scale charts (bar, dot): groups marks by band row and returns
- * a single obstacle per row spanning the full band height and x-range.
- *
- * For other charts (column, scatter): returns individual mark bounds so
- * annotations avoid overlapping any visible data mark.
- */
-function computeMarkObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
-  // Band-scale y-axis: group marks by row for efficient obstacle computation
-  if (scales.y?.type === 'band') {
-    return computeBandRowObstacles(marks, scales);
-  }
-
-  // All other charts: use individual rect/point mark bounds as obstacles
-  const obstacles: Rect[] = [];
-  for (const mark of marks) {
-    if (mark.type === 'rect') {
-      const rm = mark as RectMark;
-      obstacles.push({ x: rm.x, y: rm.y, width: rm.width, height: rm.height });
-    } else if (mark.type === 'point') {
-      const pm = mark as PointMark;
-      obstacles.push({
-        x: pm.cx - pm.r,
-        y: pm.cy - pm.r,
-        width: pm.r * 2,
-        height: pm.r * 2,
-      });
-    }
-  }
-  return obstacles;
-}
-
-/** Group band-scale marks by row, returning one obstacle per band. */
-function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
-  const rows = new Map<number, { minX: number; maxX: number; bandY: number }>();
-
-  for (const mark of marks) {
-    let cy: number;
-    let left: number;
-    let right: number;
-
-    if (mark.type === 'point') {
-      const pm = mark as PointMark;
-      cy = pm.cy;
-      left = pm.cx - pm.r;
-      right = pm.cx + pm.r;
-    } else if (mark.type === 'rect') {
-      const rm = mark as RectMark;
-      cy = rm.y + rm.height / 2;
-      left = rm.x;
-      right = rm.x + rm.width;
-    } else {
-      continue;
-    }
-
-    // Round cy to group marks on the same band
-    const key = Math.round(cy);
-    const existing = rows.get(key);
-    if (existing) {
-      existing.minX = Math.min(existing.minX, left);
-      existing.maxX = Math.max(existing.maxX, right);
-    } else {
-      rows.set(key, { minX: left, maxX: right, bandY: cy });
-    }
-  }
-
-  // Get bandwidth from the band scale
-  const bandScale = scales.y!.scale as { bandwidth?: () => number };
-  const bandwidth = bandScale.bandwidth?.() ?? 0;
-  if (bandwidth === 0) return [];
-
-  const obstacles: Rect[] = [];
-  for (const { minX, maxX, bandY } of rows.values()) {
-    obstacles.push({
-      x: minX,
-      y: bandY - bandwidth / 2,
-      width: maxX - minX,
-      height: bandwidth,
-    });
-  }
-
-  return obstacles;
-}
 
 // ---------------------------------------------------------------------------
 // Encoding sugar expansion (bin, timeUnit on encoding channels)
@@ -496,26 +409,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
 
   // Get chart renderer and compute marks (using filtered data).
-  // For 'bar' mark, resolve orientation to pick horizontal vs vertical renderer.
-  // For 'arc' mark, resolve innerRadius to pick pie vs donut renderer.
-  let rendererKey = renderSpec.markType as string;
-  if (rendererKey === 'bar') {
-    // Infer orientation from encoding: if x is quantitative and y is categorical, horizontal (default)
-    // If x is categorical and y is quantitative, vertical (old 'column')
-    const xType = renderSpec.encoding.x?.type;
-    const yType = renderSpec.encoding.y?.type;
-    const isVertical =
-      (xType === 'nominal' || xType === 'ordinal' || xType === 'temporal') &&
-      yType === 'quantitative';
-    if (isVertical) {
-      rendererKey = 'bar:vertical';
-    }
-  } else if (rendererKey === 'arc') {
-    const innerRadius = renderSpec.markDef.innerRadius;
-    if (innerRadius && innerRadius > 0) {
-      rendererKey = 'arc:donut';
-    }
-  }
+  const rendererKey = resolveRendererKey(
+    renderSpec.markType,
+    renderSpec.encoding,
+    renderSpec.markDef,
+  );
   const renderer = getChartRenderer(rendererKey);
   const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
 
@@ -579,44 +477,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   );
 
   // Assign animationIndex for stagger ordering when animation is enabled
-  // Assign animationIndex for value-based stagger ordering. Skip stacked rects
-  // since they get group-based indices below (avoids wasted work that gets overwritten).
-  if (resolvedAnimation?.enabled && resolvedAnimation.staggerOrder === 'value') {
-    const indexed = marks.map((m, i) => ({ mark: m, idx: i }));
-    indexed.sort((a, b) => {
-      const av = getMarkPrimaryValue(a.mark);
-      const bv = getMarkPrimaryValue(b.mark);
-      return av - bv;
-    });
-    for (let i = 0; i < indexed.length; i++) {
-      const m = indexed[i].mark;
-      if (m.type === 'rect' && (m as RectMark).stackGroup) continue;
-      m.animationIndex = i;
-    }
-  }
-
-  // For stacked bars/columns, assign the same animationIndex to all segments
-  // sharing a stackGroup so they animate as one contiguous bar per category.
-  // Also compute stackPos (segment position within each group: 0, 1, 2...)
-  // so the renderer can chain segment animations sequentially.
-  if (resolvedAnimation?.enabled) {
-    const groupIndexMap = new Map<string, number>();
-    const groupStackPos = new Map<string, number>();
-    let nextGroupIndex = 0;
-    for (const mark of marks) {
-      if (mark.type === 'rect' && (mark as RectMark).stackGroup) {
-        const rect = mark as RectMark;
-        const group = rect.stackGroup!;
-        if (!groupIndexMap.has(group)) {
-          groupIndexMap.set(group, nextGroupIndex++);
-        }
-        rect.animationIndex = groupIndexMap.get(group)!;
-        const pos = groupStackPos.get(group) ?? 0;
-        rect.stackPos = pos;
-        groupStackPos.set(group, pos + 1);
-      }
-    }
-  }
+  assignAnimationIndices(marks, resolvedAnimation);
 
   return {
     area: chartArea,
@@ -643,23 +504,6 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     animation: resolvedAnimation,
     watermark,
   };
-}
-
-/** Extract the primary quantitative value from a mark for value-based stagger ordering. */
-function getMarkPrimaryValue(mark: Mark): number {
-  switch (mark.type) {
-    case 'rect':
-      return mark.height; // bar height is the primary value encoding
-    case 'point':
-      return mark.cy; // y position for scatter
-    case 'arc':
-      return mark.endAngle - mark.startAngle; // arc angle extent
-    case 'line':
-    case 'area':
-      return 0; // series marks don't have individual values
-    default:
-      return 0;
-  }
 }
 
 // ---------------------------------------------------------------------------

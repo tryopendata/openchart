@@ -18,6 +18,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [ColumnConfig](#columnconfig) (column definitions and visual types)
 - [Event handlers](#event-handlers) (chart and table interaction callbacks)
 - [GraphSpec](#graphspec) (network/relationship visualizations)
+- [SankeySpec](#sankeyspec) (flow diagrams)
 - [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
 - [Validation](#validation) (validateSpec, error codes)
 
@@ -26,7 +27,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 The top-level type is a discriminated union on the `type` field:
 
 ```ts
-type VizSpec = ChartSpec | TableSpec | GraphSpec;
+type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec | SankeySpec;
 ```
 
 Use `type` to select which spec shape you're building:
@@ -34,8 +35,9 @@ Use `type` to select which spec shape you're building:
 - Chart types (`line`, `area`, `bar`, `column`, `pie`, `donut`, `dot`, `scatter`) produce a `ChartSpec`
 - `table` produces a `TableSpec`
 - `graph` produces a `GraphSpec`
+- `sankey` produces a `SankeySpec`
 
-Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`.
+Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`.
 
 ---
 
@@ -659,6 +661,72 @@ Per-node visual overrides. Useful for highlighting seed nodes, selected nodes, o
 
 ---
 
+## SankeySpec
+
+Input for flow/Sankey diagram visualizations. Source: `core/src/types/spec.ts`.
+
+Sankey diagrams show flows between stages. Each data row represents a link from a source node to a target node with a quantitative value. Nodes are auto-derived from the data. Uses a separate component: `<Sankey>` (React/Vue/Svelte) or `createSankey` (vanilla).
+
+| Field           | Type              | Default     | Description                                                                         |
+| --------------- | ----------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `type`          | `'sankey'`        | (required)  | Discriminant. Always `'sankey'`.                                                    |
+| `data`          | `DataRow[]`       | (required)  | Tabular flow data. Each row is a source-target-value link.                          |
+| `encoding`      | `SankeyEncoding`  | (required)  | Maps data fields to source, target, value channels. See below.                      |
+| `nodeWidth`     | `number`          | `12`        | Width of node rectangles in pixels.                                                 |
+| `nodePadding`   | `number`          | `16`        | Vertical padding between nodes in pixels.                                           |
+| `nodeAlign`     | `SankeyNodeAlign` | `'justify'` | Node alignment: `'left'`, `'right'`, `'center'`, `'justify'`.                      |
+| `iterations`    | `number`          | `6`         | Number of layout relaxation iterations.                                             |
+| `linkStyle`     | `SankeyLinkColor` | `'gradient'`| Link coloring: `'gradient'`, `'source'`, `'target'`, `'neutral'`.                  |
+| `linkOpacity`   | `number`          | `0.5`       | Link fill opacity (0-1). Defaults to 0.75 in dark mode.                            |
+| `nodeLabelAlign`| `string`          | `'auto'`    | Label placement: `'auto'`, `'left'`, `'right'`.                                    |
+| `valueFormat`   | `string`          | `undefined` | d3-format string for values in tooltips and ARIA labels (e.g. `"$,.0f"`, `"~s"`).  |
+| `chrome`        | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                           |
+| `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
+| `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
+| `darkMode`      | `DarkMode`        | `'off'`     | Dark mode behavior.                                                                 |
+| `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
+| `animation`     | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                   |
+
+### SankeyEncoding
+
+| Channel   | Type                               | Required | Description                           |
+| --------- | ---------------------------------- | -------- | ------------------------------------- |
+| `source`  | `EncodingChannel`                  | yes      | Source node field (nominal).          |
+| `target`  | `EncodingChannel`                  | yes      | Target node field (nominal).          |
+| `value`   | `EncodingChannel`                  | yes      | Flow value field (quantitative).      |
+| `color`   | `EncodingChannel`                  | no       | Color encoding for nodes/links.       |
+| `tooltip` | `EncodingChannel \| EncodingChannel[]` | no  | Tooltip encoding.                     |
+
+### Sankey example
+
+```ts
+import { Sankey } from "@opendata-ai/openchart-react";
+
+const spec: SankeySpec = {
+  type: "sankey",
+  data: [
+    { source: "Coal", target: "Electricity", value: 46.5 },
+    { source: "Natural Gas", target: "Electricity", value: 38.2 },
+    { source: "Natural Gas", target: "Heating", value: 25.8 },
+    { source: "Electricity", target: "Residential", value: 38.5 },
+    { source: "Electricity", target: "Commercial", value: 35.8 },
+    { source: "Heating", target: "Residential", value: 15.2 },
+  ],
+  encoding: {
+    source: { field: "source", type: "nominal" },
+    target: { field: "target", type: "nominal" },
+    value: { field: "value", type: "quantitative" },
+  },
+  chrome: {
+    title: "US Energy Flow",
+    subtitle: "From primary sources to end-use sectors, quadrillion BTU",
+    source: "U.S. Energy Information Administration",
+  },
+};
+```
+
+---
+
 ## Complete spec examples
 
 ### Line chart
@@ -695,6 +763,8 @@ const spec: ChartSpec = {
 };
 ```
 
+[Live example](https://tryopendata.github.io/openchart/?story=line--multi-series)
+
 ### Area chart
 
 ```ts
@@ -713,6 +783,8 @@ const spec: ChartSpec = {
   chrome: { title: "User growth" },
 };
 ```
+
+[Live example](https://tryopendata.github.io/openchart/?story=line--area-chart)
 
 ### Bar chart (horizontal)
 
@@ -734,6 +806,8 @@ const spec: ChartSpec = {
 };
 ```
 
+[Live example](https://tryopendata.github.io/openchart/?story=bar--simple-bars)
+
 ### Column chart (vertical bars)
 
 ```ts
@@ -754,6 +828,8 @@ const spec: ChartSpec = {
 };
 ```
 
+[Live example](https://tryopendata.github.io/openchart/?story=column--simple-columns)
+
 ### Pie chart
 
 ```ts
@@ -772,6 +848,8 @@ const spec: ChartSpec = {
 };
 ```
 
+[Live example](https://tryopendata.github.io/openchart/?story=pie--basic-pie)
+
 ### Donut chart
 
 ```ts
@@ -789,6 +867,8 @@ const spec: ChartSpec = {
   chrome: { title: "Task status" },
 };
 ```
+
+[Live example](https://tryopendata.github.io/openchart/?story=pie--donut-chart)
 
 ### Scatter chart
 
@@ -819,6 +899,8 @@ const spec: ChartSpec = {
 };
 ```
 
+[Live example](https://tryopendata.github.io/openchart/?story=scatter--bubble-chart)
+
 ### Dot plot
 
 ```ts
@@ -837,6 +919,8 @@ const spec: ChartSpec = {
   chrome: { title: "Team satisfaction scores" },
 };
 ```
+
+[Live example](https://tryopendata.github.io/openchart/?story=dot--simple-dot-plot)
 
 ### Data table
 
@@ -884,6 +968,8 @@ const spec: TableSpec = {
   stickyFirstColumn: true,
 };
 ```
+
+[Live example](https://tryopendata.github.io/openchart/?story=table-basic--basic)
 
 ---
 
@@ -971,6 +1057,9 @@ const result = validateSpec(spec);
 
 ## Related docs
 
+- [Chart types](chart-types.md) for a visual gallery with boilerplate specs and live examples
+- [Tables](tables.md) for data table features (heatmaps, sparklines, flags, and more)
+- [Graphs](graphs.md) for network/relationship visualizations
 - [Getting started](getting-started.md) for a hands-on tutorial
 - [Architecture](architecture.md) for how the packages and compilation pipeline work
 - [Integration guide](integration-guide.md) for building apps on top of the library
