@@ -384,6 +384,194 @@ describe('computeTooltipDescriptors', () => {
     });
   });
 
+  describe('tooltip title and format on encoding channels', () => {
+    it('uses channel title as label instead of field name in explicit tooltip', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          ...makeBarSpec().encoding,
+          tooltip: [
+            { field: 'category', type: 'nominal', title: 'Category Name' },
+            { field: 'value', type: 'quantitative', title: 'Total Sales' },
+          ],
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 100 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      expect(content.fields[0].label).toBe('Category Name');
+      expect(content.fields[1].label).toBe('Total Sales');
+    });
+
+    it('uses channel format to format values in explicit tooltip', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          ...makeBarSpec().encoding,
+          tooltip: [{ field: 'value', type: 'quantitative', format: '$,.0f' }],
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 1500 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      expect(content.fields[0].value).toBe('$1,500');
+    });
+
+    it('channel title takes precedence over axis.title', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          ...makeBarSpec().encoding,
+          tooltip: [
+            {
+              field: 'value',
+              type: 'quantitative',
+              title: 'Channel Title',
+              axis: { title: 'Axis Title' },
+            },
+          ],
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 100 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      expect(content.fields[0].label).toBe('Channel Title');
+    });
+
+    it('channel format takes precedence over axis.format', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          ...makeBarSpec().encoding,
+          tooltip: [
+            {
+              field: 'value',
+              type: 'quantitative',
+              format: ',.0f',
+              axis: { format: '.2f' },
+            },
+          ],
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 1500 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      expect(content.fields[0].value).toBe('1,500');
+    });
+
+    it('uses title and format on auto-generated tooltip fields (no explicit tooltip)', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          x: { field: 'value', type: 'quantitative', title: 'Sales', format: '$,.0f' },
+          y: { field: 'category', type: 'nominal', title: 'Product' },
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 2000 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      const productField = content.fields.find((f) => f.label === 'Product');
+      expect(productField).toBeDefined();
+      expect(productField!.value).toBe('A');
+
+      const salesField = content.fields.find((f) => f.label === 'Sales');
+      expect(salesField).toBeDefined();
+      expect(salesField!.value).toBe('$2,000');
+    });
+
+    it('falls back to axis.title when channel title is not set', () => {
+      const spec: NormalizedChartSpec = {
+        ...makeBarSpec(),
+        encoding: {
+          ...makeBarSpec().encoding,
+          tooltip: [{ field: 'value', type: 'quantitative', axis: { title: 'Axis Label' } }],
+        },
+      };
+      const rectMarks: RectMark[] = [
+        {
+          type: 'rect',
+          x: 50,
+          y: 30,
+          width: 200,
+          height: 40,
+          fill: '#1b7fa3',
+          data: { category: 'A', value: 100 },
+          aria: { label: 'bar' },
+        },
+      ];
+
+      const descriptors = computeTooltipDescriptors(spec, rectMarks);
+      const content = descriptors.get('rect-0')!;
+
+      expect(content.fields[0].label).toBe('Axis Label');
+    });
+  });
+
   describe('empty data', () => {
     it('returns empty map for no marks', () => {
       const spec = makeLineSpec();

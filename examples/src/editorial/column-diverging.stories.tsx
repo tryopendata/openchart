@@ -37,7 +37,7 @@ const tempSpec: ChartSpec = {
     y: {
       field: 'anomaly',
       type: 'quantitative',
-      axis: { label: 'Temperature anomaly (°C)' },
+      axis: { title: 'Temperature anomaly (°C)' },
     },
     color: { field: 'trend', type: 'nominal' },
   },

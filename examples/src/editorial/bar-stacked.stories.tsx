@@ -51,7 +51,7 @@ const spendingSpec: ChartSpec = {
     x: {
       field: 'pct',
       type: 'quantitative',
-      axis: { label: 'Share of spending (%)' },
+      axis: { title: 'Share of spending (%)' },
     },
     y: { field: 'bracket', type: 'nominal' },
     color: { field: 'category', type: 'nominal' },

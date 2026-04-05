@@ -57,11 +57,21 @@ function formatValue(value: unknown, fieldType?: string, format?: string): strin
   return String(value);
 }
 
+/** Resolve the display label for an encoding channel: title > axis.title > field name. */
+function resolveLabel(ch: EncodingChannel): string {
+  return ch.title ?? ch.axis?.title ?? ch.field;
+}
+
+/** Resolve the format string for an encoding channel: format > axis.format. */
+function resolveFormat(ch: EncodingChannel): string | undefined {
+  return ch.format ?? ch.axis?.format;
+}
+
 /** Build tooltip fields from explicit tooltip encoding channels. */
 function buildExplicitTooltipFields(row: DataRow, channels: EncodingChannel[]): TooltipField[] {
   return channels.map((ch) => ({
-    label: ch.axis?.label ?? ch.field,
-    value: formatValue(row[ch.field], ch.type, ch.axis?.format),
+    label: resolveLabel(ch),
+    value: formatValue(row[ch.field], ch.type, resolveFormat(ch)),
   }));
 }
 
@@ -77,8 +87,8 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
   // Y-axis value (the "main" value in most charts)
   if (encoding.y) {
     fields.push({
-      label: encoding.y.axis?.label ?? encoding.y.field,
-      value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
+      label: resolveLabel(encoding.y),
+      value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
       color,
     });
   }
@@ -86,16 +96,20 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
   // X-axis value (often the category or date)
   if (encoding.x) {
     fields.push({
-      label: encoding.x.axis?.label ?? encoding.x.field,
-      value: formatValue(row[encoding.x.field], encoding.x.type, encoding.x.axis?.format),
+      label: resolveLabel(encoding.x),
+      value: formatValue(row[encoding.x.field], encoding.x.type, resolveFormat(encoding.x)),
     });
   }
 
   // Size (for scatter/bubble) - skip conditional size definitions
   if (encoding.size && 'field' in encoding.size) {
     fields.push({
-      label: encoding.size.axis?.label ?? encoding.size.field,
-      value: formatValue(row[encoding.size.field], encoding.size.type, encoding.size.axis?.format),
+      label: resolveLabel(encoding.size),
+      value: formatValue(
+        row[encoding.size.field],
+        encoding.size.type,
+        resolveFormat(encoding.size),
+      ),
     });
   }
 
@@ -191,14 +205,14 @@ function tooltipsForArc(
     if (encoding.y) {
       fields.push({
         label: categoryName,
-        value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
+        value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
         color: getRepresentativeColor(mark.fill),
       });
     }
   } else if (encoding.y) {
     fields.push({
-      label: encoding.y.field,
-      value: formatValue(row[encoding.y.field], encoding.y.type, encoding.y.axis?.format),
+      label: resolveLabel(encoding.y),
+      value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
       color: getRepresentativeColor(mark.fill),
     });
   }

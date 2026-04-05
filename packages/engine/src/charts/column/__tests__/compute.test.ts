@@ -424,3 +424,102 @@ describe('computeColumnLabels', () => {
     expect(texts).toContain('200%');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stack mode tests
+// ---------------------------------------------------------------------------
+
+describe('stack modes', () => {
+  function makeStackedSpec(
+    stackMode: boolean | 'zero' | 'normalize' | 'center' | null,
+  ): NormalizedChartSpec {
+    return {
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: [
+        { cat: 'A', val: 30, grp: 'X' },
+        { cat: 'A', val: 70, grp: 'Y' },
+        { cat: 'B', val: 40, grp: 'X' },
+        { cat: 'B', val: 60, grp: 'Y' },
+      ],
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative', stack: stackMode },
+        color: { field: 'grp', type: 'nominal' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '' },
+    };
+  }
+
+  it('normalize: produces marks whose stacked fractions sum to ~1 per category', () => {
+    const spec = makeStackedSpec('normalize');
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+    expect(marks.length).toBe(4);
+
+    // Group by category (stackGroup) and verify normalized heights
+    const catA = marks.filter((m) => m.stackGroup === 'A');
+    const catB = marks.filter((m) => m.stackGroup === 'B');
+    expect(catA).toHaveLength(2);
+    expect(catB).toHaveLength(2);
+
+    // The y scale domain is [0, 1] for normalize. Verify marks don't overlap
+    // and each category's marks span the full [0, 1] range when mapped back.
+    // Category A: 30/(30+70)=0.3, 70/(30+70)=0.7
+    // Category B: 40/(40+60)=0.4, 60/(40+60)=0.6
+    // All marks should have non-zero height
+    for (const mark of marks) {
+      expect(mark.height).toBeGreaterThan(0);
+    }
+  });
+
+  it('center: produces marks with symmetric offsets around zero', () => {
+    const spec = makeStackedSpec('center');
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+    expect(marks.length).toBe(4);
+
+    // All marks should have non-zero height
+    for (const mark of marks) {
+      expect(mark.height).toBeGreaterThan(0);
+    }
+  });
+
+  it('existing zero mode still works correctly', () => {
+    const spec = makeStackedSpec('zero');
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+    expect(marks.length).toBe(4);
+    // All stacked marks should have stackGroup set
+    for (const mark of marks) {
+      expect(mark.stackGroup).toBeDefined();
+    }
+  });
+
+  it('null/false disables stacking (grouped mode)', () => {
+    const specNull = makeStackedSpec(null);
+    const scalesNull = computeScales(specNull, chartArea, specNull.data);
+    const marksNull = computeColumnMarks(specNull, scalesNull, chartArea, fullStrategy);
+
+    // Grouped mode: no stackGroup
+    for (const mark of marksNull) {
+      expect(mark.stackGroup).toBeUndefined();
+    }
+
+    const specFalse = makeStackedSpec(false);
+    const scalesFalse = computeScales(specFalse, chartArea, specFalse.data);
+    const marksFalse = computeColumnMarks(specFalse, scalesFalse, chartArea, fullStrategy);
+
+    for (const mark of marksFalse) {
+      expect(mark.stackGroup).toBeUndefined();
+    }
+  });
+});

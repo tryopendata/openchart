@@ -140,6 +140,25 @@ function uniqueStrings(values: unknown[]): string[] {
   return result;
 }
 
+/**
+ * Apply sort order to categorical domain values (Vega-Lite aligned).
+ * - 'ascending': sort alphabetically/numerically ascending
+ * - 'descending': sort descending
+ * - null: preserve data order (no sorting)
+ * - undefined: ascending (VL default)
+ */
+function applyCategoricalSort(
+  values: string[],
+  sort: 'ascending' | 'descending' | null | undefined,
+): string[] {
+  // null means use data order
+  if (sort === null) return values;
+
+  const sorted = [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (sort === 'descending') sorted.reverse();
+  return sorted;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers: apply common scale config
 // ---------------------------------------------------------------------------
@@ -439,7 +458,7 @@ function buildBandScale(
 ): ResolvedScale {
   const values = channel.scale?.domain
     ? (channel.scale.domain as string[])
-    : uniqueStrings(fieldValues(data, channel.field));
+    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
   const padding = channel.scale?.padding ?? 0.35;
   const scale = scaleBand().domain(values).range([rangeStart, rangeEnd]).padding(padding);
@@ -466,7 +485,7 @@ function buildPointScale(
 ): ResolvedScale {
   const values = channel.scale?.domain
     ? (channel.scale.domain as string[])
-    : uniqueStrings(fieldValues(data, channel.field));
+    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
   const padding = channel.scale?.padding ?? 0.5;
   const scale = scalePoint().domain(values).range([rangeStart, rangeEnd]).padding(padding);
@@ -484,7 +503,11 @@ function buildOrdinalColorScale(
   data: DataRow[],
   palette: string[],
 ): ResolvedScale {
-  const values = uniqueStrings(fieldValues(data, channel.field));
+  // Use explicit domain if provided, otherwise derive from data
+  const explicitDomain = channel.scale?.domain as string[] | undefined;
+  const values = explicitDomain
+    ? explicitDomain.map(String)
+    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
   const scale = scaleOrdinal<string>().domain(values).range(palette);
 
@@ -622,6 +645,7 @@ export function computeScales(
     // For stacked bars, the x-domain needs the max category sum, not max individual value.
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
+    let xChannel = encoding.x;
     const xStackDisabled = encoding.x.stack === null || encoding.x.stack === false;
     if (
       spec.markType === 'bar' &&
@@ -629,25 +653,51 @@ export function computeScales(
       encoding.x.type === 'quantitative' &&
       !xStackDisabled
     ) {
-      const yField = encoding.y?.field;
-      const xField = encoding.x.field;
-      if (yField) {
-        const sums = new Map<string, number>();
-        for (const row of data) {
-          const cat = String(row[yField] ?? '');
-          const val = Number(row[xField] ?? 0);
-          if (Number.isFinite(val) && val > 0) {
-            sums.set(cat, (sums.get(cat) ?? 0) + val);
+      if (encoding.x.stack === 'normalize') {
+        // Normalize: domain is [0, 1]
+        xChannel = { ...encoding.x, scale: { ...encoding.x.scale, domain: [0, 1], nice: false } };
+      } else if (encoding.x.stack === 'center') {
+        // Center: compute max half-sum for symmetric domain
+        const yField = encoding.y?.field;
+        const xField = encoding.x.field;
+        if (yField) {
+          const sums = new Map<string, number>();
+          for (const row of data) {
+            const cat = String(row[yField] ?? '');
+            const val = Number(row[xField] ?? 0);
+            if (Number.isFinite(val) && val > 0) {
+              sums.set(cat, (sums.get(cat) ?? 0) + val);
+            }
           }
+          const maxSum = Math.max(...sums.values(), 0);
+          const half = maxSum / 2;
+          xChannel = {
+            ...encoding.x,
+            scale: { ...encoding.x.scale, domain: [-half, half], zero: true },
+          };
         }
-        const maxSum = Math.max(...sums.values(), 0);
-        // Create a synthetic row with the max stack sum so buildLinearScale sees it
-        xData = [...data, { [xField]: maxSum } as DataRow];
+      } else {
+        // Zero (default): domain extends to max category sum
+        const yField = encoding.y?.field;
+        const xField = encoding.x.field;
+        if (yField) {
+          const sums = new Map<string, number>();
+          for (const row of data) {
+            const cat = String(row[yField] ?? '');
+            const val = Number(row[xField] ?? 0);
+            if (Number.isFinite(val) && val > 0) {
+              sums.set(cat, (sums.get(cat) ?? 0) + val);
+            }
+          }
+          const maxSum = Math.max(...sums.values(), 0);
+          // Create a synthetic row with the max stack sum so buildLinearScale sees it
+          xData = [...data, { [xField]: maxSum } as DataRow];
+        }
       }
     }
 
     result.x = buildPositionalScale(
-      encoding.x,
+      xChannel,
       xData,
       chartArea.x,
       chartArea.x + chartArea.width,
@@ -662,6 +712,7 @@ export function computeScales(
     // would clip above the chart area.
     // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
+    let yChannel = encoding.y;
     const isVerticalBar =
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
@@ -673,26 +724,52 @@ export function computeScales(
       encoding.y.type === 'quantitative' &&
       !yStackDisabled
     ) {
-      const xField = encoding.x?.field;
-      const yField = encoding.y.field;
-      if (xField) {
-        const sums = new Map<string, number>();
-        for (const row of data) {
-          const cat = String(row[xField] ?? '');
-          const val = Number(row[yField] ?? 0);
-          if (Number.isFinite(val) && val > 0) {
-            sums.set(cat, (sums.get(cat) ?? 0) + val);
+      if (encoding.y.stack === 'normalize') {
+        // Normalize: domain is [0, 1] (VL convention)
+        yChannel = { ...encoding.y, scale: { ...encoding.y.scale, domain: [0, 1], nice: false } };
+      } else if (encoding.y.stack === 'center') {
+        // Center: compute max half-sum for symmetric domain
+        const xField = encoding.x?.field;
+        const yField = encoding.y.field;
+        if (xField) {
+          const sums = new Map<string, number>();
+          for (const row of data) {
+            const cat = String(row[xField] ?? '');
+            const val = Number(row[yField] ?? 0);
+            if (Number.isFinite(val) && val > 0) {
+              sums.set(cat, (sums.get(cat) ?? 0) + val);
+            }
           }
+          const maxSum = Math.max(...sums.values(), 0);
+          const half = maxSum / 2;
+          yChannel = {
+            ...encoding.y,
+            scale: { ...encoding.y.scale, domain: [-half, half], zero: true },
+          };
         }
-        const maxSum = Math.max(...sums.values(), 0);
-        // Create a synthetic row with the max stack sum so buildLinearScale sees it
-        yData = [...data, { [yField]: maxSum } as DataRow];
+      } else {
+        // Zero (default): domain extends to max category sum
+        const xField = encoding.x?.field;
+        const yField = encoding.y.field;
+        if (xField) {
+          const sums = new Map<string, number>();
+          for (const row of data) {
+            const cat = String(row[xField] ?? '');
+            const val = Number(row[yField] ?? 0);
+            if (Number.isFinite(val) && val > 0) {
+              sums.set(cat, (sums.get(cat) ?? 0) + val);
+            }
+          }
+          const maxSum = Math.max(...sums.values(), 0);
+          // Create a synthetic row with the max stack sum so buildLinearScale sees it
+          yData = [...data, { [yField]: maxSum } as DataRow];
+        }
       }
     }
 
     // Y axis: range is inverted (SVG y goes down, data y goes up)
     result.y = buildPositionalScale(
-      encoding.y,
+      yChannel,
       yData,
       chartArea.y + chartArea.height,
       chartArea.y,

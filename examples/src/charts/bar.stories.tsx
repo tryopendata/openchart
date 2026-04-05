@@ -31,7 +31,7 @@ const simpleBarSpec: ChartSpec = {
     x: {
       field: 'deaths',
       type: 'quantitative',
-      axis: { label: 'Deaths (millions)' },
+      axis: { title: 'Deaths (millions)' },
     },
     y: { field: 'cause', type: 'nominal' },
   },
@@ -95,7 +95,7 @@ const groupedBarSpec: ChartSpec = {
     x: {
       field: 'medals',
       type: 'quantitative',
-      axis: { label: 'Medal count' },
+      axis: { title: 'Medal count' },
     },
     y: { field: 'country', type: 'nominal' },
     color: { field: 'type', type: 'nominal' },
@@ -159,7 +159,7 @@ const negativeBarSpec: ChartSpec = {
     x: {
       field: 'return',
       type: 'quantitative',
-      axis: { label: 'Total return (%)', format: '+.0f' },
+      axis: { title: 'Total return (%)', format: '+.0f' },
     },
     y: { field: 'sector', type: 'nominal' },
   },

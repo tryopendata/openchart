@@ -116,6 +116,13 @@ export function computeBarMarks(
       );
     }
 
+    const stackMode =
+      xChannel.stack === 'normalize'
+        ? 'normalize'
+        : xChannel.stack === 'center'
+          ? 'center'
+          : 'zero';
+
     return computeStackedBars(
       spec.data,
       xChannel.field,
@@ -126,6 +133,7 @@ export function computeBarMarks(
       bandwidth,
       baseline,
       scales,
+      stackMode,
     );
   }
 
@@ -143,7 +151,7 @@ export function computeBarMarks(
   );
 }
 
-/** Compute stacked horizontal bars. */
+/** Compute stacked horizontal bars with support for zero/normalize/center modes. */
 function computeStackedBars(
   data: DataRow[],
   valueField: string,
@@ -154,6 +162,7 @@ function computeStackedBars(
   bandwidth: number,
   _baseline: number,
   scales: ResolvedScales,
+  stackMode: 'zero' | 'normalize' | 'center' = 'zero',
 ): RectMark[] {
   const marks: RectMark[] = [];
   const categoryGroups = groupByField(data, categoryField);
@@ -162,13 +171,25 @@ function computeStackedBars(
     const bandY = yScale(category);
     if (bandY === undefined) continue;
 
-    let cumulativeValue = 0;
+    // Compute category total for normalize/center modes
+    let categoryTotal = 0;
+    for (const row of rows) {
+      const v = Number(row[valueField] ?? 0);
+      if (Number.isFinite(v) && v > 0) categoryTotal += v;
+    }
+
+    // For center mode, offset so the stack is centered around zero
+    let cumulativeValue = stackMode === 'center' ? -categoryTotal / 2 : 0;
 
     for (const row of rows) {
       const groupKey = String(row[colorField] ?? '');
-      const value = Number(row[valueField] ?? 0);
+      const rawValue = Number(row[valueField] ?? 0);
       // Only stack positive values (same approach as stacked columns)
-      if (!Number.isFinite(value) || value <= 0) continue;
+      if (!Number.isFinite(rawValue) || rawValue <= 0) continue;
+
+      // For normalize mode, scale the value to a fraction of the total
+      const value =
+        stackMode === 'normalize' && categoryTotal > 0 ? rawValue / categoryTotal : rawValue;
 
       const color = getColor(scales, groupKey);
 
@@ -177,12 +198,12 @@ function computeStackedBars(
       const barWidth = Math.max(Math.abs(xRight - xLeft), MIN_BAR_WIDTH);
 
       const aria: MarkAria = {
-        label: `${category}, ${groupKey}: ${formatBarValue(value)}`,
+        label: `${category}, ${groupKey}: ${formatBarValue(rawValue)}`,
       };
 
       marks.push({
         type: 'rect',
-        x: xLeft,
+        x: Math.min(xLeft, xRight),
         y: bandY,
         width: barWidth,
         height: bandwidth,

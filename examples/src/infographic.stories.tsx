@@ -30,7 +30,7 @@ const barSpec: ChartSpec = {
     x: {
       field: 'spending',
       type: 'quantitative',
-      axis: { label: 'Annual spending ($ billions)' },
+      axis: { title: 'Annual spending ($ billions)' },
     },
     y: { field: 'country', type: 'nominal' },
   },
@@ -102,7 +102,7 @@ const lineSpec: ChartSpec = {
     y: {
       field: 'mau',
       type: 'quantitative',
-      axis: { label: 'Monthly active users (millions)' },
+      axis: { title: 'Monthly active users (millions)' },
     },
     color: { field: 'platform', type: 'nominal' },
   },
@@ -176,7 +176,7 @@ const stackedColumnSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'year', type: 'ordinal' },
-    y: { field: 'sales', type: 'quantitative', axis: { label: 'Sales (millions)' } },
+    y: { field: 'sales', type: 'quantitative', axis: { title: 'Sales (millions)' } },
     color: { field: 'fuel', type: 'nominal' },
   },
   annotations: [
@@ -251,7 +251,7 @@ const stackedAreaSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'date', type: 'temporal', axis: { tickCount: 6 } },
-    y: { field: 'generation', type: 'quantitative', axis: { label: 'TWh' } },
+    y: { field: 'generation', type: 'quantitative', axis: { title: 'TWh' } },
     color: { field: 'source', type: 'nominal' },
   },
   annotations: [

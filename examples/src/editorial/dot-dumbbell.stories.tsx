@@ -50,7 +50,7 @@ const lifeExpectancySpec: ChartSpec = {
     x: {
       field: 'years',
       type: 'quantitative',
-      axis: { label: 'Life expectancy (years)' },
+      axis: { title: 'Life expectancy (years)' },
       scale: { zero: false },
     },
     y: { field: 'country', type: 'nominal' },

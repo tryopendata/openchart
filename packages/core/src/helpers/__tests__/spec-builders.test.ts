@@ -112,7 +112,7 @@ describe('lineChart', () => {
     const xChannel: EncodingChannel = {
       field: 'date',
       type: 'temporal',
-      axis: { label: 'Year' },
+      axis: { title: 'Year' },
     };
     const yChannel: EncodingChannel = {
       field: 'value',
@@ -173,7 +173,7 @@ describe('barChart', () => {
     const catChannel: EncodingChannel = {
       field: 'name',
       type: 'ordinal',
-      axis: { label: 'Fruit' },
+      axis: { title: 'Fruit' },
     };
 
     const spec = barChart(categoricalData, catChannel, 'count');
@@ -320,7 +320,7 @@ describe('mixed FieldRef usage', () => {
       field: 'value',
       type: 'quantitative',
       aggregate: 'mean',
-      axis: { label: 'Average Value', format: ',.1f' },
+      axis: { title: 'Average Value', format: ',.1f' },
     };
 
     const spec = lineChart(timeSeriesData, 'date', yChannel, {
@@ -331,7 +331,7 @@ describe('mixed FieldRef usage', () => {
     expect(spec.encoding.x?.type).toBe('temporal');
     // y was a full object, so it's passed through
     expect(spec.encoding.y?.aggregate).toBe('mean');
-    expect(spec.encoding.y?.axis?.label).toBe('Average Value');
+    expect(spec.encoding.y?.axis?.title).toBe('Average Value');
     // color was a full object
     expect(spec.encoding.color?.type).toBe('nominal');
   });

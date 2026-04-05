@@ -399,8 +399,7 @@ export function computeAxes(
 
     // Auto-rotate labels when band scale labels would overlap.
     // Uses max label width (not average) since one long label is enough to overlap.
-    // Prefer labelAngle over deprecated tickAngle
-    let tickAngle = axisConfig?.labelAngle ?? axisConfig?.tickAngle;
+    let tickAngle = axisConfig?.labelAngle;
     if (tickAngle === undefined && scales.x.type === 'band' && ticks.length > 1) {
       const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
       let maxLabelWidth = 0;
@@ -414,8 +413,7 @@ export function computeAxes(
       }
     }
 
-    // Prefer title over deprecated label
-    const axisTitle = axisConfig?.title ?? axisConfig?.label;
+    const axisTitle = axisConfig?.title;
 
     result.x = {
       ticks,
@@ -454,21 +452,20 @@ export function computeAxes(
       allTicks = continuousTicks(scales.y, yDensity);
     }
 
-    // Gridlines use the full tick set (label thinning shouldn't remove gridlines).
-    const gridlines: Gridline[] = allTicks.map((t) => ({
-      position: t.position,
-      major: true,
-    }));
-
     // Thin tick labels to prevent overlap (skip for band scales, explicit tickCount, and values).
     const shouldThin = scales.y.type !== 'band' && !axisConfig?.tickCount && !axisConfig?.values;
     const ticks = shouldThin
       ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText)
       : allTicks;
 
-    // Prefer title over deprecated label, labelAngle over deprecated tickAngle
-    const axisTitle = axisConfig?.title ?? axisConfig?.label;
-    const tickAngle = axisConfig?.labelAngle ?? axisConfig?.tickAngle;
+    // Gridlines match the tick set so every gridline has a label.
+    const gridlines: Gridline[] = ticks.map((t) => ({
+      position: t.position,
+      major: true,
+    }));
+
+    const axisTitle = axisConfig?.title;
+    const tickAngle = axisConfig?.labelAngle;
 
     result.y = {
       ticks,

@@ -53,7 +53,7 @@ const singleLineSpec: ChartSpec = {
     y: {
       field: 'rate',
       type: 'quantitative',
-      axis: { label: 'CPI (year-over-year %)', format: '.1f', grid: true },
+      axis: { title: 'CPI (year-over-year %)', format: '.1f', grid: true },
     },
   },
   annotations: [
@@ -143,7 +143,7 @@ const multiSeriesSpec: ChartSpec = {
     y: {
       field: 'gdp',
       type: 'quantitative',
-      axis: { label: 'GDP Growth (%)', format: '+.1f', grid: true },
+      axis: { title: 'GDP Growth (%)', format: '+.1f', grid: true },
     },
     color: { field: 'country', type: 'nominal' },
   },
@@ -241,7 +241,7 @@ const fiveSeriesSpec: ChartSpec = {
     y: {
       field: 'revenue',
       type: 'quantitative',
-      axis: { label: 'Revenue ($B)', format: ',.0f', grid: true },
+      axis: { title: 'Revenue ($B)', format: ',.0f', grid: true },
     },
     color: { field: 'company', type: 'nominal' },
   },
@@ -296,7 +296,7 @@ const singleAreaSpec: ChartSpec = {
     y: {
       field: 'sales',
       type: 'quantitative',
-      axis: { label: 'Cumulative EV Fleet (millions)', format: ',.0f', grid: true },
+      axis: { title: 'Cumulative EV Fleet (millions)', format: ',.0f', grid: true },
     },
   },
   annotations: [
@@ -378,7 +378,7 @@ const stackedAreaSpec: ChartSpec = {
     y: {
       field: 'generation',
       type: 'quantitative',
-      axis: { label: 'Generation (TWh)', format: ',.0f', grid: true },
+      axis: { title: 'Generation (TWh)', format: ',.0f', grid: true },
     },
     color: { field: 'source', type: 'nominal' },
   },
@@ -485,7 +485,7 @@ function interpolationSpec(
       y: {
         field: 'temp',
         type: 'quantitative',
-        axis: { label: 'Temp (\u00B0C)', grid: true },
+        axis: { title: 'Temp (\u00B0C)', grid: true },
       },
     },
     labels: { density: 'none' },
@@ -539,7 +539,7 @@ const stepAreaSpec: ChartSpec = {
     y: {
       field: 'stations',
       type: 'quantitative',
-      axis: { label: 'Public Charging Stations (thousands)', format: ',.0f', grid: true },
+      axis: { title: 'Public Charging Stations (thousands)', format: ',.0f', grid: true },
     },
   },
   labels: { density: 'all', format: ',.0f' },

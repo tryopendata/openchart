@@ -9,7 +9,15 @@
 import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
-import { area, line, stack, stackOffsetNone, stackOrderNone } from 'd3-shape';
+import {
+  area,
+  line,
+  stack,
+  stackOffsetExpand,
+  stackOffsetNone,
+  stackOffsetSilhouette,
+  stackOrderNone,
+} from 'd3-shape';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -200,11 +208,20 @@ function computeStackedArea(
     return pivot;
   });
 
+  // Resolve stack offset from the y channel's stack property
+  const stackProp = yChannel.stack;
+  const offsetFn =
+    stackProp === 'normalize'
+      ? stackOffsetExpand
+      : stackProp === 'center'
+        ? stackOffsetSilhouette
+        : stackOffsetNone;
+
   // Use d3 stack to compute the stacked layout
   const stackGenerator = stack<Record<string, unknown>>()
     .keys(keys)
     .order(stackOrderNone)
-    .offset(stackOffsetNone);
+    .offset(offsetFn);
 
   const stackedData = stackGenerator(pivotData);
   const yScale = scales.y.scale as ScaleLinear<number, number>;

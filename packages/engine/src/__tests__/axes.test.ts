@@ -203,10 +203,10 @@ describe('computeAxes', () => {
   });
 
   // -------------------------------------------------------------------------
-  // tickAngle propagation
+  // labelAngle propagation
   // -------------------------------------------------------------------------
 
-  it('propagates tickAngle from encoding to x-axis layout', () => {
+  it('propagates labelAngle from encoding to x-axis layout', () => {
     const specWithAngle: NormalizedChartSpec = {
       ...lineSpec,
       markType: 'bar',
@@ -216,7 +216,7 @@ describe('computeAxes', () => {
         { cat: 'New York', val: 20 },
       ],
       encoding: {
-        x: { field: 'cat', type: 'nominal', axis: { tickAngle: -90 } },
+        x: { field: 'cat', type: 'nominal', axis: { labelAngle: -90 } },
         y: { field: 'val', type: 'quantitative' },
       },
     };
@@ -234,12 +234,12 @@ describe('computeAxes', () => {
     expect(axes.y!.tickAngle).toBeUndefined();
   });
 
-  it('propagates tickAngle to y-axis layout', () => {
+  it('propagates labelAngle to y-axis layout', () => {
     const specWithAngle: NormalizedChartSpec = {
       ...lineSpec,
       encoding: {
         x: { field: 'date', type: 'temporal' },
-        y: { field: 'value', type: 'quantitative', axis: { tickAngle: -45 } },
+        y: { field: 'value', type: 'quantitative', axis: { labelAngle: -45 } },
       },
     };
     const scales = computeScales(specWithAngle, chartArea, specWithAngle.data);
@@ -458,19 +458,16 @@ describe('text-aware tick density', () => {
     expect(axes.x!.ticks.length).toBe(categories.length);
   });
 
-  it('gridlines survive tick thinning', () => {
+  it('y-axis gridlines match ticks so every gridline has a label', () => {
     // Force thinning by using a measureText that reports wide labels
     const wideMeasure = () => ({ width: 200, height: 12 });
     const scales = computeScales(lineSpec, chartArea, lineSpec.data);
     const axes = computeAxes(scales, chartArea, fullStrategy, theme, wideMeasure);
 
-    // Ticks should be thinned (fewer labels) but gridlines should remain at
-    // all original tick positions
-    expect(axes.y!.gridlines.length).toBeGreaterThanOrEqual(axes.y!.ticks.length);
-    // With wide labels forcing thinning, gridlines should outnumber ticks
-    if (axes.y!.ticks.length < axes.y!.gridlines.length) {
-      // Gridlines retained positions that ticks lost — the fix is working
-      expect(axes.y!.gridlines.length).toBeGreaterThan(axes.y!.ticks.length);
+    // Y-axis gridlines should always match ticks 1:1 (every gridline gets a label)
+    expect(axes.y!.gridlines.length).toBe(axes.y!.ticks.length);
+    for (let i = 0; i < axes.y!.ticks.length; i++) {
+      expect(axes.y!.gridlines[i].position).toBe(axes.y!.ticks[i].position);
     }
   });
 
@@ -534,28 +531,14 @@ describe('axis config properties', () => {
     expect(axes.y!.label).toBe('Amount ($)');
   });
 
-  it('falls back to deprecated label when title is not set', () => {
-    const spec: NormalizedChartSpec = {
-      ...lineSpec,
-      encoding: {
-        x: { field: 'date', type: 'temporal', axis: { label: 'Old Label' } },
-        y: { field: 'value', type: 'quantitative' },
-      },
-    };
-    const scales = computeScales(spec, chartArea, spec.data);
-    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
-
-    expect(axes.x!.label).toBe('Old Label');
-  });
-
-  it('prefers labelAngle over deprecated tickAngle', () => {
+  it('propagates labelAngle to layout tickAngle', () => {
     const spec: NormalizedChartSpec = {
       ...lineSpec,
       encoding: {
         x: {
           field: 'date',
           type: 'temporal',
-          axis: { labelAngle: -30, tickAngle: -90 },
+          axis: { labelAngle: -30 },
         },
         y: { field: 'value', type: 'quantitative' },
       },
@@ -563,7 +546,6 @@ describe('axis config properties', () => {
     const scales = computeScales(spec, chartArea, spec.data);
     const axes = computeAxes(scales, chartArea, fullStrategy, theme);
 
-    // labelAngle takes precedence
     expect(axes.x!.tickAngle).toBe(-30);
   });
 

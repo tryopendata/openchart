@@ -33,12 +33,12 @@ const textMarkSpec: ChartSpec = {
     x: {
       field: 'gdp',
       type: 'quantitative',
-      axis: { label: 'GDP ($ trillions)' },
+      axis: { title: 'GDP ($ trillions)' },
     },
     y: {
       field: 'pop',
       type: 'quantitative',
-      axis: { label: 'Population (millions)' },
+      axis: { title: 'Population (millions)' },
     },
     text: { field: 'label', type: 'nominal' },
     size: { field: 'gdp', type: 'quantitative' },
@@ -75,7 +75,7 @@ const ruleMarkSpec: ChartSpec = {
     y: {
       field: 'rate',
       type: 'quantitative',
-      axis: { label: 'Interest Rate (%)', format: '.2f' },
+      axis: { title: 'Interest Rate (%)', format: '.2f' },
     },
     color: { field: 'category', type: 'nominal' },
   },
@@ -150,7 +150,7 @@ const tickMarkSpec: ChartSpec = {
     x: {
       field: 'income',
       type: 'quantitative',
-      axis: { label: 'Household Income ($K)', format: '$,.0f' },
+      axis: { title: 'Household Income ($K)', format: '$,.0f' },
     },
     y: { field: 'region', type: 'nominal' },
     color: { field: 'region', type: 'nominal' },

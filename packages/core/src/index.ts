@@ -17,8 +17,7 @@ export * from './types/index';
 // Colors: palette collections, contrast utilities, color-blindness simulation
 //
 // Individual named palettes (SEQUENTIAL_BLUE, DIVERGING_RED_BLUE, etc.) are
-// available via SEQUENTIAL_PALETTES and DIVERGING_PALETTES or by direct import
-// from '@opendata-ai/openchart-core/src/colors/palettes'.
+// available via the SEQUENTIAL_PALETTES and DIVERGING_PALETTES collections.
 // ---------------------------------------------------------------------------
 
 export type {

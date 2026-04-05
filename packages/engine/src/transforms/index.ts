@@ -7,15 +7,19 @@
  */
 
 import type { DataRow, Transform } from '@opendata-ai/openchart-core';
+import { runAggregate } from './aggregate';
 import { runBin } from './bin';
 import { runCalculate } from './calculate';
 import { runFilter } from './filter';
+import { runFold } from './fold';
 import { runTimeUnit } from './timeunit';
 
+export { runAggregate } from './aggregate';
 export { runBin } from './bin';
 export { runCalculate } from './calculate';
 export { isConditionalValueDef, resolveConditionalValue } from './conditional';
 export { runFilter } from './filter';
+export { runFold } from './fold';
 export { evaluatePredicate } from './predicates';
 export { runTimeUnit } from './timeunit';
 
@@ -41,6 +45,10 @@ export function runTransforms(data: DataRow[], transforms: Transform[]): DataRow
       result = runCalculate(result, transform);
     } else if ('timeUnit' in transform) {
       result = runTimeUnit(result, transform);
+    } else if ('aggregate' in transform) {
+      result = runAggregate(result, transform);
+    } else if ('fold' in transform) {
+      result = runFold(result, transform);
     }
   }
 

@@ -31,7 +31,7 @@ const conditionalBarSpec: ChartSpec = {
     y: {
       field: 'surprise',
       type: 'quantitative',
-      axis: { label: 'EPS Surprise (%)', format: '+.1f', grid: true },
+      axis: { title: 'EPS Surprise (%)', format: '+.1f', grid: true },
     },
     color: {
       condition: [
