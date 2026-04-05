@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.12.0](https://github.com/tryopendata/openchart/compare/react-v6.11.0...react-v6.12.0) (2026-04-05)
+
+
+### Features
+
+* add configurable watermark opt-out ([03519e1](https://github.com/tryopendata/openchart/commit/03519e116097c8103783314898a3d5c2a49cc3ac))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.12.0
+    * @opendata-ai/openchart-engine bumped to 6.12.0
+    * @opendata-ai/openchart-vanilla bumped to 6.12.0
+
 ## [6.11.0](https://github.com/tryopendata/openchart/compare/react-v6.10.0...react-v6.11.0) (2026-04-02)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.12.0](https://github.com/tryopendata/openchart/compare/core-v6.11.0...core-v6.12.0) (2026-04-05)
+
+
+### Features
+
+* add configurable watermark opt-out ([03519e1](https://github.com/tryopendata/openchart/commit/03519e116097c8103783314898a3d5c2a49cc3ac))
+
 ## [6.11.0](https://github.com/tryopendata/openchart/compare/core-v6.10.0...core-v6.11.0) (2026-04-02)
 
 
