@@ -30,7 +30,7 @@ const simpleDotSpec: ChartSpec = {
     { city: 'Tulsa', minutes: 19.7 },
   ],
   encoding: {
-    x: { field: 'minutes', type: 'quantitative', axis: { label: 'Minutes' } },
+    x: { field: 'minutes', type: 'quantitative', axis: { title: 'Minutes' } },
     y: { field: 'city', type: 'nominal' },
   },
   chrome: {
@@ -65,7 +65,7 @@ const coloredDotSpec: ChartSpec = {
     { airline: 'Frontier', onTime: 73.8, rating: 'Below average' },
   ],
   encoding: {
-    x: { field: 'onTime', type: 'quantitative', axis: { label: 'On-time arrival rate (%)' } },
+    x: { field: 'onTime', type: 'quantitative', axis: { title: 'On-time arrival rate (%)' } },
     y: { field: 'airline', type: 'nominal' },
     color: { field: 'rating', type: 'nominal' },
   },
@@ -106,7 +106,7 @@ const divergingDotSpec: ChartSpec = {
     { state: 'Hawaii', change: -1.5 },
   ],
   encoding: {
-    x: { field: 'change', type: 'quantitative', axis: { label: 'Population change (%)' } },
+    x: { field: 'change', type: 'quantitative', axis: { title: 'Population change (%)' } },
     y: { field: 'state', type: 'nominal' },
   },
   chrome: {

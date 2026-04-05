@@ -767,7 +767,7 @@ function ChartEditingDemo() {
       y: {
         field: 'revenue',
         type: 'quantitative',
-        axis: { label: 'Revenue ($B)', format: '$.0f' },
+        axis: { title: 'Revenue ($B)', format: '$.0f' },
         scale: { zero: true },
       },
       color: { field: 'segment', type: 'nominal' },

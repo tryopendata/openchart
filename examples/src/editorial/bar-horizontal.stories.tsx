@@ -28,7 +28,7 @@ const populationBarSpec: ChartSpec = {
     { country: 'Ethiopia', population: 135_000_000 },
   ],
   encoding: {
-    x: { field: 'population', type: 'quantitative', axis: { label: 'Population' } },
+    x: { field: 'population', type: 'quantitative', axis: { title: 'Population' } },
     y: { field: 'country', type: 'nominal' },
   },
   annotations: [

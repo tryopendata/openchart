@@ -13,10 +13,13 @@
 
 import type {
   AnimationSpec,
+  BinParams,
+  BinTransform,
   ChartLayout,
   ChartSpec,
   CompileOptions,
   CompileTableOptions,
+  EncodingChannel,
   LayerSpec,
   Mark,
   PointMark,
@@ -25,6 +28,9 @@ import type {
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
+  TimeUnit,
+  TimeUnitTransform,
+  Transform,
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
@@ -188,6 +194,80 @@ function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] 
 }
 
 // ---------------------------------------------------------------------------
+// Encoding sugar expansion (bin, timeUnit on encoding channels)
+// ---------------------------------------------------------------------------
+
+/**
+ * Expand encoding-level `bin` and `timeUnit` shorthand into explicit transforms.
+ *
+ * Vega-Lite allows `encoding.x.bin: true` as sugar for a BinTransform.
+ * This function detects those shorthands, generates the corresponding transforms,
+ * updates encoding field references to the output field names, and prepends the
+ * transforms to the spec's transform array.
+ *
+ * Mutates nothing; returns a new spec object (shallow copy).
+ */
+export function expandEncodingSugar(spec: Record<string, unknown>): Record<string, unknown> {
+  const encoding = spec.encoding as Record<string, EncodingChannel | undefined> | undefined;
+  if (!encoding) return spec;
+
+  const generatedTransforms: Transform[] = [];
+  const updatedEncoding = { ...encoding };
+  let changed = false;
+
+  for (const channel of Object.keys(encoding)) {
+    const ch = encoding[channel];
+    if (!ch || !ch.field) continue;
+
+    // Expand bin shorthand
+    if (ch.bin != null && ch.bin !== false) {
+      const field = ch.field;
+      const outputField = `bin_${field}`;
+      const binTransform: BinTransform = {
+        bin: ch.bin === true ? true : (ch.bin as BinParams),
+        field,
+        as: outputField,
+      };
+      generatedTransforms.push(binTransform);
+
+      // Update encoding to reference binned output field, remove bin property
+      const { bin: _bin, ...rest } = ch;
+      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
+      changed = true;
+    }
+
+    // Expand timeUnit shorthand (read from updated encoding in case bin already ran)
+    const current = updatedEncoding[channel] ?? ch;
+    if (current.timeUnit) {
+      const field = current.field;
+      const unit = current.timeUnit as TimeUnit;
+      const outputField = `${unit}_${field}`;
+      const timeUnitTransform: TimeUnitTransform = {
+        timeUnit: unit,
+        field,
+        as: outputField,
+      };
+      generatedTransforms.push(timeUnitTransform);
+
+      // Update encoding to reference timeUnit output field, remove timeUnit property
+      const { timeUnit: _tu, ...rest } = current;
+      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
+      changed = true;
+    }
+  }
+
+  if (!changed) return spec;
+
+  // Prepend generated transforms before any user-defined transforms
+  const existingTransforms = (spec.transform as Transform[] | undefined) ?? [];
+  return {
+    ...spec,
+    encoding: updatedEncoding,
+    transform: [...generatedTransforms, ...existingTransforms],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Chart compilation
 // ---------------------------------------------------------------------------
 
@@ -204,8 +284,15 @@ function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] 
  * @throws Error if spec is invalid or not a chart type.
  */
 export function compileChart(spec: unknown, options: CompileOptions): ChartLayout {
+  // Expand encoding-level bin/timeUnit sugar before validation + normalization.
+  // This converts shorthand (e.g. encoding.x.bin: true) into explicit transforms.
+  const expandedSpec =
+    spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? expandEncodingSugar(spec as Record<string, unknown>)
+      : spec;
+
   // Validate + normalize
-  const { spec: normalized } = compileSpec(spec);
+  const { spec: normalized } = compileSpec(expandedSpec);
 
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');
@@ -223,13 +310,14 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   let chartSpec = normalized as NormalizedChartSpec;
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
-  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const rawWatermark = (expandedSpec as Record<string, unknown>).watermark;
   const watermark = rawWatermark !== undefined ? chartSpec.watermark : (options.watermark ?? true);
 
   // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
-  // Transforms are defined on the original spec, not the normalized spec, since
-  // NormalizedChartSpec doesn't carry the transform field.
-  const rawTransforms = (spec as Record<string, unknown>).transform as
+  // Transforms are defined on the expanded spec (which includes any auto-generated
+  // transforms from encoding-level bin/timeUnit sugar), not the normalized spec,
+  // since NormalizedChartSpec doesn't carry the transform field.
+  const rawTransforms = (expandedSpec as Record<string, unknown>).transform as
     | import('@opendata-ai/openchart-core').Transform[]
     | undefined;
   if (rawTransforms && rawTransforms.length > 0) {
@@ -241,8 +329,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const heightClass = getHeightClass(options.height);
   const strategy = getLayoutStrategy(breakpoint, heightClass);
 
-  // Apply breakpoint-conditional overrides from the original spec
-  const rawSpec = spec as Record<string, unknown>;
+  // Apply breakpoint-conditional overrides from the expanded spec
+  const rawSpec = expandedSpec as Record<string, unknown>;
   const overrides = rawSpec.overrides as
     | Partial<
         Record<

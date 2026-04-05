@@ -125,9 +125,9 @@ export function computeDimensions(
   // Estimate x-axis height below chart area: tick labels sit 14px below,
   // axis title sits 35px below. These extend past the chart area bottom
   // and source/footer chrome must be positioned below them.
-  const xAxis = encoding.x?.axis as (Record<string, unknown> & { tickAngle?: number }) | undefined;
-  const hasXAxisLabel = !!xAxis?.label;
-  const xTickAngle = xAxis?.tickAngle;
+  const xAxis = encoding.x?.axis as (Record<string, unknown> & { labelAngle?: number }) | undefined;
+  const hasXAxisLabel = !!xAxis?.title;
+  const xTickAngle = xAxis?.labelAngle;
 
   let xAxisHeight: number;
   if (isRadial) {

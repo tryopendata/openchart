@@ -84,6 +84,7 @@ export type {
 // Spec types (user input)
 export type {
   AggregateOp,
+  AggregateTransform,
   AnimationConfig,
   AnimationEase,
   AnimationPhaseConfig,
@@ -114,6 +115,7 @@ export type {
   FieldType,
   FilterPredicate,
   FilterTransform,
+  FoldTransform,
   GradientDef,
   GradientStop,
   GraphEdge,

@@ -49,12 +49,12 @@ const emissionsSpec: ChartSpec = {
     x: {
       field: 'co2',
       type: 'quantitative',
-      axis: { label: 'CO2 emissions per capita (tonnes)' },
+      axis: { title: 'CO2 emissions per capita (tonnes)' },
     },
     y: {
       field: 'renewables',
       type: 'quantitative',
-      axis: { label: 'Renewable electricity share (%)' },
+      axis: { title: 'Renewable electricity share (%)' },
     },
     color: { field: 'continent', type: 'nominal' },
     size: { field: 'pop', type: 'quantitative' },

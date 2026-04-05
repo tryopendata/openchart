@@ -106,6 +106,13 @@ export function computeColumnMarks(
         );
       }
 
+      const stackMode =
+        yChannel.stack === 'normalize'
+          ? 'normalize'
+          : yChannel.stack === 'center'
+            ? 'center'
+            : 'zero';
+
       return computeStackedColumns(
         spec.data,
         xChannel.field,
@@ -116,6 +123,7 @@ export function computeColumnMarks(
         bandwidth,
         baseline,
         scales,
+        stackMode,
       );
     }
 
@@ -333,7 +341,7 @@ function computeGroupedColumns(
   return marks;
 }
 
-/** Compute stacked vertical columns. */
+/** Compute stacked vertical columns with support for zero/normalize/center modes. */
 function computeStackedColumns(
   data: DataRow[],
   categoryField: string,
@@ -344,6 +352,7 @@ function computeStackedColumns(
   bandwidth: number,
   _baseline: number,
   scales: ResolvedScales,
+  stackMode: 'zero' | 'normalize' | 'center' = 'zero',
 ): RectMark[] {
   const marks: RectMark[] = [];
   const categoryGroups = groupByField(data, categoryField);
@@ -352,14 +361,26 @@ function computeStackedColumns(
     const bandX = xScale(category);
     if (bandX === undefined) continue;
 
-    let cumulativeValue = 0;
+    // Compute category total for normalize/center modes
+    let categoryTotal = 0;
+    for (const row of rows) {
+      const v = Number(row[valueField] ?? 0);
+      if (Number.isFinite(v) && v > 0) categoryTotal += v;
+    }
+
+    // For center mode, offset so the stack is centered around zero
+    let cumulativeValue = stackMode === 'center' ? -categoryTotal / 2 : 0;
 
     for (const row of rows) {
       const groupKey = String(row[colorField] ?? '');
-      const value = Number(row[valueField] ?? 0);
+      const rawValue = Number(row[valueField] ?? 0);
       // Stacking only applies to positive values; negative/zero rows are skipped
       // since cumulative stacking doesn't make visual sense for mixed signs.
-      if (!Number.isFinite(value) || value <= 0) continue;
+      if (!Number.isFinite(rawValue) || rawValue <= 0) continue;
+
+      // For normalize mode, scale the value to a fraction of the total
+      const value =
+        stackMode === 'normalize' && categoryTotal > 0 ? rawValue / categoryTotal : rawValue;
 
       const color = getColor(scales, groupKey);
 
@@ -368,13 +389,13 @@ function computeStackedColumns(
       const columnHeight = Math.max(Math.abs(yBottom - yTop), MIN_COLUMN_HEIGHT);
 
       const aria: MarkAria = {
-        label: `${category}, ${groupKey}: ${formatColumnValue(value)}`,
+        label: `${category}, ${groupKey}: ${formatColumnValue(rawValue)}`,
       };
 
       marks.push({
         type: 'rect',
         x: bandX,
-        y: yTop,
+        y: Math.min(yTop, yBottom),
         width: bandwidth,
         height: columnHeight,
         fill: color,
