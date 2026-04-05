@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.13.0](https://github.com/tryopendata/openchart/compare/core-v6.12.0...core-v6.13.0) (2026-04-05)
+
+
+### Features
+
+* Vega-Lite spec alignment and release readiness ([#64](https://github.com/tryopendata/openchart/issues/64)) ([586a113](https://github.com/tryopendata/openchart/commit/586a11313f2b58f4d00f21be70ea53bed8d57b43))
+
 ## [6.12.0](https://github.com/tryopendata/openchart/compare/core-v6.11.0...core-v6.12.0) (2026-04-05)
 
 
