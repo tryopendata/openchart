@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.13.0](https://github.com/tryopendata/openchart/compare/engine-v6.12.0...engine-v6.13.0) (2026-04-05)
+
+
+### Features
+
+* **engine:** refactor annotations and compile into focused modules ([91c6f6a](https://github.com/tryopendata/openchart/commit/91c6f6ac6ffe6b21ea82c961c622f39cb044a491))
+* Vega-Lite spec alignment and release readiness ([#64](https://github.com/tryopendata/openchart/issues/64)) ([586a113](https://github.com/tryopendata/openchart/commit/586a11313f2b58f4d00f21be70ea53bed8d57b43))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.13.0
+
 ## [6.12.0](https://github.com/tryopendata/openchart/compare/engine-v6.11.0...engine-v6.12.0) (2026-04-05)
 
 
