@@ -245,6 +245,8 @@ const isDark = useDarkMode("auto");
 
 ## Theme management
 
+Browse built-in themes: [theme gallery](https://tryopendata.github.io/openchart/?story=theme--default-theme)
+
 ### Per-component theme
 
 Pass `theme` as a prop. It's deep-merged onto `DEFAULT_THEME` during compilation:
@@ -1244,7 +1246,7 @@ For tables, the HTML structure uses semantic elements (`<table>`, `<thead>`, `<t
 
 ## Graph visualization
 
-Graphs render force-directed network visualizations on canvas. The input is a `GraphSpec` with `nodes` and `edges` instead of `data` and `encoding`. See the [spec reference](spec-reference.md#graphspec) for the full type definition.
+Graphs render force-directed network visualizations on canvas. The input is a `GraphSpec` with `nodes` and `edges` instead of `data` and `encoding`. See the [graphs guide](graphs.md) for layout and encoding details, and the [spec reference](spec-reference.md#graphspec) for the full type definition. Live examples: [basic](https://tryopendata.github.io/openchart/?story=graph--basic-graph), [search](https://tryopendata.github.io/openchart/?story=graph--search-demo)
 
 ### React
 
@@ -1437,6 +1439,9 @@ The force simulation runs in a web worker to keep the main thread responsive. No
 
 ## Related docs
 
+- [Chart types](chart-types.md) for a visual gallery with boilerplate specs and live examples
+- [Tables](tables.md) for data table features (heatmaps, sparklines, flags, and more)
+- [Graphs](graphs.md) for network/relationship visualizations
 - [Spec reference](spec-reference.md) for field-by-field type details
 - [Getting started](getting-started.md) for a hands-on tutorial
 - [Architecture](architecture.md) for how the compilation pipeline works
