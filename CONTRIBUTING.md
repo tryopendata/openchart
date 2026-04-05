@@ -5,7 +5,7 @@ How to set up the project, run tests, add chart types, add table cell types, and
 ## Prerequisites
 
 - **Bun** (package manager and script runner)
-- **Node.js 20+** (runtime for TypeScript tooling)
+- **Node.js 18+** (runtime for TypeScript tooling)
 
 ## Setup
 

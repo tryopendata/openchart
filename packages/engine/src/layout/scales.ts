@@ -503,10 +503,11 @@ function buildOrdinalColorScale(
   data: DataRow[],
   palette: string[],
 ): ResolvedScale {
-  const values = applyCategoricalSort(
-    uniqueStrings(fieldValues(data, channel.field)),
-    channel.sort,
-  );
+  // Use explicit domain if provided, otherwise derive from data
+  const explicitDomain = channel.scale?.domain as string[] | undefined;
+  const values = explicitDomain
+    ? explicitDomain.map(String)
+    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
   const scale = scaleOrdinal<string>().domain(values).range(palette);
 

@@ -215,9 +215,9 @@ export function expandEncodingSugar(spec: Record<string, unknown>): Record<strin
   const updatedEncoding = { ...encoding };
   let changed = false;
 
-  for (const channel of ['x', 'y'] as const) {
+  for (const channel of Object.keys(encoding)) {
     const ch = encoding[channel];
-    if (!ch) continue;
+    if (!ch || !ch.field) continue;
 
     // Expand bin shorthand
     if (ch.bin != null && ch.bin !== false) {

@@ -33,10 +33,12 @@ function computeAggregate(op: AggregateOp, values: number[]): number {
     case 'max':
       return Math.max(...values);
     case 'variance': {
+      if (values.length < 2) return 0;
       const mean = values.reduce((a, b) => a + b, 0) / values.length;
       return values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length;
     }
     case 'stdev': {
+      if (values.length < 2) return 0;
       const m = values.reduce((a, b) => a + b, 0) / values.length;
       return Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / values.length);
     }

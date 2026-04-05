@@ -465,6 +465,8 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
         href="https://github.com/tryopendata/openchart"
         target="_blank"
         rel="noopener noreferrer"
+        aria-label="OpenChart GitHub repository (opens in new tab)"
+        className="oc-github-link"
         style={{
           position: 'fixed',
           bottom: 10,
