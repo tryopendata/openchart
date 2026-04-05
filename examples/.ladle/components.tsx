@@ -469,7 +469,7 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
         className="oc-github-link"
         style={{
           position: 'fixed',
-          bottom: 10,
+          bottom: 50,
           left: 12,
           zIndex: 9999,
           display: 'flex',
