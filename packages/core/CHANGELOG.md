@@ -1,5 +1,16 @@
 # Changelog
 
+## [7.0.0](https://github.com/tryopendata/openchart/compare/core-v6.12.0...core-v7.0.0) (2026-04-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* Removed deprecated axis properties 'label' (use 'title') and 'tickAngle' (use 'labelAngle') from AxisConfig.
+
+### Features
+
+* Vega-Lite spec alignment and release readiness ([#64](https://github.com/tryopendata/openchart/issues/64)) ([aefcb1f](https://github.com/tryopendata/openchart/commit/aefcb1f53ab4cfc47f5a8c35368c10f9b005d02c))
+
 ## [6.12.0](https://github.com/tryopendata/openchart/compare/core-v6.11.0...core-v6.12.0) (2026-04-05)
 
 

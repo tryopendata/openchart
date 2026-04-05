@@ -1,5 +1,24 @@
 # Changelog
 
+## [7.0.0](https://github.com/tryopendata/openchart/compare/engine-v6.12.0...engine-v7.0.0) (2026-04-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* Removed deprecated axis properties 'label' (use 'title') and 'tickAngle' (use 'labelAngle') from AxisConfig.
+
+### Features
+
+* **engine:** refactor annotations and compile into focused modules ([26985ae](https://github.com/tryopendata/openchart/commit/26985aeafd034ae9cfa3e2de7be59dee144693b1))
+* Vega-Lite spec alignment and release readiness ([#64](https://github.com/tryopendata/openchart/issues/64)) ([aefcb1f](https://github.com/tryopendata/openchart/commit/aefcb1f53ab4cfc47f5a8c35368c10f9b005d02c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 7.0.0
+
 ## [6.12.0](https://github.com/tryopendata/openchart/compare/engine-v6.11.0...engine-v6.12.0) (2026-04-05)
 
 
