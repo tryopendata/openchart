@@ -185,3 +185,34 @@ describe('computeBarLabels with $~s format and abbreviated aria values', () => {
     expect(labels[0].text).toBe('$500');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Unicode minus sign handling
+// ---------------------------------------------------------------------------
+
+describe('computeBarLabels with Unicode minus (U+2212) in aria values', () => {
+  function makeUnicodeMinusMark(index: number, ariaValue: string): RectMark {
+    return {
+      type: 'rect',
+      x: 0,
+      y: index * 30,
+      width: 200,
+      height: 25,
+      fill: '#4e79a7',
+      data: { category: `Cat${index}` },
+      aria: { label: `Cat${index}: ${ariaValue}` },
+    };
+  }
+
+  it('parses Unicode minus and applies format with % suffix', () => {
+    const unicodeMarks: RectMark[] = [
+      makeUnicodeMinusMark(0, '\u221234'), // −34
+      makeUnicodeMinusMark(1, '\u22125'), // −5
+    ];
+
+    const labels = computeBarLabels(unicodeMarks, chartArea, 'all', '+.0f%');
+    expect(labels).toHaveLength(2);
+    expect(labels[0].text).toBe('\u221234%'); // −34%
+    expect(labels[1].text).toBe('\u22125%'); // −5%
+  });
+});

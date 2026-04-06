@@ -42,7 +42,8 @@ const SUFFIX_MULTIPLIERS: Record<string, number> = {
  * Returns NaN when the string cannot be parsed.
  */
 function parseDisplayNumber(raw: string): number {
-  const trimmed = raw.trim();
+  // Normalize Unicode minus (U+2212, produced by d3-format) to ASCII hyphen-minus
+  const trimmed = raw.trim().replace(/\u2212/g, '-');
   if (!trimmed) return NaN;
 
   // Check for trailing abbreviation suffix (case-insensitive)
@@ -52,6 +53,11 @@ function parseDisplayNumber(raw: string): number {
     const numPart = trimmed.slice(0, -1).replace(/,/g, '');
     const n = Number(numPart);
     return Number.isNaN(n) ? NaN : n * multiplier;
+  }
+
+  // Strip literal % suffix (e.g., from "+.0f%" d3-format strings)
+  if (last === '%') {
+    return Number(trimmed.slice(0, -1).replace(/,/g, ''));
   }
 
   // No suffix — strip commas and parse
