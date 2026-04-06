@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.13.1](https://github.com/tryopendata/openchart/compare/engine-v6.13.0...engine-v6.13.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* negative value bar handling ([475b088](https://github.com/tryopendata/openchart/commit/475b088fd7e94060e9a5a7821bf517fd0cb7b1e4))
+* several issues found in the core engine (title calculation, formatting, etc) ([7861c0f](https://github.com/tryopendata/openchart/commit/7861c0f04157f0f593c47299b7d53baf8d5ac879))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.13.1
+
 ## [6.13.0](https://github.com/tryopendata/openchart/compare/engine-v6.12.0...engine-v6.13.0) (2026-04-05)
 
 
