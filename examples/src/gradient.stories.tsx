@@ -185,7 +185,7 @@ const areaGradientSpec: ChartSpec = {
     { date: '2024-12', users: 3800 },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
+    x: { field: 'date', type: 'temporal', scale: { domain: ['2024-01', '2024-12'] } },
     y: { field: 'users', type: 'quantitative', axis: { title: 'Monthly Active Users' } },
   },
   chrome: {

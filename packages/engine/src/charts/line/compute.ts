@@ -75,8 +75,13 @@ export function computeLineMarks(
       : getColor(scales, seriesKey);
     const strokeColor = getRepresentativeColor(color);
 
-    // Sort rows by x-axis field so lines draw left-to-right
-    const sortedRows = sortByField(rows, xChannel.field);
+    // Sort rows by x-axis field so lines draw left-to-right.
+    // For nominal/ordinal axes, preserve data order since there's no
+    // natural sort and the scale domain already reflects intended order.
+    const sortedRows =
+      xChannel.type === 'nominal' || xChannel.type === 'ordinal'
+        ? rows
+        : sortByField(rows, xChannel.field);
 
     // Compute pixel positions for each data point, preserving nulls
     // for line break handling

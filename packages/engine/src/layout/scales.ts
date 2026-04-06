@@ -141,18 +141,16 @@ function uniqueStrings(values: unknown[]): string[] {
 }
 
 /**
- * Apply sort order to categorical domain values (Vega-Lite aligned).
+ * Apply sort order to categorical domain values.
  * - 'ascending': sort alphabetically/numerically ascending
  * - 'descending': sort descending
- * - null: preserve data order (no sorting)
- * - undefined: ascending (VL default)
+ * - null | undefined: preserve data order (no sorting)
  */
 function applyCategoricalSort(
   values: string[],
   sort: 'ascending' | 'descending' | null | undefined,
 ): string[] {
-  // null means use data order
-  if (sort === null) return values;
+  if (!sort) return values;
 
   const sorted = [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (sort === 'descending') sorted.reverse();
@@ -194,7 +192,9 @@ function buildTimeScale(
 
   const scale = scaleTime().domain(domain).range([rangeStart, rangeEnd]);
 
-  if (channel.scale?.nice !== false) {
+  // Skip nice() when an explicit domain is provided so user-specified
+  // boundaries aren't rounded away (e.g. 2019 expanding to 2018).
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -215,7 +215,8 @@ function buildUtcScale(
 
   const scale = scaleUtc().domain(domain).range([rangeStart, rangeEnd]);
 
-  if (channel.scale?.nice !== false) {
+  // Skip nice() when an explicit domain is provided.
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -251,7 +252,7 @@ function buildLinearScale(
 
   const scale = scaleLinear().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]);
 
-  if (channel.scale?.nice !== false) {
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -278,7 +279,7 @@ function buildLogScale(
   if (channel.scale?.base !== undefined) {
     scale.base(channel.scale.base);
   }
-  if (channel.scale?.nice !== false) {
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -313,7 +314,7 @@ function buildPowScale(
   if (channel.scale?.exponent !== undefined) {
     scale.exponent(channel.scale.exponent);
   }
-  if (channel.scale?.nice !== false) {
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -345,7 +346,7 @@ function buildSqrtScale(
 
   const scale = scaleSqrt().domain([domainMin, domainMax]).range([rangeStart, rangeEnd]);
 
-  if (channel.scale?.nice !== false) {
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -380,7 +381,7 @@ function buildSymlogScale(
   if (channel.scale?.constant !== undefined) {
     scale.constant(channel.scale.constant);
   }
-  if (channel.scale?.nice !== false) {
+  if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);

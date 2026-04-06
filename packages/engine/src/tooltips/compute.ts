@@ -84,12 +84,25 @@ function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipF
 
   const fields: TooltipField[] = [];
 
+  // Color/series field (e.g. "Source: Coal") so the user knows which series
+  if (encoding.color && 'field' in encoding.color) {
+    fields.push({
+      label: resolveLabel(encoding.color),
+      value: formatValue(
+        row[encoding.color.field],
+        encoding.color.type,
+        resolveFormat(encoding.color),
+      ),
+      color,
+    });
+  }
+
   // Y-axis value (the "main" value in most charts)
   if (encoding.y) {
     fields.push({
       label: resolveLabel(encoding.y),
       value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
-      color,
+      color: encoding.color ? undefined : color,
     });
   }
 

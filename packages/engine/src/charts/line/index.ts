@@ -4,7 +4,8 @@
  * Exports line and area chart renderers and computation functions.
  */
 
-import type { LineMark, Mark } from '@opendata-ai/openchart-core';
+import type { AreaMark, LineMark, Mark } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { ChartRenderer } from '../registry';
 import { computeAreaMarks } from './area';
 import { computeLineMarks } from './compute';
@@ -53,11 +54,41 @@ export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _
  */
 export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
   const areas = computeAreaMarks(spec, scales, chartArea);
-  const lines = computeLineMarks(spec, scales, chartArea, strategy);
+
+  const encoding = spec.encoding;
+  const hasColor = !!(encoding.color && 'field' in encoding.color);
+
+  // For stacked areas, derive line marks from the area top paths so lines
+  // align with stacked positions. For non-stacked, compute lines normally.
+  const lines = hasColor
+    ? linesFromAreas(areas)
+    : computeLineMarks(spec, scales, chartArea, strategy);
 
   // Areas go first (rendered behind lines), then lines on top
   return [...areas, ...lines] as Mark[];
 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive LineMark[] from stacked AreaMark[] using each area's top boundary.
+ * This ensures lines sit on top of their corresponding stacked area bands.
+ */
+function linesFromAreas(areas: AreaMark[]): LineMark[] {
+  return areas.map((a) => ({
+    type: 'line' as const,
+    points: a.topPoints,
+    path: a.topPath,
+    stroke: getRepresentativeColor(a.fill),
+    strokeWidth: a.strokeWidth ?? 1,
+    seriesKey: a.seriesKey,
+    data: a.data,
+    dataPoints: a.dataPoints,
+    aria: { label: `${a.seriesKey ?? 'Series'}: line with ${a.topPoints.length} data points` },
+  }));
+}
 
 // ---------------------------------------------------------------------------
 // Public exports

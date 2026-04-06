@@ -74,8 +74,12 @@ function computeSingleArea(
   for (const [seriesKey, rows] of groups) {
     const color = getColor(scales, seriesKey);
 
-    // Sort rows by x-axis field so areas draw left-to-right
-    const sortedRows = sortByField(rows, xChannel.field);
+    // Sort rows by x-axis field so areas draw left-to-right.
+    // For nominal/ordinal axes, preserve data order.
+    const sortedRows =
+      xChannel.type === 'nominal' || xChannel.type === 'ordinal'
+        ? rows
+        : sortByField(rows, xChannel.field);
 
     // Compute points, filtering out null values
     const validPoints: { x: number; yTop: number; yBottom: number; row: DataRow }[] = [];
@@ -162,8 +166,12 @@ function computeStackedArea(
     return computeSingleArea(spec, scales, chartArea);
   }
 
-  // Sort data by x field so stacked areas render left-to-right
-  const sortedData = sortByField(spec.data, xChannel.field);
+  // Sort data by x field so stacked areas render left-to-right.
+  // For nominal/ordinal axes, preserve data order.
+  const sortedData =
+    xChannel.type === 'nominal' || xChannel.type === 'ordinal'
+      ? spec.data
+      : sortByField(spec.data, xChannel.field);
 
   // Collect unique series keys and x values, and build a lookup from
   // (x-value, series-key) -> original data row so stacked area marks

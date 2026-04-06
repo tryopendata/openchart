@@ -219,11 +219,9 @@ export function computeLegend(
       1,
       Math.floor((maxLegendHeight - LEGEND_PADDING * 2) / (entryHeight + 4)),
     );
-    // symbolLimit overrides the space-based limit when set (minimum 1)
+    // symbolLimit overrides the space-based limit when explicitly set (minimum 1)
     const maxEntries =
-      spec.legend?.symbolLimit != null
-        ? Math.min(Math.max(1, spec.legend.symbolLimit), maxFromSpace)
-        : maxFromSpace;
+      spec.legend?.symbolLimit != null ? Math.max(1, spec.legend.symbolLimit) : maxFromSpace;
     if (entries.length > maxEntries) {
       entries = truncateEntries(entries, maxEntries);
     }

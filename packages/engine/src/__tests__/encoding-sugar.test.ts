@@ -234,11 +234,12 @@ describe('categorical sort', () => {
     seriesStyles: {},
   });
 
-  it('sorts domain ascending by default (undefined sort)', () => {
+  it('preserves data order by default (undefined sort)', () => {
     const spec = makeBarSpec(undefined);
     const scales = computeScales(spec, chartArea, spec.data);
     const domain = (scales.y!.scale as ScaleBand<string>).domain();
-    expect(domain).toEqual(['Apple', 'Banana', 'Cherry']);
+    // Data order: Banana, Apple, Cherry
+    expect(domain).toEqual(['Banana', 'Apple', 'Cherry']);
   });
 
   it('sorts domain ascending when sort is "ascending"', () => {
