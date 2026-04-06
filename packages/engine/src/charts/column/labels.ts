@@ -18,11 +18,23 @@ import type {
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
+  abbreviateNumber,
   buildD3Formatter,
   estimateTextWidth,
+  formatNumber,
   getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format a column value for display (abbreviate large numbers). */
+function formatColumnValue(value: number): string {
+  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
+  return formatNumber(value);
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -47,6 +59,7 @@ export function computeColumnLabels(
   density: LabelDensity = 'auto',
   labelFormat?: string,
   labelPrefix?: string,
+  valueField?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -60,19 +73,28 @@ export function computeColumnLabels(
   const candidates: LabelCandidate[] = [];
 
   for (const mark of targetMarks) {
-    // Extract the display value from the aria label.
-    // Format is "category: value" or "category, group: value".
-    // Use the last colon to split, which handles colons in category names.
-    const ariaLabel = mark.aria.label;
-    const lastColon = ariaLabel.lastIndexOf(':');
-    const rawValue = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
-    if (!rawValue) continue;
+    // Get the original numeric value from the data row when possible,
+    // falling back to parsing the aria label (which may lose precision
+    // due to abbreviation rounding, e.g. 1955 → "2K" → 2000).
+    let valuePart: string;
+    const rawNum = valueField != null ? Number(mark.data[valueField]) : NaN;
 
-    // Apply label format if provided (re-parse the number from the aria string)
-    let valuePart = rawValue;
-    if (formatter) {
-      const num = Number(rawValue.replace(/[^0-9.-]/g, ''));
-      if (!Number.isNaN(num)) valuePart = formatter(num);
+    if (formatter && Number.isFinite(rawNum)) {
+      valuePart = formatter(rawNum);
+    } else if (Number.isFinite(rawNum)) {
+      valuePart = formatColumnValue(rawNum);
+    } else {
+      // Fallback: extract from aria label
+      const ariaLabel = mark.aria.label;
+      const lastColon = ariaLabel.lastIndexOf(':');
+      const rawValue = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
+      if (!rawValue) continue;
+      if (formatter) {
+        const num = Number(rawValue.replace(/[^0-9.-]/g, ''));
+        valuePart = !Number.isNaN(num) ? formatter(num) : rawValue;
+      } else {
+        valuePart = rawValue;
+      }
     }
     if (labelPrefix) valuePart = labelPrefix + valuePart;
 

@@ -17,12 +17,15 @@ export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _t
   const marks = computeBarMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
+  const valueField =
+    spec.encoding?.x && 'field' in spec.encoding.x ? spec.encoding.x.field : undefined;
   const labels = computeBarLabels(
     marks,
     chartArea,
     spec.labels.density,
     spec.labels.format,
     spec.labels.prefix,
+    valueField,
   );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];

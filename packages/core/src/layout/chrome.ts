@@ -87,7 +87,7 @@ function estimateLineCount(
   text: string,
   style: TextStyle,
   maxWidth: number,
-  _measureText?: MeasureTextFn,
+  measureText?: MeasureTextFn,
 ): number {
   if (maxWidth <= 0) return 1;
 
@@ -97,9 +97,32 @@ function estimateLineCount(
     return segments.reduce((total, segment) => {
       return (
         total +
-        (segment.length === 0 ? 1 : estimateLineCount(segment, style, maxWidth, _measureText))
+        (segment.length === 0 ? 1 : estimateLineCount(segment, style, maxWidth, measureText))
       );
     }, 0);
+  }
+
+  // Use real text measurement when available, fall back to heuristic
+  if (measureText) {
+    const textWidth = measureText(text, style.fontSize, style.fontWeight).width;
+    if (textWidth <= maxWidth) return 1;
+
+    const words = text.split(' ');
+    let lines = 1;
+    let current = '';
+
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      const candidateWidth = measureText(candidate, style.fontSize, style.fontWeight).width;
+      if (candidateWidth > maxWidth && current) {
+        lines++;
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+
+    return lines;
   }
 
   const charWidth = estimateCharWidth(style.fontSize, style.fontWeight);

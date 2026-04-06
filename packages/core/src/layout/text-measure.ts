@@ -47,7 +47,16 @@ export function estimateCharWidth(fontSize: number, fontWeight = 400): number {
  * @param fontWeight - Font weight (100-900). Defaults to 400.
  */
 export function estimateTextWidth(text: string, fontSize: number, fontWeight = 400): number {
-  return text.length * estimateCharWidth(fontSize, fontWeight);
+  const charWidth = estimateCharWidth(fontSize, fontWeight);
+  // For multiline text, measure the longest line
+  if (text.includes('\n')) {
+    let maxLen = 0;
+    for (const line of text.split('\n')) {
+      if (line.length > maxLen) maxLen = line.length;
+    }
+    return maxLen * charWidth;
+  }
+  return text.length * charWidth;
 }
 
 /**

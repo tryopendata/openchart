@@ -26,7 +26,16 @@ export const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _t
   const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
 
   // Compute and attach labels to point marks (respects spec.labels.density)
-  const labels = computeDotLabels(pointMarks, chartArea, spec.labels.density, spec.labels.prefix);
+  const valueField =
+    spec.encoding?.x && 'field' in spec.encoding.x ? spec.encoding.x.field : undefined;
+  const labels = computeDotLabels(
+    pointMarks,
+    chartArea,
+    spec.labels.density,
+    spec.labels.prefix,
+    spec.labels.format,
+    valueField,
+  );
   let labelIdx = 0;
   for (const mark of marks) {
     if (mark.type === 'point' && labelIdx < labels.length) {

@@ -17,6 +17,7 @@ import type {
   LegendLayout,
   LineMark,
   Mark,
+  MeasureTextFn,
   Point,
   PointMark,
   RectMark,
@@ -135,15 +136,45 @@ function applyTextStyle(el: SVGElement, style: TextStyle): void {
  * Break text into lines that fit within maxWidth using word wrapping.
  * Uses a character-width heuristic (same as text-measure.ts).
  */
-function wrapText(text: string, fontSize: number, fontWeight: number, maxWidth: number): string[] {
+function wrapText(
+  text: string,
+  fontSize: number,
+  fontWeight: number,
+  maxWidth: number,
+  measureText?: MeasureTextFn,
+): string[] {
   if (maxWidth <= 0) return [text];
 
   // Split on explicit newlines first
   const segments = text.split('\n');
   if (segments.length > 1) {
     return segments.flatMap((segment) =>
-      segment.length === 0 ? [''] : wrapText(segment, fontSize, fontWeight, maxWidth),
+      segment.length === 0 ? [''] : wrapText(segment, fontSize, fontWeight, maxWidth, measureText),
     );
+  }
+
+  // Use real text measurement when available
+  if (measureText) {
+    const textWidth = measureText(text, fontSize, fontWeight).width;
+    if (textWidth <= maxWidth) return [text];
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let current = '';
+
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      const candidateWidth = measureText(candidate, fontSize, fontWeight).width;
+      if (candidateWidth > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current) lines.push(current);
+
+    return lines;
   }
 
   // Heuristic character width matching text-measure.ts
@@ -188,6 +219,7 @@ function renderChromeElement(
   element: ResolvedChromeElement,
   className: string,
   chromeKey: string,
+  measureText?: MeasureTextFn,
 ): void {
   const text = createSVGElement('text');
   setAttrs(text, { x: element.x, y: element.y });
@@ -200,6 +232,7 @@ function renderChromeElement(
     element.style.fontSize,
     element.style.fontWeight,
     element.maxWidth,
+    measureText,
   );
 
   if (lines.length === 1) {
@@ -221,14 +254,14 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-chrome');
 
-  const { chrome } = layout;
+  const { chrome, measureText } = layout;
 
   // Top chrome: render at their stored y positions (already absolute)
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'oc-title', 'title');
+    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle');
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
   }
 
   // Bottom chrome starts below x-axis labels/title, not at chart area bottom.
@@ -241,6 +274,7 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       { ...chrome.source, y: bottomOffset + chrome.source.y },
       'oc-source',
       'source',
+      measureText,
     );
   }
   if (chrome.byline) {
@@ -249,6 +283,7 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       { ...chrome.byline, y: bottomOffset + chrome.byline.y },
       'oc-byline',
       'byline',
+      measureText,
     );
   }
   if (chrome.footer) {
@@ -257,6 +292,7 @@ function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       { ...chrome.footer, y: bottomOffset + chrome.footer.y },
       'oc-footer',
       'footer',
+      measureText,
     );
   }
 

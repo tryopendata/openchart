@@ -17,12 +17,15 @@ export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy,
   const marks = computeColumnMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
+  const valueField =
+    spec.encoding?.y && 'field' in spec.encoding.y ? spec.encoding.y.field : undefined;
   const labels = computeColumnLabels(
     marks,
     chartArea,
     spec.labels.density,
     spec.labels.format,
     spec.labels.prefix,
+    valueField,
   );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];

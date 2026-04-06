@@ -18,10 +18,23 @@ import type {
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
+  abbreviateNumber,
+  buildD3Formatter,
   estimateTextWidth,
+  formatNumber,
   getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format a dot value for display (abbreviate large numbers). */
+function formatDotValue(value: number): string {
+  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
+  return formatNumber(value);
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -45,6 +58,8 @@ export function computeDotLabels(
   _chartArea: Rect,
   density: LabelDensity = 'auto',
   labelPrefix?: string,
+  labelFormat?: string,
+  valueField?: string,
 ): ResolvedLabel[] {
   // 'none': no labels at all
   if (density === 'none') return [];
@@ -53,15 +68,31 @@ export function computeDotLabels(
   const targetMarks =
     density === 'endpoints' && marks.length > 1 ? [marks[0], marks[marks.length - 1]] : marks;
 
+  const formatter = buildD3Formatter(labelFormat);
   const candidates: LabelCandidate[] = [];
 
   for (const mark of targetMarks) {
-    // Extract the display value from the aria label.
-    // Format is "category: value". Use the last colon to handle colons in category names.
-    const ariaLabel = mark.aria.label;
-    const lastColon = ariaLabel.lastIndexOf(':');
-    let valuePart = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
-    if (!valuePart) continue;
+    // Get the original numeric value from the data row when possible,
+    // falling back to parsing the aria label (which may lose precision
+    // due to abbreviation rounding, e.g. 1955 → "2K" → 2000).
+    let valuePart: string;
+    const rawNum = valueField != null ? Number(mark.data[valueField]) : NaN;
+
+    if (formatter && Number.isFinite(rawNum)) {
+      valuePart = formatter(rawNum);
+    } else if (Number.isFinite(rawNum)) {
+      valuePart = formatDotValue(rawNum);
+    } else {
+      // Fallback: extract from aria label
+      const ariaLabel = mark.aria.label;
+      const lastColon = ariaLabel.lastIndexOf(':');
+      valuePart = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
+      if (!valuePart) continue;
+      if (formatter) {
+        const num = Number(valuePart.replace(/[^0-9.-]/g, ''));
+        if (!Number.isNaN(num)) valuePart = formatter(num);
+      }
+    }
     if (labelPrefix) valuePart = labelPrefix + valuePart;
 
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);

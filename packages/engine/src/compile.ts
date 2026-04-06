@@ -503,6 +503,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     },
     animation: resolvedAnimation,
     watermark,
+    measureText: options.measureText,
   };
 }
 
