@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.13.1](https://github.com/tryopendata/openchart/compare/core-v6.13.0...core-v6.13.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* several issues found in the core engine (title calculation, formatting, etc) ([7861c0f](https://github.com/tryopendata/openchart/commit/7861c0f04157f0f593c47299b7d53baf8d5ac879))
+
 ## [6.13.0](https://github.com/tryopendata/openchart/compare/core-v6.12.0...core-v6.13.0) (2026-04-05)
 
 
