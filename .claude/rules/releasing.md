@@ -17,7 +17,7 @@ This project uses [release-please](https://github.com/googleapis/release-please)
 ## Key config details
 
 - `include-component-in-tag: true` is REQUIRED for `linked-versions` to work (without it, `getComponent()` returns empty string and the plugin can't match components)
-- `group-pull-request-title-pattern` must NOT use `${version}` (known bug #1456 - version can't resolve for linked groups). Use `${scope}` for branch detection instead.
+- `group-pull-request-title-pattern` MUST include `${version}` so release-please can parse its own merged PR titles to determine the last released version. Without it, release-please falls back to tag-based lookup and can compute the wrong version. (The original #1456 bug that prevented `${version}` from resolving was fixed in release-please PR #1760.)
 - Publishing is chained directly from the release-please workflow via `releases_created` output, not via tag-triggered workflows (GitHub API-created tags don't fire push events)
 
 ## Troubleshooting
