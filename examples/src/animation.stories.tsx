@@ -13,6 +13,31 @@ import { Chart } from '@opendata-ai/openchart-react';
 // Shared data for easing comparison stories
 // ---------------------------------------------------------------------------
 
+// Gradient fill helpers for bar/column marks (opacity 0.4 -> 1)
+const hBarGradient = (color: string) => ({
+  gradient: 'linear' as const,
+  x1: 0,
+  y1: 0,
+  x2: 1,
+  y2: 0,
+  stops: [
+    { offset: 0, color, opacity: 0.4 },
+    { offset: 1, color },
+  ],
+});
+
+const vBarGradient = (color: string) => ({
+  gradient: 'linear' as const,
+  x1: 0,
+  y1: 1,
+  x2: 0,
+  y2: 0,
+  stops: [
+    { offset: 0, color, opacity: 0.4 },
+    { offset: 1, color },
+  ],
+});
+
 const easingData = [
   { category: 'Engineering', value: 142 },
   { category: 'Design', value: 98 },
@@ -32,7 +57,7 @@ const easingEncoding = {
 // ---------------------------------------------------------------------------
 
 const barSmoothSpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: easingData,
   encoding: easingEncoding,
   chrome: {
@@ -53,7 +78,7 @@ export const BarSmooth = () => (
 // ---------------------------------------------------------------------------
 
 const barSnappySpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: easingData,
   encoding: easingEncoding,
   chrome: { title: 'Snappy Easing', subtitle: 'Fast attack, gentle settle' },
@@ -71,7 +96,7 @@ export const BarSnappy = () => (
 // ---------------------------------------------------------------------------
 
 const columnStaggerSpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: vBarGradient('#1b7fa3') },
   data: [
     { month: 'Jan', revenue: 42 },
     { month: 'Feb', revenue: 38 },
@@ -108,7 +133,7 @@ export const ColumnStagger = () => (
 // ---------------------------------------------------------------------------
 
 const lineDrawingSpec: ChartSpec = {
-  mark: { type: 'line', interpolate: 'monotone' },
+  mark: { type: 'area', interpolate: 'monotone' },
   data: [
     { date: '2024-01', series: 'Product A', value: 120 },
     { date: '2024-02', series: 'Product A', value: 135 },
@@ -137,12 +162,18 @@ const lineDrawingSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'date', type: 'temporal' },
-    y: { field: 'value', type: 'quantitative', axis: { title: 'Monthly Revenue ($K)' } },
+    y: {
+      field: 'value',
+      type: 'quantitative',
+      axis: { title: 'Monthly Revenue ($K)', grid: true, tickCount: 8 },
+      scale: { domain: [0, 400] },
+    },
     color: { field: 'series', type: 'nominal' },
   },
+  legend: { position: 'top' },
   chrome: {
-    title: 'Line Path Drawing',
-    subtitle: 'Lines draw in via CSS clip-path reveal',
+    title: 'Area Path Drawing',
+    subtitle: 'Areas draw in via CSS clip-path reveal with opacity gradient',
   },
   animation: { enter: { duration: 1000, ease: 'smooth' } },
 };
@@ -256,7 +287,18 @@ export const ScatterAnimation = () => (
 // ---------------------------------------------------------------------------
 
 const areaSpec: ChartSpec = {
-  mark: { type: 'area', point: true, interpolate: 'monotone' },
+  mark: {
+    type: 'area',
+    point: true,
+    interpolate: 'monotone',
+    fill: {
+      gradient: 'linear',
+      stops: [
+        { offset: 0, color: '#6366f1', opacity: 0.8 },
+        { offset: 1, color: '#6366f1', opacity: 0.05 },
+      ],
+    },
+  },
   data: [
     { date: '2024-01', value: 220 },
     { date: '2024-02', value: 245 },
@@ -280,7 +322,10 @@ const areaSpec: ChartSpec = {
       scale: { domain: [180, 400] },
     },
   },
-  chrome: { title: 'Area Entrance', subtitle: 'Area fill fades in with staggered point markers' },
+  chrome: {
+    title: 'Area Entrance',
+    subtitle: 'Opacity gradient fades from solid to transparent at baseline',
+  },
   animation: { enter: { duration: 1200 } },
 };
 
@@ -299,14 +344,31 @@ const slowLineSpec: ChartSpec = {
   data: [
     { date: '2024-01', value: 120 },
     { date: '2024-02', value: 135 },
-    { date: '2024-03', value: 128 },
+    { date: '2024-03', value: 118 },
     { date: '2024-04', value: 152 },
-    { date: '2024-05', value: 168 },
-    { date: '2024-06', value: 155 },
+    { date: '2024-05', value: 141 },
+    { date: '2024-06', value: 168 },
+    { date: '2024-07', value: 155 },
+    { date: '2024-08', value: 189 },
+    { date: '2024-09', value: 172 },
+    { date: '2024-10', value: 195 },
+    { date: '2024-11', value: 182 },
+    { date: '2024-12', value: 210 },
+    { date: '2025-01', value: 198 },
+    { date: '2025-02', value: 225 },
+    { date: '2025-03', value: 215 },
+    { date: '2025-04', value: 242 },
+    { date: '2025-05', value: 230 },
+    { date: '2025-06', value: 258 },
   ],
   encoding: {
     x: { field: 'date', type: 'temporal' },
-    y: { field: 'value', type: 'quantitative' },
+    y: {
+      field: 'value',
+      type: 'quantitative',
+      scale: { domain: [100, 270] },
+      axis: { grid: true, tickCount: 8 },
+    },
   },
   chrome: {
     title: 'Slow Line Draw',
@@ -331,14 +393,14 @@ export const SlowLineWithPoints = () => (
 // ---------------------------------------------------------------------------
 
 const manyBarsSpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: Array.from({ length: 50 }, (_, i) => ({
     category: `Item ${String(i + 1).padStart(2, '0')}`,
     value: Math.round(20 + Math.random() * 80),
   })),
   encoding: {
     x: { field: 'value', type: 'quantitative' },
-    y: { field: 'category', type: 'nominal' },
+    y: { field: 'category', type: 'nominal', axis: { tickCount: 10 } },
   },
   labels: { density: 'none' },
   chrome: {
@@ -362,7 +424,7 @@ const durationData = easingData;
 const durationEncoding = easingEncoding;
 
 const fastSpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: durationData,
   encoding: durationEncoding,
   chrome: { title: 'Fast (300ms)', subtitle: 'Snappy easing, quick reveal' },
@@ -370,7 +432,7 @@ const fastSpec: ChartSpec = {
 };
 
 const slowSpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: durationData,
   encoding: durationEncoding,
   chrome: { title: 'Slow (1200ms)', subtitle: 'Smooth easing, gradual reveal' },
@@ -393,37 +455,56 @@ export const CustomDuration = () => (
 // ---------------------------------------------------------------------------
 
 const annotationDelaySpec: ChartSpec = {
-  mark: { type: 'line', point: true, interpolate: 'monotone' },
+  mark: {
+    type: 'area',
+    point: true,
+    interpolate: 'monotone',
+    fill: {
+      gradient: 'linear',
+      stops: [
+        { offset: 0, color: '#0ea5e9', opacity: 0.7 },
+        { offset: 0.6, color: '#0ea5e9', opacity: 0.25 },
+        { offset: 1, color: '#0ea5e9', opacity: 0.02 },
+      ],
+    },
+  },
   data: [
-    { date: '2024-01', value: 45 },
-    { date: '2024-02', value: 42 },
-    { date: '2024-03', value: 48 },
-    { date: '2024-04', value: 52 },
-    { date: '2024-05', value: 65 },
-    { date: '2024-06', value: 58 },
-    { date: '2024-07', value: 72 },
-    { date: '2024-08', value: 68 },
-    { date: '2024-09', value: 75 },
-    { date: '2024-10', value: 82 },
-    { date: '2024-11', value: 88 },
-    { date: '2024-12', value: 95 },
+    { month: '2023-07', score: 38 },
+    { month: '2023-08', score: 41 },
+    { month: '2023-09', score: 39 },
+    { month: '2023-10', score: 43 },
+    { month: '2023-11', score: 40 },
+    { month: '2023-12', score: 44 },
+    { month: '2024-01', score: 46 },
+    { month: '2024-02', score: 42 },
+    { month: '2024-03', score: 48 },
+    { month: '2024-04', score: 53 },
+    { month: '2024-05', score: 67 },
+    { month: '2024-06', score: 62 },
+    { month: '2024-07', score: 71 },
+    { month: '2024-08', score: 68 },
+    { month: '2024-09', score: 74 },
+    { month: '2024-10', score: 78 },
+    { month: '2024-11', score: 85 },
+    { month: '2024-12', score: 92 },
   ],
   encoding: {
-    x: { field: 'date', type: 'temporal' },
+    x: { field: 'month', type: 'temporal', scale: { domain: ['2023-07', '2024-12'] } },
     y: {
-      field: 'value',
+      field: 'score',
       type: 'quantitative',
       axis: { title: 'NPS Score' },
-      scale: { domain: [30, 100] },
+      scale: { domain: [25, 100] },
     },
   },
   annotations: [
     {
       type: 'text',
-      text: 'Product launch',
-      x: '2024-05',
-      y: 65,
-      offset: { dy: -20 },
+      text: 'Product relaunch',
+      x: '2024-04',
+      y: 53,
+      offset: { dx: -80, dy: -18 },
+      connector: true,
     },
     {
       type: 'refline',
@@ -433,10 +514,12 @@ const annotationDelaySpec: ChartSpec = {
     },
   ],
   chrome: {
-    title: 'Annotation Delay',
-    subtitle: 'Annotations fade in 200ms after marks finish',
+    title: 'Customer Satisfaction Surges After Relaunch',
+    subtitle: 'Net Promoter Score, Jul 2023 - Dec 2024',
+    source: 'Source: Quarterly customer surveys',
+    byline: 'Chart: OpenChart',
   },
-  animation: { enter: { duration: 800 }, annotationDelay: 400 },
+  animation: { enter: { duration: 1000, ease: 'smooth' }, annotationDelay: 400 },
 };
 
 export const AnnotationDelay = () => (
@@ -450,7 +533,7 @@ export const AnnotationDelay = () => (
 // ---------------------------------------------------------------------------
 
 const noStaggerSpec: ChartSpec = {
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: easingData,
   encoding: easingEncoding,
   chrome: { title: 'No Stagger', subtitle: 'All elements animate simultaneously' },

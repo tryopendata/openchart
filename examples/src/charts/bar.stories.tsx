@@ -8,13 +8,25 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
+const hBarGradient = (color: string) => ({
+  gradient: 'linear' as const,
+  x1: 0,
+  y1: 0,
+  x2: 1,
+  y2: 0,
+  stops: [
+    { offset: 0, color, opacity: 0.4 },
+    { offset: 1, color },
+  ],
+});
+
 // ---------------------------------------------------------------------------
 // Simple horizontal bars: Top 10 global causes of death (WHO, 2021)
 // ---------------------------------------------------------------------------
 
 const simpleBarSpec: ChartSpec = {
   animation: true,
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: [
     { cause: 'Ischaemic heart disease', deaths: 9.0 },
     { cause: 'COVID-19', deaths: 8.8 },
@@ -141,7 +153,7 @@ export const GroupedBars = () => (
 
 const negativeBarSpec: ChartSpec = {
   animation: true,
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: [
     { sector: 'Communication Services', return: 39.7 },
     { sector: 'Information Technology', return: 37.6 },

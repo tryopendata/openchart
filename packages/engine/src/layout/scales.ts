@@ -192,9 +192,11 @@ function buildTimeScale(
 
   const scale = scaleTime().domain(domain).range([rangeStart, rangeEnd]);
 
-  // Skip nice() when an explicit domain is provided so user-specified
-  // boundaries aren't rounded away (e.g. 2019 expanding to 2018).
-  if (!channel.scale?.domain && channel.scale?.nice !== false) {
+  // Temporal scales default to nice: false because date data typically starts
+  // at clean boundaries and nice() rounds the domain outward, creating visible
+  // gaps (e.g. data starting 2018-01-01 gets rounded to 2017-01-01).
+  // Users can opt in with scale: { nice: true }.
+  if (!channel.scale?.domain && channel.scale?.nice === true) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);
@@ -215,8 +217,8 @@ function buildUtcScale(
 
   const scale = scaleUtc().domain(domain).range([rangeStart, rangeEnd]);
 
-  // Skip nice() when an explicit domain is provided.
-  if (!channel.scale?.domain && channel.scale?.nice !== false) {
+  // Temporal scales default to nice: false (see buildTimeScale comment).
+  if (!channel.scale?.domain && channel.scale?.nice === true) {
     scale.nice();
   }
   applyContinuousConfig(scale, channel);

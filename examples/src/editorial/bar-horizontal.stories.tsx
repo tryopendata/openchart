@@ -8,13 +8,25 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
+const hBarGradient = (color: string) => ({
+  gradient: 'linear' as const,
+  x1: 0,
+  y1: 0,
+  x2: 1,
+  y2: 0,
+  stops: [
+    { offset: 0, color, opacity: 0.4 },
+    { offset: 1, color },
+  ],
+});
+
 // ---------------------------------------------------------------------------
 // Most Populous Countries: Horizontal bar with value labels
 // ---------------------------------------------------------------------------
 
 const populationBarSpec: ChartSpec = {
   animation: true,
-  mark: 'bar',
+  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: [
     { country: 'India', population: 1_463_000_000 },
     { country: 'China', population: 1_410_000_000 },

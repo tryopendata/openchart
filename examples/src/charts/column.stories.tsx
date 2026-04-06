@@ -8,13 +8,25 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
+const vBarGradient = (color: string) => ({
+  gradient: 'linear' as const,
+  x1: 0,
+  y1: 1,
+  x2: 0,
+  y2: 0,
+  stops: [
+    { offset: 0, color, opacity: 0.4 },
+    { offset: 1, color },
+  ],
+});
+
 // ---------------------------------------------------------------------------
 // Simple columns: US nonfarm payroll additions, 2024
 // ---------------------------------------------------------------------------
 
 const simpleColumnSpec: ChartSpec = {
   animation: true,
-  mark: 'bar',
+  mark: { type: 'bar', fill: vBarGradient('#1b7fa3') },
   data: [
     { month: 'Jan', jobs: 353 },
     { month: 'Feb', jobs: 275 },
@@ -114,8 +126,8 @@ const groupedColumnSpec: ChartSpec = {
       y: 346,
       text: 'Solar nearly doubled\nin a single year',
       anchor: 'top',
-      offset: { dx: -200, dy: -20 },
-      connector: true,
+      offset: { dx: -80, dy: -20 },
+      connector: false,
     },
   ],
   labels: { density: 'none' },
@@ -139,7 +151,7 @@ export const GroupedColumns = () => (
 
 const negativeColumnSpec: ChartSpec = {
   animation: true,
-  mark: 'bar',
+  mark: { type: 'bar', fill: vBarGradient('#1b7fa3') },
   data: [
     { quarter: "Q1 '20", growth: -5.3 },
     { quarter: "Q2 '20", growth: -31.2 },

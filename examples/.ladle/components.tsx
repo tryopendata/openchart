@@ -123,95 +123,284 @@ const themeNames = Object.keys(themes);
 // ---------------------------------------------------------------------------
 
 const ladleOverrides = `
-  /* Strip all wrapper backgrounds so theme shows through */
-  html, body,
-  #root,
-  .ladle-main,
-  .ladle-background {
+  /* ── Variables ── */
+  :root {
+    --ladle-bg-color-primary: #ffffff !important;
+    --ladle-bg-color-secondary: #f4f5f7 !important;
+    --ladle-color-primary: #1f2937 !important;
+    --ladle-color-hover: #6366f1 !important;
+    --ladle-color-accent: #4f46e5 !important;
+  }
+
+  [data-theme="dark"] {
+    --ladle-bg-color-primary: #0f1117 !important;
+    --ladle-bg-color-secondary: #181b24 !important;
+    --ladle-color-primary: #d1d5db !important;
+    --ladle-color-hover: #a5b4fc !important;
+    --ladle-color-accent: #818cf8 !important;
+  }
+
+  /* Strip wrapper backgrounds so theme shows through */
+  html, body, #root, .ladle-main, .ladle-background {
     background: transparent !important;
   }
 
-
-  /* Sidebar typography and spacing */
+  /* ── Sidebar ── */
   .ladle-aside {
     font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif !important;
     font-size: 13px !important;
-    border-left: 1px solid #e8ecf1 !important;
-    background: #fafbfd !important;
+    border-left: 1px solid rgba(0,0,0,0.08) !important;
+    background-color: #f8f9fb !important;
+    padding: 20px 14px 20px 12px !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.12) transparent !important;
   }
 
-  .ladle-aside input[type="search"],
-  .ladle-aside input[type="text"] {
-    font-family: inherit !important;
-    font-size: 12px !important;
-    border-radius: 6px !important;
-    border: 1px solid #e2e8f0 !important;
-    padding: 6px 10px !important;
-    background: #fff !important;
-    transition: border-color 0.15s !important;
+  /* Search input: replace underline with a proper field */
+  .ladle-aside input {
+    font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif !important;
+    font-size: 12.5px !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    border-width: 1px !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+    margin-bottom: 4px !important;
+  }
+
+  .ladle-aside input::placeholder {
+    color: #9ca3af !important;
+    font-weight: 400 !important;
   }
 
   .ladle-aside input:focus {
-    border-color: #a5b4fc !important;
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(129,140,248,0.12) !important;
     outline: none !important;
-    box-shadow: 0 0 0 2px rgba(165, 180, 252, 0.2) !important;
+    color: #1f2937 !important;
   }
 
-  .ladle-aside [role="tree"] {
+  /* Tree list */
+  .ladle-aside ul {
+    margin: 8px 0 0 0 !important;
+    padding: 0 !important;
+  }
+
+  .ladle-aside li {
+    margin: 1px 0 !important;
     font-size: 13px !important;
-  }
-
-  .ladle-aside [role="treeitem"] {
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     transition: background 0.1s !important;
   }
 
+  .ladle-aside li > div {
+    padding: 5px 8px !important;
+    border-radius: 6px !important;
+  }
+
+  .ladle-aside li > div:hover {
+    background: rgba(0,0,0,0.04) !important;
+  }
+
+  /* Expanded group items: bolder label */
+  .ladle-aside li[aria-expanded] > div > div:last-child {
+    font-weight: 600 !important;
+    color: #374151 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* Collapsed chevrons: muted */
+  .ladle-aside li[aria-expanded="false"] svg {
+    opacity: 0.4 !important;
+  }
+
+  .ladle-aside li[aria-expanded="true"] svg {
+    opacity: 0.6 !important;
+  }
+
+  /* Nested story links */
+  .ladle-aside .ladle-linkable {
+    margin-left: 2px !important;
+  }
+
+  .ladle-aside .ladle-linkable a {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #4b5563 !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    display: block !important;
+    transition: background 0.1s, color 0.1s !important;
+  }
+
+  .ladle-aside .ladle-linkable a:hover {
+    background: rgba(79,70,229,0.06) !important;
+    color: #4338ca !important;
+  }
+
+  /* Active story */
   .ladle-aside .ladle-active {
-    background: #eef2ff !important;
+    background: rgba(79,70,229,0.08) !important;
+  }
+
+  .ladle-aside .ladle-active a {
     color: #4338ca !important;
     font-weight: 600 !important;
   }
 
-  .ladle-aside .ladle-linkable:hover {
-    background: #f1f5f9 !important;
+  /* File icons in story links */
+  .ladle-aside .ladle-linkable svg {
+    opacity: 0.35 !important;
+    width: 14px !important;
+    height: 14px !important;
   }
 
-  /* Bottom addons bar */
+  .ladle-aside .ladle-active svg {
+    opacity: 0.55 !important;
+    color: #4338ca !important;
+  }
+
+  /* ── Bottom addons bar ── */
   .ladle-addons {
-    border-top: 1px solid #e8ecf1 !important;
-    background: #fafbfd !important;
+    font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif !important;
+    background: rgba(248,249,251,0.92) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-top: 1px solid rgba(0,0,0,0.06) !important;
+    padding: 6px 8px !important;
+    margin: 0 !important;
+    margin-inline: 0 !important;
+    width: auto !important;
+    left: 0 !important;
+    right: 0 !important;
   }
 
-  .ladle-addons button {
+  .ladle-addons ul {
+    gap: 2px !important;
+    align-items: center !important;
+  }
+
+  .ladle-addons li {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    margin: 0 1px !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .ladle-addons > ul > li > button {
+    border-radius: 8px !important;
+    padding: 7px !important;
+    color: #9ca3af !important;
+    transition: background 0.12s, color 0.12s, transform 0.12s !important;
+  }
+
+  .ladle-addons > ul > li > button:hover {
+    background: rgba(79,70,229,0.08) !important;
+    color: #4f46e5 !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .ladle-addons > ul > li > button:active {
+    transform: translateY(0) !important;
+  }
+
+  .ladle-addons > ul > li > button > label {
+    display: none !important;
+  }
+
+  .ladle-addons > ul > li > button svg {
+    width: 18px !important;
+    height: 18px !important;
+    stroke-width: 1.75 !important;
+  }
+
+  /* Tooltip styling */
+  .ladle-addon-tooltip {
+    font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif !important;
+    font-size: 11px !important;
     border-radius: 6px !important;
-    transition: background 0.1s !important;
-  }
-
-  .ladle-addons button:hover {
-    background: #eef2ff !important;
+    padding: 4px 8px !important;
+    letter-spacing: -0.01em !important;
   }
 
   /* Resize handle */
   .ladle-resize-handle {
     width: 1px !important;
-    background: #e8ecf1 !important;
+    background: rgba(0,0,0,0.06) !important;
   }
 
-  /* Dark mode overrides */
-  [data-theme="dark"] .ladle-aside,
-  .ladle-aside[data-theme="dark"] {
-    background: #0d1117 !important;
-    border-left-color: #21262d !important;
+  /* ── Dark mode ── */
+  [data-theme="dark"] .ladle-aside {
+    background-color: #0f1117 !important;
+    border-left-color: rgba(255,255,255,0.06) !important;
+    scrollbar-color: rgba(255,255,255,0.1) transparent !important;
+  }
+
+  [data-theme="dark"] .ladle-aside input {
+    background: #181b24 !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    color: #e5e7eb !important;
+  }
+
+  [data-theme="dark"] .ladle-aside input::placeholder {
+    color: #6b7280 !important;
+  }
+
+  [data-theme="dark"] .ladle-aside input:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important;
+  }
+
+  [data-theme="dark"] .ladle-aside li > div:hover {
+    background: rgba(255,255,255,0.03) !important;
+  }
+
+  [data-theme="dark"] .ladle-aside li[aria-expanded] > div > div:last-child {
+    color: #e5e7eb !important;
+  }
+
+  [data-theme="dark"] .ladle-aside .ladle-linkable a {
+    color: #9ca3af !important;
+  }
+
+  [data-theme="dark"] .ladle-aside .ladle-linkable a:hover {
+    background: rgba(129,140,248,0.08) !important;
+    color: #a5b4fc !important;
   }
 
   [data-theme="dark"] .ladle-aside .ladle-active {
-    background: rgba(99,102,241,0.12) !important;
+    background: rgba(99,102,241,0.1) !important;
+  }
+
+  [data-theme="dark"] .ladle-aside .ladle-active a {
+    color: #a5b4fc !important;
+  }
+
+  [data-theme="dark"] .ladle-aside .ladle-active svg {
     color: #a5b4fc !important;
   }
 
   [data-theme="dark"] .ladle-addons {
-    background: #0d1117 !important;
-    border-top-color: #21262d !important;
+    background: rgba(15,17,23,0.92) !important;
+    border-top-color: rgba(255,255,255,0.06) !important;
+  }
+
+  [data-theme="dark"] .ladle-addons > ul > li > button {
+    color: #6b7280 !important;
+  }
+
+  [data-theme="dark"] .ladle-addons > ul > li > button:hover {
+    background: rgba(129,140,248,0.1) !important;
+    color: #a5b4fc !important;
+  }
+
+  [data-theme="dark"] .ladle-resize-handle {
+    background: rgba(255,255,255,0.06) !important;
   }
 `;
 

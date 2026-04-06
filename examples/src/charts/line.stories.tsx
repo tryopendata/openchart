@@ -564,7 +564,7 @@ const stackedAreaSpec: ChartSpec = {
     { year: '2023-01-01', generation: 3935, source: 'Wind & Solar' },
   ],
   encoding: {
-    x: { field: 'year', type: 'temporal', axis: { tickCount: 6 }, scale: { nice: false } },
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 6 } },
     y: {
       field: 'generation',
       type: 'quantitative',

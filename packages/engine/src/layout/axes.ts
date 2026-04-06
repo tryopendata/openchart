@@ -38,8 +38,8 @@ import type {
 
 /** Base tick counts by axis label density. */
 const TICK_COUNTS: Record<AxisLabelDensity, number> = {
-  full: 8,
-  reduced: 5,
+  full: 10,
+  reduced: 7,
   minimal: 3,
 };
 

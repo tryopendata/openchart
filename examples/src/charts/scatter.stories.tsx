@@ -181,13 +181,21 @@ const colorScatterSpec: ChartSpec = {
       field: 'cost',
       type: 'quantitative',
       axis: { title: 'Cost of living index' },
+      scale: { domain: [35, 140] },
     },
     y: {
       field: 'quality',
       type: 'quantitative',
       axis: { title: 'Quality of living index' },
+      scale: { domain: [68, 100] },
     },
     color: { field: 'region', type: 'nominal' },
+    tooltip: [
+      { field: 'city', type: 'nominal', title: 'City' },
+      { field: 'cost', type: 'quantitative', title: 'Cost index' },
+      { field: 'quality', type: 'quantitative', title: 'Quality index' },
+      { field: 'region', type: 'nominal', title: 'Region' },
+    ],
   },
   annotations: [
     { type: 'text', x: 131, y: 98, text: 'Zurich', anchor: 'left', fontSize: 10 },

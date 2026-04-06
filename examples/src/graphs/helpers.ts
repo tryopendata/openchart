@@ -23,6 +23,71 @@ function mulberry32(seed: number) {
 }
 
 // ---------------------------------------------------------------------------
+// Realistic name pools for generated nodes
+// ---------------------------------------------------------------------------
+
+const PERSON_NAMES = [
+  'Ava',
+  'Liam',
+  'Mia',
+  'Noah',
+  'Zoe',
+  'Ethan',
+  'Chloe',
+  'Leo',
+  'Isla',
+  'Owen',
+  'Nora',
+  'Kai',
+  'Lily',
+  'Jude',
+  'Ruby',
+  'Finn',
+  'Ella',
+  'Max',
+  'Sara',
+  'Cole',
+  'Maya',
+  'Theo',
+  'Iris',
+  'Rhys',
+  'Jade',
+  'Luca',
+  'Aria',
+  'Seth',
+  'Luna',
+  'Evan',
+  'Rosa',
+  'Axel',
+  'Ivy',
+  'Tate',
+  'Wren',
+  'Dean',
+  'Sage',
+  'Reid',
+  'Vera',
+  'Neil',
+  'Faye',
+  'Hugo',
+  'Gwen',
+  'Troy',
+  'June',
+  'Beau',
+  'Hope',
+  'Clay',
+  'Leah',
+  'Remy',
+];
+
+/** Map an index to a name, appending a suffix number when the pool wraps. */
+function nameForIndex(i: number): string {
+  return (
+    PERSON_NAMES[i % PERSON_NAMES.length] +
+    (i >= PERSON_NAMES.length ? ` ${Math.floor(i / PERSON_NAMES.length) + 1}` : '')
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Random graph
 // ---------------------------------------------------------------------------
 
@@ -47,7 +112,9 @@ export function generateRandomGraph(
   const nodes = Array.from({ length: nodeCount }, (_, i) => {
     const node: Record<string, unknown> = {
       id: `n${i}`,
-      label: `Node ${i}`,
+      label:
+        PERSON_NAMES[i % PERSON_NAMES.length] +
+        (i >= PERSON_NAMES.length ? ` ${Math.floor(i / PERSON_NAMES.length) + 1}` : ''),
     };
     if (communityNames.length > 0) {
       node.community = communityNames[i % communityNames.length];
@@ -137,7 +204,7 @@ export function generateScaleFreeGraph(nodeCount: number): GraphSpec {
 
   // Initial seed: m+1 fully connected nodes
   for (let i = 0; i <= m; i++) {
-    nodes.push({ id: `n${i}`, label: `Node ${i}`, weight: 0 });
+    nodes.push({ id: `n${i}`, label: nameForIndex(i), weight: 0 });
     degree.push(0);
     for (let j = 0; j < i; j++) {
       edges.push({ source: `n${j}`, target: `n${i}` });
@@ -148,7 +215,7 @@ export function generateScaleFreeGraph(nodeCount: number): GraphSpec {
 
   // Add remaining nodes with preferential attachment
   for (let i = m + 1; i < nodeCount; i++) {
-    nodes.push({ id: `n${i}`, label: `Node ${i}`, weight: 0 });
+    nodes.push({ id: `n${i}`, label: nameForIndex(i), weight: 0 });
     degree.push(0);
 
     const totalDegree = degree.reduce((a, b) => a + b, 0);
