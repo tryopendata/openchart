@@ -1,5 +1,95 @@
 # Changelog
 
+## [6.1.0](https://github.com/tryopendata/openchart/compare/engine-v6.13.0...engine-v6.1.0) (2026-04-06)
+
+
+* **main:** release openchart 6.1.0 ([c0659f4](https://github.com/tryopendata/openchart/commit/c0659f4d244b09cb2c3fa0f0bdd8d30e3e29e90c))
+
+
+### Features
+
+* add configurable watermark opt-out ([03519e1](https://github.com/tryopendata/openchart/commit/03519e116097c8103783314898a3d5c2a49cc3ac))
+* add CSS entrance animations and modularize styles ([dff701a](https://github.com/tryopendata/openchart/commit/dff701a073e2ac2f3f591be606064a5e9a771fb8))
+* add data transforms and conditional encoding (Chunks 6-7) ([c140084](https://github.com/tryopendata/openchart/commit/c1400845b8bbbf767b68a6ed8cc1b294bf4d4534))
+* add format strings, label anchors, series styles, and dark mode docs ([f4af8d6](https://github.com/tryopendata/openchart/commit/f4af8d6e53c7525193e7e35e29006f33e403cbef))
+* add gradient fill support for chart marks ([#60](https://github.com/tryopendata/openchart/issues/60)) ([fee85b2](https://github.com/tryopendata/openchart/commit/fee85b2ce756e07188a3d4461a224dc395cff0f8))
+* add grouped/dodged bar and column charts via stack encoding ([860b499](https://github.com/tryopendata/openchart/commit/860b499fbd85484fe781238bbd29cfe0f76d7e7c))
+* add hiddenSeries filtering, graph edge hover/styles, JPG export, and simulation config ([52cd15e](https://github.com/tryopendata/openchart/commit/52cd15e292b11ced6a8e0f680e78cb4a5cd22fd6))
+* add label format support to column charts and extract shared formatter ([16305b1](https://github.com/tryopendata/openchart/commit/16305b1e878fd4d9861aa932f17bc745f1f19beb))
+* add label prefix option and update brand watermark to tryOpenData.ai ([91e5d47](https://github.com/tryopendata/openchart/commit/91e5d4757e2d22a6ee4dabb54774e7061ce7c6c3))
+* add LayerSpec compilation for multi-layer chart composition (Chunk 8) ([87b51c3](https://github.com/tryopendata/openchart/commit/87b51c3e31a2defbf71296724540e6904f7feae2))
+* add mark interpolation, conditional points, and voronoi tooltip overlay (Chunks 2-3) ([c31129a](https://github.com/tryopendata/openchart/commit/c31129ae7de2cfa9b713c940aad7d6e82048bc71))
+* add new encoding channels and mark type renderers (Chunks 4-5) ([bd40fac](https://github.com/tryopendata/openchart/commit/bd40facb298f0dd063aadbd779ed05d01267fff9))
+* add responsive overrides, legend hiding, and chrome text wrapping ([2eb0236](https://github.com/tryopendata/openchart/commit/2eb02366bfbd51b15341708c912da8897adbc98a))
+* add rich chart editing with selection, deletion, and inline text editing ([25d44f4](https://github.com/tryopendata/openchart/commit/25d44f4f7f747eba36cb31980f294fe1bf992b86))
+* add sankey diagram visualization type ([#52](https://github.com/tryopendata/openchart/issues/52)) ([816ce8a](https://github.com/tryopendata/openchart/commit/816ce8a55b2a1902facc1c4d1ae5d8e7261148aa))
+* add SeriesStyle type for per-series visual overrides ([67ac80e](https://github.com/tryopendata/openchart/commit/67ac80ec002e0786ae8ed8607e583389aed4323c))
+* address all FEATURE-REQUESTS.md bugs and feature requests ([771358b](https://github.com/tryopendata/openchart/commit/771358b8ea76d2842a8124ce220f24c3a39455e7))
+* align spec with Vega-Lite conventions (Chunk 1 - core type system) ([0e40caa](https://github.com/tryopendata/openchart/commit/0e40caaca2fdc9940c99d50d2a821e99e7afe55e))
+* **annotations:** interpolate positions for out-of-domain values on categorical scales ([0898bfd](https://github.com/tryopendata/openchart/commit/0898bfd249cdae270b4c82556bb6aa6be506f84b))
+* auto-sort line and area chart data by x-axis ([186b81f](https://github.com/tryopendata/openchart/commit/186b81f9cbd40beecdb8a387227a69895404a7bb))
+* **axes:** text-aware tick density prevents label overlap ([bc9f461](https://github.com/tryopendata/openchart/commit/bc9f46135c12ccf318738a291fcc02d28b670611))
+* coderbbit and npm publish ([b857251](https://github.com/tryopendata/openchart/commit/b85725110f3ef05d94707b4f92e91811bd7acb20))
+* **engine:** refactor annotations and compile into focused modules ([91c6f6a](https://github.com/tryopendata/openchart/commit/91c6f6ac6ffe6b21ea82c961c622f39cb044a491))
+* expand scale types and axis config (Chunk 9) ([04a8161](https://github.com/tryopendata/openchart/commit/04a8161ef77bbc61776762cfb0d3f307997d4810))
+* **graph:** add scale config to graph encoding channels and fix color precedence ([a52efce](https://github.com/tryopendata/openchart/commit/a52efceea6e0750ad53e42ad6084e9b75ce4e27b))
+* implement seriesStyles in line chart compute pipeline ([54feb7c](https://github.com/tryopendata/openchart/commit/54feb7c266a90885bf218df6275449c17920f229))
+* **layout:** prevent annotation/label/brand overlap with improved obstacle detection ([74650ae](https://github.com/tryopendata/openchart/commit/74650aeef1bb386f90f5f1c0c81a9255ed3b21e2))
+* new visualize-data skill marketplace plugin ([dde291a](https://github.com/tryopendata/openchart/commit/dde291a66813e4c6071f5662373ab3f5ca8250ea))
+* rename packages from @opendata-ai/* to @opendata-ai/openchart-* ([26f3e48](https://github.com/tryopendata/openchart/commit/26f3e484c58d43ee51b8dbd909f93765c14c8360))
+* **responsive:** height-aware layout, chrome compression, and legend overflow ([41362f5](https://github.com/tryopendata/openchart/commit/41362f5dc08077a9e2661415e370c58972be089b))
+* sankey label positions spec ([77c1af8](https://github.com/tryopendata/openchart/commit/77c1af86ed50db6a8a9a27b7280fd89ea8973937))
+* **sankey:** add linkOpacity spec option for user control ([6732603](https://github.com/tryopendata/openchart/commit/673260311be8269101e53012b5652dd4ed4e1b2e))
+* **sankey:** add valueFormat for tooltip and ARIA label formatting ([e90da0f](https://github.com/tryopendata/openchart/commit/e90da0f3fd637cf71eb52b730d37b67afb272c3c))
+* space-aware axis tick density and rotated label support ([5a39a02](https://github.com/tryopendata/openchart/commit/5a39a02fa684736bf73ffaacde0032400d7c7796))
+* **tooltips:** use detail encoding as tooltip title ([3f0db09](https://github.com/tryopendata/openchart/commit/3f0db09b3e8c4a607561b47abf47f65e47e25608))
+* unified chart element editing system ([9fd5521](https://github.com/tryopendata/openchart/commit/9fd5521f809c6932a4060b7b47b43001a0111dfc))
+* Vega-Lite spec alignment and inline style cleanup ([f3ed3e0](https://github.com/tryopendata/openchart/commit/f3ed3e0353d3e0656ad14af65ddc2e822d5a905d))
+* Vega-Lite spec alignment and release readiness ([#64](https://github.com/tryopendata/openchart/issues/64)) ([586a113](https://github.com/tryopendata/openchart/commit/586a11313f2b58f4d00f21be70ea53bed8d57b43))
+* visual QA audit fixes and documentation improvements ([5b77092](https://github.com/tryopendata/openchart/commit/5b77092d4f8bcf91b736e5ec1f391af4a762528e))
+
+
+### Bug Fixes
+
+* address 6 editorial feedback issues ([96b14f2](https://github.com/tryopendata/openchart/commit/96b14f2dd67dd1af63c6fd93cdeb08383b4fa602))
+* address code review findings ([c888e78](https://github.com/tryopendata/openchart/commit/c888e7855b3c8e7b34774074e817372aaf6db947))
+* address code review findings ([c1a5248](https://github.com/tryopendata/openchart/commit/c1a5248001aaba271fafc22b52966eb9d3e7a0c9))
+* address code review findings (utc scale, dead code, type safety) ([943e81b](https://github.com/tryopendata/openchart/commit/943e81b99430d0644c8685e16d124576f9b9146b))
+* **axes:** decouple gridlines from tick label thinning ([9a79786](https://github.com/tryopendata/openchart/commit/9a79786dfd4d900182cbcc4a09b91e890ec995c3))
+* bump engine to 2.0.0 (release-please linked-versions missed it) ([5aae3da](https://github.com/tryopendata/openchart/commit/5aae3dafd4d2ace3b72c5ff82cd16ddb9bdfbf2f))
+* dark-mode theme preservation, graph visual tuning, and tooltip/legend toggle ([6a746cc](https://github.com/tryopendata/openchart/commit/6a746cc1c984a55ea2c0887f0790b20d96e9e5f7))
+* improve chart margin computation for labels and annotations ([58cdea8](https://github.com/tryopendata/openchart/commit/58cdea859507750017301c41a22b44492cc32722))
+* inline SR-only styles and center range annotation labels ([46064fe](https://github.com/tryopendata/openchart/commit/46064fed4f3a3b617c11809a18ce7c3d4e5a3346))
+* match temporal tick formatting to scale timezone ([13bc19e](https://github.com/tryopendata/openchart/commit/13bc19ebd1c4cf741634119c102b1d2804291885))
+* move bun-symlink-resolver to scripts/ so it's not gitignored ([c2cee52](https://github.com/tryopendata/openchart/commit/c2cee5275480ef36e11ea81aa195068875f375e5))
+* move ignoreDeprecations to package tsconfigs ([bba54e9](https://github.com/tryopendata/openchart/commit/bba54e9f32e71cce26e34e2ccc29db5cde2df611))
+* prevent sankey label clipping and excess bottom padding ([5f1c748](https://github.com/tryopendata/openchart/commit/5f1c7483b0d6e0453b2926ccd107e68f34f8f1fc))
+* replace as any with proper types in engine tests, tone down Claude hook ([705c274](https://github.com/tryopendata/openchart/commit/705c274080c9c25efceab006e885418ad1cb1bd1))
+* resolve lint warnings in bar labels formatter ([ce0bb7f](https://github.com/tryopendata/openchart/commit/ce0bb7fbc7cb0267b83ec0fd48aaa71309a7141c))
+* sankey link rendering, animation, watermark, and legend layout ([b60b2b5](https://github.com/tryopendata/openchart/commit/b60b2b575cab7a4095013dc987a9bf45047a6d8e))
+* **sankey:** address devil's advocate review findings ([265823e](https://github.com/tryopendata/openchart/commit/265823e5e7a65b23c86e1438463da0165e5ad515))
+* **sankey:** commit and push ([0a0df9e](https://github.com/tryopendata/openchart/commit/0a0df9e93a0e83fbe7b8103d3b328781ee134d4f))
+* **sankey:** increase link opacity in dark mode for visibility ([6964460](https://github.com/tryopendata/openchart/commit/6964460f228dc1796bda9db64abf1d8c9fe12fb9))
+* **sankey:** raise base link opacity for better visibility ([8c35ee6](https://github.com/tryopendata/openchart/commit/8c35ee63df6b0a483943a83c893c7f2b1d7fe106))
+* **sankey:** use buildD3Formatter for literal suffix support, add tests ([4d19a7a](https://github.com/tryopendata/openchart/commit/4d19a7a77db0a741c7d84ee453f1f15f2465c11d))
+* **sankey:** use vivid colors for dark mode nodes and gradients ([911fb07](https://github.com/tryopendata/openchart/commit/911fb070df2df0993522981041f9b873a87f9d7e))
+* skip annotation margin at compact breakpoints, remove caret connector, improve animation resize handling ([632e541](https://github.com/tryopendata/openchart/commit/632e541d7d681c0737c955256001ec0100aa10e5))
+* use UTC methods for temporal granularity and support custom axis/tooltip date formats ([18dfc8e](https://github.com/tryopendata/openchart/commit/18dfc8ec76bb1e45a93bc89fe89bee71fb633420))
+* validator accepts conditional encoding and transform-created fields ([7aa4865](https://github.com/tryopendata/openchart/commit/7aa4865badc879cdeab6e96186df89c88f3a1cc3))
+* y-axis title margin and default padding ([96d0385](https://github.com/tryopendata/openchart/commit/96d03851612c685762a50dd5cc2f6bf7d412845f))
+
+
+### Documentation
+
+* add gentle OpenData references as a data source ([a25d8a7](https://github.com/tryopendata/openchart/commit/a25d8a76922278f166d3c00706095f0831190c99))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.0
+
 ## [6.13.0](https://github.com/tryopendata/openchart/compare/engine-v6.12.0...engine-v6.13.0) (2026-04-05)
 
 
