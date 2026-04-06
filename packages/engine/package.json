@@ -1,6 +1,6 @@
 {
   "name": "@opendata-ai/openchart-engine",
-  "version": "6.13.1",
+  "version": "6.1.0",
   "description": "Headless compiler for openchart: spec validation, data compilation, scales, and layout",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",

@@ -1,5 +1,54 @@
 # Changelog
 
+## [6.1.0](https://github.com/tryopendata/openchart/compare/react-v6.13.1...react-v6.1.0) (2026-04-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* `createChart` and `ChartInstance.update()` now accept `ChartSpec | GraphSpec` instead of `VizSpec`. Passing a `TableSpec` to `createChart` was always a runtime error - this makes it a compile error. The same narrowing applies to `<Chart>` component props and `useChart` hooks across React, Vue, and Svelte.
+
+* **main:** release openchart 6.1.0 ([c0659f4](https://github.com/tryopendata/openchart/commit/c0659f4d244b09cb2c3fa0f0bdd8d30e3e29e90c))
+
+
+### Features
+
+* add configurable watermark opt-out ([03519e1](https://github.com/tryopendata/openchart/commit/03519e116097c8103783314898a3d5c2a49cc3ac))
+* add CSS entrance animations and modularize styles ([dff701a](https://github.com/tryopendata/openchart/commit/dff701a073e2ac2f3f591be606064a5e9a771fb8))
+* add hiddenSeries filtering, graph edge hover/styles, JPG export, and simulation config ([52cd15e](https://github.com/tryopendata/openchart/commit/52cd15e292b11ced6a8e0f680e78cb4a5cd22fd6))
+* add LayerSpec compilation for multi-layer chart composition (Chunk 8) ([87b51c3](https://github.com/tryopendata/openchart/commit/87b51c3e31a2defbf71296724540e6904f7feae2))
+* add rich chart editing with selection, deletion, and inline text editing ([25d44f4](https://github.com/tryopendata/openchart/commit/25d44f4f7f747eba36cb31980f294fe1bf992b86))
+* add sankey diagram visualization type ([#52](https://github.com/tryopendata/openchart/issues/52)) ([816ce8a](https://github.com/tryopendata/openchart/commit/816ce8a55b2a1902facc1c4d1ae5d8e7261148aa))
+* align spec with Vega-Lite conventions (Chunk 1 - core type system) ([0e40caa](https://github.com/tryopendata/openchart/commit/0e40caaca2fdc9940c99d50d2a821e99e7afe55e))
+* coderbbit and npm publish ([b857251](https://github.com/tryopendata/openchart/commit/b85725110f3ef05d94707b4f92e91811bd7acb20))
+* export core and engine dependencies from client libs, so only single dependencies are needed for consumers ([7ae2e41](https://github.com/tryopendata/openchart/commit/7ae2e41d0e75c2c4895130846758b28d72cc17c2))
+* export styles.css from all framework packages ([358f8e3](https://github.com/tryopendata/openchart/commit/358f8e32fdddd60a3917200111a8d1b1fe717ca8))
+* **export:** embed fonts and fix dimension/background bugs ([65556cc](https://github.com/tryopendata/openchart/commit/65556ccabdcd04911fea4ab705eb9f0018d34e53))
+* **graph:** add scale config to graph encoding channels and fix color precedence ([a52efce](https://github.com/tryopendata/openchart/commit/a52efceea6e0750ad53e42ad6084e9b75ce4e27b))
+* narrow createChart types, fix remount bugs, add Visualization component ([d7e0c3f](https://github.com/tryopendata/openchart/commit/d7e0c3f52041686206afb18542f18ca6318ed1a3))
+* rename packages from @opendata-ai/* to @opendata-ai/openchart-* ([26f3e48](https://github.com/tryopendata/openchart/commit/26f3e484c58d43ee51b8dbd909f93765c14c8360))
+* unified chart element editing system ([9fd5521](https://github.com/tryopendata/openchart/commit/9fd5521f809c6932a4060b7b47b43001a0111dfc))
+* Vega-Lite spec alignment and inline style cleanup ([f3ed3e0](https://github.com/tryopendata/openchart/commit/f3ed3e0353d3e0656ad14af65ddc2e822d5a905d))
+
+
+### Bug Fixes
+
+* dark-mode theme preservation, graph visual tuning, and tooltip/legend toggle ([6a746cc](https://github.com/tryopendata/openchart/commit/6a746cc1c984a55ea2c0887f0790b20d96e9e5f7))
+* move ignoreDeprecations to package tsconfigs ([bba54e9](https://github.com/tryopendata/openchart/commit/bba54e9f32e71cce26e34e2ccc29db5cde2df611))
+
+
+### Documentation
+
+* add gentle OpenData references as a data source ([a25d8a7](https://github.com/tryopendata/openchart/commit/a25d8a76922278f166d3c00706095f0831190c99))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @opendata-ai/openchart-core bumped to 6.1.0
+    * @opendata-ai/openchart-engine bumped to 6.1.0
+    * @opendata-ai/openchart-vanilla bumped to 6.1.0
+
 ## [6.13.1](https://github.com/tryopendata/openchart/compare/react-v6.13.0...react-v6.13.1) (2026-04-06)
 
 
