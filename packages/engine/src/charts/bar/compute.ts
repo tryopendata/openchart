@@ -12,17 +12,40 @@ import type {
   Encoding,
   GradientDef,
   LayoutStrategy,
+  LinearGradient,
   MarkAria,
   Rect,
   RectMark,
 } from '@opendata-ai/openchart-core';
 import { abbreviateNumber, formatNumber, isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { getColor, getSequentialColor, groupByField } from '../utils';
+
+/**
+ * Auto-orient a gradient for horizontal bars.
+ *
+ * If the gradient uses the default top-to-bottom direction (no explicit
+ * x1/y1/x2/y2, or the defaults x1:0, y1:0, x2:0, y2:1), rotate it to
+ * left-to-right so the gradient follows the bar's data direction.
+ *
+ * Gradients with explicit non-default coordinates are left unchanged.
+ */
+function orientGradientForHorizontalBar(grad: GradientDef): GradientDef {
+  if (grad.gradient !== 'linear') return grad;
+  const lg = grad as LinearGradient;
+  // Only auto-orient if using the default vertical direction.
+  // Default is x1:0, y1:0, x2:0, y2:1 (top-to-bottom).
+  const isDefaultVertical =
+    (lg.x1 === undefined || lg.x1 === 0) &&
+    (lg.y1 === undefined || lg.y1 === 0) &&
+    (lg.x2 === undefined || lg.x2 === 0) &&
+    (lg.y2 === undefined || lg.y2 === 1);
+  if (!isDefaultVertical) return grad;
+  return { ...lg, x1: 0, y1: 0, x2: 1, y2: 0 };
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -207,7 +230,7 @@ function computeStackedBars(
         y: bandY,
         width: barWidth,
         height: bandwidth,
-        fill: color,
+        fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
         cornerRadius: 0,
         data: row as Record<string, unknown>,
         aria,
@@ -277,7 +300,7 @@ function computeGroupedBars(
         y: subY,
         width: barWidth,
         height: subBandHeight,
-        fill: color,
+        fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
         cornerRadius: 2,
         data: row as Record<string, unknown>,
         aria,
@@ -327,7 +350,7 @@ function computeColoredBars(
       y: bandY,
       width: barWidth,
       height: bandwidth,
-      fill: color,
+      fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
       cornerRadius: 2,
       data: row as Record<string, unknown>,
       aria,
@@ -387,7 +410,7 @@ function computeSimpleBars(
       y: bandY,
       width: barWidth,
       height: bandwidth,
-      fill: color,
+      fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
       cornerRadius: 2,
       data: row as Record<string, unknown>,
       aria,

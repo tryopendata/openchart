@@ -186,7 +186,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: encoding.${channel} must have a "field" string`,
         path: `encoding.${channel}.field`,
         code: 'MISSING_FIELD',
-        suggestion: `Add a field name from your data columns: ${availableColumns}`,
+        suggestion: `For constant colors, use mark.fill (e.g., mark: { type: "bar", fill: "#1b7fa3" }) instead of encoding.${channel}. Encoding channels require a data field: ${availableColumns}`,
       });
       continue;
     }
