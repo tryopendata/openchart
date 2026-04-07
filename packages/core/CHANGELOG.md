@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.15.1](https://github.com/tryopendata/openchart/compare/core-v6.15.0...core-v6.15.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* auto-orient gradients for horizontal bars and improve validation suggestion ([14a02f9](https://github.com/tryopendata/openchart/commit/14a02f9))
+* create release tags via GitHub API for verified signatures ([cee901f](https://github.com/tryopendata/openchart/commit/cee901f))
+
 ## [6.15.0](https://github.com/tryopendata/openchart/compare/core-v6.14.0...core-v6.15.0) (2026-04-07)
 
 
