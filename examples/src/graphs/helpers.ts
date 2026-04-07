@@ -109,17 +109,19 @@ export function generateRandomGraph(
       ? Array.from({ length: communityCount }, (_, i) => `Community ${i + 1}`)
       : [];
 
+  // Pre-build community membership indices for O(1) lookups
+  const communityMembers: number[][] = communityNames.map(() => []);
+
   const nodes = Array.from({ length: nodeCount }, (_, i) => {
     const node: Record<string, unknown> = {
       id: `n${i}`,
-      label:
-        PERSON_NAMES[i % PERSON_NAMES.length] +
-        (i >= PERSON_NAMES.length ? ` ${Math.floor(i / PERSON_NAMES.length) + 1}` : ''),
+      label: nameForIndex(i),
     };
     if (communityNames.length > 0) {
-      node.community = communityNames[i % communityNames.length];
+      const cIdx = i % communityNames.length;
+      node.community = communityNames[cIdx];
+      communityMembers[cIdx].push(i);
     }
-    // Add a weight field for encoding demos
     node.weight = Math.round(rand() * 100);
     return node;
   });
@@ -134,19 +136,12 @@ export function generateRandomGraph(
     let attempts = 0;
 
     do {
-      if (communityNames.length > 0 && rand() < 0.7) {
-        // Prefer intra-community edges
-        const communityIdx = Math.floor(rand() * communityNames.length);
-        const communityNodes = nodes
-          .map((n, idx) => ({ idx, community: n.community }))
-          .filter((n) => n.community === communityNames[communityIdx]);
-        if (communityNodes.length >= 2) {
-          source = communityNodes[Math.floor(rand() * communityNodes.length)].idx;
-          target = communityNodes[Math.floor(rand() * communityNodes.length)].idx;
-        } else {
-          source = Math.floor(rand() * nodeCount);
-          target = Math.floor(rand() * nodeCount);
-        }
+      if (communityMembers.length > 0 && rand() < 0.7) {
+        // Prefer intra-community edges using pre-built index
+        const cIdx = Math.floor(rand() * communityMembers.length);
+        const members = communityMembers[cIdx];
+        source = members[Math.floor(rand() * members.length)];
+        target = members[Math.floor(rand() * members.length)];
       } else {
         source = Math.floor(rand() * nodeCount);
         target = Math.floor(rand() * nodeCount);

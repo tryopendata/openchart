@@ -175,16 +175,16 @@ describe('ZoomTransform', () => {
       // Graph spans 400x200, canvas 800x600, padding 0
       const nodes = [makeNode('a', 0, 0, 0), makeNode('b', 400, 200, 0)];
       const { transform: t } = ZoomTransform.fitBounds(nodes, 800, 600, 0);
-      // Scale should be min(800/400, 600/200) = min(2, 3) = 2
-      expect(t.k).toBeCloseTo(2);
+      // Scale capped at 1 (never zoom in past natural size)
+      expect(t.k).toBeCloseTo(1);
     });
 
     it('returns contentHeight matching scaled graph bounds plus padding', () => {
       const nodes = [makeNode('a', 0, 0, 0), makeNode('b', 400, 200, 0)];
       const { contentHeight } = ZoomTransform.fitBounds(nodes, 800, 600, 40);
-      // k = min(720/400, 520/200) = min(1.8, 2.6) = 1.8
-      // contentHeight = 200 * 1.8 + 80 = 440
-      expect(contentHeight).toBeCloseTo(440);
+      // k = min(1, 720/400, 520/200) = 1 (capped)
+      // contentHeight = 200 * 1 + 80 = 280
+      expect(contentHeight).toBeCloseTo(280);
     });
   });
 

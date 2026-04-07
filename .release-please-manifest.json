@@ -1,8 +1,0 @@
-{
-  "packages/core": "6.13.1",
-  "packages/engine": "6.13.1",
-  "packages/vanilla": "6.13.1",
-  "packages/react": "6.13.1",
-  "packages/vue": "6.13.1",
-  "packages/svelte": "6.13.1"
-}

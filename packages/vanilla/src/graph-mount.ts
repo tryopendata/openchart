@@ -312,9 +312,8 @@ export function createGraph(
 
     container.appendChild(wrapper);
 
-    // Size the canvas
-    const chromeHeight = chromeEl.getBoundingClientRect().height || 0;
-    const canvasHeight = Math.max(height - chromeHeight, 200);
+    // Canvas uses the full container height; chrome overlays on top
+    const canvasHeight = Math.max(height, 200);
     renderer = new GraphCanvasRenderer(canvas);
     renderer.resize(width, canvasHeight);
   }
@@ -703,8 +702,7 @@ export function createGraph(
   function doResize(): void {
     if (destroyed || !canvas || !renderer || !wrapper) return;
     const { width, height } = getContainerDimensions();
-    const chromeHeight = chromeEl?.getBoundingClientRect().height || 0;
-    const canvasHeight = Math.max(height - chromeHeight, 200);
+    const canvasHeight = Math.max(height, 200);
     renderer.resize(width, canvasHeight);
     needsRender = true;
     scheduleRender();

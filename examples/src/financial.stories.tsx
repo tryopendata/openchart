@@ -215,11 +215,11 @@ function benchmarkSpec(dark: boolean): ChartSpec {
     mark: 'line',
     data: benchmarkData,
     encoding: {
-      x: { field: 'date', type: 'temporal', axis: { tickCount: 8 } },
+      x: { field: 'date', type: 'temporal', axis: { tickCount: 4 } },
       y: {
         field: 'totalReturn',
         type: 'quantitative',
-        axis: { title: 'Cumulative Return (%)', format: '+.0f', grid: true },
+        axis: { title: 'Cumulative Return (%)', format: '+.0f', grid: true, tickCount: 5 },
       },
       color: { field: 'index', type: 'nominal' },
     },
@@ -247,11 +247,10 @@ function benchmarkSpec(dark: boolean): ChartSpec {
         text: 'NASDAQ opens 43pp gap\nover small caps',
         fontSize: 10,
         connector: false,
-        background: dark ? '#1e293b' : '#ffffff',
       },
     ],
     labels: { density: 'endpoints', format: '+.1f' },
-    legend: { position: 'bottom-right' },
+    legend: { show: false },
     seriesStyles: {
       'Russell 2000': { lineStyle: 'dashed', opacity: 0.7 },
     },
@@ -457,8 +456,8 @@ function riskReturnSpec(dark: boolean): ChartSpec {
       },
       {
         type: 'text',
-        x: 40,
-        y: 24,
+        x: 55,
+        y: 28,
         text: 'Bitcoin: highest return,\nhighest risk',
         fontSize: 10,
         anchor: 'auto',

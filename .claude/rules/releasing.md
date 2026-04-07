@@ -1,43 +1,45 @@
 # Releasing
 
-This project uses [release-please](https://github.com/googleapis/release-please) for automated releases. Never manually bump versions, edit changelogs, or create release commits.
+Releases are cut manually using `scripts/release.mjs`. All 6 packages are always released together at the same version.
 
-## How it works
+## How to release
 
-1. Push conventional commits to `main` (e.g. `fix:`, `feat:`, `perf:`)
-2. release-please creates/updates a release PR with version bumps and changelogs for ALL 6 packages (linked-versions keeps them in sync)
-3. Merging that PR triggers release-please again, which auto-creates component tags (e.g. `core-v2.3.3`) and GitHub releases
-4. The publish job in the same workflow runs automatically when releases are created, publishing all packages to npm
+```bash
+node scripts/release.mjs patch    # 6.13.1 -> 6.13.2
+node scripts/release.mjs minor    # 6.13.1 -> 6.14.0
+node scripts/release.mjs major    # 6.13.1 -> 7.0.0
+node scripts/release.mjs 6.15.0   # explicit version
+```
 
-## What to do when releasing
+The script:
+1. Bumps `version` in all 6 `packages/*/package.json` files
+2. Updates `CHANGELOG.md` in each package from conventional commits
+3. Commits as `release: openchart vX.Y.Z`
+4. Creates per-package git tags (`core-vX.Y.Z`, `engine-vX.Y.Z`, etc.)
+5. Pushes the commit and tags to origin
 
-- Just merge the release-please PR. Everything else is automated.
-- If release-please hasn't created a PR, check the workflow run logs.
+The `core-v*` tag push triggers the Release workflow, which builds, tests, publishes to npm, and creates a GitHub release.
 
-## Key config details
+## Dry run
 
-- `include-component-in-tag: true` is REQUIRED for `linked-versions` to work (without it, `getComponent()` returns empty string and the plugin can't match components)
-- `group-pull-request-title-pattern` MUST include `${version}` so release-please can parse its own merged PR titles to determine the last released version. Without it, release-please falls back to tag-based lookup and can compute the wrong version. (The original #1456 bug that prevented `${version}` from resolving was fixed in release-please PR #1760.)
-- Publishing is chained directly from the release-please workflow via `releases_created` output, not via tag-triggered workflows (GitHub API-created tags don't fire push events)
+Add `--dry-run` to skip the push step:
 
-## Troubleshooting
-
-- **"untagged, merged release PRs outstanding - aborting"**: A merged release PR still has `autorelease: pending` label. Change it to `autorelease: tagged`.
-- **Packages not all bumped**: Check that `include-component-in-tag` is `true` in `release-please-config.json`.
+```bash
+node scripts/release.mjs minor --dry-run
+```
 
 ## What NOT to do
 
-- Don't manually edit `package.json` versions, `CHANGELOG.md`, or `.release-please-manifest.json`
-- Don't manually create release commits or tags
-- Don't push version bump commits directly to main
+- Don't edit `package.json` versions by hand
+- Don't create release tags manually
+- Don't push tags without the release commit
 
-## Commit conventions
+## CI on release commits
 
-- `fix:` -> patch bump
-- `feat:` -> minor bump
-- `feat!:` or `BREAKING CHANGE:` -> major bump
-- `chore:`, `test:`, `ci:`, `build:` -> hidden (no version bump)
+CI and deploy-examples skip on release commits (prefix `release:`). The Release workflow handles build/typecheck/test verification before publishing.
 
-## CI on release merges
+## Choosing bump type
 
-CI and deploy-examples skip on release commits (prefix `chore`). The publish job in the release-please workflow handles build/typecheck/test verification.
+- `patch` for bug fixes only
+- `minor` for new features (backwards compatible)
+- `major` for breaking changes

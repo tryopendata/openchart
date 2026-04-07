@@ -151,6 +151,21 @@ function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
     return String(row[encoding.y.field] ?? '');
   }
 
+  // For scatter/bubble (both axes quantitative), find a name-like string field
+  // in the data row that isn't already used by an encoding channel
+  if (encoding.x?.type === 'quantitative' && encoding.y?.type === 'quantitative') {
+    const encodedFields = new Set(
+      [encoding.x, encoding.y, encoding.color, encoding.size, encoding.detail]
+        .filter((ch): ch is EncodingChannel => !!ch && 'field' in ch)
+        .map((ch) => ch.field),
+    );
+    for (const [key, value] of Object.entries(row)) {
+      if (!encodedFields.has(key) && typeof value === 'string') {
+        return value;
+      }
+    }
+  }
+
   // For color-encoded series, use the series name (skip conditional defs)
   if (encoding.color && 'field' in encoding.color) {
     return String(row[encoding.color.field] ?? '');

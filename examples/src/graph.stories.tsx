@@ -36,7 +36,7 @@ const basicSpec: GraphSpec = {
 };
 
 export const BasicGraph = () => (
-  <div className="story-chart story-h-600">
+  <div className="story-chart story-h-viewport">
     <Graph spec={basicSpec} />
   </div>
 );
@@ -52,7 +52,7 @@ communitySpec.chrome = {
 };
 
 export const CommunityClusters = () => (
-  <div className="story-chart story-h-600">
+  <div className="story-chart story-h-viewport">
     <Graph spec={communitySpec} />
   </div>
 );
@@ -89,7 +89,7 @@ const encodedSpec: GraphSpec = {
 };
 
 export const EncodedGraph = () => (
-  <div className="story-chart story-h-600">
+  <div className="story-chart story-h-viewport">
     <Graph spec={encodedSpec} />
   </div>
 );
@@ -126,7 +126,7 @@ const chromeSpec: GraphSpec = {
 };
 
 export const WithChrome = () => (
-  <div className="story-chart story-h-600">
+  <div className="story-chart story-h-viewport">
     <Graph spec={chromeSpec} />
   </div>
 );
@@ -148,7 +148,7 @@ searchSpec.chrome = {
 };
 
 export const SearchDemo = () => (
-  <div className="story-chart story-h-600">
+  <div className="story-chart story-h-viewport">
     <Graph spec={searchSpec} />
   </div>
 );
@@ -164,7 +164,7 @@ spec1k.chrome = {
 };
 
 export const Scale1kNodes = () => (
-  <div className="story-chart story-h-700">
+  <div className="story-chart story-h-viewport">
     <Graph spec={spec1k} />
   </div>
 );
@@ -176,7 +176,7 @@ spec5k.chrome = {
 };
 
 export const Scale5kNodes = () => (
-  <div className="story-chart story-h-700">
+  <div className="story-chart story-h-viewport">
     <Graph spec={spec5k} />
   </div>
 );
@@ -232,8 +232,21 @@ function FPSCounter() {
 }
 
 export const Scale10kNodes = () => (
-  <div className="story-chart story-h-700" style={{ position: 'relative' }}>
+  <div className="story-chart story-h-viewport" style={{ position: 'relative' }}>
     <FPSCounter />
     <Graph spec={spec10k} />
+  </div>
+);
+
+const spec20k = generateRandomGraph(20000, 1.5, 12);
+spec20k.chrome = {
+  title: '20,000 Nodes',
+  subtitle: '12 communities, ~30000 edges',
+};
+
+export const Scale20kNodes = () => (
+  <div className="story-chart story-h-viewport" style={{ position: 'relative' }}>
+    <FPSCounter />
+    <Graph spec={spec20k} />
   </div>
 );

@@ -130,8 +130,6 @@ export class GraphCanvasRenderer {
     this.cssHeight = height;
     this.canvas.width = width * this.dpr;
     this.canvas.height = height * this.dpr;
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
   }
 
   /** Clear canvas and render the full graph state. */

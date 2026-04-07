@@ -1,5 +1,26 @@
 # Changelog
 
+## [6.14.0](https://github.com/tryopendata/openchart/compare/core-v6.13.1...core-v6.14.0) (2026-04-07)
+
+
+### Features
+
+* refactor annotations and compile into focused modules ([91c6f6a](https://github.com/tryopendata/openchart/commit/91c6f6a))
+* Vega-Lite spec alignment and release readiness (#64) ([586a113](https://github.com/tryopendata/openchart/commit/586a113))
+* add configurable watermark opt-out ([03519e1](https://github.com/tryopendata/openchart/commit/03519e1))
+* add gradient fill support for chart marks (#60) ([fee85b2](https://github.com/tryopendata/openchart/commit/fee85b2))
+* add grouped/dodged bar and column charts via stack encoding ([860b499](https://github.com/tryopendata/openchart/commit/860b499))
+* sankey label positions spec ([77c1af8](https://github.com/tryopendata/openchart/commit/77c1af8))
+
+
+### Bug Fixes
+
+* consolidate table stories, add gradient fills, and fix temporal scale defaults ([5a7dbf4](https://github.com/tryopendata/openchart/commit/5a7dbf4))
+* scale domain, sort defaults, stacked area lines, and tooltip series fields ([e159233](https://github.com/tryopendata/openchart/commit/e159233))
+* several issues found in the core engine (title calculation, formatting, etc) ([7861c0f](https://github.com/tryopendata/openchart/commit/7861c0f))
+* negative value bar handling ([475b088](https://github.com/tryopendata/openchart/commit/475b088))
+* add ${version} to group PR title pattern ([712affc](https://github.com/tryopendata/openchart/commit/712affc))
+
 ## [6.13.1](https://github.com/tryopendata/openchart/compare/vanilla-v6.13.0...vanilla-v6.13.1) (2026-04-06)
 
 

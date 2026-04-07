@@ -834,8 +834,9 @@ function renderAnnotations(parent: SVGElement, layout: ChartLayout): void {
   g.setAttribute('class', 'oc-annotations');
 
   // Annotations are already sorted by zIndex from the engine, so render in order
+  const bgColor = layout.theme.colors.background;
   for (let i = 0; i < layout.annotations.length; i++) {
-    renderAnnotation(g, layout.annotations[i], i);
+    renderAnnotation(g, layout.annotations[i], i, bgColor);
   }
 
   parent.appendChild(g);
@@ -904,7 +905,12 @@ function renderCurvedArrow(parent: SVGElement, from: Point, to: Point, stroke: s
   parent.appendChild(arrow);
 }
 
-function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, index: number): void {
+function renderAnnotation(
+  parent: SVGElement,
+  annotation: ResolvedAnnotation,
+  index: number,
+  bgColor?: string,
+): void {
   const g = createSVGElement('g');
   g.setAttribute('class', `oc-annotation oc-annotation-${annotation.type}`);
   g.setAttribute('data-annotation-index', String(index));
@@ -993,7 +999,8 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
       text.textContent = annotation.label.text;
     }
 
-    // Render background rect behind text if specified
+    // Render background rect behind text if specified, otherwise use
+    // paint-order stroke halo to knock out lines behind text
     if (annotation.label.background) {
       const charWidth = fontSize * 0.55;
       const maxLineWidth = Math.max(...lines.map((l) => l.length)) * charWidth;
@@ -1013,6 +1020,11 @@ function renderAnnotation(parent: SVGElement, annotation: ResolvedAnnotation, in
         rx: 2,
       });
       g.appendChild(bgRect);
+    } else if (bgColor) {
+      text.style.paintOrder = 'stroke';
+      text.style.stroke = bgColor;
+      text.style.strokeWidth = `${Math.round(fontSize * 0.3)}px`;
+      text.style.strokeLinejoin = 'round';
     }
 
     g.appendChild(text);

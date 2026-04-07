@@ -58,17 +58,32 @@ const coloredDotSpec: ChartSpec = {
     { airline: 'Delta', onTime: 83.5, rating: 'Above average' },
     { airline: 'United', onTime: 80.9, rating: 'Above average' },
     { airline: 'Alaska', onTime: 80.2, rating: 'Above average' },
-    { airline: 'American', onTime: 77.8, rating: 'Below average' },
+    { airline: 'American', onTime: 77.8, rating: 'Above average' },
     { airline: 'Spirit', onTime: 69.1, rating: 'Below average' },
     { airline: 'Southwest', onTime: 74.6, rating: 'Below average' },
     { airline: 'JetBlue', onTime: 71.2, rating: 'Below average' },
     { airline: 'Frontier', onTime: 73.8, rating: 'Below average' },
   ],
   encoding: {
-    x: { field: 'onTime', type: 'quantitative', axis: { title: 'On-time arrival rate (%)' } },
+    x: {
+      field: 'onTime',
+      type: 'quantitative',
+      axis: { title: 'On-time arrival rate (%)', format: '.0f%' },
+      scale: { domain: [60, 90] },
+    },
     y: { field: 'airline', type: 'nominal' },
     color: { field: 'rating', type: 'nominal' },
   },
+  annotations: [
+    {
+      type: 'refline',
+      x: 76.4,
+      label: 'avg: 76%',
+      style: 'dashed',
+      stroke: '#64748b',
+      strokeWidth: 1,
+    },
+  ],
   chrome: {
     title: 'Delta Leads the Pack in Getting You There on Time',
     subtitle: 'Percentage of flights arriving within 15 minutes of schedule, full year 2024',
@@ -106,7 +121,11 @@ const divergingDotSpec: ChartSpec = {
     { state: 'Hawaii', change: -1.5 },
   ],
   encoding: {
-    x: { field: 'change', type: 'quantitative', axis: { title: 'Population change (%)' } },
+    x: {
+      field: 'change',
+      type: 'quantitative',
+      axis: { title: 'Population change (%)', format: '.0f%' },
+    },
     y: { field: 'state', type: 'nominal' },
   },
   chrome: {

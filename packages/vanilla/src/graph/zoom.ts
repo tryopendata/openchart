@@ -79,8 +79,8 @@ export class ZoomTransform {
       if (n.y + r > maxY) maxY = n.y + r;
     }
 
-    const graphW = maxX - minX;
-    const graphH = maxY - minY;
+    let graphW = maxX - minX;
+    let graphH = maxY - minY;
 
     if (graphW === 0 && graphH === 0) {
       // All nodes at the same point; just center
@@ -90,16 +90,33 @@ export class ZoomTransform {
       };
     }
 
+    // When called early in the simulation (first tick), the bounding box
+    // underestimates the final spread. Apply a spread multiplier based on
+    // node count: larger graphs expand more as charge forces push nodes
+    // apart over subsequent ticks. The sqrt scaling mirrors how d3-force
+    // charge repulsion grows with node count.
+    if (nodes.length > 50) {
+      const spread = 1 + Math.sqrt(nodes.length) / 120;
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      graphW *= spread;
+      graphH *= spread;
+      minX = cx - graphW / 2;
+      maxX = cx + graphW / 2;
+      minY = cy - graphH / 2;
+      maxY = cy + graphH / 2;
+    }
+
     const availW = canvasW - padding * 2;
     const availH = canvasH - padding * 2;
-    const k = Math.min(availW / graphW, availH / graphH);
+    // Cap at 1 so the graph never renders larger than its natural size
+    const k = Math.min(1, availW / graphW, availH / graphH);
 
-    // Center horizontally, top-align vertically.
-    // Centering both axes leaves dead space below compact clusters
-    // on mobile/portrait containers.
+    // Center both axes so the graph sits in the middle of the viewport
     const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
     const tx = canvasW / 2 - cx * k;
-    const ty = padding - minY * k;
+    const ty = canvasH / 2 - cy * k;
 
     // Content height = scaled graph extent + top and bottom padding
     const contentHeight = graphH * k + padding * 2;

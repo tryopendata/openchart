@@ -84,6 +84,10 @@
 .story-h-700 {
   height: 700px;
 }
+.story-h-viewport {
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
 
 /* Flex layout utilities */
 

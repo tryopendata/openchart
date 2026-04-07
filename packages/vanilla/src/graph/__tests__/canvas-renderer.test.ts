@@ -243,8 +243,8 @@ describe('GraphCanvasRenderer.resize', () => {
     renderer.resize(800, 600);
     expect(canvas.width).toBe(800);
     expect(canvas.height).toBe(600);
-    expect(canvas.style.width).toBe('800px');
-    expect(canvas.style.height).toBe('600px');
+    // CSS sizing is handled by width/height: 100% in graph.css,
+    // so resize() no longer sets inline style dimensions
   });
 });
 

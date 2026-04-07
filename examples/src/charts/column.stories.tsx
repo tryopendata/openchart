@@ -58,7 +58,6 @@ const simpleColumnSpec: ChartSpec = {
       anchor: 'top',
       offset: { dx: 0, dy: -200 },
       connector: true,
-      background: '#ffffff',
     },
     {
       type: 'refline',

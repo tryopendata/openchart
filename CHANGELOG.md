@@ -6,6 +6,186 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [6.14.0] - 2026-04-07
+
+### Features
+
+- **engine:** refactor annotations and compile into focused modules
+- **spec:** Vega-Lite spec alignment and release readiness (#64)
+- **core:** add configurable watermark opt-out
+- **chart:** add gradient fill support for chart marks (#60)
+- **chart:** add grouped/dodged bar and column charts via stack encoding
+- **sankey:** sankey label positions spec
+
+### Bug Fixes
+
+- consolidate table stories, add gradient fills, and fix temporal scale defaults
+- scale domain, sort defaults, stacked area lines, and tooltip series fields
+- several issues found in the core engine (title calculation, formatting, etc)
+- negative value bar handling
+- add ${version} to group PR title pattern
+
+## [6.13.1] - 2026-04-06
+
+### Bug Fixes
+
+- several issues found in the core engine (title calculation, formatting, etc)
+
+## [6.13.0] - 2026-04-05
+
+### Features
+
+- Vega-Lite spec alignment and release readiness (#64)
+
+## [6.12.0] - 2026-04-05
+
+### Features
+
+- add configurable watermark opt-out
+
+## [6.11.0] - 2026-04-02
+
+### Features
+
+- add gradient fill support for chart marks (#60)
+
+## [6.10.0] - 2026-04-01
+
+### Features
+
+- add grouped/dodged bar and column charts via stack encoding
+
+## [6.9.0] - 2026-04-01
+
+### Features
+
+- sankey label positions spec
+
+## [6.8.0] - 2026-03-31
+
+### Features
+
+- **sankey:** add linkOpacity spec option for user control
+- **sankey:** add valueFormat for tooltip and ARIA label formatting
+
+### Bug Fixes
+
+- address 6 editorial feedback issues
+- **sankey:** address code review findings
+
+## [6.7.1] - 2026-03-30
+
+### Documentation
+
+- add gentle OpenData references as a data source
+
+## [6.7.0] - 2026-03-30
+
+### Features
+
+- add label prefix option and update brand watermark to tryOpenData.ai
+
+## [6.6.0] - 2026-03-29
+
+### Features
+
+- add sankey diagram visualization type (#52)
+
+### Bug Fixes
+
+- sankey link rendering, animation, watermark, and legend layout
+
+## [6.5.2] - 2026-03-26
+
+### Bug Fixes
+
+- skip annotation margin at compact breakpoints, remove caret connector, improve animation resize handling
+
+## [6.5.1] - 2026-03-26
+
+### Bug Fixes
+
+- correct AnimationStagger.delay default in JSDoc (30 -> 80)
+
+## [6.5.0] - 2026-03-26
+
+### Features
+
+- add CSS entrance animations and modularize styles
+
+## [6.4.1] - 2026-03-26
+
+### Bug Fixes
+
+- move ignoreDeprecations to package tsconfigs
+
+## [6.4.0] - 2026-03-26
+
+### Features
+
+- add rich chart editing with selection, deletion, and inline text editing
+
+## [6.3.0] - 2026-03-26
+
+### Features
+
+- address all FEATURE-REQUESTS.md bugs and feature requests
+
+## [6.2.1] - 2026-03-23
+
+### Bug Fixes
+
+- match temporal tick formatting to scale timezone
+
+## [6.2.0] - 2026-03-23
+
+### Features
+
+- **graph:** add scale config to graph encoding channels and fix color precedence
+
+## [6.1.5] - 2026-03-23
+
+### Bug Fixes
+
+- use UTC methods for temporal granularity and support custom axis/tooltip date formats
+
+## [6.1.2] - 2026-03-23
+
+### Bug Fixes
+
+- improve chart margin computation for labels and annotations
+- reserve bottom space for brand watermark in chrome layout
+- y-axis title margin and default padding
+
+## [6.0.0] - 2026-03-21
+
+### Breaking Changes
+
+- `createChart` and `ChartInstance.update()` now accept `ChartSpec | GraphSpec` instead of `VizSpec`. Passing a `TableSpec` to `createChart` was always a runtime error, this makes it a compile error.
+
+### Features
+
+- add hiddenSeries filtering, graph edge hover/styles, JPG export, and simulation config
+- add label format support to column charts and extract shared formatter
+- add responsive overrides, legend hiding, and chrome text wrapping
+- add SeriesStyle type for per-series visual overrides
+- **core:** add areaChart, donutChart, and dotChart builder functions
+- implement seriesStyles in line chart compute pipeline
+- **layout:** prevent annotation/label/brand overlap with improved obstacle detection
+- narrow createChart types, fix remount bugs, add Visualization component
+- rename packages from @opendata-ai/* to @opendata-ai/openchart-*
+- **responsive:** height-aware layout, chrome compression, and legend overflow
+- space-aware axis tick density and rotated label support
+- unified chart element editing system
+
+### Bug Fixes
+
+- **css:** remove height:100% from chart container to fix iOS clipping
+- dark-mode theme preservation, graph visual tuning, and tooltip/legend toggle
+- **graph:** support viz-dark class on wrapper element in CSS selectors
+- move bun-symlink-resolver to scripts/ so it's not gitignored
+- **svg:** prevent chart title clipping on iOS Safari
+
 ## [2.11.0] - 2026-03-14
 
 ### Features

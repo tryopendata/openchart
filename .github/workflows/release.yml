@@ -1,48 +1,26 @@
-name: Release Please
+name: Release
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch: {}
+    tags:
+      - 'core-v*'
 
 permissions: {}
 
 jobs:
-  release-please:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    permissions:
-      contents: write
-      pull-requests: write
-
-    outputs:
-      releases_created: ${{ steps.release.outputs.releases_created }}
-
-    steps:
-      - uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
-        id: release
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-
   publish:
     name: Publish to npm
-    needs: release-please
-    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Setup
@@ -58,6 +36,10 @@ jobs:
 
       - name: Test
         run: bun run test
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#core-v}" >> "$GITHUB_OUTPUT"
 
       - name: Rewrite workspace dependencies to real versions
         run: |
@@ -110,3 +92,21 @@ jobs:
           for pkg in core engine vanilla react vue svelte; do
             (cd "packages/$pkg" && publish_pkg "$pkg")
           done
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Extract changelog entry for this version from core (representative)
+          NOTES=$(sed -n "/^## \[${VERSION}\]/,/^## \[/{ /^## \[${VERSION}\]/p; /^## \[${VERSION}\]/!{ /^## \[/!p; } }" packages/core/CHANGELOG.md)
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release openchart v${VERSION}"
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "openchart v${VERSION}" \
+            --notes "$NOTES" \
+            --verify-tag
