@@ -15,10 +15,10 @@ The script:
 1. Bumps `version` in all 6 `packages/*/package.json` files
 2. Updates `CHANGELOG.md` in each package from conventional commits
 3. Commits as `release: openchart vX.Y.Z`
-4. Creates per-package git tags (`core-vX.Y.Z`, `engine-vX.Y.Z`, etc.)
-5. Pushes the commit and tags to origin
+4. Pushes the commit to origin
+5. Creates per-package git tags via GitHub API (`core-vX.Y.Z`, `engine-vX.Y.Z`, etc.) so they get verified signatures
 
-The `core-v*` tag push triggers the Release workflow, which builds, tests, publishes to npm, and creates a GitHub release.
+The `release:` commit prefix triggers the Release workflow, which builds, tests, publishes to npm, and creates a GitHub release.
 
 ## Dry run
 

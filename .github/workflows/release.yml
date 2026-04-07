@@ -2,14 +2,15 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'core-v*'
+    branches: [main]
 
 permissions: {}
 
 jobs:
   publish:
     name: Publish to npm
+    # Only run on release commits created by scripts/release.mjs
+    if: "startsWith(github.event.head_commit.message, 'release: openchart v')"
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -37,9 +38,11 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Extract version from tag
+      - name: Extract version from commit message
         id: version
-        run: echo "version=${GITHUB_REF_NAME#core-v}" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(echo "${{ github.event.head_commit.message }}" | sed 's/release: openchart v//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Rewrite workspace dependencies to real versions
         run: |
@@ -106,7 +109,7 @@ jobs:
             NOTES="Release openchart v${VERSION}"
           fi
 
-          gh release create "${GITHUB_REF_NAME}" \
+          gh release create "core-v${VERSION}" \
             --title "openchart v${VERSION}" \
             --notes "$NOTES" \
             --verify-tag

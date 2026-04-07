@@ -198,28 +198,30 @@ console.log(`Updated ${PACKAGES.length} package.json files`);
 updateChangelogs(currentVersion, newVersion);
 console.log('Updated changelogs');
 
-// 3. Stage, commit, tag
+// 3. Stage and commit
 const files = PACKAGES.flatMap(pkg => [
   `packages/${pkg}/package.json`,
   `packages/${pkg}/CHANGELOG.md`,
 ]);
 run(`git add ${files.join(' ')}`);
 run(`git commit -m "release: openchart v${newVersion}"`);
+console.log('Created release commit');
 
-// Create per-package tags (matches existing convention)
-for (const pkg of PACKAGES) {
-  run(`git tag ${pkg}-v${newVersion}`);
-}
-console.log(`Created commit and ${PACKAGES.length} tags`);
-
-// 4. Push (unless --dry-run)
+// 4. Push and create tags (unless --dry-run)
 if (process.argv.includes('--dry-run')) {
-  console.log('Dry run - skipping push');
-  console.log(`Would push: main + ${PACKAGES.map(p => `${p}-v${newVersion}`).join(', ')}`);
+  console.log('Dry run - skipping push and tag creation');
+  console.log(`Would push main and create tags: ${PACKAGES.map(p => `${p}-v${newVersion}`).join(', ')}`);
 } else {
-  const tags = PACKAGES.map(p => `${p}-v${newVersion}`).join(' ');
-  run(`git push origin main ${tags}`);
-  console.log('Pushed to origin');
+  run('git push origin main');
+  console.log('Pushed commit to origin');
+
+  // Create tags via GitHub API so they get verified signatures
+  const sha = run('git rev-parse HEAD');
+  for (const pkg of PACKAGES) {
+    const tag = `${pkg}-v${newVersion}`;
+    run(`gh api repos/{owner}/{repo}/git/refs -f ref=refs/tags/${tag} -f sha=${sha}`);
+  }
+  console.log(`Created ${PACKAGES.length} verified tags via GitHub API`);
 }
 
 console.log(`\nDone! Released openchart v${newVersion}`);
