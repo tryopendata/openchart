@@ -524,7 +524,30 @@ function renderLabels(parent: SVGElement, nodes: SankeyNodeMark[]): void {
     const text = createSVGElement('text');
     setAttrs(text, { x: label.x, y: label.y });
     applyTextStyle(text, label.style);
-    text.textContent = label.text;
+
+    // Wrap label text when maxWidth is set and text would overflow
+    if (label.maxWidth !== undefined && label.maxWidth > 0) {
+      const fontSize = label.style.fontSize ?? 12;
+      const fontWeight = label.style.fontWeight ?? 400;
+      const lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth);
+      if (lines.length > 1) {
+        const lineHeight = fontSize * (label.style.lineHeight ?? 1.3);
+        // Center the multi-line block vertically around the label y position
+        const totalHeight = (lines.length - 1) * lineHeight;
+        const startY = label.y - totalHeight / 2;
+        for (let i = 0; i < lines.length; i++) {
+          const tspan = createSVGElement('tspan');
+          tspan.setAttribute('x', String(label.x));
+          tspan.setAttribute('y', String(startY + i * lineHeight));
+          tspan.textContent = lines[i];
+          text.appendChild(tspan);
+        }
+      } else {
+        text.textContent = label.text;
+      }
+    } else {
+      text.textContent = label.text;
+    }
 
     g.appendChild(text);
   }

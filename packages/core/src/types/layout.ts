@@ -490,6 +490,8 @@ export interface ResolvedLabel {
   style: TextStyle;
   /** Whether this label is visible or was demoted to tooltip-only by collision detection. */
   visible: boolean;
+  /** Maximum available width for the label text. When set, the renderer should wrap or truncate. */
+  maxWidth?: number;
   /** If not at the anchor point, draw a connector line from label to anchor. */
   connector?: {
     /** Connector start (at the label). */

@@ -140,6 +140,8 @@ function computeNodeLabel(
   theme: ResolvedTheme,
   nodeWidth: number,
   nodeLabelAlign: 'auto' | 'left' | 'right' = 'auto',
+  containerWidth?: number,
+  padding?: number,
 ): SankeyNodeMark['label'] {
   const depth = node.depth ?? 0;
 
@@ -168,6 +170,20 @@ function computeNodeLabel(
   const y1 = node.y1 ?? 0;
   const midY = (y0 + y1) / 2;
 
+  // Compute maxWidth: space from label position to the container edge
+  const pad = padding ?? 0;
+  let maxWidth: number | undefined;
+  if (containerWidth !== undefined) {
+    if (placeLeft) {
+      // Label goes left from x0: available space is from left padding to x0
+      maxWidth = x0 - LABEL_GAP - pad;
+    } else {
+      // Label goes right from x1: available space is from x1 to right edge
+      maxWidth = containerWidth - pad - (x1 + LABEL_GAP);
+    }
+    if (maxWidth !== undefined && maxWidth < 0) maxWidth = 0;
+  }
+
   if (placeLeft) {
     return {
       text: node.label ?? node.id,
@@ -175,6 +191,7 @@ function computeNodeLabel(
       y: midY,
       style: { ...style, textAnchor: 'end', dominantBaseline: 'central' },
       visible: true,
+      maxWidth,
     };
   }
 
@@ -184,6 +201,7 @@ function computeNodeLabel(
     y: midY,
     style: { ...style, textAnchor: 'start', dominantBaseline: 'central' },
     visible: true,
+    maxWidth,
   };
 }
 
@@ -394,7 +412,15 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       height: (node.y1 ?? 0) - (node.y0 ?? 0),
       fill,
       cornerRadius: NODE_CORNER_RADIUS,
-      label: computeNodeLabel(node, maxDepth, theme, sankeySpec.nodeWidth, nodeLabelAlign),
+      label: computeNodeLabel(
+        node,
+        maxDepth,
+        theme,
+        sankeySpec.nodeWidth,
+        nodeLabelAlign,
+        options.width,
+        padding,
+      ),
       nodeId: node.id,
       value: node.value ?? 0,
       depth,
