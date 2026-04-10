@@ -178,7 +178,7 @@ function wrapText(
   }
 
   // Heuristic character width matching text-measure.ts
-  const AVG_CHAR_WIDTH = 0.55;
+  const AVG_CHAR_WIDTH = 0.57;
   const WEIGHT_FACTORS: Record<number, number> = {
     100: 0.9,
     200: 0.92,

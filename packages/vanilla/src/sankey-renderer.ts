@@ -85,7 +85,7 @@ function stampAnimationAttrs(
 function wrapText(text: string, fontSize: number, fontWeight: number, maxWidth: number): string[] {
   if (maxWidth <= 0) return [text];
 
-  const AVG_CHAR_WIDTH = 0.55;
+  const AVG_CHAR_WIDTH = 0.57;
   const WEIGHT_FACTORS: Record<number, number> = {
     100: 0.9,
     200: 0.92,

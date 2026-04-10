@@ -240,7 +240,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Responsive strategy
   const breakpoint = getBreakpoint(options.width);
   const heightClass = getHeightClass(options.height);
-  const strategy = getLayoutStrategy(breakpoint, heightClass);
+  let strategy = getLayoutStrategy(breakpoint, heightClass);
 
   // Apply breakpoint-conditional overrides from the expanded spec
   const rawSpec = expandedSpec as Record<string, unknown>;
@@ -286,6 +286,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         ...chartSpec,
         annotations: bp.annotations as NormalizedChartSpec['annotations'],
       };
+      // User explicitly provided annotations at this breakpoint — override the
+      // responsive strategy so they render inline instead of being stripped.
+      strategy = { ...strategy, annotationPosition: 'inline' };
     }
   }
 

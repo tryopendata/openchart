@@ -289,9 +289,11 @@ export function computeLegend(
   }
 
   // Top/bottom-positioned legend: horizontal flow with overflow protection.
-  // Reserve space on the right so legend entries don't overlap the brand watermark.
+  // Reserve space on the right for bottom legends so they don't overlap the brand
+  // watermark. Top legends don't need this since the brand renders at the bottom.
+  const reserveBrand = watermark && resolvedPosition === 'bottom';
   const availableWidth =
-    chartArea.width - LEGEND_PADDING * 2 - (watermark ? BRAND_RESERVE_WIDTH : 0);
+    chartArea.width - LEGEND_PADDING * 2 - (reserveBrand ? BRAND_RESERVE_WIDTH : 0);
 
   // Apply symbolLimit first if set (minimum 1), then fit remaining entries to available rows.
   if (spec.legend?.symbolLimit != null) {

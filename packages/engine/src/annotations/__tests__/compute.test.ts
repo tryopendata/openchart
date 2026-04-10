@@ -866,8 +866,8 @@ describe('computeAnnotations', () => {
 
       // Curve should start from right edge of text, not top edge
       // Right edge x ≈ label.x + textWidth
-      // "Curve test" = 10 chars * 12 * 0.55 = 66
-      expect(connector.from.x).toBeCloseTo(label.x + 66, 1);
+      // "Curve test" = 10 chars * 12 * 0.57 = 68.4
+      expect(connector.from.x).toBeCloseTo(label.x + 68.4, 1);
     });
   });
 

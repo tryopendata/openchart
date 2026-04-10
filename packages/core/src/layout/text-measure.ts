@@ -12,7 +12,7 @@
  * Inter is slightly wider than Helvetica, narrower than Courier.
  * This is a reasonable middle ground.
  */
-const AVG_CHAR_WIDTH_RATIO = 0.55;
+const AVG_CHAR_WIDTH_RATIO = 0.57;
 
 /** Narrower characters (i, l, t, etc.) bring the average down. */
 const WEIGHT_ADJUSTMENT: Record<number, number> = {
@@ -65,7 +65,7 @@ export function estimateTextWidth(text: string, fontSize: number, fontWeight = 4
  * so adjacent text doesn't crowd it. Used by chrome and legend layout to avoid
  * overlapping the brand.
  */
-export const BRAND_RESERVE_WIDTH = 110;
+export const BRAND_RESERVE_WIDTH = 130;
 
 /** Font size of the brand watermark (px). Shared between layout and renderer. */
 export const BRAND_FONT_SIZE = 12;
