@@ -70,15 +70,26 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   if (colorEnc.type === 'quantitative') return [];
 
   const uniqueValues = [...new Set(spec.data.map((d) => String(d[colorEnc.field])))];
-  const palette = theme.colors.categorical;
+  const explicitDomain = colorEnc.scale?.domain as string[] | undefined;
+  const explicitRange = colorEnc.scale?.range as string[] | undefined;
+  const palette = explicitRange ?? theme.colors.categorical;
   const shape = swatchShapeForType(spec.markType);
 
-  return uniqueValues.map((value, i) => ({
-    label: value,
-    color: palette[i % palette.length],
-    shape,
-    active: true,
-  }));
+  return uniqueValues.map((value, i) => {
+    // When explicit domain+range are provided, look up the color by domain index
+    // so legend colors match the mark colors exactly.
+    let colorIndex = i;
+    if (explicitDomain && explicitRange) {
+      const domainIdx = explicitDomain.indexOf(value);
+      if (domainIdx >= 0) colorIndex = domainIdx;
+    }
+    return {
+      label: value,
+      color: palette[colorIndex % palette.length],
+      shape,
+      active: true,
+    };
+  });
 }
 
 /**

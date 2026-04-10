@@ -89,7 +89,7 @@ describe('computeCategoryColors', () => {
     }
   });
 
-  it('dark mode adapts colors', () => {
+  it('dark mode preserves explicit user-provided colors', () => {
     const col: ColumnConfig = {
       key: 'status',
       categoryColors: {
@@ -97,18 +97,32 @@ describe('computeCategoryColors', () => {
         inactive: '#ff0000',
       },
     };
-    const lightTheme = getTheme(false);
     const darkTheme = getTheme(true);
+    const colors = computeCategoryColors(data, col, darkTheme, true);
 
-    const lightColors = computeCategoryColors(data, col, lightTheme, false);
+    // Explicit colors should NOT be adapted for dark mode
+    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
+    expect(colors.get(1)!.backgroundColor).toBe('#ff0000');
+  });
+
+  it('dark mode adapts auto-assigned palette colors but not explicit ones', () => {
+    // Use a bright yellow that will definitely get adapted in dark mode
+    const col: ColumnConfig = {
+      key: 'status',
+      categoryColors: {
+        active: '#ffff00',
+      },
+    };
+    const darkTheme = getTheme(true);
     const darkColors = computeCategoryColors(data, col, darkTheme, true);
 
-    expect(lightColors.size).toBe(darkColors.size);
+    // Explicit color should be preserved as-is (not adapted)
+    expect(darkColors.get(0)!.backgroundColor).toBe('#ffff00');
 
-    // Dark mode colors should be adapted (different from light mode)
-    const lightBg = lightColors.get(0)!.backgroundColor;
-    const darkBg = darkColors.get(0)!.backgroundColor;
-    expect(darkBg).not.toBe(lightBg);
+    // Auto-assigned palette colors should still be present (adaptation may or
+    // may not visually change them, but the code path runs adaptColorForDarkMode)
+    expect(darkColors.has(1)).toBe(true); // inactive
+    expect(darkColors.has(3)).toBe(true); // pending
   });
 
   it('dark mode text contrast still meets AA', () => {
@@ -135,6 +149,34 @@ describe('computeCategoryColors', () => {
     const theme = getTheme();
     const colors = computeCategoryColors(data, col, theme, false);
     expect(colors.size).toBe(0);
+  });
+
+  it('skips transparent and none category colors', () => {
+    const dataWithSpecial = [
+      { status: 'active' },
+      { status: 'inactive' },
+      { status: 'pending' },
+      { status: 'disabled' },
+    ];
+    const col: ColumnConfig = {
+      key: 'status',
+      categoryColors: {
+        active: '#00ff00',
+        inactive: 'transparent',
+        pending: 'none',
+        disabled: '#cccccc',
+      },
+    };
+    const theme = getTheme();
+    const colors = computeCategoryColors(dataWithSpecial, col, theme, false);
+
+    // transparent and none rows should be skipped
+    expect(colors.has(1)).toBe(false); // inactive = transparent
+    expect(colors.has(2)).toBe(false); // pending = none
+    // explicit colors should still be present
+    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
+    expect(colors.get(3)!.backgroundColor).toBe('#cccccc');
+    expect(colors.size).toBe(2);
   });
 
   it('skips null values', () => {

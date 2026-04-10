@@ -185,7 +185,7 @@ export function computeDimensions(
         }
       }
       if (maxLabelWidth > 0) {
-        margins.right = Math.max(margins.right, padding + maxLabelWidth + 16);
+        margins.right = Math.max(margins.right, padding + maxLabelWidth + 8);
       }
     }
   }

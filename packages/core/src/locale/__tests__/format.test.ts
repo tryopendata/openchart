@@ -110,6 +110,13 @@ describe('buildD3Formatter', () => {
     expect(fmt!(7000)).toBe('$7k');
     expect(fmt!(14000)).toBe('$14k');
   });
+
+  it('$~s replaces SI "G" with "B" for billions', () => {
+    const fmt = buildD3Formatter('$~s');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(1_500_000_000)).toBe('$1.5B');
+    expect(fmt!(2_000_000_000)).toBe('$2B');
+  });
 });
 
 describe('formatDate', () => {

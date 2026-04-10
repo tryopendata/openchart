@@ -50,6 +50,7 @@ export function resolveTextAnnotation(
   if (px === null || py === null) return null;
 
   const defaultTextFill = isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL;
+
   const labelStyle = makeAnnotationLabelStyle(
     annotation.fontSize,
     annotation.fontWeight,

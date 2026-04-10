@@ -243,6 +243,38 @@ describe('computeLegend', () => {
     expect(maxRowsVisible).toBeGreaterThan(defaultVisible);
   });
 
+  it('uses explicit domain+range colors in legend entries', () => {
+    const specExplicit: NormalizedChartSpec = {
+      ...specWithColor,
+      data: [
+        { date: '2020', value: 10, country: 'UK' },
+        { date: '2021', value: 20, country: 'US' },
+        { date: '2022', value: 30, country: 'Germany' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: {
+          field: 'country',
+          type: 'nominal',
+          scale: {
+            domain: ['US', 'UK', 'Germany'],
+            range: ['#ff0000', '#0000ff', '#00ff00'],
+          },
+        },
+      },
+    };
+    const legend = computeLegend(specExplicit, compactStrategy, theme, chartArea);
+    // Data order is UK, US, Germany but domain order is US, UK, Germany
+    // Legend should match colors to domain indices, not data order
+    const ukEntry = legend.entries.find((e) => e.label === 'UK')!;
+    const usEntry = legend.entries.find((e) => e.label === 'US')!;
+    const deEntry = legend.entries.find((e) => e.label === 'Germany')!;
+    expect(usEntry.color).toBe('#ff0000');
+    expect(ukEntry.color).toBe('#0000ff');
+    expect(deEntry.color).toBe('#00ff00');
+  });
+
   it('uses correct swatch shape for chart type', () => {
     const lineLegend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
     expect(lineLegend.entries[0].shape).toBe('line');

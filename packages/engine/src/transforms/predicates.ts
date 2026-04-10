@@ -26,9 +26,11 @@ function evaluateFieldPredicate(datum: DataRow, pred: FieldPredicate): boolean {
     return pred.valid ? isValid : !isValid;
   }
 
-  // equal
+  // equal: use loose equality so "181" == 181 matches across type boundaries
+  // (data values may arrive as strings from CSV/JSON parsing)
   if (pred.equal !== undefined) {
-    return value === pred.equal;
+    // biome-ignore lint/suspicious/noDoubleEquals: intentional loose equality for CSV/JSON type coercion
+    return value == pred.equal;
   }
 
   // Numeric comparisons
@@ -53,9 +55,10 @@ function evaluateFieldPredicate(datum: DataRow, pred: FieldPredicate): boolean {
     return numValue >= min && numValue <= max;
   }
 
-  // oneOf: value is in the set
+  // oneOf: use loose equality (same rationale as equal above)
   if (pred.oneOf !== undefined) {
-    return pred.oneOf.includes(value);
+    // biome-ignore lint/suspicious/noDoubleEquals: intentional loose equality for CSV/JSON type coercion
+    return pred.oneOf.some((v) => v == value);
   }
 
   // No condition specified, default to true

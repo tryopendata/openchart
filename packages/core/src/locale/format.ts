@@ -95,7 +95,12 @@ export function buildD3Formatter(formatStr: string | undefined): ((v: number) =>
   if (!formatStr) return null;
 
   try {
-    return d3Format(formatStr);
+    const fmt = d3Format(formatStr);
+    // Replace SI prefix "G" (giga) with "B" (billion) for financial readability
+    if (formatStr.includes('s')) {
+      return (v: number) => fmt(v).replace(/G$/, 'B');
+    }
+    return fmt;
   } catch {
     // If d3-format rejects it, try stripping a trailing literal suffix
     const m = formatStr.match(D3_FORMAT_SUFFIX_RE);

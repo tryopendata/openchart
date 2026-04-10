@@ -39,9 +39,15 @@ export function computeCategoryColors(
 
     const key = String(raw);
     let bg: string;
+    let isExplicit = false;
 
-    if (explicitMap[key]) {
+    if (explicitMap[key] != null) {
+      if (explicitMap[key] === 'transparent' || explicitMap[key] === 'none') {
+        // Skip transparent/none — let the cell inherit default table styling
+        continue;
+      }
       bg = explicitMap[key];
+      isExplicit = true;
     } else if (autoAssigned.has(key)) {
       bg = autoAssigned.get(key)!;
     } else {
@@ -51,8 +57,8 @@ export function computeCategoryColors(
       autoAssigned.set(key, bg);
     }
 
-    // Dark mode adaptation
-    if (darkMode) {
+    // Dark mode adaptation (skip for explicit user-provided colors)
+    if (darkMode && !isExplicit) {
       bg = adaptColorForDarkMode(bg, lightBg, darkBg);
     }
 

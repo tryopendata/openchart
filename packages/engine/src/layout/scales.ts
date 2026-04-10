@@ -512,7 +512,11 @@ function buildOrdinalColorScale(
     ? explicitDomain.map(String)
     : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
-  const scale = scaleOrdinal<string>().domain(values).range(palette);
+  // Use explicit range if provided, otherwise fall back to theme palette
+  const explicitRange = channel.scale?.range as string[] | undefined;
+  const colors = explicitRange ?? palette;
+
+  const scale = scaleOrdinal<string>().domain(values).range(colors);
 
   return { scale, type: 'ordinal', channel };
 }
@@ -526,9 +530,13 @@ function buildSequentialColorScale(
   const domainMin = min(values) ?? 0;
   const domainMax = max(values) ?? 1;
 
+  // Use explicit range if provided, otherwise fall back to theme palette endpoints
+  const explicitRange = channel.scale?.range as string[] | undefined;
+  const colors = explicitRange ?? palette;
+
   const scale = scaleLinear<string>()
     .domain([domainMin, domainMax])
-    .range([palette[0], palette[palette.length - 1]])
+    .range([colors[0], colors[colors.length - 1]])
     .clamp(true);
 
   // Cast: sequential color scale (number -> string) is structurally incompatible

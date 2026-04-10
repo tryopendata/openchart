@@ -375,19 +375,28 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute scales
   const scales = computeScales(renderSpec, chartArea, renderSpec.data);
 
-  // Update color scale to use theme palette
+  // Update color scale to use theme palette (only when user hasn't provided an explicit range)
   if (scales.color) {
+    const hasExplicitRange = !!(
+      renderSpec.encoding.color &&
+      'field' in renderSpec.encoding.color &&
+      (renderSpec.encoding.color.scale?.range as string[] | undefined)?.length
+    );
     if (scales.color.type === 'sequential') {
       // Sequential: use first sequential palette (or fall back to categorical endpoints)
-      const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
-      (scales.color.scale as unknown as import('d3-scale').ScaleLinear<string, string>).range([
-        seqStops[0],
-        seqStops[seqStops.length - 1],
-      ]);
+      if (!hasExplicitRange) {
+        const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
+        (scales.color.scale as unknown as import('d3-scale').ScaleLinear<string, string>).range([
+          seqStops[0],
+          seqStops[seqStops.length - 1],
+        ]);
+      }
     } else {
-      (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
-        theme.colors.categorical,
-      );
+      if (!hasExplicitRange) {
+        (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
+          theme.colors.categorical,
+        );
+      }
     }
   }
 

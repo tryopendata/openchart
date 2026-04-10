@@ -14,6 +14,15 @@ describe('evaluatePredicate', () => {
     it('matches equal numeric value', () => {
       expect(evaluatePredicate({ age: 30 }, { field: 'age', equal: 30 })).toBe(true);
     });
+
+    it('matches string value against numeric predicate via loose equality', () => {
+      // CSV/JSON parsing often produces string values for numeric fields
+      expect(evaluatePredicate({ id: '181' }, { field: 'id', equal: 181 })).toBe(true);
+    });
+
+    it('matches numeric value against string predicate via loose equality', () => {
+      expect(evaluatePredicate({ id: 181 }, { field: 'id', equal: '181' })).toBe(true);
+    });
   });
 
   describe('FieldPredicate: lt/lte/gt/gte', () => {
@@ -61,6 +70,14 @@ describe('evaluatePredicate', () => {
 
     it('rejects values not in the set', () => {
       expect(evaluatePredicate({ c: 'green' }, { field: 'c', oneOf: ['red', 'blue'] })).toBe(false);
+    });
+
+    it('matches string value against numeric oneOf via loose equality', () => {
+      expect(evaluatePredicate({ id: '181' }, { field: 'id', oneOf: [181, 200] })).toBe(true);
+    });
+
+    it('rejects value not in numeric oneOf set', () => {
+      expect(evaluatePredicate({ id: '999' }, { field: 'id', oneOf: [181, 200] })).toBe(false);
     });
   });
 

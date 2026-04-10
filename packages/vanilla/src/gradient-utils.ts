@@ -90,24 +90,30 @@ function appendStop(
 }
 
 /**
+ * Global counter for gradient IDs. Ensures uniqueness across all charts
+ * on the same page, since SVG url(#id) resolves globally in the document.
+ */
+let globalGradientCounter = 0;
+
+/**
  * Scan all marks for GradientDef fill values, create SVG gradient elements
  * in the provided <defs> node, and return a map from gradient key to element ID.
  *
- * Identical gradients (by key) share a single SVG element.
+ * Identical gradients (by key) share a single SVG element within one chart.
+ * IDs are globally unique across charts to avoid SVG url(#id) collisions.
  */
 export function buildGradientDefs(
   marks: Array<{ fill?: unknown }>,
   defs: SVGElement,
 ): Map<string, string> {
   const map = new Map<string, string>();
-  let counter = 0;
 
   for (const mark of marks) {
     const fill = mark.fill;
     if (fill && isGradientDef(fill)) {
       const key = gradientKey(fill);
       if (!map.has(key)) {
-        const id = `oc-grad-${counter++}`;
+        const id = `oc-grad-${globalGradientCounter++}`;
         const el = createGradientElement(fill, id);
         defs.appendChild(el);
         map.set(key, id);
