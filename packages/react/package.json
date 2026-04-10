@@ -1,6 +1,6 @@
 {
   "name": "@opendata-ai/openchart-react",
-  "version": "6.17.0",
+  "version": "6.18.0",
   "description": "React components for openchart: <Chart />, <DataTable />, <VizThemeProvider />",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",
