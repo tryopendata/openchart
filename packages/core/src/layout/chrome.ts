@@ -182,7 +182,10 @@ export function computeChrome(
 
   const pad = padding ?? theme.spacing.padding;
   const chromeGap = theme.spacing.chromeGap;
-  const maxWidth = width - pad * 2;
+  // Subtract a small buffer beyond padding so the heuristic char-width
+  // estimate triggers word-wrap before the real font overflows the container.
+  const WRAP_SAFETY_BUFFER = 5;
+  const maxWidth = width - pad * 2 - WRAP_SAFETY_BUFFER;
   const fontFamily = theme.fonts.family;
 
   // Track vertical cursor for top elements

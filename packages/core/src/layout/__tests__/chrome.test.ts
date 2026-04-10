@@ -104,7 +104,7 @@ describe('computeChrome', () => {
     const chrome: Chrome = { title: 'Title' };
     const result = computeChrome(chrome, theme, 600);
 
-    const expectedMaxWidth = 600 - theme.spacing.padding * 2;
+    const expectedMaxWidth = 600 - theme.spacing.padding * 2 - 5;
     expect(result.title!.maxWidth).toBe(expectedMaxWidth);
   });
 
