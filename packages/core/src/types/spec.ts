@@ -1072,6 +1072,12 @@ export interface SankeySpec {
    * Defaults to 'auto'.
    */
   nodeLabelAlign?: 'auto' | 'left' | 'right';
+  /**
+   * Explicit vertical ordering of nodes. An array of node IDs listed from
+   * top to bottom. Nodes sharing the same column are sorted by their position
+   * in this array. Nodes not in the array are placed after those that are.
+   */
+  nodeSort?: string[];
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
   /** Legend display configuration. */

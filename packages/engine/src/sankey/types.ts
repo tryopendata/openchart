@@ -29,6 +29,7 @@ export interface NormalizedSankeySpec {
   iterations: number;
   linkStyle: SankeyLinkColor;
   nodeLabelAlign: 'auto' | 'left' | 'right';
+  nodeSort?: string[];
   chrome: NormalizedChrome;
   legend?: LegendConfig;
   theme: ThemeConfig;

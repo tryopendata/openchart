@@ -73,6 +73,7 @@ export function computeSankeyLayout(
   nodePadding: number,
   nodeAlign: SankeyNodeAlign,
   iterations: number,
+  nodeSort?: string[],
 ): SankeyLayoutResult {
   // Extract unique node IDs from source and target columns
   const nodeSet = new Set<string>();
@@ -112,6 +113,19 @@ export function computeSankeyLayout(
       [area.x + area.width, area.y + area.height],
     ])
     .iterations(iterations);
+
+  // Apply explicit node ordering when provided.
+  // Builds a comparator from the ordered ID array so d3-sankey places nodes
+  // top-to-bottom within each column according to the spec's nodeSort.
+  if (nodeSort && nodeSort.length > 0) {
+    const orderMap = new Map(nodeSort.map((id, i) => [id, i]));
+    const fallback = nodeSort.length;
+    generator.nodeSort(
+      (a: SankeyNode<NodeExtra, LinkExtra>, b: SankeyNode<NodeExtra, LinkExtra>) =>
+        (orderMap.get((a as unknown as NodeExtra).id) ?? fallback) -
+        (orderMap.get((b as unknown as NodeExtra).id) ?? fallback),
+    );
+  }
 
   const graph = generator({
     nodes: nodes as unknown as Array<SankeyNode<NodeExtra, LinkExtra>>,
