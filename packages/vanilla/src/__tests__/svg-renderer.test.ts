@@ -565,8 +565,11 @@ describe('gridline rendering', () => {
 // ---------------------------------------------------------------------------
 
 describe('legend rendering', () => {
+  /** Legend is auto-suppressed for line charts with endpoint labels; force it on for these tests. */
+  const lineSpecWithLegend = { ...lineSpec, legend: { show: true } };
+
   it('multi-series chart renders legend entries', () => {
-    const { svg } = renderSpec(lineSpec);
+    const { svg } = renderSpec(lineSpecWithLegend);
     const legend = svg.querySelector('.oc-legend');
     expect(legend).not.toBeNull();
     const entries = legend!.querySelectorAll('.oc-legend-entry');
@@ -575,7 +578,7 @@ describe('legend rendering', () => {
   });
 
   it('legend entries have labels with series names', () => {
-    const { svg } = renderSpec(lineSpec);
+    const { svg } = renderSpec(lineSpecWithLegend);
     const entries = svg.querySelectorAll('.oc-legend-entry');
     const labels: string[] = [];
     for (const entry of entries) {
@@ -587,7 +590,7 @@ describe('legend rendering', () => {
   });
 
   it('legend entries have data-legend-label attribute', () => {
-    const { svg } = renderSpec(lineSpec);
+    const { svg } = renderSpec(lineSpecWithLegend);
     const entries = svg.querySelectorAll('.oc-legend-entry');
     for (const entry of entries) {
       expect(entry.getAttribute('data-legend-label')).not.toBeNull();
@@ -595,7 +598,7 @@ describe('legend rendering', () => {
   });
 
   it('legend has ARIA attributes for accessibility', () => {
-    const { svg } = renderSpec(lineSpec);
+    const { svg } = renderSpec(lineSpecWithLegend);
     const legend = svg.querySelector('.oc-legend');
     expect(legend!.getAttribute('role')).toBe('list');
     expect(legend!.getAttribute('aria-label')).toBe('Chart legend');

@@ -131,6 +131,55 @@ The mark is still `"bar"`, but the engine flips to vertical columns when x is no
 
 ---
 
+## Stacking
+
+When a bar or column chart has a `color` encoding, values are **stacked by default** (one segment per series, stacked from zero). Control this with the `stack` property on the quantitative encoding channel.
+
+### Grouped (side-by-side) bars
+
+Set `stack: null` on the quantitative channel to disable stacking and place bars side-by-side:
+
+```ts
+const spec = {
+  mark: "bar",
+  data: energyData,
+  encoding: {
+    x: { field: "year", type: "nominal" },
+    y: {
+      field: "capacity",
+      type: "quantitative",
+      stack: null, // grouped, not stacked
+    },
+    color: { field: "source", type: "nominal" },
+  },
+};
+```
+
+### Normalized (100%) stacked
+
+Use `stack: 'normalize'` to scale each category to 100%:
+
+```ts
+encoding: {
+  y: {
+    field: "count",
+    type: "quantitative",
+    stack: "normalize",
+  },
+}
+```
+
+### All stack values
+
+| Value                       | Behavior                              |
+| --------------------------- | ------------------------------------- |
+| `undefined` / `true` / `'zero'` | Stack from zero baseline (default) |
+| `null` / `false`            | No stacking (grouped/dodged)          |
+| `'normalize'`               | Normalize to fraction of total (0-1)  |
+| `'center'`                  | Center around zero (streamgraph)      |
+
+---
+
 ## Pie
 
 Part-to-whole composition. Best with 5 or fewer categories. If you need more, consider a bar chart or donut.
@@ -205,6 +254,37 @@ const spec = {
 Add a `color` encoding to group dots by category. Use diverging data (positive and negative values) for lollipop-style charts.
 
 **Live examples**: [Simple dot plot](https://tryopendata.github.io/openchart/?story=dot--simple-dot-plot) | [Colored dots](https://tryopendata.github.io/openchart/?story=dot--colored-dots) | [Diverging lollipop](https://tryopendata.github.io/openchart/?story=dot--diverging-lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=dot-dumbbell--life-expectancy)
+
+---
+
+## Lollipop
+
+Dots connected to a zero baseline by thin stems. Cleaner than bars for datasets where values are far from zero. Uses `mark: "lollipop"`, a semantic alias for the dot renderer.
+
+```ts
+const spec = {
+  mark: "lollipop",
+  data: [
+    { dept: "Engineering", headcount: 142 },
+    { dept: "Sales", headcount: 89 },
+    { dept: "Marketing", headcount: 67 },
+    { dept: "Support", headcount: 53 },
+  ],
+  encoding: {
+    x: { field: "headcount", type: "quantitative" },
+    y: { field: "dept", type: "nominal" },
+  },
+};
+```
+
+**Accepted encodings:**
+- `x` (quantitative, required) -- the value axis
+- `y` (nominal/ordinal, required) -- the category axis
+- `color` (optional) -- categorical for dumbbell mode, quantitative for sequential gradient on dots
+
+Adding a categorical `color` encoding with 2+ series automatically switches to **dumbbell mode**: a connecting bar spans from the minimum to maximum value for each category, with colored dots at each series value.
+
+**Live examples**: [Diverging lollipop](https://tryopendata.github.io/openchart/?story=dot--diverging-lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=dot-dumbbell--life-expectancy)
 
 ---
 
@@ -331,6 +411,45 @@ const spec = {
 ```
 
 **Live examples**: [Text mark](https://tryopendata.github.io/openchart/?story=marks--text-mark) | [Rule mark](https://tryopendata.github.io/openchart/?story=marks--rule-mark) | [Tick mark](https://tryopendata.github.io/openchart/?story=marks--tick-mark)
+
+---
+
+## Layer charts
+
+Overlay different mark types on shared scales. Use layers when you need to combine chart types that can't be expressed as a single mark (e.g., a line over an area, or reference bars behind scatter points).
+
+```ts
+const spec = {
+  layer: [
+    {
+      mark: "area",
+      data: revenueData,
+      encoding: {
+        x: { field: "date", type: "temporal" },
+        y: { field: "revenue", type: "quantitative" },
+      },
+    },
+    {
+      mark: "line",
+      data: targetData,
+      encoding: {
+        x: { field: "date", type: "temporal" },
+        y: { field: "target", type: "quantitative" },
+      },
+    },
+  ],
+  chrome: { title: "Revenue vs target" },
+};
+```
+
+**How it works:**
+- All layers share scales by default. The engine unions data from all layers to compute a single domain.
+- Parent-level `data` and `encoding` are inherited by children that don't define their own. Child channels override parent channels on the same key.
+- `chrome`, `legend`, `annotations`, and `labels` are set at the parent level.
+
+**When to use layers vs. multi-series:** If your data has multiple series of the same mark type (e.g., US vs UK lines), use a single chart with a `color` encoding. Use layers when you need different mark types or independent datasets on the same axes.
+
+See [LayerSpec](spec-reference.md#layerspec) for the full field reference.
 
 ---
 

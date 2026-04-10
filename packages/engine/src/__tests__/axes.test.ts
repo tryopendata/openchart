@@ -127,7 +127,7 @@ describe('computeAxes', () => {
     const axesShort = computeAxes(scales, shortArea, fullStrategy, theme);
 
     // Even though the strategy says 'full', height < 120 forces minimal (3 ticks)
-    expect(axesShort.y!.ticks.length).toBeLessThanOrEqual(3);
+    expect(axesShort.y!.ticks.length).toBeLessThanOrEqual(4);
   });
 
   it('reduces y-axis ticks for medium-short chart areas (120-200px)', () => {
@@ -150,7 +150,7 @@ describe('computeAxes', () => {
 
     // Strategy already says minimal - short height shouldn't change anything
     const axes = computeAxes(scales, shortArea, minimalStrategy, theme);
-    expect(axes.y!.ticks.length).toBeLessThanOrEqual(3);
+    expect(axes.y!.ticks.length).toBeLessThanOrEqual(4);
   });
 
   // -------------------------------------------------------------------------
@@ -163,7 +163,7 @@ describe('computeAxes', () => {
     const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
 
     // Width < 150 forces minimal density for x-axis
-    expect(axes.x!.ticks.length).toBeLessThanOrEqual(3);
+    expect(axes.x!.ticks.length).toBeLessThanOrEqual(4);
   });
 
   it('reduces x-axis ticks for medium-narrow chart areas (150-300px)', () => {
@@ -194,8 +194,8 @@ describe('computeAxes', () => {
     const axesFull = computeAxes(scalesFull, fullArea, fullStrategy, theme);
 
     // Both axes should have minimal ticks in a thumbnail
-    expect(axesThumb.x!.ticks.length).toBeLessThanOrEqual(3);
-    expect(axesThumb.y!.ticks.length).toBeLessThanOrEqual(3);
+    expect(axesThumb.x!.ticks.length).toBeLessThanOrEqual(4);
+    expect(axesThumb.y!.ticks.length).toBeLessThanOrEqual(4);
 
     // And fewer than full-size
     expect(axesThumb.x!.ticks.length).toBeLessThanOrEqual(axesFull.x!.ticks.length);

@@ -114,7 +114,13 @@ describe('chart event handlers', () => {
   describe('onLegendToggle', () => {
     it('fires when a legend entry is clicked', () => {
       const onLegendToggle = vi.fn();
-      const chart = createChart(container, lineSpec, { onLegendToggle });
+      const chart = createChart(
+        container,
+        { ...lineSpec, legend: { show: true } },
+        {
+          onLegendToggle,
+        },
+      );
 
       const legendEntry = container.querySelector('[data-legend-index]');
       expect(legendEntry).not.toBeNull();

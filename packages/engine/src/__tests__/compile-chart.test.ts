@@ -66,8 +66,8 @@ describe('compileChart', () => {
     // Annotations array exists (empty for this spec since none were specified)
     expect(layout.annotations).toEqual([]);
 
-    // Legend has entries for the two series
-    expect(layout.legend.entries.length).toBe(2);
+    // Legend is auto-suppressed for line charts with endpoint labels
+    expect(layout.legend.entries.length).toBe(0);
 
     // Tooltip descriptors is a Map (may or may not have entries depending on marks)
     expect(layout.tooltipDescriptors).toBeInstanceOf(Map);
@@ -147,8 +147,11 @@ describe('compileChart', () => {
     expect(layout.axes.y!.start.y).not.toBe(layout.axes.y!.end.y);
   });
 
-  it('has a legend when color encoding is present', () => {
-    const layout = compileChart(lineSpec, { width: 600, height: 400 });
+  it('has a legend when color encoding is present and legend forced on', () => {
+    const layout = compileChart(
+      { ...lineSpec, legend: { show: true } },
+      { width: 600, height: 400 },
+    );
     expect(layout.legend.entries.length).toBeGreaterThan(0);
     expect(layout.legend.entries.some((e) => e.label === 'US')).toBe(true);
     expect(layout.legend.entries.some((e) => e.label === 'UK')).toBe(true);
@@ -280,6 +283,7 @@ describe('compileChart', () => {
     const spec = {
       ...lineSpec,
       hiddenSeries: ['UK'],
+      legend: { show: true },
     };
     const layout = compileChart(spec, { width: 600, height: 400 });
 
@@ -583,6 +587,7 @@ describe('compileGraph', () => {
   it('applies breakpoint override for legend show', () => {
     const spec = {
       ...lineSpec,
+      legend: { show: true },
       overrides: {
         compact: {
           legend: { show: false },

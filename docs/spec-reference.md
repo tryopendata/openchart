@@ -8,6 +8,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 
 - [VizSpec](#vizspec) (top-level union type)
 - [ChartSpec](#chartspec) (line, area, bar, column, pie, donut, dot, scatter)
+- [LayerSpec](#layerspec) (overlay multiple chart types)
 - [Encoding](#encoding) (x, y, color, size, detail channels)
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
@@ -68,6 +69,58 @@ A plain object with string keys. Values can be numbers, strings, dates, nulls, a
 
 ---
 
+## LayerSpec
+
+Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
+
+| Field          | Type                         | Default     | Description                                                                                   |
+| -------------- | ---------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
+| `layer`        | `(ChartSpec \| LayerSpec)[]` | (required)  | Array of child chart specs. Nesting is supported.                                             |
+| `data`         | `DataRow[]`                  | `undefined` | Shared data inherited by children that don't define their own.                                |
+| `encoding`     | `Encoding`                   | `undefined` | Shared encoding inherited by children. Child channels override parent channels.               |
+| `transform`    | `Transform[]`                | `undefined` | Shared transforms. Parent transforms run before child transforms.                             |
+| `chrome`       | `Chrome`                     | `undefined` | Editorial text (title, subtitle, source, etc.) for the layered view.                          |
+| `annotations`  | `Annotation[]`               | `undefined` | Annotations on the layered view.                                                              |
+| `labels`       | `LabelConfig`                | `undefined` | Label display configuration.                                                                  |
+| `legend`       | `LegendConfig`               | `undefined` | Legend display configuration.                                                                 |
+| `responsive`   | `boolean`                    | `true`      | Whether the chart adapts to container width.                                                  |
+| `theme`        | `ThemeConfig`                | `undefined` | Theme overrides.                                                                              |
+| `darkMode`     | `DarkMode`                   | `'off'`     | Dark mode behavior.                                                                           |
+| `watermark`    | `boolean`                    | `true`      | Whether to show the watermark.                                                                |
+| `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
+| `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
+| `animation`    | `AnimationSpec`              | `undefined` | Animation configuration.                                                                      |
+
+**Scale behavior:** All layers share scales by default. The engine unions data from all layers to compute a single scale domain, so marks from different layers are positioned on the same coordinate system.
+
+**Encoding inheritance:** Parent `encoding` channels are merged into child layers. A child channel overrides the parent on the same key, so you can share `x` across layers while varying `y` and `mark`.
+
+```ts
+const spec = {
+  layer: [
+    {
+      mark: 'area',
+      data: revenueData,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'revenue', type: 'quantitative' },
+      },
+    },
+    {
+      mark: 'line',
+      data: targetData,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'target', type: 'quantitative' },
+      },
+    },
+  ],
+  chrome: { title: 'Revenue vs target' },
+};
+```
+
+---
+
 ## Encoding
 
 Maps data fields to visual channels. Source: `core/src/types/spec.ts`.
@@ -93,6 +146,7 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
 | `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
+| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars). `'normalize'` for 100% stacked. `'center'` for streamgraph. Only applies to bar/column/area charts with a color encoding. |
 
 ### FieldType
 
@@ -549,14 +603,29 @@ Each column can have at most one visual feature. If multiple are set, precedence
 type CategoryColorsConfig = Record<string, string>;
 ```
 
-Maps category string values to CSS color strings. Cells with matching values get the assigned color as background.
+Maps category string values to CSS color strings. Only values with an explicit entry in the map get colored. Unmapped values are left unstyled by default.
+
+To highlight specific values (e.g., 3 of 8 rows):
 
 ```ts
 categoryColors: {
   'Active': '#2a9d8f',
-  'Inactive': '#e76f51',
-  'Pending': '#f4a261',
+  'Warning': '#f4a261',
+  'Critical': '#e76f51',
 }
+// Other values like 'Inactive', 'Pending', etc. remain unstyled
+```
+
+To auto-assign palette colors to all values (including unmapped ones), set `autoAssign: true` on the column config:
+
+```ts
+columns: [
+  {
+    key: 'status',
+    categoryColors: { 'Active': '#2a9d8f' },
+    autoAssign: true,  // unmapped values get colors from the theme palette
+  },
+]
 ```
 
 ---

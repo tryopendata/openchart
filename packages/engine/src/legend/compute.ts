@@ -184,6 +184,27 @@ export function computeLegend(
 
   let entries = extractColorEntries(spec, theme);
 
+  // Auto-suppress legend when endpoint labels identify series on line/area charts.
+  // Guards: keep legend at compact breakpoints (labels hidden), for stacked areas
+  // (endpoint labels overlap), and when user explicitly forces legend on.
+  const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
+  const hasLabels = spec.labels.density !== 'none';
+  const labelsWillRender = strategy.labelMode !== 'none';
+  const hasColorEncoding = spec.encoding.color != null;
+  const legendNotForced = spec.legend?.show !== true;
+
+  if (isLineOrArea && hasLabels && labelsWillRender && hasColorEncoding && legendNotForced) {
+    const isArea = spec.markType === 'area';
+    const quantChannel =
+      spec.encoding.y?.type === 'quantitative' ? spec.encoding.y : spec.encoding.x;
+    const stackValue = quantChannel?.stack;
+    const isStacked = stackValue !== null && stackValue !== false;
+
+    if (!isArea || !isStacked) {
+      entries = [];
+    }
+  }
+
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: theme.fonts.sizes.small,
