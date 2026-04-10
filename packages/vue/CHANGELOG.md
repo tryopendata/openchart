@@ -1,5 +1,27 @@
 # Changelog
 
+## [6.19.2](https://github.com/tryopendata/openchart/compare/core-v6.19.1...core-v6.19.2) (2026-04-10)
+
+
+### Features
+
+* add maxWidth-based text wrapping for sankey node labels ([824c446](https://github.com/tryopendata/openchart/commit/824c446))
+* add nodeSort prop for explicit sankey node ordering ([dc02127](https://github.com/tryopendata/openchart/commit/dc02127))
+* selective categoryColors, legend auto-suppression, tick defaults, and docs ([64595bf](https://github.com/tryopendata/openchart/commit/64595bf))
+
+
+### Bug Fixes
+
+* add 5px safety buffer to chrome maxWidth to prevent title overflow on mobile ([6143e73](https://github.com/tryopendata/openchart/commit/6143e73))
+* text width ratio, brand reserve, top legend spacing, and breakpoint annotations ([e7b98f9](https://github.com/tryopendata/openchart/commit/e7b98f9))
+* explicit color ranges, loose filter equality, gradient ID collisions, and dark mode category colors ([73ef048](https://github.com/tryopendata/openchart/commit/73ef048))
+* auto-orient gradients for horizontal bars and improve validation suggestion ([14a02f9](https://github.com/tryopendata/openchart/commit/14a02f9))
+* create release tags via GitHub API for verified signatures ([cee901f](https://github.com/tryopendata/openchart/commit/cee901f))
+* replace release-please with manual release script, graph viewport improvements, and annotation text halos ([0aaa073](https://github.com/tryopendata/openchart/commit/0aaa073))
+* consolidate table stories, add gradient fills, and fix temporal scale defaults ([5a7dbf4](https://github.com/tryopendata/openchart/commit/5a7dbf4))
+* scale domain, sort defaults, stacked area lines, and tooltip series fields ([e159233](https://github.com/tryopendata/openchart/commit/e159233))
+* several issues found in the core engine (title calculation, formatting, etc) ([7861c0f](https://github.com/tryopendata/openchart/commit/7861c0f))
+
 ## [6.19.1](https://github.com/tryopendata/openchart/compare/core-v6.19.0...core-v6.19.1) (2026-04-10)
 
 
