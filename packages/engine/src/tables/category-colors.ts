@@ -48,13 +48,18 @@ export function computeCategoryColors(
       }
       bg = explicitMap[key];
       isExplicit = true;
-    } else if (autoAssigned.has(key)) {
-      bg = autoAssigned.get(key)!;
+    } else if (column.autoAssign) {
+      if (autoAssigned.has(key)) {
+        bg = autoAssigned.get(key)!;
+      } else {
+        // Assign from categorical palette
+        bg = categoricalPalette[nextPaletteIndex % categoricalPalette.length];
+        nextPaletteIndex++;
+        autoAssigned.set(key, bg);
+      }
     } else {
-      // Assign from categorical palette
-      bg = categoricalPalette[nextPaletteIndex % categoricalPalette.length];
-      nextPaletteIndex++;
-      autoAssigned.set(key, bg);
+      // autoAssign is false/undefined — skip unmapped values
+      continue;
     }
 
     // Dark mode adaptation (skip for explicit user-provided colors)

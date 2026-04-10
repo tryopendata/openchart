@@ -8,6 +8,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 
 - [VizSpec](#vizspec) (top-level union type)
 - [ChartSpec](#chartspec) (line, area, bar, column, pie, donut, dot, scatter)
+- [LayerSpec](#layerspec) (multi-layer compositions)
 - [Encoding](#encoding) (x, y, color, size, detail channels)
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
@@ -68,6 +69,66 @@ A plain object with string keys. Values can be numbers, strings, dates, nulls, a
 
 ---
 
+## LayerSpec
+
+Compose multiple chart layers into a single visualization with shared scales. Source: `core/src/types/spec.ts`.
+
+Use layers when you need to overlay different mark types on the same axes (e.g. bars + a line trend overlay). For multi-series of the same mark type, use the `color` encoding on a single `ChartSpec` instead.
+
+| Field          | Type                          | Default     | Description                                                                                        |
+| -------------- | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
+| `layer`        | `(ChartSpec \| LayerSpec)[]`  | (required)  | Array of child layers. Can be `ChartSpec` leaves or nested `LayerSpec` for deeper composition.     |
+| `data`         | `DataRow[]`                   | `undefined` | Shared data inherited by children that don't define their own `data`.                              |
+| `encoding`     | `Encoding`                    | `undefined` | Shared encoding inherited by children. Child channels override parent channels per-channel.        |
+| `transform`    | `Transform[]`                 | `undefined` | Shared transforms. Parent transforms run before child transforms.                                  |
+| `chrome`       | `Chrome`                      | `undefined` | Editorial text (title, subtitle, source, byline, footer).                                          |
+| `annotations`  | `Annotation[]`                | `undefined` | Annotations on the layered view.                                                                   |
+| `labels`       | `LabelConfig`                 | `undefined` | Data label display controls.                                                                       |
+| `legend`       | `LegendConfig`                | `undefined` | Legend display configuration.                                                                      |
+| `responsive`   | `boolean`                     | `true`      | Whether the chart adapts to container width.                                                       |
+| `theme`        | `ThemeConfig`                 | `undefined` | Theme overrides.                                                                                   |
+| `darkMode`     | `DarkMode`                    | `'off'`     | Dark mode behavior.                                                                                |
+| `watermark`    | `boolean`                     | `true`      | Whether to show the watermark.                                                                     |
+| `resolve`      | `ResolveConfig`               | `undefined` | Resolution strategy for shared scales, axes, and legends.                                          |
+| `hiddenSeries` | `string[]`                    | `undefined` | Series names to hide.                                                                              |
+| `animation`    | `AnimationSpec`               | `undefined` | Entrance animation configuration.                                                                  |
+
+### Inheritance rules
+
+- **Data**: children without their own `data` inherit the parent's `data`.
+- **Encoding**: parent channels are merged into each child. A child channel overrides the same parent channel, but unrelated channels are inherited.
+- **Transforms**: parent transforms are prepended before child transforms.
+- **Scales**: domains are unioned across all layers so marks share the same axis range.
+- **Chrome and legend**: resolved from the primary (first) layer.
+
+### LayerSpec example
+
+```ts
+const spec: LayerSpec = {
+  data: monthlyData,
+  encoding: {
+    x: { field: "month", type: "temporal" },
+  },
+  layer: [
+    {
+      mark: "area",
+      encoding: {
+        y: { field: "revenue", type: "quantitative" },
+      },
+    },
+    {
+      mark: "line",
+      encoding: {
+        y: { field: "target", type: "quantitative" },
+      },
+    },
+  ],
+  chrome: { title: "Revenue vs target" },
+};
+```
+
+---
+
 ## Encoding
 
 Maps data fields to visual channels. Source: `core/src/types/spec.ts`.
@@ -93,6 +154,7 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
 | `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
+| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped bars). `'normalize'` for 100% stacked. `'center'` for streamgraph. |
 
 ### FieldType
 
@@ -549,15 +611,38 @@ Each column can have at most one visual feature. If multiple are set, precedence
 type CategoryColorsConfig = Record<string, string>;
 ```
 
-Maps category string values to CSS color strings. Cells with matching values get the assigned color as background.
+Maps category string values to CSS color strings. Cells with matching values get the assigned color as background. By default, only explicitly mapped values get colored. Values not listed in the map render with no color background.
+
+**Highlight-only example** (color 3 of 8 statuses, the rest stay plain):
 
 ```ts
-categoryColors: {
-  'Active': '#2a9d8f',
-  'Inactive': '#e76f51',
-  'Pending': '#f4a261',
+{
+  key: 'status',
+  label: 'Status',
+  categoryColors: {
+    'Active': '#2a9d8f',
+    'Inactive': '#e76f51',
+    'Pending': '#f4a261',
+  },
 }
 ```
+
+To auto-assign palette colors to every unique value (not just the ones you list), set `autoAssign: true` on the `ColumnConfig`. Any values with explicit colors in `categoryColors` keep those colors; remaining values get assigned from the theme's categorical palette.
+
+**Full palette example** (every status gets a color):
+
+```ts
+{
+  key: 'status',
+  label: 'Status',
+  categoryColors: {
+    'Critical': '#e63946',  // explicit override
+  },
+  autoAssign: true,         // remaining values get palette colors
+}
+```
+
+Note: `autoAssign` is a property on `ColumnConfig`, not on `categoryColors` itself.
 
 ---
 

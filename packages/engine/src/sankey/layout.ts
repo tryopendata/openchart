@@ -61,6 +61,7 @@ const ALIGN_MAP: Record<SankeyNodeAlign, typeof sankeyJustify> = {
  * @param nodePadding - Vertical padding between nodes in px.
  * @param nodeAlign - Node alignment strategy.
  * @param iterations - Number of layout relaxation iterations.
+ * @param nodeSort - Optional array of node IDs specifying vertical order within columns.
  * @returns Computed node and link positions.
  */
 export function computeSankeyLayout(
@@ -73,6 +74,7 @@ export function computeSankeyLayout(
   nodePadding: number,
   nodeAlign: SankeyNodeAlign,
   iterations: number,
+  nodeSort?: string[],
 ): SankeyLayoutResult {
   // Extract unique node IDs from source and target columns
   const nodeSet = new Set<string>();
@@ -112,6 +114,24 @@ export function computeSankeyLayout(
       [area.x + area.width, area.y + area.height],
     ])
     .iterations(iterations);
+
+  // Apply custom node sort if specified. Builds a priority map from the
+  // ordered array of node IDs so that listed nodes sort first (by their
+  // array position) and unlisted nodes sort after them.
+  if (nodeSort && nodeSort.length > 0) {
+    const orderMap = new Map<string, number>();
+    for (let i = 0; i < nodeSort.length; i++) {
+      orderMap.set(nodeSort[i], i);
+    }
+    const fallback = nodeSort.length;
+    generator.nodeSort(
+      (a: SankeyNode<NodeExtra, LinkExtra>, b: SankeyNode<NodeExtra, LinkExtra>) => {
+        const aOrder = orderMap.get(a.id ?? '') ?? fallback;
+        const bOrder = orderMap.get(b.id ?? '') ?? fallback;
+        return aOrder - bOrder;
+      },
+    );
+  }
 
   const graph = generator({
     nodes: nodes as unknown as Array<SankeyNode<NodeExtra, LinkExtra>>,

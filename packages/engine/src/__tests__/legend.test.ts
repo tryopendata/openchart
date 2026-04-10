@@ -22,7 +22,7 @@ const specWithColor: NormalizedChartSpec = {
   responsive: true,
   theme: {},
   darkMode: 'off',
-  labels: { density: 'auto', format: '' },
+  labels: { density: 'none', format: '', prefix: '' },
 };
 
 const specWithoutColor: NormalizedChartSpec = {
@@ -304,5 +304,94 @@ describe('computeLegend', () => {
     };
     const scatterLegend = computeLegend(scatterSpec, fullStrategy, theme, chartArea);
     expect(scatterLegend.entries[0].shape).toBe('circle');
+  });
+
+  describe('auto-suppression for line/area with endpoint labels', () => {
+    /** Line spec with labels enabled (density: 'auto') for suppression tests. */
+    const lineWithLabels: NormalizedChartSpec = {
+      ...specWithColor,
+      labels: { density: 'auto', format: '', prefix: '' },
+    };
+
+    it('suppresses legend for multi-series line chart with default labels', () => {
+      const legend = computeLegend(lineWithLabels, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(0);
+    });
+
+    it('preserves legend when legend.show is explicitly true', () => {
+      const spec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        legend: { show: true },
+        hiddenSeries: [],
+        seriesStyles: {},
+      };
+      const legend = computeLegend(spec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(3);
+    });
+
+    it('preserves legend when labels density is none', () => {
+      const spec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        labels: { density: 'none', format: '', prefix: '' },
+      };
+      const legend = computeLegend(spec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(3);
+    });
+
+    it('preserves legend at compact breakpoint where labelMode is none', () => {
+      const legend = computeLegend(lineWithLabels, compactStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(3);
+    });
+
+    it('preserves legend for stacked area chart (default stacking)', () => {
+      const areaSpec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        markType: 'area',
+        markDef: { type: 'area' },
+      };
+      const legend = computeLegend(areaSpec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(3);
+    });
+
+    it('suppresses legend for unstacked area chart with labels', () => {
+      const areaSpec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        markType: 'area',
+        markDef: { type: 'area' },
+        encoding: {
+          x: { field: 'date', type: 'temporal' },
+          y: { field: 'value', type: 'quantitative', stack: null },
+          color: { field: 'country', type: 'nominal' },
+        },
+      };
+      const legend = computeLegend(areaSpec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(0);
+    });
+
+    it('preserves legend for bar chart with labels (not line/area)', () => {
+      const barSpec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        encoding: {
+          x: { field: 'date', type: 'nominal' },
+          y: { field: 'value', type: 'quantitative' },
+          color: { field: 'country', type: 'nominal' },
+        },
+      };
+      const legend = computeLegend(barSpec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(3);
+    });
+
+    it('does not suppress for single-series line chart (no color encoding)', () => {
+      const noColorWithLabels: NormalizedChartSpec = {
+        ...specWithoutColor,
+        labels: { density: 'auto', format: '', prefix: '' },
+      };
+      const legend = computeLegend(noColorWithLabels, fullStrategy, theme, chartArea);
+      // No color encoding means no legend entries regardless
+      expect(legend.entries).toHaveLength(0);
+      expect(legend.bounds.width).toBe(0);
+    });
   });
 });

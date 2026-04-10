@@ -1061,6 +1061,13 @@ export interface SankeySpec {
   nodeAlign?: SankeyNodeAlign;
   /** Number of layout relaxation iterations. Defaults to 6. */
   iterations?: number;
+  /**
+   * Explicit vertical ordering of nodes within each column. Provide an array
+   * of node IDs in the desired top-to-bottom order. Nodes not listed are
+   * appended after listed ones in their natural order. When omitted,
+   * d3-sankey's relaxation algorithm determines node positions.
+   */
+  nodeSort?: string[];
   /** Link coloring strategy. Defaults to 'gradient'. */
   linkStyle?: SankeyLinkColor;
   /** Link fill opacity (0-1). Defaults to 0.5 in light mode, 0.75 in dark mode. */

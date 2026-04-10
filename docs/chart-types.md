@@ -208,6 +208,32 @@ Add a `color` encoding to group dots by category. Use diverging data (positive a
 
 ---
 
+## Lollipop
+
+A dot plot variant with thin stems connecting each dot to the axis baseline. Good for ranked comparisons where you want both the dot precision and a visual anchor to zero.
+
+```ts
+const spec = {
+  mark: "lollipop",
+  data: [
+    { metric: "Revenue", value: 82 },
+    { metric: "Retention", value: 74 },
+    { metric: "NPS", value: 61 },
+    { metric: "Growth", value: 45 },
+  ],
+  encoding: {
+    x: { field: "value", type: "quantitative" },
+    y: { field: "metric", type: "nominal" },
+  },
+};
+```
+
+Accepted encodings: `x` (quantitative, required), `y` (nominal, required), `color` (optional). Adding a categorical `color` encoding with 2+ series triggers dumbbell mode, where a connecting bar spans from min to max across series for each category instead of individual stems.
+
+**Live examples**: [Diverging lollipop](https://tryopendata.github.io/openchart/?story=dot--diverging-lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=dot-dumbbell--life-expectancy)
+
+---
+
 ## Scatter
 
 Correlation between two quantitative variables. Good for finding outliers and clusters.
@@ -270,6 +296,116 @@ Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'rig
 For the full field reference, see [SankeySpec in spec-reference.md](spec-reference.md#sankeyspec).
 
 **Live examples**: [Energy flow](https://tryopendata.github.io/openchart/?story=sankey--energy-flow) | [Budget allocation](https://tryopendata.github.io/openchart/?story=sankey--budget-allocation) | [User journey](https://tryopendata.github.io/openchart/?story=sankey--user-journey)
+
+---
+
+## Layer charts
+
+Use `LayerSpec` when you need to overlay different mark types on the same axes, like a bar chart with a line trend overlay or an area fill behind a line. For multiple series of the same mark type, use the `color` encoding on a single `ChartSpec` instead.
+
+Layers share scales automatically. The engine unions domains across all layers so marks align on the same axis range. Chrome (title, subtitle, etc.) and legend are resolved from the primary (first) layer.
+
+Parent-level `data` and `encoding` are inherited by children that don't define their own. Child encoding channels override the parent per-channel, so you only need to specify what's different in each layer.
+
+```ts
+const spec = {
+  data: [
+    { month: "Jan", revenue: 120, target: 100 },
+    { month: "Feb", revenue: 180, target: 150 },
+    { month: "Mar", revenue: 160, target: 170 },
+    { month: "Apr", revenue: 220, target: 200 },
+  ],
+  encoding: {
+    x: { field: "month", type: "temporal" },
+  },
+  layer: [
+    {
+      mark: "area",
+      encoding: { y: { field: "revenue", type: "quantitative" } },
+    },
+    {
+      mark: "line",
+      encoding: { y: { field: "target", type: "quantitative" } },
+    },
+  ],
+  chrome: { title: "Revenue vs target" },
+};
+```
+
+For the full field reference, see [LayerSpec in spec-reference.md](spec-reference.md#layerspec).
+
+---
+
+## Stacking
+
+When a `color` encoding is present on bar, column, or area charts, values are stacked by default. The `stack` property on the quantitative encoding channel controls the stacking behavior.
+
+### Default stacked bar
+
+Values stack from a zero baseline. This is the default when `color` is present.
+
+```ts
+const spec = {
+  mark: "bar",
+  data: [
+    { region: "West", category: "A", value: 30 },
+    { region: "West", category: "B", value: 50 },
+    { region: "East", category: "A", value: 40 },
+    { region: "East", category: "B", value: 35 },
+  ],
+  encoding: {
+    x: { field: "value", type: "quantitative" },
+    y: { field: "region", type: "nominal" },
+    color: { field: "category", type: "nominal" },
+  },
+};
+```
+
+### Grouped bars (no stacking)
+
+Set `stack: null` (or `false`) on the quantitative channel to disable stacking and render grouped (side-by-side) bars.
+
+```ts
+const spec = {
+  mark: "bar",
+  data: [
+    { region: "West", category: "A", value: 30 },
+    { region: "West", category: "B", value: 50 },
+    { region: "East", category: "A", value: 40 },
+    { region: "East", category: "B", value: 35 },
+  ],
+  encoding: {
+    x: { field: "value", type: "quantitative", stack: null },
+    y: { field: "region", type: "nominal" },
+    color: { field: "category", type: "nominal" },
+  },
+};
+```
+
+### Normalized 100% stacked
+
+Set `stack: 'normalize'` to normalize each group to 100%, showing proportional composition.
+
+```ts
+const spec = {
+  mark: "bar",
+  data: [
+    { region: "West", category: "A", value: 30 },
+    { region: "West", category: "B", value: 50 },
+    { region: "East", category: "A", value: 40 },
+    { region: "East", category: "B", value: 35 },
+  ],
+  encoding: {
+    x: { field: "value", type: "quantitative", stack: "normalize" },
+    y: { field: "region", type: "nominal" },
+    color: { field: "category", type: "nominal" },
+  },
+};
+```
+
+For more on stacking options, see [EncodingChannel in spec-reference.md](spec-reference.md#encodingchannel).
+
+**Live examples**: [Stacked bar](https://tryopendata.github.io/openchart/?story=bar-stacked--household-spending) | [Grouped bars](https://tryopendata.github.io/openchart/?story=bar--grouped-bars) | [Stacked columns](https://tryopendata.github.io/openchart/?story=column-stacked--energy-mix)
 
 ---
 

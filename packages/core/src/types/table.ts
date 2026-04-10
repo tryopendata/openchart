@@ -102,4 +102,6 @@ export interface ColumnConfig {
   flag?: boolean;
   /** Category colors: color-code the cell based on its categorical value. */
   categoryColors?: CategoryColorsConfig;
+  /** When true, auto-assign palette colors to values not in categoryColors. Default: false. */
+  autoAssign?: boolean;
 }

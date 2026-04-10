@@ -247,6 +247,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
     nodePadding: spec.nodePadding ?? 16,
     nodeAlign: spec.nodeAlign ?? 'justify',
     iterations: spec.iterations ?? 6,
+    nodeSort: spec.nodeSort,
     linkStyle: spec.linkStyle ?? 'gradient',
     nodeLabelAlign: spec.nodeLabelAlign ?? 'auto',
     chrome: normalizeChrome(spec.chrome),

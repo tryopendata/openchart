@@ -324,6 +324,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     sankeySpec.nodePadding,
     sankeySpec.nodeAlign,
     sankeySpec.iterations,
+    sankeySpec.nodeSort,
   );
 
   // 6b. Check if any right-side node labels overflow the right edge.
@@ -363,6 +364,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       sankeySpec.nodePadding,
       sankeySpec.nodeAlign,
       sankeySpec.iterations,
+      sankeySpec.nodeSort,
     ));
   }
 

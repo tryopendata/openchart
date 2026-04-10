@@ -27,6 +27,7 @@ export interface NormalizedSankeySpec {
   nodePadding: number;
   nodeAlign: SankeyNodeAlign;
   iterations: number;
+  nodeSort?: string[];
   linkStyle: SankeyLinkColor;
   nodeLabelAlign: 'auto' | 'left' | 'right';
   chrome: NormalizedChrome;

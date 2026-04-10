@@ -27,15 +27,18 @@ describe('computeCategoryColors', () => {
     const theme = getTheme();
     const colors = computeCategoryColors(data, col, theme, false);
 
-    expect(colors.size).toBe(4);
+    // Only explicitly mapped values should have entries (2 active + 1 inactive = 3)
+    expect(colors.size).toBe(3);
     // "active" rows (indices 0, 2) should have green background
     expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
     expect(colors.get(2)!.backgroundColor).toBe('#00ff00');
     // "inactive" row (index 1) should have red background
     expect(colors.get(1)!.backgroundColor).toBe('#ff0000');
+    // "pending" (index 3) should NOT have an entry
+    expect(colors.has(3)).toBe(false);
   });
 
-  it('unmapped values get palette colors', () => {
+  it('default behavior (no autoAssign) only colors explicitly mapped values', () => {
     const col: ColumnConfig = {
       key: 'status',
       categoryColors: {
@@ -45,15 +48,85 @@ describe('computeCategoryColors', () => {
     const theme = getTheme();
     const colors = computeCategoryColors(data, col, theme, false);
 
-    // "inactive" and "pending" are not in the explicit map, should get palette colors
+    // Only "active" rows should be colored
+    expect(colors.size).toBe(2);
+    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
+    expect(colors.get(2)!.backgroundColor).toBe('#00ff00');
+    // Unmapped values should NOT be present
+    expect(colors.has(1)).toBe(false); // inactive
+    expect(colors.has(3)).toBe(false); // pending
+  });
+
+  it('autoAssign: true gives unmapped values palette colors', () => {
+    const col: ColumnConfig = {
+      key: 'status',
+      autoAssign: true,
+      categoryColors: {
+        active: '#00ff00',
+      },
+    };
+    const theme = getTheme();
+    const colors = computeCategoryColors(data, col, theme, false);
+
+    // All 4 rows should have colors
+    expect(colors.size).toBe(4);
+    // Explicit mapping still works
+    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
+    expect(colors.get(2)!.backgroundColor).toBe('#00ff00');
+    // Unmapped values get palette colors
     const inactiveBg = colors.get(1)!.backgroundColor!;
     const pendingBg = colors.get(3)!.backgroundColor!;
-
-    // They should be assigned from the categorical palette
     expect(inactiveBg).toBeTruthy();
     expect(pendingBg).toBeTruthy();
-    // They should not be the explicit mapped color
     expect(inactiveBg).not.toBe('#00ff00');
+  });
+
+  it('autoAssign: false behaves same as default (unmapped values skipped)', () => {
+    const col: ColumnConfig = {
+      key: 'status',
+      autoAssign: false,
+      categoryColors: {
+        active: '#00ff00',
+      },
+    };
+    const theme = getTheme();
+    const colors = computeCategoryColors(data, col, theme, false);
+
+    expect(colors.size).toBe(2);
+    expect(colors.has(1)).toBe(false);
+    expect(colors.has(3)).toBe(false);
+  });
+
+  it('partial mapping with autoAssign false only has entries for mapped values', () => {
+    const col: ColumnConfig = {
+      key: 'status',
+      autoAssign: false,
+      categoryColors: {
+        pending: '#0000ff',
+      },
+    };
+    const theme = getTheme();
+    const colors = computeCategoryColors(data, col, theme, false);
+
+    // Only index 3 ("pending") should have a color
+    expect(colors.size).toBe(1);
+    expect(colors.get(3)!.backgroundColor).toBe('#0000ff');
+    expect(colors.has(0)).toBe(false);
+    expect(colors.has(1)).toBe(false);
+    expect(colors.has(2)).toBe(false);
+  });
+
+  it('autoAssign true with same value appearing multiple times gets consistent colors', () => {
+    const col: ColumnConfig = {
+      key: 'status',
+      autoAssign: true,
+      categoryColors: {},
+    };
+    const theme = getTheme();
+    const colors = computeCategoryColors(data, col, theme, false);
+
+    // Both "active" rows should have the same auto-assigned color
+    expect(colors.get(0)!.backgroundColor).toBe(colors.get(2)!.backgroundColor);
   });
 
   it('same category value gets consistent colors', () => {
@@ -105,10 +178,10 @@ describe('computeCategoryColors', () => {
     expect(colors.get(1)!.backgroundColor).toBe('#ff0000');
   });
 
-  it('dark mode adapts auto-assigned palette colors but not explicit ones', () => {
-    // Use a bright yellow that will definitely get adapted in dark mode
+  it('autoAssign true with dark mode adapts auto-assigned palette colors', () => {
     const col: ColumnConfig = {
       key: 'status',
+      autoAssign: true,
       categoryColors: {
         active: '#ffff00',
       },
@@ -119,8 +192,7 @@ describe('computeCategoryColors', () => {
     // Explicit color should be preserved as-is (not adapted)
     expect(darkColors.get(0)!.backgroundColor).toBe('#ffff00');
 
-    // Auto-assigned palette colors should still be present (adaptation may or
-    // may not visually change them, but the code path runs adaptColorForDarkMode)
+    // Auto-assigned palette colors should still be present
     expect(darkColors.has(1)).toBe(true); // inactive
     expect(darkColors.has(3)).toBe(true); // pending
   });
