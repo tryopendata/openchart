@@ -1,5 +1,27 @@
 # Changelog
 
+## [6.16.0](https://github.com/tryopendata/openchart/compare/core-v6.15.1...core-v6.16.0) (2026-04-10)
+
+
+### Features
+
+* refactor annotations and compile into focused modules ([91c6f6a](https://github.com/tryopendata/openchart/commit/91c6f6a))
+* Vega-Lite spec alignment and release readiness (#64) ([586a113](https://github.com/tryopendata/openchart/commit/586a113))
+* add configurable watermark opt-out ([03519e1](https://github.com/tryopendata/openchart/commit/03519e1))
+
+
+### Bug Fixes
+
+* explicit color ranges, loose filter equality, gradient ID collisions, and dark mode category colors ([73ef048](https://github.com/tryopendata/openchart/commit/73ef048))
+* auto-orient gradients for horizontal bars and improve validation suggestion ([14a02f9](https://github.com/tryopendata/openchart/commit/14a02f9))
+* create release tags via GitHub API for verified signatures ([cee901f](https://github.com/tryopendata/openchart/commit/cee901f))
+* replace release-please with manual release script, graph viewport improvements, and annotation text halos ([0aaa073](https://github.com/tryopendata/openchart/commit/0aaa073))
+* consolidate table stories, add gradient fills, and fix temporal scale defaults ([5a7dbf4](https://github.com/tryopendata/openchart/commit/5a7dbf4))
+* scale domain, sort defaults, stacked area lines, and tooltip series fields ([e159233](https://github.com/tryopendata/openchart/commit/e159233))
+* several issues found in the core engine (title calculation, formatting, etc) ([7861c0f](https://github.com/tryopendata/openchart/commit/7861c0f))
+* negative value bar handling ([475b088](https://github.com/tryopendata/openchart/commit/475b088))
+* add ${version} to group PR title pattern ([712affc](https://github.com/tryopendata/openchart/commit/712affc))
+
 ## [6.15.1](https://github.com/tryopendata/openchart/compare/core-v6.15.0...core-v6.15.1) (2026-04-07)
 
 
