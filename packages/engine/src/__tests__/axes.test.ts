@@ -655,3 +655,71 @@ describe('axis config properties', () => {
     expect(axes.x!.labelFlush).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Y-axis produces ~5 ticks at standard sizes
+// ---------------------------------------------------------------------------
+
+describe('y-axis tick density', () => {
+  it('produces 5+ y-axis ticks at standard chart size with full density', () => {
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    // A 500x300 chart with domain [100, 500] should show ~5+ ticks, not just 2
+    expect(axes.y!.ticks.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('y-axis thinning uses vertical overlap, not horizontal text width', () => {
+    // Even with a measureText that reports very wide labels, y-axis should
+    // not thin aggressively because overlap is checked vertically
+    const wideMeasure = () => ({ width: 500, height: 12 });
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, wideMeasure);
+
+    // Wide label text shouldn't cause y-axis thinning (only height matters)
+    expect(axes.y!.ticks.length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Vertical orientation overlap detection
+// ---------------------------------------------------------------------------
+
+describe('ticksOverlap with vertical orientation', () => {
+  const fontSize = 12;
+  const fontWeight = 400;
+
+  it('returns false when vertical ticks have sufficient spacing', () => {
+    // Labels at 30px intervals with 12px font (14.4px with lineHeight)
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: '100' },
+      { value: 1, position: 30, label: '200' },
+      { value: 2, position: 60, label: '300' },
+      { value: 3, position: 90, label: '400' },
+      { value: 4, position: 120, label: '500' },
+    ];
+    expect(ticksOverlap(ticks, fontSize, fontWeight, undefined, 'vertical')).toBe(false);
+  });
+
+  it('returns true when vertical ticks are too close', () => {
+    // Labels at 10px intervals with 12px font - should overlap vertically
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: '100' },
+      { value: 1, position: 10, label: '200' },
+      { value: 2, position: 20, label: '300' },
+    ];
+    expect(ticksOverlap(ticks, fontSize, fontWeight, undefined, 'vertical')).toBe(true);
+  });
+
+  it('ignores label text width for vertical orientation', () => {
+    // Very wide labels but well-spaced vertically - should NOT overlap
+    const ticks: AxisTick[] = [
+      { value: 0, position: 0, label: 'Very Long Label Text Here' },
+      { value: 1, position: 40, label: 'Another Very Long Label' },
+      { value: 2, position: 80, label: 'Yet Another Long Label' },
+    ];
+    // Horizontal would detect overlap, vertical should not
+    expect(ticksOverlap(ticks, fontSize, fontWeight, undefined, 'horizontal')).toBe(true);
+    expect(ticksOverlap(ticks, fontSize, fontWeight, undefined, 'vertical')).toBe(false);
+  });
+});

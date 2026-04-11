@@ -122,15 +122,31 @@ function measureLabel(
     : estimateTextWidth(text, fontSize, fontWeight);
 }
 
-/** Check whether any adjacent tick labels overlap horizontally. */
+/** Check whether any adjacent tick labels overlap along the axis direction. */
 export function ticksOverlap(
   ticks: AxisTick[],
   fontSize: number,
   fontWeight: number,
   measureText?: MeasureTextFn,
+  orientation: 'horizontal' | 'vertical' = 'horizontal',
 ): boolean {
   if (ticks.length < 2) return false;
   const minGap = fontSize * MIN_TICK_GAP_FACTOR;
+
+  if (orientation === 'vertical') {
+    // Y-axis: labels are stacked vertically. Check if vertical extent
+    // (based on font height) overlaps between adjacent ticks.
+    // Positions decrease going up in SVG coords, so sort ascending.
+    const sorted = [...ticks].sort((a, b) => a.position - b.position);
+    const labelHeight = fontSize * 1.2; // lineHeight
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const aBottom = sorted[i].position + labelHeight / 2;
+      const bTop = sorted[i + 1].position - labelHeight / 2;
+      if (aBottom + minGap > bTop) return true;
+    }
+    return false;
+  }
+
   for (let i = 0; i < ticks.length - 1; i++) {
     const aWidth = measureLabel(ticks[i].label, fontSize, fontWeight, measureText);
     const bWidth = measureLabel(ticks[i + 1].label, fontSize, fontWeight, measureText);
@@ -151,8 +167,9 @@ export function thinTicksUntilFit(
   fontSize: number,
   fontWeight: number,
   measureText?: MeasureTextFn,
+  orientation: 'horizontal' | 'vertical' = 'horizontal',
 ): AxisTick[] {
-  if (!ticksOverlap(ticks, fontSize, fontWeight, measureText)) return ticks;
+  if (!ticksOverlap(ticks, fontSize, fontWeight, measureText, orientation)) return ticks;
 
   let current = ticks;
   while (current.length > MIN_TICK_COUNT) {
@@ -164,7 +181,7 @@ export function thinTicksUntilFit(
     if (current.length > 1) thinned.push(current[current.length - 1]);
     current = thinned;
 
-    if (!ticksOverlap(current, fontSize, fontWeight, measureText)) break;
+    if (!ticksOverlap(current, fontSize, fontWeight, measureText, orientation)) break;
   }
   return current;
 }
@@ -455,7 +472,7 @@ export function computeAxes(
     // Thin tick labels to prevent overlap (skip for band scales, explicit tickCount, and values).
     const shouldThin = scales.y.type !== 'band' && !axisConfig?.tickCount && !axisConfig?.values;
     const ticks = shouldThin
-      ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText)
+      ? thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText, 'vertical')
       : allTicks;
 
     // Gridlines match the tick set so every gridline has a label.
