@@ -20,6 +20,7 @@ import type {
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, resolveCollisions } from '@opendata-ai/openchart-core';
+import { filterByDensity } from '../_shared/density-filter';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -48,16 +49,13 @@ export function computePieLabels(
 ): ResolvedLabel[] {
   if (marks.length === 0) return [];
 
-  // 'none': no labels at all
-  if (density === 'none') return [];
-
   // Get the pie center from the first mark's center property
+  // (read before filtering — 'endpoints' still needs the original center)
   const centerX = marks[0].center.x;
   const centerY = marks[0].center.y;
 
-  // Filter marks for 'endpoints' density
-  const targetMarks =
-    density === 'endpoints' && marks.length > 1 ? [marks[0], marks[marks.length - 1]] : marks;
+  const targetMarks = filterByDensity(marks, density);
+  if (targetMarks.length === 0) return [];
 
   const candidates: LabelCandidate[] = [];
   const targetMarkIndices: number[] = [];
