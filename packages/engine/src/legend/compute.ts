@@ -23,6 +23,7 @@ import type {
 import { BRAND_RESERVE_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { measureLegendWrap } from './wrap';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -90,38 +91,6 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
       active: true,
     };
   });
-}
-
-/**
- * Calculate how many entries fit within a given number of horizontal rows.
- */
-function entriesThatFit(
-  entries: LegendEntry[],
-  maxWidth: number,
-  maxRows: number,
-  labelStyle: TextStyle,
-): number {
-  let row = 1;
-  let rowWidth = 0;
-
-  for (let i = 0; i < entries.length; i++) {
-    const labelWidth = estimateTextWidth(
-      entries[i].label,
-      labelStyle.fontSize,
-      labelStyle.fontWeight,
-    );
-    const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
-
-    if (rowWidth + entryWidth > maxWidth && rowWidth > 0) {
-      row++;
-      rowWidth = entryWidth;
-      if (row > maxRows) return i;
-    } else {
-      rowWidth += entryWidth;
-    }
-  }
-
-  return entries.length;
 }
 
 /**
@@ -310,10 +279,10 @@ export function computeLegend(
       : spec.legend?.columns != null
         ? Math.ceil(entries.length / spec.legend.columns)
         : TOP_LEGEND_MAX_ROWS;
-  const maxFit = entriesThatFit(entries, availableWidth, maxRows, labelStyle);
+  const { fittingCount } = measureLegendWrap(entries, availableWidth, labelStyle, maxRows);
 
-  if (maxFit < entries.length) {
-    entries = truncateEntries(entries, maxFit);
+  if (fittingCount < entries.length) {
+    entries = truncateEntries(entries, fittingCount);
   }
 
   const totalWidth = entries.reduce((sum, entry) => {
@@ -321,19 +290,8 @@ export function computeLegend(
     return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
   }, 0);
 
-  // Calculate actual row count for height
-  let rowCount = 1;
-  let rowWidth = 0;
-  for (const entry of entries) {
-    const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
-    const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
-    if (rowWidth + entryWidth > availableWidth && rowWidth > 0) {
-      rowCount++;
-      rowWidth = entryWidth;
-    } else {
-      rowWidth += entryWidth;
-    }
-  }
+  // Calculate actual row count for height (recompute after truncation).
+  const { rowCount } = measureLegendWrap(entries, availableWidth, labelStyle);
 
   const rowHeight = SWATCH_SIZE + 4;
   const legendHeight = rowCount * rowHeight + LEGEND_PADDING * 2;

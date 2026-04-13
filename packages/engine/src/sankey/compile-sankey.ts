@@ -37,6 +37,7 @@ import {
 
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { measureLegendWrap } from '../legend/wrap';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
 import type { NormalizedSankeySpec } from './types';
 
@@ -570,23 +571,10 @@ function buildSankeyLegend(
     const ROW_HEIGHT = SWATCH_SIZE + 4;
     const availableWidth = area.width;
 
-    // Compute row count by simulating horizontal wrapping
-    let rowCount = 1;
-    let rowX = 0;
-    for (const entry of entries) {
-      const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
-      const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
-      if (rowX > 0 && rowX + entryWidth > availableWidth) {
-        rowCount++;
-        rowX = entryWidth;
-      } else {
-        rowX += entryWidth;
-      }
-    }
-
-    // Cap at 2 rows max
-    rowCount = Math.min(rowCount, 2);
-    const legendHeight = rowCount * ROW_HEIGHT;
+    // Compute row count via shared wrap geometry, then cap at 2 rows.
+    const { rowCount } = measureLegendWrap(entries, availableWidth, labelStyle);
+    const cappedRowCount = Math.min(rowCount, 2);
+    const legendHeight = cappedRowCount * ROW_HEIGHT;
 
     bounds = {
       x: area.x,
