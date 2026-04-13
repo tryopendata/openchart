@@ -309,11 +309,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     theme = adaptTheme(theme);
   }
 
-  // ORCHESTRATION INVARIANTS — do not reorder without care:
-  // 1. Legend is computed twice (preliminary + refined) to break a dims/legend dependency cycle.
-  // 2. computeGridlines mutates `axes` in place.
-  // 3. scales.defaultColor is set post-computeScales because the resolution needs theme context.
-
+  // INVARIANT 1 — double legend pass: preliminaryArea → computeDimensions → legendArea → final
+  // legend. Breaks a dims/legend dependency cycle. Do not collapse into one call.
   // Compute legend first (needs to reserve space)
   const preliminaryArea: Rect = {
     x: 0,
@@ -376,8 +373,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Update color scale to use theme palette (only when user hasn't provided an explicit range)
   applyColorScaleRange(scales, renderSpec.encoding, theme);
 
-  // Set default color for single-series charts. If the user set a fill on the mark def
-  // (string or gradient), that takes priority over the theme's first categorical color.
+  // INVARIANT 3 — post-hoc defaultColor: must run AFTER computeScales since resolution needs
+  // theme context. Do not move into computeScales (would require threading theme through).
+  // If the user set a fill on the mark def, it takes priority over the theme's first categorical.
   scales.defaultColor = chartSpec.markDef.fill ?? theme.colors.categorical[0];
 
   // Arc charts (pie/donut) don't use axes or gridlines
@@ -388,7 +386,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText);
 
-  // Compute gridlines (stored in axes, used by adapters via axes.y.gridlines)
+  // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
+  // axes.y.gridlines off the same object. Do not introduce a copy-on-write.
   if (!isRadial) {
     computeGridlines(axes, chartArea);
   }

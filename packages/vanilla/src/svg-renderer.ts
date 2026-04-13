@@ -131,54 +131,56 @@ export function renderChartSVG(
   svg.appendChild(defs);
 
   // Prime mark-renderer module-level state so mark sub-renderers can resolve
-  // animation + gradient fills without signature changes.
+  // animation + gradient fills without signature changes. try/finally guarantees
+  // the reset fires even if any downstream renderer throws, so the next render
+  // starts with a clean slate.
   setMarkRenderState({ animation, gradientMap });
+  try {
+    // Render layers in order (back to front)
+    // Axes render outside clip (labels extend beyond chart area)
+    renderAxes(svg, layout);
 
-  // Render layers in order (back to front)
-  // Axes render outside clip (labels extend beyond chart area)
-  renderAxes(svg, layout);
+    // Marks are clipped to chart area so area fills don't cover chrome
+    const clippedGroup = createSVGElement('g');
+    clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+    renderMarks(clippedGroup, layout);
 
-  // Marks are clipped to chart area so area fills don't cover chrome
-  const clippedGroup = createSVGElement('g');
-  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
-  renderMarks(clippedGroup, layout);
+    // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
+    // Only added when there are line or area marks with dataPoints, and no explicit
+    // PointMark objects (which use per-element event handling instead).
+    const hasLineOrAreaWithDataPoints = layout.marks.some(
+      (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
+    );
+    const hasPointMarks = layout.marks.some((m) => m.type === 'point');
+    if (hasLineOrAreaWithDataPoints && !hasPointMarks) {
+      const overlay = createSVGElement('rect');
+      setAttrs(overlay, {
+        x: layout.area.x,
+        y: layout.area.y,
+        width: layout.area.width,
+        height: layout.area.height,
+        fill: 'transparent',
+      });
+      overlay.setAttribute('class', 'oc-voronoi-overlay');
+      overlay.setAttribute('data-voronoi-overlay', 'true');
+      clippedGroup.appendChild(overlay);
+    }
 
-  // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
-  // Only added when there are line or area marks with dataPoints, and no explicit
-  // PointMark objects (which use per-element event handling instead).
-  const hasLineOrAreaWithDataPoints = layout.marks.some(
-    (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
-  );
-  const hasPointMarks = layout.marks.some((m) => m.type === 'point');
-  if (hasLineOrAreaWithDataPoints && !hasPointMarks) {
-    const overlay = createSVGElement('rect');
-    setAttrs(overlay, {
-      x: layout.area.x,
-      y: layout.area.y,
-      width: layout.area.width,
-      height: layout.area.height,
-      fill: 'transparent',
-    });
-    overlay.setAttribute('class', 'oc-voronoi-overlay');
-    overlay.setAttribute('data-voronoi-overlay', 'true');
-    clippedGroup.appendChild(overlay);
+    svg.appendChild(clippedGroup);
+
+    renderAnnotations(svg, layout);
+    renderLegend(svg, layout.legend);
+
+    // Chrome renders on top so titles are never obscured by chart elements
+    renderChrome(svg, layout);
+
+    // Brand renders as a footer item, right-aligned on the source/footer row
+    if (layout.watermark) {
+      renderBrand(svg, layout);
+    }
+  } finally {
+    resetMarkRenderState();
   }
-
-  svg.appendChild(clippedGroup);
-
-  renderAnnotations(svg, layout);
-  renderLegend(svg, layout.legend);
-
-  // Chrome renders on top so titles are never obscured by chart elements
-  renderChrome(svg, layout);
-
-  // Brand renders as a footer item, right-aligned on the source/footer row
-  if (layout.watermark) {
-    renderBrand(svg, layout);
-  }
-
-  // Reset module-level state after rendering
-  resetMarkRenderState();
 
   container.appendChild(svg);
   return svg;
