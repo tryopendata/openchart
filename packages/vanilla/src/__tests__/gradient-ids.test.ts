@@ -1,17 +1,15 @@
 /**
- * Characterization test for multi-chart gradient ID uniqueness.
+ * Multi-chart SVG ID uniqueness: gradients AND clip-paths.
  *
- * Part of refactor/v7-cohesion step 1. Pins the behavior of the global
- * gradient counter in `packages/vanilla/src/gradient-utils.ts` (commit 73ef048).
+ * Originally locked gradient-counter behavior from commit 73ef048 (fix for
+ * random-hex gradient collisions). Step 6 of refactor/v7-cohesion unified
+ * gradient and clip-path ID generation under `nextSvgId` in `svg-ids.ts`,
+ * so this test now guards both halves.
  *
- * Before the fix, gradient IDs used random hex suffixes that could collide when
- * multiple charts with gradient fills rendered into the same document. Because
- * SVG url(#id) resolves against the full document, a collision caused one chart
- * to inherit another chart's gradient. The fix replaced the random suffix with a
- * module-global monotonic counter so IDs are always unique across charts.
- *
- * Step 6 of the v7 refactor plans to unify gradient and clipPath ID generation.
- * This test guards uniqueness across that consolidation.
+ * Why it matters: SVG `url(#id)` resolves against the full document. If two
+ * charts on the same page generate overlapping IDs, one chart silently
+ * inherits the other's gradient fill or clip region. The shared monotonic
+ * counter makes uniqueness unconditional.
  */
 
 import type { ChartSpec, LinearGradient } from '@opendata-ai/openchart-core';
@@ -69,7 +67,16 @@ function collectGradientIds(root: HTMLElement): string[] {
   return ids;
 }
 
-describe('gradient ID uniqueness across charts', () => {
+function collectClipPathIds(root: HTMLElement): string[] {
+  const ids: string[] = [];
+  for (const el of root.querySelectorAll('clipPath')) {
+    const id = el.getAttribute('id');
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
+describe('SVG ID uniqueness across charts', () => {
   let a: HTMLDivElement;
   let b: HTMLDivElement;
 
@@ -82,7 +89,7 @@ describe('gradient ID uniqueness across charts', () => {
     document.body.innerHTML = '';
   });
 
-  it('two charts mounted in separate containers produce disjoint gradient IDs', () => {
+  it('two charts produce disjoint gradient IDs', () => {
     const chartA = createChart(a, makeBarSpec(barGradient));
     const chartB = createChart(b, makeBarSpec(altGradient));
 
@@ -101,6 +108,50 @@ describe('gradient ID uniqueness across charts', () => {
     for (const id of all) {
       expect(id).toMatch(/^oc-grad-\d+$/);
     }
+
+    chartA.destroy();
+    chartB.destroy();
+  });
+
+  it('two charts produce disjoint clip-path IDs', () => {
+    // Every chart render creates a <clipPath> for the plot area, so any spec
+    // works here. Reuse the gradient specs for consistency.
+    const chartA = createChart(a, makeBarSpec(barGradient));
+    const chartB = createChart(b, makeBarSpec(altGradient));
+
+    const idsA = collectClipPathIds(a);
+    const idsB = collectClipPathIds(b);
+
+    expect(idsA.length).toBeGreaterThan(0);
+    expect(idsB.length).toBeGreaterThan(0);
+
+    const all = [...idsA, ...idsB];
+    expect(new Set(all).size).toBe(all.length);
+
+    for (const id of all) {
+      expect(id).toMatch(/^oc-clip-\d+$/);
+    }
+
+    chartA.destroy();
+    chartB.destroy();
+  });
+
+  it('gradient and clip-path IDs never collide across two charts', () => {
+    // Core guarantee of the unified nextSvgId counter: even though gradients
+    // and clip-paths use different prefixes, the counter values are shared.
+    // Collecting every ID from both <defs> trees should yield a strict set.
+    const chartA = createChart(a, makeBarSpec(barGradient));
+    const chartB = createChart(b, makeBarSpec(altGradient));
+
+    const all = [
+      ...collectGradientIds(a),
+      ...collectClipPathIds(a),
+      ...collectGradientIds(b),
+      ...collectClipPathIds(b),
+    ];
+
+    expect(all.length).toBeGreaterThan(0);
+    expect(new Set(all).size).toBe(all.length);
 
     chartA.destroy();
     chartB.destroy();

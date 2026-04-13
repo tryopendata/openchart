@@ -37,6 +37,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
+import { nextSvgId } from './svg-ids';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -1244,7 +1245,7 @@ export function renderChartSVG(
   // Clip path to prevent marks (especially area fills) from overflowing
   // into the chrome region (title/subtitle). Extends full width so
   // end-of-line labels aren't clipped, but constrains vertically.
-  const clipId = `oc-clip-${Math.random().toString(36).slice(2, 8)}`;
+  const clipId = nextSvgId('oc-clip');
   const defs = createSVGElement('defs');
   const clipPath = createSVGElement('clipPath');
   clipPath.setAttribute('id', clipId);
