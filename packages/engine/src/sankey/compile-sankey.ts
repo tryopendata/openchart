@@ -37,7 +37,7 @@ import {
 
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
-import { measureLegendWrap } from '../legend/wrap';
+import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
 import type { NormalizedSankeySpec } from './types';
 
@@ -45,9 +45,6 @@ import type { NormalizedSankeySpec } from './types';
 // Constants
 // ---------------------------------------------------------------------------
 
-const SWATCH_SIZE = 12;
-const SWATCH_GAP = 6;
-const ENTRY_GAP = 16;
 const LABEL_GAP = 6;
 const LINK_OPACITY_LIGHT = 0.5;
 const LINK_OPACITY_DARK = 0.75;

@@ -22,6 +22,10 @@ Don't rely on it for:
 
 Before each screenshot, the spec strips generated SVG IDs (gradient/clipPath) since those change per mount. Animations are disabled via an injected stylesheet so timing is deterministic.
 
+## Platform-locked baselines
+
+Baseline PNGs are committed per-platform (`-chromium-darwin.png`, `-chromium-linux.png`, etc.). Font rendering and antialiasing differ across operating systems, so a baseline captured on macOS won't match pixel-for-pixel on Linux. If you're on a platform without committed baselines, run `bun run test:visual:update` to generate your own — they'll land alongside the existing ones rather than replacing them.
+
 ## Updating baselines
 
 ```bash

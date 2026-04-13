@@ -20,11 +20,12 @@ import type {
   Rect,
   RectMark,
 } from '@opendata-ai/openchart-core';
-import { abbreviateNumber, formatNumber, isGradientDef } from '@opendata-ai/openchart-core';
+import { isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
+import { formatLabelValue } from '../_shared/format-label-value';
 import { getColor, getSequentialColor, groupByField } from '../utils';
 
 // ---------------------------------------------------------------------------
@@ -32,12 +33,6 @@ import { getColor, getSequentialColor, groupByField } from '../utils';
 // ---------------------------------------------------------------------------
 
 const MIN_COLUMN_HEIGHT = 1;
-
-/** Format a column value for display (abbreviate large numbers). */
-function formatColumnValue(value: number): string {
-  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
-  return formatNumber(value);
-}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -199,7 +194,7 @@ function computeSimpleColumns(
     const y = value >= 0 ? yPos : baseline;
 
     const aria: MarkAria = {
-      label: `${category}: ${formatColumnValue(value)}`,
+      label: `${category}: ${formatLabelValue(value)}`,
     };
 
     marks.push({
@@ -250,7 +245,7 @@ function computeColoredColumns(
     const y = value >= 0 ? yPos : baseline;
 
     const aria: MarkAria = {
-      label: `${category}, ${groupKey}: ${formatColumnValue(value)}`,
+      label: `${category}, ${groupKey}: ${formatLabelValue(value)}`,
     };
 
     marks.push({
@@ -320,7 +315,7 @@ function computeGroupedColumns(
       const subX = bandX + groupIndex * (subBandWidth + gap);
 
       const aria: MarkAria = {
-        label: `${category}, ${groupKey}: ${formatColumnValue(value)}`,
+        label: `${category}, ${groupKey}: ${formatLabelValue(value)}`,
       };
 
       marks.push({
@@ -389,7 +384,7 @@ function computeStackedColumns(
       const columnHeight = Math.max(Math.abs(yBottom - yTop), MIN_COLUMN_HEIGHT);
 
       const aria: MarkAria = {
-        label: `${category}, ${groupKey}: ${formatColumnValue(rawValue)}`,
+        label: `${category}, ${groupKey}: ${formatLabelValue(rawValue)}`,
       };
 
       marks.push({

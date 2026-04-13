@@ -23,15 +23,12 @@ import type {
 import { BRAND_RESERVE_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
-import { measureLegendWrap } from './wrap';
+import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from './wrap';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const SWATCH_SIZE = 12;
-const SWATCH_GAP = 6;
-const ENTRY_GAP = 16;
 const LEGEND_PADDING = 8;
 const LEGEND_RIGHT_WIDTH = 120;
 

@@ -18,12 +18,16 @@ import type { LegendEntry, TextStyle } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
-// Constants (must match the legend/sankey compile sites)
+// Constants
 // ---------------------------------------------------------------------------
+//
+// Single source of truth for legend row geometry. Both compute.ts and the
+// sankey compile site import these so the wrap math here can never drift from
+// the layout math at the call sites.
 
-const SWATCH_SIZE = 12;
-const SWATCH_GAP = 6;
-const ENTRY_GAP = 16;
+export const SWATCH_SIZE = 12;
+export const SWATCH_GAP = 6;
+export const ENTRY_GAP = 16;
 
 // ---------------------------------------------------------------------------
 // Public API

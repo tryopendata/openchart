@@ -17,11 +17,12 @@ import type {
   Rect,
   RectMark,
 } from '@opendata-ai/openchart-core';
-import { abbreviateNumber, formatNumber, isGradientDef } from '@opendata-ai/openchart-core';
+import { isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
+import { formatLabelValue } from '../_shared/format-label-value';
 import { getColor, getSequentialColor, groupByField } from '../utils';
 
 /**
@@ -52,12 +53,6 @@ function orientGradientForHorizontalBar(grad: GradientDef): GradientDef {
 // ---------------------------------------------------------------------------
 
 const MIN_BAR_WIDTH = 1;
-
-/** Format a bar value for display (abbreviate large numbers). */
-function formatBarValue(value: number): string {
-  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
-  return formatNumber(value);
-}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -221,7 +216,7 @@ function computeStackedBars(
       const barWidth = Math.max(Math.abs(xRight - xLeft), MIN_BAR_WIDTH);
 
       const aria: MarkAria = {
-        label: `${category}, ${groupKey}: ${formatBarValue(rawValue)}`,
+        label: `${category}, ${groupKey}: ${formatLabelValue(rawValue)}`,
       };
 
       marks.push({
@@ -291,7 +286,7 @@ function computeGroupedBars(
       const subY = bandY + groupIndex * (subBandHeight + gap);
 
       const aria: MarkAria = {
-        label: `${category}, ${groupKey}: ${formatBarValue(value)}`,
+        label: `${category}, ${groupKey}: ${formatLabelValue(value)}`,
       };
 
       marks.push({
@@ -341,7 +336,7 @@ function computeColoredBars(
     const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
 
     const aria: MarkAria = {
-      label: `${category}, ${groupKey}: ${formatBarValue(value)}`,
+      label: `${category}, ${groupKey}: ${formatLabelValue(value)}`,
     };
 
     marks.push({
@@ -401,7 +396,7 @@ function computeSimpleBars(
     const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
 
     const aria: MarkAria = {
-      label: `${category}: ${formatBarValue(value)}`,
+      label: `${category}: ${formatLabelValue(value)}`,
     };
 
     marks.push({

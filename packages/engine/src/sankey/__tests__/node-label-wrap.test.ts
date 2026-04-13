@@ -13,7 +13,7 @@
  * label `maxWidth` that forces wrapping on long-label narrow-width sankeys.
  */
 
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileSankey } from '../../compile';
 
@@ -92,5 +92,23 @@ describe('sankey node-label wrapping', () => {
       return tw > (n.label.maxWidth as number);
     });
     expect(wrapsRequired.length).toBe(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pinned behavior (refactor/v7-cohesion code review item 1):
+  // The shared wrapText in core/src/layout/text-wrap.ts splits on `\n` before
+  // word-wrapping. The previous sankey-local wrapText did not. Pin the new
+  // behavior so anyone relying on `\n` in node labels sees the multi-line break.
+  // ---------------------------------------------------------------------------
+  it('honors explicit `\\n` in node labels by producing multi-line wrap output', () => {
+    const lines = wrapText('First line\nSecond line', 12, 400, 1000);
+
+    expect(lines).toEqual(['First line', 'Second line']);
+  });
+
+  it('preserves blank lines between consecutive `\\n` characters', () => {
+    const lines = wrapText('A\n\nB', 12, 400, 1000);
+
+    expect(lines).toEqual(['A', '', 'B']);
   });
 });

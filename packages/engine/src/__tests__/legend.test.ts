@@ -428,6 +428,7 @@ describe('computeLegend', () => {
 
       const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
       const gap = layout.area.y - legendBottom;
+      // Pin value matches the literal at compile.ts:331 (legendArea.y -= legendLayout.bounds.height + 4)
       expect(gap).toBe(4);
     });
   });

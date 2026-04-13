@@ -16,11 +16,3 @@ let counter = 0;
 export function nextSvgId(prefix: string): string {
   return `${prefix}-${counter++}`;
 }
-
-/**
- * Reset the counter. Intended for isolated test runs only - production code
- * should never call this. The underscore prefix marks it as non-public.
- */
-export function _resetSvgIdCounter(): void {
-  counter = 0;
-}
