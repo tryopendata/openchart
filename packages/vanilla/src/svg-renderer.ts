@@ -26,7 +26,6 @@ import type {
   ResolvedChromeElement,
   RuleMarkLayout,
   TextMarkLayout,
-  TextStyle,
   TickMarkLayout,
 } from '@opendata-ai/openchart-core';
 import {
@@ -37,9 +36,8 @@ import {
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
+import { applyTextStyle, createSVGElement, SVG_NS, setAttrs, XLINK_NS } from './renderers/svg-dom';
 import { nextSvgId } from './svg-ids';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Module-level animation state. Set by renderChartSVG before rendering marks
@@ -98,40 +96,6 @@ function computeXAxisExtent(layout: ChartLayout): number {
   }
 
   return xAxis.label ? 48 : 26;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function createSVGElement(tag: string): SVGElement {
-  return document.createElementNS(SVG_NS, tag);
-}
-
-function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void {
-  for (const [key, value] of Object.entries(attrs)) {
-    el.setAttribute(key, String(value));
-  }
-}
-
-function applyTextStyle(el: SVGElement, style: TextStyle): void {
-  setAttrs(el, {
-    'font-family': style.fontFamily,
-    'font-size': style.fontSize,
-    'font-weight': style.fontWeight,
-  });
-  // Use inline style for fill so it takes priority over CSS class defaults
-  // (e.g. .oc-title { fill: var(--oc-text) } which would override attributes)
-  (el as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', style.fill);
-  if (style.textAnchor) {
-    el.setAttribute('text-anchor', style.textAnchor);
-  }
-  if (style.dominantBaseline) {
-    el.setAttribute('dominant-baseline', style.dominantBaseline);
-  }
-  if (style.fontVariant) {
-    el.setAttribute('font-variant', style.fontVariant);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1090,7 +1054,6 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 // ---------------------------------------------------------------------------
 
 const BRAND_URL = 'https://tryopendata.ai';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
 /**
  * Render the "OpenData" brand as a footer-row element, right-aligned on the
