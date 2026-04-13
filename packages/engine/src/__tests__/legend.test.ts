@@ -1,6 +1,7 @@
 import type { LayoutStrategy, Rect, ResolvedTheme } from '@opendata-ai/openchart-core';
 import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import { compileChart } from '../compile';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeLegend } from '../legend/compute';
 
@@ -391,6 +392,44 @@ describe('computeLegend', () => {
       const legend = computeLegend(noColorWithLabels, fullStrategy, theme, chartArea);
       expect(legend.entries).toHaveLength(0);
       expect(legend.bounds.width).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Characterization test (refactor/v7-cohesion step 1):
+  // Pins the 4px gap between a top-positioned legend and the chart area,
+  // as enforced at packages/engine/src/compile.ts:331. Refactor step 4 will
+  // consolidate legend row-wrapping geometry; this test guards the spacing
+  // invariant through that change.
+  // ---------------------------------------------------------------------------
+  describe('top legend spacing', () => {
+    it('places the legend exactly 4px above the chart area', () => {
+      const spec = {
+        mark: 'bar' as const,
+        data: [
+          { name: 'A', value: 10, group: 'X' },
+          { name: 'A', value: 20, group: 'Y' },
+          { name: 'B', value: 30, group: 'X' },
+          { name: 'B', value: 25, group: 'Y' },
+        ],
+        encoding: {
+          x: { field: 'name', type: 'nominal' as const },
+          y: { field: 'value', type: 'quantitative' as const },
+          color: { field: 'group', type: 'nominal' as const },
+        },
+        legend: { position: 'top' as const },
+      };
+
+      const layout = compileChart(spec, { width: 600, height: 400 });
+
+      expect(layout.legend.position).toBe('top');
+      expect(layout.legend.entries.length).toBeGreaterThan(0);
+      expect(layout.legend.bounds.height).toBeGreaterThan(0);
+
+      const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
+      const gap = layout.area.y - legendBottom;
+      // Pin value matches the literal at compile.ts:331 (legendArea.y -= legendLayout.bounds.height + 4)
+      expect(gap).toBe(4);
     });
   });
 });

@@ -5,6 +5,7 @@
 
 import type { GradientDef, LinearGradient, RadialGradient } from '@opendata-ai/openchart-core';
 import { isGradientDef } from '@opendata-ai/openchart-core';
+import { nextSvgId } from './svg-ids';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -90,17 +91,14 @@ function appendStop(
 }
 
 /**
- * Global counter for gradient IDs. Ensures uniqueness across all charts
- * on the same page, since SVG url(#id) resolves globally in the document.
- */
-let globalGradientCounter = 0;
-
-/**
  * Scan all marks for GradientDef fill values, create SVG gradient elements
  * in the provided <defs> node, and return a map from gradient key to element ID.
  *
  * Identical gradients (by key) share a single SVG element within one chart.
- * IDs are globally unique across charts to avoid SVG url(#id) collisions.
+ * IDs come from `nextSvgId` so they're globally unique across charts and
+ * share the counter with clip-path IDs (see svg-ids.ts). Gradient ID numbers
+ * may skip values when clip-paths consume counter slots - still monotonic,
+ * still unique.
  */
 export function buildGradientDefs(
   marks: Array<{ fill?: unknown }>,
@@ -113,7 +111,7 @@ export function buildGradientDefs(
     if (fill && isGradientDef(fill)) {
       const key = gradientKey(fill);
       if (!map.has(key)) {
-        const id = `oc-grad-${globalGradientCounter++}`;
+        const id = nextSvgId('oc-grad');
         const el = createGradientElement(fill, id);
         defs.appendChild(el);
         map.set(key, id);

@@ -58,6 +58,7 @@ export {
   BRAND_RESERVE_WIDTH,
   computeChrome,
   estimateTextWidth,
+  wrapText,
 } from './layout/index';
 
 // ---------------------------------------------------------------------------

@@ -30,6 +30,15 @@ describe('estimateTextWidth', () => {
     expect(width).toBeGreaterThan(100);
     expect(width).toBeLessThan(250);
   });
+
+  // Characterization test (refactor/v7-cohesion step 1):
+  // Pins the AVG_CHAR_WIDTH_RATIO = 0.57 constant introduced in commit e7b98f9.
+  // Any future tuning of the ratio changes layout-wide text wrapping decisions,
+  // so we freeze the exact numeric output of the canonical call.
+  it('estimateTextWidth("sample", 14, 400) returns the locked numeric value', () => {
+    // 6 chars * (14 * 0.57 * 1.0) = 6 * 7.98 = 47.88
+    expect(estimateTextWidth('sample', 14, 400)).toBeCloseTo(47.88, 5);
+  });
 });
 
 describe('estimateTextHeight', () => {

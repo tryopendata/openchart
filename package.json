@@ -26,6 +26,9 @@
     "typecheck": "bun run --filter './packages/*' typecheck",
     "dev": "cd examples && bun run dev",
     "release": "node scripts/release.mjs",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:visual:setup": "playwright install chromium",
     "prepare": "husky"
   },
   "overrides": {
@@ -34,6 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@vitest/coverage-v8": "^4.0.18",

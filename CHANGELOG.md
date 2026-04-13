@@ -6,6 +6,79 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Refactor
+
+- **engine:** extract `formatLabelValue` shared helper for bar/column/dot, remove four duplicate copies
+- **core:** extract `wrapText` helper from vanilla renderers (now a public export); sankey keeps heuristic-only wrapping
+- **engine:** extract `measureLegendWrap` helper so legend and sankey share one row-wrap implementation
+- **vanilla:** remove vestigial 100ms resize delay; chart and sankey mount timing now match
+- **vanilla:** unify gradient and clip-path ID generation via `nextSvgId` (gradient IDs stay `oc-grad-N`; clip-path IDs move from random hex to `oc-clip-N`)
+- **engine:** de-duplicate legend geometry constants (`SWATCH_SIZE`, `SWATCH_GAP`, `ENTRY_GAP`) into a single export
+
+### Tests
+
+- Add characterization tests pinning v6.14-v6.19 shipped behaviors: horizontal bar gradient orientation, multi-chart gradient ID uniqueness, sankey node-label wrap at narrow widths, sankey `nodeSort`, text-measure 0.57 ratio, top-legend 4px spacing
+- Add Playwright visual regression harness with 8 baseline scenarios (bar, gradient bar, multi-series line, stacked column, sankey, pie with legend, annotations, watermark)
+
+## [6.19.3] - 2026-04-11
+
+### Bug Fixes
+
+- **engine:** use vertical overlap detection for y-axis tick thinning
+- chrome maxWidth 5px safety buffer to prevent title overflow on mobile
+
+## [6.19.2] - 2026-04-10
+
+### Bug Fixes
+
+- text width ratio, brand reserve, top legend spacing, and breakpoint annotations
+
+## [6.19.1] - 2026-04-10
+
+### Bug Fixes
+
+- auto-orient gradients for horizontal bars and improve validation suggestion
+- explicit color ranges, loose filter equality, gradient ID collisions, and dark mode category colors
+
+## [6.19.0] - 2026-04-10
+
+### Features
+
+- **sankey:** add `nodeSort` prop for explicit node ordering
+- **sankey:** add maxWidth-based text wrapping for node labels
+- selective `categoryColors`, legend auto-suppression, tick defaults, and docs
+
+## [6.18.0] - 2026-04-10
+
+### Features
+
+- **engine:** refactor annotations and compile into focused modules
+
+## [6.17.0] - 2026-04-10
+
+### Bug Fixes
+
+- create release tags via GitHub API for verified signatures
+
+## [6.16.0] - 2026-04-09
+
+### Bug Fixes
+
+- replace release-please with manual release script
+- graph viewport improvements and annotation text halos
+
+## [6.15.1] - 2026-04-08
+
+### Bug Fixes
+
+- negative value bar handling
+
+## [6.15.0] - 2026-04-08
+
+### Features
+
+- consolidate table stories, add gradient fills, and fix temporal scale defaults
+
 ## [6.14.0] - 2026-04-07
 
 ### Features

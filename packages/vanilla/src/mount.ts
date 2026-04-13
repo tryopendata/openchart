@@ -1798,7 +1798,6 @@ export function createChart(
   let destroyed = false;
   let isDragging = false;
   let pendingRender = false;
-  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Animation state
   let isFirstRender = true;
@@ -2393,10 +2392,6 @@ export function createChart(
     }
     cancelAnimations(svgElement);
 
-    if (resizeTimer !== null) {
-      clearTimeout(resizeTimer);
-      resizeTimer = null;
-    }
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();
       cleanupTooltipEvents = null;
@@ -2463,14 +2458,12 @@ export function createChart(
   // Initial render
   render();
 
-  // Set up responsive resize with debounce to avoid full SVG rebuild on every frame
+  // Set up responsive resize. The observeResize helper already debounces at
+  // ~60fps (16ms) internally, which is sufficient to coalesce a drag-burst
+  // into a single render without additive delay.
   if (options?.responsive !== false) {
     disconnectResize = observeResize(container, () => {
-      if (resizeTimer !== null) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        resizeTimer = null;
-        resize();
-      }, 100);
+      resize();
     });
   }
 

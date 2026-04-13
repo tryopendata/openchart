@@ -15,7 +15,12 @@ import type {
   SankeyNodeMark,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
+import {
+  BRAND_FONT_SIZE,
+  BRAND_MIN_WIDTH,
+  estimateTextWidth,
+  wrapText,
+} from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -78,48 +83,6 @@ function stampAnimationAttrs(
 // ---------------------------------------------------------------------------
 // Chrome rendering
 // ---------------------------------------------------------------------------
-
-/**
- * Break text into lines that fit within maxWidth using word wrapping.
- */
-function wrapText(text: string, fontSize: number, fontWeight: number, maxWidth: number): string[] {
-  if (maxWidth <= 0) return [text];
-
-  const AVG_CHAR_WIDTH = 0.57;
-  const WEIGHT_FACTORS: Record<number, number> = {
-    100: 0.9,
-    200: 0.92,
-    300: 0.95,
-    400: 1.0,
-    500: 1.02,
-    600: 1.05,
-    700: 1.08,
-    800: 1.1,
-    900: 1.12,
-  };
-  const weightFactor = WEIGHT_FACTORS[fontWeight] ?? 1.0;
-  const charWidth = fontSize * AVG_CHAR_WIDTH * weightFactor;
-  const maxChars = Math.floor(maxWidth / charWidth);
-
-  if (text.length <= maxChars) return [text];
-
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let current = '';
-
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length > maxChars && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = candidate;
-    }
-  }
-  if (current) lines.push(current);
-
-  return lines;
-}
 
 function renderChromeElement(
   parent: SVGElement,
