@@ -11,3 +11,4 @@ export {
   estimateTextHeight,
   estimateTextWidth,
 } from './text-measure';
+export { wrapText } from './text-wrap';
