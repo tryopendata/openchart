@@ -18,23 +18,16 @@ import type {
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
-  abbreviateNumber,
   buildD3Formatter,
   estimateTextWidth,
-  formatNumber,
   getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
+import { formatLabelValue } from '../_shared/format-label-value';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Format a bar value for display (abbreviate large numbers). */
-function formatBarValue(value: number): string {
-  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
-  return formatNumber(value);
-}
 
 /** Suffix multipliers mirroring core's abbreviateNumber output (K/M/B/T). */
 const SUFFIX_MULTIPLIERS: Record<string, number> = {
@@ -124,7 +117,7 @@ export function computeBarLabels(
     if (formatter && Number.isFinite(rawNum)) {
       valuePart = formatter(rawNum);
     } else if (Number.isFinite(rawNum)) {
-      valuePart = formatBarValue(rawNum);
+      valuePart = formatLabelValue(rawNum);
     } else {
       // Fallback: extract from aria label
       const ariaLabel = mark.aria.label;

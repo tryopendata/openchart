@@ -18,23 +18,12 @@ import type {
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
-  abbreviateNumber,
   buildD3Formatter,
   estimateTextWidth,
-  formatNumber,
   getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Format a dot value for display (abbreviate large numbers). */
-function formatDotValue(value: number): string {
-  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
-  return formatNumber(value);
-}
+import { formatLabelValue } from '../_shared/format-label-value';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -81,7 +70,7 @@ export function computeDotLabels(
     if (formatter && Number.isFinite(rawNum)) {
       valuePart = formatter(rawNum);
     } else if (Number.isFinite(rawNum)) {
-      valuePart = formatDotValue(rawNum);
+      valuePart = formatLabelValue(rawNum);
     } else {
       // Fallback: extract from aria label
       const ariaLabel = mark.aria.label;
