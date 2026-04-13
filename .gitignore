@@ -16,4 +16,13 @@ coverage/
 .npmrc
 *.png
 
+# Playwright visual regression
+test-results/
+playwright-report/
+e2e/visual/__screenshots__/**/*-actual.png
+e2e/visual/__screenshots__/**/*-diff.png
+# Keep committed baselines under e2e/visual/__screenshots__/ despite the
+# root-level *.png exclusion above.
+!e2e/visual/__screenshots__/**/*.png
+
 *.tgz
