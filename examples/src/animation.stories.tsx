@@ -498,14 +498,14 @@ const annotationDelaySpec: ChartSpec = {
     },
   },
   annotations: [
-    {
-      type: 'text',
-      text: 'Product relaunch',
-      x: '2024-04',
-      y: 53,
-      offset: { dx: -80, dy: -18 },
-      connector: true,
-    },
+    // {
+    //   type: 'text',
+    //   text: 'Product relaunch',
+    //   x: '2024-04',
+    //   y: 53,
+    //   offset: { dx: -80, dy: -18 },
+    //   connector: true,
+    // },
     {
       type: 'refline',
       y: 70,

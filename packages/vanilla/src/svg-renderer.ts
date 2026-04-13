@@ -28,15 +28,17 @@ import type {
   TextMarkLayout,
   TickMarkLayout,
 } from '@opendata-ai/openchart-core';
-import {
-  BRAND_FONT_SIZE,
-  BRAND_MIN_WIDTH,
-  estimateTextWidth,
-  wrapText,
-} from '@opendata-ai/openchart-core';
+import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
-import { applyTextStyle, createSVGElement, SVG_NS, setAttrs, XLINK_NS } from './renderers/svg-dom';
+import { renderBrand } from './renderers/brand';
+import {
+  applyTextStyle,
+  computeXAxisExtent,
+  createSVGElement,
+  SVG_NS,
+  setAttrs,
+} from './renderers/svg-dom';
 import { nextSvgId } from './svg-ids';
 
 /**
@@ -72,31 +74,6 @@ const EASE_VAR_MAP: Record<string, string> = {
   smooth: 'var(--oc-ease-smooth)',
   snappy: 'var(--oc-ease-snappy)',
 };
-
-/**
- * Compute the vertical extent of x-axis labels below the chart area.
- * Accounts for rotated tick labels which need more vertical space.
- */
-function computeXAxisExtent(layout: ChartLayout): number {
-  const xAxis = layout.axes.x;
-  if (!xAxis) return 0;
-
-  if (xAxis.tickAngle && Math.abs(xAxis.tickAngle) > 10) {
-    // Rotated labels: estimate height from the longest tick label.
-    const fontSize = xAxis.tickLabelStyle.fontSize;
-    const fontWeight = xAxis.tickLabelStyle.fontWeight;
-    const angleRad = Math.abs(xAxis.tickAngle) * (Math.PI / 180);
-    let maxLabelWidth = 40;
-    for (const tick of xAxis.ticks) {
-      const w = estimateTextWidth(tick.label, fontSize, fontWeight);
-      if (w > maxLabelWidth) maxLabelWidth = w;
-    }
-    const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
-    return xAxis.label ? rotatedHeight + 20 : rotatedHeight;
-  }
-
-  return xAxis.label ? 48 : 26;
-}
 
 // ---------------------------------------------------------------------------
 // Chrome rendering
@@ -1047,78 +1024,6 @@ function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   }
 
   parent.appendChild(g);
-}
-
-// ---------------------------------------------------------------------------
-// Brand rendering
-// ---------------------------------------------------------------------------
-
-const BRAND_URL = 'https://tryopendata.ai';
-
-/**
- * Render the "OpenData" brand as a footer-row element, right-aligned on the
- * same baseline as the first bottom chrome text (source/byline/footer).
- * Uses the same font size as chrome source text so it blends in as a subtle
- * footer item rather than occupying independent visual space.
- */
-function renderBrand(parent: SVGElement, layout: ChartLayout): void {
-  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
-
-  const { width } = layout.dimensions;
-  const padding = layout.theme.spacing.padding;
-  const rightEdge = width - padding;
-  const fill = layout.theme.colors.axis;
-
-  // Vertically align with the first bottom chrome element.
-  const { chrome } = layout;
-  const xAxisExtent = computeXAxisExtent(layout);
-  const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
-  const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
-  const chromeY = firstBottom
-    ? bottomOffset + firstBottom.y
-    : bottomOffset + layout.theme.spacing.chartToFooter;
-
-  const a = createSVGElement('a');
-  a.setAttribute('href', BRAND_URL);
-  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
-  a.setAttribute('target', '_blank');
-  a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'oc-chrome-ref');
-
-  // "try" in normal weight, "OpenData" in semibold, ".ai" in normal weight,
-  // rendered as a single right-aligned text element with three tspans.
-  // Use alphabetic baseline so mixed-size tspans share a common bottom line.
-  const BRAND_LARGE = 16;
-  const text = createSVGElement('text');
-  setAttrs(text, {
-    x: rightEdge,
-    y: chromeY + BRAND_LARGE,
-    'dominant-baseline': 'alphabetic',
-    'font-family': layout.theme.fonts.family,
-    'font-size': BRAND_FONT_SIZE,
-    'text-anchor': 'end',
-    'fill-opacity': 0.55,
-  });
-  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-
-  const trySpan = createSVGElement('tspan');
-  trySpan.setAttribute('font-weight', '500');
-  trySpan.textContent = 'try';
-  text.appendChild(trySpan);
-
-  const openDataSpan = createSVGElement('tspan');
-  openDataSpan.setAttribute('font-weight', '600');
-  openDataSpan.setAttribute('font-size', String(BRAND_LARGE));
-  openDataSpan.textContent = 'OpenData';
-  text.appendChild(openDataSpan);
-
-  const aiSpan = createSVGElement('tspan');
-  aiSpan.setAttribute('font-weight', '500');
-  aiSpan.textContent = '.ai';
-  text.appendChild(aiSpan);
-
-  a.appendChild(text);
-  parent.appendChild(a);
 }
 
 // ---------------------------------------------------------------------------
