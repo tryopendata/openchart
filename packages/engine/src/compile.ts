@@ -32,7 +32,6 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
-  BRAND_RESERVE_WIDTH,
   computeLabelBounds,
   generateAltText,
   generateDataTable,
@@ -57,6 +56,9 @@ import { ruleRenderer } from './charts/rule';
 import { scatterRenderer } from './charts/scatter';
 import { textRenderer } from './charts/text';
 import { tickRenderer } from './charts/tick';
+import { applyColorScaleRange } from './compile/color-scale-range';
+import { filterClippedDomains } from './compile/data-clip';
+import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { compile as compileSpec, flattenLayers } from './compiler/index';
 
 // Register all built-in chart renderers under the new Vega-Lite mark type names.
@@ -307,6 +309,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     theme = adaptTheme(theme);
   }
 
+  // ORCHESTRATION INVARIANTS — do not reorder without care:
+  // 1. Legend is computed twice (preliminary + refined) to break a dims/legend dependency cycle.
+  // 2. computeGridlines mutates `axes` in place.
+  // 3. scales.defaultColor is set post-computeScales because the resolution needs theme context.
+
   // Compute legend first (needs to reserve space)
   const preliminaryArea: Rect = {
     x: 0,
@@ -358,19 +365,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
 
   // Filter clipped scale domains: when scale.clip is true, exclude rows outside the domain
-  for (const channel of ['x', 'y'] as const) {
-    const enc = chartSpec.encoding[channel];
-    if (!enc?.scale?.clip || !enc.scale.domain) continue;
-    const domain = enc.scale.domain;
-    const field = enc.field;
-    if (Array.isArray(domain) && domain.length === 2 && typeof domain[0] === 'number') {
-      const [lo, hi] = domain as [number, number];
-      renderData = renderData.filter((row) => {
-        const v = Number(row[field]);
-        return Number.isFinite(v) && v >= lo && v <= hi;
-      });
-    }
-  }
+  renderData = filterClippedDomains(renderData, chartSpec.encoding);
 
   // Build a filtered spec for scales and marks, keeping all other properties intact
   const renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
@@ -379,29 +374,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const scales = computeScales(renderSpec, chartArea, renderSpec.data);
 
   // Update color scale to use theme palette (only when user hasn't provided an explicit range)
-  if (scales.color) {
-    const hasExplicitRange = !!(
-      renderSpec.encoding.color &&
-      'field' in renderSpec.encoding.color &&
-      (renderSpec.encoding.color.scale?.range as string[] | undefined)?.length
-    );
-    if (scales.color.type === 'sequential') {
-      // Sequential: use first sequential palette (or fall back to categorical endpoints)
-      if (!hasExplicitRange) {
-        const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
-        (scales.color.scale as unknown as import('d3-scale').ScaleLinear<string, string>).range([
-          seqStops[0],
-          seqStops[seqStops.length - 1],
-        ]);
-      }
-    } else {
-      if (!hasExplicitRange) {
-        (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
-          theme.colors.categorical,
-        );
-      }
-    }
-  }
+  applyColorScaleRange(scales, renderSpec.encoding, theme);
 
   // Set default color for single-series charts. If the user set a fill on the mark def
   // (string or gradient), that takes priority over the theme's first categorical color.
@@ -444,18 +417,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
 
   // Add brand watermark as an obstacle so annotations avoid overlapping it.
-  // The brand is right-aligned on the same baseline as the first bottom chrome element,
-  // offset below the chart area by x-axis extent (tick labels + axis title).
-  if (watermark) {
-    const brandPadding = theme.spacing.padding;
-    const brandX = dims.total.width - brandPadding - BRAND_RESERVE_WIDTH;
-    const xAxisExtent = axes.x?.label ? 48 : axes.x ? 26 : 0;
-    const firstBottomChrome = dims.chrome.source ?? dims.chrome.byline ?? dims.chrome.footer;
-    const brandY = firstBottomChrome
-      ? chartArea.y + chartArea.height + xAxisExtent + firstBottomChrome.y
-      : chartArea.y + chartArea.height + xAxisExtent + theme.spacing.chartToFooter;
-    obstacles.push({ x: brandX, y: brandY, width: BRAND_RESERVE_WIDTH, height: 30 });
-  }
+  const watermarkRect = computeWatermarkObstacle(dims, watermark, axes, theme);
+  if (watermarkRect) obstacles.push(watermarkRect);
   const annotations: ResolvedAnnotation[] = computeAnnotations(
     chartSpec,
     scales,
