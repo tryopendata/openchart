@@ -1,5 +1,46 @@
 # Changelog
 
+## [6.21.0](https://github.com/tryopendata/openchart/compare/core-v6.20.0...core-v6.21.0) (2026-04-14)
+
+
+### Features
+
+* add maxWidth-based text wrapping for sankey node labels ([824c446](https://github.com/tryopendata/openchart/commit/824c446))
+* add nodeSort prop for explicit sankey node ordering ([dc02127](https://github.com/tryopendata/openchart/commit/dc02127))
+* selective categoryColors, legend auto-suppression, tick defaults, and docs ([64595bf](https://github.com/tryopendata/openchart/commit/64595bf))
+
+
+### Bug Fixes
+
+* fix continuous axis tick collapse using step-down re-request ([d47bdac](https://github.com/tryopendata/openchart/commit/d47bdac))
+* use vertical overlap detection for y-axis tick thinning ([a953932](https://github.com/tryopendata/openchart/commit/a953932))
+* add 5px safety buffer to chrome maxWidth to prevent title overflow on mobile ([6143e73](https://github.com/tryopendata/openchart/commit/6143e73))
+* text width ratio, brand reserve, top legend spacing, and breakpoint annotations ([e7b98f9](https://github.com/tryopendata/openchart/commit/e7b98f9))
+* explicit color ranges, loose filter equality, gradient ID collisions, and dark mode category colors ([73ef048](https://github.com/tryopendata/openchart/commit/73ef048))
+* auto-orient gradients for horizontal bars and improve validation suggestion ([14a02f9](https://github.com/tryopendata/openchart/commit/14a02f9))
+* create release tags via GitHub API for verified signatures ([cee901f](https://github.com/tryopendata/openchart/commit/cee901f))
+
+
+### Refactoring
+
+* address code review must-fix items for v7-cohesion-pt2 ([20d8a46](https://github.com/tryopendata/openchart/commit/20d8a46))
+* split axes.ts into ticks and thinning modules ([965ef89](https://github.com/tryopendata/openchart/commit/965ef89))
+* extract renderMarks into renderers/marks.ts ([a4dc5de](https://github.com/tryopendata/openchart/commit/a4dc5de))
+* extract renderAxes into renderers/axes.ts ([93ceb2b](https://github.com/tryopendata/openchart/commit/93ceb2b))
+* extract renderAnnotations into renderers/annotations.ts ([6e4c2db](https://github.com/tryopendata/openchart/commit/6e4c2db))
+* extract renderLegend into renderers/legend.ts ([c60be4c](https://github.com/tryopendata/openchart/commit/c60be4c))
+* extract renderChrome into renderers/chrome.ts ([b81ee09](https://github.com/tryopendata/openchart/commit/b81ee09))
+* extract renderBrand into renderers/brand.ts ([3b59d20](https://github.com/tryopendata/openchart/commit/3b59d20))
+* extract svg-dom helpers from svg-renderer ([ab63110](https://github.com/tryopendata/openchart/commit/ab63110))
+* extract pure helpers from compile.ts into compile/ subfolder ([ae62c7f](https://github.com/tryopendata/openchart/commit/ae62c7f))
+* extract density filter from bar/column/dot/pie labels ([60f9a04](https://github.com/tryopendata/openchart/commit/60f9a04))
+* address code review cleanups from v7-cohesion review ([1096bd8](https://github.com/tryopendata/openchart/commit/1096bd8))
+* unify gradient and clip-path ID generation via nextSvgId ([f029171](https://github.com/tryopendata/openchart/commit/f029171))
+* remove vestigial 100ms resize delay, align chart and sankey mount timing ([303175a](https://github.com/tryopendata/openchart/commit/303175a))
+* extract measureLegendWrap helper for legend and sankey ([ec8cf11](https://github.com/tryopendata/openchart/commit/ec8cf11))
+* extract wrapText helper from vanilla renderers ([bb0c870](https://github.com/tryopendata/openchart/commit/bb0c870))
+* extract formatLabelValue shared helper for bar/column/dot ([8e908cb](https://github.com/tryopendata/openchart/commit/8e908cb))
+
 ## [6.20.0](https://github.com/tryopendata/openchart/compare/core-v6.19.3...core-v6.20.0) (2026-04-13)
 
 
