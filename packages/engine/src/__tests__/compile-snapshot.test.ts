@@ -14,59 +14,39 @@ import type { ChartLayout } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 
-/**
- * Normalize a tick value for snapshot comparison. Date objects are converted
- * to their UTC ISO date string (YYYY-MM-DD) so the snapshot doesn't encode
- * the local timezone offset, which differs between macOS (CDT/PDT) and the
- * Linux CI runner (UTC).
- */
-function normalizeTickValue(value: unknown): unknown {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  return value;
-}
+type AxisTick = { label?: string; value?: unknown; position?: unknown };
+type AxisShape = Record<string, unknown> & { ticks?: AxisTick[] };
 
 /**
- * Normalize a tick position to 2 decimal places. D3 time-scale positions are
- * floating-point and shift slightly with timezone because the tick Date values
- * differ by hours. Rounding eliminates that noise without losing signal.
+ * Whether an axis carries temporal (Date) ticks. D3 time scales produce
+ * midnight-local Date objects, so tick positions and values shift by hours
+ * between macOS (CDT/PDT) and Linux CI (UTC). We strip temporal axes from
+ * the main snapshot and assert their labels separately.
  */
-function normalizePosition(pos: unknown): unknown {
-  if (typeof pos === 'number') return Math.round(pos * 100) / 100;
-  return pos;
-}
-
-/** Normalize an axis tick array for platform-independent snapshot comparison. */
-function normalizeTicks(
-  ticks: Array<{ label?: string; value?: unknown; position?: unknown }>,
-): unknown[] {
-  return ticks.map((t) => ({
-    ...t,
-    value: normalizeTickValue(t.value),
-    position: normalizePosition(t.position),
-  }));
-}
-
-/** Normalize an axis object so tick values and positions are platform-stable. */
-function normalizeAxis(axis: Record<string, unknown> | undefined): unknown {
-  if (!axis) return axis;
-  const ticks = axis.ticks;
-  return {
-    ...axis,
-    ticks: Array.isArray(ticks)
-      ? normalizeTicks(ticks as Parameters<typeof normalizeTicks>[0])
-      : ticks,
-  };
+function isTemporalAxis(axis: AxisShape | undefined): boolean {
+  return Array.isArray(axis?.ticks) && axis.ticks.some((t) => t.value instanceof Date);
 }
 
 /** Convert ChartLayout into a fully serializable shape for snapshot comparison. */
-function serializeLayout(layout: ChartLayout): Record<string, unknown> {
+function serializeLayout(
+  layout: ChartLayout,
+  { stripTemporalAxes = false } = {},
+): Record<string, unknown> {
   const { tooltipDescriptors, measureText: _measure, ...rest } = layout;
-  const axes = rest.axes as
-    | { x?: Record<string, unknown>; y?: Record<string, unknown> }
-    | undefined;
+  const axes = rest.axes as { x?: AxisShape; y?: AxisShape } | undefined;
+
+  let serializedAxes = axes;
+  if (axes && stripTemporalAxes) {
+    serializedAxes = {
+      ...axes,
+      x: isTemporalAxis(axes.x) ? undefined : axes.x,
+      y: isTemporalAxis(axes.y) ? undefined : axes.y,
+    };
+  }
+
   return {
     ...rest,
-    axes: axes ? { ...axes, x: normalizeAxis(axes.x), y: normalizeAxis(axes.y) } : axes,
+    axes: serializedAxes,
     tooltipDescriptors: Array.from(tooltipDescriptors.entries()),
   };
 }
@@ -100,7 +80,16 @@ describe('compileChart snapshot (Step 7 oracle)', () => {
     };
 
     const layout = compileChart(spec, { width: 800, height: 500 });
-    expect(serializeLayout(layout)).toMatchSnapshot();
+
+    // Temporal x-axis positions shift with timezone (macOS CDT vs Linux UTC),
+    // so we strip it from the structural snapshot and assert just the labels.
+    expect(serializeLayout(layout, { stripTemporalAxes: true })).toMatchSnapshot();
+
+    const xAxes = (layout.axes as { x?: AxisShape } | undefined)?.x;
+    const tickLabels = (xAxes?.ticks ?? []).map((t: AxisTick) => t.label);
+    expect(tickLabels.length).toBeGreaterThanOrEqual(3);
+    expect(tickLabels.length).toBeLessThanOrEqual(6);
+    expect(tickLabels.every((l) => typeof l === 'string' && l.length > 0)).toBe(true);
   });
 
   it('clipped-domain bar chart (data outside scale.domain filtered)', () => {

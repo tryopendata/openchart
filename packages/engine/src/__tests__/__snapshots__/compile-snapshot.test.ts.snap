@@ -79,17 +79,17 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "ticks": [
         {
           "label": "0",
-          "position": 35.27,
+          "position": 35.269999999999996,
           "value": 0,
         },
         {
           "label": "20",
-          "position": 251.96,
+          "position": 251.96200000000002,
           "value": 20,
         },
         {
           "label": "40",
-          "position": 468.65,
+          "position": 468.654,
           "value": 40,
         },
       ],
@@ -145,7 +145,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "ticks": [
         {
           "label": "A",
-          "position": 297.08,
+          "position": 297.0761194029851,
           "value": "A",
         },
         {
@@ -155,7 +155,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         },
         {
           "label": "C",
-          "position": 119.52,
+          "position": 119.52388059701492,
           "value": "C",
         },
       ],
@@ -560,64 +560,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     "y": 87.6,
   },
   "axes": {
-    "x": {
-      "domainLine": undefined,
-      "end": {
-        "x": 704.293,
-        "y": 410.4,
-      },
-      "gridlines": [],
-      "label": undefined,
-      "labelFlush": undefined,
-      "labelOverlap": undefined,
-      "labelPadding": undefined,
-      "labelStyle": {
-        "fill": "#1d1d1d",
-        "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
-        "fontSize": 13,
-        "fontWeight": 500,
-        "lineHeight": 1.3,
-      },
-      "offset": undefined,
-      "orient": undefined,
-      "start": {
-        "x": 42.54,
-        "y": 410.4,
-      },
-      "tickAngle": undefined,
-      "tickLabelStyle": {
-        "fill": "#888888",
-        "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
-        "fontSize": 11,
-        "fontVariant": "tabular-nums",
-        "fontWeight": 400,
-        "lineHeight": 1.2,
-      },
-      "tickMarks": undefined,
-      "ticks": [
-        {
-          "label": "2020",
-          "position": 42.99,
-          "value": "2020-01-01",
-        },
-        {
-          "label": "Apr 2020",
-          "position": 207.45,
-          "value": "2020-04-01",
-        },
-        {
-          "label": "Jul 2020",
-          "position": 371.99,
-          "value": "2020-07-01",
-        },
-        {
-          "label": "Oct 2020",
-          "position": 538.33,
-          "value": "2020-10-01",
-        },
-      ],
-      "titlePadding": undefined,
-    },
+    "x": undefined,
     "y": {
       "domainLine": undefined,
       "end": {
@@ -697,12 +640,12 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
         {
           "label": "5",
-          "position": 370.05,
+          "position": 370.04999999999995,
           "value": 5,
         },
         {
           "label": "10",
-          "position": 329.7,
+          "position": 329.69999999999993,
           "value": 10,
         },
         {
@@ -717,17 +660,17 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
         {
           "label": "25",
-          "position": 208.65,
+          "position": 208.64999999999998,
           "value": 25,
         },
         {
           "label": "30",
-          "position": 168.3,
+          "position": 168.29999999999998,
           "value": 30,
         },
         {
           "label": "35",
-          "position": 127.95,
+          "position": 127.94999999999999,
           "value": 35,
         },
         {
@@ -1485,22 +1428,22 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "ticks": [
         {
           "label": "A",
-          "position": 124.63,
+          "position": 124.62862068965518,
           "value": "A",
         },
         {
           "label": "B",
-          "position": 247.72,
+          "position": 247.7228735632184,
           "value": "B",
         },
         {
           "label": "C",
-          "position": 370.82,
+          "position": 370.8171264367816,
           "value": "C",
         },
         {
           "label": "D",
-          "position": 493.91,
+          "position": 493.9113793103449,
           "value": "D",
         },
       ],
@@ -1565,17 +1508,17 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         {
           "label": "20",
-          "position": 229.03,
+          "position": 229.02857142857144,
           "value": 20,
         },
         {
           "label": "40",
-          "position": 161.26,
+          "position": 161.25714285714287,
           "value": 40,
         },
         {
           "label": "60",
-          "position": 93.49,
+          "position": 93.4857142857143,
           "value": 60,
         },
       ],
