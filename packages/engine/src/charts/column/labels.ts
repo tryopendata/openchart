@@ -23,6 +23,7 @@ import {
   getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
+import { filterByDensity } from '../_shared/density-filter';
 import { formatLabelValue } from '../_shared/format-label-value';
 
 // ---------------------------------------------------------------------------
@@ -50,12 +51,7 @@ export function computeColumnLabels(
   labelPrefix?: string,
   valueField?: string,
 ): ResolvedLabel[] {
-  // 'none': no labels at all
-  if (density === 'none') return [];
-
-  // Filter marks for 'endpoints' density
-  const targetMarks =
-    density === 'endpoints' && marks.length > 1 ? [marks[0], marks[marks.length - 1]] : marks;
+  const targetMarks = filterByDensity(marks, density);
 
   const formatter = buildD3Formatter(labelFormat);
 

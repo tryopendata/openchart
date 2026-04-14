@@ -32,7 +32,6 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
-  BRAND_RESERVE_WIDTH,
   computeLabelBounds,
   generateAltText,
   generateDataTable,
@@ -42,57 +41,21 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from './annotations/compute';
-import { barRenderer } from './charts/bar';
-import { columnRenderer } from './charts/column';
-import { dotRenderer } from './charts/dot';
-import { areaRenderer, lineRenderer } from './charts/line';
-import { donutRenderer, pieRenderer } from './charts/pie';
+// Side-effect import: registers all built-in chart renderers with the
+// registry on module load. Tests that clear the registry can import
+// `registerBuiltinRenderers` from `./charts/builtin` to restore defaults.
+import './charts/builtin';
 import {
   assignAnimationIndices,
   computeMarkObstacles,
   resolveRendererKey,
 } from './charts/post-process';
-import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
-import { ruleRenderer } from './charts/rule';
-import { scatterRenderer } from './charts/scatter';
-import { textRenderer } from './charts/text';
-import { tickRenderer } from './charts/tick';
-import { compile as compileSpec, flattenLayers } from './compiler/index';
-
-// Register all built-in chart renderers under the new Vega-Lite mark type names.
-// Explicit imports ensure bundlers cannot tree-shake the registrations away.
-//
-// Mark type mapping from old chart types:
-// - 'bar' -> barRenderer (horizontal bars, old 'bar')
-// - 'bar:vertical' is handled by columnRenderer (old 'column')
-// - 'arc' -> pieRenderer (old 'pie'); donutRenderer is also registered
-// - 'point' -> scatterRenderer (old 'scatter')
-// - 'circle' -> dotRenderer (old 'dot')
-// - 'line' and 'area' unchanged
-// - 'text', 'rule', 'tick' are new Vega-Lite mark types
-//
-// For 'bar', orientation is resolved at compile time to dispatch to the right renderer.
-// We register both barRenderer and columnRenderer; the compile function picks based on orientation.
-const builtinRenderers: Record<string, ChartRenderer> = {
-  line: lineRenderer,
-  area: areaRenderer,
-  bar: barRenderer, // horizontal bars
-  'bar:vertical': columnRenderer, // vertical bars (old 'column')
-  point: scatterRenderer, // old 'scatter'
-  arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
-  'arc:donut': donutRenderer, // old 'donut'
-  circle: dotRenderer, // old 'dot'
-  lollipop: dotRenderer, // semantic alias for dot/circle
-  text: textRenderer,
-  rule: ruleRenderer,
-  tick: tickRenderer,
-  rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
-};
-for (const [type, renderer] of Object.entries(builtinRenderers)) {
-  registerChartRenderer(type, renderer);
-}
-
+import { getChartRenderer } from './charts/registry';
+import { applyColorScaleRange } from './compile/color-scale-range';
+import { filterClippedDomains } from './compile/data-clip';
+import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { resolveAnimation } from './compiler/animation';
+import { compile as compileSpec, flattenLayers } from './compiler/index';
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
@@ -307,6 +270,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     theme = adaptTheme(theme);
   }
 
+  // INVARIANT 1 — double legend pass: preliminaryArea → computeDimensions → legendArea → final
+  // legend. Breaks a dims/legend dependency cycle. Do not collapse into one call.
   // Compute legend first (needs to reserve space)
   const preliminaryArea: Rect = {
     x: 0,
@@ -358,19 +323,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
 
   // Filter clipped scale domains: when scale.clip is true, exclude rows outside the domain
-  for (const channel of ['x', 'y'] as const) {
-    const enc = chartSpec.encoding[channel];
-    if (!enc?.scale?.clip || !enc.scale.domain) continue;
-    const domain = enc.scale.domain;
-    const field = enc.field;
-    if (Array.isArray(domain) && domain.length === 2 && typeof domain[0] === 'number') {
-      const [lo, hi] = domain as [number, number];
-      renderData = renderData.filter((row) => {
-        const v = Number(row[field]);
-        return Number.isFinite(v) && v >= lo && v <= hi;
-      });
-    }
-  }
+  renderData = filterClippedDomains(renderData, chartSpec.encoding);
 
   // Build a filtered spec for scales and marks, keeping all other properties intact
   const renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
@@ -379,32 +332,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const scales = computeScales(renderSpec, chartArea, renderSpec.data);
 
   // Update color scale to use theme palette (only when user hasn't provided an explicit range)
-  if (scales.color) {
-    const hasExplicitRange = !!(
-      renderSpec.encoding.color &&
-      'field' in renderSpec.encoding.color &&
-      (renderSpec.encoding.color.scale?.range as string[] | undefined)?.length
-    );
-    if (scales.color.type === 'sequential') {
-      // Sequential: use first sequential palette (or fall back to categorical endpoints)
-      if (!hasExplicitRange) {
-        const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
-        (scales.color.scale as unknown as import('d3-scale').ScaleLinear<string, string>).range([
-          seqStops[0],
-          seqStops[seqStops.length - 1],
-        ]);
-      }
-    } else {
-      if (!hasExplicitRange) {
-        (scales.color.scale as import('d3-scale').ScaleOrdinal<string, string>).range(
-          theme.colors.categorical,
-        );
-      }
-    }
-  }
+  applyColorScaleRange(scales, renderSpec.encoding, theme);
 
-  // Set default color for single-series charts. If the user set a fill on the mark def
-  // (string or gradient), that takes priority over the theme's first categorical color.
+  // INVARIANT 3 — post-hoc defaultColor: must run AFTER computeScales since resolution needs
+  // theme context. Do not move into computeScales (would require threading theme through).
+  // If the user set a fill on the mark def, it takes priority over the theme's first categorical.
   scales.defaultColor = chartSpec.markDef.fill ?? theme.colors.categorical[0];
 
   // Arc charts (pie/donut) don't use axes or gridlines
@@ -415,7 +347,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText);
 
-  // Compute gridlines (stored in axes, used by adapters via axes.y.gridlines)
+  // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
+  // axes.y.gridlines off the same object. Do not introduce a copy-on-write.
   if (!isRadial) {
     computeGridlines(axes, chartArea);
   }
@@ -444,18 +377,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
 
   // Add brand watermark as an obstacle so annotations avoid overlapping it.
-  // The brand is right-aligned on the same baseline as the first bottom chrome element,
-  // offset below the chart area by x-axis extent (tick labels + axis title).
-  if (watermark) {
-    const brandPadding = theme.spacing.padding;
-    const brandX = dims.total.width - brandPadding - BRAND_RESERVE_WIDTH;
-    const xAxisExtent = axes.x?.label ? 48 : axes.x ? 26 : 0;
-    const firstBottomChrome = dims.chrome.source ?? dims.chrome.byline ?? dims.chrome.footer;
-    const brandY = firstBottomChrome
-      ? chartArea.y + chartArea.height + xAxisExtent + firstBottomChrome.y
-      : chartArea.y + chartArea.height + xAxisExtent + theme.spacing.chartToFooter;
-    obstacles.push({ x: brandX, y: brandY, width: BRAND_RESERVE_WIDTH, height: 30 });
-  }
+  const watermarkRect = computeWatermarkObstacle(dims, watermark, axes, theme);
+  if (watermarkRect) obstacles.push(watermarkRect);
   const annotations: ResolvedAnnotation[] = computeAnnotations(
     chartSpec,
     scales,
