@@ -14,11 +14,59 @@ import type { ChartLayout } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 
+/**
+ * Normalize a tick value for snapshot comparison. Date objects are converted
+ * to their UTC ISO date string (YYYY-MM-DD) so the snapshot doesn't encode
+ * the local timezone offset, which differs between macOS (CDT/PDT) and the
+ * Linux CI runner (UTC).
+ */
+function normalizeTickValue(value: unknown): unknown {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return value;
+}
+
+/**
+ * Normalize a tick position to 2 decimal places. D3 time-scale positions are
+ * floating-point and shift slightly with timezone because the tick Date values
+ * differ by hours. Rounding eliminates that noise without losing signal.
+ */
+function normalizePosition(pos: unknown): unknown {
+  if (typeof pos === 'number') return Math.round(pos * 100) / 100;
+  return pos;
+}
+
+/** Normalize an axis tick array for platform-independent snapshot comparison. */
+function normalizeTicks(
+  ticks: Array<{ label?: string; value?: unknown; position?: unknown }>,
+): unknown[] {
+  return ticks.map((t) => ({
+    ...t,
+    value: normalizeTickValue(t.value),
+    position: normalizePosition(t.position),
+  }));
+}
+
+/** Normalize an axis object so tick values and positions are platform-stable. */
+function normalizeAxis(axis: Record<string, unknown> | undefined): unknown {
+  if (!axis) return axis;
+  const ticks = axis.ticks;
+  return {
+    ...axis,
+    ticks: Array.isArray(ticks)
+      ? normalizeTicks(ticks as Parameters<typeof normalizeTicks>[0])
+      : ticks,
+  };
+}
+
 /** Convert ChartLayout into a fully serializable shape for snapshot comparison. */
 function serializeLayout(layout: ChartLayout): Record<string, unknown> {
   const { tooltipDescriptors, measureText: _measure, ...rest } = layout;
+  const axes = rest.axes as
+    | { x?: Record<string, unknown>; y?: Record<string, unknown> }
+    | undefined;
   return {
     ...rest,
+    axes: axes ? { ...axes, x: normalizeAxis(axes.x), y: normalizeAxis(axes.y) } : axes,
     tooltipDescriptors: Array.from(tooltipDescriptors.entries()),
   };
 }
