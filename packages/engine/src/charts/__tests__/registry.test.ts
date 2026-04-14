@@ -2,6 +2,7 @@ import type { LayoutStrategy, Mark, Rect } from '@opendata-ai/openchart-core';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
+import { registerBuiltinRenderers } from '../builtin';
 import { clearRenderers, getChartRenderer, registerChartRenderer } from '../registry';
 
 // ---------------------------------------------------------------------------
@@ -38,7 +39,12 @@ function stubRenderer(
 
 describe('chart renderer registry', () => {
   afterEach(() => {
+    // Clear test-registered renderers AND restore the built-in set. The
+    // built-ins register as a module side-effect of importing `compile.ts`,
+    // so once cleared they don't come back on their own — leaving later
+    // tests in this suite with an empty registry.
     clearRenderers();
+    registerBuiltinRenderers();
   });
 
   it('returns undefined for an unregistered chart type', () => {

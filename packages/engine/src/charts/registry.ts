@@ -58,6 +58,12 @@ export function getChartRenderer(type: string): ChartRenderer | undefined {
 
 /**
  * Clear all registered renderers. Useful for testing.
+ *
+ * Note: the built-in renderers (line, bar, column, ...) register as a
+ * side-effect of importing `./builtin`. Once cleared, they do not come
+ * back on their own — subsequent `compileChart(...)` calls will return
+ * empty marks. Tests that call `clearRenderers()` should follow up with
+ * `registerBuiltinRenderers()` from `./builtin` to restore the defaults.
  */
 export function clearRenderers(): void {
   renderers.clear();

@@ -41,60 +41,21 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from './annotations/compute';
-import { barRenderer } from './charts/bar';
-import { columnRenderer } from './charts/column';
-import { dotRenderer } from './charts/dot';
-import { areaRenderer, lineRenderer } from './charts/line';
-import { donutRenderer, pieRenderer } from './charts/pie';
+// Side-effect import: registers all built-in chart renderers with the
+// registry on module load. Tests that clear the registry can import
+// `registerBuiltinRenderers` from `./charts/builtin` to restore defaults.
+import './charts/builtin';
 import {
   assignAnimationIndices,
   computeMarkObstacles,
   resolveRendererKey,
 } from './charts/post-process';
-import { type ChartRenderer, getChartRenderer, registerChartRenderer } from './charts/registry';
-import { ruleRenderer } from './charts/rule';
-import { scatterRenderer } from './charts/scatter';
-import { textRenderer } from './charts/text';
-import { tickRenderer } from './charts/tick';
+import { getChartRenderer } from './charts/registry';
 import { applyColorScaleRange } from './compile/color-scale-range';
 import { filterClippedDomains } from './compile/data-clip';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
-import { compile as compileSpec, flattenLayers } from './compiler/index';
-
-// Register all built-in chart renderers under the new Vega-Lite mark type names.
-// Explicit imports ensure bundlers cannot tree-shake the registrations away.
-//
-// Mark type mapping from old chart types:
-// - 'bar' -> barRenderer (horizontal bars, old 'bar')
-// - 'bar:vertical' is handled by columnRenderer (old 'column')
-// - 'arc' -> pieRenderer (old 'pie'); donutRenderer is also registered
-// - 'point' -> scatterRenderer (old 'scatter')
-// - 'circle' -> dotRenderer (old 'dot')
-// - 'line' and 'area' unchanged
-// - 'text', 'rule', 'tick' are new Vega-Lite mark types
-//
-// For 'bar', orientation is resolved at compile time to dispatch to the right renderer.
-// We register both barRenderer and columnRenderer; the compile function picks based on orientation.
-const builtinRenderers: Record<string, ChartRenderer> = {
-  line: lineRenderer,
-  area: areaRenderer,
-  bar: barRenderer, // horizontal bars
-  'bar:vertical': columnRenderer, // vertical bars (old 'column')
-  point: scatterRenderer, // old 'scatter'
-  arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
-  'arc:donut': donutRenderer, // old 'donut'
-  circle: dotRenderer, // old 'dot'
-  lollipop: dotRenderer, // semantic alias for dot/circle
-  text: textRenderer,
-  rule: ruleRenderer,
-  tick: tickRenderer,
-  rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
-};
-for (const [type, renderer] of Object.entries(builtinRenderers)) {
-  registerChartRenderer(type, renderer);
-}
-
 import { resolveAnimation } from './compiler/animation';
+import { compile as compileSpec, flattenLayers } from './compiler/index';
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';

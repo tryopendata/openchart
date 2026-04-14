@@ -83,54 +83,14 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
           "value": 0,
         },
         {
-          "label": "5",
-          "position": 89.443,
-          "value": 5,
-        },
-        {
-          "label": "10",
-          "position": 143.616,
-          "value": 10,
-        },
-        {
-          "label": "15",
-          "position": 197.789,
-          "value": 15,
-        },
-        {
           "label": "20",
           "position": 251.96200000000002,
           "value": 20,
         },
         {
-          "label": "25",
-          "position": 306.135,
-          "value": 25,
-        },
-        {
-          "label": "30",
-          "position": 360.308,
-          "value": 30,
-        },
-        {
-          "label": "35",
-          "position": 414.481,
-          "value": 35,
-        },
-        {
           "label": "40",
           "position": 468.654,
           "value": 40,
-        },
-        {
-          "label": "45",
-          "position": 522.8270000000001,
-          "value": 45,
-        },
-        {
-          "label": "50",
-          "position": 577,
-          "value": 50,
         },
       ],
       "titlePadding": undefined,
@@ -641,19 +601,19 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "value": 2020-01-01T06:00:00.000Z,
         },
         {
-          "label": "May 2020",
-          "position": 261.69294592440804,
-          "value": 2020-05-01T05:00:00.000Z,
+          "label": "Apr 2020",
+          "position": 207.45089674408015,
+          "value": 2020-04-01T05:00:00.000Z,
         },
         {
-          "label": "Sep 2020",
-          "position": 484.08534756375224,
-          "value": 2020-09-01T05:00:00.000Z,
+          "label": "Jul 2020",
+          "position": 371.98511259107465,
+          "value": 2020-07-01T05:00:00.000Z,
         },
         {
-          "label": "Dec 2020",
-          "position": 648.6948995901639,
-          "value": 2020-12-01T06:00:00.000Z,
+          "label": "Oct 2020",
+          "position": 538.3273967440801,
+          "value": 2020-10-01T05:00:00.000Z,
         },
       ],
       "titlePadding": undefined,
@@ -1559,15 +1519,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         {
           "major": true,
-          "position": 262.91428571428577,
-        },
-        {
-          "major": true,
           "position": 229.02857142857144,
-        },
-        {
-          "major": true,
-          "position": 195.14285714285714,
         },
         {
           "major": true,
@@ -1575,15 +1527,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         {
           "major": true,
-          "position": 127.37142857142857,
-        },
-        {
-          "major": true,
           "position": 93.4857142857143,
-        },
-        {
-          "major": true,
-          "position": 59.6,
         },
       ],
       "label": undefined,
@@ -1620,19 +1564,9 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           "value": 0,
         },
         {
-          "label": "10",
-          "position": 262.91428571428577,
-          "value": 10,
-        },
-        {
           "label": "20",
           "position": 229.02857142857144,
           "value": 20,
-        },
-        {
-          "label": "30",
-          "position": 195.14285714285714,
-          "value": 30,
         },
         {
           "label": "40",
@@ -1640,19 +1574,9 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           "value": 40,
         },
         {
-          "label": "50",
-          "position": 127.37142857142857,
-          "value": 50,
-        },
-        {
           "label": "60",
           "position": 93.4857142857143,
           "value": 60,
-        },
-        {
-          "label": "70",
-          "position": 59.6,
-          "value": 70,
         },
       ],
       "titlePadding": undefined,

@@ -679,6 +679,71 @@ describe('y-axis tick density', () => {
     // Wide label text shouldn't cause y-axis thinning (only height matters)
     expect(axes.y!.ticks.length).toBeGreaterThanOrEqual(5);
   });
+
+  it('does not collapse to min/max when nice() domain creates a close last tick', () => {
+    // Regression: domain [0, 340] nice()'s to [0, 350]. The old thinning path
+    // kept both 340 and the endpoint 350, causing cascaded thinning down to
+    // [0, 340] (2 ticks). Fix re-requests at lower counts from D3 instead.
+    const barSpec: NormalizedChartSpec = {
+      markType: 'bar',
+      markDef: { type: 'bar' },
+      data: [
+        { year: '2019', v: 110 },
+        { year: '2023', v: 340 },
+      ],
+      encoding: {
+        x: { field: 'year', type: 'nominal' },
+        y: { field: 'v', type: 'quantitative' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '' },
+    };
+    const scales = computeScales(barSpec, chartArea, barSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    // The specific bug produced exactly [0, 340] — only the min and max with
+    // no interior gridlines. Any output with interior values is a pass, even
+    // if the count varies with D3's step choice across platforms.
+    const values = axes.y!.ticks.map((t) => t.value);
+    expect(values).not.toEqual([0, 340]);
+    expect(values).not.toEqual([0, 350]);
+    expect(axes.y!.ticks.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('adapts y-axis tick count down for short charts', () => {
+    const shortArea = { x: 50, y: 50, width: 500, height: 140 };
+    const scales = computeScales(lineSpec, shortArea, lineSpec.data);
+    const axes = computeAxes(scales, shortArea, fullStrategy, theme);
+
+    // Short charts should still show multiple ticks but fewer than tall ones
+    expect(axes.y!.ticks.length).toBeGreaterThanOrEqual(2);
+    expect(axes.y!.ticks.length).toBeLessThan(10);
+  });
+
+  it('steps continuous x-axis down when D3 overshoots on narrow temporal scales', () => {
+    // D3 time scales jump between calendar units — a request for 6 ticks on
+    // a 3-year range can return 4 (yearly) or 14 (quarterly). On a narrow
+    // chart we want the sparser choice, not the dense one.
+    const narrowTimeSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      data: [
+        { date: '2022-01-01', value: 10 },
+        { date: '2022-12-01', value: 40 },
+      ],
+    };
+    const narrowArea = { x: 50, y: 50, width: 300, height: 300 };
+    const scales = computeScales(narrowTimeSpec, narrowArea, narrowTimeSpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
+
+    // A 300px-wide time axis should show at most ~6 labels, not the 10-14
+    // that D3 produces when its nice() step hops into monthly territory.
+    expect(axes.x!.ticks.length).toBeLessThanOrEqual(6);
+    expect(axes.x!.ticks.length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 // ---------------------------------------------------------------------------
