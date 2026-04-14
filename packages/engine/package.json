@@ -30,7 +30,7 @@
     "dist",
     "src"
   ],
-  "sideEffects": false,
+  "sideEffects": ["./src/charts/builtin.ts", "./dist/index.js"],
   "keywords": [
     "chart",
     "visualization",
