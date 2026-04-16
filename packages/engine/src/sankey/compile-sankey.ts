@@ -507,6 +507,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     },
     animation: resolvedAnimation,
     watermark,
+    measureText: options.measureText,
   };
 }
 

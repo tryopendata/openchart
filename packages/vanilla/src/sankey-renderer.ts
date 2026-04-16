@@ -8,6 +8,7 @@
 
 import type {
   LegendLayout,
+  MeasureTextFn,
   ResolvedAnimation,
   ResolvedChromeElement,
   SankeyLayout,
@@ -89,6 +90,7 @@ function renderChromeElement(
   element: ResolvedChromeElement,
   className: string,
   chromeKey: string,
+  measureText?: MeasureTextFn,
 ): void {
   const text = createSVGElement('text');
   setAttrs(text, { x: element.x, y: element.y });
@@ -101,6 +103,7 @@ function renderChromeElement(
     element.style.fontSize,
     element.style.fontWeight,
     element.maxWidth,
+    measureText,
   );
 
   if (lines.length === 1) {
@@ -122,13 +125,13 @@ function renderChrome(parent: SVGElement, layout: SankeyLayout): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-chrome');
 
-  const { chrome } = layout;
+  const { chrome, measureText } = layout;
 
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'oc-title', 'title');
+    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle');
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
   }
 
   // Bottom chrome: positioned below the sankey drawing area.
@@ -140,6 +143,7 @@ function renderChrome(parent: SVGElement, layout: SankeyLayout): void {
       { ...chrome.source, y: bottomOffset + chrome.source.y },
       'oc-source',
       'source',
+      measureText,
     );
   }
   if (chrome.byline) {
@@ -148,6 +152,7 @@ function renderChrome(parent: SVGElement, layout: SankeyLayout): void {
       { ...chrome.byline, y: bottomOffset + chrome.byline.y },
       'oc-byline',
       'byline',
+      measureText,
     );
   }
   if (chrome.footer) {
@@ -156,6 +161,7 @@ function renderChrome(parent: SVGElement, layout: SankeyLayout): void {
       { ...chrome.footer, y: bottomOffset + chrome.footer.y },
       'oc-footer',
       'footer',
+      measureText,
     );
   }
 
@@ -476,7 +482,11 @@ function renderNodes(
 // Labels rendering
 // ---------------------------------------------------------------------------
 
-function renderLabels(parent: SVGElement, nodes: SankeyNodeMark[]): void {
+function renderLabels(
+  parent: SVGElement,
+  nodes: SankeyNodeMark[],
+  measureText?: MeasureTextFn,
+): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-sankey-labels');
 
@@ -492,7 +502,7 @@ function renderLabels(parent: SVGElement, nodes: SankeyNodeMark[]): void {
     if (label.maxWidth !== undefined && label.maxWidth > 0) {
       const fontSize = label.style.fontSize ?? 12;
       const fontWeight = label.style.fontWeight ?? 400;
-      const lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth);
+      const lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth, measureText);
       if (lines.length > 1) {
         const lineHeight = fontSize * (label.style.lineHeight ?? 1.3);
         // Center the multi-line block vertically around the label y position
@@ -585,7 +595,7 @@ export function renderSankeySVG(
   renderNodes(svg, layout.nodes, animation);
 
   // Labels
-  renderLabels(svg, layout.nodes);
+  renderLabels(svg, layout.nodes, layout.measureText);
 
   // Legend
   renderLegend(svg, layout.legend);

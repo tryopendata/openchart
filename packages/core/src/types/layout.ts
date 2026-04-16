@@ -1030,6 +1030,8 @@ export interface SankeyLayout {
   animation?: ResolvedAnimation;
   /** Whether the tryOpenData.ai watermark is enabled. */
   watermark: boolean;
+  /** Real text measurement function from the adapter (for accurate SVG text wrapping). */
+  measureText?: MeasureTextFn;
 }
 
 // ---------------------------------------------------------------------------

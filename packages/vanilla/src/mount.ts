@@ -20,7 +20,6 @@ import type {
   ElementRef,
   GraphSpec,
   LayerSpec,
-  MeasureTextFn,
   RangeAnnotation,
   RefLineAnnotation,
   TextAnnotation,
@@ -39,6 +38,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import { createMeasureText } from './measure-text';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
@@ -113,38 +113,6 @@ function resolveDarkMode(mode?: DarkMode): boolean {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
   return false;
-}
-
-// ---------------------------------------------------------------------------
-// measureText via hidden canvas
-// ---------------------------------------------------------------------------
-
-function createMeasureText(): MeasureTextFn {
-  let canvas: HTMLCanvasElement | null = null;
-  let ctx: CanvasRenderingContext2D | null = null;
-
-  return (
-    text: string,
-    fontSize: number,
-    fontWeight?: number,
-  ): { width: number; height: number } => {
-    if (!canvas) {
-      canvas = document.createElement('canvas');
-      ctx = canvas.getContext('2d');
-    }
-    if (!ctx) {
-      // Fallback: heuristic estimation
-      return { width: text.length * fontSize * 0.6, height: fontSize * 1.2 };
-    }
-
-    const weight = fontWeight ?? 400;
-    ctx.font = `${weight} ${fontSize}px Inter, sans-serif`;
-    const metrics = ctx.measureText(text);
-    return {
-      width: metrics.width,
-      height: fontSize * 1.2,
-    };
-  };
 }
 
 // ---------------------------------------------------------------------------

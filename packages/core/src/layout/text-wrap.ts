@@ -6,8 +6,8 @@
  * accurate wrapping. Otherwise falls back to a character-width
  * heuristic driven by `estimateCharWidth` from text-measure.ts.
  *
- * Callers that want heuristic-only behavior (e.g. sankey) should omit
- * the measureText argument. Do not change the signature without
+ * Non-browser callers (SSR, tests) omit the measureText argument to
+ * use the heuristic fallback. Do not change the signature without
  * re-verifying visual baselines for every caller.
  */
 

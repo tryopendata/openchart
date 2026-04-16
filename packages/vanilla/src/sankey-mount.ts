@@ -23,6 +23,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import { createMeasureText } from './measure-text';
 import { observeResize } from './resize-observer';
 import { renderSankeySVG } from './sankey-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
@@ -121,6 +122,8 @@ export function createSankey(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
+  const measureText = createMeasureText();
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -143,6 +146,7 @@ export function createSankey(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
+      measureText,
     };
 
     return compileSankey(currentSpec, compileOpts);
