@@ -56,6 +56,7 @@ export {
   BRAND_FONT_SIZE,
   BRAND_MIN_WIDTH,
   BRAND_RESERVE_WIDTH,
+  COMPACT_WIDTH,
   computeChrome,
   estimateTextWidth,
   wrapText,

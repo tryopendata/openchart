@@ -276,6 +276,30 @@ describe('computeLegend', () => {
     expect(deEntry.color).toBe('#00ff00');
   });
 
+  it('orders legend entries by explicit domain, not data order', () => {
+    const specExplicit: NormalizedChartSpec = {
+      ...specWithColor,
+      data: [
+        { date: '2020', value: 10, country: 'Germany' },
+        { date: '2021', value: 20, country: 'UK' },
+        { date: '2022', value: 30, country: 'US' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: {
+          field: 'country',
+          type: 'nominal',
+          scale: {
+            domain: ['US', 'UK', 'Germany'],
+          },
+        },
+      },
+    };
+    const legend = computeLegend(specExplicit, compactStrategy, theme, chartArea);
+    expect(legend.entries.map((e) => e.label)).toEqual(['US', 'UK', 'Germany']);
+  });
+
   it('uses correct swatch shape for chart type', () => {
     const lineLegend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
     expect(lineLegend.entries[0].shape).toBe('line');
@@ -395,32 +419,25 @@ describe('computeLegend', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Characterization test (refactor/v7-cohesion step 1):
-  // Pins the 4px gap between a top-positioned legend and the chart area,
-  // as enforced at packages/engine/src/compile.ts:331. Refactor step 4 will
-  // consolidate legend row-wrapping geometry; this test guards the spacing
-  // invariant through that change.
-  // ---------------------------------------------------------------------------
   describe('top legend spacing', () => {
-    it('places the legend exactly 4px above the chart area', () => {
-      const spec = {
-        mark: 'bar' as const,
-        data: [
-          { name: 'A', value: 10, group: 'X' },
-          { name: 'A', value: 20, group: 'Y' },
-          { name: 'B', value: 30, group: 'X' },
-          { name: 'B', value: 25, group: 'Y' },
-        ],
-        encoding: {
-          x: { field: 'name', type: 'nominal' as const },
-          y: { field: 'value', type: 'quantitative' as const },
-          color: { field: 'group', type: 'nominal' as const },
-        },
-        legend: { position: 'top' as const },
-      };
+    const topLegendSpec = {
+      mark: 'bar' as const,
+      data: [
+        { name: 'A', value: 10, group: 'X' },
+        { name: 'A', value: 20, group: 'Y' },
+        { name: 'B', value: 30, group: 'X' },
+        { name: 'B', value: 25, group: 'Y' },
+      ],
+      encoding: {
+        x: { field: 'name', type: 'nominal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'group', type: 'nominal' as const },
+      },
+      legend: { position: 'top' as const },
+    };
 
-      const layout = compileChart(spec, { width: 600, height: 400 });
+    it('places the legend exactly 4px above the chart area at standard width', () => {
+      const layout = compileChart(topLegendSpec, { width: 600, height: 400 });
 
       expect(layout.legend.position).toBe('top');
       expect(layout.legend.entries.length).toBeGreaterThan(0);
@@ -428,8 +445,18 @@ describe('computeLegend', () => {
 
       const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
       const gap = layout.area.y - legendBottom;
-      // Pin value matches the literal at compile.ts:331 (legendArea.y -= legendLayout.bounds.height + 4)
       expect(gap).toBe(4);
+    });
+
+    it('eliminates legend gap on narrow viewports (< 420px)', () => {
+      const layout = compileChart(topLegendSpec, { width: 360, height: 400 });
+
+      expect(layout.legend.position).toBe('top');
+      expect(layout.legend.entries.length).toBeGreaterThan(0);
+
+      const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
+      const gap = layout.area.y - legendBottom;
+      expect(gap).toBe(0);
     });
   });
 });

@@ -346,12 +346,12 @@ describe('chart chrome rendering', () => {
 
   it('title has font styling applied', () => {
     const { svg } = renderSpec(lineSpec);
-    const title = svg.querySelector('.oc-title');
+    const title = svg.querySelector('.oc-title') as SVGElement & ElementCSSInlineStyle;
     expect(title).not.toBeNull();
-    const fontFamily = title!.getAttribute('font-family');
-    const fontSize = Number(title!.getAttribute('font-size'));
-    expect(fontFamily).not.toBeNull();
-    expect(fontSize).toBeGreaterThan(0);
+    const fontFamily = title.style.getPropertyValue('font-family');
+    const fontSize = title.style.getPropertyValue('font-size');
+    expect(fontFamily).not.toBe('');
+    expect(parseFloat(fontSize)).toBeGreaterThan(0);
   });
 
   it('wraps long title text into tspan elements at narrow widths', () => {

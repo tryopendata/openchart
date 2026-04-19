@@ -76,7 +76,39 @@ function renderAxis(
         'dominant-baseline': 'central',
       });
       applyTextStyle(label, axis.tickLabelStyle);
-      label.textContent = tick.label;
+      // Truncate categorical y-axis labels that exceed available space so
+      // they don't overflow into the chart area. The engine may clamp
+      // margin.left on narrow containers; render what fits with an ellipsis.
+      const availableWidth = area.x - 6;
+      const fontSize = axis.tickLabelStyle.fontSize;
+      const fontWeight = axis.tickLabelStyle.fontWeight;
+      const fullWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
+      if (fullWidth > availableWidth && availableWidth > 20) {
+        // Binary-search the longest prefix that fits with a trailing ellipsis
+        const ellipsis = '\u2026';
+        const ellipsisWidth = estimateTextWidth(ellipsis, fontSize, fontWeight);
+        let lo = 0;
+        let hi = tick.label.length;
+        while (lo < hi) {
+          const mid = (lo + hi + 1) >>> 1;
+          const candidate = tick.label.slice(0, mid);
+          if (
+            estimateTextWidth(candidate, fontSize, fontWeight) + ellipsisWidth <=
+            availableWidth
+          ) {
+            lo = mid;
+          } else {
+            hi = mid - 1;
+          }
+        }
+        label.textContent = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
+        // Preserve the full label for accessibility / tooltips
+        const titleEl = createSVGElement('title');
+        titleEl.textContent = tick.label;
+        label.appendChild(titleEl);
+      } else {
+        label.textContent = tick.label;
+      }
       g.appendChild(label);
     }
   }

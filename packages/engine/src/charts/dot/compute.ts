@@ -67,7 +67,12 @@ export function computeDotMarks(
   }
 
   const bandwidth = yScale.bandwidth();
-  const baseline = xScale(0);
+  // Clamp baseline to the scale range so stems never extend past the plot area
+  // (e.g., when domain doesn't include zero, xScale(0) would land outside).
+  const [rangeStart, rangeEnd] = xScale.range();
+  const rangeMin = Math.min(rangeStart, rangeEnd);
+  const rangeMax = Math.max(rangeStart, rangeEnd);
+  const baseline = Math.max(rangeMin, Math.min(rangeMax, xScale(0)));
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   const isSequentialColor = colorEnc?.type === 'quantitative';
   const colorField = isSequentialColor ? undefined : colorEnc?.field;

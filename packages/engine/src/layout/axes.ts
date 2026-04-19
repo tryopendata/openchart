@@ -272,8 +272,11 @@ export function computeAxes(
     }));
 
     // Thin tick labels to prevent overlap (skip for band scales which use
-    // auto-rotation, and when the user set an explicit tickCount or values).
-    const shouldThin = scales.x.type !== 'band' && !axisConfig?.tickCount && !axisConfig?.values;
+    // auto-rotation, and when the user set explicit tick values).
+    // When tickCount is set, we still thin if D3 overshot the requested count
+    // (common with log scales where ticks(4) can return 26 values).
+    const hasExplicitValues = !!axisConfig?.values;
+    const shouldThin = scales.x.type !== 'band' && !hasExplicitValues;
     let ticks: AxisTick[];
     if (!shouldThin) {
       ticks = allTicks;
@@ -352,10 +355,12 @@ export function computeAxes(
       allTicks = continuousTicks(scales.y, yDensity, yTargetCount);
     }
 
-    // Thin tick labels to prevent overlap (skip for band scales, explicit tickCount, and values).
-    const shouldThin = scales.y.type !== 'band' && !axisConfig?.tickCount && !axisConfig?.values;
+    // Thin tick labels to prevent overlap (skip for band scales and explicit tick values).
+    // When tickCount is set, we still thin if D3 overshot the requested count
+    // (common with log scales where ticks(4) can return 26 values).
+    const shouldThinY = scales.y.type !== 'band' && !axisConfig?.values;
     let ticks: AxisTick[];
-    if (!shouldThin) {
+    if (!shouldThinY) {
       ticks = allTicks;
     } else if (isContinuousY) {
       // Continuous y-axis: re-request ticks at a lower count on overlap so

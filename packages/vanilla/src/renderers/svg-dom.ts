@@ -21,14 +21,14 @@ export function setAttrs(el: SVGElement, attrs: Record<string, string | number>)
 }
 
 export function applyTextStyle(el: SVGElement, style: TextStyle): void {
-  setAttrs(el, {
-    'font-family': style.fontFamily,
-    'font-size': style.fontSize,
-    'font-weight': style.fontWeight,
-  });
-  // Use inline style for fill so it takes priority over CSS class defaults
-  // (e.g. .oc-title { fill: var(--oc-text) } which would override attributes)
-  (el as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', style.fill);
+  // Use inline styles so engine-computed values take priority over CSS class
+  // defaults (e.g. .oc-title { font-size: var(--oc-title-size) } would otherwise
+  // override the responsive scaling applied by the chrome layout).
+  const inline = (el as SVGElement & ElementCSSInlineStyle).style;
+  inline.setProperty('fill', style.fill);
+  inline.setProperty('font-size', `${style.fontSize}px`);
+  inline.setProperty('font-weight', String(style.fontWeight));
+  inline.setProperty('font-family', style.fontFamily);
   if (style.textAnchor) {
     el.setAttribute('text-anchor', style.textAnchor);
   }

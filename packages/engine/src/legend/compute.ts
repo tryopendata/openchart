@@ -20,10 +20,10 @@ import type {
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { BRAND_RESERVE_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
+import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
-import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from './wrap';
+import { ENTRY_GAP, ENTRY_GAP_COMPACT, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from './wrap';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -67,11 +67,21 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   // Sequential (quantitative) color doesn't produce discrete legend entries
   if (colorEnc.type === 'quantitative') return [];
 
-  const uniqueValues = [...new Set(spec.data.map((d) => String(d[colorEnc.field])))];
+  const dataValues = [...new Set(spec.data.map((d) => String(d[colorEnc.field])))];
   const explicitDomain = colorEnc.scale?.domain as string[] | undefined;
   const explicitRange = colorEnc.scale?.range as string[] | undefined;
   const palette = explicitRange ?? theme.colors.categorical;
   const shape = swatchShapeForType(spec.markType);
+
+  // Order legend entries by explicit domain when provided so the author
+  // controls which entries render first (and which get truncated last when
+  // symbolLimit applies). Without explicit domain, preserve data order.
+  const uniqueValues = explicitDomain
+    ? [
+        ...explicitDomain.filter((v) => dataValues.includes(v)),
+        ...dataValues.filter((v) => !explicitDomain.includes(v)),
+      ]
+    : dataValues;
 
   return uniqueValues.map((value, i) => {
     // When explicit domain+range are provided, look up the color by domain index
@@ -258,8 +268,12 @@ export function computeLegend(
   // Reserve space on the right for bottom legends so they don't overlap the brand
   // watermark. Top legends don't need this since the brand renders at the bottom.
   const reserveBrand = watermark && resolvedPosition === 'bottom';
+  // Tighten gaps on narrow viewports so horizontal legends keep fitting on one row.
+  const isCompact = chartArea.width < COMPACT_WIDTH;
+  const effectivePadding = isCompact ? 2 : LEGEND_PADDING;
+  const effectiveEntryGap = isCompact ? ENTRY_GAP_COMPACT : ENTRY_GAP;
   const availableWidth =
-    chartArea.width - LEGEND_PADDING * 2 - (reserveBrand ? BRAND_RESERVE_WIDTH : 0);
+    chartArea.width - effectivePadding * 2 - (reserveBrand ? BRAND_RESERVE_WIDTH : 0);
 
   // Apply symbolLimit first if set (minimum 1), then fit remaining entries to available rows.
   if (spec.legend?.symbolLimit != null) {
@@ -276,7 +290,13 @@ export function computeLegend(
       : spec.legend?.columns != null
         ? Math.ceil(entries.length / spec.legend.columns)
         : TOP_LEGEND_MAX_ROWS;
-  const { fittingCount } = measureLegendWrap(entries, availableWidth, labelStyle, maxRows);
+  const { fittingCount } = measureLegendWrap(
+    entries,
+    availableWidth,
+    labelStyle,
+    maxRows,
+    effectiveEntryGap,
+  );
 
   if (fittingCount < entries.length) {
     entries = truncateEntries(entries, fittingCount);
@@ -284,14 +304,20 @@ export function computeLegend(
 
   const totalWidth = entries.reduce((sum, entry) => {
     const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
-    return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
+    return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap;
   }, 0);
 
   // Calculate actual row count for height (recompute after truncation).
-  const { rowCount } = measureLegendWrap(entries, availableWidth, labelStyle);
+  const { rowCount } = measureLegendWrap(
+    entries,
+    availableWidth,
+    labelStyle,
+    undefined,
+    effectiveEntryGap,
+  );
 
   const rowHeight = SWATCH_SIZE + 4;
-  const legendHeight = rowCount * rowHeight + LEGEND_PADDING * 2;
+  const legendHeight = rowCount * rowHeight + effectivePadding * 2;
 
   // Apply user-provided legend offset
   const offsetDx = spec.legend?.offset?.dx ?? 0;
@@ -312,6 +338,6 @@ export function computeLegend(
     labelStyle,
     swatchSize: SWATCH_SIZE,
     swatchGap: SWATCH_GAP,
-    entryGap: ENTRY_GAP,
+    entryGap: effectiveEntryGap,
   };
 }

@@ -25,6 +25,7 @@ import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
+import { legendGap } from '../legend/wrap';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -251,7 +252,15 @@ export function computeDimensions(
         if (w > maxLabelWidth) maxLabelWidth = w;
       }
       if (maxLabelWidth > 0) {
-        margins.left = Math.max(margins.left, padding + maxLabelWidth + 12);
+        // Tighter label-to-chart gap on narrow containers
+        const labelGap = width < 500 ? 8 : 12;
+        // Clamp reservation so bars keep at least ~45% of container width on
+        // narrow viewports. Labels that exceed the cap will be truncated by
+        // the axis renderer (see axes.ts).
+        const maxLeftFraction = width < 400 ? 0.45 : width < 600 ? 0.55 : 1;
+        const maxLeftReserved = Math.floor(width * maxLeftFraction);
+        const reserved = Math.min(padding + maxLabelWidth + labelGap, maxLeftReserved);
+        margins.left = Math.max(margins.left, reserved);
       }
     } else if (encoding.y.type === 'quantitative' || encoding.y.type === 'temporal') {
       // Numeric tick labels on the left. Estimate width from the data range.
@@ -305,12 +314,13 @@ export function computeDimensions(
 
   // Reserve legend space
   if (legendLayout.entries.length > 0) {
+    const gap = legendGap(width);
     if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
       margins.right += legendLayout.bounds.width + 8;
     } else if (legendLayout.position === 'top') {
-      margins.top += legendLayout.bounds.height + 4;
+      margins.top += legendLayout.bounds.height + gap;
     } else if (legendLayout.position === 'bottom') {
-      margins.bottom += legendLayout.bounds.height + 4;
+      margins.bottom += legendLayout.bounds.height + gap;
     }
   }
 
@@ -347,10 +357,11 @@ export function computeDimensions(
     const bottomDelta = margins.bottom - newBottom;
 
     if (topDelta > 0 || bottomDelta > 0) {
+      const gap = legendGap(width);
       margins.top =
         newTop +
         (legendLayout.entries.length > 0 && legendLayout.position === 'top'
-          ? legendLayout.bounds.height + 4
+          ? legendLayout.bounds.height + gap
           : 0);
       margins.bottom = newBottom;
 

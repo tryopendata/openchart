@@ -73,6 +73,16 @@ export const BRAND_FONT_SIZE = 12;
 /** Minimum chart width to render the brand watermark (px). */
 export const BRAND_MIN_WIDTH = 120;
 
+// ---------------------------------------------------------------------------
+// Responsive breakpoints
+// ---------------------------------------------------------------------------
+
+/**
+ * Width threshold below which layout tightens spacing (legend gaps, chrome
+ * padding, label gaps) to maximize data area on small screens.
+ */
+export const COMPACT_WIDTH = 420;
+
 /**
  * Estimate the rendered height of a text block.
  *

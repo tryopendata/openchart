@@ -418,7 +418,7 @@ describe('text-aware tick density', () => {
     expect(axesNarrow.x!.ticks.length).toBeLessThanOrEqual(axesWide.x!.ticks.length);
   });
 
-  it('does not thin x-axis ticks when explicit tickCount is set', () => {
+  it('still thins x-axis ticks when tickCount is set but D3 overshoots', () => {
     const narrowArea = { x: 50, y: 50, width: 200, height: 300 };
     const specWithTickCount: NormalizedChartSpec = {
       ...lineSpec,
@@ -431,10 +431,31 @@ describe('text-aware tick density', () => {
     const scales = computeScales(specWithTickCount, narrowArea, specWithTickCount.data);
     const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
 
-    // With explicit tickCount, the engine should not thin
-    // D3 may return fewer than 8 for this small dataset, but the point is
-    // thinTicksUntilFit should not be called
+    // tickCount is advisory for D3 - if it overshoots, thinning still applies
+    // to prevent overlap. The result should still have ticks, just not more
+    // than the narrow area can display without overlap.
     expect(axes.x!.ticks.length).toBeGreaterThan(0);
+  });
+
+  it('does not thin x-axis ticks when explicit values are set', () => {
+    const narrowArea = { x: 50, y: 50, width: 200, height: 300 };
+    const specWithValues: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        x: {
+          field: 'date',
+          type: 'temporal',
+          axis: { values: ['2020-01-01', '2021-01-01', '2022-01-01'] },
+        },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const scales = computeScales(specWithValues, narrowArea, specWithValues.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
+
+    // Explicit values should be preserved exactly as specified
+    expect(axes.x!.ticks.length).toBe(3);
   });
 
   it('band scale shows all categories regardless of width', () => {

@@ -8,6 +8,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 
 - [VizSpec](#vizspec) (top-level union type)
 - [ChartSpec](#chartspec) (line, area, bar, column, pie, donut, dot, scatter)
+  - [Mark properties](#mark-properties) (fill, gradient, point, interpolate, opacity)
 - [LayerSpec](#layerspec) (overlay multiple chart types)
 - [Encoding](#encoding) (x, y, color, size, detail channels)
 - [Annotations](#annotations) (refline, text, range)
@@ -66,6 +67,65 @@ type DataRow = Record<string, unknown>;
 ```
 
 A plain object with string keys. Values can be numbers, strings, dates, nulls, arrays (for sparklines), or booleans. The engine inspects values at runtime to validate encoding types.
+
+### Mark properties
+
+The `type` field on ChartSpec accepts either a string (`'line'`) or an object with additional mark configuration. In LayerSpec children, this field is called `mark`.
+
+```ts
+// String shorthand
+{ type: 'area', data: [...], encoding: {...} }
+
+// Object form with mark properties
+{
+  type: { type: 'area', point: true, fill: { gradient: 'linear', ... } },
+  data: [...],
+  encoding: {...}
+}
+```
+
+| Field          | Type                    | Default     | Applies to     | Description                                                              |
+| -------------- | ----------------------- | ----------- | -------------- | ------------------------------------------------------------------------ |
+| `type`         | `MarkType`              | (required)  | all            | Mark type: `'bar'`, `'line'`, `'area'`, `'point'`, `'arc'`, `'text'`, etc. |
+| `point`        | `boolean \| 'transparent'` | `false`  | line, area     | Show point markers at data positions. `true` = filled circles. |
+| `interpolate`  | `string`                | `'linear'`  | line, area     | Curve: `'linear'`, `'monotone'`, `'step'`, `'step-before'`, `'step-after'`, `'basis'`, `'cardinal'`, `'natural'`. |
+| `orient`       | `'horizontal' \| 'vertical'` | auto   | bar            | Explicit orientation override. |
+| `innerRadius`  | `number`                | `0`         | arc            | Inner radius. >0 produces a donut. |
+| `outerRadius`  | `number`                | auto        | arc            | Outer radius. |
+| `cornerRadius` | `number`                | `0`         | bar, arc       | Corner rounding in pixels. |
+| `filled`       | `boolean`               | `true`      | all            | Whether the mark is filled vs stroked only. |
+| `opacity`      | `number`                | `1`         | all            | Overall mark opacity (0-1). |
+| `fill`         | `string \| GradientDef` | theme color | all            | Fill color or gradient. See [Gradients](#gradients). |
+| `stroke`       | `string`                | `undefined` | all            | Stroke color. |
+| `strokeWidth`  | `number`                | varies      | all            | Stroke width in pixels. |
+| `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
+| `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
+
+#### Gradients
+
+The `fill` property accepts a `GradientDef` object for linear or radial gradients. Source: `core/src/types/spec.ts`.
+
+```ts
+// Linear gradient (top-to-bottom opacity fade)
+fill: {
+  gradient: 'linear',
+  x1: 0, y1: 1,  // start (bottom)
+  x2: 0, y2: 0,  // end (top)
+  stops: [
+    { offset: 0, color: '#38bdf8', opacity: 0 },
+    { offset: 1, color: '#38bdf8', opacity: 1 },
+  ],
+}
+```
+
+| Field    | Type             | Default | Description                                    |
+| -------- | ---------------- | ------- | ---------------------------------------------- |
+| `gradient` | `'linear' \| 'radial'` | (required) | Gradient type.                        |
+| `stops`  | `GradientStop[]` | (required) | Color stops with offset (0-1), color, and optional opacity. |
+| `x1`, `y1` | `number`      | `0`, `0` | Start point in [0,1] normalized space.        |
+| `x2`, `y2` | `number`      | `0`, `1` | End point. Default is top-to-bottom.           |
+
+**Area chart fill behavior:** Single-series area charts apply a default `fillOpacity` of 0.15 to the area fill (the stroke is drawn at full opacity). Stacked areas use 0.7. The gradient stop `opacity` values multiply with this default, so a stop at `opacity: 1` with the area default produces an effective opacity of 0.15. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
 
 ---
 

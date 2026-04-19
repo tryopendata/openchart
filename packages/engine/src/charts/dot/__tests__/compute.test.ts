@@ -264,6 +264,37 @@ describe('computeDotMarks', () => {
     });
   });
 
+  describe('baseline clamping', () => {
+    it('clamps stems to the plot area when domain does not include zero', () => {
+      const spec: NormalizedChartSpec = {
+        markType: 'circle',
+        markDef: { type: 'circle' },
+        data: [
+          { country: 'USA', score: 50 },
+          { country: 'UK', score: 80 },
+        ],
+        encoding: {
+          x: { field: 'score', type: 'quantitative', scale: { domain: [40, 100] } },
+          y: { field: 'country', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeDotMarks(spec, scales, chartArea, fullStrategy);
+
+      const stems = marks.filter((m): m is RectMark => m.type === 'rect');
+      for (const stem of stems) {
+        expect(stem.x).toBeGreaterThanOrEqual(chartArea.x);
+        expect(stem.x + stem.width).toBeLessThanOrEqual(chartArea.x + chartArea.width);
+      }
+    });
+  });
+
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {

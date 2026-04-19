@@ -265,4 +265,52 @@ describe('computeDimensions', () => {
     // Tooltip-only should NOT reserve extra margin (annotations are hidden)
     expect(dimsTooltipOnly.margins.right).toBe(dimsNoAnnotations.margins.right);
   });
+
+  it('clamps y-axis label margin on narrow containers to preserve chart area', () => {
+    const longLabelSpec: NormalizedChartSpec = {
+      ...baseSpec,
+      markType: 'bar',
+      markDef: { type: 'bar' },
+      data: [
+        {
+          category: 'This is a very long category label that would consume lots of space',
+          value: 10,
+        },
+        { category: 'Another extremely verbose category name', value: 20 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'category', type: 'nominal' },
+      },
+    };
+
+    const narrowDims = computeDimensions(
+      longLabelSpec,
+      { width: 350, height: 300 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // On narrow viewports, left margin should be clamped so the chart area
+    // retains at least ~45% of the container width
+    expect(narrowDims.chartArea.width).toBeGreaterThanOrEqual(350 * 0.4);
+  });
+
+  it('tightens legend gap on narrow viewports', () => {
+    const wideDims = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      topLegend,
+      lightTheme,
+    );
+    const narrowDims = computeDimensions(
+      baseSpec,
+      { width: 360, height: 400 },
+      topLegend,
+      lightTheme,
+    );
+
+    // Narrow viewport should have more chart height available (smaller legend gap)
+    expect(narrowDims.chartArea.height).toBeGreaterThanOrEqual(wideDims.chartArea.height - 10);
+  });
 });

@@ -26,6 +26,7 @@ import {
   BRAND_FONT_SIZE,
   BRAND_MIN_WIDTH,
   BRAND_RESERVE_WIDTH,
+  COMPACT_WIDTH,
   estimateCharWidth,
   estimateTextHeight,
 } from './text-measure';
@@ -236,9 +237,12 @@ export function computeChrome(
     topY += estimateTextHeight(style.fontSize, lineCount, style.lineHeight) + chromeGap;
   }
 
-  // Add chromeToChart gap if there are any top elements
+  // Add chromeToChart gap if there are any top elements. Tighten on narrow
+  // viewports so the subtitle doesn't float far above a legend or chart area.
   const hasTopChrome = titleNorm || subtitleNorm;
-  const topHeight = hasTopChrome ? topY - pad + theme.spacing.chromeToChart - chromeGap : 0;
+  const chromeToChart =
+    width < COMPACT_WIDTH ? Math.min(theme.spacing.chromeToChart, 2) : theme.spacing.chromeToChart;
+  const topHeight = hasTopChrome ? topY - pad + chromeToChart - chromeGap : 0;
 
   // Bottom chrome text hidden in compact mode, but brand watermark still
   // renders for wide-enough charts. Reserve space so it doesn't overflow.

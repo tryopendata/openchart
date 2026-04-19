@@ -15,7 +15,7 @@
  */
 
 import type { LegendEntry, TextStyle } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -28,6 +28,16 @@ import { estimateTextWidth } from '@opendata-ai/openchart-core';
 export const SWATCH_SIZE = 12;
 export const SWATCH_GAP = 6;
 export const ENTRY_GAP = 16;
+/** Tighter inter-entry gap for narrow viewports where every pixel matters. */
+export const ENTRY_GAP_COMPACT = 10;
+
+/** Default gap between legend bounds and chart area. Zero on narrow viewports. */
+export const LEGEND_GAP = 4;
+
+/** Gap between legend and chart area, responsive to container width. */
+export function legendGap(width: number): number {
+  return width < COMPACT_WIDTH ? 0 : LEGEND_GAP;
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -55,6 +65,7 @@ export function measureLegendWrap(
   maxWidth: number,
   labelStyle: TextStyle,
   maxRows?: number,
+  entryGap: number = ENTRY_GAP,
 ): LegendWrapResult {
   if (entries.length === 0) {
     return { rowCount: 0, fittingCount: 0, rowWidths: [] };
@@ -72,7 +83,7 @@ export function measureLegendWrap(
       labelStyle.fontSize,
       labelStyle.fontWeight,
     );
-    const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + ENTRY_GAP;
+    const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + entryGap;
 
     if (rowWidth + entryWidth > maxWidth && rowWidth > 0) {
       rowWidths.push(rowWidth);

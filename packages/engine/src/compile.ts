@@ -64,6 +64,7 @@ import { computeDimensions } from './layout/dimensions';
 import { computeGridlines } from './layout/gridlines';
 import { computeScales } from './layout/scales';
 import { computeLegend } from './legend/compute';
+import { legendGap } from './legend/wrap';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
 import { computeTooltipDescriptors } from './tooltips/compute';
@@ -291,13 +292,14 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // the data area (in the margin) instead of overlapping data marks.
   const legendArea: Rect = { ...chartArea };
   if (legendLayout.entries.length > 0) {
+    const gap = legendGap(options.width);
     switch (legendLayout.position) {
       case 'top':
-        legendArea.y -= legendLayout.bounds.height + 4;
-        legendArea.height += legendLayout.bounds.height + 4;
+        legendArea.y -= legendLayout.bounds.height + gap;
+        legendArea.height += legendLayout.bounds.height + gap;
         break;
       case 'bottom':
-        legendArea.height += legendLayout.bounds.height + 4;
+        legendArea.height += legendLayout.bounds.height + gap;
         break;
       case 'right':
       case 'bottom-right':
