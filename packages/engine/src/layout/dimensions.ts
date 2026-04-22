@@ -317,6 +317,11 @@ export function computeDimensions(
     margins.left = Math.max(margins.left, padding + rotatedLabelMargin);
   }
 
+  // Reserve space for a secondary (right) y-axis in dual-axis charts
+  if (options.rightAxisReserve && options.rightAxisReserve > 0) {
+    margins.right += options.rightAxisReserve;
+  }
+
   // Reserve legend space
   if (legendLayout.entries.length > 0) {
     const gap = legendGap(width);

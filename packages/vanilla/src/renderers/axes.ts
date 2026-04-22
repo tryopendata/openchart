@@ -13,7 +13,8 @@ function renderAxis(
   layout: ChartLayout,
 ): void {
   const g = createSVGElement('g');
-  g.setAttribute('class', `oc-axis oc-axis-${orientation}`);
+  const isRight = orientation === 'y' && axis.orient === 'right';
+  g.setAttribute('class', `oc-axis oc-axis-${isRight ? 'y2' : orientation}`);
 
   const { area } = layout;
 
@@ -66,46 +67,45 @@ function renderAxis(
       label.textContent = tick.label;
       g.appendChild(label);
     } else {
-      // Label (no tick marks -- gridlines provide sufficient reference)
       const label = createSVGElement('text');
       label.setAttribute('class', 'oc-axis-tick');
       setAttrs(label, {
-        x: area.x - 6,
+        x: isRight ? area.x + area.width + 6 : area.x - 6,
         y: tick.position,
-        'text-anchor': 'end',
+        'text-anchor': isRight ? 'start' : 'end',
         'dominant-baseline': 'central',
       });
       applyTextStyle(label, axis.tickLabelStyle);
-      // Truncate categorical y-axis labels that exceed available space so
-      // they don't overflow into the chart area. The engine may clamp
-      // margin.left on narrow containers; render what fits with an ellipsis.
-      const availableWidth = area.x - 6;
-      const fontSize = axis.tickLabelStyle.fontSize;
-      const fontWeight = axis.tickLabelStyle.fontWeight;
-      const fullWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
-      if (fullWidth > availableWidth && availableWidth > 20) {
-        // Binary-search the longest prefix that fits with a trailing ellipsis
-        const ellipsis = '\u2026';
-        const ellipsisWidth = estimateTextWidth(ellipsis, fontSize, fontWeight);
-        let lo = 0;
-        let hi = tick.label.length;
-        while (lo < hi) {
-          const mid = (lo + hi + 1) >>> 1;
-          const candidate = tick.label.slice(0, mid);
-          if (
-            estimateTextWidth(candidate, fontSize, fontWeight) + ellipsisWidth <=
-            availableWidth
-          ) {
-            lo = mid;
-          } else {
-            hi = mid - 1;
+      if (!isRight) {
+        // Truncate categorical left y-axis labels that exceed available space
+        const availableWidth = area.x - 6;
+        const fontSize = axis.tickLabelStyle.fontSize;
+        const fontWeight = axis.tickLabelStyle.fontWeight;
+        const fullWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
+        if (fullWidth > availableWidth && availableWidth > 20) {
+          const ellipsis = '…';
+          const ellipsisWidth = estimateTextWidth(ellipsis, fontSize, fontWeight);
+          let lo = 0;
+          let hi = tick.label.length;
+          while (lo < hi) {
+            const mid = (lo + hi + 1) >>> 1;
+            const candidate = tick.label.slice(0, mid);
+            if (
+              estimateTextWidth(candidate, fontSize, fontWeight) + ellipsisWidth <=
+              availableWidth
+            ) {
+              lo = mid;
+            } else {
+              hi = mid - 1;
+            }
           }
+          label.textContent = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
+          const titleEl = createSVGElement('title');
+          titleEl.textContent = tick.label;
+          label.appendChild(titleEl);
+        } else {
+          label.textContent = tick.label;
         }
-        label.textContent = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
-        // Preserve the full label for accessibility / tooltips
-        const titleEl = createSVGElement('title');
-        titleEl.textContent = tick.label;
-        label.appendChild(titleEl);
       } else {
         label.textContent = tick.label;
       }
@@ -114,31 +114,34 @@ function renderAxis(
   }
 
   // Gridlines (positions are also absolute from the scales)
-  for (const gridline of axis.gridlines) {
-    const gl = createSVGElement('line');
-    gl.setAttribute('class', 'oc-gridline');
-    if (orientation === 'y') {
-      setAttrs(gl, {
-        x1: area.x,
-        y1: gridline.position,
-        x2: area.x + area.width,
-        y2: gridline.position,
-        stroke: layout.theme.colors.gridline,
-        'stroke-width': 1,
-        'stroke-opacity': 0.6,
-      });
-    } else {
-      setAttrs(gl, {
-        x1: gridline.position,
-        y1: area.y,
-        x2: gridline.position,
-        y2: area.y + area.height,
-        stroke: layout.theme.colors.gridline,
-        'stroke-width': 1,
-        'stroke-opacity': 0.6,
-      });
+  // Skip gridlines for right-side y-axis (left y-axis gridlines are sufficient)
+  if (!isRight) {
+    for (const gridline of axis.gridlines) {
+      const gl = createSVGElement('line');
+      gl.setAttribute('class', 'oc-gridline');
+      if (orientation === 'y') {
+        setAttrs(gl, {
+          x1: area.x,
+          y1: gridline.position,
+          x2: area.x + area.width,
+          y2: gridline.position,
+          stroke: layout.theme.colors.gridline,
+          'stroke-width': 1,
+          'stroke-opacity': 0.6,
+        });
+      } else {
+        setAttrs(gl, {
+          x1: gridline.position,
+          y1: area.y,
+          x2: gridline.position,
+          y2: area.y + area.height,
+          stroke: layout.theme.colors.gridline,
+          'stroke-width': 1,
+          'stroke-opacity': 0.6,
+        });
+      }
+      g.appendChild(gl);
     }
-    g.appendChild(gl);
   }
 
   // Axis label
@@ -171,8 +174,17 @@ function renderAxis(
         y: titleY,
         'text-anchor': 'middle',
       });
+    } else if (isRight) {
+      // Rotated right y-axis label
+      const titleX = area.x + area.width + 45;
+      setAttrs(axisLabel, {
+        x: titleX,
+        y: area.y + area.height / 2,
+        'text-anchor': 'middle',
+        transform: `rotate(90, ${titleX}, ${area.y + area.height / 2})`,
+      });
     } else {
-      // Rotated y-axis label
+      // Rotated left y-axis label
       setAttrs(axisLabel, {
         x: area.x - 45,
         y: area.y + area.height / 2,
@@ -192,5 +204,8 @@ export function renderAxes(parent: SVGElement, layout: ChartLayout): void {
   }
   if (layout.axes.y) {
     renderAxis(parent, layout.axes.y, 'y', layout);
+  }
+  if (layout.axes.y2) {
+    renderAxis(parent, layout.axes.y2, 'y', layout);
   }
 }

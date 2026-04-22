@@ -220,6 +220,8 @@ export interface LineMark {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /**
@@ -262,6 +264,8 @@ export interface AreaMark {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /**
@@ -300,6 +304,8 @@ export interface RectMark {
   stackGroup?: string;
   /** Position of this segment within its stack group (0, 1, 2...). Set by engine for stacked bars. */
   stackPos?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /**
@@ -366,6 +372,8 @@ export interface PointMark {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /**
@@ -400,6 +408,8 @@ export interface TextMarkLayout {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /**
@@ -430,6 +440,8 @@ export interface RuleMarkLayout {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /**
@@ -458,6 +470,8 @@ export interface TickMarkLayout {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
+  /** Which y-scale produced this mark ('y' = left, 'y2' = right). */
+  yScale?: 'y' | 'y2';
 }
 
 /** Discriminated union of all mark types. */
@@ -654,6 +668,8 @@ export interface ChartLayout {
   axes: {
     x?: AxisLayout;
     y?: AxisLayout;
+    /** Right-side y-axis for independent-scale layers (dual-axis charts). */
+    y2?: AxisLayout;
   };
   /** Data marks: the visual representation of data points. */
   marks: Mark[];
@@ -1076,6 +1092,8 @@ export interface CompileOptions {
    * If not provided, the engine falls back to heuristic estimation.
    */
   measureText?: MeasureTextFn;
+  /** Extra pixels to reserve on the right margin for a secondary y-axis. Set by compileLayer when resolve.scale.y is 'independent'. */
+  rightAxisReserve?: number;
 }
 
 /** Extended compile options for table visualizations. */

@@ -238,6 +238,8 @@ export interface AxisConfig {
   titlePadding?: number;
   /** Padding between tick labels and axis. */
   labelPadding?: number;
+  /** Color override for axis tick labels and title. Useful in dual-axis charts to match axis color to its series. */
+  labelColor?: string;
 }
 
 /** Scale configuration for an encoding channel. */

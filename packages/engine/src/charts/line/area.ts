@@ -7,7 +7,7 @@
  */
 
 import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor, isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
 import {
   area,
@@ -135,7 +135,12 @@ function computeSingleArea(
 
     const aria: MarkAria = { label: ariaLabel };
 
-    const fillOpacity = y2Channel ? 0.25 : DEFAULT_FILL_OPACITY;
+    // Allow markDef.fill to override color with a gradient.
+    // When a gradient is provided, set fillOpacity=1 so gradient stop-opacity controls the fade.
+    const markFill = spec.markDef.fill;
+    const fillValue = markFill != null ? markFill : color;
+    const defaultFillOpacity = y2Channel ? 0.25 : DEFAULT_FILL_OPACITY;
+    const fillOpacity = isGradientDef(fillValue) ? 1 : (spec.markDef.opacity ?? defaultFillOpacity);
 
     marks.push({
       type: 'area',
@@ -143,9 +148,9 @@ function computeSingleArea(
       bottomPoints,
       path: pathStr,
       topPath: topPathStr,
-      fill: color,
+      fill: fillValue,
       fillOpacity: fillOpacity,
-      stroke: getRepresentativeColor(color),
+      stroke: getRepresentativeColor(isGradientDef(fillValue) ? color : fillValue),
       strokeWidth: 2,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),

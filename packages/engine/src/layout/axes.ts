@@ -314,13 +314,14 @@ export function computeAxes(
     }
 
     const axisTitle = axisConfig?.title;
+    const xLabelColor = axisConfig?.labelColor;
 
     result.x = {
       ticks,
       gridlines: axisConfig?.grid ? gridlines : [],
       label: axisTitle,
-      labelStyle: axisLabelStyle,
-      tickLabelStyle,
+      labelStyle: xLabelColor ? { ...axisLabelStyle, fill: xLabelColor } : axisLabelStyle,
+      tickLabelStyle: xLabelColor ? { ...tickLabelStyle, fill: xLabelColor } : tickLabelStyle,
       tickAngle,
       start: { x: chartArea.x, y: chartArea.y + chartArea.height },
       end: { x: chartArea.x + chartArea.width, y: chartArea.y + chartArea.height },
@@ -387,14 +388,15 @@ export function computeAxes(
 
     const axisTitle = axisConfig?.title;
     const tickAngle = axisConfig?.labelAngle;
+    const yLabelColor = axisConfig?.labelColor;
 
     result.y = {
       ticks,
       // Y-axis gridlines are shown by default (standard editorial practice)
       gridlines,
       label: axisTitle,
-      labelStyle: axisLabelStyle,
-      tickLabelStyle,
+      labelStyle: yLabelColor ? { ...axisLabelStyle, fill: yLabelColor } : axisLabelStyle,
+      tickLabelStyle: yLabelColor ? { ...tickLabelStyle, fill: yLabelColor } : tickLabelStyle,
       tickAngle,
       start: { x: chartArea.x, y: chartArea.y },
       end: { x: chartArea.x, y: chartArea.y + chartArea.height },

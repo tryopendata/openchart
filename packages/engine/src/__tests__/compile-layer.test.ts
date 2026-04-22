@@ -346,6 +346,227 @@ describe('compileLayer', () => {
     expect(layout.marks.length).toBeGreaterThan(0);
   });
 
+  // -------------------------------------------------------------------------
+  // Independent y-scales (dual-axis)
+  // -------------------------------------------------------------------------
+
+  it('produces a y2 axis when resolve.scale.y is independent', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2025', revenue: 10_000_000 },
+            { year: '2026', revenue: 15_000_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const, axis: { title: 'Revenue ($)' } },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { year: '2025', enrollment: 30_000 },
+            { year: '2026', enrollment: 40_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: {
+              field: 'enrollment',
+              type: 'quantitative' as const,
+              axis: { title: 'Enrollment' },
+            },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+
+    expect(layout.axes.y2).toBeDefined();
+    expect(layout.axes.y2!.orient).toBe('right');
+    expect(layout.axes.y).toBeDefined();
+    expect(layout.axes.x).toBeDefined();
+  });
+
+  it('tags layer-1 marks with yScale y2', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ year: '2025', revenue: 10_000_000 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [{ year: '2025', enrollment: 30_000 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'enrollment', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const y2Marks = layout.marks.filter((m) => m.yScale === 'y2');
+    expect(y2Marks.length).toBeGreaterThan(0);
+  });
+
+  it('strips gridlines from y2 axis', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ year: '2025', revenue: 10_000_000 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [{ year: '2025', enrollment: 30_000 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'enrollment', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    expect(layout.axes.y2!.gridlines).toEqual([]);
+  });
+
+  it('produces no y2 axis when resolve is absent', () => {
+    const spec: LayerSpec = {
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ name: 'A', value: 10 }],
+          encoding: {
+            x: { field: 'value', type: 'quantitative' as const },
+            y: { field: 'name', type: 'nominal' as const },
+          },
+        },
+        {
+          mark: 'bar' as const,
+          data: [{ name: 'A', value: 20 }],
+          encoding: {
+            x: { field: 'value', type: 'quantitative' as const },
+            y: { field: 'name', type: 'nominal' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    expect(layout.axes.y2).toBeUndefined();
+  });
+
+  it('produces mixed mark types from bar + line layers', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2025', revenue: 10_000_000 },
+            { year: '2026', revenue: 15_000_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { year: '2025', enrollment: 30_000 },
+            { year: '2026', enrollment: 40_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'enrollment', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const markTypes = new Set(layout.marks.map((m) => m.type));
+    expect(markTypes.has('rect')).toBe(true);
+    expect(markTypes.has('line')).toBe(true);
+  });
+
+  it('throws on >2 layers with independent y-scales', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ year: '2025', a: 10 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'a', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [{ year: '2025', b: 20 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'b', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'area' as const,
+          data: [{ year: '2025', c: 30 }],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'c', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    expect(() => compileLayer(spec, compileOpts)).toThrow(/at most 2 layers/);
+  });
+
+  it('throws on mismatched x-field types across layers', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ year: '2025', a: 10 }],
+          encoding: {
+            x: { field: 'year', type: 'nominal' as const },
+            y: { field: 'a', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [{ year: '2025-01-01', b: 20 }],
+          encoding: {
+            x: { field: 'year', type: 'temporal' as const },
+            y: { field: 'b', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    expect(() => compileLayer(spec, compileOpts)).toThrow(/matching x-field types/);
+  });
+
   it('deduplicates legend entries when layers share a color field', () => {
     const spec: LayerSpec = {
       layer: [
@@ -382,5 +603,105 @@ describe('compileLayer', () => {
     expect(uniqueLabels.size).toBe(2);
     expect(uniqueLabels.has('X')).toBe(true);
     expect(uniqueLabels.has('Y')).toBe(true);
+  });
+
+  it('remaps x-coordinates when area is layer 0 and bars are layer 1', () => {
+    // Inverse ordering: area/line on left axis, bars on right. The x-remapping
+    // logic must detect that layer 1 has bars and remap layer 0's area mark instead.
+    const years = ['2020', '2021', '2022', '2023'];
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'area' as const,
+          data: years.map((y, i) => ({ year: y, temp: 60 + i * 3 })),
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'temp', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'bar' as const,
+          data: years.map((y, i) => ({ year: y, precip: i * 0.5 })),
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'precip', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+
+    // y2 axis belongs to the bar layer (layer 1)
+    expect(layout.axes.y2).toBeDefined();
+    expect(layout.axes.y2!.orient).toBe('right');
+
+    // Area marks come from layer 0 (left axis, no yScale tag)
+    const areaMarks = layout.marks.filter((m) => m.type === 'area');
+    expect(areaMarks.length).toBeGreaterThan(0);
+    for (const m of areaMarks) {
+      expect(m.yScale).toBeUndefined();
+    }
+
+    // Rect marks come from layer 1 (right axis, yScale: 'y2')
+    const rectMarks = layout.marks.filter((m) => m.type === 'rect');
+    expect(rectMarks.length).toBeGreaterThan(0);
+    for (const m of rectMarks) {
+      expect(m.yScale).toBe('y2');
+    }
+  });
+
+  it('offsets layer-1 discrete mark tooltip keys by layer-0 mark count', () => {
+    // Bars in layer 0 and layer 1. Each bar layer has 2 bars.
+    // Layer 0 bar at index 0 -> key 'rect-0', layer 1 bar at index 0 -> key 'rect-2'
+    // (offset by 2, the number of marks in layer 0).
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2020', a: 10 },
+            { year: '2021', a: 20 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'a', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2020', b: 5 },
+            { year: '2021', b: 15 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'b', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const l0RectCount = layout.marks
+      .slice(0, layout.marks.length)
+      .filter((m, i) => m.type === 'rect' && i < layout.marks.length / 2).length;
+
+    // Every rect mark in the combined array should have a tooltip descriptor
+    // under its actual combined-array index key.
+    const rectMarks = layout.marks.filter((m) => m.type === 'rect');
+    for (let i = 0; i < rectMarks.length; i++) {
+      const globalIndex = layout.marks.indexOf(rectMarks[i]);
+      expect(layout.tooltipDescriptors.has(`rect-${globalIndex}`)).toBe(true);
+    }
+
+    // No stale 'l1-rect-N' prefixed keys should exist
+    for (const key of layout.tooltipDescriptors.keys()) {
+      expect(key).not.toMatch(/^l1-/);
+    }
+
+    void l0RectCount; // used for conceptual clarity above
   });
 });
