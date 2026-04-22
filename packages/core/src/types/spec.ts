@@ -563,6 +563,8 @@ export interface TextAnnotation extends AnnotationBase {
   };
   /** Background color behind the text. Useful for readability over chart lines. */
   background?: string;
+  /** Whether to show the paint-order stroke halo behind text. Default true. Set false for white text on colored backgrounds. */
+  halo?: boolean;
 }
 
 /**

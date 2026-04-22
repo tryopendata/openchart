@@ -183,7 +183,7 @@ function renderAnnotation(
         rx: 2,
       });
       g.appendChild(bgRect);
-    } else if (bgColor) {
+    } else if (bgColor && annotation.label.halo !== false) {
       text.style.paintOrder = 'stroke';
       text.style.stroke = bgColor;
       text.style.strokeWidth = `${Math.round(fontSize * 0.3)}px`;

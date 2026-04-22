@@ -121,6 +121,7 @@ export function resolveTextAnnotation(
         }
       : undefined,
     background: annotation.background,
+    halo: annotation.halo,
   };
 
   return {

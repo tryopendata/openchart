@@ -505,6 +505,8 @@ export interface ResolvedLabel {
   };
   /** Background color behind the label text. */
   background?: string;
+  /** Whether to show the paint-order stroke halo. Default true. */
+  halo?: boolean;
 }
 
 // ---------------------------------------------------------------------------
