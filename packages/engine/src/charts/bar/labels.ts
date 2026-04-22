@@ -20,6 +20,7 @@ import type {
 import {
   buildD3Formatter,
   estimateTextWidth,
+  findAccessibleColor,
   getRepresentativeColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
@@ -137,6 +138,8 @@ export function computeBarLabels(
 
     // Determine if label goes inside or outside the bar
     const isInside = mark.width >= MIN_WIDTH_FOR_INSIDE_LABEL;
+    const isNegative = Number.isFinite(rawNum) ? rawNum < 0 : false;
+    const bgColor = getRepresentativeColor(mark.fill);
 
     let anchorX: number;
     let fill: string;
@@ -145,18 +148,32 @@ export function computeBarLabels(
     if (isStacked && isInside) {
       // Stacked: centered within segment
       anchorX = mark.x + mark.width / 2;
-      fill = '#ffffff';
+      fill = findAccessibleColor('#ffffff', bgColor, 4.5);
       textAnchor = 'middle';
     } else if (isInside) {
-      // Simple: right-aligned within bar
-      anchorX = mark.x + mark.width - LABEL_PADDING;
-      fill = '#ffffff';
-      textAnchor = 'end';
+      if (isNegative) {
+        // Negative bar: left-aligned within bar (bar extends leftward)
+        anchorX = mark.x + LABEL_PADDING;
+        fill = findAccessibleColor('#ffffff', bgColor, 4.5);
+        textAnchor = 'start';
+      } else {
+        // Positive bar: right-aligned within bar
+        anchorX = mark.x + mark.width - LABEL_PADDING;
+        fill = findAccessibleColor('#ffffff', bgColor, 4.5);
+        textAnchor = 'end';
+      }
     } else {
-      // Outside: just past the bar's right edge
-      anchorX = mark.x + mark.width + LABEL_PADDING;
-      fill = getRepresentativeColor(mark.fill);
-      textAnchor = 'start';
+      if (isNegative) {
+        // Outside negative bar: just past the bar's left edge
+        anchorX = mark.x - LABEL_PADDING;
+        fill = getRepresentativeColor(mark.fill);
+        textAnchor = 'end';
+      } else {
+        // Outside positive bar: just past the bar's right edge
+        anchorX = mark.x + mark.width + LABEL_PADDING;
+        fill = getRepresentativeColor(mark.fill);
+        textAnchor = 'start';
+      }
     }
 
     // anchorY = bar vertical center. With dominant-baseline: central,

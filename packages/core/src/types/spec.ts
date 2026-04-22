@@ -523,6 +523,8 @@ interface AnnotationBase {
   opacity?: number;
   /** Z-index for render ordering. Higher values render on top. */
   zIndex?: number;
+  /** When false, the annotation is always shown even at compact breakpoints. Default true. */
+  responsive?: boolean;
 }
 
 /**
@@ -588,13 +590,15 @@ export interface RangeAnnotation extends AnnotationBase {
  * Useful for baselines (zero), targets, or thresholds.
  */
 export interface RefLineAnnotation extends AnnotationBase {
-  type: 'refline';
+  type: 'refline' | 'rule';
   /** X-axis value for a vertical reference line. */
   x?: string | number;
   /** Y-axis value for a horizontal reference line. */
   y?: string | number;
   /** Line style. */
   style?: 'solid' | 'dashed' | 'dotted';
+  /** Raw SVG dash pattern override, e.g. [4, 4]. Takes precedence over style. */
+  strokeDash?: number[];
   /** Line width in pixels. */
   strokeWidth?: number;
   /** Pixel offset for the reference line label. */
@@ -715,6 +719,8 @@ export interface LegendConfig {
   symbolLimit?: number;
   /** Maximum number of rows for top-positioned legends before truncation. Defaults to 2. */
   maxRows?: number;
+  /** Series names to exclude from the legend. Excluded series still render in the chart. */
+  exclude?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -1408,7 +1414,7 @@ export function isRangeAnnotation(annotation: Annotation): annotation is RangeAn
 
 /** Check if an annotation is a RefLineAnnotation. */
 export function isRefLineAnnotation(annotation: Annotation): annotation is RefLineAnnotation {
-  return annotation.type === 'refline';
+  return annotation.type === 'refline' || annotation.type === 'rule';
 }
 
 // ---------------------------------------------------------------------------

@@ -84,16 +84,24 @@ function computeSingleArea(
     // Compute points, filtering out null values
     const validPoints: { x: number; yTop: number; yBottom: number; row: DataRow }[] = [];
 
+    // Check for y2 channel (band between y and y2)
+    const y2Channel = (encoding as Encoding & { y2?: { field: string; type: string } }).y2;
+
     for (const row of sortedRows) {
       const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
       const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
 
       if (xVal === null || yVal === null) continue;
 
+      const yBottomVal =
+        y2Channel && row[y2Channel.field] != null
+          ? scaleValue(scales.y.scale, scales.y.type, row[y2Channel.field])
+          : null;
+
       validPoints.push({
         x: xVal,
         yTop: yVal,
-        yBottom: baselineY,
+        yBottom: yBottomVal ?? baselineY,
         row,
       });
     }
@@ -127,6 +135,8 @@ function computeSingleArea(
 
     const aria: MarkAria = { label: ariaLabel };
 
+    const fillOpacity = y2Channel ? 0.25 : DEFAULT_FILL_OPACITY;
+
     marks.push({
       type: 'area',
       topPoints,
@@ -134,7 +144,7 @@ function computeSingleArea(
       path: pathStr,
       topPath: topPathStr,
       fill: color,
-      fillOpacity: DEFAULT_FILL_OPACITY,
+      fillOpacity: fillOpacity,
       stroke: getRepresentativeColor(color),
       strokeWidth: 2,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,

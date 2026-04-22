@@ -65,30 +65,42 @@ export function findAccessibleColor(baseColor: string, bg: string, targetRatio =
   if (c == null) return baseColor;
 
   const bgLum = relativeLuminance(bg);
-  // Determine direction: darken if bg is light, lighten if bg is dark.
-  const bgIsLight = bgLum > 0.5;
+  const baseLum = relativeLuminance(baseColor);
 
-  // Binary search for the lightness adjustment that hits the target ratio.
-  let lo = 0;
-  let hi = 1;
-  let best = baseColor;
+  // Try both directions: prefer the one matching bg luminance, but fall back
+  // to the other if the base color is already at the extreme (e.g. white on
+  // a medium-luminance background can't be lightened, so darken instead).
+  const preferDarken = bgLum > 0.5;
+  const directions = preferDarken ? [true, false] : [false, true];
 
-  for (let i = 0; i < 20; i++) {
-    const mid = (lo + hi) / 2;
-    const adjusted = bgIsLight
-      ? rgb(c.r * (1 - mid), c.g * (1 - mid), c.b * (1 - mid))
-      : rgb(c.r + (255 - c.r) * mid, c.g + (255 - c.g) * mid, c.b + (255 - c.b) * mid);
+  for (const darken of directions) {
+    // Skip impossible directions: can't lighten white or darken black.
+    if (!darken && baseLum > 0.95) continue;
+    if (darken && baseLum < 0.05) continue;
 
-    const hex = adjusted.formatHex();
-    const ratio = contrastRatio(hex, bg);
+    let lo = 0;
+    let hi = 1;
+    let best: string | null = null;
 
-    if (ratio >= targetRatio) {
-      best = hex;
-      hi = mid; // try less adjustment
-    } else {
-      lo = mid; // need more adjustment
+    for (let i = 0; i < 20; i++) {
+      const mid = (lo + hi) / 2;
+      const adjusted = darken
+        ? rgb(c.r * (1 - mid), c.g * (1 - mid), c.b * (1 - mid))
+        : rgb(c.r + (255 - c.r) * mid, c.g + (255 - c.g) * mid, c.b + (255 - c.b) * mid);
+
+      const hex = adjusted.formatHex();
+      const ratio = contrastRatio(hex, bg);
+
+      if (ratio >= targetRatio) {
+        best = hex;
+        hi = mid;
+      } else {
+        lo = mid;
+      }
     }
+
+    if (best) return best;
   }
 
-  return best;
+  return baseColor;
 }

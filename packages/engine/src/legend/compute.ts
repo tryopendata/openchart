@@ -83,21 +83,25 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
       ]
     : dataValues;
 
-  return uniqueValues.map((value, i) => {
-    // When explicit domain+range are provided, look up the color by domain index
-    // so legend colors match the mark colors exactly.
-    let colorIndex = i;
-    if (explicitDomain && explicitRange) {
-      const domainIdx = explicitDomain.indexOf(value);
-      if (domainIdx >= 0) colorIndex = domainIdx;
-    }
-    return {
-      label: value,
-      color: palette[colorIndex % palette.length],
-      shape,
-      active: true,
-    };
-  });
+  const excludeSet = new Set(spec.legend?.exclude ?? []);
+
+  return uniqueValues
+    .map((value, i) => {
+      // When explicit domain+range are provided, look up the color by domain index
+      // so legend colors match the mark colors exactly.
+      let colorIndex = i;
+      if (explicitDomain && explicitRange) {
+        const domainIdx = explicitDomain.indexOf(value);
+        if (domainIdx >= 0) colorIndex = domainIdx;
+      }
+      return {
+        label: value,
+        color: palette[colorIndex % palette.length],
+        shape,
+        active: true,
+      };
+    })
+    .filter((entry) => !excludeSet.has(entry.label));
 }
 
 /**
@@ -162,12 +166,22 @@ export function computeLegend(
 
   // Auto-suppress legend when endpoint labels identify series on line/area charts.
   // Guards: keep legend at compact breakpoints (labels hidden), for stacked areas
-  // (endpoint labels overlap), and when user explicitly forces legend on.
+  // (endpoint labels overlap), and when user has configured any legend property
+  // (position, columns, maxRows, etc.) — any explicit legend config signals intent
+  // to show a legend, not just show: true.
   const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
   const hasLabels = spec.labels.density !== 'none';
   const labelsWillRender = strategy.labelMode !== 'none';
   const hasColorEncoding = spec.encoding.color != null;
-  const legendNotForced = spec.legend?.show !== true;
+  // Legend is "forced" when the user set show: true OR specified any legend config
+  // other than show: false. Vega-Lite convention: legend is shown by default for
+  // multi-series charts; auto-suppression only fires when no legend config is present.
+  const userConfiguredLegend =
+    spec.legend != null &&
+    Object.keys(spec.legend).some(
+      (k) => k !== 'show' || spec.legend![k as keyof typeof spec.legend] !== false,
+    );
+  const legendNotForced = !userConfiguredLegend;
 
   if (isLineOrArea && hasLabels && labelsWillRender && hasColorEncoding && legendNotForced) {
     const isArea = spec.markType === 'area';

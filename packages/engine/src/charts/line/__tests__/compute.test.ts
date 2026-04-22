@@ -477,6 +477,34 @@ describe('computeAreaMarks', () => {
     expect(marks[0].fillOpacity).toBeLessThanOrEqual(1);
   });
 
+  it('area with y2 encoding uses y2 field as bottom boundary instead of baseline', () => {
+    const spec: NormalizedChartSpec = {
+      ...makeSingleSeriesSpec(),
+      data: [
+        { date: '2020-01-01', value: 80, value_low: 60 },
+        { date: '2021-01-01', value: 90, value_low: 70 },
+        { date: '2022-01-01', value: 85, value_low: 65 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        y2: { field: 'value_low', type: 'quantitative' },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(1);
+    // Bottom points should NOT all be at the same baseline y coordinate
+    const bottomYValues = marks[0].bottomPoints.map((p) => p.y);
+    const allSame = bottomYValues.every((y) => y === bottomYValues[0]);
+    expect(allSame).toBe(false);
+    // Each bottom point should be between the top point and the chart bottom
+    for (let i = 0; i < marks[0].topPoints.length; i++) {
+      expect(marks[0].bottomPoints[i].y).toBeGreaterThan(marks[0].topPoints[i].y); // SVG coords: larger y = lower on screen
+    }
+  });
+
   it('stacked areas: produces multiple AreaMarks for multi-series', () => {
     const spec = makeMultiSeriesSpec();
     const scales = computeScales(spec, chartArea, spec.data);

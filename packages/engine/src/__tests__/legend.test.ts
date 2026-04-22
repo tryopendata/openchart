@@ -354,6 +354,17 @@ describe('computeLegend', () => {
       expect(legend.entries).toHaveLength(3);
     });
 
+    it('preserves legend when any legend config is present (e.g. position)', () => {
+      const spec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        legend: { position: 'top' },
+        hiddenSeries: [],
+        seriesStyles: {},
+      };
+      const legend = computeLegend(spec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(3);
+    });
+
     it('preserves legend when labels density is none', () => {
       const spec: NormalizedChartSpec = {
         ...lineWithLabels,

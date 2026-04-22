@@ -45,14 +45,15 @@ export function computeAnnotations(
   obstacles: Rect[] = [],
   svgDimensions?: { width: number; height: number },
 ): ResolvedAnnotation[] {
-  // At compact breakpoints, skip all annotations
-  if (strategy.annotationPosition === 'tooltip-only') {
-    return [];
-  }
+  const isCompact = strategy.annotationPosition === 'tooltip-only';
 
   const annotations: ResolvedAnnotation[] = [];
 
   for (const annotation of spec.annotations) {
+    // At compact breakpoints, skip annotations unless they opt out with responsive: false
+    if (isCompact && annotation.responsive !== false) {
+      continue;
+    }
     let resolved: ResolvedAnnotation | null = null;
 
     switch (annotation.type) {

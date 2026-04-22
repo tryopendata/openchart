@@ -168,9 +168,14 @@ export function computeDimensions(
   };
 
   // Dynamic right margin for line/area end-of-line labels.
-  // Only reserve space when labels will actually render (density != 'none').
+  // Only reserve space when labels will actually render.
   const labelDensity = spec.labels.density;
-  if ((spec.markType === 'line' || spec.markType === 'area') && labelDensity !== 'none') {
+  const labelsHiddenByStrategy = strategy?.labelMode === 'none';
+  if (
+    (spec.markType === 'line' || spec.markType === 'area') &&
+    labelDensity !== 'none' &&
+    !labelsHiddenByStrategy
+  ) {
     // Estimate label width from longest series name (color encoding domain)
     const colorEnc = encoding.color;
     const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;

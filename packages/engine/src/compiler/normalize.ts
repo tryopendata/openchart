@@ -174,8 +174,10 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
           fill: ann.fill ?? '#000000',
         };
       case 'refline':
+      case 'rule':
         return {
           ...ann,
+          type: 'refline' as const,
           style: ann.style ?? 'dashed',
           strokeWidth: ann.strokeWidth ?? 1,
           stroke: ann.stroke ?? '#666666',

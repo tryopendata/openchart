@@ -43,9 +43,11 @@ export function resolveRefLineAnnotation(
     return null;
   }
 
-  // Determine dash pattern from style
+  // Determine dash pattern: strokeDash array wins, then style string
   let strokeDasharray: string | undefined;
-  if (annotation.style === 'dashed' || annotation.style === undefined) {
+  if (annotation.strokeDash && annotation.strokeDash.length > 0) {
+    strokeDasharray = annotation.strokeDash.join(' ');
+  } else if (annotation.style === 'dashed' || annotation.style === undefined) {
     strokeDasharray = DEFAULT_REFLINE_DASH;
   } else if (annotation.style === 'dotted') {
     strokeDasharray = '2 2';
