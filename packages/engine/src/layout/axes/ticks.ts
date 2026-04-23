@@ -211,10 +211,11 @@ export function categoricalTicks(
   const explicitTickCount = resolvedScale.channel.axis?.tickCount;
   const maxTicks = explicitTickCount ?? TICK_COUNTS[density];
 
-  // Band scales (bar charts) show all category labels by default.
-  // Only thin when there's an explicit tickCount override or for point/ordinal scales.
+  // Band scales show all labels at full density but thin at reduced/minimal
+  // to prevent overlap on narrow containers (e.g. 17 bars on mobile).
   let selectedValues = domain;
-  if ((resolvedScale.type !== 'band' || explicitTickCount) && domain.length > maxTicks) {
+  const shouldThinBand = resolvedScale.type === 'band' && (explicitTickCount || density !== 'full');
+  if ((resolvedScale.type !== 'band' || shouldThinBand) && domain.length > maxTicks) {
     const step = Math.ceil(domain.length / maxTicks);
     selectedValues = domain.filter((_: string, i: number) => i % step === 0);
   }

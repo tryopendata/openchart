@@ -3,7 +3,11 @@
  */
 
 import type { AxisLayout, ChartLayout } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import {
+  estimateTextWidth,
+  getAxisTitleOffset,
+  TICK_LABEL_OFFSET,
+} from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 function renderAxis(
@@ -70,7 +74,7 @@ function renderAxis(
       const label = createSVGElement('text');
       label.setAttribute('class', 'oc-axis-tick');
       setAttrs(label, {
-        x: isRight ? area.x + area.width + 6 : area.x - 6,
+        x: isRight ? area.x + area.width + TICK_LABEL_OFFSET : area.x - TICK_LABEL_OFFSET,
         y: tick.position,
         'text-anchor': isRight ? 'start' : 'end',
         'dominant-baseline': 'central',
@@ -78,7 +82,7 @@ function renderAxis(
       applyTextStyle(label, axis.tickLabelStyle);
       if (!isRight) {
         // Truncate categorical left y-axis labels that exceed available space
-        const availableWidth = area.x - 6;
+        const availableWidth = area.x - TICK_LABEL_OFFSET;
         const fontSize = axis.tickLabelStyle.fontSize;
         const fontWeight = axis.tickLabelStyle.fontWeight;
         const fullWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
@@ -175,8 +179,9 @@ function renderAxis(
         'text-anchor': 'middle',
       });
     } else if (isRight) {
-      // Rotated right y-axis label
-      const titleX = area.x + area.width + 45;
+      // Rotated right y-axis label (tighter offset on compact viewports)
+      const titleOffset = getAxisTitleOffset(layout.dimensions.width);
+      const titleX = area.x + area.width + titleOffset;
       setAttrs(axisLabel, {
         x: titleX,
         y: area.y + area.height / 2,
@@ -184,12 +189,13 @@ function renderAxis(
         transform: `rotate(90, ${titleX}, ${area.y + area.height / 2})`,
       });
     } else {
-      // Rotated left y-axis label
+      // Rotated left y-axis label (tighter offset on compact viewports)
+      const titleOffset = getAxisTitleOffset(layout.dimensions.width);
       setAttrs(axisLabel, {
-        x: area.x - 45,
+        x: area.x - titleOffset,
         y: area.y + area.height / 2,
         'text-anchor': 'middle',
-        transform: `rotate(-90, ${area.x - 45}, ${area.y + area.height / 2})`,
+        transform: `rotate(-90, ${area.x - titleOffset}, ${area.y + area.height / 2})`,
       });
     }
     g.appendChild(axisLabel);

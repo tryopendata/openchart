@@ -21,7 +21,23 @@ import type {
   ResolvedChrome,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
+import {
+  AXIS_TITLE_TRAILING_PAD,
+  BREAKPOINT_COMPACT_MAX,
+  computeChrome,
+  estimateTextWidth,
+  getAxisTitleOffset,
+  HPAD_COMPACT_FRACTION,
+  HPAD_COMPACT_MIN,
+  LABEL_GAP_COMPACT,
+  LABEL_GAP_DEFAULT,
+  MAX_LEFT_LABEL_FRACTION_COMPACT,
+  MAX_LEFT_LABEL_FRACTION_DEFAULT,
+  MAX_LEFT_LABEL_FRACTION_MEDIUM,
+  MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
+  NARROW_VIEWPORT_MAX,
+  TOP_PAD_EXTRA_NARROW,
+} from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
@@ -102,6 +118,12 @@ export function computeDimensions(
   const { width, height } = options;
 
   const padding = scalePadding(theme.spacing.padding, width, height);
+  // Horizontal padding can be tighter than the chrome text padding on narrow
+  // containers because axis titles and tick labels tolerate closer edges.
+  const hPad =
+    width < BREAKPOINT_COMPACT_MAX
+      ? Math.max(Math.round(padding * HPAD_COMPACT_FRACTION), HPAD_COMPACT_MIN)
+      : padding;
   const axisMargin = theme.spacing.axisMargin;
   const chromeMode = strategy?.chromeMode ?? 'full';
 
@@ -160,11 +182,14 @@ export function computeDimensions(
   // added when there's actual chrome content that needs separation from the
   // chart area. When chrome is empty the margin is just padding.
   const topAxisGap = isRadial && chrome.topHeight === 0 ? 0 : axisMargin;
+  // Extra top padding on narrow viewports prevents iOS Safari from clipping
+  // the title chrome behind the browser UI.
+  const topPad = width < NARROW_VIEWPORT_MAX ? padding + TOP_PAD_EXTRA_NARROW : padding;
   const margins: Margins = {
-    top: padding + chrome.topHeight + topAxisGap,
-    right: padding + (isRadial ? padding : axisMargin),
+    top: topPad + chrome.topHeight + topAxisGap,
+    right: hPad + (isRadial ? hPad : axisMargin),
     bottom: padding + chrome.bottomHeight + xAxisHeight,
-    left: padding + (isRadial ? padding : axisMargin),
+    left: hPad + (isRadial ? hPad : axisMargin),
   };
 
   // Dynamic right margin for line/area end-of-line labels.
@@ -191,7 +216,7 @@ export function computeDimensions(
         }
       }
       if (maxLabelWidth > 0) {
-        margins.right = Math.max(margins.right, padding + maxLabelWidth + 8);
+        margins.right = Math.max(margins.right, hPad + maxLabelWidth + 8);
       }
     }
   }
@@ -232,7 +257,7 @@ export function computeDimensions(
                   textWidth / 2; // centered (top/bottom/auto)
           const rightOverflow = Math.max(0, baseRightExtent + dx);
           if (rightOverflow > 0) {
-            margins.right = Math.max(margins.right, padding + rightOverflow + 12);
+            margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
           }
         }
       }
@@ -258,13 +283,18 @@ export function computeDimensions(
       }
       if (maxLabelWidth > 0) {
         // Tighter label-to-chart gap on narrow containers
-        const labelGap = width < 500 ? 8 : 12;
+        const labelGap = width < NARROW_VIEWPORT_MAX ? LABEL_GAP_COMPACT : LABEL_GAP_DEFAULT;
         // Clamp reservation so bars keep at least ~45% of container width on
         // narrow viewports. Labels that exceed the cap will be truncated by
         // the axis renderer (see axes.ts).
-        const maxLeftFraction = width < 400 ? 0.45 : width < 600 ? 0.55 : 1;
+        const maxLeftFraction =
+          width < BREAKPOINT_COMPACT_MAX
+            ? MAX_LEFT_LABEL_FRACTION_COMPACT
+            : width < MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX
+              ? MAX_LEFT_LABEL_FRACTION_MEDIUM
+              : MAX_LEFT_LABEL_FRACTION_DEFAULT;
         const maxLeftReserved = Math.floor(width * maxLeftFraction);
-        const reserved = Math.min(padding + maxLabelWidth + labelGap, maxLeftReserved);
+        const reserved = Math.min(hPad + maxLabelWidth + labelGap, maxLeftReserved);
         margins.left = Math.max(margins.left, reserved);
       }
     } else if (encoding.y.type === 'quantitative' || encoding.y.type === 'temporal') {
@@ -306,20 +336,26 @@ export function computeDimensions(
         theme.fonts.weights.normal,
       );
       // 6px gap between label and chart area edge
-      margins.left = Math.max(margins.left, padding + labelWidth + 10);
+      margins.left = Math.max(margins.left, hPad + labelWidth + 10);
     }
   }
 
-  // Rotated y-axis label needs extra left margin (rendered at area.x - 45 in SVG)
+  // Rotated y-axis label needs extra left margin (rendered at area.x - offset in SVG).
+  // Tighter on compact viewports where horizontal space is scarce.
   const yAxis = encoding.y?.axis as Record<string, unknown> | undefined;
   if (yAxis && (yAxis.title || yAxis.label) && !isRadial) {
-    const rotatedLabelMargin = 45 + Math.ceil(theme.fonts.sizes.body / 2) + 4;
-    margins.left = Math.max(margins.left, padding + rotatedLabelMargin);
+    const axisTitleOffset = getAxisTitleOffset(width);
+    const halfGlyph = Math.ceil(theme.fonts.sizes.body / 2);
+    const rotatedLabelMargin =
+      axisTitleOffset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);
+    margins.left = Math.max(margins.left, hPad + rotatedLabelMargin);
   }
 
-  // Reserve space for a secondary (right) y-axis in dual-axis charts
+  // Reserve space for a secondary (right) y-axis in dual-axis charts.
+  // Use Math.max (not +=) to mirror the left-margin pattern: the reserve
+  // replaces the base axisMargin when it's larger, instead of stacking.
   if (options.rightAxisReserve && options.rightAxisReserve > 0) {
-    margins.right += options.rightAxisReserve;
+    margins.right = Math.max(margins.right, hPad + options.rightAxisReserve);
   }
 
   // Reserve legend space
@@ -359,9 +395,10 @@ export function computeDimensions(
       watermark,
     );
 
-    // Recalculate top/bottom margins with stripped chrome
+    // Recalculate top/bottom margins with stripped chrome.
+    // Use topPad (not padding) to preserve the iOS Safari clearance on narrow viewports.
     const fallbackTopAxisGap = isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin;
-    const newTop = padding + fallbackChrome.topHeight + fallbackTopAxisGap;
+    const newTop = topPad + fallbackChrome.topHeight + fallbackTopAxisGap;
     const topDelta = margins.top - newTop;
     const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;

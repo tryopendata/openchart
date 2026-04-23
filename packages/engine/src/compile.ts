@@ -33,16 +33,21 @@ import type {
   Transform,
 } from '@opendata-ai/openchart-core';
 import {
+  AXIS_TITLE_TRAILING_PAD,
   adaptTheme,
+  BREAKPOINT_COMPACT_MAX,
   computeLabelBounds,
   estimateTextWidth,
   generateAltText,
   generateDataTable,
+  getAxisTitleOffset,
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
   resolveTheme,
+  TICK_LABEL_OFFSET,
 } from '@opendata-ai/openchart-core';
+import { format as d3Format } from 'd3-format';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { computeAnnotations } from './annotations/compute';
@@ -548,18 +553,30 @@ function estimateYAxisLabelWidth(
   }
 
   // Quantitative/temporal: estimate from the largest value
+  const yAxisFormat = (encoding.y.axis as Record<string, unknown> | undefined)?.format as
+    | string
+    | undefined;
   let maxAbsVal = 0;
   for (const row of data) {
     const v = Number(row[yField]);
     if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
   }
   let sampleLabel: string;
-  if (maxAbsVal >= 1_000_000_000) sampleLabel = '1.5B';
-  else if (maxAbsVal >= 1_000_000) sampleLabel = '1.5M';
-  else if (maxAbsVal >= 1_000) sampleLabel = '1.5K';
-  else if (maxAbsVal >= 100) sampleLabel = '100';
-  else if (maxAbsVal >= 10) sampleLabel = '10';
-  else sampleLabel = '0.0';
+  if (yAxisFormat) {
+    try {
+      const fmt = d3Format(yAxisFormat);
+      sampleLabel = fmt(maxAbsVal);
+    } catch {
+      sampleLabel = String(maxAbsVal);
+    }
+  } else {
+    if (maxAbsVal >= 1_000_000_000) sampleLabel = '1.5B';
+    else if (maxAbsVal >= 1_000_000) sampleLabel = '1.5M';
+    else if (maxAbsVal >= 1_000) sampleLabel = '1.5K';
+    else if (maxAbsVal >= 100) sampleLabel = '100';
+    else if (maxAbsVal >= 10) sampleLabel = '10';
+    else sampleLabel = '0.0';
+  }
   const hasNeg = data.some((r) => Number(r[yField]) < 0);
   const labelEst = (hasNeg ? '-' : '') + sampleLabel;
   return estimateTextWidth(labelEst, baseFontSize, 400) + 10;
@@ -596,13 +613,24 @@ function compileLayerIndependent(
     );
   }
 
-  // Estimate right-axis label width to reserve margin space
+  // Estimate right-axis label width to reserve margin space.
+  // Tick labels sit at chartEdge+6 and extend rightward by their width.
+  // The rotated title sits at chartEdge+45 and extends by half the font height.
+  // These overlap spatially, so use max (not sum) to mirror the left-margin pattern.
   const theme = resolveTheme(layerSpec.theme ?? leaf1.theme);
   const axisFontSize = theme.fonts?.sizes?.axisTick ?? 11;
   const rightAxisWidth = estimateYAxisLabelWidth(leaf1.data, leaf1.encoding, axisFontSize);
-  // Add space for the rotated axis title if present (match left-axis 45px clearance)
   const hasRightAxisTitle = !!leaf1.encoding?.y?.axis?.title;
-  const rightReserve = rightAxisWidth + (hasRightAxisTitle ? 45 : 0);
+  const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
+  const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
+  const axisTitleOffset = getAxisTitleOffset(options.width);
+  const halfGlyph = Math.ceil(bodyFontSize / 2);
+  const titleExtent = hasRightAxisTitle
+    ? axisTitleOffset +
+      halfGlyph +
+      (options.width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD)
+    : 0;
+  const rightReserve = Math.max(tickExtent, titleExtent);
 
   const optionsWithReserve: CompileOptions = {
     ...options,
@@ -960,6 +988,7 @@ function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec 
     data: allData,
     // Layer-level chrome overrides leaf chrome
     chrome: layerSpec.chrome ?? leaves[0].chrome,
+    annotations: layerSpec.annotations ?? leaves[0].annotations,
     labels: layerSpec.labels ?? leaves[0].labels,
     legend: layerSpec.legend ?? leaves[0].legend,
     responsive: layerSpec.responsive ?? leaves[0].responsive,
