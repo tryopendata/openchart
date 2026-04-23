@@ -1,5 +1,40 @@
 # Changelog
 
+## [6.25.1](https://github.com/tryopendata/openchart/compare/core-v6.25.0...core-v6.25.1) (2026-04-23)
+
+
+### Features
+
+* centralize responsive layout metrics and fix mobile chart alignment ([265bf95](https://github.com/tryopendata/openchart/commit/265bf95))
+* dual-axis combo charts with independent y-scales ([70cf379](https://github.com/tryopendata/openchart/commit/70cf379))
+* add halo prop to text annotations ([8269c3c](https://github.com/tryopendata/openchart/commit/8269c3c))
+* area y2 bands, annotation responsiveness, bar label improvements ([e31736b](https://github.com/tryopendata/openchart/commit/e31736b))
+* responsive layout improvements for narrow viewports ([666792b](https://github.com/tryopendata/openchart/commit/666792b))
+
+
+### Bug Fixes
+
+* thread measureText through sankey pipeline for accurate text wrapping ([9fa3624](https://github.com/tryopendata/openchart/commit/9fa3624))
+* declare builtin.ts as side-effectful to prevent tree-shaking ([848ce1d](https://github.com/tryopendata/openchart/commit/848ce1d))
+* strip temporal axes from snapshot to fix macOS/Linux divergence ([8610b2e](https://github.com/tryopendata/openchart/commit/8610b2e))
+* make compile-snapshot test platform-independent ([5497bfa](https://github.com/tryopendata/openchart/commit/5497bfa))
+* fix continuous axis tick collapse using step-down re-request ([d47bdac](https://github.com/tryopendata/openchart/commit/d47bdac))
+
+
+### Refactoring
+
+* address code review must-fix items for v7-cohesion-pt2 ([20d8a46](https://github.com/tryopendata/openchart/commit/20d8a46))
+* split axes.ts into ticks and thinning modules ([965ef89](https://github.com/tryopendata/openchart/commit/965ef89))
+* extract renderMarks into renderers/marks.ts ([a4dc5de](https://github.com/tryopendata/openchart/commit/a4dc5de))
+* extract renderAxes into renderers/axes.ts ([93ceb2b](https://github.com/tryopendata/openchart/commit/93ceb2b))
+* extract renderAnnotations into renderers/annotations.ts ([6e4c2db](https://github.com/tryopendata/openchart/commit/6e4c2db))
+* extract renderLegend into renderers/legend.ts ([c60be4c](https://github.com/tryopendata/openchart/commit/c60be4c))
+* extract renderChrome into renderers/chrome.ts ([b81ee09](https://github.com/tryopendata/openchart/commit/b81ee09))
+* extract renderBrand into renderers/brand.ts ([3b59d20](https://github.com/tryopendata/openchart/commit/3b59d20))
+* extract svg-dom helpers from svg-renderer ([ab63110](https://github.com/tryopendata/openchart/commit/ab63110))
+* extract pure helpers from compile.ts into compile/ subfolder ([ae62c7f](https://github.com/tryopendata/openchart/commit/ae62c7f))
+* extract density filter from bar/column/dot/pie labels ([60f9a04](https://github.com/tryopendata/openchart/commit/60f9a04))
+
 ## [6.25.0](https://github.com/tryopendata/openchart/compare/core-v6.24.2...core-v6.25.0) (2026-04-22)
 
 
