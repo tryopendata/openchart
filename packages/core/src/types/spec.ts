@@ -875,6 +875,13 @@ export interface ChartSpec {
    * - AnimationConfig: full control via enter/update/exit phases
    */
   animation?: AnimationSpec;
+  /**
+   * Render order within a LayerSpec. Higher values render on top.
+   * When omitted, layers render in array order (later layers paint on top).
+   * Axis assignment (left/right y) is always determined by array position,
+   * not zIndex.
+   */
+  zIndex?: number;
 }
 
 /**

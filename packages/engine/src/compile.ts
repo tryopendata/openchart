@@ -500,7 +500,15 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
     seenLabels.add(entry.label);
   }
 
-  for (const leaf of leaves) {
+  // Sort leaves by zIndex for render order while preserving original indices
+  // for axis assignment. Default zIndex is the array position.
+  const indexedLeaves = leaves.map((leaf, i) => ({
+    leaf,
+    zIndex: (leaf as ChartSpec).zIndex ?? i,
+  }));
+  indexedLeaves.sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const { leaf } of indexedLeaves) {
     const leafLayout = compileChart(leaf as unknown, options);
 
     allMarks.push(...leafLayout.marks);
@@ -821,6 +829,14 @@ function compileLayerIndependent(
     }
   }
 
+  // Determine mark render order. By default, layer 0 paints first (behind),
+  // layer 1 paints second (on top). zIndex on the original leaf specs can
+  // reverse this so e.g. a line in layer 0 renders on top of bars in layer 1.
+  const z0 = leaf0.zIndex ?? 0;
+  const z1 = leaf1.zIndex ?? 1;
+  const marks =
+    z0 <= z1 ? [...adjustedMarks0, ...taggedMarks1] : [...taggedMarks1, ...adjustedMarks0];
+
   return {
     ...layout0,
     axes: {
@@ -828,7 +844,7 @@ function compileLayerIndependent(
       y: layout0.axes.y,
       y2: y2Axis,
     },
-    marks: [...adjustedMarks0, ...taggedMarks1],
+    marks,
     legend: {
       ...layout0.legend,
       entries: mergedLegendEntries,
