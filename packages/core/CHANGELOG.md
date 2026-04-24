@@ -1,5 +1,25 @@
 # Changelog
 
+## [6.25.4](https://github.com/tryopendata/openchart/compare/core-v6.25.3...core-v6.25.4) (2026-04-24)
+
+
+### Features
+
+* add boolean shorthand for labels spec ([8eb0a87](https://github.com/tryopendata/openchart/commit/8eb0a87))
+* add zIndex to ChartSpec for controlling layer render order ([1febd38](https://github.com/tryopendata/openchart/commit/1febd38))
+* centralize responsive layout metrics and fix mobile chart alignment ([265bf95](https://github.com/tryopendata/openchart/commit/265bf95))
+* dual-axis combo charts with independent y-scales ([70cf379](https://github.com/tryopendata/openchart/commit/70cf379))
+* add halo prop to text annotations ([8269c3c](https://github.com/tryopendata/openchart/commit/8269c3c))
+* area y2 bands, annotation responsiveness, bar label improvements ([e31736b](https://github.com/tryopendata/openchart/commit/e31736b))
+* responsive layout improvements for narrow viewports ([666792b](https://github.com/tryopendata/openchart/commit/666792b))
+
+
+### Bug Fixes
+
+* restore all y-axis labels on horizontal bar charts and improve x-axis band label thinning ([66c2be3](https://github.com/tryopendata/openchart/commit/66c2be3))
+* thread measureText through sankey pipeline for accurate text wrapping ([9fa3624](https://github.com/tryopendata/openchart/commit/9fa3624))
+* declare builtin.ts as side-effectful to prevent tree-shaking ([848ce1d](https://github.com/tryopendata/openchart/commit/848ce1d))
+
 ## [6.25.3](https://github.com/tryopendata/openchart/compare/core-v6.25.2...core-v6.25.3) (2026-04-24)
 
 
