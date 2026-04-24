@@ -809,3 +809,78 @@ describe('ticksOverlap with vertical orientation', () => {
     expect(ticksOverlap(ticks, fontSize, fontWeight, undefined, 'vertical')).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Horizontal bar chart: y-axis category label regression
+// Mobile/compact viewports must show all category labels on horizontal bar
+// charts, regardless of axisLabelDensity. Thinning is only valid on x-axis
+// band scales where many category names can overlap horizontally.
+// ---------------------------------------------------------------------------
+
+describe('horizontal bar y-axis label thinning regression', () => {
+  const countries = [
+    'USA',
+    'Germany',
+    'France',
+    'Japan',
+    'UK',
+    'Canada',
+    'Australia',
+    'Netherlands',
+    'Sweden',
+    'Switzerland',
+  ];
+
+  const hBarSpec: NormalizedChartSpec = {
+    markType: 'bar',
+    markDef: { type: 'bar', orient: 'horizontal' },
+    data: countries.map((country, i) => ({ country, value: (i + 1) * 100 })),
+    encoding: {
+      x: { field: 'value', type: 'quantitative' },
+      y: { field: 'country', type: 'nominal' },
+    },
+    chrome: {},
+    annotations: [],
+    responsive: true,
+    theme: {},
+    darkMode: 'off',
+    labels: { density: 'auto', format: '' },
+  };
+
+  it('shows all category labels on y-axis at minimal density (mobile regression)', () => {
+    const scales = computeScales(hBarSpec, chartArea, hBarSpec.data);
+    const axes = computeAxes(scales, chartArea, minimalStrategy, theme);
+
+    // Every bar must have a label -- thinning to 3 on mobile was the bug
+    expect(axes.y!.ticks.length).toBe(countries.length);
+  });
+
+  it('shows all category labels on y-axis at reduced density', () => {
+    const reducedStrategy: LayoutStrategy = {
+      ...minimalStrategy,
+      axisLabelDensity: 'reduced',
+    };
+    const scales = computeScales(hBarSpec, chartArea, hBarSpec.data);
+    const axes = computeAxes(scales, chartArea, reducedStrategy, theme);
+
+    expect(axes.y!.ticks.length).toBe(countries.length);
+  });
+
+  it('still thins x-axis band scale labels at minimal density (column chart)', () => {
+    const vBarSpec: NormalizedChartSpec = {
+      ...hBarSpec,
+      markDef: { type: 'bar', orient: 'vertical' },
+      encoding: {
+        x: { field: 'country', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const narrowArea = { x: 50, y: 50, width: 200, height: 300 };
+    const scales = computeScales(vBarSpec, narrowArea, vBarSpec.data);
+    const axes = computeAxes(scales, narrowArea, minimalStrategy, theme);
+
+    // X-axis band scale with 10 categories at minimal density on a narrow chart
+    // should thin -- showing all 10 on 200px would overlap
+    expect(axes.x!.ticks.length).toBeLessThan(countries.length);
+  });
+});

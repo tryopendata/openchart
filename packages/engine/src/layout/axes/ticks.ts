@@ -5,11 +5,12 @@
  * not from the chart area. Density thinning lives in ./thinning.ts.
  */
 
-import type { AxisLabelDensity, AxisTick } from '@opendata-ai/openchart-core';
+import type { AxisLabelDensity, AxisTick, MeasureTextFn } from '@opendata-ai/openchart-core';
 import {
   abbreviateNumber,
   buildD3Formatter,
   buildTemporalFormatter,
+  estimateTextWidth,
   formatDate,
   formatNumber,
 } from '@opendata-ai/openchart-core';
@@ -201,24 +202,78 @@ export function scaleSupportsTickCount(resolvedScale: ResolvedScale): boolean {
   return 'ticks' in scale && typeof scale.ticks === 'function';
 }
 
-/** Generate ticks for a band/point/ordinal scale. */
+/**
+ * Generate ticks for a band/point/ordinal scale.
+ *
+ * For horizontal x-axis band scales, thinning is geometry-aware: if
+ * `bandwidth` and `fontSize`/`fontWeight` are provided, labels are only
+ * thinned when the estimated label footprint (accounting for `labelAngle`)
+ * actually exceeds the bandwidth. When labels are rotated, their horizontal
+ * footprint shrinks by |cos(angle)|, so far fewer need to be removed.
+ * Falls back to a density-count cap when geometry info is unavailable.
+ */
 export function categoricalTicks(
   resolvedScale: ResolvedScale,
   density: AxisLabelDensity,
+  orientation: 'horizontal' | 'vertical' = 'horizontal',
+  bandwidth?: number,
+  labelAngle?: number,
+  fontSize?: number,
+  fontWeight?: number,
+  measureText?: MeasureTextFn,
 ): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
   const domain: string[] = scale.domain();
   const explicitTickCount = resolvedScale.channel.axis?.tickCount;
-  const maxTicks = explicitTickCount ?? TICK_COUNTS[density];
 
-  // Band scales show all labels at full density but thin at reduced/minimal
-  // to prevent overlap on narrow containers (e.g. 17 bars on mobile).
   let selectedValues = domain;
-  const shouldThinBand = resolvedScale.type === 'band' && (explicitTickCount || density !== 'full');
-  if ((resolvedScale.type !== 'band' || shouldThinBand) && domain.length > maxTicks) {
-    const step = Math.ceil(domain.length / maxTicks);
-    selectedValues = domain.filter((_: string, i: number) => i % step === 0);
+
+  if (resolvedScale.type === 'band' && orientation === 'horizontal') {
+    // Geometry-based thinning: check whether labels actually fit within the
+    // bandwidth before deciding to thin. Rotated labels have a smaller
+    // horizontal footprint (width * |cos(angle)|), so they can be much denser.
+    if (bandwidth !== undefined && bandwidth > 0 && fontSize !== undefined) {
+      const maxLabelWidth = domain.reduce((max, v) => {
+        const w = measureText
+          ? measureText(v, fontSize, fontWeight ?? 400).width
+          : estimateTextWidth(v, fontSize, fontWeight ?? 400);
+        return Math.max(max, w);
+      }, 0);
+
+      // At non-zero angles, horizontal footprint per label = width * |cos(angle)|
+      const angleRad = labelAngle !== undefined ? (Math.abs(labelAngle) * Math.PI) / 180 : 0;
+      const footprint = angleRad > 0 ? maxLabelWidth * Math.abs(Math.cos(angleRad)) : maxLabelWidth;
+      const minGap = fontSize * 0.5;
+
+      if (footprint + minGap > bandwidth) {
+        // Labels don't fit -- thin proportionally to bandwidth, not density tier
+        const maxFitting = Math.max(1, Math.floor(bandwidth / (footprint + minGap)));
+        // Still respect explicit tickCount as an upper bound
+        const cap =
+          explicitTickCount ?? Math.min(domain.length, Math.max(maxFitting, TICK_COUNTS[density]));
+        if (domain.length > cap) {
+          const step = Math.ceil(domain.length / cap);
+          selectedValues = domain.filter((_: string, i: number) => i % step === 0);
+        }
+      }
+      // else: labels fit at this bandwidth -- show all of them
+    } else {
+      // No geometry info: fall back to density-count cap (original behavior)
+      const maxTicks = explicitTickCount ?? TICK_COUNTS[density];
+      if ((explicitTickCount || density !== 'full') && domain.length > maxTicks) {
+        const step = Math.ceil(domain.length / maxTicks);
+        selectedValues = domain.filter((_: string, i: number) => i % step === 0);
+      }
+    }
+  } else if (resolvedScale.type !== 'band') {
+    // Point/ordinal scales: thin by density count
+    const maxTicks = explicitTickCount ?? TICK_COUNTS[density];
+    if (domain.length > maxTicks) {
+      const step = Math.ceil(domain.length / maxTicks);
+      selectedValues = domain.filter((_: string, i: number) => i % step === 0);
+    }
   }
+  // vertical band scale (horizontal bar y-axis): always show all labels
 
   const ticks = selectedValues.map((value: string) => {
     // Band scales: use the center of the band

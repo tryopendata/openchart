@@ -259,7 +259,18 @@ export function computeAxes(
     if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.x);
     } else if (!isContinuousX) {
-      allTicks = categoricalTicks(scales.x, xDensity);
+      const xBandwidth =
+        scales.x.type === 'band' ? (scales.x.scale as ScaleBand<string>).bandwidth() : undefined;
+      allTicks = categoricalTicks(
+        scales.x,
+        xDensity,
+        'horizontal',
+        xBandwidth,
+        axisConfig?.labelAngle,
+        fontSize,
+        fontWeight,
+        measureText,
+      );
     } else {
       allTicks = continuousTicks(scales.x, xDensity, xTargetCount);
     }
@@ -351,7 +362,7 @@ export function computeAxes(
     if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.y);
     } else if (!isContinuousY) {
-      allTicks = categoricalTicks(scales.y, yDensity);
+      allTicks = categoricalTicks(scales.y, yDensity, 'vertical');
     } else {
       allTicks = continuousTicks(scales.y, yDensity, yTargetCount);
     }
