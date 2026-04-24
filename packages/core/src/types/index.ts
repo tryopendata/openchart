@@ -127,6 +127,7 @@ export type {
   GraphSpecWithoutData,
   LabelConfig,
   LabelDensity,
+  LabelSpec,
   LayerSpec,
   LegendConfig,
   LinearGradient,

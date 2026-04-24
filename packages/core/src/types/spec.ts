@@ -705,6 +705,9 @@ export interface LabelConfig {
   offsets?: Record<string, AnnotationOffset>;
 }
 
+/** Shorthand: `false` disables all labels, `true` uses defaults, or pass a full config object. */
+export type LabelSpec = boolean | LabelConfig;
+
 // ---------------------------------------------------------------------------
 // Legend configuration
 // ---------------------------------------------------------------------------
@@ -813,7 +816,7 @@ export interface ChartSpecOverride {
   /** Override editorial chrome at this breakpoint. */
   chrome?: Chrome;
   /** Override label configuration at this breakpoint. */
-  labels?: LabelConfig;
+  labels?: LabelSpec;
   /** Override legend configuration at this breakpoint. */
   legend?: LegendConfig;
   /** Override annotations at this breakpoint. */
@@ -846,8 +849,8 @@ export interface ChartSpec {
   chrome?: Chrome;
   /** Data annotations (text callouts, highlighted ranges, reference lines). */
   annotations?: Annotation[];
-  /** Label display configuration (density, format). */
-  labels?: LabelConfig;
+  /** Label display configuration. `false` disables all labels, `true` uses defaults. */
+  labels?: LabelSpec;
   /** Legend display configuration (position override). */
   legend?: LegendConfig;
   /** Whether the chart adapts to container width. Defaults to true. */
@@ -1019,8 +1022,8 @@ export interface LayerSpec {
   chrome?: Chrome;
   /** Annotations on the layered view. */
   annotations?: Annotation[];
-  /** Label display configuration. */
-  labels?: LabelConfig;
+  /** Label display configuration. `false` disables all labels, `true` uses defaults. */
+  labels?: LabelSpec;
   /** Legend display configuration. */
   legend?: LegendConfig;
   /** Whether the chart adapts to container width. Defaults to true. */

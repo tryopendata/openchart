@@ -17,6 +17,7 @@ import type {
   Encoding,
   FieldType,
   GraphSpec,
+  LabelSpec,
   LayerSpec,
   SankeySpec,
   TableSpec,
@@ -190,6 +191,21 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
 }
 
 // ---------------------------------------------------------------------------
+// Label normalization
+// ---------------------------------------------------------------------------
+
+function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
+  if (labels === false) return { density: 'none', format: '', prefix: '' };
+  if (labels === true || labels === undefined) return { density: 'auto', format: '', prefix: '' };
+  return {
+    density: labels.density ?? 'auto',
+    format: labels.format ?? '',
+    prefix: labels.prefix ?? '',
+    offsets: labels.offsets,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Spec-level normalization
 // ---------------------------------------------------------------------------
 
@@ -205,12 +221,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     encoding,
     chrome: normalizeChrome(spec.chrome),
     annotations: normalizeAnnotations(spec.annotations),
-    labels: {
-      density: spec.labels?.density ?? 'auto',
-      format: spec.labels?.format ?? '',
-      prefix: spec.labels?.prefix ?? '',
-      offsets: spec.labels?.offsets,
-    },
+    labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     responsive: spec.responsive ?? true,
     theme: spec.theme ?? {},

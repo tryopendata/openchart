@@ -237,14 +237,23 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         },
       };
     }
-    if (bp.labels) {
-      chartSpec = {
-        ...chartSpec,
-        labels: {
-          ...chartSpec.labels,
-          ...(bp.labels as NormalizedChartSpec['labels']),
-        },
-      };
+    if (bp.labels !== undefined) {
+      if (typeof bp.labels === 'boolean') {
+        chartSpec = {
+          ...chartSpec,
+          labels: bp.labels
+            ? { density: 'auto', format: '', prefix: '' }
+            : { density: 'none', format: '', prefix: '' },
+        };
+      } else {
+        chartSpec = {
+          ...chartSpec,
+          labels: {
+            ...chartSpec.labels,
+            ...(bp.labels as NormalizedChartSpec['labels']),
+          },
+        };
+      }
     }
     if (bp.legend) {
       chartSpec = {

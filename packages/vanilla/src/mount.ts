@@ -1181,8 +1181,9 @@ function wireSeriesLabelDrag(
   const labels = svg.querySelectorAll('.oc-mark-label');
   const cleanups: Array<() => void> = [];
 
-  // Read existing label offsets from the spec
-  const labelsConfig = 'labels' in spec ? spec.labels : undefined;
+  // Read existing label offsets from the spec (skip boolean shorthand)
+  const rawLabels = 'labels' in spec ? spec.labels : undefined;
+  const labelsConfig = typeof rawLabels === 'object' ? rawLabels : undefined;
 
   for (const label of labels) {
     const labelEl = label as SVGTextElement;
