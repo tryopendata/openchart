@@ -13,6 +13,7 @@ import { runCalculate } from './calculate';
 import { runFilter } from './filter';
 import { runFold } from './fold';
 import { runTimeUnit } from './timeunit';
+import { runWindow } from './window';
 
 export { runAggregate } from './aggregate';
 export { runBin } from './bin';
@@ -20,8 +21,9 @@ export { runCalculate } from './calculate';
 export { isConditionalValueDef, resolveConditionalValue } from './conditional';
 export { runFilter } from './filter';
 export { runFold } from './fold';
-export { evaluatePredicate } from './predicates';
+export { evaluatePredicate, isRelativeTimeRef } from './predicates';
 export { runTimeUnit } from './timeunit';
+export { runWindow } from './window';
 
 /**
  * Run a sequence of transforms against a data array.
@@ -49,6 +51,8 @@ export function runTransforms(data: DataRow[], transforms: Transform[]): DataRow
       result = runAggregate(result, transform);
     } else if ('fold' in transform) {
       result = runFold(result, transform);
+    } else if ('window' in transform) {
+      result = runWindow(result, transform);
     }
   }
 

@@ -275,10 +275,26 @@ export function computeDimensions(
     ) {
       // Category labels on the left for bar/dot charts
       const yField = encoding.y.field;
+      const yLabelField = (encoding.y.axis as Record<string, unknown> | undefined)?.labelField as
+        | string
+        | undefined;
       let maxLabelWidth = 0;
       for (const row of spec.data) {
         const label = String(row[yField] ?? '');
-        const w = estimateTextWidth(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
+        let w = estimateTextWidth(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
+        // When labelField is set, add a gap and the subtitle width
+        if (yLabelField) {
+          const subtitle = String(row[yLabelField] ?? '');
+          if (subtitle) {
+            const gap = theme.fonts.sizes.axisTick * 0.6;
+            const subtitleWidth = estimateTextWidth(
+              subtitle,
+              theme.fonts.sizes.axisTick,
+              theme.fonts.weights.normal,
+            );
+            w += gap + subtitleWidth;
+          }
+        }
         if (w > maxLabelWidth) maxLabelWidth = w;
       }
       if (maxLabelWidth > 0) {

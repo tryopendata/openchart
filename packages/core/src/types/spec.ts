@@ -240,6 +240,8 @@ export interface AxisConfig {
   labelPadding?: number;
   /** Color override for axis tick labels and title. Useful in dual-axis charts to match axis color to its series. */
   labelColor?: string;
+  /** Secondary data field to display alongside each tick label. Renders in lighter weight/color. Only effective on categorical y-axis labels (horizontal bar charts). */
+  labelField?: string;
 }
 
 /** Scale configuration for an encoding channel. */
@@ -879,6 +881,12 @@ export interface ChartSpec {
    */
   animation?: AnimationSpec;
   /**
+   * Show a vertical crosshair line that tracks the nearest data point on
+   * line and area charts. Only active when a voronoi overlay is present.
+   * Defaults to false.
+   */
+  crosshair?: boolean;
+  /**
    * Render order within a LayerSpec. Higher values render on top.
    * When omitted, layers render in array order (later layers paint on top).
    * Axis assignment (left/right y) is always determined by array position,
@@ -1221,6 +1229,13 @@ export interface LogicalNot<T> {
   not: T;
 }
 
+/** A relative-time reference that resolves against the data extent. */
+export interface RelativeTimeRef {
+  anchor: 'max' | 'min';
+  offset: number;
+  unit: 'day' | 'week' | 'month' | 'quarter' | 'year';
+}
+
 /** A predicate that tests a field value against a condition. */
 export interface FieldPredicate {
   /** Data field to test. */
@@ -1228,15 +1243,15 @@ export interface FieldPredicate {
   /** Equals comparison. */
   equal?: unknown;
   /** Less than. */
-  lt?: number;
+  lt?: number | RelativeTimeRef;
   /** Less than or equal. */
-  lte?: number;
+  lte?: number | RelativeTimeRef;
   /** Greater than. */
-  gt?: number;
+  gt?: number | RelativeTimeRef;
   /** Greater than or equal. */
-  gte?: number;
+  gte?: number | RelativeTimeRef;
   /** Inclusive range [min, max]. */
-  range?: [number, number];
+  range?: [number | RelativeTimeRef, number | RelativeTimeRef];
   /** Value is one of these. */
   oneOf?: unknown[];
   /** Whether the value is valid (non-null, non-undefined, non-NaN). */
@@ -1342,6 +1357,33 @@ export interface FoldTransform {
   as?: [string, string];
 }
 
+/** Window operation types for computing values relative to other rows. */
+export type WindowOp = 'lag' | 'lead' | 'diff' | 'pct_change' | 'cumsum' | 'rank' | 'first_value';
+
+/** Sort field definition for window transforms. */
+export interface WindowSortField {
+  field: string;
+  order?: 'ascending' | 'descending';
+}
+
+/** Window field definition specifying which operation to compute. */
+export interface WindowFieldDef {
+  op: WindowOp;
+  field: string;
+  /** Row offset for lag/lead/diff/pct_change. Defaults to 1. */
+  offset?: number;
+  as: string;
+}
+
+/** Window transform: computes values relative to other rows in sort order within a partition. */
+export interface WindowTransform {
+  window: WindowFieldDef[];
+  /** Fields to sort by within each partition. */
+  sort: WindowSortField[];
+  /** Fields to partition (group) by. Each group is windowed independently. */
+  groupby?: string[];
+}
+
 /** Discriminated union of all transform types. */
 export type Transform =
   | FilterTransform
@@ -1349,7 +1391,8 @@ export type Transform =
   | CalculateTransform
   | TimeUnitTransform
   | AggregateTransform
-  | FoldTransform;
+  | FoldTransform
+  | WindowTransform;
 
 // ---------------------------------------------------------------------------
 // Conditional encoding (Vega-Lite aligned)

@@ -5,7 +5,12 @@
  * not from the chart area. Density thinning lives in ./thinning.ts.
  */
 
-import type { AxisLabelDensity, AxisTick, MeasureTextFn } from '@opendata-ai/openchart-core';
+import type {
+  AxisLabelDensity,
+  AxisTick,
+  DataRow,
+  MeasureTextFn,
+} from '@opendata-ai/openchart-core';
 import {
   abbreviateNumber,
   buildD3Formatter,
@@ -221,6 +226,7 @@ export function categoricalTicks(
   fontSize?: number,
   fontWeight?: number,
   measureText?: MeasureTextFn,
+  subtitleContext?: { data: DataRow[]; fieldName: string; labelField: string },
 ): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
   const domain: string[] = scale.domain();
@@ -275,6 +281,23 @@ export function categoricalTicks(
   }
   // vertical band scale (horizontal bar y-axis): always show all labels
 
+  let subtitleMap: Map<string, string> | undefined;
+  if (subtitleContext) {
+    const { data, fieldName, labelField } = subtitleContext;
+    if (data.length > 0) {
+      subtitleMap = new Map();
+      for (const row of data) {
+        const key = String(row[fieldName] ?? '');
+        if (!subtitleMap.has(key)) {
+          const val = row[labelField];
+          if (val != null) {
+            subtitleMap.set(key, String(val));
+          }
+        }
+      }
+    }
+  }
+
   const ticks = selectedValues.map((value: string) => {
     // Band scales: use the center of the band
     const bandScale = resolvedScale.type === 'band' ? (scale as ScaleBand<string>) : null;
@@ -282,11 +305,20 @@ export function categoricalTicks(
       ? (bandScale(value) ?? 0) + bandScale.bandwidth() / 2
       : ((scale(value) as number | undefined) ?? 0);
 
-    return {
+    const tick: AxisTick = {
       value,
       position: pos,
       label: value,
     };
+
+    if (subtitleMap) {
+      const subtitle = subtitleMap.get(value);
+      if (subtitle !== undefined) {
+        tick.subtitle = subtitle;
+      }
+    }
+
+    return tick;
   });
 
   return ticks;

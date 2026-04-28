@@ -368,7 +368,10 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute axes (skip for radial charts)
   const axes = isRadial
     ? { x: undefined, y: undefined }
-    : computeAxes(scales, chartArea, strategy, theme, options.measureText);
+    : computeAxes(scales, chartArea, strategy, theme, options.measureText, {
+        data: renderSpec.data,
+        encoding: renderSpec.encoding as Encoding,
+      });
 
   // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
   // axes.y.gridlines off the same object. Do not introduce a copy-on-write.

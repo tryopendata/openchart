@@ -41,7 +41,7 @@ const EASE_VAR_MAP: Record<string, string> = {
 export function renderChartSVG(
   layout: ChartLayout,
   container: HTMLElement,
-  opts?: { animate?: boolean },
+  opts?: { animate?: boolean; crosshair?: boolean },
 ): SVGElement {
   const { width, height } = layout.dimensions;
   const animation = layout.animation;
@@ -164,6 +164,26 @@ export function renderChartSVG(
       overlay.setAttribute('class', 'oc-voronoi-overlay');
       overlay.setAttribute('data-voronoi-overlay', 'true');
       clippedGroup.appendChild(overlay);
+
+      // Crosshair line: opt-in vertical line that tracks the nearest data point
+      if (opts?.crosshair) {
+        const crosshairLine = createSVGElement('line');
+        crosshairLine.setAttribute('data-crosshair', 'true');
+        crosshairLine.setAttribute('class', 'oc-crosshair');
+        setAttrs(crosshairLine, {
+          x1: 0,
+          y1: layout.area.y,
+          x2: 0,
+          y2: layout.area.y + layout.area.height,
+          stroke: layout.theme.colors.gridline,
+          'stroke-opacity': '0.5',
+          'stroke-dasharray': '4,3',
+          'stroke-width': '1',
+          'pointer-events': 'none',
+        });
+        crosshairLine.style.display = 'none';
+        clippedGroup.appendChild(crosshairLine);
+      }
     }
 
     svg.appendChild(clippedGroup);
