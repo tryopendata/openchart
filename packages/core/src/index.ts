@@ -151,6 +151,7 @@ export type {
   ChartBuilderOptions,
   FieldRef,
   TableBuilderOptions,
+  TileMapBuilderOptions,
 } from './helpers/spec-builders';
 export {
   areaChart,
@@ -163,4 +164,5 @@ export {
   lineChart,
   pieChart,
   scatterChart,
+  tileMap,
 } from './helpers/spec-builders';

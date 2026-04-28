@@ -646,6 +646,124 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
 }
 
 // ---------------------------------------------------------------------------
+// TileMap validation
+// ---------------------------------------------------------------------------
+
+function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  // Validate data (can be record or array)
+  if (
+    !spec.data ||
+    typeof spec.data !== 'object' ||
+    (Array.isArray(spec.data) === false && typeof spec.data !== 'object')
+  ) {
+    errors.push({
+      message: 'Spec error: tilemap spec requires a "data" field (record or array)',
+      path: 'data',
+      code: 'INVALID_TYPE',
+      suggestion:
+        'Provide data as either a record mapping state codes to values (e.g. { "CA": 12000, "TX": 8500 }) or an array of objects with state and value fields',
+    });
+    return;
+  }
+
+  // If data is an object (record), validate it has at least one entry
+  if (!Array.isArray(spec.data) && Object.keys(spec.data as Record<string, unknown>).length === 0) {
+    errors.push({
+      message: 'Spec error: "data" must have at least one entry',
+      path: 'data',
+      code: 'EMPTY_DATA',
+      suggestion: 'Add at least one state-value pair, e.g. { "CA": 12000 }',
+    });
+    return;
+  }
+
+  // If data is an array, validate it's non-empty
+  if (Array.isArray(spec.data)) {
+    if (spec.data.length === 0) {
+      errors.push({
+        message: 'Spec error: "data" array must be non-empty',
+        path: 'data',
+        code: 'EMPTY_DATA',
+        suggestion: 'Add at least one data row',
+      });
+      return;
+    }
+
+    const firstRow = spec.data[0] as unknown;
+    if (typeof firstRow !== 'object' || firstRow === null || Array.isArray(firstRow)) {
+      errors.push({
+        message: 'Spec error: each item in "data" must be a plain object',
+        path: 'data[0]',
+        code: 'INVALID_TYPE',
+        suggestion: 'Each data item should be an object, e.g. { state: "CA", value: 12000 }',
+      });
+      return;
+    }
+
+    // If data is array, encoding is required
+    if (!spec.encoding || typeof spec.encoding !== 'object') {
+      errors.push({
+        message:
+          'Spec error: tilemap spec with array data requires an "encoding" object with state and value channels',
+        path: 'encoding',
+        code: 'MISSING_FIELD',
+        suggestion:
+          'Add an encoding object, e.g. encoding: { state: { field: "state", type: "nominal" }, value: { field: "value", type: "quantitative" } }',
+      });
+      return;
+    }
+
+    const encoding = spec.encoding as Record<string, unknown>;
+    const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
+    const availableColumns = [...dataColumns].join(', ');
+
+    // Required channels
+    for (const channel of ['state', 'value'] as const) {
+      const ch = encoding[channel] as Record<string, unknown> | undefined;
+      if (!ch || typeof ch !== 'object') {
+        errors.push({
+          message: `Spec error: tilemap encoding requires "${channel}" channel`,
+          path: `encoding.${channel}`,
+          code: 'MISSING_FIELD',
+          suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
+        });
+        continue;
+      }
+
+      if (!ch.field || typeof ch.field !== 'string') {
+        errors.push({
+          message: `Spec error: encoding.${channel} must have a "field" string`,
+          path: `encoding.${channel}.field`,
+          code: 'MISSING_FIELD',
+          suggestion: `Add a field name from your data columns: ${availableColumns}`,
+        });
+        continue;
+      }
+
+      if (!dataColumns.has(ch.field as string)) {
+        errors.push({
+          message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist in data. Available columns: ${availableColumns}`,
+          path: `encoding.${channel}.field`,
+          code: 'DATA_FIELD_MISSING',
+          suggestion: `Use one of the available data columns: ${availableColumns}`,
+        });
+      }
+    }
+  }
+
+  // Validate darkMode if provided
+  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
+    errors.push({
+      message: 'Spec error: darkMode must be "auto", "force", or "off"',
+      path: 'darkMode',
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Layer validation
 // ---------------------------------------------------------------------------
 
@@ -775,24 +893,27 @@ export function validateSpec(spec: unknown): ValidationResult {
   // - Chart specs have a 'mark' field (string or object with type property)
   // - Table specs have type: 'table'
   // - Graph specs have type: 'graph'
+  // - Sankey specs have type: 'sankey'
+  // - TileMap specs have type: 'tilemap'
   const hasLayer = 'layer' in obj && Array.isArray(obj.layer);
   const hasMark = 'mark' in obj;
   const isTable = obj.type === 'table';
   const isGraph = obj.type === 'graph';
   const isSankey = obj.type === 'sankey';
-  const isLayer = hasLayer && !isTable && !isGraph && !isSankey;
-  const isChart = hasMark && !hasLayer && !isTable && !isGraph && !isSankey;
+  const isTileMap = obj.type === 'tilemap';
+  const isLayer = hasLayer && !isTable && !isGraph && !isSankey && !isTileMap;
+  const isChart = hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap;
 
-  if (!isChart && !isTable && !isGraph && !isSankey && !isLayer) {
+  if (!isChart && !isTable && !isGraph && !isSankey && !isTileMap && !isLayer) {
     return {
       valid: false,
       errors: [
         {
           message:
-            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey',
+            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap',
           path: 'mark',
           code: 'MISSING_FIELD',
-          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field for tables/graphs/sankey (type: "table", type: "graph", or type: "sankey"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
+          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap (type: "table", type: "graph", type: "sankey", or type: "tilemap"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
         },
       ],
       normalized: null,
@@ -837,6 +958,8 @@ export function validateSpec(spec: unknown): ValidationResult {
     validateGraphSpec(obj, errors);
   } else if (isSankey) {
     validateSankeySpec(obj, errors);
+  } else if (isTileMap) {
+    validateTileMapSpec(obj, errors);
   }
 
   if (errors.length > 0) {

@@ -312,7 +312,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   );
 
   // Reserve legend space by shrinking the drawing area
-  const legendGap = legend.entries.length > 0 ? 4 : 0;
+  const legendGap = 'entries' in legend && legend.entries.length > 0 ? 4 : 0;
   const area: Rect = {
     x: fullArea.x,
     y: fullArea.y + legend.bounds.height + legendGap,

@@ -557,7 +557,7 @@ export interface ResolvedAnnotation {
 // Legend
 // ---------------------------------------------------------------------------
 
-/** A single entry in the legend. */
+/** A single entry in a categorical legend. */
 export interface LegendEntry {
   /** The label text (category name or range description). */
   label: string;
@@ -571,16 +571,22 @@ export interface LegendEntry {
   overflow?: boolean;
 }
 
-/** Resolved legend layout with position and entries. */
-export interface LegendLayout {
+/** Base legend layout fields shared by all legend types. */
+export interface BaseLegendLayout {
   /** Where the legend is positioned relative to the chart area. */
   position: 'top' | 'right' | 'bottom' | 'bottom-right' | 'inline';
-  /** Legend entries. */
-  entries: LegendEntry[];
   /** Bounding box for the legend (pixel coordinates). */
   bounds: Rect;
   /** Entry label style. */
   labelStyle: TextStyle;
+}
+
+/** Categorical legend with discrete swatch entries. */
+export interface CategoricalLegendLayout extends BaseLegendLayout {
+  /** Discriminant for legend type. Omitted means categorical (backwards compat). */
+  type?: 'categorical';
+  /** Legend entries. */
+  entries: LegendEntry[];
   /** Swatch size in pixels. */
   swatchSize: number;
   /** Gap between swatch and label. */
@@ -588,6 +594,29 @@ export interface LegendLayout {
   /** Gap between entries. */
   entryGap: number;
 }
+
+/** A color stop in a gradient legend. */
+export interface GradientColorStop {
+  /** Position along the gradient (0 to 1). */
+  offset: number;
+  /** CSS color value. */
+  color: string;
+}
+
+/** Gradient legend for continuous color scales. */
+export interface GradientLegendLayout extends BaseLegendLayout {
+  /** Discriminant for legend type. */
+  type: 'gradient';
+  /** Color stops for the gradient bar. */
+  colorStops: GradientColorStop[];
+  /** Formatted minimum value label. */
+  minLabel: string;
+  /** Formatted maximum value label. */
+  maxLabel: string;
+}
+
+/** Resolved legend layout — either categorical (swatches) or gradient (continuous bar). */
+export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout;
 
 // ---------------------------------------------------------------------------
 // Tooltips
@@ -1050,6 +1079,80 @@ export interface SankeyLayout {
   watermark: boolean;
   /** Real text measurement function from the adapter (for accurate SVG text wrapping). */
   measureText?: MeasureTextFn;
+}
+
+// ---------------------------------------------------------------------------
+// TileMapLayout (engine output for tile map visualizations)
+// ---------------------------------------------------------------------------
+
+/** A resolved tile map tile with computed position and visual properties. */
+export interface TileMapTileMark {
+  type: 'tile';
+  /** Left edge x position. */
+  x: number;
+  /** Top edge y position. */
+  y: number;
+  /** Tile width and height (tiles are square). */
+  size: number;
+  /** Fill color from the sequential color scale. */
+  fill: string;
+  /** Tile border color. */
+  stroke: string;
+  /** Tile border width. */
+  strokeWidth: number;
+  /** Corner radius. */
+  cornerRadius: number;
+  /** US state abbreviation (e.g. "CA", "TX"). */
+  stateCode: string;
+  /** Numeric value (null if state has no data). */
+  value: number | null;
+  /** Formatted value string (e.g. "12,000" or "–" for missing). */
+  formattedValue: string;
+  /** Whether this state has data. False for missing states. */
+  hasData: boolean;
+  /** State code text label (positioned inside tile). */
+  label: ResolvedLabel;
+  /** Value text label (positioned inside tile, below state code). */
+  valueLabel: ResolvedLabel;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex?: number;
+  /** Original data associated with this tile. */
+  data: Record<string, unknown>;
+}
+
+/**
+ * TileMapLayout: the complete engine output for tile map visualizations.
+ *
+ * Contains everything an adapter needs to render the tile map: dimensions,
+ * chrome, tiles, gradient legend, tooltip descriptors, and accessibility metadata.
+ */
+export interface TileMapLayout {
+  /** The tile map drawing area (after chrome and legend are subtracted). */
+  area: Rect;
+  /** Resolved chrome text elements with positions and styles. */
+  chrome: ResolvedChrome;
+  /** Resolved tile marks with positions, colors, and labels. */
+  tiles: TileMapTileMark[];
+  /** Gradient color legend (null if legend is hidden). */
+  gradientLegend: GradientLegendLayout | null;
+  /** Tooltip content descriptors keyed by state code. */
+  tooltipDescriptors: Map<string, TooltipContent>;
+  /** Accessibility metadata for the tile map. */
+  a11y: A11yMetadata;
+  /** Resolved theme. */
+  theme: ResolvedTheme;
+  /** Total SVG width in pixels. */
+  width: number;
+  /** Total SVG height in pixels. */
+  height: number;
+  /** Resolved animation config (undefined if animation is disabled). */
+  animation: ResolvedAnimation | undefined;
+  /** Whether to render the watermark. */
+  watermark: boolean;
+  /** Text measurement function for the rendering adapter. */
+  measureText: MeasureTextFn;
 }
 
 // ---------------------------------------------------------------------------

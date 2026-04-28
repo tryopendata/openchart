@@ -77,6 +77,7 @@ import { computeLegend } from './legend/compute';
 import { legendGap } from './legend/wrap';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
+import { compileTileMap as compileTileMapImpl } from './tilemap/compile-tilemap';
 import { computeTooltipDescriptors } from './tooltips/compute';
 import { runTransforms } from './transforms';
 
@@ -310,7 +311,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // the reserved margin. This way computeLegend positions the legend outside
   // the data area (in the margin) instead of overlapping data marks.
   const legendArea: Rect = { ...chartArea };
-  if (legendLayout.entries.length > 0) {
+  if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(options.width);
     switch (legendLayout.position) {
       case 'top':
@@ -504,7 +505,8 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
 
   const allMarks: Mark[] = [];
   const seenLabels = new Set<string>();
-  const mergedLegendEntries = [...primaryLayout.legend.entries];
+  const pLegend = primaryLayout.legend;
+  const mergedLegendEntries = 'entries' in pLegend ? [...pLegend.entries] : [];
   for (const entry of mergedLegendEntries) {
     seenLabels.add(entry.label);
   }
@@ -522,10 +524,13 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
 
     allMarks.push(...leafLayout.marks);
 
-    for (const entry of leafLayout.legend.entries) {
-      if (!seenLabels.has(entry.label)) {
-        seenLabels.add(entry.label);
-        mergedLegendEntries.push(entry);
+    const leafLeg = leafLayout.legend;
+    if ('entries' in leafLeg) {
+      for (const entry of leafLeg.entries) {
+        if (!seenLabels.has(entry.label)) {
+          seenLabels.add(entry.label);
+          mergedLegendEntries.push(entry);
+        }
       }
     }
   }
@@ -535,8 +540,8 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
     marks: allMarks,
     legend: {
       ...primaryLayout.legend,
-      entries: mergedLegendEntries,
-    },
+      ...('entries' in pLegend ? { entries: mergedLegendEntries } : {}),
+    } as typeof primaryLayout.legend,
   };
 }
 
@@ -812,9 +817,12 @@ function compileLayerIndependent(
 
   // Merge legend entries with deduplication
   const seenLabels = new Set<string>();
-  const mergedLegendEntries = [...layout0.legend.entries];
+  const l0Legend = layout0.legend;
+  const l1Legend = layout1.legend;
+  const mergedLegendEntries = 'entries' in l0Legend ? [...l0Legend.entries] : [];
   for (const entry of mergedLegendEntries) seenLabels.add(entry.label);
-  for (const entry of layout1.legend.entries) {
+  const l1Entries = 'entries' in l1Legend ? l1Legend.entries : [];
+  for (const entry of l1Entries) {
     if (!seenLabels.has(entry.label)) {
       seenLabels.add(entry.label);
       mergedLegendEntries.push(entry);
@@ -856,8 +864,8 @@ function compileLayerIndependent(
     marks,
     legend: {
       ...layout0.legend,
-      entries: mergedLegendEntries,
-    },
+      ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
+    } as typeof layout0.legend,
     tooltipDescriptors: mergedTooltips,
   };
 }
@@ -1110,4 +1118,27 @@ export function compileSankey(
   options: CompileOptions,
 ): import('@opendata-ai/openchart-core').SankeyLayout {
   return compileSankeyImpl(spec, options);
+}
+
+// ---------------------------------------------------------------------------
+// TileMap compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a tilemap spec into a TileMapLayout.
+ *
+ * Takes a raw tilemap spec, validates, normalizes, resolves theme and chrome,
+ * computes tile positions, builds tile marks with colors and labels, and
+ * returns a TileMapLayout ready for rendering.
+ *
+ * @param spec - Raw tilemap spec (validated and normalized internally).
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns TileMapLayout with computed positions and visual properties.
+ * @throws Error if spec is invalid or not a tilemap type.
+ */
+export function compileTileMap(
+  spec: unknown,
+  options: CompileOptions,
+): import('@opendata-ai/openchart-core').TileMapLayout {
+  return compileTileMapImpl(spec, options);
 }

@@ -47,6 +47,7 @@ export type {
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
+  NormalizedTileMapSpec,
   SimulationConfig,
   ValidationError,
   ValidationErrorCode,
@@ -59,6 +60,7 @@ export {
   compileGraph,
   compileSankey,
   compileTable,
+  compileTileMap,
   getChartRenderer,
   normalizeSpec,
   registerChartRenderer,
@@ -86,5 +88,7 @@ export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeContext';
 // Theme context
 export { useVizDarkMode, useVizTheme, VizThemeProvider } from './ThemeContext';
+export type { TileMapHandle, TileMapProps } from './TileMap';
+export { TileMap } from './TileMap';
 export type { VisualizationProps } from './Visualization';
 export { Visualization } from './Visualization';

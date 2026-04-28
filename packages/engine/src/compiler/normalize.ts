@@ -21,6 +21,7 @@ import type {
   LayerSpec,
   SankeySpec,
   TableSpec,
+  TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
 import {
@@ -29,10 +30,13 @@ import {
   isLayerSpec,
   isSankeySpec,
   isTableSpec,
+  isTileMapSpec,
   resolveMarkDef,
   resolveMarkType,
 } from '@opendata-ai/openchart-core';
 import type { NormalizedSankeySpec } from '../sankey/types';
+import { STATE_CODE_SET } from '../tilemap/layout';
+import type { NormalizedTileMapSpec } from '../tilemap/types';
 import type {
   NormalizedChartSpec,
   NormalizedChrome,
@@ -303,6 +307,55 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
   };
 }
 
+function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): NormalizedTileMapSpec {
+  // Convert record data to array if needed
+  let data: Record<string, unknown>[] = Array.isArray(spec.data) ? spec.data : [];
+
+  if (!Array.isArray(spec.data)) {
+    // Convert record map to array of rows
+    data = Object.entries(spec.data).map(([state, value]) => ({ state, value }));
+  }
+
+  // Auto-generate encoding if not provided
+  let encoding = spec.encoding;
+  if (!encoding) {
+    encoding = {
+      state: { field: 'state', type: 'nominal' },
+      value: { field: 'value', type: 'quantitative' },
+    };
+  }
+
+  // Count matched states and warn if low match ratio
+  let matchedCount = 0;
+  for (const row of data) {
+    const stateCode = String(row[encoding.state.field]);
+    if (STATE_CODE_SET.has(stateCode)) {
+      matchedCount++;
+    }
+  }
+
+  const matchRatio = data.length > 0 ? matchedCount / data.length : 0;
+  if (matchRatio < 0.5 && data.length > 0) {
+    warnings.push(
+      `TileMap data: only ${matchedCount} of ${data.length} rows have valid US state codes (expected ≥50%)`,
+    );
+  }
+
+  return {
+    type: 'tilemap',
+    data,
+    encoding,
+    palette: spec.palette ?? 'blue',
+    chrome: normalizeChrome(spec.chrome),
+    legend: spec.legend,
+    theme: spec.theme ?? {},
+    darkMode: spec.darkMode ?? 'off',
+    watermark: spec.watermark ?? true,
+    animation: spec.animation,
+    valueFormat: spec.valueFormat,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -337,9 +390,12 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   if (isSankeySpec(spec)) {
     return normalizeSankeySpec(spec, warnings);
   }
+  if (isTileMapSpec(spec)) {
+    return normalizeTileMapSpec(spec, warnings);
+  }
   // Should never happen after validation
   throw new Error(
-    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', or type: 'sankey'.`,
+    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', or type: 'tilemap'.`,
   );
 }
 

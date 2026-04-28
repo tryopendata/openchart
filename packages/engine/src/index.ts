@@ -12,7 +12,14 @@
 // Main compile API
 // ---------------------------------------------------------------------------
 
-export { compileChart, compileGraph, compileLayer, compileSankey, compileTable } from './compile';
+export {
+  compileChart,
+  compileGraph,
+  compileLayer,
+  compileSankey,
+  compileTable,
+  compileTileMap,
+} from './compile';
 
 // ---------------------------------------------------------------------------
 // Animation resolution
@@ -36,6 +43,12 @@ export type {
 // ---------------------------------------------------------------------------
 
 export type { NormalizedSankeySpec } from './sankey/types';
+
+// ---------------------------------------------------------------------------
+// TileMap compilation types
+// ---------------------------------------------------------------------------
+
+export type { NormalizedTileMapSpec } from './tilemap/types';
 
 // ---------------------------------------------------------------------------
 // Compiler pipeline (spec validation, normalization, generic compile)
@@ -100,5 +113,7 @@ export type {
   SankeySpec,
   TableLayout,
   TableSpec,
+  TileMapLayout,
+  TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';

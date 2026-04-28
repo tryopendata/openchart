@@ -56,6 +56,9 @@ export { createTable } from './table-mount';
 export { renderTable } from './table-renderer';
 export type { TextEditOverlayConfig } from './text-edit-overlay';
 export { createTextEditOverlay } from './text-edit-overlay';
+export type { TileMapInstance, TileMapMountOptions } from './tilemap-mount';
+// TileMap mount API
+export { createTileMap } from './tilemap-mount';
 export type { TooltipManager } from './tooltip';
 // Tooltip
 export { createTooltipManager } from './tooltip';

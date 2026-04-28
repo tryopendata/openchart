@@ -2,12 +2,16 @@
  * Legend rendering: swatches + labels with wrap/overflow handling.
  */
 
-import type { LegendLayout } from '@opendata-ai/openchart-core';
+import type { CategoricalLegendLayout, LegendLayout } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
+function isCategorical(legend: LegendLayout): legend is CategoricalLegendLayout {
+  return !legend.type || legend.type === 'categorical';
+}
+
 export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
-  if (legend.entries.length === 0) return;
+  if (!isCategorical(legend) || legend.entries.length === 0) return;
 
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-legend');

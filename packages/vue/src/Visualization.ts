@@ -6,12 +6,13 @@
  */
 
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isSankeySpec, isTableSpec } from '@opendata-ai/openchart-core';
+import { isGraphSpec, isSankeySpec, isTableSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
 import { type CSSProperties, defineComponent, h, type PropType } from 'vue';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
 import { Sankey } from './Sankey';
+import { TileMap } from './TileMap';
 
 export interface VisualizationProps {
   spec: VizSpec;
@@ -58,6 +59,9 @@ export const Visualization = defineComponent({
       }
       if (isSankeySpec(spec)) {
         return h(Sankey, { ...sharedProps, spec });
+      }
+      if (isTileMapSpec(spec)) {
+        return h(TileMap, { ...sharedProps, spec });
       }
       return h(Chart, { ...sharedProps, spec });
     };

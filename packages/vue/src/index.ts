@@ -79,5 +79,7 @@ export type { SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeProvider';
 export { VizThemeProvider } from './ThemeProvider';
+export type { TileMapProps } from './TileMap';
+export { TileMap } from './TileMap';
 export type { VisualizationProps } from './Visualization';
 export { Visualization } from './Visualization';

@@ -22,6 +22,9 @@ import type {
   MarkType,
   TableSpec,
   ThemeConfig,
+  TileMapEncoding,
+  TileMapPalette,
+  TileMapSpec,
 } from '../types/spec';
 import type { ColumnConfig } from '../types/table';
 
@@ -408,4 +411,53 @@ export function dataTable(data: DataRow[], options?: TableBuilderOptions): Table
   if (options?.responsive !== undefined) spec.responsive = options.responsive;
 
   return spec;
+}
+
+// ---------------------------------------------------------------------------
+// Tile map builder
+// ---------------------------------------------------------------------------
+
+/** Options for the tileMap convenience builder. */
+export interface TileMapBuilderOptions {
+  /** Encoding channels (required when data is DataRow[]). */
+  encoding?: TileMapEncoding;
+  /** Sequential color palette name. */
+  palette?: TileMapPalette;
+  /** Editorial chrome. */
+  chrome?: Chrome;
+  /** Theme overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode setting. */
+  darkMode?: DarkMode;
+  /** d3-format string for value formatting. */
+  valueFormat?: string;
+}
+
+/**
+ * Build a TileMapSpec from a state-to-value record or tabular data.
+ *
+ * @example Record map (simplest):
+ * ```ts
+ * tileMap({ CA: 4.4, TX: 17.6, NY: 4.5 })
+ * ```
+ *
+ * @example Tabular data with encoding:
+ * ```ts
+ * tileMap(data, { encoding: { state: { field: 'code' }, value: { field: 'rate' } } })
+ * ```
+ */
+export function tileMap(
+  data: Record<string, number | null> | DataRow[],
+  options?: TileMapBuilderOptions,
+): TileMapSpec {
+  return {
+    type: 'tilemap' as const,
+    data,
+    ...(options?.encoding && { encoding: options.encoding }),
+    ...(options?.palette && { palette: options.palette }),
+    ...(options?.chrome && { chrome: options.chrome }),
+    ...(options?.theme && { theme: options.theme }),
+    ...(options?.darkMode && { darkMode: options.darkMode }),
+    ...(options?.valueFormat && { valueFormat: options.valueFormat }),
+  };
 }

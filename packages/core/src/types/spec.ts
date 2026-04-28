@@ -1120,6 +1120,58 @@ export interface SankeySpec {
   valueFormat?: string;
 }
 
+// ---------------------------------------------------------------------------
+// TileMap spec (US state tile grid map)
+// ---------------------------------------------------------------------------
+
+/** Encoding channels specific to tile map visualizations. */
+export interface TileMapEncoding {
+  /** State code field (required, nominal). Maps to US state abbreviations. */
+  state: EncodingChannel;
+  /** Value field (required, quantitative). Maps to the sequential color scale. */
+  value: EncodingChannel;
+  /** Tooltip encoding (optional). */
+  tooltip?: EncodingChannel | EncodingChannel[];
+}
+
+/** Sequential color palette names available for tile maps. */
+export type TileMapPalette = 'blue' | 'green' | 'orange' | 'purple';
+
+export interface TileMapSpec {
+  /** Discriminant: always "tilemap". */
+  type: 'tilemap';
+  /**
+   * Data for the tile map. Accepts either:
+   * - A record mapping state codes to numeric values: `{ "CA": 12000, "TX": 8500 }`
+   * - Tabular data rows with state and value fields (requires encoding)
+   */
+  data: Record<string, number | null> | DataRow[];
+  /**
+   * Encoding channels mapping data fields to visual properties.
+   * Required when data is DataRow[]. Auto-generated when data is a record map.
+   */
+  encoding?: TileMapEncoding;
+  /** Sequential color palette. Defaults to 'blue'. */
+  palette?: TileMapPalette;
+  /** Editorial chrome (title, subtitle, source, byline, footer). */
+  chrome?: Chrome;
+  /** Legend display configuration. */
+  legend?: LegendConfig;
+  /** Theme configuration overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode behavior. Defaults to "off". */
+  darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
+  /** Animation configuration for entrance animations. */
+  animation?: AnimationSpec;
+  /**
+   * d3-format string applied to tile values, legend labels, and tooltips.
+   * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
+   */
+  valueFormat?: string;
+}
+
 /**
  * Top-level visualization spec: union discriminated by structural shape.
  *
@@ -1128,8 +1180,9 @@ export interface SankeySpec {
  * - TableSpec: has `type: 'table'`
  * - GraphSpec: has `type: 'graph'`
  * - SankeySpec: has `type: 'sankey'`
+ * - TileMapSpec: has `type: 'tilemap'`
  */
-export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec | SankeySpec;
+export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec | SankeySpec | TileMapSpec;
 
 /** Chart spec without runtime data, for persistence/storage. */
 export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
@@ -1139,12 +1192,15 @@ export type TableSpecWithoutData = Omit<TableSpec, 'data' | 'columns'>;
 export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
 /** Sankey spec without runtime data, for persistence/storage. */
 export type SankeySpecWithoutData = Omit<SankeySpec, 'data'>;
+/** TileMap spec without runtime data, for persistence/storage. */
+export type TileMapSpecWithoutData = Omit<TileMapSpec, 'data'>;
 /** Union of data-stripped spec types for persistence/storage. */
 export type StoredVizSpec =
   | ChartSpecWithoutData
   | TableSpecWithoutData
   | GraphSpecWithoutData
-  | SankeySpecWithoutData;
+  | SankeySpecWithoutData
+  | TileMapSpecWithoutData;
 
 // ---------------------------------------------------------------------------
 // Transforms (Vega-Lite aligned)
@@ -1410,6 +1466,16 @@ export function isGraphSpec(spec: VizSpec | Record<string, unknown>): spec is Gr
 /** Check if a spec is a SankeySpec. */
 export function isSankeySpec(spec: VizSpec | Record<string, unknown>): spec is SankeySpec {
   return 'type' in spec && (spec as Record<string, unknown>).type === 'sankey';
+}
+
+/** Type guard: checks if a spec is a TileMapSpec. */
+export function isTileMapSpec(spec: unknown): spec is TileMapSpec {
+  return (
+    typeof spec === 'object' &&
+    spec !== null &&
+    'type' in spec &&
+    (spec as Record<string, unknown>).type === 'tilemap'
+  );
 }
 
 // ---------------------------------------------------------------------------

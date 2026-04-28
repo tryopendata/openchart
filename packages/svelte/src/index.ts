@@ -77,12 +77,14 @@ export { default as DataTable } from './DataTable.svelte';
 export { default as Graph } from './Graph.svelte';
 export { default as Sankey } from './Sankey.svelte';
 export { default as VizThemeProvider } from './ThemeProvider.svelte';
+export { default as TileMap } from './TileMap.svelte';
 // Component prop types
 export type {
   ChartProps,
   DataTableProps,
   GraphProps,
   SankeyProps,
+  TileMapProps,
   VisualizationProps,
   VizThemeProviderProps,
 } from './types.js';

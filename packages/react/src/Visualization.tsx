@@ -6,12 +6,13 @@
  */
 
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isSankeySpec, isTableSpec } from '@opendata-ai/openchart-core';
+import { isGraphSpec, isSankeySpec, isTableSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
 import type { CSSProperties } from 'react';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
 import { Sankey } from './Sankey';
+import { TileMap } from './TileMap';
 
 export interface VisualizationProps {
   /** The visualization spec to render. */
@@ -52,6 +53,11 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
   if (isSankeySpec(spec)) {
     return (
       <Sankey spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
+    );
+  }
+  if (isTileMapSpec(spec)) {
+    return (
+      <TileMap spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );
   }
   return (

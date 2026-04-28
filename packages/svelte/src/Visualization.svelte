@@ -6,11 +6,12 @@
 -->
 <script lang="ts">
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isSankeySpec, isTableSpec } from '@opendata-ai/openchart-core';
+import { isGraphSpec, isSankeySpec, isTableSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
 import Chart from './Chart.svelte';
 import DataTable from './DataTable.svelte';
 import Graph from './Graph.svelte';
 import Sankey from './Sankey.svelte';
+import TileMap from './TileMap.svelte';
 
 let {
   spec,
@@ -33,6 +34,8 @@ let {
   <Graph {spec} {theme} {darkMode} class={className} {style} />
 {:else if isSankeySpec(spec)}
   <Sankey {spec} {theme} {darkMode} class={className} {style} />
+{:else if isTileMapSpec(spec)}
+  <TileMap {spec} {theme} {darkMode} class={className} {style} />
 {:else}
   <Chart {spec} {theme} {darkMode} class={className} {style} />
 {/if}

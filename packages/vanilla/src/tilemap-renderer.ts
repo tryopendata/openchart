@@ -1,0 +1,364 @@
+/**
+ * TileMap SVG renderer: converts a TileMapLayout into SVG DOM elements.
+ *
+ * Creates an <svg> with tile rectangles, state code labels, value labels,
+ * gradient legend, and chrome. All styling via inline SVG attributes from
+ * layout data. Animation is pure CSS, driven by data attributes.
+ */
+
+import type { TileMapLayout, TileMapTileMark } from '@opendata-ai/openchart-core';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+const BRAND_URL = 'https://tryopendata.ai';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function createSVGElement(tag: string): SVGElement {
+  return document.createElementNS(SVG_NS, tag);
+}
+
+function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void {
+  for (const [key, value] of Object.entries(attrs)) {
+    el.setAttribute(key, String(value));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chrome rendering
+// ---------------------------------------------------------------------------
+
+function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-chrome');
+
+  const { chrome } = layout;
+  const bottomOffset = layout.area.y + layout.area.height;
+
+  if (chrome.title) {
+    const text = createSVGElement('text');
+    setAttrs(text, { x: chrome.title.x, y: chrome.title.y });
+    text.setAttribute('class', 'oc-title');
+    text.setAttribute('font-family', chrome.title.style.fontFamily);
+    text.setAttribute('font-size', String(chrome.title.style.fontSize));
+    text.setAttribute('font-weight', String(chrome.title.style.fontWeight));
+    (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', chrome.title.style.fill);
+    text.textContent = chrome.title.text;
+    g.appendChild(text);
+  }
+
+  if (chrome.subtitle) {
+    const text = createSVGElement('text');
+    setAttrs(text, { x: chrome.subtitle.x, y: chrome.subtitle.y });
+    text.setAttribute('class', 'oc-subtitle');
+    text.setAttribute('font-family', chrome.subtitle.style.fontFamily);
+    text.setAttribute('font-size', String(chrome.subtitle.style.fontSize));
+    text.setAttribute('font-weight', String(chrome.subtitle.style.fontWeight));
+    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      'fill',
+      chrome.subtitle.style.fill,
+    );
+    text.textContent = chrome.subtitle.text;
+    g.appendChild(text);
+  }
+
+  if (chrome.source) {
+    const text = createSVGElement('text');
+    setAttrs(text, { x: chrome.source.x, y: bottomOffset + chrome.source.y });
+    text.setAttribute('class', 'oc-source');
+    text.setAttribute('font-family', chrome.source.style.fontFamily);
+    text.setAttribute('font-size', String(chrome.source.style.fontSize));
+    text.setAttribute('font-weight', String(chrome.source.style.fontWeight));
+    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      'fill',
+      chrome.source.style.fill,
+    );
+    text.textContent = chrome.source.text;
+    g.appendChild(text);
+  }
+
+  if (chrome.byline) {
+    const text = createSVGElement('text');
+    setAttrs(text, { x: chrome.byline.x, y: bottomOffset + chrome.byline.y });
+    text.setAttribute('class', 'oc-byline');
+    text.setAttribute('font-family', chrome.byline.style.fontFamily);
+    text.setAttribute('font-size', String(chrome.byline.style.fontSize));
+    text.setAttribute('font-weight', String(chrome.byline.style.fontWeight));
+    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      'fill',
+      chrome.byline.style.fill,
+    );
+    text.textContent = chrome.byline.text;
+    g.appendChild(text);
+  }
+
+  if (chrome.footer) {
+    const text = createSVGElement('text');
+    setAttrs(text, { x: chrome.footer.x, y: bottomOffset + chrome.footer.y });
+    text.setAttribute('class', 'oc-footer');
+    text.setAttribute('font-family', chrome.footer.style.fontFamily);
+    text.setAttribute('font-size', String(chrome.footer.style.fontSize));
+    text.setAttribute('font-weight', String(chrome.footer.style.fontWeight));
+    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      'fill',
+      chrome.footer.style.fill,
+    );
+    text.textContent = chrome.footer.text;
+    g.appendChild(text);
+  }
+
+  parent.appendChild(g);
+}
+
+// ---------------------------------------------------------------------------
+// Watermark rendering
+// ---------------------------------------------------------------------------
+
+function renderWatermark(parent: SVGElement, layout: TileMapLayout): void {
+  if (layout.width < 480) return; // Don't render if too narrow
+
+  const { width, height } = layout;
+  const { theme } = layout;
+  const padding = theme.spacing.padding;
+  const rightEdge = width - padding;
+  const bottomEdge = height - padding;
+  const fill = theme.colors.axis;
+
+  const a = createSVGElement('a');
+  a.setAttribute('href', BRAND_URL);
+  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
+  a.setAttribute('target', '_blank');
+  a.setAttribute('rel', 'noopener');
+  a.setAttribute('class', 'oc-chrome-ref');
+
+  const text = createSVGElement('text');
+  setAttrs(text, {
+    x: rightEdge,
+    y: bottomEdge,
+    'dominant-baseline': 'alphabetic',
+    'text-anchor': 'end',
+    'font-family': theme.fonts.family,
+    'font-size': 12,
+    'fill-opacity': 0.55,
+  });
+  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
+
+  const trySpan = createSVGElement('tspan');
+  setAttrs(trySpan, { 'font-weight': 500 });
+  trySpan.textContent = 'try';
+
+  const openDataSpan = createSVGElement('tspan');
+  setAttrs(openDataSpan, { 'font-weight': 600, 'font-size': 16 });
+  openDataSpan.textContent = 'OpenData';
+
+  const aiSpan = createSVGElement('tspan');
+  setAttrs(aiSpan, { 'font-weight': 500 });
+  aiSpan.textContent = '.ai';
+
+  text.appendChild(trySpan);
+  text.appendChild(openDataSpan);
+  text.appendChild(aiSpan);
+  a.appendChild(text);
+  parent.appendChild(a);
+}
+
+// ---------------------------------------------------------------------------
+// Tiles rendering
+// ---------------------------------------------------------------------------
+
+function renderTiles(parent: SVGElement, tiles: TileMapTileMark[]): void {
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-tilemap-tiles');
+  g.setAttribute('role', 'list');
+
+  for (const tile of tiles) {
+    const tileGroup = createSVGElement('g');
+    tileGroup.setAttribute('class', 'oc-tilemap-tile');
+    tileGroup.setAttribute('data-state', tile.stateCode);
+    tileGroup.setAttribute('role', 'listitem');
+    if (tile.aria?.label) {
+      tileGroup.setAttribute('aria-label', tile.aria.label);
+    }
+
+    // Tile background rect
+    const rect = createSVGElement('rect');
+    setAttrs(rect, {
+      x: tile.x,
+      y: tile.y,
+      width: tile.size,
+      height: tile.size,
+      rx: tile.cornerRadius,
+      fill: tile.fill,
+      stroke: tile.stroke,
+      'stroke-width': tile.strokeWidth,
+    });
+    tileGroup.appendChild(rect);
+
+    // State code label
+    const codeLabel = createSVGElement('text');
+    setAttrs(codeLabel, {
+      x: tile.label.x,
+      y: tile.label.y,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'central',
+      'font-family': tile.label.style.fontFamily,
+      'font-size': tile.label.style.fontSize,
+      'font-weight': tile.label.style.fontWeight,
+    });
+    (codeLabel as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      'fill',
+      tile.label.style.fill,
+    );
+    codeLabel.textContent = tile.label.text;
+    tileGroup.appendChild(codeLabel);
+
+    // Value label (if visible)
+    if (tile.valueLabel.visible && tile.valueLabel.text) {
+      const valueLabel = createSVGElement('text');
+      setAttrs(valueLabel, {
+        x: tile.valueLabel.x,
+        y: tile.valueLabel.y,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        'font-family': tile.valueLabel.style.fontFamily,
+        'font-size': tile.valueLabel.style.fontSize,
+        'font-weight': tile.valueLabel.style.fontWeight,
+      });
+      (valueLabel as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        'fill',
+        tile.valueLabel.style.fill,
+      );
+      valueLabel.textContent = tile.valueLabel.text;
+      tileGroup.appendChild(valueLabel);
+    }
+
+    g.appendChild(tileGroup);
+  }
+
+  parent.appendChild(g);
+}
+
+// ---------------------------------------------------------------------------
+// Gradient legend rendering
+// ---------------------------------------------------------------------------
+
+function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
+  if (!layout.gradientLegend) return;
+
+  const { gradientLegend } = layout;
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-tilemap-legend');
+
+  // Build linear gradient in defs
+  const defs = parent.querySelector('defs') || createSVGElement('defs');
+  const exists = parent.querySelector('defs');
+  if (!exists) {
+    parent.insertBefore(defs, parent.firstChild);
+  }
+
+  const grad = createSVGElement('linearGradient');
+  grad.id = 'oc-tilemap-legend-gradient';
+  grad.setAttribute('x1', '0%');
+  grad.setAttribute('y1', '0%');
+  grad.setAttribute('x2', '100%');
+  grad.setAttribute('y2', '0%');
+
+  for (const stop of gradientLegend.colorStops) {
+    const s = createSVGElement('stop');
+    setAttrs(s, { offset: `${stop.offset * 100}%`, 'stop-color': stop.color });
+    grad.appendChild(s);
+  }
+
+  (defs as SVGElement).appendChild(grad);
+
+  // Gradient bar
+  const bar = createSVGElement('rect');
+  setAttrs(bar, {
+    x: gradientLegend.bounds.x,
+    y: gradientLegend.bounds.y,
+    width: gradientLegend.bounds.width,
+    height: gradientLegend.bounds.height,
+    rx: 3,
+    fill: 'url(#oc-tilemap-legend-gradient)',
+  });
+  g.appendChild(bar);
+
+  // Min label
+  const minText = createSVGElement('text');
+  setAttrs(minText, {
+    x: gradientLegend.bounds.x,
+    y: gradientLegend.bounds.y + gradientLegend.bounds.height + 14,
+    'text-anchor': 'start',
+    'font-family': gradientLegend.labelStyle.fontFamily,
+    'font-size': gradientLegend.labelStyle.fontSize,
+    'font-weight': gradientLegend.labelStyle.fontWeight,
+  });
+  (minText as SVGElement & ElementCSSInlineStyle).style.setProperty(
+    'fill',
+    gradientLegend.labelStyle.fill,
+  );
+  minText.textContent = gradientLegend.minLabel;
+  g.appendChild(minText);
+
+  // Max label
+  const maxText = createSVGElement('text');
+  setAttrs(maxText, {
+    x: gradientLegend.bounds.x + gradientLegend.bounds.width,
+    y: gradientLegend.bounds.y + gradientLegend.bounds.height + 14,
+    'text-anchor': 'end',
+    'font-family': gradientLegend.labelStyle.fontFamily,
+    'font-size': gradientLegend.labelStyle.fontSize,
+    'font-weight': gradientLegend.labelStyle.fontWeight,
+  });
+  (maxText as SVGElement & ElementCSSInlineStyle).style.setProperty(
+    'fill',
+    gradientLegend.labelStyle.fill,
+  );
+  maxText.textContent = gradientLegend.maxLabel;
+  g.appendChild(maxText);
+
+  parent.appendChild(g);
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a TileMapLayout to an SVG element.
+ */
+export function renderTileMapSVG(layout: TileMapLayout): SVGSVGElement {
+  const { width, height, tiles, a11y, watermark } = layout;
+
+  const svg = createSVGElement('svg') as SVGSVGElement;
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  svg.setAttribute('role', 'img');
+  if (a11y.altText) {
+    svg.setAttribute('aria-label', a11y.altText);
+  }
+  svg.classList.add('oc-tilemap');
+
+  // Empty defs element (will be filled by gradient legend)
+  const defs = createSVGElement('defs');
+  svg.appendChild(defs);
+
+  // Render chrome
+  renderChrome(svg, layout);
+
+  // Render tiles
+  renderTiles(svg, tiles);
+
+  // Render gradient legend
+  renderGradientLegend(svg, layout);
+
+  // Render watermark
+  if (watermark) {
+    renderWatermark(svg, layout);
+  }
+
+  return svg;
+}

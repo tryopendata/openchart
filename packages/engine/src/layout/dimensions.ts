@@ -359,7 +359,7 @@ export function computeDimensions(
   }
 
   // Reserve legend space
-  if (legendLayout.entries.length > 0) {
+  if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(width);
     if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
       margins.right += legendLayout.bounds.width + 8;
@@ -407,7 +407,9 @@ export function computeDimensions(
       const gap = legendGap(width);
       margins.top =
         newTop +
-        (legendLayout.entries.length > 0 && legendLayout.position === 'top'
+        ('entries' in legendLayout &&
+        legendLayout.entries.length > 0 &&
+        legendLayout.position === 'top'
           ? legendLayout.bounds.height + gap
           : 0);
       margins.bottom = newBottom;

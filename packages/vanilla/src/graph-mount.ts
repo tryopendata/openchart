@@ -342,7 +342,7 @@ export function createGraph(
   function renderLegend(): void {
     if (!legendEl) return;
 
-    const entries = compilation.legend.entries;
+    const entries = 'entries' in compilation.legend ? compilation.legend.entries : [];
     if (entries.length === 0) {
       legendEl.style.display = 'none';
       return;

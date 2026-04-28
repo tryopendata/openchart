@@ -7,6 +7,7 @@
  */
 
 import type {
+  CategoricalLegendLayout,
   LegendLayout,
   MeasureTextFn,
   ResolvedAnimation,
@@ -230,8 +231,9 @@ function renderBrand(parent: SVGElement, layout: SankeyLayout): void {
 // Legend rendering
 // ---------------------------------------------------------------------------
 
-function renderLegend(parent: SVGElement, legend: LegendLayout): void {
-  if (legend.entries.length === 0) return;
+function renderLegend(parent: SVGElement, legendLayout: LegendLayout): void {
+  if (!('entries' in legendLayout) || legendLayout.entries.length === 0) return;
+  const legend = legendLayout as CategoricalLegendLayout;
 
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-legend');

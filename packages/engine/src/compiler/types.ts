@@ -29,6 +29,7 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import type { NormalizedSankeySpec } from '../sankey/types';
+import type { NormalizedTileMapSpec } from '../tilemap/types';
 
 // ---------------------------------------------------------------------------
 // NormalizedChrome: all fields are ChromeText objects (not plain strings)
@@ -124,7 +125,8 @@ export type NormalizedSpec =
   | NormalizedChartSpec
   | NormalizedTableSpec
   | NormalizedGraphSpec
-  | NormalizedSankeySpec;
+  | NormalizedSankeySpec
+  | NormalizedTileMapSpec;
 
 // ---------------------------------------------------------------------------
 // Validation types

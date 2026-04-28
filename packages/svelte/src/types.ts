@@ -19,6 +19,7 @@ import type {
   TableSpec,
   TextAnnotation,
   ThemeConfig,
+  TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
 import type { Snippet } from 'svelte';
@@ -73,6 +74,28 @@ export interface SankeyProps {
   onlinkclick?: (link: Record<string, unknown>) => void;
   onnodehover?: (node: Record<string, unknown> | null) => void;
   onlinkhover?: (link: Record<string, unknown> | null) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface TileMapProps {
+  spec: TileMapSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  ontileclick?: (tile: {
+    stateCode: string;
+    stateName: string;
+    value: number | null;
+    data: Record<string, unknown>;
+  }) => void;
+  ontilehover?: (
+    tile: {
+      stateCode: string;
+      stateName: string;
+      value: number | null;
+      data: Record<string, unknown>;
+    } | null,
+  ) => void;
   class?: string;
   style?: string;
 }

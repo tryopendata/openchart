@@ -1625,7 +1625,7 @@ function getEditableElements(
   }
 
   // Legend
-  if (layout.legend.entries.length > 0) {
+  if ('entries' in layout.legend && layout.legend.entries.length > 0) {
     refs.push(elementRef.legend());
   }
 
