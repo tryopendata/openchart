@@ -74,19 +74,32 @@ const defaultOptions = { width: 600, height: 400 };
 // ---------------------------------------------------------------------------
 
 describe('compileTileMap', () => {
-  it('compiles record-map data correctly (all 51 states)', () => {
-    const result = compileTileMap(fullSpec, defaultOptions);
-
-    // 50 states + DC = 51 tiles
+  it('always renders all 51 state tiles', () => {
+    const result = compileTileMap(basicSpec, defaultOptions);
     expect(result.tiles).toHaveLength(51);
   });
 
-  it('compiles a basic spec with 5 states', () => {
+  it('marks data-bearing states as hasData: true', () => {
     const result = compileTileMap(basicSpec, defaultOptions);
 
-    expect(result.tiles).toHaveLength(5);
-    const codes = result.tiles.map((t) => t.stateCode).sort();
+    const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+    expect(caTile.hasData).toBe(true);
+    expect(caTile.value).toBe(5.4);
+
+    const dataTiles = result.tiles.filter((t) => t.hasData);
+    expect(dataTiles).toHaveLength(5);
+    const codes = dataTiles.map((t) => t.stateCode).sort();
     expect(codes).toEqual(['CA', 'FL', 'IL', 'NY', 'TX']);
+  });
+
+  it('marks missing states as hasData: false with neutral fill', () => {
+    const result = compileTileMap(basicSpec, defaultOptions);
+
+    const akTile = result.tiles.find((t) => t.stateCode === 'AK')!;
+    expect(akTile).toBeDefined();
+    expect(akTile.hasData).toBe(false);
+    expect(akTile.value).toBeNull();
+    expect(akTile.formattedValue).toBe('–');
   });
 
   it('all tiles have valid position and size (x >= 0, y >= 0, size > 0)', () => {
@@ -99,16 +112,16 @@ describe('compileTileMap', () => {
     }
   });
 
-  it('tiles have fill colors from the sequential palette', () => {
+  it('data tiles have fill colors from the sequential palette', () => {
     const result = compileTileMap(basicSpec, defaultOptions);
 
-    for (const tile of result.tiles) {
+    const dataTiles = result.tiles.filter((t) => t.hasData);
+    for (const tile of dataTiles) {
       expect(tile.fill).toBeTruthy();
       expect(typeof tile.fill).toBe('string');
     }
 
-    // Different values should produce different fill colors
-    const fills = new Set(result.tiles.map((t) => t.fill));
+    const fills = new Set(dataTiles.map((t) => t.fill));
     expect(fills.size).toBeGreaterThan(1);
   });
 
@@ -128,43 +141,57 @@ describe('compileTileMap', () => {
 
     const result = compileTileMap(spec, defaultOptions);
 
-    expect(result.tiles).toHaveLength(3);
-    const codes = result.tiles.map((t) => t.stateCode).sort();
+    expect(result.tiles).toHaveLength(51);
+    const dataTiles = result.tiles.filter((t) => t.hasData);
+    expect(dataTiles).toHaveLength(3);
+    const codes = dataTiles.map((t) => t.stateCode).sort();
     expect(codes).toEqual(['CA', 'NY', 'TX']);
   });
 
-  it('missing states produce no tiles (only provided states get tiles)', () => {
-    const result = compileTileMap(basicSpec, defaultOptions);
+  it('handles null values in record-map data as missing', () => {
+    const spec = {
+      type: 'tilemap' as const,
+      data: { CA: 5.4, TX: null, NY: 4.5 } as Record<string, number | null>,
+    };
 
-    // Only 5 states in data, so only 5 tiles
-    expect(result.tiles).toHaveLength(5);
+    const result = compileTileMap(spec, defaultOptions);
 
-    // Verify a state not in data has no tile
-    const alaskaTile = result.tiles.find((t) => t.stateCode === 'AK');
-    expect(alaskaTile).toBeUndefined();
+    const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+    expect(caTile.hasData).toBe(true);
+
+    const txTile = result.tiles.find((t) => t.stateCode === 'TX')!;
+    expect(txTile.hasData).toBe(false);
+    expect(txTile.value).toBeNull();
   });
 
   describe('gradient legend', () => {
     it('has correct min/max labels', () => {
       const result = compileTileMap(basicSpec, defaultOptions);
 
-      expect(result.gradientLegend.minLabel).toBeTruthy();
-      expect(result.gradientLegend.maxLabel).toBeTruthy();
-      // Min value in data is FL: 3.3, max is IL: 4.6
-      expect(Number(result.gradientLegend.minLabel)).toBeLessThan(
-        Number(result.gradientLegend.maxLabel),
+      expect(result.gradientLegend).not.toBeNull();
+      expect(result.gradientLegend!.minLabel).toBeTruthy();
+      expect(result.gradientLegend!.maxLabel).toBeTruthy();
+      expect(Number(result.gradientLegend!.minLabel)).toBeLessThan(
+        Number(result.gradientLegend!.maxLabel),
       );
     });
 
     it('has colorStops', () => {
       const result = compileTileMap(basicSpec, defaultOptions);
 
-      expect(result.gradientLegend.colorStops.length).toBeGreaterThan(0);
-      for (const stop of result.gradientLegend.colorStops) {
+      expect(result.gradientLegend!.colorStops.length).toBeGreaterThan(0);
+      for (const stop of result.gradientLegend!.colorStops) {
         expect(stop.offset).toBeGreaterThanOrEqual(0);
         expect(stop.offset).toBeLessThanOrEqual(1);
         expect(stop.color).toBeTruthy();
       }
+    });
+
+    it('is null when legend.show is false', () => {
+      const spec = { ...basicSpec, legend: { show: false } };
+      const result = compileTileMap(spec, defaultOptions);
+
+      expect(result.gradientLegend).toBeNull();
     });
   });
 
@@ -175,7 +202,6 @@ describe('compileTileMap', () => {
 
       const caTile = result.tiles.find((t) => t.stateCode === 'CA');
       expect(caTile).toBeDefined();
-      // 5.4 formatted with .1f should be "5.4"
       expect(caTile!.formattedValue).toBe('5.4');
     });
   });
@@ -185,7 +211,6 @@ describe('compileTileMap', () => {
       const lightResult = compileTileMap(basicSpec, defaultOptions);
       const darkResult = compileTileMap(basicSpec, { ...defaultOptions, darkMode: true });
 
-      // The lightest value (FL: 3.3) should have a different fill in dark vs light mode
       const lightFL = lightResult.tiles.find((t) => t.stateCode === 'FL');
       const darkFL = darkResult.tiles.find((t) => t.stateCode === 'FL');
       expect(lightFL!.fill).not.toBe(darkFL!.fill);
@@ -211,14 +236,12 @@ describe('compileTileMap', () => {
   });
 
   describe('tooltip descriptors', () => {
-    it('contains entries for each state in the data', () => {
+    it('contains entries for all tiles', () => {
       const result = compileTileMap(basicSpec, defaultOptions);
 
       expect(result.tooltipDescriptors.has('CA')).toBe(true);
       expect(result.tooltipDescriptors.has('TX')).toBe(true);
-      expect(result.tooltipDescriptors.has('NY')).toBe(true);
-      expect(result.tooltipDescriptors.has('FL')).toBe(true);
-      expect(result.tooltipDescriptors.has('IL')).toBe(true);
+      expect(result.tooltipDescriptors.size).toBe(51);
     });
 
     it('tooltip has title and value field', () => {
@@ -287,14 +310,13 @@ describe('compileTileMap', () => {
   });
 
   describe('palette', () => {
-    it('uses the specified palette', () => {
+    it('uses the specified palette (data tiles differ between palettes)', () => {
       const blueResult = compileTileMap(basicSpec, defaultOptions);
       const greenResult = compileTileMap({ ...basicSpec, palette: 'green' }, defaultOptions);
 
-      // Different palettes should produce different fill colors
-      const blueFill = blueResult.tiles[0].fill;
-      const greenFill = greenResult.tiles[0].fill;
-      expect(blueFill).not.toBe(greenFill);
+      const blueCa = blueResult.tiles.find((t) => t.stateCode === 'CA')!;
+      const greenCa = greenResult.tiles.find((t) => t.stateCode === 'CA')!;
+      expect(blueCa.fill).not.toBe(greenCa.fill);
     });
   });
 });

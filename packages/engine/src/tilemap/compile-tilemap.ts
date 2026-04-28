@@ -37,7 +37,7 @@ import { scaleLinear } from 'd3-scale';
 
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
-import { computeTilePositions, STATE_CODE_SET, STATE_NAMES } from './layout';
+import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
 import type { NormalizedTileMapSpec } from './types';
 
 // ---------------------------------------------------------------------------
@@ -123,15 +123,18 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   const stateField = tilemapSpec.encoding.state.field;
   const valueField = tilemapSpec.encoding.value.field;
 
-  // 6. Extract values from data
+  // 6. Extract values from data, preserving null/undefined as missing
   const stateValueMap = new Map<string, number>();
 
   for (const row of tilemapSpec.data) {
     const stateCode = String(row[stateField]);
-    const value = Number(row[valueField]) || 0;
+    const raw = row[valueField];
 
-    if (STATE_CODE_SET.has(stateCode)) {
-      stateValueMap.set(stateCode, value);
+    if (STATE_CODE_SET.has(stateCode) && raw !== null && raw !== undefined) {
+      const value = Number(raw);
+      if (!Number.isNaN(value)) {
+        stateValueMap.set(stateCode, value);
+      }
     }
   }
 
@@ -140,20 +143,22 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   const min = values.length > 0 ? Math.min(...values) : 0;
   const max = values.length > 0 ? Math.max(...values) : 100;
 
-  // 8. Build color scale
-  const paletteStops = [...SEQUENTIAL_PALETTES[tilemapSpec.palette]];
+  // 8. Build color scale (fallback to 'blue' if palette name is invalid)
+  const paletteStops = [...(SEQUENTIAL_PALETTES[tilemapSpec.palette] ?? SEQUENTIAL_PALETTES.blue)];
   if (isDarkMode) paletteStops.reverse();
 
   const domain = paletteStops.map((_, i) => min + (i / (paletteStops.length - 1)) * (max - min));
   const colorScale = scaleLinear<string>().domain(domain).range(paletteStops).clamp(true);
 
-  // 9. Reserve space for gradient legend at bottom
+  // 9. Reserve space for gradient legend at bottom (unless hidden)
+  const showLegend = tilemapSpec.legend?.show !== false;
   const legendBarHeight = 12;
   const legendLabelGap = 4;
-  const legendTotalHeight = legendBarHeight + legendLabelGap + 14; // 14 for label font size
+  const legendTotalHeight = showLegend ? legendBarHeight + legendLabelGap + 14 : 0;
 
   // 10. Compute tile positions in the remaining area
-  const tileAreaHeight = fullArea.height - legendTotalHeight - 8; // 8px gap above legend
+  const legendGap = showLegend ? 8 : 0;
+  const tileAreaHeight = fullArea.height - legendTotalHeight - legendGap;
   const tilePositions = computeTilePositions(fullArea.width, tileAreaHeight, 4);
 
   // Center tile grid horizontally
@@ -162,11 +167,11 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
 
   // Position for legend
   const legendX = tileGridOffsetX;
-  const legendY = tileGridOffsetY + tilePositions.gridHeight + 8;
+  const legendY = tileGridOffsetY + tilePositions.gridHeight + legendGap;
   const legendWidth = tilePositions.gridWidth;
 
   // 11. Build TileMapTileMark[]
-  const formatter = buildD3Formatter(tilemapSpec.valueFormat) || formatNumber;
+  const formatter = buildD3Formatter(tilemapSpec.valueFormat) ?? formatNumber;
   const neutralFillLight = '#e0e0e0';
   const neutralFillDark = '#2a2a3e';
   const neutralStrokeLight = '#d0d0d0';
@@ -177,14 +182,14 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
 
   const tiles: TileMapTileMark[] = [];
 
-  for (const [stateCode] of stateValueMap) {
+  for (const { state: stateCode } of US_STATE_TILES) {
     const pos = tilePositions.positions.get(stateCode);
     if (!pos) continue;
 
-    const value = stateValueMap.get(stateCode);
-    const hasData = value !== undefined && value !== null;
-    const fill = hasData ? colorScale(value) : neutralFill;
-    const formattedValue = hasData ? formatter(value) : '–';
+    const hasData = stateValueMap.has(stateCode);
+    const value = hasData ? stateValueMap.get(stateCode)! : null;
+    const fill = hasData ? colorScale(value!) : neutralFill;
+    const formattedValue = hasData ? formatter(value!) : '–';
 
     const labelStyle: TextStyle = {
       fontFamily: theme.fonts.family,
@@ -246,27 +251,31 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     tiles.push(tile);
   }
 
-  // 12. Build gradient legend
-  const gradientColorStops: GradientColorStop[] = paletteStops.map((color, i) => ({
-    offset: i / (paletteStops.length - 1),
-    color,
-  }));
+  // 12. Build gradient legend (null when legend is hidden)
+  let gradientLegend: GradientLegendLayout | null = null;
 
-  const gradientLegend: GradientLegendLayout = {
-    type: 'gradient',
-    position: 'bottom',
-    bounds: { x: legendX, y: legendY, width: legendWidth, height: legendBarHeight },
-    labelStyle: {
-      fontFamily: theme.fonts.family,
-      fontSize: 11,
-      fontWeight: 400,
-      fill: theme.colors.text,
-      lineHeight: 1.2,
-    },
-    colorStops: gradientColorStops,
-    minLabel: formatter(min),
-    maxLabel: formatter(max),
-  };
+  if (showLegend) {
+    const gradientColorStops: GradientColorStop[] = paletteStops.map((color, i) => ({
+      offset: i / (paletteStops.length - 1),
+      color,
+    }));
+
+    gradientLegend = {
+      type: 'gradient',
+      position: 'bottom',
+      bounds: { x: legendX, y: legendY, width: legendWidth, height: legendBarHeight },
+      labelStyle: {
+        fontFamily: theme.fonts.family,
+        fontSize: 11,
+        fontWeight: 400,
+        fill: theme.colors.text,
+        lineHeight: 1.2,
+      },
+      colorStops: gradientColorStops,
+      minLabel: formatter(min),
+      maxLabel: formatter(max),
+    };
+  }
 
   // 13. Build tooltip descriptors
   const tooltipDescriptors = new Map<string, TooltipContent>();

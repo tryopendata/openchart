@@ -12,6 +12,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const BRAND_URL = 'https://tryopendata.ai';
 
+let gradientIdCounter = 0;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -258,8 +260,9 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
     parent.insertBefore(defs, parent.firstChild);
   }
 
+  const gradientId = `oc-tilemap-legend-gradient-${gradientIdCounter++}`;
   const grad = createSVGElement('linearGradient');
-  grad.id = 'oc-tilemap-legend-gradient';
+  grad.id = gradientId;
   grad.setAttribute('x1', '0%');
   grad.setAttribute('y1', '0%');
   grad.setAttribute('x2', '100%');
@@ -281,7 +284,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
     width: gradientLegend.bounds.width,
     height: gradientLegend.bounds.height,
     rx: 3,
-    fill: 'url(#oc-tilemap-legend-gradient)',
+    fill: `url(#${gradientId})`,
   });
   g.appendChild(bar);
 

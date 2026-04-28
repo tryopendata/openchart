@@ -651,11 +651,7 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
 
 function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
   // Validate data (can be record or array)
-  if (
-    !spec.data ||
-    typeof spec.data !== 'object' ||
-    (Array.isArray(spec.data) === false && typeof spec.data !== 'object')
-  ) {
+  if (!spec.data || typeof spec.data !== 'object') {
     errors.push({
       message: 'Spec error: tilemap spec requires a "data" field (record or array)',
       path: 'data',

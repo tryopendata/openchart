@@ -10,6 +10,7 @@
  */
 
 import type {
+  AnimationSpec,
   Annotation,
   ChartSpec,
   Chrome,
@@ -18,6 +19,7 @@ import type {
   Encoding,
   EncodingChannel,
   FieldType,
+  LegendConfig,
   MarkDef,
   MarkType,
   TableSpec,
@@ -425,10 +427,16 @@ export interface TileMapBuilderOptions {
   palette?: TileMapPalette;
   /** Editorial chrome. */
   chrome?: Chrome;
+  /** Legend display configuration. */
+  legend?: LegendConfig;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode setting. */
   darkMode?: DarkMode;
+  /** Whether to show the watermark. */
+  watermark?: boolean;
+  /** Animation configuration. */
+  animation?: AnimationSpec;
   /** d3-format string for value formatting. */
   valueFormat?: string;
 }
@@ -456,8 +464,11 @@ export function tileMap(
     ...(options?.encoding && { encoding: options.encoding }),
     ...(options?.palette && { palette: options.palette }),
     ...(options?.chrome && { chrome: options.chrome }),
+    ...(options?.legend && { legend: options.legend }),
     ...(options?.theme && { theme: options.theme }),
     ...(options?.darkMode && { darkMode: options.darkMode }),
+    ...(options?.watermark !== undefined && { watermark: options.watermark }),
+    ...(options?.animation && { animation: options.animation }),
     ...(options?.valueFormat && { valueFormat: options.valueFormat }),
   };
 }

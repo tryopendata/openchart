@@ -36,12 +36,11 @@ describe('createTileMap', () => {
     instance.destroy();
   });
 
-  it('renders correct number of tile elements', () => {
+  it('renders all 51 state tiles', () => {
     const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
 
     const tiles = container.querySelectorAll('.oc-tilemap-tile');
-    // CA, TX, NY, FL, IL = 5 tiles
-    expect(tiles).toHaveLength(5);
+    expect(tiles).toHaveLength(51);
 
     instance.destroy();
   });
@@ -49,18 +48,68 @@ describe('createTileMap', () => {
   it('update() re-renders with new data', () => {
     const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
 
-    const tilesBefore = container.querySelectorAll('.oc-tilemap-tile');
-    expect(tilesBefore).toHaveLength(5);
-
-    // Update with fewer states
+    // Update with full data
     const updatedSpec = {
       ...basicTileMapSpec,
-      data: { CA: 5.4, TX: 4.1 } as Record<string, number>,
+      data: {
+        AL: 2.7,
+        AK: 6.4,
+        AZ: 3.5,
+        AR: 3.4,
+        CA: 5.4,
+        CO: 3.4,
+        CT: 4.1,
+        DE: 4.4,
+        FL: 3.3,
+        GA: 3.4,
+        HI: 3.2,
+        ID: 3.0,
+        IL: 4.6,
+        IN: 3.3,
+        IA: 2.7,
+        KS: 3.2,
+        KY: 4.4,
+        LA: 3.6,
+        ME: 3.6,
+        MD: 1.8,
+        MA: 3.3,
+        MI: 4.2,
+        MN: 2.8,
+        MS: 3.7,
+        MO: 3.5,
+        MT: 2.9,
+        NE: 2.2,
+        NV: 5.4,
+        NH: 2.4,
+        NJ: 4.8,
+        NM: 4.1,
+        NY: 4.5,
+        NC: 3.5,
+        ND: 1.9,
+        OH: 4.0,
+        OK: 3.9,
+        OR: 4.2,
+        PA: 3.4,
+        RI: 3.8,
+        SC: 3.3,
+        SD: 2.0,
+        TN: 3.5,
+        TX: 4.1,
+        UT: 2.9,
+        VT: 2.3,
+        VA: 2.9,
+        WA: 4.6,
+        WV: 4.0,
+        WI: 2.9,
+        WY: 3.2,
+        DC: 5.2,
+      } as Record<string, number>,
     };
     instance.update(updatedSpec);
 
-    const tilesAfter = container.querySelectorAll('.oc-tilemap-tile');
-    expect(tilesAfter).toHaveLength(2);
+    // All tiles should have data now
+    const dataTiles = instance.layout.tiles.filter((t) => t.hasData);
+    expect(dataTiles).toHaveLength(51);
 
     instance.destroy();
   });
@@ -90,8 +139,8 @@ describe('createTileMap', () => {
     const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
 
     expect(instance.layout).toBeDefined();
-    expect(instance.layout.tiles).toHaveLength(5);
-    expect(instance.layout.gradientLegend).toBeDefined();
+    expect(instance.layout.tiles).toHaveLength(51);
+    expect(instance.layout.gradientLegend).not.toBeNull();
 
     instance.destroy();
   });

@@ -1468,14 +1468,9 @@ export function isSankeySpec(spec: VizSpec | Record<string, unknown>): spec is S
   return 'type' in spec && (spec as Record<string, unknown>).type === 'sankey';
 }
 
-/** Type guard: checks if a spec is a TileMapSpec. */
-export function isTileMapSpec(spec: unknown): spec is TileMapSpec {
-  return (
-    typeof spec === 'object' &&
-    spec !== null &&
-    'type' in spec &&
-    (spec as Record<string, unknown>).type === 'tilemap'
-  );
+/** Check if a spec is a TileMapSpec. */
+export function isTileMapSpec(spec: VizSpec | Record<string, unknown>): spec is TileMapSpec {
+  return 'type' in spec && (spec as Record<string, unknown>).type === 'tilemap';
 }
 
 // ---------------------------------------------------------------------------
