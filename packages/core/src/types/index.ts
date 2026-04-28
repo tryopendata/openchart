@@ -140,6 +140,7 @@ export type {
   RadialGradient,
   RangeAnnotation,
   RefLineAnnotation,
+  RelativeTimeRef,
   ResolveConfig,
   ResolveMode,
   SankeyEncoding,
@@ -159,6 +160,10 @@ export type {
   TimeUnitTransform,
   Transform,
   VizSpec,
+  WindowFieldDef,
+  WindowOp,
+  WindowSortField,
+  WindowTransform,
 } from './spec';
 export {
   CHART_TYPES,

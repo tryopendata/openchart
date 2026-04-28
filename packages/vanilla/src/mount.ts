@@ -260,6 +260,7 @@ function wireVoronoiTooltipEvents(
   const voronoiPoints = collectVoronoiPoints(layout);
   if (voronoiPoints.length === 0) return () => {};
 
+  const crosshair = svg.querySelector('[data-crosshair]') as SVGLineElement | null;
   const cleanups: Array<() => void> = [];
 
   const handleMouseMove = (e: Event) => {
@@ -277,6 +278,13 @@ function wireVoronoiTooltipEvents(
     const nearest = findNearestPoint(voronoiPoints, svgX, svgY);
     if (!nearest?.tooltip) return;
 
+    // Update crosshair position to match the nearest data point's x
+    if (crosshair) {
+      crosshair.setAttribute('x1', String(nearest.x));
+      crosshair.setAttribute('x2', String(nearest.x));
+      crosshair.style.display = '';
+    }
+
     // Show tooltip at the mouse position (relative to container, not SVG viewBox)
     const containerX = mouseEvent.clientX - svgRect.left;
     const containerY = mouseEvent.clientY - svgRect.top;
@@ -284,6 +292,7 @@ function wireVoronoiTooltipEvents(
   };
 
   const handleMouseLeave = () => {
+    if (crosshair) crosshair.style.display = 'none';
     tooltipManager.hide();
   };
 
@@ -303,6 +312,13 @@ function wireVoronoiTooltipEvents(
 
       const nearest = findNearestPoint(voronoiPoints, svgX, svgY);
       if (!nearest?.tooltip) return;
+
+      // Update crosshair position on touch
+      if (crosshair) {
+        crosshair.setAttribute('x1', String(nearest.x));
+        crosshair.setAttribute('x2', String(nearest.x));
+        crosshair.style.display = '';
+      }
 
       const containerX = touch.clientX - svgRect.left;
       const containerY = touch.clientY - svgRect.top;
@@ -2146,7 +2162,11 @@ export function createChart(
 
     currentLayout = compile();
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
-    svgElement = renderChartSVG(currentLayout, container, { animate: shouldAnimate });
+    const crosshair = 'crosshair' in currentSpec && !!(currentSpec as ChartSpec).crosshair;
+    svgElement = renderChartSVG(currentLayout, container, {
+      animate: shouldAnimate,
+      crosshair,
+    });
     tooltipManager = createTooltipManager(container);
 
     // Wire tooltip events on mark elements

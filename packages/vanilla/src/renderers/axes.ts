@@ -10,6 +10,25 @@ import {
 } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
+function appendCompoundLabel(
+  parent: SVGElement,
+  primaryText: string,
+  subtitle: string,
+  fontWeight: number,
+): void {
+  const primarySpan = createSVGElement('tspan');
+  primarySpan.setAttribute('font-weight', String(fontWeight));
+  primarySpan.textContent = primaryText;
+  parent.appendChild(primarySpan);
+
+  const subtitleSpan = createSVGElement('tspan');
+  subtitleSpan.setAttribute('dx', '0.5em');
+  subtitleSpan.textContent = subtitle;
+  subtitleSpan.setAttribute('font-weight', '400');
+  subtitleSpan.setAttribute('fill-opacity', '0.6');
+  parent.appendChild(subtitleSpan);
+}
+
 function renderAxis(
   parent: SVGElement,
   axis: AxisLayout,
@@ -85,30 +104,72 @@ function renderAxis(
         const availableWidth = area.x - TICK_LABEL_OFFSET;
         const fontSize = axis.tickLabelStyle.fontSize;
         const fontWeight = axis.tickLabelStyle.fontWeight;
-        const fullWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
-        if (fullWidth > availableWidth && availableWidth > 20) {
-          const ellipsis = '…';
-          const ellipsisWidth = estimateTextWidth(ellipsis, fontSize, fontWeight);
-          let lo = 0;
-          let hi = tick.label.length;
-          while (lo < hi) {
-            const mid = (lo + hi + 1) >>> 1;
-            const candidate = tick.label.slice(0, mid);
-            if (
-              estimateTextWidth(candidate, fontSize, fontWeight) + ellipsisWidth <=
-              availableWidth
-            ) {
-              lo = mid;
+
+        if (tick.subtitle) {
+          // Compound label: primary + gap + subtitle via tspan elements
+          const gapWidth = fontSize * 0.5;
+          const subtitleWidth = estimateTextWidth(tick.subtitle, fontSize, fontWeight);
+          const primaryWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
+          const totalWidth = primaryWidth + gapWidth + subtitleWidth;
+
+          if (totalWidth > availableWidth && availableWidth > 20) {
+            const ellipsis = '…';
+            const ellipsisWidth = estimateTextWidth(ellipsis, fontSize, fontWeight);
+            const budgetForPrimary = availableWidth - gapWidth - subtitleWidth - ellipsisWidth;
+
+            let primaryText = tick.label;
+            if (budgetForPrimary > 0) {
+              let lo = 0;
+              let hi = tick.label.length;
+              while (lo < hi) {
+                const mid = (lo + hi + 1) >>> 1;
+                const candidate = tick.label.slice(0, mid);
+                if (estimateTextWidth(candidate, fontSize, fontWeight) <= budgetForPrimary) {
+                  lo = mid;
+                } else {
+                  hi = mid - 1;
+                }
+              }
+              primaryText = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
             } else {
-              hi = mid - 1;
+              primaryText = ellipsis;
             }
+
+            appendCompoundLabel(label, primaryText, tick.subtitle, fontWeight);
+
+            const titleEl = createSVGElement('title');
+            titleEl.textContent = `${tick.label}  ${tick.subtitle}`;
+            label.appendChild(titleEl);
+          } else {
+            appendCompoundLabel(label, tick.label, tick.subtitle, fontWeight);
           }
-          label.textContent = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
-          const titleEl = createSVGElement('title');
-          titleEl.textContent = tick.label;
-          label.appendChild(titleEl);
         } else {
-          label.textContent = tick.label;
+          // Plain label (no subtitle)
+          const fullWidth = estimateTextWidth(tick.label, fontSize, fontWeight);
+          if (fullWidth > availableWidth && availableWidth > 20) {
+            const ellipsis = '…';
+            const ellipsisWidth = estimateTextWidth(ellipsis, fontSize, fontWeight);
+            let lo = 0;
+            let hi = tick.label.length;
+            while (lo < hi) {
+              const mid = (lo + hi + 1) >>> 1;
+              const candidate = tick.label.slice(0, mid);
+              if (
+                estimateTextWidth(candidate, fontSize, fontWeight) + ellipsisWidth <=
+                availableWidth
+              ) {
+                lo = mid;
+              } else {
+                hi = mid - 1;
+              }
+            }
+            label.textContent = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
+            const titleEl = createSVGElement('title');
+            titleEl.textContent = tick.label;
+            label.appendChild(titleEl);
+          } else {
+            label.textContent = tick.label;
+          }
         }
       } else {
         label.textContent = tick.label;

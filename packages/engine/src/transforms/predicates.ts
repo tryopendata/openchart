@@ -5,13 +5,39 @@
  * and logical combinators (and, or, not).
  */
 
-import type { DataRow, FieldPredicate, FilterPredicate } from '@opendata-ai/openchart-core';
+import type {
+  DataRow,
+  FieldPredicate,
+  FilterPredicate,
+  RelativeTimeRef,
+} from '@opendata-ai/openchart-core';
 
 /**
  * Check if a predicate is a FieldPredicate (has a 'field' property).
  */
 function isFieldPredicate(pred: FilterPredicate): pred is FieldPredicate {
   return 'field' in pred;
+}
+
+/**
+ * Check if a value is a RelativeTimeRef (has anchor, offset, and unit properties).
+ */
+export function isRelativeTimeRef(value: unknown): value is RelativeTimeRef {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'anchor' in value &&
+    'offset' in value &&
+    'unit' in value
+  );
+}
+
+/**
+ * Coerce a comparison value to a number. RelativeTimeRef objects that weren't
+ * resolved upstream become NaN, which makes all comparisons return false (safe).
+ */
+function toNum(v: number | RelativeTimeRef): number {
+  return typeof v === 'number' ? v : NaN;
 }
 
 /**
@@ -33,26 +59,30 @@ function evaluateFieldPredicate(datum: DataRow, pred: FieldPredicate): boolean {
     return value == pred.equal;
   }
 
-  // Numeric comparisons
-  const numValue = Number(value);
+  // Numeric comparisons (with date string fallback)
+  let numValue = Number(value);
+  if (Number.isNaN(numValue) && value != null) {
+    const ms = new Date(value as string | number).getTime();
+    if (!Number.isNaN(ms)) numValue = ms;
+  }
 
   if (pred.lt !== undefined) {
-    return numValue < pred.lt;
+    return numValue < toNum(pred.lt);
   }
   if (pred.lte !== undefined) {
-    return numValue <= pred.lte;
+    return numValue <= toNum(pred.lte);
   }
   if (pred.gt !== undefined) {
-    return numValue > pred.gt;
+    return numValue > toNum(pred.gt);
   }
   if (pred.gte !== undefined) {
-    return numValue >= pred.gte;
+    return numValue >= toNum(pred.gte);
   }
 
   // range: inclusive [min, max]
   if (pred.range !== undefined) {
-    const [min, max] = pred.range;
-    return numValue >= min && numValue <= max;
+    const [lo, hi] = pred.range;
+    return numValue >= toNum(lo) && numValue <= toNum(hi);
   }
 
   // oneOf: use loose equality (same rationale as equal above)

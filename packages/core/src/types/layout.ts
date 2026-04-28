@@ -121,6 +121,8 @@ export interface AxisTick {
   position: number;
   /** Formatted label string for display. */
   label: string;
+  /** Secondary label text from axis.labelField. */
+  subtitle?: string;
 }
 
 /** A single gridline with computed positions. */

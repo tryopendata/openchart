@@ -10,6 +10,8 @@ import type {
   AxisLabelDensity,
   AxisLayout,
   AxisTick,
+  DataRow,
+  Encoding,
   Gridline,
   LayoutStrategy,
   MeasureTextFn,
@@ -191,6 +193,14 @@ export interface AxesResult {
   y?: AxisLayout;
 }
 
+/** Optional data context for axis computation (enables labelField subtitles). */
+export interface AxesDataContext {
+  /** The data rows for subtitle lookup. */
+  data: DataRow[];
+  /** The encoding object to resolve field names. */
+  encoding: Encoding;
+}
+
 /**
  * Compute axis layouts with tick positions, labels, and axis lines.
  *
@@ -199,6 +209,7 @@ export interface AxesResult {
  * @param strategy - Responsive layout strategy.
  * @param theme - Resolved theme for styling.
  * @param measureText - Optional real text measurement from the adapter.
+ * @param dataContext - Optional data context for labelField subtitle support.
  */
 export function computeAxes(
   scales: ResolvedScales,
@@ -206,6 +217,7 @@ export function computeAxes(
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
   measureText?: MeasureTextFn,
+  dataContext?: AxesDataContext,
 ): AxesResult {
   const result: AxesResult = {};
   const baseDensity = strategy.axisLabelDensity;
@@ -362,7 +374,21 @@ export function computeAxes(
     if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.y);
     } else if (!isContinuousY) {
-      allTicks = categoricalTicks(scales.y, yDensity, 'vertical');
+      const yFieldName = dataContext?.encoding.y?.field;
+      const yLabelField = axisConfig?.labelField;
+      allTicks = categoricalTicks(
+        scales.y,
+        yDensity,
+        'vertical',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        yFieldName && yLabelField && dataContext
+          ? { data: dataContext.data, fieldName: yFieldName, labelField: yLabelField }
+          : undefined,
+      );
     } else {
       allTicks = continuousTicks(scales.y, yDensity, yTargetCount);
     }
