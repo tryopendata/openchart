@@ -1,5 +1,27 @@
 # Changelog
 
+## [6.27.0](https://github.com/tryopendata/openchart/compare/core-v6.26.0...core-v6.27.0) (2026-04-29)
+
+
+### Features
+
+* add display: 'sparkline' mode for inline mini-charts ([455c4cd](https://github.com/tryopendata/openchart/commit/455c4cd))
+* polish animations, fix grid layout, and backfill CHANGELOG ([0a728b4](https://github.com/tryopendata/openchart/commit/0a728b4))
+* add window transform, relative-time filter, crosshair, and compound axis labels ([4056362](https://github.com/tryopendata/openchart/commit/4056362))
+* add US state tile grid map visualization ([1157043](https://github.com/tryopendata/openchart/commit/1157043))
+* add boolean shorthand for labels spec ([8eb0a87](https://github.com/tryopendata/openchart/commit/8eb0a87))
+* add zIndex to ChartSpec for controlling layer render order ([1febd38](https://github.com/tryopendata/openchart/commit/1febd38))
+* centralize responsive layout metrics and fix mobile chart alignment ([265bf95](https://github.com/tryopendata/openchart/commit/265bf95))
+* dual-axis combo charts with independent y-scales ([70cf379](https://github.com/tryopendata/openchart/commit/70cf379))
+* add halo prop to text annotations ([8269c3c](https://github.com/tryopendata/openchart/commit/8269c3c))
+* area y2 bands, annotation responsiveness, bar label improvements ([e31736b](https://github.com/tryopendata/openchart/commit/e31736b))
+
+
+### Bug Fixes
+
+* address code review findings ([1359887](https://github.com/tryopendata/openchart/commit/1359887))
+* restore all y-axis labels on horizontal bar charts and improve x-axis band label thinning ([66c2be3](https://github.com/tryopendata/openchart/commit/66c2be3))
+
 ## [6.26.0](https://github.com/tryopendata/openchart/compare/core-v6.25.4...core-v6.26.0) (2026-04-29)
 
 
