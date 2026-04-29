@@ -8,7 +8,8 @@
 
 .oc-table-root,
 .oc-graph-root,
-.oc-sankey-root {
+.oc-sankey-root,
+.oc-tilemap-root {
   width: 100%;
   height: 100%;
 }

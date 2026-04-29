@@ -84,7 +84,7 @@ const unemploymentSpec: TileMapSpec = {
 };
 
 export const UnemploymentRate = () => (
-  <div className="story-chart story-h-420">
+  <div className="story-chart story-h-600">
     <TileMap spec={unemploymentSpec} />
   </div>
 );
@@ -115,7 +115,7 @@ const partialSpec: TileMapSpec = {
 };
 
 export const PartialData = () => (
-  <div className="story-chart story-h-420">
+  <div className="story-chart story-h-600">
     <TileMap spec={partialSpec} />
   </div>
 );
@@ -135,7 +135,7 @@ const darkModeSpec: TileMapSpec = {
 };
 
 export const DarkMode = () => (
-  <div className="story-chart story-h-420">
+  <div className="story-chart story-h-600">
     <TileMap spec={darkModeSpec} />
   </div>
 );
@@ -211,7 +211,7 @@ const greenPaletteSpec: TileMapSpec = {
 };
 
 export const GreenPalette = () => (
-  <div className="story-chart story-h-420">
+  <div className="story-chart story-h-600">
     <TileMap spec={greenPaletteSpec} />
   </div>
 );
@@ -248,7 +248,7 @@ const tabularSpec: TileMapSpec = {
 };
 
 export const TabularData = () => (
-  <div className="story-chart story-h-420">
+  <div className="story-chart story-h-600">
     <TileMap spec={tabularSpec} />
   </div>
 );
@@ -270,7 +270,7 @@ const withChromeSpec: TileMapSpec = {
 };
 
 export const WithChrome = () => (
-  <div className="story-chart story-h-420">
+  <div className="story-chart story-h-600">
     <TileMap spec={withChromeSpec} />
   </div>
 );

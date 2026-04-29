@@ -115,6 +115,13 @@
     animation-delay: calc(var(--oc-animation-duration) + var(--oc-annotation-delay, 200ms));
   }
 
+  /* Tilemap tiles: fade in with jittered stagger for organic feel.
+     Per-tile delay is computed in the renderer with pseudo-random variation. */
+  & .oc-tilemap-tile {
+    animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.35) ease-in both;
+    animation-delay: var(--oc-tile-delay, 0ms);
+  }
+
   /* Sankey nodes: fade in with stagger by column depth (left-to-right) */
   & .oc-sankey-node rect {
     animation: oc-enter-fade-only var(--oc-animation-duration)

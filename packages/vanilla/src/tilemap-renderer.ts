@@ -6,11 +6,20 @@
  * layout data. Animation is pure CSS, driven by data attributes.
  */
 
-import type { TileMapLayout, TileMapTileMark } from '@opendata-ai/openchart-core';
+import type {
+  ResolvedAnimation,
+  TileMapLayout,
+  TileMapTileMark,
+} from '@opendata-ai/openchart-core';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const BRAND_URL = 'https://tryopendata.ai';
+
+const EASE_VAR_MAP: Record<string, string> = {
+  smooth: 'var(--oc-ease-smooth)',
+  snappy: 'var(--oc-ease-snappy)',
+};
 
 let gradientIdCounter = 0;
 
@@ -170,18 +179,51 @@ function renderWatermark(parent: SVGElement, layout: TileMapLayout): void {
 // Tiles rendering
 // ---------------------------------------------------------------------------
 
-function renderTiles(parent: SVGElement, tiles: TileMapTileMark[]): void {
+function renderTiles(
+  parent: SVGElement,
+  tiles: TileMapTileMark[],
+  animation?: ResolvedAnimation,
+): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-tilemap-tiles');
   g.setAttribute('role', 'list');
 
-  for (const tile of tiles) {
+  // Compute per-tile delays with jitter for organic feel.
+  // Base delay spreads tiles across ~800ms window, jitter adds +-40% variation
+  // so some tiles pop in clusters while others have longer gaps.
+  const tileDelays: number[] = [];
+  if (animation?.enabled) {
+    const baseStagger = 800 / Math.max(tiles.length, 1);
+    let seed = 17;
+    for (let i = 0; i < tiles.length; i++) {
+      const idx = tiles[i].animationIndex ?? i;
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      const jitter = ((seed % 1000) / 1000 - 0.5) * 0.8;
+      tileDelays.push(Math.max(0, Math.round(idx * baseStagger * (1 + jitter))));
+    }
+  }
+
+  for (let i = 0; i < tiles.length; i++) {
+    const tile = tiles[i];
     const tileGroup = createSVGElement('g');
     tileGroup.setAttribute('class', 'oc-tilemap-tile');
     tileGroup.setAttribute('data-state', tile.stateCode);
     tileGroup.setAttribute('role', 'listitem');
     if (tile.aria?.label) {
       tileGroup.setAttribute('aria-label', tile.aria.label);
+    }
+
+    if (animation?.enabled) {
+      const idx = tile.animationIndex ?? i;
+      tileGroup.setAttribute('data-animation-index', String(idx));
+      (tileGroup as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        '--oc-mark-index',
+        String(idx),
+      );
+      (tileGroup as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        '--oc-tile-delay',
+        `${tileDelays[i]}ms`,
+      );
     }
 
     // Tile background rect
@@ -332,8 +374,12 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
 /**
  * Render a TileMapLayout to an SVG element.
  */
-export function renderTileMapSVG(layout: TileMapLayout): SVGSVGElement {
-  const { width, height, tiles, a11y, watermark } = layout;
+export function renderTileMapSVG(
+  layout: TileMapLayout,
+  opts?: { animate?: boolean },
+): SVGSVGElement {
+  const { width, height, tiles, a11y, watermark, animation } = layout;
+  const animate = opts?.animate && animation?.enabled;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -343,7 +389,19 @@ export function renderTileMapSVG(layout: TileMapLayout): SVGSVGElement {
   if (a11y.altText) {
     svg.setAttribute('aria-label', a11y.altText);
   }
-  svg.classList.add('oc-tilemap');
+
+  const classes = animate ? 'oc-tilemap oc-animate' : 'oc-tilemap';
+  svg.setAttribute('class', classes);
+
+  if (animate && animation) {
+    // Target ~1s total: stagger window ~800ms + per-tile pop ~200ms
+    const stagger = Math.max(5, Math.round(800 / Math.max(tiles.length, 1)));
+    svg.style.setProperty('--oc-animation-duration', `${animation.duration}ms`);
+    svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
+    svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
+    const easeVar = EASE_VAR_MAP[animation.ease] || EASE_VAR_MAP.smooth;
+    svg.style.setProperty('--oc-animation-ease', easeVar);
+  }
 
   // Empty defs element (will be filled by gradient legend)
   const defs = createSVGElement('defs');
@@ -353,7 +411,7 @@ export function renderTileMapSVG(layout: TileMapLayout): SVGSVGElement {
   renderChrome(svg, layout);
 
   // Render tiles
-  renderTiles(svg, tiles);
+  renderTiles(svg, tiles, animate ? animation : undefined);
 
   // Render gradient legend
   renderGradientLegend(svg, layout);

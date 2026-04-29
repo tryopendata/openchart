@@ -6,6 +6,108 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Features
+
+- **tilemap:** add entrance animations with deterministic shuffled stagger for organic tile pop-in
+- **tilemap:** expand grid to 12 columns, move ME to its own row for more accurate geography
+- **tilemap:** add `oc-tilemap-root` CSS class for token and tooltip scoping
+- **engine:** add window transform for year-over-year, period-over-period, and delta calculations
+- **engine:** add relative-time filter ("last N units from max date") for timeseries range toggles
+- **vanilla:** add crosshair snap-to-nearest tooltip for timeseries charts
+- **engine:** add compound axis labels for multi-level temporal formatting
+
+### Bug Fixes
+
+- **tilemap:** remove tile stroke (cleaner look at small sizes)
+- **tilemap:** fix dark mode class management on mount/destroy lifecycle
+
+## [6.25.4] - 2026-04-24
+
+### Features
+
+- **labels:** add boolean shorthand for labels spec
+
+## [6.25.3] - 2026-04-23
+
+### Bug Fixes
+
+- **axes:** restore all y-axis labels on horizontal bar charts and improve x-axis band label thinning
+
+## [6.25.2] - 2026-04-23
+
+### Features
+
+- **layer:** add zIndex to ChartSpec for controlling layer render order
+
+## [6.25.1] - 2026-04-23
+
+### Features
+
+- centralize responsive layout metrics and fix mobile chart alignment
+
+## [6.25.0] - 2026-04-22
+
+### Features
+
+- dual-axis combo charts with independent y-scales
+
+## [6.24.2] - 2026-04-22
+
+### Features
+
+- **annotations:** add halo prop to text annotations
+
+## [6.24.1] - 2026-04-22
+
+### Features
+
+- area y2 bands, annotation responsiveness, bar label improvements
+
+## [6.24.0] - 2026-04-19
+
+### Features
+
+- responsive layout improvements for narrow viewports
+
+### Bug Fixes
+
+- **sankey:** thread measureText through sankey pipeline for accurate text wrapping
+
+## [6.23.1] - 2026-04-14
+
+### Bug Fixes
+
+- **engine:** declare builtin.ts as side-effectful to prevent tree-shaking
+
+## [6.23.0] - 2026-04-14
+
+_No user-facing changes (release pipeline fix)._
+
+## [6.22.0] - 2026-04-14
+
+_No user-facing changes (release pipeline fix)._
+
+## [6.21.0] - 2026-04-14
+
+### Refactor
+
+- **engine:** split axes.ts into ticks and thinning modules
+- **engine:** extract pure helpers from compile.ts into compile/ subfolder
+- **engine:** extract density filter from bar/column/dot/pie labels
+- **vanilla:** extract renderMarks, renderAxes, renderAnnotations, renderLegend, renderChrome, renderBrand into dedicated renderer modules
+- **vanilla:** extract svg-dom helpers from svg-renderer
+
+### Bug Fixes
+
+- **engine:** fix continuous axis tick collapse using step-down re-request
+- **engine:** strip temporal axes from snapshot to fix macOS/Linux divergence
+
+### Tests
+
+- **engine:** add compile-snapshot integration test as Step 7 oracle
+
+## [6.20.0] - 2026-04-13
+
 ### Refactor
 
 - **engine:** extract `formatLabelValue` shared helper for bar/column/dot, remove four duplicate copies

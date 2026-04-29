@@ -232,7 +232,7 @@ export function createTileMap(
   // Render + update
   // ---------------------------------------------------------------------------
 
-  function render(): void {
+  function render(animate = false): void {
     // Cancel running animations
     if (animationCleanup) {
       animationCleanup();
@@ -249,7 +249,7 @@ export function createTileMap(
     }
 
     // Render new SVG
-    const newSvg = renderTileMapSVG(currentLayout);
+    const newSvg = renderTileMapSVG(currentLayout, { animate });
     container.appendChild(newSvg);
     svgElement = newSvg;
 
@@ -356,15 +356,24 @@ export function createTileMap(
       disconnectResize();
       disconnectResize = null;
     }
+
+    // Remove root classes
+    container.classList.remove('oc-tilemap-root', 'oc-dark');
   }
 
   // ---------------------------------------------------------------------------
   // Initialize
   // ---------------------------------------------------------------------------
 
-  // Initial compile and render
+  // Add root class for CSS custom properties (tokens, tooltip styles)
+  container.classList.add('oc-tilemap-root');
+  if (resolveDarkMode(options?.darkMode)) {
+    container.classList.add('oc-dark');
+  }
+
+  // Initial compile and render (animate on first mount)
   currentLayout = compile();
-  render();
+  render(true);
 
   // Setup responsive resizing
   if (options?.responsive !== false) {

@@ -1,15 +1,17 @@
 /**
  * US state tile grid layout computation.
  *
- * Defines the fixed grid positions for US state tiles (11 columns x 8 rows)
+ * Defines the fixed grid positions for US state tiles (12 columns x 8 rows)
  * and computes pixel positions from a given available area.
  */
 
 export const US_STATE_TILES: Array<{ state: string; col: number; row: number }> = [
+  // Row 0
+  { state: 'ME', col: 10, row: 0 },
+
   // Row 1
-  { state: 'VT', col: 8, row: 1 },
-  { state: 'NH', col: 9, row: 1 },
-  { state: 'ME', col: 10, row: 1 },
+  { state: 'VT', col: 9, row: 1 },
+  { state: 'NH', col: 10, row: 1 },
 
   // Row 2
   { state: 'WA', col: 0, row: 2 },
@@ -128,7 +130,7 @@ export const STATE_NAMES: Record<string, string> = {
   WY: 'Wyoming',
 };
 
-const GRID_COLS = 11;
+const GRID_COLS = 12;
 const GRID_ROWS = 8;
 
 export interface TilePositions {

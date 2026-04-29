@@ -45,7 +45,7 @@ import type { NormalizedTileMapSpec } from './types';
 // ---------------------------------------------------------------------------
 
 const TILE_CORNER_RADIUS = 2;
-const TILE_STROKE_WIDTH = 1;
+const TILE_STROKE_WIDTH = 0;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -245,10 +245,24 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
         role: 'img',
         label: `${STATE_NAMES[stateCode] ?? stateCode}: ${formattedValue}`,
       },
-      animationIndex: tiles.length,
+      animationIndex: 0,
     };
 
     tiles.push(tile);
+  }
+
+  // Assign shuffled animation indices for a scattered pop-in effect.
+  // Uses a deterministic Fisher-Yates shuffle so the order looks random
+  // but is consistent across renders.
+  const indices = Array.from({ length: tiles.length }, (_, i) => i);
+  let seed = 42;
+  for (let i = indices.length - 1; i > 0; i--) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const j = seed % (i + 1);
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  for (let i = 0; i < tiles.length; i++) {
+    tiles[i].animationIndex = indices[i];
   }
 
   // 12. Build gradient legend (null when legend is hidden)
