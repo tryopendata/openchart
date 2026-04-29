@@ -15,6 +15,7 @@ import type {
   ColumnConfig,
   DarkMode,
   DataRow,
+  Display,
   Encoding,
   FieldType,
   GraphEncoding,
@@ -61,6 +62,35 @@ export interface NormalizedEncodingChannel {
 // NormalizedSpec types
 // ---------------------------------------------------------------------------
 
+/**
+ * Tracks which top-level fields the user explicitly set in their input spec.
+ *
+ * Built from the raw expandedSpec (post-breakpoint-merge, pre-normalize) so
+ * that "user wrote chrome.title" vs "user wrote nothing" is distinguishable
+ * after normalization fills in defaults.
+ *
+ * Used by sparkline display mode to decide whether to suppress chrome/axes/
+ * legend/etc. by default vs. respecting an explicit user opt-in.
+ */
+export interface UserExplicit {
+  /** True if user wrote `chrome` (any non-empty chrome). */
+  chrome: boolean;
+  /** True if user wrote `legend`. */
+  legend: boolean;
+  /** True if user wrote `encoding.x.axis`. */
+  xAxis: boolean;
+  /** True if user wrote `encoding.y.axis`. */
+  yAxis: boolean;
+  /** True if user wrote `labels`. */
+  labels: boolean;
+  /** True if user wrote `animation`. */
+  animation: boolean;
+  /** True if user wrote `watermark`. */
+  watermark: boolean;
+  /** True if user wrote `crosshair`. */
+  crosshair: boolean;
+}
+
 /** A ChartSpec with all optional fields filled with sensible defaults. */
 export interface NormalizedChartSpec {
   /** Resolved mark type string (extracted from spec.mark). */
@@ -85,6 +115,14 @@ export interface NormalizedChartSpec {
   hiddenSeries: string[];
   /** Per-series visual style overrides. */
   seriesStyles: Record<string, import('@opendata-ai/openchart-core').SeriesStyle>;
+  /** Display mode controlling chrome/axes/legend stripping. Defaults to `'full'`. */
+  display: Display;
+  /**
+   * Which top-level fields the user explicitly set. Populated by compileChart
+   * from the raw expanded spec before normalization. NormalizeChartSpec runs
+   * with a default-empty descriptor; compileChart overwrites it post-normalize.
+   */
+  userExplicit: UserExplicit;
 }
 
 /** A TableSpec with all optional fields filled with sensible defaults. */

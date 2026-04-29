@@ -398,6 +398,307 @@ describe('compileChart', () => {
     const pointMarks = layout.marks.filter((m) => m.type === 'point');
     expect(pointMarks.length).toBe(3);
   });
+
+  // ---------------------------------------------------------------------------
+  // display field + breakpoint override
+  // ---------------------------------------------------------------------------
+
+  it('display defaults to "full" when not specified', () => {
+    const layout = compileChart(lineSpec, { width: 600, height: 400 });
+    expect(layout.display).toBe('full');
+  });
+
+  it('display: "sparkline" propagates through to ChartLayout', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const },
+      { width: 400, height: 80 },
+    );
+    expect(layout.display).toBe('sparkline');
+  });
+
+  it('breakpoint override flips display at compact width', () => {
+    const spec = {
+      ...lineSpec,
+      overrides: {
+        compact: { display: 'sparkline' as const },
+      },
+    };
+
+    const compactLayout = compileChart(spec, { width: 320, height: 200 });
+    expect(compactLayout.display).toBe('sparkline');
+
+    const desktopLayout = compileChart(spec, { width: 1200, height: 600 });
+    expect(desktopLayout.display).toBe('full');
+  });
+
+  it('sparkline mode forces watermark off when not user-explicit', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const },
+      { width: 400, height: 80 },
+    );
+    expect(layout.watermark).toBe(false);
+  });
+
+  it('sparkline mode respects explicit watermark: true', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const, watermark: true },
+      { width: 400, height: 80 },
+    );
+    expect(layout.watermark).toBe(true);
+  });
+
+  it('sparkline mode forces crosshair off when not user-explicit', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const },
+      { width: 400, height: 80 },
+    );
+    expect(layout.crosshair).toBe(false);
+  });
+
+  it('sparkline mode respects explicit crosshair: true', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const, crosshair: true },
+      { width: 400, height: 80 },
+    );
+    expect(layout.crosshair).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sparkline layout profile (dimensions, axes, legend)
+  // ---------------------------------------------------------------------------
+
+  it('sparkline produces near-edge-to-edge chart area (margins <= 4px per side)', () => {
+    const layout = compileChart(
+      { ...lineSpec, chrome: undefined, display: 'sparkline' as const },
+      { width: 400, height: 80 },
+    );
+
+    // No chrome, no axes, no legend by default. Mark area should be tight.
+    expect(layout.area.x).toBeLessThanOrEqual(4);
+    expect(layout.area.y).toBeLessThanOrEqual(4);
+    const rightMargin = 400 - (layout.area.x + layout.area.width);
+    const bottomMargin = 80 - (layout.area.y + layout.area.height);
+    expect(rightMargin).toBeLessThanOrEqual(4);
+    expect(bottomMargin).toBeLessThanOrEqual(4);
+  });
+
+  it('sparkline returns no axes by default', () => {
+    const layout = compileChart(
+      { ...lineSpec, chrome: undefined, display: 'sparkline' as const },
+      { width: 400, height: 80 },
+    );
+    expect(layout.axes.x).toBeUndefined();
+    expect(layout.axes.y).toBeUndefined();
+  });
+
+  it('sparkline + explicit encoding.x.axis still reserves x-axis', () => {
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        chrome: undefined,
+        display: 'sparkline' as const,
+        encoding: {
+          ...lineSpec.encoding,
+          x: { ...lineSpec.encoding.x, axis: { title: 'date' } },
+        },
+      },
+      { width: 400, height: 200 },
+    );
+    expect(layout.axes.x).toBeDefined();
+  });
+
+  it('sparkline + explicit chrome.title still renders chrome', () => {
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        chrome: { title: 'Q4 Revenue' },
+        display: 'sparkline' as const,
+      },
+      { width: 400, height: 200 },
+    );
+    expect(layout.chrome.title).toBeDefined();
+    expect(layout.chrome.title?.text).toBe('Q4 Revenue');
+  });
+
+  it('sparkline hides legend by default even with color encoding', () => {
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        chrome: undefined,
+        display: 'sparkline' as const,
+      },
+      { width: 400, height: 80 },
+    );
+    expect('entries' in layout.legend && layout.legend.entries.length).toBe(0);
+  });
+
+  it('sparkline + explicit legend.show: true renders legend', () => {
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        chrome: undefined,
+        display: 'sparkline' as const,
+        legend: { show: true },
+      },
+      { width: 400, height: 200 },
+    );
+    expect('entries' in layout.legend && layout.legend.entries.length).toBeGreaterThan(0);
+  });
+
+  it('sparkline works at heights as low as 30px', () => {
+    const layout = compileChart(
+      { ...lineSpec, chrome: undefined, display: 'sparkline' as const },
+      { width: 200, height: 30 },
+    );
+    expect(layout.area.height).toBeGreaterThan(0);
+    expect(layout.area.width).toBeGreaterThan(0);
+  });
+
+  it('chrome: {} does not count as user-explicit chrome (still stripped in sparkline)', () => {
+    // Empty chrome object is the idiom for "silence defaults" — should not
+    // opt-in to chrome rendering in sparkline mode.
+    const layout = compileChart(
+      { ...lineSpec, chrome: {}, display: 'sparkline' as const },
+      { width: 400, height: 80 },
+    );
+    expect(layout.chrome.title).toBeUndefined();
+    expect(layout.chrome.topHeight).toBe(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Explicit-at-any-level wins (precedence matrix)
+  // ---------------------------------------------------------------------------
+
+  it('top-level animation: true wins even when breakpoint flips to sparkline', () => {
+    const spec = {
+      ...lineSpec,
+      animation: true as const,
+      overrides: { compact: { display: 'sparkline' as const } },
+    };
+    const layout = compileChart(spec, { width: 320, height: 200 });
+    expect(layout.display).toBe('sparkline');
+    expect(layout.animation?.enabled).toBe(true);
+  });
+
+  it('breakpoint chrome wins when top-level is sparkline', () => {
+    const spec = {
+      ...lineSpec,
+      chrome: undefined,
+      display: 'sparkline' as const,
+      overrides: { full: { chrome: { title: 'Q4 revenue' } } },
+    };
+    const layout = compileChart(spec, { width: 1200, height: 600 });
+    // At full breakpoint, chrome.title from override should render even
+    // though display is sparkline at top-level.
+    expect(layout.chrome.title?.text).toBe('Q4 revenue');
+  });
+
+  it('top-level display: sparkline + breakpoint display: full restores all defaults', () => {
+    const spec = {
+      ...lineSpec,
+      display: 'sparkline' as const,
+      overrides: { full: { display: 'full' as const } },
+    };
+    const layout = compileChart(spec, { width: 1200, height: 600 });
+    expect(layout.display).toBe('full');
+    // Watermark default is true in full mode.
+    expect(layout.watermark).toBe(true);
+  });
+
+  it('explicit watermark: true in sparkline mode actually paints the watermark', () => {
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        chrome: undefined,
+        display: 'sparkline' as const,
+        watermark: true,
+      },
+      { width: 400, height: 200 },
+    );
+    expect(layout.watermark).toBe(true);
+  });
+
+  it('breakpoint encoding.x.axis opts back into x-axis at that breakpoint', () => {
+    const spec = {
+      ...lineSpec,
+      chrome: undefined,
+      display: 'sparkline' as const,
+      overrides: {
+        full: {
+          encoding: {
+            x: { field: 'date', type: 'temporal' as const, axis: { title: 'date' } },
+          },
+        },
+      },
+    };
+    const layoutFull = compileChart(spec, { width: 1200, height: 600 });
+    expect(layoutFull.axes.x).toBeDefined();
+    const layoutCompact = compileChart(spec, { width: 320, height: 200 });
+    expect(layoutCompact.axes.x).toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Animation duration: sparkline mode bumps the entrance to 1100ms when on
+  // ---------------------------------------------------------------------------
+
+  it('sparkline + animation: true bumps entrance duration to 1100ms', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const, animation: true },
+      { width: 400, height: 80 },
+    );
+    expect(layout.animation?.enabled).toBe(true);
+    expect(layout.animation?.duration).toBe(1100);
+  });
+
+  it('sparkline + animation: { enter: { duration: 500 } } respects user duration', () => {
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        display: 'sparkline' as const,
+        animation: { enter: { duration: 500 } },
+      },
+      { width: 400, height: 80 },
+    );
+    expect(layout.animation?.duration).toBe(500);
+  });
+
+  it('full mode + animation: true uses default 500ms (sparkline bump does not leak)', () => {
+    const layout = compileChart({ ...lineSpec, animation: true }, { width: 600, height: 400 });
+    expect(layout.animation?.duration).toBe(500);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Breakpoint encoding deep-merge: nested axis state survives an override that
+  // only touches one axis property.
+  // ---------------------------------------------------------------------------
+
+  it('breakpoint encoding.x.axis deep-merges with base axis config', () => {
+    const spec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        x: {
+          field: 'date',
+          type: 'temporal' as const,
+          axis: { title: 'date', tickCount: 8, format: '%b' },
+        },
+      },
+      overrides: {
+        compact: {
+          encoding: {
+            x: { axis: { title: 'd' } },
+          },
+        },
+      },
+    };
+    const layout = compileChart(spec, { width: 320, height: 200 });
+    // The compact override only touched axis.title; tickCount and format
+    // should survive the deep merge.
+    expect(layout.axes.x).toBeDefined();
+    expect(layout.axes.x?.label).toBe('d');
+    // Tick count flows from base spec — if shallow-merged, tickCount would be lost.
+    expect(layout.axes.x?.ticks.length).toBeGreaterThan(0);
+  });
 });
 
 describe('compileTable', () => {

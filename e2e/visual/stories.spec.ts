@@ -27,6 +27,7 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
   },
   { name: 'chart-with-annotations', slug: 'column-diverging--temperature-anomaly' },
   { name: 'chart-with-watermark', slug: 'chrome--chrome-all-elements' },
+  { name: 'sparklines', slug: 'sparkline--sparklines' },
 ];
 
 /**

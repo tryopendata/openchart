@@ -199,7 +199,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
   const rawWatermark = (expandedSpec as Record<string, unknown>).watermark;
-  const watermark = rawWatermark !== undefined ? chartSpec.watermark : (options.watermark ?? true);
+  let watermark = rawWatermark !== undefined ? chartSpec.watermark : (options.watermark ?? true);
 
   // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
   // Transforms are defined on the expanded spec (which includes any auto-generated
@@ -223,10 +223,49 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     | Partial<
         Record<
           string,
-          { chrome?: unknown; labels?: unknown; legend?: unknown; annotations?: unknown }
+          {
+            chrome?: unknown;
+            labels?: unknown;
+            legend?: unknown;
+            annotations?: unknown;
+            animation?: unknown;
+            display?: unknown;
+            encoding?: unknown;
+            watermark?: unknown;
+            crosshair?: unknown;
+          }
         >
       >
     | undefined;
+
+  // Build userExplicit descriptor BEFORE applying any overrides so we capture
+  // the union of "user wrote this at top-level" and "user wrote this in the
+  // active breakpoint override." Sparkline display mode reads this to decide
+  // whether to suppress chrome/axes/legend/etc. by default vs. respecting an
+  // explicit user opt-in. Precedence: explicit at any level wins.
+  const rawEncoding = rawSpec.encoding as
+    | { x?: { axis?: unknown }; y?: { axis?: unknown } }
+    | undefined;
+  const bpForExplicit = overrides?.[breakpoint];
+  const bpEncoding = bpForExplicit?.encoding as
+    | { x?: { axis?: unknown }; y?: { axis?: unknown } }
+    | undefined;
+  // chrome: {} (empty object) is not "explicit" — it's an idiom users write to
+  // silence defaults. Require at least one chrome key set to count as opt-in.
+  const hasChromeKeys = (v: unknown): boolean =>
+    !!v && typeof v === 'object' && Object.keys(v as Record<string, unknown>).length > 0;
+  const userExplicit = {
+    chrome: hasChromeKeys(rawSpec.chrome) || hasChromeKeys(bpForExplicit?.chrome),
+    legend: rawSpec.legend !== undefined || bpForExplicit?.legend !== undefined,
+    xAxis: rawEncoding?.x?.axis !== undefined || bpEncoding?.x?.axis !== undefined,
+    yAxis: rawEncoding?.y?.axis !== undefined || bpEncoding?.y?.axis !== undefined,
+    labels: rawSpec.labels !== undefined || bpForExplicit?.labels !== undefined,
+    animation: rawSpec.animation !== undefined || bpForExplicit?.animation !== undefined,
+    watermark: rawSpec.watermark !== undefined || bpForExplicit?.watermark !== undefined,
+    crosshair: rawSpec.crosshair !== undefined || bpForExplicit?.crosshair !== undefined,
+  };
+  chartSpec = { ...chartSpec, userExplicit };
+
   if (overrides?.[breakpoint]) {
     const bp = overrides[breakpoint]!;
     if (bp.chrome) {
@@ -274,13 +313,137 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       // responsive strategy so they render inline instead of being stripped.
       strategy = { ...strategy, annotationPosition: 'inline' };
     }
+    // New override branches for sparkline mode and related fields:
+    if (bp.display !== undefined) {
+      chartSpec = {
+        ...chartSpec,
+        display: bp.display as NormalizedChartSpec['display'],
+      };
+    }
+    if (bp.encoding !== undefined) {
+      // Merge encoding so a breakpoint can flip on/off encoding.x.axis or
+      // encoding.y.axis (used by sparkline display mode to opt back in to
+      // axes at a specific breakpoint). Channels merge per-key, and `axis`
+      // and `scale` deep-merge one level so a breakpoint can set
+      // `axis: { title: 'foo' }` without dropping the base spec's
+      // `axis.tickCount` / `axis.format`.
+      const bpEnc = bp.encoding as Record<string, Record<string, unknown> | undefined>;
+      const mergedEncoding = { ...chartSpec.encoding } as Record<
+        string,
+        Record<string, unknown> | undefined
+      >;
+      const NESTED_CHANNEL_KEYS = ['axis', 'scale'];
+      for (const channel of Object.keys(bpEnc)) {
+        const baseCh = mergedEncoding[channel];
+        const bpCh = bpEnc[channel];
+        if (bpCh && baseCh) {
+          const merged: Record<string, unknown> = { ...baseCh, ...bpCh };
+          for (const key of NESTED_CHANNEL_KEYS) {
+            const baseNested = baseCh[key];
+            const bpNested = bpCh[key];
+            if (
+              baseNested &&
+              bpNested &&
+              typeof baseNested === 'object' &&
+              typeof bpNested === 'object' &&
+              !Array.isArray(baseNested) &&
+              !Array.isArray(bpNested)
+            ) {
+              merged[key] = { ...baseNested, ...bpNested };
+            }
+          }
+          mergedEncoding[channel] = merged;
+        } else if (bpCh) {
+          mergedEncoding[channel] = bpCh;
+        }
+      }
+      chartSpec = {
+        ...chartSpec,
+        encoding: mergedEncoding as unknown as NormalizedChartSpec['encoding'],
+      };
+    }
+    if (typeof bp.watermark === 'boolean') {
+      // Update the resolved watermark value used downstream. ChartSpec carries
+      // this in its normalized shape; the local `watermark` variable controls
+      // chrome computation and rendering.
+      watermark = bp.watermark;
+      chartSpec = { ...chartSpec, watermark };
+    }
+  }
+
+  // Sparkline mode: default labels off. Mark renderers draw value labels per
+  // labels.density (default 'auto'), which fills tiny sparklines with text and
+  // is never what you want. Explicit user labels at any level wins via
+  // userExplicit.labels.
+  if (chartSpec.display === 'sparkline' && !chartSpec.userExplicit.labels) {
+    chartSpec = {
+      ...chartSpec,
+      labels: { ...chartSpec.labels, density: 'none' },
+    };
   }
 
   // Resolve animation spec. Breakpoint override wins over base spec (matching
   // chrome, labels, legend, and annotation override precedence).
-  const rawAnimationSpec = ((overrides?.[breakpoint] as Record<string, unknown> | undefined)
+  // Precedence rule for sparkline mode: an explicit user animation at ANY
+  // level (top-level OR breakpoint) always wins, regardless of display mode.
+  // resolveAnimation handles the explicit-user value; the sparkline default-off
+  // behavior is applied below when no explicit value exists.
+  let rawAnimationSpec = ((overrides?.[breakpoint] as Record<string, unknown> | undefined)
     ?.animation ?? rawSpec.animation) as AnimationSpec | undefined;
+  if (rawAnimationSpec === undefined && chartSpec.display === 'sparkline') {
+    // Sparkline mode: animation defaults to false. User-explicit (top OR bp)
+    // already short-circuits this branch via userExplicit.animation.
+    rawAnimationSpec = false;
+  }
+  // Sparkline mode: when animation is on but the user didn't specify duration,
+  // bump to 1100ms so the line/area reveal feels paced rather than mechanical.
+  // The CSS override pairs this with an expo-out easing curve. AnimationConfig
+  // nests duration under `enter`, so we set it there.
+  if (
+    chartSpec.display === 'sparkline' &&
+    rawAnimationSpec !== false &&
+    rawAnimationSpec !== undefined
+  ) {
+    const SPARK_DURATION = 1100;
+    if (rawAnimationSpec === true) {
+      rawAnimationSpec = { enter: { duration: SPARK_DURATION } } as AnimationSpec;
+    } else if (typeof rawAnimationSpec === 'object') {
+      const cfg = rawAnimationSpec as { enter?: unknown; annotationDelay?: number };
+      const enter = cfg.enter;
+      if (enter === undefined || enter === true) {
+        rawAnimationSpec = {
+          ...cfg,
+          enter: { duration: SPARK_DURATION },
+        } as AnimationSpec;
+      } else if (
+        typeof enter === 'object' &&
+        enter !== null &&
+        (enter as { duration?: number }).duration === undefined
+      ) {
+        rawAnimationSpec = {
+          ...cfg,
+          enter: { ...(enter as object), duration: SPARK_DURATION },
+        } as AnimationSpec;
+      }
+    }
+  }
   const resolvedAnimation = resolveAnimation(rawAnimationSpec);
+
+  // Crosshair: explicit user value at any level wins. In sparkline mode the
+  // default is off, otherwise default is off too (crosshair is opt-in). The
+  // value is plumbed through ChartLayout so the renderer doesn't need to
+  // re-inspect the raw spec.
+  const rawCrosshair = (bpForExplicit?.crosshair ?? rawSpec.crosshair) as boolean | undefined;
+  const crosshair =
+    chartSpec.display === 'sparkline' && !chartSpec.userExplicit.crosshair
+      ? false
+      : rawCrosshair === true;
+
+  // Watermark default-off in sparkline mode unless user-explicit.
+  if (chartSpec.display === 'sparkline' && !chartSpec.userExplicit.watermark) {
+    watermark = false;
+    chartSpec = { ...chartSpec, watermark: false };
+  }
 
   // Resolve theme: merge spec-level theme with options-level overrides
   const mergedThemeConfig = options.theme
@@ -365,12 +528,18 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Arc charts (pie/donut) don't use axes or gridlines
   const isRadial = chartSpec.markType === 'arc';
 
-  // Compute axes (skip for radial charts)
+  // Compute axes (skip for radial charts).
+  // Sparkline mode skips axes by default unless the user explicitly opted into
+  // an axis on a specific channel.
+  const skipX = chartSpec.display === 'sparkline' && !chartSpec.userExplicit.xAxis;
+  const skipY = chartSpec.display === 'sparkline' && !chartSpec.userExplicit.yAxis;
   const axes = isRadial
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText, {
         data: renderSpec.data,
         encoding: renderSpec.encoding as Encoding,
+        skipX,
+        skipY,
       });
 
   // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
@@ -464,6 +633,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     },
     animation: resolvedAnimation,
     watermark,
+    display: chartSpec.display,
+    crosshair,
     measureText: options.measureText,
   };
 }

@@ -720,6 +720,10 @@ export interface ChartLayout {
   animation?: ResolvedAnimation;
   /** Whether the tryOpenData.ai watermark is enabled. */
   watermark: boolean;
+  /** Display mode controlling chrome/axes/legend stripping. `'sparkline'` produces an edge-to-edge mini chart. */
+  display: import('./spec').Display;
+  /** Whether the crosshair (vertical snap line) is enabled. */
+  crosshair: boolean;
   /** Real text measurement function from the adapter (for accurate SVG text wrapping). */
   measureText?: MeasureTextFn;
 }

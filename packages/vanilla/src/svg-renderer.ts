@@ -64,6 +64,13 @@ export function renderChartSVG(
   svg.setAttribute('role', layout.a11y.role);
   svg.setAttribute('aria-label', layout.a11y.altText);
 
+  // Sparkline display mode: stamp a data attribute so consumers can target
+  // sparkline-specific styles. Only set the attribute in sparkline mode so
+  // regular charts keep an unchanged DOM signature.
+  if (layout.display === 'sparkline') {
+    svg.setAttribute('data-display', 'sparkline');
+  }
+
   // oc-animate must be set before the SVG enters the DOM to prevent a flash
   // of the final state. mount.ts passes animate: true only on genuine first render.
   const classes = opts?.animate ? 'oc-chart oc-animate' : 'oc-chart';

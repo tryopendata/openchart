@@ -32,6 +32,10 @@ import { resolveCurve } from './curves';
 /** Default stroke width for line marks. */
 const DEFAULT_STROKE_WIDTH = 2.5;
 
+/** Sparkline mode uses a thinner stroke since the chart area is tiny and a
+ *  2.5px line reads as clunky. 1.25px keeps the trend legible without dominating. */
+const SPARKLINE_STROKE_WIDTH = 1.25;
+
 /** Default radius for point marks (hover targets). */
 const DEFAULT_POINT_RADIUS = 3;
 
@@ -174,7 +178,9 @@ export function computeLineMarks(
       points: allPoints,
       path: combinedPath,
       stroke: strokeColor,
-      strokeWidth: styleOverride?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+      strokeWidth:
+        styleOverride?.strokeWidth ??
+        (spec.display === 'sparkline' ? SPARKLINE_STROKE_WIDTH : DEFAULT_STROKE_WIDTH),
       strokeDasharray,
       opacity: styleOverride?.opacity,
       seriesKey: seriesStyleKey,

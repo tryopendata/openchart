@@ -143,8 +143,13 @@ export function computeLegend(
   chartArea: Rect,
   watermark: boolean = true,
 ): LegendLayout {
+  // Sparkline mode: legend hidden by default unless the user opted in. Color
+  // scales still resolve normally (legend hidden != no colors), so multi-series
+  // sparklines retain their categorical palette.
+  const sparklineHidden = spec.display === 'sparkline' && !spec.userExplicit.legend;
+
   // Legend explicitly hidden via show: false, or height strategy says no legend
-  if (spec.legend?.show === false || strategy.legendMaxHeight === 0) {
+  if (sparklineHidden || spec.legend?.show === false || strategy.legendMaxHeight === 0) {
     return {
       position: 'top',
       entries: [],

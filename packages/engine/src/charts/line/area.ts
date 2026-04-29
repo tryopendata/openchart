@@ -151,7 +151,7 @@ function computeSingleArea(
       fill: fillValue,
       fillOpacity: fillOpacity,
       stroke: getRepresentativeColor(isGradientDef(fillValue) ? color : fillValue),
-      strokeWidth: 2,
+      strokeWidth: spec.display === 'sparkline' ? 1.25 : 2,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
       dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row })),

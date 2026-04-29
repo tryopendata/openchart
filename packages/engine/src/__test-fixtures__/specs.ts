@@ -74,6 +74,17 @@ export function makeLineSpec(): NormalizedChartSpec {
     hiddenSeries: [],
     seriesStyles: {},
     watermark: true,
+    display: 'full',
+    userExplicit: {
+      chrome: false,
+      legend: false,
+      xAxis: false,
+      yAxis: false,
+      labels: false,
+      animation: false,
+      watermark: false,
+      crosshair: false,
+    },
   };
 }
 
@@ -104,6 +115,17 @@ export function makeBarSpec(): NormalizedChartSpec {
     hiddenSeries: [],
     seriesStyles: {},
     watermark: true,
+    display: 'full',
+    userExplicit: {
+      chrome: false,
+      legend: false,
+      xAxis: false,
+      yAxis: false,
+      labels: false,
+      animation: false,
+      watermark: false,
+      crosshair: false,
+    },
   };
 }
 
@@ -136,5 +158,16 @@ export function makeScatterSpec(): NormalizedChartSpec {
     hiddenSeries: [],
     seriesStyles: {},
     watermark: true,
+    display: 'full',
+    userExplicit: {
+      chrome: false,
+      legend: false,
+      xAxis: false,
+      yAxis: false,
+      labels: false,
+      animation: false,
+      watermark: false,
+      crosshair: false,
+    },
   };
 }

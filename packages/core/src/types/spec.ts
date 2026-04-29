@@ -808,6 +808,17 @@ export interface AnimationConfig {
 export type AnimationSpec = boolean | AnimationConfig;
 
 /**
+ * Chart display mode.
+ * - `'full'` (default): standard chart with chrome, axes, legend, padding.
+ * - `'sparkline'`: minimal inline mini-chart. Strips chrome, axes, legend,
+ *   watermark, animation, and reduces margins to a tiny safety pad. The mark
+ *   fills the container edge-to-edge. Best with `mark: 'line' | 'area' | 'bar'`.
+ *   Explicit user fields (chrome, legend, encoding.x.axis, etc.) still render
+ *   when set, so users can opt in to specific elements.
+ */
+export type Display = 'full' | 'sparkline';
+
+/**
  * Breakpoint-conditional overrides for chart specs.
  *
  * Allows specifying different chrome, labels, legend, or annotations
@@ -825,6 +836,12 @@ export interface ChartSpecOverride {
   annotations?: Annotation[];
   /** Override animation at this breakpoint. */
   animation?: AnimationSpec;
+  /** Override display mode (`'full'` or `'sparkline'`) at this breakpoint. */
+  display?: Display;
+  /** Override watermark visibility at this breakpoint. */
+  watermark?: boolean;
+  /** Override crosshair behavior at this breakpoint. */
+  crosshair?: boolean;
 }
 
 /**
@@ -883,9 +900,25 @@ export interface ChartSpec {
   /**
    * Show a vertical crosshair line that tracks the nearest data point on
    * line and area charts. Only active when a voronoi overlay is present.
-   * Defaults to false.
+   * Defaults to false. In sparkline display mode, defaults to false unless
+   * explicitly set.
    */
   crosshair?: boolean;
+  /**
+   * Display mode controlling how much chart chrome is rendered.
+   *
+   * - `'full'` (default): full publication chart with chrome, axes, legend, padding.
+   * - `'sparkline'`: inline mini-chart for dashboards/KPI cards. Strips chrome,
+   *   axes, legend, watermark, animation, and crosshair. The mark fills the
+   *   container edge-to-edge with a small safety margin. Best with
+   *   `mark: 'line' | 'area' | 'bar' | 'point'`.
+   *
+   * **Override precedence:** explicit user fields always win, even in sparkline
+   * mode. Setting `chrome.title` on a sparkline still renders the title.
+   * Setting `legend: { show: true }` still renders the legend. This applies at
+   * top-level and per-breakpoint overrides.
+   */
+  display?: Display;
   /**
    * Render order within a LayerSpec. Higher values render on top.
    * When omitted, layers render in array order (later layers paint on top).

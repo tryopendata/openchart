@@ -192,6 +192,25 @@ describe('createChart', () => {
 
     chart.destroy();
   });
+
+  it('does NOT stamp data-display on default (full) charts', () => {
+    const chart = createChart(container, lineSpec);
+    const svg = container.querySelector('svg');
+    expect(svg?.hasAttribute('data-display')).toBe(false);
+    chart.destroy();
+  });
+
+  it('stamps data-display="sparkline" when display is sparkline', () => {
+    const chart = createChart(container, {
+      mark: 'line',
+      data: lineSpec.data,
+      encoding: lineSpec.encoding,
+      display: 'sparkline',
+    });
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('data-display')).toBe('sparkline');
+    chart.destroy();
+  });
 });
 
 describe('resize observer integration', () => {

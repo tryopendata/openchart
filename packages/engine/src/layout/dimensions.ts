@@ -93,6 +93,30 @@ function scalePadding(basePadding: number, width: number, height: number): numbe
 const MIN_CHART_WIDTH = 60;
 const MIN_CHART_HEIGHT = 40;
 
+/**
+ * Per-display minimum chart dimensions. Sparkline mode allows much smaller
+ * containers (down to ~30x20px) since the entire chart is just the mark.
+ */
+function getMinChartDims(display: import('@opendata-ai/openchart-core').Display): {
+  width: number;
+  height: number;
+} {
+  return display === 'sparkline'
+    ? { width: 30, height: 20 }
+    : { width: MIN_CHART_WIDTH, height: MIN_CHART_HEIGHT };
+}
+
+/**
+ * Resolve the per-side safety padding for sparkline mode. Padding scales with
+ * the user-configured mark stroke width so a thick line doesn't clip at the
+ * container edge. Per-side padding = max(strokeWidth/2 + 1, 2) so even a 1px
+ * stroke gets at least 2px breathing room.
+ */
+function getSparklinePad(spec: NormalizedChartSpec): number {
+  const strokeWidth = (spec.markDef as { strokeWidth?: number }).strokeWidth ?? 2;
+  return Math.max(strokeWidth / 2 + 1, 2);
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -125,7 +149,16 @@ export function computeDimensions(
       ? Math.max(Math.round(padding * HPAD_COMPACT_FRACTION), HPAD_COMPACT_MIN)
       : padding;
   const axisMargin = theme.spacing.axisMargin;
-  const chromeMode = strategy?.chromeMode ?? 'full';
+  const userExplicit = spec.userExplicit;
+  const isSparkline = spec.display === 'sparkline';
+
+  // Sparkline mode forces chrome hidden unless the user opted in explicitly.
+  // Force-hiding chrome here also short-circuits the watermark (which is
+  // rendered as part of chrome), so we don't need a separate watermark gate.
+  let chromeMode = strategy?.chromeMode ?? 'full';
+  if (isSparkline && !userExplicit.chrome) {
+    chromeMode = 'hidden';
+  }
 
   // Compute chrome with mode and scaled padding
   const chrome = computeChrome(
@@ -137,6 +170,47 @@ export function computeDimensions(
     padding,
     watermark,
   );
+
+  // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
+  // safety padding plus chrome (if user-explicit). Skip axis space, label
+  // reservations, annotation reservations, and legend reservations unless the
+  // user opted in to those individually.
+  if (isSparkline) {
+    const total: Rect = { x: 0, y: 0, width, height };
+    const sparkPad = getSparklinePad(spec);
+
+    // Axis space only when user explicitly set encoding.x/y.axis.
+    const xAxisSpace = userExplicit.xAxis ? 26 : 0;
+    const yAxisSpace = userExplicit.yAxis ? 30 : 0;
+
+    const margins: Margins = {
+      top: chrome.topHeight + sparkPad,
+      right: sparkPad,
+      bottom: chrome.bottomHeight + sparkPad + xAxisSpace,
+      left: sparkPad + yAxisSpace,
+    };
+
+    // Reserve legend space only when user explicitly opted into a legend.
+    if (userExplicit.legend && 'entries' in legendLayout && legendLayout.entries.length > 0) {
+      const gap = legendGap(width);
+      if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
+        margins.right += legendLayout.bounds.width + 8;
+      } else if (legendLayout.position === 'top') {
+        margins.top += legendLayout.bounds.height + gap;
+      } else if (legendLayout.position === 'bottom') {
+        margins.bottom += legendLayout.bounds.height + gap;
+      }
+    }
+
+    const chartArea: Rect = {
+      x: margins.left,
+      y: margins.top,
+      width: Math.max(0, width - margins.left - margins.right),
+      height: Math.max(0, height - margins.top - margins.bottom),
+    };
+
+    return { total, chrome, chartArea, margins, theme };
+  }
 
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
@@ -395,8 +469,9 @@ export function computeDimensions(
   };
 
   // Guardrail: if chart area is too small, progressively strip chrome
+  const minDims = getMinChartDims(spec.display);
   if (
-    (chartArea.width < MIN_CHART_WIDTH || chartArea.height < MIN_CHART_HEIGHT) &&
+    (chartArea.width < minDims.width || chartArea.height < minDims.height) &&
     chromeMode !== 'hidden'
   ) {
     // Try compact first, then hidden

@@ -1818,6 +1818,27 @@ export function createChart(
 
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
+    // Sparkline mode allows tiny containers (KPI cards, inline strips). Drop
+    // the standard floor and, when the wrapper has auto-height (collapsed to 0
+    // because we haven't rendered yet), measure the parent that the user sized
+    // explicitly. Without this, a <div style={{height: 40}}><Chart/></div>
+    // would still render at the fallback height because oc-chart-root has
+    // width:100% but no intrinsic height.
+    const isSparkline =
+      'display' in currentSpec && (currentSpec as ChartSpec).display === 'sparkline';
+    if (isSparkline) {
+      let width = rect.width;
+      let height = rect.height;
+      if (!height && container.parentElement) {
+        const parentRect = container.parentElement.getBoundingClientRect();
+        height = parentRect.height;
+        if (!width) width = parentRect.width;
+      }
+      return {
+        width: Math.max(width || 200, 30),
+        height: Math.max(height || 40, 20),
+      };
+    }
     return {
       width: Math.max(rect.width || 600, 100),
       height: Math.max(rect.height || 400, 100),
@@ -2162,7 +2183,9 @@ export function createChart(
 
     currentLayout = compile();
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
-    const crosshair = 'crosshair' in currentSpec && !!(currentSpec as ChartSpec).crosshair;
+    // Crosshair is resolved by the engine (handles sparkline default-off,
+    // user-explicit precedence, breakpoint overrides). Mount just reads it.
+    const crosshair = !!currentLayout.crosshair;
     svgElement = renderChartSVG(currentLayout, container, {
       animate: shouldAnimate,
       crosshair,

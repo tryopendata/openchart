@@ -217,6 +217,19 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
   const markType = resolveMarkType(spec.mark);
   const markDef = resolveMarkDef(spec.mark);
+  const display = spec.display ?? 'full';
+
+  if (
+    display === 'sparkline' &&
+    markType !== 'line' &&
+    markType !== 'area' &&
+    markType !== 'bar' &&
+    markType !== 'point'
+  ) {
+    warnings.push(
+      `[openchart] display: 'sparkline' works best with mark: 'line' | 'area' | 'bar' | 'point'. Got mark: '${markType}' — rendering may degrade.`,
+    );
+  }
 
   return {
     markType,
@@ -233,6 +246,19 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     hiddenSeries: spec.hiddenSeries ?? [],
     seriesStyles: spec.seriesStyles ?? {},
     watermark: spec.watermark ?? true,
+    display,
+    // Default empty userExplicit; compileChart overwrites this with the real
+    // descriptor built from the raw expanded spec before normalize runs.
+    userExplicit: {
+      chrome: false,
+      legend: false,
+      xAxis: false,
+      yAxis: false,
+      labels: false,
+      animation: false,
+      watermark: false,
+      crosshair: false,
+    },
   };
 }
 

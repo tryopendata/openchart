@@ -142,3 +142,16 @@
     );
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Sparkline mode: pair the line/area reveal with a stronger ease-out so it
+ * doesn't read as a uniform left-to-right swipe. cubic-bezier(0.16, 1, 0.3, 1)
+ * is "expo-out" — fast initial draw that decelerates noticeably at the end,
+ * giving the trend a hand-drawn feel. Duration is bumped via the engine
+ * (compile.ts) so the cleanup timer stays in sync.
+ * --------------------------------------------------------------------------- */
+
+.oc-animate[data-display="sparkline"] .oc-mark-line,
+.oc-animate[data-display="sparkline"] .oc-mark-area {
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}

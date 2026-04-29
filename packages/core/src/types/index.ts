@@ -115,6 +115,7 @@ export type {
   ConditionalValueDef,
   DarkMode,
   DataRow,
+  Display,
   Encoding,
   EncodingChannel,
   FieldPredicate,

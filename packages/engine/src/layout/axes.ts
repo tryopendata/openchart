@@ -199,6 +199,13 @@ export interface AxesDataContext {
   data: DataRow[];
   /** The encoding object to resolve field names. */
   encoding: Encoding;
+  /**
+   * When true, skip generating ticks/labels/title for the x-axis. Used by
+   * sparkline display mode when the user hasn't explicitly opted into axes.
+   */
+  skipX?: boolean;
+  /** Same as skipX, for the y-axis. */
+  skipY?: boolean;
 }
 
 /**
@@ -257,7 +264,7 @@ export function computeAxes(
   const { fontSize } = tickLabelStyle;
   const { fontWeight } = tickLabelStyle;
 
-  if (scales.x) {
+  if (scales.x && !dataContext?.skipX) {
     const axisConfig = scales.x.channel.axis;
     const isContinuousX =
       scales.x.type !== 'band' && scales.x.type !== 'point' && scales.x.type !== 'ordinal';
@@ -359,7 +366,7 @@ export function computeAxes(
     };
   }
 
-  if (scales.y) {
+  if (scales.y && !dataContext?.skipY) {
     const axisConfig = scales.y.channel.axis;
     const isContinuousY =
       scales.y.type !== 'band' && scales.y.type !== 'point' && scales.y.type !== 'ordinal';

@@ -181,10 +181,12 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
     },
     "topHeight": 36.6,
   },
+  "crosshair": false,
   "dimensions": {
     "height": 400,
     "width": 600,
   },
+  "display": "full",
   "legend": {
     "bounds": {
       "height": 0,
@@ -731,10 +733,12 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     },
     "topHeight": 61.599999999999994,
   },
+  "crosshair": false,
   "dimensions": {
     "height": 500,
     "width": 800,
   },
+  "display": "full",
   "legend": {
     "bounds": {
       "height": 85.2,
@@ -1574,10 +1578,12 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     },
     "topHeight": 36.6,
   },
+  "crosshair": false,
   "dimensions": {
     "height": 400,
     "width": 600,
   },
+  "display": "full",
   "legend": {
     "bounds": {
       "height": 0,
