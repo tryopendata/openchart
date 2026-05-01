@@ -194,7 +194,29 @@ export function buildContinuousTicks(resolvedScale: ResolvedScale, count: number
     return continuousTicks(resolvedScale, 'full');
   }
   const raw: unknown[] = scale.ticks(count);
-  return raw.map((value: unknown) => ({
+
+  // D3 log scales ignore the count hint and return ticks at every sub-power
+  // position (e.g. 5, 6, 7, 8, 9, 10, 20, 30... for a domain of [5, 25000]).
+  // Filter down to powers of the base only when the raw set overshoots.
+  let ticks = raw;
+  if (resolvedScale.type === 'log' && raw.length > count) {
+    const base = resolvedScale.channel.scale?.base ?? 10;
+    const logBase = Math.log(base);
+    const powered = raw.filter((v) => {
+      const n = v as number;
+      if (n <= 0) return false;
+      const exp = Math.log(n) / logBase;
+      return Math.abs(exp - Math.round(exp)) < 1e-9;
+    });
+    // Only use the filtered set if it has at least 2 ticks; otherwise fall back
+    // to raw ticks. This handles domains like [5, 9] (no powers of 10 at all) or
+    // [5, 50] (only one power: 10) where filtering would leave too few meaningful ticks.
+    if (powered.length >= 2) {
+      ticks = powered;
+    }
+  }
+
+  return ticks.map((value: unknown) => ({
     value,
     position: scale(value as number & Date) as number,
     label: formatTickLabel(value, resolvedScale),

@@ -2,7 +2,7 @@
  * Data-coordinate to pixel-coordinate resolution for annotations.
  */
 
-import type { ScaleBand, ScaleLinear, ScaleTime } from 'd3-scale';
+import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import type { ResolvedScales } from '../layout/scales';
 
 /**
@@ -92,4 +92,40 @@ export function resolvePosition(
   }
 
   return null;
+}
+
+/**
+ * Like resolvePosition, but extends the result to the visual edge of the column
+ * for band and point scales. Used by range annotations to span complete columns.
+ *
+ * For point scales: shifts by ±step/2 using scalePoint.step()
+ * For band scales: shifts from center (what resolvePosition returns) to the band edge
+ * For all other scales: identical to resolvePosition
+ */
+export function resolvePositionEdge(
+  value: string | number,
+  scale: ResolvedScales['x'] | ResolvedScales['y'],
+  edge: 'start' | 'end',
+): number | null {
+  const center = resolvePosition(value, scale);
+  if (center === null || !scale) return null;
+
+  const type = scale.type;
+
+  if (type === 'point') {
+    const s = scale.scale as ScalePoint<string>;
+    const halfStep = (s.step?.() ?? 0) / 2;
+    return edge === 'start' ? center - halfStep : center + halfStep;
+  }
+
+  if (type === 'band') {
+    // center = bandStart + bandwidth/2
+    // edge 'start' => bandStart   = center - bandwidth/2
+    // edge 'end'   => bandEnd     = center + bandwidth/2
+    const s = scale.scale as ScaleBand<string>;
+    const halfBw = (s.bandwidth?.() ?? 0) / 2;
+    return edge === 'start' ? center - halfBw : center + halfBw;
+  }
+
+  return center;
 }

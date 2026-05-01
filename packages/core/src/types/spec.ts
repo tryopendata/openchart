@@ -321,7 +321,15 @@ export interface EncodingChannel {
    * - undefined | true | 'zero': stack from zero baseline (default)
    * - 'normalize': stack and normalize to fraction of total (0-1 per category)
    * - 'center': center stacks around zero (streamgraph style)
-   * - null | false: no stacking (grouped/dodged side-by-side)
+   * - null | false: no stacking -- renders grouped (side-by-side) bars instead
+   *
+   * Use `stack: null` to get grouped/dodged bars. This is the idiomatic way to
+   * compare values across categories side-by-side rather than stacked on top of
+   * each other. Without it, multi-series bar data stacks by default.
+   *
+   * @example
+   * // Side-by-side grouped bars (comparing 2018 vs 2022 wages by firm size):
+   * "x": { "field": "pay", "type": "quantitative", "stack": null }
    */
   stack?: boolean | 'zero' | 'normalize' | 'center' | null;
   /**

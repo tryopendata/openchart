@@ -386,6 +386,108 @@ describe('computeBarMarks', () => {
     });
   });
 
+  describe('stacked vs grouped (wage data reproduction)', () => {
+    // 2 years × 2 firm-size categories — the canonical grouped-bar use case
+    const wageData = [
+      { size: '<5 employees', year: '2018', pay: 48200 },
+      { size: '<5 employees', year: '2022', pay: 56400 },
+      { size: '5,000+ employees', year: '2018', pay: 62300 },
+      { size: '5,000+ employees', year: '2022', pay: 74800 },
+    ];
+
+    function makeWageSpec(stackNull = false): NormalizedChartSpec {
+      return {
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        data: wageData,
+        encoding: {
+          x: {
+            field: 'pay',
+            type: 'quantitative',
+            ...(stackNull ? { stack: null } : {}),
+          },
+          y: { field: 'size', type: 'nominal' },
+          color: { field: 'year', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+    }
+
+    it('stacks by default: segments are contiguous end-to-end within each category', () => {
+      const spec = makeWageSpec(false);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      // 2 firm sizes × 2 years = 4 bars
+      expect(marks).toHaveLength(4);
+
+      // For stacked bars, the second segment starts exactly where the first ends.
+      const smallFirmMarks = marks
+        .filter((m) => m.aria.label.includes('<5'))
+        .sort((a, b) => a.x - b.x);
+      expect(smallFirmMarks).toHaveLength(2);
+      expect(smallFirmMarks[1].x).toBeCloseTo(smallFirmMarks[0].x + smallFirmMarks[0].width, 1);
+    });
+
+    it('stacks by default: segments share the same y position (stacked on same row)', () => {
+      const spec = makeWageSpec(false);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const smallFirmMarks = marks.filter((m) => m.aria.label.includes('<5'));
+      expect(smallFirmMarks).toHaveLength(2);
+      expect(smallFirmMarks[0].y).toBe(smallFirmMarks[1].y);
+    });
+
+    it('grouped with stack:null: bar widths match individual pay values (not cumulative)', () => {
+      const stackedSpec = makeWageSpec(false);
+      const stackedScales = computeScales(stackedSpec, chartArea, stackedSpec.data);
+      const stackedMarks = computeBarMarks(stackedSpec, stackedScales, chartArea, fullStrategy);
+
+      const groupedSpec = makeWageSpec(true);
+      const groupedScales = computeScales(groupedSpec, chartArea, groupedSpec.data);
+      const groupedMarks = computeBarMarks(groupedSpec, groupedScales, chartArea, fullStrategy);
+
+      expect(groupedMarks).toHaveLength(4);
+
+      // Grouped bars each start from the baseline (same x for both years within a firm size)
+      const smallFirmGrouped = groupedMarks.filter((m) => m.aria.label.includes('<5'));
+      expect(smallFirmGrouped[0].x).toBe(smallFirmGrouped[1].x);
+
+      // Stacked bars for the same category have different x positions (end-to-end)
+      const smallFirmStacked = stackedMarks.filter((m) => m.aria.label.includes('<5'));
+      expect(smallFirmStacked[0].x).not.toBe(smallFirmStacked[1].x);
+    });
+
+    it('grouped with stack:null: bars sit at different y positions within each category', () => {
+      const spec = makeWageSpec(true);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const smallFirmMarks = marks.filter((m) => m.aria.label.includes('<5'));
+      expect(smallFirmMarks).toHaveLength(2);
+      expect(smallFirmMarks[0].y).not.toBe(smallFirmMarks[1].y);
+    });
+
+    it('grouped with stack:null: scale domain covers max individual value, not stacked sum', () => {
+      const spec = makeWageSpec(true);
+      const scales = computeScales(spec, chartArea, spec.data);
+
+      // Max individual pay is 74800. Stacked sum for 5000+ employees = 62300 + 74800 = 137100.
+      // With stack:null the domain should NOT reach 137100.
+      const xScale = scales.x!.scale;
+      const domain = xScale.domain() as number[];
+      expect(domain[1]).toBeLessThan(137100);
+      // But it should cover the max individual value
+      expect(domain[1]).toBeGreaterThanOrEqual(74800);
+    });
+  });
+
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {

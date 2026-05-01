@@ -12,7 +12,7 @@ import type {
 import type { ResolvedScales } from '../layout/scales';
 import { DEFAULT_RANGE_FILL, DEFAULT_RANGE_OPACITY } from './constants';
 import { applyOffset } from './geometry';
-import { resolvePosition } from './position';
+import { resolvePositionEdge } from './position';
 import { makeAnnotationLabelStyle } from './resolve-text';
 
 export function resolveRangeAnnotation(
@@ -28,8 +28,8 @@ export function resolveRangeAnnotation(
 
   // X-range (vertical band)
   if (annotation.x1 !== undefined && annotation.x2 !== undefined) {
-    const x1px = resolvePosition(annotation.x1, scales.x);
-    const x2px = resolvePosition(annotation.x2, scales.x);
+    const x1px = resolvePositionEdge(annotation.x1, scales.x, 'start');
+    const x2px = resolvePositionEdge(annotation.x2, scales.x, 'end');
     if (x1px === null || x2px === null) return null;
 
     x = Math.min(x1px, x2px);
@@ -38,8 +38,8 @@ export function resolveRangeAnnotation(
 
   // Y-range (horizontal band)
   if (annotation.y1 !== undefined && annotation.y2 !== undefined) {
-    const y1px = resolvePosition(annotation.y1, scales.y);
-    const y2px = resolvePosition(annotation.y2, scales.y);
+    const y1px = resolvePositionEdge(annotation.y1, scales.y, 'end');
+    const y2px = resolvePositionEdge(annotation.y2, scales.y, 'start');
     if (y1px === null || y2px === null) return null;
 
     y = Math.min(y1px, y2px);

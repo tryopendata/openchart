@@ -118,6 +118,7 @@ export function computeBarMarks(
   const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
   if (needsStacking) {
+    // stack: null or false -> grouped (side-by-side) bars
     const stackDisabled = xChannel.stack === null || xChannel.stack === false;
 
     if (stackDisabled) {

@@ -1,8 +1,10 @@
 import type { Annotation, LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import type { ScaleBand, ScalePoint } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeScales } from '../../layout/scales';
 import { computeAnnotations } from '../compute';
+import { resolvePosition } from '../position';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -235,6 +237,179 @@ describe('computeAnnotations', () => {
 
       // Non-numeric domain can't interpolate, annotation is dropped
       expect(annotations).toHaveLength(0);
+    });
+
+    it('two adjacent point-scale ranges have a non-zero pixel gap between them', () => {
+      // Regression: ranges ending/starting at point-scale centers would share the same
+      // pixel boundary, visually merging. resolvePositionEdge now extends each range
+      // by half a step so adjacent ranges are truly separated.
+      const ordinalSpec: NormalizedChartSpec = {
+        markType: 'line',
+        markDef: { type: 'line' },
+        data: [
+          { year: '2006', value: 10 },
+          { year: '2008', value: 20 },
+          { year: '2010', value: 30 },
+          { year: '2012', value: 40 },
+          { year: '2020', value: 50 },
+          { year: '2022', value: 60 },
+        ],
+        encoding: {
+          x: { field: 'year', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [
+          { type: 'range', x1: '2008', x2: '2010', label: 'First range' },
+          { type: 'range', x1: '2020', x2: '2022', label: 'Second range' },
+        ],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
+      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(2);
+      const rect1 = annotations[0].rect!;
+      const rect2 = annotations[1].rect!;
+
+      // First range must end before second range starts (non-zero gap)
+      expect(rect1.x + rect1.width).toBeLessThan(rect2.x);
+    });
+
+    it('single range on point-scale ordinal x covers at least a full step', () => {
+      // A range spanning a single domain value should be at least step-wide,
+      // since resolvePositionEdge extends by half a step on each side.
+      const domainValues = ['2006', '2008', '2010', '2012'];
+      const ordinalSpec: NormalizedChartSpec = {
+        markType: 'line',
+        markDef: { type: 'line' },
+        data: domainValues.map((year, i) => ({ year, value: i * 10 })),
+        encoding: {
+          x: { field: 'year', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [{ type: 'range', x1: '2008', x2: '2010', label: 'Single step' }],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
+      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(1);
+      const rect = annotations[0].rect!;
+
+      // step = chartArea.width / (numPoints - 1) roughly. With 4 points and default 0.5 padding,
+      // the step on a point scale = width / (n - 1 + 2*padding) -- but the key property is that
+      // the range width should be at least as wide as the distance between two domain centers.
+      const xScale = scales.x!.scale as ScalePoint<string>;
+      const step = xScale.step();
+      expect(rect.width).toBeGreaterThanOrEqual(step);
+    });
+
+    it('band-scale (bar chart) range covers full bands, not band centers', () => {
+      // On a bar chart the x scale is a band scale. resolvePositionEdge extends from the
+      // center (what resolvePosition returns) to the band edge.
+      const barSpec: NormalizedChartSpec = {
+        markType: 'bar',
+        markDef: { type: 'bar', orient: 'vertical' },
+        data: [
+          { year: '2008', value: 10 },
+          { year: '2010', value: 20 },
+          { year: '2012', value: 30 },
+          { year: '2014', value: 40 },
+        ],
+        encoding: {
+          x: { field: 'year', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [{ type: 'range', x1: '2010', x2: '2012', label: 'Band range' }],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(barSpec, chartArea, barSpec.data);
+      const annotations = computeAnnotations(barSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(1);
+      const rect = annotations[0].rect!;
+
+      const bandScale = scales.x!.scale as ScaleBand<string>;
+      const bandwidth = bandScale.bandwidth();
+      const x1BandStart = bandScale('2010')!;
+      const x2BandStart = bandScale('2012')!;
+
+      // Left edge should be at the start of the 2010 band (not the center)
+      expect(rect.x).toBeCloseTo(x1BandStart, 1);
+      // Right edge should be at the end of the 2012 band
+      expect(rect.x + rect.width).toBeCloseTo(x2BandStart + bandwidth, 1);
+    });
+
+    it('linear-scale range is unaffected by edge extension', () => {
+      // For linear scales, resolvePositionEdge is identical to resolvePosition.
+      // This ensures the fix doesn't introduce any drift on continuous axes.
+      const linearSpec = makeSpec([{ type: 'range', x1: '2020-01-01', x2: '2021-01-01' }]);
+      const scales = computeScales(linearSpec, chartArea, linearSpec.data);
+      const annotations = computeAnnotations(linearSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(1);
+      const rect = annotations[0].rect!;
+
+      // The x positions should exactly match what resolvePosition would return
+      const x1Expected = resolvePosition('2020-01-01', scales.x)!;
+      const x2Expected = resolvePosition('2021-01-01', scales.x)!;
+
+      expect(rect.x).toBeCloseTo(Math.min(x1Expected, x2Expected), 1);
+      expect(rect.x + rect.width).toBeCloseTo(Math.max(x1Expected, x2Expected), 1);
+    });
+
+    it('y1/y2 range on ordinal point-scale y-axis has a non-zero pixel gap between two annotations', () => {
+      // Horizontal band: y-axis is ordinal (point scale), x-axis is quantitative.
+      // Two y-range annotations with a gap should produce two distinct rects.
+      const ordinalYSpec: NormalizedChartSpec = {
+        markType: 'line',
+        markDef: { type: 'line' },
+        data: [
+          { year: '2006', value: 10 },
+          { year: '2008', value: 20 },
+          { year: '2010', value: 30 },
+          { year: '2015', value: 40 },
+          { year: '2020', value: 50 },
+          { year: '2022', value: 60 },
+        ],
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'year', type: 'ordinal' },
+        },
+        chrome: {},
+        annotations: [
+          { type: 'range', y1: '2006', y2: '2008' },
+          { type: 'range', y1: '2020', y2: '2022' },
+        ],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(ordinalYSpec, chartArea, ordinalYSpec.data);
+      const annotations = computeAnnotations(ordinalYSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(2);
+      const rects = annotations.map((a) => a.rect!);
+
+      // In SVG, y increases downward. Sort by y so rect[0] is the top one.
+      rects.sort((a, b) => a.y - b.y);
+
+      // There must be a non-zero pixel gap between the bottom of rect[0] and top of rect[1]
+      const bottomOfFirst = rects[0].y + rects[0].height;
+      expect(bottomOfFirst).toBeLessThan(rects[1].y);
     });
   });
 

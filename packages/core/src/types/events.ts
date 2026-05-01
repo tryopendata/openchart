@@ -64,6 +64,11 @@ export const elementRef = {
  * Fired by the `onEdit` callback when any editable chart element is modified.
  * Covers repositioning (drag), deletion (Delete key), and text editing (double-click).
  * Selection events (onSelect/onDeselect) are separate callbacks, not part of this union.
+ *
+ * For the `annotation` variant:
+ * - `annotation` is the ORIGINAL spec annotation (may have a stale or missing offset)
+ * - `offset` is the NEW accumulated position after the drag completes
+ * - To persist a drag edit back into your spec: `{ ...edit.annotation, offset: edit.offset }`
  */
 export type ElementEdit =
   | { type: 'annotation'; annotation: TextAnnotation; offset: AnnotationOffset }

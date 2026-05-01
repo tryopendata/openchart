@@ -1,8 +1,11 @@
 import type { AxisTick, LayoutStrategy } from '@opendata-ai/openchart-core';
 import { resolveTheme } from '@opendata-ai/openchart-core';
+import { scaleLinear, scaleLog } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeAxes, effectiveDensity, thinTicksUntilFit, ticksOverlap } from '../layout/axes';
+import { buildContinuousTicks } from '../layout/axes/ticks';
+import type { ResolvedScale } from '../layout/scales';
 import { computeScales } from '../layout/scales';
 
 const lineSpec: NormalizedChartSpec = {
@@ -882,5 +885,100 @@ describe('horizontal bar y-axis label thinning regression', () => {
     // X-axis band scale with 10 categories at minimal density on a narrow chart
     // should thin -- showing all 10 on 200px would overlap
     expect(axes.x!.ticks.length).toBeLessThan(countries.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Log scale tick filtering — buildContinuousTicks
+// D3 log scales ignore the count hint and return ticks at every sub-power
+// position. The engine must filter these down to powers of the base only.
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a ResolvedScale backed by a D3 log scale, matching what buildLogScale produces.
+ * Using a single `base` parameter keeps the D3 scale and channel config in sync,
+ * mirroring how they're always derived from the same spec field.
+ */
+function makeLogScale(domain: [number, number], base = 10): ResolvedScale {
+  const scale = scaleLog().domain(domain).range([400, 0]);
+  scale.base(base);
+  return {
+    scale,
+    type: 'log',
+    channel: {
+      field: 'value',
+      type: 'quantitative',
+      scale: base !== 10 ? { base } : undefined,
+    },
+  } as ResolvedScale;
+}
+
+describe('buildContinuousTicks — log scale power filtering', () => {
+  it('returns only power-of-10 ticks for [5, 25000] at tickCount 5', () => {
+    const resolved = makeLogScale([5, 25000]);
+    const ticks = buildContinuousTicks(resolved, 5);
+    const values = ticks.map((t) => t.value as number);
+    // Should be exactly the powers of 10 in domain: 10, 100, 1000, 10000
+    expect(values).toEqual([10, 100, 1000, 10000]);
+  });
+
+  it('returns only power-of-10 ticks for [1, 1000000] at tickCount 5', () => {
+    const resolved = makeLogScale([1, 1_000_000]);
+    const ticks = buildContinuousTicks(resolved, 5);
+    const values = ticks.map((t) => t.value as number);
+    // Assert invariants rather than exact output: every tick is a power of 10,
+    // and we get at least 5 (the domain spans 6 decades).
+    for (const v of values) {
+      const exp = Math.log10(v);
+      expect(Math.abs(exp - Math.round(exp))).toBeLessThan(1e-9);
+    }
+    expect(values.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('returns only powers-of-2 for [1, 64] base-2 at tickCount 5', () => {
+    const resolved = makeLogScale([1, 64], 2);
+    const ticks = buildContinuousTicks(resolved, 5);
+    const values = ticks.map((t) => t.value as number);
+    expect(values).toEqual([1, 2, 4, 8, 16, 32, 64]);
+  });
+
+  it('handles fractional powers for [0.001, 100] at tickCount 5', () => {
+    const resolved = makeLogScale([0.001, 100]);
+    const ticks = buildContinuousTicks(resolved, 5);
+    const values = ticks.map((t) => t.value as number);
+    // Tolerance check prevents floating-point false negatives on 0.001, 0.01, 0.1
+    expect(values).toEqual([0.001, 0.01, 0.1, 1, 10, 100]);
+  });
+
+  it('still produces ticks at tickCount 3 (regression guard)', () => {
+    const resolved = makeLogScale([1, 1000]);
+    const ticks = buildContinuousTicks(resolved, 3);
+    expect(ticks.length).toBeGreaterThanOrEqual(2);
+    const values = ticks.map((t) => t.value as number);
+    // Every value must be a power of 10
+    for (const v of values) {
+      const exp = Math.log10(v);
+      expect(Math.abs(exp - Math.round(exp))).toBeLessThan(1e-6);
+    }
+  });
+
+  it('does not over-filter linear scales with the same domain', () => {
+    const scale = scaleLinear().domain([5, 25000]).range([400, 0]);
+    const resolved: ResolvedScale = {
+      scale,
+      type: 'linear',
+      channel: { field: 'value', type: 'quantitative' },
+    } as ResolvedScale;
+    const ticks = buildContinuousTicks(resolved, 5);
+    // Linear scale should return normal D3 ticks — not just power-of-10 values
+    expect(ticks.length).toBeGreaterThanOrEqual(4);
+    // At least one tick should NOT be a power of 10 (e.g. 5000, 10000, 15000, 20000, 25000)
+    const values = ticks.map((t) => t.value as number);
+    const nonPowerOf10 = values.filter((v) => {
+      if (v <= 0) return true;
+      const exp = Math.log10(v);
+      return Math.abs(exp - Math.round(exp)) >= 0.01;
+    });
+    expect(nonPowerOf10.length).toBeGreaterThan(0);
   });
 });
