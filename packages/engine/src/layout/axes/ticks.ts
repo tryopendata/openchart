@@ -38,13 +38,18 @@ import type { D3CategoricalScale, D3ContinuousScale, ResolvedScale } from '../sc
  * "full" is the publication-ready default; "reduced" and "minimal" step down as the
  * responsive breakpoint system shifts to smaller containers.
  *
+ * Y full is set to 40px/tick (tighter than Observable Plot's 50) because chart areas
+ * are measured after chrome subtraction. A 400px container with title+subtitle leaves
+ * ~270px of chart area; 55px/tick would only produce 4 ticks. 40px/tick reaches 5-6
+ * on typical chart areas (150-300px) and the overlap check acts as a safety net.
+ *
  * @internal — these are tuning constants, not part of the configuration API.
  * Consumers should configure tick density through `axis.tickCount` on the spec.
  */
 const Y_PX_PER_TICK: Record<AxisLabelDensity, number> = {
-  full: 55,
-  reduced: 90,
-  minimal: 140,
+  full: 40,
+  reduced: 70,
+  minimal: 120,
 };
 
 const X_PX_PER_TICK: Record<AxisLabelDensity, number> = {

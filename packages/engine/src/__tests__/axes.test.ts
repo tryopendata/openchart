@@ -124,16 +124,16 @@ describe('computeAxes', () => {
   // Height-aware y-axis tick reduction
   // -------------------------------------------------------------------------
 
-  it('reduces y-axis ticks for very short chart areas (< 120px)', () => {
+  it('reduces y-axis ticks for very short chart areas (< 80px)', () => {
     const shortArea = { x: 50, y: 50, width: 500, height: 80 };
     const scales = computeScales(lineSpec, shortArea, lineSpec.data);
     const axesShort = computeAxes(scales, shortArea, fullStrategy, theme);
 
-    // Even though the strategy says 'full', height < 120 forces minimal (3 ticks)
+    // Very short chart area -- tick count clamped to at most 4
     expect(axesShort.y!.ticks.length).toBeLessThanOrEqual(4);
   });
 
-  it('reduces y-axis ticks for medium-short chart areas (120-200px)', () => {
+  it('reduces y-axis ticks for medium-short chart areas (80-100px)', () => {
     const mediumArea = { x: 50, y: 50, width: 500, height: 160 };
     const tallArea = { x: 50, y: 50, width: 500, height: 400 };
 

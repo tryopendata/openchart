@@ -44,9 +44,16 @@ export { thinTicksUntilFit, ticksOverlap } from './axes/thinning';
  * Below these pixel heights, we step down the density regardless of the
  * width-based strategy. This prevents overlapping y-axis labels in short
  * containers like thumbnail previews.
+ *
+ * These thresholds apply to the chart area height (after chrome/margins),
+ * not the total container height. A 400px container with title+subtitle
+ * leaves ~270px of chart area; a 320px container leaves ~186px. The old
+ * HEIGHT_REDUCED_THRESHOLD of 200 kicked in on nearly every common chart
+ * size, producing only 3 ticks. Lowering to 100 keeps 'full' density for
+ * all but the most compact thumbnail-style containers.
  */
-const HEIGHT_MINIMAL_THRESHOLD = 120;
-const HEIGHT_REDUCED_THRESHOLD = 200;
+const HEIGHT_MINIMAL_THRESHOLD = 80;
+const HEIGHT_REDUCED_THRESHOLD = 100;
 
 /**
  * Width thresholds for reducing x-axis tick density.
