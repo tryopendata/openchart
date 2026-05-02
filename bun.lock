@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "@opendata-ai/monorepo",
-      "dependencies": {
-        "lightningcss-cli": "^1.32.0",
-      },
       "devDependencies": {
         "@biomejs/biome": "^2.4.4",
         "@playwright/test": "^1.59.1",
@@ -15,6 +12,7 @@
         "@vitest/coverage-v8": "^4.0.18",
         "happy-dom": "^20.8.3",
         "husky": "^9.1.7",
+        "lightningcss-cli": "^1.32.0",
         "lightningcss-cli-darwin-arm64": "^1.32.0",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
@@ -42,7 +40,7 @@
     },
     "packages/core": {
       "name": "@opendata-ai/openchart-core",
-      "version": "6.27.2",
+      "version": "6.28.0",
       "dependencies": {
         "d3-color": "^3.1.0",
         "d3-format": "^3.1.0",
@@ -57,7 +55,7 @@
     },
     "packages/engine": {
       "name": "@opendata-ai/openchart-engine",
-      "version": "6.27.2",
+      "version": "6.28.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "d3-array": "^3.2.0",
@@ -78,7 +76,7 @@
     },
     "packages/react": {
       "name": "@opendata-ai/openchart-react",
-      "version": "6.27.2",
+      "version": "6.28.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -97,7 +95,7 @@
     },
     "packages/svelte": {
       "name": "@opendata-ai/openchart-svelte",
-      "version": "6.27.2",
+      "version": "6.28.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -116,7 +114,7 @@
     },
     "packages/vanilla": {
       "name": "@opendata-ai/openchart-vanilla",
-      "version": "6.27.2",
+      "version": "6.28.0",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
         "@opendata-ai/openchart-core": "workspace:*",
@@ -131,7 +129,7 @@
     },
     "packages/vue": {
       "name": "@opendata-ai/openchart-vue",
-      "version": "6.27.2",
+      "version": "6.28.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
