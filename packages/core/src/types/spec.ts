@@ -147,9 +147,10 @@ export interface MarkDef {
    * Show point markers on line/area marks.
    * - true: filled circles at each data point
    * - 'transparent': invisible hover targets (legacy behavior)
+   * - 'endpoints': show only first and last point per series
    * - false: no point marks (default; uses voronoi overlay for tooltips)
    */
-  point?: boolean | 'transparent';
+  point?: boolean | 'transparent' | 'endpoints';
   /**
    * Curve interpolation for line/area marks.
    * Maps to d3-shape curve factories.
@@ -169,8 +170,10 @@ export interface MarkDef {
   innerRadius?: number;
   /** Outer radius for arc marks. */
   outerRadius?: number;
-  /** Corner radius for rect/bar marks. */
-  cornerRadius?: number;
+  /** Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness. */
+  cornerRadius?: number | 'pill';
+  /** Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band. */
+  size?: number;
   /** Whether the mark is filled (vs stroked only). */
   filled?: boolean;
   /** Default opacity (0-1). */
@@ -312,8 +315,8 @@ export interface EncodingChannel {
   type: FieldType;
   /** Optional aggregate to apply before encoding. */
   aggregate?: AggregateOp;
-  /** Axis configuration. Only relevant for x and y channels. */
-  axis?: AxisConfig;
+  /** Axis configuration. Set to `false` to suppress axis entirely (no space reserved). */
+  axis?: AxisConfig | false;
   /** Scale configuration. */
   scale?: ScaleConfig;
   /**
@@ -711,6 +714,8 @@ export interface LabelConfig {
   format?: string;
   /** Literal string prepended to each formatted label value (e.g. "-" or "$"). */
   prefix?: string;
+  /** Fixed CSS color for all labels. Overrides the default fill-derived color. */
+  color?: string;
   /** Per-series pixel offsets for fine-tuning label positions, keyed by series name. */
   offsets?: Record<string, AnnotationOffset>;
 }
@@ -1184,7 +1189,7 @@ export interface TileMapEncoding {
 }
 
 /** Sequential color palette names available for tile maps. */
-export type TileMapPalette = 'blue' | 'green' | 'orange' | 'purple';
+export type TileMapPalette = 'blue' | 'green' | 'orange' | 'purple' | 'teal';
 
 export interface TileMapSpec {
   /** Discriminant: always "tilemap". */
@@ -1221,6 +1226,57 @@ export interface TileMapSpec {
   valueFormat?: string;
 }
 
+// ---------------------------------------------------------------------------
+// BarList spec (ranked horizontal bar list)
+// ---------------------------------------------------------------------------
+
+export interface BarListSpec {
+  /** Discriminant: always "barlist". */
+  type: 'barlist';
+  /**
+   * Data rows. Each row must have at least a label field and a value field.
+   * Rendered as a ranked list of horizontal bars.
+   */
+  data: DataRow[];
+  /** Encoding channels mapping data fields to visual properties. */
+  encoding: BarListEncoding;
+  /** Bar height in pixels. Defaults to 6. */
+  barHeight?: number;
+  /** Corner radius: number in px or "pill" for fully rounded ends. Defaults to "pill". */
+  cornerRadius?: number | 'pill';
+  /** Maximum number of rows to show. Defaults to 20. */
+  maxItems?: number;
+  /** Editorial chrome (title, subtitle, source, byline, footer). */
+  chrome?: Chrome;
+  /** Theme configuration overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode behavior. Defaults to "off". */
+  darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
+  /** Animation configuration for entrance animations. */
+  animation?: AnimationSpec;
+  /**
+   * d3-format string applied to bar values and tooltips.
+   * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
+   */
+  valueFormat?: string;
+}
+
+/** Encoding channels for a barlist visualization. */
+export interface BarListEncoding {
+  /** Label field (required, nominal). The category name for each row. */
+  label: EncodingChannel;
+  /** Value field (required, quantitative). The numeric value that drives bar width. */
+  value: EncodingChannel;
+  /** Subtitle field (optional, nominal). Secondary text shown beside the label in lighter weight. */
+  subtitle?: EncodingChannel;
+  /** Color field (optional, nominal). Maps categories to colors from the palette. When omitted, colors cycle by row index. */
+  color?: EncodingChannel;
+  /** Tooltip encoding (optional). */
+  tooltip?: EncodingChannel | EncodingChannel[];
+}
+
 /**
  * Top-level visualization spec: union discriminated by structural shape.
  *
@@ -1230,8 +1286,16 @@ export interface TileMapSpec {
  * - GraphSpec: has `type: 'graph'`
  * - SankeySpec: has `type: 'sankey'`
  * - TileMapSpec: has `type: 'tilemap'`
+ * - BarListSpec: has `type: 'barlist'`
  */
-export type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec | SankeySpec | TileMapSpec;
+export type VizSpec =
+  | ChartSpec
+  | LayerSpec
+  | TableSpec
+  | GraphSpec
+  | SankeySpec
+  | TileMapSpec
+  | BarListSpec;
 
 /** Chart spec without runtime data, for persistence/storage. */
 export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
@@ -1243,13 +1307,16 @@ export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
 export type SankeySpecWithoutData = Omit<SankeySpec, 'data'>;
 /** TileMap spec without runtime data, for persistence/storage. */
 export type TileMapSpecWithoutData = Omit<TileMapSpec, 'data'>;
+/** BarList spec without runtime data, for persistence/storage. */
+export type BarListSpecWithoutData = Omit<BarListSpec, 'data'>;
 /** Union of data-stripped spec types for persistence/storage. */
 export type StoredVizSpec =
   | ChartSpecWithoutData
   | TableSpecWithoutData
   | GraphSpecWithoutData
   | SankeySpecWithoutData
-  | TileMapSpecWithoutData;
+  | TileMapSpecWithoutData
+  | BarListSpecWithoutData;
 
 // ---------------------------------------------------------------------------
 // Transforms (Vega-Lite aligned)
@@ -1555,6 +1622,11 @@ export function isSankeySpec(spec: VizSpec | Record<string, unknown>): spec is S
 /** Check if a spec is a TileMapSpec. */
 export function isTileMapSpec(spec: VizSpec | Record<string, unknown>): spec is TileMapSpec {
   return 'type' in spec && (spec as Record<string, unknown>).type === 'tilemap';
+}
+
+/** Check if a spec is a BarListSpec. */
+export function isBarListSpec(spec: VizSpec | Record<string, unknown>): spec is BarListSpec {
+  return 'type' in spec && (spec as Record<string, unknown>).type === 'barlist';
 }
 
 // ---------------------------------------------------------------------------

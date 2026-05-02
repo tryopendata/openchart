@@ -235,6 +235,7 @@ function renderTiles(
       height: tile.size,
       rx: tile.cornerRadius,
       fill: tile.fill,
+      'fill-opacity': tile.fillOpacity ?? 1,
       stroke: tile.stroke,
       'stroke-width': tile.strokeWidth,
     });
@@ -312,20 +313,28 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
 
   for (const stop of gradientLegend.colorStops) {
     const s = createSVGElement('stop');
-    setAttrs(s, { offset: `${stop.offset * 100}%`, 'stop-color': stop.color });
+    const attrs: Record<string, string | number> = {
+      offset: `${stop.offset * 100}%`,
+      'stop-color': stop.color,
+    };
+    if (stop.opacity !== undefined) {
+      attrs['stop-opacity'] = stop.opacity;
+    }
+    setAttrs(s, attrs);
     grad.appendChild(s);
   }
 
   (defs as SVGElement).appendChild(grad);
 
-  // Gradient bar
+  // Gradient bar (pill-shaped)
+  const barHeight = gradientLegend.bounds.height;
   const bar = createSVGElement('rect');
   setAttrs(bar, {
     x: gradientLegend.bounds.x,
     y: gradientLegend.bounds.y,
     width: gradientLegend.bounds.width,
-    height: gradientLegend.bounds.height,
-    rx: 3,
+    height: barHeight,
+    rx: barHeight / 2,
     fill: `url(#${gradientId})`,
   });
   g.appendChild(bar);

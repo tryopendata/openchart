@@ -137,10 +137,31 @@ function computeSingleArea(
 
     // Allow markDef.fill to override color with a gradient.
     // When a gradient is provided, set fillOpacity=1 so gradient stop-opacity controls the fade.
+    // When no fill is provided, auto-generate a top-to-bottom fade gradient.
     const markFill = spec.markDef.fill;
-    const fillValue = markFill != null ? markFill : color;
-    const defaultFillOpacity = y2Channel ? 0.25 : DEFAULT_FILL_OPACITY;
-    const fillOpacity = isGradientDef(fillValue) ? 1 : (spec.markDef.opacity ?? defaultFillOpacity);
+    let fillValue: string | import('@opendata-ai/openchart-core').GradientDef;
+    let fillOpacity: number;
+
+    if (markFill != null) {
+      fillValue = markFill;
+      fillOpacity = isGradientDef(markFill)
+        ? 1
+        : (spec.markDef.opacity ?? (y2Channel ? 0.25 : DEFAULT_FILL_OPACITY));
+    } else {
+      const colorStr = getRepresentativeColor(color);
+      fillValue = {
+        gradient: 'linear',
+        x1: 0,
+        y1: 0,
+        x2: 0,
+        y2: 1,
+        stops: [
+          { offset: 0, color: colorStr, opacity: 0.12 },
+          { offset: 1, color: colorStr, opacity: 0 },
+        ],
+      };
+      fillOpacity = 1;
+    }
 
     marks.push({
       type: 'area',
@@ -151,7 +172,7 @@ function computeSingleArea(
       fill: fillValue,
       fillOpacity: fillOpacity,
       stroke: getRepresentativeColor(isGradientDef(fillValue) ? color : fillValue),
-      strokeWidth: spec.display === 'sparkline' ? 1.25 : 2,
+      strokeWidth: spec.markDef.strokeWidth ?? (spec.display === 'sparkline' ? 1.25 : 1.5),
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
       dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row })),

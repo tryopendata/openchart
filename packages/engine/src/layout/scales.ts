@@ -256,6 +256,16 @@ function buildLinearScale(
 
   if (!channel.scale?.domain && channel.scale?.nice !== false) {
     scale.nice();
+
+    // nice() can round the domain min down to 0 even when zero: false.
+    // Re-nice with more ticks to tighten the domain around the data range.
+    if (channel.scale?.zero === false) {
+      const [nicedMin, nicedMax] = scale.domain();
+      if (nicedMin < domainMin || nicedMax > domainMax) {
+        scale.domain([domainMin, domainMax]);
+        scale.nice(20);
+      }
+    }
   }
   applyContinuousConfig(scale, channel);
 

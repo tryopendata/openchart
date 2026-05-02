@@ -271,7 +271,7 @@ export function computeAxes(
   const { fontSize } = tickLabelStyle;
   const { fontWeight } = tickLabelStyle;
 
-  if (scales.x && !dataContext?.skipX) {
+  if (scales.x && !dataContext?.skipX && scales.x.channel.axis !== false) {
     const axisConfig = scales.x.channel.axis;
     const isContinuousX =
       scales.x.type !== 'band' && scales.x.type !== 'point' && scales.x.type !== 'ordinal';
@@ -373,7 +373,7 @@ export function computeAxes(
     };
   }
 
-  if (scales.y && !dataContext?.skipY) {
+  if (scales.y && !dataContext?.skipY && scales.y.channel.axis !== false) {
     const axisConfig = scales.y.channel.axis;
     const isContinuousY =
       scales.y.type !== 'band' && scales.y.type !== 'point' && scales.y.type !== 'ordinal';

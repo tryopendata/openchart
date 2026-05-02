@@ -32,6 +32,7 @@ export type {
   CompiledGraphNode,
   CompileResult,
   GraphCompilation,
+  NormalizedBarListSpec,
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
@@ -46,6 +47,7 @@ export type {
 export {
   clearRenderers,
   compile,
+  compileBarList,
   compileChart,
   compileGraph,
   compileSankey,
@@ -55,7 +57,7 @@ export {
   registerChartRenderer,
   validateSpec,
 } from '@opendata-ai/openchart-engine';
-
+export { default as BarList } from './BarList.svelte';
 // Components
 export { default as Chart } from './Chart.svelte';
 export type { UseChartOptions, UseChartReturn } from './composables/useChart.svelte.js';
@@ -80,6 +82,7 @@ export { default as VizThemeProvider } from './ThemeProvider.svelte';
 export { default as TileMap } from './TileMap.svelte';
 // Component prop types
 export type {
+  BarListProps,
   ChartProps,
   DataTableProps,
   GraphProps,

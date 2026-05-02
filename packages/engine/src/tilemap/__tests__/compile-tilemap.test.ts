@@ -112,7 +112,7 @@ describe('compileTileMap', () => {
     }
   });
 
-  it('data tiles have fill colors from the sequential palette', () => {
+  it('data tiles use opacity-based encoding with a single base color', () => {
     const result = compileTileMap(basicSpec, defaultOptions);
 
     const dataTiles = result.tiles.filter((t) => t.hasData);
@@ -122,7 +122,10 @@ describe('compileTileMap', () => {
     }
 
     const fills = new Set(dataTiles.map((t) => t.fill));
-    expect(fills.size).toBeGreaterThan(1);
+    expect(fills.size).toBe(1);
+
+    const opacities = new Set(dataTiles.map((t) => t.fillOpacity));
+    expect(opacities.size).toBeGreaterThan(1);
   });
 
   it('compiles tabular DataRow[] data with encoding', () => {

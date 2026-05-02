@@ -59,12 +59,14 @@ function formatValue(value: unknown, fieldType?: string, format?: string): strin
 
 /** Resolve the display label for an encoding channel: title > axis.title > field name. */
 function resolveLabel(ch: EncodingChannel): string {
-  return ch.title ?? ch.axis?.title ?? ch.field;
+  const ax = ch.axis || undefined;
+  return ch.title ?? ax?.title ?? ch.field;
 }
 
 /** Resolve the format string for an encoding channel: format > axis.format. */
 function resolveFormat(ch: EncodingChannel): string | undefined {
-  return ch.format ?? ch.axis?.format;
+  const ax = ch.axis || undefined;
+  return ch.format ?? ax?.format;
 }
 
 /** Build tooltip fields from explicit tooltip encoding channels. */

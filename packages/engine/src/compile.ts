@@ -55,6 +55,7 @@ import { computeAnnotations } from './annotations/compute';
 // registry on module load. Tests that clear the registry can import
 // `registerBuiltinRenderers` from `./charts/builtin` to restore defaults.
 import './charts/builtin';
+import { compileBarList as compileBarListImpl } from './barlist/compile-barlist';
 import {
   assignAnimationIndices,
   computeMarkObstacles,
@@ -816,7 +817,8 @@ function compileLayerIndependent(
   const theme = resolveTheme(layerSpec.theme ?? leaf1.theme);
   const axisFontSize = theme.fonts?.sizes?.axisTick ?? 11;
   const rightAxisWidth = estimateYAxisLabelWidth(leaf1.data, leaf1.encoding, axisFontSize);
-  const hasRightAxisTitle = !!leaf1.encoding?.y?.axis?.title;
+  const yAxisConfig = leaf1.encoding?.y?.axis || undefined;
+  const hasRightAxisTitle = !!yAxisConfig?.title;
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
   const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
   const axisTitleOffset = getAxisTitleOffset(options.width);
@@ -1315,4 +1317,27 @@ export function compileTileMap(
   options: CompileOptions,
 ): import('@opendata-ai/openchart-core').TileMapLayout {
   return compileTileMapImpl(spec, options);
+}
+
+// ---------------------------------------------------------------------------
+// BarList compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a barlist spec into a BarListLayout.
+ *
+ * Takes a raw barlist spec, validates, normalizes, resolves theme and chrome,
+ * computes row layout with proportional bars, builds tooltips, and returns
+ * a BarListLayout ready for rendering.
+ *
+ * @param spec - Raw barlist spec (validated and normalized internally).
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns BarListLayout with computed positions and visual properties.
+ * @throws Error if spec is invalid or not a barlist type.
+ */
+export function compileBarList(
+  spec: unknown,
+  options: CompileOptions,
+): import('@opendata-ai/openchart-core').BarListLayout {
+  return compileBarListImpl(spec, options);
 }

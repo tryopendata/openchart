@@ -6,8 +6,15 @@
  */
 
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isSankeySpec, isTableSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
+import {
+  isBarListSpec,
+  isGraphSpec,
+  isSankeySpec,
+  isTableSpec,
+  isTileMapSpec,
+} from '@opendata-ai/openchart-core';
 import type { CSSProperties } from 'react';
+import { BarList } from './BarList';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
@@ -58,6 +65,11 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
   if (isTileMapSpec(spec)) {
     return (
       <TileMap spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
+    );
+  }
+  if (isBarListSpec(spec)) {
+    return (
+      <BarList spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );
   }
   return (

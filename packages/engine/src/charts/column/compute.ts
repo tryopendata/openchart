@@ -78,6 +78,8 @@ export function computeColumnMarks(
 
   const isSequentialColor = colorEnc?.type === 'quantitative';
 
+  let marks: RectMark[];
+
   // Color encoding present: decide between colored simple columns vs stacked
   if (colorField && !isSequentialColor) {
     // Check if any category has multiple rows (actual stacking needed)
@@ -88,7 +90,7 @@ export function computeColumnMarks(
       const stackDisabled = yChannel.stack === null || yChannel.stack === false;
 
       if (stackDisabled) {
-        return computeGroupedColumns(
+        marks = computeGroupedColumns(
           spec.data,
           xChannel.field,
           yChannel.field,
@@ -99,16 +101,30 @@ export function computeColumnMarks(
           baseline,
           scales,
         );
+      } else {
+        const stackMode =
+          yChannel.stack === 'normalize'
+            ? 'normalize'
+            : yChannel.stack === 'center'
+              ? 'center'
+              : 'zero';
+
+        marks = computeStackedColumns(
+          spec.data,
+          xChannel.field,
+          yChannel.field,
+          colorField,
+          xScale,
+          yScale,
+          bandwidth,
+          baseline,
+          scales,
+          stackMode,
+        );
       }
-
-      const stackMode =
-        yChannel.stack === 'normalize'
-          ? 'normalize'
-          : yChannel.stack === 'center'
-            ? 'center'
-            : 'zero';
-
-      return computeStackedColumns(
+    } else {
+      // Single row per category: render like simple columns but with color from scale
+      marks = computeColoredColumns(
         spec.data,
         xChannel.field,
         yChannel.field,
@@ -118,36 +134,24 @@ export function computeColumnMarks(
         bandwidth,
         baseline,
         scales,
-        stackMode,
       );
     }
-
-    // Single row per category: render like simple columns but with color from scale
-    return computeColoredColumns(
+  } else {
+    marks = computeSimpleColumns(
       spec.data,
       xChannel.field,
       yChannel.field,
-      colorField,
       xScale,
       yScale,
       bandwidth,
       baseline,
       scales,
+      isSequentialColor,
+      conditionalColor,
     );
   }
 
-  return computeSimpleColumns(
-    spec.data,
-    xChannel.field,
-    yChannel.field,
-    xScale,
-    yScale,
-    bandwidth,
-    baseline,
-    scales,
-    isSequentialColor,
-    conditionalColor,
-  );
+  return applyMarkDefOverrides(marks, spec, bandwidth);
 }
 
 /** Compute simple (non-grouped) vertical columns. */
@@ -402,6 +406,35 @@ function computeStackedColumns(
       });
 
       cumulativeValue += value;
+    }
+  }
+
+  return marks;
+}
+
+function applyMarkDefOverrides(
+  marks: RectMark[],
+  spec: NormalizedChartSpec,
+  bandwidth: number,
+): RectMark[] {
+  const { markDef } = spec;
+  const fixedSize = markDef.size;
+  const crSpec = markDef.cornerRadius;
+
+  if (fixedSize == null && crSpec == null) return marks;
+
+  for (const mark of marks) {
+    if (fixedSize != null && mark.stackGroup === undefined) {
+      const barWidth = Math.min(fixedSize, bandwidth);
+      const offset = (bandwidth - barWidth) / 2;
+      mark.x = mark.x + offset;
+      mark.width = barWidth;
+    }
+    const effectiveWidth = mark.width;
+    if (crSpec === 'pill') {
+      mark.cornerRadius = effectiveWidth / 2;
+    } else if (typeof crSpec === 'number') {
+      mark.cornerRadius = crSpec;
     }
   }
 

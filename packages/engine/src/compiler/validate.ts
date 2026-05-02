@@ -760,6 +760,117 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
 }
 
 // ---------------------------------------------------------------------------
+// BarList validation
+// ---------------------------------------------------------------------------
+
+function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  if (!Array.isArray(spec.data)) {
+    errors.push({
+      message: 'Spec error: barlist spec requires a "data" array',
+      path: 'data',
+      code: 'INVALID_TYPE',
+      suggestion:
+        'Provide data as an array of objects, e.g. data: [{ label: "Category A", value: 42 }]',
+    });
+    return;
+  }
+
+  if (spec.data.length === 0) {
+    errors.push({
+      message: 'Spec error: "data" array must be non-empty',
+      path: 'data',
+      code: 'EMPTY_DATA',
+      suggestion: 'Add at least one data row',
+    });
+    return;
+  }
+
+  const firstRow = spec.data[0] as unknown;
+  if (typeof firstRow !== 'object' || firstRow === null || Array.isArray(firstRow)) {
+    errors.push({
+      message: 'Spec error: each item in "data" must be a plain object',
+      path: 'data[0]',
+      code: 'INVALID_TYPE',
+      suggestion: 'Each data item should be an object, e.g. { label: "Category A", value: 42 }',
+    });
+    return;
+  }
+
+  if (!spec.encoding || typeof spec.encoding !== 'object') {
+    errors.push({
+      message:
+        'Spec error: barlist spec requires an "encoding" object with label and value channels',
+      path: 'encoding',
+      code: 'MISSING_FIELD',
+      suggestion:
+        'Add an encoding object, e.g. encoding: { label: { field: "name", type: "nominal" }, value: { field: "count", type: "quantitative" } }',
+    });
+    return;
+  }
+
+  const encoding = spec.encoding as Record<string, unknown>;
+  const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
+  const availableColumns = [...dataColumns].join(', ');
+
+  for (const channel of ['label', 'value'] as const) {
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (!ch || typeof ch !== 'object') {
+      errors.push({
+        message: `Spec error: barlist encoding requires "${channel}" channel`,
+        path: `encoding.${channel}`,
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
+      });
+      continue;
+    }
+
+    if (!ch.field || typeof ch.field !== 'string') {
+      errors.push({
+        message: `Spec error: encoding.${channel} must have a "field" string`,
+        path: `encoding.${channel}.field`,
+        code: 'MISSING_FIELD',
+        suggestion: `Add a field name from your data columns: ${availableColumns}`,
+      });
+      continue;
+    }
+
+    if (!dataColumns.has(ch.field as string)) {
+      errors.push({
+        message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist in data. Available columns: ${availableColumns}`,
+        path: `encoding.${channel}.field`,
+        code: 'DATA_FIELD_MISSING',
+        suggestion: `Use one of the available data columns: ${availableColumns}`,
+      });
+    }
+  }
+
+  // Validate optional encoding channels
+  for (const channel of ['subtitle', 'color', 'tooltip'] as const) {
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (!ch) continue;
+    const field = ch.field;
+    if (field && typeof field === 'string' && !dataColumns.has(field)) {
+      errors.push({
+        message: `Spec error: encoding.${channel}.field "${field}" does not exist in data. Available columns: ${availableColumns}`,
+        path: `encoding.${channel}.field`,
+        code: 'DATA_FIELD_MISSING',
+        suggestion: `Use one of the available data columns: ${availableColumns}`,
+      });
+    }
+  }
+
+  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
+    errors.push({
+      message: 'Spec error: darkMode must be "auto", "force", or "off"',
+      path: 'darkMode',
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Layer validation
 // ---------------------------------------------------------------------------
 
@@ -897,19 +1008,21 @@ export function validateSpec(spec: unknown): ValidationResult {
   const isGraph = obj.type === 'graph';
   const isSankey = obj.type === 'sankey';
   const isTileMap = obj.type === 'tilemap';
-  const isLayer = hasLayer && !isTable && !isGraph && !isSankey && !isTileMap;
-  const isChart = hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap;
+  const isBarList = obj.type === 'barlist';
+  const isLayer = hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList;
+  const isChart =
+    hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList;
 
-  if (!isChart && !isTable && !isGraph && !isSankey && !isTileMap && !isLayer) {
+  if (!isChart && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList && !isLayer) {
     return {
       valid: false,
       errors: [
         {
           message:
-            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap',
+            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap/barlist',
           path: 'mark',
           code: 'MISSING_FIELD',
-          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap (type: "table", type: "graph", type: "sankey", or type: "tilemap"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
+          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field (type: "table", type: "graph", type: "sankey", type: "tilemap", or type: "barlist"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
         },
       ],
       normalized: null,
@@ -956,6 +1069,8 @@ export function validateSpec(spec: unknown): ValidationResult {
     validateSankeySpec(obj, errors);
   } else if (isTileMap) {
     validateTileMapSpec(obj, errors);
+  } else if (isBarList) {
+    validateBarListSpec(obj, errors);
   }
 
   if (errors.length > 0) {

@@ -29,6 +29,7 @@ import type {
   ScaleConfig,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
+import type { NormalizedBarListSpec } from '../barlist/types';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
 
@@ -101,9 +102,9 @@ export interface NormalizedChartSpec {
   encoding: Encoding;
   chrome: NormalizedChrome;
   annotations: Annotation[];
-  /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets stays optional. */
+  /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
-    Pick<LabelConfig, 'offsets'>;
+    Pick<LabelConfig, 'offsets' | 'color'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   responsive: boolean;
@@ -164,7 +165,8 @@ export type NormalizedSpec =
   | NormalizedTableSpec
   | NormalizedGraphSpec
   | NormalizedSankeySpec
-  | NormalizedTileMapSpec;
+  | NormalizedTileMapSpec
+  | NormalizedBarListSpec;
 
 // ---------------------------------------------------------------------------
 // Validation types

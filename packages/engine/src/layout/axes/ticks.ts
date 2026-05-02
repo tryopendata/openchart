@@ -130,7 +130,8 @@ const TEMPORAL_SCALE_TYPES = new Set(['time', 'utc']);
 
 /** Format a tick value based on the scale type. */
 function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
-  const formatStr = resolvedScale.channel.axis?.format;
+  const axisConfig = resolvedScale.channel.axis || undefined;
+  const formatStr = axisConfig?.format;
 
   if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
     const temporalFmt = buildTemporalFormatter(formatStr);
@@ -179,8 +180,8 @@ export function continuousTicks(
     }));
   }
 
-  const explicitCount = resolvedScale.channel.axis?.tickCount;
-  const count = explicitCount ?? targetCount ?? TICK_COUNTS[density];
+  const axCfg = resolvedScale.channel.axis || undefined;
+  const count = axCfg?.tickCount ?? targetCount ?? TICK_COUNTS[density];
   return buildContinuousTicks(resolvedScale, count);
 }
 
@@ -257,7 +258,8 @@ export function categoricalTicks(
 ): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
   const domain: string[] = scale.domain();
-  const explicitTickCount = resolvedScale.channel.axis?.tickCount;
+  const catAxisCfg = resolvedScale.channel.axis || undefined;
+  const explicitTickCount = catAxisCfg?.tickCount;
 
   let selectedValues = domain;
 

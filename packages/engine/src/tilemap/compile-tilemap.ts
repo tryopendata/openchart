@@ -44,8 +44,8 @@ import type { NormalizedTileMapSpec } from './types';
 // Constants
 // ---------------------------------------------------------------------------
 
-const TILE_CORNER_RADIUS = 2;
-const TILE_STROKE_WIDTH = 0;
+const TILE_CORNER_RADIUS = 6;
+const TILE_STROKE_WIDTH = 1;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -143,23 +143,22 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   const min = values.length > 0 ? Math.min(...values) : 0;
   const max = values.length > 0 ? Math.max(...values) : 100;
 
-  // 8. Build color scale (fallback to 'blue' if palette name is invalid)
+  // 8. Build opacity scale: single base color, opacity encodes value
   const paletteStops = [...(SEQUENTIAL_PALETTES[tilemapSpec.palette] ?? SEQUENTIAL_PALETTES.blue)];
-  if (isDarkMode) paletteStops.reverse();
-
-  const domain = paletteStops.map((_, i) => min + (i / (paletteStops.length - 1)) * (max - min));
-  const colorScale = scaleLinear<string>().domain(domain).range(paletteStops).clamp(true);
+  const baseColor = isDarkMode ? paletteStops[0] : paletteStops[paletteStops.length - 1];
+  const opacityRange: [number, number] = isDarkMode ? [0.15, 1] : [0.2, 1];
+  const opacityScale = scaleLinear<number>().domain([min, max]).range(opacityRange).clamp(true);
 
   // 9. Reserve space for gradient legend at bottom (unless hidden)
   const showLegend = tilemapSpec.legend?.show !== false;
-  const legendBarHeight = 12;
-  const legendLabelGap = 4;
+  const legendBarHeight = 6;
+  const legendLabelGap = 6;
   const legendTotalHeight = showLegend ? legendBarHeight + legendLabelGap + 14 : 0;
 
   // 10. Compute tile positions in the remaining area
   const legendGap = showLegend ? 8 : 0;
   const tileAreaHeight = fullArea.height - legendTotalHeight - legendGap;
-  const tilePositions = computeTilePositions(fullArea.width, tileAreaHeight, 4);
+  const tilePositions = computeTilePositions(fullArea.width, tileAreaHeight, 5);
 
   // Center tile grid horizontally
   const tileGridOffsetX = fullArea.x + (fullArea.width - tilePositions.gridWidth) / 2;
@@ -173,9 +172,9 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   // 11. Build TileMapTileMark[]
   const formatter = buildD3Formatter(tilemapSpec.valueFormat) ?? formatNumber;
   const neutralFillLight = '#e0e0e0';
-  const neutralFillDark = '#2a2a3e';
+  const neutralFillDark = '#1e2a30';
   const neutralStrokeLight = '#d0d0d0';
-  const neutralStrokeDark = '#3a3a50';
+  const neutralStrokeDark = 'rgba(255,255,255,0.08)';
 
   const neutralFill = isDarkMode ? neutralFillDark : neutralFillLight;
   const neutralStroke = isDarkMode ? neutralStrokeDark : neutralStrokeLight;
@@ -188,12 +187,18 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
 
     const hasData = stateValueMap.has(stateCode);
     const value = hasData ? stateValueMap.get(stateCode)! : null;
-    const fill = hasData ? colorScale(value!) : neutralFill;
+    const opacity = hasData ? opacityScale(value!) : 0;
+    const fill = hasData ? baseColor : neutralFill;
+    const stroke = hasData
+      ? isDarkMode
+        ? 'rgba(255,255,255,0.1)'
+        : 'rgba(0,0,0,0.1)'
+      : neutralStroke;
     const formattedValue = hasData ? formatter(value!) : '–';
 
     const labelStyle: TextStyle = {
       fontFamily: theme.fonts.family,
-      fontSize: tilePositions.tileSize > 24 ? 14 : 11,
+      fontSize: tilePositions.tileSize > 24 ? 10 : 7,
       fontWeight: 700,
       fill: '#ffffff',
       lineHeight: 1.2,
@@ -201,20 +206,24 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
 
     const valueLabelStyle: TextStyle = {
       fontFamily: theme.fonts.family,
-      fontSize: tilePositions.tileSize > 24 ? 12 : 10,
-      fontWeight: 400,
-      fill: '#ffffff',
+      fontSize: tilePositions.tileSize > 24 ? 10 : 7,
+      fontWeight: 300,
+      fill: 'rgba(255,255,255,0.6)',
       lineHeight: 1.2,
     };
 
+    const tileCenterX = tileGridOffsetX + pos.x + tilePositions.tileSize / 2;
+    const tileTopY = tileGridOffsetY + pos.y;
+    const sz = tilePositions.tileSize;
+
     // Only show value label on larger tiles
     const valueLabel =
-      tilePositions.tileSize < 24
+      sz < 24
         ? { text: '', x: 0, y: 0, style: valueLabelStyle, visible: false }
         : {
             text: formattedValue,
-            x: tileGridOffsetX + pos.x + tilePositions.tileSize / 2,
-            y: tileGridOffsetY + pos.y + tilePositions.tileSize / 2 + 8,
+            x: tileCenterX,
+            y: tileTopY + sz * 0.78,
             style: valueLabelStyle,
             visible: true,
           };
@@ -223,10 +232,11 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
       type: 'tile' as const,
       stateCode,
       x: tileGridOffsetX + pos.x,
-      y: tileGridOffsetY + pos.y,
-      size: tilePositions.tileSize,
+      y: tileTopY,
+      size: sz,
       fill,
-      stroke: neutralStroke,
+      fillOpacity: hasData ? opacity : 1,
+      stroke,
       strokeWidth: TILE_STROKE_WIDTH,
       cornerRadius: TILE_CORNER_RADIUS,
       value: value ?? null,
@@ -234,8 +244,8 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
       hasData,
       label: {
         text: stateCode,
-        x: tileGridOffsetX + pos.x + tilePositions.tileSize / 2,
-        y: tileGridOffsetY + pos.y + tilePositions.tileSize / 2 - 4,
+        x: tileCenterX,
+        y: tileTopY + sz * 0.28,
         style: labelStyle,
         visible: true,
       },
@@ -269,10 +279,12 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   let gradientLegend: GradientLegendLayout | null = null;
 
   if (showLegend) {
-    const gradientColorStops: GradientColorStop[] = paletteStops.map((color, i) => ({
-      offset: i / (paletteStops.length - 1),
-      color,
-    }));
+    const numStops = 5;
+    const gradientColorStops: GradientColorStop[] = Array.from({ length: numStops }, (_, i) => {
+      const t = i / (numStops - 1);
+      const o = opacityRange[0] + t * (opacityRange[1] - opacityRange[0]);
+      return { offset: t, color: baseColor, opacity: o };
+    });
 
     gradientLegend = {
       type: 'gradient',

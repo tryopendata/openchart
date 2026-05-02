@@ -67,12 +67,18 @@ export const SEQUENTIAL_PURPLE: SequentialPalette = {
   stops: ['#efedf5', '#dadaeb', '#bcbddc', '#9e9ac8', '#756bb1', '#54278f'],
 } as const;
 
+export const SEQUENTIAL_TEAL: SequentialPalette = {
+  name: 'teal',
+  stops: ['#06b6d4', '#05a3be', '#0490a8', '#037d92', '#026a7c', '#015766', '#004450'],
+} as const;
+
 /** All sequential palettes keyed by name. */
 export const SEQUENTIAL_PALETTES: Record<string, string[]> = {
   blue: [...SEQUENTIAL_BLUE.stops],
   green: [...SEQUENTIAL_GREEN.stops],
   orange: [...SEQUENTIAL_ORANGE.stops],
   purple: [...SEQUENTIAL_PURPLE.stops],
+  teal: [...SEQUENTIAL_TEAL.stops],
 };
 
 // ---------------------------------------------------------------------------

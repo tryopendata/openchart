@@ -41,6 +41,7 @@ export type {
   CompiledGraphNode,
   CompileResult,
   GraphCompilation,
+  NormalizedBarListSpec,
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
@@ -56,6 +57,7 @@ export type {
 export {
   clearRenderers,
   compile,
+  compileBarList,
   compileChart,
   compileGraph,
   compileSankey,
@@ -66,7 +68,8 @@ export {
   registerChartRenderer,
   validateSpec,
 } from '@opendata-ai/openchart-engine';
-
+export type { BarListHandle, BarListProps } from './BarList';
+export { BarList } from './BarList';
 export type { ChartHandle, ChartProps } from './Chart';
 // Components
 export { Chart } from './Chart';

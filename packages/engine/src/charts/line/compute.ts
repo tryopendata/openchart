@@ -30,7 +30,7 @@ import { resolveCurve } from './curves';
 // ---------------------------------------------------------------------------
 
 /** Default stroke width for line marks. */
-const DEFAULT_STROKE_WIDTH = 2.5;
+const DEFAULT_STROKE_WIDTH = 1.5;
 
 /** Sparkline mode uses a thinner stroke since the chart area is tiny and a
  *  2.5px line reads as clunky. 1.25px keeps the trend legible without dominating. */
@@ -195,29 +195,38 @@ export function computeLineMarks(
     // Emit PointMark objects when markDef.point is truthy, or when sequential
     // color is active (points carry the gradient since SVG paths are single-color).
     const markPoint = spec.markDef.point;
-    const showPoints = markPoint === true || markPoint === 'transparent' || isSequentialColor;
+    const showPoints =
+      markPoint === true ||
+      markPoint === 'transparent' ||
+      markPoint === 'endpoints' ||
+      isSequentialColor;
 
     if (showPoints) {
       const isTransparent = markPoint === 'transparent';
+      const isEndpoints = markPoint === 'endpoints';
       // Also respect per-series showPoints override
       const seriesShowPoints = styleOverride?.showPoints !== false;
+      const lastIdx = pointsWithData.length - 1;
 
       for (let i = 0; i < pointsWithData.length; i++) {
         const p = pointsWithData[i];
-        const visible = seriesShowPoints && !isTransparent;
+        const isEndpoint = i === 0 || i === lastIdx;
+        const visible = seriesShowPoints && !isTransparent && (!isEndpoints || isEndpoint);
         // Sequential color: each point gets colored by its data value
         let pointColor = color;
         if (isSequentialColor) {
           const val = Number(p.row[sequentialColorField!]);
           pointColor = Number.isFinite(val) ? getSequentialColor(scales, val) : color;
         }
+        const hollow = isEndpoints && visible;
+        const pointColorStr = getRepresentativeColor(pointColor);
         const pointMark: PointMark = {
           type: 'point',
           cx: p.x,
           cy: p.y,
           r: visible ? DEFAULT_POINT_RADIUS : 0,
-          fill: pointColor,
-          stroke: visible ? '#ffffff' : 'transparent',
+          fill: hollow ? 'transparent' : pointColorStr,
+          stroke: hollow ? pointColorStr : visible ? '#ffffff' : 'transparent',
           strokeWidth: visible ? 1.5 : 0,
           fillOpacity: isTransparent ? 0 : 1,
           data: p.row,

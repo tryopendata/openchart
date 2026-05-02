@@ -896,7 +896,7 @@ describe('seriesStyles', () => {
     const usLine = lineMarks.find((m) => m.seriesKey === 'US');
 
     expect(ukLine?.strokeWidth).toBe(1.5);
-    expect(usLine?.strokeWidth).toBe(2.5); // default
+    expect(usLine?.strokeWidth).toBe(1.5); // default
   });
 
   it('sets opacity on a series', () => {
@@ -941,7 +941,7 @@ describe('seriesStyles', () => {
     for (const line of lineMarks) {
       expect(line.strokeDasharray).toBeUndefined();
       expect(line.opacity).toBeUndefined();
-      expect(line.strokeWidth).toBe(2.5);
+      expect(line.strokeWidth).toBe(1.5);
     }
   });
 });

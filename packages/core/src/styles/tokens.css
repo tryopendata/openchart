@@ -9,7 +9,8 @@
 .oc-graph-wrapper,
 .oc-graph-root,
 .oc-sankey-root,
-.oc-tilemap-root {
+.oc-tilemap-root,
+.oc-barlist-root {
   --oc-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --oc-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
 

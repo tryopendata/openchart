@@ -10,6 +10,7 @@
 
 import type {
   Annotation,
+  BarListSpec,
   ChartSpec,
   Chrome,
   ChromeText,
@@ -25,6 +26,7 @@ import type {
   VizSpec,
 } from '@opendata-ai/openchart-core';
 import {
+  isBarListSpec,
   isChartSpec,
   isGraphSpec,
   isLayerSpec,
@@ -34,6 +36,7 @@ import {
   resolveMarkDef,
   resolveMarkType,
 } from '@opendata-ai/openchart-core';
+import type { NormalizedBarListSpec } from '../barlist/types';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import { STATE_CODE_SET } from '../tilemap/layout';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
@@ -206,6 +209,7 @@ function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
     format: labels.format ?? '',
     prefix: labels.prefix ?? '',
     offsets: labels.offsets,
+    color: labels.color,
   };
 }
 
@@ -382,6 +386,23 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
   };
 }
 
+function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): NormalizedBarListSpec {
+  return {
+    type: 'barlist',
+    data: spec.data,
+    encoding: spec.encoding,
+    barHeight: spec.barHeight ?? 6,
+    cornerRadius: spec.cornerRadius ?? 'pill',
+    maxItems: spec.maxItems ?? 20,
+    chrome: normalizeChrome(spec.chrome),
+    theme: spec.theme ?? {},
+    darkMode: spec.darkMode ?? 'off',
+    watermark: spec.watermark ?? true,
+    animation: spec.animation ?? true,
+    valueFormat: spec.valueFormat,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -419,9 +440,12 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   if (isTileMapSpec(spec)) {
     return normalizeTileMapSpec(spec, warnings);
   }
+  if (isBarListSpec(spec)) {
+    return normalizeBarListSpec(spec, warnings);
+  }
   // Should never happen after validation
   throw new Error(
-    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', or type: 'tilemap'.`,
+    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', type: 'tilemap', or type: 'barlist'.`,
   );
 }
 

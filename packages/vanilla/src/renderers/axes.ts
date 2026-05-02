@@ -41,9 +41,9 @@ function renderAxis(
 
   const { area } = layout;
 
-  // Only draw axis line for x-axis (bottom baseline).
+  // Only draw axis line for x-axis (bottom baseline), unless explicitly disabled.
   // Horizontal gridlines already guide y-values, so the vertical y-axis line is redundant.
-  if (orientation === 'x') {
+  if (orientation === 'x' && axis.domainLine !== false) {
     const line = createSVGElement('line');
     line.setAttribute('class', 'oc-axis-line');
     setAttrs(line, {

@@ -97,9 +97,11 @@ export function computeBarMarks(
   const colorField = colorEnc?.field;
   const isSequentialColor = colorEnc?.type === 'quantitative';
 
+  let marks: RectMark[];
+
   // If no color encoding, or sequential color (value-based gradient), render simple bars
   if (!colorField || isSequentialColor) {
-    return computeSimpleBars(
+    marks = computeSimpleBars(
       spec.data,
       xChannel.field,
       yChannel.field,
@@ -111,18 +113,51 @@ export function computeBarMarks(
       isSequentialColor,
       conditionalColor,
     );
-  }
+  } else {
+    // Color encoding present: decide between colored simple bars vs stacked
+    const categoryGroups = groupByField(spec.data, yChannel.field);
+    const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
-  // Color encoding present: decide between colored simple bars vs stacked
-  const categoryGroups = groupByField(spec.data, yChannel.field);
-  const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
+    if (needsStacking) {
+      // stack: null or false -> grouped (side-by-side) bars
+      const stackDisabled = xChannel.stack === null || xChannel.stack === false;
 
-  if (needsStacking) {
-    // stack: null or false -> grouped (side-by-side) bars
-    const stackDisabled = xChannel.stack === null || xChannel.stack === false;
+      if (stackDisabled) {
+        marks = computeGroupedBars(
+          spec.data,
+          xChannel.field,
+          yChannel.field,
+          colorField,
+          xScale,
+          yScale,
+          bandwidth,
+          baseline,
+          scales,
+        );
+      } else {
+        const stackMode =
+          xChannel.stack === 'normalize'
+            ? 'normalize'
+            : xChannel.stack === 'center'
+              ? 'center'
+              : 'zero';
 
-    if (stackDisabled) {
-      return computeGroupedBars(
+        marks = computeStackedBars(
+          spec.data,
+          xChannel.field,
+          yChannel.field,
+          colorField,
+          xScale,
+          yScale,
+          bandwidth,
+          baseline,
+          scales,
+          stackMode,
+        );
+      }
+    } else {
+      // Single row per category: render like simple bars but with color from scale
+      marks = computeColoredBars(
         spec.data,
         xChannel.field,
         yChannel.field,
@@ -134,40 +169,9 @@ export function computeBarMarks(
         scales,
       );
     }
-
-    const stackMode =
-      xChannel.stack === 'normalize'
-        ? 'normalize'
-        : xChannel.stack === 'center'
-          ? 'center'
-          : 'zero';
-
-    return computeStackedBars(
-      spec.data,
-      xChannel.field,
-      yChannel.field,
-      colorField,
-      xScale,
-      yScale,
-      bandwidth,
-      baseline,
-      scales,
-      stackMode,
-    );
   }
 
-  // Single row per category: render like simple bars but with color from scale
-  return computeColoredBars(
-    spec.data,
-    xChannel.field,
-    yChannel.field,
-    colorField,
-    xScale,
-    yScale,
-    bandwidth,
-    baseline,
-    scales,
-  );
+  return applyMarkDefOverrides(marks, spec, bandwidth);
 }
 
 /** Compute stacked horizontal bars with support for zero/normalize/center modes. */
@@ -354,6 +358,34 @@ function computeColoredBars(
     });
   }
 
+  return marks;
+}
+
+function applyMarkDefOverrides(
+  marks: RectMark[],
+  spec: NormalizedChartSpec,
+  bandwidth: number,
+): RectMark[] {
+  const { markDef } = spec;
+  const fixedSize = markDef.size;
+  const crSpec = markDef.cornerRadius;
+
+  if (fixedSize == null && crSpec == null) return marks;
+
+  for (const mark of marks) {
+    if (fixedSize != null && mark.stackGroup === undefined) {
+      const barHeight = Math.min(fixedSize, bandwidth);
+      const offset = (bandwidth - barHeight) / 2;
+      mark.y = mark.y + offset;
+      mark.height = barHeight;
+    }
+    const effectiveHeight = mark.height;
+    if (crSpec === 'pill') {
+      mark.cornerRadius = effectiveHeight / 2;
+    } else if (typeof crSpec === 'number') {
+      mark.cornerRadius = crSpec;
+    }
+  }
   return marks;
 }
 

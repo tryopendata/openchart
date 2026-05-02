@@ -94,6 +94,7 @@ export function computeBarLabels(
   labelFormat?: string,
   labelPrefix?: string,
   valueField?: string,
+  labelColor?: string,
 ): ResolvedLabel[] {
   const targetMarks = filterByDensity(marks, density);
 
@@ -166,12 +167,12 @@ export function computeBarLabels(
       if (isNegative) {
         // Outside negative bar: just past the bar's left edge
         anchorX = mark.x - LABEL_PADDING;
-        fill = getRepresentativeColor(mark.fill);
+        fill = labelColor ?? getRepresentativeColor(mark.fill);
         textAnchor = 'end';
       } else {
         // Outside positive bar: just past the bar's right edge
         anchorX = mark.x + mark.width + LABEL_PADDING;
-        fill = getRepresentativeColor(mark.fill);
+        fill = labelColor ?? getRepresentativeColor(mark.fill);
         textAnchor = 'start';
       }
     }

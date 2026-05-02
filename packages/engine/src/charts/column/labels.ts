@@ -50,6 +50,7 @@ export function computeColumnLabels(
   labelFormat?: string,
   labelPrefix?: string,
   valueField?: string,
+  labelColor?: string,
 ): ResolvedLabel[] {
   const targetMarks = filterByDensity(marks, density);
 
@@ -107,7 +108,7 @@ export function computeColumnLabels(
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: LABEL_FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
-        fill: getRepresentativeColor(mark.fill),
+        fill: labelColor ?? getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'middle',
         dominantBaseline: isNegative ? 'hanging' : 'auto',

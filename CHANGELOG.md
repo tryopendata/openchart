@@ -8,18 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Features
 
+- **barlist:** add `BarList` chart type — ranked horizontal bar list with proportional fill bars, color encoding, subtitle fields, value formatting, dark mode, animation, and tooltip support across all framework packages (React, Vue, Svelte, vanilla)
 - **tilemap:** add entrance animations with deterministic shuffled stagger for organic tile pop-in
 - **tilemap:** expand grid to 12 columns, move ME to its own row for more accurate geography
 - **tilemap:** add `oc-tilemap-root` CSS class for token and tooltip scoping
+- **tilemap:** add `teal` sequential palette
 - **engine:** add window transform for year-over-year, period-over-period, and delta calculations
 - **engine:** add relative-time filter ("last N units from max date") for timeseries range toggles
 - **vanilla:** add crosshair snap-to-nearest tooltip for timeseries charts
 - **engine:** add compound axis labels for multi-level temporal formatting
+- **marks:** add `size` prop to `MarkDef` for fixed bar/column thickness in pixels
+- **marks:** add `'pill'` value for `cornerRadius` to fully round bar/column ends
+- **marks:** add `'endpoints'` value for `point` to show only first/last point per series (hollow circles)
+- **marks:** add `color` prop to `LabelConfig` for a fixed label color override
+- **encoding:** allow `axis: false` on x/y channels to suppress axis entirely (no space reserved)
+- **scales:** tighten `nice()` domain when `scale.zero: false` to avoid over-rounding below data range
+- **areas:** auto-generate top-to-bottom fade gradient when no explicit fill is set on area marks
+- **renderer:** expand SVG clip-path vertically to accommodate point mark radius so endpoints aren't clipped
 
 ### Bug Fixes
 
 - **tilemap:** remove tile stroke (cleaner look at small sizes)
 - **tilemap:** fix dark mode class management on mount/destroy lifecycle
+- **barlist:** fix resize feedback loop by adding `width: 100%; height: 100%` to `oc-barlist-root` and rendering SVG with `viewBox` + CSS width instead of absolute pixel attributes
 
 ## [6.25.4] - 2026-04-24
 

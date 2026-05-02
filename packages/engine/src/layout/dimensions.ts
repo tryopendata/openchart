@@ -114,7 +114,9 @@ function getMinChartDims(display: import('@opendata-ai/openchart-core').Display)
  */
 function getSparklinePad(spec: NormalizedChartSpec): number {
   const strokeWidth = (spec.markDef as { strokeWidth?: number }).strokeWidth ?? 2;
-  return Math.max(strokeWidth / 2 + 1, 2);
+  const hasPoints = !!(spec.markDef as { point?: unknown }).point;
+  const pointRadius = hasPoints ? 3 : 0;
+  return Math.max(strokeWidth / 2 + 1, pointRadius + 1, 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -222,12 +224,15 @@ export function computeDimensions(
   // Estimate x-axis height below chart area: tick labels sit 14px below,
   // axis title sits 35px below. These extend past the chart area bottom
   // and source/footer chrome must be positioned below them.
-  const xAxis = encoding.x?.axis as (Record<string, unknown> & { labelAngle?: number }) | undefined;
+  const xAxisSuppressed = encoding.x?.axis === false;
+  const xAxis = (!xAxisSuppressed && encoding.x?.axis) as
+    | (Record<string, unknown> & { labelAngle?: number })
+    | undefined;
   const hasXAxisLabel = !!xAxis?.title;
   const xTickAngle = xAxis?.labelAngle;
 
   let xAxisHeight: number;
-  if (isRadial) {
+  if (isRadial || xAxisSuppressed) {
     xAxisHeight = 0;
   } else if (xTickAngle && Math.abs(xTickAngle) > 10) {
     // Rotated labels: estimate height from the longest label text.
@@ -339,7 +344,8 @@ export function computeDimensions(
   }
 
   // Dynamic left margin for y-axis labels
-  if (encoding.y && !isRadial) {
+  const yAxisSuppressed = encoding.y?.axis === false;
+  if (encoding.y && !isRadial && !yAxisSuppressed) {
     if (
       spec.markType === 'bar' ||
       spec.markType === 'circle' ||

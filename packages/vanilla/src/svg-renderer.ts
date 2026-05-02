@@ -122,12 +122,18 @@ export function renderChartSVG(
   const defs = createSVGElement('defs');
   const clipPath = createSVGElement('clipPath');
   clipPath.setAttribute('id', clipId);
+  const maxPointR = layout.marks.reduce(
+    (max, m) =>
+      m.type === 'point' && (m as { r?: number }).r ? Math.max(max, (m as { r?: number }).r!) : max,
+    0,
+  );
+  const clipPad = Math.max(maxPointR, 2);
   const clipRect = createSVGElement('rect');
   setAttrs(clipRect, {
     x: 0,
-    y: layout.area.y,
+    y: layout.area.y - clipPad,
     width,
-    height: layout.area.height + 2,
+    height: layout.area.height + clipPad * 2,
   });
   clipPath.appendChild(clipRect);
   defs.appendChild(clipPath);

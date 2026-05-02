@@ -17,6 +17,9 @@ export type {
   TableSpec,
   VizSpec,
 } from '@opendata-ai/openchart-engine';
+export type { BarListInstance, BarListMountOptions } from './barlist-mount';
+// BarList mount API
+export { createBarList } from './barlist-mount';
 export type { JPGExportOptions, PNGExportOptions, SVGExportOptions } from './export';
 // Export utilities
 export { exportCSV, exportJPG, exportPNG, exportSVG, exportSVGWithFonts } from './export';

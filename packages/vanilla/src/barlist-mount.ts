@@ -1,0 +1,314 @@
+/**
+ * BarList mount API: the main entry point for vanilla JS barlist usage.
+ *
+ * createBarList() takes a container, BarListSpec, and options, compiles the
+ * barlist, renders it as SVG, sets up responsive resizing, tooltip interaction,
+ * and returns a BarListInstance with update/resize/export/destroy.
+ */
+
+import type {
+  BarListLayout,
+  BarListSpec,
+  CompileOptions,
+  DarkMode,
+  ThemeConfig,
+} from '@opendata-ai/openchart-core';
+import { compileBarList } from '@opendata-ai/openchart-engine';
+import { cancelAnimations, setupAnimationCleanup } from './animation';
+import { renderBarListSVG } from './barlist-renderer';
+import {
+  exportJPG,
+  exportPNG,
+  exportSVG,
+  exportSVGWithFonts,
+  type JPGExportOptions,
+  type SVGExportOptions,
+} from './export';
+import { createMeasureText } from './measure-text';
+import { observeResize } from './resize-observer';
+import { createTooltipManager, type TooltipManager } from './tooltip';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface BarListMountOptions {
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  responsive?: boolean;
+  watermark?: boolean;
+  tooltip?: boolean;
+  onRowClick?: (row: { label: string; value: number; data: Record<string, unknown> }) => void;
+  onRowHover?: (
+    row: { label: string; value: number; data: Record<string, unknown> } | null,
+  ) => void;
+}
+
+export interface BarListInstance {
+  update(spec: BarListSpec): void;
+  resize(): void;
+  export(
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
+    options?: JPGExportOptions | SVGExportOptions,
+  ): string | Promise<Blob> | Promise<string>;
+  destroy(): void;
+  readonly layout: BarListLayout;
+}
+
+// ---------------------------------------------------------------------------
+// Dark mode resolution
+// ---------------------------------------------------------------------------
+
+function resolveDarkMode(mode?: DarkMode): boolean {
+  if (mode === 'force') return true;
+  if (mode === 'off' || mode === undefined) return false;
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Main API
+// ---------------------------------------------------------------------------
+
+export function createBarList(
+  container: HTMLElement,
+  spec: BarListSpec,
+  options?: BarListMountOptions,
+): BarListInstance {
+  let currentSpec = spec;
+  let currentLayout: BarListLayout;
+  let destroyed = false;
+
+  let svgElement: SVGSVGElement | null = null;
+  let tooltipManager: TooltipManager | null = null;
+  let cleanupTooltipEvents: (() => void) | null = null;
+  let disconnectResize: (() => void) | null = null;
+  let animationCleanup: (() => void) | null = null;
+  let pendingResize = false;
+
+  const measureText = createMeasureText();
+
+  function getContainerDimensions(): { width: number; height: number } {
+    const rect = container.getBoundingClientRect();
+    return {
+      width: Math.max(rect.width || 600, 100),
+      height: Math.max(rect.height || 400, 100),
+    };
+  }
+
+  function compile(): BarListLayout {
+    const { width, height } = getContainerDimensions();
+    const darkMode = resolveDarkMode(options?.darkMode);
+
+    const compileOpts: CompileOptions = {
+      width,
+      height,
+      theme: options?.theme,
+      darkMode,
+      watermark: options?.watermark,
+      measureText,
+    };
+
+    return compileBarList(currentSpec, compileOpts);
+  }
+
+  function wireTooltipAndInteraction(svg: SVGSVGElement, layout: BarListLayout): () => void {
+    const cleanups: Array<() => void> = [];
+
+    const rowElements = svg.querySelectorAll('.oc-barlist-row');
+    for (const el of rowElements) {
+      const indexStr = el.getAttribute('data-row-index');
+      if (indexStr === null) continue;
+
+      const content = layout.tooltipDescriptors.get(indexStr);
+      const row = layout.rows[Number(indexStr)];
+
+      const handleMouseEnter = (e: Event) => {
+        const mouseEvent = e as MouseEvent;
+        if (content && tooltipManager && options?.tooltip !== false) {
+          const svgRect = svg.getBoundingClientRect();
+          const x = mouseEvent.clientX - svgRect.left;
+          const y = mouseEvent.clientY - svgRect.top;
+          tooltipManager.show(content, x, y);
+        }
+        if (row) {
+          options?.onRowHover?.({
+            label: row.label.text,
+            value: row.value,
+            data: row.data,
+          });
+        }
+      };
+
+      const handleMouseMove = (e: Event) => {
+        if (content && tooltipManager && options?.tooltip !== false) {
+          const mouseEvent = e as MouseEvent;
+          const svgRect = svg.getBoundingClientRect();
+          const x = mouseEvent.clientX - svgRect.left;
+          const y = mouseEvent.clientY - svgRect.top;
+          tooltipManager.show(content, x, y);
+        }
+      };
+
+      const handleMouseLeave = () => {
+        tooltipManager?.hide();
+        options?.onRowHover?.(null);
+      };
+
+      const handleClick = () => {
+        if (row) {
+          options?.onRowClick?.({
+            label: row.label.text,
+            value: row.value,
+            data: row.data,
+          });
+        }
+      };
+
+      el.addEventListener('mouseenter', handleMouseEnter);
+      el.addEventListener('mousemove', handleMouseMove);
+      el.addEventListener('mouseleave', handleMouseLeave);
+      el.addEventListener('click', handleClick);
+
+      cleanups.push(() => {
+        el.removeEventListener('mouseenter', handleMouseEnter);
+        el.removeEventListener('mousemove', handleMouseMove);
+        el.removeEventListener('mouseleave', handleMouseLeave);
+        el.removeEventListener('click', handleClick);
+      });
+    }
+
+    return () => {
+      for (const cleanup of cleanups) cleanup();
+    };
+  }
+
+  function render(animate = false): void {
+    if (animationCleanup) {
+      animationCleanup();
+      animationCleanup = null;
+    }
+
+    if (svgElement) {
+      if (cleanupTooltipEvents) {
+        cleanupTooltipEvents();
+        cleanupTooltipEvents = null;
+      }
+      svgElement.remove();
+    }
+
+    const newSvg = renderBarListSVG(currentLayout, { animate });
+    container.appendChild(newSvg);
+    svgElement = newSvg;
+
+    cleanupTooltipEvents = wireTooltipAndInteraction(newSvg, currentLayout);
+
+    if (options?.tooltip !== false) {
+      if (!tooltipManager) {
+        tooltipManager = createTooltipManager(container);
+      }
+    }
+
+    if (currentLayout.animation?.enabled) {
+      animationCleanup = setupAnimationCleanup(newSvg, () => {
+        if (pendingResize && !destroyed) {
+          pendingResize = false;
+          resize();
+        }
+      });
+    }
+  }
+
+  function update(newSpec: BarListSpec): void {
+    currentSpec = newSpec;
+    currentLayout = compile();
+    render();
+  }
+
+  function resize(): void {
+    if (destroyed) return;
+    if (animationCleanup) {
+      pendingResize = true;
+      return;
+    }
+    currentLayout = compile();
+    render();
+  }
+
+  function exportChart(
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
+    options_?: JPGExportOptions | SVGExportOptions,
+  ): string | Promise<Blob> | Promise<string> {
+    if (!svgElement) return '';
+    switch (format) {
+      case 'svg':
+        return exportSVG(svgElement);
+      case 'svg-with-fonts':
+        return exportSVGWithFonts(svgElement);
+      case 'png':
+        return exportPNG(svgElement, options_ as JPGExportOptions);
+      case 'jpg':
+        return exportJPG(svgElement, options_ as JPGExportOptions);
+      default:
+        return '';
+    }
+  }
+
+  function destroy(): void {
+    if (destroyed) return;
+    destroyed = true;
+
+    if (animationCleanup) {
+      cancelAnimations(svgElement);
+      animationCleanup();
+      animationCleanup = null;
+    }
+
+    if (cleanupTooltipEvents) {
+      cleanupTooltipEvents();
+      cleanupTooltipEvents = null;
+    }
+
+    if (svgElement) {
+      svgElement.remove();
+      svgElement = null;
+    }
+
+    if (tooltipManager) {
+      tooltipManager.destroy();
+      tooltipManager = null;
+    }
+
+    if (disconnectResize) {
+      disconnectResize();
+      disconnectResize = null;
+    }
+
+    container.classList.remove('oc-barlist-root', 'oc-dark');
+  }
+
+  // Initialize
+  container.classList.add('oc-barlist-root');
+  if (resolveDarkMode(options?.darkMode)) {
+    container.classList.add('oc-dark');
+  }
+
+  currentLayout = compile();
+  render(true);
+
+  if (options?.responsive !== false) {
+    disconnectResize = observeResize(container, () => resize());
+  }
+
+  return {
+    update,
+    resize,
+    export: exportChart,
+    destroy,
+    get layout(): BarListLayout {
+      return currentLayout;
+    },
+  };
+}

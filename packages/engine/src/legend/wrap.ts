@@ -32,7 +32,7 @@ export const ENTRY_GAP = 16;
 export const ENTRY_GAP_COMPACT = 10;
 
 /** Default gap between legend bounds and chart area. Zero on narrow viewports. */
-export const LEGEND_GAP = 4;
+export const LEGEND_GAP = 8;
 
 /** Gap between legend and chart area, responsive to container width. */
 export function legendGap(width: number): number {

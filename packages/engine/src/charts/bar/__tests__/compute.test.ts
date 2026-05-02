@@ -609,4 +609,124 @@ describe('computeBarLabels', () => {
     expect(texts).toContain('30%');
     expect(texts).toContain('70%');
   });
+
+  it('applies fixed label color to outside labels', () => {
+    // Narrow chart area forces bars < 40px, putting labels outside
+    const smallArea: Rect = { x: 80, y: 20, width: 30, height: 300 };
+    const spec: NormalizedChartSpec = {
+      markType: 'bar',
+      markDef: { type: 'bar', size: 6, cornerRadius: 'pill' },
+      data: [
+        { category: 'A', value: 1 },
+        { category: 'B', value: 2 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'category', type: 'nominal' },
+      },
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off',
+      labels: { density: 'auto', format: '', prefix: '' },
+    };
+    const scales = computeScales(spec, smallArea, spec.data);
+    const marks = computeBarMarks(spec, scales, smallArea, fullStrategy);
+    const labels = computeBarLabels(
+      marks,
+      smallArea,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      '#a1a1aa',
+    );
+
+    // Outside labels should use the fixed color; inside labels use contrast-adjusted colors
+    const outsideLabels = labels.filter((l) => l.style.textAnchor === 'start');
+    expect(outsideLabels.length).toBeGreaterThan(0);
+    for (const label of outsideLabels) {
+      expect(label.style.fill).toBe('#a1a1aa');
+    }
+  });
+});
+
+describe('markDef overrides', () => {
+  it('markDef.size reduces bar height and centers within band', () => {
+    const spec = makeSimpleBarSpec();
+    spec.markDef = { type: 'bar', size: 6 };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+    for (const mark of marks) {
+      expect(mark.height).toBe(6);
+    }
+
+    // Bars should be centered: offset = (bandwidth - 6) / 2
+    const specDefault = makeSimpleBarSpec();
+    const scalesDefault = computeScales(specDefault, chartArea, specDefault.data);
+    const marksDefault = computeBarMarks(specDefault, scalesDefault, chartArea, fullStrategy);
+    for (let i = 0; i < marks.length; i++) {
+      expect(marks[i].y).toBeGreaterThan(marksDefault[i].y);
+    }
+  });
+
+  it('markDef.size is capped at bandwidth', () => {
+    const spec = makeSimpleBarSpec();
+    spec.markDef = { type: 'bar', size: 9999 };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+    const bandwidth = marks[0].height;
+    // Should be capped at bandwidth, not 9999
+    expect(bandwidth).toBeLessThan(9999);
+  });
+
+  it('markDef.cornerRadius "pill" resolves to half the bar height', () => {
+    const spec = makeSimpleBarSpec();
+    spec.markDef = { type: 'bar', size: 6, cornerRadius: 'pill' };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+    for (const mark of marks) {
+      expect(mark.cornerRadius).toBe(3);
+    }
+  });
+
+  it('markDef.cornerRadius as number overrides default', () => {
+    const spec = makeSimpleBarSpec();
+    spec.markDef = { type: 'bar', cornerRadius: 8 };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+    for (const mark of marks) {
+      expect(mark.cornerRadius).toBe(8);
+    }
+  });
+
+  it('markDef.size is skipped for stacked bars', () => {
+    const spec = makeGroupedBarSpec();
+    spec.markDef = { type: 'bar', size: 6 };
+    // Enable stacking (default for grouped)
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+    const stackedMarks = marks.filter((m) => m.stackGroup !== undefined);
+    for (const mark of stackedMarks) {
+      expect(mark.height).not.toBe(6);
+    }
+  });
+
+  it('combined size + pill uses adjusted size for radius', () => {
+    const spec = makeSimpleBarSpec();
+    spec.markDef = { type: 'bar', size: 10, cornerRadius: 'pill' };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+    for (const mark of marks) {
+      expect(mark.height).toBe(10);
+      expect(mark.cornerRadius).toBe(5);
+    }
+  });
 });

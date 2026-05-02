@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 export {
+  compileBarList,
   compileChart,
   compileGraph,
   compileLayer,
@@ -47,6 +48,8 @@ export type { NormalizedSankeySpec } from './sankey/types';
 // ---------------------------------------------------------------------------
 // TileMap compilation types
 // ---------------------------------------------------------------------------
+
+export type { NormalizedBarListSpec } from './barlist/types';
 
 export type { NormalizedTileMapSpec } from './tilemap/types';
 
@@ -102,6 +105,8 @@ export {
 // ---------------------------------------------------------------------------
 
 export type {
+  BarListLayout,
+  BarListSpec,
   ChartLayout,
   ChartSpec,
   CompileOptions,

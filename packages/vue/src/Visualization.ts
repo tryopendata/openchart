@@ -6,8 +6,15 @@
  */
 
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isSankeySpec, isTableSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
+import {
+  isBarListSpec,
+  isGraphSpec,
+  isSankeySpec,
+  isTableSpec,
+  isTileMapSpec,
+} from '@opendata-ai/openchart-core';
 import { type CSSProperties, defineComponent, h, type PropType } from 'vue';
+import { BarList } from './BarList';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
@@ -62,6 +69,9 @@ export const Visualization = defineComponent({
       }
       if (isTileMapSpec(spec)) {
         return h(TileMap, { ...sharedProps, spec });
+      }
+      if (isBarListSpec(spec)) {
+        return h(BarList, { ...sharedProps, spec });
       }
       return h(Chart, { ...sharedProps, spec });
     };

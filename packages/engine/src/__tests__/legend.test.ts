@@ -447,7 +447,7 @@ describe('computeLegend', () => {
       legend: { position: 'top' as const },
     };
 
-    it('places the legend exactly 4px above the chart area at standard width', () => {
+    it('places the legend exactly 8px above the chart area at standard width', () => {
       const layout = compileChart(topLegendSpec, { width: 600, height: 400 });
 
       expect(layout.legend.position).toBe('top');
@@ -456,7 +456,7 @@ describe('computeLegend', () => {
 
       const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
       const gap = layout.area.y - legendBottom;
-      expect(gap).toBe(4);
+      expect(gap).toBe(8);
     });
 
     it('eliminates legend gap on narrow viewports (< 420px)', () => {

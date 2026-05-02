@@ -603,6 +603,8 @@ export interface GradientColorStop {
   offset: number;
   /** CSS color value. */
   color: string;
+  /** Optional stop-opacity (0 to 1). */
+  opacity?: number;
 }
 
 /** Gradient legend for continuous color scales. */
@@ -1102,6 +1104,8 @@ export interface TileMapTileMark {
   size: number;
   /** Fill color from the sequential color scale. */
   fill: string;
+  /** Fill opacity (0-1). Used for opacity-based encoding. */
+  fillOpacity: number;
   /** Tile border color. */
   stroke: string;
   /** Tile border width. */
@@ -1146,6 +1150,72 @@ export interface TileMapLayout {
   /** Tooltip content descriptors keyed by state code. */
   tooltipDescriptors: Map<string, TooltipContent>;
   /** Accessibility metadata for the tile map. */
+  a11y: A11yMetadata;
+  /** Resolved theme. */
+  theme: ResolvedTheme;
+  /** Total SVG width in pixels. */
+  width: number;
+  /** Total SVG height in pixels. */
+  height: number;
+  /** Resolved animation config (undefined if animation is disabled). */
+  animation: ResolvedAnimation | undefined;
+  /** Whether to render the watermark. */
+  watermark: boolean;
+  /** Text measurement function for the rendering adapter. */
+  measureText: MeasureTextFn;
+}
+
+// ---------------------------------------------------------------------------
+// BarListLayout (engine output for bar list visualizations)
+// ---------------------------------------------------------------------------
+
+/** A resolved bar list row with computed positions and visual properties. */
+export interface BarListRowMark {
+  type: 'barlist-row';
+  /** Row index (0-based). */
+  index: number;
+  /** Row top y position. */
+  y: number;
+  /** Row height (includes spacing). */
+  height: number;
+  /** Label text for this row. */
+  label: ResolvedLabel;
+  /** Optional subtitle text. */
+  subtitle?: ResolvedLabel;
+  /** Track rectangle (the muted background bar). */
+  track: { x: number; y: number; width: number; height: number; cornerRadius: number };
+  /** Fill bar rectangle (the colored bar proportional to value). */
+  bar: { x: number; y: number; width: number; height: number; cornerRadius: number; fill: string };
+  /** Formatted value label (right-aligned). */
+  valueLabel: ResolvedLabel;
+  /** Raw numeric value. */
+  value: number;
+  /** Formatted value string. */
+  formattedValue: string;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex: number;
+  /** Original data row. */
+  data: Record<string, unknown>;
+}
+
+/**
+ * BarListLayout: the complete engine output for bar list visualizations.
+ *
+ * Contains everything an adapter needs to render the bar list: dimensions,
+ * chrome, row marks, tooltip descriptors, and accessibility metadata.
+ */
+export interface BarListLayout {
+  /** The bar list drawing area. */
+  area: Rect;
+  /** Resolved chrome text elements with positions and styles. */
+  chrome: ResolvedChrome;
+  /** Resolved row marks with positions, colors, and labels. */
+  rows: BarListRowMark[];
+  /** Tooltip content descriptors keyed by row index. */
+  tooltipDescriptors: Map<string, TooltipContent>;
+  /** Accessibility metadata. */
   a11y: A11yMetadata;
   /** Resolved theme. */
   theme: ResolvedTheme;

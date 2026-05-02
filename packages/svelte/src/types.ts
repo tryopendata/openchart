@@ -8,6 +8,7 @@
 import type {
   Annotation,
   AnnotationOffset,
+  BarListSpec,
   ChartSpec,
   DarkMode,
   ElementEdit,
@@ -93,6 +94,22 @@ export interface TileMapProps {
       stateCode: string;
       stateName: string;
       value: number | null;
+      data: Record<string, unknown>;
+    } | null,
+  ) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface BarListProps {
+  spec: BarListSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  onrowclick?: (row: { label: string; value: number; data: Record<string, unknown> }) => void;
+  onrowhover?: (
+    row: {
+      label: string;
+      value: number;
       data: Record<string, unknown>;
     } | null,
   ) => void;
