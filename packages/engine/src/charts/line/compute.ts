@@ -180,6 +180,7 @@ export function computeLineMarks(
       stroke: strokeColor,
       strokeWidth:
         styleOverride?.strokeWidth ??
+        spec.markDef.strokeWidth ??
         (spec.display === 'sparkline' ? SPARKLINE_STROKE_WIDTH : DEFAULT_STROKE_WIDTH),
       strokeDasharray,
       opacity: styleOverride?.opacity,
