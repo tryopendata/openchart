@@ -11,17 +11,6 @@ import { interpolateRgb } from 'd3-interpolate';
 import { scaleSequential } from 'd3-scale';
 import { accessibleTextColor } from './utils';
 
-/** WCAG relative luminance from a hex color string. */
-function relativeLuminance(hex: string): number {
-  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-  if (!m) return 0;
-  const [r, g, b] = [m[1], m[2], m[3]].map((c) => {
-    const v = Number.parseInt(c, 16) / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
 /**
  * Build an interpolator from an array of color stops.
  * Uses d3-interpolate for smooth color transitions.
@@ -111,24 +100,7 @@ export function computeHeatmapColors(
   if (darkMode) {
     const lightBg = '#ffffff';
     const darkBg = theme.colors.background;
-    const originalStops = stops;
     stops = stops.map((c) => adaptColorForDarkMode(c, lightBg, darkBg));
-
-    // adaptColorForDarkMode preserves contrast ratios independently per stop,
-    // which can invert the luminance ordering (light-to-dark becomes dark-to-light).
-    // Detect this and reverse the adapted stops to preserve the intended gradient direction.
-    if (originalStops.length >= 2) {
-      const origDirection = Math.sign(
-        relativeLuminance(originalStops[originalStops.length - 1]) -
-          relativeLuminance(originalStops[0]),
-      );
-      const adaptedDirection = Math.sign(
-        relativeLuminance(stops[stops.length - 1]) - relativeLuminance(stops[0]),
-      );
-      if (origDirection !== 0 && adaptedDirection !== 0 && origDirection !== adaptedDirection) {
-        stops = stops.slice().reverse();
-      }
-    }
   }
 
   const interpolator = interpolatorFromStops(stops);
