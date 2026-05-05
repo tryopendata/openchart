@@ -112,7 +112,7 @@ describe('computeHeatmapColors', () => {
     }
   });
 
-  it('high values are more visually prominent than low values in both modes', () => {
+  it('custom palette arrays are not adapted in dark mode', () => {
     const col: ColumnConfig = {
       key: 'value',
       heatmap: { palette: ['#fca5a5', '#c44e52'], domain: [0, 100] },
@@ -127,32 +127,9 @@ describe('computeHeatmapColors', () => {
     const darkLowBg = darkColors.get(0)!.backgroundColor!;
     const darkHighBg = darkColors.get(4)!.backgroundColor!;
 
-    expect(lightLowBg).not.toBe(lightHighBg);
-    expect(darkLowBg).not.toBe(darkHighBg);
-
-    function parseLum(color: string): number {
-      const rgbMatch = /rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/.exec(color);
-      if (rgbMatch) {
-        const [r, g, b] = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((c) => {
-          const v = Number(c) / 255;
-          return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-        });
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      }
-      const hexMatch = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
-      if (!hexMatch) return 0;
-      const [r, g, b] = [hexMatch[1], hexMatch[2], hexMatch[3]].map((c) => {
-        const v = Number.parseInt(c, 16) / 255;
-        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
-
-    // Light mode: high values get darker/more saturated bg (lower luminance = more prominent)
-    expect(parseLum(lightLowBg)).toBeGreaterThan(parseLum(lightHighBg));
-
-    // Dark mode: high values get brighter bg (higher luminance = more prominent on dark bg)
-    expect(parseLum(darkHighBg)).toBeGreaterThan(parseLum(darkLowBg));
+    // Custom palettes produce the same colors in both modes
+    expect(darkLowBg).toBe(lightLowBg);
+    expect(darkHighBg).toBe(lightHighBg);
   });
 
   it('supports array of color stops as palette', () => {

@@ -95,9 +95,13 @@ export function computeHeatmapColors(
     domain = [min, max];
   }
 
-  // Resolve palette and build scale
+  // Resolve palette and build scale.
+  // Only adapt theme-derived palettes for dark mode. Custom color arrays
+  // are used as-is since the author chose them for a reason, and
+  // adaptColorForDarkMode inverts the perceived intensity ordering
+  // (light pink -> dark red becomes dark red -> pink on dark backgrounds).
   let stops = resolvePalette(config.palette, theme);
-  if (darkMode) {
+  if (darkMode && !Array.isArray(config.palette)) {
     const lightBg = '#ffffff';
     const darkBg = theme.colors.background;
     stops = stops.map((c) => adaptColorForDarkMode(c, lightBg, darkBg));
