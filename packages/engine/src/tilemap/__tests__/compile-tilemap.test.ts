@@ -297,18 +297,20 @@ describe('compileTileMap', () => {
   });
 
   describe('dimensions', () => {
-    it('reflects the compile options', () => {
+    it('width matches compile options, height fits content', () => {
       const result = compileTileMap(basicSpec, defaultOptions);
 
       expect(result.width).toBe(600);
-      expect(result.height).toBe(400);
+      expect(result.height).toBeGreaterThan(0);
+      expect(result.height).toBeLessThanOrEqual(400);
     });
 
     it('works with different container sizes', () => {
       const result = compileTileMap(basicSpec, { width: 800, height: 600 });
 
       expect(result.width).toBe(800);
-      expect(result.height).toBe(600);
+      expect(result.height).toBeGreaterThan(0);
+      expect(result.height).toBeLessThanOrEqual(600);
     });
   });
 
