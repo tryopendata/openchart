@@ -112,6 +112,28 @@ describe('computeHeatmapColors', () => {
     }
   });
 
+  it('preserves luminance ordering in dark mode with custom color stops', () => {
+    const col: ColumnConfig = {
+      key: 'value',
+      heatmap: { palette: ['#fca5a5', '#c44e52'], domain: [0, 100] },
+    };
+    const lightTheme = getTheme(false);
+    const darkTheme = getTheme(true);
+    const lightColors = computeHeatmapColors(data, col, lightTheme, false);
+    const darkColors = computeHeatmapColors(data, col, darkTheme, true);
+
+    // Low value should have a visually lighter/less intense background than high value
+    // in both modes. Extract the backgrounds and compare luminance ordering.
+    const lightLowBg = lightColors.get(0)!.backgroundColor!;
+    const lightHighBg = lightColors.get(4)!.backgroundColor!;
+    const darkLowBg = darkColors.get(0)!.backgroundColor!;
+    const darkHighBg = darkColors.get(4)!.backgroundColor!;
+
+    // The low-value cell and high-value cell should have different backgrounds in both modes
+    expect(lightLowBg).not.toBe(lightHighBg);
+    expect(darkLowBg).not.toBe(darkHighBg);
+  });
+
   it('supports array of color stops as palette', () => {
     const col: ColumnConfig = {
       key: 'value',

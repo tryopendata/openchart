@@ -329,6 +329,15 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   // 15. Resolve animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(tilemapSpec.animation);
 
+  // Tight content height: tiles + legend + chrome + padding
+  const contentHeight =
+    tileGridOffsetY +
+    tilePositions.gridHeight +
+    legendGap +
+    legendTotalHeight +
+    chrome.bottomHeight +
+    padding;
+
   return {
     area: fullArea,
     chrome,
@@ -338,7 +347,7 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     a11y,
     theme,
     width: options.width,
-    height: options.height,
+    height: contentHeight,
     animation: resolvedAnimation,
     watermark,
     measureText:
