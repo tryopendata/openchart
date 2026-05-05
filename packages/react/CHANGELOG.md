@@ -1,5 +1,24 @@
 # Changelog
 
+## [6.28.5](https://github.com/tryopendata/openchart/compare/core-v6.28.4...core-v6.28.5) (2026-05-05)
+
+
+### Features
+
+* add BarList chart type and engine/mark improvements ([2fc0d23](https://github.com/tryopendata/openchart/commit/2fc0d23))
+* add display: 'sparkline' mode for inline mini-charts ([455c4cd](https://github.com/tryopendata/openchart/commit/455c4cd))
+* polish animations, fix grid layout, and backfill CHANGELOG ([0a728b4](https://github.com/tryopendata/openchart/commit/0a728b4))
+* add window transform, relative-time filter, crosshair, and compound axis labels ([4056362](https://github.com/tryopendata/openchart/commit/4056362))
+
+
+### Bug Fixes
+
+* remove incorrect dark mode stop reversal ([87cf0c5](https://github.com/tryopendata/openchart/commit/87cf0c5))
+* update tilemap test expectations for tight content height ([4f20a3a](https://github.com/tryopendata/openchart/commit/4f20a3a))
+* preserve heatmap luminance ordering in dark mode ([93cbfa9](https://github.com/tryopendata/openchart/commit/93cbfa9))
+* honor markDef.strokeWidth in line compute ([a82f48e](https://github.com/tryopendata/openchart/commit/a82f48e))
+* log scale tick filtering, range annotation extent on point scales ([d6e98ee](https://github.com/tryopendata/openchart/commit/d6e98ee))
+
 ## [6.28.4](https://github.com/tryopendata/openchart/compare/core-v6.28.3...core-v6.28.4) (2026-05-05)
 
 
