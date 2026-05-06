@@ -126,10 +126,10 @@ export function createTileMap(
 
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
-    return {
-      width: Math.max(rect.width || 600, 100),
-      height: Math.max(rect.height || 400, 100),
-    };
+    const width = Math.max(rect.width || 600, 100);
+    // Height is derived from content by the compiler (tight viewBox),
+    // so pass a large value to ensure width is the binding constraint.
+    return { width, height: width };
   }
 
   function compile(): TileMapLayout {
@@ -263,8 +263,8 @@ export function createTileMap(
       }
     }
 
-    // Setup animation cleanup
-    if (currentLayout.animation?.enabled) {
+    // Setup animation cleanup only when actually animating
+    if (animate && currentLayout.animation?.enabled) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
         // On animation complete, check if resize was pending
         if (pendingResize && !destroyed) {

@@ -9,10 +9,13 @@
 .oc-table-root,
 .oc-graph-root,
 .oc-sankey-root,
-.oc-tilemap-root,
 .oc-barlist-root {
   width: 100%;
   height: 100%;
+}
+
+.oc-tilemap-root {
+  width: 100%;
 }
 
 .oc-table-root {
@@ -32,6 +35,12 @@
 /* ---------------------------------------------------------------------------
  * BarList SVG container
  * --------------------------------------------------------------------------- */
+
+.oc-tilemap {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
 .oc-barlist {
   display: block;

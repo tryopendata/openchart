@@ -392,8 +392,6 @@ export function renderTileMapSVG(
 
   const svg = createSVGElement('svg') as SVGSVGElement;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.setAttribute('width', String(width));
-  svg.setAttribute('height', String(height));
   svg.setAttribute('role', 'img');
   if (a11y.altText) {
     svg.setAttribute('aria-label', a11y.altText);
