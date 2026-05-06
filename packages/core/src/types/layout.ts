@@ -306,6 +306,13 @@ export interface RectMark {
   strokeWidth?: number;
   /** Corner radius. */
   cornerRadius?: number;
+  /**
+   * Which corners receive `cornerRadius`. Defaults to all four when unset.
+   * Used by stacked bars/columns to round only the leading edge of the
+   * topmost (vertical) or rightmost (horizontal) segment so the seams
+   * between stacked segments stay square and visually contiguous.
+   */
+  cornerRadiusSides?: { tl?: boolean; tr?: boolean; br?: boolean; bl?: boolean };
   /** Original data row. */
   data: Record<string, unknown>;
   /** Resolved label. */

@@ -211,14 +211,12 @@ function applySparklineDefaults(
   }
 
   if (isBar) {
-    // Pill cornerRadius is only safe when bars don't stack: each stacked
-    // segment would render as a half-pill, leaving visible gaps where two
-    // series meet. The grammar normalizes truthy stack values to a string
-    // ('zero' | 'normalize' | 'center'); explicit `null` / `false` opts out.
-    const yStack = (spec.encoding.y as { stack?: unknown } | undefined)?.stack;
-    const xStack = (spec.encoding.x as { stack?: unknown } | undefined)?.stack;
-    const isStacked = typeof yStack === 'string' || typeof xStack === 'string';
-    if (newMarkDef.cornerRadius === undefined && !isStacked) {
+    // Pill cornerRadius is safe on stacked bars too — the column compute
+    // path applies the radius only to the topmost segment via
+    // `cornerRadiusSides`, leaving the seams between segments square so
+    // they stay flush. Single-series bars get all four corners rounded
+    // since there's nothing below them to align against.
+    if (newMarkDef.cornerRadius === undefined) {
       newMarkDef.cornerRadius = 'pill';
     }
   }

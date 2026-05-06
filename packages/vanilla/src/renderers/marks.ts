@@ -179,6 +179,40 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
   return g;
 }
 
+/**
+ * Build an SVG path describing a rectangle with selectively rounded corners.
+ * Used by stacked segments where only the leading edge (top of a vertical
+ * stack, right of a horizontal stack) should round so the seams between
+ * adjacent segments stay flush.
+ */
+function _rectPathWithCorners(
+  mark: RectMark,
+  sides: NonNullable<RectMark['cornerRadiusSides']>,
+): string {
+  const { x, y, width: w, height: h } = mark;
+  // Clamp the radius so it never exceeds half of the shorter side, otherwise
+  // the arcs would overlap and the path would render as a degenerate shape.
+  const r = Math.max(0, Math.min(mark.cornerRadius ?? 0, w / 2, h / 2));
+  const tl = sides.tl ? r : 0;
+  const tr = sides.tr ? r : 0;
+  const br = sides.br ? r : 0;
+  const bl = sides.bl ? r : 0;
+  return [
+    `M${x + tl},${y}`,
+    `H${x + w - tr}`,
+    tr ? `A${tr},${tr} 0 0 1 ${x + w},${y + tr}` : '',
+    `V${y + h - br}`,
+    br ? `A${br},${br} 0 0 1 ${x + w - br},${y + h}` : '',
+    `H${x + bl}`,
+    bl ? `A${bl},${bl} 0 0 1 ${x},${y + h - bl}` : '',
+    `V${y + tl}`,
+    tl ? `A${tl},${tl} 0 0 1 ${x + tl},${y}` : '',
+    'Z',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 function renderRectMark(mark: RectMark, index: number): SVGElement {
   const g = createSVGElement('g');
   g.setAttribute('data-mark-id', `rect-${index}`);
@@ -189,24 +223,35 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
     g.setAttribute('data-orient', 'horizontal');
   }
 
-  const rect = createSVGElement('rect');
-  setAttrs(rect, {
-    x: mark.x,
-    y: mark.y,
-    width: mark.width,
-    height: mark.height,
-    fill: resolveMarkFill(mark.fill, currentGradientMap),
-  });
+  // When `cornerRadiusSides` selects a subset of corners (e.g. top-only for
+  // the topmost segment of a stacked column), SVG's `rx`/`ry` won't do —
+  // it rounds all four corners or none. Emit a `<path>` with per-corner
+  // arcs in that case so the stacked segments stay flush at the seam.
+  const sides = mark.cornerRadiusSides;
+  const partialCorners =
+    !!sides && (!sides.tl || !sides.tr || !sides.br || !sides.bl) && !!mark.cornerRadius;
+  const shapeEl = partialCorners ? createSVGElement('path') : createSVGElement('rect');
+  if (partialCorners) {
+    shapeEl.setAttribute('d', _rectPathWithCorners(mark, sides));
+  } else {
+    setAttrs(shapeEl, {
+      x: mark.x,
+      y: mark.y,
+      width: mark.width,
+      height: mark.height,
+    });
+    if (mark.cornerRadius) {
+      setAttrs(shapeEl, { rx: mark.cornerRadius, ry: mark.cornerRadius });
+    }
+  }
+  shapeEl.setAttribute('fill', String(resolveMarkFill(mark.fill, currentGradientMap)));
   if (mark.stroke) {
-    rect.setAttribute('stroke', mark.stroke);
+    shapeEl.setAttribute('stroke', mark.stroke);
   }
   if (mark.strokeWidth) {
-    rect.setAttribute('stroke-width', String(mark.strokeWidth));
+    shapeEl.setAttribute('stroke-width', String(mark.strokeWidth));
   }
-  if (mark.cornerRadius) {
-    setAttrs(rect, { rx: mark.cornerRadius, ry: mark.cornerRadius });
-  }
-  g.appendChild(rect);
+  g.appendChild(shapeEl);
 
   // Render value label if present and visible
   if (mark.label?.visible) {

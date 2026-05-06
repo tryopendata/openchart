@@ -29,12 +29,9 @@ import { resolveCurve } from './curves';
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Default stroke width for line marks. */
+/** Default stroke width for line marks. Sparklines use the same width so the
+ *  visual weight matches the rest of the chart family. */
 const DEFAULT_STROKE_WIDTH = 1.5;
-
-/** Sparkline stroke width. Tuned against the markets-dashboard mocks at the
- *  card-sized render: 2px reads as confident but doesn't dominate the card. */
-const SPARKLINE_STROKE_WIDTH = 2;
 
 /** Default radius for point marks (hover targets). */
 const DEFAULT_POINT_RADIUS = 3;
@@ -181,10 +178,7 @@ export function computeLineMarks(
       points: allPoints,
       path: combinedPath,
       stroke: strokeColor,
-      strokeWidth:
-        styleOverride?.strokeWidth ??
-        spec.markDef.strokeWidth ??
-        (spec.display === 'sparkline' ? SPARKLINE_STROKE_WIDTH : DEFAULT_STROKE_WIDTH),
+      strokeWidth: styleOverride?.strokeWidth ?? spec.markDef.strokeWidth ?? DEFAULT_STROKE_WIDTH,
       strokeDasharray,
       opacity: styleOverride?.opacity,
       seriesKey: seriesStyleKey,

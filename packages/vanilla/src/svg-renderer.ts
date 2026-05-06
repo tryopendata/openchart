@@ -106,16 +106,22 @@ export function renderChartSVG(
     }
   }
 
-  // Background
-  const bg = createSVGElement('rect');
-  setAttrs(bg, {
-    x: 0,
-    y: 0,
-    width,
-    height,
-    fill: layout.theme.colors.background,
-  });
-  svg.appendChild(bg);
+  // Background. Sparkline mode skips the background rect entirely so the
+  // host page's surface color shows through — sparklines are drop-ins for
+  // KPI cards, table cells, and inline contexts where the consumer owns
+  // the background. Other display modes paint a fill so the chart is a
+  // self-contained visual on any host surface.
+  if (layout.display !== 'sparkline') {
+    const bg = createSVGElement('rect');
+    setAttrs(bg, {
+      x: 0,
+      y: 0,
+      width,
+      height,
+      fill: layout.theme.colors.background,
+    });
+    svg.appendChild(bg);
+  }
 
   // Clip path to prevent marks (especially area fills) from overflowing
   // into the chrome region (title/subtitle). Extends full width so

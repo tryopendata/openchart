@@ -812,10 +812,11 @@ describe('compileChart', () => {
     expect(r.cornerRadius).toBeCloseTo(r.width / 2, 1);
   });
 
-  it('sparkline stacked bars do NOT get pill cornerRadius (would break stacks)', () => {
-    // Each stacked segment becomes a half-pill if pill radius is applied,
-    // leaving visible gaps where two series meet. Skip the pill default
-    // when the y-channel is stacked.
+  it('sparkline stacked bars: only top segment per stack gets pill rounding (top corners)', () => {
+    // Stacked segments below the top stay square so the seams between
+    // segments are flush. Each topmost segment receives the pill radius
+    // with `cornerRadiusSides` constrained to the top corners — the
+    // renderer emits a path with rounded top + square bottom.
     const layout = compileChart(
       {
         mark: 'bar' as const,
@@ -834,9 +835,37 @@ describe('compileChart', () => {
       },
       { width: 200, height: 80 },
     );
-    const rects = layout.marks.filter((m) => m.type === 'rect');
-    for (const rect of rects) {
-      expect((rect as { cornerRadius?: number }).cornerRadius ?? 0).toBe(0);
+    type Rect = {
+      type: 'rect';
+      cornerRadius?: number;
+      cornerRadiusSides?: { tl?: boolean; tr?: boolean; br?: boolean; bl?: boolean };
+      stackGroup?: string;
+      y: number;
+    };
+    const rects = layout.marks.filter((m): m is Rect => m.type === 'rect') as Rect[];
+
+    // Group by stackGroup, find topmost (smallest y) per group.
+    const tops = new Map<string, Rect>();
+    for (const r of rects) {
+      if (!r.stackGroup) continue;
+      const cur = tops.get(r.stackGroup);
+      if (!cur || r.y < cur.y) tops.set(r.stackGroup, r);
+    }
+    expect(tops.size).toBe(2);
+
+    for (const r of rects) {
+      const isTop = tops.get(r.stackGroup ?? '') === r;
+      if (isTop) {
+        expect(r.cornerRadius).toBeGreaterThan(0);
+        expect(r.cornerRadiusSides).toEqual({
+          tl: true,
+          tr: true,
+          br: false,
+          bl: false,
+        });
+      } else {
+        expect(r.cornerRadius ?? 0).toBe(0);
+      }
     }
   });
 

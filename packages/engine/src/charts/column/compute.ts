@@ -430,6 +430,18 @@ function applyMarkDefOverrides(
 
   if (fixedSize == null && crSpec == null) return marks;
 
+  // Identify the topmost segment per stackGroup (smallest `y` since SVG
+  // grows downward). Only that segment receives the corner rounding so
+  // the seams between stacked segments stay square and flush.
+  const topPerStack = new Map<string, RectMark>();
+  for (const mark of marks) {
+    if (mark.stackGroup === undefined) continue;
+    const current = topPerStack.get(mark.stackGroup);
+    if (!current || mark.y < current.y) {
+      topPerStack.set(mark.stackGroup, mark);
+    }
+  }
+
   for (const mark of marks) {
     if (fixedSize != null && mark.stackGroup === undefined) {
       const barWidth = Math.min(fixedSize, bandwidth);
@@ -438,10 +450,23 @@ function applyMarkDefOverrides(
       mark.width = barWidth;
     }
     const effectiveWidth = mark.width;
+    const isStacked = mark.stackGroup !== undefined;
+    const isStackTop = isStacked && topPerStack.get(mark.stackGroup!) === mark;
+
+    // Stacked segments below the top stay square. Stack top rounds only its
+    // top corners; non-stacked bars round all four.
+    if (isStacked && !isStackTop) continue;
+
     if (crSpec === 'pill') {
       mark.cornerRadius = effectiveWidth / 2;
     } else if (typeof crSpec === 'number') {
       mark.cornerRadius = crSpec;
+    } else {
+      continue;
+    }
+
+    if (isStackTop) {
+      mark.cornerRadiusSides = { tl: true, tr: true, br: false, bl: false };
     }
   }
 
