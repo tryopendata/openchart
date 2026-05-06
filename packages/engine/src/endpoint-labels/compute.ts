@@ -137,14 +137,24 @@ function formatValue(value: number | string | null, formatString: string | undef
 }
 
 /**
- * Bidirectional collision sweep to compute non-overlapping `labelY` values.
+ * Local collision sweep: keep each label anchored to its line's `dataY` and
+ * only displace neighbors that actually overlap.
  *
- * Forward pass walks top-to-bottom, pushing each entry down so it doesn't
- * overlap the previous one. Reverse pass walks bottom-to-top doing the same
- * upward. Final position is the midpoint of the two passes — this is more
- * stable than a single direction (which always biases one end).
+ * Each entry's "natural" position is centered on its `dataY` (i.e. `top =
+ * dataY - height/2`). We only push neighbors apart when their stacks would
+ * collide, and only by the minimum amount needed. This preserves the
+ * line-tracking behavior the design calls for: when lines are well-separated,
+ * labels sit at their lines; when they're close together, the sweep nudges
+ * them apart while staying near their data points.
  *
- * Clamps each entry to stay inside `[areaTop, areaBottom - height]`.
+ * Algorithm:
+ *   1. Sort by dataY ascending.
+ *   2. Forward pass (top→bottom): if entry i overlaps i-1, push i down to
+ *      `prevTop + prevHeight`.
+ *   3. Reverse pass (bottom→top): if entry i overlaps i+1, push i up to
+ *      `nextTop - height`. This handles the case where the forward pass
+ *      pushed everyone past the bottom and we now need to back off upward.
+ *   4. Clamp each entry to `[areaTop, areaBottom - height]`.
  */
 function bidirectionalSweep(
   entries: { dataY: number; height: number; index: number }[],
@@ -154,36 +164,30 @@ function bidirectionalSweep(
   const n = entries.length;
   if (n === 0) return [];
 
-  // Sort by dataY ascending.
+  // Sort by dataY ascending so neighbors in the chart are neighbors in the array.
   const sorted = [...entries].sort((a, b) => a.dataY - b.dataY);
 
-  // Forward pass: push down to resolve overlaps from the top.
-  const forward = new Array<number>(n);
-  let cursor = areaTop;
-  for (let i = 0; i < n; i++) {
-    const e = sorted[i];
-    const top = Math.max(e.dataY - e.height / 2, cursor);
-    forward[i] = top;
-    cursor = top + e.height;
+  // Initialize tops at the natural (centered-on-dataY) positions.
+  const tops = sorted.map((e) => e.dataY - e.height / 2);
+
+  // Forward pass: push down only when overlapping the previous entry.
+  for (let i = 1; i < n; i++) {
+    const minTop = tops[i - 1] + sorted[i - 1].height;
+    if (tops[i] < minTop) tops[i] = minTop;
   }
 
-  // Reverse pass: push up to resolve overlaps from the bottom.
-  const reverse = new Array<number>(n);
-  cursor = areaBottom;
-  for (let i = n - 1; i >= 0; i--) {
-    const e = sorted[i];
-    const top = Math.min(e.dataY - e.height / 2, cursor - e.height);
-    reverse[i] = top;
-    cursor = top;
+  // Reverse pass: if forward pushed entries below the chart, back them off
+  // upward by clamping each to fit above its successor.
+  for (let i = n - 2; i >= 0; i--) {
+    const maxTop = tops[i + 1] - sorted[i].height;
+    if (tops[i] > maxTop) tops[i] = maxTop;
   }
 
-  // Final = midpoint of the two passes, clamped.
+  // Final clamp to the chart area, written back in original index order.
   const result = new Array<number>(n);
   for (let i = 0; i < n; i++) {
-    const e = sorted[i];
-    const mid = (forward[i] + reverse[i]) / 2;
-    const clamped = Math.max(areaTop, Math.min(areaBottom - e.height, mid));
-    result[e.index] = clamped;
+    const clamped = Math.max(areaTop, Math.min(areaBottom - sorted[i].height, tops[i]));
+    result[sorted[i].index] = clamped;
   }
   return result;
 }
