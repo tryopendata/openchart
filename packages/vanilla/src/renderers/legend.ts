@@ -61,6 +61,10 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     }
 
     // Swatch
+    // The default ('square') and 'line' shapes both render as a stroke-segment
+    // pair to match the refreshed mock-2 legend (and the endpoint-labels swatch).
+    // 'circle' is preserved for point/scatter charts where a dot reads more
+    // naturally than a stroke segment.
     if (entry.shape === 'circle') {
       const circle = createSVGElement('circle');
       setAttrs(circle, {
@@ -70,38 +74,37 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
         fill: entry.color,
       });
       entryG.appendChild(circle);
-    } else if (entry.shape === 'line') {
-      // Line swatch: a short line segment with a dot in the middle
-      const line = createSVGElement('line');
-      setAttrs(line, {
-        x1: offsetX,
-        y1: offsetY + legend.swatchSize / 2,
-        x2: offsetX + legend.swatchSize,
-        y2: offsetY + legend.swatchSize / 2,
-        stroke: entry.color,
-        'stroke-width': 2,
-      });
-      entryG.appendChild(line);
-      // Small dot at center
-      const dot = createSVGElement('circle');
-      setAttrs(dot, {
-        cx: offsetX + legend.swatchSize / 2,
-        cy: offsetY + legend.swatchSize / 2,
-        r: 2.5,
-        fill: entry.color,
-      });
-      entryG.appendChild(dot);
     } else {
-      const rect = createSVGElement('rect');
-      setAttrs(rect, {
-        x: offsetX,
-        y: offsetY,
-        width: legend.swatchSize,
-        height: legend.swatchSize,
-        fill: entry.color,
-        rx: 2,
+      // Stroke-segment swatch: a thicker colored bar with a thin lighter strip
+      // 1.5px below it, both rounded. Matches the endpoint-labels idiom and the
+      // mock-2 bottom-legend treatment so a chart never shows two swatch styles.
+      const swatchY = offsetY + legend.swatchSize / 2;
+      const bar = createSVGElement('line');
+      bar.setAttribute('class', 'oc-legend-swatch-bar');
+      setAttrs(bar, {
+        x1: offsetX,
+        y1: swatchY,
+        x2: offsetX + legend.swatchSize,
+        y2: swatchY,
+        stroke: entry.color,
+        'stroke-width': 3,
+        'stroke-linecap': 'round',
       });
-      entryG.appendChild(rect);
+      entryG.appendChild(bar);
+
+      const accent = createSVGElement('line');
+      accent.setAttribute('class', 'oc-legend-swatch-accent');
+      setAttrs(accent, {
+        x1: offsetX,
+        y1: swatchY + 3,
+        x2: offsetX + legend.swatchSize,
+        y2: swatchY + 3,
+        stroke: entry.color,
+        'stroke-width': 1,
+        'stroke-opacity': 0.3,
+        'stroke-linecap': 'round',
+      });
+      entryG.appendChild(accent);
     }
 
     // Label

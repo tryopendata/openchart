@@ -16,6 +16,7 @@ import { renderAnnotations } from './renderers/annotations';
 import { renderAxes } from './renderers/axes';
 import { renderBrand } from './renderers/brand';
 import { renderChrome } from './renderers/chrome';
+import { renderEndpointLabels } from './renderers/endpoint-labels';
 import { renderLegend } from './renderers/legend';
 import { renderMarks, resetMarkRenderState, setMarkRenderState } from './renderers/marks';
 import { createSVGElement, SVG_NS, setAttrs } from './renderers/svg-dom';
@@ -202,6 +203,13 @@ export function renderChartSVG(
     svg.appendChild(clippedGroup);
 
     renderAnnotations(svg, layout);
+
+    // Endpoint labels render after marks/annotations so they sit on top of any
+    // chart-edge content, but before the traditional legend so chrome wins on
+    // collision. The engine handles all suppression — when entries is empty,
+    // renderEndpointLabels is a no-op.
+    renderEndpointLabels(svg, layout);
+
     renderLegend(svg, layout.legend);
 
     // Chrome renders on top so titles are never obscured by chart elements

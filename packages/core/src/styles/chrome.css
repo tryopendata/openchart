@@ -28,6 +28,55 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Endpoint labels (right-side per-series column for line/area charts)
+ *
+ * Swatch idiom: a thicker colored stroke segment with an optional thinner
+ * lighter strip below. Mirrors the refreshed traditional legend swatch so a
+ * single chart never shows two swatch idioms (mock-2 alignment). Per-series
+ * color is stamped inline by the renderer; CSS tokens here cover the muted
+ * value text and the leader line so theme overrides flow through naturally.
+ * --------------------------------------------------------------------------- */
+
+.oc-endpoint-labels {
+  font-family: var(--oc-font-family);
+}
+
+.oc-endpoint-label {
+  /* Color set inline per series; this fallback only kicks in if the renderer
+     ever omits the inline fill. */
+  fill: var(--oc-endpoint-label-color, var(--oc-text));
+}
+
+.oc-endpoint-value {
+  fill: var(--oc-endpoint-value-color, var(--oc-text-muted));
+}
+
+.oc-endpoint-leader {
+  stroke: var(--oc-endpoint-leader-color, currentColor);
+}
+
+.oc-endpoint-marker {
+  /* Fill/stroke set inline (open-ring style: bg fill, series stroke). */
+}
+
+.oc-endpoint-swatch {
+  /* Color set inline per series. */
+}
+
+/* ---------------------------------------------------------------------------
+ * Annotation dot + subtitle (text-annotation extensions)
+ * --------------------------------------------------------------------------- */
+
+.oc-annotation-dot {
+  /* Fill/stroke resolved by the engine. Open-ring default = bg fill, series
+     stroke. */
+}
+
+.oc-annotation-subtitle {
+  fill: var(--oc-annotation-subtitle-color, var(--oc-text-muted));
+}
+
+/* ---------------------------------------------------------------------------
  * Table footer chrome
  * --------------------------------------------------------------------------- */
 
