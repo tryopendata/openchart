@@ -38,6 +38,7 @@ const layout = compileChart(chartSpec, { width: 600, height: 400 });
 // layout.marks: positioned line paths, bar rects, arc segments, etc.
 // layout.axes: tick positions, labels, format strings
 // layout.legend: entries, position, dimensions
+// layout.endpointLabels: per-series chip+swatch labels at the trailing point (line/area), driven by `layout.endpointLabels: EndpointLabelsLayout` on the spec
 // layout.annotations: pixel-positioned annotation elements
 // layout.theme: fully resolved theme with all defaults filled
 ```

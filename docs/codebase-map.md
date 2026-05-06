@@ -42,6 +42,12 @@
 | Annotations: collision resolution | `packages/engine/src/annotations/collisions.ts` |
 | Annotations: data → pixel resolver | `packages/engine/src/annotations/position.ts` |
 | Annotations: shared constants (`ANCHOR_OFFSET=8`, default font, dash patterns) | `packages/engine/src/annotations/constants.ts` |
+| Legend layout (entries, wrapping, positioning) | `packages/engine/src/legend/compute.ts`, `wrap.ts` |
+| Legend / endpoint-label suppression truth table (per-series UI hides when series hidden) | `packages/engine/src/legend/suppression.ts` |
+| Endpoint labels: compute (placement, leader lines, anti-overlap sweep) | `packages/engine/src/endpoint-labels/compute.ts` |
+| Endpoint labels: number formatting (currency / unit / compact) | `packages/engine/src/endpoint-labels/format.ts` |
+| Endpoint labels: text-width prediction for layout reservation | `packages/engine/src/endpoint-labels/predict.ts` |
+| Endpoint labels: shared constants (chip padding, swatch geometry, leader gaps) | `packages/engine/src/endpoint-labels/constants.ts` |
 | Vanilla mount + lifecycle | `packages/vanilla/src/mount.ts` (~2500 lines) |
 | Vanilla SVG renderer entry | `packages/vanilla/src/svg-renderer.ts` → `renderChartSVG()` |
 | Renderer: chrome (title/subtitle/source/byline/footer) | `packages/vanilla/src/renderers/chrome.ts` → `renderChrome()` |
@@ -50,6 +56,8 @@
 | Renderer: annotations | `packages/vanilla/src/renderers/annotations.ts` → `renderAnnotations()` |
 | Renderer: legend | `packages/vanilla/src/renderers/legend.ts` |
 | Renderer: brand block | `packages/vanilla/src/renderers/brand.ts` |
+| Renderer: endpoint labels (line/area series labels at the trailing edge) | `packages/vanilla/src/renderers/endpoint-labels.ts` |
+| Renderer: metric bar (chrome metric pills) | `packages/vanilla/src/renderers/metrics.ts` |
 | SVG DOM helpers (`createSVGElement`, `setAttrs`, `applyTextStyle`) | `packages/vanilla/src/renderers/svg-dom.ts` |
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
@@ -173,8 +181,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 These are easy mistakes — written down so the next agent doesn't search for them.
 
 - ~~`packages/core/src/labels/chrome.ts`~~ → it's `packages/core/src/layout/chrome.ts`. The `labels/` dir only has `collision.ts`.
-- ~~`packages/vanilla/src/renderers/metrics.ts`~~ → does not exist yet (would be created by the metric-bar feature).
-- ~~`adaptForLightLineStroke` / `light-mode.ts`~~ → does not exist yet.
+- ~~`packages/core/src/theme/light-mode.ts`~~ → does not exist. `adaptForLightLineStroke` lives in `packages/core/src/theme/dark-mode.ts` alongside `adaptColorForDarkMode` and `adaptTheme` (the file owns both directions of palette adaptation).
 - ~~`packages/core/src/styles/axis.css`~~ → axis classes live inside `chrome.css`.
 - The vanilla package does **not** have a `Chart.tsx` or any framework-specific entry — that's `packages/react/src/Chart.tsx` etc.
 

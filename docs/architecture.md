@@ -52,7 +52,10 @@ graph LR
 
   subgraph Marks
     K[Chart renderer] --> L[Compute marks]
-    L --> M[Compute annotations]
+    L --> EL[Compute endpoint labels]
+    EL --> MB[Compute metric bar]
+    MB --> SUP[Apply suppression truth table]
+    SUP --> M[Compute annotations]
     M --> N[Compute tooltips]
     N --> O[Compute a11y]
   end
@@ -82,9 +85,12 @@ Step by step:
 8. **Compute axes**: Generate tick positions, labels, and format strings from the scales. Responsive strategy controls label density.
 9. **Compute gridlines**: Position gridlines aligned to y-axis ticks.
 10. **Chart renderer**: Look up the registered renderer for the chart type. Compute mark positions (line paths, bar rects, arc segments, etc.).
-11. **Compute annotations**: Map annotation specs (reference lines, ranges, text callouts) to pixel positions using the scales.
-12. **Compute tooltips**: Build tooltip content descriptors keyed by mark ID.
-13. **Compute a11y**: Generate alt text, ARIA labels, and a screen-reader data table from the spec and data.
+11. **Compute endpoint labels**: For line/area charts with `layout.endpointLabels` enabled, place a chip+swatch label at each series' trailing point. A capped iterative sweep (`endpoint-labels/compute.ts`) resolves vertical overlaps and clamps to the chart edges so the tail label never falls off-canvas.
+12. **Compute metric bar**: When `chrome.metrics` is set, lay out the chrome metric pills (label + value + delta) so the renderer can paint them above the chart area.
+13. **Apply suppression truth table**: A single source of truth (`legend/suppression.ts`) decides what disappears for each hidden series — endpoint label, leader line, dot annotation, and series-anchored text annotations all consult the same table so legend toggles, `hiddenSeries`, and runtime hides never disagree.
+14. **Compute annotations**: Map annotation specs (reference lines, ranges, text callouts) to pixel positions using the scales.
+15. **Compute tooltips**: Build tooltip content descriptors keyed by mark ID.
+16. **Compute a11y**: Generate alt text, ARIA labels, and a screen-reader data table from the spec and data.
 
 The output is a `ChartLayout` with everything the renderer needs: positioned marks, resolved chrome, axes, gridlines, annotations, tooltips, accessibility metadata, and the resolved theme.
 

@@ -595,7 +595,7 @@ Legend entries are interactive by default. Clicking a legend swatch hides/shows 
 />
 ```
 
-The vanilla adapter handles the DOM toggling (setting `display: none` on matching marks). The callback is informational, for cases where you need to sync legend state with external UI.
+A click triggers a full recompile through the engine's `hiddenSeries` filter — the y-axis rebalances to the visible series, endpoint labels and series-bound chrome refresh, the color scale stays locked to the original palette indices (visible series don't shift colors), and text annotations are suppressed while any series is hidden (range and refline annotations remain since they anchor to constant axis values). Toggling off the last visible series is a no-op rather than producing an empty chart. The callback fires with the post-toggle visible state so external UI can mirror it.
 
 ### Annotation click
 

@@ -125,7 +125,7 @@ fill: {
 | `x1`, `y1` | `number`      | `0`, `0` | Start point in [0,1] normalized space.        |
 | `x2`, `y2` | `number`      | `0`, `1` | End point. Default is top-to-bottom.           |
 
-**Area chart fill behavior:** Single-series area charts apply a default `fillOpacity` of 0.15 to the area fill (the stroke is drawn at full opacity). Stacked areas use 0.7. The gradient stop `opacity` values multiply with this default, so a stop at `opacity: 1` with the area default produces an effective opacity of 0.15. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
+**Area chart fill behavior:** Multi-series area charts default to **overlap** mode — a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) so all series stay readable on a shared baseline. Single-series area charts apply a default `fillOpacity` of 0.15. Opting into stacked mode (`stack: 'zero' | true | 'normalize' | 'center'`) switches to the higher-opacity stacked gradient. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap default produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
 
 ---
 
@@ -206,7 +206,7 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
 | `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
-| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars). `'normalize'` for 100% stacked. `'center'` for streamgraph. Only applies to bar/column/area charts with a color encoding. |
+| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column; **non-stacked** (overlap) for area | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars). `'normalize'` for 100% stacked. `'center'` for streamgraph. **Note:** multi-series area charts default to overlap mode (translucent gradients on a shared baseline) — pass `stack: 'zero'` (or `true`) to opt into stacked composition. |
 
 ### FieldType
 
@@ -280,23 +280,29 @@ Editorial text elements. Source: `core/src/types/spec.ts`.
 
 ```ts
 interface Chrome {
+  eyebrow?: string | ChromeText;
   title?: string | ChromeText;
   subtitle?: string | ChromeText;
+  metric?: MetricBar;
   source?: string | ChromeText;
   byline?: string | ChromeText;
   footer?: string | ChromeText;
+  brand?: string | ChromeText;
 }
 ```
 
-Each field accepts either a plain string or a `ChromeText` object for style overrides.
+Each text field accepts either a plain string or a `ChromeText` object for style overrides.
 
-| Field      | Position         | Default style                 |
-| ---------- | ---------------- | ----------------------------- |
-| `title`    | Top, above chart | 22px, bold (700), `#333333`   |
-| `subtitle` | Below title      | 15px, normal (400), `#666666` |
-| `source`   | Below chart area | 12px, normal (400), `#999999` |
-| `byline`   | Below source     | 12px, normal (400), `#999999` |
-| `footer`   | Below byline     | 12px, normal (400), `#999999` |
+| Field      | Position                         | Default style                                                |
+| ---------- | -------------------------------- | ------------------------------------------------------------ |
+| `eyebrow`  | Above title                      | 11px, semibold, uppercase, theme accent — leading accent dot |
+| `title`    | Top, above chart                 | 22px, bold (700), `#333333`                                  |
+| `subtitle` | Below title                      | 15px, normal (400), `#666666`                                |
+| `metric`   | Below subtitle, above chart area | Inline metric bar (see `MetricBar`)                          |
+| `source`   | Below chart area                 | 12px, normal (400), `#999999`                                |
+| `byline`   | Below source                     | 12px, normal (400), `#999999`                                |
+| `footer`   | Below byline                     | 12px, normal (400), `#999999`                                |
+| `brand`    | Right-aligned on the source row  | 12px — leading accent dot, suppresses the default watermark  |
 
 ### ChromeText
 
@@ -346,6 +352,8 @@ A callout label positioned at a data coordinate.
 | `x`          | `string \| number`   | (required)             | X-axis data value or position.                                                                                         |
 | `y`          | `string \| number`   | (required)             | Y-axis data value or position.                                                                                         |
 | `text`       | `string`             | (required)             | The annotation text.                                                                                                   |
+| `subtitle`   | `string`             | `undefined`            | Optional muted second-tone text rendered below `text`. Use for supporting context (methodology, source, etc.).         |
+| `dot`        | `boolean \| AnnotationDot` | `undefined`      | When set, draws an open-ring marker at the connector's data-point endpoint. `true` uses default open-ring style; pass an object to override radius, fill, stroke, or strokeWidth. |
 | `label`      | `string`             | `undefined`            | Additional label text.                                                                                                 |
 | `fontSize`   | `number`             | theme default          | Font size override in pixels.                                                                                          |
 | `fontWeight` | `number`             | theme default          | Font weight override.                                                                                                  |
