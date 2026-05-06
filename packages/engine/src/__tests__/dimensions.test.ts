@@ -324,8 +324,11 @@ describe('computeDimensions', () => {
 
   it('reserves extra bottom space for a bottom legend so it sits below the x-axis', () => {
     // Defect-3 regression: bottom-positioned legends used to render in the
-    // same band as the x-axis tick row. dimensions.ts now adds xAxisHeight
-    // on top of legendHeight + gap so the legend lands BELOW the axis.
+    // same band as the x-axis tick row. The reservation now flows through
+    // chrome.bottomHeight (via bottomLegendReservation) so chrome stacks
+    // below the legend band rather than colliding with it. The base bottom
+    // margin already includes xAxisHeight, so the additional reservation
+    // collapses to legendHeight + gap.
     const bottomLegend: LegendLayout = {
       ...emptyLegend,
       position: 'bottom',
@@ -346,10 +349,17 @@ describe('computeDimensions', () => {
       lightTheme,
     );
 
-    // Bottom legend reserves at minimum legendHeight + gap + xAxisHeight extra.
+    // Reservation is legendHeight + gap, threaded through chrome.bottomHeight.
     const gap = legendGap(600);
-    const expectedExtra = bottomLegend.bounds.height + gap + dimsNoLegend.xAxisHeight;
-    expect(dimsBottom.margins.bottom - dimsNoLegend.margins.bottom).toBe(expectedExtra);
+    const expectedExtra = bottomLegend.bounds.height + gap;
+    expect(dimsBottom.margins.bottom - dimsNoLegend.margins.bottom).toBeCloseTo(expectedExtra, 5);
+    // The reservation lives on chrome.bottomHeight, not as a separate margin
+    // delta, so renderers reading chrome.source.y get the legend offset baked
+    // in for free.
+    expect(dimsBottom.chrome.bottomHeight - dimsNoLegend.chrome.bottomHeight).toBeCloseTo(
+      expectedExtra,
+      5,
+    );
   });
 });
 
@@ -395,5 +405,57 @@ describe('bottom legend placement (defect-3 regression)', () => {
     const minLegendY = chartBottom + xAxisHeight + gap;
 
     expect(layout.legend.bounds.y).toBeGreaterThanOrEqual(minLegendY - 0.5);
+  });
+
+  it('positions bottom chrome (source) below the bottom legend band', () => {
+    // Follow-up regression: a bottom legend reserved space below the x-axis
+    // tick row, but source/byline/footer chrome was still positioned via
+    // chartBottom + xAxisExtent + chartToFooter, landing in the same band as
+    // the legend swatches. Threading bottomLegendReservation into computeChrome
+    // now shifts chrome.source.y so it stacks below the legend.
+    const spec = {
+      mark: 'area' as const,
+      data: [
+        { year: '2020', value: 10, series: 'A' },
+        { year: '2021', value: 20, series: 'A' },
+        { year: '2022', value: 15, series: 'A' },
+        { year: '2020', value: 8, series: 'B' },
+        { year: '2021', value: 18, series: 'B' },
+        { year: '2022', value: 12, series: 'B' },
+      ],
+      encoding: {
+        x: { field: 'year', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'series', type: 'nominal' as const },
+      },
+      legend: { position: 'bottom' as const, show: true },
+      chrome: {
+        source: 'World Bank, 2024',
+        byline: 'OpenChart Newsroom',
+      },
+    };
+
+    const layout = compileChart(spec, { width: 800, height: 500 });
+
+    // Sanity: legend and chrome both rendered.
+    expect(layout.legend.position).toBe('bottom');
+    expect(layout.legend.entries.length).toBeGreaterThan(0);
+    expect(layout.chrome.source).toBeDefined();
+    expect(layout.chrome.byline).toBeDefined();
+
+    // Compute chrome's absolute y the same way the renderer does:
+    // bottomOffset = chartBottom + xAxisExtent (= 26 for default unrotated x-axis).
+    const xAxisExtent = 26;
+    const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
+    const sourceAbsoluteY = bottomOffset + layout.chrome.source!.y;
+    const bylineAbsoluteY = bottomOffset + layout.chrome.byline!.y;
+
+    // Legend's bottom edge.
+    const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
+
+    // Source must land below the legend band, with at least a small gap
+    // (chartToFooter ≈ 12px) for breathing room.
+    expect(sourceAbsoluteY).toBeGreaterThan(legendBottom);
+    expect(bylineAbsoluteY).toBeGreaterThan(sourceAbsoluteY);
   });
 });

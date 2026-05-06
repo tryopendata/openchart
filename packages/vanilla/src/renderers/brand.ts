@@ -27,9 +27,15 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   const xAxisExtent = computeXAxisExtent(layout);
   const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
   const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
+  // When no bottom chrome items exist, derive a fallback offset that still
+  // clears any bottom-positioned legend so the brand watermark doesn't
+  // overlap legend swatches.
+  const { legend } = layout;
+  const bottomLegendOffset =
+    legend.position === 'bottom' && legend.bounds.height > 0 ? legend.bounds.height + 8 : 0;
   const chromeY = firstBottom
     ? bottomOffset + firstBottom.y
-    : bottomOffset + layout.theme.spacing.chartToFooter;
+    : bottomOffset + layout.theme.spacing.chartToFooter + bottomLegendOffset;
 
   const a = createSVGElement('a');
   a.setAttribute('href', BRAND_URL);

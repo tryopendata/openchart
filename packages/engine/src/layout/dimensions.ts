@@ -170,7 +170,20 @@ export function computeDimensions(
     chromeMode = 'hidden';
   }
 
-  // Compute chrome with mode and scaled padding
+  // Pre-compute the bottom-legend reservation (legend height + gap) so the
+  // chrome layout can stack source/byline/footer below the legend band.
+  // Chart-side bottom legends only — right/top/bottom-right legends don't
+  // share vertical space with bottom chrome.
+  const bottomLegendReservation =
+    'entries' in legendLayout &&
+    legendLayout.entries.length > 0 &&
+    legendLayout.position === 'bottom'
+      ? legendLayout.bounds.height + legendGap(width)
+      : 0;
+
+  // Compute chrome with mode and scaled padding. `bottomLegendReservation`
+  // pushes bottom chrome below the legend band; the returned bottomHeight
+  // already accounts for it, so margin math below must not re-add it.
   const chrome = computeChrome(
     chromeToInput(spec.chrome),
     theme,
@@ -179,6 +192,7 @@ export function computeDimensions(
     chromeMode,
     padding,
     watermark,
+    bottomLegendReservation,
   );
 
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
@@ -502,19 +516,20 @@ export function computeDimensions(
 
   // Reserve legend space.
   //
-  // For bottom-positioned legends we also add `xAxisHeight` so the legend
-  // lands BELOW the x-axis tick row instead of colliding with it. The bottom
-  // margin already includes `xAxisHeight` once (for the axis itself); the
-  // legend needs its own band of space stacked underneath that.
+  // Bottom legend: reservation is already baked into `chrome.bottomHeight`
+  // via `bottomLegendReservation`, so no additional bottom margin is needed
+  // here. The legend lands below the x-axis tick row (which is reserved via
+  // `xAxisHeight` in the base bottom margin) and source/byline/footer chrome
+  // stacks underneath the legend band rather than colliding with it.
   if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(width);
     if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
       margins.right += legendLayout.bounds.width + 8;
     } else if (legendLayout.position === 'top') {
       margins.top += legendLayout.bounds.height + gap;
-    } else if (legendLayout.position === 'bottom') {
-      margins.bottom += legendLayout.bounds.height + gap + xAxisHeight;
     }
+    // 'bottom' is intentionally not handled here — see bottomLegendReservation
+    // above.
   }
 
   // Chart area is what's left after margins
@@ -541,6 +556,7 @@ export function computeDimensions(
       fallbackMode as 'compact' | 'hidden',
       padding,
       watermark,
+      bottomLegendReservation,
     );
 
     // Recalculate top/bottom margins with stripped chrome.
