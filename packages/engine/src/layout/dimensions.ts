@@ -41,6 +41,8 @@ import {
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
+import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
+import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
 
 // ---------------------------------------------------------------------------
@@ -271,16 +273,46 @@ export function computeDimensions(
     left: hPad + (isRadial ? hPad : axisMargin),
   };
 
-  // Dynamic right margin for line/area end-of-line labels.
-  // Only reserve space when labels will actually render.
+  // Right-margin reservation for the three-way label suppression truth table:
+  //
+  //   1. Endpoint-labels column (predicted width, default ON for ≥2-series
+  //      line/area). Reserves chart-width + ENDPOINT_COLUMN_GAP + col-width.
+  //   2. Legacy end-of-line labels — only when the truth table resolves to
+  //      `showEndOfLineLabels: true` (legend hidden AND endpoint column off).
+  //   3. Right-edge text annotations — stack ADDITIVELY on top of (1) and (2)
+  //      so a callout at maxX lands between the chart area and any column to
+  //      its right.
   const labelDensity = spec.labels.density;
   const labelsHiddenByStrategy = strategy?.labelMode === 'none';
+  const seriesCount = countColorSeries(spec);
+  const sup = resolveSuppression(spec, {
+    seriesCount,
+    labelsHiddenByStrategy,
+    labelsDensityNone: labelDensity === 'none',
+  });
+
+  // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
+  // when the column would be suppressed.
+  let endpointWidth = 0;
+  if (sup.showEndpointLabels && !labelsHiddenByStrategy && labelDensity !== 'none') {
+    endpointWidth = predictEndpointLabelsWidth(spec, theme);
+    if (endpointWidth > 0) {
+      // 16px gap between chart area edge and the column.
+      margins.right = Math.max(margins.right, hPad) + endpointWidth + 16;
+    }
+  }
+
+  // (2) Legacy end-of-line label reservation — fires only in the truth-table
+  // cell where end-of-line labels still render (legend hidden AND endpoint
+  // column off AND ≥2 series AND labels visible). When the endpoint column
+  // is on, this reservation is redundant and is skipped.
   if (
+    endpointWidth === 0 &&
+    sup.showEndOfLineLabels &&
     (spec.markType === 'line' || spec.markType === 'area') &&
     labelDensity !== 'none' &&
     !labelsHiddenByStrategy
   ) {
-    // Estimate label width from longest series name (color encoding domain)
     const colorEnc = encoding.color;
     const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
     if (colorField) {
@@ -300,10 +332,10 @@ export function computeDimensions(
     }
   }
 
-  // Reserve right margin for text annotations near the chart's right edge.
-  // Without this, annotation text at the last data point clips outside the SVG.
-  // Account for anchor direction and offset.dx to avoid over-reserving space.
-  // Skip when annotations are hidden (tooltip-only at compact breakpoints).
+  // (3) Right-edge text annotations. Stacks ADDITIVELY on top of any
+  // endpoint-labels reservation so the annotation text lands between the
+  // chart area's right edge and the endpoint column. When no endpoint column
+  // is reserved, behaves as before (max-of with the existing margin).
   if (
     strategy?.annotationPosition !== 'tooltip-only' &&
     spec.annotations.length > 0 &&
@@ -336,7 +368,14 @@ export function computeDimensions(
                   textWidth / 2; // centered (top/bottom/auto)
           const rightOverflow = Math.max(0, baseRightExtent + dx);
           if (rightOverflow > 0) {
-            margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
+            if (endpointWidth > 0) {
+              // Endpoint column already reserved space at the far right; the
+              // annotation lands BETWEEN the chart edge and the column, so
+              // stack additively rather than max-of.
+              margins.right += rightOverflow + 12;
+            } else {
+              margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
+            }
           }
         }
       }

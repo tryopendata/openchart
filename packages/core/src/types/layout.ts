@@ -645,6 +645,53 @@ export interface GradientLegendLayout extends BaseLegendLayout {
 export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout;
 
 // ---------------------------------------------------------------------------
+// Endpoint labels (right-side per-series column for line/area charts)
+// ---------------------------------------------------------------------------
+
+/** A single resolved endpoint-label entry, fully positioned. */
+export interface EndpointLabelEntry {
+  /** Series identifier (matches mark.seriesKey). */
+  seriesKey: string;
+  /** Pre-wrapped label text lines. */
+  labelLines: string[];
+  /** Formatted value string for the last data point. */
+  value: string;
+  /** Series color. */
+  color: string;
+  /** True pixel y of the last data point on the line. */
+  dataY: number;
+  /** Displaced y after the bidirectional collision sweep. */
+  labelY: number;
+  /** True when |labelY - dataY| exceeds the threshold (renderer draws a leader line). */
+  showLeader: boolean;
+  /** Optional anchor circle drawn on the line at the chart's right edge. */
+  marker?: {
+    x: number;
+    y: number;
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+    radius: number;
+  };
+}
+
+/** Resolved layout for the endpoint labels column. */
+export interface EndpointLabelsLayout {
+  /** Per-series resolved entries. */
+  entries: EndpointLabelEntry[];
+  /** Bounding box for the column. */
+  bounds: Rect;
+  /** Style for the series-name text. */
+  labelStyle: TextStyle;
+  /** Style for the formatted value text. */
+  valueStyle: TextStyle;
+  /** Width of the colored swatch line drawn left of the label. */
+  swatchSize: number;
+  /** Gap between swatch, label, and value. */
+  gap: number;
+}
+
+// ---------------------------------------------------------------------------
 // Tooltips
 // ---------------------------------------------------------------------------
 
@@ -732,6 +779,12 @@ export interface ChartLayout {
   annotations: ResolvedAnnotation[];
   /** Legend layout (position, entries, bounds). */
   legend: LegendLayout;
+  /**
+   * Right-side endpoint labels column for multi-series line/area charts.
+   * Empty `entries` means the column is suppressed (single-series, opt-out, or
+   * auto-suppressed by the truth table).
+   */
+  endpointLabels?: EndpointLabelsLayout;
   /** Tooltip descriptors keyed by a mark identifier. */
   tooltipDescriptors: Map<string, TooltipContent>;
   /** Accessibility metadata. */

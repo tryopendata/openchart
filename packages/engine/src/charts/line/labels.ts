@@ -25,6 +25,9 @@ import {
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
 
+import type { NormalizedChartSpec } from '../../compiler/types';
+import { countColorSeries, resolveSuppression } from '../../legend/suppression';
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -56,6 +59,11 @@ const LABEL_OFFSET_X = 6;
  * @param marks - Line marks (only processes marks with type === 'line').
  * @param strategy - Layout strategy from the responsive breakpoint.
  * @param density - Label density mode from spec.labels.density.
+ * @param labelOffsets - Per-series user offsets applied after collision resolution.
+ * @param spec - Optional normalized spec. When provided, the shared suppression
+ *   truth table gates rendering: end-of-line labels are the last-resort series
+ *   identifier and only render when both the traditional legend and endpoint
+ *   labels column are off.
  * @returns Map of seriesKey -> ResolvedLabel after collision detection.
  */
 export function computeLineLabels(
@@ -63,6 +71,7 @@ export function computeLineLabels(
   strategy: LayoutStrategy,
   density: LabelDensity = 'auto',
   labelOffsets?: Record<string, { dx?: number; dy?: number }>,
+  spec?: NormalizedChartSpec,
 ): Map<string, ResolvedLabel> {
   const result = new Map<string, ResolvedLabel>();
 
@@ -72,6 +81,26 @@ export function computeLineLabels(
   // At compact breakpoint, suppress inline labels entirely
   if (strategy.labelMode === 'none') {
     return result;
+  }
+
+  // Suppression truth table: when the spec is available, defer to the shared
+  // helper. End-of-line labels render only when both the legend and endpoint
+  // column are off — they're the last-resort series identifier.
+  if (spec) {
+    // The 'none' branches above already returned, so by here labelMode and
+    // density are not 'none'. Pass false explicitly to keep the helper pure.
+    const suppression = resolveSuppression(spec, {
+      seriesCount: countColorSeries(spec),
+      labelsHiddenByStrategy: false,
+      labelsDensityNone: false,
+    });
+    if (!suppression.showEndOfLineLabels) {
+      // Single-series charts have no series-name end-of-line label to hide
+      // (computeLineLabels returns nothing when seriesKey is empty). For
+      // multi-series, the suppression result tells us to skip explicitly.
+      const isMultiSeries = !!spec.encoding.color && countColorSeries(spec) >= 2;
+      if (isMultiSeries) return result;
+    }
   }
 
   const candidates: LabelCandidate[] = [];

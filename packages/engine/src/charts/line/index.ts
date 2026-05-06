@@ -33,8 +33,16 @@ export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _
   // Extract just the line marks for label computation
   const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
 
-  // Compute and attach labels to line marks by seriesKey lookup
-  const labelMap = computeLineLabels(lineMarks, strategy, spec.labels.density, spec.labels.offsets);
+  // Compute and attach labels to line marks by seriesKey lookup. Passing the
+  // spec engages the shared suppression truth table so end-of-line labels
+  // hide when the legend or endpoint column is showing.
+  const labelMap = computeLineLabels(
+    lineMarks,
+    strategy,
+    spec.labels.density,
+    spec.labels.offsets,
+    spec,
+  );
   for (const mark of marks) {
     if (mark.type === 'line' && mark.seriesKey) {
       const label = labelMap.get(mark.seriesKey);

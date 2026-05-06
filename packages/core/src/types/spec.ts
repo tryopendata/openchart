@@ -777,6 +777,47 @@ export interface LegendConfig {
   exclude?: string[];
 }
 
+/**
+ * Configuration for the endpoint labels column rendered at the chart's right edge
+ * for multi-series line/area charts. Each entry pairs the series name with its
+ * last formatted value, optionally anchored to the line by an open-circle marker.
+ *
+ * The column is independent of the traditional `legend` and the legacy
+ * end-of-line labels. Together with `legend.show`, the three suppression toggles
+ * follow this truth table for ≥2-series line/area charts:
+ *
+ * | `legend.show` | `endpointLabels` | Traditional legend | Endpoint column | End-of-line labels |
+ * |--|--|--|--|--|
+ * | unset | unset | hidden (auto-suppressed) | shown (default) | hidden |
+ * | true  | unset | shown                    | shown           | hidden |
+ * | unset | false | shown (auto-suppress revoked) | hidden     | hidden |
+ * | false | false | hidden                   | hidden          | shown (last-resort) |
+ * | true  | false | shown                    | hidden          | hidden |
+ * | false | true  | hidden                   | shown           | hidden |
+ * | true  | true  | shown                    | shown           | hidden |
+ *
+ * Single-series charts: column is hidden by default (nothing to identify).
+ */
+export interface EndpointLabelsConfig {
+  /** Explicit on/off. When undefined, the chart auto-decides based on series count. */
+  show?: boolean;
+  /** Field to read the displayed value from. Defaults to `encoding.y.field`. */
+  valueField?: string;
+  /** d3-format string for the value. Defaults to `encoding.y.axis.format`. */
+  format?: string;
+  /** Max wrap width in pixels for long series names. Default 96. */
+  width?: number;
+  /** Render an open-circle marker on the line at the right edge. Default true. */
+  showMarker?: boolean;
+  /** Override the marker style. */
+  markerStyle?: {
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    radius?: number;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Spec types (the top-level discriminated union)
 // ---------------------------------------------------------------------------
@@ -917,6 +958,17 @@ export interface ChartSpec {
   labels?: LabelSpec;
   /** Legend display configuration (position override). */
   legend?: LegendConfig;
+  /**
+   * Right-side endpoint labels column for multi-series line/area charts.
+   *
+   * - `true` or `EndpointLabelsConfig`: render the column.
+   * - `false`: hide the column.
+   * - omitted: auto-enable for multi-series line/area charts, hide otherwise.
+   *
+   * See {@link EndpointLabelsConfig} for the full suppression truth table that
+   * relates this flag to `legend.show` and the legacy end-of-line labels.
+   */
+  endpointLabels?: boolean | EndpointLabelsConfig;
   /** Whether the chart adapts to container width. Defaults to true. */
   responsive?: boolean;
   /** Theme configuration overrides. */

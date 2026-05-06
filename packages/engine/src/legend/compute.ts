@@ -23,6 +23,7 @@ import type {
 import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { countColorSeries, resolveSuppression } from './suppression';
 import { ENTRY_GAP, ENTRY_GAP_COMPACT, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from './wrap';
 
 // ---------------------------------------------------------------------------
@@ -169,42 +170,18 @@ export function computeLegend(
 
   let entries = extractColorEntries(spec, theme);
 
-  // Auto-suppress legend when endpoint labels identify series on line/area charts.
-  // Guards: keep legend at compact breakpoints (labels hidden), for stacked areas
-  // (endpoint labels overlap), and when user has configured any legend property
-  // (position, columns, maxRows, etc.) — any explicit legend config signals intent
-  // to show a legend, not just show: true.
-  const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
-  const hasLabels = spec.labels.density !== 'none';
-  const labelsWillRender = strategy.labelMode !== 'none';
-  const hasColorEncoding = spec.encoding.color != null;
-  // Legend is "forced" when the user set show: true OR specified any legend config
-  // other than show: false. Vega-Lite convention: legend is shown by default for
-  // multi-series charts; auto-suppression only fires when no legend config is present.
-  const userConfiguredLegend =
-    spec.legend != null &&
-    Object.keys(spec.legend).some(
-      (k) => k !== 'show' || spec.legend![k as keyof typeof spec.legend] !== false,
-    );
-  const legendNotForced = !userConfiguredLegend;
-
-  if (isLineOrArea && hasLabels && labelsWillRender && hasColorEncoding && legendNotForced) {
-    const isArea = spec.markType === 'area';
-    const quantChannel =
-      spec.encoding.y?.type === 'quantitative' ? spec.encoding.y : spec.encoding.x;
-    const stackValue = quantChannel?.stack;
-    // Area default is now overlap (v6); only treat as stacked when explicitly opted in.
-    // Bars still default to stacked, so for non-area marks `undefined` counts as stacked.
-    const isStacked = isArea
-      ? stackValue === true ||
-        stackValue === 'zero' ||
-        stackValue === 'normalize' ||
-        stackValue === 'center'
-      : stackValue !== null && stackValue !== false;
-
-    if (!isArea || !isStacked) {
-      entries = [];
-    }
+  // Consult the shared suppression truth table so the legend, endpoint column,
+  // and end-of-line labels stay in sync. The helper returns
+  // `showTraditionalLegend: false` when the endpoint column auto-takes over
+  // for ≥2-series line/area charts (and the user hasn't forced the legend on).
+  const seriesCount = countColorSeries(spec);
+  const suppression = resolveSuppression(spec, {
+    seriesCount,
+    labelsHiddenByStrategy: strategy.labelMode === 'none',
+    labelsDensityNone: spec.labels.density === 'none',
+  });
+  if (!suppression.showTraditionalLegend) {
+    entries = [];
   }
 
   const labelStyle: TextStyle = {
