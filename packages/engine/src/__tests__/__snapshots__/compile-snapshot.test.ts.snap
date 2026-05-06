@@ -792,7 +792,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "labelLines": [
           "UK",
         ],
-        "labelY": 136.875,
+        "labelY": 139.95,
         "marker": {
           "fill": "#ffffff",
           "radius": 4,

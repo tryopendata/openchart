@@ -36,6 +36,14 @@ export const ENDPOINT_COLUMN_GAP = 18;
 /** Vertical pad between the last wrapped label line and the value text. */
 export const ENDPOINT_VALUE_GAP = 4;
 
+/**
+ * Vertical breathing room between adjacent stacked entries during the
+ * collision sweep. The renderer doesn't draw this gap — it's purely a
+ * sweep-time cushion so that the value text of entry N doesn't hug the
+ * label text of entry N+1 when the sweep has packed them tightly.
+ */
+export const ENDPOINT_ENTRY_GAP = 6;
+
 /** Default open-circle marker radius on the line. */
 export const ENDPOINT_MARKER_RADIUS = 4;
 

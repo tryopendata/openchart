@@ -34,6 +34,7 @@ import type { NormalizedChartSpec } from '../compiler/types';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import {
   ENDPOINT_COLUMN_GAP,
+  ENDPOINT_ENTRY_GAP,
   ENDPOINT_GAP,
   ENDPOINT_LABEL_FONT_SIZE,
   ENDPOINT_LABEL_FONT_WEIGHT,
@@ -150,10 +151,16 @@ function formatValue(value: number | string | null, formatString: string | undef
  *
  * Algorithm:
  *   1. Sort by naturalTop ascending.
- *   2. Forward pass (top→bottom): if entry i overlaps i-1, push i down.
- *   3. Reverse pass (bottom→top): if entry i overlaps i+1, push i up.
- *      Handles the case where the forward pass overran the bottom edge.
- *   4. Clamp each entry to `[areaTop, areaBottom - height]`.
+ *   2. Forward pass (top→bottom): push i down if it overlaps i-1, then clamp
+ *      to `areaBottom - height` so an entry never lands below the chart.
+ *   3. Reverse pass (bottom→top): push i up if it overlaps i+1, then clamp
+ *      to `areaTop` so an entry never lands above the chart.
+ *
+ * Both passes cascade the clamp through neighbors, so a clamp at one end can
+ * propagate all the way to the other when the chart is too short to fit every
+ * label without overlap. (When the total stack is taller than the area, the
+ * earliest entries get pinned to areaTop and overlap is unavoidable — the
+ * caller has to drop entries or shrink them.)
  */
 function bidirectionalSweep(
   entries: { naturalTop: number; height: number; index: number }[],
@@ -169,24 +176,32 @@ function bidirectionalSweep(
   // Initialize tops at the natural (anchored-to-dataY) positions.
   const tops = sorted.map((e) => e.naturalTop);
 
-  // Forward pass: push down only when overlapping the previous entry.
-  for (let i = 1; i < n; i++) {
-    const minTop = tops[i - 1] + sorted[i - 1].height;
-    if (tops[i] < minTop) tops[i] = minTop;
-  }
-
-  // Reverse pass: if forward pushed entries below the chart, back them off
-  // upward by clamping each to fit above its successor.
-  for (let i = n - 2; i >= 0; i--) {
-    const maxTop = tops[i + 1] - sorted[i].height;
+  // Forward pass: push down only when overlapping the previous entry, then
+  // cap at the chart's bottom edge so we don't run off the canvas.
+  for (let i = 0; i < n; i++) {
+    if (i > 0) {
+      const minTop = tops[i - 1] + sorted[i - 1].height;
+      if (tops[i] < minTop) tops[i] = minTop;
+    }
+    const maxTop = areaBottom - sorted[i].height;
     if (tops[i] > maxTop) tops[i] = maxTop;
   }
 
-  // Final clamp to the chart area, written back in original index order.
+  // Reverse pass: when the forward pass clamped a tail entry up to fit the
+  // bottom edge, propagate that displacement back through the predecessors so
+  // they don't overlap the now-raised tail. Then clamp at areaTop.
+  for (let i = n - 1; i >= 0; i--) {
+    if (i < n - 1) {
+      const maxTop = tops[i + 1] - sorted[i].height;
+      if (tops[i] > maxTop) tops[i] = maxTop;
+    }
+    if (tops[i] < areaTop) tops[i] = areaTop;
+  }
+
+  // Write back in original index order.
   const result = new Array<number>(n);
   for (let i = 0; i < n; i++) {
-    const clamped = Math.max(areaTop, Math.min(areaBottom - sorted[i].height, tops[i]));
-    result[sorted[i].index] = clamped;
+    result[sorted[i].index] = tops[i];
   }
   return result;
 }
@@ -344,9 +359,12 @@ export function computeEndpointLabels(
   // so the label's first-line baseline-center aligns with the line's last data point.
   // The marker sits on this same baseline-center row, putting the open ring directly
   // where the line terminates when undisplaced.
+  // Add ENDPOINT_ENTRY_GAP to each entry's claimed height so the sweep leaves
+  // breathing room between stacked labels. The renderer doesn't draw the gap,
+  // so it's invisible when entries are well-separated.
   const sweepInput = provisional.map((p, i) => ({
     naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
-    height: p.height,
+    height: p.height + ENDPOINT_ENTRY_GAP,
     index: i,
   }));
   const sweptTops = bidirectionalSweep(sweepInput, chartArea.y, chartArea.y + chartArea.height);
