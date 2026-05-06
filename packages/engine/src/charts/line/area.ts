@@ -236,8 +236,9 @@ function computeSingleArea(
       topPath: topPathStr,
       fill: fillValue,
       fillOpacity: fillOpacity,
-      stroke: getRepresentativeColor(isGradientDef(fillValue) ? color : fillValue),
-      strokeWidth: spec.markDef.strokeWidth ?? (spec.display === 'sparkline' ? 1.25 : 1.5),
+      stroke:
+        spec.markDef.stroke ?? getRepresentativeColor(isGradientDef(fillValue) ? color : fillValue),
+      strokeWidth: spec.markDef.strokeWidth ?? (spec.display === 'sparkline' ? 2 : 1.5),
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
       dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row })),

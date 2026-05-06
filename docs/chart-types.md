@@ -70,9 +70,9 @@ const spec = {
 };
 ```
 
-Add a `color` encoding for stacked areas showing composition over time.
+Add a `color` encoding to split into series. Multi-series area charts default to **overlap** mode — translucent gradient fills layered on a shared baseline, so each series's curve stays readable. Pass `encoding.y.stack: 'zero'` (or `true`, `'normalize'`, `'center'`) to opt into stacked composition over time.
 
-**Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=line--area-chart) | [Stacked area](https://tryopendata.github.io/openchart/?story=line--stacked-area) | [Step area](https://tryopendata.github.io/openchart/?story=line--step-area)
+**Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=line--area-chart) | [Multi-series overlap](https://tryopendata.github.io/openchart/?story=line--multi-series-area-overlap) | [Stacked area](https://tryopendata.github.io/openchart/?story=line--multi-series-area-stacked) | [Step area](https://tryopendata.github.io/openchart/?story=line--step-area)
 
 ---
 
@@ -134,6 +134,8 @@ The mark is still `"bar"`, but the engine flips to vertical columns when x is no
 ## Stacking
 
 When a bar or column chart has a `color` encoding, values are **stacked by default** (one segment per series, stacked from zero). Control this with the `stack` property on the quantitative encoding channel.
+
+> **Area charts are different.** Multi-series area defaults to **overlap** (translucent gradients per series, shared zero baseline) — comparison-first rather than composition-first. To stack a multi-series area, opt in explicitly with `stack: 'zero'` (or any of the values below). The `stack` property and its values otherwise behave the same way for area charts.
 
 ### Grouped (side-by-side) bars
 

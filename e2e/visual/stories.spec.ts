@@ -27,7 +27,8 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
   },
   { name: 'chart-with-annotations', slug: 'column-diverging--temperature-anomaly' },
   { name: 'chart-with-watermark', slug: 'chrome--chrome-all-elements' },
-  { name: 'sparklines', slug: 'sparkline--sparklines' },
+  { name: 'sparklines-markets', slug: 'sparkline--markets-dashboard' },
+  { name: 'sparklines-sizes', slug: 'sparkline--sizes' },
   {
     name: 'multi-series-area-overlap',
     slug: 'line--multi-series-area-overlap',

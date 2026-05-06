@@ -32,9 +32,9 @@ import { resolveCurve } from './curves';
 /** Default stroke width for line marks. */
 const DEFAULT_STROKE_WIDTH = 1.5;
 
-/** Sparkline mode uses a thinner stroke since the chart area is tiny and a
- *  2.5px line reads as clunky. 1.25px keeps the trend legible without dominating. */
-const SPARKLINE_STROKE_WIDTH = 1.25;
+/** Sparkline stroke width. Tuned against the markets-dashboard mocks at the
+ *  card-sized render: 2px reads as confident but doesn't dominate the card. */
+const SPARKLINE_STROKE_WIDTH = 2;
 
 /** Default radius for point marks (hover targets). */
 const DEFAULT_POINT_RADIUS = 3;
@@ -77,7 +77,10 @@ export function computeLineMarks(
     const color: string | GradientDef = isSequentialColor
       ? getSequentialColor(scales, _getMidValue(rows, sequentialColorField!))
       : getColor(scales, seriesKey);
-    const strokeColor = getRepresentativeColor(color);
+    // markDef.stroke wins over the scale-derived color when set explicitly.
+    // Sparkline mode injects this via applySparklineDefaults to carry the
+    // trend color; users can also set it directly to override the palette.
+    const strokeColor = spec.markDef.stroke ?? getRepresentativeColor(color);
 
     // Sort rows by x-axis field so lines draw left-to-right.
     // For nominal/ordinal axes, preserve data order since there's no
@@ -195,10 +198,12 @@ export function computeLineMarks(
     // Emit PointMark objects when markDef.point is truthy, or when sequential
     // color is active (points carry the gradient since SVG paths are single-color).
     const markPoint = spec.markDef.point;
+    const isSingleEndpoint = markPoint === 'last' || markPoint === 'first';
     const showPoints =
       markPoint === true ||
       markPoint === 'transparent' ||
       markPoint === 'endpoints' ||
+      isSingleEndpoint ||
       isSequentialColor;
 
     if (showPoints) {
@@ -211,6 +216,14 @@ export function computeLineMarks(
       for (let i = 0; i < pointsWithData.length; i++) {
         const p = pointsWithData[i];
         const isEndpoint = i === 0 || i === lastIdx;
+        const isLast = i === lastIdx;
+        const isFirst = i === 0;
+        // Single-endpoint mode ('last' / 'first'): emit only the chosen point.
+        // Skip the others entirely instead of emitting invisible placeholders.
+        if (isSingleEndpoint) {
+          if (markPoint === 'last' && !isLast) continue;
+          if (markPoint === 'first' && !isFirst) continue;
+        }
         const visible = seriesShowPoints && !isTransparent && (!isEndpoints || isEndpoint);
         // Sequential color: each point gets colored by its data value
         let pointColor = color;
@@ -220,6 +233,29 @@ export function computeLineMarks(
         }
         const hollow = isEndpoints && visible;
         const pointColorStr = getRepresentativeColor(pointColor);
+        // 'last' / 'first' render as a tight filled terminator dot in the line
+        // color — no white halo, no hollow ring. Marked decorative because the
+        // data point already exists on the line and gets described by the a11y
+        // data table; the dot is purely visual.
+        if (isSingleEndpoint) {
+          marks.push({
+            type: 'point',
+            cx: p.x,
+            cy: p.y,
+            // 3.5 reads as a deliberate terminator against the 2px sparkline
+            // line — smaller dots blur into the stroke at typical card sizes.
+            r: 3.5,
+            fill: strokeColor,
+            stroke: 'transparent',
+            strokeWidth: 0,
+            fillOpacity: 1,
+            data: p.row,
+            // No label: decorative marks render with aria-hidden="true" and
+            // don't participate in the accessible data table.
+            aria: { decorative: true },
+          });
+          continue;
+        }
         const pointMark: PointMark = {
           type: 'point',
           cx: p.x,

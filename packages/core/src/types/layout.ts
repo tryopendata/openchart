@@ -184,12 +184,17 @@ export interface AxisLayout {
 
 /** Accessibility attributes for a mark. */
 export interface MarkAria {
-  /** ARIA label for the mark. */
-  label: string;
+  /** ARIA label for the mark. Optional when `decorative: true` — decorative
+   *  marks render with `aria-hidden="true"` and don't need a label. */
+  label?: string;
   /** Optional longer description. */
   description?: string;
   /** ARIA role override. */
   role?: string;
+  /** When true, the mark is purely decorative (e.g. a sparkline endpoint dot
+   *  that duplicates an existing data point). Renderers translate this into
+   *  `aria-hidden="true"` and skip the mark from the screen-reader data table. */
+  decorative?: boolean;
 }
 
 /**
@@ -700,8 +705,14 @@ export interface EndpointLabelsLayout {
   valueStyle: TextStyle;
   /** Width of the colored swatch line drawn left of the label. */
   swatchSize: number;
-  /** Gap between swatch, label, and value. */
+  /** Horizontal gap between swatch and label text. */
   gap: number;
+  /**
+   * Vertical gap between the last wrapped label line and the value text
+   * directly below it. Resolved by the engine so the renderer can't drift
+   * away from the height the collision sweep budgeted for each entry.
+   */
+  valueGap: number;
   /** Fill color for the rounded chip background behind the colored bar. */
   swatchChipFill: string;
 }

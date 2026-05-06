@@ -14,7 +14,6 @@
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import {
@@ -26,6 +25,7 @@ import {
   ENDPOINT_VALUE_FONT_WEIGHT,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
 } from './constants';
+import { formatEndpointValue } from './format';
 
 /**
  * Predict the pixel width the endpoint-labels column will need, including
@@ -86,19 +86,19 @@ export function predictEndpointLabelsWidth(
       const v = Number(row[yField]);
       if (Number.isFinite(v) && Math.abs(v) > maxAbs) maxAbs = Math.abs(v);
     }
+    // When the user supplied a format string, run it through the same
+    // formatter compute.ts will use so width prediction matches reality.
+    // Without one, fall back to a magnitude-aware sample that bounds the
+    // expected unformatted value width (compute.ts uses toFixed(2) here,
+    // which is roughly the same character count as "1.5K"-style abbreviations
+    // for the upper end of each band).
     let sample: string;
     if (yFormat) {
-      try {
-        sample = d3Format(yFormat)(maxAbs);
-      } catch {
-        sample = String(maxAbs);
-      }
-    } else {
-      if (maxAbs >= 1_000_000_000) sample = '1.5B';
-      else if (maxAbs >= 1_000_000) sample = '1.5M';
-      else if (maxAbs >= 1_000) sample = '1.5K';
-      else sample = String(Math.round(maxAbs * 100) / 100);
-    }
+      sample = formatEndpointValue(maxAbs, yFormat);
+    } else if (maxAbs >= 1_000_000_000) sample = '1.5B';
+    else if (maxAbs >= 1_000_000) sample = '1.5M';
+    else if (maxAbs >= 1_000) sample = '1.5K';
+    else sample = String(Math.round(maxAbs * 100) / 100);
     valueWidth = estimateTextWidth(sample, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT);
   }
 

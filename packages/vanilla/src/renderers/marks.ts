@@ -376,7 +376,7 @@ function getMarkSeries(mark: Mark): string | undefined {
   }
   // For arc marks, the category name is the first part of the aria label (before ':')
   if (mark.type === 'arc') {
-    return mark.aria.label.split(':')[0]?.trim();
+    return mark.aria.label?.split(':')[0]?.trim();
   }
   // For rect/point, the aria label may be "category: value" or "category, group: value".
   // The series name is the category part (before the colon).
@@ -397,8 +397,11 @@ export function renderMarks(parent: SVGElement, layout: ChartLayout): void {
     if (!renderer) continue;
 
     const el = renderer(mark, i);
-    // Add ARIA label if present
-    if (mark.aria?.label) {
+    // Decorative marks (e.g. sparkline endpoint dots) are hidden from
+    // assistive tech because they duplicate an existing data point.
+    if (mark.aria?.decorative) {
+      el.setAttribute('aria-hidden', 'true');
+    } else if (mark.aria?.label) {
       el.setAttribute('aria-label', mark.aria.label);
     }
     // Add data-series attribute for legend toggle matching

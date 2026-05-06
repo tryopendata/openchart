@@ -66,6 +66,7 @@ export function computePieLabels(
     // Format is "Category: value (percent%)". Split on the first colon
     // to handle category names that might contain colons.
     const ariaLabel = mark.aria.label;
+    if (!ariaLabel) continue;
     const firstColon = ariaLabel.indexOf(':');
     const labelText = firstColon >= 0 ? ariaLabel.slice(0, firstColon).trim() : '';
     if (!labelText) continue;

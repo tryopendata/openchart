@@ -321,6 +321,75 @@ describe('compileChart', () => {
     expect(layout.marks.length).toBeGreaterThan(0);
   });
 
+  it('hiddenSeries keeps remaining series on their original palette colors', () => {
+    // Regression: filtering renderData by hiddenSeries used to shrink the
+    // ordinal color scale's domain, which shifted every visible series down
+    // one palette index.
+    type LineLike = { type: string; seriesKey?: string; stroke?: string };
+    const findStroke = (marks: { type: string }[], series: string) =>
+      (marks.find((m) => m.type === 'line' && (m as LineLike).seriesKey === series) as LineLike)
+        ?.stroke;
+
+    const baseline = compileChart({ ...lineSpec, hiddenSeries: [] }, { width: 600, height: 400 });
+    const baselineUS = findStroke(baseline.marks, 'US');
+    const baselineUK = findStroke(baseline.marks, 'UK');
+    expect(baselineUS).toBeTruthy();
+    expect(baselineUK).toBeTruthy();
+
+    // Hide UK → US should keep its color.
+    const ukHidden = compileChart(
+      { ...lineSpec, hiddenSeries: ['UK'] },
+      { width: 600, height: 400 },
+    );
+    expect(findStroke(ukHidden.marks, 'US')).toBe(baselineUS);
+
+    // Hide US → UK should keep its color (reverse direction).
+    const usHidden = compileChart(
+      { ...lineSpec, hiddenSeries: ['US'] },
+      { width: 600, height: 400 },
+    );
+    expect(findStroke(usHidden.marks, 'UK')).toBe(baselineUK);
+  });
+
+  it('hiddenSeries keeps middle-of-N series colors stable in 3-series charts', () => {
+    // Pre-fix bug shifted EVERY series after the hidden one — a 2-series
+    // case only proves shift-by-one. A 3-series case where the middle is
+    // hidden proves the late series doesn't drift either.
+    type LineLike = { type: string; seriesKey?: string; stroke?: string };
+    const findStroke = (marks: { type: string }[], series: string) =>
+      (marks.find((m) => m.type === 'line' && (m as LineLike).seriesKey === series) as LineLike)
+        ?.stroke;
+
+    const threeSeriesSpec = {
+      mark: 'line' as const,
+      data: [
+        { date: '2020-01-01', value: 10, country: 'US' },
+        { date: '2021-01-01', value: 40, country: 'US' },
+        { date: '2020-01-01', value: 15, country: 'UK' },
+        { date: '2021-01-01', value: 35, country: 'UK' },
+        { date: '2020-01-01', value: 12, country: 'JP' },
+        { date: '2021-01-01', value: 38, country: 'JP' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'country', type: 'nominal' as const },
+      },
+    };
+
+    const baseline = compileChart(threeSeriesSpec, { width: 600, height: 400 });
+    const baselineUS = findStroke(baseline.marks, 'US');
+    const baselineJP = findStroke(baseline.marks, 'JP');
+
+    // Hide the middle series.
+    const ukHidden = compileChart(
+      { ...threeSeriesSpec, hiddenSeries: ['UK'] },
+      { width: 600, height: 400 },
+    );
+    expect(findStroke(ukHidden.marks, 'US')).toBe(baselineUS); // first stays
+    expect(findStroke(ukHidden.marks, 'JP')).toBe(baselineJP); // last doesn't shift up
+  });
+
   // ---------------------------------------------------------------------------
   // scale.clip
   // ---------------------------------------------------------------------------
@@ -573,6 +642,202 @@ describe('compileChart', () => {
     );
     expect(layout.chrome.title).toBeUndefined();
     expect(layout.chrome.topHeight).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // Sparkline visual defaults (trend color, endpoint dot, gradient, bar pill)
+  // -------------------------------------------------------------------------
+
+  const upTrendData = [
+    { date: '2026-01-01', value: 10 },
+    { date: '2026-01-02', value: 12 },
+    { date: '2026-01-03', value: 14 },
+    { date: '2026-01-04', value: 18 },
+    { date: '2026-01-05', value: 22 },
+  ];
+
+  const downTrendData = [
+    { date: '2026-01-01', value: 22 },
+    { date: '2026-01-02', value: 18 },
+    { date: '2026-01-03', value: 14 },
+    { date: '2026-01-04', value: 12 },
+    { date: '2026-01-05', value: 10 },
+  ];
+
+  const sparkLineSpec = {
+    mark: 'line' as const,
+    data: upTrendData,
+    encoding: {
+      x: { field: 'date', type: 'temporal' as const },
+      y: { field: 'value', type: 'quantitative' as const },
+    },
+    display: 'sparkline' as const,
+  };
+
+  it('sparkline line emits a single decorative endpoint dot at the last point', () => {
+    const layout = compileChart(sparkLineSpec, { width: 200, height: 40 });
+    const points = layout.marks.filter((m) => m.type === 'point');
+    expect(points.length).toBe(1);
+    expect(points[0].aria?.decorative).toBe(true);
+  });
+
+  it('sparkline line uses the positive theme token for an up-trending series', () => {
+    const layout = compileChart(sparkLineSpec, { width: 200, height: 40 });
+    const lineMark = layout.marks.find((m) => m.type === 'line');
+    expect(lineMark?.stroke).toBe('#16a34a');
+  });
+
+  it('sparkline line uses the negative theme token for a down-trending series', () => {
+    const layout = compileChart(
+      { ...sparkLineSpec, data: downTrendData },
+      { width: 200, height: 40 },
+    );
+    const lineMark = layout.marks.find((m) => m.type === 'line');
+    expect(lineMark?.stroke).toBe('#dc2626');
+  });
+
+  it('explicit markDef.stroke wins over the trend default in sparkline mode', () => {
+    const layout = compileChart(
+      { ...sparkLineSpec, mark: { type: 'line' as const, stroke: '#ff00ff' } },
+      { width: 200, height: 40 },
+    );
+    const lineMark = layout.marks.find((m) => m.type === 'line');
+    expect(lineMark?.stroke).toBe('#ff00ff');
+  });
+
+  it('explicit markDef.point: false suppresses the auto-injected endpoint dot', () => {
+    const layout = compileChart(
+      { ...sparkLineSpec, mark: { type: 'line' as const, point: false } },
+      { width: 200, height: 40 },
+    );
+    const points = layout.marks.filter((m) => m.type === 'point');
+    expect(points.length).toBe(0);
+  });
+
+  it('sparkline area injects a trend-colored gradient fill by default', () => {
+    const layout = compileChart(
+      { ...sparkLineSpec, mark: 'area' as const },
+      { width: 200, height: 40 },
+    );
+    const areaMark = layout.marks.find((m) => m.type === 'area');
+    // fill should be a gradient object (not a flat string)
+    expect(typeof areaMark?.fill).toBe('object');
+    expect((areaMark?.fill as { gradient?: string }).gradient).toBe('linear');
+  });
+
+  it('sparkline single-series vertical bars use a [min, max] domain', () => {
+    // With values 100, 105, 110, 120 and zero: false, the y-domain should
+    // start near 100 — not 0 — so the shortest bar is still visible.
+    const layout = compileChart(
+      {
+        mark: 'bar' as const,
+        data: [
+          { cat: 'a', value: 100 },
+          { cat: 'b', value: 105 },
+          { cat: 'c', value: 110 },
+          { cat: 'd', value: 120 },
+        ],
+        encoding: {
+          x: { field: 'cat', type: 'nominal' as const },
+          y: { field: 'value', type: 'quantitative' as const },
+        },
+        display: 'sparkline' as const,
+      },
+      { width: 200, height: 40 },
+    );
+    // The shortest bar (value 100) should NOT have a height that fills the
+    // chart down from y=0; with zero:false it sits near the bottom.
+    const rects = layout.marks.filter((m) => m.type === 'rect');
+    expect(rects.length).toBe(4);
+    // Heights should differ meaningfully across the four bars.
+    const heights = rects.map((r) => (r as { height: number }).height);
+    const maxH = Math.max(...heights);
+    const minH = Math.min(...heights);
+    expect(maxH - minH).toBeGreaterThan(maxH * 0.5);
+  });
+
+  it('sparkline stacked vertical bars retain the [0, max] baseline', () => {
+    // Stacked bars MUST baseline at zero — non-zero baselines break stack
+    // arithmetic. The total bar should equal the category sum.
+    const layout = compileChart(
+      {
+        mark: 'bar' as const,
+        data: [
+          { cat: 'a', series: 's1', value: 50 },
+          { cat: 'a', series: 's2', value: 50 },
+          { cat: 'b', series: 's1', value: 30 },
+          { cat: 'b', series: 's2', value: 70 },
+        ],
+        encoding: {
+          x: { field: 'cat', type: 'nominal' as const },
+          y: { field: 'value', type: 'quantitative' as const, stack: 'zero' as const },
+          color: { field: 'series', type: 'nominal' as const },
+        },
+        display: 'sparkline' as const,
+      },
+      { width: 200, height: 80 },
+    );
+    const rects = layout.marks.filter((m) => m.type === 'rect');
+    expect(rects.length).toBe(4);
+    // For stacked bars, both categories sum to the same total (100), so the
+    // tallest stacked column should fill close to the full chart area height.
+    // Verify by checking that at least one bar starts at the chart-area top
+    // (its y matches chartArea.y within a rounding tolerance).
+    const minY = Math.min(...rects.map((r) => (r as { y: number }).y));
+    expect(minY).toBeCloseTo(layout.area.y, -1);
+  });
+
+  it('sparkline bar gets pill cornerRadius by default', () => {
+    const layout = compileChart(
+      {
+        mark: 'bar' as const,
+        data: [
+          { cat: 'a', value: 5 },
+          { cat: 'b', value: 8 },
+          { cat: 'c', value: 6 },
+        ],
+        encoding: {
+          x: { field: 'cat', type: 'nominal' as const },
+          y: { field: 'value', type: 'quantitative' as const },
+        },
+        display: 'sparkline' as const,
+      },
+      { width: 200, height: 40 },
+    );
+    const rects = layout.marks.filter((m) => m.type === 'rect');
+    expect(rects.length).toBeGreaterThan(0);
+    // 'pill' translates to rx = barWidth / 2 in column compute. Each rect's
+    // cornerRadius should equal half the bar's width (or thickness).
+    const r = rects[0] as { width: number; cornerRadius: number };
+    expect(r.cornerRadius).toBeCloseTo(r.width / 2, 1);
+  });
+
+  it('sparkline stacked bars do NOT get pill cornerRadius (would break stacks)', () => {
+    // Each stacked segment becomes a half-pill if pill radius is applied,
+    // leaving visible gaps where two series meet. Skip the pill default
+    // when the y-channel is stacked.
+    const layout = compileChart(
+      {
+        mark: 'bar' as const,
+        data: [
+          { cat: 'a', series: 's1', value: 50 },
+          { cat: 'a', series: 's2', value: 50 },
+          { cat: 'b', series: 's1', value: 30 },
+          { cat: 'b', series: 's2', value: 70 },
+        ],
+        encoding: {
+          x: { field: 'cat', type: 'nominal' as const },
+          y: { field: 'value', type: 'quantitative' as const, stack: 'zero' as const },
+          color: { field: 'series', type: 'nominal' as const },
+        },
+        display: 'sparkline' as const,
+      },
+      { width: 200, height: 80 },
+    );
+    const rects = layout.marks.filter((m) => m.type === 'rect');
+    for (const rect of rects) {
+      expect((rect as { cornerRadius?: number }).cornerRadius ?? 0).toBe(0);
+    }
   });
 
   // ---------------------------------------------------------------------------

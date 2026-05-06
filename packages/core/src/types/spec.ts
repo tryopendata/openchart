@@ -147,10 +147,13 @@ export interface MarkDef {
    * Show point markers on line/area marks.
    * - true: filled circles at each data point
    * - 'transparent': invisible hover targets (legacy behavior)
-   * - 'endpoints': show only first and last point per series
+   * - 'endpoints': show only first and last point per series (hollow dots)
+   * - 'last' / 'first': show only the last (or first) point — filled dot,
+   *   no white halo. Useful for highlighting the latest reading on a line
+   *   chart and the default for sparkline mode.
    * - false: no point marks (default; uses voronoi overlay for tooltips)
    */
-  point?: boolean | 'transparent' | 'endpoints';
+  point?: boolean | 'transparent' | 'endpoints' | 'last' | 'first';
   /**
    * Curve interpolation for line/area marks.
    * Maps to d3-shape curve factories.
@@ -340,6 +343,13 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
   scale?: ScaleConfig;
   /**
    * Stacking behavior for quantitative channels (Vega-Lite aligned).
+   *
+   * Vega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds
+   * `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can
+   * write `stack: true` / `stack: false` without learning the string forms.
+   * The string forms are still the canonical input — the boolean shorthand is
+   * normalized to the matching string before reaching layout.
+   *
    * - undefined: chart-type default (see below)
    * - true | 'zero': stack from zero baseline
    * - 'normalize': stack and normalize to fraction of total (0-1 per category)
@@ -884,6 +894,11 @@ export interface LegendConfig {
  * | true  | true  | shown                    | shown           | hidden |
  *
  * Single-series charts: column is hidden by default (nothing to identify).
+ *
+ * The implementation is in `packages/engine/src/legend/suppression.ts` —
+ * `resolveSuppression` is the single source of truth. The table above is
+ * a user-facing mirror; if the two ever diverge, the engine wins. Tests
+ * in `legend/__tests__/suppression.test.ts` enforce every cell.
  */
 export interface EndpointLabelsConfig {
   /** Explicit on/off. When undefined, the chart auto-decides based on series count. */
