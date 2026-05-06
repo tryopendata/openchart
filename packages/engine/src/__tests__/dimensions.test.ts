@@ -296,6 +296,85 @@ describe('computeDimensions', () => {
     expect(narrowDims.chartArea.width).toBeGreaterThanOrEqual(350 * 0.4);
   });
 
+  describe('metrics bar', () => {
+    const fourMetrics = [
+      { label: 'CLOSE', value: '$186.10', delta: '+1.4%', deltaTone: 'up' as const },
+      { label: 'ALL-TIME HIGH', value: '$202.00' },
+      { label: '3-YR RETURN', value: '+1228%', secondary: '10.3x' },
+      { label: 'AVG MONTHLY', value: '$104.95' },
+    ];
+
+    it('reserves space and emits cells when metrics fit', () => {
+      const spec: NormalizedChartSpec = { ...baseSpec, metrics: fourMetrics };
+      const dims = computeDimensions(spec, { width: 800, height: 500 }, emptyLegend, lightTheme);
+
+      expect(dims.metrics).toBeDefined();
+      expect(dims.metrics?.cells).toHaveLength(4);
+      // First cell sits at the container left padding (aligned with title /
+      // eyebrow), not indented to the chart area's left gutter.
+      expect(dims.metrics?.cells[0].x).toBeLessThanOrEqual(dims.chartArea.x);
+      expect(dims.metrics?.cells[0].x).toBeGreaterThan(0);
+      // Cells span the metrics area evenly
+      const totalSpan =
+        (dims.metrics?.cells[3].x ?? 0) +
+        (dims.metrics?.cells[3].cellWidth ?? 0) -
+        (dims.metrics?.cells[0].x ?? 0);
+      const cellWidth = totalSpan / 4;
+      expect(dims.metrics?.cells[1].x).toBeCloseTo((dims.metrics?.cells[0].x ?? 0) + cellWidth, 1);
+    });
+
+    it('shrinks chart-area top to accommodate metric bar', () => {
+      const noMetrics = computeDimensions(
+        baseSpec,
+        { width: 800, height: 500 },
+        emptyLegend,
+        lightTheme,
+      );
+      const withMetrics = computeDimensions(
+        { ...baseSpec, metrics: fourMetrics },
+        { width: 800, height: 500 },
+        emptyLegend,
+        lightTheme,
+      );
+
+      expect(withMetrics.chartArea.height).toBeLessThan(noMetrics.chartArea.height);
+      expect(withMetrics.margins.top).toBeGreaterThan(noMetrics.margins.top);
+    });
+
+    it('strips metric bar on narrow widths', () => {
+      const spec: NormalizedChartSpec = { ...baseSpec, metrics: fourMetrics };
+      const dims = computeDimensions(spec, { width: 400, height: 400 }, emptyLegend, lightTheme);
+      expect(dims.metrics).toBeUndefined();
+
+      // Top margin should match the no-metrics case (no leftover reservation)
+      const noMetrics = computeDimensions(
+        baseSpec,
+        { width: 400, height: 400 },
+        emptyLegend,
+        lightTheme,
+      );
+      expect(dims.margins.top).toBe(noMetrics.margins.top);
+    });
+
+    it('strips metric bar when value text would overflow', () => {
+      const oversizeMetrics = [
+        { label: 'A', value: 'this is an extraordinarily long monetary value that cannot fit' },
+        { label: 'B', value: 'another impossibly long string to force overflow detection' },
+        { label: 'C', value: 'still more text that pushes well past the cell width' },
+        { label: 'D', value: 'and one more lengthy figure for good measure here too' },
+      ];
+      const spec: NormalizedChartSpec = { ...baseSpec, metrics: oversizeMetrics };
+      const dims = computeDimensions(spec, { width: 600, height: 400 }, emptyLegend, lightTheme);
+      expect(dims.metrics).toBeUndefined();
+    });
+
+    it('returns undefined when metrics array is empty', () => {
+      const spec: NormalizedChartSpec = { ...baseSpec, metrics: [] };
+      const dims = computeDimensions(spec, { width: 800, height: 500 }, emptyLegend, lightTheme);
+      expect(dims.metrics).toBeUndefined();
+    });
+  });
+
   it('tightens legend gap on narrow viewports', () => {
     const wideDims = computeDimensions(
       baseSpec,

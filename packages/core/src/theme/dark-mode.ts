@@ -7,16 +7,17 @@
 
 import { hsl, rgb } from 'd3-color';
 import { contrastRatio } from '../colors/contrast';
+import { ACHROMATIC_RAMP } from '../colors/palettes';
 import type { ResolvedTheme } from '../types/theme';
 
 // ---------------------------------------------------------------------------
 // Dark mode background
 // ---------------------------------------------------------------------------
 
-/** Default dark mode background color. */
-const DARK_BG = '#1a1a2e';
+/** Default dark mode background color (zinc-based canvas). */
+const DARK_BG = ACHROMATIC_RAMP.bg;
 /** Default dark mode text color. */
-const DARK_TEXT = '#e0e0e0';
+const DARK_TEXT = ACHROMATIC_RAMP.fg;
 
 // ---------------------------------------------------------------------------
 // Color adaptation
@@ -30,6 +31,17 @@ const DARK_TEXT = '#e0e0e0';
  * had against lightBg.
  */
 export function adaptColorForDarkMode(color: string, lightBg: string, darkBg: string): string {
+  // Adapter only handles hex/rgb-style inputs. Raw oklch() and other
+  // CSS Color 4 strings parse unreliably through d3-color in happy-dom,
+  // so guard early instead of silently falling back to a default.
+  if (rgb(color) == null) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(
+        `[openchart] adaptColorForDarkMode: unparseable color "${color}", returning unchanged. Use precomputed sRGB hex.`,
+      );
+    }
+    return color;
+  }
   const originalRatio = contrastRatio(color, lightBg);
   const c = hsl(color);
   if (c == null || Number.isNaN(c.h)) {
@@ -101,13 +113,17 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   // instead of overwriting with library defaults.
   const darkBg = alreadyDark ? inputBg : DARK_BG;
   const darkText = alreadyDark ? theme.colors.text : DARK_TEXT;
-  const darkGridline = alreadyDark ? theme.colors.gridline : '#333344';
-  const darkAxis = alreadyDark ? theme.colors.axis : '#888899';
+  const darkGridline = alreadyDark ? theme.colors.gridline : 'rgba(255,255,255,0.05)';
+  // axis is also tick-label fill — needs WCAG AA contrast on dark bg.
+  // Zinc-400 (`#a1a1aa`) hits ~6:1 against #09090b.
+  const darkAxis = alreadyDark ? theme.colors.axis : '#a1a1aa';
+  const darkMuted = ACHROMATIC_RAMP.fgMuted;
 
-  // Only adapt categorical colors when switching from light to dark
-  const categorical = alreadyDark
-    ? theme.colors.categorical
-    : theme.colors.categorical.map((c) => adaptColorForDarkMode(c, inputBg, darkBg));
+  // Categorical palette is pinned to design-system tokens. The same vibrant
+  // hex values render in both light and dark modes — adapting them via
+  // contrast-equivalence dulls them on dark backgrounds (cyan -> teal),
+  // which is the opposite of what the design system calls for.
+  const categorical = theme.colors.categorical;
 
   return {
     ...theme,
@@ -118,16 +134,37 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       text: darkText,
       gridline: darkGridline,
       axis: darkAxis,
-      annotationFill: 'rgba(255,255,255,0.08)',
-      annotationText: '#bbbbcc',
+      annotationFill: 'rgba(255,255,255,0.06)',
+      annotationText: darkMuted,
       categorical,
     },
     chrome: {
+      // Eyebrow keeps its accent tint (cyan in both modes); the other
+      // chrome elements desaturate to a muted gray on the dark canvas.
+      eyebrow: theme.chrome.eyebrow,
       title: { ...theme.chrome.title, color: darkText },
-      subtitle: { ...theme.chrome.subtitle, color: '#aaaaaa' },
-      source: { ...theme.chrome.source, color: '#888888' },
-      byline: { ...theme.chrome.byline, color: '#888888' },
-      footer: { ...theme.chrome.footer, color: '#888888' },
+      subtitle: { ...theme.chrome.subtitle, color: darkMuted },
+      source: { ...theme.chrome.source, color: darkMuted },
+      byline: { ...theme.chrome.byline, color: darkMuted },
+      footer: { ...theme.chrome.footer, color: darkMuted },
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Light mode line stroke darkening
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a darker variant of a hex color for use as a foreground stroke
+ * on light backgrounds, where the default cyan (#06b6d4) lacks contrast.
+ *
+ * Specifically maps cyan-500 -> cyan-600 (#0891b2). Other inputs pass
+ * through unchanged. Exposed via the `--oc-accent-strong` CSS token.
+ */
+export function adaptForLightLineStroke(color: string): string {
+  if (color === '#06b6d4' || color.toLowerCase() === '#06b6d4') {
+    return '#0891b2';
+  }
+  return color;
 }

@@ -16,6 +16,7 @@ function renderChromeElement(
   className: string,
   chromeKey: string,
   measureText?: MeasureTextFn,
+  uppercase = false,
 ): void {
   const text = createSVGElement('text');
   setAttrs(text, { x: element.x, y: element.y });
@@ -23,8 +24,13 @@ function renderChromeElement(
   text.setAttribute('class', className);
   text.setAttribute('data-chrome-key', chromeKey);
 
+  // happy-dom doesn't apply CSS text-transform inside SVG measurement, so
+  // pre-uppercase the rendered text for elements that style as uppercase.
+  // Browsers honor the CSS rule too, so this is double-applied harmlessly.
+  const renderedText = uppercase ? element.text.toUpperCase() : element.text;
+
   const lines = wrapText(
-    element.text,
+    renderedText,
     element.style.fontSize,
     element.style.fontWeight,
     element.maxWidth,
@@ -32,7 +38,7 @@ function renderChromeElement(
   );
 
   if (lines.length === 1) {
-    text.textContent = element.text;
+    text.textContent = renderedText;
   } else {
     const lineHeight = element.style.fontSize * (element.style.lineHeight ?? 1.3);
     for (let i = 0; i < lines.length; i++) {
@@ -53,6 +59,27 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   const { chrome, measureText } = layout;
 
   // Top chrome: render at their stored y positions (already absolute)
+  if (chrome.eyebrow) {
+    // Leading accent dot — matches the editorial design system mock.
+    // Eyebrow text uses dominantBaseline: hanging, so eyebrow.y is the top of
+    // the text. Visual center is roughly y + fontSize * 0.55 (cap height).
+    const eyebrow = chrome.eyebrow;
+    const dotR = 3;
+    const dotGap = 8;
+    const dotX = eyebrow.x + dotR;
+    const dotY = eyebrow.y + eyebrow.style.fontSize * 0.42;
+    const dot = createSVGElement('circle');
+    dot.setAttribute('class', 'oc-eyebrow-dot');
+    setAttrs(dot, { cx: dotX, cy: dotY, r: dotR });
+    dot.setAttribute('fill', eyebrow.style.fill ?? 'currentColor');
+    g.appendChild(dot);
+
+    const shifted: ResolvedChromeElement = {
+      ...eyebrow,
+      x: eyebrow.x + dotR * 2 + dotGap,
+    };
+    renderChromeElement(g, shifted, 'oc-eyebrow', 'eyebrow', measureText, true);
+  }
   if (chrome.title) {
     renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
   }
@@ -90,6 +117,21 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       'footer',
       measureText,
     );
+  }
+  if (chrome.brand) {
+    const brandY = bottomOffset + chrome.brand.y;
+    renderChromeElement(g, { ...chrome.brand, y: brandY }, 'oc-brand', 'brand', measureText);
+    // Cyan accent dot to the left of the brand text. estimateCharWidth-ish:
+    // text-anchor=end means brand.x is the right edge. The dot sits 12px
+    // left of the leftmost character, derived from a rough text width.
+    const charWidth = chrome.brand.style.fontSize * 0.55;
+    const textWidth = chrome.brand.text.length * charWidth;
+    const dotX = chrome.brand.x - textWidth - 12;
+    const dotY = brandY + chrome.brand.style.fontSize / 2;
+    const dot = createSVGElement('circle');
+    dot.setAttribute('class', 'oc-brand-dot');
+    setAttrs(dot, { cx: dotX, cy: dotY, r: 3 });
+    g.appendChild(dot);
   }
 
   parent.appendChild(g);

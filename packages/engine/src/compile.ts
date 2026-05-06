@@ -430,15 +430,15 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
   const resolvedAnimation = resolveAnimation(rawAnimationSpec);
 
-  // Crosshair: explicit user value at any level wins. In sparkline mode the
-  // default is off, otherwise default is off too (crosshair is opt-in). The
-  // value is plumbed through ChartLayout so the renderer doesn't need to
-  // re-inspect the raw spec.
+  // Crosshair: explicit user value at any level wins. Default is ON for line
+  // and area marks in full mode (the hover guideline + per-series tooltip is
+  // the standard interaction pattern for time-series charts). Sparkline mode
+  // defaults off. The value is plumbed through ChartLayout so the renderer
+  // doesn't need to re-inspect the raw spec.
   const rawCrosshair = (bpForExplicit?.crosshair ?? rawSpec.crosshair) as boolean | undefined;
-  const crosshair =
-    chartSpec.display === 'sparkline' && !chartSpec.userExplicit.crosshair
-      ? false
-      : rawCrosshair === true;
+  const isLineOrAreaMark = chartSpec.markType === 'line' || chartSpec.markType === 'area';
+  const crosshairDefault = chartSpec.display === 'sparkline' ? false : isLineOrAreaMark;
+  const crosshair = chartSpec.userExplicit.crosshair ? rawCrosshair === true : crosshairDefault;
 
   // Watermark default-off in sparkline mode unless user-explicit.
   if (chartSpec.display === 'sparkline' && !chartSpec.userExplicit.watermark) {
@@ -514,8 +514,69 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Build a filtered spec for scales and marks, keeping all other properties intact
   const renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
 
+  // Inline y-axis labels render at chartArea.x with text-anchor=start. Without
+  // an inset the leftmost data point on a line/area would clip through the
+  // label glyphs (since the line begins at chartArea.x too). Inset the x-scale
+  // range start by the widest tick label width so the data starts to the right
+  // of the labels. Axes/gridlines still span the full chart area, so inline
+  // labels stay flush left where the design intends.
+  const yEnc = renderSpec.encoding?.y;
+  const yAxisCfgInline =
+    typeof yEnc?.axis === 'object' && yEnc.axis !== null
+      ? (yEnc.axis as Record<string, unknown>)
+      : undefined;
+  const yIsContinuous = yEnc?.type === 'quantitative' || yEnc?.type === 'temporal';
+  const isLineOrArea = renderSpec.markType === 'line' || renderSpec.markType === 'area';
+  const yInlineExplicit = yAxisCfgInline?.tickPosition as 'inline' | 'gutter' | undefined;
+  const yIsInline =
+    yInlineExplicit === 'inline' ||
+    (yInlineExplicit === undefined &&
+      isLineOrArea &&
+      yIsContinuous &&
+      yAxisCfgInline?.orient !== 'right');
+  let scaleArea = chartArea;
+  if (yIsInline && yEnc && yIsContinuous && yEnc.axis !== false) {
+    const yField = yEnc.field;
+    const yFmt = yAxisCfgInline?.format as string | undefined;
+    let maxAbsVal = 0;
+    for (const row of renderSpec.data) {
+      const v = Number(row[yField]);
+      if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
+    }
+    let sample: string;
+    if (yFmt) {
+      try {
+        sample = d3Format(yFmt)(maxAbsVal);
+      } catch {
+        sample = String(maxAbsVal);
+      }
+    } else if (maxAbsVal >= 1_000_000_000) sample = '1.5B';
+    else if (maxAbsVal >= 1_000_000) sample = '1.5M';
+    else if (maxAbsVal >= 1_000) sample = '1.5K';
+    else if (maxAbsVal >= 100) sample = '100';
+    else if (maxAbsVal >= 10) sample = '10';
+    else sample = '0.0';
+    const negPrefix = renderSpec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
+    const labelEst = negPrefix + sample;
+    const labelWidth = estimateTextWidth(
+      labelEst,
+      theme.fonts.sizes.axisTick,
+      theme.fonts.weights.normal,
+    );
+    const INLINE_LABEL_BREATHING_ROOM = 8;
+    const inset = Math.ceil(labelWidth + INLINE_LABEL_BREATHING_ROOM);
+    if (inset > 0 && inset < chartArea.width) {
+      scaleArea = {
+        x: chartArea.x + inset,
+        y: chartArea.y,
+        width: chartArea.width - inset,
+        height: chartArea.height,
+      };
+    }
+  }
+
   // Compute scales
-  const scales = computeScales(renderSpec, chartArea, renderSpec.data);
+  const scales = computeScales(renderSpec, scaleArea, renderSpec.data);
 
   // Update color scale to use theme palette (only when user hasn't provided an explicit range)
   applyColorScaleRange(scales, renderSpec.encoding, theme);
@@ -541,6 +602,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         encoding: renderSpec.encoding as Encoding,
         skipX,
         skipY,
+        markType: chartSpec.markType,
       });
 
   // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
@@ -613,6 +675,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   return {
     area: chartArea,
     chrome: dims.chrome,
+    metrics: dims.metrics,
     axes: {
       x: axes.x,
       y: axes.y,

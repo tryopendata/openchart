@@ -118,6 +118,8 @@ function adaptChromeForDarkBg(theme: Theme, textColor: string): Theme {
   return {
     ...theme,
     chrome: {
+      // Eyebrow keeps its accent tint regardless of surface mode.
+      eyebrow: theme.chrome.eyebrow,
       title: {
         ...theme.chrome.title,
         color:

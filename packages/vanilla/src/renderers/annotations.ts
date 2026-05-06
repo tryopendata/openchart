@@ -85,6 +85,11 @@ function renderAnnotation(
   if (annotation.rect) {
     const rect = createSVGElement('rect');
     rect.setAttribute('class', 'oc-annotation-range');
+    // Range fills cover large chart-area regions; if they intercept pointer
+    // events the voronoi tooltip overlay below stops receiving mousemove
+    // inside the range, creating hover dead zones. The label still receives
+    // events for annotation click handlers.
+    rect.setAttribute('pointer-events', 'none');
     setAttrs(rect, {
       x: annotation.rect.x,
       y: annotation.rect.y,
@@ -123,6 +128,20 @@ function renderAnnotation(
       const c = annotation.label.connector;
       if (c.style === 'curve') {
         renderCurvedArrow(g, c.from, c.to, c.stroke);
+      } else if (c.style === 'drop-line') {
+        const connector = createSVGElement('line');
+        connector.setAttribute('class', 'oc-annotation-connector oc-annotation-drop-line');
+        setAttrs(connector, {
+          x1: c.from.x,
+          y1: c.from.y,
+          x2: c.to.x,
+          y2: c.to.y,
+          stroke: c.stroke,
+          'stroke-width': 1,
+          'stroke-opacity': 0.6,
+          'shape-rendering': 'crispEdges',
+        });
+        g.appendChild(connector);
       } else {
         const connector = createSVGElement('line');
         connector.setAttribute('class', 'oc-annotation-connector');
@@ -137,6 +156,34 @@ function renderAnnotation(
         });
         g.appendChild(connector);
       }
+
+      // Endpoint marker: bullseye dot at the data point. Outer ring uses the
+      // chart background as fill so it knocks out the line/area beneath; inner
+      // dot is the connector color. Skipped for curve style — the arrowhead
+      // already serves as the endpoint indicator there.
+      if (c.endpoint && c.style !== 'curve') {
+        const ring = createSVGElement('circle');
+        ring.setAttribute('class', 'oc-annotation-endpoint-ring');
+        setAttrs(ring, {
+          cx: c.endpoint.x,
+          cy: c.endpoint.y,
+          r: 5,
+          fill: bgColor ?? '#ffffff',
+          stroke: c.stroke,
+          'stroke-width': 1.5,
+        });
+        g.appendChild(ring);
+
+        const dot = createSVGElement('circle');
+        dot.setAttribute('class', 'oc-annotation-endpoint-dot');
+        setAttrs(dot, {
+          cx: c.endpoint.x,
+          cy: c.endpoint.y,
+          r: 2,
+          fill: c.stroke,
+        });
+        g.appendChild(dot);
+      }
     }
 
     const text = createSVGElement('text');
@@ -149,9 +196,14 @@ function renderAnnotation(
     const lineHeight = fontSize * (annotation.label.style.lineHeight ?? 1.3);
     const isMultiLine = lines.length > 1;
 
-    // Multi-line text uses center alignment for a cleaner look
+    // Multi-line text: drop-line connectors keep the resolved side anchor so
+    // the label hugs the vertical line. Other connectors center the text for
+    // a cleaner look.
     if (isMultiLine) {
-      text.setAttribute('text-anchor', 'middle');
+      const isDropLine = annotation.label.connector?.style === 'drop-line';
+      if (!isDropLine) {
+        text.setAttribute('text-anchor', 'middle');
+      }
       for (let i = 0; i < lines.length; i++) {
         const tspan = createSVGElement('tspan');
         setAttrs(tspan, { x: annotation.label.x, dy: i === 0 ? 0 : lineHeight });

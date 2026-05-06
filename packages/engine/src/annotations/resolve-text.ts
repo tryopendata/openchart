@@ -3,12 +3,13 @@
  * optional callout connector to the data point.
  */
 
-import type {
-  Rect,
-  ResolvedAnnotation,
-  ResolvedLabel,
-  TextAnnotation,
-  TextStyle,
+import {
+  estimateTextWidth,
+  type Rect,
+  type ResolvedAnnotation,
+  type ResolvedLabel,
+  type TextAnnotation,
+  type TextStyle,
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import {
@@ -20,6 +21,13 @@ import {
 } from './constants';
 import { applyOffset, computeAnchorOffset, computeConnectorOrigin } from './geometry';
 import { resolvePosition } from './position';
+
+/** Horizontal gap between the drop-line and the label text. */
+const DROP_LINE_LABEL_GAP = 8;
+/** Vertical gap between the top of the drop-line and the top of the label box. */
+const DROP_LINE_TOP_GAP = 4;
+/** Vertical gap between the bottom of the drop-line and the data point. */
+const DROP_LINE_BOTTOM_GAP = 4;
 
 export function makeAnnotationLabelStyle(
   fontSize?: number,
@@ -58,6 +66,13 @@ export function resolveTextAnnotation(
     isDark,
   );
 
+  // Drop-line connector: vertical line through the data point's x with the
+  // label sitting flush beside it. Auto-flips to the opposite side if the
+  // chosen side would overflow the chart area.
+  if (annotation.connector === 'drop-line') {
+    return resolveDropLineAnnotation(annotation, px, py, chartArea, labelStyle, defaultTextFill);
+  }
+
   // Compute position from anchor direction + user offset
   const anchorDelta = computeAnchorOffset(annotation.anchor, px, py, chartArea);
   const finalDelta = applyOffset(anchorDelta, annotation.offset);
@@ -67,7 +82,8 @@ export function resolveTextAnnotation(
 
   // Connector: draw unless explicitly disabled
   const showConnector = annotation.connector !== false;
-  const connectorStyle = annotation.connector === 'curve' ? 'curve' : 'straight';
+  const connectorStyle: 'straight' | 'curve' =
+    annotation.connector === 'curve' ? 'curve' : 'straight';
 
   // Compute connector origin: pick the edge midpoint closest to the data point
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
@@ -116,10 +132,98 @@ export function resolveTextAnnotation(
       ? {
           from: adjustedFrom,
           to: adjustedTo,
+          endpoint: { x: px, y: py },
           stroke: annotation.stroke ?? '#999999',
           style: connectorStyle,
         }
       : undefined,
+    background: annotation.background,
+    halo: annotation.halo,
+  };
+
+  return {
+    type: 'text',
+    id: annotation.id,
+    label,
+    stroke: annotation.stroke,
+    fill: annotation.fill,
+    opacity: annotation.opacity,
+    zIndex: annotation.zIndex,
+  };
+}
+
+/**
+ * Resolve a drop-line text annotation. The connector is a vertical line through
+ * the data point's x. The label sits beside the line, anchored toward the chosen
+ * side (left or right), and auto-flips if the chosen side would overflow.
+ */
+function resolveDropLineAnnotation(
+  annotation: TextAnnotation,
+  px: number,
+  py: number,
+  chartArea: Rect,
+  labelStyle: TextStyle,
+  defaultTextFill: string,
+): ResolvedAnnotation {
+  const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+  const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
+  const lines = annotation.text.split('\n');
+  const estimatedWidth = Math.max(
+    0,
+    ...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)),
+  );
+
+  // Pick initial side from anchor; default to 'left' (label sits to the left
+  // of the drop-line) when not specified.
+  let side: 'left' | 'right' = annotation.anchor === 'right' ? 'right' : 'left';
+
+  // Auto-flip: if the chosen side would push the label past the chart-area edge,
+  // flip to the other side. Compare the estimated label width against the
+  // available space on each side. When neither side fits cleanly, fall back to
+  // whichever side has more room — graceful degradation beats silent overflow.
+  const spaceLeft = px - chartArea.x - DROP_LINE_LABEL_GAP;
+  const spaceRight = chartArea.x + chartArea.width - px - DROP_LINE_LABEL_GAP;
+  const fitsLeft = estimatedWidth <= spaceLeft;
+  const fitsRight = estimatedWidth <= spaceRight;
+  if (side === 'left' && !fitsLeft) {
+    side = fitsRight || spaceRight > spaceLeft ? 'right' : 'left';
+  } else if (side === 'right' && !fitsRight) {
+    side = fitsLeft || spaceLeft > spaceRight ? 'left' : 'right';
+  }
+
+  const labelX = side === 'left' ? px - DROP_LINE_LABEL_GAP : px + DROP_LINE_LABEL_GAP;
+  const textAnchor: 'start' | 'end' = side === 'left' ? 'end' : 'start';
+
+  // Drop the label box top a bit above the data point so the label and line
+  // share a baseline that reads as "callout above the point".
+  const lineHeight = fontSize * DEFAULT_LINE_HEIGHT;
+  const totalHeight = lineHeight * lines.length;
+  // Position the first line so the bottom of the label sits ~12px above py.
+  // Clamp to the chart-area top so multi-line labels near peaks don't escape
+  // upward into chrome / metric-bar territory.
+  const desiredLabelTopY = py - totalHeight - 12;
+  const minLabelTopY = chartArea.y + 4;
+  const labelTopY = Math.max(desiredLabelTopY, minLabelTopY);
+  const labelBaselineY = labelTopY + fontSize;
+
+  const resolvedStyle: TextStyle = { ...labelStyle, textAnchor };
+
+  const from = { x: px, y: labelTopY - DROP_LINE_TOP_GAP };
+  const to = { x: px, y: py - DROP_LINE_BOTTOM_GAP };
+
+  const label: ResolvedLabel = {
+    text: annotation.text,
+    x: labelX,
+    y: labelBaselineY,
+    style: resolvedStyle,
+    visible: true,
+    connector: {
+      from,
+      to,
+      endpoint: { x: px, y: py },
+      stroke: annotation.stroke ?? defaultTextFill,
+      style: 'drop-line',
+    },
     background: annotation.background,
     halo: annotation.halo,
   };

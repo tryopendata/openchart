@@ -109,6 +109,7 @@ export interface ChromeDefaults {
 
 /** Default chrome styles for each element type. */
 export interface ThemeChromeDefaults {
+  eyebrow: ChromeDefaults;
   title: ChromeDefaults;
   subtitle: ChromeDefaults;
   source: ChromeDefaults;

@@ -2,6 +2,15 @@
 
 Data visualization library monorepo. Declarative chart and table specs rendered via SVG (charts) and DOM (tables).
 
+## Read these first (skip the codebase investigation step)
+
+Before grepping the repo to find where something lives, check:
+
+- [`docs/codebase-map.md`](../docs/codebase-map.md) — lookup table of file paths, function names, package boundaries, and common "files that don't exist but you'll think they do" gotchas. Covers theme infra, annotation system, chrome layout, mark types, animation system, etc.
+- [`docs/architecture.md`](../docs/architecture.md) — the high-level *why*: package dependency graph, compile pipeline, registry pattern, theme resolution.
+
+If your task involves finding files/functions in this repo, the codebase map almost certainly already has them. Use it instead of a fresh exploration pass. If something's missing or wrong in the map, update it as part of your work so the next session benefits.
+
 ## Architecture
 
 ```

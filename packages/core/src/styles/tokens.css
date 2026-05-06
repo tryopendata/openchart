@@ -11,7 +11,8 @@
 .oc-sankey-root,
 .oc-tilemap-root,
 .oc-barlist-root {
-  --oc-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --oc-font-family:
+    "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --oc-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
 
   /* Animation easing presets via CSS linear() */
@@ -70,27 +71,69 @@
   --oc-animation-duration: 500ms;
   --oc-animation-stagger: 80ms;
   --oc-annotation-delay: 200ms;
-  --oc-title-size: 22px;
-  --oc-title-weight: 700;
-  --oc-title-tracking: -0.02em;
+
+  /* Typography scale (editorial design system) */
+  --oc-title-size: 26px;
+  --oc-title-weight: 590;
+  --oc-title-tracking: -0.022em;
   --oc-subtitle-size: 14px;
   --oc-subtitle-weight: 400;
-  --oc-source-size: 12px;
+  --oc-source-size: 11px;
   --oc-source-weight: 400;
   --oc-body-size: 13px;
+  --oc-eyebrow-size: 11px;
+  --oc-eyebrow-weight: 510;
+  --oc-eyebrow-tracking: 0.08em;
+
+  /* Surfaces (light mode defaults) */
   --oc-bg: #ffffff;
-  --oc-text: #1d1d1d;
-  --oc-text-secondary: #5c5c5c;
-  --oc-text-muted: #999999;
-  --oc-gridline: #e8e8e8;
-  --oc-axis: #888888;
-  --oc-border: #e2e2e2;
-  --oc-border-radius: 4px;
+  --oc-card: #ffffff;
+  --oc-secondary: #f4f4f5; /* zinc-100, raised surface */
+
+  /*
+   * Text levels. Names invert across modes: in light mode "muted" sits at
+   * a lighter zinc step than "subtle" because both are picked relative to
+   * the active background, not from a fixed lightness ladder. The intent
+   * is "muted = first step away from primary text"; "subtle = next step
+   * down"; etc.
+   *
+   *   Light mode: text=zinc-950, secondary=zinc-700, muted=zinc-500,
+   *               subtle=zinc-400, faint=zinc-300
+   *   Dark mode (dark.css): inverts the surface tokens but keeps the same
+   *               muted -> subtle -> faint progression away from primary.
+   */
+  --oc-text: #09090b;
+  --oc-text-secondary: #3f3f46;
+  --oc-text-muted: #71717a;
+  --oc-text-subtle: #a1a1aa;
+  --oc-text-faint: #d4d4d8;
+
+  /* Lines */
+  --oc-gridline: rgba(0, 0, 0, 0.06);
+  --oc-axis: rgba(0, 0, 0, 0.1);
+  --oc-border: rgba(0, 0, 0, 0.08);
+  --oc-border-radius: 2px;
+
+  /* Brand and semantic */
+  --oc-accent: #06b6d4;
+  --oc-accent-strong: #0891b2; /* darker cyan for line strokes on light bg */
+  --oc-positive: #10b981;
+  --oc-negative: #e11d48;
   --oc-focus: #3b82f6;
+
+  /* Spacing scale (4px base) */
+  --oc-space-1: 4px;
+  --oc-space-2: 8px;
+  --oc-space-3: 12px;
+  --oc-space-4: 16px;
+  --oc-space-6: 24px;
+  --oc-space-8: 32px;
+
+  /* Interactive states */
   --oc-hover-bg: rgba(0, 0, 0, 0.025);
   --oc-tooltip-bg: rgba(255, 255, 255, 0.88);
   --oc-tooltip-border: rgba(0, 0, 0, 0.08);
   --oc-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
-  --oc-tooltip-text: #1d1d1d;
-  --oc-legend-text: #555555;
+  --oc-tooltip-text: #09090b;
+  --oc-legend-text: #3f3f46;
 }

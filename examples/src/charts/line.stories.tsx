@@ -95,11 +95,18 @@ const singleLineSpec: ChartSpec = {
   ],
   labels: { density: 'endpoints', format: '.1f' },
   chrome: {
+    eyebrow: 'Macro · Inflation',
     title: "Inflation's Wild Ride: From 1% to 9% and Back",
     subtitle: 'US Consumer Price Index, year-over-year % change, quarterly 2019-2024',
     source: 'Source: Bureau of Labor Statistics',
     byline: 'Chart: OpenChart',
   },
+  metrics: [
+    { label: 'LATEST', value: '3.1%', delta: '-0.3pp', deltaTone: 'down' },
+    { label: 'PEAK', value: '9.1%', secondary: 'Jun 2022' },
+    { label: 'TROUGH', value: '0.1%', secondary: 'May 2020' },
+    { label: '5-YR AVG', value: '3.8%' },
+  ],
 };
 
 export const SingleLine = () => (
@@ -179,6 +186,7 @@ const multiSeriesSpec: ChartSpec = {
     Germany: { lineStyle: 'dotted', strokeWidth: 1.5, opacity: 0.65 },
   },
   chrome: {
+    eyebrow: 'Macro · GDP Growth',
     title: 'The Great Divergence: Three Economies, Three Recoveries',
     subtitle: 'Annual real GDP growth rate, 2019-2024',
     source: 'Source: World Bank, IMF',
@@ -354,11 +362,18 @@ const fiveSeriesSpec: ChartSpec = {
   legend: { position: 'top' },
   labels: { density: 'endpoints', format: ',.0f' },
   chrome: {
+    eyebrow: 'Equities · Big Tech',
     title: 'Big Tech Roars Past $2 Trillion in Combined Revenue',
     subtitle: 'Quarterly revenue in billions USD, 2019-2024',
     source: 'Source: Company filings (SEC 10-K)',
     byline: 'Chart: OpenChart',
   },
+  metrics: [
+    { label: 'COMBINED Q4', value: '$582B', delta: '+12.4%', deltaTone: 'up' },
+    { label: 'LEADER', value: 'Apple', secondary: '$120B' },
+    { label: 'FASTEST GROWING', value: 'NVIDIA', secondary: '+265%' },
+    { label: '5-YR CAGR', value: '+18.6%' },
+  ],
 };
 
 export const FiveSeries = () => (
@@ -416,11 +431,18 @@ const singleAreaSpec: ChartSpec = {
   ],
   labels: { density: 'endpoints', format: ',.1f' },
   chrome: {
+    eyebrow: 'Energy · Electric Vehicles',
     title: 'The Electric Surge: From Niche to 58 Million on the Road',
     subtitle: 'Cumulative global electric car fleet, 2015-2024 (BEV + PHEV)',
     source: 'Source: IEA Global EV Outlook 2025',
     byline: 'Chart: OpenChart',
   },
+  metrics: [
+    { label: 'GLOBAL FLEET', value: '58.0M', delta: '+45%', deltaTone: 'up' },
+    { label: 'LEADER', value: 'China', secondary: '29.0M' },
+    { label: '10-YR GROWTH', value: '+89x' },
+    { label: '2024 SHARE', value: '20%', secondary: 'of new sales' },
+  ],
 };
 
 export const AreaChart = () => (
@@ -576,6 +598,7 @@ const stackedAreaSpec: ChartSpec = {
   legend: { symbolLimit: 10 },
   labels: { density: 'none' },
   chrome: {
+    eyebrow: 'Energy · Power Generation',
     title: 'Renewables Rising, but Fossil Fuels Still Dominate',
     subtitle: 'Global electricity generation by source, 2000-2023 (TWh)',
     source: 'Source: Ember Global Electricity Review 2025',
@@ -725,6 +748,7 @@ const stepAreaSpec: ChartSpec = {
   },
   labels: { density: 'all', format: ',.0f' },
   chrome: {
+    eyebrow: 'Infrastructure · EV Charging',
     title: 'US Public EV Charging Network Has Quadrupled Since 2018',
     subtitle:
       'Number of public EV charging stations (thousands), step interpolation shows discrete annual jumps',
@@ -736,5 +760,125 @@ const stepAreaSpec: ChartSpec = {
 export const StepArea = () => (
   <div className="story-chart story-h-400">
     <Chart spec={stepAreaSpec} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Editorial single-line: NVIDIA closing prices with metric bar, drop-line
+// annotation, refline, and range. Designed to match the design system mock.
+// ---------------------------------------------------------------------------
+
+const nvidiaCloses: Array<{ date: string; close: number }> = [
+  { date: '2022-11-01', close: 14.61 },
+  { date: '2022-12-01', close: 14.61 },
+  { date: '2023-01-01', close: 19.55 },
+  { date: '2023-02-01', close: 23.21 },
+  { date: '2023-03-01', close: 27.78 },
+  { date: '2023-04-01', close: 27.71 },
+  { date: '2023-05-01', close: 37.86 },
+  { date: '2023-06-01', close: 42.28 },
+  { date: '2023-07-01', close: 46.78 },
+  { date: '2023-08-01', close: 49.25 },
+  { date: '2023-09-01', close: 43.51 },
+  { date: '2023-10-01', close: 40.78 },
+  { date: '2023-11-01', close: 46.7 },
+  { date: '2023-12-01', close: 49.52 },
+  { date: '2024-01-01', close: 61.59 },
+  { date: '2024-02-01', close: 78.78 },
+  { date: '2024-03-01', close: 90.36 },
+  { date: '2024-04-01', close: 86.4 },
+  { date: '2024-05-01', close: 109.6 },
+  { date: '2024-06-01', close: 123.54 },
+  { date: '2024-07-01', close: 117.02 },
+  { date: '2024-08-01', close: 119.37 },
+  { date: '2024-09-01', close: 121.44 },
+  { date: '2024-10-01', close: 132.76 },
+  { date: '2024-11-01', close: 138.25 },
+  { date: '2024-12-01', close: 134.29 },
+  { date: '2025-01-01', close: 120.07 },
+  { date: '2025-02-01', close: 124.92 },
+  { date: '2025-03-01', close: 108.38 },
+  { date: '2025-04-01', close: 109.02 },
+  { date: '2025-05-01', close: 135.13 },
+  { date: '2025-06-01', close: 157.99 },
+  { date: '2025-07-01', close: 173.5 },
+  { date: '2025-08-01', close: 180.75 },
+  { date: '2025-09-01', close: 191.04 },
+  { date: '2025-10-01', close: 202.0 },
+  { date: '2025-11-01', close: 186.1 },
+];
+
+const editorialSingleLineDarkSpec: ChartSpec = {
+  animation: false,
+  mark: { type: 'line', interpolate: 'monotone', strokeWidth: 1.75, point: false },
+  data: nvidiaCloses,
+  encoding: {
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 5 } },
+    y: {
+      field: 'close',
+      type: 'quantitative',
+      axis: { format: '$.0f', grid: true, tickPosition: 'inline' },
+    },
+  },
+  chrome: {
+    eyebrow: 'Equities · Single ticker',
+    title: 'NVIDIA Corporation',
+    subtitle: 'Daily close, 3-year history',
+    source: 'Source: Nasdaq historical data',
+    byline: 'Chart: OpenChart',
+    brand: 'tryOpenData.ai',
+  },
+  metrics: [
+    { label: 'CLOSE', value: '$186.10', delta: '+1.4%', deltaTone: 'up' },
+    { label: 'ALL-TIME HIGH', value: '$202.00' },
+    { label: '3-YR RETURN', value: '+1,228%', secondary: '10.3x' },
+    { label: 'AVG MONTHLY', value: '$104.95' },
+  ],
+  annotations: [
+    {
+      type: 'text',
+      x: '2025-10-01',
+      y: 202,
+      text: 'All-time high · $202\nOct 2025',
+      connector: 'drop-line',
+      anchor: 'left',
+    },
+    {
+      type: 'refline',
+      y: 105,
+      label: '3-yr avg · $105',
+      style: 'dashed',
+    },
+    {
+      type: 'range',
+      x1: '2023-01-01',
+      x2: '2023-04-01',
+      label: 'ChatGPT mania',
+    },
+  ],
+  darkMode: 'force',
+};
+
+const editorialSingleLineLightSpec: ChartSpec = {
+  ...editorialSingleLineDarkSpec,
+  mark: {
+    type: 'line',
+    interpolate: 'monotone',
+    strokeWidth: 1.75,
+    point: false,
+    stroke: '#0891b2',
+  },
+  darkMode: 'off',
+};
+
+export const EditorialSingleLine = () => (
+  <div className="story-chart story-h-550">
+    <Chart spec={editorialSingleLineDarkSpec} />
+  </div>
+);
+
+export const EditorialSingleLineLight = () => (
+  <div className="story-chart story-h-550">
+    <Chart spec={editorialSingleLineLightSpec} />
   </div>
 );

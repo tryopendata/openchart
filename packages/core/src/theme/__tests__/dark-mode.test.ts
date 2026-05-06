@@ -5,10 +5,10 @@ import { resolveTheme } from '../resolve';
 
 describe('adaptColorForDarkMode', () => {
   const lightBg = '#ffffff';
-  const darkBg = '#1a1a2e';
+  const darkBg = '#09090b';
 
   it('adapted color has similar contrast on dark bg as original on light bg', () => {
-    const original = '#1b7fa3'; // teal from palette
+    const original = '#06b6d4'; // cyan, primary accent
     const adapted = adaptColorForDarkMode(original, lightBg, darkBg);
 
     const originalRatio = contrastRatio(original, lightBg);
@@ -17,6 +17,11 @@ describe('adaptColorForDarkMode', () => {
     // Should be within 30% of the original ratio
     const tolerance = originalRatio * 0.3;
     expect(Math.abs(adaptedRatio - originalRatio)).toBeLessThan(tolerance);
+  });
+
+  it('returns unchanged input for unparseable colors (e.g. raw oklch)', () => {
+    const result = adaptColorForDarkMode('oklch(70% 0.15 200)', lightBg, darkBg);
+    expect(result).toBe('oklch(70% 0.15 200)');
   });
 
   it('returns a valid hex color', () => {
@@ -40,7 +45,7 @@ describe('adaptTheme', () => {
   it('swaps to dark background', () => {
     const light = resolveTheme();
     const dark = adaptTheme(light);
-    expect(dark.colors.background).toBe('#1a1a2e');
+    expect(dark.colors.background).toBe('#09090b');
   });
 
   it('updates text color for dark mode', () => {
@@ -52,12 +57,13 @@ describe('adaptTheme', () => {
     expect(ratio).toBeGreaterThan(4);
   });
 
-  it('adapts categorical palette colors', () => {
+  it('preserves categorical palette across modes', () => {
     const light = resolveTheme();
     const dark = adaptTheme(light);
-    // Colors should be different (adjusted for dark bg)
-    expect(dark.colors.categorical).not.toEqual(light.colors.categorical);
-    expect(dark.colors.categorical).toHaveLength(light.colors.categorical.length);
+    // Design-system tokens are mode-agnostic: the same vibrant cyan-led
+    // palette renders in both modes. Contrast-equivalence adaptation
+    // dulls cyan into teal, which is not what the spec calls for.
+    expect(dark.colors.categorical).toEqual(light.colors.categorical);
   });
 
   it('updates chrome text colors', () => {

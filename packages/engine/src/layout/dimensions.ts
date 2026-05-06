@@ -19,6 +19,7 @@ import type {
   Margins,
   Rect,
   ResolvedChrome,
+  ResolvedMetricBar,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import {
@@ -42,6 +43,7 @@ import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
 import { legendGap } from '../legend/wrap';
+import { computeMetricBar, metricBarHeight } from './metrics';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,6 +61,11 @@ export interface LayoutDimensions {
   margins: Margins;
   /** Resolved theme used for this layout. */
   theme: ResolvedTheme;
+  /**
+   * Resolved metric bar (KPI cells above the chart area). Present only when
+   * spec.metrics is supplied AND the bar fits the container.
+   */
+  metrics?: ResolvedMetricBar;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,11 +75,13 @@ export interface LayoutDimensions {
 /** Convert NormalizedChrome back to a Chrome-compatible shape for computeChrome. */
 function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/openchart-core').Chrome {
   return {
+    eyebrow: chrome.eyebrow,
     title: chrome.title,
     subtitle: chrome.subtitle,
     source: chrome.source,
     byline: chrome.byline,
     footer: chrome.footer,
+    brand: chrome.brand,
   };
 }
 
@@ -264,8 +273,14 @@ export function computeDimensions(
   // Extra top padding on narrow viewports prevents iOS Safari from clipping
   // the title chrome behind the browser UI.
   const topPad = width < NARROW_VIEWPORT_MAX ? padding + TOP_PAD_EXTRA_NARROW : padding;
+  // Tentative metric-bar reservation. The bar's final inclusion is decided
+  // below by computeMetricBar, which can strip it on overflow / narrow areas.
+  // We reserve optimistically so the chart-area math is correct when the bar
+  // is kept; the rollback path subtracts it back when stripped.
+  const wantsMetrics = !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden';
+  const tentativeMetricsHeight = wantsMetrics ? metricBarHeight() : 0;
   const margins: Margins = {
-    top: topPad + chrome.topHeight + topAxisGap,
+    top: topPad + chrome.topHeight + tentativeMetricsHeight + topAxisGap,
     right: hPad + (isRadial ? hPad : axisMargin),
     bottom: padding + chrome.bottomHeight + xAxisHeight,
     left: hPad + (isRadial ? hPad : axisMargin),
@@ -345,7 +360,19 @@ export function computeDimensions(
 
   // Dynamic left margin for y-axis labels
   const yAxisSuppressed = encoding.y?.axis === false;
-  if (encoding.y && !isRadial && !yAxisSuppressed) {
+  // Resolve effective y-axis tickPosition. Editorial line/area y-axes default
+  // to inline (labels render above gridlines inside the chart area, so no
+  // left gutter is reserved). Other marks default to gutter.
+  const yAxisCfg = (encoding.y?.axis as Record<string, unknown> | undefined) ?? undefined;
+  const yTickPositionExplicit = yAxisCfg?.tickPosition as 'inline' | 'gutter' | undefined;
+  const yIsContinuous = encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal';
+  const yIsLineOrArea = spec.markType === 'line' || spec.markType === 'area';
+  const yAxisOrient = yAxisCfg?.orient as 'left' | 'right' | 'top' | 'bottom' | undefined;
+  const yTickPosition: 'inline' | 'gutter' =
+    yTickPositionExplicit ??
+    (yIsLineOrArea && yIsContinuous && yAxisOrient !== 'right' ? 'inline' : 'gutter');
+  const yIsInline = yTickPosition === 'inline';
+  if (encoding.y && !isRadial && !yAxisSuppressed && !yIsInline) {
     if (
       spec.markType === 'bar' ||
       spec.markType === 'circle' ||
@@ -494,8 +521,11 @@ export function computeDimensions(
 
     // Recalculate top/bottom margins with stripped chrome.
     // Use topPad (not padding) to preserve the iOS Safari clearance on narrow viewports.
+    // Include the tentative metric reservation so the rollback below mirrors
+    // the primary path's invariant (margins.top includes tentativeMetricsHeight
+    // until resolveMetrics decides otherwise).
     const fallbackTopAxisGap = isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin;
-    const newTop = topPad + fallbackChrome.topHeight + fallbackTopAxisGap;
+    const newTop = topPad + fallbackChrome.topHeight + fallbackTopAxisGap + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
     const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;
@@ -518,9 +548,71 @@ export function computeDimensions(
         height: Math.max(0, height - margins.top - margins.bottom),
       };
 
-      return { total, chrome: fallbackChrome, chartArea, margins, theme };
+      const fallbackMetricsTopY = topPad + fallbackChrome.topHeight;
+      const fallbackMetricsArea = { x: hPad, width: Math.max(0, width - hPad * 2) };
+      const fallbackMetrics = wantsMetrics
+        ? resolveMetrics(
+            spec,
+            fallbackMetricsTopY,
+            fallbackMetricsArea,
+            chartArea.height,
+            options.measureText,
+          )
+        : undefined;
+      if (wantsMetrics && !fallbackMetrics) {
+        // Bar was tentatively reserved but didn't fit — roll back the top margin.
+        margins.top -= tentativeMetricsHeight;
+        chartArea = {
+          ...chartArea,
+          y: margins.top,
+          height: Math.max(0, height - margins.top - margins.bottom),
+        };
+      }
+      return {
+        total,
+        chrome: fallbackChrome,
+        chartArea,
+        margins,
+        theme,
+        metrics: fallbackMetrics,
+      };
     }
   }
 
-  return { total, chrome, chartArea, margins, theme };
+  const metricsTopY = topPad + chrome.topHeight;
+  const metricsArea = { x: hPad, width: Math.max(0, width - hPad * 2) };
+  const resolvedMetrics = wantsMetrics
+    ? resolveMetrics(spec, metricsTopY, metricsArea, chartArea.height, options.measureText)
+    : undefined;
+  if (wantsMetrics && !resolvedMetrics) {
+    margins.top -= tentativeMetricsHeight;
+    chartArea = {
+      ...chartArea,
+      y: margins.top,
+      height: Math.max(0, height - margins.top - margins.bottom),
+    };
+  }
+  return { total, chrome, chartArea, margins, theme, metrics: resolvedMetrics };
+}
+
+/**
+ * Resolve the metric bar layout. The bar spans the full chrome content width
+ * (from hPad to width - hPad), aligning with the title/eyebrow rather than
+ * indenting to the chart area's left gutter. Its `y` sits directly below
+ * chrome and above any top legend.
+ */
+function resolveMetrics(
+  spec: NormalizedChartSpec,
+  metricsTopY: number,
+  metricsArea: { x: number; width: number },
+  remainingChartHeight: number,
+  measureText: import('@opendata-ai/openchart-core').MeasureTextFn | undefined,
+): ResolvedMetricBar | undefined {
+  return computeMetricBar(
+    spec.metrics,
+    metricsTopY,
+    metricsArea,
+    remainingChartHeight,
+    measureText,
+  );
 }

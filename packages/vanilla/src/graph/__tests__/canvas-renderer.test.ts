@@ -98,6 +98,7 @@ function makeTheme(isDark = false): ResolvedTheme {
     },
     borderRadius: 4,
     chrome: {
+      eyebrow: { fontSize: 11, fontWeight: 510, color: '#06b6d4', lineHeight: 1.4 },
       title: { fontSize: 18, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.2 },
       subtitle: { fontSize: 14, fontWeight: 400, color: '#666', lineHeight: 1.3 },
       source: { fontSize: 10, fontWeight: 400, color: '#999', lineHeight: 1.2 },

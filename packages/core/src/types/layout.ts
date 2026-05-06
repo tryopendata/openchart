@@ -102,11 +102,13 @@ export interface ResolvedChrome {
   /** Total height consumed by chrome elements below the chart area. */
   bottomHeight: number;
   /** Resolved chrome elements. Only present if specified in the spec. */
+  eyebrow?: ResolvedChromeElement;
   title?: ResolvedChromeElement;
   subtitle?: ResolvedChromeElement;
   source?: ResolvedChromeElement;
   byline?: ResolvedChromeElement;
   footer?: ResolvedChromeElement;
+  brand?: ResolvedChromeElement;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +169,13 @@ export interface AxisLayout {
   labelOverlap?: boolean | 'parity' | 'greedy';
   /** Whether to flush labels to the axis edges. */
   labelFlush?: boolean;
+  /**
+   * Where tick labels render relative to the chart area.
+   * `'inline'` puts y-axis labels above their gridlines at chart-area x and
+   * suppresses the axis line and tick marks. `'gutter'` (default) keeps the
+   * classic outside-the-area placement.
+   */
+  tickPosition?: 'inline' | 'gutter';
 }
 
 // ---------------------------------------------------------------------------
@@ -512,12 +521,14 @@ export interface ResolvedLabel {
   connector?: {
     /** Connector start (at the label). */
     from: Point;
-    /** Connector end (at the data point). */
+    /** Connector end (pulled back from the data point so the line doesn't touch it). */
     to: Point;
+    /** Actual data point the connector is calling out. Renderer uses this for the endpoint marker. */
+    endpoint?: Point;
     /** Connector line color. */
     stroke: string;
-    /** Connector style: straight line or curved arrow. */
-    style: 'straight' | 'curve';
+    /** Connector style: straight line, curved arrow, or vertical drop-line through the data point. */
+    style: 'straight' | 'curve' | 'drop-line';
   };
   /** Background color behind the label text. */
   background?: string;
@@ -681,6 +692,42 @@ export interface ResolvedAnimation {
 }
 
 // ---------------------------------------------------------------------------
+// Metric bar (resolved)
+// ---------------------------------------------------------------------------
+
+/**
+ * A resolved KPI metric cell with computed positions for label, value, and
+ * supplementary text spans. Cells render as a row above the chart area.
+ */
+export interface ResolvedMetricCell {
+  /** Cell left x in layout coordinates. */
+  x: number;
+  /** Cell width. */
+  cellWidth: number;
+  /** Baseline y for the uppercase label. */
+  labelY: number;
+  /** Baseline y for the primary value. */
+  valueY: number;
+  /** The original metric spec (label/value/delta/etc.). */
+  metric: import('./spec').Metric;
+  /** True if value+delta+secondary would overflow cellWidth. Set by layout for diagnostics. */
+  overflowed: boolean;
+}
+
+/**
+ * The full metric-bar layout. Present only when spec.metrics is supplied
+ * and the bar fits the container.
+ */
+export interface ResolvedMetricBar {
+  /** Top y of the metric row in layout coordinates. */
+  y: number;
+  /** Total reserved height of the row. */
+  height: number;
+  /** Cells laid out evenly across the chart width. */
+  cells: ResolvedMetricCell[];
+}
+
+// ---------------------------------------------------------------------------
 // ChartLayout (the main engine output for charts)
 // ---------------------------------------------------------------------------
 
@@ -697,6 +744,8 @@ export interface ChartLayout {
   area: Rect;
   /** Resolved chrome text elements with positions and styles. */
   chrome: ResolvedChrome;
+  /** Resolved KPI metric bar. Present only when spec.metrics is supplied and fits. */
+  metrics?: ResolvedMetricBar;
   /** Resolved axis layouts. */
   axes: {
     x?: AxisLayout;

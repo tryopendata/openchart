@@ -85,6 +85,117 @@ describe('computeAnnotations', () => {
       // Invalid date should result in null annotation (filtered out)
       expect(annotations).toHaveLength(0);
     });
+
+    describe('drop-line connector', () => {
+      it('produces a vertical line through the data point with end-anchored text on the left', () => {
+        const spec = makeSpec([
+          {
+            type: 'text',
+            x: '2020-01-01',
+            y: 20,
+            text: 'Peak',
+            connector: 'drop-line',
+            anchor: 'left',
+          },
+        ]);
+        const scales = computeScales(spec, chartArea, spec.data);
+        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+        const ann = annotations[0];
+        const c = ann.label?.connector;
+        expect(c).toBeDefined();
+        expect(c?.style).toBe('drop-line');
+        // Vertical line: from.x === to.x and equals the data point's x
+        expect(c?.from.x).toBe(c?.to.x);
+        const px = resolvePosition('2020-01-01', scales.x);
+        expect(c?.from.x).toBe(px);
+        // Label sits to the left of the data point with end anchor
+        expect(ann.label?.style.textAnchor).toBe('end');
+        expect(ann.label?.x).toBeLessThan(px ?? Infinity);
+      });
+
+      it('flips a left-anchored label to the right when there is no room on the left', () => {
+        // Place a long label very near the chart-area left edge — left side is too tight
+        const spec = makeSpec([
+          {
+            type: 'text',
+            x: '2019-01-01',
+            y: 10,
+            text: 'A long annotation that needs lots of horizontal room',
+            connector: 'drop-line',
+            anchor: 'left',
+          },
+        ]);
+        const scales = computeScales(spec, chartArea, spec.data);
+        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+        const ann = annotations[0];
+        const px = resolvePosition('2019-01-01', scales.x);
+        expect(ann.label?.style.textAnchor).toBe('start');
+        expect(ann.label?.x).toBeGreaterThan(px ?? -Infinity);
+      });
+
+      it('flips a right-anchored label to the left when there is no room on the right', () => {
+        const spec = makeSpec([
+          {
+            type: 'text',
+            x: '2022-01-01',
+            y: 40,
+            text: 'A long annotation that needs lots of horizontal room',
+            connector: 'drop-line',
+            anchor: 'right',
+          },
+        ]);
+        const scales = computeScales(spec, chartArea, spec.data);
+        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+        const ann = annotations[0];
+        const px = resolvePosition('2022-01-01', scales.x);
+        expect(ann.label?.style.textAnchor).toBe('end');
+        expect(ann.label?.x).toBeLessThan(px ?? Infinity);
+      });
+
+      it('picks the wider side when neither side fits cleanly', () => {
+        // Tiny chart area + long label + data point near right edge means
+        // neither side can fit the full label. Left side has more room
+        // (x=50 ... px), so the auto-flip should land left.
+        const tinyArea: typeof chartArea = { x: 50, y: 20, width: 120, height: 200 };
+        const spec = makeSpec([
+          {
+            type: 'text',
+            x: '2022-01-01',
+            y: 40,
+            text: 'A genuinely long annotation label that exceeds both sides',
+            connector: 'drop-line',
+            anchor: 'right',
+          },
+        ]);
+        const scales = computeScales(spec, tinyArea, spec.data);
+        const annotations = computeAnnotations(spec, scales, tinyArea, fullStrategy);
+
+        // anchor=right but the right side is even narrower than left, so flip
+        expect(annotations[0].label?.style.textAnchor).toBe('end');
+      });
+
+      it('preserves the resolved text-anchor on multi-line drop-line labels', () => {
+        const spec = makeSpec([
+          {
+            type: 'text',
+            x: '2020-01-01',
+            y: 20,
+            text: 'Line one\nLine two',
+            connector: 'drop-line',
+            anchor: 'left',
+          },
+        ]);
+        const scales = computeScales(spec, chartArea, spec.data);
+        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+        // Engine output retains end anchor; the renderer relies on this to
+        // not override it back to middle.
+        expect(annotations[0].label?.style.textAnchor).toBe('end');
+      });
+    });
   });
 
   describe('range annotations', () => {

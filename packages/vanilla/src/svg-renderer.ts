@@ -18,6 +18,7 @@ import { renderBrand } from './renderers/brand';
 import { renderChrome } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { renderMarks, resetMarkRenderState, setMarkRenderState } from './renderers/marks';
+import { renderMetrics } from './renderers/metrics';
 import { createSVGElement, SVG_NS, setAttrs } from './renderers/svg-dom';
 import { nextSvgId } from './svg-ids';
 
@@ -178,7 +179,9 @@ export function renderChartSVG(
       overlay.setAttribute('data-voronoi-overlay', 'true');
       clippedGroup.appendChild(overlay);
 
-      // Crosshair line: opt-in vertical line that tracks the nearest data point
+      // Crosshair line: vertical line that tracks the snapped data point x.
+      // Always emitted alongside the snap-dots group so mount.ts can populate
+      // both without re-checking the option.
       if (opts?.crosshair) {
         const crosshairLine = createSVGElement('line');
         crosshairLine.setAttribute('data-crosshair', 'true');
@@ -188,14 +191,23 @@ export function renderChartSVG(
           y1: layout.area.y,
           x2: 0,
           y2: layout.area.y + layout.area.height,
-          stroke: layout.theme.colors.gridline,
-          'stroke-opacity': '0.5',
-          'stroke-dasharray': '4,3',
+          stroke: layout.theme.colors.axis,
+          'stroke-opacity': '0.4',
+          'stroke-dasharray': '3,3',
           'stroke-width': '1',
           'pointer-events': 'none',
         });
         crosshairLine.style.display = 'none';
         clippedGroup.appendChild(crosshairLine);
+
+        // Snap-dot layer: mount.ts populates one circle per series at the
+        // snapped x. Empty group here so renderer doesn't need to know how
+        // many series exist.
+        const dotsGroup = createSVGElement('g');
+        dotsGroup.setAttribute('data-snap-dots', 'true');
+        dotsGroup.setAttribute('class', 'oc-snap-dots');
+        dotsGroup.setAttribute('pointer-events', 'none');
+        clippedGroup.appendChild(dotsGroup);
       }
     }
 
@@ -206,9 +218,12 @@ export function renderChartSVG(
 
     // Chrome renders on top so titles are never obscured by chart elements
     renderChrome(svg, layout);
+    renderMetrics(svg, layout);
 
-    // Brand renders as a footer item, right-aligned on the source/footer row
-    if (layout.watermark) {
+    // Brand renders as a footer item, right-aligned on the source/footer row.
+    // Suppressed when the spec supplies a custom chrome.brand so the two
+    // brand blocks don't stack.
+    if (layout.watermark && !layout.chrome.brand) {
       renderBrand(svg, layout);
     }
   } finally {

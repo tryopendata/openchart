@@ -213,6 +213,12 @@ export interface AxesDataContext {
   skipX?: boolean;
   /** Same as skipX, for the y-axis. */
   skipY?: boolean;
+  /**
+   * The chart's primary mark type. Used to default tickPosition: line and area
+   * y-axes default to `'inline'` (labels above gridlines, no gutter); other
+   * marks default to `'gutter'`.
+   */
+  markType?: import('@opendata-ai/openchart-core').MarkType;
 }
 
 /**
@@ -352,6 +358,9 @@ export function computeAxes(
 
     const axisTitle = axisConfig?.title;
     const xLabelColor = axisConfig?.labelColor;
+    // X-axis defaults to gutter (no inline mode is sensible for the x axis
+    // because tick labels need horizontal room around their x position).
+    const xTickPosition = axisConfig?.tickPosition ?? 'gutter';
 
     result.x = {
       ticks,
@@ -370,6 +379,7 @@ export function computeAxes(
       labelPadding: axisConfig?.labelPadding,
       labelOverlap: axisConfig?.labelOverlap,
       labelFlush: axisConfig?.labelFlush,
+      tickPosition: xTickPosition,
     };
   }
 
@@ -440,6 +450,20 @@ export function computeAxes(
     const axisTitle = axisConfig?.title;
     const tickAngle = axisConfig?.labelAngle;
     const yLabelColor = axisConfig?.labelColor;
+    // Editorial line/area y-axes default to inline tick labels above their
+    // gridlines. Other mark types keep the classic gutter placement. Right-side
+    // y-axes (dual-axis) always use gutter.
+    const isContinuousYAxis =
+      scales.y.type !== 'band' && scales.y.type !== 'point' && scales.y.type !== 'ordinal';
+    const isLineOrArea = dataContext?.markType === 'line' || dataContext?.markType === 'area';
+    const yTickPosition: 'inline' | 'gutter' =
+      axisConfig?.tickPosition ??
+      (isLineOrArea && isContinuousYAxis && axisConfig?.orient !== 'right' ? 'inline' : 'gutter');
+
+    // Inline mode hides the axis line and tick marks by default; the gridlines
+    // themselves serve as the visual axis. Explicit user overrides win.
+    const yDomainLine = axisConfig?.domain ?? (yTickPosition === 'inline' ? false : undefined);
+    const yTickMarks = axisConfig?.ticks ?? (yTickPosition === 'inline' ? false : undefined);
 
     result.y = {
       ticks,
@@ -452,13 +476,14 @@ export function computeAxes(
       start: { x: chartArea.x, y: chartArea.y },
       end: { x: chartArea.x, y: chartArea.y + chartArea.height },
       orient: axisConfig?.orient,
-      domainLine: axisConfig?.domain,
-      tickMarks: axisConfig?.ticks,
+      domainLine: yDomainLine,
+      tickMarks: yTickMarks,
       offset: axisConfig?.offset,
       titlePadding: axisConfig?.titlePadding,
       labelPadding: axisConfig?.labelPadding,
       labelOverlap: axisConfig?.labelOverlap,
       labelFlush: axisConfig?.labelFlush,
+      tickPosition: yTickPosition,
     };
   }
 

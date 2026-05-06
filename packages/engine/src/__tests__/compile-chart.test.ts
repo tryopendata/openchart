@@ -463,6 +463,16 @@ describe('compileChart', () => {
     expect(layout.crosshair).toBe(true);
   });
 
+  it('crosshair defaults on for line marks in full mode', () => {
+    const layout = compileChart(lineSpec, { width: 400, height: 300 });
+    expect(layout.crosshair).toBe(true);
+  });
+
+  it('crosshair respects explicit crosshair: false on a line chart', () => {
+    const layout = compileChart({ ...lineSpec, crosshair: false }, { width: 400, height: 300 });
+    expect(layout.crosshair).toBe(false);
+  });
+
   // ---------------------------------------------------------------------------
   // Sparkline layout profile (dimensions, axes, legend)
   // ---------------------------------------------------------------------------

@@ -39,11 +39,13 @@ import type { NormalizedTileMapSpec } from '../tilemap/types';
 
 /** Chrome with all string values normalized to ChromeText objects. */
 export interface NormalizedChrome {
+  eyebrow?: ChromeText;
   title?: ChromeText;
   subtitle?: ChromeText;
   source?: ChromeText;
   byline?: ChromeText;
   footer?: ChromeText;
+  brand?: ChromeText;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +103,8 @@ export interface NormalizedChartSpec {
   data: DataRow[];
   encoding: Encoding;
   chrome: NormalizedChrome;
+  /** Optional KPI metric cells, passed through unchanged. */
+  metrics?: import('@opendata-ai/openchart-core').Metric[];
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &

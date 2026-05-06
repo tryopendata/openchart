@@ -982,3 +982,78 @@ describe('buildContinuousTicks — log scale power filtering', () => {
     expect(nonPowerOf10.length).toBeGreaterThan(0);
   });
 });
+
+describe('axis tickPosition', () => {
+  it('defaults y-axis to inline for line charts', () => {
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, undefined, {
+      data: lineSpec.data,
+      encoding: lineSpec.encoding,
+      markType: 'line',
+    });
+
+    expect(axes.y!.tickPosition).toBe('inline');
+    expect(axes.y!.domainLine).toBe(false);
+    expect(axes.y!.tickMarks).toBe(false);
+    expect(axes.x!.tickPosition).toBe('gutter');
+  });
+
+  it('defaults y-axis to inline for area charts', () => {
+    const areaSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'area',
+      markDef: { type: 'area' },
+    };
+    const scales = computeScales(areaSpec, chartArea, areaSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, undefined, {
+      data: areaSpec.data,
+      encoding: areaSpec.encoding,
+      markType: 'area',
+    });
+
+    expect(axes.y!.tickPosition).toBe('inline');
+  });
+
+  it('defaults y-axis to gutter when markType is unknown', () => {
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.y!.tickPosition).toBe('gutter');
+  });
+
+  it('respects explicit user override on y-axis', () => {
+    const overrideSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        y: { ...lineSpec.encoding.y!, axis: { tickPosition: 'gutter' } },
+      },
+    };
+    const scales = computeScales(overrideSpec, chartArea, overrideSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, undefined, {
+      data: overrideSpec.data,
+      encoding: overrideSpec.encoding,
+      markType: 'line',
+    });
+
+    expect(axes.y!.tickPosition).toBe('gutter');
+  });
+
+  it('right-side y-axis stays gutter even on line charts', () => {
+    const dualSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        y: { ...lineSpec.encoding.y!, axis: { orient: 'right' } },
+      },
+    };
+    const scales = computeScales(dualSpec, chartArea, dualSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, undefined, {
+      data: dualSpec.data,
+      encoding: dualSpec.encoding,
+      markType: 'line',
+    });
+
+    expect(axes.y!.tickPosition).toBe('gutter');
+  });
+});

@@ -15,6 +15,7 @@ export type {
   SequentialPalette,
 } from './palettes';
 export {
+  ACHROMATIC_RAMP,
   CATEGORICAL_PALETTE,
   DIVERGING_BROWN_TEAL,
   DIVERGING_PALETTES,

@@ -75,8 +75,17 @@ describe('crosshair', () => {
     chart.destroy();
   });
 
-  it('does not create crosshair when crosshair is false or omitted', () => {
+  it('crosshair defaults to on for line charts (omitted spec)', () => {
     const chart = createChart(container, lineSpecNoCrosshair);
+
+    const crosshair = container.querySelector('[data-crosshair]');
+    expect(crosshair).not.toBeNull();
+
+    chart.destroy();
+  });
+
+  it('does not create crosshair when explicitly disabled', () => {
+    const chart = createChart(container, { ...lineSpecNoCrosshair, crosshair: false });
 
     const crosshair = container.querySelector('[data-crosshair]');
     expect(crosshair).toBeNull();
@@ -102,7 +111,7 @@ describe('crosshair', () => {
 
     const crosshair = container.querySelector('[data-crosshair]') as SVGLineElement;
     expect(crosshair).not.toBeNull();
-    expect(crosshair.getAttribute('stroke-dasharray')).toBe('4,3');
+    expect(crosshair.getAttribute('stroke-dasharray')).toBe('3,3');
     expect(crosshair.getAttribute('stroke-width')).toBe('1');
     expect(crosshair.getAttribute('pointer-events')).toBe('none');
 

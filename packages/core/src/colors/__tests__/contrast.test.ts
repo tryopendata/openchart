@@ -58,8 +58,8 @@ describe('findAccessibleColor', () => {
   });
 
   it('lightens a dark color to meet contrast on dark background', () => {
-    const result = findAccessibleColor('#333333', '#1a1a2e');
-    const ratio = contrastRatio(result, '#1a1a2e');
+    const result = findAccessibleColor('#333333', '#09090b');
+    const ratio = contrastRatio(result, '#09090b');
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 

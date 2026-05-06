@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { adaptColorForDarkMode } from '../../theme/dark-mode';
 import {
+  ACHROMATIC_RAMP,
   CATEGORICAL_PALETTE,
   DIVERGING_PALETTES,
   DIVERGING_RED_BLUE,
@@ -8,14 +10,32 @@ import {
 } from '../palettes';
 
 describe('palettes', () => {
-  it('categorical palette has 10 colors', () => {
-    expect(CATEGORICAL_PALETTE).toHaveLength(10);
+  it('categorical palette has 9 colors (cyan-led OKLCH ramp)', () => {
+    expect(CATEGORICAL_PALETTE).toHaveLength(9);
+  });
+
+  it('categorical palette leads with cyan #06b6d4', () => {
+    expect(CATEGORICAL_PALETTE[0]).toBe('#06b6d4');
   });
 
   it('categorical palette colors are valid hex', () => {
     for (const color of CATEGORICAL_PALETTE) {
       expect(color).toMatch(/^#[0-9a-f]{6}$/i);
     }
+  });
+
+  it('every categorical color round-trips cleanly through the dark-mode adapter', () => {
+    // Guard against hex strings that fail to parse (e.g. accidental oklch).
+    for (const color of CATEGORICAL_PALETTE) {
+      const adapted = adaptColorForDarkMode(color, '#ffffff', ACHROMATIC_RAMP.bg);
+      expect(adapted).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  it('exports an achromatic ramp keyed by token name', () => {
+    expect(ACHROMATIC_RAMP.bg).toBe('#09090b');
+    expect(ACHROMATIC_RAMP.fg).toBe('#f7f8f8');
+    expect(ACHROMATIC_RAMP.fgMuted).toBe('#a1a1aa');
   });
 
   it('sequential palettes have expected keys', () => {

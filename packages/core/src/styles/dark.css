@@ -3,18 +3,35 @@
  * --------------------------------------------------------------------------- */
 
 .oc-dark {
-  --oc-bg: #1a1a2e;
-  --oc-text: #e0e0e0;
-  --oc-text-secondary: #b0b0b0;
-  --oc-text-muted: #808080;
-  --oc-gridline: #333355;
-  --oc-axis: #999999;
-  --oc-border: #444466;
+  /* Surfaces (zinc-based achromatic ramp) */
+  --oc-bg: #09090b;
+  --oc-card: #111113;
+  --oc-secondary: #27272a;
+
+  /* Text levels — see tokens.css for the cross-mode naming rationale */
+  --oc-text: #f7f8f8;
+  --oc-text-secondary: #d0d6e0;
+  --oc-text-muted: #a1a1aa;
+  --oc-text-subtle: #71717a;
+  --oc-text-faint: #52525b;
+
+  /* Lines */
+  --oc-gridline: rgba(255, 255, 255, 0.05);
+  --oc-axis: rgba(255, 255, 255, 0.1);
+  --oc-border: rgba(255, 255, 255, 0.1);
+
+  /* Brand and semantic — accent stays cyan (no darkening on dark bg) */
+  --oc-accent: #06b6d4;
+  --oc-accent-strong: #06b6d4;
+  --oc-positive: #34d399;
+  --oc-negative: #fb7185;
   --oc-focus: #60a5fa;
+
+  /* Interactive states */
   --oc-hover-bg: rgba(255, 255, 255, 0.05);
-  --oc-tooltip-bg: rgba(30, 30, 50, 0.85);
+  --oc-tooltip-bg: rgba(17, 17, 19, 0.92);
   --oc-tooltip-border: rgba(255, 255, 255, 0.08);
   --oc-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
-  --oc-tooltip-text: #e0e0e0;
-  --oc-legend-text: #b0b0b0;
+  --oc-tooltip-text: #f7f8f8;
+  --oc-legend-text: #d0d6e0;
 }

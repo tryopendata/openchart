@@ -245,6 +245,14 @@ export interface AxisConfig {
   labelColor?: string;
   /** Secondary data field to display alongside each tick label. Renders in lighter weight/color. Only effective on categorical y-axis labels (horizontal bar charts). */
   labelField?: string;
+  /**
+   * Where tick labels render relative to the chart area. Editorial line/area
+   * y-axes default to `'inline'`: labels sit above their gridlines at the
+   * chart's left edge, with no left gutter, axis line, or tick marks. Other
+   * axis types default to `'gutter'` (the classic placement outside the chart
+   * area).
+   */
+  tickPosition?: 'inline' | 'gutter';
 }
 
 /** Scale configuration for an encoding channel. */
@@ -492,11 +500,18 @@ export interface ChromeText {
 }
 
 /**
- * Editorial chrome elements: title, subtitle, source attribution, byline, footer.
+ * Editorial chrome elements: eyebrow, title, subtitle, source attribution, byline, footer.
  * These are first-class structural elements, not string-only afterthoughts.
  * Each element can be a simple string or a ChromeText object with style overrides.
  */
 export interface Chrome {
+  /**
+   * Editorial kicker/category label rendered above the title. Typically
+   * uppercase, tracked, and tinted with the accent color (e.g.
+   * "Equities · Single Ticker"). Term follows IBM Carbon and Atlassian
+   * Design System conventions; not part of Vega-Lite's title model.
+   */
+  eyebrow?: string | ChromeText;
   /** Main title displayed above the visualization. */
   title?: string | ChromeText;
   /** Subtitle displayed below the title, typically providing context. */
@@ -507,6 +522,12 @@ export interface Chrome {
   byline?: string | ChromeText;
   /** Footer text, displayed at the very bottom. */
   footer?: string | ChromeText;
+  /**
+   * Right-anchored brand block on the footer row, paired with a small accent
+   * dot to its left. Visually balances the source/byline left-anchored text.
+   * When set, suppresses the default `tryOpenData.ai` watermark for this chart.
+   */
+  brand?: string | ChromeText;
 }
 
 // ---------------------------------------------------------------------------
@@ -565,10 +586,12 @@ export interface TextAnnotation extends AnnotationBase {
   /**
    * Connector from label to anchor point.
    * - `true` (default): straight line
+   * - `'straight'`: straight line (alias of `true`)
    * - `'curve'`: curved arrow with arrowhead
+   * - `'drop-line'`: vertical line through the data point's x; label sits beside the line and auto-flips to the opposite side if it would overflow the chart area
    * - `false`: no connector
    */
-  connector?: boolean | 'curve';
+  connector?: boolean | 'straight' | 'curve' | 'drop-line';
   /** Per-endpoint offsets for the connector line. Allows fine-tuning where the connector starts and ends. */
   connectorOffset?: {
     /** Offset for the label-end of the connector. */
@@ -858,6 +881,27 @@ export interface ChartSpecOverride {
 }
 
 /**
+ * A KPI/metric cell rendered above the chart in a horizontal row.
+ *
+ * Used for editorial dashboards (e.g. "CLOSE $186.10 +1.4%") where the chart
+ * is paired with summary statistics. Cells lay out evenly across the chart
+ * width. Hidden in sparkline mode; auto-stripped when the container can't
+ * fit the laid-out values.
+ */
+export interface Metric {
+  /** Uppercase eyebrow label, e.g. "CLOSE". */
+  label: string;
+  /** Primary numeric value, e.g. "$186.10". */
+  value: string;
+  /** Optional change indicator, e.g. "+1.4%". Rendered next to the value. */
+  delta?: string;
+  /** Tone for the delta. 'up' = positive (green), 'down' = negative (red). Default 'up'. */
+  deltaTone?: 'up' | 'down';
+  /** Optional secondary value (e.g. multiplier "10.3×"). Rendered after the delta. */
+  secondary?: string;
+}
+
+/**
  * Chart specification: the primary input for standard chart types.
  *
  * Uses the Vega-Lite `mark` property instead of `type` to specify
@@ -879,6 +923,13 @@ export interface ChartSpec {
   encoding: Encoding;
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
+  /**
+   * KPI/metric cells rendered as a horizontal row between subtitle and chart
+   * area. Each cell shows a label/value pair with optional delta and secondary
+   * value. Hidden in sparkline mode and auto-stripped when the container is
+   * too narrow or short, or when value text would overflow its cell.
+   */
+  metrics?: Metric[];
   /** Data annotations (text callouts, highlighted ranges, reference lines). */
   annotations?: Annotation[];
   /** Label display configuration. `false` disables all labels, `true` uses defaults. */

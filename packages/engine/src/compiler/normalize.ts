@@ -63,11 +63,13 @@ function normalizeChromeField(value: string | ChromeText | undefined): ChromeTex
 function normalizeChrome(chrome: Chrome | undefined): NormalizedChrome {
   if (!chrome) return {};
   return {
+    eyebrow: normalizeChromeField(chrome.eyebrow),
     title: normalizeChromeField(chrome.title),
     subtitle: normalizeChromeField(chrome.subtitle),
     source: normalizeChromeField(chrome.source),
     byline: normalizeChromeField(chrome.byline),
     footer: normalizeChromeField(chrome.footer),
+    brand: normalizeChromeField(chrome.brand),
   };
 }
 
@@ -241,6 +243,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     data: spec.data,
     encoding,
     chrome: normalizeChrome(spec.chrome),
+    metrics: spec.metrics,
     annotations: normalizeAnnotations(spec.annotations),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,

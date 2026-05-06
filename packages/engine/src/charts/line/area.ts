@@ -156,7 +156,8 @@ function computeSingleArea(
         x2: 0,
         y2: 1,
         stops: [
-          { offset: 0, color: colorStr, opacity: 0.12 },
+          { offset: 0, color: colorStr, opacity: 0.28 },
+          { offset: 0.6, color: colorStr, opacity: 0.08 },
           { offset: 1, color: colorStr, opacity: 0 },
         ],
       };

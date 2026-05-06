@@ -194,60 +194,125 @@ function wireTooltipEvents(
 }
 
 // ---------------------------------------------------------------------------
-// Voronoi overlay tooltip wiring (nearest-point lookup for line/area charts)
+// Voronoi overlay tooltip wiring (x-snap multi-series lookup for line/area charts)
 // ---------------------------------------------------------------------------
 
-/** A single data point with pixel coordinates, datum, and pre-computed tooltip. */
-interface VoronoiPoint {
+interface SeriesPoint {
   x: number;
   y: number;
   datum: Record<string, unknown>;
   tooltip?: TooltipContent;
+}
+
+interface SeriesGroup {
+  seriesKey: string;
   color: string;
+  points: SeriesPoint[];
 }
 
 /**
- * Collect all dataPoints from line and area marks for nearest-point lookup.
+ * Group line/area dataPoints by series so the tooltip can show all series
+ * values at a single snapped x position.
  */
-function collectVoronoiPoints(layout: ChartLayout): VoronoiPoint[] {
-  const points: VoronoiPoint[] = [];
-  for (const mark of layout.marks) {
-    if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints) {
+function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
+  const groups: SeriesGroup[] = [];
+  for (let i = 0; i < layout.marks.length; i++) {
+    const mark = layout.marks[i];
+    if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints?.length) {
       const color = mark.type === 'line' ? mark.stroke : getRepresentativeColor(mark.fill);
-      for (const dp of mark.dataPoints) {
-        points.push({ ...dp, color });
+      groups.push({
+        seriesKey: mark.seriesKey ?? `${mark.type}-${i}`,
+        color,
+        points: mark.dataPoints.map((dp) => ({ ...dp })),
+      });
+    }
+  }
+  return groups;
+}
+
+/** All unique x positions across all series, sorted ascending. */
+function collectSnapXs(groups: SeriesGroup[]): number[] {
+  const seen = new Set<number>();
+  for (const g of groups) {
+    for (const p of g.points) seen.add(p.x);
+  }
+  return Array.from(seen).sort((a, b) => a - b);
+}
+
+/** Binary-search the closest x in a sorted array. */
+function findNearestX(sortedXs: number[], x: number): number | null {
+  if (sortedXs.length === 0) return null;
+  let lo = 0;
+  let hi = sortedXs.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (sortedXs[mid] < x) lo = mid + 1;
+    else hi = mid;
+  }
+  // lo is the first index where sortedXs[lo] >= x; check the prior element too.
+  const candidate = sortedXs[lo];
+  if (lo > 0) {
+    const prev = sortedXs[lo - 1];
+    if (Math.abs(prev - x) < Math.abs(candidate - x)) return prev;
+  }
+  return candidate;
+}
+
+/**
+ * Build one merged tooltip from all series points at the snapped x.
+ * The title comes from the first series' tooltip (typically the x-axis label,
+ * which is identical across series at a given x). Each series contributes one
+ * row whose label is the series name (or its y-axis title for single-series)
+ * and whose value is the formatted y-value.
+ */
+function buildSliceTooltip(
+  hits: Array<{ group: SeriesGroup; point: SeriesPoint }>,
+): TooltipContent | null {
+  if (hits.length === 0) return null;
+
+  // Title: take the first hit's title (x value); same across series at this x.
+  const title = hits[0].point.tooltip?.title;
+  const fields: Array<{ label: string; value: string; color?: string }> = [];
+
+  // Multi-series: one row per series, label = series name, value = y-value.
+  // The per-point tooltip already has fields in [color/series, y, x] order;
+  // for multi-series we want a single row per series so we pull the y field.
+  const isMulti = hits.length > 1;
+  for (const { group, point } of hits) {
+    const tip = point.tooltip;
+    if (!tip) continue;
+    if (isMulti) {
+      // Find the y field: in buildFields, when there's a color encoding the
+      // first field is the series name and the second is y. Without a color
+      // encoding the y field is first. Prefer the y-row (we want a numeric
+      // value, not the series name itself).
+      const yField =
+        tip.fields.find((f) => !f.color && f.label !== title) ??
+        tip.fields[tip.fields.length - 1] ??
+        null;
+      if (!yField) continue;
+      fields.push({
+        label: group.seriesKey,
+        value: yField.value,
+        color: group.color,
+      });
+    } else {
+      // Single-series: pass through the per-point fields verbatim.
+      for (const f of tip.fields) {
+        fields.push({ ...f, color: f.color ?? group.color });
       }
     }
   }
-  return points;
+
+  if (fields.length === 0) return null;
+  return { title, fields };
 }
 
 /**
- * Find the nearest VoronoiPoint to a given (x, y) position using linear scan.
- * Returns null if no points exist.
- */
-function findNearestPoint(points: VoronoiPoint[], x: number, y: number): VoronoiPoint | null {
-  if (points.length === 0) return null;
-
-  let nearest = points[0];
-  let minDist = (points[0].x - x) ** 2 + (points[0].y - y) ** 2;
-
-  for (let i = 1; i < points.length; i++) {
-    const dist = (points[i].x - x) ** 2 + (points[i].y - y) ** 2;
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = points[i];
-    }
-  }
-
-  return nearest;
-}
-
-/**
- * Wire voronoi overlay tooltip events for line/area charts.
- * Uses a transparent overlay rect with nearest-point lookup instead of
- * per-point event listeners, eliminating DOM bloat.
- * Returns a cleanup function.
+ * Wire snap-to-x multi-series tooltip events for line/area charts.
+ * On mousemove over the chart area we find the nearest x in the union of all
+ * series, render one snap dot per series at that x, and show one merged
+ * tooltip listing every series' value.
  */
 function wireVoronoiTooltipEvents(
   svg: SVGElement,
@@ -257,89 +322,122 @@ function wireVoronoiTooltipEvents(
   const overlay = svg.querySelector('[data-voronoi-overlay]');
   if (!overlay) return () => {};
 
-  const voronoiPoints = collectVoronoiPoints(layout);
-  if (voronoiPoints.length === 0) return () => {};
+  const groups = collectSeriesGroups(layout);
+  if (groups.length === 0) return () => {};
+
+  const snapXs = collectSnapXs(groups);
+  if (snapXs.length === 0) return () => {};
 
   const crosshair = svg.querySelector('[data-crosshair]') as SVGLineElement | null;
-  const cleanups: Array<() => void> = [];
+  const dotsLayer = svg.querySelector('[data-snap-dots]') as SVGGElement | null;
 
-  const handleMouseMove = (e: Event) => {
-    const mouseEvent = e as MouseEvent;
-    const svgEl = svg as unknown as SVGSVGElement;
-    const svgRect = svgEl.getBoundingClientRect();
-    const viewBox = svgEl.viewBox?.baseVal;
+  // One <circle> per series, hidden until mouse enters. Each circle keeps its
+  // series color so multi-series charts read correctly without re-paint flicker.
+  const dots: SVGCircleElement[] = [];
+  if (dotsLayer) {
+    while (dotsLayer.firstChild) dotsLayer.removeChild(dotsLayer.firstChild);
+    for (const group of groups) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', '4');
+      circle.setAttribute('fill', layout.theme.colors.background);
+      circle.setAttribute('stroke', group.color);
+      circle.setAttribute('stroke-width', '2');
+      circle.setAttribute('pointer-events', 'none');
+      circle.style.display = 'none';
+      dotsLayer.appendChild(circle);
+      dots.push(circle);
+    }
+  }
 
-    // Convert client coordinates to SVG viewBox coordinates
-    const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
-    const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
-    const svgX = (mouseEvent.clientX - svgRect.left) * scaleX;
-    const svgY = (mouseEvent.clientY - svgRect.top) * scaleY;
+  const positionAt = (svgX: number, _svgY: number, viewBoxToContainer: number): boolean => {
+    const snappedX = findNearestX(snapXs, svgX);
+    if (snappedX === null) return false;
 
-    const nearest = findNearestPoint(voronoiPoints, svgX, svgY);
-    if (!nearest?.tooltip) return;
+    const hits: Array<{ group: SeriesGroup; point: SeriesPoint }> = [];
+    let anchorY = 0;
+    let anchorCount = 0;
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      const point = group.points.find((p) => p.x === snappedX);
+      const dot = dots[i];
+      if (point) {
+        hits.push({ group, point });
+        anchorY += point.y;
+        anchorCount += 1;
+        if (dot) {
+          dot.setAttribute('cx', String(point.x));
+          dot.setAttribute('cy', String(point.y));
+          dot.style.display = '';
+        }
+      } else if (dot) {
+        dot.style.display = 'none';
+      }
+    }
 
-    // Update crosshair position to match the nearest data point's x
     if (crosshair) {
-      crosshair.setAttribute('x1', String(nearest.x));
-      crosshair.setAttribute('x2', String(nearest.x));
+      crosshair.setAttribute('x1', String(snappedX));
+      crosshair.setAttribute('x2', String(snappedX));
       crosshair.style.display = '';
     }
 
-    // Show tooltip at the mouse position (relative to container, not SVG viewBox)
-    const containerX = mouseEvent.clientX - svgRect.left;
-    const containerY = mouseEvent.clientY - svgRect.top;
-    tooltipManager.show(nearest.tooltip, containerX, containerY);
+    const tooltip = buildSliceTooltip(hits);
+    if (!tooltip) return false;
+
+    // Anchor the tooltip at the snapped x in container space so the card
+    // sits beside the line. Use the average series y so multi-series tooltips
+    // stay vertically centered against the data.
+    const containerAnchorX = snappedX * viewBoxToContainer;
+    const containerAnchorY = anchorCount > 0 ? (anchorY / anchorCount) * viewBoxToContainer : 0;
+    // 'right' centers the tooltip vertically on the anchor; floating-ui's
+    // flip() middleware swaps it to 'left' near the right edge so the card
+    // never overflows the container.
+    tooltipManager.show(tooltip, containerAnchorX, containerAnchorY, {
+      placement: 'right',
+    });
+    return true;
   };
 
-  const handleMouseLeave = () => {
+  const toSvgCoords = (clientX: number, clientY: number) => {
+    const svgEl = svg as unknown as SVGSVGElement;
+    const svgRect = svgEl.getBoundingClientRect();
+    const viewBox = svgEl.viewBox?.baseVal;
+    const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
+    const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
+    const svgX = (clientX - svgRect.left) * scaleX;
+    const svgY = (clientY - svgRect.top) * scaleY;
+    // Inverse scale to map viewBox units back into container pixels.
+    const viewBoxToContainer = scaleX > 0 ? 1 / scaleX : 1;
+    return { svgX, svgY, viewBoxToContainer };
+  };
+
+  const handleMouseMove = (e: Event) => {
+    const me = e as MouseEvent;
+    const { svgX, svgY, viewBoxToContainer } = toSvgCoords(me.clientX, me.clientY);
+    positionAt(svgX, svgY, viewBoxToContainer);
+  };
+
+  const hideAll = () => {
     if (crosshair) crosshair.style.display = 'none';
+    for (const dot of dots) dot.style.display = 'none';
     tooltipManager.hide();
   };
 
-  // Touch support
   const handleTouchStart = (e: Event) => {
-    const touchEvent = e as TouchEvent;
-    if (touchEvent.touches.length > 0) {
-      const touch = touchEvent.touches[0];
-      const svgEl = svg as unknown as SVGSVGElement;
-      const svgRect = svgEl.getBoundingClientRect();
-      const viewBox = svgEl.viewBox?.baseVal;
-
-      const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
-      const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
-      const svgX = (touch.clientX - svgRect.left) * scaleX;
-      const svgY = (touch.clientY - svgRect.top) * scaleY;
-
-      const nearest = findNearestPoint(voronoiPoints, svgX, svgY);
-      if (!nearest?.tooltip) return;
-
-      // Update crosshair position on touch
-      if (crosshair) {
-        crosshair.setAttribute('x1', String(nearest.x));
-        crosshair.setAttribute('x2', String(nearest.x));
-        crosshair.style.display = '';
-      }
-
-      const containerX = touch.clientX - svgRect.left;
-      const containerY = touch.clientY - svgRect.top;
-      tooltipManager.show(nearest.tooltip, containerX, containerY);
-    }
+    const te = e as TouchEvent;
+    if (te.touches.length === 0) return;
+    const t = te.touches[0];
+    const { svgX, svgY, viewBoxToContainer } = toSvgCoords(t.clientX, t.clientY);
+    positionAt(svgX, svgY, viewBoxToContainer);
   };
 
   overlay.addEventListener('mousemove', handleMouseMove);
-  overlay.addEventListener('mouseleave', handleMouseLeave);
+  overlay.addEventListener('mouseleave', hideAll);
   overlay.addEventListener('touchstart', handleTouchStart);
 
-  cleanups.push(() => {
-    overlay.removeEventListener('mousemove', handleMouseMove);
-    overlay.removeEventListener('mouseleave', handleMouseLeave);
-    overlay.removeEventListener('touchstart', handleTouchStart);
-  });
-
   return () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
+    overlay.removeEventListener('mousemove', handleMouseMove);
+    overlay.removeEventListener('mouseleave', hideAll);
+    overlay.removeEventListener('touchstart', handleTouchStart);
   };
 }
 

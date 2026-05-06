@@ -1,38 +1,66 @@
 /**
  * Color palettes for @opendata-ai.
  *
- * Categorical palette is Infrographic-influenced with WCAG AA contrast
- * for large text (3:1 ratio) on both light (#ffffff) and dark (#1a1a2e)
- * backgrounds. Several colors do not meet the stricter 4.5:1 ratio
- * required for normal-sized body text. This is acceptable because chart
- * marks (bars, lines, areas, points) are large visual elements.
+ * Categorical palette leads with cyan and uses an OKLCH-balanced multi-hue
+ * ramp tuned to L≈0.70, C≈0.13–0.15. Hex values are precomputed sRGB
+ * (rather than raw `oklch()` strings) because raw OKLCH strings parse
+ * unreliably through d3-color and the dark-mode adapter's hsl-based
+ * binary search. Source OKLCH values are documented inline so the ramp
+ * can be regenerated if needed.
+ *
+ * Convention for low-cardinality charts (1 / 2-4 / 5+ series) is enforced
+ * by chart-type renderer logic, not the palette itself. The palette stays
+ * a flat 9-color ramp consumed by index. The convention is:
+ *   - 1 series: cyan only
+ *   - 2-4 series: cyan + zinc-400/500/600 (achromatic)
+ *   - 5+ series: full multi-hue ramp below
  *
  * Sequential palettes: 5-7 stops from light to dark.
  * Diverging palettes: 7 stops with a neutral midpoint.
  */
 
 // ---------------------------------------------------------------------------
+// Achromatic ramp (zinc-based, dark-mode canonical)
+// ---------------------------------------------------------------------------
+
+/**
+ * Achromatic surface and supporting-series ramp. Values are the canonical
+ * dark-mode tokens; light-mode equivalents are derived per token in
+ * `theme/dark-mode.ts` and the CSS partials, not mirrored here.
+ */
+export const ACHROMATIC_RAMP = {
+  fg: '#f7f8f8', // primary text
+  fg2: '#d0d6e0', // body text
+  fgMuted: '#a1a1aa', // secondary series (zinc-400)
+  fgSubtle: '#71717a', // tertiary series (zinc-500)
+  fgFaint: '#52525b', // quaternary series (zinc-600)
+  secondary: '#27272a', // hover / raised surface
+  card: '#111113', // card surface
+  bg: '#09090b', // canvas
+} as const;
+
+// ---------------------------------------------------------------------------
 // Categorical
 // ---------------------------------------------------------------------------
 
 /**
- * Default categorical palette. 10 visually distinct colors that meet
- * WCAG AA contrast for large text (3:1) on both white and near-black
- * backgrounds. Some colors fall below the 4.5:1 threshold for normal
- * body text. Influenced by Infrographic's editorial palette with tweaks
- * for accessibility and colorblind distinguishability.
+ * Default categorical palette. Cyan-led OKLCH-balanced multi-hue ramp.
+ *
+ * Hex values precomputed from OKLCH via the standard OKLab -> linear sRGB
+ * -> sRGB pipeline. Documented OKLCH source values are the contract; if
+ * the conversion math changes, regenerate from the source rather than
+ * editing hex literals directly.
  */
 export const CATEGORICAL_PALETTE = [
-  '#1b7fa3', // teal-blue (primary)
-  '#c44e52', // warm red (secondary)
-  '#6a9f58', // softer green (tertiary)
-  '#d47215', // orange
-  '#507e79', // muted teal
-  '#9a6a8d', // purple
-  '#c4636b', // rose
-  '#9c755f', // brown
-  '#a88f22', // olive gold
-  '#858078', // warm gray
+  '#06b6d4', // cyan, primary accent (sRGB literal)
+  '#00b9c3', // teal    — oklch(70% 0.15 200)
+  '#3bb974', // emerald — oklch(70% 0.15 155)
+  '#e69c3a', // amber   — oklch(75% 0.14 70)
+  '#eb7289', // rose    — oklch(70% 0.15 10)
+  '#8494fa', // indigo  — oklch(70% 0.15 275)
+  '#ad87ed', // violet  — oklch(70% 0.15 300)
+  '#eb8656', // orange  — oklch(72% 0.14 45)
+  '#4ba3f7', // sky     — oklch(70% 0.15 250)
 ] as const;
 
 export type CategoricalPalette = typeof CATEGORICAL_PALETTE;

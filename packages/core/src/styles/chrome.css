@@ -1,9 +1,17 @@
 /* ---------------------------------------------------------------------------
- * Chrome (title, subtitle, source, footer)
+ * Chrome (eyebrow, title, subtitle, source, byline, footer, brand)
  * --------------------------------------------------------------------------- */
 
 .oc-chrome {
   font-family: var(--oc-font-family);
+}
+
+.oc-eyebrow {
+  font-size: var(--oc-eyebrow-size);
+  font-weight: var(--oc-eyebrow-weight);
+  letter-spacing: var(--oc-eyebrow-tracking);
+  text-transform: uppercase;
+  fill: var(--oc-accent);
 }
 
 .oc-title {
@@ -16,7 +24,7 @@
 .oc-subtitle {
   font-size: var(--oc-subtitle-size);
   font-weight: var(--oc-subtitle-weight);
-  fill: var(--oc-text-secondary);
+  fill: var(--oc-text-muted);
 }
 
 .oc-source,
@@ -24,6 +32,74 @@
 .oc-footer {
   font-size: var(--oc-source-size);
   font-weight: var(--oc-source-weight);
+  fill: var(--oc-text-muted);
+}
+
+.oc-brand {
+  font-size: 11px;
+  font-weight: 510;
+  letter-spacing: 0.02em;
+  fill: var(--oc-text-faint);
+}
+
+.oc-brand-dot {
+  fill: var(--oc-accent);
+}
+
+.oc-eyebrow-dot {
+  fill: var(--oc-accent);
+}
+
+/* ---------------------------------------------------------------------------
+ * Metric bar (.oc-metrics) — optional row of label/value cells above chart
+ * --------------------------------------------------------------------------- */
+
+.oc-metrics {
+  font-family: var(--oc-font-family);
+}
+
+.oc-metric-label {
+  font-size: 10px;
+  font-weight: 510;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--oc-text-muted);
+}
+
+.oc-metric-value {
+  font-size: 22px;
+  font-weight: 510;
+  letter-spacing: -0.01em;
+  fill: var(--oc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.oc-metric-delta-up {
+  fill: var(--oc-positive);
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.oc-metric-delta-down {
+  fill: var(--oc-negative);
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.oc-metric-secondary {
+  fill: var(--oc-positive);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* ---------------------------------------------------------------------------
+ * Axis tick labels — inline variant sits above each gridline at the
+ * chart-area left edge (no left gutter). Used by line/area y-axes.
+ * --------------------------------------------------------------------------- */
+
+.oc-axis-tick-inline {
+  font-size: 11px;
+  font-weight: 400;
   fill: var(--oc-text-muted);
 }
 

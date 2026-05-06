@@ -618,10 +618,10 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
   const darkMode: DarkMode = globalState.theme === 'dark' ? 'force' : 'off';
 
   const bg = darkMode === 'force'
-    ? (theme?.colors?.background ?? '#1a1a2e')
+    ? (theme?.colors?.background ?? '#09090b')
     : (theme?.colors?.background ?? '#ffffff');
   const fg = darkMode === 'force'
-    ? (theme?.colors?.text ?? '#e0e0e0')
+    ? (theme?.colors?.text ?? '#f7f8f8')
     : (theme?.colors?.text ?? '#1d1d1d');
 
   useLadleOverrides();

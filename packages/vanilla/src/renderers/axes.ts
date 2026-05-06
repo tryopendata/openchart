@@ -37,7 +37,11 @@ function renderAxis(
 ): void {
   const g = createSVGElement('g');
   const isRight = orientation === 'y' && axis.orient === 'right';
-  g.setAttribute('class', `oc-axis oc-axis-${isRight ? 'y2' : orientation}`);
+  const isInlineY = orientation === 'y' && axis.tickPosition === 'inline' && !isRight;
+  g.setAttribute(
+    'class',
+    `oc-axis oc-axis-${isRight ? 'y2' : orientation}${isInlineY ? ' oc-axis-inline' : ''}`,
+  );
 
   const { area } = layout;
 
@@ -86,6 +90,19 @@ function renderAxis(
         });
       }
 
+      applyTextStyle(label, axis.tickLabelStyle);
+      label.textContent = tick.label;
+      g.appendChild(label);
+    } else if (isInlineY) {
+      // Inline y-tick: label sits above its gridline at the chart-area left
+      // edge, no gutter reserved. The gridline itself is the visual axis.
+      const label = createSVGElement('text');
+      label.setAttribute('class', 'oc-axis-tick oc-axis-tick-inline');
+      setAttrs(label, {
+        x: area.x,
+        y: tick.position - 6,
+        'text-anchor': 'start',
+      });
       applyTextStyle(label, axis.tickLabelStyle);
       label.textContent = tick.label;
       g.appendChild(label);
