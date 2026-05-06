@@ -309,3 +309,5 @@ function ChartInner(
 export const Chart = forwardRef(ChartInner) as <TData extends DataRow = DataRow>(
   props: ChartProps<TData> & { ref?: React.Ref<ChartHandle> },
 ) => React.ReactElement | null;
+// Restore display name lost by the forwardRef + cast pattern
+(Chart as React.FC).displayName = 'Chart';
