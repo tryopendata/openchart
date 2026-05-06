@@ -164,6 +164,12 @@ function estimateLineCount(
  * @param measureText - Optional real text measurement function from the adapter.
  * @param chromeMode - Chrome display mode: full, compact (title only), or hidden.
  * @param padding - Override padding (for scaled padding from dimensions).
+ * @param watermark - Whether the brand watermark renders (affects bottom space).
+ * @param bottomLegendHeight - Reserved height for a bottom-positioned legend
+ *   (legend bounds height + gap). When > 0, source/byline/footer y positions
+ *   are shifted down by this amount so the chrome stacks BELOW the legend
+ *   rather than colliding with it. The returned `bottomHeight` includes this
+ *   reservation, so callers should not double-reserve it in margin math.
  */
 export function computeChrome(
   chrome: Chrome | undefined,
@@ -173,6 +179,7 @@ export function computeChrome(
   chromeMode: ChromeMode = 'full',
   padding?: number,
   watermark: boolean = true,
+  bottomLegendHeight: number = 0,
 ): ResolvedChrome {
   if (!chrome || chromeMode === 'hidden') {
     // Brand watermark is also skipped at cramped sizes (height < 200px triggers
@@ -273,7 +280,12 @@ export function computeChrome(
     let compactBottom = 0;
     if (watermark && width >= BRAND_MIN_WIDTH) {
       const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
-      compactBottom = theme.spacing.chartToFooter + brandHeight + pad;
+      compactBottom = theme.spacing.chartToFooter + brandHeight + pad + bottomLegendHeight;
+    } else if (bottomLegendHeight > 0) {
+      // No bottom chrome content but a bottom legend was reserved upstream.
+      // Surface the reservation through bottomHeight so margin math stays
+      // additive and consistent with full mode.
+      compactBottom = bottomLegendHeight;
     }
     return {
       topHeight,
@@ -329,6 +341,9 @@ export function computeChrome(
 
   if (bottomItems.length > 0) {
     bottomHeight += theme.spacing.chartToFooter;
+    // Push bottom chrome below the bottom legend (if reserved). Stored y values
+    // include this offset so renderers don't need to know about the legend band.
+    bottomHeight += bottomLegendHeight;
 
     for (const item of bottomItems) {
       const style = buildTextStyle(
@@ -375,9 +390,15 @@ export function computeChrome(
     bottomHeight += pad;
   } else if (showWatermark && width >= BRAND_MIN_WIDTH) {
     // No bottom chrome items, but brand watermark still renders.
-    // Reserve space: chartToFooter gap + brand text height + padding.
+    // Reserve space: chartToFooter gap + brand text height + padding,
+    // plus the bottom-legend reservation so the watermark sits below it.
     const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
-    bottomHeight = theme.spacing.chartToFooter + brandHeight + pad;
+    bottomHeight = theme.spacing.chartToFooter + brandHeight + pad + bottomLegendHeight;
+  } else if (bottomLegendHeight > 0) {
+    // No bottom chrome content and no watermark, but a bottom legend was
+    // reserved upstream. Surface the reservation so callers don't need to
+    // re-add it on top of bottomHeight.
+    bottomHeight = bottomLegendHeight;
   }
 
   // Custom brand is right-anchored on the same row as the first bottom chrome

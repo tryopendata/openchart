@@ -247,6 +247,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     annotations: normalizeAnnotations(spec.annotations),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
+    endpointLabels: spec.endpointLabels,
     responsive: spec.responsive ?? true,
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
@@ -259,6 +260,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     userExplicit: {
       chrome: false,
       legend: false,
+      endpointLabels: false,
       xAxis: false,
       yAxis: false,
       labels: false,

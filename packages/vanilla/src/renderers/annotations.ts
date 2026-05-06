@@ -186,6 +186,24 @@ function renderAnnotation(
       }
     }
 
+    // Optional anchor dot: rendered AFTER the connector but BEFORE the label
+    // text so the dot sits on top of the connector and under any text halo.
+    // The engine resolves dot.x/y at the post-gap-pullback connector.to point;
+    // the renderer just stamps coordinates.
+    if (annotation.dot) {
+      const dot = createSVGElement('circle');
+      dot.setAttribute('class', 'oc-annotation-dot');
+      setAttrs(dot, {
+        cx: annotation.dot.x,
+        cy: annotation.dot.y,
+        r: annotation.dot.radius,
+        fill: annotation.dot.fill,
+        stroke: annotation.dot.stroke,
+        'stroke-width': annotation.dot.strokeWidth,
+      });
+      g.appendChild(dot);
+    }
+
     const text = createSVGElement('text');
     text.setAttribute('class', 'oc-annotation-label');
     setAttrs(text, { x: annotation.label.x, y: annotation.label.y });
@@ -243,6 +261,16 @@ function renderAnnotation(
     }
 
     g.appendChild(text);
+
+    // Optional muted subtitle, positioned by the engine below the primary label.
+    if (annotation.subtitle) {
+      const sub = createSVGElement('text');
+      sub.setAttribute('class', 'oc-annotation-subtitle');
+      setAttrs(sub, { x: annotation.subtitle.x, y: annotation.subtitle.y });
+      applyTextStyle(sub, annotation.subtitle.style);
+      sub.textContent = annotation.subtitle.text;
+      g.appendChild(sub);
+    }
   }
 
   parent.appendChild(g);

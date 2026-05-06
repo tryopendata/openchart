@@ -1,8 +1,10 @@
 import type { LayoutStrategy, LegendLayout } from '@opendata-ai/openchart-core';
 import { adaptTheme, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import { compileChart } from '../compile';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeDimensions } from '../layout/dimensions';
+import { legendGap } from '../legend/wrap';
 
 const baseSpec: NormalizedChartSpec = {
   markType: 'line',
@@ -391,5 +393,148 @@ describe('computeDimensions', () => {
 
     // Narrow viewport should have more chart height available (smaller legend gap)
     expect(narrowDims.chartArea.height).toBeGreaterThanOrEqual(wideDims.chartArea.height - 10);
+  });
+
+  it('exposes xAxisHeight on the layout dimensions', () => {
+    const dims = computeDimensions(baseSpec, { width: 600, height: 400 }, emptyLegend, lightTheme);
+    // Default x-axis (no rotation, no title): 26px reservation.
+    expect(dims.xAxisHeight).toBeGreaterThan(0);
+  });
+
+  it('reserves extra bottom space for a bottom legend so it sits below the x-axis', () => {
+    // Defect-3 regression: bottom-positioned legends used to render in the
+    // same band as the x-axis tick row. The reservation now flows through
+    // chrome.bottomHeight (via bottomLegendReservation) so chrome stacks
+    // below the legend band rather than colliding with it. The base bottom
+    // margin already includes xAxisHeight, so the additional reservation
+    // collapses to legendHeight + gap.
+    const bottomLegend: LegendLayout = {
+      ...emptyLegend,
+      position: 'bottom',
+      entries: [{ label: 'US', color: '#1b7fa3', shape: 'line' }],
+      bounds: { x: 0, y: 0, width: 400, height: 28 },
+    };
+
+    const dimsNoLegend = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const dimsBottom = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      bottomLegend,
+      lightTheme,
+    );
+
+    // Reservation is legendHeight + gap, threaded through chrome.bottomHeight.
+    const gap = legendGap(600);
+    const expectedExtra = bottomLegend.bounds.height + gap;
+    expect(dimsBottom.margins.bottom - dimsNoLegend.margins.bottom).toBeCloseTo(expectedExtra, 5);
+    // The reservation lives on chrome.bottomHeight, not as a separate margin
+    // delta, so renderers reading chrome.source.y get the legend offset baked
+    // in for free.
+    expect(dimsBottom.chrome.bottomHeight - dimsNoLegend.chrome.bottomHeight).toBeCloseTo(
+      expectedExtra,
+      5,
+    );
+  });
+});
+
+describe('bottom legend placement (defect-3 regression)', () => {
+  it('places the bottom legend below the x-axis tick row, not over it', () => {
+    // Multi-series area with explicit bottom legend should render the legend
+    // beneath the x-axis ticks. Asserts:
+    //   legend.bounds.y >= chartArea.y + chartArea.height + xAxisHeight + gap
+    const spec = {
+      mark: 'area' as const,
+      data: [
+        { year: '2020', value: 10, series: 'A' },
+        { year: '2021', value: 20, series: 'A' },
+        { year: '2022', value: 15, series: 'A' },
+        { year: '2020', value: 8, series: 'B' },
+        { year: '2021', value: 18, series: 'B' },
+        { year: '2022', value: 12, series: 'B' },
+        { year: '2020', value: 5, series: 'C' },
+        { year: '2021', value: 12, series: 'C' },
+        { year: '2022', value: 9, series: 'C' },
+      ],
+      encoding: {
+        x: { field: 'year', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'series', type: 'nominal' as const },
+      },
+      legend: { position: 'bottom' as const, show: true },
+    };
+
+    const layout = compileChart(spec, { width: 800, height: 500 });
+
+    expect(layout.legend.entries.length).toBeGreaterThan(0);
+    expect(layout.legend.position).toBe('bottom');
+
+    // Recompute the gap the engine uses internally to make a tight assertion.
+    const gap = legendGap(800);
+
+    // Use the same axis-height fallback dimensions.ts uses for an unrotated
+    // x-axis without an axis title (26px). Asserting `>=` means the legend
+    // top is at or below the bottom of the x-axis tick row.
+    const xAxisHeight = 26;
+    const chartBottom = layout.area.y + layout.area.height;
+    const minLegendY = chartBottom + xAxisHeight + gap;
+
+    expect(layout.legend.bounds.y).toBeGreaterThanOrEqual(minLegendY - 0.5);
+  });
+
+  it('positions bottom chrome (source) below the bottom legend band', () => {
+    // Follow-up regression: a bottom legend reserved space below the x-axis
+    // tick row, but source/byline/footer chrome was still positioned via
+    // chartBottom + xAxisExtent + chartToFooter, landing in the same band as
+    // the legend swatches. Threading bottomLegendReservation into computeChrome
+    // now shifts chrome.source.y so it stacks below the legend.
+    const spec = {
+      mark: 'area' as const,
+      data: [
+        { year: '2020', value: 10, series: 'A' },
+        { year: '2021', value: 20, series: 'A' },
+        { year: '2022', value: 15, series: 'A' },
+        { year: '2020', value: 8, series: 'B' },
+        { year: '2021', value: 18, series: 'B' },
+        { year: '2022', value: 12, series: 'B' },
+      ],
+      encoding: {
+        x: { field: 'year', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'series', type: 'nominal' as const },
+      },
+      legend: { position: 'bottom' as const, show: true },
+      chrome: {
+        source: 'World Bank, 2024',
+        byline: 'OpenChart Newsroom',
+      },
+    };
+
+    const layout = compileChart(spec, { width: 800, height: 500 });
+
+    // Sanity: legend and chrome both rendered.
+    expect(layout.legend.position).toBe('bottom');
+    expect(layout.legend.entries.length).toBeGreaterThan(0);
+    expect(layout.chrome.source).toBeDefined();
+    expect(layout.chrome.byline).toBeDefined();
+
+    // Compute chrome's absolute y the same way the renderer does:
+    // bottomOffset = chartBottom + xAxisExtent (= 26 for default unrotated x-axis).
+    const xAxisExtent = 26;
+    const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
+    const sourceAbsoluteY = bottomOffset + layout.chrome.source!.y;
+    const bylineAbsoluteY = bottomOffset + layout.chrome.byline!.y;
+
+    // Legend's bottom edge.
+    const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
+
+    // Source must land below the legend band, with at least a small gap
+    // (chartToFooter ≈ 12px) for breathing room.
+    expect(sourceAbsoluteY).toBeGreaterThan(legendBottom);
+    expect(bylineAbsoluteY).toBeGreaterThan(sourceAbsoluteY);
   });
 });

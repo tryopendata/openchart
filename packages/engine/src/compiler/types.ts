@@ -80,6 +80,8 @@ export interface UserExplicit {
   chrome: boolean;
   /** True if user wrote `legend`. */
   legend: boolean;
+  /** True if user wrote `endpointLabels`. */
+  endpointLabels: boolean;
   /** True if user wrote `encoding.x.axis`. */
   xAxis: boolean;
   /** True if user wrote `encoding.y.axis`. */
@@ -111,6 +113,8 @@ export interface NormalizedChartSpec {
     Pick<LabelConfig, 'offsets' | 'color'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
+  /** Right-side endpoint labels column config (multi-series line/area only). */
+  endpointLabels?: boolean | import('@opendata-ai/openchart-core').EndpointLabelsConfig;
   responsive: boolean;
   theme: ThemeConfig;
   darkMode: DarkMode;

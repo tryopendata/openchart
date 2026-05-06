@@ -42,6 +42,8 @@ import {
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
+import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
+import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
 import { computeMetricBar, metricBarHeight } from './metrics';
 
@@ -66,6 +68,12 @@ export interface LayoutDimensions {
    * spec.metrics is supplied AND the bar fits the container.
    */
   metrics?: ResolvedMetricBar;
+  /**
+   * Height reserved below the chart area for x-axis tick labels and the
+   * (optional) axis title. Exposed so downstream layout code (e.g. the
+   * second legend pass) can position elements below the axis row.
+   */
+  xAxisHeight: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +179,20 @@ export function computeDimensions(
     chromeMode = 'hidden';
   }
 
-  // Compute chrome with mode and scaled padding
+  // Pre-compute the bottom-legend reservation (legend height + gap) so the
+  // chrome layout can stack source/byline/footer below the legend band.
+  // Chart-side bottom legends only — right/top/bottom-right legends don't
+  // share vertical space with bottom chrome.
+  const bottomLegendReservation =
+    'entries' in legendLayout &&
+    legendLayout.entries.length > 0 &&
+    legendLayout.position === 'bottom'
+      ? legendLayout.bounds.height + legendGap(width)
+      : 0;
+
+  // Compute chrome with mode and scaled padding. `bottomLegendReservation`
+  // pushes bottom chrome below the legend band; the returned bottomHeight
+  // already accounts for it, so margin math below must not re-add it.
   const chrome = computeChrome(
     chromeToInput(spec.chrome),
     theme,
@@ -180,6 +201,7 @@ export function computeDimensions(
     chromeMode,
     padding,
     watermark,
+    bottomLegendReservation,
   );
 
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
@@ -220,7 +242,7 @@ export function computeDimensions(
       height: Math.max(0, height - margins.top - margins.bottom),
     };
 
-    return { total, chrome, chartArea, margins, theme };
+    return { total, chrome, chartArea, margins, theme, xAxisHeight: xAxisSpace };
   }
 
   // Start with the total rect
@@ -286,16 +308,47 @@ export function computeDimensions(
     left: hPad + (isRadial ? hPad : axisMargin),
   };
 
-  // Dynamic right margin for line/area end-of-line labels.
-  // Only reserve space when labels will actually render.
+  // Right-margin reservation for the three-way label suppression truth table:
+  //
+  //   1. Endpoint-labels column (predicted width, default ON for ≥2-series
+  //      line/area). Reserves chart-width + ENDPOINT_COLUMN_GAP + col-width.
+  //   2. Legacy end-of-line labels — only when the truth table resolves to
+  //      `showEndOfLineLabels: true` (legend hidden AND endpoint column off).
+  //   3. Right-edge text annotations — stack ADDITIVELY on top of (1) and (2)
+  //      so a callout at maxX lands between the chart area and any column to
+  //      its right.
   const labelDensity = spec.labels.density;
   const labelsHiddenByStrategy = strategy?.labelMode === 'none';
+  const seriesCount = countColorSeries(spec);
+  const sup = resolveSuppression(spec, {
+    seriesCount,
+    labelsHiddenByStrategy,
+    labelsDensityNone: labelDensity === 'none',
+  });
+
+  // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
+  // when the column would be suppressed. `labels.density` is intentionally
+  // not checked here — that switch controls only the legacy end-of-line labels.
+  let endpointWidth = 0;
+  if (sup.showEndpointLabels && !labelsHiddenByStrategy) {
+    endpointWidth = predictEndpointLabelsWidth(spec, theme);
+    if (endpointWidth > 0) {
+      // 16px gap between chart area edge and the column.
+      margins.right = Math.max(margins.right, hPad) + endpointWidth + 16;
+    }
+  }
+
+  // (2) Legacy end-of-line label reservation — fires only in the truth-table
+  // cell where end-of-line labels still render (legend hidden AND endpoint
+  // column off AND ≥2 series AND labels visible). When the endpoint column
+  // is on, this reservation is redundant and is skipped.
   if (
+    endpointWidth === 0 &&
+    sup.showEndOfLineLabels &&
     (spec.markType === 'line' || spec.markType === 'area') &&
     labelDensity !== 'none' &&
     !labelsHiddenByStrategy
   ) {
-    // Estimate label width from longest series name (color encoding domain)
     const colorEnc = encoding.color;
     const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
     if (colorField) {
@@ -315,10 +368,10 @@ export function computeDimensions(
     }
   }
 
-  // Reserve right margin for text annotations near the chart's right edge.
-  // Without this, annotation text at the last data point clips outside the SVG.
-  // Account for anchor direction and offset.dx to avoid over-reserving space.
-  // Skip when annotations are hidden (tooltip-only at compact breakpoints).
+  // (3) Right-edge text annotations. Stacks ADDITIVELY on top of any
+  // endpoint-labels reservation so the annotation text lands between the
+  // chart area's right edge and the endpoint column. When no endpoint column
+  // is reserved, behaves as before (max-of with the existing margin).
   if (
     strategy?.annotationPosition !== 'tooltip-only' &&
     spec.annotations.length > 0 &&
@@ -351,7 +404,14 @@ export function computeDimensions(
                   textWidth / 2; // centered (top/bottom/auto)
           const rightOverflow = Math.max(0, baseRightExtent + dx);
           if (rightOverflow > 0) {
-            margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
+            if (endpointWidth > 0) {
+              // Endpoint column already reserved space at the far right; the
+              // annotation lands BETWEEN the chart edge and the column, so
+              // stack additively rather than max-of.
+              margins.right += rightOverflow + 12;
+            } else {
+              margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
+            }
           }
         }
       }
@@ -481,16 +541,22 @@ export function computeDimensions(
     margins.right = Math.max(margins.right, hPad + options.rightAxisReserve);
   }
 
-  // Reserve legend space
+  // Reserve legend space.
+  //
+  // Bottom legend: reservation is already baked into `chrome.bottomHeight`
+  // via `bottomLegendReservation`, so no additional bottom margin is needed
+  // here. The legend lands below the x-axis tick row (which is reserved via
+  // `xAxisHeight` in the base bottom margin) and source/byline/footer chrome
+  // stacks underneath the legend band rather than colliding with it.
   if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(width);
     if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
       margins.right += legendLayout.bounds.width + 8;
     } else if (legendLayout.position === 'top') {
       margins.top += legendLayout.bounds.height + gap;
-    } else if (legendLayout.position === 'bottom') {
-      margins.bottom += legendLayout.bounds.height + gap;
     }
+    // 'bottom' is intentionally not handled here — see bottomLegendReservation
+    // above.
   }
 
   // Chart area is what's left after margins
@@ -517,6 +583,7 @@ export function computeDimensions(
       fallbackMode as 'compact' | 'hidden',
       padding,
       watermark,
+      bottomLegendReservation,
     );
 
     // Recalculate top/bottom margins with stripped chrome.
@@ -575,6 +642,7 @@ export function computeDimensions(
         margins,
         theme,
         metrics: fallbackMetrics,
+        xAxisHeight,
       };
     }
   }
@@ -592,7 +660,15 @@ export function computeDimensions(
       height: Math.max(0, height - margins.top - margins.bottom),
     };
   }
-  return { total, chrome, chartArea, margins, theme, metrics: resolvedMetrics };
+  return {
+    total,
+    chrome,
+    chartArea,
+    margins,
+    theme,
+    metrics: resolvedMetrics,
+    xAxisHeight,
+  };
 }
 
 /**

@@ -78,6 +78,7 @@ export function makeLineSpec(): NormalizedChartSpec {
     userExplicit: {
       chrome: false,
       legend: false,
+      endpointLabels: false,
       xAxis: false,
       yAxis: false,
       labels: false,
@@ -119,6 +120,7 @@ export function makeBarSpec(): NormalizedChartSpec {
     userExplicit: {
       chrome: false,
       legend: false,
+      endpointLabels: false,
       xAxis: false,
       yAxis: false,
       labels: false,
@@ -162,6 +164,7 @@ export function makeScatterSpec(): NormalizedChartSpec {
     userExplicit: {
       chrome: false,
       legend: false,
+      endpointLabels: false,
       xAxis: false,
       yAxis: false,
       labels: false,

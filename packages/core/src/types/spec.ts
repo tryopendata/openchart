@@ -329,18 +329,26 @@ export interface EncodingChannel {
   scale?: ScaleConfig;
   /**
    * Stacking behavior for quantitative channels (Vega-Lite aligned).
-   * - undefined | true | 'zero': stack from zero baseline (default)
+   * - undefined: chart-type default (see below)
+   * - true | 'zero': stack from zero baseline
    * - 'normalize': stack and normalize to fraction of total (0-1 per category)
    * - 'center': center stacks around zero (streamgraph style)
-   * - null | false: no stacking -- renders grouped (side-by-side) bars instead
+   * - null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)
    *
-   * Use `stack: null` to get grouped/dodged bars. This is the idiomatic way to
-   * compare values across categories side-by-side rather than stacked on top of
-   * each other. Without it, multi-series bar data stacks by default.
+   * **Defaults differ by chart type:**
+   * - **Bar**: defaults to stacked. Use `stack: null` for grouped (side-by-side) bars.
+   * - **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)
+   *   to opt into stacked areas. Each overlapping series renders as a translucent
+   *   gradient band anchored at the y-domain baseline.
+   * - **Line**: stacking is not applied (lines always overlap).
    *
    * @example
    * // Side-by-side grouped bars (comparing 2018 vs 2022 wages by firm size):
    * "x": { "field": "pay", "type": "quantitative", "stack": null }
+   *
+   * @example
+   * // Stacked area (opt-in; default is overlap):
+   * "y": { "field": "value", "type": "quantitative", "stack": "zero" }
    */
   stack?: boolean | 'zero' | 'normalize' | 'center' | null;
   /**
@@ -545,6 +553,18 @@ export interface AnnotationOffset {
 /** Anchor direction for annotation label placement relative to the data point. */
 export type AnnotationAnchor = 'top' | 'bottom' | 'left' | 'right' | 'auto';
 
+/** Style overrides for the dot marker drawn at the connector's data-point endpoint. */
+export interface AnnotationDot {
+  /** Circle radius in pixels. Default 5. */
+  radius?: number;
+  /** Fill color. Defaults to theme background for an "open ring" look. */
+  fill?: string;
+  /** Stroke color. Defaults to theme text color. */
+  stroke?: string;
+  /** Stroke width in pixels. Default 2. */
+  strokeWidth?: number;
+}
+
 /** Base properties shared by all annotation types. */
 interface AnnotationBase {
   /** Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching. */
@@ -575,6 +595,18 @@ export interface TextAnnotation extends AnnotationBase {
   y: string | number;
   /** The annotation text. Required for text annotations. */
   text: string;
+  /**
+   * Optional muted second-tone text rendered below the primary `text`.
+   * Used for supporting context (e.g. methodology, source). Newlines in
+   * `text` still produce multi-line primary; subtitle is a separate block.
+   */
+  subtitle?: string;
+  /**
+   * Optional dot marker drawn at the connector's data-point endpoint.
+   * `true` enables the default open-ring style. Pass an object to override
+   * radius, fill, stroke, or strokeWidth.
+   */
+  dot?: boolean | AnnotationDot;
   /** Font size override. */
   fontSize?: number;
   /** Font weight override. */
@@ -768,6 +800,47 @@ export interface LegendConfig {
   exclude?: string[];
 }
 
+/**
+ * Configuration for the endpoint labels column rendered at the chart's right edge
+ * for multi-series line/area charts. Each entry pairs the series name with its
+ * last formatted value, optionally anchored to the line by an open-circle marker.
+ *
+ * The column is independent of the traditional `legend` and the legacy
+ * end-of-line labels. Together with `legend.show`, the three suppression toggles
+ * follow this truth table for ≥2-series line/area charts:
+ *
+ * | `legend.show` | `endpointLabels` | Traditional legend | Endpoint column | End-of-line labels |
+ * |--|--|--|--|--|
+ * | unset | unset | hidden (auto-suppressed) | shown (default) | hidden |
+ * | true  | unset | shown                    | shown           | hidden |
+ * | unset | false | shown (auto-suppress revoked) | hidden     | hidden |
+ * | false | false | hidden                   | hidden          | shown (last-resort) |
+ * | true  | false | shown                    | hidden          | hidden |
+ * | false | true  | hidden                   | shown           | hidden |
+ * | true  | true  | shown                    | shown           | hidden |
+ *
+ * Single-series charts: column is hidden by default (nothing to identify).
+ */
+export interface EndpointLabelsConfig {
+  /** Explicit on/off. When undefined, the chart auto-decides based on series count. */
+  show?: boolean;
+  /** Field to read the displayed value from. Defaults to `encoding.y.field`. */
+  valueField?: string;
+  /** d3-format string for the value. Defaults to `encoding.y.axis.format`. */
+  format?: string;
+  /** Max wrap width in pixels for long series names. Default 96. */
+  width?: number;
+  /** Render an open-circle marker on the line at the right edge. Default true. */
+  showMarker?: boolean;
+  /** Override the marker style. */
+  markerStyle?: {
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    radius?: number;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Spec types (the top-level discriminated union)
 // ---------------------------------------------------------------------------
@@ -936,6 +1009,17 @@ export interface ChartSpec {
   labels?: LabelSpec;
   /** Legend display configuration (position override). */
   legend?: LegendConfig;
+  /**
+   * Right-side endpoint labels column for multi-series line/area charts.
+   *
+   * - `true` or `EndpointLabelsConfig`: render the column.
+   * - `false`: hide the column.
+   * - omitted: auto-enable for multi-series line/area charts, hide otherwise.
+   *
+   * See {@link EndpointLabelsConfig} for the full suppression truth table that
+   * relates this flag to `legend.show` and the legacy end-of-line labels.
+   */
+  endpointLabels?: boolean | EndpointLabelsConfig;
   /** Whether the chart adapts to container width. Defaults to true. */
   responsive?: boolean;
   /** Theme configuration overrides. */

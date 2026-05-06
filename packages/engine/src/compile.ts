@@ -51,6 +51,7 @@ import { format as d3Format } from 'd3-format';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { computeAnnotations } from './annotations/compute';
+import { computeEndpointLabels } from './endpoint-labels/compute';
 // Side-effect import: registers all built-in chart renderers with the
 // registry on module load. Tests that clear the registry can import
 // `registerBuiltinRenderers` from `./charts/builtin` to restore defaults.
@@ -258,6 +259,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const userExplicit = {
     chrome: hasChromeKeys(rawSpec.chrome) || hasChromeKeys(bpForExplicit?.chrome),
     legend: rawSpec.legend !== undefined || bpForExplicit?.legend !== undefined,
+    endpointLabels:
+      rawSpec.endpointLabels !== undefined ||
+      (bpForExplicit as Record<string, unknown> | undefined)?.endpointLabels !== undefined,
     xAxis: rawEncoding?.x?.axis !== undefined || bpEncoding?.x?.axis !== undefined,
     yAxis: rawEncoding?.y?.axis !== undefined || bpEncoding?.y?.axis !== undefined,
     labels: rawSpec.labels !== undefined || bpForExplicit?.labels !== undefined,
@@ -483,7 +487,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         legendArea.height += legendLayout.bounds.height + gap;
         break;
       case 'bottom':
-        legendArea.height += legendLayout.bounds.height + gap;
+        // Bottom legend sits below the x-axis tick row, not over it. Expand
+        // legendArea by xAxisHeight + legendHeight + gap so the bottom-anchored
+        // legend lands beneath the axis. Mirrors dimensions.ts which reserved
+        // the same xAxisHeight in margins.bottom.
+        legendArea.height += legendLayout.bounds.height + gap + dims.xAxisHeight;
         break;
       case 'right':
       case 'bottom-right':
@@ -620,6 +628,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const renderer = getChartRenderer(rendererKey);
   const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
 
+  // Compute the right-side endpoint labels column for multi-series line/area
+  // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.
+  // dimensions.ts already reserved the right margin via predictEndpointLabelsWidth.
+  const endpointLabels = computeEndpointLabels(chartSpec, marks, theme, chartArea, strategy);
+
   // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
   const obstacles: Rect[] = [];
   if (finalLegend.bounds.width > 0) {
@@ -683,6 +696,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     marks,
     annotations,
     legend: finalLegend,
+    ...(endpointLabels.entries.length > 0 ? { endpointLabels } : {}),
     tooltipDescriptors,
     a11y: {
       altText,

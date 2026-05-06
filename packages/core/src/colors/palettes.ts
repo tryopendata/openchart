@@ -51,16 +51,20 @@ export const ACHROMATIC_RAMP = {
  * the conversion math changes, regenerate from the source rather than
  * editing hex literals directly.
  */
+// Order interleaves hues so adjacent slots sit at least ~70° apart on the
+// OKLCH wheel. Cyan and teal differ by only ~10° and read as the same color
+// when placed side-by-side (e.g. on a pie slice or stacked area), so the
+// teal slot is pushed deep into the ramp where it won't neighbor cyan.
 export const CATEGORICAL_PALETTE = [
-  '#06b6d4', // cyan, primary accent (sRGB literal)
-  '#00b9c3', // teal    — oklch(70% 0.15 200)
-  '#3bb974', // emerald — oklch(70% 0.15 155)
-  '#e69c3a', // amber   — oklch(75% 0.14 70)
-  '#eb7289', // rose    — oklch(70% 0.15 10)
-  '#8494fa', // indigo  — oklch(70% 0.15 275)
-  '#ad87ed', // violet  — oklch(70% 0.15 300)
-  '#eb8656', // orange  — oklch(72% 0.14 45)
-  '#4ba3f7', // sky     — oklch(70% 0.15 250)
+  '#06b6d4', // cyan,    primary accent (sRGB literal, ~205°)
+  '#eb7289', // rose     — oklch(70% 0.15 10)
+  '#3bb974', // emerald  — oklch(70% 0.15 155)
+  '#ad87ed', // violet   — oklch(70% 0.15 300)
+  '#e69c3a', // amber    — oklch(75% 0.14 70)
+  '#4ba3f7', // sky      — oklch(70% 0.15 250)
+  '#eb8656', // orange   — oklch(72% 0.14 45)
+  '#8494fa', // indigo   — oklch(70% 0.15 275)
+  '#00b9c3', // teal     — oklch(70% 0.15 200)
 ] as const;
 
 export type CategoricalPalette = typeof CATEGORICAL_PALETTE;
