@@ -372,6 +372,19 @@ function applyMarkDefOverrides(
 
   if (fixedSize == null && crSpec == null) return marks;
 
+  // Identify the rightmost segment per stackGroup (largest `x + width`).
+  // Only that segment receives the corner rounding so the seams between
+  // stacked segments stay square and flush.
+  const rightPerStack = new Map<string, RectMark>();
+  for (const mark of marks) {
+    if (mark.stackGroup === undefined) continue;
+    const current = rightPerStack.get(mark.stackGroup);
+    const markRight = mark.x + mark.width;
+    if (!current || markRight > current.x + current.width) {
+      rightPerStack.set(mark.stackGroup, mark);
+    }
+  }
+
   for (const mark of marks) {
     if (fixedSize != null && mark.stackGroup === undefined) {
       const barHeight = Math.min(fixedSize, bandwidth);
@@ -380,10 +393,21 @@ function applyMarkDefOverrides(
       mark.height = barHeight;
     }
     const effectiveHeight = mark.height;
+    const isStacked = mark.stackGroup !== undefined;
+    const isStackRight = isStacked && rightPerStack.get(mark.stackGroup!) === mark;
+
+    if (isStacked && !isStackRight) continue;
+
     if (crSpec === 'pill') {
       mark.cornerRadius = effectiveHeight / 2;
     } else if (typeof crSpec === 'number') {
       mark.cornerRadius = crSpec;
+    } else {
+      continue;
+    }
+
+    if (isStackRight) {
+      mark.cornerRadiusSides = { tl: false, tr: true, br: true, bl: false };
     }
   }
   return marks;
