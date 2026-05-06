@@ -321,18 +321,26 @@ export interface EncodingChannel {
   scale?: ScaleConfig;
   /**
    * Stacking behavior for quantitative channels (Vega-Lite aligned).
-   * - undefined | true | 'zero': stack from zero baseline (default)
+   * - undefined: chart-type default (see below)
+   * - true | 'zero': stack from zero baseline
    * - 'normalize': stack and normalize to fraction of total (0-1 per category)
    * - 'center': center stacks around zero (streamgraph style)
-   * - null | false: no stacking -- renders grouped (side-by-side) bars instead
+   * - null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)
    *
-   * Use `stack: null` to get grouped/dodged bars. This is the idiomatic way to
-   * compare values across categories side-by-side rather than stacked on top of
-   * each other. Without it, multi-series bar data stacks by default.
+   * **Defaults differ by chart type:**
+   * - **Bar**: defaults to stacked. Use `stack: null` for grouped (side-by-side) bars.
+   * - **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)
+   *   to opt into stacked areas. Each overlapping series renders as a translucent
+   *   gradient band anchored at the y-domain baseline.
+   * - **Line**: stacking is not applied (lines always overlap).
    *
    * @example
    * // Side-by-side grouped bars (comparing 2018 vs 2022 wages by firm size):
    * "x": { "field": "pay", "type": "quantitative", "stack": null }
+   *
+   * @example
+   * // Stacked area (opt-in; default is overlap):
+   * "y": { "field": "value", "type": "quantitative", "stack": "zero" }
    */
   stack?: boolean | 'zero' | 'normalize' | 'center' | null;
   /**

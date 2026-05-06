@@ -738,13 +738,18 @@ export function computeScales(
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
       encoding.y.type === 'quantitative';
-    const yStackDisabled = encoding.y.stack === null || encoding.y.stack === false;
-    if (
-      (isVerticalBar || spec.markType === 'area') &&
-      encoding.color &&
-      encoding.y.type === 'quantitative' &&
-      !yStackDisabled
-    ) {
+    // Bar default is stacked, so undefined counts as stacked. Area default is
+    // overlap (v6), so the stacked-domain expansion only applies when the user
+    // explicitly opts into stacking.
+    const stackProp = encoding.y.stack;
+    const isExplicitlyStacked =
+      stackProp === true ||
+      stackProp === 'zero' ||
+      stackProp === 'normalize' ||
+      stackProp === 'center';
+    const isAreaStacked = spec.markType === 'area' && isExplicitlyStacked;
+    const isBarStacked = isVerticalBar && stackProp !== null && stackProp !== false;
+    if ((isBarStacked || isAreaStacked) && encoding.color && encoding.y.type === 'quantitative') {
       if (encoding.y.stack === 'normalize') {
         // Normalize: domain is [0, 1] (VL convention)
         yChannel = { ...encoding.y, scale: { ...encoding.y.scale, domain: [0, 1], nice: false } };

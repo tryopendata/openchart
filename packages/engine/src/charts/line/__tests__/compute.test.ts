@@ -505,8 +505,9 @@ describe('computeAreaMarks', () => {
     }
   });
 
-  it('stacked areas: produces multiple AreaMarks for multi-series', () => {
+  it('stacked areas: produces multiple AreaMarks for multi-series with stack: "zero"', () => {
     const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = 'zero';
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea);
 
@@ -514,6 +515,129 @@ describe('computeAreaMarks', () => {
     const seriesKeys = marks.map((m) => m.seriesKey).filter(Boolean);
     expect(seriesKeys).toContain('US');
     expect(seriesKeys).toContain('UK');
+  });
+
+  it('overlap (default): produces multiple AreaMarks for multi-series', () => {
+    // v6 default: multi-series with color but no `stack` overlaps instead of stacking.
+    const spec = makeMultiSeriesSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(2);
+    const seriesKeys = marks.map((m) => m.seriesKey).filter(Boolean);
+    expect(seriesKeys).toContain('US');
+    expect(seriesKeys).toContain('UK');
+  });
+
+  it('overlap: every series shares the same baseline (no stacking offset)', () => {
+    const spec = makeMultiSeriesSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    // All bottom points across all series should be at the same baseline.
+    const baselines = new Set<number>();
+    for (const mark of marks) {
+      for (const p of mark.bottomPoints) {
+        baselines.add(p.y);
+      }
+    }
+    expect(baselines.size).toBe(1);
+  });
+
+  it('overlap: each series uses a translucent gradient fill', () => {
+    const spec = makeMultiSeriesSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks.length).toBeGreaterThan(0);
+    for (const mark of marks) {
+      expect(typeof mark.fill).toBe('object');
+      const fill = mark.fill as { gradient: string; stops: { opacity?: number }[] };
+      expect(fill.gradient).toBe('linear');
+      // Overlap stops are calibrated lower than solo stops so layered bands stay legible.
+      expect(fill.stops[0].opacity).toBe(0.22);
+      expect(fill.stops[fill.stops.length - 1].opacity).toBe(0);
+    }
+  });
+
+  it('overlap: stack: null is treated the same as undefined (overlap)', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = null;
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(2);
+    // Same baseline -> overlap, not stacked
+    const baselines = new Set(marks.flatMap((m) => m.bottomPoints.map((p) => p.y)));
+    expect(baselines.size).toBe(1);
+  });
+
+  it('overlap: stack: false is treated the same as undefined (overlap)', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = false;
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(2);
+    const baselines = new Set(marks.flatMap((m) => m.bottomPoints.map((p) => p.y)));
+    expect(baselines.size).toBe(1);
+  });
+
+  it('stack: true opts into stacked rendering', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = true;
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(2);
+    // Stacked layers should have different baselines (one stacks on top of the other)
+    const firstBottom = marks[0].bottomPoints[0]?.y;
+    const secondBottom = marks[1].bottomPoints[0]?.y;
+    expect(firstBottom).not.toBe(secondBottom);
+  });
+
+  it('solo (single series) uses the richer solo gradient', () => {
+    const spec = makeSingleSeriesSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks).toHaveLength(1);
+    const fill = marks[0].fill as { gradient: string; stops: { opacity?: number }[] };
+    expect(fill.gradient).toBe('linear');
+    // Solo stops are heavier than overlap stops since there's no overlap.
+    expect(fill.stops[0].opacity).toBe(0.42);
+  });
+
+  it('stacked areas use a top-to-bottom gradient fill (not flat opacity)', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = 'zero';
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    expect(marks.length).toBeGreaterThan(0);
+    for (const mark of marks) {
+      const fill = mark.fill as { gradient: string; stops: { opacity?: number }[] };
+      expect(fill.gradient).toBe('linear');
+      expect(fill.stops).toHaveLength(2);
+      expect(fill.stops[0].opacity).toBe(0.65);
+      expect(fill.stops[1].opacity).toBe(0.35);
+      // fillOpacity should be 1 so gradient stop-opacity controls the fade
+      expect(mark.fillOpacity).toBe(1);
+    }
+  });
+
+  it('stacked: markDef.fill string still overrides per-layer gradient', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = 'zero';
+    spec.markDef = { type: 'area', fill: '#ff00ff' };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea);
+
+    for (const mark of marks) {
+      expect(mark.fill).toBe('#ff00ff');
+      // Falls back to the historical 0.7 fillOpacity when user supplies flat color
+      expect(mark.fillOpacity).toBe(0.7);
+    }
   });
 
   describe('x-axis sorting', () => {
@@ -536,6 +660,30 @@ describe('computeAreaMarks', () => {
     });
 
     it('sorts unsorted temporal data for stacked area', () => {
+      const base = makeMultiSeriesSpec();
+      base.encoding.y!.stack = 'zero';
+      const spec: NormalizedChartSpec = {
+        ...base,
+        data: [
+          { date: '2022-01-01', value: 30, country: 'US' },
+          { date: '2020-01-01', value: 10, country: 'US' },
+          { date: '2021-01-01', value: 40, country: 'US' },
+          { date: '2022-01-01', value: 45, country: 'UK' },
+          { date: '2020-01-01', value: 15, country: 'UK' },
+          { date: '2021-01-01', value: 35, country: 'UK' },
+        ],
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeAreaMarks(spec, scales, chartArea);
+
+      for (const mark of marks) {
+        for (let i = 1; i < mark.topPoints.length; i++) {
+          expect(mark.topPoints[i].x).toBeGreaterThan(mark.topPoints[i - 1].x);
+        }
+      }
+    });
+
+    it('sorts unsorted temporal data for overlap (multi-series default)', () => {
       const spec: NormalizedChartSpec = {
         ...makeMultiSeriesSpec(),
         data: [
@@ -550,6 +698,7 @@ describe('computeAreaMarks', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeAreaMarks(spec, scales, chartArea);
 
+      expect(marks).toHaveLength(2);
       for (const mark of marks) {
         for (let i = 1; i < mark.topPoints.length; i++) {
           expect(mark.topPoints[i].x).toBeGreaterThan(mark.topPoints[i - 1].x);
@@ -590,7 +739,7 @@ describe('computeAreaMarks', () => {
         ],
         encoding: {
           x: { field: 'date', type: 'temporal' },
-          y: { field: 'value', type: 'quantitative' },
+          y: { field: 'value', type: 'quantitative', stack: 'zero' },
           color: { field: 'region', type: 'nominal' },
         },
         chrome: {},
@@ -635,6 +784,7 @@ describe('computeAreaMarks', () => {
 
   it('stacked areas: each layer has different baselines', () => {
     const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = 'zero';
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea);
 
@@ -664,7 +814,7 @@ describe('computeAreaMarks', () => {
       ],
       encoding: {
         x: { field: 'date', type: 'temporal' },
-        y: { field: 'value', type: 'quantitative' },
+        y: { field: 'value', type: 'quantitative', stack: 'zero' },
         color: { field: 'group', type: 'nominal' },
       },
       chrome: {},

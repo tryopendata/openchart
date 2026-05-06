@@ -193,7 +193,14 @@ export function computeLegend(
     const quantChannel =
       spec.encoding.y?.type === 'quantitative' ? spec.encoding.y : spec.encoding.x;
     const stackValue = quantChannel?.stack;
-    const isStacked = stackValue !== null && stackValue !== false;
+    // Area default is now overlap (v6); only treat as stacked when explicitly opted in.
+    // Bars still default to stacked, so for non-area marks `undefined` counts as stacked.
+    const isStacked = isArea
+      ? stackValue === true ||
+        stackValue === 'zero' ||
+        stackValue === 'normalize' ||
+        stackValue === 'center'
+      : stackValue !== null && stackValue !== false;
 
     if (!isArea || !isStacked) {
       entries = [];

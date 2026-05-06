@@ -2,8 +2,13 @@
  * Area chart mark computation.
  *
  * Uses D3 area() generator to produce AreaMark[] with top/bottom
- * boundary points and SVG path strings. Supports single areas and
- * stacked areas via d3-shape stack layout.
+ * boundary points and SVG path strings.
+ *
+ * Multi-series behavior (v6 redesign):
+ * - Default for multi-series with `color` is **overlap** (one translucent
+ *   gradient band per series, layered with low opacity).
+ * - Stacked rendering is opt-in via `encoding.y.stack: 'zero' | true | 'normalize' | 'center'`.
+ * - Single series always renders one gradient-filled area.
  */
 
 import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/openchart-core';
@@ -30,10 +35,76 @@ import { resolveCurve } from './curves';
 
 const DEFAULT_FILL_OPACITY = 0.15;
 
+/**
+ * Resolve `encoding.y.stack` to a boolean: should we stack this area chart?
+ *
+ * Vega-Lite-aligned semantics:
+ * - undefined | null | false  -> overlap (NEW DEFAULT for area)
+ * - true | 'zero' | 'normalize' | 'center' -> stacked
+ *
+ * This is a v6 breaking change. Previously, multi-series with `color`
+ * implicitly stacked. Now overlap is the default; stacking is opt-in.
+ */
+function isStacked(stackProp: unknown): boolean {
+  if (stackProp === undefined || stackProp === null || stackProp === false) {
+    return false;
+  }
+  return (
+    stackProp === true ||
+    stackProp === 'zero' ||
+    stackProp === 'normalize' ||
+    stackProp === 'center'
+  );
+}
+
+// Gradient stops calibrated by series count. Solo areas can carry richer fills
+// because there's no overlap to manage; multi-series overlap needs lighter
+// stops so layered bands stay legible.
+const SOLO_GRADIENT_STOPS = [
+  { offset: 0, opacity: 0.42 },
+  { offset: 0.6, opacity: 0.1 },
+  { offset: 1, opacity: 0 },
+];
+
+const OVERLAP_GRADIENT_STOPS = [
+  { offset: 0, opacity: 0.22 },
+  { offset: 0.7, opacity: 0.04 },
+  { offset: 1, opacity: 0 },
+];
+
+// Stacked layers sit on top of each other and need higher opacity so each
+// band reads as a distinct quantity. A gentle top-to-bottom gradient adds
+// depth without losing the categorical color identity.
+const STACKED_GRADIENT_STOPS = [
+  { offset: 0, opacity: 0.65 },
+  { offset: 1, opacity: 0.35 },
+];
+
+function buildGradientFill(
+  colorStr: string,
+  stops: ReadonlyArray<{ offset: number; opacity: number }>,
+): import('@opendata-ai/openchart-core').GradientDef {
+  return {
+    gradient: 'linear',
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 1,
+    stops: stops.map((s) => ({ offset: s.offset, color: colorStr, opacity: s.opacity })),
+  };
+}
+
 // ---------------------------------------------------------------------------
-// Single area (non-stacked)
+// Single / overlap area (non-stacked)
 // ---------------------------------------------------------------------------
 
+/**
+ * Compute area marks for non-stacked rendering.
+ *
+ * - With no `color` field: emits a single area with the solo gradient.
+ * - With a `color` field (overlap mode): emits one area per series, each
+ *   anchored at the y-domain baseline and using the lighter overlap gradient.
+ */
 function computeSingleArea(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
@@ -68,6 +139,9 @@ function computeSingleArea(
       }
     }
   }
+
+  const isMultiSeries = colorField !== undefined && groups.size > 1;
+  const defaultGradientStops = isMultiSeries ? OVERLAP_GRADIENT_STOPS : SOLO_GRADIENT_STOPS;
 
   const marks: AreaMark[] = [];
 
@@ -137,7 +211,8 @@ function computeSingleArea(
 
     // Allow markDef.fill to override color with a gradient.
     // When a gradient is provided, set fillOpacity=1 so gradient stop-opacity controls the fade.
-    // When no fill is provided, auto-generate a top-to-bottom fade gradient.
+    // When no fill is provided, auto-generate a top-to-bottom fade gradient
+    // tuned to series count (lighter for overlap).
     const markFill = spec.markDef.fill;
     let fillValue: string | import('@opendata-ai/openchart-core').GradientDef;
     let fillOpacity: number;
@@ -149,17 +224,7 @@ function computeSingleArea(
         : (spec.markDef.opacity ?? (y2Channel ? 0.25 : DEFAULT_FILL_OPACITY));
     } else {
       const colorStr = getRepresentativeColor(color);
-      fillValue = {
-        gradient: 'linear',
-        x1: 0,
-        y1: 0,
-        x2: 0,
-        y2: 1,
-        stops: [
-          { offset: 0, color: colorStr, opacity: 0.12 },
-          { offset: 1, color: colorStr, opacity: 0 },
-        ],
-      };
+      fillValue = buildGradientFill(colorStr, defaultGradientStops);
       fillOpacity = 1;
     }
 
@@ -312,14 +377,29 @@ function computeStackedArea(
       label: `${seriesKey}: stacked area with ${validPoints.length} data points`,
     };
 
+    // Per-layer top-to-bottom gradient. User-supplied markDef.fill (string or
+    // gradient) overrides the auto gradient just like in single-area mode.
+    const markFill = spec.markDef.fill;
+    let fillValue: string | import('@opendata-ai/openchart-core').GradientDef;
+    let fillOpacity: number;
+
+    if (markFill != null) {
+      fillValue = markFill;
+      fillOpacity = isGradientDef(markFill) ? 1 : (spec.markDef.opacity ?? 0.7);
+    } else {
+      const colorStr = getRepresentativeColor(color);
+      fillValue = buildGradientFill(colorStr, STACKED_GRADIENT_STOPS);
+      fillOpacity = 1;
+    }
+
     marks.push({
       type: 'area',
       topPoints,
       bottomPoints,
       path: pathStr,
       topPath: topPathStr,
-      fill: color,
-      fillOpacity: 0.7, // Higher opacity for stacked so layers are visible
+      fill: fillValue,
+      fillOpacity,
       stroke: getRepresentativeColor(color),
       strokeWidth: 1,
       seriesKey,
@@ -348,8 +428,15 @@ function computeStackedArea(
 /**
  * Compute area marks from a normalized chart spec.
  *
- * For multi-series with color encoding, produces stacked areas.
- * For single series, produces a simple area fill from the line to baseline (y=0).
+ * Behavior depends on `encoding.y.stack` (Vega-Lite aligned):
+ * - `undefined | null | false` -> overlap (default for multi-series)
+ * - `true | 'zero' | 'normalize' | 'center'` -> stacked
+ *
+ * Single-series specs always render one gradient-filled area; the `stack`
+ * branch only matters when a `color` encoding is present.
+ *
+ * BREAKING CHANGE (v6): multi-series no longer auto-stacks. Pass
+ * `encoding.y.stack: 'zero'` (or `true`) to opt back into the old behavior.
  */
 export function computeAreaMarks(
   spec: NormalizedChartSpec,
@@ -357,9 +444,9 @@ export function computeAreaMarks(
   chartArea: Rect,
 ): AreaMark[] {
   const encoding = spec.encoding as Encoding;
-  const hasColor = !!encoding.color;
+  const yChannel = encoding.y;
 
-  if (hasColor) {
+  if (yChannel && isStacked(yChannel.stack)) {
     return computeStackedArea(spec, scales, chartArea);
   }
 
