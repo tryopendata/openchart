@@ -156,15 +156,33 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns a darker variant of a hex color for use as a foreground stroke
- * on light backgrounds, where the default cyan (#06b6d4) lacks contrast.
+ * Returns a darker variant of a color for use as a foreground stroke on
+ * light backgrounds, where mid-lightness palette colors (e.g. cyan-500
+ * `#06b6d4`) lack contrast against white. Drops HSL lightness by ~12%
+ * absolute (clamped to >= 0) while preserving hue and saturation, which
+ * reproduces the cyan-500 → cyan-600 step the cyan accent originally
+ * needed and works for any other palette accent the user picks.
  *
- * Specifically maps cyan-500 -> cyan-600 (#0891b2). Other inputs pass
- * through unchanged. Exposed via the `--oc-accent-strong` CSS token.
+ * Returns the input unchanged when:
+ *   - the color is already dark enough (L <= ~0.40) — further darkening
+ *     just muddies the stroke without adding contrast
+ *   - the color isn't parseable
+ *   - the color is achromatic (NaN hue) — HSL lightness on grays drifts
+ *     toward black instead of staying neutral
+ *
+ * Exposed via the `--oc-accent-strong` CSS token.
  */
 export function adaptForLightLineStroke(color: string): string {
-  if (color === '#06b6d4' || color.toLowerCase() === '#06b6d4') {
-    return '#0891b2';
-  }
-  return color;
+  if (rgb(color) == null) return color;
+  const c = hsl(color);
+  if (c == null) return color;
+  // Achromatic check: NaN hue OR low saturation. d3-color reports a valid
+  // hue for grays whose RGB channels aren't perfectly equal (e.g. zinc
+  // `#a1a1aa` has s≈0.05), so saturation is the more reliable signal.
+  // Threshold 0.10 catches near-grays without tripping on real palette
+  // colors (palette saturation is ≥ ~0.5).
+  if (Number.isNaN(c.h) || c.s < 0.1) return color;
+  if (c.l <= 0.4) return color;
+  c.l = Math.max(0, c.l - 0.12);
+  return c.formatHex();
 }

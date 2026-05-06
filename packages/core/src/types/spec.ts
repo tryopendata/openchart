@@ -329,6 +329,13 @@ export interface EncodingChannel {
   scale?: ScaleConfig;
   /**
    * Stacking behavior for quantitative channels (Vega-Lite aligned).
+   *
+   * Vega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds
+   * `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can
+   * write `stack: true` / `stack: false` without learning the string forms.
+   * The string forms are still the canonical input — the boolean shorthand is
+   * normalized to the matching string before reaching layout.
+   *
    * - undefined: chart-type default (see below)
    * - true | 'zero': stack from zero baseline
    * - 'normalize': stack and normalize to fraction of total (0-1 per category)
@@ -820,6 +827,11 @@ export interface LegendConfig {
  * | true  | true  | shown                    | shown           | hidden |
  *
  * Single-series charts: column is hidden by default (nothing to identify).
+ *
+ * The implementation is in `packages/engine/src/legend/suppression.ts` —
+ * `resolveSuppression` is the single source of truth. The table above is
+ * a user-facing mirror; if the two ever diverge, the engine wins. Tests
+ * in `legend/__tests__/suppression.test.ts` enforce every cell.
  */
 export interface EndpointLabelsConfig {
   /** Explicit on/off. When undefined, the chart auto-decides based on series count. */

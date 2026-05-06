@@ -111,6 +111,13 @@ const MIN_CHART_WIDTH = 60;
 const MIN_CHART_HEIGHT = 40;
 
 /**
+ * Vertical breathing room added to the inline-tick label height so the
+ * topmost tick has clearance from chrome. Inline ticks sit above their
+ * gridline by `axisTick + INLINE_TICK_OVERHANG_PAD` pixels.
+ */
+const INLINE_TICK_OVERHANG_PAD = 6;
+
+/**
  * Per-display minimum chart dimensions. Sparkline mode allows much smaller
  * containers (down to ~30x20px) since the entire chart is just the mark.
  */
@@ -183,6 +190,12 @@ export function computeDimensions(
   // chrome layout can stack source/byline/footer below the legend band.
   // Chart-side bottom legends only — right/top/bottom-right legends don't
   // share vertical space with bottom chrome.
+  //
+  // We narrow on `'entries' in` (a structural brand) rather than the
+  // `legendLayout.type` discriminator because `type` is optional on
+  // CategoricalLegendLayout for back-compat with older legend payloads.
+  // Once the discriminator is required everywhere, this can collapse to
+  // `legendLayout.type !== 'gradient'`.
   const bottomLegendReservation =
     'entries' in legendLayout &&
     legendLayout.entries.length > 0 &&
@@ -193,6 +206,15 @@ export function computeDimensions(
   // Compute chrome with mode and scaled padding. `bottomLegendReservation`
   // pushes bottom chrome below the legend band; the returned bottomHeight
   // already accounts for it, so margin math below must not re-add it.
+  //
+  // Invariant: bottom-legend space is owned by `chrome.bottomHeight`, not
+  // `margins.bottom`. The legend reservation flows like this:
+  //   bottomLegendReservation = legend.height + legendGap(width)
+  //   chrome.bottomHeight     ⊇ bottomLegendReservation  (via computeChrome)
+  //   margins.bottom          = padding + chrome.bottomHeight + xAxisHeight
+  // So the legend band is implicitly inside margins.bottom exactly once.
+  // The legend-reservation block further down explicitly skips position
+  // 'bottom' to avoid double-counting.
   const chrome = computeChrome(
     chromeToInput(spec.chrome),
     theme,
@@ -290,8 +312,8 @@ export function computeDimensions(
   // Resolve effective y-axis tickPosition early so margin math can account
   // for the inline-tick overhang. Inline y-tick labels render above their
   // gridline inside the chart area; the topmost tick text extends roughly
-  // (tickFontSize + 6) pixels above area.y, which would otherwise crowd
-  // the chrome→chart gap.
+  // (tickFontSize + INLINE_TICK_OVERHANG_PAD) pixels above area.y, which
+  // would otherwise crowd the chrome→chart gap.
   const yAxisCfgPre = (encoding.y?.axis as Record<string, unknown> | undefined) ?? undefined;
   const yTickPositionExplicitPre = yAxisCfgPre?.tickPosition as 'inline' | 'gutter' | undefined;
   const yIsContinuousPre = encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal';
@@ -302,7 +324,9 @@ export function computeDimensions(
       (yIsLineOrAreaPre && yIsContinuousPre && yAxisOrientPre !== 'right'
         ? 'inline'
         : 'gutter')) === 'inline';
-  const inlineTickOverhang = yIsInlinePre ? theme.fonts.sizes.axisTick + 6 : 0;
+  const inlineTickOverhang = yIsInlinePre
+    ? theme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD
+    : 0;
 
   // Build margins: padding + chrome + axis space.
   // For radial charts (arc/donut), axes don't exist, so axisMargin is only
@@ -623,6 +647,8 @@ export function computeDimensions(
         height: Math.max(0, height - margins.top - margins.bottom),
       };
 
+      // Same chrome-anchored positioning as the primary path; see comment
+      // near the primary `metricsTopY` for the full stacking order.
       const fallbackMetricsTopY = topPad + fallbackChrome.topHeight;
       const fallbackMetricsArea = { x: hPad, width: Math.max(0, width - hPad * 2) };
       const fallbackMetrics = wantsMetrics
@@ -636,7 +662,12 @@ export function computeDimensions(
         : undefined;
       if (wantsMetrics && !fallbackMetrics) {
         // Bar was tentatively reserved but didn't fit — roll back the top margin.
-        margins.top -= tentativeMetricsHeight;
+        // Clamp at 0 as a defensive guard: even though the reservation was
+        // additive (margins.top = topPad + chrome + tentative + axisGap [+ legend])
+        // and so subtraction is mathematically safe, a negative top margin would
+        // shift the chart above the SVG viewport if any future change ever
+        // reordered the additions.
+        margins.top = Math.max(0, margins.top - tentativeMetricsHeight);
         chartArea = {
           ...chartArea,
           y: margins.top,
@@ -655,13 +686,24 @@ export function computeDimensions(
     }
   }
 
+  // Vertical stacking order from the SVG top edge:
+  //   topPad
+  //   chrome.topHeight              (title / subtitle / eyebrow)
+  //   tentativeMetricsHeight        (KPI bar — placed here)
+  //   topAxisGap                    (axisMargin + inlineTickOverhang)
+  //   [optional top legend band]
+  //   chartArea
+  // The metric bar belongs with chrome, above the legend, so its y is
+  // computed off chrome.topHeight only — not the full legend-inclusive
+  // margins.top.
   const metricsTopY = topPad + chrome.topHeight;
   const metricsArea = { x: hPad, width: Math.max(0, width - hPad * 2) };
   const resolvedMetrics = wantsMetrics
     ? resolveMetrics(spec, metricsTopY, metricsArea, chartArea.height, options.measureText)
     : undefined;
   if (wantsMetrics && !resolvedMetrics) {
-    margins.top -= tentativeMetricsHeight;
+    // See fallback path above for the clamp rationale.
+    margins.top = Math.max(0, margins.top - tentativeMetricsHeight);
     chartArea = {
       ...chartArea,
       y: margins.top,

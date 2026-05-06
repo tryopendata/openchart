@@ -43,6 +43,25 @@ const TOP_LEGEND_MAX_ROWS = 2;
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve the constant fields every CategoricalLegendLayout return shares
+ * (swatch geometry + chip fill). Pulled out so each early-return branch
+ * doesn't re-spell the same five fields.
+ */
+function categoricalDefaults(theme: ResolvedTheme): {
+  swatchSize: number;
+  swatchGap: number;
+  entryGap: number;
+  swatchChipFill: string;
+} {
+  return {
+    swatchSize: SWATCH_SIZE,
+    swatchGap: SWATCH_GAP,
+    entryGap: ENTRY_GAP,
+    swatchChipFill: theme.colors.annotationFill,
+  };
+}
+
 /** Determine the swatch shape based on mark type. */
 function swatchShapeForType(markType: string): LegendEntry['shape'] {
   switch (markType) {
@@ -85,6 +104,10 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
     : dataValues;
 
   const excludeSet = new Set(spec.legend?.exclude ?? []);
+  // Hidden series stay in the legend (dimmed) so the user can toggle them
+  // back on. `active: false` is the renderer's signal to apply the dimmed
+  // visual state.
+  const hiddenSet = new Set(spec.hiddenSeries);
 
   return uniqueValues
     .map((value, i) => {
@@ -99,7 +122,7 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
         label: value,
         color: palette[colorIndex % palette.length],
         shape,
-        active: true,
+        active: !hiddenSet.has(value),
       };
     })
     .filter((entry) => !excludeSet.has(entry.label));
@@ -163,10 +186,7 @@ export function computeLegend(
         fill: theme.colors.text,
         lineHeight: 1.3,
       },
-      swatchSize: SWATCH_SIZE,
-      swatchGap: SWATCH_GAP,
-      entryGap: ENTRY_GAP,
-      swatchChipFill: theme.colors.annotationFill,
+      ...categoricalDefaults(theme),
     };
   }
 
@@ -206,10 +226,7 @@ export function computeLegend(
       entries: [],
       bounds: { x: 0, y: 0, width: 0, height: 0 },
       labelStyle,
-      swatchSize: SWATCH_SIZE,
-      swatchGap: SWATCH_GAP,
-      entryGap: ENTRY_GAP,
-      swatchChipFill: theme.colors.annotationFill,
+      ...categoricalDefaults(theme),
     };
   }
 
@@ -266,10 +283,11 @@ export function computeLegend(
         height: clampedHeight,
       },
       labelStyle,
-      swatchSize: SWATCH_SIZE,
-      swatchGap: SWATCH_GAP,
+      ...categoricalDefaults(theme),
+      // Right-positioned legends pack rows tighter than the default entryGap
+      // because each row is its own swatch+label and the gap controls
+      // vertical breathing room rather than horizontal spacing.
       entryGap: 4,
-      swatchChipFill: theme.colors.annotationFill,
     };
   }
 
@@ -346,9 +364,9 @@ export function computeLegend(
       height: legendHeight,
     },
     labelStyle,
-    swatchSize: SWATCH_SIZE,
-    swatchGap: SWATCH_GAP,
+    ...categoricalDefaults(theme),
+    // Top/bottom legends honor the compact-viewport-aware entry gap so
+    // chips stay readable on narrow widths.
     entryGap: effectiveEntryGap,
-    swatchChipFill: theme.colors.annotationFill,
   };
 }

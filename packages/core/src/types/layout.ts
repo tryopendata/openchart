@@ -700,8 +700,14 @@ export interface EndpointLabelsLayout {
   valueStyle: TextStyle;
   /** Width of the colored swatch line drawn left of the label. */
   swatchSize: number;
-  /** Gap between swatch, label, and value. */
+  /** Horizontal gap between swatch and label text. */
   gap: number;
+  /**
+   * Vertical gap between the last wrapped label line and the value text
+   * directly below it. Resolved by the engine so the renderer can't drift
+   * away from the height the collision sweep budgeted for each entry.
+   */
+  valueGap: number;
   /** Fill color for the rounded chip background behind the colored bar. */
   swatchChipFill: string;
 }

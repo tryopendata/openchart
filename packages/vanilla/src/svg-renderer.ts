@@ -189,8 +189,9 @@ export function renderChartSVG(
       clippedGroup.appendChild(overlay);
 
       // Crosshair line: vertical line that tracks the snapped data point x.
-      // Always emitted alongside the snap-dots group so mount.ts can populate
-      // both without re-checking the option.
+      // Gated on `opts.crosshair` because the dashed line is the optional bit;
+      // the snap-dots layer below ships regardless so the multi-series
+      // hover-tooltip stays useful even when the user opts out of the line.
       if (opts?.crosshair) {
         const crosshairLine = createSVGElement('line');
         crosshairLine.setAttribute('data-crosshair', 'true');
@@ -208,16 +209,16 @@ export function renderChartSVG(
         });
         crosshairLine.style.display = 'none';
         clippedGroup.appendChild(crosshairLine);
-
-        // Snap-dot layer: mount.ts populates one circle per series at the
-        // snapped x. Empty group here so renderer doesn't need to know how
-        // many series exist.
-        const dotsGroup = createSVGElement('g');
-        dotsGroup.setAttribute('data-snap-dots', 'true');
-        dotsGroup.setAttribute('class', 'oc-snap-dots');
-        dotsGroup.setAttribute('pointer-events', 'none');
-        clippedGroup.appendChild(dotsGroup);
       }
+
+      // Snap-dot layer: mount.ts populates one circle per series at the
+      // snapped x on hover. Always emitted so the merged tooltip has its
+      // anchors regardless of `opts.crosshair`.
+      const dotsGroup = createSVGElement('g');
+      dotsGroup.setAttribute('data-snap-dots', 'true');
+      dotsGroup.setAttribute('class', 'oc-snap-dots');
+      dotsGroup.setAttribute('pointer-events', 'none');
+      clippedGroup.appendChild(dotsGroup);
     }
 
     svg.appendChild(clippedGroup);
@@ -229,6 +230,28 @@ export function renderChartSVG(
     // collision. The engine handles all suppression — when entries is empty,
     // renderEndpointLabels is a no-op.
     renderEndpointLabels(svg, layout);
+
+    // Suppress decorative point marks that sit underneath an endpoint marker
+    // (mark.point: true + endpoint marker on produces a double-circle at the
+    // line's right terminus). The endpoint marker is the canonical terminator
+    // when present, so the point mark hides via opacity (not removal) so the
+    // SVG DOM stays diff-friendly for animated re-renders.
+    const epEntries = layout.endpointLabels?.entries ?? [];
+    if (epEntries.length > 0) {
+      const pointEls = clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point');
+      for (const entry of epEntries) {
+        if (!entry.marker) continue;
+        const mx = entry.marker.x;
+        const my = entry.marker.y;
+        for (const el of pointEls) {
+          const cx = Number(el.getAttribute('cx'));
+          const cy = Number(el.getAttribute('cy'));
+          if (Math.abs(cx - mx) < 0.5 && Math.abs(cy - my) < 0.5) {
+            el.setAttribute('opacity', '0');
+          }
+        }
+      }
+    }
 
     renderLegend(svg, layout.legend);
 

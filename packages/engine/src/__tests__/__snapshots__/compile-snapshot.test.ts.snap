@@ -854,6 +854,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     },
     "swatchChipFill": "rgba(0,0,0,0.04)",
     "swatchSize": 18,
+    "valueGap": 4,
     "valueStyle": {
       "fill": "#71717a",
       "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",

@@ -16,13 +16,11 @@
 import type { ChartLayout } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
-/** Gap between swatch and label text. */
-const SWATCH_GAP = 8;
-/** Gap between label baseline and the value text below it. */
-const VALUE_GAP = 4;
-/** Stroke width for the optional leader line (subtle but visible). */
+// Swatch→label and label→value gaps both come from the engine layout
+// (`ep.gap` and `ep.valueGap`), so the renderer never has to keep its own
+// copies in sync. Leader styling is renderer-only — the engine doesn't
+// model stroke width or opacity for the optional connector.
 const LEADER_STROKE_WIDTH = 1;
-/** Opacity for the optional leader line. */
 const LEADER_OPACITY = 0.45;
 
 export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): void {
@@ -45,7 +43,7 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
   // the label/value text starts after the chip + gap.
   const chipX = ep.bounds.x;
   const chipWidth = ep.swatchSize;
-  const textX = chipX + chipWidth + SWATCH_GAP;
+  const textX = chipX + chipWidth + ep.gap;
 
   for (let i = 0; i < ep.entries.length; i++) {
     const entry = ep.entries[i];
@@ -132,7 +130,11 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
     // Value text directly underneath the last label line.
     const lineCount = Math.max(entry.labelLines.length, 1);
     const valueY =
-      entry.labelY + labelFontSize + (lineCount - 1) * labelLineHeight + VALUE_GAP + valueFontSize;
+      entry.labelY +
+      labelFontSize +
+      (lineCount - 1) * labelLineHeight +
+      ep.valueGap +
+      valueFontSize;
     const value = createSVGElement('text');
     value.setAttribute('class', 'oc-endpoint-value');
     setAttrs(value, { x: textX, y: valueY });

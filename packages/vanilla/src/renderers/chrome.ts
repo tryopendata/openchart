@@ -7,7 +7,7 @@ import type {
   MeasureTextFn,
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
-import { wrapText } from '@opendata-ai/openchart-core';
+import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 import { applyTextStyle, computeXAxisExtent, createSVGElement, setAttrs } from './svg-dom';
 
 function renderChromeElement(
@@ -121,11 +121,16 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.brand) {
     const brandY = bottomOffset + chrome.brand.y;
     renderChromeElement(g, { ...chrome.brand, y: brandY }, 'oc-brand', 'brand', measureText);
-    // Cyan accent dot to the left of the brand text. estimateCharWidth-ish:
-    // text-anchor=end means brand.x is the right edge. The dot sits 12px
-    // left of the leftmost character, derived from a rough text width.
-    const charWidth = chrome.brand.style.fontSize * 0.55;
-    const textWidth = chrome.brand.text.length * charWidth;
+    // Accent dot to the left of the brand text. text-anchor=end means
+    // brand.x is the right edge, so the dot sits 12px left of the measured
+    // text's leftmost glyph. Use estimateTextWidth (the same path the
+    // engine uses for label sizing) instead of a `length * 0.55em` fudge
+    // so wide glyphs (W, M) and narrow ones (i, l) land correctly.
+    const textWidth = estimateTextWidth(
+      chrome.brand.text,
+      chrome.brand.style.fontSize,
+      chrome.brand.style.fontWeight,
+    );
     const dotX = chrome.brand.x - textWidth - 12;
     const dotY = brandY + chrome.brand.style.fontSize / 2;
     const dot = createSVGElement('circle');

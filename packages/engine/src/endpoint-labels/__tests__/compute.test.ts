@@ -18,7 +18,7 @@ import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
-import { computeEndpointLabels } from '../compute';
+import { bidirectionalSweep, computeEndpointLabels } from '../compute';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -357,6 +357,59 @@ describe('computeEndpointLabels', () => {
     // area-derived gradient color.
     for (const entry of layout.entries) {
       expect(entry.color).toBe(lineColor);
+    }
+  });
+
+  it('bidirectional sweep produces non-overlapping tops when stack fits in area (deterministic fuzz)', () => {
+    // Seeded LCG so the fuzz is reproducible without dragging in a dep.
+    const rand = (() => {
+      let s = 0x12345678 >>> 0;
+      return () => {
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+        return s / 0x100000000;
+      };
+    })();
+
+    const areaTop = 0;
+    const areaBottom = 600;
+    const areaHeight = areaBottom - areaTop;
+
+    for (let trial = 0; trial < 200; trial++) {
+      const n = 2 + Math.floor(rand() * 9); // 2..10 entries
+      const heights: number[] = [];
+      let totalHeight = 0;
+      for (let i = 0; i < n; i++) {
+        const h = 12 + Math.floor(rand() * 30); // 12..41
+        heights.push(h);
+        totalHeight += h;
+      }
+      // Skip trials whose stack can't fit — the algorithm explicitly cannot
+      // promise non-overlap when the chart is too short for the entries.
+      if (totalHeight > areaHeight) continue;
+
+      const sweepEntries = heights.map((h, idx) => ({
+        naturalTop: areaTop + rand() * (areaBottom - h),
+        height: h,
+        index: idx,
+      }));
+      const tops = bidirectionalSweep(sweepEntries, areaTop, areaBottom);
+
+      // Resort by final top to validate the sorted-stack invariant the
+      // algorithm guarantees: every entry sits inside [areaTop, areaBottom-h]
+      // and adjacent entries never overlap.
+      const sortedFinals = sweepEntries
+        .map((e) => ({ top: tops[e.index], height: e.height }))
+        .sort((a, b) => a.top - b.top);
+
+      for (let i = 0; i < sortedFinals.length; i++) {
+        const { top, height } = sortedFinals[i];
+        expect(top).toBeGreaterThanOrEqual(areaTop - 1e-6);
+        expect(top + height).toBeLessThanOrEqual(areaBottom + 1e-6);
+        if (i + 1 < sortedFinals.length) {
+          const next = sortedFinals[i + 1];
+          expect(top + height).toBeLessThanOrEqual(next.top + 1e-6);
+        }
+      }
     }
   });
 

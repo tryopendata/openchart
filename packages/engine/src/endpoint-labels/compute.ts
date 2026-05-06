@@ -28,7 +28,6 @@ import type {
   TextStyle,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
@@ -48,6 +47,7 @@ import {
   ENDPOINT_VALUE_GAP,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
 } from './constants';
+import { formatEndpointValue } from './format';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,6 +76,7 @@ function emptyLayout(theme: ResolvedTheme): EndpointLabelsLayout {
     valueStyle,
     swatchSize: ENDPOINT_SWATCH_SIZE,
     gap: ENDPOINT_GAP,
+    valueGap: ENDPOINT_VALUE_GAP,
     swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
   };
 }
@@ -122,22 +123,6 @@ function readValue(
   return null;
 }
 
-/** Format a value with d3-format, falling back to String(). */
-function formatValue(value: number | string | null, formatString: string | undefined): string {
-  if (value == null) return '';
-  if (typeof value === 'string') return value;
-  if (formatString) {
-    try {
-      return d3Format(formatString)(value);
-    } catch {
-      return String(value);
-    }
-  }
-  // No format string: use a sensible default depending on magnitude.
-  if (Number.isInteger(value) && Math.abs(value) < 1000) return String(value);
-  return value.toFixed(2);
-}
-
 /**
  * Local collision sweep: keep each label anchored to its line's `dataY` and
  * only displace neighbors that actually overlap.
@@ -162,7 +147,7 @@ function formatValue(value: number | string | null, formatString: string | undef
  * earliest entries get pinned to areaTop and overlap is unavoidable — the
  * caller has to drop entries or shrink them.)
  */
-function bidirectionalSweep(
+export function bidirectionalSweep(
   entries: { naturalTop: number; height: number; index: number }[],
   areaTop: number,
   areaBottom: number,
@@ -248,12 +233,12 @@ export function computeEndpointLabels(
   // endpoint entries. Prefer the line mark — its `stroke` is the canonical
   // series color and matches the visible line, whereas the area mark's
   // `stroke` may be derived from a gradient via `getRepresentativeColor`.
+  // Same-type collisions (area→area, line→line) keep the first mark; the
+  // engine never emits two of the same type per seriesKey.
   const bySeriesKey = new Map<string, LineMark | AreaMark>();
   for (const mark of marks) {
     if (!isLineOrArea(mark) || !mark.seriesKey) continue;
     const existing = bySeriesKey.get(mark.seriesKey);
-    // Line marks overwrite area marks for the same seriesKey; area marks only
-    // win when no line mark has been seen yet for that series.
     if (!existing || (existing.type === 'area' && mark.type === 'line')) {
       bySeriesKey.set(mark.seriesKey, mark);
     }
@@ -316,7 +301,7 @@ export function computeEndpointLabels(
       wrapWidth,
     );
     const rawValue = readValue(mark, valueField);
-    const value = formatValue(rawValue, formatString);
+    const value = formatEndpointValue(rawValue, formatString);
 
     // Width of the widest line in this entry (used to size the column).
     let entryWidth = 0;
@@ -426,6 +411,7 @@ export function computeEndpointLabels(
     valueStyle,
     swatchSize: ENDPOINT_SWATCH_SIZE,
     gap: ENDPOINT_GAP,
+    valueGap: ENDPOINT_VALUE_GAP,
     swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
   };
 }
