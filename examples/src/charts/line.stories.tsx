@@ -568,6 +568,10 @@ const stackedAreaSpec: ChartSpec = {
     y: {
       field: 'generation',
       type: 'quantitative',
+      // Opt back into stacking after the multi-series default flipped to overlap.
+      // This story is a parts-of-a-whole composition (energy sources adding up to
+      // total generation), so stacking is the right read.
+      stack: 'zero',
       axis: { title: 'Generation (TWh)', format: '~s', grid: true, tickCount: 8 },
       scale: { domain: [5500, 28000] },
     },
@@ -586,6 +590,208 @@ const stackedAreaSpec: ChartSpec = {
 export const StackedArea = () => (
   <div className="story-chart story-h-460">
     <Chart spec={stackedAreaSpec} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Multi-series overlap (mock 2): Streaming market share, 2020-2024
+// Overlapping multi-series areas with low-opacity gradient fills, full-strength
+// lines, both bottom legend and right-side endpoint label column, and a
+// two-tone text annotation with a styled dot at the crossover point.
+// ---------------------------------------------------------------------------
+
+const multiSeriesAreaOverlapSpec: ChartSpec = {
+  animation: true,
+  mark: 'area',
+  data: [
+    // Netflix: dominant in 2020, slow erosion as competitors arrive
+    { date: '2020-01-01', share: 0.42, service: 'Netflix' },
+    { date: '2021-01-01', share: 0.35, service: 'Netflix' },
+    { date: '2022-01-01', share: 0.3, service: 'Netflix' },
+    { date: '2023-01-01', share: 0.27, service: 'Netflix' },
+    { date: '2024-01-01', share: 0.24, service: 'Netflix' },
+    // Disney+: launched late 2019, rapid early growth, plateau
+    { date: '2020-01-01', share: 0.22, service: 'Disney+' },
+    { date: '2021-01-01', share: 0.25, service: 'Disney+' },
+    { date: '2022-01-01', share: 0.26, service: 'Disney+' },
+    { date: '2023-01-01', share: 0.25, service: 'Disney+' },
+    { date: '2024-01-01', share: 0.24, service: 'Disney+' },
+    // Prime Video: steady mid-pack
+    { date: '2020-01-01', share: 0.22, service: 'Prime' },
+    { date: '2021-01-01', share: 0.23, service: 'Prime' },
+    { date: '2022-01-01', share: 0.23, service: 'Prime' },
+    { date: '2023-01-01', share: 0.23, service: 'Prime' },
+    { date: '2024-01-01', share: 0.23, service: 'Prime' },
+    // Max (HBO Max): late entrant, climbing fast, overtakes Disney+ around Q3 2023
+    { date: '2020-01-01', share: 0.06, service: 'Max' },
+    { date: '2021-01-01', share: 0.14, service: 'Max' },
+    { date: '2022-01-01', share: 0.21, service: 'Max' },
+    { date: '2023-01-01', share: 0.25, service: 'Max' },
+    { date: '2024-01-01', share: 0.3, service: 'Max' },
+  ],
+  encoding: {
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 5 } },
+    // No `stack` field -> overlap mode (the new multi-series area default).
+    y: {
+      field: 'share',
+      type: 'quantitative',
+      axis: { format: '.0%', grid: true, tickCount: 5 },
+      scale: { domain: [0, 0.5] },
+    },
+    color: { field: 'service', type: 'nominal' },
+  },
+  // Mock 2 keeps both the bottom legend and the right-side endpoint column.
+  // Pinning the legend to the bottom keeps it clear of the right-side
+  // endpoint column (the default top placement would land in the same band).
+  legend: { show: true, position: 'bottom' },
+  // Don't set endpointLabels -> default `true` for multi-series, which is what
+  // the mock asks for.
+  annotations: [
+    {
+      type: 'text',
+      x: '2023-07-01',
+      y: 0.25,
+      text: 'Max overtakes Disney+',
+      subtitle: 'Q3 2023',
+      dot: true,
+      anchor: 'top',
+      offset: { dx: 0, dy: -36 },
+      connector: true,
+    },
+  ],
+  // Don't set `labels.density: 'none'` here — the suppression truth table
+  // treats that as a global "no labels" hint and switches off the endpoint
+  // column too. The truth table already drops end-of-line labels when either
+  // the legend or the endpoint column is showing, so leaving labels unset is
+  // safe and lets the endpoint column render.
+  chrome: {
+    title: 'The lead changes hands every other year',
+    subtitle:
+      "Overlapping multi-series areas use lower fill opacity (12%) and lines stay full-strength to preserve each series' shape.",
+    source: 'Source: OpenData · Streaming Subscriber Panel',
+    byline: 'tryOpenData.ai',
+  },
+};
+
+export const MultiSeriesAreaOverlap = () => (
+  <div className="story-chart story-h-520">
+    <Chart spec={multiSeriesAreaOverlapSpec} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Multi-series stacked (mock 1): Cloud infrastructure spend by hyperscaler
+// Stacked area chart with gradient fills, no bottom legend, only the right-side
+// endpoint label column with open-circle markers anchoring labels to the lines.
+// ---------------------------------------------------------------------------
+
+const multiSeriesAreaStackedSpec: ChartSpec = {
+  animation: true,
+  mark: 'area',
+  // Spend is in raw dollars so the d3-format `$~s` SI prefix prints e.g. "$26M".
+  // Storing values pre-scaled to millions and trying to suffix "M" through
+  // d3-format requires a custom locale, so we lift the values into raw dollars.
+  data: [
+    // AWS: ~17M -> ~26M, the leader, slight wobble in mid-2024
+    { date: '2023-01-01', spend: 17_000_000, vendor: 'AWS' },
+    { date: '2023-02-01', spend: 17_400_000, vendor: 'AWS' },
+    { date: '2023-03-01', spend: 17_800_000, vendor: 'AWS' },
+    { date: '2023-04-01', spend: 18_200_000, vendor: 'AWS' },
+    { date: '2023-05-01', spend: 18_600_000, vendor: 'AWS' },
+    { date: '2023-06-01', spend: 19_000_000, vendor: 'AWS' },
+    { date: '2023-07-01', spend: 19_400_000, vendor: 'AWS' },
+    { date: '2023-08-01', spend: 19_700_000, vendor: 'AWS' },
+    { date: '2023-09-01', spend: 20_000_000, vendor: 'AWS' },
+    { date: '2023-10-01', spend: 20_400_000, vendor: 'AWS' },
+    { date: '2023-11-01', spend: 20_700_000, vendor: 'AWS' },
+    { date: '2023-12-01', spend: 21_000_000, vendor: 'AWS' },
+    { date: '2024-01-01', spend: 21_500_000, vendor: 'AWS' },
+    { date: '2024-02-01', spend: 22_000_000, vendor: 'AWS' },
+    { date: '2024-03-01', spend: 22_600_000, vendor: 'AWS' },
+    { date: '2024-04-01', spend: 23_000_000, vendor: 'AWS' },
+    { date: '2024-05-01', spend: 23_400_000, vendor: 'AWS' },
+    { date: '2024-06-01', spend: 23_800_000, vendor: 'AWS' },
+    { date: '2024-07-01', spend: 24_400_000, vendor: 'AWS' },
+    { date: '2024-08-01', spend: 25_000_000, vendor: 'AWS' },
+    { date: '2024-09-01', spend: 25_400_000, vendor: 'AWS' },
+    { date: '2024-10-01', spend: 25_800_000, vendor: 'AWS' },
+    { date: '2024-11-01', spend: 26_000_000, vendor: 'AWS' },
+    // Azure: ~12M -> ~21M, catching up the fastest
+    { date: '2023-01-01', spend: 12_000_000, vendor: 'Azure' },
+    { date: '2023-02-01', spend: 12_400_000, vendor: 'Azure' },
+    { date: '2023-03-01', spend: 12_800_000, vendor: 'Azure' },
+    { date: '2023-04-01', spend: 13_200_000, vendor: 'Azure' },
+    { date: '2023-05-01', spend: 13_600_000, vendor: 'Azure' },
+    { date: '2023-06-01', spend: 14_000_000, vendor: 'Azure' },
+    { date: '2023-07-01', spend: 14_500_000, vendor: 'Azure' },
+    { date: '2023-08-01', spend: 15_000_000, vendor: 'Azure' },
+    { date: '2023-09-01', spend: 15_400_000, vendor: 'Azure' },
+    { date: '2023-10-01', spend: 15_800_000, vendor: 'Azure' },
+    { date: '2023-11-01', spend: 16_200_000, vendor: 'Azure' },
+    { date: '2023-12-01', spend: 16_600_000, vendor: 'Azure' },
+    { date: '2024-01-01', spend: 17_000_000, vendor: 'Azure' },
+    { date: '2024-02-01', spend: 17_400_000, vendor: 'Azure' },
+    { date: '2024-03-01', spend: 17_800_000, vendor: 'Azure' },
+    { date: '2024-04-01', spend: 18_200_000, vendor: 'Azure' },
+    { date: '2024-05-01', spend: 18_600_000, vendor: 'Azure' },
+    { date: '2024-06-01', spend: 19_000_000, vendor: 'Azure' },
+    { date: '2024-07-01', spend: 19_400_000, vendor: 'Azure' },
+    { date: '2024-08-01', spend: 19_800_000, vendor: 'Azure' },
+    { date: '2024-09-01', spend: 20_200_000, vendor: 'Azure' },
+    { date: '2024-10-01', spend: 20_600_000, vendor: 'Azure' },
+    { date: '2024-11-01', spend: 20_900_000, vendor: 'Azure' },
+    // GCP: ~6M -> ~12M, smaller but steady gains
+    { date: '2023-01-01', spend: 6_000_000, vendor: 'GCP' },
+    { date: '2023-02-01', spend: 6_200_000, vendor: 'GCP' },
+    { date: '2023-03-01', spend: 6_500_000, vendor: 'GCP' },
+    { date: '2023-04-01', spend: 6_800_000, vendor: 'GCP' },
+    { date: '2023-05-01', spend: 7_100_000, vendor: 'GCP' },
+    { date: '2023-06-01', spend: 7_400_000, vendor: 'GCP' },
+    { date: '2023-07-01', spend: 7_700_000, vendor: 'GCP' },
+    { date: '2023-08-01', spend: 8_000_000, vendor: 'GCP' },
+    { date: '2023-09-01', spend: 8_300_000, vendor: 'GCP' },
+    { date: '2023-10-01', spend: 8_600_000, vendor: 'GCP' },
+    { date: '2023-11-01', spend: 8_900_000, vendor: 'GCP' },
+    { date: '2023-12-01', spend: 9_200_000, vendor: 'GCP' },
+    { date: '2024-01-01', spend: 9_500_000, vendor: 'GCP' },
+    { date: '2024-02-01', spend: 9_800_000, vendor: 'GCP' },
+    { date: '2024-03-01', spend: 10_100_000, vendor: 'GCP' },
+    { date: '2024-04-01', spend: 10_400_000, vendor: 'GCP' },
+    { date: '2024-05-01', spend: 10_600_000, vendor: 'GCP' },
+    { date: '2024-06-01', spend: 10_800_000, vendor: 'GCP' },
+    { date: '2024-07-01', spend: 11_000_000, vendor: 'GCP' },
+    { date: '2024-08-01', spend: 11_300_000, vendor: 'GCP' },
+    { date: '2024-09-01', spend: 11_500_000, vendor: 'GCP' },
+    { date: '2024-10-01', spend: 11_700_000, vendor: 'GCP' },
+    { date: '2024-11-01', spend: 11_900_000, vendor: 'GCP' },
+  ],
+  encoding: {
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 7 } },
+    y: {
+      field: 'spend',
+      type: 'quantitative',
+      // Opt INTO stacking. Mock 1 reads as a parts-of-a-whole hyperscaler total.
+      stack: 'zero',
+      axis: { format: '$~s', grid: true, tickCount: 4 },
+    },
+    color: { field: 'vendor', type: 'nominal' },
+  },
+  // Endpoint column with open-circle markers on each series. `showMarker: true`
+  // is the default; it's restated here to make the story self-documenting.
+  endpointLabels: { showMarker: true },
+  // No bottom legend; the endpoint column owns series identification.
+  legend: { show: false },
+  chrome: {
+    title: 'AWS still leads, but Azure is catching up fastest',
+    subtitle: 'Monthly infrastructure spend by hyperscaler · multi-series area, $M',
+    source: 'Source: OpenData · Vendor Spend Panel',
+    byline: 'tryOpenData.ai',
+  },
+};
+
+export const MultiSeriesAreaStacked = () => (
+  <div className="story-chart story-h-520">
+    <Chart spec={multiSeriesAreaStackedSpec} />
   </div>
 );
 

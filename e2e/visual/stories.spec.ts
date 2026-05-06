@@ -28,6 +28,16 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
   { name: 'chart-with-annotations', slug: 'column-diverging--temperature-anomaly' },
   { name: 'chart-with-watermark', slug: 'chrome--chrome-all-elements' },
   { name: 'sparklines', slug: 'sparkline--sparklines' },
+  {
+    name: 'multi-series-area-overlap',
+    slug: 'line--multi-series-area-overlap',
+    note: 'Overlapping multi-series areas with bottom legend, endpoint column, and a dot+subtitle text annotation.',
+  },
+  {
+    name: 'multi-series-area-stacked',
+    slug: 'line--multi-series-area-stacked',
+    note: 'Stacked multi-series areas with gradient fills, endpoint column with markers, no bottom legend.',
+  },
 ];
 
 /**
