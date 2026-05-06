@@ -16,6 +16,7 @@ import type {
   ChromeKey,
   CompileOptions,
   DarkMode,
+  DataRow,
   ElementEdit,
   ElementRef,
   GraphSpec,
@@ -1858,12 +1859,15 @@ function renderSelectionOverlay(
  * @param options - Mount options (theme, darkMode, responsive, etc.).
  * @returns A ChartInstance with update/resize/export/destroy methods.
  */
-export function createChart(
+export function createChart<TData extends DataRow = DataRow>(
   container: HTMLElement,
-  spec: ChartSpec | LayerSpec | GraphSpec,
+  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec,
   options?: MountOptions,
 ): ChartInstance {
-  let currentSpec: ChartSpec | LayerSpec | GraphSpec = spec;
+  // currentSpec uses the non-generic union internally so update() (which is
+  // intentionally non-generic) can assign freely. The generic only constrains
+  // what consumers can pass at the call site.
+  let currentSpec: ChartSpec | LayerSpec | GraphSpec = spec as ChartSpec | LayerSpec | GraphSpec;
   let currentLayout: ChartLayout;
   let svgElement: SVGElement | null = null;
   let tooltipManager: TooltipManager | null = null;

@@ -309,10 +309,21 @@ export type ScaleType =
  * Follows the Vega-Lite encoding model: field identifies the column,
  * type determines how the engine interprets values, aggregate applies
  * a transformation before encoding.
+ *
+ * @template TData - The shape of a data row. When `ChartSpec<TData>` is used
+ * with a typed data array, `field` is constrained to `keyof TData & string`,
+ * giving IDE autocomplete and compile-time typo detection. Defaults to `DataRow`
+ * which degrades to plain `string` (no constraint), keeping untyped specs working.
  */
-export interface EncodingChannel {
-  /** Data field name (column in the data array). */
-  field: string;
+export interface EncodingChannel<TData extends DataRow = DataRow> {
+  /**
+   * Data field name (column in the data array).
+   *
+   * When using `ChartSpec<TData>` with a typed data array, this is constrained
+   * to the actual column names of `TData`. Typos fail at compile time and IDEs
+   * autocomplete your column names.
+   */
+  field: keyof TData & string;
   /**
    * How to interpret the field values.
    * - quantitative: continuous numbers (scale: linear)
@@ -390,44 +401,97 @@ export interface EncodingChannel {
 
 /**
  * Encoding object mapping visual channels to data fields.
- * Which channels are required depends on the mark type.
- * See MARK_ENCODING_RULES in encoding.ts for per-type requirements.
+ * Which channels are required depends on the mark type — see the per-mark
+ * encoding interfaces (ArcEncoding, LineEncoding, etc.) and MARK_ENCODING_RULES
+ * in encoding.ts for the full requirements table.
+ *
+ * @template TData - Propagated from ChartSpec<TData>. Constrains `field` in
+ * every channel to `keyof TData & string` when a typed data row is provided.
  */
-export interface Encoding {
-  /** Horizontal position channel. */
-  x?: EncodingChannel;
-  /** Vertical position channel. */
-  y?: EncodingChannel;
-  /** Color channel (series differentiation or heatmap). Accepts conditional definitions. */
-  color?: EncodingChannel | ConditionalValueDef;
-  /** Size channel (bubble charts, dot plots). Accepts conditional definitions. */
-  size?: EncodingChannel | ConditionalValueDef;
-  /** Detail channel (group without encoding to a visual property). */
-  detail?: EncodingChannel;
-  /** Secondary x position (for ranges, error bars). */
-  x2?: EncodingChannel;
-  /** Secondary y position (for ranges, error bars). */
-  y2?: EncodingChannel;
-  /** Data-driven opacity (0-1). Accepts conditional definitions. */
-  opacity?: EncodingChannel | ConditionalValueDef;
-  /** Point shape encoding (circle, square, diamond, triangle-up, etc.). */
-  shape?: EncodingChannel;
-  /** Data-driven stroke dash patterns. */
-  strokeDash?: EncodingChannel;
-  /** Rotation angle encoding. */
-  angle?: EncodingChannel;
-  /** Text content for text marks. */
-  text?: EncodingChannel;
-  /** Tooltip field(s). Can be a single channel or array. */
-  tooltip?: EncodingChannel | EncodingChannel[];
-  /** Hyperlink encoding. */
-  href?: EncodingChannel;
-  /** Stacking/drawing order. */
-  order?: EncodingChannel;
-  /** Angular position for arc marks. */
-  theta?: EncodingChannel;
-  /** Radial position for arc marks. */
-  radius?: EncodingChannel;
+export interface Encoding<TData extends DataRow = DataRow> {
+  /**
+   * Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop.
+   * Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories,
+   * `'quantitative'` for numbers.
+   */
+  x?: EncodingChannel<TData>;
+  /**
+   * Vertical position channel. Required for: bar, line, area, point, tick, rect, arc, lollipop.
+   * For arc marks, this is the value field (slice size). For all others it's the y-axis position.
+   */
+  y?: EncodingChannel<TData>;
+  /**
+   * Color channel. Required for arc marks (determines pie/donut slice coloring).
+   * Optional for all other marks -- used for series differentiation on multi-series charts,
+   * or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates.
+   */
+  color?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  /**
+   * Size channel. Used by point/bubble charts to scale dot area by a quantitative field.
+   * Accepts a conditional definition to vary size based on data predicates.
+   */
+  size?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  /**
+   * Detail channel. Groups data into multiple series without mapping to a visual property.
+   * Useful when you want separate lines per category but don't need the color to differ.
+   */
+  detail?: EncodingChannel<TData>;
+  /**
+   * Secondary x position. Used with `x` to define a horizontal span (rect marks, error bars).
+   * Both `x` and `x2` must be quantitative.
+   */
+  x2?: EncodingChannel<TData>;
+  /**
+   * Secondary y position. Used with `y` to define a vertical span (rect marks, error bands).
+   * Both `y` and `y2` must be quantitative.
+   */
+  y2?: EncodingChannel<TData>;
+  /**
+   * Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity
+   * based on data predicates (e.g., highlight selected points).
+   */
+  opacity?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  /**
+   * Point shape encoding. Valid values: 'circle', 'square', 'diamond', 'triangle-up',
+   * 'triangle-down', 'cross'. Used on point/scatter marks to differentiate series by shape.
+   */
+  shape?: EncodingChannel<TData>;
+  /**
+   * Stroke dash pattern encoding. Maps a nominal field to different dash patterns
+   * on line marks. Useful when color alone doesn't distinguish series well.
+   */
+  strokeDash?: EncodingChannel<TData>;
+  /** Rotation angle encoding for point marks. Maps a quantitative field to 0-360 degrees. */
+  angle?: EncodingChannel<TData>;
+  /**
+   * Text content for `text` marks. Required when mark is `'text'`.
+   * Not meaningful for other mark types.
+   */
+  text?: EncodingChannel<TData>;
+  /**
+   * Tooltip field(s). Shown on hover. Can be a single channel or an array for
+   * multi-field tooltips. Independent of the x/y/color encoding.
+   */
+  tooltip?: EncodingChannel<TData> | EncodingChannel<TData>[];
+  /** Hyperlink encoding. Maps a field containing URLs to clickable marks. */
+  href?: EncodingChannel<TData>;
+  /**
+   * Drawing order. Controls z-order and stacking sort order for bar/area marks.
+   * Lower values are drawn first (behind higher values).
+   */
+  order?: EncodingChannel<TData>;
+  /**
+   * Angular position for arc marks (pie/donut).
+   * Optional -- defaults to the `y` channel value when omitted.
+   * Not used by any other mark type.
+   */
+  theta?: EncodingChannel<TData>;
+  /**
+   * Radial distance from center for arc marks.
+   * Optional -- only meaningful on donut charts (controls inner radius boundary).
+   * Not used by any other mark type.
+   */
+  radius?: EncodingChannel<TData>;
 }
 
 // ---------------------------------------------------------------------------
@@ -982,26 +1046,128 @@ export interface Metric {
   secondary?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Per-mark encoding interfaces (Task 2)
+// Required channels derived directly from MARK_ENCODING_RULES in encoding.ts.
+// TypeScript types must stay in sync with those runtime rules.
+// ---------------------------------------------------------------------------
+
 /**
- * Chart specification: the primary input for standard chart types.
- *
- * Uses the Vega-Lite `mark` property instead of `type` to specify
- * the visualization mark. The mark can be a string shorthand or an
- * object with additional properties (interpolation, point markers, etc.).
+ * Encoding for arc marks (pie/donut charts).
+ * - `y`: required (quantitative — the slice value)
+ * - `color`: required (nominal/ordinal — the category)
+ * - `theta`: optional (defaults to `y` channel)
+ * - `radius`: optional (donut inner radius)
  */
-export interface ChartSpec {
-  /**
-   * The mark type to render.
-   * String shorthand: `mark: 'bar'`
-   * Object with properties: `mark: { type: 'line', interpolate: 'step' }`
-   */
-  mark: MarkType | MarkDef;
+export interface ArcEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  y: EncodingChannel<TData>;
+  color: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for line marks.
+ * - `x`: required (temporal or ordinal — the time/category axis)
+ * - `y`: required (quantitative — the value axis)
+ */
+export interface LineEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for bar marks (vertical columns and horizontal bars).
+ * - `x`: required
+ * - `y`: required
+ */
+export interface BarEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for area marks.
+ * - `x`: required (temporal or ordinal)
+ * - `y`: required (quantitative)
+ */
+export interface AreaEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for point marks (scatter plots).
+ * - `x`: required
+ * - `y`: required
+ */
+export interface PointEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for circle marks (dot plots).
+ * - `x`: required (quantitative)
+ * - `y`: required (nominal/ordinal — the category axis)
+ */
+export interface CircleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for lollipop marks.
+ * - `x`: required (quantitative)
+ * - `y`: required (nominal/ordinal)
+ */
+export interface LollipopEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for text marks (data-positioned labels).
+ * - `text`: required (the field to render as text)
+ * - `x`, `y`: optional positioning
+ */
+export interface TextEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  text: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for tick marks (strip/rug plots).
+ * - `x`: required
+ * - `y`: required
+ */
+export interface TickEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for rect marks (heatmaps, 2D binned plots).
+ * - `x`: required
+ * - `y`: required
+ */
+export interface RectEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+// ---------------------------------------------------------------------------
+// Shared (non-mark-specific) ChartSpec properties
+// ---------------------------------------------------------------------------
+
+/**
+ * Properties shared across all ChartSpec mark variants.
+ * Extracted to avoid repeating them in every union member.
+ *
+ * @internal
+ */
+interface BaseChartSpec<TData extends DataRow = DataRow> {
   /** Data array: each element is a row with field values. */
-  data: DataRow[];
+  data: TData[];
   /** Data transforms applied in order before encoding (filter, bin, calculate, timeUnit). */
   transform?: Transform[];
-  /** Encoding mapping data fields to visual channels. */
-  encoding: Encoding;
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
   /**
@@ -1083,6 +1249,87 @@ export interface ChartSpec {
    */
   zIndex?: number;
 }
+
+/**
+ * Chart specification: the primary input for standard chart types.
+ *
+ * Uses the Vega-Lite `mark` property instead of `type` to specify
+ * the visualization mark. The mark can be a string shorthand or an
+ * object with additional properties (interpolation, point markers, etc.).
+ *
+ * This is a discriminated union — the `mark` value determines which encoding
+ * channels are required. TypeScript enforces required channels at compile time,
+ * matching the runtime rules in `MARK_ENCODING_RULES`.
+ *
+ * @template TData - The shape of a single data row. When provided, `encoding.*.field`
+ * values are constrained to `keyof TData` and IDEs autocomplete your column names.
+ * Defaults to `DataRow` (no constraint) — existing untyped specs work unchanged.
+ *
+ * @example
+ * // Typed: field autocomplete + typo detection
+ * type SalesRow = { date: string; revenue: number; region: string };
+ * const spec: ChartSpec<SalesRow> = {
+ *   mark: 'line',
+ *   data: rows,
+ *   encoding: {
+ *     x: { field: 'date', type: 'temporal' },      // autocompletes
+ *     y: { field: 'revenue', type: 'quantitative' }, // typos fail at compile time
+ *   }
+ * };
+ *
+ * @example
+ * // Untyped: works exactly as before (no migration needed)
+ * const spec: ChartSpec = {
+ *   mark: 'bar',
+ *   data: myData,
+ *   encoding: { x: { field: 'category', type: 'nominal' }, y: { field: 'value', type: 'quantitative' } }
+ * };
+ */
+export type ChartSpec<TData extends DataRow = DataRow> =
+  | (BaseChartSpec<TData> & {
+      mark: 'arc' | (MarkDef & { type: 'arc' });
+      encoding: ArcEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'line' | (MarkDef & { type: 'line' });
+      encoding: LineEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'bar' | (MarkDef & { type: 'bar' });
+      encoding: BarEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'area' | (MarkDef & { type: 'area' });
+      encoding: AreaEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'point' | (MarkDef & { type: 'point' });
+      encoding: PointEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'circle' | (MarkDef & { type: 'circle' });
+      encoding: CircleEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'lollipop' | (MarkDef & { type: 'lollipop' });
+      encoding: LollipopEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'text' | (MarkDef & { type: 'text' });
+      encoding: TextEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'tick' | (MarkDef & { type: 'tick' });
+      encoding: TickEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'rect' | (MarkDef & { type: 'rect' });
+      encoding: RectEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'rule' | (MarkDef & { type: 'rule' });
+      encoding: Encoding<TData>;
+    });
 
 /**
  * Table specification: input for data table visualizations.
@@ -1205,14 +1452,19 @@ export interface ResolveConfig {
  * Each element in `layer` is either a ChartSpec or another LayerSpec (nested).
  * Shared data, encoding, and transforms at the LayerSpec level are inherited
  * by children that don't define their own.
+ *
+ * @template TData - The shape of a single data row. When all layers share the
+ * same data shape, pass it here to get field autocomplete across the layer.
+ * For layers with different data shapes per child, omit TData (defaults to
+ * `DataRow`) — children can be independently typed.
  */
-export interface LayerSpec {
+export interface LayerSpec<TData extends DataRow = DataRow> {
   /** Array of child layers (ChartSpec or nested LayerSpec). */
-  layer: (ChartSpec | LayerSpec)[];
+  layer: (ChartSpec<TData> | LayerSpec<TData>)[];
   /** Shared data inherited by children without their own data. */
-  data?: DataRow[];
+  data?: TData[];
   /** Shared encoding inherited by children (overridden per-channel by child). */
-  encoding?: Encoding;
+  encoding?: Encoding<TData>;
   /** Shared transforms. Parent transforms run before child transforms. */
   transform?: Transform[];
   /** Editorial chrome (title, subtitle, source, etc.). */
@@ -1440,8 +1692,11 @@ export type VizSpec =
   | TileMapSpec
   | BarListSpec;
 
-/** Chart spec without runtime data, for persistence/storage. */
-export type ChartSpecWithoutData = Omit<ChartSpec, 'data'>;
+/**
+ * Chart spec without runtime data, for persistence/storage.
+ * Generic: `ChartSpecWithoutData<MyRow>` constrains encoding field names.
+ */
+export type ChartSpecWithoutData<TData extends DataRow = DataRow> = Omit<ChartSpec<TData>, 'data'>;
 /** Table spec without runtime data and columns, for persistence/storage. Columns can be auto-generated via dataTable(). */
 export type TableSpecWithoutData = Omit<TableSpec, 'data' | 'columns'>;
 /** Graph spec without runtime data, for persistence/storage. */
@@ -1489,7 +1744,12 @@ export interface RelativeTimeRef {
 
 /** A predicate that tests a field value against a condition. */
 export interface FieldPredicate {
-  /** Data field to test. */
+  /**
+   * Data field to test.
+   * Note: FieldPredicate is used in transforms (FilterTransform) which operate
+   * on the raw DataRow type — field is typed as string here since transforms
+   * can reference computed/derived fields not present in the original TData.
+   */
   field: string;
   /** Equals comparison. */
   equal?: unknown;
@@ -1652,14 +1912,23 @@ export type Transform =
 /**
  * A single condition with a test predicate and resulting value/field.
  * When the test passes for a datum, the condition's value/field is used.
+ *
+ * @template TData - Propagated from ChartSpec<TData>. Constrains `field` to
+ * `keyof TData & string` when a typed data row is provided.
  */
-export interface Condition {
+export interface Condition<TData extends DataRow = DataRow> {
   /** Predicate to test against each datum. */
   test: FilterPredicate;
-  /** Static value to use when the condition is true. */
-  value?: unknown;
-  /** Data field to use when the condition is true. */
-  field?: string;
+  /**
+   * Static value to use when the condition is true.
+   * Accepted values: CSS color string, opacity (0-1), size number, or boolean flag.
+   */
+  value?: string | number | boolean | null;
+  /**
+   * Data field to use when the condition is true.
+   * Constrained to column names of `TData` when using `ChartSpec<TData>`.
+   */
+  field?: keyof TData & string;
   /** Field type for the conditional field. */
   type?: FieldType;
 }
@@ -1667,12 +1936,17 @@ export interface Condition {
 /**
  * A conditional value definition for an encoding channel.
  * Evaluates conditions in order, falling back to the default value.
+ *
+ * @template TData - Propagated from ChartSpec<TData>.
  */
-export interface ConditionalValueDef {
+export interface ConditionalValueDef<TData extends DataRow = DataRow> {
   /** One or more conditions to evaluate. */
-  condition: Condition | Condition[];
-  /** Default value when no condition matches. */
-  value?: unknown;
+  condition: Condition<TData> | Condition<TData>[];
+  /**
+   * Default value when no condition matches.
+   * Accepted values: CSS color string, opacity (0-1), size number, or boolean flag.
+   */
+  value?: string | number | boolean | null;
 }
 
 /**
@@ -1680,9 +1954,9 @@ export interface ConditionalValueDef {
  * Use this to narrow `EncodingChannel | ConditionalValueDef` in encoding channels
  * that support conditional encoding (color, size, opacity).
  */
-export function isEncodingChannel(
-  def: EncodingChannel | ConditionalValueDef | undefined,
-): def is EncodingChannel {
+export function isEncodingChannel<TData extends DataRow = DataRow>(
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | undefined,
+): def is EncodingChannel<TData> {
   if (!def) return false;
   return 'field' in def && !('condition' in def);
 }
@@ -1690,9 +1964,9 @@ export function isEncodingChannel(
 /**
  * Check if a channel definition is a ConditionalValueDef.
  */
-export function isConditionalDef(
-  def: EncodingChannel | ConditionalValueDef | undefined,
-): def is ConditionalValueDef {
+export function isConditionalDef<TData extends DataRow = DataRow>(
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | undefined,
+): def is ConditionalValueDef<TData> {
   if (!def) return false;
   return 'condition' in def;
 }
