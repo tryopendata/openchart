@@ -287,11 +287,28 @@ export function computeDimensions(
     xAxisHeight = hasXAxisLabel ? 48 : 26;
   }
 
+  // Resolve effective y-axis tickPosition early so margin math can account
+  // for the inline-tick overhang. Inline y-tick labels render above their
+  // gridline inside the chart area; the topmost tick text extends roughly
+  // (tickFontSize + 6) pixels above area.y, which would otherwise crowd
+  // the chrome→chart gap.
+  const yAxisCfgPre = (encoding.y?.axis as Record<string, unknown> | undefined) ?? undefined;
+  const yTickPositionExplicitPre = yAxisCfgPre?.tickPosition as 'inline' | 'gutter' | undefined;
+  const yIsContinuousPre = encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal';
+  const yIsLineOrAreaPre = spec.markType === 'line' || spec.markType === 'area';
+  const yAxisOrientPre = yAxisCfgPre?.orient as 'left' | 'right' | 'top' | 'bottom' | undefined;
+  const yIsInlinePre =
+    (yTickPositionExplicitPre ??
+      (yIsLineOrAreaPre && yIsContinuousPre && yAxisOrientPre !== 'right'
+        ? 'inline'
+        : 'gutter')) === 'inline';
+  const inlineTickOverhang = yIsInlinePre ? theme.fonts.sizes.axisTick + 6 : 0;
+
   // Build margins: padding + chrome + axis space.
   // For radial charts (arc/donut), axes don't exist, so axisMargin is only
   // added when there's actual chrome content that needs separation from the
   // chart area. When chrome is empty the margin is just padding.
-  const topAxisGap = isRadial && chrome.topHeight === 0 ? 0 : axisMargin;
+  const topAxisGap = isRadial && chrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
   // Extra top padding on narrow viewports prevents iOS Safari from clipping
   // the title chrome behind the browser UI.
   const topPad = width < NARROW_VIEWPORT_MAX ? padding + TOP_PAD_EXTRA_NARROW : padding;
@@ -418,20 +435,10 @@ export function computeDimensions(
     }
   }
 
-  // Dynamic left margin for y-axis labels
+  // Dynamic left margin for y-axis labels (yIsInline already resolved above
+  // for inline-tick top-margin reservation).
   const yAxisSuppressed = encoding.y?.axis === false;
-  // Resolve effective y-axis tickPosition. Editorial line/area y-axes default
-  // to inline (labels render above gridlines inside the chart area, so no
-  // left gutter is reserved). Other marks default to gutter.
-  const yAxisCfg = (encoding.y?.axis as Record<string, unknown> | undefined) ?? undefined;
-  const yTickPositionExplicit = yAxisCfg?.tickPosition as 'inline' | 'gutter' | undefined;
-  const yIsContinuous = encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal';
-  const yIsLineOrArea = spec.markType === 'line' || spec.markType === 'area';
-  const yAxisOrient = yAxisCfg?.orient as 'left' | 'right' | 'top' | 'bottom' | undefined;
-  const yTickPosition: 'inline' | 'gutter' =
-    yTickPositionExplicit ??
-    (yIsLineOrArea && yIsContinuous && yAxisOrient !== 'right' ? 'inline' : 'gutter');
-  const yIsInline = yTickPosition === 'inline';
+  const yIsInline = yIsInlinePre;
   if (encoding.y && !isRadial && !yAxisSuppressed && !yIsInline) {
     if (
       spec.markType === 'bar' ||
@@ -591,7 +598,8 @@ export function computeDimensions(
     // Include the tentative metric reservation so the rollback below mirrors
     // the primary path's invariant (margins.top includes tentativeMetricsHeight
     // until resolveMetrics decides otherwise).
-    const fallbackTopAxisGap = isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin;
+    const fallbackTopAxisGap =
+      isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
     const newTop = topPad + fallbackChrome.topHeight + fallbackTopAxisGap + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
     const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;

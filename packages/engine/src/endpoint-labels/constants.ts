@@ -6,35 +6,35 @@
  * drift from the eventual rendered geometry.
  */
 
-/** Series-name label font size, matching the existing end-of-line label style. */
-export const ENDPOINT_LABEL_FONT_SIZE = 11;
+/** Series-name label font size. Matches body text for editorial prominence. */
+export const ENDPOINT_LABEL_FONT_SIZE = 13;
 
 /** Series-name label font weight (semibold for visual prominence). */
 export const ENDPOINT_LABEL_FONT_WEIGHT = 600;
 
 /** Last-value label font size (slightly smaller than the series name). */
-export const ENDPOINT_VALUE_FONT_SIZE = 11;
+export const ENDPOINT_VALUE_FONT_SIZE = 12;
 
 /** Last-value label font weight (regular, muted text tone). */
 export const ENDPOINT_VALUE_FONT_WEIGHT = 400;
 
 /** Default wrap width for long series names, in pixels. */
-export const ENDPOINT_WRAP_WIDTH_DEFAULT = 96;
+export const ENDPOINT_WRAP_WIDTH_DEFAULT = 110;
 
-/** Width of the colored stroke segment swatch drawn left of the label. */
-export const ENDPOINT_SWATCH_SIZE = 14;
+/** Width of the colored swatch chip drawn left of the label. */
+export const ENDPOINT_SWATCH_SIZE = 18;
 
 /** Gap between swatch, label, and value. */
-export const ENDPOINT_GAP = 6;
+export const ENDPOINT_GAP = 8;
 
 /** Line height multiplier for wrapped label lines. */
 export const ENDPOINT_LINE_HEIGHT = 1.25;
 
 /** Pixel padding between the chart area's right edge and the column. */
-export const ENDPOINT_COLUMN_GAP = 16;
+export const ENDPOINT_COLUMN_GAP = 18;
 
 /** Vertical pad between the last wrapped label line and the value text. */
-export const ENDPOINT_VALUE_GAP = 2;
+export const ENDPOINT_VALUE_GAP = 4;
 
 /** Default open-circle marker radius on the line. */
 export const ENDPOINT_MARKER_RADIUS = 4;

@@ -628,6 +628,8 @@ export interface CategoricalLegendLayout extends BaseLegendLayout {
   swatchGap: number;
   /** Gap between entries. */
   entryGap: number;
+  /** Fill color for the rounded chip background behind the colored bar. */
+  swatchChipFill: string;
 }
 
 /** A color stop in a gradient legend. */

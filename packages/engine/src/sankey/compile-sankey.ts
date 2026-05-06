@@ -590,6 +590,7 @@ function buildSankeyLegend(
     swatchSize: SWATCH_SIZE,
     swatchGap: SWATCH_GAP,
     entryGap: ENTRY_GAP,
+    swatchChipFill: theme.colors.annotationFill,
   };
 }
 
@@ -674,6 +675,7 @@ function emptyLayout(
       swatchSize: SWATCH_SIZE,
       swatchGap: SWATCH_GAP,
       entryGap: ENTRY_GAP,
+      swatchChipFill: theme.colors.annotationFill,
     },
     tooltipDescriptors: new Map(),
     a11y: {

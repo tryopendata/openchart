@@ -109,6 +109,7 @@ function buildGraphLegend(
     swatchSize: SWATCH_SIZE,
     swatchGap: SWATCH_GAP,
     entryGap: ENTRY_GAP,
+    swatchChipFill: theme.colors.annotationFill,
   };
 }
 

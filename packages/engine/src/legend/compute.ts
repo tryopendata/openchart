@@ -152,6 +152,7 @@ export function computeLegend(
   // Legend explicitly hidden via show: false, or height strategy says no legend
   if (sparklineHidden || spec.legend?.show === false || strategy.legendMaxHeight === 0) {
     return {
+      type: 'categorical' as const,
       position: 'top',
       entries: [],
       bounds: { x: 0, y: 0, width: 0, height: 0 },
@@ -165,6 +166,7 @@ export function computeLegend(
       swatchSize: SWATCH_SIZE,
       swatchGap: SWATCH_GAP,
       entryGap: ENTRY_GAP,
+      swatchChipFill: theme.colors.annotationFill,
     };
   }
 
@@ -199,6 +201,7 @@ export function computeLegend(
   // No entries = empty legend with no space
   if (entries.length === 0) {
     return {
+      type: 'categorical' as const,
       position: resolvedPosition,
       entries: [],
       bounds: { x: 0, y: 0, width: 0, height: 0 },
@@ -206,6 +209,7 @@ export function computeLegend(
       swatchSize: SWATCH_SIZE,
       swatchGap: SWATCH_GAP,
       entryGap: ENTRY_GAP,
+      swatchChipFill: theme.colors.annotationFill,
     };
   }
 
@@ -252,6 +256,7 @@ export function computeLegend(
     const offsetDy = spec.legend?.offset?.dy ?? 0;
 
     return {
+      type: 'categorical' as const,
       position: resolvedPosition,
       entries,
       bounds: {
@@ -264,6 +269,7 @@ export function computeLegend(
       swatchSize: SWATCH_SIZE,
       swatchGap: SWATCH_GAP,
       entryGap: 4,
+      swatchChipFill: theme.colors.annotationFill,
     };
   }
 
@@ -327,6 +333,7 @@ export function computeLegend(
   const offsetDy = spec.legend?.offset?.dy ?? 0;
 
   return {
+    type: 'categorical' as const,
     position: resolvedPosition,
     entries,
     bounds: {
@@ -342,5 +349,6 @@ export function computeLegend(
     swatchSize: SWATCH_SIZE,
     swatchGap: SWATCH_GAP,
     entryGap: effectiveEntryGap,
+    swatchChipFill: theme.colors.annotationFill,
   };
 }
