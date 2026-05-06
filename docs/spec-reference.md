@@ -283,7 +283,6 @@ interface Chrome {
   eyebrow?: string | ChromeText;
   title?: string | ChromeText;
   subtitle?: string | ChromeText;
-  metric?: MetricBar;
   source?: string | ChromeText;
   byline?: string | ChromeText;
   footer?: string | ChromeText;
@@ -291,18 +290,19 @@ interface Chrome {
 }
 ```
 
-Each text field accepts either a plain string or a `ChromeText` object for style overrides.
+Each field accepts either a plain string or a `ChromeText` object for style overrides.
 
-| Field      | Position                         | Default style                                                |
-| ---------- | -------------------------------- | ------------------------------------------------------------ |
-| `eyebrow`  | Above title                      | 11px, semibold, uppercase, theme accent — leading accent dot |
-| `title`    | Top, above chart                 | 22px, bold (700), `#333333`                                  |
-| `subtitle` | Below title                      | 15px, normal (400), `#666666`                                |
-| `metric`   | Below subtitle, above chart area | Inline metric bar (see `MetricBar`)                          |
-| `source`   | Below chart area                 | 12px, normal (400), `#999999`                                |
-| `byline`   | Below source                     | 12px, normal (400), `#999999`                                |
-| `footer`   | Below byline                     | 12px, normal (400), `#999999`                                |
-| `brand`    | Right-aligned on the source row  | 12px — leading accent dot, suppresses the default watermark  |
+| Field      | Position                        | Default style                                                |
+| ---------- | ------------------------------- | ------------------------------------------------------------ |
+| `eyebrow`  | Above title                     | 11px, semibold, uppercase, theme accent — leading accent dot |
+| `title`    | Top, above chart                | 22px, bold (700), `#333333`                                  |
+| `subtitle` | Below title                     | 15px, normal (400), `#666666`                                |
+| `source`   | Below chart area                | 12px, normal (400), `#999999`                                |
+| `byline`   | Below source                    | 12px, normal (400), `#999999`                                |
+| `footer`   | Below byline                    | 12px, normal (400), `#999999`                                |
+| `brand`    | Right-aligned on the source row | 12px — leading accent dot, suppresses the default watermark  |
+
+**KPI metric row** is a separate top-level field on chart specs, not part of `Chrome`. Use `metrics: Metric[]` on the chart spec for a horizontal row of label+value cells rendered between the subtitle and the chart area. Each cell can carry a delta and a secondary value. See `Metric` in `core/src/types/spec.ts` for the full shape.
 
 ### ChromeText
 
