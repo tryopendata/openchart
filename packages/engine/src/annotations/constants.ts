@@ -22,6 +22,26 @@ export const DARK_TEXT_FILL = '#d1d5db';
 export const LIGHT_REFLINE_STROKE = '#888888';
 export const DARK_REFLINE_STROKE = '#9ca3af';
 
+// Muted text fill for annotation subtitles (~60% perceived contrast vs primary)
+export const LIGHT_MUTED_TEXT_FILL = '#6b7280';
+export const DARK_MUTED_TEXT_FILL = '#9ca3af';
+
+// Background fills used as the default "open ring" dot interior
+export const LIGHT_DOT_FILL = '#ffffff';
+export const DARK_DOT_FILL = '#0a0a0a';
+
+/** Default annotation dot radius in pixels. */
+export const DEFAULT_DOT_RADIUS = 5;
+
+/** Default annotation dot stroke width in pixels. */
+export const DEFAULT_DOT_STROKE_WIDTH = 2;
+
+/** Vertical gap (px) between the primary annotation text and its subtitle. */
+export const SUBTITLE_GAP = 2;
+
+/** Subtitle font size multiplier (relative to primary annotation font size). */
+export const SUBTITLE_FONT_SIZE_RATIO = 0.85;
+
 /** Default label offset when using anchor directions. */
 export const ANCHOR_OFFSET = 8;
 

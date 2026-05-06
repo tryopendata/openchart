@@ -532,6 +532,18 @@ export interface AnnotationOffset {
 /** Anchor direction for annotation label placement relative to the data point. */
 export type AnnotationAnchor = 'top' | 'bottom' | 'left' | 'right' | 'auto';
 
+/** Style overrides for the dot marker drawn at the connector's data-point endpoint. */
+export interface AnnotationDot {
+  /** Circle radius in pixels. Default 5. */
+  radius?: number;
+  /** Fill color. Defaults to theme background for an "open ring" look. */
+  fill?: string;
+  /** Stroke color. Defaults to theme text color. */
+  stroke?: string;
+  /** Stroke width in pixels. Default 2. */
+  strokeWidth?: number;
+}
+
 /** Base properties shared by all annotation types. */
 interface AnnotationBase {
   /** Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching. */
@@ -562,6 +574,18 @@ export interface TextAnnotation extends AnnotationBase {
   y: string | number;
   /** The annotation text. Required for text annotations. */
   text: string;
+  /**
+   * Optional muted second-tone text rendered below the primary `text`.
+   * Used for supporting context (e.g. methodology, source). Newlines in
+   * `text` still produce multi-line primary; subtitle is a separate block.
+   */
+  subtitle?: string;
+  /**
+   * Optional dot marker drawn at the connector's data-point endpoint.
+   * `true` enables the default open-ring style. Pass an object to override
+   * radius, fill, stroke, or strokeWidth.
+   */
+  dot?: boolean | AnnotationDot;
   /** Font size override. */
   fontSize?: number;
   /** Font weight override. */

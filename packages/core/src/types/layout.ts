@@ -553,6 +553,28 @@ export interface ResolvedAnnotation {
   strokeWidth?: number;
   /** Z-index for render ordering. Higher values render on top. */
   zIndex?: number;
+  /**
+   * For text annotations: optional dot marker drawn at the connector's
+   * data-point endpoint. Coordinates match `label.connector.to` exactly.
+   */
+  dot?: {
+    x: number;
+    y: number;
+    radius: number;
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+  };
+  /**
+   * For text annotations: optional muted subtitle rendered below the primary
+   * label. Positioned `lineHeight * primaryLineCount + gap` below `label.y`.
+   */
+  subtitle?: {
+    text: string;
+    x: number;
+    y: number;
+    style: TextStyle;
+  };
 }
 
 // ---------------------------------------------------------------------------
