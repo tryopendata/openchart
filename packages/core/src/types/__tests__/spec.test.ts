@@ -22,7 +22,7 @@ import {
 // Test data factories
 // ---------------------------------------------------------------------------
 
-function makeChartSpec(overrides?: Partial<ChartSpec>): ChartSpec {
+function makeChartSpec(): ChartSpec {
   return {
     mark: 'line',
     data: [
@@ -33,7 +33,6 @@ function makeChartSpec(overrides?: Partial<ChartSpec>): ChartSpec {
       x: { field: 'date', type: 'temporal' },
       y: { field: 'value', type: 'quantitative' },
     },
-    ...overrides,
   };
 }
 
@@ -70,22 +69,10 @@ function makeGraphSpec(overrides?: Partial<GraphSpec>): GraphSpec {
 
 describe('isChartSpec', () => {
   it('returns true for all mark types', () => {
-    const markTypes = [
-      'line',
-      'area',
-      'bar',
-      'point',
-      'circle',
-      'arc',
-      'text',
-      'rule',
-      'tick',
-      'rect',
-      'lollipop',
-    ] as const;
-
-    for (const markType of markTypes) {
-      const spec = makeChartSpec({ mark: markType });
+    // isChartSpec is a runtime guard that only checks for the presence of `mark`.
+    // Use `as ChartSpec` here since we're testing the guard, not encoding validity.
+    for (const markType of MARK_TYPES) {
+      const spec = { mark: markType, data: [], encoding: {} } as ChartSpec;
       expect(isChartSpec(spec)).toBe(true);
     }
   });
@@ -424,5 +411,85 @@ describe('type-level spec construction', () => {
     expect(spec.type).toBe('graph');
     expect(spec.nodes).toHaveLength(2);
     expect(spec.edges).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Negative type tests (compile-time rejection verification)
+//
+// Each variable below is annotated with @ts-expect-error on the line that
+// should be rejected. If any @ts-expect-error becomes "unused" (no error),
+// TypeScript will fail the build — meaning the type guarantee regressed.
+// ---------------------------------------------------------------------------
+
+describe('type-level rejection', () => {
+  it('compiles with @ts-expect-error annotations intact (runtime no-op)', () => {
+    // Arc requires y + color. Missing color must error.
+    const _arcMissingColor: ChartSpec = {
+      mark: 'arc',
+      data: [],
+      // @ts-expect-error ArcEncoding requires color channel
+      encoding: {
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    // Text mark requires text channel. Missing text must error.
+    const _textMissingText: ChartSpec = {
+      mark: 'text',
+      data: [],
+      // @ts-expect-error TextEncoding requires text channel
+      encoding: {},
+    };
+
+    // Typed spec: field typo must error when TData is provided.
+    type SalesRow = { date: string; revenue: number };
+    const _typoField: ChartSpec<SalesRow> = {
+      mark: 'line',
+      data: [],
+      encoding: {
+        // @ts-expect-error 'dat' is not a key of SalesRow — did you mean 'date'?
+        x: { field: 'dat', type: 'temporal' },
+        y: { field: 'revenue', type: 'quantitative' },
+      },
+    };
+
+    // Valid typed spec must compile without errors.
+    const _validTyped: ChartSpec<SalesRow> = {
+      mark: 'line',
+      data: [{ date: '2024-01', revenue: 100 }],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'revenue', type: 'quantitative' },
+      },
+    };
+
+    // Arc without theta must compile (theta is optional per MARK_ENCODING_RULES).
+    const _arcNoTheta: ChartSpec = {
+      mark: 'arc',
+      data: [],
+      encoding: {
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'category', type: 'nominal' },
+      },
+    };
+
+    // Untyped spec (no TData param) must compile — no migration cost.
+    const _untypedSpec: ChartSpec = {
+      mark: 'line',
+      data: [],
+      encoding: {
+        x: { field: 'anything', type: 'temporal' },
+        y: { field: 'anything', type: 'quantitative' },
+      },
+    };
+
+    void _arcMissingColor;
+    void _textMissingText;
+    void _typoField;
+    void _validTyped;
+    void _arcNoTheta;
+    void _untypedSpec;
+    expect(true).toBe(true);
   });
 });

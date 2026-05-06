@@ -167,7 +167,9 @@ function buildChartSpec(
   encoding: Encoding,
   options?: ChartBuilderOptions,
 ): ChartSpec {
-  const spec: ChartSpec = { mark, data, encoding };
+  // Cast needed because the generic discriminated union can't be constructed
+  // from a runtime MarkType variable — the caller always pairs mark+encoding correctly.
+  const spec = { mark, data, encoding } as ChartSpec;
   if (options?.chrome) spec.chrome = options.chrome;
   if (options?.annotations) spec.annotations = options.annotations;
   if (options?.responsive !== undefined) spec.responsive = options.responsive;

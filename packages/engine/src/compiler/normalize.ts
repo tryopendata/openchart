@@ -509,7 +509,7 @@ export function flattenLayers(
         ...(child.watermark === undefined && resolvedWatermark !== undefined
           ? { watermark: resolvedWatermark }
           : {}),
-      });
+      } as ChartSpec);
     }
   }
 

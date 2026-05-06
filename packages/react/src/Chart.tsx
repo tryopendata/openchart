@@ -5,11 +5,13 @@
  * and cleans up on unmount. All heavy lifting is done by the vanilla
  * createChart() function.
  */
+// biome-ignore-all lint/correctness/useHookAtTopLevel: Biome doesn't recognize overloaded function declarations as React components; hooks are correctly at the top level of ChartInner
 
 import type {
   ChartEventHandlers,
   ChartSpec,
   DarkMode,
+  DataRow,
   ElementRef,
   GraphSpec,
   LayerSpec,
@@ -37,9 +39,9 @@ export interface ChartHandle {
   readonly instance: ChartInstance | null;
 }
 
-export interface ChartProps extends ChartEventHandlers {
+export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventHandlers {
   /** The visualization spec to render. */
-  spec: ChartSpec | LayerSpec | GraphSpec;
+  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */
@@ -60,8 +62,24 @@ export interface ChartProps extends ChartEventHandlers {
  * Uses the vanilla adapter internally. The spec is compiled and rendered
  * as SVG inside a wrapper div. Spec changes trigger re-renders via the
  * vanilla adapter's update() method.
+ *
+ * Pass a typed data row as the generic to get field autocomplete:
+ * ```tsx
+ * type SalesRow = { date: string; revenue: number };
+ * <Chart<SalesRow> spec={{ mark: 'line', data: rows, encoding: { x: { field: 'date', ... } } }} />
+ * ```
  */
-export const Chart = forwardRef<ChartHandle, ChartProps>(function Chart(
+// forwardRef doesn't support generics natively in TypeScript, so we use the
+// inner function + cast pattern to preserve the generic on the public API.
+function ChartInner<TData extends DataRow = DataRow>(
+  props: ChartProps<TData> & React.RefAttributes<ChartHandle>,
+  ref: React.Ref<ChartHandle>,
+): React.ReactElement | null;
+function ChartInner(
+  props: ChartProps & { ref?: React.Ref<ChartHandle> },
+  ref: React.Ref<ChartHandle>,
+): React.ReactElement | null;
+function ChartInner(
   {
     spec,
     theme: themeProp,
@@ -80,8 +98,8 @@ export const Chart = forwardRef<ChartHandle, ChartProps>(function Chart(
     selectedElement: selectedElementProp,
     className,
     style,
-  },
-  ref,
+  }: ChartProps,
+  ref: React.Ref<ChartHandle>,
 ) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
@@ -275,4 +293,21 @@ export const Chart = forwardRef<ChartHandle, ChartProps>(function Chart(
       style={style}
     />
   );
-});
+}
+
+/**
+ * Generic Chart component with field autocomplete support.
+ *
+ * Pass your data row type to get compile-time field validation:
+ * ```tsx
+ * type SalesRow = { date: string; revenue: number; region: string };
+ * <Chart<SalesRow> spec={{ mark: 'line', data: rows, encoding: { x: { field: 'date', type: 'temporal' } } }} />
+ * ```
+ *
+ * Without a type parameter, behaves identically to before — no migration needed.
+ */
+export const Chart = forwardRef(ChartInner) as <TData extends DataRow = DataRow>(
+  props: ChartProps<TData> & { ref?: React.Ref<ChartHandle> },
+) => React.ReactElement | null;
+// Restore display name lost by the forwardRef + cast pattern
+(Chart as React.FC).displayName = 'Chart';

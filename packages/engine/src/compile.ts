@@ -698,7 +698,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       data: chartSpec.data,
       encoding: chartSpec.encoding,
       chrome: chartSpec.chrome,
-    },
+    } as ChartSpec,
     chartSpec.data,
   );
   const dataTableFallback = generateDataTable(
@@ -706,7 +706,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       mark: chartSpec.markType,
       data: chartSpec.data,
       encoding: chartSpec.encoding,
-    },
+    } as ChartSpec,
     chartSpec.data,
   );
 
@@ -1285,7 +1285,7 @@ function withYDomain(leaf: ChartSpec, domain: [number, number]): ChartSpec {
         },
       },
     },
-  };
+  } as ChartSpec;
 }
 
 /**
