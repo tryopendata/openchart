@@ -324,25 +324,70 @@ describe('compileChart', () => {
   it('hiddenSeries keeps remaining series on their original palette colors', () => {
     // Regression: filtering renderData by hiddenSeries used to shrink the
     // ordinal color scale's domain, which shifted every visible series down
-    // one palette index. With UK hidden, US should still get the same color
-    // it had when both were visible.
+    // one palette index.
     type LineLike = { type: string; seriesKey?: string; stroke?: string };
-    const baseline = compileChart({ ...lineSpec, hiddenSeries: [] }, { width: 600, height: 400 });
-    const baselineUS = baseline.marks.find(
-      (m) => m.type === 'line' && (m as LineLike).seriesKey === 'US',
-    ) as LineLike | undefined;
-    expect(baselineUS).toBeTruthy();
+    const findStroke = (marks: { type: string }[], series: string) =>
+      (marks.find((m) => m.type === 'line' && (m as LineLike).seriesKey === series) as LineLike)
+        ?.stroke;
 
-    const filtered = compileChart(
+    const baseline = compileChart({ ...lineSpec, hiddenSeries: [] }, { width: 600, height: 400 });
+    const baselineUS = findStroke(baseline.marks, 'US');
+    const baselineUK = findStroke(baseline.marks, 'UK');
+    expect(baselineUS).toBeTruthy();
+    expect(baselineUK).toBeTruthy();
+
+    // Hide UK → US should keep its color.
+    const ukHidden = compileChart(
       { ...lineSpec, hiddenSeries: ['UK'] },
       { width: 600, height: 400 },
     );
-    const filteredUS = filtered.marks.find(
-      (m) => m.type === 'line' && (m as LineLike).seriesKey === 'US',
-    ) as LineLike | undefined;
-    expect(filteredUS).toBeTruthy();
+    expect(findStroke(ukHidden.marks, 'US')).toBe(baselineUS);
 
-    expect(filteredUS!.stroke).toBe(baselineUS!.stroke);
+    // Hide US → UK should keep its color (reverse direction).
+    const usHidden = compileChart(
+      { ...lineSpec, hiddenSeries: ['US'] },
+      { width: 600, height: 400 },
+    );
+    expect(findStroke(usHidden.marks, 'UK')).toBe(baselineUK);
+  });
+
+  it('hiddenSeries keeps middle-of-N series colors stable in 3-series charts', () => {
+    // Pre-fix bug shifted EVERY series after the hidden one — a 2-series
+    // case only proves shift-by-one. A 3-series case where the middle is
+    // hidden proves the late series doesn't drift either.
+    type LineLike = { type: string; seriesKey?: string; stroke?: string };
+    const findStroke = (marks: { type: string }[], series: string) =>
+      (marks.find((m) => m.type === 'line' && (m as LineLike).seriesKey === series) as LineLike)
+        ?.stroke;
+
+    const threeSeriesSpec = {
+      mark: 'line' as const,
+      data: [
+        { date: '2020-01-01', value: 10, country: 'US' },
+        { date: '2021-01-01', value: 40, country: 'US' },
+        { date: '2020-01-01', value: 15, country: 'UK' },
+        { date: '2021-01-01', value: 35, country: 'UK' },
+        { date: '2020-01-01', value: 12, country: 'JP' },
+        { date: '2021-01-01', value: 38, country: 'JP' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'country', type: 'nominal' as const },
+      },
+    };
+
+    const baseline = compileChart(threeSeriesSpec, { width: 600, height: 400 });
+    const baselineUS = findStroke(baseline.marks, 'US');
+    const baselineJP = findStroke(baseline.marks, 'JP');
+
+    // Hide the middle series.
+    const ukHidden = compileChart(
+      { ...threeSeriesSpec, hiddenSeries: ['UK'] },
+      { width: 600, height: 400 },
+    );
+    expect(findStroke(ukHidden.marks, 'US')).toBe(baselineUS); // first stays
+    expect(findStroke(ukHidden.marks, 'JP')).toBe(baselineJP); // last doesn't shift up
   });
 
   // ---------------------------------------------------------------------------

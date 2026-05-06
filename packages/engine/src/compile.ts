@@ -534,7 +534,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     colorEnc &&
     'field' in colorEnc &&
     colorEnc.type !== 'quantitative' &&
-    !colorEnc.scale?.domain
+    colorEnc.scale?.domain == null
   ) {
     const colorField = colorEnc.field;
     const stableDomain = Array.from(new Set(chartSpec.data.map((row) => String(row[colorField]))));

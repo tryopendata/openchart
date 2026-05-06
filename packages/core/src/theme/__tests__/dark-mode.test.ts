@@ -1,6 +1,7 @@
+import { hsl } from 'd3-color';
 import { describe, expect, it } from 'vitest';
 import { contrastRatio } from '../../colors/contrast';
-import { adaptColorForDarkMode, adaptTheme } from '../dark-mode';
+import { adaptColorForDarkMode, adaptForLightLineStroke, adaptTheme } from '../dark-mode';
 import { resolveTheme } from '../resolve';
 
 describe('adaptColorForDarkMode', () => {
@@ -32,6 +33,44 @@ describe('adaptColorForDarkMode', () => {
   it('handles pure black gracefully', () => {
     const result = adaptColorForDarkMode('#000000', lightBg, darkBg);
     expect(result).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+});
+
+describe('adaptForLightLineStroke', () => {
+  it('darkens a saturated cyan by ~12% lightness', () => {
+    const original = '#06b6d4';
+    const darkened = adaptForLightLineStroke(original);
+    expect(darkened).not.toBe(original);
+    const c = hsl(darkened);
+    const o = hsl(original);
+    expect(c).not.toBeNull();
+    expect(c!.l).toBeCloseTo(o.l - 0.12, 2);
+  });
+
+  it('passes saturated red and blue through with reduced lightness', () => {
+    for (const color of ['#ef4444', '#3b82f6']) {
+      const out = adaptForLightLineStroke(color);
+      const before = hsl(color);
+      const after = hsl(out);
+      expect(after!.l).toBeLessThan(before.l);
+    }
+  });
+
+  it('passes pure gray through unchanged (saturation below threshold)', () => {
+    // zinc-400 has near-zero saturation; reducing lightness on a gray would
+    // shift it toward black, which isn't desired for achromatic palettes.
+    expect(adaptForLightLineStroke('#a1a1aa')).toBe('#a1a1aa');
+  });
+
+  it('passes already-dark colors through unchanged (l <= 0.4)', () => {
+    // Indigo-900 sits at l ≈ 0.30 — already meets contrast on white.
+    const dark = '#312e81';
+    expect(adaptForLightLineStroke(dark)).toBe(dark);
+  });
+
+  it('passes invalid input through unchanged', () => {
+    expect(adaptForLightLineStroke('not-a-color')).toBe('not-a-color');
+    expect(adaptForLightLineStroke('')).toBe('');
   });
 });
 

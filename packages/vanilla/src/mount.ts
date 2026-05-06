@@ -1903,9 +1903,13 @@ export function createChart<TData extends DataRow = DataRow>(
   let isTextEditingActive = false;
 
   // Runtime legend-toggle state. The user's spec is the source of truth for
-  // initially-hidden series; this set tracks runtime overrides from legend
-  // clicks. The two are merged each compile so the engine sees the union.
+  // initially-hidden series; these two sets track runtime overrides from
+  // legend clicks. Final hidden = (userHidden ∪ runtimeHidden) \ runtimeShown,
+  // so a legend click can either hide a visible series OR show one the
+  // author marked hidden — a single set couldn't roundtrip the latter case
+  // because subtracting from userHidden was impossible.
   const runtimeHiddenSeries = new Set<string>();
+  const runtimeShownSeries = new Set<string>();
   let textEditCleanup: (() => void) | null = null;
 
   const measureText = createMeasureText();
@@ -1934,19 +1938,28 @@ export function createChart<TData extends DataRow = DataRow>(
    * Returns the spec unchanged when no overrides are active so the common
    * path doesn't allocate.
    *
-   * Annotations are suppressed while any series is runtime-hidden. They were
-   * authored against the full dataset (their x/y values anchor to specific
+   * Text annotations are suppressed while any series is runtime-hidden:
+   * they're authored against the full dataset (x/y values anchor to specific
    * data points), and a rebalanced y-scale or a hidden anchor series would
-   * make them point at the wrong place. Restoring all series restores the
-   * authored state, so annotations come back automatically.
+   * make them point at the wrong place. Range and ref-line annotations
+   * anchor to constant axis values, not data points, so they pass through
+   * unchanged — a refline at y=$1T is still meaningful when one country is
+   * hidden. Restoring all series restores text annotations automatically.
    */
   function withRuntimeHidden<T extends { hiddenSeries?: string[]; annotations?: Annotation[] }>(
     spec: T,
   ): T {
-    if (runtimeHiddenSeries.size === 0) return spec;
+    if (runtimeHiddenSeries.size === 0 && runtimeShownSeries.size === 0) return spec;
     const userHidden = spec.hiddenSeries ?? [];
-    const merged = Array.from(new Set([...userHidden, ...runtimeHiddenSeries]));
-    return { ...spec, hiddenSeries: merged, annotations: undefined };
+    const finalHidden = new Set<string>(userHidden);
+    for (const s of runtimeHiddenSeries) finalHidden.add(s);
+    for (const s of runtimeShownSeries) finalHidden.delete(s);
+    const out: T = { ...spec, hiddenSeries: Array.from(finalHidden) };
+    if (finalHidden.size > 0 && spec.annotations) {
+      const filtered = spec.annotations.filter((a) => a.type !== 'text');
+      out.annotations = filtered.length > 0 ? filtered : undefined;
+    }
+    return out;
   }
 
   /**
@@ -1967,6 +1980,14 @@ export function createChart<TData extends DataRow = DataRow>(
     return seen.size;
   }
 
+  /** Resolve whether `series` is currently hidden after merging spec + runtime overrides. */
+  function isSeriesHidden(series: string): boolean {
+    if (runtimeShownSeries.has(series)) return false;
+    if (runtimeHiddenSeries.has(series)) return true;
+    const userHidden = (currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? [];
+    return userHidden.includes(series);
+  }
+
   /**
    * Toggle a series' visibility from a legend click. Returns true when the
    * series is now hidden (post-toggle), false when visible. Triggers a full
@@ -1978,23 +1999,54 @@ export function createChart<TData extends DataRow = DataRow>(
    * reflects state from the previous render in that case.
    */
   function toggleSeriesVisibility(series: string): boolean {
-    const isCurrentlyHidden = runtimeHiddenSeries.has(series);
-    if (!isCurrentlyHidden) {
+    const wasHidden = isSeriesHidden(series);
+    if (!wasHidden) {
+      // Count what would remain visible after this hide. Walk all known
+      // series and check `isSeriesHidden` *as if* this click already applied.
       const total = countSeries(currentSpec);
-      const userHidden = new Set((currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? []);
-      const hiddenCount = new Set([...userHidden, ...runtimeHiddenSeries, series]).size;
-      if (hiddenCount >= total) return false; // would hide everything; bail
+      if (Number.isFinite(total)) {
+        const userHidden = new Set((currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? []);
+        let visibleAfter = 0;
+        const seriesField = getColorField(currentSpec);
+        if (seriesField) {
+          const allSeries = new Set<string>();
+          for (const row of (currentSpec as ChartSpec).data ?? []) {
+            allSeries.add(String((row as Record<string, unknown>)[seriesField]));
+          }
+          for (const s of allSeries) {
+            if (s === series) continue; // pretend this one is hidden
+            if (runtimeShownSeries.has(s)) {
+              visibleAfter++;
+              continue;
+            }
+            if (runtimeHiddenSeries.has(s)) continue;
+            if (!userHidden.has(s)) visibleAfter++;
+          }
+        }
+        if (visibleAfter === 0) return false; // would hide everything; bail
+      }
     }
-    let nowHidden: boolean;
-    if (isCurrentlyHidden) {
+    if (wasHidden) {
+      // Show: clear from hidden set, and if the spec marked it hidden, add
+      // to the shown override so withRuntimeHidden subtracts it back out.
       runtimeHiddenSeries.delete(series);
-      nowHidden = false;
+      const userHidden = (currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? [];
+      if (userHidden.includes(series)) runtimeShownSeries.add(series);
     } else {
+      // Hide: add to hidden set, and clear any prior "shown" override.
+      runtimeShownSeries.delete(series);
       runtimeHiddenSeries.add(series);
-      nowHidden = true;
     }
     render();
-    return nowHidden;
+    return !wasHidden;
+  }
+
+  function getColorField(spec: ChartSpec | GraphSpec | LayerSpec): string | undefined {
+    if (isLayerSpec(spec)) return undefined;
+    const colorEnc = (spec as ChartSpec).encoding?.color;
+    if (!colorEnc || 'condition' in colorEnc) return undefined;
+    if (!('field' in colorEnc) || !colorEnc.field) return undefined;
+    return colorEnc.field;
   }
 
   function getContainerDimensions(): { width: number; height: number } {
@@ -2524,6 +2576,12 @@ export function createChart<TData extends DataRow = DataRow>(
   function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
     if (destroyed) return;
     currentSpec = newSpec;
+    // Runtime legend toggles are scoped to a single spec — when the spec is
+    // replaced (new dataset, different series names), stale entries become
+    // dead labels that no longer match any series. Clear them so the new
+    // spec starts in its authored visibility state.
+    runtimeHiddenSeries.clear();
+    runtimeShownSeries.clear();
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }

@@ -112,7 +112,7 @@ describe('chart event handlers', () => {
   });
 
   describe('onLegendToggle', () => {
-    it('fires when a legend entry is clicked', () => {
+    it('fires when a legend entry is clicked, and toggling back restores the same series', () => {
       const onLegendToggle = vi.fn();
       const chart = createChart(
         container,
@@ -122,23 +122,64 @@ describe('chart event handlers', () => {
         },
       );
 
-      const legendEntry = container.querySelector('[data-legend-index]');
-      expect(legendEntry).not.toBeNull();
+      const firstEntry = container.querySelector('[data-legend-index]') as HTMLElement | null;
+      expect(firstEntry).not.toBeNull();
+      const targetLabel = firstEntry!.getAttribute('data-legend-label')!;
+      expect(targetLabel).toBeTypeOf('string');
 
-      legendEntry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      firstEntry!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
       expect(onLegendToggle).toHaveBeenCalledTimes(1);
-      const [series, visible] = onLegendToggle.mock.calls[0];
-      expect(series).toBeTypeOf('string');
-      // First click hides the series
-      expect(visible).toBe(false);
+      const [hiddenSeries, visibleAfterFirst] = onLegendToggle.mock.calls[0];
+      expect(hiddenSeries).toBe(targetLabel);
+      expect(visibleAfterFirst).toBe(false);
 
       // Toggling triggers a recompile (so the y-scale rebalances and any
       // endpoint labels for the hidden series clear), which replaces the
-      // legend DOM. Re-query the entry for the second click.
-      const legendEntryAfter = container.querySelector('[data-legend-index]');
-      expect(legendEntryAfter).not.toBeNull();
-      legendEntryAfter!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      // legend DOM. Find the same entry by label and click it again.
+      const sameEntry = container.querySelector(
+        `[data-legend-label="${targetLabel}"]`,
+      ) as HTMLElement | null;
+      expect(sameEntry).not.toBeNull();
+      sameEntry!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(onLegendToggle).toHaveBeenCalledTimes(2);
+      const [shownSeries, visibleAfterSecond] = onLegendToggle.mock.calls[1];
+      expect(shownSeries).toBe(targetLabel); // same series, not the other one
+      expect(visibleAfterSecond).toBe(true);
+
+      chart.destroy();
+    });
+
+    it('refuses to hide the last visible series', () => {
+      // Two-series chart: hide one, then attempt to hide the other.
+      // The second click should be a no-op (no toggle callback for the hide).
+      const onLegendToggle = vi.fn();
+      const chart = createChart(
+        container,
+        { ...lineSpec, legend: { show: true } },
+        { onLegendToggle },
+      );
+
+      const entries = container.querySelectorAll('[data-legend-label]');
+      expect(entries.length).toBeGreaterThanOrEqual(2);
+      const firstLabel = (entries[0] as HTMLElement).getAttribute('data-legend-label')!;
+
+      // Hide the first one.
+      (entries[0] as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(onLegendToggle).toHaveBeenCalledTimes(1);
+
+      // Click the *other* (still-visible) series. The guard should refuse.
+      const remaining = Array.from(container.querySelectorAll('[data-legend-label]')).find(
+        (el) => (el as HTMLElement).getAttribute('data-legend-label') !== firstLabel,
+      ) as HTMLElement | undefined;
+      expect(remaining).toBeTruthy();
+      remaining!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      // The handler still fires (the click bubbled and the wired listener ran),
+      // but the visible flag should report that nothing was actually hidden.
+      // Implementation detail: we expect the second call to report visible=true
+      // (the series is still visible because the toggle was refused).
       expect(onLegendToggle).toHaveBeenCalledTimes(2);
       const [, visibleAfter] = onLegendToggle.mock.calls[1];
       expect(visibleAfter).toBe(true);
