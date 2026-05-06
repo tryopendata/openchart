@@ -61,6 +61,12 @@ export interface LayoutDimensions {
   margins: Margins;
   /** Resolved theme used for this layout. */
   theme: ResolvedTheme;
+  /**
+   * Height reserved below the chart area for x-axis tick labels and the
+   * (optional) axis title. Exposed so downstream layout code (e.g. the
+   * second legend pass) can position elements below the axis row.
+   */
+  xAxisHeight: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +219,7 @@ export function computeDimensions(
       height: Math.max(0, height - margins.top - margins.bottom),
     };
 
-    return { total, chrome, chartArea, margins, theme };
+    return { total, chrome, chartArea, margins, theme, xAxisHeight: xAxisSpace };
   }
 
   // Start with the total rect
@@ -292,9 +298,10 @@ export function computeDimensions(
   });
 
   // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
-  // when the column would be suppressed.
+  // when the column would be suppressed. `labels.density` is intentionally
+  // not checked here — that switch controls only the legacy end-of-line labels.
   let endpointWidth = 0;
-  if (sup.showEndpointLabels && !labelsHiddenByStrategy && labelDensity !== 'none') {
+  if (sup.showEndpointLabels && !labelsHiddenByStrategy) {
     endpointWidth = predictEndpointLabelsWidth(spec, theme);
     if (endpointWidth > 0) {
       // 16px gap between chart area edge and the column.
@@ -493,7 +500,12 @@ export function computeDimensions(
     margins.right = Math.max(margins.right, hPad + options.rightAxisReserve);
   }
 
-  // Reserve legend space
+  // Reserve legend space.
+  //
+  // For bottom-positioned legends we also add `xAxisHeight` so the legend
+  // lands BELOW the x-axis tick row instead of colliding with it. The bottom
+  // margin already includes `xAxisHeight` once (for the axis itself); the
+  // legend needs its own band of space stacked underneath that.
   if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(width);
     if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
@@ -501,7 +513,7 @@ export function computeDimensions(
     } else if (legendLayout.position === 'top') {
       margins.top += legendLayout.bounds.height + gap;
     } else if (legendLayout.position === 'bottom') {
-      margins.bottom += legendLayout.bounds.height + gap;
+      margins.bottom += legendLayout.bounds.height + gap + xAxisHeight;
     }
   }
 
@@ -557,9 +569,9 @@ export function computeDimensions(
         height: Math.max(0, height - margins.top - margins.bottom),
       };
 
-      return { total, chrome: fallbackChrome, chartArea, margins, theme };
+      return { total, chrome: fallbackChrome, chartArea, margins, theme, xAxisHeight };
     }
   }
 
-  return { total, chrome, chartArea, margins, theme };
+  return { total, chrome, chartArea, margins, theme, xAxisHeight };
 }

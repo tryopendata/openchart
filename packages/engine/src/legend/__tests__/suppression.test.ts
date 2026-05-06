@@ -214,10 +214,23 @@ describe('resolveSuppression - special cases', () => {
     expect(result.showEndOfLineLabels).toBe(false);
   });
 
-  it('labels.density === none: column off, end-of-line off', () => {
+  it('labels.density === none: scoped to end-of-line labels only (column + legend follow truth table)', () => {
+    // labels.density: 'none' is the legacy switch for end-of-line labels.
+    // It must NOT suppress the endpoint column or the traditional legend —
+    // those follow the truth table independently. End-of-line labels stay off.
     const spec = makeMultiSeriesLineSpec();
     const result = resolveSuppression(spec, { ...baseCtx, labelsDensityNone: true });
-    expect(result.showEndpointLabels).toBe(false);
+    expect(result.showEndpointLabels).toBe(true);
+    expect(result.showEndOfLineLabels).toBe(false);
+    // Cell 1 (legend unset, endpointLabels unset): traditional legend hidden.
+    expect(result.showTraditionalLegend).toBe(false);
+  });
+
+  it('labels.density === none + legend.show: true: legend stays shown', () => {
+    const spec = makeMultiSeriesLineSpec({ legend: { show: true } });
+    const result = resolveSuppression(spec, { ...baseCtx, labelsDensityNone: true });
+    expect(result.showTraditionalLegend).toBe(true);
+    expect(result.showEndpointLabels).toBe(true);
     expect(result.showEndOfLineLabels).toBe(false);
   });
 

@@ -23,7 +23,14 @@ const specWithColor: NormalizedChartSpec = {
   responsive: true,
   theme: {},
   darkMode: 'off',
+  // density: 'none' historically short-circuited the legend auto-suppression
+  // table, but post-fix that switch only governs end-of-line labels. Keep
+  // density: 'none' here AND set legend.show: true so the basic legend tests
+  // still test what they want — generic legend rendering with an explicit
+  // opt-in. Tests that need to exercise auto-suppression rules use
+  // `lineWithLabels` (density: 'auto', no explicit legend.show) further down.
   labels: { density: 'none', format: '', prefix: '' },
+  legend: { show: true },
 };
 
 const specWithoutColor: NormalizedChartSpec = {
@@ -336,6 +343,9 @@ describe('computeLegend', () => {
     const lineWithLabels: NormalizedChartSpec = {
       ...specWithColor,
       labels: { density: 'auto', format: '', prefix: '' },
+      // Drop the explicit legend opt-in inherited from specWithColor so the
+      // auto-suppression truth table actually applies.
+      legend: undefined as unknown as NormalizedChartSpec['legend'],
     };
 
     it('suppresses legend for multi-series line chart with default labels', () => {
@@ -365,10 +375,24 @@ describe('computeLegend', () => {
       expect(legend.entries).toHaveLength(3);
     });
 
-    it('preserves legend when labels density is none', () => {
+    it('still applies the truth table when labels density is none', () => {
+      // labels.density: 'none' is the legacy switch for end-of-line labels
+      // only — it must not short-circuit the legend / endpoint-column truth
+      // table. So a multi-series line with density: 'none' and no explicit
+      // legend.show still gets the legend auto-suppressed (cell 1).
       const spec: NormalizedChartSpec = {
         ...lineWithLabels,
         labels: { density: 'none', format: '', prefix: '' },
+      };
+      const legend = computeLegend(spec, fullStrategy, theme, chartArea);
+      expect(legend.entries).toHaveLength(0);
+    });
+
+    it('preserves legend when density is none AND legend.show is explicitly true', () => {
+      const spec: NormalizedChartSpec = {
+        ...lineWithLabels,
+        labels: { density: 'none', format: '', prefix: '' },
+        legend: { show: true },
       };
       const legend = computeLegend(spec, fullStrategy, theme, chartArea);
       expect(legend.entries).toHaveLength(3);

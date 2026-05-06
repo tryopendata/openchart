@@ -107,7 +107,12 @@ export function resolveSuppression(
 
   // Single-series, non-line/area, or compact strategy: never show endpoint
   // column or end-of-line labels. Legend follows its own rules elsewhere.
-  if (!isMultiSeries || ctx.labelsHiddenByStrategy || ctx.labelsDensityNone) {
+  //
+  // Note: `labelsDensityNone` is intentionally NOT in this short-circuit.
+  // `labels.density: 'none'` is the legacy switch for end-of-line labels and
+  // must not affect the endpoint column or the traditional legend (those
+  // are independent concerns governed by the truth table below).
+  if (!isMultiSeries || ctx.labelsHiddenByStrategy) {
     return {
       // Defer the legend's own show/hide rules to computeLegend; this helper
       // doesn't override the existing legend behavior for non-multi-series.
@@ -167,7 +172,10 @@ export function resolveSuppression(
 
   // End-of-line labels are the last-resort series identifier: they render
   // only when both the traditional legend and the endpoint column are off.
-  const showEndOfLineLabels = !showTraditionalLegend && !showEndpointLabels;
+  // `labels.density: 'none'` is the legacy switch that explicitly disables
+  // end-of-line labels regardless of the other toggles.
+  const showEndOfLineLabels =
+    !showTraditionalLegend && !showEndpointLabels && !ctx.labelsDensityNone;
 
   return {
     showTraditionalLegend,

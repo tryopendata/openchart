@@ -487,7 +487,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         legendArea.height += legendLayout.bounds.height + gap;
         break;
       case 'bottom':
-        legendArea.height += legendLayout.bounds.height + gap;
+        // Bottom legend sits below the x-axis tick row, not over it. Expand
+        // legendArea by xAxisHeight + legendHeight + gap so the bottom-anchored
+        // legend lands beneath the axis. Mirrors dimensions.ts which reserved
+        // the same xAxisHeight in margins.bottom.
+        legendArea.height += legendLayout.bounds.height + gap + dims.xAxisHeight;
         break;
       case 'right':
       case 'bottom-right':

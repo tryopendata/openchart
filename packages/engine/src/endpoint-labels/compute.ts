@@ -224,7 +224,23 @@ export function computeEndpointLabels(
   });
   if (!sup.showEndpointLabels) return emptyLayout(theme);
 
-  const lineOrAreaMarks = marks.filter(isLineOrArea).filter((m) => m.seriesKey);
+  // Dedupe by seriesKey: for area charts, the engine emits BOTH an AreaMark
+  // and a derived LineMark per series (see `linesFromAreas` in
+  // `charts/line/index.ts`). Without dedupe each series would produce two
+  // endpoint entries. Prefer the line mark — its `stroke` is the canonical
+  // series color and matches the visible line, whereas the area mark's
+  // `stroke` may be derived from a gradient via `getRepresentativeColor`.
+  const bySeriesKey = new Map<string, LineMark | AreaMark>();
+  for (const mark of marks) {
+    if (!isLineOrArea(mark) || !mark.seriesKey) continue;
+    const existing = bySeriesKey.get(mark.seriesKey);
+    // Line marks overwrite area marks for the same seriesKey; area marks only
+    // win when no line mark has been seen yet for that series.
+    if (!existing || (existing.type === 'area' && mark.type === 'line')) {
+      bySeriesKey.set(mark.seriesKey, mark);
+    }
+  }
+  const lineOrAreaMarks = Array.from(bySeriesKey.values());
   if (lineOrAreaMarks.length < 2) return emptyLayout(theme);
 
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;

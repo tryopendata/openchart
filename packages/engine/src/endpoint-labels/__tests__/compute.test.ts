@@ -318,4 +318,58 @@ describe('computeEndpointLabels', () => {
 
     expect(layout.entries).toHaveLength(2);
   });
+
+  it('dedupes by seriesKey when both an area and a derived line exist for a series', () => {
+    // Defect-1 regression: the area renderer emits BOTH an AreaMark AND a
+    // derived LineMark per series (see linesFromAreas in
+    // packages/engine/src/charts/line/index.ts). Without dedupe, each series
+    // produces two endpoint entries.
+    const spec = makeSpec({
+      markType: 'area',
+      markDef: { type: 'area' },
+    });
+    const lineColor = '#3366cc';
+    const areaColor = '#ddee99'; // fake gradient-derived color, distinct from the line stroke
+    const marks: Mark[] = [
+      makeAreaMark('US', 100, 40, areaColor),
+      makeAreaMark('UK', 200, 35, areaColor),
+      makeLineMark('US', 100, 40, lineColor),
+      makeLineMark('UK', 200, 35, lineColor),
+    ];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    // Single entry per series.
+    expect(layout.entries).toHaveLength(2);
+    const keys = layout.entries.map((e) => e.seriesKey).sort();
+    expect(keys).toEqual(['UK', 'US']);
+
+    // Line marks win — entry color should match the line stroke, not the
+    // area-derived gradient color.
+    for (const entry of layout.entries) {
+      expect(entry.color).toBe(lineColor);
+    }
+  });
+
+  it('dedupe prefers line mark even when area appears later in the marks array', () => {
+    // Defect-1 regression: area marks listed AFTER line marks should not
+    // overwrite the line's canonical stroke color in the endpoint entry.
+    const spec = makeSpec({
+      markType: 'area',
+      markDef: { type: 'area' },
+    });
+    const lineColor = '#3366cc';
+    const areaColor = '#ddee99';
+    const marks: Mark[] = [
+      makeLineMark('US', 100, 40, lineColor),
+      makeLineMark('UK', 200, 35, lineColor),
+      makeAreaMark('US', 100, 40, areaColor),
+      makeAreaMark('UK', 200, 35, areaColor),
+    ];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    expect(layout.entries).toHaveLength(2);
+    for (const entry of layout.entries) {
+      expect(entry.color).toBe(lineColor);
+    }
+  });
 });
