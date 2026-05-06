@@ -161,13 +161,21 @@ export function renderChartSVG(
     renderMarks(clippedGroup, layout);
 
     // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
-    // Only added when there are line or area marks with dataPoints, and no explicit
-    // PointMark objects (which use per-element event handling instead).
+    // Always emitted for line/area with dataPoints — the overlay-driven snap tooltip
+    // with crosshair is the canonical interaction for these chart types. When point
+    // marks coexist (e.g. mark.point: true), they still render decoratively but
+    // pointer events route to the overlay so the snap behavior wins.
     const hasLineOrAreaWithDataPoints = layout.marks.some(
       (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
     );
-    const hasPointMarks = layout.marks.some((m) => m.type === 'point');
-    if (hasLineOrAreaWithDataPoints && !hasPointMarks) {
+    if (hasLineOrAreaWithDataPoints) {
+      // Decorative point marks on line/area: route pointer events to the
+      // overlay so the snap-tooltip wins instead of competing per-point hover.
+      const pointEls = clippedGroup.querySelectorAll('circle.oc-mark-point');
+      for (const el of pointEls) {
+        el.setAttribute('pointer-events', 'none');
+      }
+
       const overlay = createSVGElement('rect');
       setAttrs(overlay, {
         x: layout.area.x,
