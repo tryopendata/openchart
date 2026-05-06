@@ -131,16 +131,35 @@ function getMinChartDims(display: import('@opendata-ai/openchart-core').Display)
 }
 
 /**
- * Resolve the per-side safety padding for sparkline mode. Padding scales with
- * the user-configured mark stroke width so a thick line doesn't clip at the
- * container edge. Per-side padding = max(strokeWidth/2 + 1, 2) so even a 1px
- * stroke gets at least 2px breathing room.
+ * Resolve per-side safety padding for sparkline mode. Stroke-based padding
+ * applies to every side so a thick line doesn't clip at the container edge.
+ * Endpoint-dot padding applies only to the side that actually carries a dot:
+ * `point: 'last'` reserves space on the right, `'first'` on the left, and
+ * `true | 'endpoints' | 'transparent'` on both. This keeps tiny sparklines
+ * flush left when the endpoint dot only renders at the right edge.
  */
-function getSparklinePad(spec: NormalizedChartSpec): number {
+function getSparklinePad(spec: NormalizedChartSpec): {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+} {
   const strokeWidth = (spec.markDef as { strokeWidth?: number }).strokeWidth ?? 2;
-  const hasPoints = !!(spec.markDef as { point?: unknown }).point;
-  const pointRadius = hasPoints ? 3 : 0;
-  return Math.max(strokeWidth / 2 + 1, pointRadius + 1, 2);
+  const point = (spec.markDef as { point?: unknown }).point;
+  const strokePad = Math.max(strokeWidth / 2 + 1, 2);
+  const dotPad = 4; // r=3.5 + 0.5 — matches the terminator dot size
+
+  const dotRight =
+    point === 'last' || point === true || point === 'endpoints' || point === 'transparent';
+  const dotLeft =
+    point === 'first' || point === true || point === 'endpoints' || point === 'transparent';
+
+  return {
+    left: dotLeft ? Math.max(strokePad, dotPad) : strokePad,
+    right: dotRight ? Math.max(strokePad, dotPad) : strokePad,
+    top: strokePad,
+    bottom: strokePad,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -239,10 +258,10 @@ export function computeDimensions(
     const yAxisSpace = userExplicit.yAxis ? 30 : 0;
 
     const margins: Margins = {
-      top: chrome.topHeight + sparkPad,
-      right: sparkPad,
-      bottom: chrome.bottomHeight + sparkPad + xAxisSpace,
-      left: sparkPad + yAxisSpace,
+      top: chrome.topHeight + sparkPad.top,
+      right: sparkPad.right,
+      bottom: chrome.bottomHeight + sparkPad.bottom + xAxisSpace,
+      left: sparkPad.left + yAxisSpace,
     };
 
     // Reserve legend space only when user explicitly opted into a legend.

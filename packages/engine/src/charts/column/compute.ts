@@ -68,7 +68,14 @@ export function computeColumnMarks(
   }
 
   const bandwidth = xScale.bandwidth();
-  const baseline = yScale(0);
+  // Baseline = pixel y where the column's bottom edge anchors. When the
+  // y-domain includes zero (the common case), this is yScale(0). Sparkline
+  // mode tightens the domain to [min, max] (zero: false) so yScale(0) lands
+  // outside the chart area; in that case we anchor to the bottom of the
+  // y-range instead, otherwise every bar would render with the same height.
+  const yDomain = yScale.domain() as [number, number];
+  const yIncludesZero = yDomain[0] <= 0 && yDomain[1] >= 0;
+  const baseline = yIncludesZero ? yScale(0) : yScale(yDomain[0]);
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   const conditionalColor =
     encoding.color && isConditionalValueDef(encoding.color)

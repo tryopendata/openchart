@@ -390,6 +390,8 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         ],
       },
       "gridline": "rgba(0,0,0,0.06)",
+      "negative": "#dc2626",
+      "positive": "#16a34a",
       "sequential": {
         "blue": [
           "#deebf7",
@@ -1358,6 +1360,8 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         ],
       },
       "gridline": "rgba(0,0,0,0.06)",
+      "negative": "#dc2626",
+      "positive": "#16a34a",
       "sequential": {
         "blue": [
           "#deebf7",
@@ -1945,6 +1949,8 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         ],
       },
       "gridline": "rgba(0,0,0,0.06)",
+      "negative": "#dc2626",
+      "positive": "#16a34a",
       "sequential": {
         "blue": [
           "#deebf7",

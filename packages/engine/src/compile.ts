@@ -68,6 +68,12 @@ import { filterClippedDomains } from './compile/data-clip';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec, flattenLayers } from './compiler/index';
+import {
+  buildSparklineAreaGradient,
+  computeTrendFromData,
+  hasExplicitColor,
+  trendColor,
+} from './compiler/sparkline-defaults';
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
@@ -160,6 +166,65 @@ export function expandEncodingSugar(spec: Record<string, unknown>): Record<strin
 // ---------------------------------------------------------------------------
 // Chart compilation
 // ---------------------------------------------------------------------------
+
+/**
+ * Inject sparkline-mode visual defaults that depend on the resolved theme.
+ *
+ * Trend-aware color (positive/negative/neutral), default endpoint dot,
+ * default area gradient, and default pill cornerRadius for bars. Each
+ * default backs off when the user has set the corresponding markDef
+ * field. Bar marks do NOT get trend coloring — the design intent is a
+ * single palette color across all bars.
+ */
+function applySparklineDefaults(
+  spec: NormalizedChartSpec,
+  theme: ResolvedTheme,
+): NormalizedChartSpec {
+  const markType = spec.markType;
+  const isLineFamily = markType === 'line' || markType === 'area';
+  const isBar = markType === 'bar';
+  if (!isLineFamily && !isBar) return spec;
+
+  const yField = spec.encoding.y && 'field' in spec.encoding.y ? spec.encoding.y.field : undefined;
+  const trend = computeTrendFromData(spec.data, yField);
+  const color = trendColor(trend, theme);
+
+  const encodingHasColor =
+    !!spec.encoding.color && (spec.encoding.color as { field?: unknown }).field !== undefined;
+  const explicit = hasExplicitColor(spec.markDef, encodingHasColor);
+
+  const newMarkDef = { ...spec.markDef };
+
+  if (isLineFamily) {
+    if (!explicit.stroke) newMarkDef.stroke = color;
+    if (markType === 'area' && !explicit.fill) {
+      newMarkDef.fill = buildSparklineAreaGradient(color);
+    }
+    // Endpoint dot is wired in the line compute path. We skip the default
+    // when the encoding has a color field, because the multi-series area
+    // path (linesFromAreas()) ignores markDef.point — the dot would be set
+    // on the spec but never rendered, and the line compute path's dot logic
+    // is per-series, not "one dot for the chart."
+    if (newMarkDef.point === undefined && !encodingHasColor) {
+      newMarkDef.point = 'last';
+    }
+  }
+
+  if (isBar) {
+    // Pill cornerRadius is only safe when bars don't stack: each stacked
+    // segment would render as a half-pill, leaving visible gaps where two
+    // series meet. The grammar normalizes truthy stack values to a string
+    // ('zero' | 'normalize' | 'center'); explicit `null` / `false` opts out.
+    const yStack = (spec.encoding.y as { stack?: unknown } | undefined)?.stack;
+    const xStack = (spec.encoding.x as { stack?: unknown } | undefined)?.stack;
+    const isStacked = typeof yStack === 'string' || typeof xStack === 'string';
+    if (newMarkDef.cornerRadius === undefined && !isStacked) {
+      newMarkDef.cornerRadius = 'pill';
+    }
+  }
+
+  return { ...spec, markDef: newMarkDef };
+}
 
 /**
  * Compile a chart spec into a ChartLayout.
@@ -262,8 +327,16 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     endpointLabels:
       rawSpec.endpointLabels !== undefined ||
       (bpForExplicit as Record<string, unknown> | undefined)?.endpointLabels !== undefined,
-    xAxis: rawEncoding?.x?.axis !== undefined || bpEncoding?.x?.axis !== undefined,
-    yAxis: rawEncoding?.y?.axis !== undefined || bpEncoding?.y?.axis !== undefined,
+    // Axis explicitness tracks "user opted IN to render the axis" — `axis: false`
+    // is an explicit opt-OUT and must not flip these flags on. Sparkline mode
+    // reads them to decide whether to reserve axis space; treating `false` as
+    // explicit would leave a phantom gutter for an axis that won't render.
+    xAxis:
+      (rawEncoding?.x?.axis !== undefined && rawEncoding.x.axis !== false) ||
+      (bpEncoding?.x?.axis !== undefined && bpEncoding.x.axis !== false),
+    yAxis:
+      (rawEncoding?.y?.axis !== undefined && rawEncoding.y.axis !== false) ||
+      (bpEncoding?.y?.axis !== undefined && bpEncoding.y.axis !== false),
     labels: rawSpec.labels !== undefined || bpForExplicit?.labels !== undefined,
     animation: rawSpec.animation !== undefined || bpForExplicit?.animation !== undefined,
     watermark: rawSpec.watermark !== undefined || bpForExplicit?.watermark !== undefined,
@@ -459,6 +532,15 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     theme = adaptTheme(theme);
   }
 
+  // Sparkline mode: inject smart defaults that depend on the resolved theme
+  // (trend-aware color, area gradient, default endpoint dot, pill cornerRadius
+  // for bars). Each default backs off when the user has set the corresponding
+  // field explicitly. Must run AFTER theme resolution (color depends on theme)
+  // and BEFORE computeDimensions (which reads markDef.point for sparkline padding).
+  if (chartSpec.display === 'sparkline') {
+    chartSpec = applySparklineDefaults(chartSpec, theme);
+  }
+
   // INVARIANT 1 — double legend pass: preliminaryArea → computeDimensions → legendArea → final
   // legend. Breaks a dims/legend dependency cycle. Do not collapse into one call.
   // Compute legend first (needs to reserve space)
@@ -564,12 +646,20 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const yIsContinuous = yEnc?.type === 'quantitative' || yEnc?.type === 'temporal';
   const isLineOrArea = renderSpec.markType === 'line' || renderSpec.markType === 'area';
   const yInlineExplicit = yAxisCfgInline?.tickPosition as 'inline' | 'gutter' | undefined;
+  // Sparkline mode hides the y-axis by default, so the inline-label inset
+  // would shrink the data range without any labels actually being drawn —
+  // the line ends up starting ~30px from the left edge for no visible
+  // reason. Skip the inset unless the user explicitly opted into the
+  // y-axis (in which case the labels do render and the inset is needed).
+  const sparklineSuppressesYAxis =
+    chartSpec.display === 'sparkline' && !chartSpec.userExplicit.yAxis;
   const yIsInline =
-    yInlineExplicit === 'inline' ||
-    (yInlineExplicit === undefined &&
-      isLineOrArea &&
-      yIsContinuous &&
-      yAxisCfgInline?.orient !== 'right');
+    !sparklineSuppressesYAxis &&
+    (yInlineExplicit === 'inline' ||
+      (yInlineExplicit === undefined &&
+        isLineOrArea &&
+        yIsContinuous &&
+        yAxisCfgInline?.orient !== 'right'));
   let scaleArea = chartArea;
   if (yIsInline && yEnc && yIsContinuous && yEnc.axis !== false) {
     const yField = yEnc.field;

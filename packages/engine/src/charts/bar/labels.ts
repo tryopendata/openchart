@@ -119,6 +119,7 @@ export function computeBarLabels(
     } else {
       // Fallback: extract from aria label
       const ariaLabel = mark.aria.label;
+      if (!ariaLabel) continue;
       const lastColon = ariaLabel.lastIndexOf(':');
       const rawValue = lastColon >= 0 ? ariaLabel.slice(lastColon + 1).trim() : '';
       if (!rawValue) continue;

@@ -137,6 +137,11 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       annotationFill: 'rgba(255,255,255,0.06)',
       annotationText: darkMuted,
       categorical,
+      // Sparkline trend colors tuned for dark surfaces: teal-leaning green
+      // and coral red read better than the saturated light-mode tokens.
+      // Any non-default value is treated as a user override and preserved.
+      positive: theme.colors.positive !== '#16a34a' ? theme.colors.positive : '#34d399',
+      negative: theme.colors.negative !== '#dc2626' ? theme.colors.negative : '#f87171',
     },
     chrome: {
       // Eyebrow keeps its accent tint (cyan in both modes); the other

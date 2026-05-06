@@ -749,6 +749,38 @@ export function computeScales(
       stackProp === 'center';
     const isAreaStacked = spec.markType === 'area' && isExplicitlyStacked;
     const isBarStacked = isVerticalBar && stackProp !== null && stackProp !== false;
+
+    // Sparkline tightening: drop the default `zero: true` baseline so the
+    // y-domain hugs the actual data range. Without this, a series with
+    // values in the 4000s renders as a near-flat line because most of the
+    // chart area gets reserved for the gap between zero and the data.
+    //
+    // Applies to:
+    //   - Line / area sparklines (always — variation is the whole point)
+    //   - Vertical bar sparklines, but ONLY when no real stacking is in
+    //     play. Two ways to opt OUT of bar tightening:
+    //       1. Real stacking — color/group encoding plus a non-disabled
+    //          stack — needs the zero baseline to keep segment arithmetic
+    //          summing.
+    //       2. Any explicit `encoding.y.stack` value signals the user
+    //          wants stack semantics even on a single series; respect that.
+    const hasStackingGroup = isBarStacked && encoding.color !== undefined;
+    const userRequestedStack = isExplicitlyStacked;
+    const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
+    const sparklineTightenBar =
+      isVerticalBar && !hasStackingGroup && !userRequestedStack && !isAreaStacked;
+    const sparklineTightenLineArea = isLineOrArea && !isAreaStacked;
+    if (
+      spec.display === 'sparkline' &&
+      (sparklineTightenBar || sparklineTightenLineArea) &&
+      encoding.y.type === 'quantitative' &&
+      encoding.y.scale?.zero === undefined
+    ) {
+      yChannel = {
+        ...encoding.y,
+        scale: { ...encoding.y.scale, zero: false },
+      };
+    }
     if ((isBarStacked || isAreaStacked) && encoding.color && encoding.y.type === 'quantitative') {
       if (encoding.y.stack === 'normalize') {
         // Normalize: domain is [0, 1] (VL convention)

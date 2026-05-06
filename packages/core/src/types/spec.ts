@@ -147,10 +147,13 @@ export interface MarkDef {
    * Show point markers on line/area marks.
    * - true: filled circles at each data point
    * - 'transparent': invisible hover targets (legacy behavior)
-   * - 'endpoints': show only first and last point per series
+   * - 'endpoints': show only first and last point per series (hollow dots)
+   * - 'last' / 'first': show only the last (or first) point — filled dot,
+   *   no white halo. Useful for highlighting the latest reading on a line
+   *   chart and the default for sparkline mode.
    * - false: no point marks (default; uses voronoi overlay for tooltips)
    */
-  point?: boolean | 'transparent' | 'endpoints';
+  point?: boolean | 'transparent' | 'endpoints' | 'last' | 'first';
   /**
    * Curve interpolation for line/area marks.
    * Maps to d3-shape curve factories.

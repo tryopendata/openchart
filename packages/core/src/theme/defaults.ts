@@ -29,6 +29,8 @@ export const DEFAULT_THEME: Theme = {
     axis: '#71717a',
     annotationFill: 'rgba(0,0,0,0.04)',
     annotationText: '#71717a',
+    positive: '#16a34a',
+    negative: '#dc2626',
   },
   fonts: {
     family:

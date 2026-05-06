@@ -184,12 +184,17 @@ export interface AxisLayout {
 
 /** Accessibility attributes for a mark. */
 export interface MarkAria {
-  /** ARIA label for the mark. */
-  label: string;
+  /** ARIA label for the mark. Optional when `decorative: true` — decorative
+   *  marks render with `aria-hidden="true"` and don't need a label. */
+  label?: string;
   /** Optional longer description. */
   description?: string;
   /** ARIA role override. */
   role?: string;
+  /** When true, the mark is purely decorative (e.g. a sparkline endpoint dot
+   *  that duplicates an existing data point). Renderers translate this into
+   *  `aria-hidden="true"` and skip the mark from the screen-reader data table. */
+  decorative?: boolean;
 }
 
 /**

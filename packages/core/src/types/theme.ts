@@ -29,6 +29,10 @@ export interface ThemeColors {
   annotationFill: string;
   /** Annotation text color. */
   annotationText: string;
+  /** Semantic color for positive/up-trend values (e.g. sparkline trend coloring). */
+  positive: string;
+  /** Semantic color for negative/down-trend values (e.g. sparkline trend coloring). */
+  negative: string;
 }
 
 // ---------------------------------------------------------------------------
