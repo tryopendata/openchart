@@ -1,7 +1,8 @@
 /**
  * Endpoint-labels rendering: right-side per-series label column for multi-series
  * line/area charts. Renders, per entry:
- *   - a stroke-segment swatch (matches the refreshed traditional legend swatch)
+ *   - a chip+bar swatch matching the traditional legend (rounded surface chip
+ *     with a colored bar through its midline)
  *   - the colored series label (with wrap support via tspans)
  *   - a muted formatted value below the label
  *   - an optional thin leader line back to the data point's true y
@@ -15,14 +16,10 @@
 import type { ChartLayout } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
-/** Width of the colored stroke-segment swatch drawn left of the label. */
-const SWATCH_WIDTH = 14;
-/** Stroke width of the swatch line (matches the refreshed legend swatch). */
-const SWATCH_STROKE = 3;
 /** Gap between swatch and label text. */
-const SWATCH_GAP = 6;
+const SWATCH_GAP = 8;
 /** Gap between label baseline and the value text below it. */
-const VALUE_GAP = 2;
+const VALUE_GAP = 4;
 /** Stroke width for the optional leader line (subtle but visible). */
 const LEADER_STROKE_WIDTH = 1;
 /** Opacity for the optional leader line. */
@@ -44,11 +41,11 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
   const labelLineHeight = labelFontSize * (ep.labelStyle.lineHeight ?? 1.25);
   const valueFontSize = ep.valueStyle.fontSize ?? 11;
 
-  // The column starts at ep.bounds.x; the swatch sits flush-left in the column,
-  // the label/value text starts after the swatch + gap.
-  const swatchX1 = ep.bounds.x;
-  const swatchX2 = swatchX1 + SWATCH_WIDTH;
-  const textX = swatchX2 + SWATCH_GAP;
+  // The column starts at ep.bounds.x; the chip sits flush-left in the column,
+  // the label/value text starts after the chip + gap.
+  const chipX = ep.bounds.x;
+  const chipWidth = ep.swatchSize;
+  const textX = chipX + chipWidth + SWATCH_GAP;
 
   for (let i = 0; i < ep.entries.length; i++) {
     const entry = ep.entries[i];
@@ -65,7 +62,7 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
       const leader = createSVGElement('line');
       leader.setAttribute('class', 'oc-endpoint-leader');
       setAttrs(leader, {
-        x1: swatchX1,
+        x1: chipX,
         y1: entry.labelY + labelFontSize / 2,
         x2: chartRightX,
         y2: entry.dataY,
@@ -76,21 +73,40 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
       entryG.appendChild(leader);
     }
 
-    // Swatch: short colored stroke segment, vertically centered on the first
-    // line of label text (use labelFontSize/2 as the visual baseline mid).
-    const swatchY = entry.labelY + labelFontSize / 2;
-    const swatch = createSVGElement('line');
-    swatch.setAttribute('class', 'oc-endpoint-swatch');
-    setAttrs(swatch, {
-      x1: swatchX1,
-      y1: swatchY,
-      x2: swatchX2,
-      y2: swatchY,
-      stroke: entry.color,
-      'stroke-width': SWATCH_STROKE,
-      'stroke-linecap': 'round',
+    // Swatch: rounded chip with a colored bar through its midline, matching
+    // the traditional legend so a chart never shows two swatch idioms.
+    const rowY = entry.labelY + labelFontSize / 2;
+    const chipHeight = Math.max(12, Math.round(ep.swatchSize * 0.85));
+    const chipY = rowY - chipHeight / 2;
+    const chip = createSVGElement('rect');
+    chip.setAttribute('class', 'oc-endpoint-swatch-chip');
+    setAttrs(chip, {
+      x: chipX,
+      y: chipY,
+      width: chipWidth,
+      height: chipHeight,
+      rx: 3,
+      ry: 3,
+      fill: ep.swatchChipFill,
     });
-    entryG.appendChild(swatch);
+    entryG.appendChild(chip);
+
+    const barWidth = Math.max(8, chipWidth - 8);
+    const barHeight = 3;
+    const barX = chipX + (chipWidth - barWidth) / 2;
+    const barY = rowY - barHeight / 2;
+    const bar = createSVGElement('rect');
+    bar.setAttribute('class', 'oc-endpoint-swatch-bar');
+    setAttrs(bar, {
+      x: barX,
+      y: barY,
+      width: barWidth,
+      height: barHeight,
+      rx: barHeight / 2,
+      ry: barHeight / 2,
+      fill: entry.color,
+    });
+    entryG.appendChild(bar);
 
     // Label text. Multi-line via tspans when wrapped.
     const label = createSVGElement('text');

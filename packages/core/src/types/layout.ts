@@ -702,6 +702,8 @@ export interface EndpointLabelsLayout {
   swatchSize: number;
   /** Gap between swatch, label, and value. */
   gap: number;
+  /** Fill color for the rounded chip background behind the colored bar. */
+  swatchChipFill: string;
 }
 
 // ---------------------------------------------------------------------------

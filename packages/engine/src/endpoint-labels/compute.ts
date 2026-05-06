@@ -75,6 +75,7 @@ function emptyLayout(theme: ResolvedTheme): EndpointLabelsLayout {
     valueStyle,
     swatchSize: ENDPOINT_SWATCH_SIZE,
     gap: ENDPOINT_GAP,
+    swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
   };
 }
 
@@ -407,5 +408,6 @@ export function computeEndpointLabels(
     valueStyle,
     swatchSize: ENDPOINT_SWATCH_SIZE,
     gap: ENDPOINT_GAP,
+    swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
   };
 }
