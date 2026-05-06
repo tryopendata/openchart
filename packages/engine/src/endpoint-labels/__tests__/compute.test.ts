@@ -214,8 +214,9 @@ describe('computeEndpointLabels', () => {
     expect(distance).toBeGreaterThanOrEqual(11 * 1.25 - 0.5);
   });
 
-  it('marks displaced entries with showLeader: true', () => {
-    const spec = makeSpec();
+  it('marks displaced entries with showLeader: true when opted in', () => {
+    // Leaders are off by default; opt in via endpointLabels.showLeader.
+    const spec = makeSpec({ endpointLabels: { showLeader: true } });
     // Force overlap at the same y to guarantee displacement.
     const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 100, 35, '#cc6633')];
     const layout = computeEndpointLabels(spec, marks, theme, chartArea);
@@ -224,9 +225,18 @@ describe('computeEndpointLabels', () => {
     expect(anyDisplaced).toBe(true);
   });
 
-  it('does not flag undisplaced entries with showLeader', () => {
-    // Two series far apart vertically — no collision, no leader.
+  it('keeps showLeader off by default even when displaced', () => {
+    // Default (no showLeader config): displacement does not produce a leader.
     const spec = makeSpec();
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 100, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    expect(layout.entries.every((e) => !e.showLeader)).toBe(true);
+  });
+
+  it('does not flag undisplaced entries with showLeader', () => {
+    // Two series far apart vertically — no collision, no leader, even when opted in.
+    const spec = makeSpec({ endpointLabels: { showLeader: true } });
     const marks: Mark[] = [makeLineMark('US', 50, 40), makeLineMark('UK', 280, 35, '#cc6633')];
     const layout = computeEndpointLabels(spec, marks, theme, chartArea);
 

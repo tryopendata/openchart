@@ -839,6 +839,14 @@ export interface EndpointLabelsConfig {
     strokeWidth?: number;
     radius?: number;
   };
+  /**
+   * Render a thin leader line from the swatch row back to the line endpoint
+   * when collision-sweep displaces a label off its data point. Default false:
+   * the marker on the line plus the swatch in the column already pair label
+   * to data; the connector tends to add visual noise for small displacements.
+   * Opt in when labels collide hard and you need the explicit tie-back.
+   */
+  showLeader?: boolean;
 }
 
 // ---------------------------------------------------------------------------

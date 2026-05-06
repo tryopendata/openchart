@@ -140,35 +140,33 @@ function formatValue(value: number | string | null, formatString: string | undef
  * Local collision sweep: keep each label anchored to its line's `dataY` and
  * only displace neighbors that actually overlap.
  *
- * Each entry's "natural" position is centered on its `dataY` (i.e. `top =
- * dataY - height/2`). We only push neighbors apart when their stacks would
- * collide, and only by the minimum amount needed. This preserves the
- * line-tracking behavior the design calls for: when lines are well-separated,
- * labels sit at their lines; when they're close together, the sweep nudges
- * them apart while staying near their data points.
+ * Each entry's "natural" top is `naturalTop` (typically `dataY - fontSize/2`
+ * so the label's first-line baseline-center aligns with the data point). We
+ * only push neighbors apart when their stacks would collide, by the minimum
+ * amount needed. This preserves the line-tracking behavior the design calls
+ * for: when lines are well-separated, labels sit at their lines; when close
+ * together, the sweep nudges them apart while staying near their data points.
  *
  * Algorithm:
- *   1. Sort by dataY ascending.
- *   2. Forward pass (top→bottom): if entry i overlaps i-1, push i down to
- *      `prevTop + prevHeight`.
- *   3. Reverse pass (bottom→top): if entry i overlaps i+1, push i up to
- *      `nextTop - height`. This handles the case where the forward pass
- *      pushed everyone past the bottom and we now need to back off upward.
+ *   1. Sort by naturalTop ascending.
+ *   2. Forward pass (top→bottom): if entry i overlaps i-1, push i down.
+ *   3. Reverse pass (bottom→top): if entry i overlaps i+1, push i up.
+ *      Handles the case where the forward pass overran the bottom edge.
  *   4. Clamp each entry to `[areaTop, areaBottom - height]`.
  */
 function bidirectionalSweep(
-  entries: { dataY: number; height: number; index: number }[],
+  entries: { naturalTop: number; height: number; index: number }[],
   areaTop: number,
   areaBottom: number,
 ): number[] {
   const n = entries.length;
   if (n === 0) return [];
 
-  // Sort by dataY ascending so neighbors in the chart are neighbors in the array.
-  const sorted = [...entries].sort((a, b) => a.dataY - b.dataY);
+  // Sort by naturalTop ascending so neighbors in the chart are neighbors here.
+  const sorted = [...entries].sort((a, b) => a.naturalTop - b.naturalTop);
 
-  // Initialize tops at the natural (centered-on-dataY) positions.
-  const tops = sorted.map((e) => e.dataY - e.height / 2);
+  // Initialize tops at the natural (anchored-to-dataY) positions.
+  const tops = sorted.map((e) => e.naturalTop);
 
   // Forward pass: push down only when overlapping the previous entry.
   for (let i = 1; i < n; i++) {
@@ -341,8 +339,15 @@ export function computeEndpointLabels(
 
   if (provisional.length < 2) return emptyLayout(theme);
 
-  // Bidirectional collision sweep.
-  const sweepInput = provisional.map((p, i) => ({ dataY: p.dataY, height: p.height, index: i }));
+  // Bidirectional collision sweep. Each entry's natural top is `dataY - labelFontSize/2`
+  // so the label's first-line baseline-center aligns with the line's last data point.
+  // The marker sits on this same baseline-center row, putting the open ring directly
+  // where the line terminates when undisplaced.
+  const sweepInput = provisional.map((p, i) => ({
+    naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
+    height: p.height,
+    index: i,
+  }));
   const sweptTops = bidirectionalSweep(sweepInput, chartArea.y, chartArea.y + chartArea.height);
 
   // Build final entries.
@@ -353,9 +358,21 @@ export function computeEndpointLabels(
   const columnX = chartArea.x + chartArea.width + ENDPOINT_COLUMN_GAP;
   const markerX = chartArea.x + chartArea.width;
 
+  // The marker is the line's visual terminator — always at (chartRightX, dataY).
+  // The swatch + label first-line baseline-center sit at `labelY + fontSize/2`.
+  // The sweep uses naturalTop = `dataY - fontSize/2` so that, when undisplaced,
+  // the swatch row and the marker share the same y, producing the clean
+  // single-row look from the mocks.
+  //
+  // Leader lines are off by default. The marker on the line plus the swatch in
+  // the column already tie label to data; a connecting line adds noise without
+  // adding information for the small displacements the sweep produces. Users
+  // who want them can opt in via `endpointLabels.showLeader: true`.
+  const showLeader = config?.showLeader === true;
   const entries: EndpointLabelEntry[] = provisional.map((p, i) => {
     const labelY = sweptTops[i];
-    const showLeader = Math.abs(labelY - (p.dataY - p.height / 2)) > ENDPOINT_LEADER_THRESHOLD;
+    const swatchRowY = labelY + ENDPOINT_LABEL_FONT_SIZE / 2;
+    const displaced = Math.abs(swatchRowY - p.dataY) > ENDPOINT_LEADER_THRESHOLD;
     const entry: EndpointLabelEntry = {
       seriesKey: p.seriesKey,
       labelLines: p.labelLines,
@@ -363,7 +380,7 @@ export function computeEndpointLabels(
       color: p.color,
       dataY: p.dataY,
       labelY,
-      showLeader,
+      showLeader: showLeader && displaced,
     };
     if (showMarker) {
       entry.marker = {

@@ -23,10 +23,10 @@ const SWATCH_STROKE = 3;
 const SWATCH_GAP = 6;
 /** Gap between label baseline and the value text below it. */
 const VALUE_GAP = 2;
-/** Stroke width for the optional leader line. */
-const LEADER_STROKE_WIDTH = 0.5;
+/** Stroke width for the optional leader line (subtle but visible). */
+const LEADER_STROKE_WIDTH = 1;
 /** Opacity for the optional leader line. */
-const LEADER_OPACITY = 0.3;
+const LEADER_OPACITY = 0.45;
 
 export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): void {
   const ep = layout.endpointLabels;

@@ -781,7 +781,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 88.2,
         },
         "seriesKey": "US",
-        "showLeader": true,
+        "showLeader": false,
         "value": "40",
       },
       {
@@ -790,7 +790,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "labelLines": [
           "UK",
         ],
-        "labelY": 113.75,
+        "labelY": 123,
         "marker": {
           "fill": "#ffffff",
           "radius": 4,
@@ -809,7 +809,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "labelLines": [
           "FR",
         ],
-        "labelY": 218.52999999999997,
+        "labelY": 227.77999999999997,
         "marker": {
           "fill": "#ffffff",
           "radius": 4,
@@ -828,7 +828,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "labelLines": [
           "DE",
         ],
-        "labelY": 170.17000000000002,
+        "labelY": 179.42000000000002,
         "marker": {
           "fill": "#ffffff",
           "radius": 4,
