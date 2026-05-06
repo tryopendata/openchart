@@ -6,7 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **area!:** multi-series area charts default to `overlap` mode (gradient-filled, partially translucent) instead of stacked. Pass `mark: { type: 'area', stack: true }` (or `stack: 'zero'`) to opt into the previous stacked behavior. The default change makes per-series comparison the dominant idiom; stacked totals remain a one-flag opt-in.
+
 ### Features
+
+- **endpoint-labels:** right-side per-series label column for multi-series line/area charts. Renders a chip+bar swatch (matching the redesigned legend), the colored series name, and a muted formatted value below. Auto-takes over from the traditional legend on ≥2-series line/area charts unless the user forces `legend: { show: true }`. Bidirectional collision sweep keeps labels stacked without overlap. Optional open-ring marker terminates the line at the chart's right edge; decorative point marks at the same coordinate are auto-suppressed to avoid double-circles.
+- **legend:** redesigned categorical swatch as a rounded chip with a colored bar through its midline. Shared between the traditional legend and the endpoint-labels column so a chart never shows two swatch idioms.
+- **annotations:** add `dot` and `subtitle` fields to `TextAnnotation` for editorial pull-quote callouts (open-ring marker at the data point + muted second-tone supporting text).
+- **chrome:** editorial chrome system — eyebrow (with leading accent dot), brand watermark with accent dot positioned via real text width, and a metric bar that renders below the chrome row.
+- **theme:** generalized light-mode line stroke darkening — hue/saturation-aware so achromatic palettes (grays) pass through unchanged while saturated colors get a perceptual lightness reduction for AA contrast on white backgrounds.
+- **palette:** new OKLCH-based cyan-led categorical palette tuned for adjacency contrast (cyan and teal no longer neighbor each other).
+- **vanilla:** snap-to-data-point crosshair on multi-series line/area charts with merged tooltip and per-series snap dots.
+
+### Bug Fixes
+
+- **legend toggle:** y-axis now rebalances to the visible series when a legend item is clicked (previously the dimmed series's domain stayed reserved). Recompiles on toggle so per-series UI (endpoint markers, labels, series-bound chrome) hides and restores cleanly.
+- **legend toggle:** color scale stays locked to the unfiltered series list when items are toggled off — visible lines no longer shift palette indices and mismatch their legend swatches.
+- **legend toggle:** annotations are suppressed while any series is runtime-hidden. They were authored against the full dataset; the rebalanced scale would otherwise drift their anchors. Restoring all series restores the authored state.
+- **legend toggle:** clicking the last visible series is a no-op rather than producing an empty chart with a fully dimmed legend.
+- **endpoint-labels:** track lines instead of uniform stacking — labels stay anchored near their series's actual y-position when there's room, and only stack when collisions force it.
+- **endpoint-labels:** marker aligns with the line endpoint (not the label center); leader line off by default.
+- **endpoint-labels:** bidirectional sweep caps each pass so the tail clamp propagates back through the stack instead of stranding mid-stack overlaps.
+- **layout:** clamp `margins.top` rollback when metrics rolls back so the chart area never shifts up on retry.
+- **layout:** push bottom chrome (source/byline/footer/brand) below bottom legends so they don't overlap.
+
+### Internal
+
+- **engine:** unified suppression truth table (`legend/suppression.ts`) consulted by the legend, endpoint-labels, and end-of-line label compute paths so the three stay in sync.
+- **engine:** factored `formatEndpointValue` so width prediction (before scales) uses the same formatter the renderer eventually applies.
+- **engine:** added bidirectional-sweep fuzz test (200 deterministic trials) asserting stack invariants.
+
+### Features (carryover from prior unreleased work)
 
 - **barlist:** add `BarList` chart type — ranked horizontal bar list with proportional fill bars, color encoding, subtitle fields, value formatting, dark mode, animation, and tooltip support across all framework packages (React, Vue, Svelte, vanilla)
 - **tilemap:** add entrance animations with deterministic shuffled stagger for organic tile pop-in

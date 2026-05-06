@@ -321,6 +321,30 @@ describe('compileChart', () => {
     expect(layout.marks.length).toBeGreaterThan(0);
   });
 
+  it('hiddenSeries keeps remaining series on their original palette colors', () => {
+    // Regression: filtering renderData by hiddenSeries used to shrink the
+    // ordinal color scale's domain, which shifted every visible series down
+    // one palette index. With UK hidden, US should still get the same color
+    // it had when both were visible.
+    type LineLike = { type: string; seriesKey?: string; stroke?: string };
+    const baseline = compileChart({ ...lineSpec, hiddenSeries: [] }, { width: 600, height: 400 });
+    const baselineUS = baseline.marks.find(
+      (m) => m.type === 'line' && (m as LineLike).seriesKey === 'US',
+    ) as LineLike | undefined;
+    expect(baselineUS).toBeTruthy();
+
+    const filtered = compileChart(
+      { ...lineSpec, hiddenSeries: ['UK'] },
+      { width: 600, height: 400 },
+    );
+    const filteredUS = filtered.marks.find(
+      (m) => m.type === 'line' && (m as LineLike).seriesKey === 'US',
+    ) as LineLike | undefined;
+    expect(filteredUS).toBeTruthy();
+
+    expect(filteredUS!.stroke).toBe(baselineUS!.stroke);
+  });
+
   // ---------------------------------------------------------------------------
   // scale.clip
   // ---------------------------------------------------------------------------

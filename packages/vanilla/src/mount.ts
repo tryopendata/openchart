@@ -207,7 +207,18 @@ interface SeriesPoint {
 interface SeriesGroup {
   seriesKey: string;
   color: string;
-  points: SeriesPoint[];
+  /**
+   * Per-series lookup keyed by the rounded pixel x of each data point.
+   * Keys are integers so two series whose pixel x's came from independent
+   * scale calls can still match at the snapped x. Replaces an older O(n)
+   * `points.find(p => p.x === snappedX)` that broke under float drift.
+   */
+  pointsByX: Map<number, SeriesPoint>;
+}
+
+/** Round a pixel x to the integer used as the lookup key. */
+function snapKey(x: number): number {
+  return Math.round(x);
 }
 
 /**
@@ -220,21 +231,27 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
     const mark = layout.marks[i];
     if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints?.length) {
       const color = mark.type === 'line' ? mark.stroke : getRepresentativeColor(mark.fill);
+      const pointsByX = new Map<number, SeriesPoint>();
+      for (const dp of mark.dataPoints) {
+        // Last write wins for identical rounded keys (rare; would only happen
+        // on dense temporal scales where two points share a pixel column).
+        pointsByX.set(snapKey(dp.x), { ...dp });
+      }
       groups.push({
         seriesKey: mark.seriesKey ?? `${mark.type}-${i}`,
         color,
-        points: mark.dataPoints.map((dp) => ({ ...dp })),
+        pointsByX,
       });
     }
   }
   return groups;
 }
 
-/** All unique x positions across all series, sorted ascending. */
+/** All unique snap-key x positions across all series, sorted ascending. */
 function collectSnapXs(groups: SeriesGroup[]): number[] {
   const seen = new Set<number>();
   for (const g of groups) {
-    for (const p of g.points) seen.add(p.x);
+    for (const k of g.pointsByX.keys()) seen.add(k);
   }
   return Array.from(seen).sort((a, b) => a - b);
 }
@@ -358,7 +375,7 @@ function wireVoronoiTooltipEvents(
     let anchorCount = 0;
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
-      const point = group.points.find((p) => p.x === snappedX);
+      const point = group.pointsByX.get(snappedX);
       const dot = dots[i];
       if (point) {
         hits.push({ group, point });
@@ -422,22 +439,30 @@ function wireVoronoiTooltipEvents(
     tooltipManager.hide();
   };
 
-  const handleTouchStart = (e: Event) => {
+  const handleTouch = (e: Event) => {
     const te = e as TouchEvent;
     if (te.touches.length === 0) return;
     const t = te.touches[0];
     const { svgX, svgY, viewBoxToContainer } = toSvgCoords(t.clientX, t.clientY);
+    // preventDefault keeps a finger drag across the chart from scrolling the
+    // page, so the snap-tooltip reads naturally on mobile. Skipped if the
+    // listener can't be added as non-passive (older Safari).
+    if (te.cancelable) te.preventDefault();
     positionAt(svgX, svgY, viewBoxToContainer);
   };
 
   overlay.addEventListener('mousemove', handleMouseMove);
   overlay.addEventListener('mouseleave', hideAll);
-  overlay.addEventListener('touchstart', handleTouchStart);
+  overlay.addEventListener('touchstart', handleTouch, { passive: false });
+  overlay.addEventListener('touchmove', handleTouch, { passive: false });
+  overlay.addEventListener('touchend', hideAll);
 
   return () => {
     overlay.removeEventListener('mousemove', handleMouseMove);
     overlay.removeEventListener('mouseleave', hideAll);
-    overlay.removeEventListener('touchstart', handleTouchStart);
+    overlay.removeEventListener('touchstart', handleTouch);
+    overlay.removeEventListener('touchmove', handleTouch);
+    overlay.removeEventListener('touchend', hideAll);
   };
 }
 
@@ -1353,20 +1378,24 @@ function wireSeriesLabelDrag(
  * Wire click handlers on legend entries to toggle series visibility.
  * Fires onEdit with { type: 'legend-toggle', series, hidden } for each toggle,
  * and optionally calls the legacy onLegendToggle callback.
- * Legend entries for hidden series stay visible but dimmed (opacity 0.3).
+ *
+ * Toggling a series mutates `currentSpec.hiddenSeries` and triggers a full
+ * re-render so the engine rebalances the y-scale to the visible series and
+ * removes endpoint labels, markers, annotations, and any series-bound chrome
+ * for the hidden ones. Hiding marks via CSS doesn't rescale the axis or
+ * suppress the per-series UI, which is why a recompile is the correct path.
+ *
  * Returns a cleanup function.
  */
 function wireLegendInteraction(
   svg: SVGElement,
   _layout: ChartLayout,
+  toggleSeries: (series: string) => boolean,
   onLegendToggle?: (series: string, visible: boolean) => void,
   onEdit?: (edit: ElementEdit) => void,
 ): () => void {
   const legendEntries = svg.querySelectorAll('[data-legend-index]');
   const cleanups: Array<() => void> = [];
-
-  // Track which series are hidden
-  const hiddenSeries = new Set<string>();
 
   for (const entry of legendEntries) {
     // Skip overflow indicator entries ("+N more")
@@ -1376,34 +1405,11 @@ function wireLegendInteraction(
       const label = entry.getAttribute('data-legend-label');
       if (!label) return;
 
-      if (hiddenSeries.has(label)) {
-        hiddenSeries.delete(label);
-        entry.setAttribute('opacity', '1');
-        entry.setAttribute('aria-label', `${label}: visible`);
-        onLegendToggle?.(label, true);
-        onEdit?.({ type: 'legend-toggle', series: label, hidden: false });
-      } else {
-        hiddenSeries.add(label);
-        entry.setAttribute('opacity', '0.3');
-        entry.setAttribute('aria-label', `${label}: hidden`);
-        onLegendToggle?.(label, false);
-        onEdit?.({ type: 'legend-toggle', series: label, hidden: true });
-      }
-
-      // Toggle visibility of marks with matching series.
-      // Uses the data-series attribute set by the SVG renderer, which works
-      // for all mark types (line, area, rect, arc, point).
-      const marks = svg.querySelectorAll('.oc-mark');
-      for (const mark of marks) {
-        const seriesName = mark.getAttribute('data-series');
-        if (!seriesName) continue;
-
-        if (hiddenSeries.has(seriesName)) {
-          (mark as SVGElement).style.display = 'none';
-        } else {
-          (mark as SVGElement).style.display = '';
-        }
-      }
+      const nowHidden = toggleSeries(label);
+      onLegendToggle?.(label, !nowHidden);
+      onEdit?.({ type: 'legend-toggle', series: label, hidden: nowHidden });
+      // Visual state on the legend entry itself comes back via the next
+      // render's CSS hook (`.oc-legend-entry-hidden`); no DOM mutation here.
     };
 
     entry.addEventListener('click', handleClick);
@@ -1891,6 +1897,11 @@ export function createChart(
   let selectedElement: ElementRef | null = options?.selectedElement ?? null;
   let overlayElement: SVGGElement | null = null;
   let isTextEditingActive = false;
+
+  // Runtime legend-toggle state. The user's spec is the source of truth for
+  // initially-hidden series; this set tracks runtime overrides from legend
+  // clicks. The two are merged each compile so the engine sees the union.
+  const runtimeHiddenSeries = new Set<string>();
   let textEditCleanup: (() => void) | null = null;
 
   const measureText = createMeasureText();
@@ -1909,9 +1920,77 @@ export function createChart(
     };
 
     if (isLayerSpec(currentSpec)) {
-      return compileLayer(currentSpec as LayerSpec, compileOpts);
+      return compileLayer(withRuntimeHidden(currentSpec as LayerSpec) as LayerSpec, compileOpts);
     }
-    return compileChart(currentSpec as ChartSpec | GraphSpec, compileOpts);
+    return compileChart(withRuntimeHidden(currentSpec) as ChartSpec | GraphSpec, compileOpts);
+  }
+
+  /**
+   * Merge runtime legend-toggle overrides into the spec for compilation.
+   * Returns the spec unchanged when no overrides are active so the common
+   * path doesn't allocate.
+   *
+   * Annotations are suppressed while any series is runtime-hidden. They were
+   * authored against the full dataset (their x/y values anchor to specific
+   * data points), and a rebalanced y-scale or a hidden anchor series would
+   * make them point at the wrong place. Restoring all series restores the
+   * authored state, so annotations come back automatically.
+   */
+  function withRuntimeHidden<T extends { hiddenSeries?: string[]; annotations?: Annotation[] }>(
+    spec: T,
+  ): T {
+    if (runtimeHiddenSeries.size === 0) return spec;
+    const userHidden = spec.hiddenSeries ?? [];
+    const merged = Array.from(new Set([...userHidden, ...runtimeHiddenSeries]));
+    return { ...spec, hiddenSeries: merged, annotations: undefined };
+  }
+
+  /**
+   * Count the distinct color-encoded series in the user's spec. Used to
+   * gate the all-series-off case on toggle.
+   */
+  function countSeries(spec: ChartSpec | GraphSpec | LayerSpec): number {
+    if (isLayerSpec(spec)) return Infinity; // layered specs: don't gate
+    const enc = (spec as ChartSpec).encoding;
+    const colorEnc = enc?.color;
+    if (!colorEnc || 'condition' in colorEnc || colorEnc.type === 'quantitative') return Infinity;
+    if (!('field' in colorEnc) || !colorEnc.field) return Infinity;
+    const field = colorEnc.field;
+    const seen = new Set<string>();
+    for (const row of (spec as ChartSpec).data ?? []) {
+      seen.add(String((row as Record<string, unknown>)[field]));
+    }
+    return seen.size;
+  }
+
+  /**
+   * Toggle a series' visibility from a legend click. Returns true when the
+   * series is now hidden (post-toggle), false when visible. Triggers a full
+   * re-render so the engine rebalances the y-scale and refreshes endpoint
+   * labels, markers, and series-bound annotations.
+   *
+   * Refuses to hide the last visible series — an empty chart with a dimmed
+   * legend is a worse outcome than a no-op click. The legend visual still
+   * reflects state from the previous render in that case.
+   */
+  function toggleSeriesVisibility(series: string): boolean {
+    const isCurrentlyHidden = runtimeHiddenSeries.has(series);
+    if (!isCurrentlyHidden) {
+      const total = countSeries(currentSpec);
+      const userHidden = new Set((currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? []);
+      const hiddenCount = new Set([...userHidden, ...runtimeHiddenSeries, series]).size;
+      if (hiddenCount >= total) return false; // would hide everything; bail
+    }
+    let nowHidden: boolean;
+    if (isCurrentlyHidden) {
+      runtimeHiddenSeries.delete(series);
+      nowHidden = false;
+    } else {
+      runtimeHiddenSeries.add(series);
+      nowHidden = true;
+    }
+    render();
+    return nowHidden;
   }
 
   function getContainerDimensions(): { width: number; height: number } {
@@ -2313,6 +2392,7 @@ export function createChart(
     cleanupLegend = wireLegendInteraction(
       svgElement,
       currentLayout,
+      toggleSeriesVisibility,
       options?.onLegendToggle,
       options?.onEdit,
     );

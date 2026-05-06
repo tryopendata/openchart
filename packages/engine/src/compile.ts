@@ -520,7 +520,35 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   renderData = filterClippedDomains(renderData, chartSpec.encoding);
 
   // Build a filtered spec for scales and marks, keeping all other properties intact
-  const renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
+  let renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
+
+  // Lock the color scale domain to the unfiltered series list so palette
+  // assignments stay stable across legend toggles. Without this, hiding a
+  // series shrinks the ordinal scale's domain and shifts every remaining
+  // series down one palette index — the visible lines would mismatch the
+  // legend swatches that still represent the original assignment.
+  // Skipped when the user already supplied an explicit domain.
+  const colorEnc = chartSpec.encoding.color;
+  if (
+    chartSpec.hiddenSeries.length > 0 &&
+    colorEnc &&
+    'field' in colorEnc &&
+    colorEnc.type !== 'quantitative' &&
+    !colorEnc.scale?.domain
+  ) {
+    const colorField = colorEnc.field;
+    const stableDomain = Array.from(new Set(chartSpec.data.map((row) => String(row[colorField]))));
+    renderSpec = {
+      ...renderSpec,
+      encoding: {
+        ...renderSpec.encoding,
+        color: {
+          ...colorEnc,
+          scale: { ...(colorEnc.scale ?? {}), domain: stableDomain },
+        },
+      },
+    };
+  }
 
   // Inline y-axis labels render at chartArea.x with text-anchor=start. Without
   // an inset the leftmost data point on a line/area would clip through the

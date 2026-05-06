@@ -133,8 +133,12 @@ describe('chart event handlers', () => {
       // First click hides the series
       expect(visible).toBe(false);
 
-      // Click again to toggle back
-      legendEntry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      // Toggling triggers a recompile (so the y-scale rebalances and any
+      // endpoint labels for the hidden series clear), which replaces the
+      // legend DOM. Re-query the entry for the second click.
+      const legendEntryAfter = container.querySelector('[data-legend-index]');
+      expect(legendEntryAfter).not.toBeNull();
+      legendEntryAfter!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       expect(onLegendToggle).toHaveBeenCalledTimes(2);
       const [, visibleAfter] = onLegendToggle.mock.calls[1];
       expect(visibleAfter).toBe(true);
