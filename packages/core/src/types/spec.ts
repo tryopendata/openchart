@@ -1502,6 +1502,8 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   resolve?: ResolveConfig;
   /** Hidden series names. */
   hiddenSeries?: string[];
+  /** Endpoint labels column, inherited by child layers that don't set their own. */
+  endpointLabels?: boolean | EndpointLabelsConfig;
   /** Animation configuration. */
   animation?: AnimationSpec;
 }

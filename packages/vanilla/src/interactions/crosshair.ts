@@ -20,23 +20,28 @@ function snapKey(x: number): number {
 }
 
 function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
-  const groups: SeriesGroup[] = [];
+  // Dedupe by seriesKey: area charts emit BOTH an AreaMark and a derived
+  // LineMark per series. Without dedupe, single-series area charts show
+  // "line-0" / "area-1" in the tooltip instead of the actual data fields.
+  // Prefer the line mark (same logic as endpoint-labels).
+  const byKey = new Map<string, SeriesGroup>();
+  const markTypeByKey = new Map<string, 'line' | 'area'>();
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
     if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints?.length) {
+      const key = mark.seriesKey ?? '__default__';
+      const existingType = markTypeByKey.get(key);
+      if (existingType === 'line' && mark.type === 'area') continue;
       const color = mark.type === 'line' ? mark.stroke : getRepresentativeColor(mark.fill);
       const pointsByX = new Map<number, SeriesPoint>();
       for (const dp of mark.dataPoints) {
         pointsByX.set(snapKey(dp.x), { ...dp });
       }
-      groups.push({
-        seriesKey: mark.seriesKey ?? `${mark.type}-${i}`,
-        color,
-        pointsByX,
-      });
+      byKey.set(key, { seriesKey: key, color, pointsByX });
+      markTypeByKey.set(key, mark.type);
     }
   }
-  return groups;
+  return Array.from(byKey.values());
 }
 
 function collectSnapXs(groups: SeriesGroup[]): number[] {

@@ -491,6 +491,7 @@ function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec 
     darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
     watermark: layerSpec.watermark ?? leaves[0].watermark,
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
+    endpointLabels: layerSpec.endpointLabels ?? leaves[0].endpointLabels,
   };
 
   return primary;

@@ -468,6 +468,7 @@ export function flattenLayers(
   parentEncoding?: Encoding,
   parentTransforms?: import('@opendata-ai/openchart-core').Transform[],
   parentWatermark?: boolean,
+  parentEndpointLabels?: boolean | import('@opendata-ai/openchart-core').EndpointLabelsConfig,
 ): ChartSpec[] {
   const resolvedData = spec.data ?? parentData;
   const resolvedEncoding: Encoding | undefined =
@@ -477,6 +478,7 @@ export function flattenLayers(
   const resolvedTransforms = [...(parentTransforms ?? []), ...(spec.transform ?? [])];
   // Layer-level watermark propagates to children (child can still override)
   const resolvedWatermark = spec.watermark ?? parentWatermark;
+  const resolvedEndpointLabels = spec.endpointLabels ?? parentEndpointLabels;
 
   const leaves: ChartSpec[] = [];
 
@@ -490,6 +492,7 @@ export function flattenLayers(
           resolvedEncoding,
           resolvedTransforms,
           resolvedWatermark,
+          resolvedEndpointLabels,
         ),
       );
     } else {
@@ -508,6 +511,9 @@ export function flattenLayers(
         // Inherit parent watermark if child doesn't explicitly set one
         ...(child.watermark === undefined && resolvedWatermark !== undefined
           ? { watermark: resolvedWatermark }
+          : {}),
+        ...(child.endpointLabels === undefined && resolvedEndpointLabels !== undefined
+          ? { endpointLabels: resolvedEndpointLabels }
           : {}),
       } as ChartSpec);
     }
