@@ -1,5 +1,41 @@
 # Changelog
 
+## [7.0.1](https://github.com/tryopendata/openchart/compare/core-v7.0.0...core-v7.0.1) (2026-05-07)
+
+
+### Features
+
+* trend-aware visual defaults and endpoint dot polish ([2f0e8ee](https://github.com/tryopendata/openchart/commit/2f0e8ee))
+* generic ChartSpec<TData> with discriminated mark/encoding types ([404f588](https://github.com/tryopendata/openchart/commit/404f588))
+* match traditional legend with chip+bar swatch ([43f755e](https://github.com/tryopendata/openchart/commit/43f755e))
+* redesign swatch as rounded chip with colored bar ([2125455](https://github.com/tryopendata/openchart/commit/2125455))
+* editorial chrome + metric bar + dark-mode palette pinning ([77c9fa9](https://github.com/tryopendata/openchart/commit/77c9fa9))
+* render endpoint labels, annotation dots/subtitles, refreshed swatch ([1cec902](https://github.com/tryopendata/openchart/commit/1cec902))
+* endpoint labels + legend suppression truth table ([daf52a6](https://github.com/tryopendata/openchart/commit/daf52a6))
+* add dot + subtitle fields to TextAnnotation ([6ccf70f](https://github.com/tryopendata/openchart/commit/6ccf70f))
+* multi-series area defaults to overlap; gradient fills everywhere ([4f31e23](https://github.com/tryopendata/openchart/commit/4f31e23))
+
+
+### Bug Fixes
+
+* propagate endpointLabels on LayerSpec, dedupe area+line tooltip ([c8588ef](https://github.com/tryopendata/openchart/commit/c8588ef))
+* transparent background, top-only corner rounding, thinner strokes ([b6bce4c](https://github.com/tryopendata/openchart/commit/b6bce4c))
+* address code-review must-fix items ([bd26e2e](https://github.com/tryopendata/openchart/commit/bd26e2e))
+* rebalance scale, lock colors, suppress drift ([649d78a](https://github.com/tryopendata/openchart/commit/649d78a))
+* address code review findings from generic ChartSpec PR ([50eb80c](https://github.com/tryopendata/openchart/commit/50eb80c))
+* cap each pass in the sweep so tail clamp propagates ([1fc2ce0](https://github.com/tryopendata/openchart/commit/1fc2ce0))
+* align marker with line endpoint, drop leader by default ([664288d](https://github.com/tryopendata/openchart/commit/664288d))
+* enable crosshair on line/area charts with point marks ([0b0afe4](https://github.com/tryopendata/openchart/commit/0b0afe4))
+* track lines instead of uniform stacking ([62c3195](https://github.com/tryopendata/openchart/commit/62c3195))
+* push bottom chrome below bottom legend ([414a0c7](https://github.com/tryopendata/openchart/commit/414a0c7))
+* three defects found in visual QA of area redesign ([85ae03e](https://github.com/tryopendata/openchart/commit/85ae03e))
+
+
+### Refactoring
+
+* extract interaction and layer modules from mega-files ([af471c6](https://github.com/tryopendata/openchart/commit/af471c6))
+* apply review + devil's-advocate fixes ([4b0e506](https://github.com/tryopendata/openchart/commit/4b0e506))
+
 ## [7.0.0](https://github.com/tryopendata/openchart/compare/core-v6.28.6...core-v7.0.0) (2026-05-06)
 
 
