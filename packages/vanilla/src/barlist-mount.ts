@@ -111,7 +111,21 @@ export function createBarList(
       measureText,
     };
 
-    return compileBarList(currentSpec, compileOpts);
+    const layout = compileBarList(currentSpec, compileOpts);
+
+    // Auto-size height to content so few-row lists don't leave empty space.
+    if (layout.rows.length > 0) {
+      const lastRow = layout.rows[layout.rows.length - 1];
+      const contentBottom =
+        lastRow.y + lastRow.height + layout.chrome.bottomHeight + layout.theme.spacing.padding;
+      if (contentBottom < layout.height) {
+        layout.height = contentBottom;
+        layout.area.height =
+          contentBottom - layout.area.y - layout.chrome.bottomHeight - layout.theme.spacing.padding;
+      }
+    }
+
+    return layout;
   }
 
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: BarListLayout): () => void {

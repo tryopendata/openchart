@@ -153,12 +153,13 @@ function getSparklinePad(spec: NormalizedChartSpec): {
     point === 'last' || point === true || point === 'endpoints' || point === 'transparent';
   const dotLeft =
     point === 'first' || point === true || point === 'endpoints' || point === 'transparent';
+  const hasDots = dotRight || dotLeft;
 
   return {
     left: dotLeft ? Math.max(strokePad, dotPad) : strokePad,
     right: dotRight ? Math.max(strokePad, dotPad) : strokePad,
-    top: strokePad,
-    bottom: strokePad,
+    top: hasDots ? Math.max(strokePad, dotPad) : strokePad,
+    bottom: hasDots ? Math.max(strokePad, dotPad) : strokePad,
   };
 }
 
@@ -361,8 +362,13 @@ export function computeDimensions(
   // is kept; the rollback path subtracts it back when stripped.
   const wantsMetrics = !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden';
   const tentativeMetricsHeight = wantsMetrics ? metricBarHeight() : 0;
+  // topAxisGap sits between the legend (or chrome, if no legend) and the
+  // chart area. It accounts for the general axis margin plus any inline
+  // tick-label overhang. Placing it after the legend (below) keeps the
+  // subtitle-to-legend gap tight while reserving physical space for ticks
+  // that protrude above the chart area.
   const margins: Margins = {
-    top: topPad + chrome.topHeight + tentativeMetricsHeight + topAxisGap,
+    top: topPad + chrome.topHeight + tentativeMetricsHeight,
     right: hPad + (isRadial ? hPad : axisMargin),
     bottom: padding + chrome.bottomHeight + xAxisHeight,
     left: hPad + (isRadial ? hPad : axisMargin),
@@ -609,6 +615,10 @@ export function computeDimensions(
     // above.
   }
 
+  // Add topAxisGap after legend so it sits between the legend (or chrome
+  // when there's no legend) and the chart area.
+  margins.top += topAxisGap;
+
   // Chart area is what's left after margins
   let chartArea: Rect = {
     x: margins.left,
@@ -643,7 +653,7 @@ export function computeDimensions(
     // until resolveMetrics decides otherwise).
     const fallbackTopAxisGap =
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
-    const newTop = topPad + fallbackChrome.topHeight + fallbackTopAxisGap + tentativeMetricsHeight;
+    const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
     const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;
@@ -656,7 +666,8 @@ export function computeDimensions(
         legendLayout.entries.length > 0 &&
         legendLayout.position === 'top'
           ? legendLayout.bounds.height + gap
-          : 0);
+          : 0) +
+        fallbackTopAxisGap;
       margins.bottom = newBottom;
 
       chartArea = {
@@ -709,8 +720,8 @@ export function computeDimensions(
   //   topPad
   //   chrome.topHeight              (title / subtitle / eyebrow)
   //   tentativeMetricsHeight        (KPI bar — placed here)
-  //   topAxisGap                    (axisMargin + inlineTickOverhang)
   //   [optional top legend band]
+  //   topAxisGap                    (axisMargin + inlineTickOverhang)
   //   chartArea
   // The metric bar belongs with chrome, above the legend, so its y is
   // computed off chrome.topHeight only — not the full legend-inclusive

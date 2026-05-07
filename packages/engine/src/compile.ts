@@ -552,15 +552,25 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // chartArea was shrunk to exclude legend space, so expand it back to include
   // the reserved margin. This way computeLegend positions the legend outside
   // the data area (in the margin) instead of overlapping data marks.
+  //
+  // Top/bottom legends sit above/below the chart and aren't constrained by
+  // y-axis labels. Use the full container width so wrapping decisions match
+  // the first pass (which uses options.width). Without this, charts with wide
+  // y-axis labels (horizontal bars, long category names) artificially narrow
+  // the legend and trigger premature wrapping.
   const legendArea: Rect = { ...chartArea };
   if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(options.width);
     switch (legendLayout.position) {
       case 'top':
+        legendArea.x = theme.spacing.padding;
+        legendArea.width = options.width - theme.spacing.padding * 2;
         legendArea.y -= legendLayout.bounds.height + gap;
         legendArea.height += legendLayout.bounds.height + gap;
         break;
       case 'bottom':
+        legendArea.x = theme.spacing.padding;
+        legendArea.width = options.width - theme.spacing.padding * 2;
         // Bottom legend sits below the x-axis tick row, not over it. Expand
         // legendArea by xAxisHeight + legendHeight + gap so the bottom-anchored
         // legend lands beneath the axis. Mirrors dimensions.ts which reserved
