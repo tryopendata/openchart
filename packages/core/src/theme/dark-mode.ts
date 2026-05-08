@@ -106,17 +106,20 @@ function _luminanceFromHex(color: string): number {
  */
 export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   const inputBg = theme.colors.background;
-  // Treat transparent as "already dark" to preserve user intent
-  const alreadyDark = inputBg === 'transparent' || _luminanceFromHex(inputBg) < 0.2;
+  // "transparent" preserves the background token but must still adopt dark
+  // text/gridline/axis colors — the container is dark, not the chart canvas.
+  const isTransparent = inputBg === 'transparent';
+  const alreadyDark = isTransparent || _luminanceFromHex(inputBg) < 0.2;
 
-  // If the theme already has a dark background, preserve user-provided colors
-  // instead of overwriting with library defaults.
+  // Preserve user-supplied background (including transparent) but always
+  // apply dark-mode text/axis/gridline colors so labels are readable on the
+  // dark host surface.
   const darkBg = alreadyDark ? inputBg : DARK_BG;
-  const darkText = alreadyDark ? theme.colors.text : DARK_TEXT;
-  const darkGridline = alreadyDark ? theme.colors.gridline : 'rgba(255,255,255,0.05)';
+  const darkText = DARK_TEXT;
+  const darkGridline = 'rgba(255,255,255,0.05)';
   // axis is also tick-label fill — needs WCAG AA contrast on dark bg.
   // Zinc-400 (`#a1a1aa`) hits ~6:1 against #09090b.
-  const darkAxis = alreadyDark ? theme.colors.axis : '#a1a1aa';
+  const darkAxis = '#a1a1aa';
   const darkMuted = ACHROMATIC_RAMP.fgMuted;
 
   // Categorical palette is pinned to design-system tokens. The same vibrant
