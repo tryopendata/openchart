@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **area!:** multi-series area charts default to `overlap` mode (gradient-filled, partially translucent) instead of stacked. Pass `mark: { type: 'area', stack: true }` (or `stack: 'zero'`) to opt into the previous stacked behavior. The default change makes per-series comparison the dominant idiom; stacked totals remain a one-flag opt-in.
 
+### Bug Fixes
+
+- **layout:** restore bottom margin base padding dropped in v7.1.0 — bottom-aligned legends were rendering outside the SVG viewport because `padding + bottomHeight + xAxisHeight` was incorrectly simplified to `bottomHeight + xAxisHeight`.
+
 ### Features
 
 - **endpoint-labels:** right-side per-series label column for multi-series line/area charts. Renders a chip+bar swatch (matching the redesigned legend), the colored series name, and a muted formatted value below. Auto-takes over from the traditional legend on ≥2-series line/area charts unless the user forces `legend: { show: true }`. Bidirectional collision sweep keeps labels stacked without overlap. Optional open-ring marker terminates the line at the chart's right edge; decorative point marks at the same coordinate are auto-suppressed to avoid double-circles.
