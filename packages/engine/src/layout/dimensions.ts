@@ -96,12 +96,12 @@ function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/openchart
 
 /**
  * Compute the bottom margin contribution from chrome.
- * chrome.bottomHeight already includes its own padding when it has content
- * (watermark, source, byline, or footer). When zero, fall back to the base
- * padding so the chart area doesn't butt against the container edge.
+ * Padding always applies (gap between x-axis ticks and the chrome below).
+ * bottomHeight is additive on top — it covers source/watermark/legend space
+ * including its own internal padding when content is present.
  */
 function bottomMargin(bottomHeight: number, padding: number, xAxisHeight: number): number {
-  return (bottomHeight > 0 ? bottomHeight : padding) + xAxisHeight;
+  return padding + bottomHeight + xAxisHeight;
 }
 
 /**
