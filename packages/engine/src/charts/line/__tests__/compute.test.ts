@@ -620,8 +620,27 @@ describe('computeAreaMarks', () => {
       expect(fill.gradient).toBe('linear');
       expect(fill.stops).toHaveLength(2);
       expect(fill.stops[0].opacity).toBe(0.65);
-      expect(fill.stops[1].opacity).toBe(0.35);
+      // Light mode: bottom fades to 0 so the colored wash at the base is avoided
+      expect(fill.stops[1].opacity).toBe(0);
       // fillOpacity should be 1 so gradient stop-opacity controls the fade
+      expect(mark.fillOpacity).toBe(1);
+    }
+  });
+
+  it('stacked areas use higher bottom opacity in dark mode', () => {
+    const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = 'zero';
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeAreaMarks(spec, scales, chartArea, true /* darkMode */);
+
+    expect(marks.length).toBeGreaterThan(0);
+    for (const mark of marks) {
+      const fill = mark.fill as { gradient: string; stops: { opacity?: number }[] };
+      expect(fill.gradient).toBe('linear');
+      expect(fill.stops).toHaveLength(2);
+      expect(fill.stops[0].opacity).toBe(0.65);
+      // Dark mode: bottom stop is 0.35 so bands remain visible on dark surfaces
+      expect(fill.stops[1].opacity).toBe(0.35);
       expect(mark.fillOpacity).toBe(1);
     }
   });

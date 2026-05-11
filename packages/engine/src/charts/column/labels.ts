@@ -32,7 +32,7 @@ import { formatLabelValue } from '../_shared/format-label-value';
 
 const LABEL_FONT_SIZE = 10;
 const LABEL_FONT_WEIGHT = 600;
-const LABEL_OFFSET_Y = 6;
+const LABEL_OFFSET_Y = 8;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -91,8 +91,11 @@ export function computeColumnLabels(
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;
 
-    // For positive values, place label above the column top.
-    // For negative values, place label below the column bottom.
+    // anchorY is the TOP of the label bounding box so the collision system's
+    // AABB check (rect = { y: anchorY, height: textHeight }) is geometrically
+    // correct. dominantBaseline 'hanging' anchors the glyph top at anchorY.
+    //   Positive bar: top = barTop - LABEL_OFFSET_Y - textHeight, text floats above
+    //   Negative bar: top = barBottom + LABEL_OFFSET_Y, text hangs below
     const anchorX = mark.x + mark.width / 2;
     const anchorY = isNegative
       ? mark.y + mark.height + LABEL_OFFSET_Y
@@ -112,7 +115,7 @@ export function computeColumnLabels(
         fill: labelColor ?? getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'middle',
-        dominantBaseline: isNegative ? 'hanging' : 'auto',
+        dominantBaseline: 'hanging',
       },
     });
   }

@@ -12,9 +12,11 @@ import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
 /**
  * Minimum gap between adjacent tick labels as a multiple of font size.
- * At the default 12px axis font, this yields ~12px of breathing room.
+ * At the default 11px axis font, this yields ~5-6px of breathing room.
+ * Reduced from 1.0 to 0.5 to prevent over-aggressive thinning on charts
+ * with a small number of categories that clearly have room for all labels.
  */
-const MIN_TICK_GAP_FACTOR = 1.0;
+const MIN_TICK_GAP_FACTOR = 0.5;
 
 /** Always show at least this many ticks, even if they overlap. */
 const MIN_TICK_COUNT = 2;

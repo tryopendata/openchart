@@ -36,8 +36,8 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.borderRadius).toBe(2);
   });
 
-  it('font weights include 510 (medium) and 590 (demi)', () => {
-    expect(DEFAULT_THEME.fonts.weights.medium).toBe(510);
+  it('font weights include 550 (medium) and 590 (demi)', () => {
+    expect(DEFAULT_THEME.fonts.weights.medium).toBe(550);
     expect(DEFAULT_THEME.fonts.weights.semibold).toBe(590);
   });
 
