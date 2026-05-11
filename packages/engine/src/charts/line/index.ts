@@ -71,8 +71,8 @@ export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _
  * of whether the layout is stacked (cumulative tops) or overlap (per-series
  * raw values).
  */
-export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
-  const areas = computeAreaMarks(spec, scales, chartArea);
+export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+  const areas = computeAreaMarks(spec, scales, chartArea, theme.isDark);
 
   const encoding = spec.encoding;
   const hasColor = !!(encoding.color && 'field' in encoding.color);

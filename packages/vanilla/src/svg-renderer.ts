@@ -58,6 +58,8 @@ export function renderChartSVG(
     // overflow:visible prevents the clipping. Chart marks are already
     // constrained by a clipPath, so nothing bleeds out.
     overflow: 'visible',
+    // Hint browsers to enable sub-pixel font hinting and kerning for chart text.
+    'text-rendering': 'optimizeLegibility',
   });
   // Set explicit pixel height via inline style. iOS Safari misresolves CSS
   // height:100% when the ancestor chain uses minHeight instead of height,

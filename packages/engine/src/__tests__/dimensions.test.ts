@@ -142,7 +142,12 @@ describe('computeDimensions', () => {
 
     expect(lightDims.theme.isDark).toBe(false);
     expect(darkDims.theme.isDark).toBe(true);
-    expect(darkDims.theme.colors.background).not.toBe(lightDims.theme.colors.background);
+    // Both modes use transparent background — the dark adaptation changes text/axis
+    // colors while keeping transparency so the host surface shows through.
+    expect(darkDims.theme.colors.background).toBe('transparent');
+    expect(lightDims.theme.colors.background).toBe('transparent');
+    // Dark mode uses a different text color
+    expect(darkDims.theme.colors.text).not.toBe(lightDims.theme.colors.text);
   });
 
   it('prevents negative chart area dimensions', () => {

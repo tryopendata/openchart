@@ -589,7 +589,7 @@ export function computeDimensions(
   if (yAxis && (yAxis.title || yAxis.label) && !isRadial) {
     // Estimate the widest y-axis tick label width to mirror the renderer's dynamic offset.
     const yFieldForTitle = encoding.y?.field;
-    const yAxisFormatForTitle = (yAxis?.format as string | undefined);
+    const yAxisFormatForTitle = yAxis?.format as string | undefined;
     let estTickLabelWidth = 0;
     if (
       yFieldForTitle &&
@@ -598,8 +598,7 @@ export function computeDimensions(
       let maxAbsValForTitle = 0;
       for (const row of spec.data) {
         const v = Number(row[yFieldForTitle]);
-        if (Number.isFinite(v) && Math.abs(v) > maxAbsValForTitle)
-          maxAbsValForTitle = Math.abs(v);
+        if (Number.isFinite(v) && Math.abs(v) > maxAbsValForTitle) maxAbsValForTitle = Math.abs(v);
       }
       let sampleLabelForTitle: string;
       if (yAxisFormatForTitle) {
@@ -702,7 +701,8 @@ export function computeDimensions(
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
     const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
-    const newBottom = (fallbackChrome.bottomHeight > 0 ? fallbackChrome.bottomHeight : padding) + xAxisHeight;
+    const newBottom =
+      (fallbackChrome.bottomHeight > 0 ? fallbackChrome.bottomHeight : padding) + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;
 
     if (topDelta > 0 || bottomDelta > 0) {

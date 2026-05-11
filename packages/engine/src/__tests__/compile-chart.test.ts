@@ -230,7 +230,10 @@ describe('compileChart', () => {
 
     expect(light.theme.isDark).toBe(false);
     expect(dark.theme.isDark).toBe(true);
-    expect(dark.theme.colors.background).not.toBe(light.theme.colors.background);
+    // Both modes preserve transparent background — dark mode swaps text/axis/gridline
+    // colors but keeps transparency so the host surface shows through.
+    expect(dark.theme.colors.background).toBe('transparent');
+    expect(light.theme.colors.background).toBe('transparent');
     // Dark mode text should be light, light mode text should be dark
     expect(dark.theme.colors.text).not.toBe(light.theme.colors.text);
   });
