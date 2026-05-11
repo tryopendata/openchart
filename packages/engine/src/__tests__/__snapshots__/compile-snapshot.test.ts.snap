@@ -1716,7 +1716,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "auto",
+          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1727,7 +1727,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "30",
         "visible": true,
         "x": 124.62862068965518,
-        "y": 197.6428571428571,
+        "y": 185.6428571428571,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1761,7 +1761,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "auto",
+          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1772,7 +1772,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "55",
         "visible": true,
         "x": 247.7228735632184,
-        "y": 107.17857142857144,
+        "y": 95.17857142857144,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1806,7 +1806,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "auto",
+          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1817,7 +1817,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "70",
         "visible": true,
         "x": 370.8171264367816,
-        "y": 52.9,
+        "y": 40.9,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1851,7 +1851,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "auto",
+          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1862,7 +1862,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "45",
         "visible": true,
         "x": 493.9113793103449,
-        "y": 143.3642857142857,
+        "y": 131.3642857142857,
       },
       "orient": "vertical",
       "type": "rect",

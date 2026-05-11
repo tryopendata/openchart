@@ -37,6 +37,7 @@ import {
   MAX_LEFT_LABEL_FRACTION_MEDIUM,
   MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
   NARROW_VIEWPORT_MAX,
+  TICK_LABEL_OFFSET,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
@@ -91,6 +92,16 @@ function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/openchart
     footer: chrome.footer,
     brand: chrome.brand,
   };
+}
+
+/**
+ * Compute the bottom margin contribution from chrome.
+ * chrome.bottomHeight already includes its own padding when it has content
+ * (watermark, source, byline, or footer). When zero, fall back to the base
+ * padding so the chart area doesn't butt against the container edge.
+ */
+function bottomMargin(bottomHeight: number, padding: number, xAxisHeight: number): number {
+  return (bottomHeight > 0 ? bottomHeight : padding) + xAxisHeight;
 }
 
 /**
@@ -370,9 +381,7 @@ export function computeDimensions(
   const margins: Margins = {
     top: topPad + chrome.topHeight + tentativeMetricsHeight,
     right: hPad + (isRadial ? hPad : axisMargin),
-    // chrome.bottomHeight already includes bottom padding when it has content
-    // (watermark, source, byline, or footer). When it's zero, add padding ourselves.
-    bottom: (chrome.bottomHeight > 0 ? chrome.bottomHeight : padding) + xAxisHeight,
+    bottom: bottomMargin(chrome.bottomHeight, padding, xAxisHeight),
     left: hPad + (isRadial ? hPad : axisMargin),
   };
 
@@ -627,8 +636,7 @@ export function computeDimensions(
     //   dynamicOffset = TICK_LABEL_OFFSET(6) + maxTickLabelWidth + 8px gap
     //   titleOffset = max(dynamicOffset, AXIS_TITLE_OFFSET_COMPACT)
     const AXIS_TITLE_GAP = 8;
-    const TICK_LABEL_OFFSET_CONST = 6; // must match TICK_LABEL_OFFSET from core
-    const dynamicTitleOffset = TICK_LABEL_OFFSET_CONST + estTickLabelWidth + AXIS_TITLE_GAP;
+    const dynamicTitleOffset = TICK_LABEL_OFFSET + estTickLabelWidth + AXIS_TITLE_GAP;
     const axisTitleOffset = Math.max(dynamicTitleOffset, getAxisTitleOffset(width));
     const halfGlyph = Math.ceil(theme.fonts.sizes.body / 2);
     const rotatedLabelMargin =
@@ -701,8 +709,7 @@ export function computeDimensions(
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
     const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
-    const newBottom =
-      (fallbackChrome.bottomHeight > 0 ? fallbackChrome.bottomHeight : padding) + xAxisHeight;
+    const newBottom = bottomMargin(fallbackChrome.bottomHeight, padding, xAxisHeight);
     const bottomDelta = margins.bottom - newBottom;
 
     if (topDelta > 0 || bottomDelta > 0) {

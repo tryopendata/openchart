@@ -426,7 +426,15 @@ function getMarkSeries(mark: Mark): string | undefined {
   return undefined;
 }
 
-export function renderMarks(parent: SVGElement, layout: ChartLayout): void {
+/**
+ * Render chart marks into `parent`.
+ *
+ * Returns an optional overlay group containing rect mark value labels.
+ * The caller should append this group to the outer SVG (outside any clip path)
+ * so tall labels above near-full-height bars are not clipped by the chart-area
+ * clip path that constrains the marks themselves.
+ */
+export function renderMarks(parent: SVGElement, layout: ChartLayout): SVGElement | undefined {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-marks');
 
@@ -507,7 +515,5 @@ export function renderMarks(parent: SVGElement, layout: ChartLayout): void {
     labelsGroup.appendChild(label);
   }
 
-  if (labelsGroup) {
-    parent.appendChild(labelsGroup);
-  }
+  return labelsGroup;
 }

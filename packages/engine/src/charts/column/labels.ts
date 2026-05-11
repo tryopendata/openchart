@@ -91,17 +91,15 @@ export function computeColumnLabels(
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;
 
-    // For positive values, place label above the column top with the alphabetic
-    // baseline LABEL_OFFSET_Y px above the bar edge. dominantBaseline 'auto'
-    // means the baseline (bottom of most glyphs) sits at anchorY, so visible
-    // text extends upward from that point — exactly what we want here.
-    //
-    // For negative values, use 'hanging' so the top of the glyph sits at
-    // anchorY, meaning text extends downward below the bar bottom.
+    // anchorY is the TOP of the label bounding box so the collision system's
+    // AABB check (rect = { y: anchorY, height: textHeight }) is geometrically
+    // correct. dominantBaseline 'hanging' anchors the glyph top at anchorY.
+    //   Positive bar: top = barTop - LABEL_OFFSET_Y - textHeight, text floats above
+    //   Negative bar: top = barBottom + LABEL_OFFSET_Y, text hangs below
     const anchorX = mark.x + mark.width / 2;
     const anchorY = isNegative
       ? mark.y + mark.height + LABEL_OFFSET_Y
-      : mark.y - LABEL_OFFSET_Y;
+      : mark.y - LABEL_OFFSET_Y - textHeight;
 
     candidates.push({
       text: valuePart,
@@ -117,7 +115,7 @@ export function computeColumnLabels(
         fill: labelColor ?? getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'middle',
-        dominantBaseline: isNegative ? 'hanging' : 'auto',
+        dominantBaseline: 'hanging',
       },
     });
   }
