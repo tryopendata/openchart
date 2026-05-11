@@ -691,8 +691,11 @@ export interface EndpointLabelEntry {
   showLeader: boolean;
   /** Optional anchor circle drawn on the line at the chart's right edge. */
   marker?: {
+    /** Rendered cx (offset right by radius so the line terminates at the circle edge). */
     x: number;
     y: number;
+    /** Original data point x (used to suppress the underlying point mark). */
+    dataX: number;
     fill: string;
     stroke: string;
     strokeWidth: number;

@@ -386,9 +386,12 @@ export function computeEndpointLabels(
       showLeader: showLeader && displaced,
     };
     if (showMarker) {
+      // Offset cx right by markerRadius so the line terminates at the circle's
+      // left edge rather than its center — prevents the line from piercing the ring.
       entry.marker = {
-        x: p.dataX,
+        x: p.dataX + markerRadius,
         y: p.dataY,
+        dataX: p.dataX,
         fill: markerFill,
         stroke: config?.markerStyle?.stroke ?? p.color,
         strokeWidth: markerStrokeWidth,

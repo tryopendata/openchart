@@ -58,6 +58,8 @@ export function renderChartSVG(
     // overflow:visible prevents the clipping. Chart marks are already
     // constrained by a clipPath, so nothing bleeds out.
     overflow: 'visible',
+    // Hint browsers to enable sub-pixel font hinting and kerning for chart text.
+    'text-rendering': 'optimizeLegibility',
   });
   // Set explicit pixel height via inline style. iOS Safari misresolves CSS
   // height:100% when the ancestor chain uses minHeight instead of height,
@@ -164,7 +166,7 @@ export function renderChartSVG(
     // Marks are clipped to chart area so area fills don't cover chrome
     const clippedGroup = createSVGElement('g');
     clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
-    renderMarks(clippedGroup, layout);
+    const markLabelsOverlay = renderMarks(clippedGroup, layout);
 
     // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
     // Always emitted for line/area with dataPoints — the overlay-driven snap tooltip
@@ -229,6 +231,12 @@ export function renderChartSVG(
 
     svg.appendChild(clippedGroup);
 
+    // Value label overlay sits outside the clip path so labels above near-full-height
+    // bars aren't clipped. Coordinates are in absolute SVG space, no transform needed.
+    if (markLabelsOverlay) {
+      svg.appendChild(markLabelsOverlay);
+    }
+
     renderAnnotations(svg, layout);
 
     // Endpoint labels render after marks/annotations so they sit on top of any
@@ -247,7 +255,9 @@ export function renderChartSVG(
       const pointEls = clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point');
       for (const entry of epEntries) {
         if (!entry.marker) continue;
-        const mx = entry.marker.x;
+        // dataX is the original line endpoint; marker.x is offset by radius.
+        // Point marks are placed at data coordinates, so compare against dataX.
+        const mx = entry.marker.dataX;
         const my = entry.marker.y;
         for (const el of pointEls) {
           const cx = Number(el.getAttribute('cx'));

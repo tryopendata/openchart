@@ -20,7 +20,7 @@ export const DEFAULT_THEME: Theme = {
     categorical: [...CATEGORICAL_PALETTE],
     sequential: SEQUENTIAL_PALETTES,
     diverging: DIVERGING_PALETTES,
-    background: '#ffffff',
+    background: 'transparent',
     text: '#09090b',
     gridline: 'rgba(0,0,0,0.1)',
     // Used for axis lines/ticks AND axis tick label fill. Must clear WCAG AA
@@ -44,8 +44,8 @@ export const DEFAULT_THEME: Theme = {
       axisTick: 11,
     },
     weights: {
-      normal: 400,
-      medium: 510,
+      normal: 450,
+      medium: 550,
       semibold: 590,
       bold: 700,
     },

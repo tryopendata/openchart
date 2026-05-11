@@ -81,18 +81,28 @@ describe('adaptTheme', () => {
     expect(dark.isDark).toBe(true);
   });
 
-  it('swaps to dark background', () => {
+  it('preserves transparent background in dark mode', () => {
     const light = resolveTheme();
+    // Default background is transparent; adaptTheme preserves it so the
+    // host page's surface shows through in both light and dark contexts.
+    const dark = adaptTheme(light);
+    expect(dark.colors.background).toBe('transparent');
+  });
+
+  it('swaps to dark background when starting from an explicit light color', () => {
+    const light = resolveTheme({ colors: { background: '#ffffff' } });
     const dark = adaptTheme(light);
     expect(dark.colors.background).toBe('#09090b');
   });
 
   it('updates text color for dark mode', () => {
-    const light = resolveTheme();
+    // Use an explicit light background so the contrast ratio check has a
+    // concrete background to measure against.
+    const light = resolveTheme({ colors: { background: '#ffffff' } });
     const dark = adaptTheme(light);
     expect(dark.colors.text).not.toBe(light.colors.text);
-    // Dark text should be light
-    const ratio = contrastRatio(dark.colors.text, dark.colors.background);
+    // Dark text should be light — measure against the dark canvas color.
+    const ratio = contrastRatio(dark.colors.text, '#09090b');
     expect(ratio).toBeGreaterThan(4);
   });
 

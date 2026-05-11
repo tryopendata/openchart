@@ -80,6 +80,13 @@ const STACKED_GRADIENT_STOPS = [
   { offset: 1, opacity: 0.35 },
 ];
 
+// Light-mode stacked areas: bottom out at opacity 0 rather than 0.35 to avoid
+// the muddy color wash at the base of each band on white/light backgrounds.
+const STACKED_GRADIENT_STOPS_LIGHT = [
+  { offset: 0, opacity: 0.65 },
+  { offset: 1, opacity: 0 },
+];
+
 function buildGradientFill(
   colorStr: string,
   stops: ReadonlyArray<{ offset: number; opacity: number }>,
@@ -257,6 +264,7 @@ function computeStackedArea(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
   chartArea: Rect,
+  darkMode?: boolean,
 ): AreaMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -389,7 +397,8 @@ function computeStackedArea(
       fillOpacity = isGradientDef(markFill) ? 1 : (spec.markDef.opacity ?? 0.7);
     } else {
       const colorStr = getRepresentativeColor(color);
-      fillValue = buildGradientFill(colorStr, STACKED_GRADIENT_STOPS);
+      const stackedStops = darkMode ? STACKED_GRADIENT_STOPS : STACKED_GRADIENT_STOPS_LIGHT;
+      fillValue = buildGradientFill(colorStr, stackedStops);
       fillOpacity = 1;
     }
 
@@ -443,12 +452,13 @@ export function computeAreaMarks(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
   chartArea: Rect,
+  darkMode?: boolean,
 ): AreaMark[] {
   const encoding = spec.encoding as Encoding;
   const yChannel = encoding.y;
 
   if (yChannel && isStacked(yChannel.stack)) {
-    return computeStackedArea(spec, scales, chartArea);
+    return computeStackedArea(spec, scales, chartArea, darkMode);
   }
 
   return computeSingleArea(spec, scales, chartArea);

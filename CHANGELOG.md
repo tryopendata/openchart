@@ -27,10 +27,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **legend toggle:** annotations are suppressed while any series is runtime-hidden. They were authored against the full dataset; the rebalanced scale would otherwise drift their anchors. Restoring all series restores the authored state.
 - **legend toggle:** clicking the last visible series is a no-op rather than producing an empty chart with a fully dimmed legend.
 - **endpoint-labels:** track lines instead of uniform stacking — labels stay anchored near their series's actual y-position when there's room, and only stack when collisions force it.
-- **endpoint-labels:** marker aligns with the line endpoint (not the label center); leader line off by default.
+- **endpoint-labels:** open-ring marker cx is now offset by its own radius so the line terminates at the circle edge rather than piercing through the center.
 - **endpoint-labels:** bidirectional sweep caps each pass so the tail clamp propagates back through the stack instead of stranding mid-stack overlaps.
 - **layout:** clamp `margins.top` rollback when metrics rolls back so the chart area never shifts up on retry.
 - **layout:** push bottom chrome (source/byline/footer/brand) below bottom legends so they don't overlap.
+- **column-labels:** value labels now render in a separate overlay group above all bars (fixes z-order on grouped charts where tall bars obscured labels from shorter neighbors); label y-position corrected to `mark.y - offset - textHeight` with `dominant-baseline: hanging` so the AABB collision box matches the visible glyph top.
+- **axes:** y-axis title position is now computed dynamically from the widest tick label width rather than a fixed 45px offset, preventing title/label overlap on charts with wide currency or large-number tick formatting.
+- **axes:** x-axis tick thinning threshold reduced so charts with 3–5 categories no longer drop labels on typical container widths.
+- **layout:** bottom margin formula no longer double-counts chrome height, eliminating dead space between the x-axis and the footer/watermark row.
+- **theme:** chart background defaults to `transparent` so charts inherit the host container's surface color instead of painting an opaque white rect (breaking change — update visual regression baselines if pinning screenshots).
+- **areas:** stacked area gradient in light mode fades cleanly to transparent at the base instead of bottoming out at 35% opacity, which was creating a visible colored wash where bands overlapped.
+- **renderer:** font smoothing (`-webkit-font-smoothing: antialiased`, `-moz-osx-font-smoothing: grayscale`) applied to all chart text for crisper rendering on macOS and iOS.
 
 ### Internal
 
