@@ -32,7 +32,7 @@ import { formatLabelValue } from '../_shared/format-label-value';
 
 const LABEL_FONT_SIZE = 10;
 const LABEL_FONT_WEIGHT = 600;
-const LABEL_OFFSET_Y = 6;
+const LABEL_OFFSET_Y = 8;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -91,12 +91,17 @@ export function computeColumnLabels(
     const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;
 
-    // For positive values, place label above the column top.
-    // For negative values, place label below the column bottom.
+    // For positive values, place label above the column top with the alphabetic
+    // baseline LABEL_OFFSET_Y px above the bar edge. dominantBaseline 'auto'
+    // means the baseline (bottom of most glyphs) sits at anchorY, so visible
+    // text extends upward from that point — exactly what we want here.
+    //
+    // For negative values, use 'hanging' so the top of the glyph sits at
+    // anchorY, meaning text extends downward below the bar bottom.
     const anchorX = mark.x + mark.width / 2;
     const anchorY = isNegative
       ? mark.y + mark.height + LABEL_OFFSET_Y
-      : mark.y - LABEL_OFFSET_Y - textHeight;
+      : mark.y - LABEL_OFFSET_Y;
 
     candidates.push({
       text: valuePart,

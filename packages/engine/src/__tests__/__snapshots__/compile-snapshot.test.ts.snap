@@ -577,7 +577,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
   "animation": undefined,
   "annotations": [],
   "area": {
-    "height": 305.4,
+    "height": 325.4,
     "width": 631.899,
     "x": 26,
     "y": 105.2,
@@ -588,40 +588,40 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "domainLine": false,
       "end": {
         "x": 26,
-        "y": 410.59999999999997,
+        "y": 430.59999999999997,
       },
       "gridlines": [
         {
           "major": true,
-          "position": 410.59999999999997,
+          "position": 430.59999999999997,
         },
         {
           "major": true,
-          "position": 372.42499999999995,
+          "position": 389.92499999999995,
         },
         {
           "major": true,
-          "position": 334.25,
+          "position": 349.25,
         },
         {
           "major": true,
-          "position": 296.075,
+          "position": 308.575,
         },
         {
           "major": true,
-          "position": 257.9,
+          "position": 267.9,
         },
         {
           "major": true,
-          "position": 219.725,
+          "position": 227.225,
         },
         {
           "major": true,
-          "position": 181.55,
+          "position": 186.55,
         },
         {
           "major": true,
-          "position": 143.375,
+          "position": 145.875,
         },
         {
           "major": true,
@@ -659,42 +659,42 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "ticks": [
         {
           "label": "0",
-          "position": 410.59999999999997,
+          "position": 430.59999999999997,
           "value": 0,
         },
         {
           "label": "5",
-          "position": 372.42499999999995,
+          "position": 389.92499999999995,
           "value": 5,
         },
         {
           "label": "10",
-          "position": 334.25,
+          "position": 349.25,
           "value": 10,
         },
         {
           "label": "15",
-          "position": 296.075,
+          "position": 308.575,
           "value": 15,
         },
         {
           "label": "20",
-          "position": 257.9,
+          "position": 267.9,
           "value": 20,
         },
         {
           "label": "25",
-          "position": 219.725,
+          "position": 227.225,
           "value": 25,
         },
         {
           "label": "30",
-          "position": 181.55,
+          "position": 186.55,
           "value": 30,
         },
         {
           "label": "35",
-          "position": 143.375,
+          "position": 145.875,
           "value": 35,
         },
         {
@@ -763,7 +763,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
   "display": "full",
   "endpointLabels": {
     "bounds": {
-      "height": 305.4,
+      "height": 325.4,
       "width": 45.561,
       "x": 675.899,
       "y": 105.2,
@@ -790,7 +790,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "color": "#eb7289",
-        "dataY": 143.375,
+        "dataY": 145.875,
         "labelLines": [
           "UK",
         ],
@@ -801,7 +801,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "stroke": "#eb7289",
           "strokeWidth": 2,
           "x": 657.899,
-          "y": 143.375,
+          "y": 145.875,
         },
         "seriesKey": "UK",
         "showLeader": false,
@@ -809,18 +809,18 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "color": "#3bb974",
-        "dataY": 242.62999999999997,
+        "dataY": 251.62999999999997,
         "labelLines": [
           "FR",
         ],
-        "labelY": 236.12999999999997,
+        "labelY": 245.12999999999997,
         "marker": {
           "fill": "#ffffff",
           "radius": 4,
           "stroke": "#3bb974",
           "strokeWidth": 2,
           "x": 657.899,
-          "y": 242.62999999999997,
+          "y": 251.62999999999997,
         },
         "seriesKey": "FR",
         "showLeader": false,
@@ -828,18 +828,18 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "color": "#ad87ed",
-        "dataY": 196.82,
+        "dataY": 202.82,
         "labelLines": [
           "DE",
         ],
-        "labelY": 190.32,
+        "labelY": 196.32,
         "marker": {
           "fill": "#ffffff",
           "radius": 4,
           "stroke": "#ad87ed",
           "strokeWidth": 2,
           "x": 657.899,
-          "y": 196.82,
+          "y": 202.82,
         },
         "seriesKey": "DE",
         "showLeader": false,
@@ -956,7 +956,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 334.25,
+          "y": 349.25,
         },
         {
           "datum": {
@@ -988,11 +988,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
       ],
       "opacity": undefined,
-      "path": "M47,334.25L657.899,105.2",
+      "path": "M47,349.25L657.899,105.2",
       "points": [
         {
           "x": 47,
-          "y": 334.25,
+          "y": 349.25,
         },
         {
           "x": 657.899,
@@ -1048,7 +1048,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 296.075,
+          "y": 308.575,
         },
         {
           "datum": {
@@ -1076,19 +1076,19 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2021",
           },
           "x": 657.899,
-          "y": 143.375,
+          "y": 145.875,
         },
       ],
       "opacity": undefined,
-      "path": "M47,296.075L657.899,143.375",
+      "path": "M47,308.575L657.899,145.875",
       "points": [
         {
           "x": 47,
-          "y": 296.075,
+          "y": 308.575,
         },
         {
           "x": 657.899,
-          "y": 143.375,
+          "y": 145.875,
         },
       ],
       "seriesKey": "UK",
@@ -1140,7 +1140,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 349.52000000000004,
+          "y": 365.52000000000004,
         },
         {
           "datum": {
@@ -1168,19 +1168,19 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2021",
           },
           "x": 657.899,
-          "y": 242.62999999999997,
+          "y": 251.62999999999997,
         },
       ],
       "opacity": undefined,
-      "path": "M47,349.52L657.899,242.63",
+      "path": "M47,365.52L657.899,251.63",
       "points": [
         {
           "x": 47,
-          "y": 349.52000000000004,
+          "y": 365.52000000000004,
         },
         {
           "x": 657.899,
-          "y": 242.62999999999997,
+          "y": 251.62999999999997,
         },
       ],
       "seriesKey": "FR",
@@ -1232,7 +1232,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 318.97999999999996,
+          "y": 332.97999999999996,
         },
         {
           "datum": {
@@ -1260,19 +1260,19 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2021",
           },
           "x": 657.899,
-          "y": 196.82,
+          "y": 202.82,
         },
       ],
       "opacity": undefined,
-      "path": "M47,318.98L657.899,196.82",
+      "path": "M47,332.98L657.899,202.82",
       "points": [
         {
           "x": 47,
-          "y": 318.97999999999996,
+          "y": 332.97999999999996,
         },
         {
           "x": 657.899,
-          "y": 196.82,
+          "y": 202.82,
         },
       ],
       "seriesKey": "DE",
@@ -1470,7 +1470,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
   "animation": undefined,
   "annotations": [],
   "area": {
-    "height": 236.3,
+    "height": 253.3,
     "width": 535.46,
     "x": 41.54,
     "y": 60.9,
@@ -1480,7 +1480,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "domainLine": undefined,
       "end": {
         "x": 577,
-        "y": 297.2,
+        "y": 314.2,
       },
       "gridlines": [],
       "label": undefined,
@@ -1498,7 +1498,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "orient": undefined,
       "start": {
         "x": 41.54,
-        "y": 297.2,
+        "y": 314.2,
       },
       "tickAngle": undefined,
       "tickLabelStyle": {
@@ -1539,24 +1539,24 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "domainLine": undefined,
       "end": {
         "x": 41.54,
-        "y": 297.2,
+        "y": 314.2,
       },
       "gridlines": [
         {
           "major": true,
-          "position": 297.2,
+          "position": 314.2,
         },
         {
           "major": true,
-          "position": 229.68571428571428,
+          "position": 241.82857142857142,
         },
         {
           "major": true,
-          "position": 162.17142857142858,
+          "position": 169.45714285714286,
         },
         {
           "major": true,
-          "position": 94.65714285714287,
+          "position": 97.08571428571429,
         },
       ],
       "label": undefined,
@@ -1590,22 +1590,22 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "ticks": [
         {
           "label": "0",
-          "position": 297.2,
+          "position": 314.2,
           "value": 0,
         },
         {
           "label": "20",
-          "position": 229.68571428571428,
+          "position": 241.82857142857142,
           "value": 20,
         },
         {
           "label": "40",
-          "position": 162.17142857142858,
+          "position": 169.45714285714286,
           "value": 40,
         },
         {
           "label": "60",
-          "position": 94.65714285714287,
+          "position": 97.08571428571429,
           "value": 60,
         },
       ],
@@ -1712,7 +1712,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         ],
         "type": "linear",
       },
-      "height": 101.27142857142857,
+      "height": 108.55714285714288,
       "label": {
         "connector": undefined,
         "style": {
@@ -1727,13 +1727,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "30",
         "visible": true,
         "x": 124.62862068965518,
-        "y": 177.92857142857142,
+        "y": 197.6428571428571,
       },
       "orient": "vertical",
       "type": "rect",
       "width": 80.01126436781611,
       "x": 84.62298850574712,
-      "y": 195.92857142857142,
+      "y": 205.6428571428571,
     },
     {
       "aria": {
@@ -1757,7 +1757,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         ],
         "type": "linear",
       },
-      "height": 185.6642857142857,
+      "height": 199.02142857142854,
       "label": {
         "connector": undefined,
         "style": {
@@ -1772,13 +1772,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "55",
         "visible": true,
         "x": 247.7228735632184,
-        "y": 93.53571428571429,
+        "y": 107.17857142857144,
       },
       "orient": "vertical",
       "type": "rect",
       "width": 80.01126436781611,
       "x": 207.71724137931034,
-      "y": 111.53571428571429,
+      "y": 115.17857142857144,
     },
     {
       "aria": {
@@ -1802,7 +1802,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         ],
         "type": "linear",
       },
-      "height": 236.29999999999998,
+      "height": 253.29999999999998,
       "label": {
         "connector": undefined,
         "style": {
@@ -1817,7 +1817,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "70",
         "visible": true,
         "x": 370.8171264367816,
-        "y": 42.9,
+        "y": 52.9,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1847,7 +1847,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         ],
         "type": "linear",
       },
-      "height": 151.90714285714287,
+      "height": 162.8357142857143,
       "label": {
         "connector": undefined,
         "style": {
@@ -1862,13 +1862,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "45",
         "visible": true,
         "x": 493.9113793103449,
-        "y": 127.29285714285712,
+        "y": 143.3642857142857,
       },
       "orient": "vertical",
       "type": "rect",
       "width": 80.01126436781611,
       "x": 453.90574712643684,
-      "y": 145.29285714285712,
+      "y": 151.3642857142857,
     },
   ],
   "metrics": undefined,

@@ -253,15 +253,9 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
   }
   g.appendChild(shapeEl);
 
-  // Render value label if present and visible
-  if (mark.label?.visible) {
-    const label = createSVGElement('text');
-    label.setAttribute('class', 'oc-mark-label');
-    setAttrs(label, { x: mark.label.x, y: mark.label.y });
-    applyTextStyle(label, mark.label.style);
-    label.textContent = mark.label.text;
-    g.appendChild(label);
-  }
+  // Labels for rect marks are rendered in a dedicated overlay group by
+  // renderMarks() so they always paint above all bars in SVG z-order.
+  // See the two-pass logic in renderMarks() below.
 
   return g;
 }
@@ -472,4 +466,48 @@ export function renderMarks(parent: SVGElement, layout: ChartLayout): void {
   }
 
   parent.appendChild(g);
+
+  // Second pass: render rect mark labels in a dedicated overlay group so they
+  // always paint above all bars in SVG z-order. On grouped column charts, a
+  // later-rendered bar can otherwise paint over a label from an adjacent column
+  // when the label extends into a neighbor's airspace.
+  //
+  // Each overlay label gets --oc-mark-index stamped directly on it so the CSS
+  // animation delay calc (which reads that property) works without inheriting
+  // from a parent group.
+  let labelsGroup: SVGElement | undefined;
+  for (let i = 0; i < layout.marks.length; i++) {
+    const mark = layout.marks[i];
+    if (mark.type !== 'rect') continue;
+    const rect = mark as RectMark;
+    if (!rect.label?.visible) continue;
+
+    if (!labelsGroup) {
+      labelsGroup = createSVGElement('g');
+      labelsGroup.setAttribute('class', 'oc-mark-labels');
+    }
+
+    const label = createSVGElement('text');
+    label.setAttribute('class', 'oc-mark-label');
+    setAttrs(label, { x: rect.label.x, y: rect.label.y });
+    applyTextStyle(label, rect.label.style);
+    label.textContent = rect.label.text;
+
+    // Stamp animation index so the CSS stagger delay works for overlay labels
+    // (they're not children of a .oc-mark-rect group that carries --oc-mark-index).
+    if (currentAnimation?.enabled) {
+      const idx = rect.animationIndex ?? i;
+      label.setAttribute('data-animation-index', String(idx));
+      (label as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        '--oc-mark-index',
+        String(idx),
+      );
+    }
+
+    labelsGroup.appendChild(label);
+  }
+
+  if (labelsGroup) {
+    parent.appendChild(labelsGroup);
+  }
 }

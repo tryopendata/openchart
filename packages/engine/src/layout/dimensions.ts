@@ -370,7 +370,9 @@ export function computeDimensions(
   const margins: Margins = {
     top: topPad + chrome.topHeight + tentativeMetricsHeight,
     right: hPad + (isRadial ? hPad : axisMargin),
-    bottom: padding + chrome.bottomHeight + xAxisHeight,
+    // chrome.bottomHeight already includes bottom padding when it has content
+    // (watermark, source, byline, or footer). When it's zero, add padding ourselves.
+    bottom: (chrome.bottomHeight > 0 ? chrome.bottomHeight : padding) + xAxisHeight,
     left: hPad + (isRadial ? hPad : axisMargin),
   };
 
@@ -580,10 +582,55 @@ export function computeDimensions(
   }
 
   // Rotated y-axis label needs extra left margin (rendered at area.x - offset in SVG).
-  // Tighter on compact viewports where horizontal space is scarce.
+  // The renderer computes a dynamic offset that accounts for wide tick labels (e.g.
+  // "$100,000" is ~62px wide and would overlap a fixed 45px offset). We replicate
+  // the same formula here so the reserved space matches what the renderer places.
   const yAxis = encoding.y?.axis as Record<string, unknown> | undefined;
   if (yAxis && (yAxis.title || yAxis.label) && !isRadial) {
-    const axisTitleOffset = getAxisTitleOffset(width);
+    // Estimate the widest y-axis tick label width to mirror the renderer's dynamic offset.
+    const yFieldForTitle = encoding.y?.field;
+    const yAxisFormatForTitle = (yAxis?.format as string | undefined);
+    let estTickLabelWidth = 0;
+    if (
+      yFieldForTitle &&
+      (encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal')
+    ) {
+      let maxAbsValForTitle = 0;
+      for (const row of spec.data) {
+        const v = Number(row[yFieldForTitle]);
+        if (Number.isFinite(v) && Math.abs(v) > maxAbsValForTitle)
+          maxAbsValForTitle = Math.abs(v);
+      }
+      let sampleLabelForTitle: string;
+      if (yAxisFormatForTitle) {
+        try {
+          const fmt = d3Format(yAxisFormatForTitle);
+          sampleLabelForTitle = fmt(maxAbsValForTitle);
+        } catch {
+          sampleLabelForTitle = String(maxAbsValForTitle);
+        }
+      } else {
+        if (maxAbsValForTitle >= 1_000_000_000) sampleLabelForTitle = '1.5B';
+        else if (maxAbsValForTitle >= 1_000_000) sampleLabelForTitle = '1.5M';
+        else if (maxAbsValForTitle >= 1_000) sampleLabelForTitle = '1.5K';
+        else if (maxAbsValForTitle >= 100) sampleLabelForTitle = '100';
+        else if (maxAbsValForTitle >= 10) sampleLabelForTitle = '10';
+        else sampleLabelForTitle = '0.0';
+      }
+      const negPrefixForTitle = spec.data.some((r) => Number(r[yFieldForTitle]) < 0) ? '-' : '';
+      estTickLabelWidth = estimateTextWidth(
+        negPrefixForTitle + sampleLabelForTitle,
+        theme.fonts.sizes.axisTick,
+        theme.fonts.weights.normal,
+      );
+    }
+    // Mirror the renderer's dynamic offset formula:
+    //   dynamicOffset = TICK_LABEL_OFFSET(6) + maxTickLabelWidth + 8px gap
+    //   titleOffset = max(dynamicOffset, AXIS_TITLE_OFFSET_COMPACT)
+    const AXIS_TITLE_GAP = 8;
+    const TICK_LABEL_OFFSET_CONST = 6; // must match TICK_LABEL_OFFSET from core
+    const dynamicTitleOffset = TICK_LABEL_OFFSET_CONST + estTickLabelWidth + AXIS_TITLE_GAP;
+    const axisTitleOffset = Math.max(dynamicTitleOffset, getAxisTitleOffset(width));
     const halfGlyph = Math.ceil(theme.fonts.sizes.body / 2);
     const rotatedLabelMargin =
       axisTitleOffset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);
@@ -655,7 +702,7 @@ export function computeDimensions(
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
     const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
-    const newBottom = padding + fallbackChrome.bottomHeight + xAxisHeight;
+    const newBottom = (fallbackChrome.bottomHeight > 0 ? fallbackChrome.bottomHeight : padding) + xAxisHeight;
     const bottomDelta = margins.bottom - newBottom;
 
     if (topDelta > 0 || bottomDelta > 0) {
