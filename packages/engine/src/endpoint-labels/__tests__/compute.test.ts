@@ -19,6 +19,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { bidirectionalSweep, computeEndpointLabels } from '../compute';
+import { ENDPOINT_MARKER_RADIUS } from '../constants';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -281,7 +282,10 @@ describe('computeEndpointLabels', () => {
 
     for (const entry of layout.entries) {
       expect(entry.marker).toBeDefined();
-      expect(entry.marker!.x).toBe(lastX);
+      // dataX is the original line endpoint; x is offset right by radius so the
+      // line terminates at the circle edge rather than its center.
+      expect(entry.marker!.dataX).toBe(lastX);
+      expect(entry.marker!.x).toBe(lastX + ENDPOINT_MARKER_RADIUS);
       // Marker y is at the actual data point (not displaced labelY).
       expect(entry.marker!.y).toBe(entry.dataY);
       // Open-circle convention: fill = background, stroke = series color.

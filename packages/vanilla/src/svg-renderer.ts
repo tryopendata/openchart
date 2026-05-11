@@ -255,7 +255,9 @@ export function renderChartSVG(
       const pointEls = clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point');
       for (const entry of epEntries) {
         if (!entry.marker) continue;
-        const mx = entry.marker.x;
+        // dataX is the original line endpoint; marker.x is offset by radius.
+        // Point marks are placed at data coordinates, so compare against dataX.
+        const mx = entry.marker.dataX;
         const my = entry.marker.y;
         for (const el of pointEls) {
           const cx = Number(el.getAttribute('cx'));
