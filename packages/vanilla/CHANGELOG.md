@@ -1,5 +1,33 @@
 # Changelog
 
+## [7.1.1](https://github.com/tryopendata/openchart/compare/core-v7.1.0...core-v7.1.1) (2026-05-11)
+
+
+### Features
+
+* trend-aware visual defaults and endpoint dot polish ([2f0e8ee](https://github.com/tryopendata/openchart/commit/2f0e8ee))
+* generic ChartSpec<TData> with discriminated mark/encoding types ([404f588](https://github.com/tryopendata/openchart/commit/404f588))
+
+
+### Bug Fixes
+
+* restore bottom margin padding, fixing bottom legend viewport overflow ([97c837e](https://github.com/tryopendata/openchart/commit/97c837e))
+* endpoint marker sits at line terminus, visual regression baselines updated ([0d6fdf1](https://github.com/tryopendata/openchart/commit/0d6fdf1))
+* address code review findings ([ca27cd6](https://github.com/tryopendata/openchart/commit/ca27cd6))
+* footer dead space, transparent background (breaking), area gradients, font smoothing ([cf5f8b8](https://github.com/tryopendata/openchart/commit/cf5f8b8))
+* column labels z-order, y-axis title overlap, and x-axis tick density ([e4d0139](https://github.com/tryopendata/openchart/commit/e4d0139))
+* grouped bars as default, white labels on dark bars ([ea4949f](https://github.com/tryopendata/openchart/commit/ea4949f))
+* correct legend area width, sparkline dot padding, and barlist auto-height ([ee3c35f](https://github.com/tryopendata/openchart/commit/ee3c35f))
+* propagate endpointLabels on LayerSpec, dedupe area+line tooltip ([c8588ef](https://github.com/tryopendata/openchart/commit/c8588ef))
+* transparent background, top-only corner rounding, thinner strokes ([b6bce4c](https://github.com/tryopendata/openchart/commit/b6bce4c))
+* address code-review must-fix items ([bd26e2e](https://github.com/tryopendata/openchart/commit/bd26e2e))
+* address code review findings from generic ChartSpec PR ([50eb80c](https://github.com/tryopendata/openchart/commit/50eb80c))
+
+
+### Refactoring
+
+* extract interaction and layer modules from mega-files ([af471c6](https://github.com/tryopendata/openchart/commit/af471c6))
+
 ## [7.1.0](https://github.com/tryopendata/openchart/compare/core-v7.0.4...core-v7.1.0) (2026-05-11)
 
 
