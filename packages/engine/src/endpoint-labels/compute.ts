@@ -360,7 +360,6 @@ export function computeEndpointLabels(
     32,
   );
   const columnX = chartArea.x + chartArea.width + ENDPOINT_COLUMN_GAP;
-  const markerX = chartArea.x + chartArea.width;
 
   // The marker is the line's visual terminator — always at (chartRightX, dataY).
   // The swatch + label first-line baseline-center sit at `labelY + fontSize/2`.
@@ -388,7 +387,7 @@ export function computeEndpointLabels(
     };
     if (showMarker) {
       entry.marker = {
-        x: markerX,
+        x: p.dataX,
         y: p.dataY,
         fill: markerFill,
         stroke: config?.markerStyle?.stroke ?? p.color,

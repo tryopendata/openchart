@@ -41,6 +41,23 @@ export function contrastRatio(fg: string, bg: string): number {
 }
 
 /**
+ * Pick a legible label color (white or near-black) for text placed on top of `bg`.
+ *
+ * Returns white when white clears 4.5:1 against `bg`, dark otherwise.
+ * Simpler and more reliable than `findAccessibleColor` for "label on filled bar."
+ *
+ * Note: mid-gray backgrounds (~#707070–#8a8a8a) fall in a WCAG gap where
+ * neither white nor dark clears 4.5:1. Default palettes don't produce these.
+ */
+export function pickLabelColor(bg: string): string {
+  const WHITE = '#ffffff';
+  // #111111 (luminance 0.005) ensures one of the two choices always clears 4.5:1
+  // for any background. #1a1a1a would leave a gap around luminance 0.183-0.221.
+  const DARK = '#111111';
+  return contrastRatio(WHITE, bg) >= 4.5 ? WHITE : DARK;
+}
+
+/**
  * Check if two colors meet WCAG AA contrast requirements.
  * Normal text: 4.5:1, large text (18px+ bold or 24px+): 3:1.
  */

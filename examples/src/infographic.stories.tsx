@@ -176,7 +176,7 @@ const stackedColumnSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'year', type: 'ordinal' },
-    y: { field: 'sales', type: 'quantitative', axis: { title: 'Sales (millions)' } },
+    y: { field: 'sales', type: 'quantitative', stack: 'zero', axis: { title: 'Sales (millions)' } },
     color: { field: 'fuel', type: 'nominal' },
   },
   annotations: [

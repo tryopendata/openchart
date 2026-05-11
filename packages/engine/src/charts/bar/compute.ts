@@ -119,10 +119,14 @@ export function computeBarMarks(
     const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
     if (needsStacking) {
-      // stack: null or false -> grouped (side-by-side) bars
-      const stackDisabled = xChannel.stack === null || xChannel.stack === false;
+      // stack: true/'zero'/'normalize'/'center' -> stacked; default (undefined/null/false) -> grouped
+      const stackEnabled =
+        xChannel.stack === true ||
+        xChannel.stack === 'zero' ||
+        xChannel.stack === 'normalize' ||
+        xChannel.stack === 'center';
 
-      if (stackDisabled) {
+      if (!stackEnabled) {
         marks = computeGroupedBars(
           spec.data,
           xChannel.field,

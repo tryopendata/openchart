@@ -227,7 +227,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "connector": undefined,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#3c3c3c",
+          "fill": "#111111",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 11,
           "fontWeight": 600,
@@ -260,7 +260,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "connector": undefined,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#3c3c3c",
+          "fill": "#111111",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 11,
           "fontWeight": 600,
@@ -293,7 +293,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "connector": undefined,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#3c3c3c",
+          "fill": "#111111",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 11,
           "fontWeight": 600,
@@ -389,7 +389,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.06)",
+      "gridline": "rgba(0,0,0,0.1)",
       "negative": "#dc2626",
       "positive": "#16a34a",
       "sequential": {
@@ -1359,7 +1359,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.06)",
+      "gridline": "rgba(0,0,0,0.1)",
       "negative": "#dc2626",
       "positive": "#16a34a",
       "sequential": {
@@ -1948,7 +1948,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.06)",
+      "gridline": "rgba(0,0,0,0.1)",
       "negative": "#dc2626",
       "positive": "#16a34a",
       "sequential": {

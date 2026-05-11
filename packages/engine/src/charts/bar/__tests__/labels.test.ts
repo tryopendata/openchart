@@ -86,7 +86,8 @@ function makeStackedMark(index: number, value: number, width: number): RectMark 
     width,
     height: 25,
     fill: '#4e79a7',
-    cornerRadius: 0, // cornerRadius 0 = stacked segment
+    cornerRadius: 0,
+    stackGroup: `Cat${index}`,
     data: { category: `Cat${index}`, value },
     aria: { label: `Cat${index}: ${value}` },
   };
@@ -119,7 +120,7 @@ describe('stacked bar label segment-fit', () => {
   });
 
   it('non-stacked bars still show labels regardless of width', () => {
-    // Non-stacked marks (no cornerRadius = undefined, not 0)
+    // Non-stacked marks have no stackGroup
     const nonStackedMarks: RectMark[] = [
       makeMark(0, 10), // width = 50
       makeMark(1, 20), // width = 100

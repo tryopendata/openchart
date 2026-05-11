@@ -148,9 +148,15 @@ describe('computeColumnMarks', () => {
     });
   });
 
-  describe('stacked columns', () => {
-    it('produces marks for all data rows', () => {
+  describe('stacked columns (stack: zero)', () => {
+    function makeStackedColumnSpec(): NormalizedChartSpec {
       const spec = makeGroupedColumnSpec();
+      (spec.encoding.y as { stack?: string }).stack = 'zero';
+      return spec;
+    }
+
+    it('produces marks for all data rows', () => {
+      const spec = makeStackedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
@@ -159,7 +165,7 @@ describe('computeColumnMarks', () => {
     });
 
     it('stacked segments within a category have different colors', () => {
-      const spec = makeGroupedColumnSpec();
+      const spec = makeStackedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
@@ -169,7 +175,7 @@ describe('computeColumnMarks', () => {
     });
 
     it('stacked columns within a category share the same x position', () => {
-      const spec = makeGroupedColumnSpec();
+      const spec = makeStackedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
@@ -187,15 +193,9 @@ describe('computeColumnMarks', () => {
     });
   });
 
-  describe('grouped columns (stack: null)', () => {
-    function makeDodgedColumnSpec(): NormalizedChartSpec {
-      const spec = makeGroupedColumnSpec();
-      (spec.encoding.y as { stack?: boolean | null }).stack = null;
-      return spec;
-    }
-
+  describe('grouped columns (default)', () => {
     it('produces marks for all data rows', () => {
-      const spec = makeDodgedColumnSpec();
+      const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
@@ -203,7 +203,7 @@ describe('computeColumnMarks', () => {
     });
 
     it('grouped columns within a category have different x positions', () => {
-      const spec = makeDodgedColumnSpec();
+      const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
@@ -217,22 +217,23 @@ describe('computeColumnMarks', () => {
       expect(janNorth.x).not.toBe(janSouth.x);
     });
 
-    it('grouped columns have subdivided widths', () => {
-      const spec = makeDodgedColumnSpec();
-      const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+    it('grouped columns have subdivided widths (vs stacked full bandwidth)', () => {
+      const groupedSpec = makeGroupedColumnSpec();
+      const groupedScales = computeScales(groupedSpec, chartArea, groupedSpec.data);
+      const groupedMarks = computeColumnMarks(groupedSpec, groupedScales, chartArea, fullStrategy);
 
       // With 2 groups, each sub-column should be narrower than full bandwidth
       const stackedSpec = makeGroupedColumnSpec();
+      (stackedSpec.encoding.y as { stack?: string }).stack = 'zero';
       const stackedScales = computeScales(stackedSpec, chartArea, stackedSpec.data);
       const stackedMarks = computeColumnMarks(stackedSpec, stackedScales, chartArea, fullStrategy);
 
-      expect(marks[0].width).toBeLessThan(stackedMarks[0].width);
-      expect(marks[0].width).toBeGreaterThan(0);
+      expect(groupedMarks[0].width).toBeLessThan(stackedMarks[0].width);
+      expect(groupedMarks[0].width).toBeGreaterThan(0);
     });
 
     it('grouped columns have cornerRadius 2 and no stackGroup', () => {
-      const spec = makeDodgedColumnSpec();
+      const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
@@ -243,7 +244,7 @@ describe('computeColumnMarks', () => {
     });
 
     it('scale domain covers max individual value, not stacked sum', () => {
-      const spec = makeDodgedColumnSpec();
+      const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
 
       // Max individual value is 150 (Mar North), not 280 (Mar stacked sum)

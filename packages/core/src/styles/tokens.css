@@ -109,7 +109,7 @@
   --oc-text-faint: #d4d4d8;
 
   /* Lines */
-  --oc-gridline: rgba(0, 0, 0, 0.06);
+  --oc-gridline: rgba(0, 0, 0, 0.1);
   --oc-axis: rgba(0, 0, 0, 0.1);
   --oc-border: rgba(0, 0, 0, 0.08);
   --oc-border-radius: 2px;

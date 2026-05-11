@@ -33,6 +33,7 @@ export {
   DIVERGING_PALETTES,
   findAccessibleColor,
   meetsAA,
+  pickLabelColor,
   SEQUENTIAL_PALETTES,
   simulateColorBlindness,
 } from './colors/index';

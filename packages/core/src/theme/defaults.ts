@@ -22,7 +22,7 @@ export const DEFAULT_THEME: Theme = {
     diverging: DIVERGING_PALETTES,
     background: '#ffffff',
     text: '#09090b',
-    gridline: 'rgba(0,0,0,0.06)',
+    gridline: 'rgba(0,0,0,0.1)',
     // Used for axis lines/ticks AND axis tick label fill. Must clear WCAG AA
     // contrast (4.5:1) on white because tick labels are rendered with this
     // color. Zinc-500 hits ~5.7:1.

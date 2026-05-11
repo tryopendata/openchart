@@ -357,15 +357,15 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * - null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)
    *
    * **Defaults differ by chart type:**
-   * - **Bar**: defaults to stacked. Use `stack: null` for grouped (side-by-side) bars.
+   * - **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.
    * - **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)
    *   to opt into stacked areas. Each overlapping series renders as a translucent
    *   gradient band anchored at the y-domain baseline.
    * - **Line**: stacking is not applied (lines always overlap).
    *
    * @example
-   * // Side-by-side grouped bars (comparing 2018 vs 2022 wages by firm size):
-   * "x": { "field": "pay", "type": "quantitative", "stack": null }
+   * // Stacked horizontal bars (opt-in; default is grouped):
+   * "x": { "field": "revenue", "type": "quantitative", "stack": "zero" }
    *
    * @example
    * // Stacked area (opt-in; default is overlap):

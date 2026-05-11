@@ -667,12 +667,16 @@ export function computeScales(
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
     let xChannel = encoding.x;
-    const xStackDisabled = encoding.x.stack === null || encoding.x.stack === false;
+    const xStackEnabled =
+      encoding.x.stack === true ||
+      encoding.x.stack === 'zero' ||
+      encoding.x.stack === 'normalize' ||
+      encoding.x.stack === 'center';
     if (
       spec.markType === 'bar' &&
       encoding.color &&
       encoding.x.type === 'quantitative' &&
-      !xStackDisabled
+      xStackEnabled
     ) {
       if (encoding.x.stack === 'normalize') {
         // Normalize: domain is [0, 1]
@@ -738,9 +742,7 @@ export function computeScales(
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
       encoding.y.type === 'quantitative';
-    // Bar default is stacked, so undefined counts as stacked. Area default is
-    // overlap (v6), so the stacked-domain expansion only applies when the user
-    // explicitly opts into stacking.
+    // Both bar and area require explicit opt-in for stacked domain expansion.
     const stackProp = encoding.y.stack;
     const isExplicitlyStacked =
       stackProp === true ||
@@ -748,7 +750,7 @@ export function computeScales(
       stackProp === 'normalize' ||
       stackProp === 'center';
     const isAreaStacked = spec.markType === 'area' && isExplicitlyStacked;
-    const isBarStacked = isVerticalBar && stackProp !== null && stackProp !== false;
+    const isBarStacked = isVerticalBar && isExplicitlyStacked;
 
     // Sparkline tightening: drop the default `zero: true` baseline so the
     // y-domain hugs the actual data range. Without this, a series with

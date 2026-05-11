@@ -20,8 +20,8 @@ import type {
 import {
   buildD3Formatter,
   estimateTextWidth,
-  findAccessibleColor,
   getRepresentativeColor,
+  pickLabelColor,
   resolveCollisions,
 } from '@opendata-ai/openchart-core';
 import { filterByDensity } from '../_shared/density-filter';
@@ -136,7 +136,7 @@ export function computeBarLabels(
     const textHeight = LABEL_FONT_SIZE * 1.2;
 
     // Detect stacked bars: cornerRadius 0 indicates stacked segment
-    const isStacked = mark.cornerRadius === 0;
+    const isStacked = mark.stackGroup !== undefined;
 
     // Determine if label goes inside or outside the bar
     const isInside = mark.width >= MIN_WIDTH_FOR_INSIDE_LABEL;
@@ -150,18 +150,18 @@ export function computeBarLabels(
     if (isStacked && isInside) {
       // Stacked: centered within segment
       anchorX = mark.x + mark.width / 2;
-      fill = findAccessibleColor('#ffffff', bgColor, 4.5);
+      fill = pickLabelColor(bgColor);
       textAnchor = 'middle';
     } else if (isInside) {
       if (isNegative) {
         // Negative bar: left-aligned within bar (bar extends leftward)
         anchorX = mark.x + LABEL_PADDING;
-        fill = findAccessibleColor('#ffffff', bgColor, 4.5);
+        fill = pickLabelColor(bgColor);
         textAnchor = 'start';
       } else {
         // Positive bar: right-aligned within bar
         anchorX = mark.x + mark.width - LABEL_PADDING;
-        fill = findAccessibleColor('#ffffff', bgColor, 4.5);
+        fill = pickLabelColor(bgColor);
         textAnchor = 'end';
       }
     } else {
