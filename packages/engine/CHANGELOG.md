@@ -1,5 +1,15 @@
 # Changelog
 
+## [7.1.0](https://github.com/tryopendata/openchart/compare/core-v7.0.4...core-v7.1.0) (2026-05-11)
+
+
+### Bug Fixes
+
+* endpoint marker sits at line terminus, visual regression baselines updated ([0d6fdf1](https://github.com/tryopendata/openchart/commit/0d6fdf1))
+* address code review findings ([ca27cd6](https://github.com/tryopendata/openchart/commit/ca27cd6))
+* footer dead space, transparent background (breaking), area gradients, font smoothing ([cf5f8b8](https://github.com/tryopendata/openchart/commit/cf5f8b8))
+* column labels z-order, y-axis title overlap, and x-axis tick density ([e4d0139](https://github.com/tryopendata/openchart/commit/e4d0139))
+
 ## [7.0.4](https://github.com/tryopendata/openchart/compare/core-v7.0.3...core-v7.0.4) (2026-05-11)
 
 
