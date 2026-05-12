@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.2](https://github.com/tryopendata/openchart/compare/core-v7.1.1...core-v7.1.2) (2026-05-12)
+
+
+### Bug Fixes
+
+* align brand watermark top-edge with source text using hanging baseline (#75) ([fa0186b](https://github.com/tryopendata/openchart/commit/fa0186b))
+
 ## [7.1.1](https://github.com/tryopendata/openchart/compare/core-v7.1.0...core-v7.1.1) (2026-05-11)
 
 
