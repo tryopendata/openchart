@@ -46,13 +46,13 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
 
   // "try" in normal weight, "OpenData" in semibold, ".ai" in normal weight,
   // rendered as a single right-aligned text element with three tspans.
-  // Use alphabetic baseline so mixed-size tspans share a common bottom line.
+  // Use hanging baseline to align top-edge with source/byline chrome text.
   const BRAND_LARGE = 16;
   const text = createSVGElement('text');
   setAttrs(text, {
     x: rightEdge,
-    y: chromeY + BRAND_LARGE,
-    'dominant-baseline': 'alphabetic',
+    y: chromeY,
+    'dominant-baseline': 'hanging',
     'font-family': layout.theme.fonts.family,
     'font-size': BRAND_FONT_SIZE,
     'text-anchor': 'end',
