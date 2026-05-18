@@ -1,5 +1,28 @@
 # Changelog
 
+## [7.1.3](https://github.com/tryopendata/openchart/compare/core-v7.1.2...core-v7.1.3) (2026-05-18)
+
+
+### Bug Fixes
+
+* replace legend chip+bar swatches with bare mark-appropriate shapes ([e517c6c](https://github.com/tryopendata/openchart/commit/e517c6c))
+* show all x-axis labels on grouped bar charts by resolving rotation before thinning ([31ea820](https://github.com/tryopendata/openchart/commit/31ea820))
+* align brand watermark top-edge with source text using hanging baseline (#75) ([fa0186b](https://github.com/tryopendata/openchart/commit/fa0186b))
+* restore bottom margin padding, fixing bottom legend viewport overflow ([97c837e](https://github.com/tryopendata/openchart/commit/97c837e))
+* endpoint marker sits at line terminus, visual regression baselines updated ([0d6fdf1](https://github.com/tryopendata/openchart/commit/0d6fdf1))
+* address code review findings ([ca27cd6](https://github.com/tryopendata/openchart/commit/ca27cd6))
+* footer dead space, transparent background (breaking), area gradients, font smoothing ([cf5f8b8](https://github.com/tryopendata/openchart/commit/cf5f8b8))
+* column labels z-order, y-axis title overlap, and x-axis tick density ([e4d0139](https://github.com/tryopendata/openchart/commit/e4d0139))
+* grouped bars as default, white labels on dark bars ([ea4949f](https://github.com/tryopendata/openchart/commit/ea4949f))
+* correct legend area width, sparkline dot padding, and barlist auto-height ([ee3c35f](https://github.com/tryopendata/openchart/commit/ee3c35f))
+* propagate endpointLabels on LayerSpec, dedupe area+line tooltip ([c8588ef](https://github.com/tryopendata/openchart/commit/c8588ef))
+* transparent background, top-only corner rounding, thinner strokes ([b6bce4c](https://github.com/tryopendata/openchart/commit/b6bce4c))
+
+
+### Refactoring
+
+* extract interaction and layer modules from mega-files ([af471c6](https://github.com/tryopendata/openchart/commit/af471c6))
+
 ## [7.1.2](https://github.com/tryopendata/openchart/compare/core-v7.1.1...core-v7.1.2) (2026-05-12)
 
 
