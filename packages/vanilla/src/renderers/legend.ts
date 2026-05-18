@@ -60,53 +60,47 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       }
     }
 
-    // Swatch
-    // The default ('square') and 'line' shapes render as a "chip": a small
-    // rounded rectangle in a subtle elevated surface tone with a colored
-    // rounded bar through the middle. Matches the editorial mock-2 legend
-    // and the endpoint-labels swatch so a chart never shows two swatch styles.
-    // 'circle' is preserved for point/scatter charts.
+    // Swatch: bare colored mark matching the chart type.
+    // Circle for point/scatter, line segment for line/area, filled rect for bar.
+    const midX = offsetX + legend.swatchSize / 2;
+    const midY = offsetY + legend.swatchSize / 2;
     if (entry.shape === 'circle') {
       const circle = createSVGElement('circle');
       setAttrs(circle, {
-        cx: offsetX + legend.swatchSize / 2,
-        cy: offsetY + legend.swatchSize / 2,
+        cx: midX,
+        cy: midY,
         r: legend.swatchSize / 2,
         fill: entry.color,
       });
       entryG.appendChild(circle);
-    } else {
-      const chipHeight = Math.max(12, Math.round(legend.swatchSize * 0.85));
-      const chipY = offsetY + legend.swatchSize / 2 - chipHeight / 2;
-      const chip = createSVGElement('rect');
-      chip.setAttribute('class', 'oc-legend-swatch-chip');
-      setAttrs(chip, {
-        x: offsetX,
-        y: chipY,
-        width: legend.swatchSize,
-        height: chipHeight,
-        rx: 3,
-        ry: 3,
-        fill: legend.swatchChipFill,
+    } else if (entry.shape === 'line') {
+      const lineWidth = legend.swatchSize;
+      const line = createSVGElement('line');
+      line.setAttribute('class', 'oc-legend-swatch-line');
+      setAttrs(line, {
+        x1: offsetX,
+        y1: midY,
+        x2: offsetX + lineWidth,
+        y2: midY,
+        stroke: entry.color,
+        'stroke-width': 2,
+        'stroke-linecap': 'round',
       });
-      entryG.appendChild(chip);
-
-      const barWidth = Math.max(8, legend.swatchSize - 8);
-      const barHeight = 3;
-      const barX = offsetX + (legend.swatchSize - barWidth) / 2;
-      const barY = offsetY + legend.swatchSize / 2 - barHeight / 2;
-      const bar = createSVGElement('rect');
-      bar.setAttribute('class', 'oc-legend-swatch-bar');
-      setAttrs(bar, {
-        x: barX,
-        y: barY,
-        width: barWidth,
-        height: barHeight,
-        rx: barHeight / 2,
-        ry: barHeight / 2,
+      entryG.appendChild(line);
+    } else {
+      const rectSize = Math.round(legend.swatchSize * 0.6);
+      const rect = createSVGElement('rect');
+      rect.setAttribute('class', 'oc-legend-swatch-rect');
+      setAttrs(rect, {
+        x: offsetX + (legend.swatchSize - rectSize) / 2,
+        y: midY - rectSize / 2,
+        width: rectSize,
+        height: rectSize,
+        rx: 2,
+        ry: 2,
         fill: entry.color,
       });
-      entryG.appendChild(bar);
+      entryG.appendChild(rect);
     }
 
     // Label

@@ -71,40 +71,20 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
       entryG.appendChild(leader);
     }
 
-    // Swatch: rounded chip with a colored bar through its midline, matching
-    // the traditional legend so a chart never shows two swatch idioms.
+    // Swatch: bare colored line segment matching the legend style.
     const rowY = entry.labelY + labelFontSize / 2;
-    const chipHeight = Math.max(12, Math.round(ep.swatchSize * 0.85));
-    const chipY = rowY - chipHeight / 2;
-    const chip = createSVGElement('rect');
-    chip.setAttribute('class', 'oc-endpoint-swatch-chip');
-    setAttrs(chip, {
-      x: chipX,
-      y: chipY,
-      width: chipWidth,
-      height: chipHeight,
-      rx: 3,
-      ry: 3,
-      fill: ep.swatchChipFill,
+    const line = createSVGElement('line');
+    line.setAttribute('class', 'oc-endpoint-swatch-line');
+    setAttrs(line, {
+      x1: chipX,
+      y1: rowY,
+      x2: chipX + chipWidth,
+      y2: rowY,
+      stroke: entry.color,
+      'stroke-width': 2,
+      'stroke-linecap': 'round',
     });
-    entryG.appendChild(chip);
-
-    const barWidth = Math.max(8, chipWidth - 8);
-    const barHeight = 3;
-    const barX = chipX + (chipWidth - barWidth) / 2;
-    const barY = rowY - barHeight / 2;
-    const bar = createSVGElement('rect');
-    bar.setAttribute('class', 'oc-endpoint-swatch-bar');
-    setAttrs(bar, {
-      x: barX,
-      y: barY,
-      width: barWidth,
-      height: barHeight,
-      rx: barHeight / 2,
-      ry: barHeight / 2,
-      fill: entry.color,
-    });
-    entryG.appendChild(bar);
+    entryG.appendChild(line);
 
     // Label text. Multi-line via tspans when wrapped.
     const label = createSVGElement('text');
