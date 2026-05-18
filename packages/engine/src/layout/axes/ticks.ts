@@ -5,17 +5,11 @@
  * not from the chart area. Density thinning lives in ./thinning.ts.
  */
 
-import type {
-  AxisLabelDensity,
-  AxisTick,
-  DataRow,
-  MeasureTextFn,
-} from '@opendata-ai/openchart-core';
+import type { AxisLabelDensity, AxisTick, DataRow } from '@opendata-ai/openchart-core';
 import {
   abbreviateNumber,
   buildD3Formatter,
   buildTemporalFormatter,
-  estimateTextWidth,
   formatDate,
   formatNumber,
 } from '@opendata-ai/openchart-core';
@@ -249,11 +243,6 @@ export function categoricalTicks(
   resolvedScale: ResolvedScale,
   density: AxisLabelDensity,
   orientation: 'horizontal' | 'vertical' = 'horizontal',
-  bandwidth?: number,
-  labelAngle?: number,
-  fontSize?: number,
-  fontWeight?: number,
-  measureText?: MeasureTextFn,
   subtitleContext?: { data: DataRow[]; fieldName: string; labelField: string },
 ): AxisTick[] {
   const scale = resolvedScale.scale as D3CategoricalScale;
@@ -264,41 +253,13 @@ export function categoricalTicks(
   let selectedValues = domain;
 
   if (resolvedScale.type === 'band' && orientation === 'horizontal') {
-    // Geometry-based thinning: check whether labels actually fit within the
-    // bandwidth before deciding to thin. Rotated labels have a smaller
-    // horizontal footprint (width * |cos(angle)|), so they can be much denser.
-    if (bandwidth !== undefined && bandwidth > 0 && fontSize !== undefined) {
-      const maxLabelWidth = domain.reduce((max, v) => {
-        const w = measureText
-          ? measureText(v, fontSize, fontWeight ?? 400).width
-          : estimateTextWidth(v, fontSize, fontWeight ?? 400);
-        return Math.max(max, w);
-      }, 0);
-
-      // At non-zero angles, horizontal footprint per label = width * |cos(angle)|
-      const angleRad = labelAngle !== undefined ? (Math.abs(labelAngle) * Math.PI) / 180 : 0;
-      const footprint = angleRad > 0 ? maxLabelWidth * Math.abs(Math.cos(angleRad)) : maxLabelWidth;
-      const minGap = fontSize * 0.5;
-
-      if (footprint + minGap > bandwidth) {
-        // Labels don't fit -- thin proportionally to bandwidth, not density tier
-        const maxFitting = Math.max(1, Math.floor(bandwidth / (footprint + minGap)));
-        // Still respect explicit tickCount as an upper bound
-        const cap =
-          explicitTickCount ?? Math.min(domain.length, Math.max(maxFitting, TICK_COUNTS[density]));
-        if (domain.length > cap) {
-          const step = Math.ceil(domain.length / cap);
-          selectedValues = domain.filter((_: string, i: number) => i % step === 0);
-        }
-      }
-      // else: labels fit at this bandwidth -- show all of them
-    } else {
-      // No geometry info: fall back to density-count cap (original behavior)
-      const maxTicks = explicitTickCount ?? TICK_COUNTS[density];
-      if ((explicitTickCount || density !== 'full') && domain.length > maxTicks) {
-        const step = Math.ceil(domain.length / maxTicks);
-        selectedValues = domain.filter((_: string, i: number) => i % step === 0);
-      }
+    // Horizontal band scales delegate thinning to the caller (computeAxes)
+    // which knows the effective label angle after auto-rotation. Only apply
+    // an explicit tickCount cap here; density-based thinning happens
+    // downstream in thinBandTicksIfNeeded where rotation is accounted for.
+    if (explicitTickCount && domain.length > explicitTickCount) {
+      const step = Math.ceil(domain.length / explicitTickCount);
+      selectedValues = domain.filter((_: string, i: number) => i % step === 0);
     }
   } else if (resolvedScale.type !== 'band') {
     // Point/ordinal scales: thin by density count

@@ -190,6 +190,60 @@ function fitContinuousTicks(
   return thinTicksUntilFit(fallback, fontSize, fontWeight, measureText, orientation);
 }
 
+/**
+ * Check whether band-scale tick labels overlap at a given rotation angle,
+ * using position-based detection. Rotated labels extend diagonally past
+ * their band boundaries without colliding, so we check actual footprint
+ * along the axis rather than comparing against bandwidth.
+ */
+function bandTicksOverlapAtAngle(
+  ticks: AxisTick[],
+  angleDeg: number,
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): boolean {
+  if (ticks.length < 2) return false;
+  const angleRad = (Math.abs(angleDeg) * Math.PI) / 180;
+  const cosA = angleRad > 0 ? Math.abs(Math.cos(angleRad)) : 1;
+  const minGap = fontSize * 0.5;
+  for (let i = 0; i < ticks.length - 1; i++) {
+    const aWidth = measureLabel(ticks[i].label, fontSize, fontWeight, measureText) * cosA;
+    const bWidth = measureLabel(ticks[i + 1].label, fontSize, fontWeight, measureText) * cosA;
+    const aRight = ticks[i].position + aWidth / 2;
+    const bLeft = ticks[i + 1].position - bWidth / 2;
+    if (aRight + minGap > bLeft) return true;
+  }
+  return false;
+}
+
+/**
+ * Thin band-scale tick labels only when they actually overlap at their
+ * effective angle. Most grouped bar charts keep every label even at -45°.
+ * Only extremely dense charts (50+ categories) will thin.
+ */
+function thinBandTicksIfNeeded(
+  ticks: AxisTick[],
+  angleDeg: number,
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): AxisTick[] {
+  if (!bandTicksOverlapAtAngle(ticks, angleDeg, fontSize, fontWeight, measureText)) return ticks;
+
+  let current = ticks;
+  while (current.length > 2) {
+    const thinned = [current[0]];
+    for (let i = 2; i < current.length - 1; i += 2) {
+      thinned.push(current[i]);
+    }
+    if (current.length > 1) thinned.push(current[current.length - 1]);
+    current = thinned;
+    if (!bandTicksOverlapAtAngle(current, angleDeg, fontSize, fontWeight, measureText)) break;
+  }
+  return current;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -291,18 +345,9 @@ export function computeAxes(
     if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.x);
     } else if (!isContinuousX) {
-      const xBandwidth =
-        scales.x.type === 'band' ? (scales.x.scale as ScaleBand<string>).bandwidth() : undefined;
-      allTicks = categoricalTicks(
-        scales.x,
-        xDensity,
-        'horizontal',
-        xBandwidth,
-        axisConfig?.labelAngle,
-        fontSize,
-        fontWeight,
-        measureText,
-      );
+      // For band scales, generate all ticks first (no thinning). Rotation and
+      // thinning are resolved below once we know the effective label angle.
+      allTicks = categoricalTicks(scales.x, xDensity, 'horizontal');
     } else {
       allTicks = continuousTicks(scales.x, xDensity, xTargetCount);
     }
@@ -314,18 +359,32 @@ export function computeAxes(
       major: true,
     }));
 
-    // Thin tick labels to prevent overlap (skip for band scales which use
-    // auto-rotation, and when the user set explicit tick values).
-    // When tickCount is set, we still thin if D3 overshot the requested count
-    // (common with log scales where ticks(4) can return 26 values).
+    // Determine rotation before thinning so we know the effective label
+    // footprint. Band scales auto-rotate when horizontal labels don't fit.
+    let tickAngle = axisConfig?.labelAngle;
+    if (tickAngle === undefined && scales.x.type === 'band' && allTicks.length > 1) {
+      const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
+      let maxLabelWidth = 0;
+      for (const t of allTicks) {
+        const w = measureLabel(t.label, fontSize, fontWeight, measureText);
+        if (w > maxLabelWidth) maxLabelWidth = w;
+      }
+      if (maxLabelWidth > bandwidth * 0.85) {
+        tickAngle = -45;
+      }
+    }
+
+    // Thin tick labels to prevent overlap (skip for explicit tick values).
     const hasExplicitValues = !!axisConfig?.values;
-    const shouldThin = scales.x.type !== 'band' && !hasExplicitValues;
     let ticks: AxisTick[];
-    if (!shouldThin) {
+    if (hasExplicitValues) {
       ticks = allTicks;
+    } else if (scales.x.type === 'band') {
+      // Band scales: thin only when labels actually overlap at their
+      // effective angle. After rotation, most charts have room for every label.
+      const effectiveAngle = tickAngle ?? 0;
+      ticks = thinBandTicksIfNeeded(allTicks, effectiveAngle, fontSize, fontWeight, measureText);
     } else if (isContinuousX) {
-      // Continuous x-axis: re-request ticks at a lower count on overlap so
-      // time-scale quartile/monthly jumps don't leave a too-dense axis.
       ticks = fitContinuousTicks(
         scales.x,
         allTicks,
@@ -338,22 +397,6 @@ export function computeAxes(
       );
     } else {
       ticks = thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText);
-    }
-
-    // Auto-rotate labels when band scale labels would overlap.
-    // Uses max label width (not average) since one long label is enough to overlap.
-    let tickAngle = axisConfig?.labelAngle;
-    if (tickAngle === undefined && scales.x.type === 'band' && ticks.length > 1) {
-      const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
-      let maxLabelWidth = 0;
-      for (const t of ticks) {
-        const w = measureLabel(t.label, fontSize, fontWeight, measureText);
-        if (w > maxLabelWidth) maxLabelWidth = w;
-      }
-      // If the widest label exceeds 85% of the bandwidth, rotate to avoid overlap
-      if (maxLabelWidth > bandwidth * 0.85) {
-        tickAngle = -45;
-      }
     }
 
     const axisTitle = axisConfig?.title;
@@ -404,11 +447,6 @@ export function computeAxes(
         scales.y,
         yDensity,
         'vertical',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
         yFieldName && yLabelField && dataContext
           ? { data: dataContext.data, fieldName: yFieldName, labelField: yLabelField }
           : undefined,
