@@ -156,6 +156,25 @@
  * Table footer chrome
  * --------------------------------------------------------------------------- */
 
+/* Footer row: source/footer text on the left, brand watermark on the right,
+ * sharing a single baseline. gap keeps them apart if the row gets narrow. */
+.oc-table-footer-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 16px 16px 4px;
+}
+
+/* Chrome block sits inside the flex row now, so it no longer owns the
+ * footer's top padding or horizontal inset (the row provides both). */
 .oc-chrome-footer {
-  padding-top: 16px;
+  padding-top: 0;
+}
+
+/* Brand watermark: pushed to the right edge (margin-left:auto holds it there
+ * even when the source text is absent), never shrinks below its own text. */
+.oc-table-footer-row .oc-table-ref {
+  margin-left: auto;
+  flex-shrink: 0;
+  text-align: right;
 }

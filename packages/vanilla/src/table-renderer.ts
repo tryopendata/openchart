@@ -366,10 +366,15 @@ export function renderTable(
     wrapper.appendChild(pagination);
   }
 
-  // Footer chrome
+  // Footer row: source/footer chrome on the left, brand watermark on the
+  // right, laid out on a single line via flex. Built up here and appended
+  // after the live region so source text and watermark share a baseline.
+  const footerRow = document.createElement('div');
+  footerRow.className = 'oc-table-footer-row';
+
   const footerChrome = renderChromeBlock(layout, 'footer');
   if (footerChrome) {
-    wrapper.appendChild(footerChrome);
+    footerRow.appendChild(footerChrome);
   }
 
   // Live region for screen reader announcements (sort changes, search results)
@@ -389,12 +394,12 @@ export function renderTable(
   liveRegion.setAttribute('role', 'status');
   wrapper.appendChild(liveRegion);
 
-  // Brand watermark
+  // Brand watermark — joins the footer row, pushed to the right by the
+  // flex container so it sits on the same line as the source text.
   if (layout.watermark) {
     const brandColor = theme ? theme.colors.axis : '#999999';
     const brand = document.createElement('div');
     brand.className = 'oc-table-ref';
-    brand.style.cssText = 'text-align: right; padding: 4px 8px;';
     const brandLink = document.createElement('a');
     brandLink.href = BRAND_URL;
     brandLink.target = '_blank';
@@ -402,7 +407,12 @@ export function renderTable(
     brandLink.style.cssText = `font-size: ${BRAND_FONT_SIZE}px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
     brandLink.textContent = 'tryOpenData.ai';
     brand.appendChild(brandLink);
-    wrapper.appendChild(brand);
+    footerRow.appendChild(brand);
+  }
+
+  // Append the footer row only when it has content (source/footer/watermark).
+  if (footerRow.childElementCount > 0) {
+    wrapper.appendChild(footerRow);
   }
 
   // Animation: stamp CSS custom properties and add oc-animate class BEFORE
