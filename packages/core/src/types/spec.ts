@@ -820,6 +820,26 @@ export interface ThemeConfig {
   };
   /** Border radius for chart container and tooltips. */
   borderRadius?: number;
+  /**
+   * Per-element chrome text color overrides. Font sizes and weights come
+   * from the typography scale and are not overridable here; only color is.
+   * An override survives dark-mode adaptation (adaptTheme preserves any
+   * chrome color the spec set explicitly).
+   */
+  chrome?: {
+    /** Eyebrow (kicker) text color. */
+    eyebrow?: string;
+    /** Title text color. */
+    title?: string;
+    /** Subtitle text color. */
+    subtitle?: string;
+    /** Source/attribution text color. */
+    source?: string;
+    /** Byline text color. */
+    byline?: string;
+    /** Footer text color. */
+    footer?: string;
+  };
 }
 
 // ---------------------------------------------------------------------------

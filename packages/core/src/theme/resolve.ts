@@ -86,6 +86,17 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     partial.borderRadius = config.borderRadius;
   }
 
+  if (config.chrome) {
+    // Only color is overridable per chrome element. Each element becomes a
+    // partial `{ color }`; deepMerge layers it onto the full ChromeDefaults
+    // so font size/weight/lineHeight stay at their typography-scale values.
+    const chrome: Record<string, { color: string }> = {};
+    for (const [element, color] of Object.entries(config.chrome)) {
+      if (color !== undefined) chrome[element] = { color };
+    }
+    partial.chrome = chrome as unknown as Theme['chrome'];
+  }
+
   return partial;
 }
 

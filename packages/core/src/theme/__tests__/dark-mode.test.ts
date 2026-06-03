@@ -120,4 +120,33 @@ describe('adaptTheme', () => {
     const dark = adaptTheme(light);
     expect(dark.chrome.title.color).not.toBe(light.chrome.title.color);
   });
+
+  it('preserves an explicit axis color override in dark mode', () => {
+    const light = resolveTheme({ colors: { background: '#ffffff', axis: '#d0d6e0' } });
+    const dark = adaptTheme(light);
+    expect(dark.colors.axis).toBe('#d0d6e0');
+  });
+
+  it('applies the dark axis default when axis is left unset', () => {
+    const light = resolveTheme({ colors: { background: '#ffffff' } });
+    const dark = adaptTheme(light);
+    expect(dark.colors.axis).toBe('#a1a1aa');
+  });
+
+  it('preserves explicit chrome color overrides in dark mode', () => {
+    const light = resolveTheme({
+      colors: { background: '#ffffff' },
+      chrome: { subtitle: '#d0d6e0', source: '#d0d6e0' },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.chrome.subtitle.color).toBe('#d0d6e0');
+    expect(dark.chrome.source.color).toBe('#d0d6e0');
+  });
+
+  it('applies dark chrome defaults when chrome colors are left unset', () => {
+    const light = resolveTheme({ colors: { background: '#ffffff' } });
+    const dark = adaptTheme(light);
+    // Unset chrome colors fall to the muted dark default, not the light one.
+    expect(dark.chrome.subtitle.color).not.toBe('#71717a');
+  });
 });

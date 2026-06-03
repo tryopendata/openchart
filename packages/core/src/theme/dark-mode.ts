@@ -9,6 +9,7 @@ import { hsl, rgb } from 'd3-color';
 import { contrastRatio } from '../colors/contrast';
 import { ACHROMATIC_RAMP } from '../colors/palettes';
 import type { ResolvedTheme } from '../types/theme';
+import { DEFAULT_THEME } from './defaults';
 
 // ---------------------------------------------------------------------------
 // Dark mode background
@@ -115,12 +116,22 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   // apply dark-mode text/axis/gridline colors so labels are readable on the
   // dark host surface.
   const darkBg = alreadyDark ? inputBg : DARK_BG;
-  const darkText = DARK_TEXT;
-  const darkGridline = 'rgba(255,255,255,0.05)';
+  const darkMuted = ACHROMATIC_RAMP.fgMuted;
+
+  // Per the "sensible defaults, full override" convention (see spec-grammar),
+  // dark-mode adaptation only swaps in dark defaults for colors the spec
+  // left at their light-mode default. An explicit override is preserved.
+  // This mirrors resolveTheme's adaptChromeForDarkBg.
+  const light = DEFAULT_THEME.colors;
+  const lightChrome = DEFAULT_THEME.chrome;
+  const overridden = <T>(current: T, lightDefault: T, darkDefault: T): T =>
+    current === lightDefault ? darkDefault : current;
+
+  const darkText = overridden(theme.colors.text, light.text, DARK_TEXT);
+  const darkGridline = overridden(theme.colors.gridline, light.gridline, 'rgba(255,255,255,0.05)');
   // axis is also tick-label fill — needs WCAG AA contrast on dark bg.
   // Zinc-400 (`#a1a1aa`) hits ~6:1 against #09090b.
-  const darkAxis = '#a1a1aa';
-  const darkMuted = ACHROMATIC_RAMP.fgMuted;
+  const darkAxis = overridden(theme.colors.axis, light.axis, '#a1a1aa');
 
   // Categorical palette is pinned to design-system tokens. The same vibrant
   // hex values render in both light and dark modes — adapting them via
@@ -137,8 +148,12 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       text: darkText,
       gridline: darkGridline,
       axis: darkAxis,
-      annotationFill: 'rgba(255,255,255,0.06)',
-      annotationText: darkMuted,
+      annotationFill: overridden(
+        theme.colors.annotationFill,
+        light.annotationFill,
+        'rgba(255,255,255,0.06)',
+      ),
+      annotationText: overridden(theme.colors.annotationText, light.annotationText, darkMuted),
       categorical,
       // Sparkline trend colors tuned for dark surfaces: teal-leaning green
       // and coral red read better than the saturated light-mode tokens.
@@ -149,12 +164,29 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
     chrome: {
       // Eyebrow keeps its accent tint (cyan in both modes); the other
       // chrome elements desaturate to a muted gray on the dark canvas.
+      // Each color only adapts if the spec left it at the light default,
+      // so explicit chrome color overrides survive dark-mode adaptation.
       eyebrow: theme.chrome.eyebrow,
-      title: { ...theme.chrome.title, color: darkText },
-      subtitle: { ...theme.chrome.subtitle, color: darkMuted },
-      source: { ...theme.chrome.source, color: darkMuted },
-      byline: { ...theme.chrome.byline, color: darkMuted },
-      footer: { ...theme.chrome.footer, color: darkMuted },
+      title: {
+        ...theme.chrome.title,
+        color: overridden(theme.chrome.title.color, lightChrome.title.color, darkText),
+      },
+      subtitle: {
+        ...theme.chrome.subtitle,
+        color: overridden(theme.chrome.subtitle.color, lightChrome.subtitle.color, darkMuted),
+      },
+      source: {
+        ...theme.chrome.source,
+        color: overridden(theme.chrome.source.color, lightChrome.source.color, darkMuted),
+      },
+      byline: {
+        ...theme.chrome.byline,
+        color: overridden(theme.chrome.byline.color, lightChrome.byline.color, darkMuted),
+      },
+      footer: {
+        ...theme.chrome.footer,
+        color: overridden(theme.chrome.footer.color, lightChrome.footer.color, darkMuted),
+      },
     },
   };
 }

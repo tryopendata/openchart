@@ -42,6 +42,16 @@ describe('resolveTheme', () => {
     expect(resolved.borderRadius).toBe(8);
   });
 
+  it('overrides a chrome element color, preserving its size and weight', () => {
+    const resolved = resolveTheme({ chrome: { subtitle: '#d0d6e0' } });
+    expect(resolved.chrome.subtitle.color).toBe('#d0d6e0');
+    // Non-color chrome fields come from the typography scale, untouched.
+    expect(resolved.chrome.subtitle.fontSize).toBe(14);
+    expect(resolved.chrome.subtitle.fontWeight).toBe(400);
+    // Other chrome elements keep their defaults.
+    expect(resolved.chrome.title.color).toBe('#09090b');
+  });
+
   it('overrides categorical palette completely', () => {
     const custom = ['#ff0000', '#00ff00', '#0000ff'];
     const resolved = resolveTheme({
