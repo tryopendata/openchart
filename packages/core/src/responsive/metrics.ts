@@ -60,6 +60,21 @@ export const TICK_LABEL_OFFSET = 6;
 export const AXIS_TITLE_TRAILING_PAD = 4;
 
 // ---------------------------------------------------------------------------
+// Axis title gap
+// ---------------------------------------------------------------------------
+
+/**
+ * Breathing room between the widest tick label's far edge and the rotated
+ * y-axis title center. The title glyph extends ~halfGlyph (ceil(bodyFontSize/2))
+ * from its center toward the tick labels, so visible clearance is
+ * AXIS_TITLE_GAP - halfGlyph (~7px at default body size 13).
+ *
+ * Used in both the engine (dimensions.ts margin reservation) and the renderer
+ * (axes.ts title placement). Both must agree on this value.
+ */
+export const AXIS_TITLE_GAP = 14;
+
+// ---------------------------------------------------------------------------
 // Narrow viewport threshold (between compact and medium)
 // ---------------------------------------------------------------------------
 

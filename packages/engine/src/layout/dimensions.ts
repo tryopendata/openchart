@@ -23,6 +23,7 @@ import type {
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import {
+  AXIS_TITLE_GAP,
   AXIS_TITLE_TRAILING_PAD,
   BREAKPOINT_COMPACT_MAX,
   computeChrome,
@@ -633,9 +634,8 @@ export function computeDimensions(
       );
     }
     // Mirror the renderer's dynamic offset formula:
-    //   dynamicOffset = TICK_LABEL_OFFSET(6) + maxTickLabelWidth + 8px gap
-    //   titleOffset = max(dynamicOffset, AXIS_TITLE_OFFSET_COMPACT)
-    const AXIS_TITLE_GAP = 14;
+    //   dynamicOffset = TICK_LABEL_OFFSET(6) + maxTickLabelWidth + AXIS_TITLE_GAP(14)
+    //   titleOffset = max(dynamicOffset, getAxisTitleOffset(width))
     const dynamicTitleOffset = TICK_LABEL_OFFSET + estTickLabelWidth + AXIS_TITLE_GAP;
     const axisTitleOffset = Math.max(dynamicTitleOffset, getAxisTitleOffset(width));
     const halfGlyph = Math.ceil(theme.fonts.sizes.body / 2);

@@ -78,6 +78,7 @@ export type {
   LegendPosition,
 } from './responsive/index';
 export {
+  AXIS_TITLE_GAP,
   AXIS_TITLE_OFFSET_COMPACT,
   AXIS_TITLE_OFFSET_DEFAULT,
   AXIS_TITLE_TRAILING_PAD,
