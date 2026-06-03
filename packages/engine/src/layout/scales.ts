@@ -679,8 +679,17 @@ export function computeScales(
       xStackEnabled
     ) {
       if (encoding.x.stack === 'normalize') {
-        // Normalize: domain is [0, 1]
-        xChannel = { ...encoding.x, scale: { ...encoding.x.scale, domain: [0, 1], nice: false } };
+        // Normalize: domain is [0, 1], default to percentage axis
+        const existingAxis = encoding.x.axis;
+        const axis =
+          existingAxis === false || existingAxis?.format
+            ? existingAxis
+            : { ...(typeof existingAxis === 'object' ? existingAxis : {}), format: '.0%' };
+        xChannel = {
+          ...encoding.x,
+          scale: { ...encoding.x.scale, domain: [0, 1], nice: false },
+          axis,
+        };
       } else if (encoding.x.stack === 'center') {
         // Center: compute max half-sum for symmetric domain
         const yField = encoding.y?.field;
@@ -785,8 +794,17 @@ export function computeScales(
     }
     if ((isBarStacked || isAreaStacked) && encoding.color && encoding.y.type === 'quantitative') {
       if (encoding.y.stack === 'normalize') {
-        // Normalize: domain is [0, 1] (VL convention)
-        yChannel = { ...encoding.y, scale: { ...encoding.y.scale, domain: [0, 1], nice: false } };
+        // Normalize: domain is [0, 1] (VL convention), default to percentage axis
+        const existingAxis = encoding.y.axis;
+        const axis =
+          existingAxis === false || existingAxis?.format
+            ? existingAxis
+            : { ...(typeof existingAxis === 'object' ? existingAxis : {}), format: '.0%' };
+        yChannel = {
+          ...encoding.y,
+          scale: { ...encoding.y.scale, domain: [0, 1], nice: false },
+          axis,
+        };
       } else if (encoding.y.stack === 'center') {
         // Center: compute max half-sum for symmetric domain
         const xField = encoding.x?.field;
