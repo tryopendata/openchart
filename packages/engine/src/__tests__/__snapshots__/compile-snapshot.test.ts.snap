@@ -227,7 +227,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "connector": undefined,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#111111",
+          "fill": "#ffffff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 11,
           "fontWeight": 600,
@@ -260,7 +260,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "connector": undefined,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#111111",
+          "fill": "#ffffff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 11,
           "fontWeight": 600,
@@ -293,7 +293,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "connector": undefined,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#111111",
+          "fill": "#ffffff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 11,
           "fontWeight": 600,

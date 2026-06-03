@@ -217,3 +217,75 @@ describe('computeBarLabels with Unicode minus (U+2212) in aria values', () => {
     expect(labels[1].text).toBe('\u22125%'); // −5%
   });
 });
+
+// ---------------------------------------------------------------------------
+// Dark-mode inside-label color
+// ---------------------------------------------------------------------------
+
+describe('computeBarLabels inside-label color by mode', () => {
+  // Wide bar (>= 40px) so the label is placed inside and uses pickLabelColor.
+  function makeFilledMark(fill: string): RectMark {
+    return {
+      type: 'rect',
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 25,
+      fill,
+      data: { category: 'A', value: 100 },
+      aria: { label: 'A: 100' },
+    };
+  }
+
+  it('mid-tone fill gets white inside-label in light mode, dark in dark mode', () => {
+    const slate = [makeFilledMark('#94a3b8')];
+    const light = computeBarLabels(
+      slate,
+      chartArea,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+    const dark = computeBarLabels(
+      slate,
+      chartArea,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    expect(light[0].style.fill).toBe('#ffffff');
+    expect(dark[0].style.fill).toBe('#111111');
+  });
+
+  it('saturated fill keeps white inside-label in both modes', () => {
+    const red = [makeFilledMark('#c0392b')];
+    const light = computeBarLabels(
+      red,
+      chartArea,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+    const dark = computeBarLabels(
+      red,
+      chartArea,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    expect(light[0].style.fill).toBe('#ffffff');
+    expect(dark[0].style.fill).toBe('#ffffff');
+  });
+});

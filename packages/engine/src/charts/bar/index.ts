@@ -13,7 +13,7 @@ import { computeBarLabels } from './labels';
 // Bar chart renderer
 // ---------------------------------------------------------------------------
 
-export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
   const marks = computeBarMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
@@ -27,6 +27,7 @@ export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _t
     spec.labels.prefix,
     valueField,
     spec.labels.color,
+    theme.isDark,
   );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];

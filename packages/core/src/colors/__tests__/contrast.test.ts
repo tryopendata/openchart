@@ -83,29 +83,37 @@ describe('pickLabelColor', () => {
     expect(pickLabelColor('#e2e8f0')).toBe('#111111');
   });
 
-  it('chosen color clears 4.5:1 for dark and light backgrounds (not mid-gray gap)', () => {
-    // Mid-gray backgrounds (~#707070-#8a8a8a, luminance ~0.17-0.27) are a known
-    // WCAG gap where neither white nor any dark color clears 4.5:1. Default
-    // palettes don't produce colors in this range. Those grays are excluded here.
-    const testColors = [
-      '#000000',
-      '#111111',
-      '#333333',
-      '#555555',
-      '#999999',
-      '#bbbbbb',
-      '#dddddd',
-      '#ffffff',
-      '#e24b4a',
-      '#1D9E75',
-      '#2563eb',
-      '#7c3aed',
-      '#d97706',
-    ];
-    for (const bg of testColors) {
-      const label = pickLabelColor(bg);
-      const ratio = contrastRatio(label, bg);
-      expect(ratio, `${label} on ${bg}`).toBeGreaterThanOrEqual(4.5);
-    }
+  it('returns white for saturated mid-tone fills below the luminance threshold', () => {
+    // Slate / mid-tone bar fills: WCAG body-text contrast says dark, but bold
+    // value labels read cleaner in white. These all sit below L=0.42.
+    expect(pickLabelColor('#94a3b8')).toBe('#ffffff'); // slate-400, L≈0.36
+    expect(pickLabelColor('#64748b')).toBe('#ffffff'); // slate-500
+    expect(pickLabelColor('#999999')).toBe('#ffffff'); // mid grey, L≈0.32
+    expect(pickLabelColor('#e24b4a')).toBe('#ffffff'); // red
+    expect(pickLabelColor('#d97706')).toBe('#ffffff'); // amber
+  });
+
+  it('returns dark for genuinely light fills above the luminance threshold', () => {
+    expect(pickLabelColor('#cbd5e1')).toBe('#111111'); // slate-300
+    expect(pickLabelColor('#bbbbbb')).toBe('#111111');
+    expect(pickLabelColor('#dddddd')).toBe('#111111');
+  });
+
+  it('pivots mid-tone fills to dark text in dark mode (lower threshold)', () => {
+    // Simultaneous contrast: a mid-tone bar looks lighter on a dark canvas,
+    // so dark text reads more grounded. Dark mode uses a stricter threshold.
+    expect(pickLabelColor('#94a3b8', true)).toBe('#111111'); // slate-400
+    expect(pickLabelColor('#06b6d4', true)).toBe('#111111'); // cyan
+    expect(pickLabelColor('#999999', true)).toBe('#111111'); // mid grey
+    // Light mode keeps white on these same fills.
+    expect(pickLabelColor('#94a3b8', false)).toBe('#ffffff');
+    expect(pickLabelColor('#06b6d4', false)).toBe('#ffffff');
+  });
+
+  it('keeps white on saturated fills even in dark mode', () => {
+    // Saturated palette colors sit below the dark-mode threshold too.
+    expect(pickLabelColor('#c0392b', true)).toBe('#ffffff'); // red
+    expect(pickLabelColor('#2563eb', true)).toBe('#ffffff'); // blue
+    expect(pickLabelColor('#7c3aed', true)).toBe('#ffffff'); // violet
   });
 });

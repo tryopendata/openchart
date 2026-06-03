@@ -15,7 +15,7 @@ import { rgb } from 'd3-color';
  * Compute the relative luminance of a color per WCAG 2.1 definition.
  * https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
  */
-function relativeLuminance(color: string): number {
+export function relativeLuminance(color: string): number {
   const c = rgb(color);
   if (c == null) return 0;
 
@@ -43,18 +43,27 @@ export function contrastRatio(fg: string, bg: string): number {
 /**
  * Pick a legible label color (white or near-black) for text placed on top of `bg`.
  *
- * Returns white when white clears 4.5:1 against `bg`, dark otherwise.
- * Simpler and more reliable than `findAccessibleColor` for "label on filled bar."
+ * Uses a perceptual luminance threshold rather than a strict 4.5:1 contrast
+ * gate. WCAG's 4.5:1 ratio is calibrated for body text on a page; bold value
+ * labels sitting on a saturated filled bar read fine at lower ratios. A pure
+ * contrast-ratio gate sends mid-tone fills (e.g. slate `#94a3b8`, L≈0.36) to
+ * dark text even though white reads cleaner on them.
  *
- * Note: mid-gray backgrounds (~#707070–#8a8a8a) fall in a WCAG gap where
- * neither white nor dark clears 4.5:1. Default palettes don't produce these.
+ * The threshold is mode-dependent because of simultaneous contrast: the same
+ * bar fill looks lighter against a dark canvas than against a white page, so
+ * dark text reads more grounded on it. Dark mode therefore uses a lower
+ * threshold (L < 0.30) to pivot mid-tone fills to dark text sooner.
+ *
+ * - Light mode (L < 0.42 → white): white on saturated and mid-tone fills;
+ *   dark text only on genuinely light fills (`#b0b0b0` and lighter).
+ * - Dark mode (L < 0.30 → white): saturated fills keep white; mid-tone fills
+ *   (slate `#94a3b8`, cyan `#06b6d4`, mid-grey) pivot to dark text.
  */
-export function pickLabelColor(bg: string): string {
+export function pickLabelColor(bg: string, darkMode = false): string {
   const WHITE = '#ffffff';
-  // #111111 (luminance 0.005) ensures one of the two choices always clears 4.5:1
-  // for any background. #1a1a1a would leave a gap around luminance 0.183-0.221.
   const DARK = '#111111';
-  return contrastRatio(WHITE, bg) >= 4.5 ? WHITE : DARK;
+  const threshold = darkMode ? 0.3 : 0.42;
+  return relativeLuminance(bg) < threshold ? WHITE : DARK;
 }
 
 /**

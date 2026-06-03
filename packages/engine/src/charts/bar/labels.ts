@@ -95,6 +95,7 @@ export function computeBarLabels(
   labelPrefix?: string,
   valueField?: string,
   labelColor?: string,
+  darkMode = false,
 ): ResolvedLabel[] {
   const targetMarks = filterByDensity(marks, density);
 
@@ -150,18 +151,18 @@ export function computeBarLabels(
     if (isStacked && isInside) {
       // Stacked: centered within segment
       anchorX = mark.x + mark.width / 2;
-      fill = pickLabelColor(bgColor);
+      fill = pickLabelColor(bgColor, darkMode);
       textAnchor = 'middle';
     } else if (isInside) {
       if (isNegative) {
         // Negative bar: left-aligned within bar (bar extends leftward)
         anchorX = mark.x + LABEL_PADDING;
-        fill = pickLabelColor(bgColor);
+        fill = pickLabelColor(bgColor, darkMode);
         textAnchor = 'start';
       } else {
         // Positive bar: right-aligned within bar
         anchorX = mark.x + mark.width - LABEL_PADDING;
-        fill = pickLabelColor(bgColor);
+        fill = pickLabelColor(bgColor, darkMode);
         textAnchor = 'end';
       }
     } else {
