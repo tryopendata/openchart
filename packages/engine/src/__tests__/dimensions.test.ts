@@ -126,6 +126,84 @@ describe('computeDimensions', () => {
     expect(withLegend.chartArea.height).toBeLessThan(withoutLegend.chartArea.height);
   });
 
+  it('reserves enough left margin for y-axis title to clear tick labels', () => {
+    const specWithYTitle: NormalizedChartSpec = {
+      ...baseSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', axis: { title: 'Share of districts' } },
+      },
+    };
+    const specWithoutYTitle: NormalizedChartSpec = {
+      ...baseSpec,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const dimsWithTitle = computeDimensions(
+      specWithYTitle,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const dimsWithoutTitle = computeDimensions(
+      specWithoutYTitle,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // A chart with a y-axis title needs more left margin than one without
+    expect(dimsWithTitle.margins.left).toBeGreaterThan(dimsWithoutTitle.margins.left);
+    // The difference should be at least enough for the rotated title glyph
+    // plus breathing room (halfGlyph ~7 + trailing pad 4 = 11px minimum)
+    expect(dimsWithTitle.margins.left - dimsWithoutTitle.margins.left).toBeGreaterThanOrEqual(11);
+  });
+
+  it('y-axis title margin scales with tick label width', () => {
+    const smallValues: NormalizedChartSpec = {
+      ...baseSpec,
+      data: [
+        { date: '2020-01-01', value: 5 },
+        { date: '2021-01-01', value: 9 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', axis: { title: 'Count' } },
+      },
+    };
+    const largeValues: NormalizedChartSpec = {
+      ...baseSpec,
+      data: [
+        { date: '2020-01-01', value: 1_500_000 },
+        { date: '2021-01-01', value: 2_000_000 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', axis: { title: 'Revenue ($)' } },
+      },
+    };
+
+    const dimsSmall = computeDimensions(
+      smallValues,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const dimsLarge = computeDimensions(
+      largeValues,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // Larger numeric values produce wider tick labels (e.g. "1.5M" vs "0.0"),
+    // so the y-axis title margin should grow to keep clearance
+    expect(dimsLarge.margins.left).toBeGreaterThan(dimsSmall.margins.left);
+  });
+
   it('applies dark mode theme adaptation', () => {
     const lightDims = computeDimensions(
       baseSpec,
@@ -380,6 +458,36 @@ describe('computeDimensions', () => {
       const dims = computeDimensions(spec, { width: 800, height: 500 }, emptyLegend, lightTheme);
       expect(dims.metrics).toBeUndefined();
     });
+  });
+
+  it('avoids doubling axisMargin and legendGap when top legend is present', () => {
+    const dimsWithTopLegend = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      topLegend,
+      lightTheme,
+    );
+    const dimsNoLegend = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // Without a top legend, the full topAxisGap (axisMargin + inlineTickOverhang)
+    // separates chrome from chart area. With a top legend, legendGap already
+    // provides separation, so only inlineTickOverhang is added (not the full
+    // topAxisGap). This means the chart area gains back ~axisMargin (6px)
+    // that would otherwise be redundant spacing.
+    //
+    // The top margin with legend includes: legendHeight(28) + legendGap(8)
+    // + inlineTickOverhang(17) instead of the no-legend topAxisGap(23).
+    // Net: margin delta = 28 + 8 + 17 - 23 = 30px.
+    // If axisMargin were doubling up: 28 + 8 + 23 - 23 = 36px.
+    const topMarginDelta = dimsWithTopLegend.margins.top - dimsNoLegend.margins.top;
+    expect(topMarginDelta).toBeLessThan(topLegend.bounds.height + legendGap(600) + 1);
+    // With a legend present, the chart area should still be shorter
+    expect(dimsWithTopLegend.chartArea.height).toBeLessThan(dimsNoLegend.chartArea.height);
   });
 
   it('tightens legend gap on narrow viewports', () => {

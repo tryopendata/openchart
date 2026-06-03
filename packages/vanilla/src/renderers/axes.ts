@@ -4,7 +4,7 @@
 
 import type { AxisLayout, ChartLayout } from '@opendata-ai/openchart-core';
 import {
-  AXIS_TITLE_OFFSET_COMPACT,
+  AXIS_TITLE_GAP,
   estimateTextWidth,
   getAxisTitleOffset,
   TICK_LABEL_OFFSET,
@@ -270,10 +270,6 @@ function renderAxis(
     } else {
       // Rotated left y-axis label.
       // Compute a dynamic offset so the title clears the widest tick label.
-      // TICK_LABEL_OFFSET is the gap between area.x and the near edge of tick
-      // labels; maxLabelWidth is the widest label; AXIS_TITLE_GAP is breathing
-      // room between the label column and the title center.
-      const AXIS_TITLE_GAP = 8;
       const maxTickLabelWidth = axis.ticks.reduce((max, t) => {
         const w = estimateTextWidth(
           t.label,
@@ -283,8 +279,7 @@ function renderAxis(
         return Math.max(max, w);
       }, 0);
       const dynamicOffset = TICK_LABEL_OFFSET + maxTickLabelWidth + AXIS_TITLE_GAP;
-      // Never go tighter than the compact minimum so short labels don't crowd the title.
-      const titleOffset = Math.max(dynamicOffset, AXIS_TITLE_OFFSET_COMPACT);
+      const titleOffset = Math.max(dynamicOffset, getAxisTitleOffset(layout.dimensions.width));
       setAttrs(axisLabel, {
         x: area.x - titleOffset,
         y: area.y + area.height / 2,
