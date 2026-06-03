@@ -635,7 +635,7 @@ export function computeDimensions(
     // Mirror the renderer's dynamic offset formula:
     //   dynamicOffset = TICK_LABEL_OFFSET(6) + maxTickLabelWidth + 8px gap
     //   titleOffset = max(dynamicOffset, AXIS_TITLE_OFFSET_COMPACT)
-    const AXIS_TITLE_GAP = 8;
+    const AXIS_TITLE_GAP = 14;
     const dynamicTitleOffset = TICK_LABEL_OFFSET + estTickLabelWidth + AXIS_TITLE_GAP;
     const axisTitleOffset = Math.max(dynamicTitleOffset, getAxisTitleOffset(width));
     const halfGlyph = Math.ceil(theme.fonts.sizes.body / 2);
@@ -658,6 +658,8 @@ export function computeDimensions(
   // here. The legend lands below the x-axis tick row (which is reserved via
   // `xAxisHeight` in the base bottom margin) and source/byline/footer chrome
   // stacks underneath the legend band rather than colliding with it.
+  const hasTopLegend =
+    'entries' in legendLayout && legendLayout.entries.length > 0 && legendLayout.position === 'top';
   if ('entries' in legendLayout && legendLayout.entries.length > 0) {
     const gap = legendGap(width);
     if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
@@ -669,9 +671,12 @@ export function computeDimensions(
     // above.
   }
 
-  // Add topAxisGap after legend so it sits between the legend (or chrome
-  // when there's no legend) and the chart area.
-  margins.top += topAxisGap;
+  // topAxisGap sits between the legend (or chrome, if no legend) and the
+  // chart area. When a top legend is present, the legendGap already provides
+  // breathing room, so only the inlineTickOverhang is needed (the axisMargin
+  // component would double up with legendGap). Without a top legend, the
+  // full topAxisGap (axisMargin + inlineTickOverhang) applies.
+  margins.top += hasTopLegend ? inlineTickOverhang : topAxisGap;
 
   // Chart area is what's left after margins
   let chartArea: Rect = {
@@ -707,6 +712,7 @@ export function computeDimensions(
     // until resolveMetrics decides otherwise).
     const fallbackTopAxisGap =
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
+    const fallbackEffectiveAxisGap = hasTopLegend ? inlineTickOverhang : fallbackTopAxisGap;
     const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
     const topDelta = margins.top - newTop;
     const newBottom = bottomMargin(fallbackChrome.bottomHeight, padding, xAxisHeight);
@@ -721,7 +727,7 @@ export function computeDimensions(
         legendLayout.position === 'top'
           ? legendLayout.bounds.height + gap
           : 0) +
-        fallbackTopAxisGap;
+        fallbackEffectiveAxisGap;
       margins.bottom = newBottom;
 
       chartArea = {
