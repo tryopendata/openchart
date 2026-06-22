@@ -93,6 +93,10 @@ export interface ThemeSpacing {
   chartToFooter: number;
   /** Internal padding within the chart area (axes margins). */
   axisMargin: number;
+  /** Height reserved below the chart area for x-axis tick labels (and optional axis title). */
+  xAxisHeight: number;
+  /** Gap in pixels between the x-axis line and the top of non-rotated tick label text. */
+  xAxisLabelPadding: number;
 }
 
 // ---------------------------------------------------------------------------

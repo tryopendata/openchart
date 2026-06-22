@@ -51,7 +51,10 @@ export function computeColumnLabels(
   labelPrefix?: string,
   valueField?: string,
   labelColor?: string,
+  fontSize?: number,
+  labelSuffix?: string,
 ): ResolvedLabel[] {
+  const FONT_SIZE = fontSize ?? LABEL_FONT_SIZE;
   const targetMarks = filterByDensity(marks, density);
 
   const formatter = buildD3Formatter(labelFormat);
@@ -83,13 +86,14 @@ export function computeColumnLabels(
         valuePart = rawValue;
       }
     }
-    if (labelPrefix) valuePart = labelPrefix + valuePart;
-
     const numericValue = parseFloat(valuePart);
     const isNegative = Number.isFinite(numericValue) && numericValue < 0;
 
-    const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
-    const textHeight = LABEL_FONT_SIZE * 1.2;
+    if (labelPrefix) valuePart = labelPrefix + valuePart;
+    if (labelSuffix) valuePart = valuePart + labelSuffix;
+
+    const textWidth = estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
+    const textHeight = FONT_SIZE * 1.2;
 
     // anchorY is the TOP of the label bounding box so the collision system's
     // AABB check (rect = { y: anchorY, height: textHeight }) is geometrically
@@ -110,7 +114,7 @@ export function computeColumnLabels(
       priority: 'data',
       style: {
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: LABEL_FONT_SIZE,
+        fontSize: FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
         fill: labelColor ?? getRepresentativeColor(mark.fill),
         lineHeight: 1.2,

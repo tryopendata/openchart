@@ -110,7 +110,7 @@ export interface NormalizedChartSpec {
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
-    Pick<LabelConfig, 'offsets' | 'color'>;
+    Pick<LabelConfig, 'offsets' | 'color' | 'fontSize' | 'suffix'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   /** Right-side endpoint labels column config (multi-series line/area only). */

@@ -96,7 +96,10 @@ export function computeBarLabels(
   valueField?: string,
   labelColor?: string,
   darkMode = false,
+  fontSize?: number,
+  labelSuffix?: string,
 ): ResolvedLabel[] {
+  const FONT_SIZE = fontSize ?? LABEL_FONT_SIZE;
   const targetMarks = filterByDensity(marks, density);
 
   const candidates: LabelCandidate[] = [];
@@ -132,9 +135,10 @@ export function computeBarLabels(
       }
     }
     if (labelPrefix) valuePart = labelPrefix + valuePart;
+    if (labelSuffix) valuePart = valuePart + labelSuffix;
 
-    const textWidth = estimateTextWidth(valuePart, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
-    const textHeight = LABEL_FONT_SIZE * 1.2;
+    const textWidth = estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
+    const textHeight = FONT_SIZE * 1.2;
 
     // Detect stacked bars: cornerRadius 0 indicates stacked segment
     const isStacked = mark.stackGroup !== undefined;
@@ -196,7 +200,7 @@ export function computeBarLabels(
       priority: 'data',
       style: {
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: LABEL_FONT_SIZE,
+        fontSize: FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
         fill,
         lineHeight: 1.2,
