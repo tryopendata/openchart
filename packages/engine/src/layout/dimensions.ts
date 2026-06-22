@@ -338,7 +338,8 @@ export function computeDimensions(
     const labelHeight = Math.min(rotatedHeight, 120);
     xAxisHeight = hasXAxisLabel ? labelHeight + 20 : labelHeight;
   } else {
-    xAxisHeight = hasXAxisLabel ? 48 : 26;
+    const base = theme.spacing.xAxisHeight;
+    xAxisHeight = hasXAxisLabel ? base + 22 : base;
   }
 
   // Resolve effective y-axis tickPosition early so margin math can account

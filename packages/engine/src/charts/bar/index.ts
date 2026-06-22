@@ -28,6 +28,7 @@ export const barRenderer: ChartRenderer = (spec, scales, chartArea, strategy, th
     valueField,
     spec.labels.color,
     theme.isDark,
+    spec.labels.fontSize,
   );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];

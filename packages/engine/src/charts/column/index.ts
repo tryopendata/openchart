@@ -27,6 +27,8 @@ export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy,
     spec.labels.prefix,
     valueField,
     spec.labels.color,
+    spec.labels.fontSize,
+    spec.labels.suffix,
   );
   for (let i = 0; i < marks.length && i < labels.length; i++) {
     marks[i].label = labels[i];

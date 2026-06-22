@@ -246,6 +246,8 @@ export interface AxisConfig {
   labelPadding?: number;
   /** Color override for axis tick labels and title. Useful in dual-axis charts to match axis color to its series. */
   labelColor?: string;
+  /** Literal string appended to every formatted tick label. e.g. "B" gives "$4.5B" when format is "$,.1~f". */
+  labelSuffix?: string;
   /** Secondary data field to display alongside each tick label. Renders in lighter weight/color. Only effective on categorical y-axis labels (horizontal bar charts). */
   labelField?: string;
   /**
@@ -810,6 +812,19 @@ export interface ThemeConfig {
     family?: string;
     /** Monospace font family (for tabular numbers). */
     mono?: string;
+    /** Font size overrides in pixels. Partial — only specified keys are overridden. */
+    sizes?: {
+      /** Chart title. Default: 26. */
+      title?: number;
+      /** Subtitle below the title. Default: 14. */
+      subtitle?: number;
+      /** Body text (tooltips, legend labels). Default: 13. */
+      body?: number;
+      /** Small text (source line, footer). Default: 11. */
+      small?: number;
+      /** Axis tick labels. Default: 11. */
+      axisTick?: number;
+    };
   };
   /** Spacing overrides in pixels. */
   spacing?: {
@@ -817,6 +832,10 @@ export interface ThemeConfig {
     padding?: number;
     /** Gap between chrome elements (title to subtitle, etc.). */
     chromeGap?: number;
+    /** Height reserved below chart area for x-axis tick labels. Increase when large axisTick font sizes cause label clipping. */
+    xAxisHeight?: number;
+    /** Gap in pixels between the x-axis line and tick label text. Increase when larger axisTick fonts sit too close to the axis line. */
+    xAxisLabelPadding?: number;
   };
   /** Border radius for chart container and tooltips. */
   borderRadius?: number;
@@ -863,10 +882,14 @@ export interface LabelConfig {
   format?: string;
   /** Literal string prepended to each formatted label value (e.g. "-" or "$"). */
   prefix?: string;
+  /** Literal string appended to each formatted label value (e.g. "%" or "x"). */
+  suffix?: string;
   /** Fixed CSS color for all labels. Overrides the default fill-derived color. */
   color?: string;
   /** Per-series pixel offsets for fine-tuning label positions, keyed by series name. */
   offsets?: Record<string, AnnotationOffset>;
+  /** Font size in pixels for bar/column value labels. */
+  fontSize?: number;
 }
 
 /** Shorthand: `false` disables all labels, `true` uses defaults, or pass a full config object. */

@@ -210,8 +210,10 @@ function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
     density: labels.density ?? 'auto',
     format: labels.format ?? '',
     prefix: labels.prefix ?? '',
+    suffix: labels.suffix,
     offsets: labels.offsets,
     color: labels.color,
+    fontSize: labels.fontSize,
   };
 }
 

@@ -72,6 +72,7 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     const fonts: Partial<Theme['fonts']> = {};
     if (config.fonts.family) fonts.family = config.fonts.family;
     if (config.fonts.mono) fonts.mono = config.fonts.mono;
+    if (config.fonts.sizes) fonts.sizes = config.fonts.sizes as Theme['fonts']['sizes'];
     partial.fonts = fonts as Theme['fonts'];
   }
 
@@ -79,6 +80,9 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     const spacing: Partial<Theme['spacing']> = {};
     if (config.spacing.padding !== undefined) spacing.padding = config.spacing.padding;
     if (config.spacing.chromeGap !== undefined) spacing.chromeGap = config.spacing.chromeGap;
+    if (config.spacing.xAxisHeight !== undefined) spacing.xAxisHeight = config.spacing.xAxisHeight;
+    if (config.spacing.xAxisLabelPadding !== undefined)
+      spacing.xAxisLabelPadding = config.spacing.xAxisLabelPadding;
     partial.spacing = spacing as Theme['spacing'];
   }
 
@@ -197,6 +201,30 @@ function adjustOpacity(hex: string, opacity: number): string {
  */
 export function resolveTheme(userTheme?: ThemeConfig, base: Theme = DEFAULT_THEME): ResolvedTheme {
   let merged: Theme = userTheme ? deepMerge(base, themeConfigToPartial(userTheme)) : { ...base };
+
+  // Propagate fonts.sizes overrides onto the chrome element fontSizes.
+  // The chrome defaults hard-code fontSize independently from fonts.sizes,
+  // so we sync them here after merging so a single sizes override applies everywhere.
+  if (userTheme?.fonts?.sizes) {
+    const s = userTheme.fonts.sizes;
+    merged = {
+      ...merged,
+      chrome: {
+        ...merged.chrome,
+        ...(s.title !== undefined && {
+          title: { ...merged.chrome.title, fontSize: s.title },
+        }),
+        ...(s.subtitle !== undefined && {
+          subtitle: { ...merged.chrome.subtitle, fontSize: s.subtitle },
+        }),
+        ...(s.small !== undefined && {
+          source: { ...merged.chrome.source, fontSize: s.small },
+          byline: { ...merged.chrome.byline, fontSize: s.small },
+          footer: { ...merged.chrome.footer, fontSize: s.small },
+        }),
+      },
+    };
+  }
 
   // Auto-adapt chrome for dark backgrounds
   const dark = isDarkBackground(merged.colors.background);

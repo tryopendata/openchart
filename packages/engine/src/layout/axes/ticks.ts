@@ -126,26 +126,27 @@ const TEMPORAL_SCALE_TYPES = new Set(['time', 'utc']);
 function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
   const axisConfig = resolvedScale.channel.axis || undefined;
   const formatStr = axisConfig?.format;
+  const suffix = axisConfig?.labelSuffix ?? '';
 
   if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
     const temporalFmt = buildTemporalFormatter(formatStr);
-    if (temporalFmt) return temporalFmt(value as Date);
+    if (temporalFmt) return temporalFmt(value as Date) + suffix;
     const useUtc = resolvedScale.type === 'utc';
-    return formatDate(value as Date, undefined, undefined, useUtc);
+    return formatDate(value as Date, undefined, undefined, useUtc) + suffix;
   }
 
   if (NUMERIC_SCALE_TYPES.has(resolvedScale.type)) {
     const num = value as number;
     if (formatStr) {
       const fmt = buildD3Formatter(formatStr);
-      if (fmt) return fmt(num);
+      if (fmt) return fmt(num) + suffix;
     }
     // Abbreviate large numbers for axis labels
-    if (Math.abs(num) >= 1000) return abbreviateNumber(num);
-    return formatNumber(num);
+    if (Math.abs(num) >= 1000) return abbreviateNumber(num) + suffix;
+    return formatNumber(num) + suffix;
   }
 
-  return String(value);
+  return String(value) + suffix;
 }
 
 /**

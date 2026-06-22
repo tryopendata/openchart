@@ -56,6 +56,8 @@ export const DEFAULT_THEME: Theme = {
     chromeToChart: 8,
     chartToFooter: 8,
     axisMargin: 6,
+    xAxisHeight: 26,
+    xAxisLabelPadding: 14,
   },
   borderRadius: 2,
   chrome: {

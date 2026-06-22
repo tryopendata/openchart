@@ -83,6 +83,26 @@ describe('resolveTheme', () => {
     expect(resolved.fonts.family).toBe(DEFAULT_THEME.fonts.family);
     expect(resolved.spacing.padding).toBe(DEFAULT_THEME.spacing.padding);
   });
+
+  it('fonts.sizes overrides propagate to chrome element fontSizes', () => {
+    const resolved = resolveTheme({
+      fonts: { sizes: { title: 40, subtitle: 20, small: 16, axisTick: 16 } },
+    });
+    expect(resolved.chrome.title.fontSize).toBe(40);
+    expect(resolved.chrome.subtitle.fontSize).toBe(20);
+    expect(resolved.chrome.source.fontSize).toBe(16);
+    expect(resolved.chrome.byline.fontSize).toBe(16);
+    expect(resolved.chrome.footer.fontSize).toBe(16);
+    expect(resolved.chrome.eyebrow.fontSize).toBe(DEFAULT_THEME.chrome.eyebrow.fontSize);
+    expect(resolved.fonts.sizes.body).toBe(DEFAULT_THEME.fonts.sizes.body);
+  });
+
+  it('fonts.sizes partial override only changes specified sizes', () => {
+    const resolved = resolveTheme({ fonts: { sizes: { title: 36 } } });
+    expect(resolved.chrome.title.fontSize).toBe(36);
+    expect(resolved.chrome.subtitle.fontSize).toBe(DEFAULT_THEME.chrome.subtitle.fontSize);
+    expect(resolved.chrome.source.fontSize).toBe(DEFAULT_THEME.chrome.source.fontSize);
+  });
 });
 
 // ---------------------------------------------------------------------------

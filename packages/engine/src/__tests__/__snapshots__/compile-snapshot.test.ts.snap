@@ -360,14 +360,14 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "background": "transparent",
       "categorical": [
         "#06b6d4",
-        "#eb7289",
-        "#3bb974",
-        "#ad87ed",
-        "#e69c3a",
-        "#4ba3f7",
-        "#eb8656",
-        "#8494fa",
-        "#00b9c3",
+        "#ee4a73",
+        "#00b054",
+        "#a46bf5",
+        "#e07d00",
+        "#0091ff",
+        "#f36000",
+        "#6f7dff",
+        "#00afbf",
       ],
       "diverging": {
         "brownTeal": [
@@ -461,6 +461,8 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "chromeGap": 4,
       "chromeToChart": 8,
       "padding": 20,
+      "xAxisHeight": 26,
+      "xAxisLabelPadding": 14,
     },
   },
   "tooltipDescriptors": [
@@ -790,7 +792,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "value": "40",
       },
       {
-        "color": "#eb7289",
+        "color": "#ee4a73",
         "dataY": 143.375,
         "labelLines": [
           "UK",
@@ -800,7 +802,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "dataX": 657.899,
           "fill": "transparent",
           "radius": 4,
-          "stroke": "#eb7289",
+          "stroke": "#ee4a73",
           "strokeWidth": 2,
           "x": 661.899,
           "y": 143.375,
@@ -810,7 +812,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "value": "35",
       },
       {
-        "color": "#3bb974",
+        "color": "#00b054",
         "dataY": 242.62999999999997,
         "labelLines": [
           "FR",
@@ -820,7 +822,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "dataX": 657.899,
           "fill": "transparent",
           "radius": 4,
-          "stroke": "#3bb974",
+          "stroke": "#00b054",
           "strokeWidth": 2,
           "x": 661.899,
           "y": 242.62999999999997,
@@ -830,7 +832,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "value": "22",
       },
       {
-        "color": "#ad87ed",
+        "color": "#a46bf5",
         "dataY": 196.82,
         "labelLines": [
           "DE",
@@ -840,7 +842,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "dataX": 657.899,
           "fill": "transparent",
           "radius": 4,
-          "stroke": "#ad87ed",
+          "stroke": "#a46bf5",
           "strokeWidth": 2,
           "x": 661.899,
           "y": 196.82,
@@ -885,19 +887,19 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "active": true,
-        "color": "#eb7289",
+        "color": "#ee4a73",
         "label": "UK",
         "shape": "line",
       },
       {
         "active": true,
-        "color": "#3bb974",
+        "color": "#00b054",
         "label": "FR",
         "shape": "line",
       },
       {
         "active": true,
-        "color": "#ad87ed",
+        "color": "#a46bf5",
         "label": "DE",
         "shape": "line",
       },
@@ -1035,7 +1037,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#eb7289",
+                "color": "#ee4a73",
                 "label": "country",
                 "value": "UK",
               },
@@ -1063,7 +1065,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#eb7289",
+                "color": "#ee4a73",
                 "label": "country",
                 "value": "UK",
               },
@@ -1096,7 +1098,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
       ],
       "seriesKey": "UK",
-      "stroke": "#eb7289",
+      "stroke": "#ee4a73",
       "strokeDasharray": undefined,
       "strokeWidth": 1.5,
       "type": "line",
@@ -1127,7 +1129,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#3bb974",
+                "color": "#00b054",
                 "label": "country",
                 "value": "FR",
               },
@@ -1155,7 +1157,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#3bb974",
+                "color": "#00b054",
                 "label": "country",
                 "value": "FR",
               },
@@ -1188,7 +1190,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
       ],
       "seriesKey": "FR",
-      "stroke": "#3bb974",
+      "stroke": "#00b054",
       "strokeDasharray": undefined,
       "strokeWidth": 1.5,
       "type": "line",
@@ -1219,7 +1221,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#ad87ed",
+                "color": "#a46bf5",
                 "label": "country",
                 "value": "DE",
               },
@@ -1247,7 +1249,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#ad87ed",
+                "color": "#a46bf5",
                 "label": "country",
                 "value": "DE",
               },
@@ -1280,7 +1282,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
       ],
       "seriesKey": "DE",
-      "stroke": "#ad87ed",
+      "stroke": "#a46bf5",
       "strokeDasharray": undefined,
       "strokeWidth": 1.5,
       "type": "line",
@@ -1334,14 +1336,14 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "background": "transparent",
       "categorical": [
         "#06b6d4",
-        "#eb7289",
-        "#3bb974",
-        "#ad87ed",
-        "#e69c3a",
-        "#4ba3f7",
-        "#eb8656",
-        "#8494fa",
-        "#00b9c3",
+        "#ee4a73",
+        "#00b054",
+        "#a46bf5",
+        "#e07d00",
+        "#0091ff",
+        "#f36000",
+        "#6f7dff",
+        "#00afbf",
       ],
       "diverging": {
         "brownTeal": [
@@ -1435,6 +1437,8 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "chromeGap": 4,
       "chromeToChart": 8,
       "padding": 20,
+      "xAxisHeight": 26,
+      "xAxisLabelPadding": 14,
     },
   },
   "tooltipDescriptors": [],
@@ -1923,14 +1927,14 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "background": "transparent",
       "categorical": [
         "#06b6d4",
-        "#eb7289",
-        "#3bb974",
-        "#ad87ed",
-        "#e69c3a",
-        "#4ba3f7",
-        "#eb8656",
-        "#8494fa",
-        "#00b9c3",
+        "#ee4a73",
+        "#00b054",
+        "#a46bf5",
+        "#e07d00",
+        "#0091ff",
+        "#f36000",
+        "#6f7dff",
+        "#00afbf",
       ],
       "diverging": {
         "brownTeal": [
@@ -2024,6 +2028,8 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "chromeGap": 4,
       "chromeToChart": 8,
       "padding": 20,
+      "xAxisHeight": 26,
+      "xAxisLabelPadding": 14,
     },
   },
   "tooltipDescriptors": [
