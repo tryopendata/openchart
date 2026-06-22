@@ -1,5 +1,30 @@
 # Changelog
 
+## [7.2.0](https://github.com/tryopendata/openchart/compare/core-v7.1.4...core-v7.2.0) (2026-06-22)
+
+
+### Features
+
+* theme typography controls, axis label suffix, and vivid palette (#79) ([71f3981](https://github.com/tryopendata/openchart/commit/71f3981))
+
+
+### Bug Fixes
+
+* tighten chrome-to-legend gap and y-axis title clearance (#77) ([8d81359](https://github.com/tryopendata/openchart/commit/8d81359))
+* align table footer source text and brand watermark on one line ([b5ffbba](https://github.com/tryopendata/openchart/commit/b5ffbba))
+* preserve explicit chrome color overrides through dark-mode adaptation ([f555c85](https://github.com/tryopendata/openchart/commit/f555c85))
+* use perceptual luminance threshold for bar label color ([e6f750d](https://github.com/tryopendata/openchart/commit/e6f750d))
+* inject percentage axis format when stack is normalize ([b16f076](https://github.com/tryopendata/openchart/commit/b16f076))
+* replace legend chip+bar swatches with bare mark-appropriate shapes ([e517c6c](https://github.com/tryopendata/openchart/commit/e517c6c))
+* show all x-axis labels on grouped bar charts by resolving rotation before thinning ([31ea820](https://github.com/tryopendata/openchart/commit/31ea820))
+* align brand watermark top-edge with source text using hanging baseline (#75) ([fa0186b](https://github.com/tryopendata/openchart/commit/fa0186b))
+* restore bottom margin padding, fixing bottom legend viewport overflow ([97c837e](https://github.com/tryopendata/openchart/commit/97c837e))
+* endpoint marker sits at line terminus, visual regression baselines updated ([0d6fdf1](https://github.com/tryopendata/openchart/commit/0d6fdf1))
+* address code review findings ([ca27cd6](https://github.com/tryopendata/openchart/commit/ca27cd6))
+* footer dead space, transparent background (breaking), area gradients, font smoothing ([cf5f8b8](https://github.com/tryopendata/openchart/commit/cf5f8b8))
+* column labels z-order, y-axis title overlap, and x-axis tick density ([e4d0139](https://github.com/tryopendata/openchart/commit/e4d0139))
+* grouped bars as default, white labels on dark bars ([ea4949f](https://github.com/tryopendata/openchart/commit/ea4949f))
+
 ## [7.1.4](https://github.com/tryopendata/openchart/compare/core-v7.1.3...core-v7.1.4) (2026-06-03)
 
 
