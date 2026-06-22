@@ -75,7 +75,8 @@ function renderAxis(
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         // Rotated labels: anchor at the rotation pivot point
         const labelX = tick.position;
-        const labelY = area.y + area.height + (axis.labelPadding ?? 6);
+        const xLabelPad = axis.labelPadding ?? layout.theme.spacing.xAxisLabelPadding;
+        const labelY = area.y + area.height + xLabelPad;
         setAttrs(label, {
           x: labelX,
           y: labelY,

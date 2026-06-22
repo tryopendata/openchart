@@ -86,11 +86,11 @@ export function computeColumnLabels(
         valuePart = rawValue;
       }
     }
-    if (labelPrefix) valuePart = labelPrefix + valuePart;
-    if (labelSuffix) valuePart = valuePart + labelSuffix;
-
     const numericValue = parseFloat(valuePart);
     const isNegative = Number.isFinite(numericValue) && numericValue < 0;
+
+    if (labelPrefix) valuePart = labelPrefix + valuePart;
+    if (labelSuffix) valuePart = valuePart + labelSuffix;
 
     const textWidth = estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = FONT_SIZE * 1.2;

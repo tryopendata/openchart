@@ -97,6 +97,7 @@ export function computeBarLabels(
   labelColor?: string,
   darkMode = false,
   fontSize?: number,
+  labelSuffix?: string,
 ): ResolvedLabel[] {
   const FONT_SIZE = fontSize ?? LABEL_FONT_SIZE;
   const targetMarks = filterByDensity(marks, density);
@@ -134,6 +135,7 @@ export function computeBarLabels(
       }
     }
     if (labelPrefix) valuePart = labelPrefix + valuePart;
+    if (labelSuffix) valuePart = valuePart + labelSuffix;
 
     const textWidth = estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = FONT_SIZE * 1.2;
