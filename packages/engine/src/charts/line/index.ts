@@ -10,12 +10,16 @@
  *   `'normalize'`, or `'center'`.
  */
 
-import type { AreaMark, LineMark, Mark } from '@opendata-ai/openchart-core';
+import type { AreaMark, LineMark, Mark, PointMark } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
+import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ChartRenderer } from '../registry';
 import { computeAreaMarks } from './area';
 import { computeLineMarks } from './compute';
 import { computeLineLabels } from './labels';
+
+/** Radius for area-chart data points, matching the line renderer. */
+const AREA_POINT_RADIUS = 3;
 
 // ---------------------------------------------------------------------------
 // Line chart renderer
@@ -84,8 +88,14 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
     ? linesFromAreas(areas)
     : computeLineMarks(spec, scales, chartArea, strategy);
 
-  // Areas go first (rendered behind lines), then lines on top
-  return [...areas, ...lines] as Mark[];
+  // For multi-series areas the lines are derived from area tops, which skips
+  // the point-emission path in computeLineMarks. Emit the data-point dots here
+  // so `mark.point` works on area charts the same way it does on lines.
+  // Single-series areas already get their points from computeLineMarks above.
+  const points = hasColor && spec.markDef.point ? pointsFromAreas(areas, spec.markDef.point) : [];
+
+  // Areas go first (rendered behind lines), then lines, then points on top
+  return [...areas, ...lines, ...points] as Mark[];
 };
 
 // ---------------------------------------------------------------------------
@@ -115,6 +125,46 @@ function linesFromAreas(areas: AreaMark[]): LineMark[] {
     dataPoints: a.dataPoints,
     aria: { label: `${a.seriesKey ?? 'Series'}: line with ${a.topPoints.length} data points` },
   }));
+}
+
+/**
+ * Derive PointMark[] sitting on each area's top boundary. Honors the same
+ * `mark.point` modes as the line renderer: `true` (filled dots), `'transparent'`
+ * (invisible hover targets), and `'endpoints'` (hollow dots at first/last only).
+ */
+function pointsFromAreas(
+  areas: AreaMark[],
+  pointMode: NonNullable<NormalizedChartSpec['markDef']['point']>,
+): PointMark[] {
+  const isTransparent = pointMode === 'transparent';
+  const isEndpoints = pointMode === 'endpoints';
+  const points: PointMark[] = [];
+
+  for (const a of areas) {
+    const stroke = getRepresentativeColor(a.fill);
+    const lastIdx = a.topPoints.length - 1;
+
+    for (let i = 0; i < a.topPoints.length; i++) {
+      const pt = a.topPoints[i];
+      const isEndpoint = i === 0 || i === lastIdx;
+      const visible = !isTransparent && (!isEndpoints || isEndpoint);
+      const hollow = isEndpoints && visible;
+      points.push({
+        type: 'point',
+        cx: pt.x,
+        cy: pt.y,
+        r: visible ? AREA_POINT_RADIUS : 0,
+        fill: hollow ? 'transparent' : stroke,
+        stroke: hollow ? stroke : visible ? '#ffffff' : 'transparent',
+        strokeWidth: visible ? 1.5 : 0,
+        fillOpacity: isTransparent ? 0 : 1,
+        data: a.data[i] ?? {},
+        aria: { decorative: true },
+      });
+    }
+  }
+
+  return points;
 }
 
 // ---------------------------------------------------------------------------
