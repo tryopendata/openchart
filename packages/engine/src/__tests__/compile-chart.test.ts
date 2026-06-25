@@ -205,6 +205,33 @@ describe('compileChart', () => {
     expect(pointMarks.length).toBeGreaterThan(0);
   });
 
+  it('produces PointMarks on a multi-series area when mark.point is true', () => {
+    // Multi-series areas derive their lines from area tops, which bypasses the
+    // line renderer's point emission. mark.point must still place dots.
+    const areaSpec = {
+      ...lineSpec,
+      mark: { type: 'area' as const, point: true as const },
+    };
+    const layout = compileChart(areaSpec, { width: 600, height: 400 });
+
+    const areaMarks = layout.marks.filter((m) => m.type === 'area');
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(areaMarks.length).toBe(2); // US + UK
+    // One point per data row across both series (2 points x 2 series).
+    expect(pointMarks.length).toBe(4);
+    for (const p of pointMarks) {
+      if (p.type === 'point') expect(p.r).toBeGreaterThan(0);
+    }
+  });
+
+  it('does not produce PointMarks on a multi-series area by default', () => {
+    const areaSpec = { ...lineSpec, mark: 'area' as const };
+    const layout = compileChart(areaSpec, { width: 600, height: 400 });
+
+    const pointMarks = layout.marks.filter((m) => m.type === 'point');
+    expect(pointMarks.length).toBe(0);
+  });
+
   it('includes accessibility metadata with meaningful content', () => {
     const layout = compileChart(lineSpec, { width: 600, height: 400 });
     expect(layout.a11y.altText).toContain('Line chart');

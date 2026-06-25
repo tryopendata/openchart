@@ -500,7 +500,11 @@ function buildPointScale(
     ? (channel.scale.domain as string[])
     : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
-  const padding = channel.scale?.padding ?? 0.5;
+  // Point scales have a single padding knob (outer padding only -- there are no
+  // bands, so paddingInner is meaningless). Accept `paddingOuter` as an alias so
+  // a spec written for a band scale doesn't silently no-op when the mark is a
+  // line; explicit `padding` wins if both are set.
+  const padding = channel.scale?.padding ?? channel.scale?.paddingOuter ?? 0.5;
   const scale = scalePoint().domain(values).range([rangeStart, rangeEnd]).padding(padding);
 
   if (channel.scale?.reverse) {

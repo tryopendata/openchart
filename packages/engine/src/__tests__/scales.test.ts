@@ -269,6 +269,40 @@ describe('scale config properties', () => {
     expect(paddedBandwidth).toBeGreaterThan(defaultBandwidth);
   });
 
+  it('point scale honors paddingOuter as a padding alias', () => {
+    const ordinalBase = {
+      ...lineSpec,
+      data: [
+        { year: 'A', value: 10 },
+        { year: 'B', value: 20 },
+        { year: 'C', value: 30 },
+      ],
+    };
+    const wide: NormalizedChartSpec = {
+      ...ordinalBase,
+      encoding: {
+        x: { field: 'year', type: 'ordinal', scale: { paddingOuter: 0.5 } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+    const tight: NormalizedChartSpec = {
+      ...ordinalBase,
+      encoding: {
+        x: { field: 'year', type: 'ordinal', scale: { paddingOuter: 0.04 } },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const wideScales = computeScales(wide, chartArea, wide.data);
+    const tightScales = computeScales(tight, chartArea, tight.data);
+    expect(wideScales.x!.type).toBe('point');
+
+    // Less outer padding pushes the first point closer to the left edge.
+    const wideFirst = wideScales.x!.scale('A') as number;
+    const tightFirst = tightScales.x!.scale('A') as number;
+    expect(tightFirst).toBeLessThan(wideFirst);
+  });
+
   it('backward compatible: existing specs still work', () => {
     // lineSpec and barSpec from before should still produce valid scales
     const lineScales = computeScales(lineSpec, chartArea, lineSpec.data);
