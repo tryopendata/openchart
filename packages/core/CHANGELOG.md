@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.2.1](https://github.com/tryopendata/openchart/compare/core-v7.2.0...core-v7.2.1) (2026-06-25)
+
+
+### Features
+
+* area chart mark.point support and point scale paddingOuter alias (#80) ([f66e160](https://github.com/tryopendata/openchart/commit/f66e160))
+
 ## [7.2.0](https://github.com/tryopendata/openchart/compare/core-v7.1.4...core-v7.2.0) (2026-06-22)
 
 
