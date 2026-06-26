@@ -62,7 +62,12 @@ export function resolveRangeAnnotation(
     const baseDy = 14;
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
-    const style = makeAnnotationLabelStyle(11, 500, undefined, isDark);
+    const style = makeAnnotationLabelStyle(
+      annotation.fontSize ?? 11,
+      annotation.fontWeight ?? 500,
+      undefined,
+      isDark,
+    );
     if (centered) {
       style.textAnchor = 'middle';
     } else if (anchor === 'right') {

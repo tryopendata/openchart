@@ -382,6 +382,8 @@ A highlighted band or rectangle.
 | `label`       | `string`           | `undefined`            | Range label text.                                           |
 | `labelOffset` | `AnnotationOffset` | `undefined`            | Pixel offset for the label. `{ dx?: number, dy?: number }`. |
 | `labelAnchor` | `AnnotationAnchor` | `'auto'`               | Label placement direction.                                  |
+| `fontSize`    | `number`           | `11`                   | Font size override for the range label (px).                |
+| `fontWeight`  | `number`           | `500`                  | Font weight override for the range label.                   |
 | `fill`        | `string`           | theme `annotationFill` | Fill color.                                                 |
 | `stroke`      | `string`           | `undefined`            | Stroke color.                                               |
 | `opacity`     | `number`           | `1`                    | Opacity (0 to 1).                                           |

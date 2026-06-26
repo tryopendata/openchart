@@ -225,6 +225,35 @@ describe('computeAnnotations', () => {
       expect(annotations[0].label!.text).toBe('Recession');
     });
 
+    it('range label defaults to 11px / weight 500', () => {
+      const spec = makeSpec([
+        { type: 'range', x1: '2020-01-01', x2: '2021-01-01', label: 'Period' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations[0].label!.style.fontSize).toBe(11);
+      expect(annotations[0].label!.style.fontWeight).toBe(500);
+    });
+
+    it('range label honors fontSize and fontWeight overrides', () => {
+      const spec = makeSpec([
+        {
+          type: 'range',
+          x1: '2020-01-01',
+          x2: '2021-01-01',
+          label: 'Period',
+          fontSize: 19,
+          fontWeight: 600,
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations[0].label!.style.fontSize).toBe(19);
+      expect(annotations[0].label!.style.fontWeight).toBe(600);
+    });
+
     it('range has fill and opacity', () => {
       const spec = makeSpec([
         {

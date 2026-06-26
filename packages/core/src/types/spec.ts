@@ -731,6 +731,10 @@ export interface RangeAnnotation extends AnnotationBase {
   labelOffset?: AnnotationOffset;
   /** Anchor direction for the range label. */
   labelAnchor?: AnnotationAnchor;
+  /** Font size override for the range label (px). Default: 11. */
+  fontSize?: number;
+  /** Font weight override for the range label. Default: 500. */
+  fontWeight?: number;
 }
 
 /**
