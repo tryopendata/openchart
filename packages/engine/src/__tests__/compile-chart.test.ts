@@ -175,6 +175,32 @@ describe('compileChart', () => {
     expect(layout.legend.position).toBe('top');
   });
 
+  it('aligns the top legend left edge to the plot area, not the container edge', () => {
+    // A y-axis title + numeric ticks reserves a left gutter, pushing the plot
+    // area right of the container padding. The top legend should start at the
+    // plot's left edge (above the y-axis guide), not flush against the container.
+    const layout = compileChart(
+      {
+        ...lineSpec,
+        encoding: {
+          ...lineSpec.encoding,
+          y: { field: 'value', type: 'quantitative' as const, axis: { title: 'GDP ($B)' } },
+        },
+        legend: { position: 'top' as const, show: true },
+      },
+      { width: 360, height: 400 },
+    );
+    expect(layout.legend.position).toBe('top');
+    expect(layout.legend.entries.length).toBeGreaterThan(0);
+    // Plot area is inset from the container by the y-axis gutter.
+    expect(layout.area.x).toBeGreaterThan(0);
+    // Legend left edge now matches the plot left edge (within a pixel).
+    expect(layout.legend.bounds.x).toBeCloseTo(layout.area.x, 0);
+    // And the legend never paints past the container's right padding edge.
+    // Default theme spacing.padding is 20.
+    expect(layout.legend.bounds.x + layout.legend.bounds.width).toBeLessThanOrEqual(360 - 20 + 0.5);
+  });
+
   it('produces line marks with dataPoints (no PointMarks by default)', () => {
     const layout = compileChart(lineSpec, { width: 600, height: 400 });
     expect(layout.marks.length).toBeGreaterThan(0);

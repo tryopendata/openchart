@@ -12,7 +12,7 @@ import type {
 import type { ResolvedScales } from '../layout/scales';
 import { DEFAULT_RANGE_FILL, DEFAULT_RANGE_OPACITY } from './constants';
 import { applyOffset } from './geometry';
-import { resolvePositionEdge } from './position';
+import { resolvePosition, resolvePositionEdge } from './position';
 import { makeAnnotationLabelStyle } from './resolve-text';
 
 export function resolveRangeAnnotation(
@@ -26,10 +26,22 @@ export function resolveRangeAnnotation(
   let width = chartArea.width;
   let height = chartArea.height;
 
+  // When extendToEdges is false, anchor at the data point's exact position
+  // (band/point center) instead of extending to the band/step edge. This insets
+  // the range from the axis so it starts at the first data point rather than
+  // flush against the axis guide. No effect on linear/time scales.
+  const extend = annotation.extendToEdges !== false;
+  const resolveEdge = (
+    value: string | number,
+    scale: typeof scales.x,
+    edge: 'start' | 'end',
+  ): number | null =>
+    extend ? resolvePositionEdge(value, scale, edge) : resolvePosition(value, scale);
+
   // X-range (vertical band)
   if (annotation.x1 !== undefined && annotation.x2 !== undefined) {
-    const x1px = resolvePositionEdge(annotation.x1, scales.x, 'start');
-    const x2px = resolvePositionEdge(annotation.x2, scales.x, 'end');
+    const x1px = resolveEdge(annotation.x1, scales.x, 'start');
+    const x2px = resolveEdge(annotation.x2, scales.x, 'end');
     if (x1px === null || x2px === null) return null;
 
     x = Math.min(x1px, x2px);
@@ -38,8 +50,8 @@ export function resolveRangeAnnotation(
 
   // Y-range (horizontal band)
   if (annotation.y1 !== undefined && annotation.y2 !== undefined) {
-    const y1px = resolvePositionEdge(annotation.y1, scales.y, 'end');
-    const y2px = resolvePositionEdge(annotation.y2, scales.y, 'start');
+    const y1px = resolveEdge(annotation.y1, scales.y, 'end');
+    const y2px = resolveEdge(annotation.y2, scales.y, 'start');
     if (y1px === null || y2px === null) return null;
 
     y = Math.min(y1px, y2px);
@@ -62,7 +74,12 @@ export function resolveRangeAnnotation(
     const baseDy = 14;
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
-    const style = makeAnnotationLabelStyle(11, 500, undefined, isDark);
+    const style = makeAnnotationLabelStyle(
+      annotation.fontSize ?? 11,
+      annotation.fontWeight ?? 500,
+      undefined,
+      isDark,
+    );
     if (centered) {
       style.textAnchor = 'middle';
     } else if (anchor === 'right') {

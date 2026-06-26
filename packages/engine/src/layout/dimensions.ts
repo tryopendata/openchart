@@ -23,12 +23,11 @@ import type {
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import {
-  AXIS_TITLE_GAP,
   AXIS_TITLE_TRAILING_PAD,
+  axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   computeChrome,
   estimateTextWidth,
-  getAxisTitleOffset,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   LABEL_GAP_COMPACT,
@@ -38,7 +37,6 @@ import {
   MAX_LEFT_LABEL_FRACTION_MEDIUM,
   MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
   NARROW_VIEWPORT_MAX,
-  TICK_LABEL_OFFSET,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
@@ -634,14 +632,16 @@ export function computeDimensions(
         theme.fonts.weights.normal,
       );
     }
-    // Mirror the renderer's dynamic offset formula:
-    //   dynamicOffset = TICK_LABEL_OFFSET(6) + maxTickLabelWidth + AXIS_TITLE_GAP(14)
-    //   titleOffset = max(dynamicOffset, getAxisTitleOffset(width))
-    const dynamicTitleOffset = TICK_LABEL_OFFSET + estTickLabelWidth + AXIS_TITLE_GAP;
-    const axisTitleOffset = Math.max(dynamicTitleOffset, getAxisTitleOffset(width));
-    const halfGlyph = Math.ceil(theme.fonts.sizes.body / 2);
+    // Mirror the renderer's title placement so the reserved space matches where
+    // the title is drawn. axisTitleOffset() returns the distance to the title's
+    // center; it already includes the title half-glyph on the tick-label side.
+    // We add another halfGlyph here for the title glyph extending the other way,
+    // toward the container edge, so the margin reaches the title's outer edge.
+    const titleFontSize = theme.fonts.sizes.body;
+    const offset = axisTitleOffset(estTickLabelWidth, titleFontSize, width);
+    const halfGlyph = Math.ceil(titleFontSize / 2);
     const rotatedLabelMargin =
-      axisTitleOffset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);
+      offset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);
     margins.left = Math.max(margins.left, hPad + rotatedLabelMargin);
   }
 

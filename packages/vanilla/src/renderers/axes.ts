@@ -4,7 +4,7 @@
 
 import type { AxisLayout, ChartLayout } from '@opendata-ai/openchart-core';
 import {
-  AXIS_TITLE_GAP,
+  axisTitleOffset,
   estimateTextWidth,
   getAxisTitleOffset,
   TICK_LABEL_OFFSET,
@@ -86,10 +86,16 @@ function renderAxis(
         });
       } else {
         const xLabelPad = axis.labelPadding ?? layout.theme.spacing.xAxisLabelPadding;
+        // Anchor at the text's top edge (hanging baseline) so xLabelPad is the
+        // literal gap between the axis line and the top of the label, regardless
+        // of font size. With the default alphabetic baseline the offset lands at
+        // the text baseline instead, so large fonts let the label top creep up
+        // and hug (or overlap) the axis line.
         setAttrs(label, {
           x: tick.position,
           y: area.y + area.height + xLabelPad,
           'text-anchor': 'middle',
+          'dominant-baseline': 'hanging',
         });
       }
 
@@ -272,6 +278,9 @@ function renderAxis(
     } else {
       // Rotated left y-axis label.
       // Compute a dynamic offset so the title clears the widest tick label.
+      // The title is rotated and centered, so axisTitleOffset() adds its own
+      // half-glyph height on top of the gap (otherwise large title fonts overlap
+      // the tick labels — the gap is visible clearance, not center-to-edge).
       const maxTickLabelWidth = axis.ticks.reduce((max, t) => {
         const w = estimateTextWidth(
           t.label,
@@ -280,8 +289,11 @@ function renderAxis(
         );
         return Math.max(max, w);
       }, 0);
-      const dynamicOffset = TICK_LABEL_OFFSET + maxTickLabelWidth + AXIS_TITLE_GAP;
-      const titleOffset = Math.max(dynamicOffset, getAxisTitleOffset(layout.dimensions.width));
+      const titleOffset = axisTitleOffset(
+        maxTickLabelWidth,
+        axis.labelStyle.fontSize,
+        layout.dimensions.width,
+      );
       setAttrs(axisLabel, {
         x: area.x - titleOffset,
         y: area.y + area.height / 2,
