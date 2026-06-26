@@ -410,6 +410,8 @@ A horizontal or vertical reference line.
 | `strokeWidth` | `number`                          | `1`                    | Line width in pixels.               |
 | `labelOffset` | `AnnotationOffset`                | `undefined`            | Pixel offset for the label.         |
 | `labelAnchor` | `AnnotationAnchor`                | `'auto'`               | Label placement direction.          |
+| `fontSize`    | `number`                          | `11`                   | Font size override for the label (px). |
+| `fontWeight`  | `number`                          | `400`                  | Font weight override for the label. |
 | `fill`        | `string`                          | `undefined`            | Fill color.                         |
 | `stroke`      | `string`                          | theme `annotationText` | Stroke/line color.                  |
 | `opacity`     | `number`                          | `1`                    | Opacity (0 to 1).                   |

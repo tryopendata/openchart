@@ -51,6 +51,11 @@ export interface ThemeFontSizes {
   small: number;
   /** Axis tick label font size in pixels. */
   axisTick: number;
+  /** KPI metric uppercase label font size in pixels. */
+  metricLabel: number;
+  /** KPI metric primary value font size in pixels. The delta and secondary
+   *  values derive from this (each ~0.55x), so scaling this scales the whole cell. */
+  metricValue: number;
 }
 
 /** Font weight presets. */

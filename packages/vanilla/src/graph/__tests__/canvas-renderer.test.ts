@@ -86,7 +86,15 @@ function makeTheme(isDark = false): ResolvedTheme {
     fonts: {
       family: 'Inter, sans-serif',
       mono: 'monospace',
-      sizes: { title: 18, subtitle: 14, body: 12, small: 10, axisTick: 11 },
+      sizes: {
+        title: 18,
+        subtitle: 14,
+        body: 12,
+        small: 10,
+        axisTick: 11,
+        metricLabel: 10,
+        metricValue: 22,
+      },
       weights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
     },
     spacing: {

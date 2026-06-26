@@ -42,6 +42,8 @@ export const DEFAULT_THEME: Theme = {
       body: 13,
       small: 11,
       axisTick: 11,
+      metricLabel: 10,
+      metricValue: 22,
     },
     weights: {
       normal: 450,

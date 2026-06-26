@@ -767,6 +767,10 @@ export interface RefLineAnnotation extends AnnotationBase {
   labelOffset?: AnnotationOffset;
   /** Anchor direction for the reference line label. */
   labelAnchor?: AnnotationAnchor;
+  /** Label font size in pixels. Default: 11. */
+  fontSize?: number;
+  /** Label font weight. Default: 400. */
+  fontWeight?: number;
 }
 
 /** Discriminated union of all annotation types. */
@@ -838,6 +842,10 @@ export interface ThemeConfig {
       small?: number;
       /** Axis tick labels. Default: 11. */
       axisTick?: number;
+      /** KPI metric uppercase label. Default: 10. */
+      metricLabel?: number;
+      /** KPI metric primary value. Default: 22. Delta/secondary derive from this. */
+      metricValue?: number;
     };
   };
   /** Spacing overrides in pixels. */
