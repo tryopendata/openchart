@@ -57,7 +57,10 @@ export const DEFAULT_THEME: Theme = {
     chartToFooter: 8,
     axisMargin: 6,
     xAxisHeight: 26,
-    xAxisLabelPadding: 14,
+    // Gap (px) between the x-axis line and the TOP of the tick labels. The
+    // renderer anchors x-tick labels at their top edge (hanging baseline), so
+    // this is a literal top gap that holds regardless of font size.
+    xAxisLabelPadding: 4,
   },
   borderRadius: 2,
   chrome: {

@@ -492,6 +492,41 @@ describe('computeAnnotations', () => {
       expect(rect.x + rect.width).toBeCloseTo(x2BandStart + bandwidth, 1);
     });
 
+    it('extendToEdges:false anchors a point-scale range at data point centers', () => {
+      // With extendToEdges:false the band starts/ends exactly at the first/last
+      // data point centers instead of extending half a step to the plot edge,
+      // so the range is inset from the axis.
+      const domainValues = ['2006', '2008', '2010', '2012'];
+      const ordinalSpec: NormalizedChartSpec = {
+        markType: 'line',
+        markDef: { type: 'line' },
+        data: domainValues.map((year, i) => ({ year, value: i * 10 })),
+        encoding: {
+          x: { field: 'year', type: 'ordinal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        chrome: {},
+        annotations: [{ type: 'range', x1: '2006', x2: '2012', extendToEdges: false }],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+      const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
+      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+
+      expect(annotations).toHaveLength(1);
+      const rect = annotations[0].rect!;
+
+      const xScale = scales.x!.scale as ScalePoint<string>;
+      // Left/right edges land at the point centers, not extended past them.
+      expect(rect.x).toBeCloseTo(xScale('2006')!, 1);
+      expect(rect.x + rect.width).toBeCloseTo(xScale('2012')!, 1);
+      // And the band is strictly inside the plot (inset from both edges).
+      expect(rect.x).toBeGreaterThan(chartArea.x);
+      expect(rect.x + rect.width).toBeLessThan(chartArea.x + chartArea.width);
+    });
+
     it('linear-scale range is unaffected by edge extension', () => {
       // For linear scales, resolvePositionEdge is identical to resolvePosition.
       // This ensures the fix doesn't introduce any drift on continuous axes.

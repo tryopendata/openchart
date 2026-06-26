@@ -553,24 +553,34 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // the reserved margin. This way computeLegend positions the legend outside
   // the data area (in the margin) instead of overlapping data marks.
   //
-  // Top/bottom legends sit above/below the chart and aren't constrained by
-  // y-axis labels. Use the full container width so wrapping decisions match
-  // the first pass (which uses options.width). Without this, charts with wide
-  // y-axis labels (horizontal bars, long category names) artificially narrow
-  // the legend and trigger premature wrapping.
+  // Top/bottom legends align their left edge to the plot area (chartArea.x),
+  // so the legend sits above/below the y-axis guide rather than flush against
+  // the container edge.
+  //
+  // Width runs from the new left origin (chartArea.x) to the container's right
+  // padding, so the rendered legend never paints past the right edge / over the
+  // endpoint-label column. This is narrower than the first pass (which used the
+  // full container at preliminaryArea.width = options.width), so on a chart with
+  // BOTH a wide y-axis gutter AND a legend that nearly fills its row, the second
+  // pass can wrap to one more row than the first pass reserved in margins.top —
+  // the extra row protrudes slightly into the chrome gap. That graceful failure
+  // (a few px of vertical crowding, still on-canvas) is preferable to the
+  // alternative (chips clipped off the right edge of the SVG). The maxRows cap
+  // (default 2 for top legends) bounds the worst case to a single extra row.
   const legendArea: Rect = { ...chartArea };
   if ('entries' in legendLayout && legendLayout.entries.length > 0) {
+    const legendInnerWidth = options.width - theme.spacing.padding - chartArea.x;
     const gap = legendGap(options.width);
     switch (legendLayout.position) {
       case 'top':
-        legendArea.x = theme.spacing.padding;
-        legendArea.width = options.width - theme.spacing.padding * 2;
+        legendArea.x = chartArea.x;
+        legendArea.width = legendInnerWidth;
         legendArea.y -= legendLayout.bounds.height + gap;
         legendArea.height += legendLayout.bounds.height + gap;
         break;
       case 'bottom':
-        legendArea.x = theme.spacing.padding;
-        legendArea.width = options.width - theme.spacing.padding * 2;
+        legendArea.x = chartArea.x;
+        legendArea.width = legendInnerWidth;
         // Bottom legend sits below the x-axis tick row, not over it. Expand
         // legendArea by xAxisHeight + legendHeight + gap so the bottom-anchored
         // legend lands beneath the axis. Mirrors dimensions.ts which reserved

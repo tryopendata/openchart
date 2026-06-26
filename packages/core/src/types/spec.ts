@@ -727,6 +727,16 @@ export interface RangeAnnotation extends AnnotationBase {
   y1?: string | number;
   /** End of the range on the y-axis. */
   y2?: string | number;
+  /**
+   * For band/point (ordinal) x or y scales, whether the range extends from the
+   * data point's center out to the band/step edge. Default `true`: a range on a
+   * bar chart spans full columns, and a range on a line chart extends half a step
+   * past the first/last point so the band reaches the plot edge. Set `false` to
+   * anchor the range exactly at the data point centers instead — useful when you
+   * want the band inset from the axis (e.g. starting at the first data point
+   * rather than flush against the y-axis guide). No effect on linear/time scales.
+   */
+  extendToEdges?: boolean;
   /** Pixel offset for the range label. */
   labelOffset?: AnnotationOffset;
   /** Anchor direction for the range label. */

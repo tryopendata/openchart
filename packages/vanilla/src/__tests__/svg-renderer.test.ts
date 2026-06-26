@@ -6,6 +6,7 @@
  * and that chart furniture (chrome, axes, legend, gridlines) renders properly.
  */
 
+import { AXIS_TITLE_GAP, estimateTextWidth, TICK_LABEL_OFFSET } from '@opendata-ai/openchart-core';
 import type { ChartSpec, CompileOptions } from '@opendata-ai/openchart-engine';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -531,6 +532,22 @@ describe('axis rendering', () => {
     // The renderer draws an axis line for x-axis
     expect(line).not.toBeNull();
   });
+
+  it('x-tick labels hang below the axis line by the label padding (no hugging)', () => {
+    const { svg, layout } = renderSpec(lineSpec);
+    const xAxis = svg.querySelector('.oc-axis-x')!;
+    const axisLineY = Number(xAxis.querySelector('line')!.getAttribute('y2'));
+    const labels = Array.from(xAxis.querySelectorAll('text'));
+    expect(labels.length).toBeGreaterThan(0);
+
+    const pad = layout.theme.spacing.xAxisLabelPadding;
+    for (const label of labels) {
+      // Anchored at the top edge so the gap holds regardless of font size.
+      expect(label.getAttribute('dominant-baseline')).toBe('hanging');
+      // The label top sits a full padding gap below the axis line.
+      expect(Number(label.getAttribute('y'))).toBeCloseTo(axisLineY + pad, 1);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -780,5 +797,86 @@ describe('brand watermark', () => {
     const { svg } = renderSpec(spec);
     const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Y-axis title spacing (regression for the title overlapping the tick labels)
+// ---------------------------------------------------------------------------
+
+describe('left y-axis title spacing', () => {
+  // Builds a chart with a left y-axis title and reads back the real geometry to
+  // compute the horizontal clearance between the widest tick label's far (left)
+  // edge and the rotated title's near (right) edge. A non-negative clearance
+  // means they don't overlap; the bug was a negative one at large font sizes.
+  const yTitleSpec = (axisTitleSize: number, values: number[]): ChartSpec => ({
+    mark: { type: 'line' },
+    data: values.map((v, i) => ({ year: String(2018 + i), pct: v })),
+    encoding: {
+      x: { field: 'year', type: 'ordinal' },
+      y: {
+        field: 'pct',
+        type: 'quantitative',
+        axis: { title: 'Spring 2026 pass rate', format: '.0f%' },
+      },
+    },
+    chrome: { title: 'Pass rate' },
+    // The deck renders axis titles via theme.fonts.sizes.body; vary it to
+    // reproduce the large-font overlap.
+    theme: { fonts: { sizes: { body: axisTitleSize } } },
+  });
+
+  // Clearance = (widest tick label's left edge) - (title glyph's right edge).
+  // Tick labels: text-anchor=end at x = area.x - 6, so left edge = anchorX - width.
+  // Title: text-anchor=middle, rotated, center at the title's x attr; its glyph
+  // box extends fontSize/2 toward the labels (the +x direction).
+  const measureClearance = (axisTitleSize: number, values: number[]): number => {
+    const container = createContainer(700, 450);
+    const layout = compileChart(yTitleSpec(axisTitleSize, values), {
+      width: 700,
+      height: 450,
+    });
+    const svg = renderChartSVG(layout, container);
+
+    const title = svg.querySelector('.oc-axis-title') as SVGTextElement | null;
+    expect(title).not.toBeNull();
+    const titleCenterX = Number(title!.getAttribute('x'));
+    const titleNearEdge = titleCenterX + axisTitleSize / 2;
+
+    const tickStyle = layout.axes.y!.tickLabelStyle;
+    const tickAnchorX = layout.area.x - TICK_LABEL_OFFSET;
+    let widestLeftEdge = tickAnchorX;
+    for (const t of layout.axes.y!.ticks) {
+      const w = estimateTextWidth(t.label, tickStyle.fontSize, tickStyle.fontWeight ?? 400);
+      widestLeftEdge = Math.min(widestLeftEdge, tickAnchorX - w);
+    }
+
+    return widestLeftEdge - titleNearEdge;
+  };
+
+  const PASS_RATES = [38, 41, 46, 52, 49, 61]; // labels like "38%" ... "61%"
+  // Require real breathing room, not just non-overlap. At the deck font size the
+  // old code left only ~3.5px (glyphs visibly touching), which this floor rejects.
+  const MIN_CLEARANCE = AXIS_TITLE_GAP - 1;
+
+  it('keeps the title clear of the tick labels at the default font size', () => {
+    expect(measureClearance(13, PASS_RATES)).toBeGreaterThanOrEqual(MIN_CLEARANCE);
+  });
+
+  it('keeps the title clear of the tick labels at a large (deck) font size', () => {
+    // The slide deck uses body=21 for axis titles. Under the old fixed gap this
+    // left only ~3.5px and the title glyphs touched the labels (the reported bug).
+    expect(measureClearance(21, PASS_RATES)).toBeGreaterThanOrEqual(MIN_CLEARANCE);
+  });
+
+  it('does not lose clearance as the title font size grows', () => {
+    // The original bug: clearance shrank ~1px per font-size point as the title's
+    // half-glyph ate the fixed gap, so big titles overlapped (negative clearance
+    // at body=36). Now the half-glyph is folded into the offset, so clearance
+    // holds at ~AXIS_TITLE_GAP across the whole font range instead of collapsing.
+    const sizes = [13, 18, 21, 28, 36];
+    for (const s of sizes) {
+      expect(measureClearance(s, PASS_RATES)).toBeGreaterThanOrEqual(MIN_CLEARANCE);
+    }
   });
 });

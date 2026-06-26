@@ -64,15 +64,41 @@ export const AXIS_TITLE_TRAILING_PAD = 4;
 // ---------------------------------------------------------------------------
 
 /**
- * Breathing room between the widest tick label's far edge and the rotated
- * y-axis title center. The title glyph extends ~halfGlyph (ceil(bodyFontSize/2))
- * from its center toward the tick labels, so visible clearance is
- * AXIS_TITLE_GAP - halfGlyph (~7px at default body size 13).
+ * Visible breathing room between the widest tick label's far edge and the
+ * rotated y-axis title's near edge.
+ *
+ * The title is rotated -90deg and anchored at its center, so its glyph box
+ * extends half the title font size toward the tick labels. To keep the gap
+ * constant regardless of title font size, callers add that half-glyph on top
+ * of this value (see axisTitleOffset() below). At the old fixed gap of 14 the
+ * clearance silently shrank as the font grew (14 - 11 = 3px at body size 21),
+ * which let large-font titles collide with the tick labels.
  *
  * Used in both the engine (dimensions.ts margin reservation) and the renderer
- * (axes.ts title placement). Both must agree on this value.
+ * (axes.ts title placement) via axisTitleOffset(). Both must agree on this value.
  */
-export const AXIS_TITLE_GAP = 14;
+export const AXIS_TITLE_GAP = 7;
+
+/**
+ * Computes the distance from the chart edge to the rotated y-axis title's center.
+ *
+ * The title center must sit far enough left that, after accounting for the
+ * widest tick label and the title's own half-glyph height, AXIS_TITLE_GAP of
+ * visible clearance remains. Falls back to the viewport-minimum offset when the
+ * dynamic value would be smaller (short tick labels on wide containers).
+ *
+ * Shared by the engine (margin reservation) and the renderer (title placement)
+ * so the reserved space always matches where the title is drawn.
+ */
+export function axisTitleOffset(
+  maxTickLabelWidth: number,
+  titleFontSize: number,
+  width: number,
+): number {
+  const halfTitleGlyph = Math.ceil(titleFontSize / 2);
+  const dynamic = TICK_LABEL_OFFSET + maxTickLabelWidth + AXIS_TITLE_GAP + halfTitleGlyph;
+  return Math.max(dynamic, getAxisTitleOffset(width));
+}
 
 // ---------------------------------------------------------------------------
 // Narrow viewport threshold (between compact and medium)

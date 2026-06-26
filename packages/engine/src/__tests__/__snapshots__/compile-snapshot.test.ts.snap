@@ -462,7 +462,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "chromeToChart": 8,
       "padding": 20,
       "xAxisHeight": 26,
-      "xAxisLabelPadding": 14,
+      "xAxisLabelPadding": 4,
     },
   },
   "tooltipDescriptors": [
@@ -1438,7 +1438,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "chromeToChart": 8,
       "padding": 20,
       "xAxisHeight": 26,
-      "xAxisLabelPadding": 14,
+      "xAxisLabelPadding": 4,
     },
   },
   "tooltipDescriptors": [],
@@ -2029,7 +2029,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "chromeToChart": 8,
       "padding": 20,
       "xAxisHeight": 26,
-      "xAxisLabelPadding": 14,
+      "xAxisLabelPadding": 4,
     },
   },
   "tooltipDescriptors": [
