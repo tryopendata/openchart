@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.2.2](https://github.com/tryopendata/openchart/compare/core-v7.2.1...core-v7.2.2) (2026-06-26)
+
+
+### Features
+
+* axis title offset, extendToEdges, hanging baseline, legend alignment (#81) ([5b9f7d2](https://github.com/tryopendata/openchart/commit/5b9f7d2))
+
 ## [7.2.1](https://github.com/tryopendata/openchart/compare/core-v7.2.0...core-v7.2.1) (2026-06-25)
 
 
