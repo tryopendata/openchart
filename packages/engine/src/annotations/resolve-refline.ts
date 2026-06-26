@@ -123,7 +123,12 @@ export function resolveRefLineAnnotation(
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
     const defaultStroke = isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE;
-    const style = makeAnnotationLabelStyle(11, 400, annotation.stroke ?? defaultStroke, isDark);
+    const style = makeAnnotationLabelStyle(
+      annotation.fontSize ?? 11,
+      annotation.fontWeight ?? 400,
+      annotation.stroke ?? defaultStroke,
+      isDark,
+    );
     style.textAnchor = textAnchor;
 
     label = {

@@ -14,18 +14,31 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
-// Visual constants. Sized to match the editorial KPI mock: a 10px uppercase
-// label sits above a 22px primary value, with breathing room below before the
-// chart area starts. Derived from the 4px grid.
-const LABEL_FONT_SIZE = 10;
-const VALUE_FONT_SIZE = 22;
-const LABEL_LINE_HEIGHT_RATIO = 1.4; // 14px
-const VALUE_LINE_HEIGHT_RATIO = 1.15; // ~25.3px
+// Font sizes default to the editorial KPI mock (10px uppercase label above a
+// 22px primary value) but are theme-driven so charts can scale the row. The
+// label/value sizes flow in from `theme.fonts.sizes.metricLabel/metricValue`.
+const DEFAULT_LABEL_FONT_SIZE = 10;
+const DEFAULT_VALUE_FONT_SIZE = 22;
+const LABEL_LINE_HEIGHT_RATIO = 1.4;
+const VALUE_LINE_HEIGHT_RATIO = 1.15;
 const INTER_ROW_GAP = 4;
 // Breathing room above labels (separates metric row from the subtitle).
 const TOP_GAP = 16;
 // Breathing room below values (separates metric row from legend / chart top).
 const BOTTOM_GAP = 20;
+
+/** Font sizes the metric layout reserves space for. */
+export interface MetricFontSizes {
+  /** Uppercase label size (px). */
+  label: number;
+  /** Primary value size (px). */
+  value: number;
+}
+
+const DEFAULT_METRIC_FONT_SIZES: MetricFontSizes = {
+  label: DEFAULT_LABEL_FONT_SIZE,
+  value: DEFAULT_VALUE_FONT_SIZE,
+};
 
 /** Minimum container width that can fit a metric bar. */
 const MIN_BAR_WIDTH = 480;
@@ -35,12 +48,12 @@ const MIN_CHART_HEIGHT = 150;
 const CELL_INNER_PAD = 8;
 
 /**
- * Total height the metric bar reserves above the chart area.
- * Always derived from the constants above; never hardcoded at the call site.
+ * Total height the metric bar reserves above the chart area. Derived from the
+ * font sizes (theme-driven) plus the fixed gaps; never hardcoded at the call site.
  */
-export function metricBarHeight(): number {
-  const labelLine = LABEL_FONT_SIZE * LABEL_LINE_HEIGHT_RATIO;
-  const valueLine = VALUE_FONT_SIZE * VALUE_LINE_HEIGHT_RATIO;
+export function metricBarHeight(fonts: MetricFontSizes = DEFAULT_METRIC_FONT_SIZES): number {
+  const labelLine = fonts.label * LABEL_LINE_HEIGHT_RATIO;
+  const valueLine = fonts.value * VALUE_LINE_HEIGHT_RATIO;
   return TOP_GAP + labelLine + INTER_ROW_GAP + valueLine + BOTTOM_GAP;
 }
 
@@ -66,6 +79,7 @@ export function computeMetricBar(
   metricsArea: { x: number; width: number },
   remainingChartHeight: number,
   measureText?: MeasureTextFn,
+  fonts: MetricFontSizes = DEFAULT_METRIC_FONT_SIZES,
 ): ResolvedMetricBar | undefined {
   if (!metrics || metrics.length === 0) return undefined;
   if (metricsArea.width < MIN_BAR_WIDTH) return undefined;
@@ -78,14 +92,14 @@ export function computeMetricBar(
   for (const metric of metrics) {
     const text = valueRunText(metric);
     const measured = measureText
-      ? measureText(text, VALUE_FONT_SIZE, 510).width
-      : estimateTextWidth(text, VALUE_FONT_SIZE, 510);
+      ? measureText(text, fonts.value, 510).width
+      : estimateTextWidth(text, fonts.value, 510);
     if (measured > cellWidth - CELL_INNER_PAD) return undefined;
   }
 
-  const labelLine = LABEL_FONT_SIZE * LABEL_LINE_HEIGHT_RATIO;
-  const labelY = metricsTopY + TOP_GAP + LABEL_FONT_SIZE; // baseline for uppercase label
-  const valueY = metricsTopY + TOP_GAP + labelLine + INTER_ROW_GAP + VALUE_FONT_SIZE;
+  const labelLine = fonts.label * LABEL_LINE_HEIGHT_RATIO;
+  const labelY = metricsTopY + TOP_GAP + fonts.label; // baseline for uppercase label
+  const valueY = metricsTopY + TOP_GAP + labelLine + INTER_ROW_GAP + fonts.value;
 
   const cells: ResolvedMetricCell[] = metrics.map((metric, i) => ({
     x: metricsArea.x + i * cellWidth,
@@ -98,15 +112,15 @@ export function computeMetricBar(
 
   return {
     y: metricsTopY,
-    height: metricBarHeight(),
+    height: metricBarHeight(fonts),
     cells,
   };
 }
 
 // Exposed for tests and consumers needing the same constants.
 export const METRIC_BAR_INTERNALS = {
-  LABEL_FONT_SIZE,
-  VALUE_FONT_SIZE,
+  DEFAULT_LABEL_FONT_SIZE,
+  DEFAULT_VALUE_FONT_SIZE,
   LABEL_LINE_HEIGHT_RATIO,
   VALUE_LINE_HEIGHT_RATIO,
   INTER_ROW_GAP,

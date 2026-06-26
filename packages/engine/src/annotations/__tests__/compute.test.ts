@@ -624,6 +624,25 @@ describe('computeAnnotations', () => {
       expect(annotations[0].strokeDasharray).toBeDefined();
     });
 
+    it('refline label defaults to fontSize 11', () => {
+      const spec = makeSpec([{ type: 'refline', x: '2020-06-01', label: 'Event' }]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations[0].label!.style.fontSize).toBe(11);
+    });
+
+    it('refline label honors fontSize and fontWeight overrides', () => {
+      const spec = makeSpec([
+        { type: 'refline', x: '2020-06-01', label: 'Event', fontSize: 24, fontWeight: 600 },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      expect(annotations[0].label!.style.fontSize).toBe(24);
+      expect(annotations[0].label!.style.fontWeight).toBe(600);
+    });
+
     it('solid refline has no dasharray', () => {
       const spec = makeSpec([{ type: 'refline', y: 20, style: 'solid' }]);
       const scales = computeScales(spec, chartArea, spec.data);

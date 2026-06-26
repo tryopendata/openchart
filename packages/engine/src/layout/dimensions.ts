@@ -45,7 +45,12 @@ import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
-import { computeMetricBar, metricBarHeight } from './metrics';
+import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
+
+/** Pull the metric-row font sizes from the resolved theme. */
+function metricFonts(theme: ResolvedTheme): MetricFontSizes {
+  return { label: theme.fonts.sizes.metricLabel, value: theme.fonts.sizes.metricValue };
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -372,7 +377,7 @@ export function computeDimensions(
   // We reserve optimistically so the chart-area math is correct when the bar
   // is kept; the rollback path subtracts it back when stripped.
   const wantsMetrics = !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden';
-  const tentativeMetricsHeight = wantsMetrics ? metricBarHeight() : 0;
+  const tentativeMetricsHeight = wantsMetrics ? metricBarHeight(metricFonts(theme)) : 0;
   // topAxisGap sits between the legend (or chrome, if no legend) and the
   // chart area. It accounts for the general axis margin plus any inline
   // tick-label overhang. Placing it after the legend (below) keeps the
@@ -749,6 +754,7 @@ export function computeDimensions(
             fallbackMetricsArea,
             chartArea.height,
             options.measureText,
+            theme,
           )
         : undefined;
       if (wantsMetrics && !fallbackMetrics) {
@@ -790,7 +796,7 @@ export function computeDimensions(
   const metricsTopY = topPad + chrome.topHeight;
   const metricsArea = { x: hPad, width: Math.max(0, width - hPad * 2) };
   const resolvedMetrics = wantsMetrics
-    ? resolveMetrics(spec, metricsTopY, metricsArea, chartArea.height, options.measureText)
+    ? resolveMetrics(spec, metricsTopY, metricsArea, chartArea.height, options.measureText, theme)
     : undefined;
   if (wantsMetrics && !resolvedMetrics) {
     // See fallback path above for the clamp rationale.
@@ -824,6 +830,7 @@ function resolveMetrics(
   metricsArea: { x: number; width: number },
   remainingChartHeight: number,
   measureText: import('@opendata-ai/openchart-core').MeasureTextFn | undefined,
+  theme: ResolvedTheme,
 ): ResolvedMetricBar | undefined {
   return computeMetricBar(
     spec.metrics,
@@ -831,5 +838,6 @@ function resolveMetrics(
     metricsArea,
     remainingChartHeight,
     measureText,
+    metricFonts(theme),
   );
 }
