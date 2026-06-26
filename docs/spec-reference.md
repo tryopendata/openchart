@@ -379,6 +379,7 @@ A highlighted band or rectangle.
 | `x2`          | `string \| number` | `undefined`            | End of the range on x-axis.                                 |
 | `y1`          | `string \| number` | `undefined`            | Start of the range on y-axis.                               |
 | `y2`          | `string \| number` | `undefined`            | End of the range on y-axis.                                 |
+| `extendToEdges` | `boolean`        | `true`                 | For ordinal band/point scales, whether the range extends from the data-point center to the band/step edge. Set `false` to anchor at data-point centers. No effect on linear/time scales. |
 | `label`       | `string`           | `undefined`            | Range label text.                                           |
 | `labelOffset` | `AnnotationOffset` | `undefined`            | Pixel offset for the label. `{ dx?: number, dy?: number }`. |
 | `labelAnchor` | `AnnotationAnchor` | `'auto'`               | Label placement direction.                                  |

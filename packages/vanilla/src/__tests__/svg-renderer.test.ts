@@ -537,7 +537,7 @@ describe('axis rendering', () => {
     const { svg, layout } = renderSpec(lineSpec);
     const xAxis = svg.querySelector('.oc-axis-x')!;
     const axisLineY = Number(xAxis.querySelector('line')!.getAttribute('y2'));
-    const labels = Array.from(xAxis.querySelectorAll('text'));
+    const labels = Array.from(xAxis.querySelectorAll('text.oc-axis-tick'));
     expect(labels.length).toBeGreaterThan(0);
 
     const pad = layout.theme.spacing.xAxisLabelPadding;
