@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.2.3](https://github.com/tryopendata/openchart/compare/core-v7.2.2...core-v7.2.3) (2026-06-26)
+
+
+### Features
+
+* theme-driven metric font sizes and refline fontSize/fontWeight overrides (#82) ([3b6b46f](https://github.com/tryopendata/openchart/commit/3b6b46f))
+
 ## [7.2.2](https://github.com/tryopendata/openchart/compare/core-v7.2.1...core-v7.2.2) (2026-06-26)
 
 
