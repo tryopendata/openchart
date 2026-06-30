@@ -1,5 +1,27 @@
 # Changelog
 
+## [7.2.4](https://github.com/tryopendata/openchart/compare/core-v7.2.3...core-v7.2.4) (2026-06-30)
+
+
+### Features
+
+* theme-driven metric font sizes and refline fontSize/fontWeight overrides (#82) ([3b6b46f](https://github.com/tryopendata/openchart/commit/3b6b46f))
+* axis title offset, extendToEdges, hanging baseline, legend alignment (#81) ([5b9f7d2](https://github.com/tryopendata/openchart/commit/5b9f7d2))
+* area chart mark.point support and point scale paddingOuter alias (#80) ([f66e160](https://github.com/tryopendata/openchart/commit/f66e160))
+* theme typography controls, axis label suffix, and vivid palette (#79) ([71f3981](https://github.com/tryopendata/openchart/commit/71f3981))
+
+
+### Bug Fixes
+
+* horizontal bars overrun y-axis labels when x-domain excludes zero (#83) ([65dc8b1](https://github.com/tryopendata/openchart/commit/65dc8b1))
+* tighten chrome-to-legend gap and y-axis title clearance (#77) ([8d81359](https://github.com/tryopendata/openchart/commit/8d81359))
+* align table footer source text and brand watermark on one line ([b5ffbba](https://github.com/tryopendata/openchart/commit/b5ffbba))
+* preserve explicit chrome color overrides through dark-mode adaptation ([f555c85](https://github.com/tryopendata/openchart/commit/f555c85))
+* use perceptual luminance threshold for bar label color ([e6f750d](https://github.com/tryopendata/openchart/commit/e6f750d))
+* inject percentage axis format when stack is normalize ([b16f076](https://github.com/tryopendata/openchart/commit/b16f076))
+* replace legend chip+bar swatches with bare mark-appropriate shapes ([e517c6c](https://github.com/tryopendata/openchart/commit/e517c6c))
+* show all x-axis labels on grouped bar charts by resolving rotation before thinning ([31ea820](https://github.com/tryopendata/openchart/commit/31ea820))
+
 ## [7.2.3](https://github.com/tryopendata/openchart/compare/core-v7.2.2...core-v7.2.3) (2026-06-26)
 
 
