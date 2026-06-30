@@ -88,7 +88,14 @@ export function computeBarMarks(
   }
 
   const bandwidth = yScale.bandwidth();
-  const baseline = xScale(0);
+  // Baseline = pixel x where the bar's left edge anchors. When the x-domain
+  // includes zero (the common case), this is xScale(0). When the domain
+  // excludes zero (explicit non-zero domain or scale.zero: false), xScale(0)
+  // would extrapolate outside the plot area and overrun the y-axis labels, so
+  // anchor to the domain minimum (the plot-area left edge) instead.
+  const xDomain = xScale.domain() as [number, number];
+  const xIncludesZero = xDomain[0] <= 0 && xDomain[1] >= 0;
+  const baseline = xIncludesZero ? xScale(0) : xScale(xDomain[0]);
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   const conditionalColor =
     encoding.color && isConditionalValueDef(encoding.color)

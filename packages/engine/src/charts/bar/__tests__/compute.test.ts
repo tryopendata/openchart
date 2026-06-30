@@ -490,6 +490,73 @@ describe('computeBarMarks', () => {
     });
   });
 
+  describe('x-domain excludes zero', () => {
+    it('simple bars anchor at the domain minimum, not xScale(0)', () => {
+      const spec = makeSimpleBarSpec();
+      (spec.encoding.x as { scale?: { domain: number[] } }).scale = { domain: [65, 95] };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const xScale = scales.x!.scale as (v: number) => number;
+      const left = xScale(65);
+
+      // Every bar starts at the plot-area left edge (xScale of the domain min),
+      // not at the far-left extrapolation of xScale(0).
+      for (const mark of marks) {
+        expect(mark.x).toBeCloseTo(left, 5);
+        // Bars never bleed left of the plot area into the y-axis label gutter.
+        expect(mark.x).toBeGreaterThanOrEqual(chartArea.x);
+      }
+      // Guard against the old behavior: xScale(0) lands well left of the plot area.
+      expect(xScale(0)).toBeLessThan(chartArea.x);
+    });
+
+    it('grouped bars anchor at the domain minimum, not xScale(0)', () => {
+      const spec = makeGroupedBarSpec();
+      (spec.encoding.x as { scale?: { domain: number[] } }).scale = { domain: [65, 95] };
+      // Lift values into the [65, 95] window so widths stay positive.
+      spec.data = spec.data.map((d) => ({ ...d, value: 70 + (d.value as number) / 10 }));
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const xScale = scales.x!.scale as (v: number) => number;
+      const left = xScale(65);
+
+      for (const mark of marks) {
+        expect(mark.x).toBeCloseTo(left, 5);
+        expect(mark.x).toBeGreaterThanOrEqual(chartArea.x);
+      }
+    });
+  });
+
+  describe('x-domain includes zero (no regression)', () => {
+    it('simple bars still anchor at xScale(0) for a default [0, max] domain', () => {
+      const spec = makeSimpleBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const xScale = scales.x!.scale as (v: number) => number;
+      for (const mark of marks) {
+        expect(mark.x).toBeCloseTo(xScale(0), 5);
+      }
+    });
+
+    it('diverging bars (domain crosses zero) still anchor at xScale(0)', () => {
+      const spec = makeNegativeBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+
+      const xScale = scales.x!.scale as (v: number) => number;
+      const zero = xScale(0);
+
+      const growth = marks.find((m) => m.aria.label.includes('Growth'))!;
+      const decline = marks.find((m) => m.aria.label.includes('Decline'))!;
+      // Positive bar starts at zero; negative bar ends at zero.
+      expect(growth.x).toBeCloseTo(zero, 5);
+      expect(decline.x + decline.width).toBeCloseTo(zero, 5);
+    });
+  });
+
   describe('edge cases', () => {
     it('returns empty array when no x encoding', () => {
       const spec: NormalizedChartSpec = {
