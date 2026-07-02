@@ -546,6 +546,8 @@ export interface ResolvedLabel {
   background?: string;
   /** Whether to show the paint-order stroke halo. Default true. */
   halo?: boolean;
+  /** Engine-measured text-block bounds. Renderers should use this for background rects instead of re-estimating. */
+  bounds?: Rect;
 }
 
 // ---------------------------------------------------------------------------
@@ -598,6 +600,8 @@ export interface ResolvedAnnotation {
     y: number;
     style: TextStyle;
   };
+  /** Full placed extent: label bounds unioned with subtitle bounds. Collision and placement source of truth. */
+  bounds?: Rect;
 }
 
 // ---------------------------------------------------------------------------

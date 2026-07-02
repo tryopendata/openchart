@@ -13,7 +13,12 @@ import { detectCollision } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
 import { CLAMP_MARGIN, NUDGE_PADDING } from './constants';
-import { estimateLabelBounds, recomputeConnector } from './geometry';
+import {
+  type AnnotationMeasureTextFn,
+  estimateLabelBounds,
+  heuristicMeasure,
+  recomputeConnector,
+} from './geometry';
 import { resolvePosition } from './position';
 
 /**
@@ -61,10 +66,11 @@ export function nudgeAnnotationFromObstacles(
   scales: ResolvedScales,
   chartArea: Rect,
   obstacles: Rect[],
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): boolean {
   if (annotation.type !== 'text' || !annotation.label) return false;
 
-  const labelBounds = estimateLabelBounds(annotation.label);
+  const labelBounds = estimateLabelBounds(annotation.label, measure);
   const collidingObs = obstacles.filter(
     (obs) => obs.width > 0 && obs.height > 0 && detectCollision(labelBounds, obs),
   );
@@ -90,7 +96,7 @@ export function nudgeAnnotationFromObstacles(
       connector: recomputeConnector({ ...annotation.label, x: newLabelX, y: newLabelY }, px, py),
     };
 
-    const candidateBounds = estimateLabelBounds(candidateLabel);
+    const candidateBounds = estimateLabelBounds(candidateLabel, measure);
 
     // Check no collisions with any obstacle
     const stillCollides = obstacles.some(
@@ -114,6 +120,7 @@ export function nudgeAnnotationFromObstacles(
 
     if (inBounds) {
       annotation.label = candidateLabel;
+      annotation.label.bounds = candidateBounds;
       return true;
     }
   }
@@ -134,6 +141,7 @@ export function resolveAnnotationCollisions(
   originalSpecs: NormalizedChartSpec['annotations'],
   scales: ResolvedScales,
   chartArea: Rect,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): void {
   const placedBounds: Rect[] = [];
 
@@ -143,7 +151,7 @@ export function resolveAnnotationCollisions(
       continue;
     }
 
-    const bounds = estimateLabelBounds(annotation.label);
+    const bounds = estimateLabelBounds(annotation.label, measure);
 
     // Check against all previously placed annotation labels
     const collidingBounds = placedBounds.filter(
@@ -171,7 +179,7 @@ export function resolveAnnotationCollisions(
               x: newLabelX,
               y: newLabelY,
             };
-            const candidateBounds = estimateLabelBounds(candidateLabel);
+            const candidateBounds = estimateLabelBounds(candidateLabel, measure);
 
             // Check no collisions with any placed label
             const stillCollides = placedBounds.some(
@@ -193,6 +201,7 @@ export function resolveAnnotationCollisions(
                 ...annotation.label,
                 x: newLabelX,
                 y: newLabelY,
+                bounds: candidateBounds,
                 connector: recomputeConnector(
                   { ...annotation.label, x: newLabelX, y: newLabelY },
                   px,
@@ -207,7 +216,7 @@ export function resolveAnnotationCollisions(
     }
 
     // Add this annotation's final bounds to the placed list
-    placedBounds.push(estimateLabelBounds(annotation.label));
+    placedBounds.push(estimateLabelBounds(annotation.label, measure));
   }
 }
 
@@ -221,11 +230,12 @@ export function clampAnnotationsToBounds(
   annotations: ResolvedAnnotation[],
   svgWidth: number,
   svgHeight: number,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): void {
   for (const annotation of annotations) {
     if (annotation.type !== 'text' || !annotation.label) continue;
 
-    const bounds = estimateLabelBounds(annotation.label);
+    const bounds = estimateLabelBounds(annotation.label, measure);
     let dx = 0;
     let dy = 0;
 
@@ -252,10 +262,12 @@ export function clampAnnotationsToBounds(
     const newY = annotation.label.y + dy;
 
     const connector = annotation.label.connector;
+    const newBounds = estimateLabelBounds({ ...annotation.label, x: newX, y: newY }, measure);
     annotation.label = {
       ...annotation.label,
       x: newX,
       y: newY,
+      bounds: newBounds,
       connector: connector
         ? recomputeConnector(
             { ...annotation.label, x: newX, y: newY },

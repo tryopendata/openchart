@@ -54,6 +54,14 @@ export type { NormalizedBarListSpec } from './barlist/types';
 export type { NormalizedTileMapSpec } from './tilemap/types';
 
 // ---------------------------------------------------------------------------
+// Annotations
+// ---------------------------------------------------------------------------
+
+export type { AnnotationContext } from './annotations/compute';
+export type { AnnotationMeasureTextFn } from './annotations/geometry';
+export { heuristicMeasure } from './annotations/geometry';
+
+// ---------------------------------------------------------------------------
 // Compiler pipeline (spec validation, normalization, generic compile)
 // ---------------------------------------------------------------------------
 

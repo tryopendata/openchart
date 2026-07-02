@@ -3,13 +3,12 @@
  * optional callout connector to the data point.
  */
 
-import {
-  estimateTextWidth,
-  type Rect,
-  type ResolvedAnnotation,
-  type ResolvedLabel,
-  type TextAnnotation,
-  type TextStyle,
+import type {
+  Rect,
+  ResolvedAnnotation,
+  ResolvedLabel,
+  TextAnnotation,
+  TextStyle,
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import {
@@ -27,8 +26,26 @@ import {
   SUBTITLE_FONT_SIZE_RATIO,
   SUBTITLE_GAP,
 } from './constants';
-import { applyOffset, computeAnchorOffset, computeConnectorOrigin } from './geometry';
+import {
+  type AnnotationMeasureTextFn,
+  applyOffset,
+  computeAnchorOffset,
+  computeConnectorOrigin,
+  computeTextBlockBounds,
+  heuristicMeasure,
+} from './geometry';
 import { resolvePosition } from './position';
+
+function unionRects(a: Rect, b: Rect): Rect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y,
+  };
+}
 
 /** Horizontal gap between the drop-line and the label text. */
 const DROP_LINE_LABEL_GAP = 8;
@@ -59,6 +76,7 @@ export function resolveTextAnnotation(
   scales: ResolvedScales,
   chartArea: Rect,
   isDark: boolean,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): ResolvedAnnotation | null {
   const px = resolvePosition(annotation.x, scales.x);
   const py = resolvePosition(annotation.y, scales.y);
@@ -78,7 +96,23 @@ export function resolveTextAnnotation(
   // label sitting flush beside it. Auto-flips to the opposite side if the
   // chosen side would overflow the chart area.
   if (annotation.connector === 'drop-line') {
-    return resolveDropLineAnnotation(annotation, px, py, chartArea, labelStyle, defaultTextFill);
+    return resolveDropLineAnnotation(
+      annotation,
+      px,
+      py,
+      chartArea,
+      labelStyle,
+      defaultTextFill,
+      measure,
+    );
+  }
+
+  // Multi-line non-drop-line: engine sets textAnchor to 'middle' so bounds
+  // and rendering derive from the same anchor (previously the renderer
+  // forced this override, causing bounds to lie).
+  const isMultiLine = annotation.text.includes('\n');
+  if (isMultiLine) {
+    labelStyle.textAnchor = 'middle';
   }
 
   // Compute position from anchor direction + user offset
@@ -130,6 +164,8 @@ export function resolveTextAnnotation(
       ? { x: adjustedToRaw.x - (cdx / dist) * GAP, y: adjustedToRaw.y - (cdy / dist) * GAP }
       : adjustedToRaw;
 
+  const labelBounds = computeTextBlockBounds(labelX, labelY, annotation.text, labelStyle, measure);
+
   const label: ResolvedLabel = {
     text: annotation.text,
     x: labelX,
@@ -147,6 +183,7 @@ export function resolveTextAnnotation(
       : undefined,
     background: annotation.background,
     halo: annotation.halo,
+    bounds: labelBounds,
   };
 
   // Resolve dot marker. Uses the connector's "to" endpoint coordinates
@@ -170,6 +207,7 @@ export function resolveTextAnnotation(
   // Resolve subtitle. Positioned below the primary text block by
   // (lineHeight * primaryLineCount * fontSize) + gap.
   let subtitle: ResolvedAnnotation['subtitle'] | undefined;
+  let annotationBounds: Rect = labelBounds;
   if (annotation.subtitle) {
     const primaryLineCount = annotation.text.split('\n').length;
     const subtitleFontSize = Math.round(fontSize * SUBTITLE_FONT_SIZE_RATIO);
@@ -187,6 +225,14 @@ export function resolveTextAnnotation(
       y: subtitleY,
       style: subtitleStyle,
     };
+    const subtitleBounds = computeTextBlockBounds(
+      labelX,
+      subtitleY,
+      annotation.subtitle,
+      subtitleStyle,
+      measure,
+    );
+    annotationBounds = unionRects(labelBounds, subtitleBounds);
   }
 
   return {
@@ -199,6 +245,7 @@ export function resolveTextAnnotation(
     zIndex: annotation.zIndex,
     dot,
     subtitle,
+    bounds: annotationBounds,
   };
 }
 
@@ -214,13 +261,14 @@ function resolveDropLineAnnotation(
   chartArea: Rect,
   labelStyle: TextStyle,
   defaultTextFill: string,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): ResolvedAnnotation {
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
   const lines = annotation.text.split('\n');
   const estimatedWidth = Math.max(
     0,
-    ...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)),
+    ...lines.map((line) => measure(line, { fontSize, fontWeight })),
   );
 
   // Pick initial side from anchor; default to 'left' (label sits to the left
@@ -261,6 +309,14 @@ function resolveDropLineAnnotation(
   const from = { x: px, y: labelTopY - DROP_LINE_TOP_GAP };
   const to = { x: px, y: py - DROP_LINE_BOTTOM_GAP };
 
+  const labelBounds = computeTextBlockBounds(
+    labelX,
+    labelBaselineY,
+    annotation.text,
+    resolvedStyle,
+    measure,
+  );
+
   const label: ResolvedLabel = {
     text: annotation.text,
     x: labelX,
@@ -276,6 +332,7 @@ function resolveDropLineAnnotation(
     },
     background: annotation.background,
     halo: annotation.halo,
+    bounds: labelBounds,
   };
 
   return {
@@ -286,5 +343,6 @@ function resolveDropLineAnnotation(
     fill: annotation.fill,
     opacity: annotation.opacity,
     zIndex: annotation.zIndex,
+    bounds: labelBounds,
   };
 }

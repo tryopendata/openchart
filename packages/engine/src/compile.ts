@@ -44,6 +44,8 @@ import {
 } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 import { computeAnnotations } from './annotations/compute';
+import { type AnnotationMeasureTextFn, heuristicMeasure } from './annotations/geometry';
+import type { PlacementObstacle } from './annotations/placement';
 import { computeEndpointLabels } from './endpoint-labels/compute';
 // Side-effect import: registers all built-in chart renderers with the
 // registry on module load. Tests that clear the registry can import
@@ -764,31 +766,41 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const endpointLabels = computeEndpointLabels(chartSpec, marks, theme, chartArea, strategy);
 
   // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
-  const obstacles: Rect[] = [];
+  const obstacles: PlacementObstacle[] = [];
   if (finalLegend.bounds.width > 0) {
-    obstacles.push(finalLegend.bounds);
+    obstacles.push({ ...finalLegend.bounds, kind: 'legend' });
   }
   obstacles.push(...computeMarkObstacles(marks, scales));
 
   // Add visible data label bounds as obstacles so annotations avoid overlapping them
   for (const mark of marks) {
     if ('label' in mark && mark.label?.visible) {
-      obstacles.push(computeLabelBounds(mark.label));
+      obstacles.push({ ...computeLabelBounds(mark.label), kind: 'data-label' });
     }
   }
 
   // Add brand watermark as an obstacle so annotations avoid overlapping it.
   const watermarkRect = computeWatermarkObstacle(dims, watermark, axes, theme);
-  if (watermarkRect) obstacles.push(watermarkRect);
-  const annotations: ResolvedAnnotation[] = computeAnnotations(
-    chartSpec,
+  if (watermarkRect) obstacles.push({ ...watermarkRect, kind: 'watermark' });
+
+  // Add endpoint label bounds as obstacles
+  if (endpointLabels.entries.length > 0 && endpointLabels.bounds.width > 0) {
+    obstacles.push({ ...endpointLabels.bounds, kind: 'endpoint-label' });
+  }
+
+  const annotationMeasure: AnnotationMeasureTextFn = options.measureText
+    ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
+    : heuristicMeasure;
+
+  const annotations: ResolvedAnnotation[] = computeAnnotations(chartSpec, {
     scales,
     chartArea,
     strategy,
-    theme.isDark,
+    isDark: theme.isDark,
     obstacles,
-    { width: dims.total.width, height: dims.total.height },
-  );
+    svg: { width: dims.total.width, height: dims.total.height },
+    measure: annotationMeasure,
+  });
 
   // Compute tooltip descriptors from marks and encoding
   const tooltipDescriptors = computeTooltipDescriptors(chartSpec, marks);
