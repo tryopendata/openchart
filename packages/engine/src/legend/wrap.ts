@@ -14,8 +14,8 @@
  * in-row accumulated width at the point of wrapping.
  */
 
-import type { LegendEntry, TextStyle } from '@opendata-ai/openchart-core';
-import { COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
+import type { LegendEntry, MeasureTextFn, TextStyle } from '@opendata-ai/openchart-core';
+import { COMPACT_WIDTH, heuristicMeasure } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -66,6 +66,7 @@ export function measureLegendWrap(
   labelStyle: TextStyle,
   maxRows?: number,
   entryGap: number = ENTRY_GAP,
+  measure: MeasureTextFn = heuristicMeasure,
 ): LegendWrapResult {
   if (entries.length === 0) {
     return { rowCount: 0, fittingCount: 0, rowWidths: [] };
@@ -78,11 +79,7 @@ export function measureLegendWrap(
   let fittingCountLocked = false;
 
   for (let i = 0; i < entries.length; i++) {
-    const labelWidth = estimateTextWidth(
-      entries[i].label,
-      labelStyle.fontSize,
-      labelStyle.fontWeight,
-    );
+    const labelWidth = measure(entries[i].label, labelStyle.fontSize, labelStyle.fontWeight).width;
     const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + entryGap;
 
     if (rowWidth + entryWidth > maxWidth && rowWidth > 0) {

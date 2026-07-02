@@ -1,4 +1,9 @@
-import type { Annotation, LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import {
+  type Annotation,
+  estimateTextWidth,
+  type LayoutStrategy,
+  type Rect,
+} from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScalePoint } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -1235,8 +1240,8 @@ describe('computeAnnotations', () => {
 
       // Curve should start from right edge of text, not top edge
       // Right edge x ≈ label.x + textWidth
-      // "Curve test" = 10 chars * 12 * 0.57 = 68.4
-      expect(connector.from.x).toBeCloseTo(label.x + 68.4, 1);
+      // Per-char lookup: "Curve test" = 4.557 * 12 = 54.684
+      expect(connector.from.x).toBeCloseTo(label.x + 54.684, 1);
     });
   });
 
@@ -1473,12 +1478,7 @@ describe('computeAnnotations', () => {
       const fontSize = label.style.fontSize ?? 12;
       const fontWeight = label.style.fontWeight ?? 400;
       // Estimate bounds to verify the right edge is within SVG
-      const textWidth = label.text
-        .split('\n')
-        .reduce(
-          (max, line) => Math.max(max, line.length * fontSize * (fontWeight >= 600 ? 0.65 : 0.55)),
-          0,
-        );
+      const textWidth = estimateTextWidth(label.text, fontSize, fontWeight);
       // The label's right edge should not exceed the SVG width
       expect(label.x + textWidth).toBeLessThanOrEqual(svgDimensions.width);
     });

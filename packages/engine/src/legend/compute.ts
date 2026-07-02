@@ -16,11 +16,12 @@ import type {
   LayoutStrategy,
   LegendEntry,
   LegendLayout,
+  MeasureTextFn,
   Rect,
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
+import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, heuristicMeasure } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { countColorSeries, resolveSuppression } from './suppression';
@@ -166,6 +167,7 @@ export function computeLegend(
   theme: ResolvedTheme,
   chartArea: Rect,
   watermark: boolean = true,
+  measure: MeasureTextFn = heuristicMeasure,
 ): LegendLayout {
   // Sparkline mode: legend hidden by default unless the user opted in. Color
   // scales still resolve normally (legend hidden != no colors), so multi-series
@@ -233,7 +235,7 @@ export function computeLegend(
   if (resolvedPosition === 'right' || resolvedPosition === 'bottom-right') {
     // Right-positioned legend: vertical stack
     const maxLabelWidth = Math.max(
-      ...entries.map((e) => estimateTextWidth(e.label, labelStyle.fontSize, labelStyle.fontWeight)),
+      ...entries.map((e) => measure(e.label, labelStyle.fontSize, labelStyle.fontWeight).width),
     );
     const legendWidth = Math.min(
       LEGEND_RIGHT_WIDTH,
@@ -323,6 +325,7 @@ export function computeLegend(
     labelStyle,
     maxRows,
     effectiveEntryGap,
+    measure,
   );
 
   if (fittingCount < entries.length) {
@@ -330,7 +333,7 @@ export function computeLegend(
   }
 
   const totalWidth = entries.reduce((sum, entry) => {
-    const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
+    const labelWidth = measure(entry.label, labelStyle.fontSize, labelStyle.fontWeight).width;
     return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap;
   }, 0);
 
@@ -341,6 +344,7 @@ export function computeLegend(
     labelStyle,
     undefined,
     effectiveEntryGap,
+    measure,
   );
 
   const rowHeight = SWATCH_SIZE + 4;

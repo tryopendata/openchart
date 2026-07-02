@@ -60,6 +60,8 @@ export {
   COMPACT_WIDTH,
   computeChrome,
   estimateTextWidth,
+  heuristicMeasure,
+  resolveMeasurer,
   wrapText,
 } from './layout/index';
 

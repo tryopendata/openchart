@@ -3,7 +3,7 @@
  */
 
 import type { CategoricalLegendLayout, LegendLayout } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { sharedMeasureText } from '../measure-text';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 function isCategorical(legend: LegendLayout): legend is CategoricalLegendLayout {
@@ -19,6 +19,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   g.setAttribute('aria-label', 'Chart legend');
 
   const isHorizontal = legend.position === 'top' || legend.position === 'bottom';
+  const measure = sharedMeasureText();
   let offsetX = legend.bounds.x;
   let offsetY = legend.bounds.y;
 
@@ -27,11 +28,11 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 
     // Pre-check: wrap to next line if this entry would overflow bounds
     if (isHorizontal && i > 0) {
-      const labelWidth = estimateTextWidth(
+      const labelWidth = measure(
         entry.label,
         legend.labelStyle.fontSize,
         legend.labelStyle.fontWeight,
-      );
+      ).width;
       const entryWidth = legend.swatchSize + legend.swatchGap + labelWidth + legend.entryGap;
       if (offsetX + entryWidth > legend.bounds.x + legend.bounds.width) {
         offsetX = legend.bounds.x;
@@ -118,11 +119,11 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 
     // Advance position for next entry
     if (isHorizontal) {
-      const labelWidth = estimateTextWidth(
+      const labelWidth = measure(
         entry.label,
         legend.labelStyle.fontSize,
         legend.labelStyle.fontWeight,
-      );
+      ).width;
       const entryWidth = legend.swatchSize + legend.swatchGap + labelWidth + legend.entryGap;
       offsetX += entryWidth;
     } else {

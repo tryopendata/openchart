@@ -3,6 +3,7 @@
  */
 
 import type { ChartLayout, Point, ResolvedAnnotation } from '@opendata-ai/openchart-core';
+import { sharedMeasureText } from '../measure-text';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
@@ -235,8 +236,9 @@ function renderAnnotation(
     // Render background rect behind text if specified, otherwise use
     // paint-order stroke halo to knock out lines behind text
     if (annotation.label.background) {
-      const charWidth = fontSize * 0.55;
-      const maxLineWidth = Math.max(...lines.map((l) => l.length)) * charWidth;
+      const fontWeight = annotation.label.style.fontWeight ?? 400;
+      const measure = sharedMeasureText();
+      const maxLineWidth = Math.max(...lines.map((l) => measure(l, fontSize, fontWeight).width));
       const totalHeight = lines.length * lineHeight;
       const pad = 3;
       const bgX = isMultiLine

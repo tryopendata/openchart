@@ -37,9 +37,9 @@ describe('sankey node-label wrapping', () => {
       },
     };
 
-    // 360px wide total is cramped for the labels above across 3 columns,
+    // 300px wide total is cramped for the labels above across 3 columns,
     // forcing per-label maxWidth to be well below the longest text width.
-    const layout = compileSankey(spec, { width: 360, height: 300 });
+    const layout = compileSankey(spec, { width: 300, height: 300 });
 
     // Every node should have a finite maxWidth set (a proxy for "engine
     // participated in wrap geometry") when overflow-compression kicked in.

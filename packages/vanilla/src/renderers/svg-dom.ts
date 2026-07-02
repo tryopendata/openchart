@@ -5,7 +5,7 @@
  */
 
 import type { ChartLayout, TextStyle } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { sharedMeasureText } from '../measure-text';
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -53,9 +53,10 @@ export function computeXAxisExtent(layout: ChartLayout): number {
     const fontSize = xAxis.tickLabelStyle.fontSize;
     const fontWeight = xAxis.tickLabelStyle.fontWeight;
     const angleRad = Math.abs(xAxis.tickAngle) * (Math.PI / 180);
+    const measure = sharedMeasureText();
     let maxLabelWidth = 40;
     for (const tick of xAxis.ticks) {
-      const w = estimateTextWidth(tick.label, fontSize, fontWeight);
+      const w = measure(tick.label, fontSize, fontWeight).width;
       if (w > maxLabelWidth) maxLabelWidth = w;
     }
     const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
