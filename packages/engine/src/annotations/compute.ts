@@ -230,25 +230,30 @@ export function computeAnnotations(
         };
         resolved.label.bounds = result.bounds;
 
-        // Update connector endpoint if present
         if (resolved.label.connector) {
           const box = result.bounds;
           const cx = box.x + box.width / 2;
           const cy = box.y + box.height / 2;
-          const dx = anchorX - cx;
-          const dy = anchorY - cy;
-          const absDx = Math.abs(dx);
-          const absDy = Math.abs(dy);
-          let fromX: number;
-          let fromY: number;
-          if (absDx > absDy) {
-            fromX = dx > 0 ? box.x + box.width : box.x;
-            fromY = cy;
+          const isCurve = resolved.label.connector.style === 'curve';
+          if (isCurve) {
+            resolved.label.connector.from = { x: box.x + box.width, y: cy };
           } else {
-            fromX = cx;
-            fromY = dy > 0 ? box.y + box.height : box.y;
+            const halfW = box.width / 2 || 1;
+            const halfH = box.height / 2 || 1;
+            const ndx = (anchorX - cx) / halfW;
+            const ndy = (anchorY - cy) / halfH;
+            if (Math.abs(ndy) >= Math.abs(ndx)) {
+              resolved.label.connector.from = {
+                x: cx,
+                y: ndy < 0 ? box.y : box.y + box.height,
+              };
+            } else {
+              resolved.label.connector.from = {
+                x: ndx < 0 ? box.x : box.x + box.width,
+                y: cy,
+              };
+            }
           }
-          resolved.label.connector.from = { x: fromX, y: fromY };
         }
       }
       resolved.bounds = result.bounds;
@@ -282,21 +287,20 @@ export function computeAnnotations(
     const explicitSpecs: NormalizedChartSpec['annotations'] = [];
     let specIdx = 0;
     for (let i = 0; i < annotations.length; i++) {
-      if (autoIndices.has(i)) {
-        specIdx++;
-        continue;
-      }
       // Walk specIdx past any compact-skipped specs
       while (specIdx < spec.annotations.length) {
         const s = spec.annotations[specIdx];
         if (!isCompact || s.responsive === false) break;
         specIdx++;
       }
-      if (specIdx < spec.annotations.length) {
-        explicitAnnotations.push(annotations[i]);
-        explicitSpecs.push(spec.annotations[specIdx]);
+      if (specIdx >= spec.annotations.length) break;
+      if (autoIndices.has(i)) {
         specIdx++;
+        continue;
       }
+      explicitAnnotations.push(annotations[i]);
+      explicitSpecs.push(spec.annotations[specIdx]);
+      specIdx++;
     }
     if (explicitAnnotations.length > 1) {
       resolveAnnotationCollisions(

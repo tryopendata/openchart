@@ -32,6 +32,48 @@ export interface PlacementObstacle extends Rect {
  * padded vertically. Interpolates segment y-values at bucket edges so steep
  * segments produce gap-free coverage.
  */
+function lerpY(p0: { x: number; y: number }, p1: { x: number; y: number }, x: number): number {
+  const dx = p1.x - p0.x;
+  if (Math.abs(dx) < 1e-9) return (p0.y + p1.y) / 2;
+  const t = (x - p0.x) / dx;
+  return p0.y + t * (p1.y - p0.y);
+}
+
+function fillBucketsFromSegments(
+  points: Array<{ x: number; y: number }>,
+  buckets: Array<{ minY: number; maxY: number }>,
+  xMin: number,
+  bucketWidth: number,
+): void {
+  const bucketCount = buckets.length;
+
+  function updateBucket(b: number, y: number): void {
+    if (b < 0 || b >= bucketCount) return;
+    if (y < buckets[b].minY) buckets[b].minY = y;
+    if (y > buckets[b].maxY) buckets[b].maxY = y;
+  }
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i];
+    const p1 = points[i + 1];
+    const segXMin = Math.min(p0.x, p1.x);
+    const segXMax = Math.max(p0.x, p1.x);
+    const bStart = Math.max(0, Math.floor((segXMin - xMin) / bucketWidth));
+    const bEnd = Math.min(bucketCount - 1, Math.floor((segXMax - xMin) / bucketWidth));
+    for (let b = bStart; b <= bEnd; b++) {
+      const bx0 = xMin + b * bucketWidth;
+      const bx1 = xMin + (b + 1) * bucketWidth;
+      updateBucket(b, lerpY(p0, p1, Math.max(bx0, segXMin)));
+      updateBucket(b, lerpY(p0, p1, Math.min(bx1, segXMax)));
+    }
+  }
+
+  for (const p of points) {
+    const b = Math.min(Math.floor((p.x - xMin) / bucketWidth), bucketCount - 1);
+    updateBucket(b, p.y);
+  }
+}
+
 export function samplePolylineObstacles(
   points: Array<{ x: number; y: number }>,
   kind: 'line' | 'area-fill' = 'line',
@@ -86,51 +128,7 @@ export function samplePolylineObstacles(
     buckets.push({ minY: Infinity, maxY: -Infinity });
   }
 
-  function lerpY(p0: { x: number; y: number }, p1: { x: number; y: number }, x: number): number {
-    const dx = p1.x - p0.x;
-    if (Math.abs(dx) < 1e-9) return (p0.y + p1.y) / 2;
-    const t = (x - p0.x) / dx;
-    return p0.y + t * (p1.y - p0.y);
-  }
-
-  function updateBucket(b: number, y: number): void {
-    if (b < 0 || b >= bucketCount) return;
-    if (y < buckets[b].minY) buckets[b].minY = y;
-    if (y > buckets[b].maxY) buckets[b].maxY = y;
-  }
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i];
-    const p1 = points[i + 1];
-
-    const segXMin = Math.min(p0.x, p1.x);
-    const segXMax = Math.max(p0.x, p1.x);
-
-    const bStart = Math.max(0, Math.floor((segXMin - xMin) / bucketWidth));
-    const bEnd = Math.min(bucketCount - 1, Math.floor((segXMax - xMin) / bucketWidth));
-
-    for (let b = bStart; b <= bEnd; b++) {
-      const bx0 = xMin + b * bucketWidth;
-      const bx1 = xMin + (b + 1) * bucketWidth;
-
-      const xa = Math.max(bx0, segXMin);
-      const xb = Math.min(bx1, segXMax);
-
-      const ya = lerpY(p0, p1, xa);
-      const yb = lerpY(p0, p1, xb);
-
-      updateBucket(b, ya);
-      updateBucket(b, yb);
-    }
-  }
-
-  // Also register vertex points directly (handles cases where a vertex
-  // is the local extremum within a bucket but interpolation at bucket
-  // edges would miss it).
-  for (const p of points) {
-    const b = Math.min(Math.floor((p.x - xMin) / bucketWidth), bucketCount - 1);
-    updateBucket(b, p.y);
-  }
+  fillBucketsFromSegments(points, buckets, xMin, bucketWidth);
 
   const obstacles: PlacementObstacle[] = [];
   for (let b = 0; b < bucketCount; b++) {
@@ -184,21 +182,8 @@ export function sampleAreaObstacles(
     bottomBuckets.push({ minY: Infinity, maxY: -Infinity });
   }
 
-  function addToBuckets(
-    pts: Array<{ x: number; y: number }>,
-    bkts: Array<{ minY: number; maxY: number }>,
-  ): void {
-    for (const p of pts) {
-      const b = Math.min(Math.floor((p.x - xMin) / bucketWidth), bucketCount - 1);
-      if (b >= 0) {
-        if (p.y < bkts[b].minY) bkts[b].minY = p.y;
-        if (p.y > bkts[b].maxY) bkts[b].maxY = p.y;
-      }
-    }
-  }
-
-  addToBuckets(topPoints, topBuckets);
-  addToBuckets(bottomPoints, bottomBuckets);
+  fillBucketsFromSegments(topPoints, topBuckets, xMin, bucketWidth);
+  fillBucketsFromSegments(bottomPoints, bottomBuckets, xMin, bucketWidth);
 
   const fillObs: PlacementObstacle[] = [];
   for (let b = 0; b < bucketCount; b++) {
