@@ -55,6 +55,13 @@ export function detectCollision(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
+/** Compute the area of intersection between two axis-aligned rectangles. Returns 0 if disjoint. */
+export function overlapArea(a: Rect, b: Rect): number {
+  const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Offset strategies
 // ---------------------------------------------------------------------------

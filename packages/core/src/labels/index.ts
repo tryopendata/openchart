@@ -8,5 +8,6 @@ export {
   detectCollision,
   EXTENDED_OFFSET_STRATEGIES,
   OFFSET_STRATEGIES,
+  overlapArea,
   resolveCollisions,
 } from './collision';

@@ -16,8 +16,8 @@ describe('computeMarkObstacles', () => {
     const scales = { y: { type: 'linear' } } as unknown as ResolvedScales;
     const result = computeMarkObstacles(marks, scales);
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ x: 10, y: 20, width: 50, height: 30 });
-    expect(result[1]).toEqual({ x: 80, y: 20, width: 50, height: 30 });
+    expect(result[0]).toEqual({ x: 10, y: 20, width: 50, height: 30, kind: 'mark' });
+    expect(result[1]).toEqual({ x: 80, y: 20, width: 50, height: 30, kind: 'mark' });
   });
 
   it('returns point mark bounds as bounding box from cx/cy/r', () => {
@@ -25,7 +25,7 @@ describe('computeMarkObstacles', () => {
     const scales = { y: { type: 'linear' } } as unknown as ResolvedScales;
     const result = computeMarkObstacles(marks, scales);
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({ x: 90, y: 90, width: 20, height: 20 });
+    expect(result[0]).toEqual({ x: 90, y: 90, width: 20, height: 20, kind: 'mark' });
   });
 
   it('returns grouped row obstacles for band-scale charts', () => {

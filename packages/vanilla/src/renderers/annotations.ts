@@ -214,14 +214,7 @@ function renderAnnotation(
     const lineHeight = fontSize * (annotation.label.style.lineHeight ?? 1.3);
     const isMultiLine = lines.length > 1;
 
-    // Multi-line text: drop-line connectors keep the resolved side anchor so
-    // the label hugs the vertical line. Other connectors center the text for
-    // a cleaner look.
     if (isMultiLine) {
-      const isDropLine = annotation.label.connector?.style === 'drop-line';
-      if (!isDropLine) {
-        text.setAttribute('text-anchor', 'middle');
-      }
       for (let i = 0; i < lines.length; i++) {
         const tspan = createSVGElement('tspan');
         setAttrs(tspan, { x: annotation.label.x, dy: i === 0 ? 0 : lineHeight });
@@ -237,27 +230,33 @@ function renderAnnotation(
     if (annotation.label.background) {
       const pad = 3;
       let bgX: number;
-      let bgWidth: number;
-      let bgHeight: number;
+      let bgY: number;
+      let bgW: number;
+      let bgH: number;
+
       if (annotation.label.bounds) {
-        bgX = annotation.label.bounds.x - pad;
-        bgWidth = annotation.label.bounds.width + pad * 2;
-        bgHeight = annotation.label.bounds.height + pad * 2;
+        const b = annotation.label.bounds;
+        bgX = b.x - pad;
+        bgY = b.y - pad;
+        bgW = b.width + pad * 2;
+        bgH = b.height + pad * 2;
       } else {
         const charWidth = fontSize * 0.55;
         const maxLineWidth = Math.max(...lines.map((l) => l.length)) * charWidth;
         const totalHeight = lines.length * lineHeight;
         bgX = isMultiLine ? annotation.label.x - maxLineWidth / 2 - pad : annotation.label.x - pad;
-        bgWidth = maxLineWidth + pad * 2;
-        bgHeight = totalHeight + pad * 2;
+        bgY = annotation.label.y - fontSize + (lineHeight - fontSize) / 2 - pad;
+        bgW = maxLineWidth + pad * 2;
+        bgH = totalHeight + pad * 2;
       }
+
       const bgRect = createSVGElement('rect');
       bgRect.setAttribute('class', 'oc-annotation-bg');
       setAttrs(bgRect, {
         x: bgX,
-        y: annotation.label.y - fontSize + (lineHeight - fontSize) / 2 - pad,
-        width: bgWidth,
-        height: bgHeight,
+        y: bgY,
+        width: bgW,
+        height: bgH,
         fill: annotation.label.background,
         rx: 2,
       });

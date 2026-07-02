@@ -16,9 +16,70 @@ import {
   DEFAULT_LINE_HEIGHT,
 } from './constants';
 
+export type AnnotationMeasureTextFn = (
+  text: string,
+  font: { fontSize: number; fontWeight: number; fontFamily?: string },
+) => number;
+
+export const heuristicMeasure: AnnotationMeasureTextFn = (text, { fontSize, fontWeight }) =>
+  estimateTextWidth(text, fontSize, fontWeight);
+
 /**
- * Compute the bounding box of annotation text at a given label position.
- * Multi-line text is centered at labelX; single-line starts at labelX.
+ * Compute the bounding box of a text block, aware of textAnchor and multi-line layout.
+ * labelY is the first-line baseline.
+ */
+export function computeTextBlockBounds(
+  labelX: number,
+  labelY: number,
+  text: string,
+  style: {
+    fontSize: number;
+    fontWeight: number;
+    lineHeight: number;
+    textAnchor?: 'start' | 'middle' | 'end';
+  },
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
+): Rect {
+  const lines = text.split('\n');
+  const maxWidth = Math.max(
+    ...lines.map((line) =>
+      measure(line, { fontSize: style.fontSize, fontWeight: style.fontWeight }),
+    ),
+  );
+  const height =
+    style.fontSize + (lines.length - 1) * style.fontSize * style.lineHeight + style.fontSize * 0.3;
+
+  let x: number;
+  if (style.textAnchor === 'middle') {
+    x = labelX - maxWidth / 2;
+  } else if (style.textAnchor === 'end') {
+    x = labelX - maxWidth;
+  } else {
+    x = labelX;
+  }
+
+  return {
+    x,
+    y: labelY - style.fontSize,
+    width: maxWidth,
+    height,
+  };
+}
+
+export function unionRects(a: Rect, b: Rect): Rect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y,
+  };
+}
+
+/**
+ * @deprecated Use computeTextBlockBounds instead. Kept for backward compatibility
+ * during migration.
  */
 export function computeTextBounds(
   labelX: number,
@@ -29,16 +90,13 @@ export function computeTextBounds(
 ): Rect {
   const lines = text.split('\n');
   const isMultiLine = lines.length > 1;
-  const maxWidth = Math.max(...lines.map((line) => estimateTextWidth(line, fontSize, fontWeight)));
-  const totalHeight = lines.length * fontSize * DEFAULT_LINE_HEIGHT;
-  const x = isMultiLine ? labelX - maxWidth / 2 : labelX;
-
-  return {
-    x,
-    y: labelY - fontSize,
-    width: maxWidth,
-    height: totalHeight,
-  };
+  const anchor: 'start' | 'middle' = isMultiLine ? 'middle' : 'start';
+  return computeTextBlockBounds(labelX, labelY, text, {
+    fontSize,
+    fontWeight,
+    lineHeight: DEFAULT_LINE_HEIGHT,
+    textAnchor: anchor,
+  });
 }
 
 /**
@@ -130,11 +188,25 @@ export function computeConnectorOrigin(
     : { x: box.x + box.width, y: boxCenterY }; // right
 }
 
-/** Estimate the bounding box of an annotation label. */
-export function estimateLabelBounds(label: ResolvedLabel): Rect {
+/** Estimate the bounding box of an annotation label using its resolved style. */
+export function estimateLabelBounds(
+  label: ResolvedLabel,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
+): Rect {
   const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
-  return computeTextBounds(label.x, label.y, label.text, fontSize, fontWeight);
+  return computeTextBlockBounds(
+    label.x,
+    label.y,
+    label.text,
+    {
+      fontSize,
+      fontWeight,
+      lineHeight: label.style.lineHeight ?? DEFAULT_LINE_HEIGHT,
+      textAnchor: label.style.textAnchor ?? 'start',
+    },
+    measure,
+  );
 }
 
 /**

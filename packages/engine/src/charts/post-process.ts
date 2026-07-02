@@ -5,14 +5,17 @@
  */
 
 import type {
+  AreaMark,
   Encoding,
+  LineMark,
   Mark,
   MarkDef,
   PointMark,
-  Rect,
   RectMark,
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
+import type { PlacementObstacle } from '../annotations/placement';
+import { sampleAreaObstacles, samplePolylineObstacles } from '../annotations/placement';
 import type { ResolvedScales } from '../layout/scales';
 
 // ---------------------------------------------------------------------------
@@ -28,18 +31,17 @@ import type { ResolvedScales } from '../layout/scales';
  * For other charts (column, scatter): returns individual mark bounds so
  * annotations avoid overlapping any visible data mark.
  */
-export function computeMarkObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
+export function computeMarkObstacles(marks: Mark[], scales: ResolvedScales): PlacementObstacle[] {
   // Band-scale y-axis: group marks by row for efficient obstacle computation
   if (scales.y?.type === 'band') {
     return computeBandRowObstacles(marks, scales);
   }
 
-  // All other charts: use individual rect/point mark bounds as obstacles
-  const obstacles: Rect[] = [];
+  const obstacles: PlacementObstacle[] = [];
   for (const mark of marks) {
     if (mark.type === 'rect') {
       const rm = mark as RectMark;
-      obstacles.push({ x: rm.x, y: rm.y, width: rm.width, height: rm.height });
+      obstacles.push({ x: rm.x, y: rm.y, width: rm.width, height: rm.height, kind: 'mark' });
     } else if (mark.type === 'point') {
       const pm = mark as PointMark;
       obstacles.push({
@@ -47,14 +49,25 @@ export function computeMarkObstacles(marks: Mark[], scales: ResolvedScales): Rec
         y: pm.cy - pm.r,
         width: pm.r * 2,
         height: pm.r * 2,
+        kind: 'mark',
       });
+    } else if (mark.type === 'line') {
+      const lm = mark as LineMark;
+      if (lm.points.length > 0) {
+        obstacles.push(...samplePolylineObstacles(lm.points, 'line'));
+      }
+    } else if (mark.type === 'area') {
+      const am = mark as AreaMark;
+      if (am.topPoints.length > 0) {
+        obstacles.push(...sampleAreaObstacles(am.topPoints, am.bottomPoints));
+      }
     }
   }
   return obstacles;
 }
 
 /** Group band-scale marks by row, returning one obstacle per band. */
-function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] {
+function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): PlacementObstacle[] {
   const rows = new Map<number, { minX: number; maxX: number; bandY: number }>();
 
   for (const mark of marks) {
@@ -92,13 +105,14 @@ function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Rect[] 
   const bandwidth = bandScale.bandwidth?.() ?? 0;
   if (bandwidth === 0) return [];
 
-  const obstacles: Rect[] = [];
+  const obstacles: PlacementObstacle[] = [];
   for (const { minX, maxX, bandY } of rows.values()) {
     obstacles.push({
       x: minX,
       y: bandY - bandwidth / 2,
       width: maxX - minX,
       height: bandwidth,
+      kind: 'mark',
     });
   }
 
