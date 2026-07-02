@@ -109,6 +109,8 @@ export interface ResolvedChrome {
   byline?: ResolvedChromeElement;
   footer?: ResolvedChromeElement;
   brand?: ResolvedChromeElement;
+  /** Absolute y at which bottom-chrome relative offsets are anchored: area.y + area.height + x-axis extent. */
+  bottomAnchorY?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,6 +178,10 @@ export interface AxisLayout {
    * classic outside-the-area placement.
    */
   tickPosition?: 'inline' | 'gutter';
+  /** Extent in px beyond the chart-area edge occupied by tick labels + title. Engine-resolved from the final (post-thinning) tick set. */
+  extent?: number;
+  /** Absolute anchor for the axis title. Replaces renderer-side offset math. */
+  titlePosition?: { x: number; y: number; angle?: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -546,6 +552,8 @@ export interface ResolvedLabel {
   background?: string;
   /** Whether to show the paint-order stroke halo. Default true. */
   halo?: boolean;
+  /** Engine-measured text bounding box for background rects. */
+  bounds?: Rect;
 }
 
 // ---------------------------------------------------------------------------
@@ -628,6 +636,16 @@ export interface BaseLegendLayout {
   labelStyle: TextStyle;
 }
 
+/** Engine-resolved absolute position for a single legend entry. */
+export interface LegendEntryPosition {
+  x: number;
+  y: number;
+  labelX: number;
+  labelY: number;
+  width: number;
+  row: number;
+}
+
 /** Categorical legend with discrete swatch entries. */
 export interface CategoricalLegendLayout extends BaseLegendLayout {
   /** Discriminant for legend type. Omitted means categorical (backwards compat). */
@@ -642,6 +660,10 @@ export interface CategoricalLegendLayout extends BaseLegendLayout {
   entryGap: number;
   /** Fill color for the rounded chip background behind the colored bar. */
   swatchChipFill: string;
+  /** Engine-resolved absolute positions, parallel to `entries`. */
+  entryPositions?: LegendEntryPosition[];
+  /** Row advance used to build entryPositions (single source of truth). */
+  rowHeight?: number;
 }
 
 /** A color stop in a gradient legend. */

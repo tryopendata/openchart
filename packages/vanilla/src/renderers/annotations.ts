@@ -235,20 +235,29 @@ function renderAnnotation(
     // Render background rect behind text if specified, otherwise use
     // paint-order stroke halo to knock out lines behind text
     if (annotation.label.background) {
-      const charWidth = fontSize * 0.55;
-      const maxLineWidth = Math.max(...lines.map((l) => l.length)) * charWidth;
-      const totalHeight = lines.length * lineHeight;
       const pad = 3;
-      const bgX = isMultiLine
-        ? annotation.label.x - maxLineWidth / 2 - pad
-        : annotation.label.x - pad;
+      let bgX: number;
+      let bgWidth: number;
+      let bgHeight: number;
+      if (annotation.label.bounds) {
+        bgX = annotation.label.bounds.x - pad;
+        bgWidth = annotation.label.bounds.width + pad * 2;
+        bgHeight = annotation.label.bounds.height + pad * 2;
+      } else {
+        const charWidth = fontSize * 0.55;
+        const maxLineWidth = Math.max(...lines.map((l) => l.length)) * charWidth;
+        const totalHeight = lines.length * lineHeight;
+        bgX = isMultiLine ? annotation.label.x - maxLineWidth / 2 - pad : annotation.label.x - pad;
+        bgWidth = maxLineWidth + pad * 2;
+        bgHeight = totalHeight + pad * 2;
+      }
       const bgRect = createSVGElement('rect');
       bgRect.setAttribute('class', 'oc-annotation-bg');
       setAttrs(bgRect, {
         x: bgX,
         y: annotation.label.y - fontSize + (lineHeight - fontSize) / 2 - pad,
-        width: maxLineWidth + pad * 2,
-        height: totalHeight + pad * 2,
+        width: bgWidth,
+        height: bgHeight,
         fill: annotation.label.background,
         rx: 2,
       });

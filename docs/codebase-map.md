@@ -22,7 +22,8 @@
 | CSS dark overrides (`.oc-dark`) | `packages/core/src/styles/dark.css` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
 | Animation keyframes / rules | `packages/core/src/styles/keyframes.css`, `animation.css` |
-| Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`) |
+| Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
+| X-axis extent helper + constants | `packages/core/src/responsive/metrics.ts` (`computeXAxisExtentFromLabels`, `X_AXIS_BAND_HEIGHT`, `X_AXIS_TITLE_BAND`, `X_AXIS_TITLE_BAND_ROTATED`) |
 | Text wrapping | `packages/core/src/layout/text-wrap.ts` (`wrapText`) |
 | Chrome layout computation (title/subtitle/source/byline/footer geometry) | `packages/core/src/layout/chrome.ts` → `computeChrome()` |
 | Spec normalization (defaults, shorthand expansion) | `packages/engine/src/compiler/normalize.ts` → `normalizeSpec()` |
@@ -42,7 +43,7 @@
 | Annotations: collision resolution | `packages/engine/src/annotations/collisions.ts` |
 | Annotations: data → pixel resolver | `packages/engine/src/annotations/position.ts` |
 | Annotations: shared constants (`ANCHOR_OFFSET=8`, default font, dash patterns) | `packages/engine/src/annotations/constants.ts` |
-| Legend layout (entries, wrapping, positioning) | `packages/engine/src/legend/compute.ts`, `wrap.ts` |
+| Legend layout (entries, wrapping, positioning, `entryPositions`) | `packages/engine/src/legend/compute.ts`, `wrap.ts` |
 | Legend / endpoint-label suppression truth table (per-series UI hides when series hidden) | `packages/engine/src/legend/suppression.ts` |
 | Endpoint labels: compute (placement, leader lines, anti-overlap sweep) | `packages/engine/src/endpoint-labels/compute.ts` |
 | Endpoint labels: number formatting (currency / unit / compact) | `packages/engine/src/endpoint-labels/format.ts` |
@@ -58,7 +59,7 @@
 | Renderer: brand block | `packages/vanilla/src/renderers/brand.ts` |
 | Renderer: endpoint labels (line/area series labels at the trailing edge) | `packages/vanilla/src/renderers/endpoint-labels.ts` |
 | Renderer: metric bar (chrome metric pills) | `packages/vanilla/src/renderers/metrics.ts` |
-| SVG DOM helpers (`createSVGElement`, `setAttrs`, `applyTextStyle`) | `packages/vanilla/src/renderers/svg-dom.ts` |
+| SVG DOM helpers (`createSVGElement`, `setAttrs`, `applyTextStyle`) | `packages/vanilla/src/renderers/svg-dom.ts` (note: `computeXAxisExtent` was removed; use `layout.chrome.bottomAnchorY` instead) |
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
 | Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts` |

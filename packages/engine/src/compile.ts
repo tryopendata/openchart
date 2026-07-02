@@ -741,7 +741,12 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         skipX,
         skipY,
         markType: chartSpec.markType,
+        totalWidth: options.width,
       });
+
+  // Intentional post-hoc mutation: axes must resolve before we know the x-axis extent.
+  const xAxisExtent = axes.x?.extent ?? 0;
+  dims.chrome.bottomAnchorY = chartArea.y + chartArea.height + xAxisExtent;
 
   // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
   // axes.y.gridlines off the same object. Do not introduce a copy-on-write.

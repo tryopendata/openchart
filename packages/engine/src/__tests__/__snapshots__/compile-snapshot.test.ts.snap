@@ -48,6 +48,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "x": 577,
         "y": 357,
       },
+      "extent": 26,
       "gridlines": [],
       "label": undefined,
       "labelFlush": undefined,
@@ -165,6 +166,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
     },
   },
   "chrome": {
+    "bottomAnchorY": 383,
     "bottomHeight": 0,
     "title": {
       "maxWidth": 561,
@@ -711,6 +713,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     },
   },
   "chrome": {
+    "bottomAnchorY": 436.59999999999997,
     "bottomHeight": 43.4,
     "source": {
       "maxWidth": 755,
@@ -907,6 +910,40 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
     ],
     "entryGap": 4,
+    "entryPositions": [
+      {
+        "labelX": 683.899,
+        "labelY": 111.2,
+        "row": 0,
+        "width": 34.54,
+        "x": 665.899,
+        "y": 105.2,
+      },
+      {
+        "labelX": 683.899,
+        "labelY": 129.5,
+        "row": 1,
+        "width": 34.54,
+        "x": 665.899,
+        "y": 123.5,
+      },
+      {
+        "labelX": 683.899,
+        "labelY": 147.8,
+        "row": 2,
+        "width": 34.54,
+        "x": 665.899,
+        "y": 141.8,
+      },
+      {
+        "labelX": 683.899,
+        "labelY": 166.10000000000002,
+        "row": 3,
+        "width": 34.54,
+        "x": 665.899,
+        "y": 160.10000000000002,
+      },
+    ],
     "labelStyle": {
       "fill": "#09090b",
       "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
@@ -915,6 +952,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "lineHeight": 1.3,
     },
     "position": "right",
+    "rowHeight": 18.3,
     "swatchChipFill": "rgba(0,0,0,0.04)",
     "swatchGap": 6,
     "swatchSize": 12,
@@ -1494,6 +1532,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "x": 577,
         "y": 297.2,
       },
+      "extent": 26,
       "gridlines": [],
       "label": undefined,
       "labelFlush": undefined,
@@ -1625,6 +1664,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     },
   },
   "chrome": {
+    "bottomAnchorY": 323.2,
     "bottomHeight": 59.8,
     "byline": {
       "maxWidth": 431,
