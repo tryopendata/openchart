@@ -15,13 +15,13 @@
 import type {
   LayoutStrategy,
   LegendEntry,
+  LegendEntryPosition,
   LegendLayout,
-  MeasureTextFn,
   Rect,
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, heuristicMeasure } from '@opendata-ai/openchart-core';
+import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { countColorSeries, resolveSuppression } from './suppression';
@@ -167,7 +167,6 @@ export function computeLegend(
   theme: ResolvedTheme,
   chartArea: Rect,
   watermark: boolean = true,
-  measure: MeasureTextFn = heuristicMeasure,
 ): LegendLayout {
   // Sparkline mode: legend hidden by default unless the user opted in. Color
   // scales still resolve normally (legend hidden != no colors), so multi-series
@@ -235,7 +234,7 @@ export function computeLegend(
   if (resolvedPosition === 'right' || resolvedPosition === 'bottom-right') {
     // Right-positioned legend: vertical stack
     const maxLabelWidth = Math.max(
-      ...entries.map((e) => measure(e.label, labelStyle.fontSize, labelStyle.fontWeight).width),
+      ...entries.map((e) => estimateTextWidth(e.label, labelStyle.fontSize, labelStyle.fontWeight)),
     );
     const legendWidth = Math.min(
       LEGEND_RIGHT_WIDTH,
@@ -274,22 +273,43 @@ export function computeLegend(
     const offsetDx = spec.legend?.offset?.dx ?? 0;
     const offsetDy = spec.legend?.offset?.dy ?? 0;
 
+    const rightBounds = {
+      x: chartArea.x + chartArea.width - legendWidth + offsetDx,
+      y: legendY + offsetDy,
+      width: legendWidth,
+      height: clampedHeight,
+    };
+
+    const rightEntryGap = 4;
+    const rightPositions: LegendEntryPosition[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const ex = rightBounds.x;
+      const ey = rightBounds.y + i * (entryHeight + rightEntryGap);
+      const labelWidth = estimateTextWidth(
+        entries[i].label,
+        labelStyle.fontSize,
+        labelStyle.fontWeight,
+      );
+      rightPositions.push({
+        x: ex,
+        y: ey,
+        labelX: ex + SWATCH_SIZE + SWATCH_GAP,
+        labelY: ey + SWATCH_SIZE / 2,
+        width: SWATCH_SIZE + SWATCH_GAP + labelWidth + rightEntryGap,
+        row: i,
+      });
+    }
+
     return {
       type: 'categorical' as const,
       position: resolvedPosition,
       entries,
-      bounds: {
-        x: chartArea.x + chartArea.width - legendWidth + offsetDx,
-        y: legendY + offsetDy,
-        width: legendWidth,
-        height: clampedHeight,
-      },
+      bounds: rightBounds,
       labelStyle,
       ...categoricalDefaults(theme),
-      // Right-positioned legends pack rows tighter than the default entryGap
-      // because each row is its own swatch+label and the gap controls
-      // vertical breathing room rather than horizontal spacing.
-      entryGap: 4,
+      entryGap: rightEntryGap,
+      entryPositions: rightPositions,
+      rowHeight: entryHeight + rightEntryGap,
     };
   }
 
@@ -325,7 +345,6 @@ export function computeLegend(
     labelStyle,
     maxRows,
     effectiveEntryGap,
-    measure,
   );
 
   if (fittingCount < entries.length) {
@@ -333,19 +352,19 @@ export function computeLegend(
   }
 
   const totalWidth = entries.reduce((sum, entry) => {
-    const labelWidth = measure(entry.label, labelStyle.fontSize, labelStyle.fontWeight).width;
+    const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
     return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap;
   }, 0);
 
   // Calculate actual row count for height (recompute after truncation).
-  const { rowCount } = measureLegendWrap(
+  const finalWrap = measureLegendWrap(
     entries,
     availableWidth,
     labelStyle,
     undefined,
     effectiveEntryGap,
-    measure,
   );
+  const { rowCount } = finalWrap;
 
   const rowHeight = SWATCH_SIZE + 4;
   const legendHeight = rowCount * rowHeight + effectivePadding * 2;
@@ -354,23 +373,46 @@ export function computeLegend(
   const offsetDx = spec.legend?.offset?.dx ?? 0;
   const offsetDy = spec.legend?.offset?.dy ?? 0;
 
+  const hBounds = {
+    x: chartArea.x + offsetDx,
+    y:
+      (resolvedPosition === 'bottom'
+        ? chartArea.y + chartArea.height - legendHeight
+        : chartArea.y) + offsetDy,
+    width: Math.min(totalWidth, availableWidth),
+    height: legendHeight,
+  };
+
+  const hPositions: LegendEntryPosition[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const placement = finalWrap.placements[i];
+    if (!placement) break;
+    const ex = hBounds.x + placement.xOffset;
+    const ey = hBounds.y + placement.row * rowHeight;
+    const labelWidth = estimateTextWidth(
+      entries[i].label,
+      labelStyle.fontSize,
+      labelStyle.fontWeight,
+    );
+    hPositions.push({
+      x: ex,
+      y: ey,
+      labelX: ex + SWATCH_SIZE + SWATCH_GAP,
+      labelY: ey + SWATCH_SIZE / 2,
+      width: SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap,
+      row: placement.row,
+    });
+  }
+
   return {
     type: 'categorical' as const,
     position: resolvedPosition,
     entries,
-    bounds: {
-      x: chartArea.x + offsetDx,
-      y:
-        (resolvedPosition === 'bottom'
-          ? chartArea.y + chartArea.height - legendHeight
-          : chartArea.y) + offsetDy,
-      width: Math.min(totalWidth, availableWidth),
-      height: legendHeight,
-    },
+    bounds: hBounds,
     labelStyle,
     ...categoricalDefaults(theme),
-    // Top/bottom legends honor the compact-viewport-aware entry gap so
-    // chips stay readable on narrow widths.
     entryGap: effectiveEntryGap,
+    entryPositions: hPositions,
+    rowHeight,
   };
 }

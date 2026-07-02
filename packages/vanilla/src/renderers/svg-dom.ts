@@ -4,8 +4,7 @@
  * Pure, stateless utilities. No layout/theme knowledge.
  */
 
-import type { ChartLayout, TextStyle } from '@opendata-ai/openchart-core';
-import { sharedMeasureText } from '../measure-text';
+import type { TextStyle } from '@opendata-ai/openchart-core';
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -38,30 +37,4 @@ export function applyTextStyle(el: SVGElement, style: TextStyle): void {
   if (style.fontVariant) {
     el.setAttribute('font-variant', style.fontVariant);
   }
-}
-
-/**
- * Compute the vertical extent of x-axis labels below the chart area.
- * Accounts for rotated tick labels which need more vertical space.
- */
-export function computeXAxisExtent(layout: ChartLayout): number {
-  const xAxis = layout.axes.x;
-  if (!xAxis) return 0;
-
-  if (xAxis.tickAngle && Math.abs(xAxis.tickAngle) > 10) {
-    // Rotated labels: estimate height from the longest tick label.
-    const fontSize = xAxis.tickLabelStyle.fontSize;
-    const fontWeight = xAxis.tickLabelStyle.fontWeight;
-    const angleRad = Math.abs(xAxis.tickAngle) * (Math.PI / 180);
-    const measure = sharedMeasureText();
-    let maxLabelWidth = 40;
-    for (const tick of xAxis.ticks) {
-      const w = measure(tick.label, fontSize, fontWeight).width;
-      if (w > maxLabelWidth) maxLabelWidth = w;
-    }
-    const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
-    return xAxis.label ? rotatedHeight + 20 : rotatedHeight;
-  }
-
-  return xAxis.label ? 48 : 26;
 }

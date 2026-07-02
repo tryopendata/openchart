@@ -40,7 +40,6 @@ import {
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
-  resolveMeasurer,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
@@ -543,14 +542,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     width: options.width,
     height: options.height,
   };
-  const legendLayout = computeLegend(
-    chartSpec,
-    strategy,
-    theme,
-    preliminaryArea,
-    watermark,
-    resolveMeasurer(options.measureText),
-  );
+  const legendLayout = computeLegend(chartSpec, strategy, theme, preliminaryArea, watermark);
 
   // Compute dimensions (accounts for chrome + legend + responsive strategy)
   const dims = computeDimensions(chartSpec, options, legendLayout, theme, strategy, watermark);
@@ -601,14 +593,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         break;
     }
   }
-  const finalLegend = computeLegend(
-    chartSpec,
-    strategy,
-    theme,
-    legendArea,
-    watermark,
-    resolveMeasurer(options.measureText),
-  );
+  const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea, watermark);
 
   // Apply data filtering after legend (so legend retains all series), but before
   // scale computation (so hidden/clipped data doesn't affect domains or marks).
@@ -756,7 +741,12 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         skipX,
         skipY,
         markType: chartSpec.markType,
+        totalWidth: options.width,
       });
+
+  // Intentional post-hoc mutation: axes must resolve before we know the x-axis extent.
+  const xAxisExtent = axes.x?.extent ?? 0;
+  dims.chrome.bottomAnchorY = chartArea.y + chartArea.height + xAxisExtent;
 
   // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
   // axes.y.gridlines off the same object. Do not introduce a copy-on-write.

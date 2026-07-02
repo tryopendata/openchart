@@ -27,7 +27,12 @@ import {
   SUBTITLE_FONT_SIZE_RATIO,
   SUBTITLE_GAP,
 } from './constants';
-import { applyOffset, computeAnchorOffset, computeConnectorOrigin } from './geometry';
+import {
+  applyOffset,
+  computeAnchorOffset,
+  computeConnectorOrigin,
+  computeTextBounds,
+} from './geometry';
 import { resolvePosition } from './position';
 
 /** Horizontal gap between the drop-line and the label text. */
@@ -147,6 +152,7 @@ export function resolveTextAnnotation(
       : undefined,
     background: annotation.background,
     halo: annotation.halo,
+    bounds: computeTextBounds(labelX, labelY, annotation.text, fontSize, fontWeight),
   };
 
   // Resolve dot marker. Uses the connector's "to" endpoint coordinates
@@ -276,6 +282,7 @@ function resolveDropLineAnnotation(
     },
     background: annotation.background,
     halo: annotation.halo,
+    bounds: computeTextBounds(labelX, labelBaselineY, annotation.text, fontSize, fontWeight),
   };
 
   return {

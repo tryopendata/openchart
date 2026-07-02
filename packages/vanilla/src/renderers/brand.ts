@@ -4,7 +4,7 @@
 
 import type { ChartLayout } from '@opendata-ai/openchart-core';
 import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH } from '@opendata-ai/openchart-core';
-import { computeXAxisExtent, createSVGElement, setAttrs, XLINK_NS } from './svg-dom';
+import { createSVGElement, setAttrs, XLINK_NS } from './svg-dom';
 
 const BRAND_URL = 'https://tryopendata.ai';
 
@@ -24,8 +24,7 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
 
   // Vertically align with the first bottom chrome element.
   const { chrome } = layout;
-  const xAxisExtent = computeXAxisExtent(layout);
-  const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
+  const bottomOffset = chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
   const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
   // When no bottom chrome items exist, derive a fallback offset that still
   // clears any bottom-positioned legend so the brand watermark doesn't

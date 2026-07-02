@@ -14,8 +14,8 @@
  * in-row accumulated width at the point of wrapping.
  */
 
-import type { LegendEntry, MeasureTextFn, TextStyle } from '@opendata-ai/openchart-core';
-import { COMPACT_WIDTH, heuristicMeasure } from '@opendata-ai/openchart-core';
+import type { LegendEntry, TextStyle } from '@opendata-ai/openchart-core';
+import { COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,6 +50,8 @@ export interface LegendWrapResult {
   fittingCount: number;
   /** Width (in px) of each row — callers can use for alignment. */
   rowWidths: number[];
+  /** Per-entry placement: wrap row and x offset within that row. */
+  placements: Array<{ row: number; xOffset: number }>;
 }
 
 /**
@@ -66,31 +68,37 @@ export function measureLegendWrap(
   labelStyle: TextStyle,
   maxRows?: number,
   entryGap: number = ENTRY_GAP,
-  measure: MeasureTextFn = heuristicMeasure,
 ): LegendWrapResult {
   if (entries.length === 0) {
-    return { rowCount: 0, fittingCount: 0, rowWidths: [] };
+    return { rowCount: 0, fittingCount: 0, rowWidths: [], placements: [] };
   }
 
   let rowCount = 1;
   let rowWidth = 0;
   const rowWidths: number[] = [];
+  const placements: Array<{ row: number; xOffset: number }> = [];
   let fittingCount = entries.length;
   let fittingCountLocked = false;
 
   for (let i = 0; i < entries.length; i++) {
-    const labelWidth = measure(entries[i].label, labelStyle.fontSize, labelStyle.fontWeight).width;
+    const labelWidth = estimateTextWidth(
+      entries[i].label,
+      labelStyle.fontSize,
+      labelStyle.fontWeight,
+    );
     const entryWidth = SWATCH_SIZE + SWATCH_GAP + labelWidth + entryGap;
 
     if (rowWidth + entryWidth > maxWidth && rowWidth > 0) {
       rowWidths.push(rowWidth);
       rowCount++;
+      placements.push({ row: rowCount - 1, xOffset: 0 });
       rowWidth = entryWidth;
       if (!fittingCountLocked && maxRows != null && rowCount > maxRows) {
         fittingCount = i;
         fittingCountLocked = true;
       }
     } else {
+      placements.push({ row: rowCount - 1, xOffset: rowWidth });
       rowWidth += entryWidth;
     }
   }
@@ -98,5 +106,5 @@ export function measureLegendWrap(
   // Flush the final row width so rowWidths has one entry per row.
   rowWidths.push(rowWidth);
 
-  return { rowCount, fittingCount, rowWidths };
+  return { rowCount, fittingCount, rowWidths, placements };
 }
