@@ -60,6 +60,7 @@ export type { NormalizedTileMapSpec } from './tilemap/types';
 export type { AnnotationContext } from './annotations/compute';
 export type { AnnotationMeasureTextFn } from './annotations/geometry';
 export { heuristicMeasure } from './annotations/geometry';
+export type { ObstacleKind, PlacementObstacle } from './annotations/placement';
 
 // ---------------------------------------------------------------------------
 // Compiler pipeline (spec validation, normalization, generic compile)

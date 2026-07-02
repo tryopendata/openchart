@@ -24,9 +24,15 @@ import {
   nudgeAnnotationFromObstacles,
   resolveAnnotationCollisions,
 } from './collisions';
+import { DEFAULT_ANNOTATION_FONT_WEIGHT, SUBTITLE_FONT_SIZE_RATIO } from './constants';
 import type { AnnotationMeasureTextFn } from './geometry';
 import { heuristicMeasure } from './geometry';
-import { findBestPlacement, isAutoPlacement } from './placement';
+import {
+  findBestPlacement,
+  isAutoPlacement,
+  normalizeObstacles,
+  type PlacementObstacle,
+} from './placement';
 import { resolvePosition } from './position';
 import { resolveRangeAnnotation } from './resolve-range';
 import { resolveRefLineAnnotation } from './resolve-refline';
@@ -37,7 +43,7 @@ export interface AnnotationContext {
   chartArea: Rect;
   strategy: LayoutStrategy;
   isDark: boolean;
-  obstacles: Rect[];
+  obstacles: PlacementObstacle[];
   svg: { width: number; height: number };
   measure: AnnotationMeasureTextFn;
   debugPlacement?: boolean;
@@ -85,7 +91,7 @@ export function computeAnnotations(
 ): ResolvedAnnotation[] {
   let ctx: AnnotationContext;
 
-  if ('scales' in scalesOrCtx && 'chartArea' in scalesOrCtx) {
+  if ('measure' in scalesOrCtx) {
     ctx = scalesOrCtx as AnnotationContext;
   } else {
     ctx = {
@@ -93,7 +99,7 @@ export function computeAnnotations(
       chartArea: chartArea!,
       strategy: strategy!,
       isDark: isDark ?? false,
-      obstacles: obstacles ?? [],
+      obstacles: obstacles ? normalizeObstacles(obstacles) : [],
       svg: svgDimensions ?? { width: 0, height: 0 },
       measure: heuristicMeasure,
     };
@@ -171,11 +177,11 @@ export function computeAnnotations(
   // ---- Pass 2: scored placement search for auto annotations ----
   if (autoQueue.length > 0 && ctx.svg.width > 0 && ctx.svg.height > 0) {
     // Build the working obstacle list: base obstacles + explicitly placed annotations
-    const workingObstacles: Rect[] = [...ctx.obstacles];
+    const workingObstacles: PlacementObstacle[] = [...ctx.obstacles];
     for (let i = 0; i < annotations.length; i++) {
       const a = annotations[i];
       if (a.bounds && !autoQueue.some((q) => q.index === i)) {
-        workingObstacles.push({ ...a.bounds, kind: 'annotation' } as Rect);
+        workingObstacles.push({ ...a.bounds, kind: 'annotation' } as PlacementObstacle);
       }
     }
 
@@ -190,8 +196,8 @@ export function computeAnnotations(
 
       const subtitleStyle = annotation.subtitle
         ? {
-            fontSize: labelStyle.fontSize * 0.85,
-            fontWeight: 400,
+            fontSize: labelStyle.fontSize * SUBTITLE_FONT_SIZE_RATIO,
+            fontWeight: DEFAULT_ANNOTATION_FONT_WEIGHT,
             lineHeight: labelStyle.lineHeight,
           }
         : undefined;
@@ -248,7 +254,7 @@ export function computeAnnotations(
       resolved.bounds = result.bounds;
 
       // Add this annotation's bounds as obstacle for subsequent auto annotations
-      workingObstacles.push({ ...result.bounds, kind: 'annotation' } as Rect);
+      workingObstacles.push({ ...result.bounds, kind: 'annotation' } as PlacementObstacle);
     }
   } else if (autoQueue.length > 0) {
     // Fallback: no SVG dimensions, use legacy nudge for auto annotations
@@ -270,11 +276,29 @@ export function computeAnnotations(
   // When auto placement ran, those annotations already avoid each other via the
   // obstacle-accumulation loop above, so only explicitly placed ones need this.
   if (autoQueue.length > 0) {
-    const explicitAnnotations = annotations.filter((_, i) => !autoQueue.some((q) => q.index === i));
+    // Build aligned pairs of explicit annotations + their specs
+    const autoIndices = new Set(autoQueue.map((q) => q.index));
+    const explicitAnnotations: ResolvedAnnotation[] = [];
+    const explicitSpecs: NormalizedChartSpec['annotations'] = [];
+    let specIdx = 0;
+    for (let i = 0; i < annotations.length; i++) {
+      if (autoIndices.has(i)) {
+        specIdx++;
+        continue;
+      }
+      // Walk specIdx past any compact-skipped specs
+      while (specIdx < spec.annotations.length) {
+        const s = spec.annotations[specIdx];
+        if (!isCompact || s.responsive === false) break;
+        specIdx++;
+      }
+      if (specIdx < spec.annotations.length) {
+        explicitAnnotations.push(annotations[i]);
+        explicitSpecs.push(spec.annotations[specIdx]);
+        specIdx++;
+      }
+    }
     if (explicitAnnotations.length > 1) {
-      const explicitSpecs = spec.annotations.filter(
-        (a) => !(a.type === 'text' && isAutoPlacement(a)),
-      );
       resolveAnnotationCollisions(
         explicitAnnotations,
         explicitSpecs,

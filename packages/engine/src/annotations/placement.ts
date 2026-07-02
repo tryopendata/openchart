@@ -3,8 +3,13 @@
  * scored search, and two-pass deterministic placement.
  */
 
-import type { Rect } from '@opendata-ai/openchart-core';
-import { type AnnotationMeasureTextFn, computeTextBlockBounds, heuristicMeasure } from './geometry';
+import { overlapArea, type Rect } from '@opendata-ai/openchart-core';
+import {
+  type AnnotationMeasureTextFn,
+  computeTextBlockBounds,
+  heuristicMeasure,
+  unionRects,
+} from './geometry';
 
 export type ObstacleKind =
   | 'mark'
@@ -287,6 +292,7 @@ export interface PlacementCandidate {
   directionIndex: number;
   ring: 1 | 2 | 3;
   score: number;
+  candidateIdx: number;
 }
 
 export interface CandidateScoreBreakdown {
@@ -316,46 +322,19 @@ function computeAttachmentPoint(
 function labelPositionFromAttachment(
   attachPt: { x: number; y: number },
   dir: DirectionDef,
-  _boxWidth: number,
   boxHeight: number,
   fontSize: number,
 ): { labelX: number; labelY: number } {
-  let labelX: number;
+  const labelX = attachPt.x;
   let labelY: number;
 
-  switch (dir.attach) {
-    case 'bottom-center':
-      labelX = attachPt.x;
-      labelY = attachPt.y - boxHeight + fontSize;
-      break;
-    case 'bottom-left':
-      labelX = attachPt.x;
-      labelY = attachPt.y - boxHeight + fontSize;
-      break;
-    case 'left-middle':
-      labelX = attachPt.x;
-      labelY = attachPt.y - boxHeight / 2 + fontSize;
-      break;
-    case 'top-left':
-      labelX = attachPt.x;
-      labelY = attachPt.y + fontSize;
-      break;
-    case 'top-center':
-      labelX = attachPt.x;
-      labelY = attachPt.y + fontSize;
-      break;
-    case 'top-right':
-      labelX = attachPt.x;
-      labelY = attachPt.y + fontSize;
-      break;
-    case 'right-middle':
-      labelX = attachPt.x;
-      labelY = attachPt.y - boxHeight / 2 + fontSize;
-      break;
-    case 'bottom-right':
-      labelX = attachPt.x;
-      labelY = attachPt.y - boxHeight + fontSize;
-      break;
+  const attach = dir.attach;
+  if (attach === 'left-middle' || attach === 'right-middle') {
+    labelY = attachPt.y - boxHeight / 2 + fontSize;
+  } else if (attach === 'top-left' || attach === 'top-center' || attach === 'top-right') {
+    labelY = attachPt.y + fontSize;
+  } else {
+    labelY = attachPt.y - boxHeight + fontSize;
   }
 
   return { labelX, labelY };
@@ -373,12 +352,6 @@ function areaOutside(box: Rect, container: Rect): number {
   const insideArea = insideX * insideY;
   const boxArea = box.width * box.height;
   return Math.max(0, boxArea - insideArea);
-}
-
-function overlapAreaRect(a: Rect, b: Rect): number {
-  const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
-  const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
-  return w > 0 && h > 0 ? w * h : 0;
 }
 
 function inflateRect(r: Rect, pad: number): Rect {
@@ -409,7 +382,7 @@ function scoreCandidate(
 
   for (const obs of obstacles) {
     const kind = 'kind' in obs ? (obs as PlacementObstacle).kind : 'mark';
-    const overlap = overlapAreaRect(inflated, obs);
+    const overlap = overlapArea(inflated, obs);
     if (overlap > 0) {
       const weight = OBSTACLE_WEIGHTS[kind] ?? 8;
       const contribution = (weight * overlap) / boxArea;
@@ -494,16 +467,16 @@ export function findBestPlacement(
     },
     measure,
   );
-  const boxWidth = sampleBounds.width;
   const boxHeight = sampleBounds.height;
 
   const r1 = 12;
   const r2 = r1 + boxHeight + 8;
   const r3 = 2 * r2;
 
+  let nextCandidateIdx = 0;
+
   function generateCandidates(radii: number[]): PlacementCandidate[] {
     const candidates: PlacementCandidate[] = [];
-    let candidateIdx = 0;
 
     for (const radius of radii) {
       const ring = radius === r1 ? 1 : radius === r2 ? 2 : 3;
@@ -513,7 +486,6 @@ export function findBestPlacement(
         const { labelX, labelY } = labelPositionFromAttachment(
           attachPt,
           dir,
-          boxWidth,
           boxHeight,
           style.fontSize,
         );
@@ -543,16 +515,10 @@ export function findBestPlacement(
             },
             measure,
           );
-          const ux = Math.min(box.x, subBounds.x);
-          const uy = Math.min(box.y, subBounds.y);
-          box = {
-            x: ux,
-            y: uy,
-            width: Math.max(box.x + box.width, subBounds.x + subBounds.width) - ux,
-            height: Math.max(box.y + box.height, subBounds.y + subBounds.height) - uy,
-          };
+          box = unionRects(box, subBounds);
         }
 
+        const idx = nextCandidateIdx++;
         const { score } = scoreCandidate(
           box,
           obstacles,
@@ -561,7 +527,7 @@ export function findBestPlacement(
           anchorX,
           anchorY,
           chartDiagonal,
-          candidateIdx,
+          idx,
         );
 
         candidates.push({
@@ -572,8 +538,8 @@ export function findBestPlacement(
           directionIndex: di,
           ring: ring as 1 | 2 | 3,
           score,
+          candidateIdx: idx,
         });
-        candidateIdx++;
       }
     }
 
@@ -587,10 +553,6 @@ export function findBestPlacement(
   // Ring 3 if no clean placement found
   if (best.score > CLEAN_THRESHOLD) {
     const ring3 = generateCandidates([r3]);
-    // Re-index to account for existing candidates
-    for (const c of ring3) {
-      c.score += 0; // scores already include tiebreak from candidateIdx
-    }
     candidates = [...candidates, ...ring3];
     best = candidates.reduce((a, b) => (a.score <= b.score ? a : b));
   }
@@ -598,7 +560,7 @@ export function findBestPlacement(
   let debugBreakdowns: CandidateScoreBreakdown[] | undefined;
   if (debug) {
     const dirNames = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    debugBreakdowns = candidates.map((c, i) => {
+    debugBreakdowns = candidates.map((c) => {
       const { breakdown } = scoreCandidate(
         c.box,
         obstacles,
@@ -607,7 +569,7 @@ export function findBestPlacement(
         anchorX,
         anchorY,
         chartDiagonal,
-        i,
+        c.candidateIdx,
         true,
       );
       return {
