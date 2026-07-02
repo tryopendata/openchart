@@ -12,7 +12,7 @@ export default defineConfig({
   // Run serially so the Ladle dev server and chart rendering are deterministic.
   fullyParallel: false,
   workers: 1,
-  // No retries -- we want flakes to be loud, not hidden.
+  // No retries - we want flakes to be loud, not hidden.
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {

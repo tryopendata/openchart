@@ -5,7 +5,7 @@ import { compileChart } from '../compile';
 
 // Red-locked: fixed by docs/plans/05-annotation-placement-engine.md
 
-describe('known bugs', () => {
+describe('known layout bugs', () => {
   test.fails('annotation label does not overlap the line it annotates', () => {
     // Generate ~25 smooth sine-wave data points over two years
     const data: { date: string; value: number }[] = [];

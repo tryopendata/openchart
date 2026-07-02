@@ -34,7 +34,7 @@ function distinctLabelYValues(svg: SVGElement): number[] {
 const SWATCH_SIZE = 12;
 const SWATCH_GAP = 6;
 const ENTRY_GAP = 16;
-const ENGINE_ROW_HEIGHT = SWATCH_SIZE + 4; // 16 — what the engine reserves
+const ENGINE_ROW_HEIGHT = SWATCH_SIZE + 4; // 16 - what the engine reserves
 const LEGEND_PADDING = 8;
 
 // ---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ function computeRowCount(maxWidth: number): number {
 
 describe('known layout bugs', () => {
   // Red-locked: fixed by docs/plans/04-resolved-layout-contract.md
-  test.fails('5a.1 — legend row advancement matches engine row height', () => {
+  test.fails('5a.1: legend row advancement matches engine row height', () => {
     const boundsWidth = 400;
     const rowCount = computeRowCount(boundsWidth);
     const boundsHeight = rowCount * ENGINE_ROW_HEIGHT + LEGEND_PADDING * 2;
@@ -117,7 +117,7 @@ describe('known layout bugs', () => {
   });
 
   // Red-locked: fixed by docs/plans/04-resolved-layout-contract.md and docs/plans/03-measure-then-freeze-layout.md
-  test.fails('5a.2 — rows drawn by renderer match rows reserved by engine', () => {
+  test.fails('5a.2: rows drawn by renderer match rows reserved by engine', () => {
     // Build a line spec with 8 series whose labels vary in length.
     const countries = [
       'United States of America',
@@ -176,9 +176,8 @@ describe('known layout bugs', () => {
       }
     }
 
-    // If no width produced a mismatch, force the assertion to fail so the
-    // test.fails wrapper still inverts correctly. This means the bug wasn't
-    // triggered at any tested width — adjust the range if this happens.
+    // If no width triggered a mismatch, fail so test.fails still inverts.
+    // If this path fires, widen the width range above.
     expect(foundMismatch).toBe(true);
   });
 });
