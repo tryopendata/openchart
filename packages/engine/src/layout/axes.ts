@@ -273,6 +273,13 @@ export interface AxesDataContext {
    * marks default to `'gutter'`.
    */
   markType?: import('@opendata-ai/openchart-core').MarkType;
+  /**
+   * Pinned y-axis tick values from the layout plan. When provided, the y-axis
+   * uses these values (via resolveExplicitTicks) instead of generating fresh
+   * ticks, so the labels match exactly what the gutter was measured for.
+   * User-specified `axis.values` still takes priority.
+   */
+  precomputedYTicks?: unknown[];
 }
 
 /**
@@ -440,6 +447,15 @@ export function computeAxes(
     let allTicks: AxisTick[];
     if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.y);
+    } else if (
+      dataContext?.precomputedYTicks &&
+      dataContext.precomputedYTicks.length > 0 &&
+      isContinuousY
+    ) {
+      // Pinned ticks from the layout plan -- use the same resolution path as
+      // explicit user values so the labels match exactly what the gutter was
+      // measured for.
+      allTicks = resolveExplicitTicks(dataContext.precomputedYTicks, scales.y);
     } else if (!isContinuousY) {
       const yFieldName = dataContext?.encoding.y?.field;
       const yLabelField = axisConfig?.labelField;
@@ -458,7 +474,8 @@ export function computeAxes(
     // Thin tick labels to prevent overlap (skip for band scales and explicit tick values).
     // When tickCount is set, we still thin if D3 overshot the requested count
     // (common with log scales where ticks(4) can return 26 values).
-    const shouldThinY = scales.y.type !== 'band' && !axisConfig?.values;
+    const shouldThinY =
+      scales.y.type !== 'band' && !axisConfig?.values && !dataContext?.precomputedYTicks?.length;
     let ticks: AxisTick[];
     if (!shouldThinY) {
       ticks = allTicks;

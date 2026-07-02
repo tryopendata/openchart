@@ -76,6 +76,7 @@ export type {
   LabelMode,
   LayoutStrategy,
   LegendPosition,
+  XAxisExtentInput,
 } from './responsive/index';
 export {
   AXIS_TITLE_GAP,
@@ -85,6 +86,7 @@ export {
   axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   BREAKPOINT_MEDIUM_MAX,
+  computeXAxisExtentFromLabels,
   getAxisTitleOffset,
   getBreakpoint,
   getHeightClass,
@@ -104,6 +106,9 @@ export {
   TICK_LABEL_OFFSET,
   TOP_PAD_EXTRA_NARROW,
   TOP_PAD_NARROW_MAX,
+  X_AXIS_BAND_HEIGHT,
+  X_AXIS_TITLE_BAND,
+  X_AXIS_TITLE_BAND_ROTATED,
 } from './responsive/index';
 
 // ---------------------------------------------------------------------------
