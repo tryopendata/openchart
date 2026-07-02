@@ -78,6 +78,7 @@ export type {
   LabelMode,
   LayoutStrategy,
   LegendPosition,
+  XAxisExtentInput,
 } from './responsive/index';
 export {
   AXIS_TITLE_GAP,

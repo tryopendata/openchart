@@ -3,8 +3,9 @@
  *
  * Pipeline for charts:
  *   validate spec -> normalize -> resolve theme -> dark mode adapt ->
- *   compute legend -> compute dimensions (with legend space) ->
- *   compute scales -> compute axes -> compute gridlines ->
+ *   filter data -> resolveLayoutPlan (measure real labels) ->
+ *   compute dimensions (with plan) -> placeLegend ->
+ *   compute scales -> compute axes (with pinned ticks) -> compute gridlines ->
  *   get chart renderer -> compute marks -> compute a11y -> return ChartLayout
  *
  * Table compiler handles full data pipeline (sort, search, pagination, visual enhancements).
@@ -23,7 +24,6 @@ import type {
   EncodingChannel,
   LayerSpec,
   Mark,
-  Rect,
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
@@ -34,7 +34,6 @@ import type {
 import {
   adaptTheme,
   computeLabelBounds,
-  estimateTextWidth,
   generateAltText,
   generateDataTable,
   getBreakpoint,
@@ -42,7 +41,6 @@ import {
   getLayoutStrategy,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 import { computeAnnotations } from './annotations/compute';
 import { type AnnotationMeasureTextFn, heuristicMeasure } from './annotations/geometry';
 import type { PlacementObstacle } from './annotations/placement';
@@ -76,9 +74,9 @@ import type { GraphCompilation } from './graphs/types';
 import { computeAxes } from './layout/axes';
 import { computeDimensions } from './layout/dimensions';
 import { computeGridlines } from './layout/gridlines';
+import { createMeasureFn, resolveLayoutPlan } from './layout/plan';
 import { computeScales } from './layout/scales';
-import { computeLegend } from './legend/compute';
-import { legendGap } from './legend/wrap';
+import { placeLegend } from './legend/compute';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
 import { compileTileMap as compileTileMapImpl } from './tilemap/compile-tilemap';
@@ -535,70 +533,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     chartSpec = applySparklineDefaults(chartSpec, theme);
   }
 
-  // INVARIANT 1 — double legend pass: preliminaryArea → computeDimensions → legendArea → final
-  // legend. Breaks a dims/legend dependency cycle. Do not collapse into one call.
-  // Compute legend first (needs to reserve space)
-  const preliminaryArea: Rect = {
-    x: 0,
-    y: 0,
-    width: options.width,
-    height: options.height,
-  };
-  const legendLayout = computeLegend(chartSpec, strategy, theme, preliminaryArea, watermark);
-
-  // Compute dimensions (accounts for chrome + legend + responsive strategy)
-  const dims = computeDimensions(chartSpec, options, legendLayout, theme, strategy, watermark);
-  const chartArea = dims.chartArea;
-
-  // Recompute legend bounds relative to actual chart area.
-  // chartArea was shrunk to exclude legend space, so expand it back to include
-  // the reserved margin. This way computeLegend positions the legend outside
-  // the data area (in the margin) instead of overlapping data marks.
-  //
-  // Top/bottom legends align their left edge to the plot area (chartArea.x),
-  // so the legend sits above/below the y-axis guide rather than flush against
-  // the container edge.
-  //
-  // Width runs from the new left origin (chartArea.x) to the container's right
-  // padding, so the rendered legend never paints past the right edge / over the
-  // endpoint-label column. This is narrower than the first pass (which used the
-  // full container at preliminaryArea.width = options.width), so on a chart with
-  // BOTH a wide y-axis gutter AND a legend that nearly fills its row, the second
-  // pass can wrap to one more row than the first pass reserved in margins.top —
-  // the extra row protrudes slightly into the chrome gap. That graceful failure
-  // (a few px of vertical crowding, still on-canvas) is preferable to the
-  // alternative (chips clipped off the right edge of the SVG). The maxRows cap
-  // (default 2 for top legends) bounds the worst case to a single extra row.
-  const legendArea: Rect = { ...chartArea };
-  if ('entries' in legendLayout && legendLayout.entries.length > 0) {
-    const legendInnerWidth = options.width - theme.spacing.padding - chartArea.x;
-    const gap = legendGap(options.width);
-    switch (legendLayout.position) {
-      case 'top':
-        legendArea.x = chartArea.x;
-        legendArea.width = legendInnerWidth;
-        legendArea.y -= legendLayout.bounds.height + gap;
-        legendArea.height += legendLayout.bounds.height + gap;
-        break;
-      case 'bottom':
-        legendArea.x = chartArea.x;
-        legendArea.width = legendInnerWidth;
-        // Bottom legend sits below the x-axis tick row, not over it. Expand
-        // legendArea by xAxisHeight + legendHeight + gap so the bottom-anchored
-        // legend lands beneath the axis. Mirrors dimensions.ts which reserved
-        // the same xAxisHeight in margins.bottom.
-        legendArea.height += legendLayout.bounds.height + gap + dims.xAxisHeight;
-        break;
-      case 'right':
-      case 'bottom-right':
-        legendArea.width += legendLayout.bounds.width + 8;
-        break;
-    }
-  }
-  const finalLegend = computeLegend(chartSpec, strategy, theme, legendArea, watermark);
-
-  // Apply data filtering after legend (so legend retains all series), but before
-  // scale computation (so hidden/clipped data doesn't affect domains or marks).
+  // ---------------------------------------------------------------------------
+  // Data filtering: move BEFORE layout plan so the plan measures real labels
+  // from the filtered data set. Legend retains all series via chartSpec
+  // (unfiltered); scales and marks use renderSpec (filtered).
+  // ---------------------------------------------------------------------------
   let renderData = chartSpec.data;
 
   // Filter hidden series: removed from rendering but kept in legend (dimmed in the adapter)
@@ -621,7 +560,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Lock the color scale domain to the unfiltered series list so palette
   // assignments stay stable across legend toggles. Without this, hiding a
   // series shrinks the ordinal scale's domain and shifts every remaining
-  // series down one palette index — the visible lines would mismatch the
+  // series down one palette index -- the visible lines would mismatch the
   // legend swatches that still represent the original assignment.
   // Skipped when the user already supplied an explicit domain.
   const colorEnc = chartSpec.encoding.color;
@@ -646,73 +585,53 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     };
   }
 
-  // Inline y-axis labels render at chartArea.x with text-anchor=start. Without
-  // an inset the leftmost data point on a line/area would clip through the
-  // label glyphs (since the line begins at chartArea.x too). Inset the x-scale
-  // range start by the widest tick label width so the data starts to the right
-  // of the labels. Axes/gridlines still span the full chart area, so inline
-  // labels stay flush left where the design intends.
-  const yEnc = renderSpec.encoding?.y;
-  const yAxisCfgInline =
-    typeof yEnc?.axis === 'object' && yEnc.axis !== null
-      ? (yEnc.axis as Record<string, unknown>)
-      : undefined;
-  const yIsContinuous = yEnc?.type === 'quantitative' || yEnc?.type === 'temporal';
-  const isLineOrArea = renderSpec.markType === 'line' || renderSpec.markType === 'area';
-  const yInlineExplicit = yAxisCfgInline?.tickPosition as 'inline' | 'gutter' | undefined;
-  // Sparkline mode hides the y-axis by default, so the inline-label inset
-  // would shrink the data range without any labels actually being drawn —
-  // the line ends up starting ~30px from the left edge for no visible
-  // reason. Skip the inset unless the user explicitly opted into the
-  // y-axis (in which case the labels do render and the inset is needed).
-  const sparklineSuppressesYAxis =
-    chartSpec.display === 'sparkline' && !chartSpec.userExplicit.yAxis;
-  const yIsInline =
-    !sparklineSuppressesYAxis &&
-    (yInlineExplicit === 'inline' ||
-      (yInlineExplicit === undefined &&
-        isLineOrArea &&
-        yIsContinuous &&
-        yAxisCfgInline?.orient !== 'right'));
+  // ---------------------------------------------------------------------------
+  // Layout plan: measure real labels, freeze gutter + chrome + legend content
+  // ---------------------------------------------------------------------------
+  const measure = createMeasureFn(options.measureText);
+  const plan = resolveLayoutPlan(
+    chartSpec,
+    renderSpec,
+    options,
+    theme,
+    strategy,
+    watermark,
+    measure,
+  );
+
+  // Compute dimensions (accounts for chrome + legend + responsive strategy).
+  // The plan provides measured leftGutter, xAxisExtent, and chrome so
+  // dimensions.ts skips its guess blocks.
+  const legendStub = placeLegend(
+    plan.legendContent,
+    { x: 0, y: 0, width: options.width, height: options.height },
+    options.width,
+    theme,
+    plan.xAxisExtent,
+  );
+  const dims = computeDimensions(chartSpec, options, legendStub, theme, strategy, watermark, plan);
+  const chartArea = dims.chartArea;
+
+  // Place legend in its final position relative to the computed chart area.
+  const finalLegend = placeLegend(
+    plan.legendContent,
+    chartArea,
+    options.width,
+    theme,
+    plan.xAxisExtent,
+  );
+
+  // Inline y-axis labels: inset the x-scale range start by the widest tick
+  // label width so data marks start to the right of the labels. The plan
+  // already measured the real tick labels.
   let scaleArea = chartArea;
-  if (yIsInline && yEnc && yIsContinuous && yEnc.axis !== false) {
-    const yField = yEnc.field;
-    const yFmt = yAxisCfgInline?.format as string | undefined;
-    let maxAbsVal = 0;
-    for (const row of renderSpec.data) {
-      const v = Number(row[yField]);
-      if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
-    }
-    let sample: string;
-    if (yFmt) {
-      try {
-        sample = d3Format(yFmt)(maxAbsVal);
-      } catch {
-        sample = String(maxAbsVal);
-      }
-    } else if (maxAbsVal >= 1_000_000_000) sample = '1.5B';
-    else if (maxAbsVal >= 1_000_000) sample = '1.5M';
-    else if (maxAbsVal >= 1_000) sample = '1.5K';
-    else if (maxAbsVal >= 100) sample = '100';
-    else if (maxAbsVal >= 10) sample = '10';
-    else sample = '0.0';
-    const negPrefix = renderSpec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
-    const labelEst = negPrefix + sample;
-    const labelWidth = estimateTextWidth(
-      labelEst,
-      theme.fonts.sizes.axisTick,
-      theme.fonts.weights.normal,
-    );
-    const INLINE_LABEL_BREATHING_ROOM = 8;
-    const inset = Math.ceil(labelWidth + INLINE_LABEL_BREATHING_ROOM);
-    if (inset > 0 && inset < chartArea.width) {
-      scaleArea = {
-        x: chartArea.x + inset,
-        y: chartArea.y,
-        width: chartArea.width - inset,
-        height: chartArea.height,
-      };
-    }
+  if (plan.inlineYLabelInset > 0 && plan.inlineYLabelInset < chartArea.width) {
+    scaleArea = {
+      x: chartArea.x + plan.inlineYLabelInset,
+      y: chartArea.y,
+      width: chartArea.width - plan.inlineYLabelInset,
+      height: chartArea.height,
+    };
   }
 
   // Compute scales
@@ -721,7 +640,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Update color scale to use theme palette (only when user hasn't provided an explicit range)
   applyColorScaleRange(scales, renderSpec.encoding, theme);
 
-  // INVARIANT 3 — post-hoc defaultColor: must run AFTER computeScales since resolution needs
+  // INVARIANT 3 -- post-hoc defaultColor: must run AFTER computeScales since resolution needs
   // theme context. Do not move into computeScales (would require threading theme through).
   // fill wins for bar/area/arc marks; stroke wins for line marks (the stroke IS the color).
   scales.defaultColor =
@@ -744,6 +663,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
         skipY,
         markType: chartSpec.markType,
         totalWidth: options.width,
+        precomputedYTicks: plan.yTickValues.length > 0 ? plan.yTickValues : undefined,
       });
 
   // Intentional post-hoc mutation: axes must resolve before we know the x-axis extent.

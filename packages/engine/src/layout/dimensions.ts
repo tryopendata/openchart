@@ -46,6 +46,7 @@ import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
 import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
+import type { LayoutPlan } from './plan';
 
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
@@ -199,6 +200,7 @@ export function computeDimensions(
   theme: ResolvedTheme,
   strategy?: LayoutStrategy,
   watermark: boolean = true,
+  plan?: LayoutPlan,
 ): LayoutDimensions {
   const { width, height } = options;
 
@@ -223,43 +225,41 @@ export function computeDimensions(
 
   // Pre-compute the bottom-legend reservation (legend height + gap) so the
   // chrome layout can stack source/byline/footer below the legend band.
-  // Chart-side bottom legends only — right/top/bottom-right legends don't
-  // share vertical space with bottom chrome.
-  //
-  // We narrow on `'entries' in` (a structural brand) rather than the
-  // `legendLayout.type` discriminator because `type` is optional on
-  // CategoricalLegendLayout for back-compat with older legend payloads.
-  // Once the discriminator is required everywhere, this can collapse to
-  // `legendLayout.type !== 'gradient'`.
-  const bottomLegendReservation =
-    'entries' in legendLayout &&
-    legendLayout.entries.length > 0 &&
-    legendLayout.position === 'bottom'
+  // When a layout plan is present, derive legend info from plan.legendContent;
+  // otherwise fall back to the legendLayout parameter (back-compat).
+  const bottomLegendReservation = plan
+    ? plan.legendContent.entries.length > 0 && plan.legendContent.position === 'bottom'
+      ? plan.legendContent.height + legendGap(width)
+      : 0
+    : 'entries' in legendLayout &&
+        legendLayout.entries.length > 0 &&
+        legendLayout.position === 'bottom'
       ? legendLayout.bounds.height + legendGap(width)
       : 0;
 
-  // Compute chrome with mode and scaled padding. `bottomLegendReservation`
-  // pushes bottom chrome below the legend band; the returned bottomHeight
-  // already accounts for it, so margin math below must not re-add it.
+  // When a layout plan is present, use its pre-computed chrome directly.
+  // Otherwise compute chrome with mode and scaled padding.
   //
   // Invariant: bottom-legend space is owned by `chrome.bottomHeight`, not
   // `margins.bottom`. The legend reservation flows like this:
   //   bottomLegendReservation = legend.height + legendGap(width)
-  //   chrome.bottomHeight     ⊇ bottomLegendReservation  (via computeChrome)
+  //   chrome.bottomHeight     >= bottomLegendReservation  (via computeChrome)
   //   margins.bottom          = padding + chrome.bottomHeight + xAxisHeight
   // So the legend band is implicitly inside margins.bottom exactly once.
   // The legend-reservation block further down explicitly skips position
   // 'bottom' to avoid double-counting.
-  const chrome = computeChrome(
-    chromeToInput(spec.chrome),
-    theme,
-    width,
-    options.measureText,
-    chromeMode,
-    padding,
-    watermark,
-    bottomLegendReservation,
-  );
+  const chrome =
+    plan?.chrome ??
+    computeChrome(
+      chromeToInput(spec.chrome),
+      theme,
+      width,
+      options.measureText,
+      chromeMode,
+      padding,
+      watermark,
+      bottomLegendReservation,
+    );
 
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
   // safety padding plus chrome (if user-explicit). Skip axis space, label
@@ -320,7 +320,9 @@ export function computeDimensions(
   const xTickAngle = xAxis?.labelAngle;
 
   let xAxisHeight: number;
-  if (isRadial || xAxisSuppressed) {
+  if (plan) {
+    xAxisHeight = plan.xAxisExtent;
+  } else if (isRadial || xAxisSuppressed) {
     xAxisHeight = 0;
   } else if (xTickAngle && Math.abs(xTickAngle) > 10) {
     // Rotated labels: estimate height from the longest label text.
@@ -506,11 +508,12 @@ export function computeDimensions(
   const yIsInline = yIsInlinePre;
   if (encoding.y && !isRadial && !yAxisSuppressed && !yIsInline) {
     if (
-      spec.markType === 'bar' ||
-      spec.markType === 'circle' ||
-      spec.markType === 'lollipop' ||
-      encoding.y.type === 'nominal' ||
-      encoding.y.type === 'ordinal'
+      !plan &&
+      (spec.markType === 'bar' ||
+        spec.markType === 'circle' ||
+        spec.markType === 'lollipop' ||
+        encoding.y.type === 'nominal' ||
+        encoding.y.type === 'ordinal')
     ) {
       // Category labels on the left for bar/dot charts
       const yField = encoding.y.field;
@@ -552,8 +555,10 @@ export function computeDimensions(
         const reserved = Math.min(hPad + maxLabelWidth + labelGap, maxLeftReserved);
         margins.left = Math.max(margins.left, reserved);
       }
-    } else if (encoding.y.type === 'quantitative' || encoding.y.type === 'temporal') {
+    } else if ((encoding.y.type === 'quantitative' || encoding.y.type === 'temporal') && !plan) {
       // Numeric tick labels on the left. Estimate width from the data range.
+      // Skipped when a layout plan is present -- the plan measured real tick
+      // labels and provides plan.leftGutter below.
       const yField = encoding.y.field;
       const yAxisFormat = (encoding.y.axis as Record<string, unknown> | undefined)?.format as
         | string
@@ -599,8 +604,10 @@ export function computeDimensions(
   // The renderer computes a dynamic offset that accounts for wide tick labels (e.g.
   // "$100,000" is ~62px wide and would overlap a fixed 45px offset). We replicate
   // the same formula here so the reserved space matches what the renderer places.
+  // Skipped when a layout plan is present -- the plan already accounts for the
+  // y-axis title in its leftGutter calculation.
   const yAxis = encoding.y?.axis as Record<string, unknown> | undefined;
-  if (yAxis && (yAxis.title || yAxis.label) && !isRadial) {
+  if (yAxis && (yAxis.title || yAxis.label) && !isRadial && !plan) {
     // Estimate the widest y-axis tick label width to mirror the renderer's dynamic offset.
     const yFieldForTitle = encoding.y?.field;
     const yAxisFormatForTitle = yAxis?.format as string | undefined;
@@ -650,6 +657,14 @@ export function computeDimensions(
     margins.left = Math.max(margins.left, hPad + rotatedLabelMargin);
   }
 
+  // When a layout plan is present, its leftGutter was measured from real tick
+  // labels and already accounts for quantitative guess + y-axis title. Apply
+  // it as a floor so the plan's measurement wins over the category-label
+  // reservation above (which stays for bar/dot charts).
+  if (plan) {
+    margins.left = Math.max(margins.left, plan.leftGutter);
+  }
+
   // Reserve space for a secondary (right) y-axis in dual-axis charts.
   // Use Math.max (not +=) to mirror the left-margin pattern: the reserve
   // replaces the base axisMargin when it's larger, instead of stacking.
@@ -664,16 +679,36 @@ export function computeDimensions(
   // here. The legend lands below the x-axis tick row (which is reserved via
   // `xAxisHeight` in the base bottom margin) and source/byline/footer chrome
   // stacks underneath the legend band rather than colliding with it.
-  const hasTopLegend =
-    'entries' in legendLayout && legendLayout.entries.length > 0 && legendLayout.position === 'top';
-  if ('entries' in legendLayout && legendLayout.entries.length > 0) {
+  // When a plan is present, derive legend position/size from plan.legendContent;
+  // otherwise use the legendLayout parameter (back-compat for non-plan callers).
+  const legendHasEntries = plan
+    ? plan.legendContent.entries.length > 0
+    : 'entries' in legendLayout && legendLayout.entries.length > 0;
+  const legendPos = plan
+    ? plan.legendContent.position
+    : 'entries' in legendLayout
+      ? legendLayout.position
+      : 'top';
+  const legendHeight = plan
+    ? plan.legendContent.height
+    : 'entries' in legendLayout
+      ? legendLayout.bounds.height
+      : 0;
+  const legendBoundsWidth = plan
+    ? plan.legendContent.legendWidth
+    : 'entries' in legendLayout
+      ? legendLayout.bounds.width
+      : 0;
+
+  const hasTopLegend = legendHasEntries && legendPos === 'top';
+  if (legendHasEntries) {
     const gap = legendGap(width);
-    if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
-      margins.right += legendLayout.bounds.width + 8;
-    } else if (legendLayout.position === 'top') {
-      margins.top += legendLayout.bounds.height + gap;
+    if (legendPos === 'right' || legendPos === 'bottom-right') {
+      margins.right += legendBoundsWidth + 8;
+    } else if (legendPos === 'top') {
+      margins.top += legendHeight + gap;
     }
-    // 'bottom' is intentionally not handled here — see bottomLegendReservation
+    // 'bottom' is intentionally not handled here -- see bottomLegendReservation
     // above.
   }
 
@@ -726,14 +761,7 @@ export function computeDimensions(
 
     if (topDelta > 0 || bottomDelta > 0) {
       const gap = legendGap(width);
-      margins.top =
-        newTop +
-        ('entries' in legendLayout &&
-        legendLayout.entries.length > 0 &&
-        legendLayout.position === 'top'
-          ? legendLayout.bounds.height + gap
-          : 0) +
-        fallbackEffectiveAxisGap;
+      margins.top = newTop + (hasTopLegend ? legendHeight + gap : 0) + fallbackEffectiveAxisGap;
       margins.bottom = newBottom;
 
       chartArea = {

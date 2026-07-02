@@ -21,6 +21,7 @@ export {
   HEIGHT_CRAMPED_MAX,
   HEIGHT_SHORT_MAX,
 } from './breakpoints';
+export type { XAxisExtentInput } from './metrics';
 export {
   AXIS_TITLE_GAP,
   AXIS_TITLE_OFFSET_COMPACT,

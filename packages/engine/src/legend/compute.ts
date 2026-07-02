@@ -10,6 +10,13 @@
  *
  * Overflow protection: when there are too many entries for the available
  * space, entries are truncated and a "+N more" indicator is appended.
+ *
+ * The computation is split into two phases:
+ * - `computeLegendContent`: everything width-dependent (entry derivation,
+ *   truncation, wrapping, row count, dimensions). No chart-area positioning.
+ * - `placeLegend`: pure placement (computes `bounds` from chartArea).
+ *
+ * `computeLegend` is a thin compat wrapper that calls both.
  */
 
 import type {
@@ -24,8 +31,16 @@ import type {
 import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import type { MeasureFn } from '../layout/plan';
 import { countColorSeries, resolveSuppression } from './suppression';
-import { ENTRY_GAP, ENTRY_GAP_COMPACT, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from './wrap';
+import {
+  ENTRY_GAP,
+  ENTRY_GAP_COMPACT,
+  legendGap,
+  measureLegendWrap,
+  SWATCH_GAP,
+  SWATCH_SIZE,
+} from './wrap';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -39,6 +54,28 @@ const RIGHT_LEGEND_MAX_HEIGHT_RATIO = 0.4;
 
 /** Max number of rows for top-positioned legends before truncation. */
 const TOP_LEGEND_MAX_ROWS = 2;
+
+// ---------------------------------------------------------------------------
+// LegendContent — pre-computed content before placement
+// ---------------------------------------------------------------------------
+
+/** Pre-computed legend content produced before final layout. */
+export interface LegendContent {
+  entries: LegendEntry[];
+  position: 'top' | 'bottom' | 'right' | 'bottom-right' | 'inline';
+  labelStyle: TextStyle;
+  rowCount: number;
+  totalWidth: number;
+  height: number;
+  entryGap: number;
+  swatchSize: number;
+  swatchGap: number;
+  swatchChipFill: string;
+  /** Width of the legend box (for right legends this is the column width). */
+  legendWidth: number;
+  /** User-provided legend offset, threaded through for placement. */
+  offset?: { dx?: number; dy?: number };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -148,26 +185,57 @@ function truncateEntries(entries: LegendEntry[], maxCount: number): LegendEntry[
   return truncated;
 }
 
+/** Build an empty LegendContent for suppressed/hidden legends. */
+function emptyContent(position: LegendContent['position'], theme: ResolvedTheme): LegendContent {
+  return {
+    entries: [],
+    position,
+    labelStyle: {
+      fontFamily: theme.fonts.family,
+      fontSize: theme.fonts.sizes.small,
+      fontWeight: theme.fonts.weights.normal,
+      fill: theme.colors.text,
+      lineHeight: 1.3,
+    },
+    rowCount: 0,
+    totalWidth: 0,
+    height: 0,
+    legendWidth: 0,
+    ...categoricalDefaults(theme),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
- * Compute legend layout for a chart spec.
+ * Compute legend content (entries, dimensions, wrapping) without placement.
+ *
+ * This is the "measure" half of legend computation. It determines which
+ * entries to show, how they wrap/truncate, and the resulting dimensions,
+ * but does not compute a bounding box in chart coordinates.
  *
  * @param spec - Normalized chart spec.
  * @param strategy - Responsive layout strategy.
  * @param theme - Resolved theme.
- * @param chartArea - The available chart area (before legend space is reserved).
- * @returns LegendLayout with position, entries, and bounds.
+ * @param availableWidth - Width constraint for layout (e.g. chartArea.width).
+ * @param availableHeight - Height constraint for right-legend truncation.
+ * @param watermark - Whether the brand watermark is shown (reserves space for bottom legends).
+ * @param measure - Optional text measurement function; defaults to estimateTextWidth.
+ * @returns LegendContent with entries, dimensions, but no bounds.
  */
-export function computeLegend(
+export function computeLegendContent(
   spec: NormalizedChartSpec,
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
-  chartArea: Rect,
+  availableWidth: number,
+  availableHeight: number,
   watermark: boolean = true,
-): LegendLayout {
+  measure?: MeasureFn,
+): LegendContent {
+  const measureWidth = measure ?? estimateTextWidth;
+
   // Sparkline mode: legend hidden by default unless the user opted in. Color
   // scales still resolve normally (legend hidden != no colors), so multi-series
   // sparklines retain their categorical palette.
@@ -175,20 +243,7 @@ export function computeLegend(
 
   // Legend explicitly hidden via show: false, or height strategy says no legend
   if (sparklineHidden || spec.legend?.show === false || strategy.legendMaxHeight === 0) {
-    return {
-      type: 'categorical' as const,
-      position: 'top',
-      entries: [],
-      bounds: { x: 0, y: 0, width: 0, height: 0 },
-      labelStyle: {
-        fontFamily: theme.fonts.family,
-        fontSize: theme.fonts.sizes.small,
-        fontWeight: theme.fonts.weights.normal,
-        fill: theme.colors.text,
-        lineHeight: 1.3,
-      },
-      ...categoricalDefaults(theme),
-    };
+    return emptyContent('top', theme);
   }
 
   let entries = extractColorEntries(spec, theme);
@@ -196,7 +251,7 @@ export function computeLegend(
   // Consult the shared suppression truth table so the legend, endpoint column,
   // and end-of-line labels stay in sync. The helper returns
   // `showTraditionalLegend: false` when the endpoint column auto-takes over
-  // for ≥2-series line/area charts (and the user hasn't forced the legend on).
+  // for >=2-series line/area charts (and the user hasn't forced the legend on).
   const seriesCount = countColorSeries(spec);
   const suppression = resolveSuppression(spec, {
     seriesCount,
@@ -221,20 +276,15 @@ export function computeLegend(
 
   // No entries = empty legend with no space
   if (entries.length === 0) {
-    return {
-      type: 'categorical' as const,
-      position: resolvedPosition,
-      entries: [],
-      bounds: { x: 0, y: 0, width: 0, height: 0 },
-      labelStyle,
-      ...categoricalDefaults(theme),
-    };
+    return emptyContent(resolvedPosition, theme);
   }
+
+  const offset = spec.legend?.offset;
 
   if (resolvedPosition === 'right' || resolvedPosition === 'bottom-right') {
     // Right-positioned legend: vertical stack
     const maxLabelWidth = Math.max(
-      ...entries.map((e) => estimateTextWidth(e.label, labelStyle.fontSize, labelStyle.fontWeight)),
+      ...entries.map((e) => measureWidth(e.label, labelStyle.fontSize, labelStyle.fontWeight)),
     );
     const legendWidth = Math.min(
       LEGEND_RIGHT_WIDTH,
@@ -245,7 +295,7 @@ export function computeLegend(
     // Apply max height ratio (default 40% of chart area, strategy can override)
     const maxHeightRatio =
       strategy.legendMaxHeight > 0 ? strategy.legendMaxHeight : RIGHT_LEGEND_MAX_HEIGHT_RATIO;
-    const maxLegendHeight = chartArea.height * maxHeightRatio;
+    const maxLegendHeight = availableHeight * maxHeightRatio;
 
     // Calculate how many entries fit
     const maxFromSpace = Math.max(
@@ -261,55 +311,21 @@ export function computeLegend(
 
     const legendHeight =
       entries.length * entryHeight + (entries.length - 1) * 4 + LEGEND_PADDING * 2;
-    const clampedHeight = Math.min(legendHeight, chartArea.height);
-
-    // bottom-right anchors to the bottom of the chart area
-    const legendY =
-      resolvedPosition === 'bottom-right'
-        ? chartArea.y + chartArea.height - clampedHeight
-        : chartArea.y;
-
-    // Apply user-provided legend offset
-    const offsetDx = spec.legend?.offset?.dx ?? 0;
-    const offsetDy = spec.legend?.offset?.dy ?? 0;
-
-    const rightBounds = {
-      x: chartArea.x + chartArea.width - legendWidth + offsetDx,
-      y: legendY + offsetDy,
-      width: legendWidth,
-      height: clampedHeight,
-    };
+    const clampedHeight = Math.min(legendHeight, availableHeight);
 
     const rightEntryGap = 4;
-    const rightPositions: LegendEntryPosition[] = [];
-    for (let i = 0; i < entries.length; i++) {
-      const ex = rightBounds.x;
-      const ey = rightBounds.y + i * (entryHeight + rightEntryGap);
-      const labelWidth = estimateTextWidth(
-        entries[i].label,
-        labelStyle.fontSize,
-        labelStyle.fontWeight,
-      );
-      rightPositions.push({
-        x: ex,
-        y: ey,
-        labelX: ex + SWATCH_SIZE + SWATCH_GAP,
-        labelY: ey + SWATCH_SIZE / 2,
-        width: SWATCH_SIZE + SWATCH_GAP + labelWidth + rightEntryGap,
-        row: i,
-      });
-    }
 
     return {
-      type: 'categorical' as const,
-      position: resolvedPosition,
       entries,
-      bounds: rightBounds,
+      position: resolvedPosition,
       labelStyle,
+      rowCount: entries.length,
+      totalWidth: legendWidth,
+      height: clampedHeight,
+      legendWidth,
+      offset,
       ...categoricalDefaults(theme),
       entryGap: rightEntryGap,
-      entryPositions: rightPositions,
-      rowHeight: entryHeight + rightEntryGap,
     };
   }
 
@@ -318,11 +334,11 @@ export function computeLegend(
   // watermark. Top legends don't need this since the brand renders at the bottom.
   const reserveBrand = watermark && resolvedPosition === 'bottom';
   // Tighten gaps on narrow viewports so horizontal legends keep fitting on one row.
-  const isCompact = chartArea.width < COMPACT_WIDTH;
+  const isCompact = availableWidth < COMPACT_WIDTH;
   const effectivePadding = isCompact ? 2 : LEGEND_PADDING;
   const effectiveEntryGap = isCompact ? ENTRY_GAP_COMPACT : ENTRY_GAP;
-  const availableWidth =
-    chartArea.width - effectivePadding * 2 - (reserveBrand ? BRAND_RESERVE_WIDTH : 0);
+  const contentWidth =
+    availableWidth - effectivePadding * 2 - (reserveBrand ? BRAND_RESERVE_WIDTH : 0);
 
   // Apply symbolLimit first if set (minimum 1), then fit remaining entries to available rows.
   if (spec.legend?.symbolLimit != null) {
@@ -341,10 +357,11 @@ export function computeLegend(
         : TOP_LEGEND_MAX_ROWS;
   const { fittingCount } = measureLegendWrap(
     entries,
-    availableWidth,
+    contentWidth,
     labelStyle,
     maxRows,
     effectiveEntryGap,
+    measureWidth,
   );
 
   if (fittingCount < entries.length) {
@@ -352,67 +369,257 @@ export function computeLegend(
   }
 
   const totalWidth = entries.reduce((sum, entry) => {
-    const labelWidth = estimateTextWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
+    const labelWidth = measureWidth(entry.label, labelStyle.fontSize, labelStyle.fontWeight);
     return sum + SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap;
   }, 0);
 
   // Calculate actual row count for height (recompute after truncation).
   const finalWrap = measureLegendWrap(
     entries,
-    availableWidth,
+    contentWidth,
     labelStyle,
     undefined,
     effectiveEntryGap,
+    measureWidth,
   );
   const { rowCount } = finalWrap;
 
   const rowHeight = SWATCH_SIZE + 4;
   const legendHeight = rowCount * rowHeight + effectivePadding * 2;
 
-  // Apply user-provided legend offset
-  const offsetDx = spec.legend?.offset?.dx ?? 0;
-  const offsetDy = spec.legend?.offset?.dy ?? 0;
-
-  const hBounds = {
-    x: chartArea.x + offsetDx,
-    y:
-      (resolvedPosition === 'bottom'
-        ? chartArea.y + chartArea.height - legendHeight
-        : chartArea.y) + offsetDy,
-    width: Math.min(totalWidth, availableWidth),
+  return {
+    entries,
+    position: resolvedPosition,
+    labelStyle,
+    rowCount,
+    totalWidth,
     height: legendHeight,
+    legendWidth: Math.min(totalWidth, contentWidth),
+    offset,
+    ...categoricalDefaults(theme),
+    entryGap: effectiveEntryGap,
+  };
+}
+
+/**
+ * Place a pre-computed legend into chart coordinates.
+ *
+ * This is the "layout" half of legend computation. It takes a `LegendContent`
+ * (from `computeLegendContent`) and produces a full `LegendLayout` with a
+ * positioned bounding box.
+ *
+ * @param content - Pre-computed legend content.
+ * @param chartArea - The final chart area (legend space already reserved in margins).
+ * @param containerWidth - Full container width, used for responsive legend gap.
+ * @param _theme - Resolved theme (reserved for future use).
+ * @param xAxisHeight - Height of the x-axis, used for bottom legend positioning.
+ * @returns Full LegendLayout with bounds.
+ */
+export function placeLegend(
+  content: LegendContent,
+  chartArea: Rect,
+  containerWidth: number,
+  _theme: ResolvedTheme,
+  xAxisHeight: number,
+): LegendLayout {
+  const { position, entries, labelStyle, legendWidth, height, offset } = content;
+
+  // Empty legend = no bounds
+  if (entries.length === 0) {
+    return {
+      type: 'categorical' as const,
+      position,
+      entries: [],
+      bounds: { x: 0, y: 0, width: 0, height: 0 },
+      labelStyle,
+      swatchSize: content.swatchSize,
+      swatchGap: content.swatchGap,
+      entryGap: content.entryGap,
+      swatchChipFill: content.swatchChipFill,
+    };
+  }
+
+  const offsetDx = offset?.dx ?? 0;
+  const offsetDy = offset?.dy ?? 0;
+  const gap = legendGap(containerWidth);
+
+  const measureWidth = (text: string) =>
+    estimateTextWidth(text, labelStyle.fontSize, labelStyle.fontWeight);
+
+  if (position === 'right' || position === 'bottom-right') {
+    const legendY =
+      position === 'bottom-right' ? chartArea.y + chartArea.height - height : chartArea.y;
+
+    const bounds = {
+      x: chartArea.x + chartArea.width + 8 + offsetDx,
+      y: legendY + offsetDy,
+      width: legendWidth,
+      height,
+    };
+
+    const entryHeight = content.swatchSize + 4;
+    const entryPositions: LegendEntryPosition[] = entries.map((e, i) => {
+      const ex = bounds.x;
+      const ey = bounds.y + i * entryHeight;
+      const lw = measureWidth(e.label);
+      return {
+        x: ex,
+        y: ey,
+        labelX: ex + content.swatchSize + content.swatchGap,
+        labelY: ey + content.swatchSize / 2,
+        width: content.swatchSize + content.swatchGap + lw + content.entryGap,
+        row: i,
+      };
+    });
+
+    return {
+      type: 'categorical' as const,
+      position,
+      entries,
+      bounds,
+      labelStyle,
+      swatchSize: content.swatchSize,
+      swatchGap: content.swatchGap,
+      entryGap: content.entryGap,
+      swatchChipFill: content.swatchChipFill,
+      entryPositions,
+      rowHeight: entryHeight,
+    };
+  }
+
+  // Top legend: above the chart area (in the reserved margin)
+  // Bottom legend: below the chart area + x-axis extent (in the reserved margin)
+  let legendY: number;
+  if (position === 'bottom') {
+    legendY = chartArea.y + chartArea.height + xAxisHeight + gap;
+  } else {
+    legendY = chartArea.y - gap - height;
+  }
+
+  const bounds = {
+    x: chartArea.x + offsetDx,
+    y: legendY + offsetDy,
+    width: legendWidth,
+    height,
   };
 
-  const hPositions: LegendEntryPosition[] = [];
-  for (let i = 0; i < entries.length; i++) {
-    const placement = finalWrap.placements[i];
-    if (!placement) break;
-    const ex = hBounds.x + placement.xOffset;
-    const ey = hBounds.y + placement.row * rowHeight;
-    const labelWidth = estimateTextWidth(
-      entries[i].label,
-      labelStyle.fontSize,
-      labelStyle.fontWeight,
-    );
-    hPositions.push({
+  const rowHeight = content.swatchSize + 4;
+  const entryPositions: LegendEntryPosition[] = entries.map((e, i) => {
+    const ex =
+      bounds.x +
+      i * (measureWidth(e.label) + content.swatchSize + content.swatchGap + content.entryGap);
+    const ey = bounds.y;
+    const lw = measureWidth(e.label);
+    return {
       x: ex,
       y: ey,
-      labelX: ex + SWATCH_SIZE + SWATCH_GAP,
-      labelY: ey + SWATCH_SIZE / 2,
-      width: SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap,
-      row: placement.row,
-    });
-  }
+      labelX: ex + content.swatchSize + content.swatchGap,
+      labelY: ey + content.swatchSize / 2,
+      width: content.swatchSize + content.swatchGap + lw + content.entryGap,
+      row: 0,
+    };
+  });
 
   return {
     type: 'categorical' as const,
-    position: resolvedPosition,
+    position,
     entries,
-    bounds: hBounds,
+    bounds,
     labelStyle,
-    ...categoricalDefaults(theme),
-    entryGap: effectiveEntryGap,
-    entryPositions: hPositions,
+    swatchSize: content.swatchSize,
+    swatchGap: content.swatchGap,
+    entryGap: content.entryGap,
+    swatchChipFill: content.swatchChipFill,
+    entryPositions,
+    rowHeight,
+  };
+}
+
+/**
+ * Compute legend layout for a chart spec.
+ *
+ * Thin wrapper that calls `computeLegendContent` then `placeLegend`.
+ * Existing callers are untouched.
+ *
+ * @param spec - Normalized chart spec.
+ * @param strategy - Responsive layout strategy.
+ * @param theme - Resolved theme.
+ * @param chartArea - The available chart area (before legend space is reserved).
+ * @returns LegendLayout with position, entries, and bounds.
+ */
+export function computeLegend(
+  spec: NormalizedChartSpec,
+  strategy: LayoutStrategy,
+  theme: ResolvedTheme,
+  chartArea: Rect,
+  watermark: boolean = true,
+): LegendLayout {
+  const content = computeLegendContent(
+    spec,
+    strategy,
+    theme,
+    chartArea.width,
+    chartArea.height,
+    watermark,
+  );
+  const { position, entries, labelStyle, legendWidth, height, offset: off } = content;
+  const offsetDx = off?.dx ?? 0;
+  const offsetDy = off?.dy ?? 0;
+  let boundsX = chartArea.x + offsetDx;
+  let boundsY = chartArea.y + offsetDy;
+  const boundsW = legendWidth;
+  if (entries.length === 0) {
+    return {
+      type: 'categorical' as const,
+      position,
+      entries: [],
+      bounds: { x: 0, y: 0, width: 0, height: 0 },
+      labelStyle,
+      swatchSize: content.swatchSize,
+      swatchGap: content.swatchGap,
+      entryGap: content.entryGap,
+      swatchChipFill: content.swatchChipFill,
+    };
+  }
+  if (position === 'right' || position === 'bottom-right') {
+    boundsX = chartArea.x + chartArea.width - legendWidth + offsetDx;
+    boundsY =
+      (position === 'bottom-right' ? chartArea.y + chartArea.height - height : chartArea.y) +
+      offsetDy;
+  } else if (position === 'bottom') {
+    boundsY = chartArea.y + chartArea.height - height + offsetDy;
+  }
+  const finalBounds = { x: boundsX, y: boundsY, width: boundsW, height };
+  const rowHeight = content.swatchSize + 4;
+  const mw = (text: string) => estimateTextWidth(text, labelStyle.fontSize, labelStyle.fontWeight);
+  const isVertical = position === 'right' || position === 'bottom-right';
+  const entryPositions: LegendEntryPosition[] = entries.map((e, i) => {
+    const ex = isVertical
+      ? finalBounds.x
+      : finalBounds.x +
+        i * (mw(e.label) + content.swatchSize + content.swatchGap + content.entryGap);
+    const ey = isVertical ? finalBounds.y + i * rowHeight : finalBounds.y;
+    const lw = mw(e.label);
+    return {
+      x: ex,
+      y: ey,
+      labelX: ex + content.swatchSize + content.swatchGap,
+      labelY: ey + content.swatchSize / 2,
+      width: content.swatchSize + content.swatchGap + lw + content.entryGap,
+      row: isVertical ? i : 0,
+    };
+  });
+  return {
+    type: 'categorical' as const,
+    position,
+    entries,
+    bounds: finalBounds,
+    labelStyle,
+    swatchSize: content.swatchSize,
+    swatchGap: content.swatchGap,
+    entryGap: content.entryGap,
+    swatchChipFill: content.swatchChipFill,
+    entryPositions,
     rowHeight,
   };
 }

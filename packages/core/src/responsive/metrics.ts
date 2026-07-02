@@ -156,14 +156,14 @@ export const MAX_LEFT_LABEL_FRACTION_MEDIUM = 0.55;
 export const MAX_LEFT_LABEL_FRACTION_DEFAULT = 1;
 
 // ---------------------------------------------------------------------------
-// X-axis extent constants
+// X-axis extent (height below chart area)
 // ---------------------------------------------------------------------------
 
 export const X_AXIS_BAND_HEIGHT = 26;
 export const X_AXIS_TITLE_BAND = 22;
 export const X_AXIS_TITLE_BAND_ROTATED = 20;
 
-export function computeXAxisExtentFromLabels(input: {
+export interface XAxisExtentInput {
   labels: string[];
   tickAngle?: number;
   hasTitle: boolean;
@@ -171,7 +171,9 @@ export function computeXAxisExtentFromLabels(input: {
   tickFontWeight: number;
   xAxisHeight?: number;
   measure?: (text: string, fontSize: number, fontWeight: number) => number;
-}): number {
+}
+
+export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
   const measure = input.measure ?? estimateTextWidth;
   const baseHeight = input.xAxisHeight ?? X_AXIS_BAND_HEIGHT;
 

@@ -1521,8 +1521,8 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
   "annotations": [],
   "area": {
     "height": 236.3,
-    "width": 535.768,
-    "x": 41.232,
+    "width": 537.768,
+    "x": 39.232,
     "y": 60.9,
   },
   "axes": {
@@ -1548,7 +1548,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "offset": undefined,
       "orient": undefined,
       "start": {
-        "x": 41.232,
+        "x": 39.232,
         "y": 297.2,
       },
       "tickAngle": undefined,
@@ -1565,22 +1565,22 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "ticks": [
         {
           "label": "A",
-          "position": 124.36841379310343,
+          "position": 122.67875862068962,
           "value": "A",
         },
         {
           "label": "B",
-          "position": 247.53347126436782,
+          "position": 246.30358620689654,
           "value": "B",
         },
         {
           "label": "C",
-          "position": 370.6985287356322,
+          "position": 369.92841379310346,
           "value": "C",
         },
         {
           "label": "D",
-          "position": 493.86358620689657,
+          "position": 493.55324137931035,
           "value": "D",
         },
       ],
@@ -1589,7 +1589,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     "y": {
       "domainLine": undefined,
       "end": {
-        "x": 41.232,
+        "x": 39.232,
         "y": 297.2,
       },
       "gridlines": [
@@ -1599,7 +1599,15 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         {
           "major": true,
+          "position": 263.4428571428572,
+        },
+        {
+          "major": true,
           "position": 229.68571428571428,
+        },
+        {
+          "major": true,
+          "position": 195.92857142857142,
         },
         {
           "major": true,
@@ -1607,7 +1615,15 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         {
           "major": true,
+          "position": 128.4142857142857,
+        },
+        {
+          "major": true,
           "position": 94.65714285714287,
+        },
+        {
+          "major": true,
+          "position": 60.9,
         },
       ],
       "label": undefined,
@@ -1624,7 +1640,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "offset": undefined,
       "orient": undefined,
       "start": {
-        "x": 41.232,
+        "x": 39.232,
         "y": 60.9,
       },
       "tickAngle": undefined,
@@ -1645,9 +1661,19 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           "value": 0,
         },
         {
+          "label": "10",
+          "position": 263.4428571428572,
+          "value": 10,
+        },
+        {
           "label": "20",
           "position": 229.68571428571428,
           "value": 20,
+        },
+        {
+          "label": "30",
+          "position": 195.92857142857142,
+          "value": 30,
         },
         {
           "label": "40",
@@ -1655,9 +1681,19 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           "value": 40,
         },
         {
+          "label": "50",
+          "position": 128.4142857142857,
+          "value": 50,
+        },
+        {
           "label": "60",
           "position": 94.65714285714287,
           "value": 60,
+        },
+        {
+          "label": "70",
+          "position": 60.9,
+          "value": 70,
         },
       ],
       "titlePadding": undefined,
@@ -1778,13 +1814,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         "text": "30",
         "visible": true,
-        "x": 124.36841379310343,
+        "x": 122.67875862068962,
         "y": 175.92857142857142,
       },
       "orient": "vertical",
       "type": "rect",
-      "width": 80.05728735632185,
-      "x": 84.3397701149425,
+      "width": 80.3561379310345,
+      "x": 82.50068965517238,
       "y": 195.92857142857142,
     },
     {
@@ -1823,13 +1859,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         "text": "55",
         "visible": true,
-        "x": 247.53347126436782,
+        "x": 246.30358620689654,
         "y": 91.53571428571429,
       },
       "orient": "vertical",
       "type": "rect",
-      "width": 80.05728735632185,
-      "x": 207.5048275862069,
+      "width": 80.3561379310345,
+      "x": 206.1255172413793,
       "y": 111.53571428571429,
     },
     {
@@ -1868,13 +1904,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         "text": "70",
         "visible": true,
-        "x": 370.6985287356322,
+        "x": 369.92841379310346,
         "y": 40.9,
       },
       "orient": "vertical",
       "type": "rect",
-      "width": 80.05728735632185,
-      "x": 330.6698850574713,
+      "width": 80.3561379310345,
+      "x": 329.7503448275862,
       "y": 60.9,
     },
     {
@@ -1913,13 +1949,13 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         },
         "text": "45",
         "visible": true,
-        "x": 493.86358620689657,
+        "x": 493.55324137931035,
         "y": 125.29285714285712,
       },
       "orient": "vertical",
       "type": "rect",
-      "width": 80.05728735632185,
-      "x": 453.83494252873567,
+      "width": 80.3561379310345,
+      "x": 453.3751724137931,
       "y": 145.29285714285712,
     },
   ],
