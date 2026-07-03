@@ -78,28 +78,6 @@ export function unionRects(a: Rect, b: Rect): Rect {
 }
 
 /**
- * @deprecated Use computeTextBlockBounds instead. Kept for backward compatibility
- * during migration.
- */
-export function computeTextBounds(
-  labelX: number,
-  labelY: number,
-  text: string,
-  fontSize: number,
-  fontWeight: number,
-): Rect {
-  const lines = text.split('\n');
-  const isMultiLine = lines.length > 1;
-  const anchor: 'start' | 'middle' = isMultiLine ? 'middle' : 'start';
-  return computeTextBlockBounds(labelX, labelY, text, {
-    fontSize,
-    fontWeight,
-    lineHeight: DEFAULT_LINE_HEIGHT,
-    textAnchor: anchor,
-  });
-}
-
-/**
  * Apply anchor direction to compute label offset from data point.
  * Returns { dx, dy } pixel offsets.
  */
@@ -156,7 +134,15 @@ export function computeConnectorOrigin(
   targetY: number,
   connectorStyle: 'straight' | 'curve',
 ): { x: number; y: number } {
-  const box = computeTextBounds(labelX, labelY, text, fontSize, fontWeight);
+  const lines = text.split('\n');
+  const isMultiLine = lines.length > 1;
+  const anchor: 'start' | 'middle' = isMultiLine ? 'middle' : 'start';
+  const box = computeTextBlockBounds(labelX, labelY, text, {
+    fontSize,
+    fontWeight,
+    lineHeight: DEFAULT_LINE_HEIGHT,
+    textAnchor: anchor,
+  });
   const boxCenterX = box.x + box.width / 2;
   const boxCenterY = box.y + box.height / 2;
 

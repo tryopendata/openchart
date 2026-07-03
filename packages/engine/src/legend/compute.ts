@@ -56,7 +56,7 @@ const RIGHT_LEGEND_MAX_HEIGHT_RATIO = 0.4;
 const TOP_LEGEND_MAX_ROWS = 2;
 
 // ---------------------------------------------------------------------------
-// LegendContent — pre-computed content before placement
+// LegendContent -- pre-computed content before placement
 // ---------------------------------------------------------------------------
 
 /** Pre-computed legend content produced before final layout. */
@@ -75,6 +75,10 @@ export interface LegendContent {
   legendWidth: number;
   /** User-provided legend offset, threaded through for placement. */
   offset?: { dx?: number; dy?: number };
+  /** Relative entry positions (origin 0,0). Offset by bounds in placeLegend. */
+  relativePositions?: LegendEntryPosition[];
+  /** Row advance used to build entry positions. */
+  rowHeight?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +102,21 @@ function categoricalDefaults(theme: ResolvedTheme): {
     entryGap: ENTRY_GAP,
     swatchChipFill: theme.colors.annotationFill,
   };
+}
+
+function resolveEntryPositions(
+  relative: LegendEntryPosition[] | undefined,
+  bounds: Rect,
+): LegendEntryPosition[] | undefined {
+  if (!relative) return undefined;
+  return relative.map((p) => ({
+    x: p.x + bounds.x,
+    y: p.y + bounds.y,
+    labelX: p.labelX + bounds.x,
+    labelY: p.labelY + bounds.y,
+    width: p.width,
+    row: p.row,
+  }));
 }
 
 /** Determine the swatch shape based on mark type. */
@@ -314,6 +333,20 @@ export function computeLegendContent(
     const clampedHeight = Math.min(legendHeight, availableHeight);
 
     const rightEntryGap = 4;
+    const relativePositions: LegendEntryPosition[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const ex = 0;
+      const ey = i * (entryHeight + rightEntryGap);
+      const labelWidth = measureWidth(entries[i].label, labelStyle.fontSize, labelStyle.fontWeight);
+      relativePositions.push({
+        x: ex,
+        y: ey,
+        labelX: ex + SWATCH_SIZE + SWATCH_GAP,
+        labelY: ey + SWATCH_SIZE / 2,
+        width: SWATCH_SIZE + SWATCH_GAP + labelWidth + rightEntryGap,
+        row: i,
+      });
+    }
 
     return {
       entries,
@@ -326,6 +359,8 @@ export function computeLegendContent(
       offset,
       ...categoricalDefaults(theme),
       entryGap: rightEntryGap,
+      relativePositions,
+      rowHeight: entryHeight + rightEntryGap,
     };
   }
 
@@ -387,6 +422,24 @@ export function computeLegendContent(
   const rowHeight = SWATCH_SIZE + 4;
   const legendHeight = rowCount * rowHeight + effectivePadding * 2;
 
+  // Build relative positions (origin 0,0), offset by bounds in placeLegend
+  const relativePositions: LegendEntryPosition[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const placement = finalWrap.placements[i];
+    if (!placement) break;
+    const ex = placement.xOffset;
+    const ey = placement.row * rowHeight;
+    const labelWidth = measureWidth(entries[i].label, labelStyle.fontSize, labelStyle.fontWeight);
+    relativePositions.push({
+      x: ex,
+      y: ey,
+      labelX: ex + SWATCH_SIZE + SWATCH_GAP,
+      labelY: ey + SWATCH_SIZE / 2,
+      width: SWATCH_SIZE + SWATCH_GAP + labelWidth + effectiveEntryGap,
+      row: placement.row,
+    });
+  }
+
   return {
     entries,
     position: resolvedPosition,
@@ -398,6 +451,8 @@ export function computeLegendContent(
     offset,
     ...categoricalDefaults(theme),
     entryGap: effectiveEntryGap,
+    relativePositions,
+    rowHeight,
   };
 }
 
@@ -443,82 +498,26 @@ export function placeLegend(
   const offsetDy = offset?.dy ?? 0;
   const gap = legendGap(containerWidth);
 
-  const measureWidth = (text: string) =>
-    estimateTextWidth(text, labelStyle.fontSize, labelStyle.fontWeight);
+  let boundsX: number;
+  let boundsY: number;
 
   if (position === 'right' || position === 'bottom-right') {
-    const legendY =
-      position === 'bottom-right' ? chartArea.y + chartArea.height - height : chartArea.y;
-
-    const bounds = {
-      x: chartArea.x + chartArea.width + 8 + offsetDx,
-      y: legendY + offsetDy,
-      width: legendWidth,
-      height,
-    };
-
-    const entryHeight = content.swatchSize + 4;
-    const entryPositions: LegendEntryPosition[] = entries.map((e, i) => {
-      const ex = bounds.x;
-      const ey = bounds.y + i * entryHeight;
-      const lw = measureWidth(e.label);
-      return {
-        x: ex,
-        y: ey,
-        labelX: ex + content.swatchSize + content.swatchGap,
-        labelY: ey + content.swatchSize / 2,
-        width: content.swatchSize + content.swatchGap + lw + content.entryGap,
-        row: i,
-      };
-    });
-
-    return {
-      type: 'categorical' as const,
-      position,
-      entries,
-      bounds,
-      labelStyle,
-      swatchSize: content.swatchSize,
-      swatchGap: content.swatchGap,
-      entryGap: content.entryGap,
-      swatchChipFill: content.swatchChipFill,
-      entryPositions,
-      rowHeight: entryHeight,
-    };
-  }
-
-  // Top legend: above the chart area (in the reserved margin)
-  // Bottom legend: below the chart area + x-axis extent (in the reserved margin)
-  let legendY: number;
-  if (position === 'bottom') {
-    legendY = chartArea.y + chartArea.height + xAxisHeight + gap;
+    boundsX = chartArea.x + chartArea.width + 8 + offsetDx;
+    boundsY =
+      (position === 'bottom-right' ? chartArea.y + chartArea.height - height : chartArea.y) +
+      offsetDy;
+  } else if (position === 'bottom') {
+    boundsX = chartArea.x + offsetDx;
+    boundsY = chartArea.y + chartArea.height + xAxisHeight + gap + offsetDy;
   } else {
-    legendY = chartArea.y - gap - height;
+    // top
+    boundsX = chartArea.x + offsetDx;
+    boundsY = chartArea.y - gap - height + offsetDy;
   }
 
-  const bounds = {
-    x: chartArea.x + offsetDx,
-    y: legendY + offsetDy,
-    width: legendWidth,
-    height,
-  };
+  const bounds = { x: boundsX, y: boundsY, width: legendWidth, height };
 
-  const rowHeight = content.swatchSize + 4;
-  const entryPositions: LegendEntryPosition[] = entries.map((e, i) => {
-    const ex =
-      bounds.x +
-      i * (measureWidth(e.label) + content.swatchSize + content.swatchGap + content.entryGap);
-    const ey = bounds.y;
-    const lw = measureWidth(e.label);
-    return {
-      x: ex,
-      y: ey,
-      labelX: ex + content.swatchSize + content.swatchGap,
-      labelY: ey + content.swatchSize / 2,
-      width: content.swatchSize + content.swatchGap + lw + content.entryGap,
-      row: 0,
-    };
-  });
+  const entryPositions = resolveEntryPositions(content.relativePositions, bounds);
 
   return {
     type: 'categorical' as const,
@@ -531,7 +530,7 @@ export function placeLegend(
     entryGap: content.entryGap,
     swatchChipFill: content.swatchChipFill,
     entryPositions,
-    rowHeight,
+    rowHeight: content.rowHeight,
   };
 }
 
@@ -589,37 +588,22 @@ export function computeLegend(
   } else if (position === 'bottom') {
     boundsY = chartArea.y + chartArea.height - height + offsetDy;
   }
-  const finalBounds = { x: boundsX, y: boundsY, width: boundsW, height };
-  const rowHeight = content.swatchSize + 4;
-  const mw = (text: string) => estimateTextWidth(text, labelStyle.fontSize, labelStyle.fontWeight);
-  const isVertical = position === 'right' || position === 'bottom-right';
-  const entryPositions: LegendEntryPosition[] = entries.map((e, i) => {
-    const ex = isVertical
-      ? finalBounds.x
-      : finalBounds.x +
-        i * (mw(e.label) + content.swatchSize + content.swatchGap + content.entryGap);
-    const ey = isVertical ? finalBounds.y + i * rowHeight : finalBounds.y;
-    const lw = mw(e.label);
-    return {
-      x: ex,
-      y: ey,
-      labelX: ex + content.swatchSize + content.swatchGap,
-      labelY: ey + content.swatchSize / 2,
-      width: content.swatchSize + content.swatchGap + lw + content.entryGap,
-      row: isVertical ? i : 0,
-    };
-  });
+
+  const bounds = { x: boundsX, y: boundsY, width: boundsW, height };
+
+  const entryPositions = resolveEntryPositions(content.relativePositions, bounds);
+
   return {
     type: 'categorical' as const,
     position,
     entries,
-    bounds: finalBounds,
+    bounds,
     labelStyle,
     swatchSize: content.swatchSize,
     swatchGap: content.swatchGap,
     entryGap: content.entryGap,
     swatchChipFill: content.swatchChipFill,
     entryPositions,
-    rowHeight,
+    rowHeight: content.rowHeight,
   };
 }

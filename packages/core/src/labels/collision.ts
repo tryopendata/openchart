@@ -3,7 +3,6 @@
  *
  * Greedy algorithm: sort by priority, place in order, try offset
  * positions for conflicts, demote to tooltip-only if no position works.
- * Targeting ~60% of Infrographic quality for Phase 0.
  */
 
 import { estimateTextWidth } from '../layout/text-measure';

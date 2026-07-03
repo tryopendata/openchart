@@ -41,12 +41,13 @@ import {
 } from '@opendata-ai/openchart-core';
 import { format as d3Format } from 'd3-format';
 
-import type { NormalizedChartSpec, NormalizedChrome } from '../compiler/types';
+import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
 import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
 import type { LayoutPlan } from './plan';
+import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
 
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
@@ -82,56 +83,9 @@ export interface LayoutDimensions {
   xAxisHeight: number;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Convert NormalizedChrome back to a Chrome-compatible shape for computeChrome. */
-function chromeToInput(chrome: NormalizedChrome): import('@opendata-ai/openchart-core').Chrome {
-  return {
-    eyebrow: chrome.eyebrow,
-    title: chrome.title,
-    subtitle: chrome.subtitle,
-    source: chrome.source,
-    byline: chrome.byline,
-    footer: chrome.footer,
-    brand: chrome.brand,
-  };
-}
-
-/**
- * Compute the bottom margin contribution from chrome.
- * Padding always applies (gap between x-axis ticks and the chrome below).
- * bottomHeight is additive on top — it covers source/watermark/legend space
- * including its own internal padding when content is present.
- */
-function bottomMargin(bottomHeight: number, padding: number, xAxisHeight: number): number {
-  return padding + bottomHeight + xAxisHeight;
-}
-
-/**
- * Scale padding based on the smaller container dimension.
- * At >= 500px, padding is unchanged. At <= 200px, padding is halved (min 4px).
- * Linear interpolation between 200-500px.
- */
-function scalePadding(basePadding: number, width: number, height: number): number {
-  const minDim = Math.min(width, height);
-  if (minDim >= 500) return basePadding;
-  if (minDim <= 200) return Math.max(Math.round(basePadding * 0.5), 4);
-  const t = (minDim - 200) / 300;
-  return Math.max(Math.round(basePadding * (0.5 + t * 0.5)), 4);
-}
-
 /** Minimum chart area dimensions before guardrails kick in. */
 const MIN_CHART_WIDTH = 60;
 const MIN_CHART_HEIGHT = 40;
-
-/**
- * Vertical breathing room added to the inline-tick label height so the
- * topmost tick has clearance from chrome. Inline ticks sit above their
- * gridline by `axisTick + INLINE_TICK_OVERHANG_PAD` pixels.
- */
-const INLINE_TICK_OVERHANG_PAD = 6;
 
 /**
  * Per-display minimum chart dimensions. Sparkline mode allows much smaller

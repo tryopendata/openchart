@@ -739,7 +739,6 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const _px = scales.x?.scale(new Date('2020-01-01'));
       const py = scales.y?.scale(20);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
