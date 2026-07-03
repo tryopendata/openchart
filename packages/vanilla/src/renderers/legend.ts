@@ -19,14 +19,18 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   g.setAttribute('aria-label', 'Chart legend');
 
   const isHorizontal = legend.position === 'top' || legend.position === 'bottom';
+  const positions = 'entryPositions' in legend ? legend.entryPositions : undefined;
   let offsetX = legend.bounds.x;
   let offsetY = legend.bounds.y;
 
   for (let i = 0; i < legend.entries.length; i++) {
     const entry = legend.entries[i];
 
-    // Pre-check: wrap to next line if this entry would overflow bounds
-    if (isHorizontal && i > 0) {
+    const pos = positions?.[i];
+    if (pos) {
+      offsetX = pos.x;
+      offsetY = pos.y;
+    } else if (isHorizontal && i > 0) {
       const labelWidth = estimateTextWidth(
         entry.label,
         legend.labelStyle.fontSize,
@@ -116,17 +120,21 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 
     g.appendChild(entryG);
 
-    // Advance position for next entry
-    if (isHorizontal) {
-      const labelWidth = estimateTextWidth(
-        entry.label,
-        legend.labelStyle.fontSize,
-        legend.labelStyle.fontWeight,
-      );
-      const entryWidth = legend.swatchSize + legend.swatchGap + labelWidth + legend.entryGap;
-      offsetX += entryWidth;
-    } else {
-      offsetY += legend.swatchSize + legend.entryGap;
+    if (!pos) {
+      if (isHorizontal) {
+        const labelWidth = estimateTextWidth(
+          entry.label,
+          legend.labelStyle.fontSize,
+          legend.labelStyle.fontWeight,
+        );
+        const entryWidth = legend.swatchSize + legend.swatchGap + labelWidth + legend.entryGap;
+        offsetX += entryWidth;
+      } else {
+        offsetY +=
+          'rowHeight' in legend && legend.rowHeight
+            ? legend.rowHeight
+            : legend.swatchSize + legend.entryGap;
+      }
     }
   }
 

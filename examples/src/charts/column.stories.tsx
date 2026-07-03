@@ -217,6 +217,43 @@ export const NegativeValues = () => (
 );
 
 // ---------------------------------------------------------------------------
+// Long axis labels: very long category names that test truncation + rotation
+// ---------------------------------------------------------------------------
+
+const longLabelsSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'bar', fill: vBarGradient('#1b7fa3') },
+  data: [
+    { department: 'Research and Advanced Development', budget: 42 },
+    { department: 'Marketing and Brand Communications', budget: 31 },
+    { department: 'Human Resources and Talent Acquisition', budget: 28 },
+    { department: 'Information Technology Infrastructure', budget: 24 },
+    { department: 'Customer Success and Engagement', budget: 19 },
+    { department: 'Legal and Regulatory Compliance', budget: 15 },
+    { department: 'Supply Chain and Logistics Operations', budget: 12 },
+  ],
+  encoding: {
+    x: { field: 'department', type: 'nominal' },
+    y: {
+      field: 'budget',
+      type: 'quantitative',
+      axis: { title: 'Budget ($M)' },
+    },
+  },
+  chrome: {
+    title: 'R&D Claims the Biggest Slice',
+    subtitle: 'Annual departmental budget allocations, FY 2025',
+    source: 'Source: Internal Finance',
+  },
+};
+
+export const LongAxisLabels = () => (
+  <div className="story-chart story-h-420">
+    <Chart spec={longLabelsSpec} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
 // Responsive demo
 // ---------------------------------------------------------------------------
 

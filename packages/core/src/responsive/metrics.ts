@@ -8,6 +8,7 @@
  * LayoutStrategy is semantic (what to show), this module is metric (how much space).
  */
 
+import { estimateTextWidth } from '../layout/text-measure';
 import { BREAKPOINT_COMPACT_MAX } from './breakpoints';
 
 // ---------------------------------------------------------------------------
@@ -153,3 +154,39 @@ export const MAX_LEFT_LABEL_FRACTION_MEDIUM = 0.55;
 
 /** Max fraction of container width reservable for left category labels (standard). */
 export const MAX_LEFT_LABEL_FRACTION_DEFAULT = 1;
+
+// ---------------------------------------------------------------------------
+// X-axis extent (height below chart area)
+// ---------------------------------------------------------------------------
+
+export const X_AXIS_BAND_HEIGHT = 26;
+export const X_AXIS_TITLE_BAND = 22;
+export const X_AXIS_TITLE_BAND_ROTATED = 20;
+
+export interface XAxisExtentInput {
+  labels: string[];
+  tickAngle?: number;
+  hasTitle: boolean;
+  tickFontSize: number;
+  tickFontWeight: number;
+  xAxisHeight?: number;
+  measure?: (text: string, fontSize: number, fontWeight: number) => number;
+}
+
+export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
+  const measure = input.measure ?? estimateTextWidth;
+  const baseHeight = input.xAxisHeight ?? X_AXIS_BAND_HEIGHT;
+
+  if (input.tickAngle && Math.abs(input.tickAngle) > 10) {
+    const angleRad = Math.abs(input.tickAngle) * (Math.PI / 180);
+    let maxLabelWidth = 40;
+    for (const label of input.labels) {
+      const w = measure(label, input.tickFontSize, input.tickFontWeight);
+      if (w > maxLabelWidth) maxLabelWidth = w;
+    }
+    const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
+    return input.hasTitle ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
+  }
+
+  return input.hasTitle ? baseHeight + X_AXIS_TITLE_BAND : baseHeight;
+}

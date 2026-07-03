@@ -242,9 +242,18 @@ function renderAxis(
     applyTextStyle(axisLabel, axis.labelStyle);
     axisLabel.textContent = axis.label;
 
-    if (orientation === 'x') {
-      // Position axis title below tick labels. For rotated labels, compute
-      // the vertical extent of the rotated ticks and place the title below.
+    const tp = axis.titlePosition;
+    if (tp) {
+      const attrs: Record<string, string | number> = {
+        x: tp.x,
+        y: tp.y,
+        'text-anchor': 'middle',
+      };
+      if (tp.angle) {
+        attrs.transform = `rotate(${tp.angle}, ${tp.x}, ${tp.y})`;
+      }
+      setAttrs(axisLabel, attrs);
+    } else if (orientation === 'x') {
       let titleY = area.y + area.height + 35;
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         const angleRad = Math.abs(axis.tickAngle) * (Math.PI / 180);
@@ -266,7 +275,6 @@ function renderAxis(
         'text-anchor': 'middle',
       });
     } else if (isRight) {
-      // Rotated right y-axis label (tighter offset on compact viewports)
       const titleOffset = getAxisTitleOffset(layout.dimensions.width);
       const titleX = area.x + area.width + titleOffset;
       setAttrs(axisLabel, {
@@ -276,11 +284,6 @@ function renderAxis(
         transform: `rotate(90, ${titleX}, ${area.y + area.height / 2})`,
       });
     } else {
-      // Rotated left y-axis label.
-      // Compute a dynamic offset so the title clears the widest tick label.
-      // The title is rotated and centered, so axisTitleOffset() adds its own
-      // half-glyph height on top of the gap (otherwise large title fonts overlap
-      // the tick labels — the gap is visible clearance, not center-to-edge).
       const maxTickLabelWidth = axis.ticks.reduce((max, t) => {
         const w = estimateTextWidth(
           t.label,

@@ -182,7 +182,11 @@ describe('computeDimensions', () => {
       ],
       encoding: {
         x: { field: 'date', type: 'temporal' },
-        y: { field: 'value', type: 'quantitative', axis: { title: 'Revenue ($)' } },
+        y: {
+          field: 'value',
+          type: 'quantitative',
+          axis: { title: 'Revenue ($)', format: ',.0f' },
+        },
       },
     };
 
@@ -199,7 +203,8 @@ describe('computeDimensions', () => {
       lightTheme,
     );
 
-    // Larger numeric values produce wider tick labels (e.g. "1.5M" vs "0.0"),
+    // Explicit format ",.0f" on large values produces "2,000,000" tick labels
+    // that are much wider than the abbreviated "0.0" from small values,
     // so the y-axis title margin should grow to keep clearance
     expect(dimsLarge.margins.left).toBeGreaterThan(dimsSmall.margins.left);
   });

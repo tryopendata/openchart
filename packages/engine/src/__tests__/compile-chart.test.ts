@@ -123,6 +123,12 @@ describe('compileChart', () => {
     expect(layout.chrome.source!.style.fontSize).toBeGreaterThan(0);
   });
 
+  it('emits bottomAnchorY below the chart area', () => {
+    const layout = compileChart(lineSpec, { width: 600, height: 400 });
+    expect(layout.chrome.bottomAnchorY).toBeDefined();
+    expect(layout.chrome.bottomAnchorY).toBeGreaterThanOrEqual(layout.area.y + layout.area.height);
+  });
+
   it('has axes with ticks and valid positions for a line chart', () => {
     const layout = compileChart(lineSpec, { width: 600, height: 400 });
 

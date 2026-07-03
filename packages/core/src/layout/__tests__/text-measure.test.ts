@@ -7,8 +7,8 @@ describe('estimateTextWidth', () => {
   });
 
   it('scales linearly with text length', () => {
-    const w5 = estimateTextWidth('hello', 14);
-    const w10 = estimateTextWidth('helloworld', 14);
+    const w5 = estimateTextWidth('abcde', 14);
+    const w10 = estimateTextWidth('abcdeabcde', 14);
     expect(w10).toBeCloseTo(w5 * 2, 1);
   });
 
@@ -31,13 +31,12 @@ describe('estimateTextWidth', () => {
     expect(width).toBeLessThan(250);
   });
 
-  // Characterization test (refactor/v7-cohesion step 1):
-  // Pins the AVG_CHAR_WIDTH_RATIO = 0.57 constant introduced in commit e7b98f9.
-  // Any future tuning of the ratio changes layout-wide text wrapping decisions,
-  // so we freeze the exact numeric output of the canonical call.
+  // Pins the per-character width table output. Any change to the tables
+  // shifts layout-wide text wrapping decisions, so we freeze the exact value.
   it('estimateTextWidth("sample", 14, 400) returns the locked numeric value', () => {
-    // 6 chars * (14 * 0.57 * 1.0) = 6 * 7.98 = 47.88
-    expect(estimateTextWidth('sample', 14, 400)).toBeCloseTo(47.88, 5);
+    // Per-char lookup: s(0.5) + a(0.556) + m(0.833) + p(0.556) + l(0.222) + e(0.556) = 3.223
+    // 3.223 * 14 * 1.0 = 45.122
+    expect(estimateTextWidth('sample', 14, 400)).toBeCloseTo(45.122, 2);
   });
 });
 

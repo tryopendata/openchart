@@ -20,13 +20,14 @@ describe('computeHeatmapColors', () => {
     const theme = getTheme();
     const colors = computeHeatmapColors(data, column, theme, false);
 
-    expect(colors.size).toBe(5);
+    // Domain-minimum row (value=0) is skipped so the normal row
+    // background shows through instead of an opaque low-end color.
+    expect(colors.size).toBe(4);
+    expect(colors.has(0)).toBe(false);
 
-    // Lowest value should have a lighter background
-    const lowBg = colors.get(0)!.backgroundColor!;
+    const lowBg = colors.get(1)!.backgroundColor!;
     const highBg = colors.get(4)!.backgroundColor!;
 
-    // Check that they're different colors
     expect(lowBg).not.toBe(highBg);
   });
 
@@ -51,8 +52,8 @@ describe('computeHeatmapColors', () => {
     const theme = getTheme();
     const colors = computeHeatmapColors(data, col, theme, false);
 
-    // All values are in the lower half of the domain, so should all have lighter colors
-    expect(colors.size).toBe(5);
+    // value=0 sits at the domain minimum and is skipped
+    expect(colors.size).toBe(4);
   });
 
   it('values outside custom domain are clamped', () => {
@@ -63,8 +64,9 @@ describe('computeHeatmapColors', () => {
     const theme = getTheme();
     const colors = computeHeatmapColors(data, col, theme, false);
 
-    // value=0 is clamped to domain min, value=100 to domain max
-    expect(colors.has(0)).toBe(true);
+    // value=0 clamps to domain[0]=25, which is the minimum, so it's skipped
+    expect(colors.has(0)).toBe(false);
+    // value=100 clamps to domain max and gets colored
     expect(colors.has(4)).toBe(true);
   });
 
@@ -80,8 +82,9 @@ describe('computeHeatmapColors', () => {
     const theme = getTheme();
     const colors = computeHeatmapColors(dataWithLabel, col, theme, false);
 
-    // Should have colors for both rows since score has numeric values
-    expect(colors.size).toBe(2);
+    // score=10 is the domain minimum and is skipped; only score=90 gets colored
+    expect(colors.size).toBe(1);
+    expect(colors.has(1)).toBe(true);
   });
 
   it('returns empty map for non-numeric columns', () => {
@@ -102,8 +105,8 @@ describe('computeHeatmapColors', () => {
     const theme = getTheme(true);
     const colors = computeHeatmapColors(data, column, theme, true);
 
-    expect(colors.size).toBe(5);
-    // In dark mode, text colors should still have adequate contrast
+    // Domain-minimum row skipped
+    expect(colors.size).toBe(4);
     for (const [, style] of colors) {
       const bg = style.backgroundColor!;
       const fg = style.color!;
@@ -112,7 +115,7 @@ describe('computeHeatmapColors', () => {
     }
   });
 
-  it('custom palette arrays are not adapted in dark mode', () => {
+  it('custom palette arrays are adapted for dark mode', () => {
     const col: ColumnConfig = {
       key: 'value',
       heatmap: { palette: ['#fca5a5', '#c44e52'], domain: [0, 100] },
@@ -122,14 +125,14 @@ describe('computeHeatmapColors', () => {
     const lightColors = computeHeatmapColors(data, col, lightTheme, false);
     const darkColors = computeHeatmapColors(data, col, darkTheme, true);
 
-    const lightLowBg = lightColors.get(0)!.backgroundColor!;
-    const lightHighBg = lightColors.get(4)!.backgroundColor!;
-    const darkLowBg = darkColors.get(0)!.backgroundColor!;
-    const darkHighBg = darkColors.get(4)!.backgroundColor!;
+    // Domain-minimum row (value=0) is skipped in both modes
+    expect(lightColors.has(0)).toBe(false);
+    expect(darkColors.has(0)).toBe(false);
 
-    // Custom palettes produce the same colors in both modes
-    expect(darkLowBg).toBe(lightLowBg);
-    expect(darkHighBg).toBe(lightHighBg);
+    // The high-end color gets adapted for dark mode
+    const lightHighBg = lightColors.get(4)!.backgroundColor!;
+    const darkHighBg = darkColors.get(4)!.backgroundColor!;
+    expect(darkHighBg).not.toBe(lightHighBg);
   });
 
   it('supports array of color stops as palette', () => {
@@ -139,6 +142,7 @@ describe('computeHeatmapColors', () => {
     };
     const theme = getTheme();
     const colors = computeHeatmapColors(data, col, theme, false);
-    expect(colors.size).toBe(5);
+    // Domain-minimum row skipped
+    expect(colors.size).toBe(4);
   });
 });

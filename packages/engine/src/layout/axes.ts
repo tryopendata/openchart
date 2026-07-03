@@ -19,6 +19,13 @@ import type {
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
+import {
+  axisTitleOffset,
+  computeXAxisExtentFromLabels,
+  estimateTextWidth,
+  getAxisTitleOffset,
+  X_AXIS_TITLE_BAND_ROTATED,
+} from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
 import { measureLabel, thinTicksUntilFit, ticksOverlap } from './axes/thinning';
 import {
@@ -273,6 +280,15 @@ export interface AxesDataContext {
    * marks default to `'gutter'`.
    */
   markType?: import('@opendata-ai/openchart-core').MarkType;
+  /** Total container width for axis title offset threshold checks. */
+  totalWidth?: number;
+  /**
+   * Pinned y-axis tick values from the layout plan. When provided, the y-axis
+   * uses these values (via resolveExplicitTicks) instead of generating fresh
+   * ticks, so the labels match exactly what the gutter was measured for.
+   * User-specified `axis.values` still takes priority.
+   */
+  precomputedYTicks?: unknown[];
 }
 
 /**
@@ -440,6 +456,15 @@ export function computeAxes(
     let allTicks: AxisTick[];
     if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.y);
+    } else if (
+      dataContext?.precomputedYTicks &&
+      dataContext.precomputedYTicks.length > 0 &&
+      isContinuousY
+    ) {
+      // Pinned ticks from the layout plan -- use the same resolution path as
+      // explicit user values so the labels match exactly what the gutter was
+      // measured for.
+      allTicks = resolveExplicitTicks(dataContext.precomputedYTicks, scales.y);
     } else if (!isContinuousY) {
       const yFieldName = dataContext?.encoding.y?.field;
       const yLabelField = axisConfig?.labelField;
@@ -458,7 +483,8 @@ export function computeAxes(
     // Thin tick labels to prevent overlap (skip for band scales and explicit tick values).
     // When tickCount is set, we still thin if D3 overshot the requested count
     // (common with log scales where ticks(4) can return 26 values).
-    const shouldThinY = scales.y.type !== 'band' && !axisConfig?.values;
+    const shouldThinY =
+      scales.y.type !== 'band' && !axisConfig?.values && !dataContext?.precomputedYTicks?.length;
     let ticks: AxisTick[];
     if (!shouldThinY) {
       ticks = allTicks;
@@ -523,6 +549,72 @@ export function computeAxes(
       labelFlush: axisConfig?.labelFlush,
       tickPosition: yTickPosition,
     };
+  }
+
+  const totalWidth = dataContext?.totalWidth ?? chartArea.x + chartArea.width;
+
+  if (result.x) {
+    let rotatedHeight: number | undefined;
+    if (result.x.tickAngle && Math.abs(result.x.tickAngle) > 10) {
+      const angleRad = Math.abs(result.x.tickAngle) * (Math.PI / 180);
+      let maxLabelWidth = 40;
+      for (const tick of result.x.ticks) {
+        const w = estimateTextWidth(
+          tick.label,
+          result.x.tickLabelStyle.fontSize,
+          result.x.tickLabelStyle.fontWeight,
+        );
+        if (w > maxLabelWidth) maxLabelWidth = w;
+      }
+      rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
+    }
+
+    if (rotatedHeight != null) {
+      result.x.extent = result.x.label ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
+    } else {
+      result.x.extent = computeXAxisExtentFromLabels({
+        labels: result.x.ticks.map((t) => t.label),
+        tickAngle: result.x.tickAngle,
+        hasTitle: !!result.x.label,
+        tickFontSize: result.x.tickLabelStyle.fontSize,
+        tickFontWeight: result.x.tickLabelStyle.fontWeight,
+        xAxisHeight: theme.spacing.xAxisHeight,
+      });
+    }
+
+    if (result.x.label) {
+      result.x.titlePosition = {
+        x: chartArea.x + chartArea.width / 2,
+        y: chartArea.y + chartArea.height + (rotatedHeight != null ? rotatedHeight + 14 : 35),
+      };
+    }
+  }
+
+  if (result.y?.label && result.y.labelStyle) {
+    const isRight = result.y.orient === 'right';
+    if (isRight) {
+      const titleOff = getAxisTitleOffset(totalWidth);
+      result.y.titlePosition = {
+        x: chartArea.x + chartArea.width + titleOff,
+        y: chartArea.y + chartArea.height / 2,
+        angle: 90,
+      };
+    } else {
+      const maxTickLabelWidth = result.y.ticks.reduce((max, t) => {
+        const w = estimateTextWidth(
+          t.label,
+          result.y!.tickLabelStyle.fontSize,
+          result.y!.tickLabelStyle.fontWeight ?? 400,
+        );
+        return Math.max(max, w);
+      }, 0);
+      const titleOff = axisTitleOffset(maxTickLabelWidth, result.y.labelStyle.fontSize, totalWidth);
+      result.y.titlePosition = {
+        x: chartArea.x - titleOff,
+        y: chartArea.y + chartArea.height / 2,
+        angle: -90,
+      };
+    }
   }
 
   return result;

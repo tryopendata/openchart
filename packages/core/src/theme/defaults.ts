@@ -10,6 +10,7 @@
  */
 
 import { CATEGORICAL_PALETTE, DIVERGING_PALETTES, SEQUENTIAL_PALETTES } from '../colors/palettes';
+import { X_AXIS_BAND_HEIGHT } from '../responsive/metrics';
 import type { Theme } from '../types/theme';
 
 /**
@@ -58,7 +59,7 @@ export const DEFAULT_THEME: Theme = {
     chromeToChart: 8,
     chartToFooter: 8,
     axisMargin: 6,
-    xAxisHeight: 26,
+    xAxisHeight: X_AXIS_BAND_HEIGHT,
     // Gap (px) between the x-axis line and the TOP of the tick labels. The
     // renderer anchors x-tick labels at their top edge (hanging baseline), so
     // this is a literal top gap that holds regardless of font size.

@@ -9,8 +9,10 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   AXIS_TITLE_TRAILING_PAD,
+  abbreviateNumber,
   BREAKPOINT_COMPACT_MAX,
   estimateTextWidth,
+  formatNumber,
   getAxisTitleOffset,
   resolveTheme,
   TICK_LABEL_OFFSET,
@@ -19,6 +21,8 @@ import { format as d3Format } from 'd3-format';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { flattenLayers } from '../compiler/index';
+import type { MeasureFn } from '../layout/plan';
+import { createMeasureFn } from '../layout/plan';
 
 type ChartCompiler = (spec: unknown, options: CompileOptions) => ChartLayout;
 
@@ -100,18 +104,21 @@ function estimateYAxisLabelWidth(
   data: DataRow[],
   encoding: Encoding | undefined,
   baseFontSize: number,
+  measure?: MeasureFn,
 ): number {
   if (!encoding?.y) return 40;
   const yEnc = encoding.y;
   const yField = yEnc.field;
   if (!yField) return 40;
 
+  const m = measure ?? estimateTextWidth;
+
   const yType = yEnc.type;
   if (yType === 'nominal' || yType === 'ordinal') {
     let maxWidth = 0;
     for (const row of data) {
       const label = String(row[yField] ?? '');
-      const w = estimateTextWidth(label, baseFontSize, 400);
+      const w = m(label, baseFontSize, 400);
       if (w > maxWidth) maxWidth = w;
     }
     return maxWidth > 0 ? maxWidth + 10 : 40;
@@ -134,16 +141,13 @@ function estimateYAxisLabelWidth(
       sampleLabel = String(maxAbsVal);
     }
   } else {
-    if (maxAbsVal >= 1_000_000_000) sampleLabel = '1.5B';
-    else if (maxAbsVal >= 1_000_000) sampleLabel = '1.5M';
-    else if (maxAbsVal >= 1_000) sampleLabel = '1.5K';
-    else if (maxAbsVal >= 100) sampleLabel = '100';
-    else if (maxAbsVal >= 10) sampleLabel = '10';
-    else sampleLabel = '0.0';
+    // Use the same formatting as tick labels instead of hardcoded magnitude guesses
+    sampleLabel =
+      Math.abs(maxAbsVal) >= 1000 ? abbreviateNumber(maxAbsVal) : formatNumber(maxAbsVal);
   }
   const hasNeg = data.some((r) => Number(r[yField]) < 0);
   const labelEst = (hasNeg ? '-' : '') + sampleLabel;
-  return estimateTextWidth(labelEst, baseFontSize, 400) + 10;
+  return m(labelEst, baseFontSize, 400) + 10;
 }
 
 function compileLayerIndependent(
@@ -173,7 +177,13 @@ function compileLayerIndependent(
 
   const theme = resolveTheme(layerSpec.theme ?? leaf1.theme);
   const axisFontSize = theme.fonts?.sizes?.axisTick ?? 11;
-  const rightAxisWidth = estimateYAxisLabelWidth(leaf1.data, leaf1.encoding, axisFontSize);
+  const measureFn = createMeasureFn(options.measureText);
+  const rightAxisWidth = estimateYAxisLabelWidth(
+    leaf1.data,
+    leaf1.encoding,
+    axisFontSize,
+    measureFn,
+  );
   const yAxisConfig = leaf1.encoding?.y?.axis || undefined;
   const hasRightAxisTitle = !!yAxisConfig?.title;
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
@@ -227,6 +237,18 @@ function compileLayerIndependent(
           x: layout0.area.x + layout0.area.width,
           y: layout0.area.y + layout0.area.height,
         },
+        ...(layout1.axes.y.label
+          ? {
+              titlePosition: {
+                x:
+                  layout0.area.x +
+                  layout0.area.width +
+                  getAxisTitleOffset(layout0.dimensions.width),
+                y: layout0.area.y + layout0.area.height / 2,
+                angle: 90,
+              },
+            }
+          : {}),
       }
     : undefined;
 

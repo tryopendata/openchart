@@ -1,35 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright config for visual regression testing.
- *
- * Screenshots a fixed set of Ladle stories and diffs them against
- * committed baselines. This is the pixel-level safety net for refactors
- * that must not change rendered output.
+ * Playwright config for e2e tests: visual regression + layout invariants.
  *
  * Run:
- *   bun run test:visual         # compare against baselines
- *   bun run test:visual:update  # regenerate baselines
+ *   bun run test:visual         # visual regression only
+ *   bun run test:visual:update  # regenerate visual baselines
+ *   bun run test:invariants     # layout invariant checks only
  */
 export default defineConfig({
-  testDir: './e2e/visual',
-  snapshotDir: './e2e/visual/__screenshots__',
-  // Keep strict. Any pixel drift surfaces as a failure.
-  expect: {
-    toHaveScreenshot: {
-      // Individual pixels can drift ~2 units per channel on anti-aliased edges.
-      // maxDiffPixelRatio keeps that from flagging as a failure, but we want
-      // any structural change to fail. Start tight.
-      maxDiffPixelRatio: 0.001,
-      threshold: 0.1,
-      animations: 'disabled',
-      caret: 'hide',
-    },
-  },
   // Run serially so the Ladle dev server and chart rendering are deterministic.
   fullyParallel: false,
   workers: 1,
-  // No retries — we want flakes to be loud, not hidden.
+  // No retries - we want flakes to be loud, not hidden.
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
@@ -41,8 +24,30 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
+      name: 'visual',
+      testDir: './e2e/visual',
+      snapshotDir: './e2e/visual/__screenshots__',
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+      },
+      // Keep strict. Any pixel drift surfaces as a failure.
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.1,
+          animations: 'disabled',
+          caret: 'hide',
+        },
+      },
+    },
+    {
+      name: 'invariants',
+      testDir: './e2e/invariants',
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+      },
     },
   ],
   webServer: {

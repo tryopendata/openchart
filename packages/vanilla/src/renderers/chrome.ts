@@ -8,7 +8,7 @@ import type {
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
-import { applyTextStyle, computeXAxisExtent, createSVGElement, setAttrs } from './svg-dom';
+import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 function renderChromeElement(
   parent: SVGElement,
@@ -87,10 +87,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
     renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
   }
 
-  // Bottom chrome starts below x-axis labels/title, not at chart area bottom.
-  // Accounts for rotated tick labels which need more vertical space.
-  const xAxisExtent = computeXAxisExtent(layout);
-  const bottomOffset = layout.area.y + layout.area.height + xAxisExtent;
+  const bottomOffset = layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
   if (chrome.source) {
     renderChromeElement(
       g,

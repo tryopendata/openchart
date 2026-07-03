@@ -1,4 +1,4 @@
-import type { AxisTick, LayoutStrategy } from '@opendata-ai/openchart-core';
+import type { AxisTick, Encoding, LayoutStrategy } from '@opendata-ai/openchart-core';
 import { resolveTheme } from '@opendata-ai/openchart-core';
 import { scaleLinear, scaleLog } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
@@ -1055,5 +1055,71 @@ describe('axis tickPosition', () => {
     });
 
     expect(axes.y!.tickPosition).toBe('gutter');
+  });
+});
+
+describe('axis extent and titlePosition', () => {
+  it('emits x-axis extent for a basic line chart', () => {
+    const scales = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.extent).toBeGreaterThan(0);
+    expect(axes.x!.extent).toBeLessThan(200);
+  });
+
+  it('extent is larger when axis has a title', () => {
+    const specWithTitle: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        x: { ...lineSpec.encoding.x, axis: { title: 'Year' } },
+      },
+    };
+    const scales = computeScales(specWithTitle, chartArea, specWithTitle.data);
+    const axesWithTitle = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    const scalesNoTitle = computeScales(lineSpec, chartArea, lineSpec.data);
+    const axesNoTitle = computeAxes(scalesNoTitle, chartArea, fullStrategy, theme);
+
+    expect(axesWithTitle.x!.extent).toBeGreaterThan(axesNoTitle.x!.extent!);
+  });
+
+  it('emits titlePosition for x-axis with title', () => {
+    const specWithTitle: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        x: { ...lineSpec.encoding.x, axis: { title: 'Year' } },
+      },
+    };
+    const scales = computeScales(specWithTitle, chartArea, specWithTitle.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme);
+
+    expect(axes.x!.titlePosition).toBeDefined();
+    expect(axes.x!.titlePosition!.x).toBeCloseTo(chartArea.x + chartArea.width / 2, 0);
+    expect(axes.x!.titlePosition!.y).toBeGreaterThan(chartArea.y + chartArea.height);
+  });
+
+  it('emits titlePosition for y-axis with title', () => {
+    const specWithYTitle: NormalizedChartSpec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        y: { ...lineSpec.encoding.y, axis: { title: 'Value' } },
+      },
+    };
+    const scales = computeScales(specWithYTitle, chartArea, specWithYTitle.data);
+    const axes = computeAxes(scales, chartArea, fullStrategy, theme, undefined, {
+      data: specWithYTitle.data,
+      encoding: specWithYTitle.encoding as Encoding,
+      skipX: false,
+      skipY: false,
+      markType: 'line',
+      totalWidth: 600,
+    });
+
+    expect(axes.y!.titlePosition).toBeDefined();
+    expect(axes.y!.titlePosition!.x).toBeLessThan(chartArea.x);
+    expect(axes.y!.titlePosition!.angle).toBe(-90);
   });
 });

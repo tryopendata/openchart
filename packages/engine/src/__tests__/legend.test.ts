@@ -511,4 +511,41 @@ describe('computeLegend', () => {
       expect(gap).toBe(0);
     });
   });
+
+  describe('entryPositions contract', () => {
+    it('emits entryPositions for horizontal legend', () => {
+      const legend = computeLegend(specWithColor, compactStrategy, theme, chartArea);
+      expect(legend.entries.length).toBeGreaterThan(0);
+      expect(legend.entryPositions).toBeDefined();
+      expect(legend.entryPositions).toHaveLength(legend.entries.length);
+    });
+
+    it('entryPositions have correct structure', () => {
+      const legend = computeLegend(specWithColor, compactStrategy, theme, chartArea);
+      for (const pos of legend.entryPositions!) {
+        expect(pos).toHaveProperty('x');
+        expect(pos).toHaveProperty('y');
+        expect(pos).toHaveProperty('labelX');
+        expect(pos).toHaveProperty('labelY');
+        expect(pos).toHaveProperty('width');
+        expect(pos).toHaveProperty('row');
+        expect(pos.labelX).toBeGreaterThan(pos.x);
+      }
+    });
+
+    it('emits entryPositions for right-positioned legend', () => {
+      const legend = computeLegend(specWithColor, fullStrategy, theme, chartArea);
+      expect(legend.entryPositions).toBeDefined();
+      expect(legend.entryPositions).toHaveLength(legend.entries.length);
+      for (const pos of legend.entryPositions!) {
+        expect(pos.row).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('emits rowHeight', () => {
+      const legend = computeLegend(specWithColor, compactStrategy, theme, chartArea);
+      expect(legend.rowHeight).toBeDefined();
+      expect(legend.rowHeight).toBeGreaterThan(0);
+    });
+  });
 });

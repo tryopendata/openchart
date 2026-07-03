@@ -739,7 +739,6 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const _px = scales.x?.scale(new Date('2020-01-01'));
       const py = scales.y?.scale(20);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
@@ -1235,8 +1234,8 @@ describe('computeAnnotations', () => {
 
       // Curve should start from right edge of text, not top edge
       // Right edge x ≈ label.x + textWidth
-      // "Curve test" = 10 chars * 12 * 0.57 = 68.4
-      expect(connector.from.x).toBeCloseTo(label.x + 68.4, 1);
+      // Per-char lookup: "Curve test" = 4.557 * 12 = 54.684
+      expect(connector.from.x).toBeCloseTo(label.x + 54.684, 1);
     });
   });
 
@@ -1470,17 +1469,9 @@ describe('computeAnnotations', () => {
 
       expect(annotations).toHaveLength(1);
       const label = annotations[0].label!;
-      const fontSize = label.style.fontSize ?? 12;
-      const fontWeight = label.style.fontWeight ?? 400;
-      // Estimate bounds to verify the right edge is within SVG
-      const textWidth = label.text
-        .split('\n')
-        .reduce(
-          (max, line) => Math.max(max, line.length * fontSize * (fontWeight >= 600 ? 0.65 : 0.55)),
-          0,
-        );
-      // The label's right edge should not exceed the SVG width
-      expect(label.x + textWidth).toBeLessThanOrEqual(svgDimensions.width);
+      // Use engine-exported bounds instead of re-deriving text width
+      expect(label.bounds).toBeDefined();
+      expect(label.bounds!.x + label.bounds!.width).toBeLessThanOrEqual(svgDimensions.width);
     });
 
     it('shifts annotation down when it overflows the top SVG edge', () => {
@@ -1514,13 +1505,15 @@ describe('computeAnnotations', () => {
     });
 
     it('does not modify annotation that is well within bounds', () => {
-      // Place annotation in the center of the chart
+      // Place annotation in the center of the chart with an explicit offset
+      // so it uses the same explicit placement path with and without SVG dims
       const spec = makeSpec([
         {
           type: 'text',
           x: '2020-06-01',
           y: 25,
           text: 'Centered',
+          offset: { dx: 0, dy: -10 },
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);

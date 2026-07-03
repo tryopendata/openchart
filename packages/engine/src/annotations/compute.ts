@@ -11,7 +11,12 @@
  * At compact breakpoints, annotations are simplified or hidden.
  */
 
-import type { LayoutStrategy, Rect, ResolvedAnnotation } from '@opendata-ai/openchart-core';
+import type {
+  LayoutStrategy,
+  Rect,
+  ResolvedAnnotation,
+  TextAnnotation,
+} from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
 import {
@@ -19,9 +24,30 @@ import {
   nudgeAnnotationFromObstacles,
   resolveAnnotationCollisions,
 } from './collisions';
+import { DEFAULT_ANNOTATION_FONT_WEIGHT, SUBTITLE_FONT_SIZE_RATIO } from './constants';
+import type { AnnotationMeasureTextFn } from './geometry';
+import { heuristicMeasure } from './geometry';
+import {
+  findBestPlacement,
+  isAutoPlacement,
+  normalizeObstacles,
+  type PlacementObstacle,
+} from './placement';
+import { resolvePosition } from './position';
 import { resolveRangeAnnotation } from './resolve-range';
 import { resolveRefLineAnnotation } from './resolve-refline';
-import { resolveTextAnnotation } from './resolve-text';
+import { makeAnnotationLabelStyle, resolveTextAnnotation } from './resolve-text';
+
+export interface AnnotationContext {
+  scales: ResolvedScales;
+  chartArea: Rect;
+  strategy: LayoutStrategy;
+  isDark: boolean;
+  obstacles: PlacementObstacle[];
+  svg: { width: number; height: number };
+  measure: AnnotationMeasureTextFn;
+  debugPlacement?: boolean;
+}
 
 /**
  * Compute resolved annotations from spec annotations using the resolved scales.
@@ -38,19 +64,63 @@ import { resolveTextAnnotation } from './resolve-text';
  */
 export function computeAnnotations(
   spec: NormalizedChartSpec,
+  ctx: AnnotationContext,
+): ResolvedAnnotation[];
+
+/**
+ * @deprecated Use the context-object overload instead.
+ */
+export function computeAnnotations(
+  spec: NormalizedChartSpec,
   scales: ResolvedScales,
   chartArea: Rect,
   strategy: LayoutStrategy,
-  isDark = false,
-  obstacles: Rect[] = [],
+  isDark?: boolean,
+  obstacles?: Rect[],
+  svgDimensions?: { width: number; height: number },
+): ResolvedAnnotation[];
+
+export function computeAnnotations(
+  spec: NormalizedChartSpec,
+  scalesOrCtx: ResolvedScales | AnnotationContext,
+  chartArea?: Rect,
+  strategy?: LayoutStrategy,
+  isDark?: boolean,
+  obstacles?: Rect[],
   svgDimensions?: { width: number; height: number },
 ): ResolvedAnnotation[] {
-  const isCompact = strategy.annotationPosition === 'tooltip-only';
+  let ctx: AnnotationContext;
 
+  if ('measure' in scalesOrCtx) {
+    ctx = scalesOrCtx as AnnotationContext;
+  } else {
+    ctx = {
+      scales: scalesOrCtx as ResolvedScales,
+      chartArea: chartArea!,
+      strategy: strategy!,
+      isDark: isDark ?? false,
+      obstacles: obstacles ? normalizeObstacles(obstacles) : [],
+      svg: svgDimensions ?? { width: 0, height: 0 },
+      measure: heuristicMeasure,
+    };
+  }
+
+  const isCompact = ctx.strategy.annotationPosition === 'tooltip-only';
+
+  const svgRect: Rect = { x: 0, y: 0, width: ctx.svg.width, height: ctx.svg.height };
   const annotations: ResolvedAnnotation[] = [];
 
+  // Deferred auto-placement entries (resolved in Pass 2)
+  const autoQueue: Array<{
+    annotation: TextAnnotation;
+    anchorX: number;
+    anchorY: number;
+    resolved: ResolvedAnnotation;
+    index: number;
+  }> = [];
+
+  // ---- Pass 1: resolve explicit annotations and queue auto ones ----
   for (const annotation of spec.annotations) {
-    // At compact breakpoints, skip annotations unless they opt out with responsive: false
     if (isCompact && annotation.responsive !== false) {
       continue;
     }
@@ -58,31 +128,202 @@ export function computeAnnotations(
 
     switch (annotation.type) {
       case 'text':
-        resolved = resolveTextAnnotation(annotation, scales, chartArea, isDark);
+        resolved = resolveTextAnnotation(
+          annotation,
+          ctx.scales,
+          ctx.chartArea,
+          ctx.isDark,
+          ctx.measure,
+        );
+        if (resolved && ctx.svg.width > 0 && ctx.svg.height > 0 && isAutoPlacement(annotation)) {
+          const px = resolvePosition(annotation.x, ctx.scales.x);
+          const py = resolvePosition(annotation.y, ctx.scales.y);
+          if (px !== null && py !== null) {
+            autoQueue.push({
+              annotation,
+              anchorX: px,
+              anchorY: py,
+              resolved,
+              index: annotations.length,
+            });
+            annotations.push(resolved);
+            continue;
+          }
+        }
         break;
       case 'range':
-        resolved = resolveRangeAnnotation(annotation, scales, chartArea, isDark);
+        resolved = resolveRangeAnnotation(annotation, ctx.scales, ctx.chartArea, ctx.isDark);
         break;
       case 'refline':
-        resolved = resolveRefLineAnnotation(annotation, scales, chartArea, isDark);
+        resolved = resolveRefLineAnnotation(annotation, ctx.scales, ctx.chartArea, ctx.isDark);
         break;
     }
 
     if (resolved) {
-      // For text annotations, check for collisions with obstacles and nudge if needed
-      if (annotation.type === 'text' && obstacles.length > 0) {
-        nudgeAnnotationFromObstacles(resolved, annotation, scales, chartArea, obstacles);
+      if (annotation.type === 'text' && ctx.obstacles.length > 0) {
+        nudgeAnnotationFromObstacles(
+          resolved,
+          annotation,
+          ctx.scales,
+          ctx.chartArea,
+          ctx.obstacles,
+          ctx.measure,
+        );
       }
       annotations.push(resolved);
     }
   }
 
-  // Resolve annotation-to-annotation collisions (greedy, order-preserving)
-  resolveAnnotationCollisions(annotations, spec.annotations, scales, chartArea);
+  // ---- Pass 2: scored placement search for auto annotations ----
+  if (autoQueue.length > 0 && ctx.svg.width > 0 && ctx.svg.height > 0) {
+    // Build the working obstacle list: base obstacles + explicitly placed annotations
+    const workingObstacles: PlacementObstacle[] = [...ctx.obstacles];
+    for (let i = 0; i < annotations.length; i++) {
+      const a = annotations[i];
+      if (a.bounds && !autoQueue.some((q) => q.index === i)) {
+        workingObstacles.push({ ...a.bounds, kind: 'annotation' } as PlacementObstacle);
+      }
+    }
+
+    for (const entry of autoQueue) {
+      const { annotation, anchorX, anchorY, resolved } = entry;
+      const labelStyle = makeAnnotationLabelStyle(
+        annotation.fontSize,
+        annotation.fontWeight,
+        undefined,
+        ctx.isDark,
+      );
+
+      const subtitleStyle = annotation.subtitle
+        ? {
+            fontSize: labelStyle.fontSize * SUBTITLE_FONT_SIZE_RATIO,
+            fontWeight: DEFAULT_ANNOTATION_FONT_WEIGHT,
+            lineHeight: labelStyle.lineHeight,
+          }
+        : undefined;
+
+      const result = findBestPlacement(
+        anchorX,
+        anchorY,
+        annotation.text,
+        {
+          fontSize: labelStyle.fontSize,
+          fontWeight: Number(labelStyle.fontWeight) || 400,
+          lineHeight: labelStyle.lineHeight,
+        },
+        annotation.subtitle,
+        subtitleStyle,
+        workingObstacles,
+        ctx.chartArea,
+        svgRect,
+        ctx.measure,
+        ctx.debugPlacement,
+      );
+
+      // Apply placement result to the resolved annotation
+      if (resolved.label) {
+        resolved.label.x = result.labelX;
+        resolved.label.y = result.labelY;
+        resolved.label.style = {
+          ...resolved.label.style,
+          textAnchor: result.textAnchor,
+        };
+        resolved.label.bounds = result.bounds;
+
+        if (resolved.label.connector) {
+          const box = result.bounds;
+          const cx = box.x + box.width / 2;
+          const cy = box.y + box.height / 2;
+          const isCurve = resolved.label.connector.style === 'curve';
+          if (isCurve) {
+            resolved.label.connector.from = { x: box.x + box.width, y: cy };
+          } else {
+            const halfW = box.width / 2 || 1;
+            const halfH = box.height / 2 || 1;
+            const ndx = (anchorX - cx) / halfW;
+            const ndy = (anchorY - cy) / halfH;
+            if (Math.abs(ndy) >= Math.abs(ndx)) {
+              resolved.label.connector.from = {
+                x: cx,
+                y: ndy < 0 ? box.y : box.y + box.height,
+              };
+            } else {
+              resolved.label.connector.from = {
+                x: ndx < 0 ? box.x : box.x + box.width,
+                y: cy,
+              };
+            }
+          }
+        }
+      }
+      resolved.bounds = result.bounds;
+
+      // Add this annotation's bounds as obstacle for subsequent auto annotations
+      workingObstacles.push({ ...result.bounds, kind: 'annotation' } as PlacementObstacle);
+    }
+  } else if (autoQueue.length > 0) {
+    // Fallback: no SVG dimensions, use legacy nudge for auto annotations
+    for (const entry of autoQueue) {
+      if (ctx.obstacles.length > 0) {
+        nudgeAnnotationFromObstacles(
+          entry.resolved,
+          entry.annotation,
+          ctx.scales,
+          ctx.chartArea,
+          ctx.obstacles,
+          ctx.measure,
+        );
+      }
+    }
+  }
+
+  // Resolve annotation-to-annotation collisions for non-auto-placed annotations.
+  // When auto placement ran, those annotations already avoid each other via the
+  // obstacle-accumulation loop above, so only explicitly placed ones need this.
+  if (autoQueue.length > 0) {
+    // Build aligned pairs of explicit annotations + their specs
+    const autoIndices = new Set(autoQueue.map((q) => q.index));
+    const explicitAnnotations: ResolvedAnnotation[] = [];
+    const explicitSpecs: NormalizedChartSpec['annotations'] = [];
+    let specIdx = 0;
+    for (let i = 0; i < annotations.length; i++) {
+      // Walk specIdx past any compact-skipped specs
+      while (specIdx < spec.annotations.length) {
+        const s = spec.annotations[specIdx];
+        if (!isCompact || s.responsive === false) break;
+        specIdx++;
+      }
+      if (specIdx >= spec.annotations.length) break;
+      if (autoIndices.has(i)) {
+        specIdx++;
+        continue;
+      }
+      explicitAnnotations.push(annotations[i]);
+      explicitSpecs.push(spec.annotations[specIdx]);
+      specIdx++;
+    }
+    if (explicitAnnotations.length > 1) {
+      resolveAnnotationCollisions(
+        explicitAnnotations,
+        explicitSpecs,
+        ctx.scales,
+        ctx.chartArea,
+        ctx.measure,
+      );
+    }
+  } else {
+    resolveAnnotationCollisions(
+      annotations,
+      spec.annotations,
+      ctx.scales,
+      ctx.chartArea,
+      ctx.measure,
+    );
+  }
 
   // Clamp labels that overflow the SVG boundary back inside
-  if (svgDimensions) {
-    clampAnnotationsToBounds(annotations, svgDimensions.width, svgDimensions.height);
+  if (ctx.svg.width > 0 && ctx.svg.height > 0) {
+    clampAnnotationsToBounds(annotations, ctx.svg.width, ctx.svg.height, ctx.measure);
   }
 
   // Sort by zIndex (lower first, undefined treated as 0)

@@ -391,6 +391,55 @@ describe('compileLayer', () => {
     expect(layout.axes.x).toBeDefined();
   });
 
+  it('positions y2 axis title on the right side of the chart', () => {
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2025', revenue: 10_000_000 },
+            { year: '2026', revenue: 15_000_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const, axis: { title: 'Revenue ($)' } },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { year: '2025', enrollment: 30_000 },
+            { year: '2026', enrollment: 40_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: {
+              field: 'enrollment',
+              type: 'quantitative' as const,
+              axis: { title: 'Enrollment' },
+            },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const y1Title = layout.axes.y!.titlePosition;
+    const y2Title = layout.axes.y2!.titlePosition;
+
+    expect(y1Title).toBeDefined();
+    expect(y2Title).toBeDefined();
+
+    // y1 title should be left of chart area, y2 title should be right
+    expect(y1Title!.x).toBeLessThan(layout.area.x);
+    expect(y2Title!.x).toBeGreaterThan(layout.area.x + layout.area.width);
+
+    // y2 title should rotate clockwise (90), y1 counter-clockwise (-90)
+    expect(y1Title!.angle).toBe(-90);
+    expect(y2Title!.angle).toBe(90);
+  });
+
   it('tags layer-1 marks with yScale y2', () => {
     const spec: LayerSpec = {
       resolve: { scale: { y: 'independent' } },

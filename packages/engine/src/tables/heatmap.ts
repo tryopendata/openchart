@@ -6,7 +6,7 @@
  */
 
 import type { CellStyle, ColumnConfig, ResolvedTheme } from '@opendata-ai/openchart-core';
-import { adaptColorForDarkMode } from '@opendata-ai/openchart-core';
+import { adaptColorForDarkMode, contrastRatio } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleSequential } from 'd3-scale';
 import { accessibleTextColor } from './utils';
@@ -96,22 +96,38 @@ export function computeHeatmapColors(
   }
 
   // Resolve palette and build scale.
-  // Only adapt theme-derived palettes for dark mode. Custom color arrays
-  // are used as-is since the author chose them for a reason, and
-  // adaptColorForDarkMode inverts the perceived intensity ordering
-  // (light pink -> dark red becomes dark red -> pink on dark backgrounds).
+  // For dark mode with custom palettes: replace near-white low-end stops
+  // with the dark background so the gradient blends into the table surface.
+  // Theme-named palettes use the standard adaptColorForDarkMode path.
   let stops = resolvePalette(config.palette, theme);
-  if (darkMode && !Array.isArray(config.palette)) {
+  if (darkMode) {
     const lightBg = '#ffffff';
-    const darkBg = theme.colors.background;
-    stops = stops.map((c) => adaptColorForDarkMode(c, lightBg, darkBg));
+    const themeBg = theme.colors.background;
+    // Use an opaque dark surface for palette blending even when the theme
+    // bg is transparent, so interpolation never passes through alpha=0
+    // (which breaks accessibleTextColor via NaN contrast ratios).
+    const darkBg = themeBg === 'transparent' ? '#09090b' : themeBg;
+    if (Array.isArray(config.palette)) {
+      // Custom arrays: swap near-white stops for the dark bg so the low end
+      // blends in, then adapt the remaining (saturated) stops normally.
+      stops = stops.map((c) => {
+        const ratio = contrastRatio(c, lightBg);
+        if (ratio < 1.15) return darkBg;
+        return adaptColorForDarkMode(c, lightBg, darkBg);
+      });
+    } else {
+      stops = stops.map((c) => adaptColorForDarkMode(c, lightBg, darkBg));
+    }
   }
 
   const interpolator = interpolatorFromStops(stops);
   const scale = scaleSequential(interpolator).domain(domain).clamp(true);
 
-  // Apply to each row
+  // Apply to each row. Skip cells at the domain minimum so the normal
+  // row background (striping) shows through instead of painting an
+  // opaque low-end color that clashes with the table chrome.
   for (const { index, value } of numericValues) {
+    if (value <= domain[0]) continue;
     const bg = scale(value);
     const textColor = accessibleTextColor(bg);
 

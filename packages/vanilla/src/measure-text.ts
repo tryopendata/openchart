@@ -7,6 +7,7 @@
  */
 
 import type { MeasureTextFn } from '@opendata-ai/openchart-core';
+import { estimateTextWidth } from '@opendata-ai/openchart-core';
 
 export function createMeasureText(): MeasureTextFn {
   let canvas: HTMLCanvasElement | null = null;
@@ -23,7 +24,10 @@ export function createMeasureText(): MeasureTextFn {
     }
     if (!ctx) {
       // Fallback: heuristic estimation
-      return { width: text.length * fontSize * 0.6, height: fontSize * 1.2 };
+      return {
+        width: estimateTextWidth(text, fontSize, fontWeight ?? 400),
+        height: fontSize * 1.2,
+      };
     }
 
     const weight = fontWeight ?? 400;
@@ -34,4 +38,10 @@ export function createMeasureText(): MeasureTextFn {
       height: fontSize * 1.2,
     };
   };
+}
+
+let shared: MeasureTextFn | null = null;
+export function sharedMeasureText(): MeasureTextFn {
+  if (!shared) shared = createMeasureText();
+  return shared;
 }

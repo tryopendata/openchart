@@ -54,6 +54,7 @@ export type {
   HeatmapTableCell,
   ImageTableCell,
   LegendEntry,
+  LegendEntryPosition,
   LegendLayout,
   LineMark,
   Margins,

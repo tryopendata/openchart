@@ -26,9 +26,10 @@
     "typecheck": "bun run --filter './packages/*' typecheck",
     "dev": "cd examples && bun run dev",
     "release": "node scripts/release.mjs",
-    "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots",
+    "test:visual": "playwright test --project=visual",
+    "test:visual:update": "playwright test --project=visual --update-snapshots",
     "test:visual:setup": "playwright install chromium",
+    "test:invariants": "playwright test --project=invariants",
     "prepare": "husky"
   },
   "overrides": {
