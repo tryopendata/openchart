@@ -3,10 +3,8 @@ import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { describe, expect, test } from 'vitest';
 import { compileChart } from '../compile';
 
-// Red-locked: fixed by docs/plans/05-annotation-placement-engine.md
-
 describe('known layout bugs', () => {
-  test.fails('annotation label does not overlap the line it annotates', () => {
+  test('annotation label does not overlap the line it annotates', () => {
     // Generate ~25 smooth sine-wave data points over two years
     const data: { date: string; value: number }[] = [];
     const startDate = new Date('2022-01-01');
