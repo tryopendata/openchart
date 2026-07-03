@@ -237,6 +237,18 @@ function compileLayerIndependent(
           x: layout0.area.x + layout0.area.width,
           y: layout0.area.y + layout0.area.height,
         },
+        ...(layout1.axes.y.label
+          ? {
+              titlePosition: {
+                x:
+                  layout0.area.x +
+                  layout0.area.width +
+                  getAxisTitleOffset(layout0.dimensions.width),
+                y: layout0.area.y + layout0.area.height / 2,
+                angle: 90,
+              },
+            }
+          : {}),
       }
     : undefined;
 
