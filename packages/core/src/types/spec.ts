@@ -191,6 +191,14 @@ export interface MarkDef {
   tooltip?: boolean | null;
   /** Clip marks to the chart area. */
   clip?: boolean;
+  /**
+   * Overlay a least-squares regression line on scatter (point) marks.
+   * Defaults to true. Set `mark: { type: 'point', trendline: false }` to
+   * suppress it when the chart already carries its own reference line (e.g. a
+   * manual x=y diagonal in a separate layer), which would otherwise produce
+   * two competing diagonals.
+   */
+  trendline?: boolean;
 }
 
 // ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
 import { computeScatterMarks } from '../compute';
+import { scatterRenderer } from '../index';
 import { computeTrendLine } from '../trendline';
 
 // ---------------------------------------------------------------------------
@@ -460,5 +461,28 @@ describe('computeTrendLine', () => {
 
     expect(computeTrendLine(singlePoint)).toBeNull();
     expect(computeTrendLine([])).toBeNull();
+  });
+});
+
+describe('trendline opt-out', () => {
+  it('renders a trend line by default', () => {
+    const spec = makeBasicScatterSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = scatterRenderer(spec, scales, chartArea, fullStrategy, undefined as never);
+
+    expect(marks.some((m) => m.type === 'line')).toBe(true);
+  });
+
+  it('suppresses the trend line when mark.trendline is false', () => {
+    const base = makeBasicScatterSpec();
+    const spec: NormalizedChartSpec = {
+      ...base,
+      markDef: { type: 'point', trendline: false },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = scatterRenderer(spec, scales, chartArea, fullStrategy, undefined as never);
+
+    expect(marks.some((m) => m.type === 'line')).toBe(false);
+    expect(marks.every((m) => m.type === 'point')).toBe(true);
   });
 });
