@@ -179,6 +179,40 @@ describe('computeScatterMarks', () => {
 
       expect(marks[0].aria.label).toContain('population=');
     });
+
+    it('explicit size domain keeps the largest datum below the max radius', () => {
+      const base = makeBubbleSpec();
+      // Widen the domain past the data max (8000) so nothing reaches radius 30.
+      const spec: NormalizedChartSpec = {
+        ...base,
+        encoding: {
+          ...base.encoding,
+          size: { field: 'population', type: 'quantitative', scale: { domain: [0, 32000] } },
+        },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      const largest = marks.find((m) => m.data.population === 8000)!;
+      // sqrt(8000/32000) * 30 = 0.5 * 30 = 15, well under the 30px cap.
+      expect(largest.r).toBeLessThan(20);
+    });
+
+    it('explicit size range caps the radii', () => {
+      const base = makeBubbleSpec();
+      const spec: NormalizedChartSpec = {
+        ...base,
+        encoding: {
+          ...base.encoding,
+          size: { field: 'population', type: 'quantitative', scale: { range: [2, 12] } },
+        },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      const maxRadius = Math.max(...marks.map((m) => m.r));
+      expect(maxRadius).toBeLessThanOrEqual(12);
+    });
   });
 
   describe('color encoding', () => {

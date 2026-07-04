@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Features
 
+- **scatter:** bubble size scale now honors `encoding.size.scale.domain` and `encoding.size.scale.range`. An explicit domain wider than the data keeps the largest datum below the max radius (so dense clusters stop blobbing together) and an explicit range caps the radii outright. The scale also clamps, so an author-narrowed domain never produces out-of-range radii.
 - **endpoint-labels:** right-side per-series label column for multi-series line/area charts. Renders a chip+bar swatch (matching the redesigned legend), the colored series name, and a muted formatted value below. Auto-takes over from the traditional legend on ≥2-series line/area charts unless the user forces `legend: { show: true }`. Bidirectional collision sweep keeps labels stacked without overlap. Optional open-ring marker terminates the line at the chart's right edge; decorative point marks at the same coordinate are auto-suppressed to avoid double-circles.
 - **legend:** redesigned categorical swatch as a rounded chip with a colored bar through its midline. Shared between the traditional legend and the endpoint-labels column so a chart never shows two swatch idioms.
 - **annotations:** add `dot` and `subtitle` fields to `TextAnnotation` for editorial pull-quote callouts (open-ring marker at the data point + muted second-tone supporting text).
