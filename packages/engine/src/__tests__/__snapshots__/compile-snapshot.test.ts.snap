@@ -171,7 +171,6 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
     "title": {
       "maxWidth": 561,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#09090b",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 26,
@@ -718,7 +717,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     "source": {
       "maxWidth": 755,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#71717a",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 11,
@@ -733,7 +731,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     "subtitle": {
       "maxWidth": 755,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#71717a",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 14,
@@ -748,7 +745,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     "title": {
       "maxWidth": 755,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#09090b",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 26,
@@ -1705,7 +1701,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     "byline": {
       "maxWidth": 431,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#71717a",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 11,
@@ -1720,7 +1715,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     "source": {
       "maxWidth": 431,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#71717a",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 11,
@@ -1735,7 +1729,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     "title": {
       "maxWidth": 561,
       "style": {
-        "dominantBaseline": "hanging",
         "fill": "#09090b",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
         "fontSize": 26,
@@ -1804,7 +1797,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1815,7 +1807,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "30",
         "visible": true,
         "x": 122.67875862068962,
-        "y": 175.92857142857142,
+        "y": 183.92857142857142,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1849,7 +1841,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1860,7 +1851,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "55",
         "visible": true,
         "x": 246.30358620689654,
-        "y": 91.53571428571429,
+        "y": 99.53571428571429,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1894,7 +1885,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1905,7 +1895,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "70",
         "visible": true,
         "x": 369.92841379310346,
-        "y": 40.9,
+        "y": 48.9,
       },
       "orient": "vertical",
       "type": "rect",
@@ -1939,7 +1929,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "label": {
         "connector": undefined,
         "style": {
-          "dominantBaseline": "hanging",
           "fill": "#0000ff",
           "fontFamily": "system-ui, -apple-system, sans-serif",
           "fontSize": 10,
@@ -1950,7 +1939,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "text": "45",
         "visible": true,
         "x": 493.55324137931035,
-        "y": 125.29285714285712,
+        "y": 133.29285714285712,
       },
       "orient": "vertical",
       "type": "rect",

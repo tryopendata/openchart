@@ -5,8 +5,10 @@
  * if the bar is wide enough, or outside (to the right) otherwise.
  *
  * Respects the spec's label density setting:
- * - 'all': show every label, skip collision detection
- * - 'auto': existing behavior (collision detection)
+ * - 'all': consider every bar's label (no density pre-filter), but still run
+ *   collision resolution so colliding losers are hidden rather than drawn on
+ *   top of each other. Composes with the stacked-segment pre-hide pass below.
+ * - 'auto': existing behavior (density pre-filter + collision detection)
  * - 'endpoints': first and last bars only
  * - 'none': return empty array
  */
@@ -106,6 +108,10 @@ export function computeBarLabels(
   // Track whether each candidate fits within its stacked segment.
   // Non-stacked bars are always considered fitting (undefined = fits).
   const fitsInSegment: boolean[] = [];
+  // The display anchor x (start/end/middle reference point) for each candidate.
+  // Candidates carry the box's LEFT edge for collision math; on emit we map any
+  // horizontal nudge back onto this display anchor so textAnchor stays honored.
+  const displayAnchorX: number[] = [];
 
   const formatter = buildD3Formatter(labelFormat);
 
@@ -183,17 +189,32 @@ export function computeBarLabels(
       }
     }
 
-    // anchorY = bar vertical center. With dominant-baseline: central,
-    // SVG places the text center at this y coordinate.
-    const anchorY = mark.y + mark.height / 2;
+    // Collision math works in top-left-edge space so the AABB
+    // (rect = { x: anchorX, y: anchorY, width, height }) matches the label's
+    // real footprint. The renderer anchors text by textAnchor (start/end/
+    // middle) and centers it vertically (dominant-baseline: central), so we
+    // convert the display anchor to the box's top-left corner here and shift
+    // back on emit. Feeding the display anchor directly desynced the collision
+    // box from the drawn text (by width for end/middle, by textHeight/2
+    // vertically), letting adjacent bar labels pass the overlap check while
+    // visibly colliding.
+    const centerY = mark.y + mark.height / 2;
+    const anchorY = centerY - textHeight / 2;
+    const leftEdgeX =
+      textAnchor === 'end'
+        ? anchorX - textWidth
+        : textAnchor === 'middle'
+          ? anchorX - textWidth / 2
+          : anchorX;
 
     // Check if label text fits within the stacked segment
     const fits = !(isStacked && textWidth > mark.width - 2 * LABEL_PADDING);
 
+    displayAnchorX.push(anchorX);
     fitsInSegment.push(fits);
     candidates.push({
       text: valuePart,
-      anchorX,
+      anchorX: leftEdgeX,
       anchorY,
       width: textWidth,
       height: textHeight,
@@ -212,31 +233,27 @@ export function computeBarLabels(
 
   if (candidates.length === 0) return [];
 
-  // 'all': skip collision detection, mark everything visible
-  // (but hide labels that don't fit in their stacked segment)
-  if (density === 'all') {
-    return candidates.map((c, i) => ({
-      text: c.text,
-      x: c.anchorX,
-      y: c.anchorY,
-      style: c.style,
-      visible: fitsInSegment[i] !== false,
-    }));
-  }
-
-  // For 'auto' and 'endpoints': pre-mark candidates that don't fit their
-  // stacked segment as hidden before running collision detection.
+  // Every density that reaches here ('all' and 'auto') pre-hides candidates
+  // that don't fit their stacked segment, then runs collision resolution.
+  // 'all' just skips the density pre-filter above so every mark is a
+  // candidate; colliding losers are still hidden by resolveCollisions.
   const fittingCandidates: LabelCandidate[] = [];
+  const fittingOrigIndex: number[] = [];
   const unfittingIndices = new Set<number>();
   for (let i = 0; i < candidates.length; i++) {
     if (fitsInSegment[i] === false) {
       unfittingIndices.add(i);
     } else {
       fittingCandidates.push(candidates[i]);
+      fittingOrigIndex.push(i);
     }
   }
 
   const resolved = resolveCollisions(fittingCandidates);
+
+  // Shift resolved y back from top-edge space to the vertical center that the
+  // central-baseline renderer expects (see anchorY derivation above).
+  const halfHeight = FONT_SIZE * 1.2 * 0.5;
 
   // Re-insert hidden labels for candidates that didn't fit, preserving order
   const results: ResolvedLabel[] = [];
@@ -245,13 +262,29 @@ export function computeBarLabels(
     if (unfittingIndices.has(i)) {
       results.push({
         text: candidates[i].text,
-        x: candidates[i].anchorX,
-        y: candidates[i].anchorY,
+        x: displayAnchorX[i],
+        y: candidates[i].anchorY + halfHeight,
         style: candidates[i].style,
         visible: false,
       });
     } else {
-      results.push(resolved[resolvedIdx++]);
+      const r = resolved[resolvedIdx];
+      // Map any horizontal nudge from left-edge space back onto the display
+      // anchor so textAnchor (start/end/middle) stays honored.
+      const origIdx = fittingOrigIndex[resolvedIdx];
+      const nudgeX = r.x - fittingCandidates[resolvedIdx].anchorX;
+      resolvedIdx++;
+      results.push({
+        ...r,
+        x: displayAnchorX[origIdx] + nudgeX,
+        y: r.y + halfHeight,
+        connector: r.connector
+          ? {
+              ...r.connector,
+              from: { ...r.connector.from, y: r.connector.from.y + halfHeight },
+            }
+          : undefined,
+      });
     }
   }
 

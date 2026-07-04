@@ -541,11 +541,13 @@ describe('axis rendering', () => {
     expect(labels.length).toBeGreaterThan(0);
 
     const pad = layout.theme.spacing.xAxisLabelPadding;
+    const fontSize = layout.axes.x.tickLabelStyle.fontSize;
     for (const label of labels) {
-      // Anchored at the top edge so the gap holds regardless of font size.
-      expect(label.getAttribute('dominant-baseline')).toBe('hanging');
-      // The label top sits a full padding gap below the axis line.
-      expect(Number(label.getAttribute('y'))).toBeCloseTo(axisLineY + pad, 1);
+      // No dominant-baseline: the renderer positions the alphabetic baseline
+      // directly (WebKit mishandles hanging). The label TOP still sits a full
+      // padding gap below the axis line; the baseline is that top + ascent.
+      expect(label.getAttribute('dominant-baseline')).toBeNull();
+      expect(Number(label.getAttribute('y'))).toBeCloseTo(axisLineY + pad + fontSize * 0.8, 1);
     }
   });
 });

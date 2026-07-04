@@ -53,7 +53,7 @@ import {
   wireTooltipEvents,
   wireVoronoiTooltipEvents,
 } from './interactions';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
@@ -200,7 +200,12 @@ export function createChart<TData extends DataRow = DataRow>(
   const runtimeShownSeries = new Set<string>();
   let textEditCleanup: (() => void) | null = null;
 
-  const measureText = createMeasureText();
+  // Apply the root class up front so getComputedStyle can read --oc-font-family
+  // before we build the text measurer. Prefer an explicit theme font when set.
+  container.classList.add('oc-root');
+  const fontFamily = options?.theme?.fonts?.family ?? resolveFontFamily(container);
+  const measureText = createMeasureText(fontFamily);
+  let renderGen = 0;
 
   // ---------------------------------------------------------------------------
   // Compilation
@@ -774,6 +779,11 @@ export function createChart<TData extends DataRow = DataRow>(
         }
       });
     }
+    // Bump the render generation so tests (and consumers) can observe every
+    // full recompile, including the post-font-load one.
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
+
     if (isFirstRender) {
       isFirstRender = false;
     }
@@ -892,6 +902,20 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Initial render
   render();
+
+  // Recompile once after webfonts load. On real devices the primary font
+  // (e.g. Inter via display=swap) often swaps in after first paint, changing
+  // text metrics; without a re-measure, titles wrap wrong and labels collide.
+  // Desktop Chrome has the font cached, so it renders 'ready' immediately.
+  const pending = scheduleFontReload(
+    fontFamily,
+    () => !destroyed,
+    () => {
+      resize();
+      container.dataset.ocFontsState = 'ready';
+    },
+  );
+  container.dataset.ocFontsState = pending ? 'pending' : 'ready';
 
   // Set up responsive resize
   if (options?.responsive !== false) {

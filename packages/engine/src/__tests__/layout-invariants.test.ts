@@ -179,8 +179,10 @@ describe('layout invariants', () => {
       );
     });
 
-    // Rotated long labels overflow the SVG bottom edge
-    it.fails('long labels, no chrome at 800px', () => {
+    // Rotated long labels used to overflow the SVG bottom edge; the rotated-
+    // label extent math (textWidth*|sin θ| + lineHeight*|cos θ|) now reserves
+    // the correct bottom margin.
+    it('long labels, no chrome at 800px', () => {
       compileAndCheck(
         {
           mark: 'bar',

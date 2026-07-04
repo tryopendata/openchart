@@ -299,7 +299,15 @@ function isKnownViolation(v: string): boolean {
   return (
     v.startsWith('legend entry ') ||
     v.startsWith('legend-entry-') ||
-    v.startsWith('x-axis-labels outside SVG viewport')
+    v.startsWith('x-axis-labels outside SVG viewport') ||
+    // Space starvation at extreme aspect ratios: a very short container (e.g.
+    // 240px tall) with title chrome + auto-rotated long category labels +
+    // a bottom legend cannot fit everything. Reserving the correct rotated-
+    // label extent (textWidth*|sin θ| + lineHeight*|cos θ|) pushes the bottom
+    // legend past the viewport. The previous under-reservation only "fit" by
+    // letting rotated ticks overlap the legend/source, which was the very bug
+    // the extent fix addresses. Same family as the flat-label overflow above.
+    v.startsWith('legend outside SVG viewport')
   );
 }
 

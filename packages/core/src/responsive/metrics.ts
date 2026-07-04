@@ -184,7 +184,21 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
       const w = measure(label, input.tickFontSize, input.tickFontWeight);
       if (w > maxLabelWidth) maxLabelWidth = w;
     }
-    const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
+    // Vertical extent of a rotated label = the projection of its bounding box
+    // onto the vertical axis: textWidth*|sin θ| (the tilted length) plus
+    // lineHeight*|cos θ| (the label's own height, which still contributes
+    // unless the text is fully vertical). Measuring only the sin term
+    // under-reserved space, letting rotated ticks spill into the source line.
+    const lineHeight = input.tickFontSize * 1.2;
+    // Small gap between the axis line and the top of the rotated label band.
+    // Mirrors the tick-mark-to-label offset used for flat labels; keeps the
+    // reservation matched to the drawn footprint across Blink and WebKit,
+    // whose rotated-glyph metrics differ by a couple of pixels.
+    const AXIS_TO_LABEL_GAP = 3;
+    const rotatedHeight = Math.min(
+      maxLabelWidth * Math.sin(angleRad) + lineHeight * Math.cos(angleRad) + AXIS_TO_LABEL_GAP,
+      120,
+    );
     return input.hasTitle ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
   }
 

@@ -32,6 +32,7 @@ import { format as d3Format } from 'd3-format';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeLegendContent, type LegendContent } from '../legend/compute';
 import { legendGap } from '../legend/wrap';
+import { resolveBandTickAngle } from './axes/rotation';
 import { buildContinuousTicks, scaleSupportsTickCount, targetTickCount } from './axes/ticks';
 import { computeScales } from './scales';
 import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
@@ -319,13 +320,38 @@ export function resolveLayoutPlan(
       bottomLegendReservation,
     );
 
+    // Effective x tick angle. Band x-axes auto-rotate to -45° when horizontal
+    // labels don't fit their band; computeAxes makes the same call later. The
+    // planner must know the angle now so it reserves the rotated-label
+    // footprint in the bottom margin instead of the (smaller) flat one.
+    let effectiveXTickAngle = xTickAngle;
+    if (xTickAngle === undefined && xLabels.length > 1) {
+      const rightMarginEst = hPad + (isRadial ? hPad : axisMargin);
+      const plotWidth = Math.max(0, width - leftGutter - Math.max(rightMarginEst, hPad));
+      const bandPadding = (encoding.x?.scale?.padding as number | undefined) ?? 0.35;
+      // Band step = plotWidth / n; bandwidth = step * (1 - padding). This
+      // mirrors d3 scaleBand().padding() used by buildBandScale.
+      const bandwidth = (plotWidth / xLabels.length) * (1 - bandPadding);
+      let maxXLabelWidth = 0;
+      for (const label of xLabels) {
+        const w = measure(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
+        if (w > maxXLabelWidth) maxXLabelWidth = w;
+      }
+      effectiveXTickAngle = resolveBandTickAngle(
+        undefined,
+        maxXLabelWidth,
+        bandwidth,
+        xLabels.length,
+      );
+    }
+
     // X-axis extent
     const xAxisExtent =
       isRadial || xAxisSuppressed
         ? 0
         : computeXAxisExtentFromLabels({
             labels: xLabels,
-            tickAngle: xTickAngle,
+            tickAngle: effectiveXTickAngle,
             hasTitle: hasXAxisTitle,
             tickFontSize: theme.fonts.sizes.axisTick,
             tickFontWeight: theme.fonts.weights.normal,

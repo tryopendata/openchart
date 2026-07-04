@@ -24,7 +24,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
@@ -88,7 +88,12 @@ export function createBarList(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
-  const measureText = createMeasureText();
+  // Apply the root class up front so getComputedStyle sees --oc-font-family
+  // before the text measurer is built.
+  container.classList.add('oc-barlist-root');
+  const fontFamily = options?.theme?.fonts?.family ?? resolveFontFamily(container);
+  const measureText = createMeasureText(fontFamily);
+  let renderGen = 0;
 
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
@@ -233,6 +238,9 @@ export function createBarList(
         }
       });
     }
+
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
   }
 
   function update(newSpec: BarListSpec): void {
@@ -304,13 +312,24 @@ export function createBarList(
   }
 
   // Initialize
-  container.classList.add('oc-barlist-root');
   if (resolveDarkMode(options?.darkMode)) {
     container.classList.add('oc-dark');
   }
 
   currentLayout = compile();
   render(true);
+
+  // Recompile once after webfonts load so row labels aren't stuck measured
+  // against fallback metrics on real devices.
+  const fontsPending = scheduleFontReload(
+    fontFamily,
+    () => !destroyed,
+    () => {
+      resize();
+      container.dataset.ocFontsState = 'ready';
+    },
+  );
+  container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   if (options?.responsive !== false) {
     disconnectResize = observeResize(container, () => resize());

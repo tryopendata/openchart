@@ -23,7 +23,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { renderSankeySVG } from './sankey-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
@@ -122,7 +122,12 @@ export function createSankey(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
-  const measureText = createMeasureText();
+  // Apply the root class up front so getComputedStyle sees --oc-font-family
+  // before the text measurer is built.
+  container.classList.add('oc-sankey-root');
+  const fontFamily = options?.theme?.fonts?.family ?? resolveFontFamily(container);
+  const measureText = createMeasureText(fontFamily);
+  let renderGen = 0;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -410,6 +415,9 @@ export function createSankey(
         }
       });
     }
+
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
   }
 
   // ---------------------------------------------------------------------------
@@ -495,6 +503,7 @@ export function createSankey(
     svgElement = null;
 
     container.classList.remove('oc-dark');
+    container.classList.remove('oc-sankey-root');
   }
 
   // ---------------------------------------------------------------------------
@@ -537,11 +546,26 @@ export function createSankey(
         }
       });
     }
+
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
   } catch (err) {
     console.error('[viz] Sankey mount failed:', err);
     // Re-throw so callers can handle the error rather than silently returning a broken instance
     throw err;
   }
+
+  // Recompile once after webfonts load so late-swapping fonts don't leave
+  // node labels measured against fallback metrics.
+  const fontsPending = scheduleFontReload(
+    fontFamily,
+    () => !destroyed,
+    () => {
+      resize();
+      container.dataset.ocFontsState = 'ready';
+    },
+  );
+  container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   // Responsive resize
   if (options?.responsive !== false) {

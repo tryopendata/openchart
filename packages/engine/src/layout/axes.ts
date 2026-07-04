@@ -27,6 +27,7 @@ import {
   X_AXIS_TITLE_BAND_ROTATED,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
+import { resolveBandTickAngle } from './axes/rotation';
 import { measureLabel, thinTicksUntilFit, ticksOverlap } from './axes/thinning';
 import {
   buildContinuousTicks,
@@ -131,6 +132,40 @@ const CONTINUOUS_TICK_FLOOR = 4;
 const OVERSHOOT_TOLERANCE = 1.5;
 
 /**
+ * Quantitative axes must always render at least this many tick labels. A lone
+ * tick reads as a broken axis (a real iPhone blog chart degenerated to a
+ * single "80" when D3's `scale.ticks(2)` collapsed a tight domain like
+ * [73, 88] to one nice value). This floor holds at every width.
+ */
+const MIN_QUANTITATIVE_TICKS = 2;
+
+/**
+ * Ensure a continuous scale yields at least MIN_QUANTITATIVE_TICKS ticks.
+ *
+ * D3's `scale.ticks(n)` picks nice step sizes, so a tight domain can collapse
+ * to a single value at low counts (`[73, 88].ticks(2)` → `[80]`). When that
+ * happens, request progressively higher counts until at least two ticks
+ * appear. Prefers the smallest count that clears the floor, which keeps the
+ * ticks spread toward the domain endpoints rather than clustered.
+ */
+function ensureMinContinuousTicks(
+  scale: ResolvedScales['x' | 'y'],
+  ticks: AxisTick[],
+  requestedCount: number,
+): AxisTick[] {
+  if (ticks.length >= MIN_QUANTITATIVE_TICKS) return ticks;
+  if (!scale || !scaleSupportsTickCount(scale)) return ticks;
+
+  let best = ticks;
+  for (let n = Math.max(requestedCount, MIN_QUANTITATIVE_TICKS) + 1; n <= 10; n++) {
+    const candidate = buildContinuousTicks(scale, n);
+    if (candidate.length >= MIN_QUANTITATIVE_TICKS) return candidate;
+    if (candidate.length > best.length) best = candidate;
+  }
+  return best;
+}
+
+/**
  * Fit continuous ticks by re-requesting progressively fewer ticks from the
  * scale. D3's `scale.ticks(n)` always returns evenly-spaced round values, so
  * stepping `n` down keeps spacing uniform — unlike middle-pruning which can
@@ -159,10 +194,15 @@ function fitContinuousTicks(
 ): AxisTick[] {
   if (!scale || !scaleSupportsTickCount(scale)) return initialTicks;
 
+  // Floor the initial set: a tight domain can make D3 return a single nice
+  // value, which would otherwise pass straight through (no overlap, no
+  // overshoot) and render as a lone tick.
+  const flooredTicks = ensureMinContinuousTicks(scale, initialTicks, initialCount);
+
   const tolerance = initialCount * OVERSHOOT_TOLERANCE;
-  const overshoots = initialTicks.length > tolerance;
-  const overlaps = ticksOverlap(initialTicks, fontSize, fontWeight, measureText, orientation);
-  if (!overshoots && !overlaps) return initialTicks;
+  const overshoots = flooredTicks.length > tolerance;
+  const overlaps = ticksOverlap(flooredTicks, fontSize, fontWeight, measureText, orientation);
+  if (!overshoots && !overlaps) return flooredTicks;
 
   // Enforce the floor only when the axis is long enough to fit that many
   // labels without overlap. Very short axes can fall below.
@@ -193,7 +233,8 @@ function fitContinuousTicks(
   // No candidate fit cleanly. Thin whatever most recently met the floor; if
   // nothing did, synthesize a floor-count set directly from the scale so we
   // never hand the overshot initialTicks to the middle-pruning thinner.
-  const fallback = bestWithinFloor ?? buildContinuousTicks(scale, floor);
+  const rawFallback = bestWithinFloor ?? buildContinuousTicks(scale, floor);
+  const fallback = ensureMinContinuousTicks(scale, rawFallback, floor);
   return thinTicksUntilFit(fallback, fontSize, fontWeight, measureText, orientation);
 }
 
@@ -385,9 +426,7 @@ export function computeAxes(
         const w = measureLabel(t.label, fontSize, fontWeight, measureText);
         if (w > maxLabelWidth) maxLabelWidth = w;
       }
-      if (maxLabelWidth > bandwidth * 0.85) {
-        tickAngle = -45;
-      }
+      tickAngle = resolveBandTickAngle(undefined, maxLabelWidth, bandwidth, allTicks.length);
     }
 
     // Thin tick labels to prevent overlap (skip for explicit tick values).
@@ -554,38 +593,28 @@ export function computeAxes(
   const totalWidth = dataContext?.totalWidth ?? chartArea.x + chartArea.width;
 
   if (result.x) {
-    let rotatedHeight: number | undefined;
-    if (result.x.tickAngle && Math.abs(result.x.tickAngle) > 10) {
-      const angleRad = Math.abs(result.x.tickAngle) * (Math.PI / 180);
-      let maxLabelWidth = 40;
-      for (const tick of result.x.ticks) {
-        const w = estimateTextWidth(
-          tick.label,
-          result.x.tickLabelStyle.fontSize,
-          result.x.tickLabelStyle.fontWeight,
-        );
-        if (w > maxLabelWidth) maxLabelWidth = w;
-      }
-      rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
-    }
+    const isRotated = !!result.x.tickAngle && Math.abs(result.x.tickAngle) > 10;
 
-    if (rotatedHeight != null) {
-      result.x.extent = result.x.label ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
-    } else {
-      result.x.extent = computeXAxisExtentFromLabels({
-        labels: result.x.ticks.map((t) => t.label),
-        tickAngle: result.x.tickAngle,
-        hasTitle: !!result.x.label,
-        tickFontSize: result.x.tickLabelStyle.fontSize,
-        tickFontWeight: result.x.tickLabelStyle.fontWeight,
-        xAxisHeight: theme.spacing.xAxisHeight,
-      });
-    }
+    // Single source of truth for the x-axis vertical extent (rotated or flat).
+    // computeXAxisExtentFromLabels applies the correct rotated-extent math
+    // (textWidth*|sin θ| + lineHeight*|cos θ|), so the reserved bottom margin
+    // matches what the labels actually occupy.
+    result.x.extent = computeXAxisExtentFromLabels({
+      labels: result.x.ticks.map((t) => t.label),
+      tickAngle: result.x.tickAngle,
+      hasTitle: !!result.x.label,
+      tickFontSize: result.x.tickLabelStyle.fontSize,
+      tickFontWeight: result.x.tickLabelStyle.fontWeight,
+      xAxisHeight: theme.spacing.xAxisHeight,
+    });
 
     if (result.x.label) {
+      // Rotated: place the title just below the tick band (extent already
+      // includes the rotated label height and the title band). Flat: fixed 35px.
+      const rotatedBand = isRotated ? result.x.extent - X_AXIS_TITLE_BAND_ROTATED + 14 : 35;
       result.x.titlePosition = {
         x: chartArea.x + chartArea.width / 2,
-        y: chartArea.y + chartArea.height + (rotatedHeight != null ? rotatedHeight + 14 : 35),
+        y: chartArea.y + chartArea.height + rotatedBand,
       };
     }
   }

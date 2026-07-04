@@ -1123,3 +1123,65 @@ describe('axis extent and titlePosition', () => {
     expect(axes.y!.titlePosition!.angle).toBe(-90);
   });
 });
+
+describe('quantitative axis minimum tick floor', () => {
+  // A tight domain like [73, 88] makes D3's `scale.ticks(2)` collapse to a
+  // single nice value ([80]). Before the floor, this rendered as a lone tick
+  // (a real iPhone blog chart showed only "80"). The floor must hold even at
+  // very narrow widths where the target count drops to 2.
+  const tightDomainSpec: NormalizedChartSpec = {
+    markType: 'bar',
+    markDef: { type: 'bar', orient: 'horizontal' },
+    data: [
+      { district: 'A', score: 79 },
+      { district: 'B', score: 73 },
+      { district: 'C', score: 88 },
+    ],
+    encoding: {
+      y: { field: 'district', type: 'nominal' },
+      x: {
+        field: 'score',
+        type: 'quantitative',
+        axis: { format: '.0f', grid: true },
+        scale: { domain: [73, 88], nice: false },
+      },
+    },
+    chrome: {},
+    annotations: [],
+    responsive: true,
+    theme: {},
+    darkMode: 'off',
+    labels: { density: 'all', format: '.0f' },
+  };
+
+  it('renders >= 2 ticks at a very narrow (320px-ish) chart width', () => {
+    // Narrow chart area forces the minimal density target count down to 2,
+    // where D3 collapses [73, 88] to the single tick "80" without the floor.
+    const narrowArea = { x: 90, y: 50, width: 90, height: 180 };
+    const scales = computeScales(tightDomainSpec, narrowArea, tightDomainSpec.data);
+    const axes = computeAxes(scales, narrowArea, minimalStrategy, theme, undefined, {
+      data: tightDomainSpec.data,
+      encoding: tightDomainSpec.encoding as Encoding,
+      markType: 'bar',
+    });
+
+    expect(axes.x).toBeDefined();
+    expect(axes.x!.ticks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('holds the 2-tick floor across a sweep of narrow widths', () => {
+    for (const width of [60, 90, 120, 220, 320]) {
+      const area = { x: 90, y: 50, width, height: 180 };
+      const scales = computeScales(tightDomainSpec, area, tightDomainSpec.data);
+      const axes = computeAxes(scales, area, minimalStrategy, theme, undefined, {
+        data: tightDomainSpec.data,
+        encoding: tightDomainSpec.encoding as Encoding,
+        markType: 'bar',
+      });
+      expect(
+        axes.x!.ticks.length,
+        `expected >= 2 ticks at width ${width}, got ${axes.x!.ticks.length}`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+});

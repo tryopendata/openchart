@@ -23,7 +23,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
@@ -118,7 +118,12 @@ export function createTileMap(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
-  const measureText = createMeasureText();
+  // Apply the root class up front so getComputedStyle sees --oc-font-family
+  // before the text measurer is built.
+  container.classList.add('oc-tilemap-root');
+  const fontFamily = options?.theme?.fonts?.family ?? resolveFontFamily(container);
+  const measureText = createMeasureText(fontFamily);
+  let renderGen = 0;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -273,6 +278,9 @@ export function createTileMap(
         }
       });
     }
+
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
   }
 
   function update(newSpec: TileMapSpec): void {
@@ -365,8 +373,8 @@ export function createTileMap(
   // Initialize
   // ---------------------------------------------------------------------------
 
-  // Add root class for CSS custom properties (tokens, tooltip styles)
-  container.classList.add('oc-tilemap-root');
+  // Root class was applied before the measurer was built (see above); dark
+  // mode class still applies here.
   if (resolveDarkMode(options?.darkMode)) {
     container.classList.add('oc-dark');
   }
@@ -374,6 +382,18 @@ export function createTileMap(
   // Initial compile and render (animate on first mount)
   currentLayout = compile();
   render(true);
+
+  // Recompile once after webfonts load so labels aren't stuck measured
+  // against fallback metrics on real devices.
+  const fontsPending = scheduleFontReload(
+    fontFamily,
+    () => !destroyed,
+    () => {
+      resize();
+      container.dataset.ocFontsState = 'ready';
+    },
+  );
+  container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   // Setup responsive resizing
   if (options?.responsive !== false) {
