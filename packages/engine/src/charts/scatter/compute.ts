@@ -113,19 +113,24 @@ export function computeScatterMarks(
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   const isSequentialColor = colorEnc?.type === 'quantitative';
   const colorField = colorEnc?.field;
-  const sizeField = encoding.size && 'field' in encoding.size ? encoding.size.field : undefined;
+  const sizeEnc = encoding.size && 'field' in encoding.size ? encoding.size : undefined;
+  const sizeField = sizeEnc?.field;
 
-  // Build a size scale for bubble variant
+  // Build a size scale for bubble variant. Domain and radius range are
+  // author-overridable via `encoding.size.scale.{domain,range}`: an explicit
+  // domain (e.g. [0, 900]) keeps the largest datum below the max radius so
+  // dense clusters don't blob together, and an explicit range caps the radii.
   let sizeScale: ((v: number) => number) | undefined;
   if (sizeField) {
     const sizeValues = spec.data.map((d) => Number(d[sizeField])).filter((v) => Number.isFinite(v));
 
-    const sizeMin = min(sizeValues) ?? 0;
-    const sizeMax = max(sizeValues) ?? 1;
+    const explicitDomain = sizeEnc?.scale?.domain as [number, number] | undefined;
+    const [sizeMin, sizeMax] = explicitDomain ?? [min(sizeValues) ?? 0, max(sizeValues) ?? 1];
 
-    sizeScale = scaleSqrt()
-      .domain([sizeMin, sizeMax])
-      .range([MIN_BUBBLE_RADIUS, MAX_BUBBLE_RADIUS]);
+    const explicitRange = sizeEnc?.scale?.range as [number, number] | undefined;
+    const [radiusMin, radiusMax] = explicitRange ?? [MIN_BUBBLE_RADIUS, MAX_BUBBLE_RADIUS];
+
+    sizeScale = scaleSqrt().domain([sizeMin, sizeMax]).range([radiusMin, radiusMax]).clamp(true);
   }
 
   const marks: PointMark[] = [];
