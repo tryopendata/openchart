@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.5.0](https://github.com/tryopendata/openchart/compare/core-v7.4.1...core-v7.5.0) (2026-07-04)
+
+
+### Features
+
+* honor explicit domain and range on scatter bubble size scale (#87) ([718d53d](https://github.com/tryopendata/openchart/commit/718d53d))
+
 ## [7.4.1](https://github.com/tryopendata/openchart/compare/core-v7.4.0...core-v7.4.1) (2026-07-04)
 
 
