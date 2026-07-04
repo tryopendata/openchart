@@ -23,11 +23,16 @@ export const scatterRenderer: ChartRenderer = (spec, scales, chartArea, strategy
   const pointMarks = computeScatterMarks(spec, scales, chartArea, strategy);
   const marks: Mark[] = [...pointMarks];
 
-  // Add trend line if there are enough points
-  const trendLine = computeTrendLine(pointMarks);
-  if (trendLine) {
-    // Trend line goes behind points
-    marks.unshift(trendLine);
+  // Regression trend line renders by default but is opt-out via
+  // `mark: { type: 'point', trendline: false }`. Rendering it unconditionally
+  // competed with author-drawn reference lines (e.g. a manual x=y diagonal),
+  // so a chart could show two diagonals.
+  if (spec.markDef?.trendline !== false) {
+    const trendLine = computeTrendLine(pointMarks);
+    if (trendLine) {
+      // Trend line goes behind points
+      marks.unshift(trendLine);
+    }
   }
 
   return marks;
