@@ -3,7 +3,7 @@
  */
 
 import type { ChartLayout } from '@opendata-ai/openchart-core';
-import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH } from '@opendata-ai/openchart-core';
+import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, textAscent } from '@opendata-ai/openchart-core';
 import { createSVGElement, setAttrs, XLINK_NS } from './svg-dom';
 
 const BRAND_URL = 'https://tryopendata.ai';
@@ -45,13 +45,15 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
 
   // "try" in normal weight, "OpenData" in semibold, ".ai" in normal weight,
   // rendered as a single right-aligned text element with three tspans.
-  // Use hanging baseline to align top-edge with source/byline chrome text.
+  // chromeY is the top edge shared with source/byline chrome text; anchor the
+  // shared alphabetic baseline from the largest tspan's ascent. (Hanging
+  // baseline is avoided: WebKit positions it differently and never inherits
+  // it into tspans, which scattered the three spans on iOS Safari.)
   const BRAND_LARGE = 16;
   const text = createSVGElement('text');
   setAttrs(text, {
     x: rightEdge,
-    y: chromeY,
-    'dominant-baseline': 'hanging',
+    y: chromeY + textAscent(BRAND_LARGE),
     'font-family': layout.theme.fonts.family,
     'font-size': BRAND_FONT_SIZE,
     'text-anchor': 'end',

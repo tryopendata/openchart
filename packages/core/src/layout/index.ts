@@ -13,5 +13,6 @@ export {
   estimateTextWidth,
   heuristicMeasure,
   resolveMeasurer,
+  textAscent,
 } from './text-measure';
 export { wrapText } from './text-wrap';

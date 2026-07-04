@@ -8,6 +8,7 @@ import {
   estimateTextWidth,
   getAxisTitleOffset,
   TICK_LABEL_OFFSET,
+  textAscent,
 } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
@@ -86,16 +87,15 @@ function renderAxis(
         });
       } else {
         const xLabelPad = axis.labelPadding ?? layout.theme.spacing.xAxisLabelPadding;
-        // Anchor at the text's top edge (hanging baseline) so xLabelPad is the
-        // literal gap between the axis line and the top of the label, regardless
-        // of font size. With the default alphabetic baseline the offset lands at
-        // the text baseline instead, so large fonts let the label top creep up
-        // and hug (or overlap) the axis line.
+        // xLabelPad is the literal gap between the axis line and the TOP of
+        // the label regardless of font size, so shift down by the ascent to
+        // land on the alphabetic baseline. (dominant-baseline:hanging would
+        // express this directly, but WebKit positions hanging from different
+        // font metrics than Blink, drifting labels on iOS Safari.)
         setAttrs(label, {
           x: tick.position,
-          y: area.y + area.height + xLabelPad,
+          y: area.y + area.height + xLabelPad + textAscent(axis.tickLabelStyle.fontSize),
           'text-anchor': 'middle',
-          'dominant-baseline': 'hanging',
         });
       }
 

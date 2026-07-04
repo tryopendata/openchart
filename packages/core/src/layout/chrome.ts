@@ -67,6 +67,11 @@ function buildTextStyle(
   const baseFontSize = overrides?.fontSize ?? defaults.fontSize;
   const fontSize = hasExplicitSize ? baseFontSize : scaleFontSize(baseFontSize, width);
 
+  // No dominantBaseline: chrome y positions are top-edge coordinates and
+  // renderers convert to the alphabetic baseline via textAscent(). WebKit
+  // renders `hanging` from different font metrics than Blink and never
+  // inherits it into tspans (bugs 139258/297455), which shifted wrapped
+  // titles above the container on iOS Safari.
   return {
     fontFamily: overrides?.fontFamily ?? fontFamily,
     fontSize,
@@ -74,7 +79,6 @@ function buildTextStyle(
     fill: overrides?.color ?? textColor ?? defaults.color,
     lineHeight: defaults.lineHeight,
     textAnchor: 'start',
-    dominantBaseline: 'hanging',
   };
 }
 
