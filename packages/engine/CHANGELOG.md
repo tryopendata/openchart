@@ -1,5 +1,30 @@
 # Changelog
 
+## [7.4.1](https://github.com/tryopendata/openchart/compare/core-v7.4.0...core-v7.4.1) (2026-07-04)
+
+
+### Features
+
+* theme-driven metric font sizes and refline fontSize/fontWeight overrides (#82) ([3b6b46f](https://github.com/tryopendata/openchart/commit/3b6b46f))
+* axis title offset, extendToEdges, hanging baseline, legend alignment (#81) ([5b9f7d2](https://github.com/tryopendata/openchart/commit/5b9f7d2))
+* area chart mark.point support and point scale paddingOuter alias (#80) ([f66e160](https://github.com/tryopendata/openchart/commit/f66e160))
+* theme typography controls, axis label suffix, and vivid palette (#79) ([71f3981](https://github.com/tryopendata/openchart/commit/71f3981))
+
+
+### Bug Fixes
+
+* drop phantom legend entry from rows missing the color field (#86) ([32bcd29](https://github.com/tryopendata/openchart/commit/32bcd29))
+* iOS Safari text layout, font-load recompile, and mobile label collisions (#85) ([5143eb0](https://github.com/tryopendata/openchart/commit/5143eb0))
+* horizontal bars overrun y-axis labels when x-domain excludes zero (#83) ([65dc8b1](https://github.com/tryopendata/openchart/commit/65dc8b1))
+* tighten chrome-to-legend gap and y-axis title clearance (#77) ([8d81359](https://github.com/tryopendata/openchart/commit/8d81359))
+* align table footer source text and brand watermark on one line ([b5ffbba](https://github.com/tryopendata/openchart/commit/b5ffbba))
+* preserve explicit chrome color overrides through dark-mode adaptation ([f555c85](https://github.com/tryopendata/openchart/commit/f555c85))
+
+
+### Refactoring
+
+* prod-ready cleanup for measure-then-freeze layout (#84) ([83dc7b4](https://github.com/tryopendata/openchart/commit/83dc7b4))
+
 ## [7.4.0](https://github.com/tryopendata/openchart/compare/core-v7.3.0...core-v7.4.0) (2026-07-04)
 
 
