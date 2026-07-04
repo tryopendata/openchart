@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.6.1](https://github.com/tryopendata/openchart/compare/core-v7.6.0...core-v7.6.1) (2026-07-04)
+
+
+### Bug Fixes
+
+* compile leaf layers in the primary layout's chart area (#89) ([117d09f](https://github.com/tryopendata/openchart/commit/117d09f))
+
 ## [7.6.0](https://github.com/tryopendata/openchart/compare/core-v7.5.0...core-v7.6.0) (2026-07-04)
 
 
