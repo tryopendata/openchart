@@ -753,4 +753,98 @@ describe('compileLayer', () => {
 
     void l0RectCount; // used for conceptual clarity above
   });
+
+  it('positions leaf-layer marks in the primary layout coordinate space', () => {
+    // Regression: leaves were compiled without the layer-level chrome, legend,
+    // and theme that buildPrimarySpec merges into the primary spec, so their
+    // marks landed in a different chart area than the rendered axes. A scatter
+    // with a title + top legend drew every bubble up-and-left of where the
+    // axis said it should be.
+    const spec: LayerSpec = {
+      chrome: { title: 'Scatter with diagonal', subtitle: 'primary vs leaf areas' },
+      legend: { position: 'top' },
+      layer: [
+        {
+          mark: { type: 'point', filled: true },
+          data: [
+            { x: 10, y: 10, group: 'a' },
+            { x: 50, y: 50, group: 'b' },
+            { x: 90, y: 90, group: 'a' },
+          ],
+          encoding: {
+            x: {
+              field: 'x',
+              type: 'quantitative' as const,
+              scale: { domain: [0, 100], nice: false },
+            },
+            y: {
+              field: 'y',
+              type: 'quantitative' as const,
+              scale: { domain: [0, 100], nice: false },
+            },
+            color: { field: 'group', type: 'nominal' as const },
+          },
+        },
+        {
+          mark: { type: 'rule', stroke: '#888', strokeWidth: 1 },
+          data: [{ x: 0, y: 0, x2: 100, y2: 100 }],
+          encoding: {
+            x: {
+              field: 'x',
+              type: 'quantitative' as const,
+              scale: { domain: [0, 100], nice: false },
+            },
+            y: {
+              field: 'y',
+              type: 'quantitative' as const,
+              scale: { domain: [0, 100], nice: false },
+            },
+            x2: { field: 'x2' },
+            y2: { field: 'y2' },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+
+    // Axis-implied pixel position for a data value, derived from rendered ticks.
+    const xTicks = layout.axes.x?.ticks ?? [];
+    const yTicks = layout.axes.y?.ticks ?? [];
+    expect(xTicks.length).toBeGreaterThanOrEqual(2);
+    expect(yTicks.length).toBeGreaterThanOrEqual(2);
+    const xFirst = xTicks[0];
+    const xLast = xTicks[xTicks.length - 1];
+    const yFirst = yTicks[0];
+    const yLast = yTicks[yTicks.length - 1];
+    const axisX = (v: number) =>
+      xFirst.position +
+      ((v - (xFirst.value as number)) / ((xLast.value as number) - (xFirst.value as number))) *
+        (xLast.position - xFirst.position);
+    const axisY = (v: number) =>
+      yFirst.position +
+      ((v - (yFirst.value as number)) / ((yLast.value as number) - (yFirst.value as number))) *
+        (yLast.position - yFirst.position);
+
+    const points = layout.marks.filter((m) => m.type === 'point');
+    expect(points.length).toBe(3);
+    const expected = [10, 50, 90];
+    points.forEach((mark, i) => {
+      const pm = mark as unknown as { cx: number; cy: number };
+      expect(Math.abs(pm.cx - axisX(expected[i]))).toBeLessThan(1.5);
+      expect(Math.abs(pm.cy - axisY(expected[i]))).toBeLessThan(1.5);
+    });
+
+    // The diagonal rule from the second leaf must span the same coordinate space.
+    const rule = layout.marks.find((m) => m.type === 'rule') as unknown as
+      | { x1: number; y1: number; x2: number; y2: number }
+      | undefined;
+    expect(rule).toBeDefined();
+    if (rule) {
+      expect(Math.abs(rule.x1 - axisX(0))).toBeLessThan(1.5);
+      expect(Math.abs(rule.x2 - axisX(100))).toBeLessThan(1.5);
+      expect(Math.abs(rule.y1 - axisY(0))).toBeLessThan(1.5);
+      expect(Math.abs(rule.y2 - axisY(100))).toBeLessThan(1.5);
+    }
+  });
 });

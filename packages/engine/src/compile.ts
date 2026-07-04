@@ -610,7 +610,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     plan.xAxisExtent,
   );
   const dims = computeDimensions(chartSpec, options, legendStub, theme, strategy, watermark, plan);
-  const chartArea = dims.chartArea;
+  // A frozen area (set by compileLayer for leaf layers) overrides the computed
+  // one so all layers share the primary layout's coordinate space.
+  const chartArea = options.frozenChartArea ?? dims.chartArea;
 
   // Place legend in its final position relative to the computed chart area.
   const finalLegend = placeLegend(
