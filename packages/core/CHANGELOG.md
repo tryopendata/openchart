@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.4.0](https://github.com/tryopendata/openchart/compare/core-v7.3.0...core-v7.4.0) (2026-07-04)
+
+
+### Bug Fixes
+
+* iOS Safari text layout, font-load recompile, and mobile label collisions (#85) ([5143eb0](https://github.com/tryopendata/openchart/commit/5143eb0))
+
 ## [7.3.0](https://github.com/tryopendata/openchart/compare/core-v7.2.4...core-v7.3.0) (2026-07-03)
 
 
