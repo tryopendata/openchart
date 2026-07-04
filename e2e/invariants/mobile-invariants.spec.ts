@@ -21,6 +21,13 @@ interface StoryCase {
   slug: string;
   /** Which axis is quantitative, for the min-tick rule. */
   quantAxis: 'x' | 'y';
+  /**
+   * Minimum readable thickness (px) for horizontal bar marks. When set, Rule 5
+   * asserts every rendered bar is at least this tall on narrow viewports, where
+   * the engine reclaims band whitespace to keep grouped bars legible. Matches
+   * MIN_GROUPED_BAR_THICKNESS in the engine (tied to fontSize-10 value labels).
+   */
+  minBarThickness?: number;
 }
 
 const stories: StoryCase[] = [
@@ -34,6 +41,7 @@ const stories: StoryCase[] = [
     name: 'grouped-bars-many-rows',
     slug: 'mobile-regression--grouped-bars-many-rows',
     quantAxis: 'x',
+    minBarThickness: 8,
   },
   {
     name: 'grouped-bars-sparse-ticks',
@@ -44,7 +52,7 @@ const stories: StoryCase[] = [
   { name: 'chrome-all-elements', slug: 'chrome--chrome-all-elements', quantAxis: 'y' },
 ];
 
-for (const { name, slug, quantAxis } of stories) {
+for (const { name, slug, quantAxis, minBarThickness } of stories) {
   test(`mobile invariants: ${name}`, async ({ page }) => {
     await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
     await page.waitForSelector('.oc-root svg.oc-chart');
@@ -52,7 +60,7 @@ for (const { name, slug, quantAxis } of stories) {
     // Let entrance animation and any post-font relayout settle.
     await page.waitForTimeout(600);
 
-    const violations = await page.evaluate((quantAxisArg) => {
+    const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg }) => {
       const violations: string[] = [];
       const root = document.querySelector('.oc-root');
       const svg = root?.querySelector('svg.oc-chart');
@@ -140,8 +148,25 @@ for (const { name, slug, quantAxis } of stories) {
         );
       }
 
+      // Rule 5: horizontal bar marks stay above the readable-thickness floor on
+      // narrow viewports. Only asserted where the engine's whitespace-reclaim
+      // applies (plot narrower than NARROW_VIEWPORT_MAX); on wide/desktop plots
+      // the reclaim is intentionally skipped, so the desktop project skips this.
+      if (minBarThicknessArg != null && window.innerWidth < 500) {
+        const barRects = Array.from(svg.querySelectorAll('.oc-mark-rect rect'));
+        for (const rect of barRects) {
+          const h = rect.getBoundingClientRect().height;
+          // Ignore zero-height (hidden) rects; assert on visible bars only.
+          if (h > 0 && h < minBarThicknessArg - 0.5) {
+            violations.push(
+              `bar mark too thin: ${h.toFixed(1)}px < ${minBarThicknessArg}px floor`,
+            );
+          }
+        }
+      }
+
       return violations;
-    }, quantAxis);
+    }, { quantAxisArg: quantAxis, minBarThicknessArg: minBarThickness });
 
     expect(violations, violations.join('\n')).toEqual([]);
   });

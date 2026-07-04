@@ -17,7 +17,7 @@ import type {
   Rect,
   RectMark,
 } from '@opendata-ai/openchart-core';
-import { isGradientDef } from '@opendata-ai/openchart-core';
+import { isGradientDef, NARROW_VIEWPORT_MAX } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -54,6 +54,16 @@ function orientGradientForHorizontalBar(grad: GradientDef): GradientDef {
 
 const MIN_BAR_WIDTH = 1;
 
+/**
+ * Readable floor (px) for a single grouped-bar thickness. Value labels render at
+ * fontSize 10 with ~12px line height; below this a bar is thinner than its own
+ * label and the chart reads as stripes (observed on iOS at 375-430px). When
+ * grouped sub-bars would fall under this, we reclaim the band scale's reserved
+ * inter-category whitespace (step - bandwidth) before letting bars shrink,
+ * trading padding for legibility rather than inventing extra height.
+ */
+const MIN_GROUPED_BAR_THICKNESS = 8;
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -68,7 +78,7 @@ const MIN_BAR_WIDTH = 1;
 export function computeBarMarks(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
-  _chartArea: Rect,
+  chartArea: Rect,
   _strategy: LayoutStrategy,
 ): RectMark[] {
   const encoding = spec.encoding as Encoding;
@@ -144,6 +154,7 @@ export function computeBarMarks(
           bandwidth,
           baseline,
           scales,
+          chartArea.width,
         );
       } else {
         const stackMode =
@@ -267,6 +278,7 @@ function computeGroupedBars(
   bandwidth: number,
   baseline: number,
   scales: ResolvedScales,
+  plotWidth: number,
 ): RectMark[] {
   const marks: RectMark[] = [];
   const categoryGroups = groupByField(data, categoryField);
@@ -282,9 +294,35 @@ function computeGroupedBars(
   const groupCount = groupIndexMap.size;
   if (groupCount === 0) return marks;
 
-  // Subdivide the band height by group count with a small gap
+  // Subdivide the band height by group count with a small gap.
   const gap = Math.min(1, bandwidth * 0.05);
-  const subBandHeight = Math.max((bandwidth - gap * (groupCount - 1)) / groupCount, MIN_BAR_WIDTH);
+  let groupHeight = bandwidth;
+  let subBandHeight = (groupHeight - gap * (groupCount - 1)) / groupCount;
+
+  // At tight bandwidths sub-bars fall below the readable floor and read as
+  // stripes. The band scale reserves whitespace between categories (step -
+  // bandwidth); reclaim it by growing the group height toward the full step
+  // before letting bars shrink. Bars stay centered in the band so the widened
+  // group doesn't touch its neighbors. A one-pixel residual keeps adjacent
+  // categories visually separable even at full reclaim.
+  //
+  // Gated to narrow plots (< NARROW_VIEWPORT_MAX): the fix targets phones where
+  // this was observed, and gating keeps wide/desktop layouts pixel-identical
+  // even for contrived short-but-wide containers whose bandwidth is also tight.
+  const step = typeof yScale.step === 'function' ? yScale.step() : bandwidth;
+  const maxGroupHeight = Math.max(bandwidth, step - MIN_BAR_WIDTH);
+  if (
+    plotWidth < NARROW_VIEWPORT_MAX &&
+    subBandHeight < MIN_GROUPED_BAR_THICKNESS &&
+    maxGroupHeight > bandwidth
+  ) {
+    const needed = MIN_GROUPED_BAR_THICKNESS * groupCount + gap * (groupCount - 1);
+    groupHeight = Math.min(Math.max(groupHeight, needed), maxGroupHeight);
+    subBandHeight = (groupHeight - gap * (groupCount - 1)) / groupCount;
+  }
+  subBandHeight = Math.max(subBandHeight, MIN_BAR_WIDTH);
+  // Center the (possibly widened) group within the band.
+  const groupOffset = (bandwidth - groupHeight) / 2;
 
   for (const [category, rows] of categoryGroups) {
     const bandY = yScale(category);
@@ -299,7 +337,7 @@ function computeGroupedBars(
       const color = getColor(scales, groupKey);
       const xPos = value >= 0 ? baseline : xScale(value);
       const barWidth = Math.max(Math.abs(xScale(value) - baseline), MIN_BAR_WIDTH);
-      const subY = bandY + groupIndex * (subBandHeight + gap);
+      const subY = bandY + groupOffset + groupIndex * (subBandHeight + gap);
 
       const aria: MarkAria = {
         label: `${category}, ${groupKey}: ${formatLabelValue(value)}`,

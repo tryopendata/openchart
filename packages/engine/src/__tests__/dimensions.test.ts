@@ -655,4 +655,67 @@ describe('bottom legend placement (defect-3 regression)', () => {
     expect(sourceAbsoluteY).toBeGreaterThan(legendBottom);
     expect(bylineAbsoluteY).toBeGreaterThan(sourceAbsoluteY);
   });
+
+  // Guards issue 2 (narrow-width space efficiency). The responsive metrics
+  // (scaled container padding, halved horizontal padding, collapsed legend/
+  // chrome gaps below the compact breakpoint) already keep the plot area's
+  // share of a phone-sized container within a couple of points of desktop.
+  // These floors lock that in: if a future change stops scaling padding down
+  // on narrow viewports, the plot share drops and the test fails.
+  describe('plot-area share stays efficient at narrow widths', () => {
+    const titledSpec: NormalizedChartSpec = {
+      ...baseSpec,
+      markType: 'bar',
+      markDef: { type: 'bar' },
+      encoding: {
+        x: { field: 'date', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+      chrome: {
+        title: { text: 'A representative chart title' },
+        subtitle: { text: 'A subtitle line' },
+        source: { text: 'Source: somewhere' },
+      },
+    };
+
+    it('reserves at least 85% of container width for the plot at 375px', () => {
+      const dims = computeDimensions(
+        titledSpec,
+        { width: 375, height: 500 },
+        emptyLegend,
+        lightTheme,
+      );
+      expect(dims.chartArea.width / 375).toBeGreaterThanOrEqual(0.85);
+    });
+
+    it('reserves at least 55% of container height for the plot at 375px', () => {
+      const dims = computeDimensions(
+        titledSpec,
+        { width: 375, height: 500 },
+        emptyLegend,
+        lightTheme,
+      );
+      expect(dims.chartArea.height / 500).toBeGreaterThanOrEqual(0.55);
+    });
+
+    it('narrow plot width share is no worse than desktop', () => {
+      const narrow = computeDimensions(
+        titledSpec,
+        { width: 375, height: 500 },
+        emptyLegend,
+        lightTheme,
+      );
+      const desktop = computeDimensions(
+        titledSpec,
+        { width: 700, height: 500 },
+        emptyLegend,
+        lightTheme,
+      );
+      // Narrow viewports must not waste more horizontal space than desktop:
+      // the halved horizontal padding keeps the share on par (allow 2pt slack).
+      expect(narrow.chartArea.width / 375).toBeGreaterThanOrEqual(
+        desktop.chartArea.width / 700 - 0.02,
+      );
+    });
+  });
 });

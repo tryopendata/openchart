@@ -294,6 +294,55 @@ describe('computeBarMarks', () => {
       // Domain should not extend to the stacked sum (115)
       expect(domain[1]).toBeLessThanOrEqual(80); // some nice rounding above 70
     });
+
+    // Issue 1: at tight bandwidths on narrow plots, grouped sub-bars fall below
+    // the readable floor and read as stripes. The engine reclaims reserved
+    // inter-category whitespace to keep bars >= MIN_GROUPED_BAR_THICKNESS (8px).
+    it('reclaims band whitespace so narrow-plot sub-bars meet the readable floor', () => {
+      // 11 categories x 3 series in a short, phone-width plot -> sub-bars would
+      // be ~7px without the reclaim.
+      const data = [] as { district: string; source: string; dollars: number }[];
+      for (let i = 0; i < 11; i++) {
+        for (const source of ['State', 'Local', 'Federal']) {
+          data.push({ district: `D${i}`, source, dollars: 100 + i });
+        }
+      }
+      const spec: NormalizedChartSpec = {
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        data,
+        encoding: {
+          x: { field: 'dollars', type: 'quantitative' },
+          y: { field: 'district', type: 'nominal' },
+          color: { field: 'source', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+
+      // Narrow plot (width < NARROW_VIEWPORT_MAX): reclaim active.
+      const narrowArea: Rect = { x: 120, y: 20, width: 240, height: 380 };
+      const narrowScales = computeScales(spec, narrowArea, spec.data);
+      const narrowMarks = computeBarMarks(spec, narrowScales, narrowArea, fullStrategy);
+      for (const mark of narrowMarks) {
+        expect(mark.height).toBeGreaterThanOrEqual(8);
+      }
+
+      // Wide plot (width >= NARROW_VIEWPORT_MAX): reclaim gated off, so the same
+      // tight-height layout is left untouched (bars may be thin, matching the
+      // pre-fix desktop geometry). Bars must not be *taller* than the narrow
+      // case here, proving the reclaim only applies on narrow plots.
+      const wideArea: Rect = { x: 120, y: 20, width: 700, height: 380 };
+      const wideScales = computeScales(spec, wideArea, spec.data);
+      const wideMarks = computeBarMarks(spec, wideScales, wideArea, fullStrategy);
+      const wideMax = Math.max(...wideMarks.map((m) => m.height));
+      const narrowMin = Math.min(...narrowMarks.map((m) => m.height));
+      expect(wideMax).toBeLessThan(narrowMin);
+    });
   });
 
   describe('colored (non-stacked) bars', () => {
