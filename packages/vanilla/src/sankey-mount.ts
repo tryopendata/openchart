@@ -122,11 +122,29 @@ export function createSankey(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
+  // Set when webfonts have loaded and a recompile is owed. The next render()
+  // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
+  // the attribute stays honest when resize() defers to pendingResize during
+  // the entrance animation.
+  let fontsReloadPending = false;
+
   // Apply the root class up front so getComputedStyle sees --oc-font-family
   // before the text measurer is built.
   container.classList.add('oc-sankey-root');
-  const fontFamily = options?.theme?.fonts?.family ?? resolveFontFamily(container);
-  const measureText = createMeasureText(fontFamily);
+
+  // Resolve the effective font the way compile() will: compile merges
+  // { ...spec.theme, ...options.theme }, so options.theme wins over the
+  // spec-level theme; fall back to the container's computed font. Measuring a
+  // different font than gets rendered desyncs layout metrics and the reload watcher.
+  function resolveEffectiveFont(): string {
+    return (
+      options?.theme?.fonts?.family ??
+      currentSpec.theme?.fonts?.family ??
+      resolveFontFamily(container)
+    );
+  }
+  let fontFamily = resolveEffectiveFont();
+  let measureText = createMeasureText(fontFamily);
   let renderGen = 0;
 
   // ---------------------------------------------------------------------------
@@ -418,6 +436,14 @@ export function createSankey(
 
     renderGen += 1;
     container.dataset.ocRenderGen = String(renderGen);
+
+    // This render recompiled with the loaded webfonts; publish 'ready' now
+    // rather than right after the fonts-ready resize() (which may have deferred
+    // to pendingResize during the entrance animation).
+    if (fontsReloadPending) {
+      fontsReloadPending = false;
+      container.dataset.ocFontsState = 'ready';
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -427,6 +453,13 @@ export function createSankey(
   function update(newSpec: SankeySpec): void {
     if (destroyed) return;
     currentSpec = newSpec;
+    // A new spec can change theme.fonts.family; rebuild the measurer so layout
+    // measures the font compile will actually render with.
+    const nextFont = resolveEffectiveFont();
+    if (nextFont !== fontFamily) {
+      fontFamily = nextFont;
+      measureText = createMeasureText(fontFamily);
+    }
     isFirstRender = true; // Allow animation on update
     render();
   }
@@ -561,8 +594,11 @@ export function createSankey(
     fontFamily,
     () => !destroyed,
     () => {
+      // Mark the reload owed, then recompile. render() flips the attribute to
+      // 'ready' once it actually recompiles, including the pendingResize replay
+      // after the entrance animation finishes.
+      fontsReloadPending = true;
       resize();
-      container.dataset.ocFontsState = 'ready';
     },
   );
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';

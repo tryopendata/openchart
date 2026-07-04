@@ -606,6 +606,7 @@ export function computeAxes(
       tickFontSize: result.x.tickLabelStyle.fontSize,
       tickFontWeight: result.x.tickLabelStyle.fontWeight,
       xAxisHeight: theme.spacing.xAxisHeight,
+      measure: (t, fs, fw) => measureLabel(t, fs, fw, measureText),
     });
 
     if (result.x.label) {

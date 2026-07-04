@@ -34,7 +34,7 @@ import { computeLegendContent, type LegendContent } from '../legend/compute';
 import { legendGap } from '../legend/wrap';
 import { resolveBandTickAngle } from './axes/rotation';
 import { buildContinuousTicks, scaleSupportsTickCount, targetTickCount } from './axes/ticks';
-import { computeScales } from './scales';
+import { computeScales, estimateBandwidth } from './scales';
 import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
 
 // ---------------------------------------------------------------------------
@@ -328,10 +328,10 @@ export function resolveLayoutPlan(
     if (xTickAngle === undefined && xLabels.length > 1) {
       const rightMarginEst = hPad + (isRadial ? hPad : axisMargin);
       const plotWidth = Math.max(0, width - leftGutter - Math.max(rightMarginEst, hPad));
-      const bandPadding = (encoding.x?.scale?.padding as number | undefined) ?? 0.35;
-      // Band step = plotWidth / n; bandwidth = step * (1 - padding). This
-      // mirrors d3 scaleBand().padding() used by buildBandScale.
-      const bandwidth = (plotWidth / xLabels.length) * (1 - bandPadding);
+      // Mirror d3 scaleBand: step = plotWidth / (n - paddingInner + 2*paddingOuter),
+      // bandwidth = step * (1 - paddingInner). Uses the same override resolution
+      // as buildBandScale so paddingInner/paddingOuter are honored here too.
+      const bandwidth = estimateBandwidth(encoding.x?.scale, plotWidth, xLabels.length);
       let maxXLabelWidth = 0;
       for (const label of xLabels) {
         const w = measure(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);

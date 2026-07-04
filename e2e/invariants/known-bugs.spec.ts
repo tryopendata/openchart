@@ -58,9 +58,13 @@ test('rotated x-axis labels do not overlap source text', async ({ page }) => {
   // value drifts by engine: Blink and WebKit place the bottom edge of a -45°
   // rotated glyph several pixels apart for the same layout, so we bound the
   // gap to a range that fits every engine (Chrome desktop ~3px, mobile WebKit
-  // ~10px) rather than pinning it to a tight ±3px window it can't hold.
+  // ~19px) rather than pinning it to a tight window it can't hold. The bottom
+  // extent now reserves space from the real canvas-measured label width (axes
+  // and planner agree on the measurer), which on WebKit-mobile measures the
+  // rotated labels a few pixels wider than the old heuristic — a slightly more
+  // conservative reservation, never an overlap.
   expect(
     overlap.gap,
-    `gap between axis labels and source should be readable (0-16px), got ${overlap.gap.toFixed(1)}px`,
-  ).toBeLessThanOrEqual(16);
+    `gap between axis labels and source should be readable (0-22px), got ${overlap.gap.toFixed(1)}px`,
+  ).toBeLessThanOrEqual(22);
 });

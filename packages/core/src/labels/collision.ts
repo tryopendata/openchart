@@ -41,6 +41,13 @@ export interface LabelCandidate {
   priority: LabelPriority;
   /** Text style to apply. */
   style: TextStyle;
+  /**
+   * Optional caller-assigned source index. resolveCollisions may reorder its
+   * output (it sorts by priority), so callers that zip the result back against
+   * a parallel array should carry an index here and read it off ResolvedLabel
+   * rather than relying on positional order.
+   */
+  index?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +174,9 @@ export function resolveCollisions(
         y: bestY,
         style: label.style,
         visible: true,
+        // Only carry the index through when the caller set one, so labels that
+        // don't need it keep an unchanged output shape.
+        ...(label.index !== undefined ? { index: label.index } : {}),
         connector: needsConnector
           ? {
               from: { x: bestX, y: bestY },
@@ -184,6 +194,7 @@ export function resolveCollisions(
         y: label.anchorY,
         style: label.style,
         visible: false,
+        ...(label.index !== undefined ? { index: label.index } : {}),
       });
     }
   }
@@ -198,6 +209,15 @@ export function resolveCollisions(
 /**
  * Compute the bounding rect of a resolved label from its position and text.
  * Uses heuristic text measurement so it works without DOM access.
+ *
+ * label.y is the SVG text anchor point, whose meaning depends on the label's
+ * dominant-baseline. The rect's top edge is derived accordingly so the box
+ * covers the actual glyphs (obstacles were sitting ~0.8*fontSize below the
+ * text for alphabetic-baseline labels, e.g. column value labels):
+ *   - 'central': y is the vertical center, so top = y - height/2.
+ *   - 'hanging'/'text-after-edge': y is the top edge already.
+ *   - default (alphabetic): y is the baseline, so top = y - fontSize*0.8
+ *     (matches textAscent, the top-to-baseline distance renderers apply).
  */
 export function computeLabelBounds(label: ResolvedLabel): Rect {
   const fontSize = label.style.fontSize;
@@ -213,5 +233,16 @@ export function computeLabelBounds(label: ResolvedLabel): Rect {
     x = label.x - width;
   }
 
-  return { x, y: label.y, width, height };
+  // Map the anchor y to the box top based on dominant-baseline.
+  const baseline = label.style.dominantBaseline;
+  let y: number;
+  if (baseline === 'central') {
+    y = label.y - height / 2;
+  } else if (baseline === 'hanging' || baseline === 'text-after-edge') {
+    y = label.y;
+  } else {
+    y = label.y - fontSize * 0.8;
+  }
+
+  return { x, y, width, height };
 }

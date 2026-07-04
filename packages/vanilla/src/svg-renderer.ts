@@ -52,10 +52,12 @@ export function renderChartSVG(
   setAttrs(svg, {
     viewBox: `0 0 ${width} ${height}`,
     xmlns: SVG_NS,
-    // WebKit/iOS Safari getBBox() bug: text with dominant-baseline:hanging
-    // reports bounding boxes extending above y=0. The SVG spec default
-    // overflow is "hidden", which clips this phantom extent. Setting
-    // overflow:visible prevents the clipping. Chart marks are already
+    // The SVG spec default is overflow:"hidden", which clips anything a hair
+    // outside the viewBox. We now position all text on the alphabetic/central
+    // baseline (dominant-baseline:hanging was dropped because WebKit computed
+    // it from different metrics), but WebKit/iOS still reports getBBox extents
+    // with a few pixels of slack around tspans, so text touching an edge can
+    // still get clipped. overflow:visible avoids that. Chart marks are already
     // constrained by a clipPath, so nothing bleeds out.
     overflow: 'visible',
     // Hint browsers to enable sub-pixel font hinting and kerning for chart text.

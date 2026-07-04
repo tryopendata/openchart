@@ -463,6 +463,28 @@ function evenRange(start: number, end: number, count: number): number[] {
   return Array.from({ length: count }, (_, i) => start + step * i);
 }
 
+/**
+ * Estimate d3 scaleBand bandwidth for a given plot width and category count,
+ * mirroring buildBandScale's padding resolution. d3 sets both paddingInner and
+ * paddingOuter to `padding`, then paddingInner/paddingOuter overrides adjust
+ * each independently. step = width / (n - paddingInner + 2*paddingOuter);
+ * bandwidth = step * (1 - paddingInner).
+ */
+export function estimateBandwidth(
+  scaleConfig: EncodingChannel['scale'] | undefined,
+  plotWidth: number,
+  n: number,
+): number {
+  if (n <= 0) return 0;
+  const padding = scaleConfig?.padding ?? 0.35;
+  const paddingInner = scaleConfig?.paddingInner ?? padding;
+  const paddingOuter = scaleConfig?.paddingOuter ?? padding;
+  const denom = n - paddingInner + 2 * paddingOuter;
+  if (denom <= 0) return 0;
+  const step = plotWidth / denom;
+  return step * (1 - paddingInner);
+}
+
 function buildBandScale(
   channel: EncodingChannel,
   data: DataRow[],

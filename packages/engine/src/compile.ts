@@ -683,7 +683,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     renderSpec.markDef,
   );
   const renderer = getChartRenderer(rendererKey);
-  const marks: Mark[] = renderer ? renderer(renderSpec, scales, chartArea, strategy, theme) : [];
+  const marks: Mark[] = renderer
+    ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
+    : [];
 
   // Compute the right-side endpoint labels column for multi-series line/area
   // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.

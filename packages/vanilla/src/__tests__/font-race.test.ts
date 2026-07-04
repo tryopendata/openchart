@@ -146,6 +146,39 @@ describe('createChart font-load recompile', () => {
     chart.destroy();
   });
 
+  it('defers ready until the post-animation recompile, not the deferred resize', async () => {
+    // Entrance animation running -> resize() defers to pendingResize. The
+    // fonts-ready flip must wait for the recompile that actually happens on the
+    // pendingResize replay, so 'ready' never claims final-font layout early.
+    vi.useFakeTimers();
+    try {
+      const fonts = makeFontFaceSet(false);
+      installFonts(fonts);
+
+      const animatedSpec = { ...lineSpec, animation: true as const };
+      const chart = createChart(container, animatedSpec);
+      expect(container.dataset.ocFontsState).toBe('pending');
+      const genBefore = Number(container.dataset.ocRenderGen);
+
+      fonts.resolveReady();
+      await fonts.ready;
+      await Promise.resolve();
+
+      // resize() deferred (animation in flight): no recompile yet, still pending.
+      expect(container.dataset.ocRenderGen).toBe(String(genBefore));
+      expect(container.dataset.ocFontsState).toBe('pending');
+
+      // Animation completes -> pendingResize replays -> recompile -> ready.
+      vi.runAllTimers();
+      expect(Number(container.dataset.ocRenderGen)).toBe(genBefore + 1);
+      expect(container.dataset.ocFontsState).toBe('ready');
+
+      chart.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not re-render after the chart is destroyed', async () => {
     const fonts = makeFontFaceSet(false);
     installFonts(fonts);

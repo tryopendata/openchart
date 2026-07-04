@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { TextStyle } from '../../types/layout';
+import type { ResolvedLabel, TextStyle } from '../../types/layout';
 import {
+  computeLabelBounds,
   detectCollision,
   EXTENDED_OFFSET_STRATEGIES,
   type LabelCandidate,
@@ -258,5 +259,52 @@ describe('resolveCollisions', () => {
       expect(EXTENDED_OFFSET_STRATEGIES).toContainEqual(strategy);
     }
     expect(EXTENDED_OFFSET_STRATEGIES.length).toBeGreaterThan(OFFSET_STRATEGIES.length);
+  });
+});
+
+describe('computeLabelBounds', () => {
+  it('covers the glyph box for an alphabetic-baseline label (y is the baseline)', () => {
+    // Column value labels emit y on the alphabetic baseline (top + 0.8*fontSize).
+    // The bounds must cover the glyphs above the baseline, not sit below them.
+    const fontSize = 10;
+    const glyphTop = 100; // where the text visually starts
+    const label: ResolvedLabel = {
+      text: '42',
+      x: 50,
+      // Emission shifts the top-space y down to the baseline.
+      y: glyphTop + fontSize * 0.8,
+      style: { ...defaultStyle, fontSize, textAnchor: 'middle' },
+      visible: true,
+    };
+    const bounds = computeLabelBounds(label);
+    // Top edge returns to the glyph top, not the baseline.
+    expect(bounds.y).toBeCloseTo(glyphTop, 5);
+    // The glyph box (from its top for `height`) contains the baseline.
+    expect(bounds.y).toBeLessThan(label.y);
+    expect(bounds.y + bounds.height).toBeGreaterThan(label.y);
+  });
+
+  it("treats y as the vertical center for dominant-baseline 'central'", () => {
+    const fontSize = 10;
+    const label: ResolvedLabel = {
+      text: '42',
+      x: 50,
+      y: 100,
+      style: { ...defaultStyle, fontSize, dominantBaseline: 'central' },
+      visible: true,
+    };
+    const bounds = computeLabelBounds(label);
+    expect(bounds.y).toBeCloseTo(100 - bounds.height / 2, 5);
+  });
+
+  it("treats y as the top edge for dominant-baseline 'hanging'", () => {
+    const label: ResolvedLabel = {
+      text: '42',
+      x: 50,
+      y: 100,
+      style: { ...defaultStyle, dominantBaseline: 'hanging' },
+      visible: true,
+    };
+    expect(computeLabelBounds(label).y).toBe(100);
   });
 });

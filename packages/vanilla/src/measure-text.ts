@@ -48,18 +48,6 @@ export function createMeasureText(fontFamily: string = DEFAULT_FONT_FAMILY): Mea
   };
 }
 
-// Cache measurers by font string so containers sharing the same effective font
-// reuse one canvas context instead of allocating a fresh one per mount.
-const sharedByFont = new Map<string, MeasureTextFn>();
-export function sharedMeasureText(fontFamily: string = DEFAULT_FONT_FAMILY): MeasureTextFn {
-  let m = sharedByFont.get(fontFamily);
-  if (!m) {
-    m = createMeasureText(fontFamily);
-    sharedByFont.set(fontFamily, m);
-  }
-  return m;
-}
-
 /**
  * Resolve the font family a container's SVG text will actually render with.
  *

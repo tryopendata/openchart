@@ -238,18 +238,23 @@ export function computeBarLabels(
   // 'all' just skips the density pre-filter above so every mark is a
   // candidate; colliding losers are still hidden by resolveCollisions.
   const fittingCandidates: LabelCandidate[] = [];
-  const fittingOrigIndex: number[] = [];
   const unfittingIndices = new Set<number>();
   for (let i = 0; i < candidates.length; i++) {
     if (fitsInSegment[i] === false) {
       unfittingIndices.add(i);
     } else {
-      fittingCandidates.push(candidates[i]);
-      fittingOrigIndex.push(i);
+      // Carry the original candidate index so we can zip the resolved output
+      // back to it regardless of any reordering resolveCollisions performs.
+      fittingCandidates.push({ ...candidates[i], index: i });
     }
   }
 
-  const resolved = resolveCollisions(fittingCandidates);
+  // resolveCollisions may reorder its output (it sorts by priority), so key the
+  // result by the source index we carried rather than by position.
+  const resolvedByOrig = new Map<number, ResolvedLabel>();
+  for (const r of resolveCollisions(fittingCandidates)) {
+    if (r.index !== undefined) resolvedByOrig.set(r.index, r);
+  }
 
   // Shift resolved y back from top-edge space to the vertical center that the
   // central-baseline renderer expects (see anchorY derivation above).
@@ -257,7 +262,6 @@ export function computeBarLabels(
 
   // Re-insert hidden labels for candidates that didn't fit, preserving order
   const results: ResolvedLabel[] = [];
-  let resolvedIdx = 0;
   for (let i = 0; i < candidates.length; i++) {
     if (unfittingIndices.has(i)) {
       results.push({
@@ -268,20 +272,34 @@ export function computeBarLabels(
         visible: false,
       });
     } else {
-      const r = resolved[resolvedIdx];
-      // Map any horizontal nudge from left-edge space back onto the display
-      // anchor so textAnchor (start/end/middle) stays honored.
-      const origIdx = fittingOrigIndex[resolvedIdx];
-      const nudgeX = r.x - fittingCandidates[resolvedIdx].anchorX;
-      resolvedIdx++;
+      const r = resolvedByOrig.get(i);
+      if (!r) continue;
+      // Collision math ran in left-edge/top space; renderers draw at the display
+      // anchor with central baseline. The inverse mapping shifts every point by
+      // dx (left-edge -> display anchor) on x and +halfHeight on y. Apply it to
+      // the label AND both connector endpoints, or the leader line for an
+      // end/middle-anchored label points to the box's top-left corner (up to
+      // textWidth + halfHeight away from the text it's calling out).
+      const dx = displayAnchorX[i] - candidates[i].anchorX;
+      // Drop the internal zip index so it doesn't leak into the label output.
+      const { index: _index, ...rest } = r;
       results.push({
-        ...r,
-        x: displayAnchorX[origIdx] + nudgeX,
+        ...rest,
+        x: r.x + dx,
         y: r.y + halfHeight,
         connector: r.connector
           ? {
               ...r.connector,
-              from: { ...r.connector.from, y: r.connector.from.y + halfHeight },
+              from: {
+                ...r.connector.from,
+                x: r.connector.from.x + dx,
+                y: r.connector.from.y + halfHeight,
+              },
+              to: {
+                ...r.connector.to,
+                x: r.connector.to.x + dx,
+                y: r.connector.to.y + halfHeight,
+              },
             }
           : undefined,
       });

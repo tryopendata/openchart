@@ -1,4 +1,5 @@
 import type { ChartLayout } from '@opendata-ai/openchart-core';
+import { HEIGHT_SHORT_MAX } from '@opendata-ai/openchart-core';
 import { afterAll, describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 import { checkLayoutInvariants } from './helpers/invariants';
@@ -293,22 +294,28 @@ function generateSpec(rand: () => number): {
 // Fuzz test
 // ---------------------------------------------------------------------------
 
+// Short-container threshold below which the rotated-label starvation family is
+// tolerated (see the legend-overflow allowlist below).
+const STARVATION_HEIGHT_MAX = HEIGHT_SHORT_MAX;
+
 // Known engine bugs that the fuzz legitimately catches. Filter these so the
-// suite passes while still failing on NEW violation types.
-function isKnownViolation(v: string): boolean {
-  return (
-    v.startsWith('legend entry ') ||
-    v.startsWith('legend-entry-') ||
-    v.startsWith('x-axis-labels outside SVG viewport') ||
-    // Space starvation at extreme aspect ratios: a very short container (e.g.
-    // 240px tall) with title chrome + auto-rotated long category labels +
-    // a bottom legend cannot fit everything. Reserving the correct rotated-
-    // label extent (textWidth*|sin θ| + lineHeight*|cos θ|) pushes the bottom
-    // legend past the viewport. The previous under-reservation only "fit" by
-    // letting rotated ticks overlap the legend/source, which was the very bug
-    // the extent fix addresses. Same family as the flat-label overflow above.
-    v.startsWith('legend outside SVG viewport')
-  );
+// suite passes while still failing on NEW violation types. `ctx` scopes the
+// space-starvation allowlist so ordinary-size regressions still fail.
+function isKnownViolation(v: string, ctx: { height: number; rotatedTicks: boolean }): boolean {
+  if (v.startsWith('legend entry ') || v.startsWith('legend-entry-')) return true;
+  if (v.startsWith('x-axis-labels outside SVG viewport')) return true;
+  // Space starvation at extreme aspect ratios: a very short container (e.g.
+  // 240px tall) with title chrome + auto-rotated long category labels + a
+  // bottom legend cannot fit everything. Reserving the correct rotated-label
+  // extent (textWidth*|sin θ| + lineHeight*|cos θ|) pushes the bottom legend
+  // past the viewport. The previous under-reservation only "fit" by letting
+  // rotated ticks overlap the legend/source, which was the very bug the extent
+  // fix addresses. Only tolerate it in that family (short container AND rotated
+  // ticks present); an ordinary-size legend overflow is a real regression.
+  if (v.startsWith('legend outside SVG viewport')) {
+    return ctx.height <= STARVATION_HEIGHT_MAX && ctx.rotatedTicks;
+  }
+  return false;
 }
 
 let compileSkipCount = 0;
@@ -334,7 +341,8 @@ describe('layout fuzz', () => {
         return;
       }
       const violations = checkLayoutInvariants(layout, { svgWidth: width, svgHeight: height });
-      const novel = violations.filter((v) => !isKnownViolation(v));
+      const rotatedTicks = Math.abs(layout.axes.x?.tickAngle ?? 0) > 10;
+      const novel = violations.filter((v) => !isKnownViolation(v, { height, rotatedTicks }));
       if (novel.length > 0) {
         const msg = [
           `Seed: ${SEED}, Case: ${i}`,

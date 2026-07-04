@@ -554,6 +554,8 @@ export interface ResolvedLabel {
   halo?: boolean;
   /** Engine-measured text-block bounds. Renderers should use this for background rects instead of re-estimating. */
   bounds?: Rect;
+  /** Source index carried through from the LabelCandidate, if the caller set one. */
+  index?: number;
 }
 
 // ---------------------------------------------------------------------------

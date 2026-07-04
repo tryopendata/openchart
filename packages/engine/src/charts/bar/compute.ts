@@ -78,8 +78,9 @@ const MIN_GROUPED_BAR_THICKNESS = 8;
 export function computeBarMarks(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
-  chartArea: Rect,
+  _chartArea: Rect,
   _strategy: LayoutStrategy,
+  containerWidth: number,
 ): RectMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -154,7 +155,7 @@ export function computeBarMarks(
           bandwidth,
           baseline,
           scales,
-          chartArea.width,
+          containerWidth,
         );
       } else {
         const stackMode =
@@ -278,7 +279,7 @@ function computeGroupedBars(
   bandwidth: number,
   baseline: number,
   scales: ResolvedScales,
-  plotWidth: number,
+  containerWidth: number,
 ): RectMark[] {
   const marks: RectMark[] = [];
   const categoryGroups = groupByField(data, categoryField);
@@ -306,13 +307,14 @@ function computeGroupedBars(
   // group doesn't touch its neighbors. A one-pixel residual keeps adjacent
   // categories visually separable even at full reclaim.
   //
-  // Gated to narrow plots (< NARROW_VIEWPORT_MAX): the fix targets phones where
-  // this was observed, and gating keeps wide/desktop layouts pixel-identical
-  // even for contrived short-but-wide containers whose bandwidth is also tight.
+  // Gated to narrow containers (< NARROW_VIEWPORT_MAX): the fix targets phones
+  // where this was observed. Gating on the container width (not the derived plot
+  // width) keeps desktop embeds pixel-identical even when a wide container's
+  // left gutter shrinks the plot below 500px.
   const step = typeof yScale.step === 'function' ? yScale.step() : bandwidth;
   const maxGroupHeight = Math.max(bandwidth, step - MIN_BAR_WIDTH);
   if (
-    plotWidth < NARROW_VIEWPORT_MAX &&
+    containerWidth < NARROW_VIEWPORT_MAX &&
     subBandHeight < MIN_GROUPED_BAR_THICKNESS &&
     maxGroupHeight > bandwidth
   ) {

@@ -56,9 +56,13 @@ for (const { name, slug, quantAxis, minBarThickness } of stories) {
   test(`mobile invariants: ${name}`, async ({ page }) => {
     await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
     await page.waitForSelector('.oc-root svg.oc-chart');
-    await page.evaluate(() => document.fonts.ready);
-    // Let entrance animation and any post-font relayout settle.
-    await page.waitForTimeout(600);
+    // Wait on explicit render-state signals instead of a blind sleep:
+    // data-oc-fonts-state='ready' means the post-font recompile ran (deferred
+    // until after the entrance animation, so this also covers the animated
+    // path), and :not(.oc-animate) means any entrance animation finished
+    // (immediate for charts that don't animate or have a cached font).
+    await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"]');
+    await page.waitForSelector('.oc-root svg.oc-chart:not(.oc-animate)');
 
     const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg }) => {
       const violations: string[] = [];

@@ -11,6 +11,11 @@ import { computeBarLabels } from '../labels';
 
 const chartArea: Rect = { x: 80, y: 20, width: 500, height: 300 };
 
+// Default container width for tests that don't exercise the narrow-container
+// grouped-bar reclaim gate. Wide enough (>= NARROW_VIEWPORT_MAX) that the gate
+// stays off, matching the prior default geometry.
+const CONTAINER_WIDTH = 800;
+
 const fullStrategy: LayoutStrategy = {
   labelMode: 'all',
   legendPosition: 'right',
@@ -97,7 +102,7 @@ describe('computeBarMarks', () => {
     it('produces one RectMark per data row', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks).toHaveLength(3);
       expect(marks.every((m) => m.type === 'rect')).toBe(true);
@@ -106,7 +111,7 @@ describe('computeBarMarks', () => {
     it('bars have positive width and height', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       for (const mark of marks) {
         expect(mark.width).toBeGreaterThan(0);
@@ -117,7 +122,7 @@ describe('computeBarMarks', () => {
     it('wider bars correspond to larger values', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       // Cherry (70) should be wider than Banana (30)
       const cherry = marks.find((m) => m.aria.label.includes('Cherry'))!;
@@ -128,7 +133,7 @@ describe('computeBarMarks', () => {
     it('bars have corner radius applied', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks[0].cornerRadius).toBe(2);
     });
@@ -136,7 +141,7 @@ describe('computeBarMarks', () => {
     it('each bar has an aria label with category and value', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks[0].aria.label).toContain('Apple');
       expect(marks[0].aria.label).toContain('50');
@@ -153,7 +158,7 @@ describe('computeBarMarks', () => {
     it('produces marks for all data rows', () => {
       const spec = makeStackedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       // 3 categories * 2 groups = 6
       expect(marks).toHaveLength(6);
@@ -162,7 +167,7 @@ describe('computeBarMarks', () => {
     it('segments within a category have different colors', () => {
       const spec = makeStackedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       // Find Q1 bars
       const q1Marks = marks.filter((m) => m.aria.label.includes('Q1'));
@@ -173,7 +178,7 @@ describe('computeBarMarks', () => {
     it('stacked segments share the same y position within a category', () => {
       const spec = makeStackedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const q1East = marks.find(
         (m) => m.aria.label.includes('Q1') && m.aria.label.includes('East'),
@@ -189,7 +194,7 @@ describe('computeBarMarks', () => {
     it('stacked segments are placed end-to-end horizontally', () => {
       const spec = makeStackedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const q1Marks = marks.filter((m) => m.aria.label.includes('Q1'));
       // Second segment should start where first ends
@@ -201,7 +206,7 @@ describe('computeBarMarks', () => {
     it('stacked bars have zero corner radius', () => {
       const spec = makeStackedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       for (const mark of marks) {
         expect(mark.cornerRadius).toBe(0);
@@ -213,7 +218,7 @@ describe('computeBarMarks', () => {
     it('produces marks for all data rows', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks).toHaveLength(6);
     });
@@ -221,7 +226,7 @@ describe('computeBarMarks', () => {
     it('grouped bars within a category have different y positions', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const q1East = marks.find(
         (m) => m.aria.label.includes('Q1') && m.aria.label.includes('East'),
@@ -236,7 +241,7 @@ describe('computeBarMarks', () => {
     it('grouped bars all start from baseline (not cumulative)', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const q1East = marks.find(
         (m) => m.aria.label.includes('Q1') && m.aria.label.includes('East'),
@@ -252,7 +257,7 @@ describe('computeBarMarks', () => {
     it('grouped bars have cornerRadius 2', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       for (const mark of marks) {
         expect(mark.cornerRadius).toBe(2);
@@ -262,7 +267,7 @@ describe('computeBarMarks', () => {
     it('grouped bars do not set stackGroup', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       for (const mark of marks) {
         expect(mark.stackGroup).toBeUndefined();
@@ -272,13 +277,25 @@ describe('computeBarMarks', () => {
     it('sub-band heights are smaller than full bandwidth (stacked bars use full height)', () => {
       const groupedSpec = makeGroupedBarSpec();
       const groupedScales = computeScales(groupedSpec, chartArea, groupedSpec.data);
-      const groupedMarks = computeBarMarks(groupedSpec, groupedScales, chartArea, fullStrategy);
+      const groupedMarks = computeBarMarks(
+        groupedSpec,
+        groupedScales,
+        chartArea,
+        fullStrategy,
+        CONTAINER_WIDTH,
+      );
 
       // With 2 groups, each sub-bar should be less than the full bandwidth
       const stackedSpec = makeGroupedBarSpec();
       (stackedSpec.encoding.x as { stack?: string }).stack = 'zero';
       const stackedScales = computeScales(stackedSpec, chartArea, stackedSpec.data);
-      const stackedMarks = computeBarMarks(stackedSpec, stackedScales, chartArea, fullStrategy);
+      const stackedMarks = computeBarMarks(
+        stackedSpec,
+        stackedScales,
+        chartArea,
+        fullStrategy,
+        CONTAINER_WIDTH,
+      );
 
       expect(groupedMarks[0].height).toBeLessThan(stackedMarks[0].height);
       expect(groupedMarks[0].height).toBeGreaterThan(0);
@@ -324,21 +341,23 @@ describe('computeBarMarks', () => {
         labels: { density: 'auto', format: '' },
       };
 
-      // Narrow plot (width < NARROW_VIEWPORT_MAX): reclaim active.
-      const narrowArea: Rect = { x: 120, y: 20, width: 240, height: 380 };
-      const narrowScales = computeScales(spec, narrowArea, spec.data);
-      const narrowMarks = computeBarMarks(spec, narrowScales, narrowArea, fullStrategy);
+      // Narrow container (< NARROW_VIEWPORT_MAX): reclaim active. Same plot
+      // geometry both times; only the container width toggles the gate, proving
+      // the gate keys off the container, not the derived plot width.
+      const plotArea: Rect = { x: 120, y: 20, width: 240, height: 380 };
+      const scales = computeScales(spec, plotArea, spec.data);
+      const narrowMarks = computeBarMarks(spec, scales, plotArea, fullStrategy, 400);
       for (const mark of narrowMarks) {
         expect(mark.height).toBeGreaterThanOrEqual(8);
       }
 
-      // Wide plot (width >= NARROW_VIEWPORT_MAX): reclaim gated off, so the same
-      // tight-height layout is left untouched (bars may be thin, matching the
+      // Wide container (>= NARROW_VIEWPORT_MAX): reclaim gated off, so the same
+      // tight-height plot is left untouched (bars may be thin, matching the
       // pre-fix desktop geometry). Bars must not be *taller* than the narrow
-      // case here, proving the reclaim only applies on narrow plots.
-      const wideArea: Rect = { x: 120, y: 20, width: 700, height: 380 };
-      const wideScales = computeScales(spec, wideArea, spec.data);
-      const wideMarks = computeBarMarks(spec, wideScales, wideArea, fullStrategy);
+      // case, proving the reclaim only applies for narrow containers. A wide
+      // container with a sub-500px plot (e.g. a large left gutter) is exactly
+      // the desktop-embed case that must stay pixel-identical.
+      const wideMarks = computeBarMarks(spec, scales, plotArea, fullStrategy, 700);
       const wideMax = Math.max(...wideMarks.map((m) => m.height));
       const narrowMin = Math.min(...narrowMarks.map((m) => m.height));
       expect(wideMax).toBeLessThan(narrowMin);
@@ -368,7 +387,7 @@ describe('computeBarMarks', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks).toHaveLength(3);
       // Each bar should have different colors
@@ -401,7 +420,7 @@ describe('computeBarMarks', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks).toHaveLength(2);
       const decline = marks.find((m) => m.aria.label.includes('Decline'))!;
@@ -416,7 +435,7 @@ describe('computeBarMarks', () => {
     it('negative bars extend leftward from baseline', () => {
       const spec = makeNegativeBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const decline = marks.find((m) => m.aria.label.includes('Decline'))!;
       const growth = marks.find((m) => m.aria.label.includes('Growth'))!;
@@ -428,7 +447,7 @@ describe('computeBarMarks', () => {
     it('negative bars still have positive width', () => {
       const spec = makeNegativeBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       for (const mark of marks) {
         expect(mark.width).toBeGreaterThan(0);
@@ -471,7 +490,7 @@ describe('computeBarMarks', () => {
     it('groups by default: bars sit at different y positions within each category', () => {
       const spec = makeWageSpec(false);
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       // 2 firm sizes × 2 years = 4 bars
       expect(marks).toHaveLength(4);
@@ -496,7 +515,7 @@ describe('computeBarMarks', () => {
     it('stacked with stack:zero: segments are contiguous end-to-end within each category', () => {
       const spec = makeWageSpec(true);
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks).toHaveLength(4);
 
@@ -511,7 +530,7 @@ describe('computeBarMarks', () => {
     it('stacked with stack:zero: segments share the same y position (stacked on same row)', () => {
       const spec = makeWageSpec(true);
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const smallFirmMarks = marks.filter((m) => m.aria.label.includes('<5'));
       expect(smallFirmMarks).toHaveLength(2);
@@ -521,11 +540,23 @@ describe('computeBarMarks', () => {
     it('grouped vs stacked: grouped bars each start from baseline', () => {
       const stackedSpec = makeWageSpec(true);
       const stackedScales = computeScales(stackedSpec, chartArea, stackedSpec.data);
-      const stackedMarks = computeBarMarks(stackedSpec, stackedScales, chartArea, fullStrategy);
+      const stackedMarks = computeBarMarks(
+        stackedSpec,
+        stackedScales,
+        chartArea,
+        fullStrategy,
+        CONTAINER_WIDTH,
+      );
 
       const groupedSpec = makeWageSpec(false);
       const groupedScales = computeScales(groupedSpec, chartArea, groupedSpec.data);
-      const groupedMarks = computeBarMarks(groupedSpec, groupedScales, chartArea, fullStrategy);
+      const groupedMarks = computeBarMarks(
+        groupedSpec,
+        groupedScales,
+        chartArea,
+        fullStrategy,
+        CONTAINER_WIDTH,
+      );
 
       expect(groupedMarks).toHaveLength(4);
 
@@ -544,7 +575,7 @@ describe('computeBarMarks', () => {
       const spec = makeSimpleBarSpec();
       (spec.encoding.x as { scale?: { domain: number[] } }).scale = { domain: [65, 95] };
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const xScale = scales.x!.scale as (v: number) => number;
       const left = xScale(65);
@@ -566,7 +597,7 @@ describe('computeBarMarks', () => {
       // Lift values into the [65, 95] window so widths stay positive.
       spec.data = spec.data.map((d) => ({ ...d, value: 70 + (d.value as number) / 10 }));
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const xScale = scales.x!.scale as (v: number) => number;
       const left = xScale(65);
@@ -582,7 +613,7 @@ describe('computeBarMarks', () => {
     it('simple bars still anchor at xScale(0) for a default [0, max] domain', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const xScale = scales.x!.scale as (v: number) => number;
       for (const mark of marks) {
@@ -593,7 +624,7 @@ describe('computeBarMarks', () => {
     it('diverging bars (domain crosses zero) still anchor at xScale(0)', () => {
       const spec = makeNegativeBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       const xScale = scales.x!.scale as (v: number) => number;
       const zero = xScale(0);
@@ -623,7 +654,7 @@ describe('computeBarMarks', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
       expect(marks).toHaveLength(0);
     });
 
@@ -644,7 +675,7 @@ describe('computeBarMarks', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
       expect(marks).toHaveLength(0);
     });
   });
@@ -658,7 +689,7 @@ describe('computeBarLabels', () => {
   it('produces one label per bar mark', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
     const labels = computeBarLabels(marks, chartArea);
 
     expect(labels).toHaveLength(marks.length);
@@ -667,7 +698,7 @@ describe('computeBarLabels', () => {
   it('labels contain the value text', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
     const labels = computeBarLabels(marks, chartArea);
 
     const texts = labels.map((l) => l.text);
@@ -679,7 +710,7 @@ describe('computeBarLabels', () => {
   it('applies d3 label format string', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
     const labels = computeBarLabels(marks, chartArea, 'auto', '$,.0f');
 
     const texts = labels.map((l) => l.text);
@@ -708,7 +739,7 @@ describe('computeBarLabels', () => {
       labels: { density: 'all', format: '$,.2~fT' },
     };
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
     const labels = computeBarLabels(marks, chartArea, 'all', '$,.2~fT');
 
     const texts = labels.map((l) => l.text);
@@ -719,7 +750,7 @@ describe('computeBarLabels', () => {
   it('applies format with non-alpha suffix (e.g. "%")', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
     const labels = computeBarLabels(marks, chartArea, 'auto', '.0f%');
 
     const texts = labels.map((l) => l.text);
@@ -750,7 +781,7 @@ describe('computeBarLabels', () => {
       labels: { density: 'auto', format: '', prefix: '' },
     };
     const scales = computeScales(spec, smallArea, spec.data);
-    const marks = computeBarMarks(spec, scales, smallArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, smallArea, fullStrategy, CONTAINER_WIDTH);
     const labels = computeBarLabels(
       marks,
       smallArea,
@@ -775,7 +806,7 @@ describe('markDef overrides', () => {
     const spec = makeSimpleBarSpec();
     spec.markDef = { type: 'bar', size: 6 };
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
     for (const mark of marks) {
       expect(mark.height).toBe(6);
@@ -784,7 +815,13 @@ describe('markDef overrides', () => {
     // Bars should be centered: offset = (bandwidth - 6) / 2
     const specDefault = makeSimpleBarSpec();
     const scalesDefault = computeScales(specDefault, chartArea, specDefault.data);
-    const marksDefault = computeBarMarks(specDefault, scalesDefault, chartArea, fullStrategy);
+    const marksDefault = computeBarMarks(
+      specDefault,
+      scalesDefault,
+      chartArea,
+      fullStrategy,
+      CONTAINER_WIDTH,
+    );
     for (let i = 0; i < marks.length; i++) {
       expect(marks[i].y).toBeGreaterThan(marksDefault[i].y);
     }
@@ -794,7 +831,7 @@ describe('markDef overrides', () => {
     const spec = makeSimpleBarSpec();
     spec.markDef = { type: 'bar', size: 9999 };
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
     const bandwidth = marks[0].height;
     // Should be capped at bandwidth, not 9999
@@ -805,7 +842,7 @@ describe('markDef overrides', () => {
     const spec = makeSimpleBarSpec();
     spec.markDef = { type: 'bar', size: 6, cornerRadius: 'pill' };
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
     for (const mark of marks) {
       expect(mark.cornerRadius).toBe(3);
@@ -816,7 +853,7 @@ describe('markDef overrides', () => {
     const spec = makeSimpleBarSpec();
     spec.markDef = { type: 'bar', cornerRadius: 8 };
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
     for (const mark of marks) {
       expect(mark.cornerRadius).toBe(8);
@@ -828,7 +865,7 @@ describe('markDef overrides', () => {
     spec.markDef = { type: 'bar', size: 6 };
     // Enable stacking (default for grouped)
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
     const stackedMarks = marks.filter((m) => m.stackGroup !== undefined);
     for (const mark of stackedMarks) {
@@ -840,7 +877,7 @@ describe('markDef overrides', () => {
     const spec = makeSimpleBarSpec();
     spec.markDef = { type: 'bar', size: 10, cornerRadius: 'pill' };
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
     for (const mark of marks) {
       expect(mark.height).toBe(10);
