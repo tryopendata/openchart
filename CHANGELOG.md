@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Bug Fixes
 
+- **legend:** rows missing the color field no longer manufacture a phantom `undefined` legend entry. In a layered spec every layer's rows flatten into the color-legend source, so a sibling layer (e.g. a diagonal reference-line) that doesn't carry the color field was seeding `String(undefined)` as a category — and with an explicit `scale.domain` it appended past the authored entries, breaking domain authority.
 - **layout:** restore bottom margin base padding dropped in v7.1.0 — bottom-aligned legends were rendering outside the SVG viewport because `padding + bottomHeight + xAxisHeight` was incorrectly simplified to `bottomHeight + xAxisHeight`.
 
 ### Features

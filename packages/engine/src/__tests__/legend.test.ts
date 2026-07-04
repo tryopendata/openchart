@@ -548,4 +548,58 @@ describe('computeLegend', () => {
       expect(legend.rowHeight).toBeGreaterThan(0);
     });
   });
+
+  describe('rows missing the color field', () => {
+    // A layered spec flattens every layer's rows into `spec.data`, but the
+    // color encoding belongs to one layer. Rows from sibling layers (e.g. a
+    // diagonal reference-line) have no value for the color field and must not
+    // manufacture a phantom "undefined" legend entry.
+    it('ignores rows whose color field is undefined', () => {
+      const spec: NormalizedChartSpec = {
+        ...specWithColor,
+        data: [
+          { date: '2020', value: 10, country: 'US' },
+          { date: '2021', value: 20, country: 'UK' },
+          // rule-layer rows: no `country` field
+          { date: '2020', value: 0 },
+          { date: '2022', value: 40 },
+        ],
+      };
+      const legend = computeLegend(spec, fullStrategy, theme, chartArea);
+      expect(legend.entries.map((e) => e.label)).toEqual(['US', 'UK']);
+    });
+
+    it('keeps an explicit color domain authoritative despite phantom rows', () => {
+      const spec: NormalizedChartSpec = {
+        ...specWithColor,
+        data: [
+          { date: '2020', value: 10, tier: 'One F from takeover' },
+          { date: '2021', value: 20, tier: 'One year behind' },
+          { date: '2022', value: 30, tier: 'Other D/F campus' },
+          // diagonal reference-line layer, no `tier`
+          { date: '2020', value: 0 },
+          { date: '2022', value: 40 },
+        ],
+        encoding: {
+          x: { field: 'date', type: 'temporal' },
+          y: { field: 'value', type: 'quantitative' },
+          color: {
+            field: 'tier',
+            type: 'nominal',
+            scale: {
+              domain: ['One F from takeover', 'One year behind', 'Other D/F campus'],
+              range: ['#fb7185', '#f59e0b', '#64748b'],
+            },
+          },
+        },
+      };
+      const legend = computeLegend(spec, fullStrategy, theme, chartArea);
+      expect(legend.entries.map((e) => e.label)).toEqual([
+        'One F from takeover',
+        'One year behind',
+        'Other D/F campus',
+      ]);
+      expect(legend.entries).toHaveLength(3);
+    });
+  });
 });
