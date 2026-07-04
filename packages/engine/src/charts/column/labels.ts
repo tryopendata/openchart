@@ -5,8 +5,10 @@
  * or below (for negative values).
  *
  * Respects the spec's label density setting:
- * - 'all': show every label, skip collision detection
- * - 'auto': existing behavior (collision detection)
+ * - 'all': consider every column's label (no density pre-filter), but still
+ *   run collision resolution so colliding losers are hidden rather than drawn
+ *   on top of each other
+ * - 'auto': existing behavior (density pre-filter + collision detection)
  * - 'endpoints': first and last columns only
  * - 'none': return empty array
  */
@@ -22,6 +24,7 @@ import {
   estimateTextWidth,
   getRepresentativeColor,
   resolveCollisions,
+  textAscent,
 } from '@opendata-ai/openchart-core';
 import { filterByDensity } from '../_shared/density-filter';
 import { formatLabelValue } from '../_shared/format-label-value';
@@ -97,7 +100,8 @@ export function computeColumnLabels(
 
     // anchorY is the TOP of the label bounding box so the collision system's
     // AABB check (rect = { y: anchorY, height: textHeight }) is geometrically
-    // correct. dominantBaseline 'hanging' anchors the glyph top at anchorY.
+    // correct. Collision math stays in top-coordinate space; the ascent shift
+    // to the alphabetic baseline is applied only at emission (see below).
     //   Positive bar: top = barTop - LABEL_OFFSET_Y - textHeight, text floats above
     //   Negative bar: top = barBottom + LABEL_OFFSET_Y, text hangs below
     const anchorX = mark.x + mark.width / 2;
@@ -119,23 +123,32 @@ export function computeColumnLabels(
         fill: labelColor ?? getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'middle',
-        dominantBaseline: 'hanging',
       },
     });
   }
 
   if (candidates.length === 0) return [];
 
-  // 'all': skip collision detection, mark everything visible
-  if (density === 'all') {
-    return candidates.map((c) => ({
-      text: c.text,
-      x: c.anchorX,
-      y: c.anchorY,
-      style: c.style,
-      visible: true,
-    }));
-  }
+  // Collision resolution keeps y in top-edge coordinates; renderers position
+  // text on the alphabetic baseline, so shift every emitted y down by the
+  // ascent instead of relying on dominant-baseline:hanging (WebKit computes
+  // hanging from different font metrics than Blink, clipping labels on iOS).
+  const ascent = textAscent(FONT_SIZE);
 
-  return resolveCollisions(candidates);
+  // Every density that reaches here ('all' and 'auto') runs collision
+  // resolution. 'all' just skips the density pre-filter above so every mark is
+  // a candidate; colliding losers are still hidden by resolveCollisions rather
+  // than stacked on top of each other.
+  return resolveCollisions(candidates).map((label) => ({
+    ...label,
+    y: label.y + ascent,
+    // The connector originates at the label; shift its start to the baseline
+    // too so the leader stays glued to the shifted text.
+    connector: label.connector
+      ? {
+          ...label.connector,
+          from: { ...label.connector.from, y: label.connector.from.y + ascent },
+        }
+      : undefined,
+  }));
 }

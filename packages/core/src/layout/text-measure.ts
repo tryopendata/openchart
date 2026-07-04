@@ -374,6 +374,22 @@ export function estimateTextHeight(fontSize: number, lineCount = 1, lineHeight =
   return fontSize * lineHeight * lineCount;
 }
 
+/**
+ * Distance from the top of a text box to its alphabetic baseline.
+ *
+ * Layout stores text positions as top-edge coordinates; renderers convert to
+ * baseline coordinates with this ratio instead of `dominant-baseline: hanging`.
+ * WebKit computes the hanging baseline from different font metrics than Blink
+ * and never inherits dominant-baseline into tspans (WebKit bugs 139258 /
+ * 297455), which shifted whole titles above the container on iOS Safari.
+ * The 0.8 ratio matches Blink's rendered hanging position for typical UI
+ * fonts (hanging sits at ~0.8 x ascent, Inter ascent ~= 0.97em) and the
+ * Highcharts fontMetrics convention.
+ */
+export function textAscent(fontSize: number): number {
+  return fontSize * 0.8;
+}
+
 // ---------------------------------------------------------------------------
 // Measurer resolver — bridges heuristic ↔ injected canvas measurer
 // ---------------------------------------------------------------------------

@@ -91,14 +91,13 @@ export function extractBoxes(layout: ChartLayout): NamedRect[] {
     });
   }
 
-  // Chrome elements: y interpretation depends on dominantBaseline.
-  // 'hanging' = y is top of text; 'auto' = y is baseline (ascender ~80% of fontSize).
+  // Chrome elements store y as the TOP edge of the text box (renderers convert
+  // to the alphabetic baseline via textAscent), so y is the box top directly.
   for (const key of CHROME_KEYS) {
     const el = layout.chrome[key];
     if (el) {
       const h = el.style.fontSize * el.style.lineHeight;
-      const top = el.style.dominantBaseline === 'hanging' ? el.y : el.y - el.style.fontSize * 0.8;
-      boxes.push({ x: el.x, y: top, width: el.maxWidth, height: h, name: key });
+      boxes.push({ x: el.x, y: el.y, width: el.maxWidth, height: h, name: key });
     }
   }
 
@@ -229,8 +228,7 @@ export function checkLayoutInvariants(
       const el = layout.chrome[key];
       if (el) {
         const h = el.style.fontSize * el.style.lineHeight;
-        const top = el.style.dominantBaseline === 'hanging' ? el.y : el.y - el.style.fontSize * 0.8;
-        const chromeBox: Rect = { x: el.x, y: top, width: el.maxWidth, height: h };
+        const chromeBox: Rect = { x: el.x, y: el.y, width: el.maxWidth, height: h };
         if (rectsOverlap(xAxisBand, chromeBox, 0.5)) {
           violations.push(
             `x-axis labels intersect ${key}: xAxis=${formatRect(xAxisBand)} ${key}=${formatRect(chromeBox)}`,

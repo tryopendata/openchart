@@ -61,8 +61,10 @@ export const DEFAULT_THEME: Theme = {
     axisMargin: 6,
     xAxisHeight: X_AXIS_BAND_HEIGHT,
     // Gap (px) between the x-axis line and the TOP of the tick labels. The
-    // renderer anchors x-tick labels at their top edge (hanging baseline), so
-    // this is a literal top gap that holds regardless of font size.
+    // renderer treats this as a literal top gap and then shifts the label down
+    // by textAscent() to land it on the alphabetic baseline (rather than
+    // dominant-baseline:hanging, which WebKit positions from different metrics),
+    // so the gap holds regardless of font size.
     xAxisLabelPadding: 4,
   },
   borderRadius: 2,

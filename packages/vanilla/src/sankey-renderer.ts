@@ -21,6 +21,7 @@ import {
   BRAND_FONT_SIZE,
   BRAND_MIN_WIDTH,
   estimateTextWidth,
+  textAscent,
   wrapText,
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
@@ -94,7 +95,9 @@ function renderChromeElement(
   measureText?: MeasureTextFn,
 ): void {
   const text = createSVGElement('text');
-  setAttrs(text, { x: element.x, y: element.y });
+  // element.y is the TOP of the text box; convert to the alphabetic baseline
+  // (see renderers/chrome.ts — WebKit mishandles dominant-baseline:hanging).
+  setAttrs(text, { x: element.x, y: element.y + textAscent(element.style.fontSize) });
   applyTextStyle(text, element.style);
   text.setAttribute('class', className);
   text.setAttribute('data-chrome-key', chromeKey);

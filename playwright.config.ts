@@ -49,6 +49,26 @@ export default defineConfig({
         deviceScaleFactor: 1,
       },
     },
+    // Mobile Chromium: catches narrow-viewport layout bugs (label collisions,
+    // degenerate ticks) that the desktop project never sees.
+    {
+      name: 'invariants-chromium-mobile',
+      testDir: './e2e/invariants',
+      use: {
+        ...devices['Pixel 7'],
+      },
+    },
+    // Mobile WebKit: Playwright's WebKit shares the engine bugs that break
+    // real iOS Safari (dominant-baseline divergence, tspan getBBox). Run on
+    // a macOS host for font-metric fidelity; Linux WebKit uses FreeType and
+    // measures text differently.
+    {
+      name: 'invariants-webkit-mobile',
+      testDir: './e2e/invariants',
+      use: {
+        ...devices['iPhone 13'],
+      },
+    },
   ],
   webServer: {
     // Ladle dev server. Port pinned so baseURL above matches.

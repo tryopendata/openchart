@@ -19,8 +19,9 @@ import type { ResolvedScales } from '../layout/scales';
  * A chart renderer function.
  *
  * Takes a normalized spec, resolved scales, chart area, layout strategy,
- * and the resolved theme for theme-aware styling (e.g. label colors).
- * Returns an array of marks to render.
+ * the resolved theme for theme-aware styling (e.g. label colors), and the
+ * full container width (used by geometry gates that must key off the
+ * container, not the derived plot width). Returns an array of marks to render.
  */
 export type ChartRenderer = (
   spec: NormalizedChartSpec,
@@ -28,6 +29,7 @@ export type ChartRenderer = (
   chartArea: Rect,
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
+  containerWidth: number,
 ) => Mark[];
 
 // ---------------------------------------------------------------------------

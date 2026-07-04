@@ -11,6 +11,7 @@ import type {
   TileMapLayout,
   TileMapTileMark,
 } from '@opendata-ai/openchart-core';
+import { textAscent } from '@opendata-ai/openchart-core';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -41,6 +42,8 @@ function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void 
 // Chrome rendering
 // ---------------------------------------------------------------------------
 
+// Chrome y positions are top-edge coordinates; convert to the alphabetic
+// baseline via textAscent() (WebKit mishandles dominant-baseline:hanging).
 function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-chrome');
@@ -50,7 +53,10 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
 
   if (chrome.title) {
     const text = createSVGElement('text');
-    setAttrs(text, { x: chrome.title.x, y: chrome.title.y });
+    setAttrs(text, {
+      x: chrome.title.x,
+      y: chrome.title.y + textAscent(chrome.title.style.fontSize),
+    });
     text.setAttribute('class', 'oc-title');
     text.setAttribute('font-family', chrome.title.style.fontFamily);
     text.setAttribute('font-size', String(chrome.title.style.fontSize));
@@ -62,7 +68,10 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
 
   if (chrome.subtitle) {
     const text = createSVGElement('text');
-    setAttrs(text, { x: chrome.subtitle.x, y: chrome.subtitle.y });
+    setAttrs(text, {
+      x: chrome.subtitle.x,
+      y: chrome.subtitle.y + textAscent(chrome.subtitle.style.fontSize),
+    });
     text.setAttribute('class', 'oc-subtitle');
     text.setAttribute('font-family', chrome.subtitle.style.fontFamily);
     text.setAttribute('font-size', String(chrome.subtitle.style.fontSize));
@@ -77,7 +86,10 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
 
   if (chrome.source) {
     const text = createSVGElement('text');
-    setAttrs(text, { x: chrome.source.x, y: bottomOffset + chrome.source.y });
+    setAttrs(text, {
+      x: chrome.source.x,
+      y: bottomOffset + chrome.source.y + textAscent(chrome.source.style.fontSize),
+    });
     text.setAttribute('class', 'oc-source');
     text.setAttribute('font-family', chrome.source.style.fontFamily);
     text.setAttribute('font-size', String(chrome.source.style.fontSize));
@@ -92,7 +104,10 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
 
   if (chrome.byline) {
     const text = createSVGElement('text');
-    setAttrs(text, { x: chrome.byline.x, y: bottomOffset + chrome.byline.y });
+    setAttrs(text, {
+      x: chrome.byline.x,
+      y: bottomOffset + chrome.byline.y + textAscent(chrome.byline.style.fontSize),
+    });
     text.setAttribute('class', 'oc-byline');
     text.setAttribute('font-family', chrome.byline.style.fontFamily);
     text.setAttribute('font-size', String(chrome.byline.style.fontSize));
@@ -107,7 +122,10 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
 
   if (chrome.footer) {
     const text = createSVGElement('text');
-    setAttrs(text, { x: chrome.footer.x, y: bottomOffset + chrome.footer.y });
+    setAttrs(text, {
+      x: chrome.footer.x,
+      y: bottomOffset + chrome.footer.y + textAscent(chrome.footer.style.fontSize),
+    });
     text.setAttribute('class', 'oc-footer');
     text.setAttribute('font-family', chrome.footer.style.fontFamily);
     text.setAttribute('font-size', String(chrome.footer.style.fontSize));

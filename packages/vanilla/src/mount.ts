@@ -53,7 +53,7 @@ import {
   wireTooltipEvents,
   wireVoronoiTooltipEvents,
 } from './interactions';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
@@ -190,6 +190,13 @@ export function createChart<TData extends DataRow = DataRow>(
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
 
+  // Set when webfonts have loaded and a recompile is owed to reflect final font
+  // metrics. The next render() that actually recompiles flips
+  // data-oc-fonts-state to 'ready' and clears this. Deferring the flip (rather
+  // than setting it right after resize()) keeps the attribute honest when the
+  // entrance animation makes resize() defer to pendingResize.
+  let fontsReloadPending = false;
+
   // Selection and text editing state
   let selectedElement: ElementRef | null = options?.selectedElement ?? null;
   let overlayElement: SVGGElement | null = null;
@@ -200,7 +207,25 @@ export function createChart<TData extends DataRow = DataRow>(
   const runtimeShownSeries = new Set<string>();
   let textEditCleanup: (() => void) | null = null;
 
-  const measureText = createMeasureText();
+  // Apply the root class up front so getComputedStyle can read --oc-font-family
+  // before we build the text measurer.
+  container.classList.add('oc-root');
+
+  // Resolve the effective font family the way compile() will. compile merges
+  // { ...spec.theme, ...options.theme }, so options.theme wins over the
+  // spec-level theme; fall back to the container's computed font. Measuring
+  // against a different font than compile renders (e.g. a spec that sets
+  // theme.fonts.family) desyncs layout metrics and the font-reload watcher.
+  function resolveEffectiveFont(): string {
+    return (
+      options?.theme?.fonts?.family ??
+      currentSpec.theme?.fonts?.family ??
+      resolveFontFamily(container)
+    );
+  }
+  let fontFamily = resolveEffectiveFont();
+  let measureText = createMeasureText(fontFamily);
+  let renderGen = 0;
 
   // ---------------------------------------------------------------------------
   // Compilation
@@ -774,6 +799,20 @@ export function createChart<TData extends DataRow = DataRow>(
         }
       });
     }
+    // Bump the render generation so tests (and consumers) can observe every
+    // full recompile, including the post-font-load one.
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
+
+    // This render recompiled with the loaded webfonts, so the layout now
+    // reflects final font metrics. Publish 'ready' only now (not right after
+    // the fonts-ready resize(), which may have deferred to pendingResize while
+    // the entrance animation was still running).
+    if (fontsReloadPending) {
+      fontsReloadPending = false;
+      container.dataset.ocFontsState = 'ready';
+    }
+
     if (isFirstRender) {
       isFirstRender = false;
     }
@@ -786,6 +825,13 @@ export function createChart<TData extends DataRow = DataRow>(
   function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
     if (destroyed) return;
     currentSpec = newSpec;
+    // A new spec can change theme.fonts.family; rebuild the measurer so layout
+    // measures the font compile will actually render with.
+    const nextFont = resolveEffectiveFont();
+    if (nextFont !== fontFamily) {
+      fontFamily = nextFont;
+      measureText = createMeasureText(fontFamily);
+    }
     runtimeHiddenSeries.clear();
     runtimeShownSeries.clear();
     if (updateOpts && 'selectedElement' in updateOpts) {
@@ -892,6 +938,23 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Initial render
   render();
+
+  // Recompile once after webfonts load. On real devices the primary font
+  // (e.g. Inter via display=swap) often swaps in after first paint, changing
+  // text metrics; without a re-measure, titles wrap wrong and labels collide.
+  // Desktop Chrome has the font cached, so it renders 'ready' immediately.
+  const pending = scheduleFontReload(
+    fontFamily,
+    () => !destroyed,
+    () => {
+      // Mark the reload owed, then trigger a recompile. render() flips the
+      // attribute to 'ready' once it actually recompiles — including the
+      // pendingResize replay after the entrance animation finishes.
+      fontsReloadPending = true;
+      resize();
+    },
+  );
+  container.dataset.ocFontsState = pending ? 'pending' : 'ready';
 
   // Set up responsive resize
   if (options?.responsive !== false) {

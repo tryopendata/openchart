@@ -62,6 +62,7 @@ export {
   estimateTextWidth,
   heuristicMeasure,
   resolveMeasurer,
+  textAscent,
   wrapText,
 } from './layout/index';
 

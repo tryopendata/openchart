@@ -24,7 +24,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
@@ -88,7 +88,30 @@ export function createBarList(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
-  const measureText = createMeasureText();
+  // Set when webfonts have loaded and a recompile is owed. The next render()
+  // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
+  // the attribute stays honest when resize() defers to pendingResize during
+  // the entrance animation.
+  let fontsReloadPending = false;
+
+  // Apply the root class up front so getComputedStyle sees --oc-font-family
+  // before the text measurer is built.
+  container.classList.add('oc-barlist-root');
+
+  // Resolve the effective font the way compile() will: compile merges
+  // { ...spec.theme, ...options.theme }, so options.theme wins over the
+  // spec-level theme; fall back to the container's computed font. Measuring a
+  // different font than gets rendered desyncs layout metrics and the reload watcher.
+  function resolveEffectiveFont(): string {
+    return (
+      options?.theme?.fonts?.family ??
+      currentSpec.theme?.fonts?.family ??
+      resolveFontFamily(container)
+    );
+  }
+  let fontFamily = resolveEffectiveFont();
+  let measureText = createMeasureText(fontFamily);
+  let renderGen = 0;
 
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
@@ -233,10 +256,28 @@ export function createBarList(
         }
       });
     }
+
+    renderGen += 1;
+    container.dataset.ocRenderGen = String(renderGen);
+
+    // This render recompiled with the loaded webfonts; publish 'ready' now
+    // rather than right after the fonts-ready resize() (which may have deferred
+    // to pendingResize during the entrance animation).
+    if (fontsReloadPending) {
+      fontsReloadPending = false;
+      container.dataset.ocFontsState = 'ready';
+    }
   }
 
   function update(newSpec: BarListSpec): void {
     currentSpec = newSpec;
+    // A new spec can change theme.fonts.family; rebuild the measurer so layout
+    // measures the font compile will actually render with.
+    const nextFont = resolveEffectiveFont();
+    if (nextFont !== fontFamily) {
+      fontFamily = nextFont;
+      measureText = createMeasureText(fontFamily);
+    }
     currentLayout = compile();
     render();
   }
@@ -304,13 +345,27 @@ export function createBarList(
   }
 
   // Initialize
-  container.classList.add('oc-barlist-root');
   if (resolveDarkMode(options?.darkMode)) {
     container.classList.add('oc-dark');
   }
 
   currentLayout = compile();
   render(true);
+
+  // Recompile once after webfonts load so row labels aren't stuck measured
+  // against fallback metrics on real devices.
+  const fontsPending = scheduleFontReload(
+    fontFamily,
+    () => !destroyed,
+    () => {
+      // Mark the reload owed, then recompile. render() flips the attribute to
+      // 'ready' once it actually recompiles, including the pendingResize replay
+      // after the entrance animation finishes.
+      fontsReloadPending = true;
+      resize();
+    },
+  );
+  container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   if (options?.responsive !== false) {
     disconnectResize = observeResize(container, () => resize());

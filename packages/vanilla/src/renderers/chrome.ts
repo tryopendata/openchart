@@ -7,7 +7,7 @@ import type {
   MeasureTextFn,
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
+import { estimateTextWidth, textAscent, wrapText } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 function renderChromeElement(
@@ -19,7 +19,10 @@ function renderChromeElement(
   uppercase = false,
 ): void {
   const text = createSVGElement('text');
-  setAttrs(text, { x: element.x, y: element.y });
+  // element.y is the TOP of the text box; convert to the alphabetic baseline
+  // here instead of relying on dominant-baseline:hanging, which WebKit
+  // positions from different font metrics and never inherits into tspans.
+  setAttrs(text, { x: element.x, y: element.y + textAscent(element.style.fontSize) });
   applyTextStyle(text, element.style);
   text.setAttribute('class', className);
   text.setAttribute('data-chrome-key', chromeKey);
@@ -61,8 +64,8 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   // Top chrome: render at their stored y positions (already absolute)
   if (chrome.eyebrow) {
     // Leading accent dot — matches the editorial design system mock.
-    // Eyebrow text uses dominantBaseline: hanging, so eyebrow.y is the top of
-    // the text. Visual center is roughly y + fontSize * 0.55 (cap height).
+    // eyebrow.y is the top of the text box. Visual center is roughly
+    // y + fontSize * 0.55 (cap height).
     const eyebrow = chrome.eyebrow;
     const dotR = 3;
     const dotGap = 8;
