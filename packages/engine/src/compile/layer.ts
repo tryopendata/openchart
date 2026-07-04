@@ -70,8 +70,18 @@ export function compileLayer(
   }));
   indexedLeaves.sort((a, b) => a.zIndex - b.zIndex);
 
+  // Leaf specs lack the layer-level chrome/legend, so left alone they compute
+  // a different chart area than the primary and their marks drift off the
+  // axes. Freeze the primary's area (and inherit its theme) for every leaf.
+  const leafOptions: CompileOptions = { ...options, frozenChartArea: primaryLayout.area };
+
   for (const { leaf } of indexedLeaves) {
-    const leafLayout = compileChart(leaf as unknown, options);
+    const themedLeaf = {
+      ...(leaf as ChartSpec),
+      theme: (leaf as ChartSpec).theme ?? spec.theme,
+      darkMode: (leaf as ChartSpec).darkMode ?? spec.darkMode,
+    };
+    const leafLayout = compileChart(themedLeaf as unknown, leafOptions);
 
     allMarks.push(...leafLayout.marks);
 

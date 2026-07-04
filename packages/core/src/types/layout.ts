@@ -1448,6 +1448,14 @@ export interface CompileOptions {
   measureText?: MeasureTextFn;
   /** Extra pixels to reserve on the right margin for a secondary y-axis. Set by compileLayer when resolve.scale.y is 'independent'. */
   rightAxisReserve?: number;
+  /**
+   * Use this chart drawing area instead of computing one from chrome, axes,
+   * and legend reservations. Set by compileLayer when compiling leaf layers so
+   * their marks land in the primary layout's coordinate space; leaf specs lack
+   * the layer-level chrome/legend/theme and would otherwise compute a
+   * different area than the one the axes are rendered in.
+   */
+  frozenChartArea?: Rect;
 }
 
 /** Extended compile options for table visualizations. */
