@@ -144,7 +144,15 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   // Sequential (quantitative) color doesn't produce discrete legend entries
   if (colorEnc.type === 'quantitative') return [];
 
-  const dataValues = [...new Set(spec.data.map((d) => String(d[colorEnc.field])))];
+  // Rows missing the color field (e.g. a sibling layer in a layered spec whose
+  // marks don't participate in the color encoding) must not manufacture a legend
+  // category. Without this guard, `String(undefined)` seeds a phantom "undefined"
+  // entry and — with an explicit domain — appends it past the authored entries.
+  const dataValues = [
+    ...new Set(
+      spec.data.filter((d) => d[colorEnc.field] != null).map((d) => String(d[colorEnc.field])),
+    ),
+  ];
   const explicitDomain = colorEnc.scale?.domain as string[] | undefined;
   const explicitRange = colorEnc.scale?.range as string[] | undefined;
   const palette = explicitRange ?? theme.colors.categorical;
