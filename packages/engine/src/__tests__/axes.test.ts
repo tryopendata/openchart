@@ -668,9 +668,10 @@ describe('axis config properties', () => {
     const scales = computeScales(lineSpec, chartArea, lineSpec.data);
     const axes = computeAxes(scales, chartArea, fullStrategy, theme);
 
-    // All new properties should be undefined when not set
+    // All new properties should be undefined when not set (except domainLine,
+    // which defaults to false for non-grounded marks like line)
     expect(axes.x!.orient).toBeUndefined();
-    expect(axes.x!.domainLine).toBeUndefined();
+    expect(axes.x!.domainLine).toBe(false);
     expect(axes.x!.tickMarks).toBeUndefined();
     expect(axes.x!.offset).toBeUndefined();
     expect(axes.x!.titlePadding).toBeUndefined();

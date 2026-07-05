@@ -73,6 +73,9 @@ const WIDTH_REDUCED_THRESHOLD = 300;
 /** Ordered densities from most to fewest ticks. */
 const DENSITY_ORDER: AxisLabelDensity[] = ['full', 'reduced', 'minimal'];
 
+/** Marks grounded on the x baseline that warrant a domain line. */
+const GROUNDED_MARKS = new Set(['bar', 'tick', 'lollipop']);
+
 /**
  * Compute effective axis tick density by considering available space.
  *
@@ -460,9 +463,12 @@ export function computeAxes(
     // because tick labels need horizontal room around their x position).
     const xTickPosition = axisConfig?.tickPosition ?? 'gutter';
 
+    const xDomainLine =
+      axisConfig?.domain ?? (GROUNDED_MARKS.has(dataContext?.markType ?? '') ? undefined : false);
+
     result.x = {
       ticks,
-      gridlines: axisConfig?.grid ? gridlines : [],
+      gridlines: (axisConfig?.grid ?? dataContext?.markType === 'point') ? gridlines : [],
       label: axisTitle,
       labelStyle: xLabelColor ? { ...axisLabelStyle, fill: xLabelColor } : axisLabelStyle,
       tickLabelStyle: xLabelColor ? { ...tickLabelStyle, fill: xLabelColor } : tickLabelStyle,
@@ -470,7 +476,7 @@ export function computeAxes(
       start: { x: chartArea.x, y: chartArea.y + chartArea.height },
       end: { x: chartArea.x + chartArea.width, y: chartArea.y + chartArea.height },
       orient: axisConfig?.orient,
-      domainLine: axisConfig?.domain,
+      domainLine: xDomainLine,
       tickMarks: axisConfig?.ticks,
       offset: axisConfig?.offset,
       titlePadding: axisConfig?.titlePadding,
