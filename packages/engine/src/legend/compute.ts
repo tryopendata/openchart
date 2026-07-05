@@ -289,6 +289,22 @@ export function computeLegendContent(
     entries = [];
   }
 
+  // Bar/column/lollipop redundancy rule: when color.field matches the category
+  // axis field, the legend just repeats the axis labels. Hide it unless the
+  // user explicitly configured the legend.
+  const hasRedundantLegend = spec.markType === 'bar' || spec.markType === 'lollipop';
+  if (hasRedundantLegend && entries.length > 0 && !spec.userExplicit?.legend) {
+    const colorEnc = spec.encoding.color;
+    const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
+    if (colorField) {
+      const categoryField =
+        spec.encoding.y?.type === 'quantitative' ? spec.encoding.x?.field : spec.encoding.y?.field;
+      if (colorField === categoryField) {
+        entries = [];
+      }
+    }
+  }
+
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: theme.fonts.sizes.small,

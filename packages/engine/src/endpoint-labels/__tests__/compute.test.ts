@@ -439,4 +439,61 @@ describe('computeEndpointLabels', () => {
       expect(entry.color).toBe(lineColor);
     }
   });
+
+  it('produces leading entries when ends: "both"', () => {
+    const spec = makeSpec({ endpointLabels: { ends: 'both' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    expect(layout.entries).toHaveLength(2);
+    expect(layout.leading).toBeDefined();
+    expect(layout.leading).toHaveLength(2);
+    const leadingKeys = layout.leading!.map((e) => e.seriesKey).sort();
+    expect(leadingKeys).toEqual(['UK', 'US']);
+  });
+
+  it('positions leading column to the left of the chart area', () => {
+    const spec = makeSpec({ endpointLabels: { ends: 'both' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    expect(layout.leadingBounds).toBeDefined();
+    expect(layout.leadingBounds!.x + layout.leadingBounds!.width).toBeLessThanOrEqual(chartArea.x);
+    expect(layout.leadingBounds!.width).toBeGreaterThan(0);
+  });
+
+  it('leading entries use the first data point value', () => {
+    const spec = makeSpec({ endpointLabels: { ends: 'both' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    const usTrailing = layout.entries.find((e) => e.seriesKey === 'US');
+    const usLeading = layout.leading!.find((e) => e.seriesKey === 'US');
+    expect(usTrailing).toBeDefined();
+    expect(usLeading).toBeDefined();
+    // The first data point has value - 5 (35 for US), the last has the full value (40).
+    expect(usLeading!.value).not.toBe(usTrailing!.value);
+  });
+
+  it('does not produce leading entries when ends is unset (default)', () => {
+    const spec = makeSpec();
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    expect(layout.leading).toBeUndefined();
+    expect(layout.leadingBounds).toBeUndefined();
+  });
+
+  it('leading entries get markers at the first data point', () => {
+    const spec = makeSpec({ endpointLabels: { ends: 'both' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    for (const entry of layout.leading!) {
+      expect(entry.marker).toBeDefined();
+      expect(entry.marker!.dataX).toBe(chartArea.x);
+      // Leading marker offset: x = dataX - radius (left side).
+      expect(entry.marker!.x).toBe(chartArea.x - ENDPOINT_MARKER_RADIUS);
+    }
+  });
 });

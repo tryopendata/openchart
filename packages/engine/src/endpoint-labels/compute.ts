@@ -92,8 +92,6 @@ function lastDataPoint(mark: LineMark | AreaMark): { x: number; y: number } | nu
     const last = mark.dataPoints[mark.dataPoints.length - 1];
     return { x: last.x, y: last.y };
   }
-  // Fallback for marks compiled without dataPoints (rare): use the last
-  // geometry point. For areas this is the top boundary.
   if (mark.type === 'line' && mark.points.length > 0) {
     const last = mark.points[mark.points.length - 1];
     return { x: last.x, y: last.y };
@@ -105,7 +103,24 @@ function lastDataPoint(mark: LineMark | AreaMark): { x: number; y: number } | nu
   return null;
 }
 
-/** Get the value to display from a data row. */
+/** Get the first data-point pixel position for a line/area mark. */
+function firstDataPoint(mark: LineMark | AreaMark): { x: number; y: number } | null {
+  if (mark.dataPoints && mark.dataPoints.length > 0) {
+    const first = mark.dataPoints[0];
+    return { x: first.x, y: first.y };
+  }
+  if (mark.type === 'line' && mark.points.length > 0) {
+    const first = mark.points[0];
+    return { x: first.x, y: first.y };
+  }
+  if (mark.type === 'area' && mark.topPoints.length > 0) {
+    const first = mark.topPoints[0];
+    return { x: first.x, y: first.y };
+  }
+  return null;
+}
+
+/** Get the value to display from the last data row. */
 function readValue(
   mark: LineMark | AreaMark,
   valueField: string | undefined,
@@ -119,6 +134,25 @@ function readValue(
   }
   if (mark.data.length > 0) {
     const v = mark.data[mark.data.length - 1][valueField];
+    return typeof v === 'number' || typeof v === 'string' ? v : null;
+  }
+  return null;
+}
+
+/** Get the value to display from the first data row. */
+function readFirstValue(
+  mark: LineMark | AreaMark,
+  valueField: string | undefined,
+): number | string | null {
+  if (!valueField) return null;
+  const dp = mark.dataPoints;
+  if (dp && dp.length > 0) {
+    const datum = dp[0].datum;
+    const v = datum[valueField];
+    return typeof v === 'number' || typeof v === 'string' ? v : null;
+  }
+  if (mark.data.length > 0) {
+    const v = mark.data[0][valueField];
     return typeof v === 'number' || typeof v === 'string' ? v : null;
   }
   return null;
@@ -403,6 +437,128 @@ export function computeEndpointLabels(
     return entry;
   });
 
+  // Leading column (left side) for `ends: 'both'` mode.
+  const endsBoth = config?.ends === 'both';
+  let leading: EndpointLabelEntry[] | undefined;
+  let leadingBounds: { x: number; y: number; width: number; height: number } | undefined;
+
+  if (endsBoth) {
+    type LeadingProvisional = {
+      seriesKey: string;
+      labelLines: string[];
+      value: string;
+      color: string;
+      dataX: number;
+      dataY: number;
+      height: number;
+      width: number;
+    };
+    const leadingProvisional: LeadingProvisional[] = [];
+
+    for (const mark of lineOrAreaMarks) {
+      const seriesKey = mark.seriesKey;
+      if (!seriesKey) continue;
+      const first = firstDataPoint(mark);
+      if (!first) continue;
+
+      const labelLines = wrapText(
+        seriesKey,
+        ENDPOINT_LABEL_FONT_SIZE,
+        ENDPOINT_LABEL_FONT_WEIGHT,
+        wrapWidth,
+      );
+      const rawValue = readFirstValue(mark, valueField);
+      const value = formatEndpointValue(rawValue, formatString);
+
+      let entryWidth = 0;
+      for (const line of labelLines) {
+        const w = estimateTextWidth(line, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT);
+        if (w > entryWidth) entryWidth = w;
+      }
+      const valueWidth = value
+        ? estimateTextWidth(value, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT)
+        : 0;
+      if (valueWidth > entryWidth) entryWidth = valueWidth;
+
+      const labelHeight = labelLines.length * labelLineHeight;
+      const valueHeight = value ? valueLineHeight : 0;
+      const entryHeight = labelHeight + (value ? ENDPOINT_VALUE_GAP : 0) + valueHeight;
+
+      const color =
+        mark.type === 'line'
+          ? mark.stroke
+          : (mark.stroke ??
+            (typeof mark.fill === 'string' ? mark.fill : theme.colors.categorical[0]));
+
+      leadingProvisional.push({
+        seriesKey,
+        labelLines,
+        value,
+        color,
+        dataX: first.x,
+        dataY: first.y,
+        height: entryHeight,
+        width: entryWidth,
+      });
+    }
+
+    if (leadingProvisional.length >= 2) {
+      const leadingSweepInput = leadingProvisional.map((p, i) => ({
+        naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
+        height: p.height + ENDPOINT_ENTRY_GAP,
+        index: i,
+      }));
+      const leadingSweptTops = bidirectionalSweep(
+        leadingSweepInput,
+        chartArea.y,
+        chartArea.y + chartArea.height,
+      );
+
+      const leadingColumnWidth = Math.max(
+        ENDPOINT_SWATCH_SIZE +
+          ENDPOINT_GAP +
+          Math.max(...leadingProvisional.map((p) => p.width), 0) +
+          4,
+        32,
+      );
+      const leadingColumnX = chartArea.x - ENDPOINT_COLUMN_GAP - leadingColumnWidth;
+
+      leading = leadingProvisional.map((p, i) => {
+        const labelY = leadingSweptTops[i];
+        const swatchRowY = labelY + ENDPOINT_LABEL_FONT_SIZE / 2;
+        const displaced = Math.abs(swatchRowY - p.dataY) > ENDPOINT_LEADER_THRESHOLD;
+        const entry: EndpointLabelEntry = {
+          seriesKey: p.seriesKey,
+          labelLines: p.labelLines,
+          value: p.value,
+          color: p.color,
+          dataY: p.dataY,
+          labelY,
+          showLeader: showLeader && displaced,
+        };
+        if (showMarker) {
+          entry.marker = {
+            x: p.dataX - markerRadius,
+            y: p.dataY,
+            dataX: p.dataX,
+            fill: markerFill,
+            stroke: config?.markerStyle?.stroke ?? p.color,
+            strokeWidth: markerStrokeWidth,
+            radius: markerRadius,
+          };
+        }
+        return entry;
+      });
+
+      leadingBounds = {
+        x: leadingColumnX,
+        y: chartArea.y,
+        width: leadingColumnWidth,
+        height: chartArea.height,
+      };
+    }
+  }
+
   return {
     entries,
     bounds: {
@@ -417,5 +573,7 @@ export function computeEndpointLabels(
     gap: ENDPOINT_GAP,
     valueGap: ENDPOINT_VALUE_GAP,
     swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
+    leading,
+    leadingBounds,
   };
 }

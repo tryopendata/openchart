@@ -291,4 +291,57 @@ describe('resolveSuppression - special cases', () => {
     // Legend auto-suppressed
     expect(result.showTraditionalLegend).toBe(false);
   });
+
+  it('endpointLabels: { maxSeries: 12 } alone does NOT count as explicit on', () => {
+    const spec = makeMultiSeriesLineSpec({ endpointLabels: { maxSeries: 12 } });
+    const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 14 });
+    expect(result.showEndpointLabels).toBe(false);
+    expect(result.showTraditionalLegend).toBe(true);
+  });
+});
+
+describe('resolveSuppression - series-count cutoff', () => {
+  it('10-series line chart exceeds default cutoff (8): legend shown, endpoint labels hidden', () => {
+    const spec = makeMultiSeriesLineSpec();
+    const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 10 });
+    expect(result.showEndpointLabels).toBe(false);
+    expect(result.showTraditionalLegend).toBe(true);
+  });
+
+  it('7-series line chart within default cutoff: endpoint labels shown', () => {
+    const spec = makeMultiSeriesLineSpec();
+    const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 7 });
+    expect(result.showEndpointLabels).toBe(true);
+    expect(result.showTraditionalLegend).toBe(false);
+  });
+
+  it('8-series line chart at exact cutoff: endpoint labels shown', () => {
+    const spec = makeMultiSeriesLineSpec();
+    const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 8 });
+    expect(result.showEndpointLabels).toBe(true);
+    expect(result.showTraditionalLegend).toBe(false);
+  });
+
+  it('10-series with endpointLabels: true overrides cutoff', () => {
+    const spec = makeMultiSeriesLineSpec({ endpointLabels: true });
+    const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 10 });
+    expect(result.showEndpointLabels).toBe(true);
+    expect(result.showTraditionalLegend).toBe(false);
+  });
+
+  it('10-series with endpointLabels: { show: true } overrides cutoff', () => {
+    const spec = makeMultiSeriesLineSpec({ endpointLabels: { show: true } });
+    const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 10 });
+    expect(result.showEndpointLabels).toBe(true);
+  });
+
+  it('custom maxSeries: 12 allows up to 12 series', () => {
+    const spec = makeMultiSeriesLineSpec({ endpointLabels: { maxSeries: 12 } });
+    const result12 = resolveSuppression(spec, { ...baseCtx, seriesCount: 12 });
+    expect(result12.showEndpointLabels).toBe(true);
+
+    const result13 = resolveSuppression(spec, { ...baseCtx, seriesCount: 13 });
+    expect(result13.showEndpointLabels).toBe(false);
+    expect(result13.showTraditionalLegend).toBe(true);
+  });
 });
