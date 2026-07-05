@@ -324,9 +324,15 @@ export function computeEndpointLabels(
   const labelLineHeight = ENDPOINT_LABEL_FONT_SIZE * ENDPOINT_LINE_HEIGHT;
   const valueLineHeight = ENDPOINT_VALUE_FONT_SIZE * ENDPOINT_LINE_HEIGHT;
 
+  const highlight = spec.highlight ?? [];
+  const highlightActive = highlight.length > 0;
+
   for (const mark of lineOrAreaMarks) {
     const seriesKey = mark.seriesKey;
     if (!seriesKey) continue;
+
+    if (highlightActive && !highlight.includes(seriesKey)) continue;
+
     const last = lastDataPoint(mark);
     if (!last) continue;
 
@@ -374,7 +380,8 @@ export function computeEndpointLabels(
     });
   }
 
-  if (provisional.length < 2) return emptyLayout(theme);
+  if (provisional.length === 0) return emptyLayout(theme);
+  if (provisional.length < 2 && !highlightActive) return emptyLayout(theme);
 
   // Bidirectional collision sweep. Each entry's natural top is `dataY - labelFontSize/2`
   // so the label's first-line baseline-center aligns with the line's last data point.

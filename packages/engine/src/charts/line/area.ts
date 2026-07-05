@@ -457,9 +457,23 @@ export function computeAreaMarks(
   const encoding = spec.encoding as Encoding;
   const yChannel = encoding.y;
 
+  let marks: AreaMark[];
   if (yChannel && isStacked(yChannel.stack)) {
-    return computeStackedArea(spec, scales, chartArea, darkMode);
+    marks = computeStackedArea(spec, scales, chartArea, darkMode);
+  } else {
+    marks = computeSingleArea(spec, scales, chartArea);
   }
 
-  return computeSingleArea(spec, scales, chartArea);
+  const highlight = spec.highlight ?? [];
+  if (highlight.length > 0) {
+    const highlightSet = new Set(highlight);
+    marks.sort((a, b) => {
+      const aMuted = a.seriesKey != null && !highlightSet.has(a.seriesKey);
+      const bMuted = b.seriesKey != null && !highlightSet.has(b.seriesKey);
+      if (aMuted === bMuted) return 0;
+      return aMuted ? -1 : 1;
+    });
+  }
+
+  return marks;
 }

@@ -39,6 +39,7 @@ let {
   ontextedit,
   ondatapointclick,
   selectedElement: selectedElementProp,
+  highlight,
   class: className,
   style,
 }: {
@@ -57,6 +58,7 @@ let {
   ontextedit?: (element: ElementRef, oldText: string, newText: string) => void;
   ondatapointclick?: (data: Record<string, unknown>) => void;
   selectedElement?: ElementRef;
+  highlight?: string[] | null;
   class?: string;
   style?: string;
 } = $props();
@@ -158,6 +160,15 @@ $effect(() => {
   } else {
     inst.deselect();
   }
+});
+
+// Effect 4: Watch highlight prop changes.
+$effect(() => {
+  const h = highlight;
+  if (h === undefined) return;
+  const inst = untrack(() => instance);
+  if (!inst) return;
+  inst.setHighlight(h ?? null);
 });
 
 // Imperative methods exposed via component exports

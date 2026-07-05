@@ -68,6 +68,8 @@ export function computeLineMarks(
   const sequentialColorField = isSequentialColor ? colorEnc.field : undefined;
   const groups = groupByField(spec.data, colorField);
   const marks: (LineMark | PointMark)[] = [];
+  const highlight = spec.highlight ?? [];
+  const highlightActive = highlight.length > 0;
 
   for (const [seriesKey, rows] of groups) {
     // For sequential color, use a mid-range color for the line stroke
@@ -165,6 +167,13 @@ export function computeLineMarks(
     const seriesStyleKey = seriesKey === '__default__' ? undefined : seriesKey;
     const styleOverride = seriesStyleKey ? spec.seriesStyles?.[seriesStyleKey] : undefined;
 
+    const isMuted = highlightActive && !highlight.includes(seriesKey);
+    let resolvedStrokeWidth =
+      styleOverride?.strokeWidth ?? spec.markDef.strokeWidth ?? DEFAULT_STROKE_WIDTH;
+    if (isMuted) {
+      resolvedStrokeWidth = Math.max(1, resolvedStrokeWidth * 0.75);
+    }
+
     // Map lineStyle to SVG strokeDasharray
     let strokeDasharray: string | undefined;
     if (styleOverride?.lineStyle === 'dashed') strokeDasharray = '6 4';
@@ -178,7 +187,7 @@ export function computeLineMarks(
       points: allPoints,
       path: combinedPath,
       stroke: strokeColor,
-      strokeWidth: styleOverride?.strokeWidth ?? spec.markDef.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+      strokeWidth: resolvedStrokeWidth,
       strokeDasharray,
       opacity: styleOverride?.opacity,
       seriesKey: seriesStyleKey,
@@ -267,6 +276,18 @@ export function computeLineMarks(
         marks.push(pointMark);
       }
     }
+  }
+
+  if (highlightActive) {
+    const highlightSet = new Set(highlight);
+    marks.sort((a, b) => {
+      const aKey = a.type === 'line' ? a.seriesKey : undefined;
+      const bKey = b.type === 'line' ? b.seriesKey : undefined;
+      const aMuted = aKey != null && !highlightSet.has(aKey);
+      const bMuted = bKey != null && !highlightSet.has(bKey);
+      if (aMuted === bMuted) return 0;
+      return aMuted ? -1 : 1;
+    });
   }
 
   return marks;

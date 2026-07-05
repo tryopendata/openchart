@@ -269,6 +269,34 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
+  // Validate highlight on the color channel
+  if (encoding) {
+    const colorCh = (encoding as Record<string, Record<string, unknown> | undefined>).color;
+    if (colorCh && colorCh.highlight != null) {
+      const hlVal = colorCh.highlight;
+      const isValidType =
+        typeof hlVal === 'string' ||
+        (Array.isArray(hlVal) && hlVal.every((v: unknown) => typeof v === 'string'));
+      if (!isValidType) {
+        errors.push({
+          message: 'Spec error: encoding.color.highlight must be a string or array of strings',
+          path: 'encoding.color.highlight',
+          code: 'INVALID_TYPE',
+          suggestion: 'Provide a series name (string) or an array of series names.',
+        });
+      } else if (colorCh.type === 'quantitative') {
+        errors.push({
+          message:
+            'Spec error: encoding.color.highlight is not supported on quantitative color channels',
+          path: 'encoding.color.highlight',
+          code: 'INVALID_VALUE',
+          suggestion:
+            'Highlight works with nominal/ordinal color (categorical series). Remove highlight or change encoding.color.type to nominal.',
+        });
+      }
+    }
+  }
+
   // Validate darkMode if provided
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
     errors.push({

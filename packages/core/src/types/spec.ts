@@ -417,6 +417,19 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * Used in tooltips; `axis.format` takes precedence for axis tick labels.
    */
   format?: string;
+  /**
+   * Emphasis highlight for the color channel. Names one or more series values
+   * to visually emphasize; all other series are muted to a neutral gray.
+   *
+   * Only meaningful on the `color` encoding channel. On other channels this
+   * property is ignored.
+   *
+   * @example
+   * encoding: {
+   *   color: { field: 'region', type: 'nominal', highlight: 'West' }
+   * }
+   */
+  highlight?: string | string[];
 }
 
 /**
@@ -976,6 +989,14 @@ export interface LegendConfig {
 export interface EndpointLabelsConfig {
   /** Explicit on/off. When undefined, the chart auto-decides based on series count. */
   show?: boolean;
+  /** Maximum number of series before endpoint labels switch to a legend. Default 8. */
+  maxSeries?: number;
+  /**
+   * Which ends of the chart get label columns.
+   * - `'end'` (default): labels on the right (trailing) edge only.
+   * - `'both'`: labels on both left (leading) and right (trailing) edges.
+   */
+  ends?: 'end' | 'both';
   /** Field to read the displayed value from. Defaults to `encoding.y.field`. */
   valueField?: string;
   /** d3-format string for the value. Defaults to `encoding.y.axis.format`. */
@@ -999,15 +1020,6 @@ export interface EndpointLabelsConfig {
    * Opt in when labels collide hard and you need the explicit tie-back.
    */
   showLeader?: boolean;
-  /** Maximum series count for endpoint labels. Above this, a legend is shown instead. Default 8. */
-  maxSeries?: number;
-  /**
-   * Which ends of the chart get label columns.
-   * - `'end'` (default): trailing edge only (right side).
-   * - `'both'`: leading + trailing. Leading column shows series name + first
-   *   value on the left; trailing shows last value on the right (slope convention).
-   */
-  ends?: 'end' | 'both';
 }
 
 // ---------------------------------------------------------------------------

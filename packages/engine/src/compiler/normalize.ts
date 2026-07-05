@@ -218,6 +218,43 @@ function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
 }
 
 // ---------------------------------------------------------------------------
+// Highlight normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize `encoding.color.highlight` to a flat string array.
+ * Warns when highlight values don't appear in the data.
+ */
+function normalizeHighlight(encoding: Encoding, data: DataRow[], warnings: string[]): string[] {
+  const color = encoding.color;
+  if (!color || !('field' in color)) return [];
+  const raw = (color as { highlight?: string | string[] }).highlight;
+  if (raw == null) return [];
+  const highlight = Array.isArray(raw) ? raw : [raw];
+
+  // Warn on unknown values
+  if (highlight.length > 0 && data.length > 0) {
+    const colorField = color.field;
+    const knownValues = new Set(data.map((row) => String(row[colorField])));
+    for (const v of highlight) {
+      if (!knownValues.has(v)) {
+        warnings.push(
+          `[openchart] encoding.color.highlight value "${v}" does not match any value in the "${colorField}" data column`,
+        );
+      }
+    }
+  }
+
+  if (highlight.length > 0 && color.scale?.range) {
+    warnings.push(
+      '[openchart] encoding.color.highlight has no effect on color assignment when encoding.color.scale.range is explicitly provided',
+    );
+  }
+
+  return highlight;
+}
+
+// ---------------------------------------------------------------------------
 // Spec-level normalization
 // ---------------------------------------------------------------------------
 
@@ -256,6 +293,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     hiddenSeries: spec.hiddenSeries ?? [],
     seriesStyles: spec.seriesStyles ?? {},
     watermark: spec.watermark ?? true,
+    highlight: normalizeHighlight(encoding, spec.data, warnings),
     display,
     // Default empty userExplicit; compileChart overwrites this with the real
     // descriptor built from the raw expanded spec before normalize runs.

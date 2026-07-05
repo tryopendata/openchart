@@ -50,6 +50,8 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** The currently selected element (controlled). */
   selectedElement?: ElementRef;
+  /** Highlight specific color-encoding values. Pass null to clear. */
+  highlight?: string[] | null;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -96,6 +98,7 @@ function ChartInner(
     onDeselect,
     onTextEdit,
     selectedElement: selectedElementProp,
+    highlight,
     className,
     style,
   }: ChartProps,
@@ -285,6 +288,13 @@ function ChartInner(
       chart.deselect();
     }
   }, [selectedElementProp]);
+
+  // Handle highlight prop changes
+  useEffect(() => {
+    if (chartRef.current && highlight !== undefined) {
+      chartRef.current.setHighlight(highlight);
+    }
+  }, [highlight]);
 
   return (
     <div
