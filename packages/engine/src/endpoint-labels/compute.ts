@@ -253,6 +253,8 @@ export function computeEndpointLabels(
   // over series identification at the compact breakpoint.
   if (strategy?.labelMode === 'none') return emptyLayout(theme);
 
+  const highlight = spec.highlight ?? [];
+  const highlightActive = highlight.length > 0;
   const seriesCount = countColorSeries(spec);
   const sup = resolveSuppression(spec, {
     seriesCount,
@@ -260,7 +262,10 @@ export function computeEndpointLabels(
     labelsHiddenByStrategy: false,
     labelsDensityNone: spec.labels.density === 'none',
   });
-  if (!sup.showEndpointLabels) return emptyLayout(theme);
+  const epExplicitlyOff =
+    spec.endpointLabels === false ||
+    (typeof spec.endpointLabels === 'object' && spec.endpointLabels?.show === false);
+  if (!sup.showEndpointLabels && !(highlightActive && !epExplicitlyOff)) return emptyLayout(theme);
 
   // Dedupe by seriesKey: for area charts, the engine emits BOTH an AreaMark
   // and a derived LineMark per series (see `linesFromAreas` in
@@ -323,9 +328,6 @@ export function computeEndpointLabels(
   const provisional: Provisional[] = [];
   const labelLineHeight = ENDPOINT_LABEL_FONT_SIZE * ENDPOINT_LINE_HEIGHT;
   const valueLineHeight = ENDPOINT_VALUE_FONT_SIZE * ENDPOINT_LINE_HEIGHT;
-
-  const highlight = spec.highlight ?? [];
-  const highlightActive = highlight.length > 0;
 
   for (const mark of lineOrAreaMarks) {
     const seriesKey = mark.seriesKey;
