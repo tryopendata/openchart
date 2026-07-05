@@ -158,6 +158,9 @@ export const Chart = defineComponent({
 
       instance = createChart(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
+      if (props.highlight !== undefined) {
+        instance.setHighlight(props.highlight ?? null);
+      }
     }
 
     function destroyChart() {

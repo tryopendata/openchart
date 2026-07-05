@@ -80,4 +80,24 @@ describe('normalizeSpec — highlight', () => {
     const highlightWarning = warnings.find((w) => w.includes('highlight'));
     expect(highlightWarning).toBeUndefined();
   });
+
+  it('warns when highlight is combined with explicit scale.range', () => {
+    const spec: ChartSpec = {
+      mark: 'line',
+      data,
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: {
+          field: 'country',
+          type: 'nominal',
+          highlight: ['Germany'],
+          scale: { range: ['red', 'blue', 'green'] },
+        },
+      },
+    };
+    const { warnings } = compile(spec);
+    const rangeWarning = warnings.find((w) => w.includes('scale.range') && w.includes('highlight'));
+    expect(rangeWarning).toBeDefined();
+  });
 });

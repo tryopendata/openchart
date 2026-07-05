@@ -11,6 +11,7 @@
 
 import {
   type FieldType,
+  inferFieldType,
   MARK_ENCODING_RULES,
   MARK_TYPES,
   type MarkType,
@@ -284,15 +285,22 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
           code: 'INVALID_TYPE',
           suggestion: 'Provide a series name (string) or an array of series names.',
         });
-      } else if (colorCh.type === 'quantitative') {
-        errors.push({
-          message:
-            'Spec error: encoding.color.highlight is not supported on quantitative color channels',
-          path: 'encoding.color.highlight',
-          code: 'INVALID_VALUE',
-          suggestion:
-            'Highlight works with nominal/ordinal color (categorical series). Remove highlight or change encoding.color.type to nominal.',
-        });
+      } else {
+        const colorType =
+          (colorCh.type as string | undefined) ??
+          (colorCh.field && Array.isArray(spec.data) && spec.data.length > 0
+            ? inferFieldType(spec.data as Record<string, unknown>[], colorCh.field as string)
+            : undefined);
+        if (colorType === 'quantitative') {
+          errors.push({
+            message:
+              'Spec error: encoding.color.highlight is not supported on quantitative color channels',
+            path: 'encoding.color.highlight',
+            code: 'INVALID_VALUE',
+            suggestion:
+              'Highlight works with nominal/ordinal color (categorical series). Remove highlight or change encoding.color.type to nominal.',
+          });
+        }
       }
     }
   }

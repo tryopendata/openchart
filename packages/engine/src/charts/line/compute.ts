@@ -67,7 +67,8 @@ export function computeLineMarks(
   const colorField = isSequentialColor ? undefined : colorEnc?.field;
   const sequentialColorField = isSequentialColor ? colorEnc.field : undefined;
   const groups = groupByField(spec.data, colorField);
-  const marks: (LineMark | PointMark)[] = [];
+  const mutedMarks: (LineMark | PointMark)[] = [];
+  const highlightedMarks: (LineMark | PointMark)[] = [];
   const highlight = spec.highlight ?? [];
   const highlightActive = highlight.length > 0;
 
@@ -196,7 +197,8 @@ export function computeLineMarks(
       aria,
     };
 
-    marks.push(lineMark);
+    const bucket = isMuted ? mutedMarks : highlightedMarks;
+    bucket.push(lineMark);
 
     // Emit PointMark objects when markDef.point is truthy, or when sequential
     // color is active (points carry the gradient since SVG paths are single-color).
@@ -241,20 +243,16 @@ export function computeLineMarks(
         // data point already exists on the line and gets described by the a11y
         // data table; the dot is purely visual.
         if (isSingleEndpoint) {
-          marks.push({
+          bucket.push({
             type: 'point',
             cx: p.x,
             cy: p.y,
-            // 3.5 reads as a deliberate terminator against the 2px sparkline
-            // line — smaller dots blur into the stroke at typical card sizes.
             r: 3.5,
             fill: strokeColor,
             stroke: 'transparent',
             strokeWidth: 0,
             fillOpacity: 1,
             data: p.row,
-            // No label: decorative marks render with aria-hidden="true" and
-            // don't participate in the accessible data table.
             aria: { decorative: true },
           });
           continue;
@@ -273,24 +271,12 @@ export function computeLineMarks(
             label: `Data point: ${xChannel.field}=${String(p.row[xChannel.field])}, ${yChannel.field}=${String(p.row[yChannel.field])}`,
           },
         };
-        marks.push(pointMark);
+        bucket.push(pointMark);
       }
     }
   }
 
-  if (highlightActive) {
-    const highlightSet = new Set(highlight);
-    marks.sort((a, b) => {
-      const aKey = a.type === 'line' ? a.seriesKey : undefined;
-      const bKey = b.type === 'line' ? b.seriesKey : undefined;
-      const aMuted = aKey != null && !highlightSet.has(aKey);
-      const bMuted = bKey != null && !highlightSet.has(bKey);
-      if (aMuted === bMuted) return 0;
-      return aMuted ? -1 : 1;
-    });
-  }
-
-  return marks;
+  return [...mutedMarks, ...highlightedMarks];
 }
 
 // ---------------------------------------------------------------------------

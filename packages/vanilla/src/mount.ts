@@ -20,7 +20,7 @@ import type {
   LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { isLayerSpec } from '@opendata-ai/openchart-core';
+import { isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
@@ -853,7 +853,8 @@ export function createChart<TData extends DataRow = DataRow>(
 
   function setHighlight(values: string[] | null): void {
     if (destroyed) return;
-    if (isLayerSpec(currentSpec) || (currentSpec as { type?: string }).type === 'graph') return;
+    if (isLayerSpec(currentSpec) || isGraphSpec(currentSpec as unknown as Record<string, unknown>))
+      return;
     const spec = currentSpec as ChartSpec;
     const colorEnc = spec.encoding?.color;
     if (!colorEnc || typeof colorEnc !== 'object' || !('field' in colorEnc)) return;

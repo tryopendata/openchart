@@ -44,12 +44,10 @@ export function applyColorScaleRange(
     const palette = theme.colors.categorical;
 
     if (highlight && highlight.length > 0) {
-      // Assign palette colors only to highlighted series, mute the rest
       const highlightSet = new Set(highlight);
       const domain = ordinalScale.domain();
-      let paletteIndex = 0;
-      const colors = domain.map((v) =>
-        highlightSet.has(v) ? palette[paletteIndex++ % palette.length] : MUTED_COLOR,
+      const colors = domain.map((v, i) =>
+        highlightSet.has(v) ? palette[i % palette.length] : MUTED_COLOR,
       );
       ordinalScale.range(colors);
     } else {

@@ -465,6 +465,9 @@ export function computeEndpointLabels(
     for (const mark of lineOrAreaMarks) {
       const seriesKey = mark.seriesKey;
       if (!seriesKey) continue;
+
+      if (highlightActive && !highlight.includes(seriesKey)) continue;
+
       const first = firstDataPoint(mark);
       if (!first) continue;
 
@@ -509,7 +512,7 @@ export function computeEndpointLabels(
       });
     }
 
-    if (leadingProvisional.length >= 2) {
+    if (leadingProvisional.length >= 2 || (leadingProvisional.length === 1 && highlightActive)) {
       const leadingSweepInput = leadingProvisional.map((p, i) => ({
         naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
         height: p.height + ENDPOINT_ENTRY_GAP,
