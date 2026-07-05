@@ -75,6 +75,7 @@ export function makeLineSpec(): NormalizedChartSpec {
     seriesStyles: {},
     watermark: true,
     display: 'full',
+    highlight: [],
     userExplicit: {
       chrome: false,
       legend: false,
@@ -117,6 +118,7 @@ export function makeBarSpec(): NormalizedChartSpec {
     seriesStyles: {},
     watermark: true,
     display: 'full',
+    highlight: [],
     userExplicit: {
       chrome: false,
       legend: false,
@@ -161,6 +163,7 @@ export function makeScatterSpec(): NormalizedChartSpec {
     seriesStyles: {},
     watermark: true,
     display: 'full',
+    highlight: [],
     userExplicit: {
       chrome: false,
       legend: false,

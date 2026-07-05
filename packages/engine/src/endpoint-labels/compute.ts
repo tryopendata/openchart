@@ -253,6 +253,8 @@ export function computeEndpointLabels(
   // over series identification at the compact breakpoint.
   if (strategy?.labelMode === 'none') return emptyLayout(theme);
 
+  const highlight = spec.highlight ?? [];
+  const highlightActive = highlight.length > 0;
   const seriesCount = countColorSeries(spec);
   const sup = resolveSuppression(spec, {
     seriesCount,
@@ -260,7 +262,10 @@ export function computeEndpointLabels(
     labelsHiddenByStrategy: false,
     labelsDensityNone: spec.labels.density === 'none',
   });
-  if (!sup.showEndpointLabels) return emptyLayout(theme);
+  const epExplicitlyOff =
+    spec.endpointLabels === false ||
+    (typeof spec.endpointLabels === 'object' && spec.endpointLabels?.show === false);
+  if (!sup.showEndpointLabels && !(highlightActive && !epExplicitlyOff)) return emptyLayout(theme);
 
   // Dedupe by seriesKey: for area charts, the engine emits BOTH an AreaMark
   // and a derived LineMark per series (see `linesFromAreas` in
@@ -327,6 +332,9 @@ export function computeEndpointLabels(
   for (const mark of lineOrAreaMarks) {
     const seriesKey = mark.seriesKey;
     if (!seriesKey) continue;
+
+    if (highlightActive && !highlight.includes(seriesKey)) continue;
+
     const last = lastDataPoint(mark);
     if (!last) continue;
 
@@ -374,7 +382,8 @@ export function computeEndpointLabels(
     });
   }
 
-  if (provisional.length < 2) return emptyLayout(theme);
+  if (provisional.length === 0) return emptyLayout(theme);
+  if (provisional.length < 2 && !highlightActive) return emptyLayout(theme);
 
   // Bidirectional collision sweep. Each entry's natural top is `dataY - labelFontSize/2`
   // so the label's first-line baseline-center aligns with the line's last data point.
@@ -458,6 +467,9 @@ export function computeEndpointLabels(
     for (const mark of lineOrAreaMarks) {
       const seriesKey = mark.seriesKey;
       if (!seriesKey) continue;
+
+      if (highlightActive && !highlight.includes(seriesKey)) continue;
+
       const first = firstDataPoint(mark);
       if (!first) continue;
 
@@ -502,7 +514,7 @@ export function computeEndpointLabels(
       });
     }
 
-    if (leadingProvisional.length >= 2) {
+    if (leadingProvisional.length >= 2 || (leadingProvisional.length === 1 && highlightActive)) {
       const leadingSweepInput = leadingProvisional.map((p, i) => ({
         naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
         height: p.height + ENDPOINT_ENTRY_GAP,

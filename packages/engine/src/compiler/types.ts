@@ -132,6 +132,12 @@ export interface NormalizedChartSpec {
    * with a default-empty descriptor; compileChart overwrites it post-normalize.
    */
   userExplicit: UserExplicit;
+  /**
+   * Series values to visually emphasize. Non-highlighted series are muted to
+   * a neutral gray. Normalized from `encoding.color.highlight` (always an
+   * array; empty when no highlight is active).
+   */
+  highlight: string[];
 }
 
 /** A TableSpec with all optional fields filled with sensible defaults. */

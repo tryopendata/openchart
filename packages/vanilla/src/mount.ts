@@ -20,7 +20,7 @@ import type {
   LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { isLayerSpec } from '@opendata-ai/openchart-core';
+import { isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
@@ -114,6 +114,8 @@ export interface ChartInstance {
   deselect(): void;
   /** Whether inline text editing is active. */
   readonly isEditing: boolean;
+  /** Set highlight values on the color encoding and re-render. Pass null to clear. */
+  setHighlight(values: string[] | null): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -849,6 +851,28 @@ export function createChart<TData extends DataRow = DataRow>(
     render();
   }
 
+  function setHighlight(values: string[] | null): void {
+    if (destroyed) return;
+    if (isLayerSpec(currentSpec) || isGraphSpec(currentSpec as unknown as Record<string, unknown>))
+      return;
+    const spec = currentSpec as ChartSpec;
+    const colorEnc = spec.encoding?.color;
+    if (!colorEnc || typeof colorEnc !== 'object' || !('field' in colorEnc)) return;
+    const current = (colorEnc as { highlight?: string | string[] }).highlight;
+    if (!values?.length && !current) return;
+    const updatedColor = { ...colorEnc };
+    if (values && values.length > 0) {
+      updatedColor.highlight = values;
+    } else {
+      delete updatedColor.highlight;
+    }
+    currentSpec = {
+      ...spec,
+      encoding: { ...spec.encoding, color: updatedColor },
+    } as ChartSpec;
+    render();
+  }
+
   function doExport(format: 'svg'): string;
   function doExport(format: 'svg-with-fonts', exportOptions?: SVGExportOptions): Promise<string>;
   function doExport(format: 'png', exportOptions?: ExportOptions): Promise<Blob>;
@@ -985,5 +1009,6 @@ export function createChart<TData extends DataRow = DataRow>(
     get isEditing(): boolean {
       return isTextEditingActive;
     },
+    setHighlight,
   };
 }

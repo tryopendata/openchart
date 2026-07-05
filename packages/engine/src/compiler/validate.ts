@@ -11,6 +11,7 @@
 
 import {
   type FieldType,
+  inferFieldType,
   MARK_ENCODING_RULES,
   MARK_TYPES,
   type MarkType,
@@ -263,6 +264,41 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
             path: `encoding.${channel}`,
             code: 'ENCODING_MISMATCH',
             suggestion: `Either change the type to "nominal" or ensure "${fieldName}" values are numbers`,
+          });
+        }
+      }
+    }
+  }
+
+  // Validate highlight on the color channel
+  if (encoding) {
+    const colorCh = (encoding as Record<string, Record<string, unknown> | undefined>).color;
+    if (colorCh && colorCh.highlight != null) {
+      const hlVal = colorCh.highlight;
+      const isValidType =
+        typeof hlVal === 'string' ||
+        (Array.isArray(hlVal) && hlVal.every((v: unknown) => typeof v === 'string'));
+      if (!isValidType) {
+        errors.push({
+          message: 'Spec error: encoding.color.highlight must be a string or array of strings',
+          path: 'encoding.color.highlight',
+          code: 'INVALID_TYPE',
+          suggestion: 'Provide a series name (string) or an array of series names.',
+        });
+      } else {
+        const colorType =
+          (colorCh.type as string | undefined) ??
+          (colorCh.field && Array.isArray(spec.data) && spec.data.length > 0
+            ? inferFieldType(spec.data as Record<string, unknown>[], colorCh.field as string)
+            : undefined);
+        if (colorType === 'quantitative') {
+          errors.push({
+            message:
+              'Spec error: encoding.color.highlight is not supported on quantitative color channels',
+            path: 'encoding.color.highlight',
+            code: 'INVALID_VALUE',
+            suggestion:
+              'Highlight works with nominal/ordinal color (categorical series). Remove highlight or change encoding.color.type to nominal.',
           });
         }
       }

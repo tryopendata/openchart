@@ -639,8 +639,9 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute scales
   const scales = computeScales(renderSpec, scaleArea, renderSpec.data);
 
-  // Update color scale to use theme palette (only when user hasn't provided an explicit range)
-  applyColorScaleRange(scales, renderSpec.encoding, theme);
+  // Update color scale to use theme palette (only when user hasn't provided an explicit range).
+  // When highlight is active, assign palette colors to highlighted series and mute the rest.
+  applyColorScaleRange(scales, renderSpec.encoding, theme, renderSpec.highlight);
 
   // INVARIANT 3 -- post-hoc defaultColor: must run AFTER computeScales since resolution needs
   // theme context. Do not move into computeScales (would require threading theme through).

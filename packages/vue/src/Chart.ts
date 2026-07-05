@@ -69,6 +69,10 @@ export const Chart = defineComponent({
       type: Object as PropType<ElementRef>,
       default: undefined,
     },
+    highlight: {
+      type: [Array, null] as unknown as PropType<string[] | null>,
+      default: undefined,
+    },
   },
   emits: {
     'mark-click': (_event: MarkEvent) => true,
@@ -154,6 +158,9 @@ export const Chart = defineComponent({
 
       instance = createChart(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
+      if (props.highlight !== undefined) {
+        instance.setHighlight(props.highlight ?? null);
+      }
     }
 
     function destroyChart() {
@@ -208,6 +215,15 @@ export const Chart = defineComponent({
         } else {
           instance.deselect();
         }
+      },
+    );
+
+    // Watch highlight prop changes
+    watch(
+      () => props.highlight,
+      (newVal) => {
+        if (!instance) return;
+        instance.setHighlight(newVal ?? null);
       },
     );
 
