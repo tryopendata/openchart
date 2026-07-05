@@ -999,6 +999,15 @@ export interface EndpointLabelsConfig {
    * Opt in when labels collide hard and you need the explicit tie-back.
    */
   showLeader?: boolean;
+  /** Maximum series count for endpoint labels. Above this, a legend is shown instead. Default 8. */
+  maxSeries?: number;
+  /**
+   * Which ends of the chart get label columns.
+   * - `'end'` (default): trailing edge only (right side).
+   * - `'both'`: leading + trailing. Leading column shows series name + first
+   *   value on the left; trailing shows last value on the right (slope convention).
+   */
+  ends?: 'end' | 'both';
 }
 
 // ---------------------------------------------------------------------------

@@ -1,68 +1,58 @@
 /**
- * Endpoint-labels rendering: right-side per-series label column for multi-series
- * line/area charts. Renders, per entry:
- *   - a chip+bar swatch matching the traditional legend (rounded surface chip
- *     with a colored bar through its midline)
- *   - the colored series label (with wrap support via tspans)
- *   - a muted formatted value below the label
- *   - an optional thin leader line back to the data point's true y
- *   - an optional open-ring marker on the line at the chart's right edge
+ * Endpoint-labels rendering: per-series label columns for multi-series
+ * line/area charts. Supports trailing (right) and optional leading (left)
+ * columns when `ends: 'both'` is set.
  *
  * The engine resolves all positions, colors, and styles. This renderer is dumb:
  * it reads `layout.endpointLabels` and stamps SVG. Suppression logic lives in
  * the engine — when entries is empty, the renderer is a no-op.
  */
 
-import type { ChartLayout } from '@opendata-ai/openchart-core';
+import type {
+  ChartLayout,
+  EndpointLabelEntry,
+  EndpointLabelsLayout,
+  Rect,
+} from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
-// Swatch→label and label→value gaps both come from the engine layout
-// (`ep.gap` and `ep.valueGap`), so the renderer never has to keep its own
-// copies in sync. Leader styling is renderer-only — the engine doesn't
-// model stroke width or opacity for the optional connector.
 const LEADER_STROKE_WIDTH = 1;
 const LEADER_OPACITY = 0.45;
 
-export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): void {
-  const ep = layout.endpointLabels;
-  if (!ep || ep.entries.length === 0) return;
-
-  const chartArea = layout.area;
-  const chartRightX = chartArea.x + chartArea.width;
-
-  const root = createSVGElement('g');
-  root.setAttribute('class', 'oc-endpoint-labels');
-  root.setAttribute('role', 'list');
-  root.setAttribute('aria-label', 'Endpoint labels');
-
+function renderColumn(
+  root: SVGElement,
+  entries: EndpointLabelEntry[],
+  bounds: Rect,
+  ep: EndpointLabelsLayout,
+  leaderAnchorX: number,
+  side: 'trailing' | 'leading',
+): void {
   const labelFontSize = ep.labelStyle.fontSize ?? 11;
   const labelLineHeight = labelFontSize * (ep.labelStyle.lineHeight ?? 1.25);
   const valueFontSize = ep.valueStyle.fontSize ?? 11;
 
-  // The column starts at ep.bounds.x; the chip sits flush-left in the column,
-  // the label/value text starts after the chip + gap.
-  const chipX = ep.bounds.x;
+  const chipX = bounds.x;
   const chipWidth = ep.swatchSize;
   const textX = chipX + chipWidth + ep.gap;
 
-  for (let i = 0; i < ep.entries.length; i++) {
-    const entry = ep.entries[i];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
 
     const entryG = createSVGElement('g');
     entryG.setAttribute('class', 'oc-endpoint-label-entry');
     entryG.setAttribute('role', 'listitem');
     entryG.setAttribute('data-endpoint-index', String(i));
     entryG.setAttribute('data-endpoint-key', entry.seriesKey);
+    entryG.setAttribute('data-endpoint-side', side);
     entryG.setAttribute('aria-label', `${entry.seriesKey}: ${entry.value}`);
 
-    // Leader line: drawn first so swatch/text sit on top.
     if (entry.showLeader) {
       const leader = createSVGElement('line');
       leader.setAttribute('class', 'oc-endpoint-leader');
       setAttrs(leader, {
         x1: chipX,
         y1: entry.labelY + labelFontSize / 2,
-        x2: chartRightX,
+        x2: leaderAnchorX,
         y2: entry.dataY,
         stroke: entry.color,
         'stroke-width': LEADER_STROKE_WIDTH,
@@ -71,7 +61,6 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
       entryG.appendChild(leader);
     }
 
-    // Swatch: bare colored line segment matching the legend style.
     const rowY = entry.labelY + labelFontSize / 2;
     const line = createSVGElement('line');
     line.setAttribute('class', 'oc-endpoint-swatch-line');
@@ -86,13 +75,10 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
     });
     entryG.appendChild(line);
 
-    // Label text. Multi-line via tspans when wrapped.
     const label = createSVGElement('text');
     label.setAttribute('class', 'oc-endpoint-label');
     setAttrs(label, { x: textX, y: entry.labelY + labelFontSize });
     applyTextStyle(label, ep.labelStyle);
-    // Engine-resolved color always wins so theme overrides at the CSS layer
-    // don't fight per-series colors.
     (label as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', entry.color);
 
     if (entry.labelLines.length <= 1) {
@@ -107,7 +93,6 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
     }
     entryG.appendChild(label);
 
-    // Value text directly underneath the last label line.
     const lineCount = Math.max(entry.labelLines.length, 1);
     const valueY =
       entry.labelY +
@@ -122,7 +107,6 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
     value.textContent = entry.value;
     entryG.appendChild(value);
 
-    // Marker: open-ring circle at the chart's right edge on the line.
     if (entry.marker) {
       const marker = createSVGElement('circle');
       marker.setAttribute('class', 'oc-endpoint-marker');
@@ -138,6 +122,28 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
     }
 
     root.appendChild(entryG);
+  }
+}
+
+export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): void {
+  const ep = layout.endpointLabels;
+  if (!ep || ep.entries.length === 0) return;
+
+  const chartArea = layout.area;
+
+  const root = createSVGElement('g');
+  root.setAttribute('class', 'oc-endpoint-labels');
+  root.setAttribute('role', 'list');
+  root.setAttribute('aria-label', 'Endpoint labels');
+
+  // Trailing column (right side).
+  const chartRightX = chartArea.x + chartArea.width;
+  renderColumn(root, ep.entries, ep.bounds, ep, chartRightX, 'trailing');
+
+  // Leading column (left side) when `ends: 'both'`.
+  if (ep.leading && ep.leading.length > 0 && ep.leadingBounds) {
+    const chartLeftX = chartArea.x;
+    renderColumn(root, ep.leading, ep.leadingBounds, ep, chartLeftX, 'leading');
   }
 
   parent.appendChild(root);

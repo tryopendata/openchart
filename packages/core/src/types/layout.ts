@@ -751,6 +751,10 @@ export interface EndpointLabelsLayout {
   valueGap: number;
   /** Fill color for the rounded chip background behind the colored bar. */
   swatchChipFill: string;
+  /** Leading-edge (left side) entries when `ends: 'both'`. Empty when trailing only. */
+  leading?: EndpointLabelEntry[];
+  /** Bounding box for the leading column. Only set when `ends: 'both'`. */
+  leadingBounds?: Rect;
 }
 
 // ---------------------------------------------------------------------------

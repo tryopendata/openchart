@@ -16,6 +16,7 @@ import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { endpointLabelsExplicitlyOn } from '../legend/suppression';
 import {
   ENDPOINT_GAP,
   ENDPOINT_LABEL_FONT_SIZE,
@@ -58,6 +59,13 @@ export function predictEndpointLabelsWidth(
   // When the user passed `endpointLabels: false`, predict 0. (Already handled above
   // for the bare boolean; also handle the object form `{ show: false }`.)
   if (typeof spec.endpointLabels === 'object' && spec.endpointLabels?.show === false) return 0;
+
+  // Series-count cutoff: above maxSeries (default 8), skip endpoint labels
+  // unless the user explicitly enabled them. Uses the same explicit-on logic
+  // as suppression.ts to keep predict and render decisions aligned.
+  const maxSeries =
+    (typeof spec.endpointLabels === 'object' && spec.endpointLabels?.maxSeries) || 8;
+  if (!endpointLabelsExplicitlyOn(spec) && seriesNames.size > maxSeries) return 0;
 
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;
   const wrapWidth = config?.width ?? ENDPOINT_WRAP_WIDTH_DEFAULT;
@@ -105,4 +113,13 @@ export function predictEndpointLabelsWidth(
   // Column = swatch + gap + max(label width, value width) + small trailing pad.
   const textColumn = Math.max(maxLabelWidth, valueWidth);
   return ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + textColumn + 4;
+}
+
+/**
+ * Returns true when the spec requests both-ends endpoint labels.
+ * Used by `computeDimensions` to also reserve left margin space.
+ */
+export function isEndsBoth(spec: NormalizedChartSpec): boolean {
+  const ep = spec.endpointLabels;
+  return typeof ep === 'object' && ep != null && ep.ends === 'both';
 }

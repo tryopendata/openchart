@@ -42,7 +42,7 @@ import {
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
-import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
+import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
 import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
@@ -373,6 +373,10 @@ export function computeDimensions(
     if (endpointWidth > 0) {
       // 16px gap between chart area edge and the column.
       margins.right = Math.max(margins.right, hPad) + endpointWidth + 16;
+      // Both-ends mode: mirror the column on the left for first-value labels.
+      if (isEndsBoth(spec)) {
+        margins.left = Math.max(margins.left, hPad) + endpointWidth + 16;
+      }
     }
   }
 

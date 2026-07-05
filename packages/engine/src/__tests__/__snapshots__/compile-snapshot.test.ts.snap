@@ -864,6 +864,8 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "fontWeight": 600,
       "lineHeight": 1.25,
     },
+    "leading": undefined,
+    "leadingBounds": undefined,
     "swatchChipFill": "rgba(0,0,0,0.04)",
     "swatchSize": 18,
     "valueGap": 4,

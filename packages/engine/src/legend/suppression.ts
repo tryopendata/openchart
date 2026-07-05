@@ -69,18 +69,21 @@ function legendHiddenExplicitly(spec: NormalizedChartSpec): boolean {
   return spec.legend?.show === false;
 }
 
+/** Keys on EndpointLabelsConfig that configure behavior but don't signal show intent. */
+const EP_CONFIG_ONLY_KEYS = new Set(['show', 'maxSeries']);
+
 /**
  * Did the user explicitly set endpointLabels: true?
- * Either the bare boolean or `{ show: true }` or any other config keys count.
+ * Either the bare boolean or `{ show: true }` or any display-affecting config keys count.
+ * Config-only keys like `maxSeries` don't count as show intent.
  */
-function endpointLabelsExplicitlyOn(spec: NormalizedChartSpec): boolean {
+export function endpointLabelsExplicitlyOn(spec: NormalizedChartSpec): boolean {
   const ep = spec.endpointLabels;
   if (ep === true) return true;
   if (ep === false || ep == null) return false;
-  // Object form: explicit when show: true or any non-show key set.
   if (ep.show === true) return true;
   if (ep.show === false) return false;
-  return Object.keys(ep).some((k) => k !== 'show');
+  return Object.keys(ep).some((k) => !EP_CONFIG_ONLY_KEYS.has(k));
 }
 
 /** Did the user explicitly set endpointLabels: false (or { show: false })? */
@@ -89,6 +92,15 @@ function endpointLabelsExplicitlyOff(spec: NormalizedChartSpec): boolean {
   if (ep === false) return true;
   if (typeof ep === 'object' && ep != null && ep.show === false) return true;
   return false;
+}
+
+const DEFAULT_MAX_SERIES = 8;
+
+/** Read the maxSeries cutoff from the spec's endpointLabels config. */
+function getMaxSeries(spec: NormalizedChartSpec): number {
+  const ep = spec.endpointLabels;
+  if (typeof ep === 'object' && ep != null && ep.maxSeries != null) return ep.maxSeries;
+  return DEFAULT_MAX_SERIES;
 }
 
 /**
@@ -148,13 +160,17 @@ export function resolveSuppression(
     };
   }
 
+  // Series-count cutoff: above maxSeries (default 8), treat as if endpoint
+  // labels are off so a legend shows instead. Explicit user opt-in overrides.
+  const exceedsCutoff = !endpointLabelsExplicitlyOn(spec) && ctx.seriesCount > getMaxSeries(spec);
+
   // The eight-cell truth table for ≥2-series overlap line/area charts.
-  const epExplicitOff = endpointLabelsExplicitlyOff(spec);
+  const epExplicitOff = endpointLabelsExplicitlyOff(spec) || exceedsCutoff;
   const legShown = legendShownExplicitly(spec);
   const legHidden = legendHiddenExplicitly(spec);
 
   // Endpoint column: on by default; only `endpointLabels: false` (or
-  // `{ show: false }`) turns it off.
+  // `{ show: false }`) or series-count cutoff turns it off.
   const showEndpointLabels = !epExplicitOff;
 
   // Traditional legend:
