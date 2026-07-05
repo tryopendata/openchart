@@ -525,16 +525,22 @@ describe('axis rendering', () => {
     expect(labels.length).toBeGreaterThan(0);
   });
 
-  it('x-axis has a baseline line element', () => {
-    const { svg } = renderSpec(lineSpec);
+  it('x-axis has a baseline line element for grounded marks', () => {
+    const { svg } = renderSpec(barSpec);
     const xAxis = svg.querySelector('.oc-axis-x');
     const line = xAxis!.querySelector('line');
-    // The renderer draws an axis line for x-axis
     expect(line).not.toBeNull();
   });
 
+  it('x-axis hides baseline for non-grounded marks', () => {
+    const { svg } = renderSpec(lineSpec);
+    const xAxis = svg.querySelector('.oc-axis-x');
+    const line = xAxis!.querySelector('line');
+    expect(line).toBeNull();
+  });
+
   it('x-tick labels hang below the axis line by the label padding (no hugging)', () => {
-    const { svg, layout } = renderSpec(lineSpec);
+    const { svg, layout } = renderSpec(barSpec);
     const xAxis = svg.querySelector('.oc-axis-x')!;
     const axisLineY = Number(xAxis.querySelector('line')!.getAttribute('y2'));
     const labels = Array.from(xAxis.querySelectorAll('text.oc-axis-tick'));

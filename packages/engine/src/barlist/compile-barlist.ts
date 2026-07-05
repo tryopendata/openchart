@@ -258,6 +258,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
       fontWeight: VALUE_FONT_WEIGHT,
       fill: valueColor,
       lineHeight: 1.4,
+      fontVariant: 'tabular-nums',
     };
 
     const rowMark: BarListRowMark = {

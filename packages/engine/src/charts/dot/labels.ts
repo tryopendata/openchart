@@ -99,6 +99,7 @@ export function computeDotLabels(
         lineHeight: 1.2,
         textAnchor: 'start',
         dominantBaseline: 'central',
+        fontVariant: 'tabular-nums',
       },
     });
   }

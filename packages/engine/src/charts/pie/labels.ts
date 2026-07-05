@@ -99,6 +99,7 @@ export function computePieLabels(
         lineHeight: 1.2,
         textAnchor: isRight ? 'start' : 'end',
         dominantBaseline: 'central',
+        fontVariant: 'tabular-nums',
       },
     });
 

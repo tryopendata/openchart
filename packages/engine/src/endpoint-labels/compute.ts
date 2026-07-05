@@ -68,6 +68,7 @@ function emptyLayout(theme: ResolvedTheme): EndpointLabelsLayout {
     fontWeight: ENDPOINT_VALUE_FONT_WEIGHT,
     fill: theme.colors.annotationText ?? theme.colors.text,
     lineHeight: ENDPOINT_LINE_HEIGHT,
+    fontVariant: 'tabular-nums',
   };
   return {
     entries: [],
@@ -271,6 +272,7 @@ export function computeEndpointLabels(
     fontWeight: ENDPOINT_VALUE_FONT_WEIGHT,
     fill: theme.colors.annotationText ?? theme.colors.text,
     lineHeight: ENDPOINT_LINE_HEIGHT,
+    fontVariant: 'tabular-nums',
   };
 
   // First pass: build entries with wrapped labels and dataY (no positions yet).

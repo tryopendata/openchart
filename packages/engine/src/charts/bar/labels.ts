@@ -227,6 +227,7 @@ export function computeBarLabels(
         lineHeight: 1.2,
         textAnchor,
         dominantBaseline: 'central',
+        fontVariant: 'tabular-nums',
       },
     });
   }

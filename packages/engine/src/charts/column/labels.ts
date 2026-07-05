@@ -123,6 +123,7 @@ export function computeColumnLabels(
         fill: labelColor ?? getRepresentativeColor(mark.fill),
         lineHeight: 1.2,
         textAnchor: 'middle',
+        fontVariant: 'tabular-nums',
       },
     });
   }
