@@ -5,7 +5,7 @@
  */
 
 import type { ChartSpec, TableSpec, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
-import { isTableSpec } from '@opendata-ai/openchart-core';
+import { essay as essayPreset, isTableSpec, wire as wirePreset } from '@opendata-ai/openchart-core';
 import type { ValidationResult } from '@opendata-ai/openchart-engine';
 import { validateSpec } from '@opendata-ai/openchart-engine';
 import { Chart, DataTable, useVizDarkMode, useVizTheme } from '@opendata-ai/openchart-react';
@@ -394,7 +394,77 @@ const genZTheme: ThemeConfig = {
 export const GenZTheme = () => <Showcase theme={genZTheme} />;
 
 // ---------------------------------------------------------------------------
-// 12. Custom — Interactive spec editor with live preview
+// 12. FT-like — Salmon background, serif titles, restrained palette.
+//     Replica of the Financial Times house style using only ThemeConfig.
+// ---------------------------------------------------------------------------
+
+const ftLikeTheme: ThemeConfig = {
+  colors: {
+    background: { light: '#fff1e5', dark: '#1a1311' },
+    text: { light: '#33302e', dark: '#f2dfce' },
+    categorical: ['#0d7680', '#0f5499', '#cc0000', '#593d1b', '#96bf48'],
+    gridline: { light: 'rgba(0,0,0,0.1)', dark: 'rgba(255,255,255,0.08)' },
+    axis: { light: '#66605c', dark: '#9e9792' },
+  },
+  fonts: {
+    family: 'Georgia, "Times New Roman", serif',
+    sizes: { title: 24, subtitle: 16, body: 14, small: 12 },
+    weights: { normal: 400, medium: 500, semibold: 700, bold: 700 },
+  },
+  spacing: { padding: 16, chromeGap: 4, chromeToChart: 8 },
+  chrome: {
+    title: { fontWeight: 700, lineHeight: 1.2 },
+    subtitle: { fontWeight: 400, lineHeight: 1.4 },
+  },
+  borderRadius: 0,
+};
+
+export const FTLikeTheme = () => <Showcase theme={ftLikeTheme} />;
+
+// ---------------------------------------------------------------------------
+// 13. Economist-like — Red accent, condensed sans, bold titles.
+//     Replica of The Economist house style using only ThemeConfig.
+// ---------------------------------------------------------------------------
+
+const economistLikeTheme: ThemeConfig = {
+  colors: {
+    background: { light: '#ffffff', dark: '#1a1a1a' },
+    text: { light: '#1a1a1a', dark: '#e5e5e5' },
+    categorical: ['#e3120b', '#006ba6', '#00847e', '#595959', '#c33d1c', '#3e7a34'],
+    gridline: { light: 'rgba(0,0,0,0.1)', dark: 'rgba(255,255,255,0.08)' },
+    axis: { light: '#595959', dark: '#a6a6a6' },
+  },
+  fonts: {
+    family: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+    sizes: { title: 22, subtitle: 14, body: 13, small: 11 },
+    weights: { normal: 400, medium: 500, semibold: 700, bold: 700 },
+  },
+  spacing: { padding: 16, chromeGap: 4, chromeToChart: 6 },
+  chrome: {
+    title: { fontWeight: 700, lineHeight: 1.15 },
+    subtitle: { fontWeight: 400, lineHeight: 1.4 },
+    eyebrow: { color: '#e3120b', fontWeight: 700 },
+  },
+  borderRadius: 0,
+  seriesStrategy: { single: 'accent', few: 'accent-neutral', many: 'palette' },
+};
+
+export const EconomistLikeTheme = () => <Showcase theme={economistLikeTheme} />;
+
+// ---------------------------------------------------------------------------
+// 14. Essay preset — Serif display titles, warmer background, generous spacing.
+// ---------------------------------------------------------------------------
+
+export const EssayPreset = () => <Showcase theme={essayPreset} />;
+
+// ---------------------------------------------------------------------------
+// 15. Wire preset — Dense, monospace, tighter chrome.
+// ---------------------------------------------------------------------------
+
+export const WirePreset = () => <Showcase theme={wirePreset} />;
+
+// ---------------------------------------------------------------------------
+// 16. Custom — Interactive spec editor with live preview
 // ---------------------------------------------------------------------------
 
 // ---- Fonts ----------------------------------------------------------------

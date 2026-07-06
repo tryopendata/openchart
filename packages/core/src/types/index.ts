@@ -126,6 +126,7 @@ export type {
   Chrome,
   ChromeText,
   ChromeTextStyle,
+  ChromeThemeOverride,
   CircleEncoding,
   Condition,
   ConditionalValueDef,
@@ -235,6 +236,7 @@ export type {
 export type {
   ChromeDefaults,
   ResolvedTheme,
+  SeriesStrategy,
   Theme,
   ThemeChromeDefaults,
   ThemeColors,
@@ -242,4 +244,5 @@ export type {
   ThemeFonts,
   ThemeFontWeights,
   ThemeSpacing,
+  TokenValue,
 } from './theme';

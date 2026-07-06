@@ -11,6 +11,7 @@
 // Re-import for use in LegendConfig and overrides (avoids circular by importing from sibling)
 import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
 import type { ColumnConfig } from './table';
+import type { SeriesStrategy, TokenValue } from './theme';
 
 // ---------------------------------------------------------------------------
 // Mark type union (Vega-Lite aligned)
@@ -843,6 +844,21 @@ export type Annotation = TextAnnotation | RangeAnnotation | RefLineAnnotation;
 export type DarkMode = 'auto' | 'force' | 'off';
 
 /**
+ * Per-element chrome theme override. Pass a plain string (color only,
+ * backward-compatible) or an object with full typography control.
+ */
+export interface ChromeThemeOverride {
+  /** Text color. Accepts a TokenValue for light/dark pairs. */
+  color?: TokenValue;
+  /** Font size in pixels. */
+  fontSize?: number;
+  /** Font weight. */
+  fontWeight?: number;
+  /** Line height multiplier. */
+  lineHeight?: number;
+}
+
+/**
  * User-facing theme configuration for overriding defaults.
  * All fields are optional. The engine deep-merges these onto the default theme.
  */
@@ -861,14 +877,22 @@ export interface ThemeConfig {
         sequential?: Record<string, string[]>;
         /** Diverging palettes keyed by name. Each is an array of color stops with a neutral midpoint. */
         diverging?: Record<string, string[]>;
-        /** Background color. */
-        background?: string;
-        /** Default text color. */
-        text?: string;
-        /** Gridline color. */
-        gridline?: string;
-        /** Axis line and tick color. */
-        axis?: string;
+        /** Background color. Accepts a TokenValue for light/dark pairs. */
+        background?: TokenValue;
+        /** Default text color. Accepts a TokenValue for light/dark pairs. */
+        text?: TokenValue;
+        /** Gridline color. Accepts a TokenValue for light/dark pairs. */
+        gridline?: TokenValue;
+        /** Axis line and tick color. Accepts a TokenValue for light/dark pairs. */
+        axis?: TokenValue;
+        /** Annotation fill color. Accepts a TokenValue for light/dark pairs. */
+        annotationFill?: TokenValue;
+        /** Annotation text color. Accepts a TokenValue for light/dark pairs. */
+        annotationText?: TokenValue;
+        /** Semantic color for positive/up-trend values. Accepts a TokenValue for light/dark pairs. */
+        positive?: TokenValue;
+        /** Semantic color for negative/down-trend values. Accepts a TokenValue for light/dark pairs. */
+        negative?: TokenValue;
       };
   /** Font overrides. */
   fonts?: {
@@ -893,6 +917,17 @@ export interface ThemeConfig {
       /** KPI metric primary value. Default: 22. Delta/secondary derive from this. */
       metricValue?: number;
     };
+    /** Font weight overrides. Partial — only specified keys are overridden. */
+    weights?: {
+      /** Normal text weight. Default: 450. */
+      normal?: number;
+      /** Medium text weight. Default: 550. */
+      medium?: number;
+      /** Semibold text weight. Default: 590. */
+      semibold?: number;
+      /** Bold text weight. Default: 700. */
+      bold?: number;
+    };
   };
   /** Spacing overrides in pixels. */
   spacing?: {
@@ -900,6 +935,12 @@ export interface ThemeConfig {
     padding?: number;
     /** Gap between chrome elements (title to subtitle, etc.). */
     chromeGap?: number;
+    /** Gap between the last chrome element and the chart area. */
+    chromeToChart?: number;
+    /** Gap between chart area and source/footer below. */
+    chartToFooter?: number;
+    /** Internal padding within the chart area (axes margins). */
+    axisMargin?: number;
     /** Height reserved below chart area for x-axis tick labels. Increase when large axisTick font sizes cause label clipping. */
     xAxisHeight?: number;
     /** Gap in pixels between the x-axis line and tick label text. Increase when larger axisTick fonts sit too close to the axis line. */
@@ -908,25 +949,29 @@ export interface ThemeConfig {
   /** Border radius for chart container and tooltips. */
   borderRadius?: number;
   /**
-   * Per-element chrome text color overrides. Font sizes and weights come
-   * from the typography scale and are not overridable here; only color is.
-   * An override survives dark-mode adaptation (adaptTheme preserves any
-   * chrome color the spec set explicitly).
+   * Per-element chrome style overrides. Pass a plain string for color-only
+   * (backward-compatible), or a ChromeThemeOverride object for full
+   * typography control (color, fontSize, fontWeight, lineHeight).
    */
   chrome?: {
-    /** Eyebrow (kicker) text color. */
-    eyebrow?: string;
-    /** Title text color. */
-    title?: string;
-    /** Subtitle text color. */
-    subtitle?: string;
-    /** Source/attribution text color. */
-    source?: string;
-    /** Byline text color. */
-    byline?: string;
-    /** Footer text color. */
-    footer?: string;
+    /** Eyebrow (kicker) style override. */
+    eyebrow?: string | ChromeThemeOverride;
+    /** Title style override. */
+    title?: string | ChromeThemeOverride;
+    /** Subtitle style override. */
+    subtitle?: string | ChromeThemeOverride;
+    /** Source/attribution style override. */
+    source?: string | ChromeThemeOverride;
+    /** Byline style override. */
+    byline?: string | ChromeThemeOverride;
+    /** Footer style override. */
+    footer?: string | ChromeThemeOverride;
   };
+  /**
+   * Series color assignment strategy.
+   * Default: 'palette' (full categorical palette always, zero visual drift).
+   */
+  seriesStrategy?: SeriesStrategy;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,11 +1,14 @@
 import type { Encoding, ResolvedTheme } from '@opendata-ai/openchart-core';
-import { resolveTheme } from '@opendata-ai/openchart-core';
+import { ACHROMATIC_RAMP, resolveTheme } from '@opendata-ai/openchart-core';
 import { scaleLinear, scaleOrdinal } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { ResolvedScales } from '../../layout/scales';
 import { applyColorScaleRange } from '../color-scale-range';
 
 const theme: ResolvedTheme = resolveTheme();
+const accentNeutralTheme: ResolvedTheme = resolveTheme({
+  seriesStrategy: { single: 'accent', few: 'accent-neutral', many: 'palette' },
+});
 
 describe('applyColorScaleRange', () => {
   it('is a no-op when no color scale is present', () => {
@@ -75,5 +78,55 @@ describe('applyColorScaleRange', () => {
     applyColorScaleRange(scales, encoding, theme);
     const firstSeq = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
     expect(linear.range()).toEqual([firstSeq[0], firstSeq[firstSeq.length - 1]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// seriesStrategy
+// ---------------------------------------------------------------------------
+
+describe('applyColorScaleRange seriesStrategy', () => {
+  function makeOrdinalScales(domain: string[]): {
+    scales: ResolvedScales;
+    ordinal: ReturnType<typeof scaleOrdinal<string, string>>;
+  } {
+    const ordinal = scaleOrdinal<string, string>().domain(domain);
+    const scales: ResolvedScales = {
+      color: { scale: ordinal, type: 'ordinal', channel: 'color' },
+    };
+    return { scales, ordinal };
+  }
+
+  const encoding: Encoding = {
+    x: { field: 'x', type: 'nominal' },
+    y: { field: 'y', type: 'quantitative' },
+    color: { field: 'c', type: 'nominal' },
+  };
+
+  it('palette strategy assigns full categorical palette', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c']);
+    applyColorScaleRange(scales, encoding, theme);
+    expect(ordinal.range()).toEqual(theme.colors.categorical);
+  });
+
+  it('accent-neutral: single series gets accent only', () => {
+    const { scales, ordinal } = makeOrdinalScales(['solo']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    expect(ordinal.range()).toEqual([accentNeutralTheme.colors.categorical[0]]);
+  });
+
+  it('accent-neutral: 3 series gets accent + neutral grays', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    const range = ordinal.range();
+    expect(range[0]).toBe(accentNeutralTheme.colors.categorical[0]);
+    expect(range[1]).toBe(ACHROMATIC_RAMP.fgMuted);
+    expect(range[2]).toBe(ACHROMATIC_RAMP.fgSubtle);
+  });
+
+  it('accent-neutral: 6 series falls back to full palette', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c', 'd', 'e', 'f']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    expect(ordinal.range()).toEqual(accentNeutralTheme.colors.categorical);
   });
 });

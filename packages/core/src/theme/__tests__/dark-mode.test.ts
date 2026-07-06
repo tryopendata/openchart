@@ -149,4 +149,70 @@ describe('adaptTheme', () => {
     // Unset chrome colors fall to the muted dark default, not the light one.
     expect(dark.chrome.subtitle.color).not.toBe('#71717a');
   });
+
+  it('uses explicit dark pair value for background instead of algorithmic adaptation', () => {
+    const light = resolveTheme({
+      colors: { background: { light: '#fff1e5', dark: '#1a1311' } },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.colors.background).toBe('#1a1311');
+  });
+
+  it('uses explicit dark pair value for text instead of algorithmic adaptation', () => {
+    const light = resolveTheme({
+      colors: {
+        background: { light: '#ffffff', dark: '#111111' },
+        text: { light: '#1c1917', dark: '#e7e5e4' },
+      },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.colors.text).toBe('#e7e5e4');
+  });
+
+  it('uses explicit dark pair for gridline and axis', () => {
+    const light = resolveTheme({
+      colors: {
+        background: { light: '#fff', dark: '#111' },
+        gridline: { light: 'rgba(0,0,0,0.08)', dark: 'rgba(255,255,255,0.06)' },
+        axis: { light: '#78716c', dark: '#a8a29e' },
+      },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.colors.gridline).toBe('rgba(255,255,255,0.06)');
+    expect(dark.colors.axis).toBe('#a8a29e');
+  });
+
+  it('uses explicit dark pair for semantic colors', () => {
+    const light = resolveTheme({
+      colors: {
+        background: { light: '#fff', dark: '#111' },
+        positive: { light: '#10b981', dark: '#34d399' },
+        negative: { light: '#e11d48', dark: '#fb7185' },
+      },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.colors.positive).toBe('#34d399');
+    expect(dark.colors.negative).toBe('#fb7185');
+  });
+
+  it('uses explicit dark pair for chrome element color', () => {
+    const light = resolveTheme({
+      colors: { background: { light: '#fff', dark: '#111' } },
+      chrome: {
+        title: { color: { light: '#33302e', dark: '#f2dfce' } },
+      },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.chrome.title.color).toBe('#f2dfce');
+  });
+
+  it('falls back to algorithmic adaptation when no explicit dark pair is given', () => {
+    const light = resolveTheme({
+      colors: { background: '#ffffff' },
+    });
+    const dark = adaptTheme(light);
+    // Text should be adapted to a light color for dark bg readability
+    expect(dark.colors.text).not.toBe(light.colors.text);
+    expect(dark.colors.text).toBeDefined();
+  });
 });

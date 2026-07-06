@@ -106,6 +106,7 @@ function _luminanceFromHex(color: string): number {
  * adjusts gridline and axis colors for the dark background.
  */
 export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
+  const pairs = theme._tokenPairs;
   const inputBg = theme.colors.background;
   // "transparent" preserves the background token but must still adopt dark
   // text/gridline/axis colors — the container is dark, not the chart canvas.
@@ -115,23 +116,33 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   // Preserve user-supplied background (including transparent) but always
   // apply dark-mode text/axis/gridline colors so labels are readable on the
   // dark host surface.
-  const darkBg = alreadyDark ? inputBg : DARK_BG;
+  const darkBg = pairs?.['colors.background']
+    ? pairs['colors.background'].dark
+    : alreadyDark
+      ? inputBg
+      : DARK_BG;
   const darkMuted = ACHROMATIC_RAMP.fgMuted;
 
   // Per the "sensible defaults, full override" convention (see spec-grammar),
   // dark-mode adaptation only swaps in dark defaults for colors the spec
   // left at their light-mode default. An explicit override is preserved.
-  // This mirrors resolveTheme's adaptChromeForDarkBg.
+  // When a TokenValue pair has an explicit dark value, use it directly.
   const light = DEFAULT_THEME.colors;
   const lightChrome = DEFAULT_THEME.chrome;
   const overridden = <T>(current: T, lightDefault: T, darkDefault: T): T =>
     current === lightDefault ? darkDefault : current;
 
-  const darkText = overridden(theme.colors.text, light.text, DARK_TEXT);
-  const darkGridline = overridden(theme.colors.gridline, light.gridline, 'rgba(255,255,255,0.05)');
+  const darkText = pairs?.['colors.text']
+    ? pairs['colors.text'].dark
+    : overridden(theme.colors.text, light.text, DARK_TEXT);
+  const darkGridline = pairs?.['colors.gridline']
+    ? pairs['colors.gridline'].dark
+    : overridden(theme.colors.gridline, light.gridline, 'rgba(255,255,255,0.05)');
   // axis is also tick-label fill — needs WCAG AA contrast on dark bg.
   // Zinc-400 (`#a1a1aa`) hits ~6:1 against #09090b.
-  const darkAxis = overridden(theme.colors.axis, light.axis, '#a1a1aa');
+  const darkAxis = pairs?.['colors.axis']
+    ? pairs['colors.axis'].dark
+    : overridden(theme.colors.axis, light.axis, '#a1a1aa');
 
   // Categorical palette is pinned to design-system tokens. The same vibrant
   // hex values render in both light and dark modes — adapting them via
@@ -148,44 +159,60 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       text: darkText,
       gridline: darkGridline,
       axis: darkAxis,
-      annotationFill: overridden(
-        theme.colors.annotationFill,
-        light.annotationFill,
-        'rgba(255,255,255,0.06)',
-      ),
-      annotationText: overridden(theme.colors.annotationText, light.annotationText, darkMuted),
+      annotationFill: pairs?.['colors.annotationFill']
+        ? pairs['colors.annotationFill'].dark
+        : overridden(theme.colors.annotationFill, light.annotationFill, 'rgba(255,255,255,0.06)'),
+      annotationText: pairs?.['colors.annotationText']
+        ? pairs['colors.annotationText'].dark
+        : overridden(theme.colors.annotationText, light.annotationText, darkMuted),
       categorical,
-      // Sparkline trend colors tuned for dark surfaces: teal-leaning green
-      // and coral red read better than the saturated light-mode tokens.
-      // Any non-default value is treated as a user override and preserved.
-      positive: theme.colors.positive !== '#16a34a' ? theme.colors.positive : '#34d399',
-      negative: theme.colors.negative !== '#dc2626' ? theme.colors.negative : '#f87171',
+      positive: pairs?.['colors.positive']
+        ? pairs['colors.positive'].dark
+        : theme.colors.positive !== '#16a34a'
+          ? theme.colors.positive
+          : '#34d399',
+      negative: pairs?.['colors.negative']
+        ? pairs['colors.negative'].dark
+        : theme.colors.negative !== '#dc2626'
+          ? theme.colors.negative
+          : '#f87171',
     },
     chrome: {
       // Eyebrow keeps its accent tint (cyan in both modes); the other
       // chrome elements desaturate to a muted gray on the dark canvas.
       // Each color only adapts if the spec left it at the light default,
       // so explicit chrome color overrides survive dark-mode adaptation.
+      // When a TokenValue pair has an explicit dark value, use it directly.
       eyebrow: theme.chrome.eyebrow,
       title: {
         ...theme.chrome.title,
-        color: overridden(theme.chrome.title.color, lightChrome.title.color, darkText),
+        color: pairs?.['chrome.title.color']
+          ? pairs['chrome.title.color'].dark
+          : overridden(theme.chrome.title.color, lightChrome.title.color, darkText),
       },
       subtitle: {
         ...theme.chrome.subtitle,
-        color: overridden(theme.chrome.subtitle.color, lightChrome.subtitle.color, darkMuted),
+        color: pairs?.['chrome.subtitle.color']
+          ? pairs['chrome.subtitle.color'].dark
+          : overridden(theme.chrome.subtitle.color, lightChrome.subtitle.color, darkMuted),
       },
       source: {
         ...theme.chrome.source,
-        color: overridden(theme.chrome.source.color, lightChrome.source.color, darkMuted),
+        color: pairs?.['chrome.source.color']
+          ? pairs['chrome.source.color'].dark
+          : overridden(theme.chrome.source.color, lightChrome.source.color, darkMuted),
       },
       byline: {
         ...theme.chrome.byline,
-        color: overridden(theme.chrome.byline.color, lightChrome.byline.color, darkMuted),
+        color: pairs?.['chrome.byline.color']
+          ? pairs['chrome.byline.color'].dark
+          : overridden(theme.chrome.byline.color, lightChrome.byline.color, darkMuted),
       },
       footer: {
         ...theme.chrome.footer,
-        color: overridden(theme.chrome.footer.color, lightChrome.footer.color, darkMuted),
+        color: pairs?.['chrome.footer.color']
+          ? pairs['chrome.footer.color'].dark
+          : overridden(theme.chrome.footer.color, lightChrome.footer.color, darkMuted),
       },
     },
   };

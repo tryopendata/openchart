@@ -8,9 +8,12 @@
  *
  * When `highlight` is non-empty, highlighted series get sequential palette
  * colors and muted series get a neutral gray.
+ *
+ * When `theme.seriesStrategy` is an object (accent-neutral), low-cardinality
+ * charts use accent + neutral grays instead of the full palette.
  */
 
-import type { Encoding, ResolvedTheme } from '@opendata-ai/openchart-core';
+import { ACHROMATIC_RAMP, type Encoding, type ResolvedTheme } from '@opendata-ai/openchart-core';
 import type { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import type { ResolvedScales } from '../layout/scales';
 
@@ -42,16 +45,36 @@ export function applyColorScaleRange(
   } else {
     const ordinalScale = scales.color.scale as ScaleOrdinal<string, string>;
     const palette = theme.colors.categorical;
+    const domain = ordinalScale.domain();
 
     if (highlight && highlight.length > 0) {
       const highlightSet = new Set(highlight);
-      const domain = ordinalScale.domain();
       const colors = domain.map((v, i) =>
         highlightSet.has(v) ? palette[i % palette.length] : MUTED_COLOR,
       );
       ordinalScale.range(colors);
     } else {
-      ordinalScale.range(palette);
+      const strategy = theme.seriesStrategy ?? 'palette';
+      if (strategy === 'palette' || typeof strategy === 'string') {
+        ordinalScale.range(palette);
+      } else {
+        const count = domain.length;
+        if (count <= 1) {
+          ordinalScale.range([palette[0]]);
+        } else if (count <= 4) {
+          const neutrals = [
+            ACHROMATIC_RAMP.fgMuted,
+            ACHROMATIC_RAMP.fgSubtle,
+            ACHROMATIC_RAMP.fgFaint,
+          ];
+          const colors = domain.map((_, i) =>
+            i === 0 ? palette[0] : neutrals[(i - 1) % neutrals.length],
+          );
+          ordinalScale.range(colors);
+        } else {
+          ordinalScale.range(palette);
+        }
+      }
     }
   }
 }
