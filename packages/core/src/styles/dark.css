@@ -1,5 +1,9 @@
 /* ---------------------------------------------------------------------------
- * Dark mode overrides
+ * Dark mode overrides (fallback defaults)
+ *
+ * At runtime, the JS theme engine stamps dark-adapted --oc-* custom
+ * properties on each .oc-root container. These CSS values serve as
+ * fallbacks for contexts where JS hasn't mounted yet.
  * --------------------------------------------------------------------------- */
 
 .oc-dark {

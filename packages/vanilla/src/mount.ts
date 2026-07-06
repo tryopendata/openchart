@@ -57,6 +57,7 @@ import { createMeasureText, resolveFontFamily, scheduleFontReload } from './meas
 import { observeResize } from './resize-observer';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
+import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -790,6 +791,10 @@ export function createChart<TData extends DataRow = DataRow>(
     } else {
       container.classList.remove('oc-dark');
     }
+
+    // Stamp resolved theme as CSS custom properties on the container
+    // so CSS consumers read from the same source of truth as the JS engine.
+    stampThemeProperties(container, currentLayout.theme);
 
     // Set up animation cleanup on first render only
     if (shouldAnimate && svgElement) {

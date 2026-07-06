@@ -1,11 +1,13 @@
 import type { Encoding, ResolvedTheme } from '@opendata-ai/openchart-core';
-import { resolveTheme } from '@opendata-ai/openchart-core';
+import { ACHROMATIC_RAMP, adaptTheme, resolveTheme } from '@opendata-ai/openchart-core';
 import { scaleLinear, scaleOrdinal } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { ResolvedScales } from '../../layout/scales';
 import { applyColorScaleRange } from '../color-scale-range';
 
 const theme: ResolvedTheme = resolveTheme();
+const accentNeutralTheme: ResolvedTheme = resolveTheme({ seriesStrategy: 'accent-neutral' });
+const darkAccentNeutralTheme: ResolvedTheme = adaptTheme(accentNeutralTheme);
 
 describe('applyColorScaleRange', () => {
   it('is a no-op when no color scale is present', () => {
@@ -75,5 +77,82 @@ describe('applyColorScaleRange', () => {
     applyColorScaleRange(scales, encoding, theme);
     const firstSeq = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
     expect(linear.range()).toEqual([firstSeq[0], firstSeq[firstSeq.length - 1]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// seriesStrategy
+// ---------------------------------------------------------------------------
+
+describe('applyColorScaleRange seriesStrategy', () => {
+  function makeOrdinalScales(domain: string[]): {
+    scales: ResolvedScales;
+    ordinal: ReturnType<typeof scaleOrdinal<string, string>>;
+  } {
+    const ordinal = scaleOrdinal<string, string>().domain(domain);
+    const scales: ResolvedScales = {
+      color: { scale: ordinal, type: 'ordinal', channel: 'color' },
+    };
+    return { scales, ordinal };
+  }
+
+  const encoding: Encoding = {
+    x: { field: 'x', type: 'nominal' },
+    y: { field: 'y', type: 'quantitative' },
+    color: { field: 'c', type: 'nominal' },
+  };
+
+  it('palette strategy assigns full categorical palette', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c']);
+    applyColorScaleRange(scales, encoding, theme);
+    expect(ordinal.range()).toEqual(theme.colors.categorical);
+  });
+
+  it('accent-neutral: single series gets accent only', () => {
+    const { scales, ordinal } = makeOrdinalScales(['solo']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    expect(ordinal.range()).toEqual([accentNeutralTheme.colors.categorical[0]]);
+  });
+
+  it('accent-neutral: 3 series gets accent + neutral grays (darkest first on light surface)', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    const range = ordinal.range();
+    expect(range[0]).toBe(accentNeutralTheme.colors.categorical[0]);
+    expect(range[1]).toBe(ACHROMATIC_RAMP.fgFaint);
+    expect(range[2]).toBe(ACHROMATIC_RAMP.fgSubtle);
+  });
+
+  it('accent-neutral: dark surface reverses neutral prominence (brightest first)', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c']);
+    applyColorScaleRange(scales, encoding, darkAccentNeutralTheme);
+    const range = ordinal.range();
+    expect(range[0]).toBe(darkAccentNeutralTheme.colors.categorical[0]);
+    expect(range[1]).toBe(ACHROMATIC_RAMP.fgMuted);
+    expect(range[2]).toBe(ACHROMATIC_RAMP.fgSubtle);
+  });
+
+  it('accent-neutral: 4 series is the last accent-neutral count', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c', 'd']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    const range = ordinal.range();
+    expect(range[0]).toBe(accentNeutralTheme.colors.categorical[0]);
+    expect(range.slice(1)).toEqual([
+      ACHROMATIC_RAMP.fgFaint,
+      ACHROMATIC_RAMP.fgSubtle,
+      ACHROMATIC_RAMP.fgMuted,
+    ]);
+  });
+
+  it('accent-neutral: 5 series falls back to full palette', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c', 'd', 'e']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    expect(ordinal.range()).toEqual(accentNeutralTheme.colors.categorical);
+  });
+
+  it('accent-neutral: 6 series falls back to full palette', () => {
+    const { scales, ordinal } = makeOrdinalScales(['a', 'b', 'c', 'd', 'e', 'f']);
+    applyColorScaleRange(scales, encoding, accentNeutralTheme);
+    expect(ordinal.range()).toEqual(accentNeutralTheme.colors.categorical);
   });
 });

@@ -161,3 +161,117 @@ describe('resolveTheme deep merge edge cases', () => {
     expect(resolved.chrome.title.color).not.toBe(DEFAULT_THEME.chrome.title.color);
   });
 });
+
+// ---------------------------------------------------------------------------
+// TokenValue resolution
+// ---------------------------------------------------------------------------
+
+describe('resolveTheme TokenValue handling', () => {
+  it('resolves plain string TokenValue to same string', () => {
+    const resolved = resolveTheme({ colors: { background: '#faf8f5' } });
+    expect(resolved.colors.background).toBe('#faf8f5');
+  });
+
+  it('resolves light/dark TokenValue pair to the light value', () => {
+    const resolved = resolveTheme({
+      colors: { background: { light: '#faf8f5', dark: '#1a1816' } },
+    });
+    expect(resolved.colors.background).toBe('#faf8f5');
+  });
+
+  it('stores token pairs on _tokenPairs for adaptTheme consumption', () => {
+    const resolved = resolveTheme({
+      colors: {
+        background: { light: '#fff', dark: '#111' },
+        text: { light: '#000', dark: '#eee' },
+      },
+    });
+    expect(resolved._tokenPairs).toBeDefined();
+    expect(resolved._tokenPairs?.['colors.background']).toEqual({ light: '#fff', dark: '#111' });
+    expect(resolved._tokenPairs?.['colors.text']).toEqual({ light: '#000', dark: '#eee' });
+  });
+
+  it('does not create _tokenPairs when all colors are plain strings', () => {
+    const resolved = resolveTheme({
+      colors: { background: '#fff', text: '#000' },
+    });
+    expect(resolved._tokenPairs).toBeUndefined();
+  });
+
+  it('resolves TokenValue on semantic color fields', () => {
+    const resolved = resolveTheme({
+      colors: {
+        positive: { light: '#10b981', dark: '#34d399' },
+        negative: { light: '#e11d48', dark: '#fb7185' },
+      },
+    });
+    expect(resolved.colors.positive).toBe('#10b981');
+    expect(resolved.colors.negative).toBe('#e11d48');
+    expect(resolved._tokenPairs?.['colors.positive']).toEqual({
+      light: '#10b981',
+      dark: '#34d399',
+    });
+    expect(resolved._tokenPairs?.['colors.negative']).toEqual({
+      light: '#e11d48',
+      dark: '#fb7185',
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New ThemeConfig fields
+// ---------------------------------------------------------------------------
+
+describe('resolveTheme widened ThemeConfig', () => {
+  it('overrides fonts.weights partially', () => {
+    const resolved = resolveTheme({
+      fonts: { weights: { normal: 400, bold: 700 } },
+    });
+    expect(resolved.fonts.weights.normal).toBe(400);
+    expect(resolved.fonts.weights.bold).toBe(700);
+    expect(resolved.fonts.weights.medium).toBe(DEFAULT_THEME.fonts.weights.medium);
+  });
+
+  it('overrides new spacing fields', () => {
+    const resolved = resolveTheme({
+      spacing: { chromeToChart: 16, chartToFooter: 20, axisMargin: 8 },
+    });
+    expect(resolved.spacing.chromeToChart).toBe(16);
+    expect(resolved.spacing.chartToFooter).toBe(20);
+    expect(resolved.spacing.axisMargin).toBe(8);
+    expect(resolved.spacing.padding).toBe(DEFAULT_THEME.spacing.padding);
+  });
+
+  it('overrides chrome typography with ChromeThemeOverride object', () => {
+    const resolved = resolveTheme({
+      chrome: {
+        title: { fontWeight: 700, fontSize: 32, lineHeight: 1.1 },
+      },
+    });
+    expect(resolved.chrome.title.fontWeight).toBe(700);
+    expect(resolved.chrome.title.fontSize).toBe(32);
+    expect(resolved.chrome.title.lineHeight).toBe(1.1);
+    expect(resolved.chrome.subtitle.fontWeight).toBe(DEFAULT_THEME.chrome.subtitle.fontWeight);
+  });
+
+  it('ChromeThemeOverride color accepts TokenValue', () => {
+    const resolved = resolveTheme({
+      chrome: {
+        title: { color: { light: '#111', dark: '#eee' }, fontWeight: 600 },
+      },
+    });
+    expect(resolved.chrome.title.color).toBe('#111');
+    expect(resolved.chrome.title.fontWeight).toBe(600);
+    expect(resolved._tokenPairs?.['chrome.title.color']).toEqual({ light: '#111', dark: '#eee' });
+  });
+
+  it('passes seriesStrategy through to resolved theme', () => {
+    const resolved = resolveTheme({ seriesStrategy: 'accent-neutral' });
+    expect(resolved.seriesStrategy).toBe('accent-neutral');
+  });
+
+  it('defaults seriesStrategy to palette', () => {
+    const resolved = resolveTheme();
+    expect(resolved.seriesStrategy).toBe('palette');
+  });
+});

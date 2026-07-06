@@ -1,0 +1,122 @@
+# Migration Guide
+
+## Theming Design Tokens
+
+This release widens `ThemeConfig` to expose every design-decision field and unifies CSS custom properties with the JS theme engine. All changes are backward-compatible. Existing theme configs continue to work without modification.
+
+### What changed
+
+**Before:** `ThemeConfig` covered colors, font family/sizes, 4 spacing fields, border radius, and chrome color (string only). Font weights, chrome typography, semantic colors, and additional spacing fields were hardcoded in `DEFAULT_THEME` with no override path. CSS custom properties in `tokens.css`/`dark.css` were hand-maintained separately from the JS theme.
+
+**After:** `ThemeConfig` covers everything. CSS custom properties are generated from the resolved JS theme at mount time. The static CSS files serve as SSR/pre-mount fallback defaults.
+
+### New ThemeConfig fields
+
+```ts
+const theme: ThemeConfig = {
+  colors: {
+    // Existing fields still work as plain strings
+    background: '#ffffff',
+    text: '#1a1a1a',
+
+    // New: semantic colors
+    positive: '#10b981',
+    negative: '#e11d48',
+    annotationFill: 'rgba(0,0,0,0.05)',
+    annotationText: '#555',
+
+    // New: TokenValue pairs for explicit light/dark control
+    background: { light: '#fff1e5', dark: '#1a1311' },
+    text: { light: '#33302e', dark: '#f2dfce' },
+  },
+
+  fonts: {
+    // New: weight scale
+    weights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
+  },
+
+  spacing: {
+    // Existing
+    padding: 16,
+    chromeGap: 4,
+
+    // New
+    chromeToChart: 8,
+    chartToFooter: 12,
+    axisMargin: 4,
+  },
+
+  // New: per-element chrome typography (was string-only for color)
+  chrome: {
+    title: { fontWeight: 700, fontSize: 24, lineHeight: 1.2 },
+    subtitle: { fontWeight: 400, lineHeight: 1.4 },
+    eyebrow: { color: '#e3120b', fontWeight: 700 },
+
+    // Plain strings still work (color-only, backward-compatible)
+    source: '#666',
+  },
+
+  // New: series color assignment strategy
+  seriesStrategy: 'accent-neutral',
+};
+```
+
+### TokenValue: explicit light/dark colors
+
+Any color field in `ThemeConfig` now accepts `TokenValue`:
+
+```ts
+type TokenValue = string | { light: string; dark: string };
+```
+
+When you pass a `{ light, dark }` pair, `adaptTheme()` uses your explicit dark value instead of computing one algorithmically. Plain strings still work exactly as before.
+
+```ts
+// Before: adaptTheme() guesses a dark version of salmon
+{ colors: { background: '#fff1e5' } }
+
+// After: you control both modes
+{ colors: { background: { light: '#fff1e5', dark: '#1a1311' } } }
+```
+
+### SeriesStrategy
+
+Controls how categorical colors are assigned based on series count. Default is `'palette'`, which preserves current behavior exactly.
+
+```ts
+// Editorial convention: accent-only for single series,
+// accent + neutral grays for 2-4, full palette for 5+
+seriesStrategy: 'accent-neutral'
+```
+
+The neutral grays are surface-aware: on light backgrounds the second series gets the darkest gray (strongest contrast first), on dark backgrounds the brightest.
+
+### Named presets
+
+Three presets exported from `@opendata-ai/openchart-core`:
+
+| Preset | Feel |
+|--------|------|
+| `editorial` | Current default (empty config, zero drift) |
+| `essay` | Serif titles, warm background, generous spacing |
+| `wire` | Monospace, dense, tight chrome, dashboard feel |
+
+```ts
+import { essay, wire } from '@opendata-ai/openchart-core';
+
+// React
+<Chart spec={spec} theme={essay} />
+
+// Vanilla
+createChart(container, spec, { theme: wire });
+```
+
+### CSS custom properties
+
+`--oc-*` custom properties are now stamped on each `.oc-root` container from the resolved JS theme at mount time. This means:
+
+- **Two charts with different themes on the same page** each get correct `--oc-*` values (per-container scoping).
+- **`tokens.css` and `dark.css` are fallback defaults**, not the source of truth. They still work for SSR, static HTML, and pre-mount styling.
+- **If you were reading `--oc-*` values from CSS** to style surrounding UI, those values now reflect the actual resolved theme rather than the hardcoded defaults. This is almost certainly what you wanted, but worth noting.
+
+No action required. If you import `tokens.css`/`dark.css`, keep doing so. The JS-stamped properties take precedence via inline style specificity.

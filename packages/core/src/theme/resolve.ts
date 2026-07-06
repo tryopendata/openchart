@@ -10,8 +10,8 @@
  * enabling darkMode.
  */
 
-import type { ThemeConfig } from '../types/spec';
-import type { ResolvedTheme, Theme } from '../types/theme';
+import type { ChromeThemeOverride, ThemeConfig } from '../types/spec';
+import type { ChromeDefaults, ResolvedTheme, Theme, TokenValue } from '../types/theme';
 import { DEFAULT_THEME } from './defaults';
 
 /**
@@ -44,6 +44,11 @@ function deepMerge(target: any, source: any): any {
   return result;
 }
 
+/** Extract the light-mode string from a TokenValue. */
+function resolveTokenLight(v: TokenValue): string {
+  return typeof v === 'string' ? v : v.light;
+}
+
 /**
  * Convert a user-facing ThemeConfig (partial) into the full Theme shape
  * that deepMerge can work with.
@@ -60,10 +65,16 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
       if (config.colors.categorical) colors.categorical = config.colors.categorical;
       if (config.colors.sequential) colors.sequential = config.colors.sequential;
       if (config.colors.diverging) colors.diverging = config.colors.diverging;
-      if (config.colors.background) colors.background = config.colors.background;
-      if (config.colors.text) colors.text = config.colors.text;
-      if (config.colors.gridline) colors.gridline = config.colors.gridline;
-      if (config.colors.axis) colors.axis = config.colors.axis;
+      if (config.colors.background) colors.background = resolveTokenLight(config.colors.background);
+      if (config.colors.text) colors.text = resolveTokenLight(config.colors.text);
+      if (config.colors.gridline) colors.gridline = resolveTokenLight(config.colors.gridline);
+      if (config.colors.axis) colors.axis = resolveTokenLight(config.colors.axis);
+      if (config.colors.annotationFill)
+        colors.annotationFill = resolveTokenLight(config.colors.annotationFill);
+      if (config.colors.annotationText)
+        colors.annotationText = resolveTokenLight(config.colors.annotationText);
+      if (config.colors.positive) colors.positive = resolveTokenLight(config.colors.positive);
+      if (config.colors.negative) colors.negative = resolveTokenLight(config.colors.negative);
     }
     partial.colors = colors as Theme['colors'];
   }
@@ -73,6 +84,7 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     if (config.fonts.family) fonts.family = config.fonts.family;
     if (config.fonts.mono) fonts.mono = config.fonts.mono;
     if (config.fonts.sizes) fonts.sizes = config.fonts.sizes as Theme['fonts']['sizes'];
+    if (config.fonts.weights) fonts.weights = config.fonts.weights as Theme['fonts']['weights'];
     partial.fonts = fonts as Theme['fonts'];
   }
 
@@ -80,6 +92,11 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     const spacing: Partial<Theme['spacing']> = {};
     if (config.spacing.padding !== undefined) spacing.padding = config.spacing.padding;
     if (config.spacing.chromeGap !== undefined) spacing.chromeGap = config.spacing.chromeGap;
+    if (config.spacing.chromeToChart !== undefined)
+      spacing.chromeToChart = config.spacing.chromeToChart;
+    if (config.spacing.chartToFooter !== undefined)
+      spacing.chartToFooter = config.spacing.chartToFooter;
+    if (config.spacing.axisMargin !== undefined) spacing.axisMargin = config.spacing.axisMargin;
     if (config.spacing.xAxisHeight !== undefined) spacing.xAxisHeight = config.spacing.xAxisHeight;
     if (config.spacing.xAxisLabelPadding !== undefined)
       spacing.xAxisLabelPadding = config.spacing.xAxisLabelPadding;
@@ -91,17 +108,72 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
   }
 
   if (config.chrome) {
-    // Only color is overridable per chrome element. Each element becomes a
-    // partial `{ color }`; deepMerge layers it onto the full ChromeDefaults
-    // so font size/weight/lineHeight stay at their typography-scale values.
-    const chrome: Record<string, { color: string }> = {};
-    for (const [element, color] of Object.entries(config.chrome)) {
-      if (color !== undefined) chrome[element] = { color };
+    const chrome: Record<string, Partial<ChromeDefaults>> = {};
+    for (const [element, value] of Object.entries(config.chrome)) {
+      if (value === undefined) continue;
+      if (typeof value === 'string') {
+        chrome[element] = { color: value };
+      } else {
+        const override: Partial<ChromeDefaults> = {};
+        const obj = value as ChromeThemeOverride;
+        if (obj.color !== undefined) override.color = resolveTokenLight(obj.color);
+        if (obj.fontSize !== undefined) override.fontSize = obj.fontSize;
+        if (obj.fontWeight !== undefined) override.fontWeight = obj.fontWeight;
+        if (obj.lineHeight !== undefined) override.lineHeight = obj.lineHeight;
+        chrome[element] = override;
+      }
     }
     partial.chrome = chrome as unknown as Theme['chrome'];
   }
 
+  if (config.seriesStrategy) {
+    partial.seriesStrategy = config.seriesStrategy;
+  }
+
   return partial;
+}
+
+/**
+ * Collect TokenValue pairs from the user's ThemeConfig so adaptTheme()
+ * can use explicit dark values instead of algorithmic adaptation.
+ */
+function collectTokenPairs(
+  config: ThemeConfig,
+): Record<string, { light: string; dark: string }> | undefined {
+  const pairs: Record<string, { light: string; dark: string }> = {};
+  if (config.colors && !Array.isArray(config.colors)) {
+    const colorFields = [
+      'background',
+      'text',
+      'gridline',
+      'axis',
+      'annotationFill',
+      'annotationText',
+      'positive',
+      'negative',
+    ] as const;
+    for (const field of colorFields) {
+      const v = config.colors[field];
+      if (v && typeof v === 'object' && 'light' in v) {
+        pairs[`colors.${field}`] = v;
+      }
+    }
+  }
+  if (config.chrome) {
+    for (const [element, value] of Object.entries(config.chrome)) {
+      if (
+        value &&
+        typeof value === 'object' &&
+        'color' in value &&
+        value.color &&
+        typeof value.color === 'object' &&
+        'light' in value.color
+      ) {
+        pairs[`chrome.${element}.color`] = value.color;
+      }
+    }
+  }
+  return Object.keys(pairs).length > 0 ? pairs : undefined;
 }
 
 /**
@@ -235,5 +307,6 @@ export function resolveTheme(userTheme?: ThemeConfig, base: Theme = DEFAULT_THEM
   return {
     ...merged,
     isDark: dark,
+    _tokenPairs: userTheme ? collectTokenPairs(userTheme) : undefined,
   } as ResolvedTheme;
 }

@@ -318,6 +318,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
   ],
   "metrics": undefined,
   "theme": {
+    "_tokenPairs": undefined,
     "borderRadius": 2,
     "chrome": {
       "byline": {
@@ -461,6 +462,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       },
     },
     "isDark": false,
+    "seriesStrategy": "palette",
     "spacing": {
       "axisMargin": 6,
       "chartToFooter": 8,
@@ -1332,6 +1334,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
   ],
   "metrics": undefined,
   "theme": {
+    "_tokenPairs": undefined,
     "borderRadius": 2,
     "chrome": {
       "byline": {
@@ -1475,6 +1478,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
     },
     "isDark": false,
+    "seriesStrategy": "palette",
     "spacing": {
       "axisMargin": 6,
       "chartToFooter": 8,
@@ -1960,6 +1964,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
   ],
   "metrics": undefined,
   "theme": {
+    "_tokenPairs": undefined,
     "borderRadius": 2,
     "chrome": {
       "byline": {
@@ -2103,6 +2108,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       },
     },
     "isDark": false,
+    "seriesStrategy": "palette",
     "spacing": {
       "axisMargin": 6,
       "chartToFooter": 8,

@@ -8,9 +8,9 @@
  * binary search. Source OKLCH values are documented inline so the ramp
  * can be regenerated if needed.
  *
- * Convention for low-cardinality charts (1 / 2-4 / 5+ series) is enforced
- * by chart-type renderer logic, not the palette itself. The palette stays
- * a flat 9-color ramp consumed by index. The convention is:
+ * Convention for low-cardinality charts (1 / 2-4 / 5+ series) is available
+ * as an opt-in via `theme.seriesStrategy`. The default strategy is 'palette'
+ * (full categorical ramp always). The accent-neutral convention is:
  *   - 1 series: cyan only
  *   - 2-4 series: cyan + zinc-400/500/600 (achromatic)
  *   - 5+ series: full multi-hue ramp below

@@ -1,5 +1,11 @@
 /* ---------------------------------------------------------------------------
  * Custom properties (light mode defaults)
+ *
+ * These are FALLBACK defaults. At runtime, the JS theme engine stamps the
+ * resolved theme as inline --oc-* custom properties on each .oc-root
+ * container (see packages/vanilla/src/theme-tokens.ts). These CSS values
+ * serve as fallbacks for contexts where JS hasn't mounted yet (SSR, static
+ * HTML examples).
  * --------------------------------------------------------------------------- */
 
 .oc-root,

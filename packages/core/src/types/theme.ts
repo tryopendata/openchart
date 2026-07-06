@@ -6,6 +6,33 @@
  */
 
 // ---------------------------------------------------------------------------
+// Token value (light/dark pair)
+// ---------------------------------------------------------------------------
+
+/**
+ * A color token value: either a plain CSS color string, or a light/dark pair.
+ * When a pair is given, the resolver picks the appropriate value based on
+ * dark mode state. When a plain string is given, dark-mode adaptation
+ * derives the dark value algorithmically (existing behavior).
+ */
+export type TokenValue = string | { light: string; dark: string };
+
+// ---------------------------------------------------------------------------
+// Series strategy
+// ---------------------------------------------------------------------------
+
+/**
+ * Series color assignment strategy.
+ *
+ * - `'palette'` — always assign from the full categorical palette (current
+ *   default, zero visual drift).
+ * - `'accent-neutral'` — assign by series count: a single series gets the
+ *   accent (first categorical color) only; 2-4 series get accent for the
+ *   first and neutral grays for the rest; 5+ fall back to the full palette.
+ */
+export type SeriesStrategy = 'palette' | 'accent-neutral';
+
+// ---------------------------------------------------------------------------
 // Color palette types
 // ---------------------------------------------------------------------------
 
@@ -154,6 +181,8 @@ export interface Theme {
   borderRadius: number;
   /** Default chrome text styles. */
   chrome: ThemeChromeDefaults;
+  /** Series color assignment strategy. Default: 'palette' (full categorical). */
+  seriesStrategy: SeriesStrategy;
 }
 
 /**
@@ -170,4 +199,11 @@ export interface Theme {
 export interface ResolvedTheme extends Theme {
   /** Whether dark mode adaptations have been applied to this theme. */
   isDark: boolean;
+  /**
+   * Original light/dark token pairs from the user's ThemeConfig. Used
+   * by adaptTheme() to skip algorithmic adaptation for tokens with
+   * explicit dark values. Engine-internal, not part of the public API.
+   * @internal
+   */
+  _tokenPairs?: Record<string, { light: string; dark: string }>;
 }

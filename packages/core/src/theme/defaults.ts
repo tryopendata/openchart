@@ -2,7 +2,7 @@
  * Default theme definition.
  *
  * Editorial design system with cyan-led categorical palette, Inter
- * Variable typography (weights 400/510/590), and zinc-based achromatic
+ * Variable typography (weights 450/550/590/700), and zinc-based achromatic
  * surfaces. Light is the default surface; dark adaptation lives in
  * dark-mode.ts.
  *
@@ -106,4 +106,5 @@ export const DEFAULT_THEME: Theme = {
       lineHeight: 1.4,
     },
   },
+  seriesStrategy: 'palette',
 };

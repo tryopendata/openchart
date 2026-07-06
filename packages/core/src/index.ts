@@ -27,6 +27,7 @@ export type {
   SequentialPalette,
 } from './colors/index';
 export {
+  ACHROMATIC_RAMP,
   CATEGORICAL_PALETTE,
   checkPaletteDistinguishability,
   contrastRatio,
@@ -44,9 +45,13 @@ export {
 
 export {
   adaptColorForDarkMode,
+  adaptForLightLineStroke,
   adaptTheme,
   DEFAULT_THEME,
+  editorial,
+  essay,
   resolveTheme,
+  wire,
 } from './theme/index';
 
 // ---------------------------------------------------------------------------
