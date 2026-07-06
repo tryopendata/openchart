@@ -178,12 +178,15 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
           : '#f87171',
     },
     chrome: {
-      // Eyebrow keeps its accent tint (cyan in both modes); the other
-      // chrome elements desaturate to a muted gray on the dark canvas.
-      // Each color only adapts if the spec left it at the light default,
-      // so explicit chrome color overrides survive dark-mode adaptation.
-      // When a TokenValue pair has an explicit dark value, use it directly.
-      eyebrow: theme.chrome.eyebrow,
+      // Eyebrow keeps its accent tint (cyan in both modes) unless the user
+      // gave an explicit dark value; the other chrome elements desaturate
+      // to a muted gray on the dark canvas. Each color only adapts if the
+      // spec left it at the light default, so explicit chrome color
+      // overrides survive dark-mode adaptation. When a TokenValue pair has
+      // an explicit dark value, use it directly.
+      eyebrow: pairs?.['chrome.eyebrow.color']
+        ? { ...theme.chrome.eyebrow, color: pairs['chrome.eyebrow.color'].dark }
+        : theme.chrome.eyebrow,
       title: {
         ...theme.chrome.title,
         color: pairs?.['chrome.title.color']

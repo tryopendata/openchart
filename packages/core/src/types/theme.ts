@@ -26,18 +26,11 @@ export type TokenValue = string | { light: string; dark: string };
  *
  * - `'palette'` — always assign from the full categorical palette (current
  *   default, zero visual drift).
- * - Object form — map series counts to color behaviors:
- *   - `single`: use the first categorical color (accent) only.
- *   - `few`: accent color for the first series, neutral grays for the rest.
- *   - `many`: full categorical palette.
+ * - `'accent-neutral'` — assign by series count: a single series gets the
+ *   accent (first categorical color) only; 2-4 series get accent for the
+ *   first and neutral grays for the rest; 5+ fall back to the full palette.
  */
-export type SeriesStrategy =
-  | 'palette'
-  | {
-      single: 'accent';
-      few: 'accent-neutral';
-      many: 'palette';
-    };
+export type SeriesStrategy = 'palette' | 'accent-neutral';
 
 // ---------------------------------------------------------------------------
 // Color palette types

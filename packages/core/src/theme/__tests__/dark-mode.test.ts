@@ -206,6 +206,20 @@ describe('adaptTheme', () => {
     expect(dark.chrome.title.color).toBe('#f2dfce');
   });
 
+  it('uses explicit dark pair for eyebrow color (otherwise kept as-is)', () => {
+    const light = resolveTheme({
+      chrome: {
+        eyebrow: { color: { light: '#e3120b', dark: '#ff6b64' } },
+      },
+    });
+    const dark = adaptTheme(light);
+    expect(dark.chrome.eyebrow.color).toBe('#ff6b64');
+
+    // Without a pair, the eyebrow keeps its accent tint across modes.
+    const noPair = adaptTheme(resolveTheme({ chrome: { eyebrow: '#e3120b' } }));
+    expect(noPair.chrome.eyebrow.color).toBe('#e3120b');
+  });
+
   it('falls back to algorithmic adaptation when no explicit dark pair is given', () => {
     const light = resolveTheme({
       colors: { background: '#ffffff' },

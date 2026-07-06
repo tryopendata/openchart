@@ -26,6 +26,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **theme:** generalized light-mode line stroke darkening — hue/saturation-aware so achromatic palettes (grays) pass through unchanged while saturated colors get a perceptual lightness reduction for AA contrast on white backgrounds.
 - **palette:** new OKLCH-based cyan-led categorical palette tuned for adjacency contrast (cyan and teal no longer neighbor each other).
 - **vanilla:** snap-to-data-point crosshair on multi-series line/area charts with merged tooltip and per-series snap dots.
+- **theme:** design token system — `ThemeConfig` now exposes every design-decision field: semantic colors (`positive`, `negative`, `annotationFill`, `annotationText`), `fonts.weights`, all spacing tokens (`chromeToChart`, `chartToFooter`, `axisMargin`), and per-element chrome typography overrides (`fontSize`, `fontWeight`, `lineHeight`, `color` on each chrome element). See the [migration guide](MIGRATION.md#theming-design-tokens) for details and examples.
+- **theme:** `TokenValue` type (`string | { light: string; dark: string }`) for explicit light/dark color pairs. When a pair is given, `adaptTheme()` uses the explicit dark value instead of algorithmic adaptation. Works on all color fields in `ThemeConfig` and on chrome element colors.
+- **theme:** `seriesStrategy` field controls how categorical colors are assigned based on series count. Default `'palette'` preserves current behavior. `'accent-neutral'` enables editorial conventions where 1-series charts use the accent color, 2-4 series use accent + neutral grays (surface-aware: darkest-first on light backgrounds, brightest-first on dark), and 5+ series use the full palette.
+- **theme:** 3 named presets exported from core: `editorial` (current default), `essay` (serif, warm, generous spacing), `wire` (monospace, dense, tight chrome). Import as `import { essay, wire } from '@opendata-ai/openchart-core'` and pass as the `theme` prop.
+- **theme:** CSS custom properties (`--oc-*`) now generated from the resolved JS theme at mount time, stamped per-container via `setProperty`. The static values in `tokens.css`/`dark.css` remain as SSR fallback defaults. Two charts with different themes on the same page each get correct custom property values.
 
 ### Bug Fixes
 

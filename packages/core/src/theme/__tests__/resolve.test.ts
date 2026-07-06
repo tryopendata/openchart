@@ -266,13 +266,8 @@ describe('resolveTheme widened ThemeConfig', () => {
   });
 
   it('passes seriesStrategy through to resolved theme', () => {
-    const strategy = {
-      single: 'accent' as const,
-      few: 'accent-neutral' as const,
-      many: 'palette' as const,
-    };
-    const resolved = resolveTheme({ seriesStrategy: strategy });
-    expect(resolved.seriesStrategy).toEqual(strategy);
+    const resolved = resolveTheme({ seriesStrategy: 'accent-neutral' });
+    expect(resolved.seriesStrategy).toBe('accent-neutral');
   });
 
   it('defaults seriesStrategy to palette', () => {

@@ -446,7 +446,7 @@ const economistLikeTheme: ThemeConfig = {
     eyebrow: { color: '#e3120b', fontWeight: 700 },
   },
   borderRadius: 0,
-  seriesStrategy: { single: 'accent', few: 'accent-neutral', many: 'palette' },
+  seriesStrategy: 'accent-neutral',
 };
 
 export const EconomistLikeTheme = () => <Showcase theme={economistLikeTheme} />;

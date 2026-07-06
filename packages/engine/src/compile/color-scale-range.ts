@@ -9,7 +9,7 @@
  * When `highlight` is non-empty, highlighted series get sequential palette
  * colors and muted series get a neutral gray.
  *
- * When `theme.seriesStrategy` is an object (accent-neutral), low-cardinality
+ * When `theme.seriesStrategy` is `'accent-neutral'`, low-cardinality
  * charts use accent + neutral grays instead of the full palette.
  */
 
@@ -55,18 +55,18 @@ export function applyColorScaleRange(
       ordinalScale.range(colors);
     } else {
       const strategy = theme.seriesStrategy ?? 'palette';
-      if (strategy === 'palette' || typeof strategy === 'string') {
+      if (strategy !== 'accent-neutral') {
         ordinalScale.range(palette);
       } else {
         const count = domain.length;
         if (count <= 1) {
           ordinalScale.range([palette[0]]);
         } else if (count <= 4) {
-          const neutrals = [
-            ACHROMATIC_RAMP.fgMuted,
-            ACHROMATIC_RAMP.fgSubtle,
-            ACHROMATIC_RAMP.fgFaint,
-          ];
+          // Prominence tracks contrast against the surface: on dark canvases
+          // the brightest gray reads strongest, on light canvases the darkest.
+          const neutrals = theme.isDark
+            ? [ACHROMATIC_RAMP.fgMuted, ACHROMATIC_RAMP.fgSubtle, ACHROMATIC_RAMP.fgFaint]
+            : [ACHROMATIC_RAMP.fgFaint, ACHROMATIC_RAMP.fgSubtle, ACHROMATIC_RAMP.fgMuted];
           const colors = domain.map((_, i) =>
             i === 0 ? palette[0] : neutrals[(i - 1) % neutrals.length],
           );
