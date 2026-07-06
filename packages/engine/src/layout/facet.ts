@@ -1,6 +1,6 @@
 import type { Rect } from '@opendata-ai/openchart-core';
 
-const MIN_PANEL_WIDTH = 160;
+const MIN_PANEL_WIDTH = 200;
 const PANEL_GAP = 12;
 const HEADER_HEIGHT = 20;
 
