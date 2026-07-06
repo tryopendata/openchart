@@ -856,6 +856,38 @@ export interface ResolvedMetricBar {
 // ---------------------------------------------------------------------------
 
 /**
+ * A single panel in a faceted (small-multiples) layout.
+ * Each panel has its own marks, axes, and drawing area but typically
+ * shares scales with sibling panels.
+ */
+export interface FacetPanelLayout {
+  /** Facet value that produced this panel. */
+  key: string;
+  /** Panel drawing area in SVG coordinates. */
+  area: Rect;
+  /** Data marks for this panel. */
+  marks: Mark[];
+  /** Per-panel axis layouts. Inner panels may have ticks suppressed. */
+  axes: { x?: AxisLayout; y?: AxisLayout };
+  /** Per-panel annotations. */
+  annotations: ResolvedAnnotation[];
+  /** Panel header label (facet value) positioned above the panel. */
+  header: { text: string; x: number; y: number; fontSize: number; fontWeight: number };
+}
+
+/** Layout for a faceted (small-multiples) chart. */
+export interface FacetLayout {
+  /** Ordered array of panel layouts. */
+  panels: FacetPanelLayout[];
+  /** The data field used for faceting. */
+  facetField: string;
+  /** Number of columns in the wrap grid. */
+  columns: number;
+  /** Whether scales are shared across panels. */
+  sharedScales: boolean;
+}
+
+/**
  * ChartLayout: the complete engine output for chart visualizations.
  *
  * Contains everything an adapter needs to render the chart: dimensions,
@@ -907,6 +939,8 @@ export interface ChartLayout {
   crosshair: boolean;
   /** Real text measurement function from the adapter (for accurate SVG text wrapping). */
   measureText?: MeasureTextFn;
+  /** Faceted (small-multiples) layout. When present, renderers iterate panels instead of using top-level marks/axes. */
+  facet?: FacetLayout;
 }
 
 // ---------------------------------------------------------------------------

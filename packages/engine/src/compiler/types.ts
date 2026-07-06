@@ -126,6 +126,8 @@ export interface NormalizedChartSpec {
   seriesStyles: Record<string, import('@opendata-ai/openchart-core').SeriesStyle>;
   /** Display mode controlling chrome/axes/legend stripping. Defaults to `'full'`. */
   display: Display;
+  /** Resolve configuration for independent/shared scales in faceted charts. */
+  resolve?: import('@opendata-ai/openchart-core').ResolveConfig;
   /**
    * Which top-level fields the user explicitly set. Populated by compileChart
    * from the raw expanded spec before normalization. NormalizeChartSpec runs

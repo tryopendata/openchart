@@ -433,6 +433,24 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
 }
 
 /**
+ * Facet channel definition: partitions data into small-multiple panels.
+ *
+ * Unlike positional channels, facet only needs a field, a categorical type,
+ * and optional layout hints (columns, sort). It does not carry scale/axis
+ * config because it produces a grid, not a visual encoding.
+ */
+export interface FacetChannel<TData extends DataRow = DataRow> {
+  /** Data field to partition by. Each unique value produces one panel. */
+  field: keyof TData & string;
+  /** Must be categorical. */
+  type: 'nominal' | 'ordinal';
+  /** Number of columns in the wrap grid. Auto-computed when omitted. */
+  columns?: number;
+  /** Sort order for panel values. Default ascending. */
+  sort?: 'ascending' | 'descending' | null;
+}
+
+/**
  * Encoding object mapping visual channels to data fields.
  * Which channels are required depends on the mark type — see the per-mark
  * encoding interfaces (ArcEncoding, LineEncoding, etc.) and MARK_ENCODING_RULES
@@ -525,6 +543,13 @@ export interface Encoding<TData extends DataRow = DataRow> {
    * Not used by any other mark type.
    */
   radius?: EncodingChannel<TData>;
+  /**
+   * Facet channel: partitions data into a grid of small-multiple panels.
+   * Each unique value of the facet field produces one panel. Panels share
+   * scales by default; use `resolve: { scale: { y: 'independent' } }` for
+   * per-panel axes.
+   */
+  facet?: FacetChannel<TData>;
 }
 
 // ---------------------------------------------------------------------------
@@ -1350,6 +1375,13 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * top-level and per-breakpoint overrides.
    */
   display?: Display;
+  /**
+   * Resolution strategy for shared/independent scales and axes across facet
+   * panels. Only meaningful when `encoding.facet` is present. Shared scales
+   * (the default) let readers compare across panels; independent scales give
+   * each panel its own domain.
+   */
+  resolve?: ResolveConfig;
   /**
    * Render order within a LayerSpec. Higher values render on top.
    * When omitted, layers render in array order (later layers paint on top).

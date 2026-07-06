@@ -29,11 +29,12 @@
 | Spec normalization (defaults, shorthand expansion) | `packages/engine/src/compiler/normalize.ts` → `normalizeSpec()` |
 | Spec validation | `packages/engine/src/compiler/validate.ts` → `validateSpec()` |
 | Top-level compile entry | `packages/engine/src/compiler/index.ts` → `compile()` |
-| Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()` |
+| Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()`, `compileFaceted()` |
 | Chart-type registry | `packages/engine/src/charts/registry.ts` |
 | Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,rule,tick,text}/` |
 | Layout: axes (tick generation, density, label fitting) | `packages/engine/src/layout/axes.ts` (`computeAxes`) |
 | Layout: dimensions (chrome reservation, chartArea computation) | `packages/engine/src/layout/dimensions.ts` (`computeDimensions`) |
+| Layout: facet grid geometry (panel rects, responsive column degradation) | `packages/engine/src/layout/facet.ts` (`computeFacetGrid`, `autoColumns`) |
 | Layout: gridlines | `packages/engine/src/layout/gridlines.ts` |
 | Layout: scales (d3-scale construction) | `packages/engine/src/layout/scales.ts` |
 | Annotations: top-level compile | `packages/engine/src/annotations/compute.ts` → `computeAnnotations()` |
@@ -50,7 +51,7 @@
 | Endpoint labels: text-width prediction for layout reservation | `packages/engine/src/endpoint-labels/predict.ts` |
 | Endpoint labels: shared constants (chip padding, swatch geometry, leader gaps) | `packages/engine/src/endpoint-labels/constants.ts` |
 | Vanilla mount + lifecycle | `packages/vanilla/src/mount.ts` (~2500 lines) |
-| Vanilla SVG renderer entry | `packages/vanilla/src/svg-renderer.ts` → `renderChartSVG()` |
+| Vanilla SVG renderer entry | `packages/vanilla/src/svg-renderer.ts` → `renderChartSVG()`, `renderFacetedPanels()` |
 | Renderer: chrome (title/subtitle/source/byline/footer) | `packages/vanilla/src/renderers/chrome.ts` → `renderChrome()` |
 | Renderer: marks (line, area, rect, arc, point, text, rule, tick) | `packages/vanilla/src/renderers/marks.ts` → `renderMarks()`. Returns an optional `<g class="oc-mark-labels">` overlay that `svg-renderer.ts` appends outside the clip path so value labels on tall columns aren't clipped. |
 | Renderer: axes | `packages/vanilla/src/renderers/axes.ts` → `renderAxes()` |
