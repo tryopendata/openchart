@@ -316,6 +316,16 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         suggestion:
           'Add a field property to encoding.facet (e.g. { field: "category", type: "nominal" })',
       });
+    } else if (
+      !dataColumns.has(facet.field as string) &&
+      !transformFields.has(facet.field as string)
+    ) {
+      errors.push({
+        message: `Spec error: encoding.facet.field "${facet.field}" does not exist in data. Available columns: ${availableColumns}`,
+        path: 'encoding.facet.field',
+        code: 'DATA_FIELD_MISSING',
+        suggestion: `Use one of the available data columns: ${availableColumns}`,
+      });
     }
     if (!facet.type || (facet.type !== 'nominal' && facet.type !== 'ordinal')) {
       errors.push({

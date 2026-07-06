@@ -336,8 +336,12 @@ function renderFacetedPanels(
     // Panel marks (clipped)
     const clippedGroup = createSVGElement('g');
     clippedGroup.setAttribute('clip-path', `url(#${panelClipId})`);
-    renderMarks(clippedGroup, panelLayout);
+    const panelLabelsOverlay = renderMarks(clippedGroup, panelLayout);
     g.appendChild(clippedGroup);
+
+    if (panelLabelsOverlay) {
+      g.appendChild(panelLabelsOverlay);
+    }
 
     // Panel annotations
     renderAnnotations(g, panelLayout);

@@ -34,7 +34,7 @@ export function computeFacetGrid(
   if (n === 0) return { panels: [], columns: 0, rows: 0 };
 
   const usableWidth = totalArea.width - outerAxisReservation.left;
-  let columns = requestedColumns ?? autoColumns(n, usableWidth);
+  let columns = Math.min(requestedColumns ?? autoColumns(n, usableWidth), n);
 
   // Responsive degradation: reduce columns until panels are wide enough
   while (columns > 1) {
@@ -44,7 +44,7 @@ export function computeFacetGrid(
   }
 
   const rows = Math.ceil(n / columns);
-  const panelWidth = (usableWidth - (columns - 1) * PANEL_GAP) / columns;
+  const panelWidth = Math.max(0, (usableWidth - (columns - 1) * PANEL_GAP) / columns);
   const usableHeight = totalArea.height - outerAxisReservation.bottom;
   const panelHeight = Math.max(
     0,
