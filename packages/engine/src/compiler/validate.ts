@@ -305,6 +305,39 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
+  // Validate facet channel if provided
+  if (encoding.facet && typeof encoding.facet === 'object') {
+    const facet = encoding.facet as Record<string, unknown>;
+    if (!facet.field || typeof facet.field !== 'string') {
+      errors.push({
+        message: 'Spec error: encoding.facet.field is required and must be a non-empty string',
+        path: 'encoding.facet.field',
+        code: 'MISSING_FIELD',
+        suggestion:
+          'Add a field property to encoding.facet (e.g. { field: "category", type: "nominal" })',
+      });
+    }
+    if (!facet.type || (facet.type !== 'nominal' && facet.type !== 'ordinal')) {
+      errors.push({
+        message: `Spec error: encoding.facet.type must be "nominal" or "ordinal"${facet.type ? `, got "${facet.type}"` : ''}`,
+        path: 'encoding.facet.type',
+        code: facet.type ? 'INVALID_VALUE' : 'MISSING_FIELD',
+        suggestion: 'Set encoding.facet.type to "nominal" or "ordinal"',
+      });
+    }
+    if (facet.columns !== undefined) {
+      const cols = Number(facet.columns);
+      if (!Number.isInteger(cols) || cols < 1) {
+        errors.push({
+          message: 'Spec error: encoding.facet.columns must be a positive integer',
+          path: 'encoding.facet.columns',
+          code: 'INVALID_VALUE',
+          suggestion: 'Set columns to a positive integer (e.g. 3)',
+        });
+      }
+    }
+  }
+
   // Validate darkMode if provided
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
     errors.push({

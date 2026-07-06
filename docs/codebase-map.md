@@ -29,11 +29,12 @@
 | Spec normalization (defaults, shorthand expansion) | `packages/engine/src/compiler/normalize.ts` → `normalizeSpec()` |
 | Spec validation | `packages/engine/src/compiler/validate.ts` → `validateSpec()` |
 | Top-level compile entry | `packages/engine/src/compiler/index.ts` → `compile()` |
-| Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()` |
+| Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()`, `compileFaceted()` |
 | Chart-type registry | `packages/engine/src/charts/registry.ts` |
 | Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,rule,tick,text}/` |
 | Layout: axes (tick generation, density, label fitting) | `packages/engine/src/layout/axes.ts` (`computeAxes`) |
 | Layout: dimensions (chrome reservation, chartArea computation) | `packages/engine/src/layout/dimensions.ts` (`computeDimensions`) |
+| Layout: facet grid geometry (panel rects, responsive column degradation) | `packages/engine/src/layout/facet.ts` (`computeFacetGrid`, `autoColumns`) |
 | Layout: gridlines | `packages/engine/src/layout/gridlines.ts` |
 | Layout: scales (d3-scale construction) | `packages/engine/src/layout/scales.ts` |
 | Annotations: top-level compile | `packages/engine/src/annotations/compute.ts` → `computeAnnotations()` |

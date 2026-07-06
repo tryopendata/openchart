@@ -22,8 +22,12 @@ import type {
   CompileTableOptions,
   Encoding,
   EncodingChannel,
+  FacetChannel,
+  FacetPanelLayout,
   LayerSpec,
+  LayoutStrategy,
   Mark,
+  ResolvedAnimation,
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
@@ -56,6 +60,7 @@ import {
   resolveRendererKey,
 } from './charts/post-process';
 import { getChartRenderer } from './charts/registry';
+import { groupByField } from './charts/utils';
 import { applyColorScaleRange } from './compile/color-scale-range';
 import { filterClippedDomains } from './compile/data-clip';
 import { compileLayer as compileLayerImpl } from './compile/layer';
@@ -73,6 +78,7 @@ import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
 import { computeAxes } from './layout/axes';
 import { computeDimensions } from './layout/dimensions';
+import { computeFacetGrid } from './layout/facet';
 import { computeGridlines } from './layout/gridlines';
 import { createMeasureFn, resolveLayoutPlan } from './layout/plan';
 import { computeScales } from './layout/scales';
@@ -586,6 +592,24 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   }
 
   // ---------------------------------------------------------------------------
+  // Faceted compilation: when encoding.facet is present, take the faceted path
+  // ---------------------------------------------------------------------------
+  const facetChannel = renderSpec.encoding.facet;
+  if (facetChannel?.field) {
+    return compileFaceted(
+      chartSpec,
+      renderSpec,
+      facetChannel,
+      options,
+      theme,
+      strategy,
+      watermark,
+      resolvedAnimation,
+      crosshair,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Layout plan: measure real labels, freeze gutter + chrome + legend content
   // ---------------------------------------------------------------------------
   const measure = createMeasureFn(options.measureText);
@@ -786,6 +810,266 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     display: chartSpec.display,
     crosshair,
     measureText: options.measureText,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Faceted (small-multiples) compilation
+// ---------------------------------------------------------------------------
+
+function compileFaceted(
+  chartSpec: NormalizedChartSpec,
+  renderSpec: NormalizedChartSpec,
+  facetChannel: FacetChannel,
+  options: CompileOptions,
+  theme: ResolvedTheme,
+  strategy: LayoutStrategy,
+  watermark: boolean,
+  resolvedAnimation: ResolvedAnimation | undefined,
+  crosshair: boolean,
+): ChartLayout {
+  const measure = createMeasureFn(options.measureText);
+
+  // Strip facet from encoding before passing to per-panel pipeline (panels
+  // don't know they're faceted -- they compile as regular single charts).
+  const panelEncoding = { ...renderSpec.encoding };
+  delete (panelEncoding as Record<string, unknown>).facet;
+  const panelSpec = { ...renderSpec, encoding: panelEncoding };
+  const panelChartSpec = { ...chartSpec, encoding: panelEncoding };
+
+  // Partition data by facet field
+  const groups = groupByField(renderSpec.data, facetChannel.field);
+  const facetValues = Array.from(groups.keys());
+  if (facetChannel.sort !== null) {
+    const dir = facetChannel.sort === 'descending' ? -1 : 1;
+    facetValues.sort((a, b) => dir * a.localeCompare(b));
+  }
+
+  // Compute figure-level chrome and dimensions using the full dataset
+  // (no facet channel so it compiles normally). We use a representative
+  // single-panel spec to get chrome + legend measurements.
+  const plan = resolveLayoutPlan(
+    panelChartSpec,
+    panelSpec,
+    options,
+    theme,
+    strategy,
+    watermark,
+    measure,
+  );
+  const legendStub = placeLegend(
+    plan.legendContent,
+    { x: 0, y: 0, width: options.width, height: options.height },
+    options.width,
+    theme,
+    plan.xAxisExtent,
+  );
+  const dims = computeDimensions(
+    panelChartSpec,
+    options,
+    legendStub,
+    theme,
+    strategy,
+    watermark,
+    plan,
+  );
+  const chartArea = dims.chartArea;
+
+  const finalLegend = placeLegend(
+    plan.legendContent,
+    chartArea,
+    options.width,
+    theme,
+    plan.xAxisExtent,
+  );
+
+  // Estimate y-axis gutter width (used as left reservation for outer axes)
+  const leftReservation = plan.leftGutter;
+  // Estimate x-axis extent (used as bottom reservation for outer axes)
+  const bottomReservation = plan.xAxisExtent;
+
+  // Compute facet grid geometry
+  const grid = computeFacetGrid(facetValues, facetChannel.columns, chartArea, {
+    left: leftReservation,
+    bottom: bottomReservation,
+  });
+
+  // Resolve scale for determining if we use 'independent' or 'shared'
+  const resolveConfig = chartSpec.resolve;
+  const yResolve = resolveConfig?.scale?.y ?? 'shared';
+  const xResolve = resolveConfig?.scale?.x ?? 'shared';
+
+  // Compute shared scale domains from the full dataset (when shared)
+  const fullScales = computeScales(panelSpec, chartArea, renderSpec.data);
+  const sharedXDomain =
+    xResolve === 'shared' && fullScales.x ? fullScales.x.scale.domain() : undefined;
+  const sharedYDomain =
+    yResolve === 'shared' && fullScales.y ? fullScales.y.scale.domain() : undefined;
+
+  const isRadial = chartSpec.markType === 'arc';
+  const rendererKey = resolveRendererKey(
+    renderSpec.markType,
+    panelEncoding as Encoding,
+    renderSpec.markDef,
+  );
+  const renderer = getChartRenderer(rendererKey);
+
+  const allMarks: Mark[] = [];
+  const panelLayouts: FacetPanelLayout[] = [];
+
+  for (const gridPanel of grid.panels) {
+    const panelData = groups.get(gridPanel.key) ?? [];
+    const panelSpecLocal = { ...panelSpec, data: panelData };
+
+    // Inject shared domains via scale.domain on the encoding channels
+    let panelEnc = { ...panelEncoding } as Record<string, unknown>;
+    if (sharedXDomain && panelEnc.x) {
+      const xCh = panelEnc.x as Record<string, unknown>;
+      panelEnc = {
+        ...panelEnc,
+        x: { ...xCh, scale: { ...((xCh.scale as object) ?? {}), domain: sharedXDomain } },
+      };
+    }
+    if (sharedYDomain && panelEnc.y) {
+      const yCh = panelEnc.y as Record<string, unknown>;
+      panelEnc = {
+        ...panelEnc,
+        y: { ...yCh, scale: { ...((yCh.scale as object) ?? {}), domain: sharedYDomain } },
+      };
+    }
+    const panelSpecWithDomains = {
+      ...panelSpecLocal,
+      encoding: panelEnc as unknown as typeof panelSpec.encoding,
+    };
+
+    // Compute scales for this panel's area
+    const panelScales = computeScales(panelSpecWithDomains, gridPanel.area, panelData);
+    applyColorScaleRange(panelScales, panelSpecWithDomains.encoding, theme);
+    panelScales.defaultColor =
+      chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
+
+    // Outer-axis economy: only leftmost column gets y ticks, only bottom row gets x ticks.
+    // Exception: when scales are independent, every panel needs its own axis ticks.
+    const isLeftCol = gridPanel.col === 0;
+    const isBottomRow = gridPanel.row === grid.rows - 1;
+
+    const panelAxes = isRadial
+      ? { x: undefined, y: undefined }
+      : computeAxes(panelScales, gridPanel.area, strategy, theme, options.measureText, {
+          data: panelData,
+          encoding: panelSpecWithDomains.encoding as Encoding,
+          skipX: xResolve === 'shared' ? !isBottomRow : false,
+          skipY: yResolve === 'shared' ? !isLeftCol : false,
+          markType: chartSpec.markType,
+          totalWidth: gridPanel.area.width,
+        });
+
+    if (!isRadial) {
+      computeGridlines(panelAxes, gridPanel.area);
+    }
+
+    // Compute marks for this panel
+    const panelMarks: Mark[] = renderer
+      ? renderer(
+          panelSpecWithDomains,
+          panelScales,
+          gridPanel.area,
+          strategy,
+          theme,
+          gridPanel.area.width,
+        )
+      : [];
+
+    // Compute annotations for this panel
+    const annotationMeasure: AnnotationMeasureTextFn = options.measureText
+      ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
+      : heuristicMeasure;
+    const panelAnnotations = computeAnnotations(panelSpecWithDomains, {
+      scales: panelScales,
+      chartArea: gridPanel.area,
+      strategy,
+      isDark: theme.isDark,
+      obstacles: [],
+      svg: { width: options.width, height: options.height },
+      measure: annotationMeasure,
+    });
+
+    allMarks.push(...panelMarks);
+
+    panelLayouts.push({
+      key: gridPanel.key,
+      area: gridPanel.area,
+      marks: panelMarks,
+      axes: { x: panelAxes.x, y: panelAxes.y },
+      annotations: panelAnnotations,
+      header: {
+        text: gridPanel.key,
+        x: gridPanel.headerPos.x,
+        y: gridPanel.headerPos.y,
+        fontSize: theme.fonts.sizes.body,
+        fontWeight: theme.fonts.weights.medium,
+      },
+    });
+  }
+
+  // Compute tooltip descriptors from all marks across panels
+  const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
+
+  // A11y: mention faceting in alt text
+  const panelCount = facetValues.length;
+  const baseAltText = generateAltText(
+    {
+      mark: chartSpec.markType,
+      data: chartSpec.data,
+      encoding: chartSpec.encoding,
+      chrome: chartSpec.chrome,
+    } as ChartSpec,
+    chartSpec.data,
+  );
+  const altText = `${baseAltText} Faceted into ${panelCount} panels by ${facetChannel.field}.`;
+
+  const dataTableFallback = generateDataTable(
+    {
+      mark: chartSpec.markType,
+      data: chartSpec.data,
+      encoding: chartSpec.encoding,
+    } as ChartSpec,
+    chartSpec.data,
+  );
+
+  // Assign animation indices across all panels
+  assignAnimationIndices(allMarks, resolvedAnimation);
+
+  // Figure-level axes are null (axes live in panels)
+  // Figure-level marks are the union of all panel marks (for tooltip/keyboard nav)
+  return {
+    area: chartArea,
+    chrome: dims.chrome,
+    metrics: dims.metrics,
+    axes: { x: undefined, y: undefined },
+    marks: allMarks,
+    annotations: [],
+    legend: finalLegend,
+    tooltipDescriptors,
+    a11y: {
+      altText,
+      dataTableFallback,
+      role: 'img',
+      keyboardNavigable: allMarks.length > 0,
+    },
+    theme,
+    dimensions: { width: options.width, height: options.height },
+    animation: resolvedAnimation,
+    watermark,
+    display: chartSpec.display,
+    crosshair,
+    measureText: options.measureText,
+    facet: {
+      panels: panelLayouts,
+      facetField: facetChannel.field,
+      columns: grid.columns,
+      sharedScales: yResolve === 'shared' && xResolve === 'shared',
+    },
   };
 }
 

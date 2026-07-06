@@ -295,6 +295,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     watermark: spec.watermark ?? true,
     highlight: normalizeHighlight(encoding, spec.data, warnings),
     display,
+    resolve: spec.resolve,
     // Default empty userExplicit; compileChart overwrites this with the real
     // descriptor built from the raw expanded spec before normalize runs.
     userExplicit: {

@@ -9,7 +9,7 @@
  * own module under `./renderers/`.
  */
 
-import type { ChartLayout, RectMark } from '@opendata-ai/openchart-core';
+import type { ChartLayout, FacetPanelLayout, RectMark } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs } from './gradient-utils';
 import { renderAnnotations } from './renderers/annotations';
@@ -161,111 +161,90 @@ export function renderChartSVG(
   // starts with a clean slate.
   setMarkRenderState({ animation, gradientMap });
   try {
-    // Render layers in order (back to front)
-    // Axes render outside clip (labels extend beyond chart area)
-    renderAxes(svg, layout);
+    if (layout.facet) {
+      // Faceted rendering: per-panel axes, marks, annotations
+      renderFacetedPanels(svg, layout, layout.facet.panels, defs);
+    } else {
+      // Standard (non-faceted) rendering
+      // Axes render outside clip (labels extend beyond chart area)
+      renderAxes(svg, layout);
 
-    // Marks are clipped to chart area so area fills don't cover chrome
-    const clippedGroup = createSVGElement('g');
-    clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
-    const markLabelsOverlay = renderMarks(clippedGroup, layout);
+      // Marks are clipped to chart area so area fills don't cover chrome
+      const clippedGroup = createSVGElement('g');
+      clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+      const markLabelsOverlay = renderMarks(clippedGroup, layout);
 
-    // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
-    // Always emitted for line/area with dataPoints — the overlay-driven snap tooltip
-    // with crosshair is the canonical interaction for these chart types. When point
-    // marks coexist (e.g. mark.point: true), they still render decoratively but
-    // pointer events route to the overlay so the snap behavior wins.
-    const hasLineOrAreaWithDataPoints = layout.marks.some(
-      (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
-    );
-    if (hasLineOrAreaWithDataPoints) {
-      // Decorative point marks on line/area: route pointer events to the
-      // overlay so the snap-tooltip wins instead of competing per-point hover.
-      const pointEls = clippedGroup.querySelectorAll('circle.oc-mark-point');
-      for (const el of pointEls) {
-        el.setAttribute('pointer-events', 'none');
-      }
-
-      const overlay = createSVGElement('rect');
-      setAttrs(overlay, {
-        x: layout.area.x,
-        y: layout.area.y,
-        width: layout.area.width,
-        height: layout.area.height,
-        fill: 'transparent',
-      });
-      overlay.setAttribute('class', 'oc-voronoi-overlay');
-      overlay.setAttribute('data-voronoi-overlay', 'true');
-      clippedGroup.appendChild(overlay);
-
-      // Crosshair line: vertical line that tracks the snapped data point x.
-      // Gated on `opts.crosshair` because the dashed line is the optional bit;
-      // the snap-dots layer below ships regardless so the multi-series
-      // hover-tooltip stays useful even when the user opts out of the line.
-      if (opts?.crosshair) {
-        const crosshairLine = createSVGElement('line');
-        crosshairLine.setAttribute('data-crosshair', 'true');
-        crosshairLine.setAttribute('class', 'oc-crosshair');
-        setAttrs(crosshairLine, {
-          x1: 0,
-          y1: layout.area.y,
-          x2: 0,
-          y2: layout.area.y + layout.area.height,
-          stroke: layout.theme.colors.axis,
-          'stroke-opacity': '0.4',
-          'stroke-dasharray': '3,3',
-          'stroke-width': '1',
-          'pointer-events': 'none',
-        });
-        crosshairLine.style.display = 'none';
-        clippedGroup.appendChild(crosshairLine);
-      }
-
-      // Snap-dot layer: mount.ts populates one circle per series at the
-      // snapped x on hover. Always emitted so the merged tooltip has its
-      // anchors regardless of `opts.crosshair`.
-      const dotsGroup = createSVGElement('g');
-      dotsGroup.setAttribute('data-snap-dots', 'true');
-      dotsGroup.setAttribute('class', 'oc-snap-dots');
-      dotsGroup.setAttribute('pointer-events', 'none');
-      clippedGroup.appendChild(dotsGroup);
-    }
-
-    svg.appendChild(clippedGroup);
-
-    // Value label overlay sits outside the clip path so labels above near-full-height
-    // bars aren't clipped. Coordinates are in absolute SVG space, no transform needed.
-    if (markLabelsOverlay) {
-      svg.appendChild(markLabelsOverlay);
-    }
-
-    renderAnnotations(svg, layout);
-
-    // Endpoint labels render after marks/annotations so they sit on top of any
-    // chart-edge content, but before the traditional legend so chrome wins on
-    // collision. The engine handles all suppression — when entries is empty,
-    // renderEndpointLabels is a no-op.
-    renderEndpointLabels(svg, layout);
-
-    // Suppress decorative point marks that sit underneath an endpoint marker
-    // (mark.point: true + endpoint marker on produces a double-circle at the
-    // line's right terminus). The endpoint marker is the canonical terminator
-    // when present, so the point mark hides via opacity (not removal) so the
-    // SVG DOM stays diff-friendly for animated re-renders.
-    const epEntries = layout.endpointLabels?.entries ?? [];
-    if (epEntries.length > 0) {
-      const pointEls = clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point');
-      for (const entry of epEntries) {
-        if (!entry.marker) continue;
-        // dataX is the original line endpoint; marker.x is offset by radius.
-        // Point marks are placed at data coordinates, so compare against dataX.
-        const mx = entry.marker.dataX;
-        const my = entry.marker.y;
+      // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
+      const hasLineOrAreaWithDataPoints = layout.marks.some(
+        (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
+      );
+      if (hasLineOrAreaWithDataPoints) {
+        const pointEls = clippedGroup.querySelectorAll('circle.oc-mark-point');
         for (const el of pointEls) {
-          const cx = Number(el.getAttribute('cx'));
-          const cy = Number(el.getAttribute('cy'));
-          if (Math.abs(cx - mx) < 0.5 && Math.abs(cy - my) < 0.5) {
-            el.setAttribute('opacity', '0');
+          el.setAttribute('pointer-events', 'none');
+        }
+
+        const overlay = createSVGElement('rect');
+        setAttrs(overlay, {
+          x: layout.area.x,
+          y: layout.area.y,
+          width: layout.area.width,
+          height: layout.area.height,
+          fill: 'transparent',
+        });
+        overlay.setAttribute('class', 'oc-voronoi-overlay');
+        overlay.setAttribute('data-voronoi-overlay', 'true');
+        clippedGroup.appendChild(overlay);
+
+        if (opts?.crosshair) {
+          const crosshairLine = createSVGElement('line');
+          crosshairLine.setAttribute('data-crosshair', 'true');
+          crosshairLine.setAttribute('class', 'oc-crosshair');
+          setAttrs(crosshairLine, {
+            x1: 0,
+            y1: layout.area.y,
+            x2: 0,
+            y2: layout.area.y + layout.area.height,
+            stroke: layout.theme.colors.axis,
+            'stroke-opacity': '0.4',
+            'stroke-dasharray': '3,3',
+            'stroke-width': '1',
+            'pointer-events': 'none',
+          });
+          crosshairLine.style.display = 'none';
+          clippedGroup.appendChild(crosshairLine);
+        }
+
+        const dotsGroup = createSVGElement('g');
+        dotsGroup.setAttribute('data-snap-dots', 'true');
+        dotsGroup.setAttribute('class', 'oc-snap-dots');
+        dotsGroup.setAttribute('pointer-events', 'none');
+        clippedGroup.appendChild(dotsGroup);
+      }
+
+      svg.appendChild(clippedGroup);
+
+      if (markLabelsOverlay) {
+        svg.appendChild(markLabelsOverlay);
+      }
+
+      renderAnnotations(svg, layout);
+      renderEndpointLabels(svg, layout);
+
+      // Suppress decorative point marks under endpoint markers
+      const epEntries = layout.endpointLabels?.entries ?? [];
+      if (epEntries.length > 0) {
+        const pointEls = clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point');
+        for (const entry of epEntries) {
+          if (!entry.marker) continue;
+          const mx = entry.marker.dataX;
+          const my = entry.marker.y;
+          for (const el of pointEls) {
+            const cx = Number(el.getAttribute('cx'));
+            const cy = Number(el.getAttribute('cy'));
+            if (Math.abs(cx - mx) < 0.5 && Math.abs(cy - my) < 0.5) {
+              el.setAttribute('opacity', '0');
+            }
           }
         }
       }
@@ -289,4 +268,68 @@ export function renderChartSVG(
 
   container.appendChild(svg);
   return svg;
+}
+
+function renderFacetedPanels(
+  svg: SVGElement,
+  layout: ChartLayout,
+  panels: FacetPanelLayout[],
+  defs: SVGElement,
+): void {
+  for (const panel of panels) {
+    const g = createSVGElement('g');
+    g.setAttribute('class', 'oc-facet-panel');
+    g.setAttribute('data-facet', panel.key);
+
+    // Panel header label
+    const headerText = createSVGElement('text');
+    setAttrs(headerText, {
+      x: panel.header.x,
+      y: panel.header.y,
+      'text-anchor': 'middle',
+      'font-family': layout.theme.fonts.family,
+      'font-size': panel.header.fontSize,
+      'font-weight': panel.header.fontWeight,
+      fill: layout.theme.colors.text,
+    });
+    headerText.textContent = panel.header.text;
+    g.appendChild(headerText);
+
+    // Build a per-panel synthetic layout for the existing renderers
+    const panelLayout: ChartLayout = {
+      ...layout,
+      area: panel.area,
+      axes: panel.axes,
+      marks: panel.marks,
+      annotations: panel.annotations,
+    };
+
+    // Panel axes (ticks already suppressed for inner panels by the engine)
+    renderAxes(g, panelLayout);
+
+    // Panel clip path
+    const panelClipId = nextSvgId('oc-facet-clip');
+    const clipPath = createSVGElement('clipPath');
+    clipPath.setAttribute('id', panelClipId);
+    const clipRect = createSVGElement('rect');
+    setAttrs(clipRect, {
+      x: panel.area.x,
+      y: panel.area.y,
+      width: panel.area.width,
+      height: panel.area.height,
+    });
+    clipPath.appendChild(clipRect);
+    defs.appendChild(clipPath);
+
+    // Panel marks (clipped)
+    const clippedGroup = createSVGElement('g');
+    clippedGroup.setAttribute('clip-path', `url(#${panelClipId})`);
+    renderMarks(clippedGroup, panelLayout);
+    g.appendChild(clippedGroup);
+
+    // Panel annotations
+    renderAnnotations(g, panelLayout);
+
+    svg.appendChild(g);
+  }
 }
