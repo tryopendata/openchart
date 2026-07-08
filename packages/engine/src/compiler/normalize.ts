@@ -287,7 +287,11 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
-    responsive: spec.responsive ?? true,
+    responsive: typeof spec.responsive === 'object' ? true : (spec.responsive ?? true),
+    autoThin:
+      typeof spec.responsive === 'object'
+        ? (spec.responsive.autoThin ?? true)
+        : (spec.responsive ?? true),
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     hiddenSeries: spec.hiddenSeries ?? [],

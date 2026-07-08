@@ -248,6 +248,7 @@ export function computeEndpointLabels(
   theme: ResolvedTheme,
   chartArea: Rect,
   strategy?: LayoutStrategy,
+  endpointLabelsDemoted?: boolean,
 ): EndpointLabelsLayout {
   // Compact strategy: drop the column entirely. The traditional legend takes
   // over series identification at the compact breakpoint.
@@ -261,6 +262,7 @@ export function computeEndpointLabels(
     // The 'none' branch above returned; by here labelMode is not 'none'.
     labelsHiddenByStrategy: false,
     labelsDensityNone: spec.labels.density === 'none',
+    endpointLabelsDemoted,
   });
   const epExplicitlyOff =
     spec.endpointLabels === false ||

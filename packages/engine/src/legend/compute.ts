@@ -260,6 +260,7 @@ export function computeLegendContent(
   availableHeight: number,
   watermark: boolean = true,
   measure?: MeasureFn,
+  endpointLabelsDemoted?: boolean,
 ): LegendContent {
   const measureWidth = measure ?? estimateTextWidth;
 
@@ -284,6 +285,7 @@ export function computeLegendContent(
     seriesCount,
     labelsHiddenByStrategy: strategy.labelMode === 'none',
     labelsDensityNone: spec.labels.density === 'none',
+    endpointLabelsDemoted,
   });
   if (!suppression.showTraditionalLegend) {
     entries = [];

@@ -344,4 +344,23 @@ describe('resolveSuppression - series-count cutoff', () => {
     expect(result13.showEndpointLabels).toBe(false);
     expect(result13.showTraditionalLegend).toBe(true);
   });
+
+  it('endpointLabelsDemoted hides endpoint labels and shows legend', () => {
+    const spec = makeMultiSeriesLineSpec();
+    const result = resolveSuppression(spec, {
+      ...baseCtx,
+      endpointLabelsDemoted: true,
+    });
+    expect(result.showEndpointLabels).toBe(false);
+    expect(result.showTraditionalLegend).toBe(true);
+  });
+
+  it('endpointLabelsDemoted does not override explicit endpointLabels: true', () => {
+    const spec = makeMultiSeriesLineSpec({ endpointLabels: true });
+    const result = resolveSuppression(spec, {
+      ...baseCtx,
+      endpointLabelsDemoted: true,
+    });
+    expect(result.showEndpointLabels).toBe(true);
+  });
 });

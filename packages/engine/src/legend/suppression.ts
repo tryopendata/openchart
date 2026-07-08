@@ -51,6 +51,8 @@ export interface SuppressionContext {
   labelsHiddenByStrategy: boolean;
   /** True when spec.labels.density === 'none'. */
   labelsDensityNone: boolean;
+  /** When true, endpoint labels are demoted because they don't fit at the current width. */
+  endpointLabelsDemoted?: boolean;
 }
 
 /**
@@ -164,8 +166,11 @@ export function resolveSuppression(
   // labels are off so a legend shows instead. Explicit user opt-in overrides.
   const exceedsCutoff = !endpointLabelsExplicitlyOn(spec) && ctx.seriesCount > getMaxSeries(spec);
 
+  // Auto-thinning demotion: endpoint labels don't fit at the current width.
+  const demoted = !endpointLabelsExplicitlyOn(spec) && !!ctx.endpointLabelsDemoted;
+
   // The eight-cell truth table for ≥2-series overlap line/area charts.
-  const epExplicitOff = endpointLabelsExplicitlyOff(spec) || exceedsCutoff;
+  const epExplicitOff = endpointLabelsExplicitlyOff(spec) || exceedsCutoff || demoted;
   const legShown = legendShownExplicitly(spec);
   const legHidden = legendHiddenExplicitly(spec);
 

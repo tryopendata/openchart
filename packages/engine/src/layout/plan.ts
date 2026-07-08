@@ -30,6 +30,7 @@ import {
 import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { computeLegendContent, type LegendContent } from '../legend/compute';
 import { legendGap } from '../legend/wrap';
 import { resolveBandTickAngle } from './axes/rotation';
@@ -58,6 +59,8 @@ export interface LayoutPlan {
   yTickCount: number;
   converged: boolean;
   inlineYLabelInset: number;
+  /** True when endpoint labels were demoted by auto-thinning (don't fit at current width). */
+  endpointLabelsDemoted?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -291,6 +294,17 @@ export function resolveLayoutPlan(
   let prev: { gutter: number; rowCount: number; xAxisExtent: number } | null = null;
   let finalPlan: LayoutPlan | null = null;
 
+  // Endpoint-label fit check: when autoThin is on, demote endpoint labels to
+  // legend if the column would consume more than 30% of the total width.
+  const MAX_ENDPOINT_FRACTION = 0.3;
+  let endpointLabelsDemoted = false;
+  if (chartSpec.autoThin) {
+    const epWidth = predictEndpointLabelsWidth(chartSpec, theme);
+    if (epWidth > 0 && epWidth / width > MAX_ENDPOINT_FRACTION) {
+      endpointLabelsDemoted = true;
+    }
+  }
+
   for (let iter = 0; iter < 2; iter++) {
     // Legend content
     const legendAvailWidth = width - padding - leftGutter;
@@ -302,6 +316,7 @@ export function resolveLayoutPlan(
       height,
       watermark,
       measure,
+      endpointLabelsDemoted,
     );
 
     // Chrome
@@ -537,6 +552,7 @@ export function resolveLayoutPlan(
         yTickCount,
         converged: prev === null || converged,
         inlineYLabelInset,
+        endpointLabelsDemoted,
       };
       break;
     }

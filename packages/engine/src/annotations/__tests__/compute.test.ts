@@ -672,6 +672,24 @@ describe('computeAnnotations', () => {
 
       expect(annotations).toHaveLength(0);
     });
+
+    it('keeps annotations at compact breakpoint when autoThin is on', () => {
+      const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Kept' }]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, {
+        scales,
+        chartArea,
+        strategy: compactStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: 320, height: 300 },
+        measure: (text, font) => text.length * font.fontSize * 0.6,
+        autoThin: true,
+      });
+
+      expect(annotations).toHaveLength(1);
+      expect(annotations[0].label!.text).toBe('Kept');
+    });
   });
 
   describe('multiple annotations', () => {

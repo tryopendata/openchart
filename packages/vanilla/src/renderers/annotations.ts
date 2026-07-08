@@ -121,6 +121,49 @@ function renderAnnotation(
     g.appendChild(line);
   }
 
+  // Footnote marker: annotation was demoted by auto-thinning. Render a numbered
+  // dot at the data point instead of the full label text.
+  if (annotation.footnoteIndex != null && annotation.label) {
+    const cx =
+      annotation.label.connector?.endpoint?.x ??
+      annotation.label.connector?.to.x ??
+      annotation.label.x;
+    const cy =
+      annotation.label.connector?.endpoint?.y ??
+      annotation.label.connector?.to.y ??
+      annotation.label.y;
+    const r = 8;
+    const circle = createSVGElement('circle');
+    circle.setAttribute('class', 'oc-annotation-footnote-marker');
+    setAttrs(circle, {
+      cx,
+      cy,
+      r,
+      fill: bgColor ?? '#ffffff',
+      stroke: annotation.label.style.fill ?? '#666',
+      'stroke-width': 1.5,
+    });
+    g.appendChild(circle);
+
+    const num = createSVGElement('text');
+    num.setAttribute('class', 'oc-annotation-footnote-number');
+    setAttrs(num, {
+      x: cx,
+      y: cy,
+      'dominant-baseline': 'central',
+      'text-anchor': 'middle',
+    });
+    applyTextStyle(num, {
+      ...annotation.label.style,
+      fontSize: 9,
+      fontWeight: 600,
+    });
+    num.textContent = String(annotation.footnoteIndex);
+    g.appendChild(num);
+    parent.appendChild(g);
+    return;
+  }
+
   // Label with optional connector line
   if (annotation.label?.visible) {
     // Render connector first (behind the label text)

@@ -47,6 +47,8 @@ export interface AnnotationContext {
   svg: { width: number; height: number };
   measure: AnnotationMeasureTextFn;
   debugPlacement?: boolean;
+  /** When true, annotations that overlap are demoted to footnote markers instead of being hidden. */
+  autoThin?: boolean;
 }
 
 /**
@@ -105,7 +107,7 @@ export function computeAnnotations(
     };
   }
 
-  const isCompact = ctx.strategy.annotationPosition === 'tooltip-only';
+  const isCompact = ctx.strategy.annotationPosition === 'tooltip-only' && !ctx.autoThin;
 
   const svgRect: Rect = { x: 0, y: 0, width: ctx.svg.width, height: ctx.svg.height };
   const annotations: ResolvedAnnotation[] = [];

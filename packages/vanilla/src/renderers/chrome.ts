@@ -91,10 +91,41 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   }
 
   const bottomOffset = layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
+
+  // Footnotes from auto-thinned annotations, rendered above source/byline.
+  // Each footnote gets its own line to avoid horizontal overflow.
+  let footnoteBandHeight = 0;
+  if (chrome.footnotes && chrome.footnotes.length > 0) {
+    const fontSize = layout.theme.fonts.sizes.small;
+    const pad = layout.theme.spacing.padding;
+    const lineHeight = fontSize * 1.3;
+    const style = {
+      fontFamily: layout.theme.fonts.family,
+      fontSize,
+      fontWeight: layout.theme.fonts.weights.normal,
+      fill: layout.theme.chrome.source.color,
+      lineHeight: 1.3,
+      textAnchor: 'start' as const,
+    };
+
+    for (let i = 0; i < chrome.footnotes.length; i++) {
+      const f = chrome.footnotes[i];
+      const y =
+        bottomOffset + layout.theme.spacing.chartToFooter + textAscent(fontSize) + i * lineHeight;
+      const el = createSVGElement('text');
+      el.setAttribute('class', 'oc-footnotes');
+      setAttrs(el, { x: pad, y });
+      applyTextStyle(el, style);
+      el.textContent = `${f.index}. ${f.text}`;
+      g.appendChild(el);
+    }
+    footnoteBandHeight = chrome.footnotes.length * lineHeight + 4;
+  }
+
   if (chrome.source) {
     renderChromeElement(
       g,
-      { ...chrome.source, y: bottomOffset + chrome.source.y },
+      { ...chrome.source, y: bottomOffset + chrome.source.y + footnoteBandHeight },
       'oc-source',
       'source',
       measureText,
@@ -103,7 +134,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.byline) {
     renderChromeElement(
       g,
-      { ...chrome.byline, y: bottomOffset + chrome.byline.y },
+      { ...chrome.byline, y: bottomOffset + chrome.byline.y + footnoteBandHeight },
       'oc-byline',
       'byline',
       measureText,
@@ -112,14 +143,14 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.footer) {
     renderChromeElement(
       g,
-      { ...chrome.footer, y: bottomOffset + chrome.footer.y },
+      { ...chrome.footer, y: bottomOffset + chrome.footer.y + footnoteBandHeight },
       'oc-footer',
       'footer',
       measureText,
     );
   }
   if (chrome.brand) {
-    const brandY = bottomOffset + chrome.brand.y;
+    const brandY = bottomOffset + chrome.brand.y + footnoteBandHeight;
     renderChromeElement(g, { ...chrome.brand, y: brandY }, 'oc-brand', 'brand', measureText);
     // Accent dot to the left of the brand text. text-anchor=end means
     // brand.x is the right edge, so the dot sits 12px left of the measured

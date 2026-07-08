@@ -116,6 +116,8 @@ export interface NormalizedChartSpec {
   /** Right-side endpoint labels column config (multi-series line/area only). */
   endpointLabels?: boolean | import('@opendata-ai/openchart-core').EndpointLabelsConfig;
   responsive: boolean;
+  /** Whether auto-thinning of annotations at narrow widths is enabled. Resolved from `responsive.autoThin`. */
+  autoThin: boolean;
   theme: ThemeConfig;
   darkMode: DarkMode;
   /** Whether the tryOpenData.ai watermark is enabled. */

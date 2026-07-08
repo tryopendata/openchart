@@ -718,6 +718,8 @@ export interface TextAnnotation extends AnnotationBase {
   y: string | number;
   /** The annotation text. Required for text annotations. */
   text: string;
+  /** Thinning priority (lower = kept longer at narrow widths). When omitted, spec order is used. */
+  priority?: number;
   /**
    * Optional muted second-tone text rendered below the primary `text`.
    * Used for supporting context (e.g. methodology, source). Newlines in
@@ -1129,6 +1131,17 @@ export interface AnimationStagger {
   order?: 'index' | 'value' | 'reverse';
 }
 
+/** Fine-grained responsive behavior configuration. */
+export interface ResponsiveConfig {
+  /**
+   * Automatic annotation thinning at narrow widths. When true (default),
+   * annotations that can't be placed without overlap are demoted to numbered
+   * dot markers with footnote text below the chart. Set false to restore
+   * the pre-auto-thinning behavior (annotations hidden at compact breakpoints).
+   */
+  autoThin?: boolean;
+}
+
 /**
  * Animation phase config. Follows Vega's enter/update/exit model.
  * Each phase can be true (use defaults) or a config object.
@@ -1373,8 +1386,12 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * relates this flag to `legend.show` and the legacy end-of-line labels.
    */
   endpointLabels?: boolean | EndpointLabelsConfig;
-  /** Whether the chart adapts to container width. Defaults to true. */
-  responsive?: boolean;
+  /**
+   * Responsive behavior. `true`/`false` enables/disables container-width
+   * adaptation. Pass a `ResponsiveConfig` object for fine-grained control
+   * (e.g. `{ autoThin: false }` to disable automatic annotation thinning).
+   */
+  responsive?: boolean | ResponsiveConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */

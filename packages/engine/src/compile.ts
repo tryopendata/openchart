@@ -48,6 +48,7 @@ import {
 import { computeAnnotations } from './annotations/compute';
 import { type AnnotationMeasureTextFn, heuristicMeasure } from './annotations/geometry';
 import type { PlacementObstacle } from './annotations/placement';
+import { thinAnnotations } from './annotations/thinning';
 import { computeEndpointLabels } from './endpoint-labels/compute';
 // Side-effect import: registers all built-in chart renderers with the
 // registry on module load. Tests that clear the registry can import
@@ -717,7 +718,14 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute the right-side endpoint labels column for multi-series line/area
   // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.
   // dimensions.ts already reserved the right margin via predictEndpointLabelsWidth.
-  const endpointLabels = computeEndpointLabels(chartSpec, marks, theme, chartArea, strategy);
+  const endpointLabels = computeEndpointLabels(
+    chartSpec,
+    marks,
+    theme,
+    chartArea,
+    strategy,
+    plan.endpointLabelsDemoted,
+  );
 
   // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
   const obstacles: PlacementObstacle[] = [];
@@ -746,7 +754,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
     : heuristicMeasure;
 
-  const annotations: ResolvedAnnotation[] = computeAnnotations(chartSpec, {
+  let annotations: ResolvedAnnotation[] = computeAnnotations(chartSpec, {
     scales,
     chartArea,
     strategy,
@@ -754,7 +762,20 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     obstacles,
     svg: { width: dims.total.width, height: dims.total.height },
     measure: annotationMeasure,
+    autoThin: chartSpec.autoThin,
   });
+
+  // Auto-thinning: demote overlapping text annotations to footnote markers.
+  // Pass the full spec annotations (not filtered to text-only) so index
+  // alignment with the resolved array is preserved.
+  let footnotes: import('@opendata-ai/openchart-core').AnnotationFootnote[] | undefined;
+  if (chartSpec.autoThin && annotations.length > 1) {
+    const result = thinAnnotations(annotations, chartSpec.annotations, annotationMeasure);
+    annotations = result.annotations;
+    if (result.footnotes.length > 0) {
+      footnotes = result.footnotes;
+    }
+  }
 
   // Compute tooltip descriptors from marks and encoding
   const tooltipDescriptors = computeTooltipDescriptors(chartSpec, marks);
@@ -781,9 +802,11 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Assign animationIndex for stagger ordering when animation is enabled
   assignAnimationIndices(marks, resolvedAnimation);
 
+  const chrome = footnotes ? { ...dims.chrome, footnotes } : dims.chrome;
+
   return {
     area: chartArea,
-    chrome: dims.chrome,
+    chrome,
     metrics: dims.metrics,
     axes: {
       x: axes.x,
@@ -992,6 +1015,7 @@ function compileFaceted(
       obstacles: [],
       svg: { width: options.width, height: options.height },
       measure: annotationMeasure,
+      autoThin: panelSpecWithDomains.autoThin,
     });
 
     allMarks.push(...panelMarks);

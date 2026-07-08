@@ -28,6 +28,7 @@ export { elementRef } from './events';
 // Layout types (engine output)
 export type {
   A11yMetadata,
+  AnnotationFootnote,
   ArcMark,
   AreaMark,
   AxisLayout,
@@ -174,6 +175,7 @@ export type {
   RelativeTimeRef,
   ResolveConfig,
   ResolveMode,
+  ResponsiveConfig,
   SankeyEncoding,
   SankeyLinkColor,
   SankeyNodeAlign,

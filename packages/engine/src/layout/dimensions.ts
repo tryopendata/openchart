@@ -362,6 +362,7 @@ export function computeDimensions(
     seriesCount,
     labelsHiddenByStrategy,
     labelsDensityNone: labelDensity === 'none',
+    endpointLabelsDemoted: plan?.endpointLabelsDemoted,
   });
 
   // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
