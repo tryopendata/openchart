@@ -4,7 +4,6 @@ import type {
   ChartSpec,
   CompileOptions,
   DarkMode,
-  GraphSpec,
   LayerSpec,
   ResolvedTheme,
   ThemeConfig,
@@ -14,10 +13,16 @@ import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { resetSvgIdCounter } from './svg-ids';
 import { renderChartSVG } from './svg-renderer';
 
+const esmRequire = createRequire(import.meta.url);
+
 export interface StaticRenderOptions {
   width?: number;
   height?: number;
   theme?: ThemeConfig;
+  /**
+   * Dark mode setting. In static rendering `'auto'` resolves to light mode
+   * since there is no `matchMedia` to query. Use `'force'` for dark output.
+   */
   darkMode?: DarkMode;
   watermark?: boolean;
 }
@@ -45,7 +50,7 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `.oc-annotation-subtitle { fill: ${theme.colors.axis}; }`,
     `.oc-endpoint-label { fill: ${theme.colors.text}; }`,
     `.oc-endpoint-value { fill: ${theme.colors.axis}; }`,
-    `:root { --oc-bg: ${bg}; --oc-text: ${theme.colors.text}; --oc-text-muted: ${theme.colors.axis}; --oc-accent: ${accent}; }`,
+    `svg.oc-chart { --oc-bg: ${bg}; --oc-text: ${theme.colors.text}; --oc-text-muted: ${theme.colors.axis}; --oc-accent: ${accent}; }`,
   ].join('\n');
 }
 
@@ -59,12 +64,31 @@ function stripInteractiveElements(svg: Element): void {
   }
 }
 
+/**
+ * Render a chart spec to a standalone SVG string without a browser DOM.
+ *
+ * Requires `happy-dom` as a peer dependency (`bun add happy-dom`).
+ *
+ * Not safe for concurrent invocation: the render pipeline relies on a global
+ * SVG ID counter and a temporary global `document` swap, both of which are
+ * single-threaded. In a server handling parallel requests, serialize calls
+ * through a queue or mutex.
+ *
+ * The entire render pipeline is synchronous; the global swap is safe as long
+ * as no code schedules microtasks that outlive the call.
+ */
 export function renderStaticSVG(
-  spec: ChartSpec | LayerSpec | GraphSpec,
+  spec: ChartSpec | LayerSpec,
   options?: StaticRenderOptions,
 ): string {
-  const esmRequire = createRequire(import.meta.url);
-  const { Window } = esmRequire('happy-dom') as typeof import('happy-dom');
+  let Window: typeof import('happy-dom').Window;
+  try {
+    ({ Window } = esmRequire('happy-dom') as typeof import('happy-dom'));
+  } catch {
+    throw new Error(
+      "renderStaticSVG requires 'happy-dom' as a peer dependency. Install it with: npm add happy-dom",
+    );
+  }
   const win = new Window({ url: 'about:blank' });
 
   const prevDocument = globalThis.document;
@@ -90,7 +114,7 @@ export function renderStaticSVG(
 
     let layout: ChartLayout;
     if (isLayerSpec(spec)) {
-      layout = compileLayer(spec as LayerSpec, compileOpts);
+      layout = compileLayer(spec, compileOpts);
     } else {
       layout = compileChart(spec, compileOpts);
     }
@@ -110,6 +134,8 @@ export function renderStaticSVG(
       }),
     });
 
+    // renderChartSVG appends to container; the container and SVG are owned by
+    // the happy-dom Window which is closed in the finally block.
     const svg = renderChartSVG(layout, container as unknown as HTMLElement, {
       animate: false,
       crosshair: false,
@@ -119,7 +145,8 @@ export function renderStaticSVG(
 
     // Inject a <style> block with resolved theme values so CSS-dependent
     // properties (accent dots, letter-spacing, tabular-nums) render correctly
-    // without an external stylesheet.
+    // without an external stylesheet. Uses `svg.oc-chart` instead of `:root`
+    // to keep custom properties scoped to this SVG when embedded in HTML.
     const SVG_NS = 'http://www.w3.org/2000/svg';
     const doc = win.document as unknown as Document;
     let defs = svg.querySelector('defs');

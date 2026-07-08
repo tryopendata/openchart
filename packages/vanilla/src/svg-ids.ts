@@ -17,6 +17,7 @@ export function nextSvgId(prefix: string): string {
   return `${prefix}-${counter++}`;
 }
 
+/** @internal Used by static rendering only. Never call from browser-facing code. */
 export function resetSvgIdCounter(): void {
   counter = 0;
 }

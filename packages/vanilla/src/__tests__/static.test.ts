@@ -1,3 +1,4 @@
+import type { LayerSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { barSpec, lineSpec, pieSpec } from '../__test-fixtures__/specs';
 import { renderStaticSVG } from '../static';
@@ -40,6 +41,12 @@ describe('renderStaticSVG', () => {
     expect(svg).toContain('.oc-brand-dot');
   });
 
+  it('scopes custom properties to svg.oc-chart, not :root', () => {
+    const svg = renderStaticSVG(lineSpec);
+    expect(svg).toContain('svg.oc-chart');
+    expect(svg).not.toContain(':root');
+  });
+
   it('renders bar charts', () => {
     const svg = renderStaticSVG(barSpec);
     expect(svg).toContain('oc-mark-rect');
@@ -48,6 +55,38 @@ describe('renderStaticSVG', () => {
   it('renders pie charts', () => {
     const svg = renderStaticSVG(pieSpec);
     expect(svg).toContain('oc-mark-arc');
+  });
+
+  it('renders layer specs', () => {
+    const layerSpec: LayerSpec = {
+      layer: [
+        {
+          mark: 'line',
+          data: [
+            { x: '2020', y: 10 },
+            { x: '2021', y: 20 },
+          ],
+          encoding: {
+            x: { field: 'x', type: 'temporal' },
+            y: { field: 'y', type: 'quantitative' },
+          },
+        },
+        {
+          mark: 'point',
+          data: [
+            { x: '2020', y: 10 },
+            { x: '2021', y: 20 },
+          ],
+          encoding: {
+            x: { field: 'x', type: 'temporal' },
+            y: { field: 'y', type: 'quantitative' },
+          },
+        },
+      ],
+    };
+    const svg = renderStaticSVG(layerSpec);
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('oc-mark-line');
   });
 
   it('respects explicit width and height', () => {
@@ -84,7 +123,7 @@ describe('renderStaticSVG', () => {
     expect(globalThis.document).toBe(docBefore);
   });
 
-  it('suppresses watermark by default', () => {
+  it('suppresses watermark when watermark is false', () => {
     const svg = renderStaticSVG(lineSpec, { watermark: false });
     expect(svg).not.toContain('oc-brand-text');
   });

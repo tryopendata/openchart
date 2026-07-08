@@ -6,6 +6,9 @@
  * Demonstrates rendering an openchart spec to a standalone SVG file
  * from a plain Node.js script with no DOM globals.
  *
+ * Prerequisites:
+ *   bun install && bun run build
+ *
  * Usage:
  *   node examples/static-render.mjs
  *
