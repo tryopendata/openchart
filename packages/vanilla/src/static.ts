@@ -1,3 +1,4 @@
+// Node.js only — do not import from browser code.
 import { createRequire } from 'node:module';
 import type {
   ChartLayout,
@@ -10,10 +11,26 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { adaptForLightLineStroke, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
+import { SVG_NS } from './renderers/svg-dom';
 import { resetSvgIdCounter } from './svg-ids';
 import { renderChartSVG } from './svg-renderer';
 
 const esmRequire = createRequire(import.meta.url);
+
+let cachedWindow: typeof import('happy-dom').Window | undefined;
+function getHappyDomWindow(): typeof import('happy-dom').Window {
+  if (cachedWindow) return cachedWindow;
+  try {
+    ({ Window: cachedWindow } = esmRequire('happy-dom') as typeof import('happy-dom'));
+  } catch {
+    throw new Error(
+      "renderStaticSVG requires 'happy-dom' as a peer dependency. Install it with: npm add happy-dom",
+    );
+  }
+  return cachedWindow;
+}
+
+let rendering = false;
 
 export interface StaticRenderOptions {
   width?: number;
@@ -46,7 +63,7 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `--oc-font-mono: ${theme.fonts.mono}`,
     `--oc-title-size: ${theme.chrome.title.fontSize}px`,
     `--oc-title-weight: ${theme.chrome.title.fontWeight}`,
-    `--oc-title-tracking: -0.022em`,
+    `--oc-title-tracking: -0.022em`, // sync with tokens.css
     `--oc-subtitle-size: ${theme.chrome.subtitle.fontSize}px`,
     `--oc-subtitle-weight: ${theme.chrome.subtitle.fontWeight}`,
     `--oc-source-size: ${theme.chrome.source.fontSize}px`,
@@ -54,7 +71,7 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `--oc-body-size: ${theme.fonts.sizes.body}px`,
     `--oc-eyebrow-size: ${theme.chrome.eyebrow.fontSize}px`,
     `--oc-eyebrow-weight: ${theme.chrome.eyebrow.fontWeight}`,
-    `--oc-eyebrow-tracking: 0.08em`,
+    `--oc-eyebrow-tracking: 0.08em`, // sync with tokens.css
     `--oc-bg: ${bg}`,
     `--oc-text: ${theme.colors.text}`,
     `--oc-text-muted: ${theme.colors.axis}`,
@@ -90,8 +107,11 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `.oc-endpoint-labels { font-family: var(--oc-font-family); }`,
     `.oc-endpoint-label { fill: var(--oc-endpoint-label-color, var(--oc-text)); }`,
     `.oc-endpoint-value { fill: var(--oc-endpoint-value-color, var(--oc-text-muted)); }`,
+    `.oc-endpoint-leader { stroke: var(--oc-endpoint-leader-color, currentColor); }`,
     `.oc-annotation-subtitle { fill: var(--oc-annotation-subtitle-color, var(--oc-text-muted)); }`,
+    `.oc-metric-secondary { fill: var(--oc-positive); font-size: 12px; font-weight: 400; }`,
     `.oc-legend { font-family: var(--oc-font-family); font-size: var(--oc-body-size); }`,
+    `.oc-legend-entry { cursor: default; }`,
     `.oc-legend text { fill: var(--oc-legend-text); }`,
   ];
 
@@ -125,14 +145,12 @@ export function renderStaticSVG(
   spec: ChartSpec | LayerSpec,
   options?: StaticRenderOptions,
 ): string {
-  let Window: typeof import('happy-dom').Window;
-  try {
-    ({ Window } = esmRequire('happy-dom') as typeof import('happy-dom'));
-  } catch {
-    throw new Error(
-      "renderStaticSVG requires 'happy-dom' as a peer dependency. Install it with: npm add happy-dom",
-    );
+  if (rendering) {
+    throw new Error('renderStaticSVG is not reentrant — serialize calls through a queue or mutex');
   }
+  rendering = true;
+
+  const Window = getHappyDomWindow();
   const win = new Window({ url: 'about:blank' });
 
   const prevDocument = globalThis.document;
@@ -187,11 +205,6 @@ export function renderStaticSVG(
 
     stripInteractiveElements(svg);
 
-    // Inject a <style> block with resolved theme values so CSS-dependent
-    // properties (accent dots, letter-spacing, tabular-nums) render correctly
-    // without an external stylesheet. Uses `svg.oc-chart` instead of `:root`
-    // to keep custom properties scoped to this SVG when embedded in HTML.
-    const SVG_NS = 'http://www.w3.org/2000/svg';
     const doc = win.document as unknown as Document;
     let defs = svg.querySelector('defs');
     if (!defs) {
@@ -207,6 +220,7 @@ export function renderStaticSVG(
     ).XMLSerializer();
     return serializer.serializeToString(svg as unknown as Node);
   } finally {
+    rendering = false;
     if (prevDocument !== undefined) {
       (globalThis as Record<string, unknown>).document = prevDocument;
     } else {

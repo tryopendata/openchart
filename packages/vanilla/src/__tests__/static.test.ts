@@ -126,10 +126,12 @@ describe('renderStaticSVG', () => {
     expect(firstIds.length).toBeGreaterThan(0);
   });
 
-  it('does not pollute the global document after rendering', () => {
+  it('does not pollute global document or window after rendering', () => {
     const docBefore = globalThis.document;
+    const winBefore = globalThis.window;
     renderStaticSVG(lineSpec);
     expect(globalThis.document).toBe(docBefore);
+    expect(globalThis.window).toBe(winBefore);
   });
 
   it('suppresses watermark when watermark is false', () => {
