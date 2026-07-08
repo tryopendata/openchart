@@ -54,7 +54,8 @@
       "source": {
         "source": "git",
         "url": "https://github.com/rileyhilliard/claude-essentials.git"
-      }
+      },
+      "autoUpdate": true
     }
   },
   "_readme": "Claude Code configuration. Machine-specific overrides go in settings.local.json (gitignored)."
