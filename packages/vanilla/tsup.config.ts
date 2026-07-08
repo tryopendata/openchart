@@ -4,12 +4,12 @@ import { resolve, dirname } from 'path';
 import { bunSymlinkResolver } from '../../scripts/bun-symlink-resolver';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/static.ts'],
   format: ['esm'],
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ['@opendata-ai/openchart-engine', '@opendata-ai/openchart-core'],
+  external: ['@opendata-ai/openchart-engine', '@opendata-ai/openchart-core', 'happy-dom'],
   noExternal: [/^d3-/],
   esbuildPlugins: [bunSymlinkResolver(/^d3-/)],
   onSuccess: async () => {

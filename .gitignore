@@ -26,3 +26,6 @@ e2e/visual/__screenshots__/**/*-diff.png
 !e2e/visual/__screenshots__/**/*.png
 
 *.tgz
+
+# Static render example output
+examples/output.svg

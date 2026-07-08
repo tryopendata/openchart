@@ -16,3 +16,7 @@ let counter = 0;
 export function nextSvgId(prefix: string): string {
   return `${prefix}-${counter++}`;
 }
+
+export function resetSvgIdCounter(): void {
+  counter = 0;
+}

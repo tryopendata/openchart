@@ -25,6 +25,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./static": {
+      "types": "./dist/static.d.ts",
+      "import": "./dist/static.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./simulation-worker": "./dist/simulation-worker.js"
   },
@@ -54,6 +58,14 @@
     "@opendata-ai/openchart-engine": "workspace:*",
     "d3-force": "^3.0.0",
     "d3-quadtree": "^3.0.1"
+  },
+  "peerDependencies": {
+    "happy-dom": ">=14.0.0"
+  },
+  "peerDependenciesMeta": {
+    "happy-dom": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
