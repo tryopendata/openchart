@@ -8,7 +8,7 @@ import type {
   ResolvedTheme,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { isLayerSpec } from '@opendata-ai/openchart-core';
+import { adaptForLightLineStroke, isLayerSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { resetSvgIdCounter } from './svg-ids';
 import { renderChartSVG } from './svg-renderer';
@@ -41,17 +41,61 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
         : '#ffffff'
       : theme.colors.background;
 
-  return [
-    `.oc-brand-dot { fill: ${accent}; }`,
-    `.oc-eyebrow-dot { fill: ${accent}; }`,
-    `.oc-eyebrow { letter-spacing: 0.08em; text-transform: uppercase; }`,
-    `.oc-brand { letter-spacing: 0.02em; }`,
-    `.oc-metric-value { font-variant-numeric: tabular-nums; }`,
-    `.oc-annotation-subtitle { fill: ${theme.colors.axis}; }`,
-    `.oc-endpoint-label { fill: ${theme.colors.text}; }`,
-    `.oc-endpoint-value { fill: ${theme.colors.axis}; }`,
-    `svg.oc-chart { --oc-bg: ${bg}; --oc-text: ${theme.colors.text}; --oc-text-muted: ${theme.colors.axis}; --oc-accent: ${accent}; }`,
-  ].join('\n');
+  const props = [
+    `--oc-font-family: ${theme.fonts.family}`,
+    `--oc-font-mono: ${theme.fonts.mono}`,
+    `--oc-title-size: ${theme.chrome.title.fontSize}px`,
+    `--oc-title-weight: ${theme.chrome.title.fontWeight}`,
+    `--oc-title-tracking: -0.022em`,
+    `--oc-subtitle-size: ${theme.chrome.subtitle.fontSize}px`,
+    `--oc-subtitle-weight: ${theme.chrome.subtitle.fontWeight}`,
+    `--oc-source-size: ${theme.chrome.source.fontSize}px`,
+    `--oc-source-weight: ${theme.chrome.source.fontWeight}`,
+    `--oc-body-size: ${theme.fonts.sizes.body}px`,
+    `--oc-eyebrow-size: ${theme.chrome.eyebrow.fontSize}px`,
+    `--oc-eyebrow-weight: ${theme.chrome.eyebrow.fontWeight}`,
+    `--oc-eyebrow-tracking: 0.08em`,
+    `--oc-bg: ${bg}`,
+    `--oc-text: ${theme.colors.text}`,
+    `--oc-text-muted: ${theme.colors.axis}`,
+    `--oc-text-faint: ${theme.isDark ? '#52525b' : '#d4d4d8'}`,
+    `--oc-gridline: ${theme.colors.gridline}`,
+    `--oc-axis: ${theme.colors.axis}`,
+    `--oc-border-radius: ${theme.borderRadius}px`,
+    `--oc-accent: ${accent}`,
+    `--oc-accent-strong: ${adaptForLightLineStroke(accent)}`,
+    `--oc-positive: ${theme.colors.positive}`,
+    `--oc-negative: ${theme.colors.negative}`,
+    `--oc-legend-text: ${theme.isDark ? '#d0d6e0' : '#3f3f46'}`,
+    `--oc-space-2: ${theme.spacing.chromeGap * 2}px`,
+    `--oc-space-4: ${theme.spacing.padding}px`,
+  ];
+
+  const rules = [
+    `svg.oc-chart { ${props.join('; ')}; }`,
+    `.oc-chrome { font-family: var(--oc-font-family); }`,
+    `.oc-eyebrow { font-size: var(--oc-eyebrow-size); font-weight: var(--oc-eyebrow-weight); letter-spacing: var(--oc-eyebrow-tracking); text-transform: uppercase; fill: var(--oc-accent); }`,
+    `.oc-title { font-size: var(--oc-title-size); font-weight: var(--oc-title-weight); letter-spacing: var(--oc-title-tracking); fill: var(--oc-text); }`,
+    `.oc-subtitle { font-size: var(--oc-subtitle-size); font-weight: var(--oc-subtitle-weight); fill: var(--oc-text-muted); }`,
+    `.oc-source, .oc-byline, .oc-footer { font-size: var(--oc-source-size); font-weight: var(--oc-source-weight); fill: var(--oc-text-muted); }`,
+    `.oc-brand { font-size: 11px; font-weight: 510; letter-spacing: 0.02em; fill: var(--oc-text-faint); }`,
+    `.oc-brand-dot { fill: var(--oc-accent); }`,
+    `.oc-eyebrow-dot { fill: var(--oc-accent); }`,
+    `.oc-metrics { font-family: var(--oc-font-family); }`,
+    `.oc-metric-label { font-size: 10px; font-weight: 510; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--oc-text-muted); }`,
+    `.oc-metric-value { font-size: 22px; font-weight: 510; letter-spacing: -0.01em; fill: var(--oc-text); font-variant-numeric: tabular-nums; }`,
+    `.oc-metric-delta-up { fill: var(--oc-positive); font-size: 12px; font-weight: 510; }`,
+    `.oc-metric-delta-down { fill: var(--oc-negative); font-size: 12px; font-weight: 510; }`,
+    `.oc-axis-tick-inline { font-size: 11px; font-weight: 400; fill: var(--oc-text-muted); }`,
+    `.oc-endpoint-labels { font-family: var(--oc-font-family); }`,
+    `.oc-endpoint-label { fill: var(--oc-endpoint-label-color, var(--oc-text)); }`,
+    `.oc-endpoint-value { fill: var(--oc-endpoint-value-color, var(--oc-text-muted)); }`,
+    `.oc-annotation-subtitle { fill: var(--oc-annotation-subtitle-color, var(--oc-text-muted)); }`,
+    `.oc-legend { font-family: var(--oc-font-family); font-size: var(--oc-body-size); }`,
+    `.oc-legend text { fill: var(--oc-legend-text); }`,
+  ];
+
+  return rules.join('\n');
 }
 
 function stripInteractiveElements(svg: Element): void {

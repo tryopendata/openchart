@@ -47,6 +47,15 @@ describe('renderStaticSVG', () => {
     expect(svg).not.toContain(':root');
   });
 
+  it('uses var() references in class rules for theme overridability', () => {
+    const svg = renderStaticSVG(lineSpec);
+    expect(svg).toContain('fill: var(--oc-accent)');
+    expect(svg).toContain('fill: var(--oc-text)');
+    expect(svg).toContain('fill: var(--oc-text-muted)');
+    expect(svg).toContain('font-family: var(--oc-font-family)');
+    expect(svg).not.toMatch(/\.oc-brand-dot \{ fill: #[0-9a-f]{6}/i);
+  });
+
   it('renders bar charts', () => {
     const svg = renderStaticSVG(barSpec);
     expect(svg).toContain('oc-mark-rect');
