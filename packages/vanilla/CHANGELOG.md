@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Static SVG rendering via `renderStaticSVG()` from `@opendata-ai/openchart-vanilla/static`. Generates standalone, deterministic SVG strings from chart specs in Node.js using happy-dom as a DOM shim. Supports custom themes, dark mode, and a11y attributes.
+- Node.js example script at `examples/static-render.mjs`
+
 ## [7.6.1](https://github.com/tryopendata/openchart/compare/core-v7.6.0...core-v7.6.1) (2026-07-04)
 
 
