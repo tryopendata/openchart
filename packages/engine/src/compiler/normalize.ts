@@ -397,10 +397,20 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
   }
 
   // Detect categorical mode: colors map provided, color encoding channel, or string values
+  const hasStringValues =
+    !Array.isArray(spec.data) && Object.values(spec.data).some((v) => typeof v === 'string');
   const isCategorical =
-    spec.colors !== undefined ||
-    spec.encoding?.color !== undefined ||
-    (!Array.isArray(spec.data) && Object.values(spec.data).some((v) => typeof v === 'string'));
+    spec.colors !== undefined || spec.encoding?.color !== undefined || hasStringValues;
+
+  // Warn on mixed number/string values in record map (likely a data quality issue)
+  if (hasStringValues && !Array.isArray(spec.data)) {
+    const hasNumericValues = Object.values(spec.data).some((v) => typeof v === 'number');
+    if (hasNumericValues) {
+      warnings.push(
+        'TileMap data: record map contains mixed number and string values. Treating as categorical. Use all numbers for quantitative or all strings for categorical.',
+      );
+    }
+  }
 
   // Auto-generate encoding if not provided
   let encoding = spec.encoding;

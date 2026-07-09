@@ -213,20 +213,20 @@ function compileQuantitative(
     const formattedValue = hasData ? formatter(value!) : '–';
 
     tiles.push(
-      buildTileMark(
+      buildTileMark({
         stateCode,
         pos,
-        tilePositions.tileSize,
-        tileGridOffsetX,
-        tileGridOffsetY,
+        tileSize: tilePositions.tileSize,
+        gridOffsetX: tileGridOffsetX,
+        gridOffsetY: tileGridOffsetY,
         fill,
-        hasData ? opacity : 1,
+        fillOpacity: hasData ? opacity : 1,
         stroke,
         value,
         formattedValue,
         hasData,
         theme,
-      ),
+      }),
     );
   }
 
@@ -381,24 +381,24 @@ function compileCategorical(
         ? 'rgba(255,255,255,0.1)'
         : 'rgba(0,0,0,0.1)'
       : neutralStroke;
-    const formattedValue = category ?? '–';
+    const formattedValue = category ? formatCategoryLabel(category) : '–';
 
     tiles.push(
-      buildTileMark(
+      buildTileMark({
         stateCode,
         pos,
-        tilePositions.tileSize,
-        tileGridOffsetX,
-        tileGridOffsetY,
+        tileSize: tilePositions.tileSize,
+        gridOffsetX: tileGridOffsetX,
+        gridOffsetY: tileGridOffsetY,
         fill,
-        1,
+        fillOpacity: 1,
         stroke,
-        null,
+        value: null,
         formattedValue,
         hasData,
         theme,
-        category,
-      ),
+        category: hasData ? category : undefined,
+      }),
     );
   }
 
@@ -433,7 +433,7 @@ function compileCategorical(
     };
   }
 
-  const tooltipDescriptors = buildTooltips(tiles);
+  const tooltipDescriptors = buildTooltips(tiles, 'Category');
   const categoryList = categories.map(formatCategoryLabel).join(', ');
   const a11y = {
     altText: `Tile map of US states showing categories: ${categoryList}`,
@@ -475,21 +475,38 @@ function compileCategorical(
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-function buildTileMark(
-  stateCode: string,
-  pos: { x: number; y: number },
-  tileSize: number,
-  gridOffsetX: number,
-  gridOffsetY: number,
-  fill: string,
-  fillOpacity: number,
-  stroke: string,
-  value: number | null,
-  formattedValue: string,
-  hasData: boolean,
-  theme: ResolvedTheme,
-  category?: string | null,
-): TileMapTileMark {
+interface TileMarkOptions {
+  stateCode: string;
+  pos: { x: number; y: number };
+  tileSize: number;
+  gridOffsetX: number;
+  gridOffsetY: number;
+  fill: string;
+  fillOpacity: number;
+  stroke: string;
+  value: number | null;
+  formattedValue: string;
+  hasData: boolean;
+  theme: ResolvedTheme;
+  category?: string | null;
+}
+
+function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
+  const {
+    stateCode,
+    pos,
+    tileSize,
+    gridOffsetX,
+    gridOffsetY,
+    fill,
+    fillOpacity,
+    stroke,
+    value,
+    formattedValue,
+    hasData,
+    theme,
+    category,
+  } = opts;
   const tileCenterX = gridOffsetX + pos.x + tileSize / 2;
   const tileTopY = gridOffsetY + pos.y;
 
@@ -573,10 +590,13 @@ function assignAnimationIndices(tiles: TileMapTileMark[]): void {
   }
 }
 
-function buildTooltips(tiles: TileMapTileMark[]): Map<string, TooltipContent> {
+function buildTooltips(
+  tiles: TileMapTileMark[],
+  fieldLabel = 'Value',
+): Map<string, TooltipContent> {
   const tooltipDescriptors = new Map<string, TooltipContent>();
   for (const tile of tiles) {
-    const fields: TooltipField[] = [{ label: 'Value', value: tile.formattedValue }];
+    const fields: TooltipField[] = [{ label: fieldLabel, value: tile.formattedValue }];
     tooltipDescriptors.set(tile.stateCode, {
       title: STATE_NAMES[tile.stateCode] ?? tile.stateCode,
       fields,

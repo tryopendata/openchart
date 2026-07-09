@@ -425,7 +425,7 @@ describe('compileTileMap', () => {
 
       const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
       expect(caTile.fill).toBe('#ee4a73');
-      expect(caTile.formattedValue).toBe('medical_only');
+      expect(caTile.formattedValue).toBe('Medical Only');
     });
 
     it('uses default categorical palette when no colors map provided', () => {
@@ -464,11 +464,74 @@ describe('compileTileMap', () => {
       expect(result.categoricalLegend).toBeNull();
     });
 
-    it('stores category in tile.data', () => {
+    it('stores category in tile.data for data-bearing tiles only', () => {
       const result = compileTileMap(categoricalRecordSpec, defaultOptions);
 
       const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
       expect(caTile.data.category).toBe('medical_only');
+
+      const akTile = result.tiles.find((t) => t.stateCode === 'AK')!;
+      expect(akTile.data.category).toBeUndefined();
+    });
+
+    it('category colors are the same in dark and light mode', () => {
+      const lightResult = compileTileMap(categoricalRecordSpec, defaultOptions);
+      const darkResult = compileTileMap(categoricalRecordSpec, {
+        ...defaultOptions,
+        darkMode: true,
+      });
+
+      const lightCA = lightResult.tiles.find((t) => t.stateCode === 'CA')!;
+      const darkCA = darkResult.tiles.find((t) => t.stateCode === 'CA')!;
+      expect(lightCA.fill).toBe(darkCA.fill);
+      expect(lightCA.fill).toBe('#ee4a73');
+    });
+
+    it('colors map takes precedence over palette (categorical wins)', () => {
+      const spec = {
+        ...categoricalRecordSpec,
+        palette: 'green' as const,
+      };
+      const result = compileTileMap(spec, defaultOptions);
+
+      expect(result.categoricalLegend).not.toBeNull();
+      expect(result.gradientLegend).toBeNull();
+
+      const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+      expect(caTile.fill).toBe('#ee4a73');
+    });
+
+    it('wraps categorical palette colors when categories exceed palette length', () => {
+      const manyCategories: Record<string, string> = {};
+      const letters = 'ABCDEFGHIJKLM';
+      const states = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL'];
+      for (let i = 0; i < states.length; i++) {
+        manyCategories[states[i]] = letters[i];
+      }
+      const spec = {
+        type: 'tilemap' as const,
+        data: manyCategories,
+      };
+      const result = compileTileMap(spec, defaultOptions);
+
+      // Category 'A' (index 0) and 'J' (index 9) share the same palette slot after wrapping
+      const alTile = result.tiles.find((t) => t.stateCode === 'AL')!; // category A, palette[0]
+      const gaTile = result.tiles.find((t) => t.stateCode === 'GA')!; // category J, palette[9 % 9 = 0]
+      expect(alTile.fill).toBe(gaTile.fill);
+    });
+
+    it('tooltip uses "Category" label for categorical tiles', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const tooltip = result.tooltipDescriptors.get('CA')!;
+      expect(tooltip.fields[0].label).toBe('Category');
+    });
+
+    it('formattedValue shows formatted label, not raw key', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+      expect(caTile.formattedValue).toBe('Medical Only');
     });
   });
 });
