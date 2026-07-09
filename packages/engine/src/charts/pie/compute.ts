@@ -257,7 +257,7 @@ export function computePieMarks(
   const rawKeys = marks.map((m) => {
     const label = categoryField
       ? String(m.data[categoryField] ?? '')
-      : String(m.data.label ?? m.data.name ?? '');
+      : String(m.data.label ?? m.data.name ?? m.data.category ?? '');
     return serializeKeyValue(label);
   });
   const keys = dedupeKeys(rawKeys);

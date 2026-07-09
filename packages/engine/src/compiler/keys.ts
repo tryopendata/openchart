@@ -24,10 +24,11 @@ export function serializeKeyValue(v: unknown): string {
 }
 
 /**
- * Append `:0`, `:1`... occurrence suffixes to duplicate keys, in order.
+ * Append occurrence suffixes to duplicate keys, in order.
  *
  * Only keys that appear more than once get suffixed. Unique keys pass
  * through unchanged so keys remain human-readable when possible.
+ * Uses SOH (\x01) as separator to avoid collisions with real data values.
  */
 export function dedupeKeys(keys: string[]): string[] {
   // Count occurrences
@@ -42,7 +43,7 @@ export function dedupeKeys(keys: string[]): string[] {
   for (const k of keys) {
     if (counts.get(k)! > 1) {
       const idx = seen.get(k) ?? 0;
-      result.push(`${k}:${idx}`);
+      result.push(`${k}\x01${idx}`);
       seen.set(k, idx + 1);
     } else {
       result.push(k);

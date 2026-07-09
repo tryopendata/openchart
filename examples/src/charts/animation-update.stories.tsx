@@ -7,7 +7,7 @@
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Data helpers
@@ -289,31 +289,33 @@ export const AreaTransitions = () => <AreaTransitionDemo />;
 // ---------------------------------------------------------------------------
 
 const SCATTER_INITIAL = [
-  { x: 10, y: 80, size: 5 },
-  { x: 25, y: 120, size: 8 },
-  { x: 40, y: 60, size: 12 },
-  { x: 55, y: 200, size: 6 },
-  { x: 70, y: 150, size: 10 },
-  { x: 85, y: 90, size: 7 },
+  { id: 'p1', x: 10, y: 80, size: 5 },
+  { id: 'p2', x: 25, y: 120, size: 8 },
+  { id: 'p3', x: 40, y: 60, size: 12 },
+  { id: 'p4', x: 55, y: 200, size: 6 },
+  { id: 'p5', x: 70, y: 150, size: 10 },
+  { id: 'p6', x: 85, y: 90, size: 7 },
 ];
 
 const SCATTER_ALT = [
-  { x: 15, y: 180, size: 9 },
-  { x: 35, y: 70, size: 11 },
-  { x: 50, y: 140, size: 5 },
-  { x: 65, y: 100, size: 14 },
-  { x: 80, y: 220, size: 8 },
+  { id: 'p7', x: 15, y: 180, size: 9 },
+  { id: 'p8', x: 35, y: 70, size: 11 },
+  { id: 'p9', x: 50, y: 140, size: 5 },
+  { id: 'p10', x: 65, y: 100, size: 14 },
+  { id: 'p11', x: 80, y: 220, size: 8 },
 ];
 
 function ScatterTransitionDemo() {
   const [data, setData] = useState(SCATTER_INITIAL);
   const [useAlt, setUseAlt] = useState(false);
+  const nextId = useRef(12);
 
   const spec: ChartSpec = {
     animation: true,
     mark: 'point',
     data,
     encoding: {
+      key: { field: 'id' },
       x: { field: 'x', type: 'quantitative', axis: { title: 'X Value' } },
       y: { field: 'y', type: 'quantitative', axis: { title: 'Y Value' } },
       size: { field: 'size', type: 'quantitative' },
@@ -325,9 +327,11 @@ function ScatterTransitionDemo() {
   };
 
   const addPoint = () => {
+    const id = `p${nextId.current++}`;
     setData([
       ...data,
       {
+        id,
         x: Math.round(Math.random() * 100),
         y: Math.round(50 + Math.random() * 200),
         size: Math.round(3 + Math.random() * 12),

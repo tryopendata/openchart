@@ -442,6 +442,12 @@ export function normalizePointArrays(
   // Merge keys in order: walk both arrays maintaining relative order
   const merged = mergeKeyOrder(prevKeys, nextKeys);
 
+  // Precompute merged index map for O(1) lookups in insertion/removal helpers
+  const mergedIndex = new Map<string, number>();
+  for (let i = 0; i < merged.length; i++) {
+    mergedIndex.set(merged[i], i);
+  }
+
   const fromPts: Point[] = [];
   const toPts: Point[] = [];
 
@@ -457,12 +463,12 @@ export function normalizePointArrays(
       // Inserted point: "to" is nextPoint; "from" is interpolated on prev line
       const nextPt = nextByKey.get(key)!;
       toPts.push(nextPt);
-      fromPts.push(findInsertionPosition(key, merged, prevByKey, nextByKey, nextPt));
+      fromPts.push(findInsertionPosition(key, merged, mergedIndex, prevByKey, nextByKey, nextPt));
     } else if (inPrev && !inNext) {
       // Removed point: "from" is prevPoint; "to" is collapse position
       const prevPt = prevByKey.get(key)!;
       fromPts.push(prevPt);
-      toPts.push(findRemovalPosition(key, merged, prevByKey, nextByKey, prevPt));
+      toPts.push(findRemovalPosition(key, merged, mergedIndex, prevByKey, nextByKey, prevPt));
     }
   }
 
@@ -474,6 +480,16 @@ export function normalizePointArrays(
  * Keys present in both appear once at their first occurrence position.
  */
 function mergeKeyOrder(prevKeys: string[], nextKeys: string[]): string[] {
+  // Precompute index maps for O(1) lookups instead of indexOf
+  const nextIndex = new Map<string, number>();
+  for (let i = 0; i < nextKeys.length; i++) {
+    if (!nextIndex.has(nextKeys[i])) nextIndex.set(nextKeys[i], i);
+  }
+  const prevIndex = new Map<string, number>();
+  for (let i = 0; i < prevKeys.length; i++) {
+    if (!prevIndex.has(prevKeys[i])) prevIndex.set(prevKeys[i], i);
+  }
+
   const result: string[] = [];
   const added = new Set<string>();
   let pi = 0;
@@ -498,27 +514,22 @@ function mergeKeyOrder(prevKeys: string[], nextKeys: string[]): string[] {
       pi++;
       ni++;
     } else {
-      // Determine which to take first by checking if the other appears later
-      const pkInNext = nextKeys.indexOf(pk, ni);
-      const nkInPrev = prevKeys.indexOf(nk, pi);
+      const pkInNext = nextIndex.has(pk) && nextIndex.get(pk)! >= ni ? nextIndex.get(pk)! : -1;
+      const nkInPrev = prevIndex.has(nk) && prevIndex.get(nk)! >= pi ? prevIndex.get(nk)! : -1;
 
       if (pkInNext === -1 && nkInPrev === -1) {
-        // Neither is in the other array; take prev first
         result.push(pk);
         added.add(pk);
         pi++;
       } else if (pkInNext === -1) {
-        // pk not in next (removed); take it now
         result.push(pk);
         added.add(pk);
         pi++;
       } else if (nkInPrev === -1) {
-        // nk not in prev (inserted); take it now
         result.push(nk);
         added.add(nk);
         ni++;
       } else {
-        // Both exist in both; take the one that comes first in its opposing array
         if (pkInNext <= nkInPrev) {
           result.push(pk);
           added.add(pk);
@@ -560,11 +571,12 @@ function mergeKeyOrder(prevKeys: string[], nextKeys: string[]): string[] {
 function findInsertionPosition(
   key: string,
   merged: string[],
+  mergedIndex: Map<string, number>,
   prevByKey: Map<string, Point>,
   nextByKey: Map<string, Point>,
   nextPt: Point,
 ): Point {
-  const idx = merged.indexOf(key);
+  const idx = mergedIndex.get(key) ?? -1;
 
   // Find nearest surviving neighbor before
   let beforeKey: string | null = null;
@@ -617,11 +629,12 @@ function findInsertionPosition(
 function findRemovalPosition(
   key: string,
   merged: string[],
+  mergedIndex: Map<string, number>,
   prevByKey: Map<string, Point>,
   nextByKey: Map<string, Point>,
   prevPt: Point,
 ): Point {
-  const idx = merged.indexOf(key);
+  const idx = mergedIndex.get(key) ?? -1;
 
   // Find nearest surviving neighbor before
   let beforeKey: string | null = null;
@@ -1079,6 +1092,10 @@ function getKeyForTween(tw: Tween): string | null {
 // Tween state application (shared across all tween types)
 // ---------------------------------------------------------------------------
 
+function resolveLineElement(el: SVGElement): SVGElement {
+  return el.tagName === 'line' ? el : ((el.querySelector('line') as SVGElement) ?? el);
+}
+
 function applyTweenState(
   tw: Tween,
   elapsed: number,
@@ -1133,8 +1150,7 @@ function applyTweenState(
     }
     case 'rule':
     case 'tick': {
-      const lineEl =
-        tw.el.tagName === 'line' ? tw.el : ((tw.el.querySelector('line') as SVGElement) ?? tw.el);
+      const lineEl = resolveLineElement(tw.el);
       lineEl.setAttribute('x1', String(tw.fromX1 + (tw.toX1 - tw.fromX1) * eased));
       lineEl.setAttribute('y1', String(tw.fromY1 + (tw.toY1 - tw.fromY1) * eased));
       lineEl.setAttribute('x2', String(tw.fromX2 + (tw.toX2 - tw.fromX2) * eased));
@@ -1202,12 +1218,14 @@ function snapTweenToFinal(tw: Tween): void {
       }
       break;
     case 'rule':
-    case 'tick':
-      tw.el.setAttribute('x1', String(tw.toX1));
-      tw.el.setAttribute('y1', String(tw.toY1));
-      tw.el.setAttribute('x2', String(tw.toX2));
-      tw.el.setAttribute('y2', String(tw.toY2));
+    case 'tick': {
+      const lineEl = resolveLineElement(tw.el);
+      lineEl.setAttribute('x1', String(tw.toX1));
+      lineEl.setAttribute('y1', String(tw.toY1));
+      lineEl.setAttribute('x2', String(tw.toX2));
+      lineEl.setAttribute('y2', String(tw.toY2));
       break;
+    }
     case 'textMark':
       tw.el.setAttribute('x', String(tw.toX));
       tw.el.setAttribute('y', String(tw.toY));
