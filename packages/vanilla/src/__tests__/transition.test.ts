@@ -1319,3 +1319,274 @@ describe('gradient ghost', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Interruption / retargeting
+// ---------------------------------------------------------------------------
+
+const DATA_D = [
+  { category: 'Q1', value: 300 },
+  { category: 'Q2', value: 100 },
+  { category: 'Q3', value: 250 },
+];
+
+describe('interruption retargeting', () => {
+  it('A -> B -> interrupt at ~50% -> C -> complete -> equals fresh render of C', () => {
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+    const specC = columnSpec(DATA_D);
+
+    // Use createChart so update() handles snapshot plumbing
+    const container = createContainer();
+    const chart = createChart(container, specA);
+
+    // Update A -> B, start transition
+    chart.update(specB);
+
+    // Pump to ~50% of the transition (start at t=0, then advance)
+    pumpRaf(0);
+    pumpRaf(250); // 250ms into ~500ms transition
+
+    // Interrupt with C
+    chart.update(specC);
+
+    // Run the C transition to completion
+    pumpRaf(0);
+    pumpRaf(2000);
+
+    // Extract geometry from the current SVG
+    const svg = container.querySelector('svg') as SVGSVGElement;
+    const transitioned = extractRectGeometry(svg);
+
+    // Fresh render of specC for comparison
+    const { svg: freshSvg } = compileAndRender(specC);
+    const fresh = extractRectGeometry(freshSvg);
+
+    // Same set of keys
+    expect([...transitioned.keys()].sort()).toEqual([...fresh.keys()].sort());
+
+    // Same geometry per key (round-trip invariant holds through interruption)
+    for (const [key, tGeom] of transitioned) {
+      const fGeom = fresh.get(key);
+      expect(fGeom).toBeDefined();
+      expect(tGeom).toEqual(fGeom);
+    }
+
+    // No ghost elements remain
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+
+    chart.destroy();
+  });
+
+  it('snapshot captures intermediate rect geometry', () => {
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    const handle = runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // Pump to start, then mid-transition
+    pumpRaf(0);
+    pumpRaf(250);
+
+    const snap = handle.snapshot();
+
+    // Should have entries for updated marks
+    expect(snap.size).toBeGreaterThan(0);
+
+    // Each entry should be a rect with intermediate values
+    for (const [, geom] of snap) {
+      expect(geom.type).toBe('rect');
+    }
+
+    handle.cancel();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reduced motion
+// ---------------------------------------------------------------------------
+
+describe('reduced motion', () => {
+  it('canTransition returns false when prefers-reduced-motion matches', () => {
+    const original = window.matchMedia;
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
+
+    vi.stubGlobal('matchMedia', original);
+  });
+
+  it('canTransition returns true when reduced-motion is not active', () => {
+    const original = window.matchMedia;
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
+
+    vi.stubGlobal('matchMedia', original);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// React StrictMode double-mount
+// ---------------------------------------------------------------------------
+
+describe('React StrictMode double-mount', () => {
+  it('destroy cancels rAF loop; fresh mount does not inherit stale state', () => {
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+
+    const container = createContainer();
+
+    // First mount
+    const chart1 = createChart(container, specA);
+    chart1.update(specB);
+    pumpRaf(0); // start transition
+
+    // Destroy mid-transition (simulates StrictMode unmount)
+    chart1.destroy();
+
+    // Record rAF callback count after destroy
+    const callbacksAfterDestroy = rafCallbacks.size;
+
+    // Second mount (fresh closure)
+    const chart2 = createChart(container, specA);
+    chart2.update(specB);
+    pumpRaf(0);
+
+    // The old transition's rAF should not have re-registered
+    // (only the new transition should be running)
+    // Pump to completion - if old rAF leaked, it would crash or write to removed DOM
+    pumpRaf(2000);
+
+    // Clean up
+    chart2.destroy();
+
+    // No crash = success: the first transition did not leak rAF callbacks
+    expect(callbacksAfterDestroy).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Secondary element crossfade
+// ---------------------------------------------------------------------------
+
+describe('secondary element crossfade', () => {
+  it('annotations start at opacity 0 during transition', () => {
+    // Create a spec with annotations
+    const specA: ChartSpec = {
+      ...columnSpec(DATA_A),
+      annotations: [{ type: 'text', x: 'Q1', y: 100, text: 'Note' }],
+    };
+    const specB: ChartSpec = {
+      ...columnSpec(DATA_B),
+      annotations: [{ type: 'text', x: 'Q1', y: 150, text: 'Updated' }],
+    };
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // After applying from-states, annotations should be at opacity 0
+    const annotations = svg.querySelectorAll('.oc-annotation');
+    for (const ann of annotations) {
+      expect((ann as SVGElement).style.opacity).toBe('0');
+    }
+
+    // Run to completion
+    runToCompletion();
+
+    // After completion, annotation opacity should be restored (empty = visible)
+    for (const ann of annotations) {
+      expect((ann as SVGElement).style.opacity).toBe('');
+    }
+  });
+
+  it('endpoint labels start at opacity 0 during transition', () => {
+    // Use a line chart that produces endpoint labels
+    const lineSpecWithLabels: ChartSpec = {
+      animation: true,
+      mark: 'line',
+      data: [
+        { month: 'Jan', value: 100, group: 'A' },
+        { month: 'Feb', value: 200, group: 'A' },
+        { month: 'Jan', value: 80, group: 'B' },
+        { month: 'Feb', value: 150, group: 'B' },
+      ],
+      encoding: {
+        x: { field: 'month', type: 'ordinal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'group', type: 'nominal' },
+      },
+    };
+    const lineSpecB: ChartSpec = {
+      ...lineSpecWithLabels,
+      data: [
+        { month: 'Jan', value: 120, group: 'A' },
+        { month: 'Feb', value: 220, group: 'A' },
+        { month: 'Jan', value: 90, group: 'B' },
+        { month: 'Feb', value: 170, group: 'B' },
+      ],
+    };
+
+    const layoutA = compile(lineSpecWithLabels);
+    const layoutB = compile(lineSpecB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // Check if endpoint labels exist
+    const epLabels = svg.querySelector('.oc-endpoint-labels') as SVGElement | null;
+    if (epLabels) {
+      expect(epLabels.style.opacity).toBe('0');
+
+      runToCompletion();
+
+      // After completion, opacity restored
+      expect(epLabels.style.opacity).toBe('');
+    }
+  });
+});

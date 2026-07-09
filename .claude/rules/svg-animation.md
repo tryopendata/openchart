@@ -41,3 +41,25 @@ The segments must use `animation-timing-function: linear`. Non-linear easing (sm
 ## Orientation
 
 Bar orientation comes from the engine via `RectMark.orient` (`'horizontal' | 'vertical'`), set based on encoding (x: quantitative = horizontal bar, y: quantitative = vertical column). Don't infer from geometry (`width > height`) because grouped columns with short bars get misclassified. The renderer puts `data-orient="horizontal"` on the mark group and CSS switches between `oc-enter-bar` (bottom-to-top) and `oc-enter-bar-h` (left-to-right).
+
+## Update/Exit Transitions
+
+Data-update transitions live in `packages/vanilla/src/transition.ts` and use a rAF loop, not CSS animations. This is a fundamentally different mechanism from the CSS-based entrance animations.
+
+**rAF-not-CSS rationale.** Entrance animations are fire-and-forget: CSS keyframes handle them with zero JS per frame. Update transitions need to interpolate between two computed layouts (prev geometry -> next geometry), which requires reading layout data and writing SVG attributes per frame. CSS can't do that.
+
+**FLIP-from-layout (never measure DOM).** The transition driver reads geometry from `ChartLayout` objects (prev and next), not from DOM measurements. The engine already computed exact pixel positions; the driver interpolates between them. Never call `getBBox()` or `getBoundingClientRect()` during a transition frame.
+
+**Cancellation lives in render() and why.** `render()` tears down the SVG and rebuilds from scratch. Any in-flight transition must be cancelled before teardown, otherwise the rAF callback writes to removed DOM nodes. The cancel path: `render()` calls `transitionHandle.cancel()`, which stops the rAF loop, snaps to final geometry, and removes ghosts.
+
+**Synchronous from-state rule.** All tween from-states are applied synchronously before the first `requestAnimationFrame`. This prevents a flash of final-state on the first frame. The SVG is already rendered from `nextLayout`, so without this step elements would appear at their final positions for one frame before snapping to the from-state.
+
+**Ghost pattern.** Exiting marks get ghost elements: clones rendered from `prevLayout` mark data, appended to the marks container. Ghosts:
+- Have `.oc-ghost` class, `aria-hidden="true"`, `pointer-events: none`
+- Do NOT have `data-key` (prevents key-matching with real elements)
+- For gradient fills: gradient defs are built into the new SVG's `<defs>` so ghost `url(#id)` references resolve correctly
+- Are removed after the transition completes or is cancelled
+
+**Never-tween-opacity-on-updates rule.** Updated marks (same key in prev and next) should NOT have their opacity tweened. The renderer may have set `opacity="0"` on points suppressed under endpoint markers. Tweening opacity would make those points flash visible during the transition. Only enter/exit tweens use opacity.
+
+**Path-morph freeze-and-crossfade on interruption.** When `.update()` is called while a line/area series is mid-morph, the interpolated point array matches neither layout's data. Re-matching is intractable. Instead: `snapshot()` captures the current interpolated path `d` string, creates a ghost carrying that frozen path, crossfades to the new final path. Rects/points retarget smoothly from their current interpolated position.

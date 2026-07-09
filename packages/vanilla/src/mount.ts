@@ -59,7 +59,7 @@ import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import { canTransition, runTransition } from './transition';
+import { canTransition, type GeometrySnapshot, runTransition } from './transition';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -196,6 +196,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Data-update transition state
   let transitionHandle: import('./transition').TransitionHandle | null = null;
+  let transitionSnapshot: GeometrySnapshot | null = null;
 
   // Set when webfonts have loaded and a recompile is owed to reflect final font
   // metrics. The next render() that actually recompiles flips
@@ -847,6 +848,13 @@ export function createChart<TData extends DataRow = DataRow>(
     const prevLayout = currentLayout;
     const entranceWasRunning = cleanupAnimations != null;
 
+    // Snapshot in-flight transition geometry before render() cancels it.
+    // This enables retargeting: the next transition starts from the
+    // interrupted position instead of snapping to the previous final state.
+    if (transitionHandle?.running) {
+      transitionSnapshot = transitionHandle.snapshot();
+    }
+
     currentSpec = newSpec;
     // A new spec can change theme.fonts.family; rebuild the measurer so layout
     // measures the font compile will actually render with.
@@ -875,15 +883,23 @@ export function createChart<TData extends DataRow = DataRow>(
         entranceInFlight: entranceWasRunning,
       })
     ) {
+      // Consume snapshot (if any) for retargeting, then clear
+      const snapshot = transitionSnapshot;
+      transitionSnapshot = null;
+
       transitionHandle = runTransition({
         svg: svgElement as SVGSVGElement,
         prevLayout,
         nextLayout: currentLayout,
         animation: currentLayout.animation!,
+        fromSnapshot: snapshot ?? undefined,
         onComplete: () => {
           transitionHandle = null;
         },
       });
+    } else {
+      // No transition started; clear any stale snapshot
+      transitionSnapshot = null;
     }
   }
 
@@ -958,6 +974,7 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle.cancel();
       transitionHandle = null;
     }
+    transitionSnapshot = null;
 
     if (cleanupAnimations) {
       cleanupAnimations();

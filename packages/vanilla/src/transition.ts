@@ -44,9 +44,27 @@ import { rectPathWithCorners, renderSingleMark } from './renderers/marks';
 // Public types
 // ---------------------------------------------------------------------------
 
+/**
+ * Snapshot of in-flight tween geometry, keyed by mark key.
+ * Used for interruption retargeting: the next transition starts from
+ * whatever position the previous transition had reached.
+ */
+export type GeometrySnapshot = Map<string, SnapshotGeometry>;
+
+export type SnapshotGeometry =
+  | { type: 'rect'; x: number; y: number; width: number; height: number }
+  | { type: 'point'; cx: number; cy: number; r?: number }
+  | { type: 'rule'; x1: number; y1: number; x2: number; y2: number }
+  | { type: 'tick'; x1: number; y1: number; x2: number; y2: number }
+  | { type: 'textMark'; x: number; y: number }
+  | { type: 'line'; d: string }
+  | { type: 'area'; d: string; topD?: string };
+
 export interface TransitionHandle {
   cancel(): void;
   readonly running: boolean;
+  /** Capture current interpolated geometry for all in-flight tweens. */
+  snapshot(): GeometrySnapshot;
 }
 
 // ---------------------------------------------------------------------------
@@ -708,8 +726,10 @@ export function runTransition(args: {
   nextLayout: ChartLayout;
   animation: ResolvedAnimation;
   onComplete: () => void;
+  /** Snapshot from a cancelled in-flight transition for retargeting. */
+  fromSnapshot?: GeometrySnapshot;
 }): TransitionHandle {
-  const { svg, prevLayout, nextLayout, animation, onComplete } = args;
+  const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot } = args;
   const update = animation.update!;
   const exit = animation.exit ?? {
     duration: 300,
@@ -731,6 +751,9 @@ export function runTransition(args: {
       cancel() {},
       get running() {
         return false;
+      },
+      snapshot() {
+        return new Map();
       },
     };
   }
@@ -781,39 +804,74 @@ export function runTransition(args: {
     nextLayout.marks.some((m) => m.type === 'textMark');
 
   if (hasRects) {
-    buildRectTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, ghostGradientMap);
+    buildRectTweens(
+      prevLayout,
+      nextLayout,
+      marksContainer,
+      tweens,
+      ghosts,
+      ghostGradientMap,
+      fromSnapshot,
+    );
   }
   if (hasLines) {
-    buildLineTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildLineTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
   }
   if (hasAreas) {
-    buildAreaTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, ghostGradientMap);
+    buildAreaTweens(
+      prevLayout,
+      nextLayout,
+      marksContainer,
+      tweens,
+      ghosts,
+      ghostGradientMap,
+      fromSnapshot,
+    );
   }
   if (hasPoints) {
-    buildPointTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, ghostGradientMap);
+    buildPointTweens(
+      prevLayout,
+      nextLayout,
+      marksContainer,
+      tweens,
+      ghosts,
+      ghostGradientMap,
+      fromSnapshot,
+    );
   }
   if (hasRules) {
-    buildRuleTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildRuleTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
   }
   if (hasTicks) {
-    buildTickTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildTickTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
   }
   if (hasTextMarks) {
-    buildTextMarkTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildTextMarkTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
   }
 
   // Axis tick/gridline transitions
   buildAxisTweens(svg, prevLayout, nextLayout, tweens, ghosts);
 
+  // Secondary element crossfade: annotations, endpoint labels, mark labels
+  // fade in from opacity 0 delayed at 40% of the update duration.
+  const secondaryEls = collectSecondaryElements(svg);
+  // Store original opacities so we can restore them on completion
+  const secondaryOriginalOpacity = secondaryEls.map((el) => el.style.opacity || '');
+
   // Apply all from-states SYNCHRONOUSLY before scheduling the first rAF
   for (const tw of tweens) {
     applyTweenState(tw, 0, update, exit, enterDelay, enterDuration);
+  }
+  // Set secondary elements to invisible at start
+  for (const el of secondaryEls) {
+    el.style.opacity = '0';
   }
 
   // Animation loop state
   let rafId: number | null = null;
   let running = true;
   let startTime: number | null = null;
+  let lastElapsed = 0;
 
   // Track line/area marks that need final path snapping
   const nextLineMarks = nextLayout.marks.filter((m): m is LineMark => m.type === 'line');
@@ -824,11 +882,15 @@ export function runTransition(args: {
     if (startTime === null) startTime = now;
 
     const elapsed = now - startTime;
+    lastElapsed = elapsed;
     const tGlobal = Math.min(elapsed / totalMs, 1);
 
     for (const tw of tweens) {
       applyTweenState(tw, elapsed, update, exit, enterDelay, enterDuration);
     }
+
+    // Crossfade secondary elements: delayed 40%, over 60% of update duration
+    applySecondaryOpacity(secondaryEls, elapsed, enterDelay, enterDuration);
 
     if (tGlobal >= 1) {
       finish();
@@ -844,6 +906,10 @@ export function runTransition(args: {
 
     snapToFinal();
     removeGhosts();
+    // Restore secondary element opacities to their rendered values
+    for (let i = 0; i < secondaryEls.length; i++) {
+      secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
+    }
     onComplete();
   }
 
@@ -871,6 +937,75 @@ export function runTransition(args: {
     }
   }
 
+  /** Capture the current interpolated geometry of all in-flight tweens. */
+  function captureSnapshot(): GeometrySnapshot {
+    const snap: GeometrySnapshot = new Map();
+    const tUpdate = Math.min(lastElapsed / update.duration, 1);
+    const easedUpdate = cubicOut(tUpdate);
+
+    for (const tw of tweens) {
+      if (tw.kind !== 'update') continue;
+      const key = getKeyForTween(tw);
+      if (!key) continue;
+
+      switch (tw.tweenType) {
+        case 'rect': {
+          const g = lerpGeom(tw.from, tw.to, easedUpdate);
+          snap.set(key, { type: 'rect', ...g });
+          break;
+        }
+        case 'point': {
+          const cx = tw.fromCx + (tw.toCx - tw.fromCx) * easedUpdate;
+          const cy = tw.fromCy + (tw.toCy - tw.fromCy) * easedUpdate;
+          const entry: SnapshotGeometry = { type: 'point', cx, cy };
+          if (tw.fromR !== undefined && tw.toR !== undefined) {
+            entry.r = tw.fromR + (tw.toR - tw.fromR) * easedUpdate;
+          }
+          snap.set(key, entry);
+          break;
+        }
+        case 'rule':
+        case 'tick': {
+          snap.set(key, {
+            type: tw.tweenType,
+            x1: tw.fromX1 + (tw.toX1 - tw.fromX1) * easedUpdate,
+            y1: tw.fromY1 + (tw.toY1 - tw.fromY1) * easedUpdate,
+            x2: tw.fromX2 + (tw.toX2 - tw.fromX2) * easedUpdate,
+            y2: tw.fromY2 + (tw.toY2 - tw.fromY2) * easedUpdate,
+          });
+          break;
+        }
+        case 'textMark': {
+          snap.set(key, {
+            type: 'textMark',
+            x: tw.fromX + (tw.toX - tw.fromX) * easedUpdate,
+            y: tw.fromY + (tw.toY - tw.fromY) * easedUpdate,
+          });
+          break;
+        }
+        case 'line': {
+          // Freeze the current interpolated path string
+          const pts = interpolatePoints(tw.fromPts, tw.toPts, easedUpdate);
+          const d = buildLinePath(pts, tw.interpolate);
+          snap.set(key, { type: 'line', d });
+          break;
+        }
+        case 'area': {
+          const top = interpolatePoints(tw.fromTop, tw.toTop, easedUpdate);
+          const bottom = interpolatePoints(tw.fromBottom, tw.toBottom, easedUpdate);
+          const d = buildAreaPath(top, bottom, tw.interpolate);
+          let topD: string | undefined;
+          if (tw.hasStroke) {
+            topD = buildLinePath(top, tw.interpolate);
+          }
+          snap.set(key, { type: 'area', d, topD });
+          break;
+        }
+      }
+    }
+    return snap;
+  }
+
   rafId = requestAnimationFrame(tick);
 
   return {
@@ -883,11 +1018,61 @@ export function runTransition(args: {
       }
       snapToFinal();
       removeGhosts();
+      // Restore secondary element opacities on cancel
+      for (let i = 0; i < secondaryEls.length; i++) {
+        secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
+      }
     },
     get running() {
       return running;
     },
+    snapshot(): GeometrySnapshot {
+      return captureSnapshot();
+    },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Secondary element helpers
+// ---------------------------------------------------------------------------
+
+/** Collect annotation, endpoint-label, and mark-label groups for crossfade. */
+function collectSecondaryElements(svg: SVGSVGElement): SVGElement[] {
+  const els: SVGElement[] = [];
+  for (const el of svg.querySelectorAll('.oc-annotation')) {
+    els.push(el as SVGElement);
+  }
+  const epLabels = svg.querySelector('.oc-endpoint-labels') as SVGElement | null;
+  if (epLabels) els.push(epLabels);
+  const markLabels = svg.querySelector('.oc-mark-labels') as SVGElement | null;
+  if (markLabels) els.push(markLabels);
+  return els;
+}
+
+/** Apply delayed fade-in to secondary elements during transition. */
+function applySecondaryOpacity(
+  els: SVGElement[],
+  elapsed: number,
+  enterDelay: number,
+  enterDuration: number,
+): void {
+  if (els.length === 0) return;
+  let t: number;
+  if (elapsed < enterDelay) {
+    t = 0;
+  } else {
+    t = Math.min((elapsed - enterDelay) / enterDuration, 1);
+  }
+  const opacity = String(cubicOut(t));
+  for (const el of els) {
+    el.style.opacity = opacity;
+  }
+}
+
+/** Get the data-key for a tween's element (used for snapshot keying). */
+function getKeyForTween(tw: Tween): string | null {
+  if ('ghost' in tw && tw.ghost) return null; // ghosts don't carry keys
+  return tw.el.getAttribute('data-key');
 }
 
 // ---------------------------------------------------------------------------
@@ -1085,6 +1270,7 @@ function buildRectTweens(
   tweens: Tween[],
   ghosts: SVGElement[],
   ghostGradientMap: Map<string, string>,
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevRects = prevLayout.marks.filter((m): m is RectMark => m.type === 'rect');
   const nextRects = nextLayout.marks.filter((m): m is RectMark => m.type === 'rect');
@@ -1104,11 +1290,19 @@ function buildRectTweens(
     if (!prev) continue;
     const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
     if (!el) continue;
+
+    // Retarget: use snapshot geometry if available (interrupted transition)
+    let fromGeom = geomFromMark(prev);
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'rect') {
+      fromGeom = { x: snap.x, y: snap.y, width: snap.width, height: snap.height };
+    }
+
     tweens.push({
       tweenType: 'rect',
       kind: 'update',
       el,
-      from: geomFromMark(prev),
+      from: fromGeom,
       to: geomFromMark(next),
       mark: next,
     });
@@ -1182,6 +1376,7 @@ function buildLineTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevLines = prevLayout.marks.filter((m): m is LineMark => m.type === 'line');
   const nextLines = nextLayout.marks.filter((m): m is LineMark => m.type === 'line');
@@ -1201,6 +1396,48 @@ function buildLineTweens(
     if (!prev) continue;
     const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
     if (!el) continue;
+
+    // If interrupted mid-morph, freeze the current path and crossfade
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'line') {
+      // Create ghost carrying the frozen mid-morph path
+      const ghost = el.cloneNode(true) as SVGElement;
+      ghost.classList.add('oc-ghost');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.setAttribute('pointer-events', 'none');
+      ghost.removeAttribute('data-key');
+      const ghostPath = ghost.querySelector('path');
+      if (ghostPath) ghostPath.setAttribute('d', snap.d);
+      marksContainer.appendChild(ghost);
+      ghosts.push(ghost);
+
+      tweens.push({
+        tweenType: 'line',
+        kind: 'exit',
+        el: ghost,
+        fromPts: next.points, // placeholder, not used for path
+        toPts: next.points,
+        finalPoints: next.points,
+        interpolate: next.interpolate,
+        ghost,
+        fromOpacity: 1,
+        toOpacity: 0,
+      });
+
+      // Fade in the new final path
+      tweens.push({
+        tweenType: 'line',
+        kind: 'enter',
+        el,
+        fromPts: next.points,
+        toPts: next.points,
+        finalPoints: next.points,
+        interpolate: next.interpolate,
+        fromOpacity: 0,
+        toOpacity: 1,
+      });
+      continue;
+    }
 
     const prevPKs = prev.pointKeys ?? prev.points.map((_, i) => `${i}`);
     const nextPKs = next.pointKeys ?? next.points.map((_, i) => `${i}`);
@@ -1320,6 +1557,7 @@ function buildAreaTweens(
   tweens: Tween[],
   ghosts: SVGElement[],
   ghostGradientMap: Map<string, string>,
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevAreas = prevLayout.marks.filter((m): m is AreaMark => m.type === 'area');
   const nextAreas = nextLayout.marks.filter((m): m is AreaMark => m.type === 'area');
@@ -1339,6 +1577,55 @@ function buildAreaTweens(
     if (!prev) continue;
     const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
     if (!el) continue;
+
+    // If interrupted mid-morph, freeze and crossfade
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'area') {
+      const ghost = el.cloneNode(true) as SVGElement;
+      ghost.classList.add('oc-ghost');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.setAttribute('pointer-events', 'none');
+      ghost.removeAttribute('data-key');
+      const ghostPaths = ghost.querySelectorAll('path');
+      if (ghostPaths[0]) ghostPaths[0].setAttribute('d', snap.d);
+      if (ghostPaths[1] && snap.topD) ghostPaths[1].setAttribute('d', snap.topD);
+      marksContainer.appendChild(ghost);
+      ghosts.push(ghost);
+
+      tweens.push({
+        tweenType: 'area',
+        kind: 'exit',
+        el: ghost,
+        fromTop: next.topPoints,
+        toTop: next.topPoints,
+        fromBottom: next.bottomPoints,
+        toBottom: next.bottomPoints,
+        finalTopPoints: next.topPoints,
+        finalBottomPoints: next.bottomPoints,
+        interpolate: next.interpolate,
+        hasStroke: !!next.stroke && !!next.topPath,
+        ghost,
+        fromOpacity: 1,
+        toOpacity: 0,
+      });
+
+      tweens.push({
+        tweenType: 'area',
+        kind: 'enter',
+        el,
+        fromTop: next.topPoints,
+        toTop: next.topPoints,
+        fromBottom: next.bottomPoints,
+        toBottom: next.bottomPoints,
+        finalTopPoints: next.topPoints,
+        finalBottomPoints: next.bottomPoints,
+        interpolate: next.interpolate,
+        hasStroke: !!next.stroke && !!next.topPath,
+        fromOpacity: 0,
+        toOpacity: 1,
+      });
+      continue;
+    }
 
     const prevPKs = prev.pointKeys ?? prev.topPoints.map((_, i) => `${i}`);
     const nextPKs = next.pointKeys ?? next.topPoints.map((_, i) => `${i}`);
@@ -1509,6 +1796,7 @@ function buildPointTweens(
   tweens: Tween[],
   ghosts: SVGElement[],
   ghostGradientMap: Map<string, string>,
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevPoints = prevLayout.marks.filter((m): m is PointMark => m.type === 'point');
   const nextPoints = nextLayout.marks.filter((m): m is PointMark => m.type === 'point');
@@ -1536,16 +1824,29 @@ function buildPointTweens(
     const renderedOpacity = el.getAttribute('opacity');
     const isSuppressed = renderedOpacity === '0';
 
+    // Retarget from snapshot if interrupted
+    let fromCx = prev.cx;
+    let fromCy = prev.cy;
+    let fromR = prev.r !== next.r ? prev.r : undefined;
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'point') {
+      fromCx = snap.cx;
+      fromCy = snap.cy;
+      if (snap.r !== undefined && snap.r !== next.r) {
+        fromR = snap.r;
+      }
+    }
+
     tweens.push({
       tweenType: 'point',
       kind: 'update',
       el,
-      fromCx: prev.cx,
-      fromCy: prev.cy,
+      fromCx,
+      fromCy,
       toCx: next.cx,
       toCy: next.cy,
-      fromR: prev.r !== next.r ? prev.r : undefined,
-      toR: prev.r !== next.r ? next.r : undefined,
+      fromR: fromR,
+      toR: fromR !== undefined ? next.r : undefined,
       // Do NOT tween opacity for updated points - preserve renderer state
       suppressedOpacity: isSuppressed ? '0' : undefined,
     });
@@ -1616,6 +1917,7 @@ function buildRuleTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevRules = prevLayout.marks.filter((m): m is RuleMarkLayout => m.type === 'rule');
   const nextRules = nextLayout.marks.filter((m): m is RuleMarkLayout => m.type === 'rule');
@@ -1637,14 +1939,27 @@ function buildRuleTweens(
       `.oc-mark-rule[data-key="${key}"]`,
     ) as SVGElement | null;
     if (!el) continue;
+
+    let fromX1 = prev.x1;
+    let fromY1 = prev.y1;
+    let fromX2 = prev.x2;
+    let fromY2 = prev.y2;
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'rule') {
+      fromX1 = snap.x1;
+      fromY1 = snap.y1;
+      fromX2 = snap.x2;
+      fromY2 = snap.y2;
+    }
+
     tweens.push({
       tweenType: 'rule',
       kind: 'update',
       el,
-      fromX1: prev.x1,
-      fromY1: prev.y1,
-      fromX2: prev.x2,
-      fromY2: prev.y2,
+      fromX1,
+      fromY1,
+      fromX2,
+      fromY2,
       toX1: next.x1,
       toY1: next.y1,
       toX2: next.x2,
@@ -1716,6 +2031,7 @@ function buildTickTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevTicks = prevLayout.marks.filter((m): m is TickMarkLayout => m.type === 'tick');
   const nextTicks = nextLayout.marks.filter((m): m is TickMarkLayout => m.type === 'tick');
@@ -1745,8 +2061,12 @@ function buildTickTweens(
       `.oc-mark-tick[data-key="${key}"]`,
     ) as SVGElement | null;
     if (!el) continue;
-    const pEnd = tickEndpoints(prev);
+    let pEnd = tickEndpoints(prev);
     const nEnd = tickEndpoints(next);
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'tick') {
+      pEnd = { x1: snap.x1, y1: snap.y1, x2: snap.x2, y2: snap.y2 };
+    }
     tweens.push({
       tweenType: 'tick',
       kind: 'update',
@@ -1828,6 +2148,7 @@ function buildTextMarkTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  fromSnapshot?: GeometrySnapshot,
 ): void {
   const prevTexts = prevLayout.marks.filter((m): m is TextMarkLayout => m.type === 'textMark');
   const nextTexts = nextLayout.marks.filter((m): m is TextMarkLayout => m.type === 'textMark');
@@ -1849,12 +2170,21 @@ function buildTextMarkTweens(
       `.oc-mark-text[data-key="${key}"]`,
     ) as SVGElement | null;
     if (!el) continue;
+
+    let fromX = prev.x;
+    let fromY = prev.y;
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'textMark') {
+      fromX = snap.x;
+      fromY = snap.y;
+    }
+
     tweens.push({
       tweenType: 'textMark',
       kind: 'update',
       el,
-      fromX: prev.x,
-      fromY: prev.y,
+      fromX,
+      fromY,
       toX: next.x,
       toY: next.y,
     });

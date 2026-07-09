@@ -59,6 +59,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
 | `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options; if neither is set, defaults to `true`. |
+| `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
 
 ### DataRow
 
@@ -149,7 +150,7 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `watermark`    | `boolean`                    | `true`      | Whether to show the watermark.                                                                |
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
 | `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
-| `animation`    | `AnimationSpec`              | `undefined` | Animation configuration.                                                                      |
+| `animation`    | `AnimationSpec`              | `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
 
 **Scale behavior:** All layers share scales by default. The engine unions data from all layers to compute a single scale domain, so marks from different layers are positioned on the same coordinate system.
 
@@ -472,6 +473,106 @@ interface LabelConfig {
 | `'auto'`      | Show labels with collision detection. Overlapping labels are hidden and only appear in tooltips.                         |
 | `'endpoints'` | Show only the first and last label per series. Good for line charts where the trend matters more than individual values. |
 | `'none'`      | Hide all labels. Rely on tooltips and the legend for value readout.                                                      |
+
+---
+
+## Animation
+
+Controls entrance animations and data-update transitions. Source: `core/src/types/spec.ts`.
+
+### Quick start
+
+```ts
+// Enable all animation phases with defaults
+{ animation: true }
+
+// Entrance only (no update/exit transitions)
+{ animation: { enter: true } }
+
+// Full control
+{
+  animation: {
+    enter: { duration: 500, ease: 'smooth', stagger: true },
+    update: { duration: 500, ease: 'smooth' },
+    exit: { duration: 300, ease: 'smooth' },
+    annotationDelay: 200,
+  }
+}
+```
+
+### AnimationSpec
+
+`boolean | AnimationConfig`
+
+- `true`: enables entrance animation with sensible defaults. When `animation: true`, all three phases (enter, update, exit) are enabled.
+- `false` / omitted: no animation.
+- `AnimationConfig`: per-phase control.
+
+### AnimationConfig
+
+| Field             | Type                              | Default     | Description                                        |
+| ----------------- | --------------------------------- | ----------- | -------------------------------------------------- |
+| `enter`           | `AnimationPhaseConfig \| boolean` | `true`      | Entrance animation when chart first renders.       |
+| `update`          | `AnimationPhaseConfig \| boolean` | `true`      | Transition animation when data updates via `.update()`. |
+| `exit`            | `AnimationPhaseConfig \| boolean` | `true`      | Exit animation when marks are removed during updates. |
+| `annotationDelay` | `number`                          | `200`       | Delay in ms before annotations animate in after marks. |
+
+### AnimationPhaseConfig
+
+| Field      | Type                          | Default    | Description                                  |
+| ---------- | ----------------------------- | ---------- | -------------------------------------------- |
+| `duration` | `number`                      | `500`      | Duration in ms.                              |
+| `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'`, `'snappy'`, `'linear'`. |
+| `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. |
+
+### Data-update transitions
+
+When `animation.update` is enabled and `.update(newSpec)` is called, the chart animates marks from their previous positions to the new layout instead of doing an instant swap. The engine matches marks across layouts using keys derived from data values.
+
+**Supported mark types:** bar, line, area, point/circle (scatter/dot).
+
+**What transitions:**
+- Rect marks (bars/columns): position + size tween
+- Line/area marks: point-matched path morphing with enter/exit interpolation
+- Point marks (scatter): cx/cy/r tween
+- Axis ticks and gridlines: position slide for updated, fade for enter/exit
+- Annotations, endpoint labels, mark labels: delayed crossfade (40% delay, 60% fade-in)
+
+**Fallback to instant swap** when any of these conditions is true:
+- Mark type changes between updates
+- Encoding fields change (x/y/color field names)
+- Dimensions change (container resized)
+- Mark count exceeds 500
+- `prefers-reduced-motion` is active
+- Entrance animation is still in flight
+- Chart is a sparkline
+
+**Legend-hidden series:** When series are hidden via legend toggle, they are removed from the data. On the next `.update()` call, those series re-enter with enter animations as new marks.
+
+### encoding.key channel
+
+The `key` channel maps a field that uniquely identifies each datum across updates. It is not visually encoded. When omitted, the engine derives keys from the x-axis value (and color field for grouped charts).
+
+Explicit keys are useful for scatter plots where multiple points can share the same x/y values:
+
+```ts
+{
+  type: 'scatter',
+  data: points,
+  encoding: {
+    x: { field: 'longitude', type: 'quantitative' },
+    y: { field: 'latitude', type: 'quantitative' },
+    key: { field: 'stationId' },
+  },
+  animation: true,
+}
+```
+
+### Interruption behavior
+
+When `.update()` is called while a previous transition is still running, the new transition retargets from the current interpolated positions rather than snapping to the previous final state. This creates a smooth redirect effect for rapid updates or streaming data.
+
+For line/area marks, mid-morph interruption uses a crossfade from the frozen intermediate path to the new final path, since re-matching interpolated point arrays is intractable.
 
 ---
 
@@ -827,7 +928,7 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
 | `darkMode`      | `DarkMode`        | `'off'`     | Dark mode behavior.                                                                 |
 | `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
-| `animation`     | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                   |
+| `animation`     | `AnimationSpec`   | `undefined` | Entrance animation configuration. Sankey charts support entrance animations only.   |
 
 ### SankeyEncoding
 
