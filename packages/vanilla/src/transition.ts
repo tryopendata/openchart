@@ -36,7 +36,12 @@ import type {
   TickMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { isGradientDef } from '@opendata-ai/openchart-core';
-import { buildAreaPath, buildLinePath, serializeKeyValue } from '@opendata-ai/openchart-engine';
+import {
+  buildAreaPath,
+  buildLinePath,
+  EXIT_DEFAULTS,
+  serializeKeyValue,
+} from '@opendata-ai/openchart-engine';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
 import { rectPathWithCorners, renderSingleMark } from './renderers/marks';
 
@@ -82,7 +87,7 @@ function cubicOut(t: number): number {
 // ---------------------------------------------------------------------------
 
 /** Mark types that support data-update transitions. */
-const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point', 'circle']);
+const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point']);
 
 /**
  * Determine whether a data-update transition should run instead of
@@ -731,12 +736,7 @@ export function runTransition(args: {
 }): TransitionHandle {
   const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot } = args;
   const update = animation.update!;
-  const exit = animation.exit ?? {
-    duration: 300,
-    ease: 'smooth',
-    staggerDelay: 0,
-    staggerOrder: 'index' as const,
-  };
+  const exit = animation.exit ?? { ...EXIT_DEFAULTS };
 
   // Total timeline
   const totalMs = Math.max(update.duration, exit.duration);
@@ -856,7 +856,7 @@ export function runTransition(args: {
   // fade in from opacity 0 delayed at 40% of the update duration.
   const secondaryEls = collectSecondaryElements(svg);
   // Store original opacities so we can restore them on completion
-  const secondaryOriginalOpacity = secondaryEls.map((el) => el.style.opacity || '');
+  const secondaryOriginalOpacity = secondaryEls.map((el) => el.style.opacity ?? '');
 
   // Apply all from-states SYNCHRONOUSLY before scheduling the first rAF
   for (const tw of tweens) {
@@ -1133,7 +1133,8 @@ function applyTweenState(
     }
     case 'rule':
     case 'tick': {
-      const lineEl = tw.tweenType === 'rule' ? tw.el : tw.el.tagName === 'line' ? tw.el : tw.el;
+      const lineEl =
+        tw.el.tagName === 'line' ? tw.el : ((tw.el.querySelector('line') as SVGElement) ?? tw.el);
       lineEl.setAttribute('x1', String(tw.fromX1 + (tw.toX1 - tw.fromX1) * eased));
       lineEl.setAttribute('y1', String(tw.fromY1 + (tw.toY1 - tw.fromY1) * eased));
       lineEl.setAttribute('x2', String(tw.fromX2 + (tw.toX2 - tw.fromX2) * eased));
@@ -1633,8 +1634,6 @@ function buildAreaTweens(
     const prevKeySet = new Set(prevPKs);
     const hasSurvivors = nextPKs.some((k) => prevKeySet.has(k));
 
-    const hasGradientFill = typeof next.fill !== 'string';
-
     if (!hasSurvivors) {
       // Crossfade
       const ghost = renderSingleMark(prev, 0);
@@ -1694,38 +1693,19 @@ function buildAreaTweens(
         nextPKs,
       );
 
-      // Gradient-filled areas with whole-series exit fall back to opacity fade
-      if (hasGradientFill && !hasSurvivors) {
-        tweens.push({
-          tweenType: 'area',
-          kind: 'enter',
-          el,
-          fromTop: next.topPoints,
-          toTop: next.topPoints,
-          fromBottom: next.bottomPoints,
-          toBottom: next.bottomPoints,
-          finalTopPoints: next.topPoints,
-          finalBottomPoints: next.bottomPoints,
-          interpolate: next.interpolate,
-          hasStroke: !!next.stroke && !!next.topPath,
-          fromOpacity: 0,
-          toOpacity: 1,
-        });
-      } else {
-        tweens.push({
-          tweenType: 'area',
-          kind: 'update',
-          el,
-          fromTop,
-          toTop,
-          fromBottom,
-          toBottom,
-          finalTopPoints: next.topPoints,
-          finalBottomPoints: next.bottomPoints,
-          interpolate: next.interpolate,
-          hasStroke: !!next.stroke && !!next.topPath,
-        });
-      }
+      tweens.push({
+        tweenType: 'area',
+        kind: 'update',
+        el,
+        fromTop,
+        toTop,
+        fromBottom,
+        toBottom,
+        finalTopPoints: next.topPoints,
+        finalBottomPoints: next.bottomPoints,
+        interpolate: next.interpolate,
+        hasStroke: !!next.stroke && !!next.topPath,
+      });
     }
   }
 
@@ -2343,11 +2323,16 @@ function buildSingleAxisTweens(
     ghost.setAttribute('pointer-events', 'none');
     ghost.textContent = prevTick.label;
     // Copy positioning from prevAxis ticks
+    const area = layout.area;
     if (orientation === 'x') {
       ghost.setAttribute('x', String(prevPos));
-      // Approximate the y position (it was already computed in the prev render)
+      const xLabelPad = nextAxis.labelPadding ?? layout.theme.spacing.xAxisLabelPadding;
+      const fontSize = nextAxis.tickLabelStyle.fontSize;
+      ghost.setAttribute('y', String(area.y + area.height + xLabelPad + fontSize * 0.8));
       ghost.setAttribute('text-anchor', 'middle');
     } else {
+      const TICK_LABEL_OFFSET = 8;
+      ghost.setAttribute('x', String(area.x - TICK_LABEL_OFFSET));
       ghost.setAttribute('y', String(prevPos));
       ghost.setAttribute('text-anchor', 'end');
       ghost.setAttribute('dominant-baseline', 'central');
@@ -2452,7 +2437,6 @@ function buildSingleAxisTweens(
       ghost.setAttribute('x2', String(prevPos));
       ghost.setAttribute('y2', String(area.y + area.height));
     }
-    ghost.setAttribute('stroke-opacity', '0.6');
     axisGroup.appendChild(ghost);
     ghosts.push(ghost);
 

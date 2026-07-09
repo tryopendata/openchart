@@ -253,7 +253,9 @@ export function computeLineMarks(
         // data table; the dot is purely visual.
         const pointKey = keyField
           ? serializeKeyValue(p.row[keyField])
-          : `${seriesStyleKey ?? ''}|${serializeKeyValue(p.row[xChannel.field])}`;
+          : seriesStyleKey
+            ? `${seriesStyleKey}|${serializeKeyValue(p.row[xChannel.field])}`
+            : serializeKeyValue(p.row[xChannel.field]);
         if (isSingleEndpoint) {
           bucket.push({
             type: 'point',

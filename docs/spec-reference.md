@@ -487,7 +487,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 { animation: true }
 
 // Entrance only (no update/exit transitions)
-{ animation: { enter: true } }
+{ animation: { enter: true, update: false, exit: false } }
 
 // Full control
 {
@@ -529,7 +529,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 
 When `animation.update` is enabled and `.update(newSpec)` is called, the chart animates marks from their previous positions to the new layout instead of doing an instant swap. The engine matches marks across layouts using keys derived from data values.
 
-**Supported mark types:** bar, line, area, point/circle (scatter/dot).
+**Supported mark types:** bar, line, area, point (scatter/dot).
 
 **What transitions:**
 - Rect marks (bars/columns): position + size tween
