@@ -292,3 +292,103 @@ export const Compact = () => (
     <TileMap spec={compactSpec} />
   </div>
 );
+
+// ---------------------------------------------------------------------------
+// Categorical: vaccine exemption policy types with custom colors
+// ---------------------------------------------------------------------------
+
+const exemptionData: Record<string, string> = {
+  AL: 'religious',
+  AK: 'religious',
+  AZ: 'philosophical',
+  AR: 'philosophical',
+  CA: 'medical_only',
+  CO: 'philosophical',
+  CT: 'religious',
+  DE: 'religious',
+  FL: 'religious',
+  GA: 'religious',
+  HI: 'religious',
+  ID: 'philosophical',
+  IL: 'religious',
+  IN: 'religious',
+  IA: 'religious',
+  KS: 'religious',
+  KY: 'religious',
+  LA: 'philosophical',
+  ME: 'philosophical',
+  MD: 'religious',
+  MA: 'religious',
+  MI: 'philosophical',
+  MN: 'philosophical',
+  MS: 'medical_only',
+  MO: 'religious',
+  MT: 'religious',
+  NE: 'religious',
+  NV: 'religious',
+  NH: 'religious',
+  NJ: 'religious',
+  NM: 'religious',
+  NY: 'medical_only',
+  NC: 'religious',
+  ND: 'philosophical',
+  OH: 'philosophical',
+  OK: 'philosophical',
+  OR: 'philosophical',
+  PA: 'philosophical',
+  RI: 'religious',
+  SC: 'religious',
+  SD: 'religious',
+  TN: 'religious',
+  TX: 'philosophical',
+  UT: 'philosophical',
+  VT: 'religious',
+  VA: 'religious',
+  WA: 'philosophical',
+  WV: 'medical_only',
+  WI: 'philosophical',
+  WY: 'religious',
+  DC: 'religious',
+};
+
+const categoricalSpec: TileMapSpec = {
+  type: 'tilemap',
+  data: exemptionData,
+  colors: {
+    medical_only: '#ee4a73',
+    religious: '#e07d00',
+    philosophical: '#06b6d4',
+  },
+  chrome: {
+    title: 'Vaccine Exemption Policies by State',
+    subtitle: 'Broadest non-medical exemption type allowed',
+    source: 'National Conference of State Legislatures',
+  },
+  animation: true,
+};
+
+export const Categorical = () => (
+  <div className="story-chart story-h-600">
+    <TileMap spec={categoricalSpec} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Categorical Dark Mode
+// ---------------------------------------------------------------------------
+
+const categoricalDarkSpec: TileMapSpec = {
+  ...categoricalSpec,
+  darkMode: 'force',
+  chrome: {
+    title: 'Vaccine Exemption Policies (Dark)',
+    subtitle: 'Dark mode variant of the categorical map',
+    source: 'National Conference of State Legislatures',
+  },
+};
+
+export const CategoricalDark = () => (
+  <div className="story-chart story-h-600">
+    <TileMap spec={categoricalDarkSpec} />
+  </div>
+);
