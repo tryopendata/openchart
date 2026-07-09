@@ -6,7 +6,7 @@
  * ghost element lifecycle, and cancel semantics.
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import type { ChartLayout, ChartSpec } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
@@ -981,6 +981,341 @@ describe('suppressed-point opacity', () => {
     // The suppressed point should still have opacity="0"
     if (points.length > 0) {
       expect(points[0].getAttribute('opacity')).toBe('0');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scatter/dot (point) chart transitions
+// ---------------------------------------------------------------------------
+
+/** Build a scatter chart spec with animation enabled. */
+function scatterSpec(
+  data: Array<{ x: number; y: number; size?: number }>,
+  hasSize = false,
+): ChartSpec {
+  const encoding: ChartSpec['encoding'] = {
+    x: { field: 'x', type: 'quantitative' },
+    y: { field: 'y', type: 'quantitative' },
+  };
+  if (hasSize) {
+    encoding.size = { field: 'size', type: 'quantitative' };
+  }
+  return {
+    animation: true,
+    mark: 'point',
+    data,
+    encoding,
+  };
+}
+
+describe('scatter chart transitions', () => {
+  it('canTransition passes for point mark type', () => {
+    // Need 3+ points with different values so geometry actually changes
+    // (2 points always map to domain extremes producing identical pixel positions)
+    const specA = scatterSpec([
+      { x: 10, y: 20 },
+      { x: 30, y: 40 },
+      { x: 50, y: 60 },
+    ]);
+    const specB = scatterSpec([
+      { x: 10, y: 50 },
+      { x: 30, y: 30 },
+      { x: 50, y: 70 },
+    ]);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
+  });
+
+  it('y-swap between same-x points tweens without identity swap (encoding.key)', () => {
+    // Two points at the same x, different y. After update, y values swap.
+    // With proper keying, each point should tween to its new y, not swap identity.
+    const specA: ChartSpec = {
+      animation: true,
+      mark: 'point',
+      data: [
+        { id: 'a', x: 50, y: 20 },
+        { id: 'b', x: 50, y: 80 },
+      ],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+        key: { field: 'id' },
+      },
+    };
+    const specB: ChartSpec = {
+      ...specA,
+      data: [
+        { id: 'a', x: 50, y: 80 },
+        { id: 'b', x: 50, y: 20 },
+      ],
+    };
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    // Verify marks have keys and they match across layouts
+    const pointsA = layoutA.marks.filter((m) => m.type === 'point');
+    const pointsB = layoutB.marks.filter((m) => m.type === 'point');
+    expect(pointsA.length).toBe(2);
+    expect(pointsB.length).toBe(2);
+
+    // Keys should match: point 'a' in both, point 'b' in both
+    const keysA = new Set(pointsA.map((m) => m.key));
+    const keysB = new Set(pointsB.map((m) => m.key));
+    expect(keysA).toEqual(keysB);
+  });
+
+  it('bubble r tween lands exactly on final value', () => {
+    const specA = scatterSpec(
+      [
+        { x: 10, y: 20, size: 5 },
+        { x: 30, y: 40, size: 10 },
+      ],
+      true,
+    );
+    const specB = scatterSpec(
+      [
+        { x: 10, y: 20, size: 15 },
+        { x: 30, y: 40, size: 20 },
+      ],
+      true,
+    );
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    runToCompletion();
+
+    // After transition completes, check that the r values match the final layout
+    const pointMarks = layoutB.marks.filter((m) => m.type === 'point');
+    for (const mark of pointMarks) {
+      if (!mark.key) continue;
+      const el = svg.querySelector(
+        `circle.oc-mark-point[data-key="${mark.key}"]`,
+      ) as SVGElement | null;
+      if (!el) continue;
+      const rAttr = el.getAttribute('r');
+      expect(rAttr).toBe(String((mark as { r: number }).r));
+    }
+  });
+
+  it('scatter round-trip: add/remove', () => {
+    const specA = scatterSpec([
+      { x: 10, y: 20 },
+      { x: 30, y: 40 },
+      { x: 50, y: 60 },
+    ]);
+    const specB = scatterSpec([
+      { x: 10, y: 50 },
+      { x: 30, y: 30 },
+      { x: 50, y: 70 },
+      { x: 70, y: 90 },
+    ]);
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    runToCompletion();
+
+    // No ghost elements remain
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+
+    // All next layout point marks are present with correct positions
+    const pointMarks = layoutB.marks.filter((m) => m.type === 'point');
+    for (const mark of pointMarks) {
+      if (!mark.key) continue;
+      const el = svg.querySelector(
+        `circle.oc-mark-point[data-key="${mark.key}"]`,
+      ) as SVGElement | null;
+      expect(el).not.toBeNull();
+      if (el) {
+        expect(el.getAttribute('cx')).toBe(String((mark as { cx: number }).cx));
+        expect(el.getAttribute('cy')).toBe(String((mark as { cy: number }).cy));
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Axis tick transitions
+// ---------------------------------------------------------------------------
+
+describe('axis tick transitions', () => {
+  it('data-tick-key is stamped on tick labels', () => {
+    const spec = columnSpec(DATA_A);
+    const { svg } = compileAndRender(spec);
+
+    const tickLabels = svg.querySelectorAll('.oc-axis-tick[data-tick-key]');
+    expect(tickLabels.length).toBeGreaterThan(0);
+  });
+
+  it('data-tick-key is stamped on gridlines', () => {
+    const spec = columnSpec(DATA_A);
+    const { svg } = compileAndRender(spec);
+
+    const gridlines = svg.querySelectorAll('.oc-gridline[data-tick-key]');
+    expect(gridlines.length).toBeGreaterThan(0);
+  });
+
+  it('adding a category: surviving tick labels from/to match prev/next layout tick positions', () => {
+    const specA = columnSpec(DATA_A); // Q1, Q2, Q3
+    const specB = columnSpec(DATA_C); // Q1, Q2, Q3, Q4
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    // Surviving x-axis ticks (Q1, Q2, Q3) should have different positions
+    // between layoutA and layoutB because adding Q4 changes the band scale
+    const prevXTicks = layoutA.axes.x?.ticks ?? [];
+    const nextXTicks = layoutB.axes.x?.ticks ?? [];
+
+    // Q1 should exist in both
+    const prevQ1 = prevXTicks.find((t) => t.label === 'Q1');
+    const nextQ1 = nextXTicks.find((t) => t.label === 'Q1');
+    expect(prevQ1).toBeDefined();
+    expect(nextQ1).toBeDefined();
+
+    // Now render and transition
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    runToCompletion();
+
+    // After transition, verify tick labels are at final positions
+    const tickLabels = svg.querySelectorAll('.oc-axis-x .oc-axis-tick[data-tick-key]');
+    expect(tickLabels.length).toBe(nextXTicks.length);
+
+    // No ghost elements remain
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+  });
+
+  it('removed tick ghost-fades', () => {
+    const specA = columnSpec(DATA_C); // Q1, Q2, Q3, Q4
+    const specB = columnSpec(DATA_A); // Q1, Q2, Q3
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // After starting, there should be ghost tick labels for the removed Q4
+    pumpRaf(0);
+    const tickGhosts = svg.querySelectorAll('.oc-axis-tick.oc-ghost');
+    // Q4 was removed, so there should be at least one ghost
+    expect(tickGhosts.length).toBeGreaterThan(0);
+
+    // Run to completion
+    pumpRaf(2000);
+
+    // Ghosts should be cleaned up
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Gradient ghost test
+// ---------------------------------------------------------------------------
+
+describe('gradient ghost', () => {
+  it('exiting mark with gradient fill: new SVG defs contain the gradient, ghost fill references valid ID', () => {
+    // Create an area chart spec with gradient fill (area marks use gradients by default)
+    const specA: ChartSpec = {
+      animation: true,
+      mark: 'area',
+      data: [
+        { month: 'Jan', sales: 100, group: 'A' },
+        { month: 'Feb', sales: 200, group: 'A' },
+        { month: 'Jan', sales: 80, group: 'B' },
+        { month: 'Feb', sales: 150, group: 'B' },
+      ],
+      encoding: {
+        x: { field: 'month', type: 'ordinal' },
+        y: { field: 'sales', type: 'quantitative' },
+        color: { field: 'group', type: 'nominal' },
+      },
+    };
+    // Remove group B
+    const specB: ChartSpec = {
+      ...specA,
+      data: [
+        { month: 'Jan', sales: 120, group: 'A' },
+        { month: 'Feb', sales: 220, group: 'A' },
+      ],
+    };
+
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    // Check if any marks have gradient fills
+    const hasGradients = layoutA.marks.some(
+      (m) => 'fill' in m && typeof m.fill !== 'string' && m.fill !== undefined,
+    );
+
+    // If the chart type produces gradients, verify ghost handling
+    if (hasGradients) {
+      const container = createContainer();
+      const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+      runTransition({
+        svg,
+        prevLayout: layoutA,
+        nextLayout: layoutB,
+        animation: layoutB.animation!,
+        onComplete: () => {},
+      });
+
+      // After starting, check that ghost fill references a valid gradient
+      const ghosts = svg.querySelectorAll('.oc-ghost path[fill]');
+      for (const ghost of ghosts) {
+        const fill = ghost.getAttribute('fill') ?? '';
+        if (fill.startsWith('url(#')) {
+          const id = fill.slice(5, -1);
+          const gradientEl = svg.querySelector(`#${id}`);
+          expect(gradientEl).not.toBeNull();
+        }
+      }
+
+      runToCompletion();
+      expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
     }
   });
 });

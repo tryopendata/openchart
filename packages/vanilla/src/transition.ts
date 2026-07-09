@@ -1,5 +1,7 @@
 /**
- * Data-update transition driver for bar/column, line, and area charts.
+ * Data-update transition driver for bar/column, line, area, scatter/dot,
+ * rule, tick, and text charts. Also transitions axis ticks, tick labels,
+ * and gridlines so the whole chart adjusts as one system.
  *
  * Matches marks across layout snapshots by `key`, then animates geometry
  * changes (position, size, path) using a single rAF loop. Enter/exit/update
@@ -9,7 +11,10 @@
  * For rect marks: tweens position/size directly.
  * For line/area marks: normalizes point arrays to equal length, interpolates
  * point positions per frame, and rebuilds SVG paths via d3 curve generators.
- * For point marks overlaid on lines: tweens cx/cy.
+ * For point marks (scatter/dot/line overlay): tweens cx/cy/r.
+ * For rule/tick marks: tweens line endpoints (x1/y1/x2/y2).
+ * For text marks: tweens x/y position.
+ * For axis ticks/gridlines: matches by value key and tweens positions.
  *
  * Ghost elements handle exits: cloned into the marks container, they
  * collapse + fade out then get removed. No CSS animations are used here
@@ -18,14 +23,21 @@
 
 import type {
   AreaMark,
+  AxisLayout,
   ChartLayout,
+  GradientDef,
   LineMark,
   Point,
   PointMark,
   RectMark,
   ResolvedAnimation,
+  RuleMarkLayout,
+  TextMarkLayout,
+  TickMarkLayout,
 } from '@opendata-ai/openchart-core';
-import { buildAreaPath, buildLinePath } from '@opendata-ai/openchart-engine';
+import { isGradientDef } from '@opendata-ai/openchart-core';
+import { buildAreaPath, buildLinePath, serializeKeyValue } from '@opendata-ai/openchart-engine';
+import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
 import { rectPathWithCorners, renderSingleMark } from './renderers/marks';
 
 // ---------------------------------------------------------------------------
@@ -52,7 +64,7 @@ function cubicOut(t: number): number {
 // ---------------------------------------------------------------------------
 
 /** Mark types that support data-update transitions. */
-const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area']);
+const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point', 'circle']);
 
 /**
  * Determine whether a data-update transition should run instead of
@@ -156,7 +168,13 @@ function hasGeometryChanged(prevLayout: ChartLayout, nextLayout: ChartLayout): b
     } else if (p.type === 'area' && n.type === 'area') {
       if (p.path !== n.path) return true;
     } else if (p.type === 'point' && n.type === 'point') {
-      if (p.cx !== n.cx || p.cy !== n.cy) return true;
+      if (p.cx !== n.cx || p.cy !== n.cy || p.r !== n.r) return true;
+    } else if (p.type === 'rule' && n.type === 'rule') {
+      if (p.x1 !== n.x1 || p.y1 !== n.y1 || p.x2 !== n.x2 || p.y2 !== n.y2) return true;
+    } else if (p.type === 'tick' && n.type === 'tick') {
+      if (p.x !== n.x || p.y !== n.y) return true;
+    } else if (p.type === 'textMark' && n.type === 'textMark') {
+      if (p.x !== n.x || p.y !== n.y) return true;
     }
   }
   return false;
@@ -226,6 +244,8 @@ interface PointTween {
   fromCy: number;
   toCx: number;
   toCy: number;
+  fromR?: number;
+  toR?: number;
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
@@ -233,7 +253,91 @@ interface PointTween {
   suppressedOpacity?: string;
 }
 
-type Tween = RectTween | LineTween | AreaTween | PointTween;
+interface RuleTween {
+  tweenType: 'rule';
+  kind: 'update' | 'enter' | 'exit';
+  el: SVGElement;
+  fromX1: number;
+  fromY1: number;
+  fromX2: number;
+  fromY2: number;
+  toX1: number;
+  toY1: number;
+  toX2: number;
+  toY2: number;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+interface TickTween {
+  tweenType: 'tick';
+  kind: 'update' | 'enter' | 'exit';
+  el: SVGElement;
+  fromX1: number;
+  fromY1: number;
+  fromX2: number;
+  fromY2: number;
+  toX1: number;
+  toY1: number;
+  toX2: number;
+  toY2: number;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+interface TextMarkTween {
+  tweenType: 'textMark';
+  kind: 'update' | 'enter' | 'exit';
+  el: SVGElement;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+interface AxisTickTween {
+  tweenType: 'axisTick';
+  kind: 'update' | 'enter' | 'exit';
+  el: SVGElement;
+  /** Position attribute name: 'x' for x-axis ticks, 'y' for y-axis ticks. */
+  posAttr: string;
+  fromPos: number;
+  toPos: number;
+  /** Whether to crossfade instead of slide (for rotated labels). */
+  crossfade: boolean;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+interface GridlineTween {
+  tweenType: 'gridline';
+  kind: 'update' | 'enter' | 'exit';
+  el: SVGElement;
+  /** Which attrs to tween: 'y' for horizontal gridlines, 'x' for vertical. */
+  orientation: 'x' | 'y';
+  fromPos: number;
+  toPos: number;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+type Tween =
+  | RectTween
+  | LineTween
+  | AreaTween
+  | PointTween
+  | RuleTween
+  | TickTween
+  | TextMarkTween
+  | AxisTickTween
+  | GridlineTween;
 
 // ---------------------------------------------------------------------------
 // Geometry helpers (rect)
@@ -635,6 +739,24 @@ export function runTransition(args: {
   const tweens: Tween[] = [];
   const ghosts: SVGElement[] = [];
 
+  // Fix gradient ghosts: ensure exiting marks with gradient fills have valid
+  // gradient defs in the new SVG. Build any missing gradients into <defs>.
+  const defs = svg.querySelector('defs') as SVGElement | null;
+  let ghostGradientMap = new Map<string, string>();
+  if (defs) {
+    // Collect gradient fills from exiting marks (marks in prev but not next)
+    const nextKeySet = new Set(nextLayout.marks.filter((m) => m.key).map((m) => m.key));
+    const exitingMarks = prevLayout.marks.filter(
+      (m) => m.key && !nextKeySet.has(m.key) && 'fill' in m,
+    );
+    const gradientMarks = exitingMarks.filter(
+      (m) => 'fill' in m && isGradientDef((m as { fill: unknown }).fill),
+    );
+    if (gradientMarks.length > 0) {
+      ghostGradientMap = buildGradientDefs(gradientMarks as Array<{ fill?: unknown }>, defs);
+    }
+  }
+
   // Determine what mark types we're dealing with
   const hasRects =
     prevLayout.marks.some((m) => m.type === 'rect') ||
@@ -648,19 +770,40 @@ export function runTransition(args: {
   const hasPoints =
     prevLayout.marks.some((m) => m.type === 'point') ||
     nextLayout.marks.some((m) => m.type === 'point');
+  const hasRules =
+    prevLayout.marks.some((m) => m.type === 'rule') ||
+    nextLayout.marks.some((m) => m.type === 'rule');
+  const hasTicks =
+    prevLayout.marks.some((m) => m.type === 'tick') ||
+    nextLayout.marks.some((m) => m.type === 'tick');
+  const hasTextMarks =
+    prevLayout.marks.some((m) => m.type === 'textMark') ||
+    nextLayout.marks.some((m) => m.type === 'textMark');
 
   if (hasRects) {
-    buildRectTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildRectTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, ghostGradientMap);
   }
   if (hasLines) {
     buildLineTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
   }
   if (hasAreas) {
-    buildAreaTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildAreaTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, ghostGradientMap);
   }
   if (hasPoints) {
-    buildPointTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+    buildPointTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, ghostGradientMap);
   }
+  if (hasRules) {
+    buildRuleTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+  }
+  if (hasTicks) {
+    buildTickTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+  }
+  if (hasTextMarks) {
+    buildTextMarkTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts);
+  }
+
+  // Axis tick/gridline transitions
+  buildAxisTweens(svg, prevLayout, nextLayout, tweens, ghosts);
 
   // Apply all from-states SYNCHRONOUSLY before scheduling the first rAF
   for (const tw of tweens) {
@@ -797,6 +940,52 @@ function applyTweenState(
       const cy = tw.fromCy + (tw.toCy - tw.fromCy) * eased;
       tw.el.setAttribute('cx', String(cx));
       tw.el.setAttribute('cy', String(cy));
+      if (tw.fromR !== undefined && tw.toR !== undefined) {
+        const r = tw.fromR + (tw.toR - tw.fromR) * eased;
+        tw.el.setAttribute('r', String(r));
+      }
+      break;
+    }
+    case 'rule':
+    case 'tick': {
+      const lineEl = tw.tweenType === 'rule' ? tw.el : tw.el.tagName === 'line' ? tw.el : tw.el;
+      lineEl.setAttribute('x1', String(tw.fromX1 + (tw.toX1 - tw.fromX1) * eased));
+      lineEl.setAttribute('y1', String(tw.fromY1 + (tw.toY1 - tw.fromY1) * eased));
+      lineEl.setAttribute('x2', String(tw.fromX2 + (tw.toX2 - tw.fromX2) * eased));
+      lineEl.setAttribute('y2', String(tw.fromY2 + (tw.toY2 - tw.fromY2) * eased));
+      break;
+    }
+    case 'textMark': {
+      const x = tw.fromX + (tw.toX - tw.fromX) * eased;
+      const y = tw.fromY + (tw.toY - tw.fromY) * eased;
+      tw.el.setAttribute('x', String(x));
+      tw.el.setAttribute('y', String(y));
+      break;
+    }
+    case 'axisTick': {
+      if (tw.crossfade) {
+        // Crossfade: only tween opacity, don't move
+        break;
+      }
+      const pos = tw.fromPos + (tw.toPos - tw.fromPos) * eased;
+      if (tw.posAttr === 'x') {
+        tw.el.setAttribute('x', String(pos));
+      } else {
+        tw.el.setAttribute('y', String(pos));
+      }
+      break;
+    }
+    case 'gridline': {
+      const pos = tw.fromPos + (tw.toPos - tw.fromPos) * eased;
+      if (tw.orientation === 'y') {
+        // Horizontal gridline: y1 and y2 share the same position
+        tw.el.setAttribute('y1', String(pos));
+        tw.el.setAttribute('y2', String(pos));
+      } else {
+        // Vertical gridline: x1 and x2 share the same position
+        tw.el.setAttribute('x1', String(pos));
+        tw.el.setAttribute('x2', String(pos));
+      }
       break;
     }
   }
@@ -822,6 +1011,38 @@ function snapTweenToFinal(tw: Tween): void {
     case 'point':
       tw.el.setAttribute('cx', String(tw.toCx));
       tw.el.setAttribute('cy', String(tw.toCy));
+      if (tw.toR !== undefined) {
+        tw.el.setAttribute('r', String(tw.toR));
+      }
+      break;
+    case 'rule':
+    case 'tick':
+      tw.el.setAttribute('x1', String(tw.toX1));
+      tw.el.setAttribute('y1', String(tw.toY1));
+      tw.el.setAttribute('x2', String(tw.toX2));
+      tw.el.setAttribute('y2', String(tw.toY2));
+      break;
+    case 'textMark':
+      tw.el.setAttribute('x', String(tw.toX));
+      tw.el.setAttribute('y', String(tw.toY));
+      break;
+    case 'axisTick':
+      if (!tw.crossfade) {
+        if (tw.posAttr === 'x') {
+          tw.el.setAttribute('x', String(tw.toPos));
+        } else {
+          tw.el.setAttribute('y', String(tw.toPos));
+        }
+      }
+      break;
+    case 'gridline':
+      if (tw.orientation === 'y') {
+        tw.el.setAttribute('y1', String(tw.toPos));
+        tw.el.setAttribute('y2', String(tw.toPos));
+      } else {
+        tw.el.setAttribute('x1', String(tw.toPos));
+        tw.el.setAttribute('x2', String(tw.toPos));
+      }
       break;
   }
 
@@ -836,6 +1057,24 @@ function snapTweenToFinal(tw: Tween): void {
 }
 
 // ---------------------------------------------------------------------------
+// Gradient ghost helper
+// ---------------------------------------------------------------------------
+
+/**
+ * For marks with gradient fills, resolve the gradient to a url(#id) reference
+ * using the ghost gradient map. This ensures ghosts reference valid gradient
+ * IDs in the new SVG's <defs>.
+ */
+function resolveGhostGradientFill<T extends { fill?: string | GradientDef }>(
+  mark: T,
+  ghostGradientMap: Map<string, string>,
+): T {
+  if (!mark.fill || typeof mark.fill === 'string' || ghostGradientMap.size === 0) return mark;
+  const resolved = resolveMarkFill(mark.fill, ghostGradientMap);
+  return { ...mark, fill: resolved };
+}
+
+// ---------------------------------------------------------------------------
 // Rect tween building (extracted from original runTransition)
 // ---------------------------------------------------------------------------
 
@@ -845,6 +1084,7 @@ function buildRectTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  ghostGradientMap: Map<string, string>,
 ): void {
   const prevRects = prevLayout.marks.filter((m): m is RectMark => m.type === 'rect');
   const nextRects = nextLayout.marks.filter((m): m is RectMark => m.type === 'rect');
@@ -900,7 +1140,9 @@ function buildRectTweens(
   // Exited
   for (const [key, prev] of prevByKey) {
     if (nextByKey.has(key)) continue;
-    const ghost = renderSingleMark(prev, 0);
+    // Resolve gradient fill for ghost if needed
+    const ghostMark = resolveGhostGradientFill(prev, ghostGradientMap);
+    const ghost = renderSingleMark(ghostMark, 0);
     if (!ghost) continue;
     ghost.classList.add('oc-ghost');
     ghost.setAttribute('aria-hidden', 'true');
@@ -1077,6 +1319,7 @@ function buildAreaTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  ghostGradientMap: Map<string, string>,
 ): void {
   const prevAreas = prevLayout.marks.filter((m): m is AreaMark => m.type === 'area');
   const nextAreas = nextLayout.marks.filter((m): m is AreaMark => m.type === 'area');
@@ -1226,7 +1469,8 @@ function buildAreaTweens(
   for (const [key, prev] of prevByKey) {
     if (nextByKey.has(key)) continue;
 
-    const ghost = renderSingleMark(prev, 0);
+    const ghostMark = resolveGhostGradientFill(prev, ghostGradientMap);
+    const ghost = renderSingleMark(ghostMark, 0);
     if (!ghost) continue;
     ghost.classList.add('oc-ghost');
     ghost.setAttribute('aria-hidden', 'true');
@@ -1255,7 +1499,7 @@ function buildAreaTweens(
 }
 
 // ---------------------------------------------------------------------------
-// Point tween building (overlaid circle marks on line/area charts)
+// Point tween building (scatter/dot/line overlay circle marks)
 // ---------------------------------------------------------------------------
 
 function buildPointTweens(
@@ -1264,6 +1508,7 @@ function buildPointTweens(
   marksContainer: SVGElement,
   tweens: Tween[],
   ghosts: SVGElement[],
+  ghostGradientMap: Map<string, string>,
 ): void {
   const prevPoints = prevLayout.marks.filter((m): m is PointMark => m.type === 'point');
   const nextPoints = nextLayout.marks.filter((m): m is PointMark => m.type === 'point');
@@ -1277,7 +1522,7 @@ function buildPointTweens(
     if (m.key) nextByKey.set(m.key, m);
   }
 
-  // Updated points: tween cx/cy
+  // Updated points: tween cx/cy/r
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
@@ -1299,6 +1544,8 @@ function buildPointTweens(
       fromCy: prev.cy,
       toCx: next.cx,
       toCy: next.cy,
+      fromR: prev.r !== next.r ? prev.r : undefined,
+      toR: prev.r !== next.r ? next.r : undefined,
       // Do NOT tween opacity for updated points - preserve renderer state
       suppressedOpacity: isSuppressed ? '0' : undefined,
     });
@@ -1334,7 +1581,8 @@ function buildPointTweens(
   for (const [key, prev] of prevByKey) {
     if (nextByKey.has(key)) continue;
 
-    const ghost = renderSingleMark(prev, 0);
+    const ghostMark = resolveGhostGradientFill(prev, ghostGradientMap);
+    const ghost = renderSingleMark(ghostMark, 0);
     if (!ghost) continue;
     ghost.classList.add('oc-ghost');
     ghost.setAttribute('aria-hidden', 'true');
@@ -1351,6 +1599,540 @@ function buildPointTweens(
       fromCy: prev.cy,
       toCx: prev.cx,
       toCy: prev.cy,
+      ghost,
+      fromOpacity: 1,
+      toOpacity: 0,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule tween building
+// ---------------------------------------------------------------------------
+
+function buildRuleTweens(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  marksContainer: SVGElement,
+  tweens: Tween[],
+  ghosts: SVGElement[],
+): void {
+  const prevRules = prevLayout.marks.filter((m): m is RuleMarkLayout => m.type === 'rule');
+  const nextRules = nextLayout.marks.filter((m): m is RuleMarkLayout => m.type === 'rule');
+
+  const prevByKey = new Map<string, RuleMarkLayout>();
+  for (const m of prevRules) {
+    if (m.key) prevByKey.set(m.key, m);
+  }
+  const nextByKey = new Map<string, RuleMarkLayout>();
+  for (const m of nextRules) {
+    if (m.key) nextByKey.set(m.key, m);
+  }
+
+  // Updated
+  for (const [key, next] of nextByKey) {
+    const prev = prevByKey.get(key);
+    if (!prev) continue;
+    const el = marksContainer.querySelector(
+      `.oc-mark-rule[data-key="${key}"]`,
+    ) as SVGElement | null;
+    if (!el) continue;
+    tweens.push({
+      tweenType: 'rule',
+      kind: 'update',
+      el,
+      fromX1: prev.x1,
+      fromY1: prev.y1,
+      fromX2: prev.x2,
+      fromY2: prev.y2,
+      toX1: next.x1,
+      toY1: next.y1,
+      toX2: next.x2,
+      toY2: next.y2,
+    });
+  }
+
+  // Entering
+  for (const [key, next] of nextByKey) {
+    if (prevByKey.has(key)) continue;
+    const el = marksContainer.querySelector(
+      `.oc-mark-rule[data-key="${key}"]`,
+    ) as SVGElement | null;
+    if (!el) continue;
+    tweens.push({
+      tweenType: 'rule',
+      kind: 'enter',
+      el,
+      fromX1: next.x1,
+      fromY1: next.y1,
+      fromX2: next.x2,
+      fromY2: next.y2,
+      toX1: next.x1,
+      toY1: next.y1,
+      toX2: next.x2,
+      toY2: next.y2,
+      fromOpacity: 0,
+      toOpacity: 1,
+    });
+  }
+
+  // Exiting
+  for (const [key, prev] of prevByKey) {
+    if (nextByKey.has(key)) continue;
+    const ghost = renderSingleMark(prev, 0);
+    if (!ghost) continue;
+    ghost.classList.add('oc-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('pointer-events', 'none');
+    ghost.removeAttribute('data-key');
+    marksContainer.appendChild(ghost);
+    ghosts.push(ghost);
+    tweens.push({
+      tweenType: 'rule',
+      kind: 'exit',
+      el: ghost,
+      fromX1: prev.x1,
+      fromY1: prev.y1,
+      fromX2: prev.x2,
+      fromY2: prev.y2,
+      toX1: prev.x1,
+      toY1: prev.y1,
+      toX2: prev.x2,
+      toY2: prev.y2,
+      ghost,
+      fromOpacity: 1,
+      toOpacity: 0,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tick tween building
+// ---------------------------------------------------------------------------
+
+function buildTickTweens(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  marksContainer: SVGElement,
+  tweens: Tween[],
+  ghosts: SVGElement[],
+): void {
+  const prevTicks = prevLayout.marks.filter((m): m is TickMarkLayout => m.type === 'tick');
+  const nextTicks = nextLayout.marks.filter((m): m is TickMarkLayout => m.type === 'tick');
+
+  const prevByKey = new Map<string, TickMarkLayout>();
+  for (const m of prevTicks) {
+    if (m.key) prevByKey.set(m.key, m);
+  }
+  const nextByKey = new Map<string, TickMarkLayout>();
+  for (const m of nextTicks) {
+    if (m.key) nextByKey.set(m.key, m);
+  }
+
+  function tickEndpoints(t: TickMarkLayout) {
+    const half = t.length / 2;
+    if (t.orient === 'vertical') {
+      return { x1: t.x, y1: t.y - half, x2: t.x, y2: t.y + half };
+    }
+    return { x1: t.x - half, y1: t.y, x2: t.x + half, y2: t.y };
+  }
+
+  // Updated
+  for (const [key, next] of nextByKey) {
+    const prev = prevByKey.get(key);
+    if (!prev) continue;
+    const el = marksContainer.querySelector(
+      `.oc-mark-tick[data-key="${key}"]`,
+    ) as SVGElement | null;
+    if (!el) continue;
+    const pEnd = tickEndpoints(prev);
+    const nEnd = tickEndpoints(next);
+    tweens.push({
+      tweenType: 'tick',
+      kind: 'update',
+      el,
+      fromX1: pEnd.x1,
+      fromY1: pEnd.y1,
+      fromX2: pEnd.x2,
+      fromY2: pEnd.y2,
+      toX1: nEnd.x1,
+      toY1: nEnd.y1,
+      toX2: nEnd.x2,
+      toY2: nEnd.y2,
+    });
+  }
+
+  // Entering
+  for (const [key, next] of nextByKey) {
+    if (prevByKey.has(key)) continue;
+    const el = marksContainer.querySelector(
+      `.oc-mark-tick[data-key="${key}"]`,
+    ) as SVGElement | null;
+    if (!el) continue;
+    const nEnd = tickEndpoints(next);
+    tweens.push({
+      tweenType: 'tick',
+      kind: 'enter',
+      el,
+      fromX1: nEnd.x1,
+      fromY1: nEnd.y1,
+      fromX2: nEnd.x2,
+      fromY2: nEnd.y2,
+      toX1: nEnd.x1,
+      toY1: nEnd.y1,
+      toX2: nEnd.x2,
+      toY2: nEnd.y2,
+      fromOpacity: 0,
+      toOpacity: 1,
+    });
+  }
+
+  // Exiting
+  for (const [key, prev] of prevByKey) {
+    if (nextByKey.has(key)) continue;
+    const ghost = renderSingleMark(prev, 0);
+    if (!ghost) continue;
+    ghost.classList.add('oc-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('pointer-events', 'none');
+    ghost.removeAttribute('data-key');
+    marksContainer.appendChild(ghost);
+    ghosts.push(ghost);
+    const pEnd = tickEndpoints(prev);
+    tweens.push({
+      tweenType: 'tick',
+      kind: 'exit',
+      el: ghost,
+      fromX1: pEnd.x1,
+      fromY1: pEnd.y1,
+      fromX2: pEnd.x2,
+      fromY2: pEnd.y2,
+      toX1: pEnd.x1,
+      toY1: pEnd.y1,
+      toX2: pEnd.x2,
+      toY2: pEnd.y2,
+      ghost,
+      fromOpacity: 1,
+      toOpacity: 0,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Text mark tween building
+// ---------------------------------------------------------------------------
+
+function buildTextMarkTweens(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  marksContainer: SVGElement,
+  tweens: Tween[],
+  ghosts: SVGElement[],
+): void {
+  const prevTexts = prevLayout.marks.filter((m): m is TextMarkLayout => m.type === 'textMark');
+  const nextTexts = nextLayout.marks.filter((m): m is TextMarkLayout => m.type === 'textMark');
+
+  const prevByKey = new Map<string, TextMarkLayout>();
+  for (const m of prevTexts) {
+    if (m.key) prevByKey.set(m.key, m);
+  }
+  const nextByKey = new Map<string, TextMarkLayout>();
+  for (const m of nextTexts) {
+    if (m.key) nextByKey.set(m.key, m);
+  }
+
+  // Updated
+  for (const [key, next] of nextByKey) {
+    const prev = prevByKey.get(key);
+    if (!prev) continue;
+    const el = marksContainer.querySelector(
+      `.oc-mark-text[data-key="${key}"]`,
+    ) as SVGElement | null;
+    if (!el) continue;
+    tweens.push({
+      tweenType: 'textMark',
+      kind: 'update',
+      el,
+      fromX: prev.x,
+      fromY: prev.y,
+      toX: next.x,
+      toY: next.y,
+    });
+  }
+
+  // Entering
+  for (const [key, next] of nextByKey) {
+    if (prevByKey.has(key)) continue;
+    const el = marksContainer.querySelector(
+      `.oc-mark-text[data-key="${key}"]`,
+    ) as SVGElement | null;
+    if (!el) continue;
+    tweens.push({
+      tweenType: 'textMark',
+      kind: 'enter',
+      el,
+      fromX: next.x,
+      fromY: next.y,
+      toX: next.x,
+      toY: next.y,
+      fromOpacity: 0,
+      toOpacity: 1,
+    });
+  }
+
+  // Exiting
+  for (const [key, prev] of prevByKey) {
+    if (nextByKey.has(key)) continue;
+    const ghost = renderSingleMark(prev, 0);
+    if (!ghost) continue;
+    ghost.classList.add('oc-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('pointer-events', 'none');
+    ghost.removeAttribute('data-key');
+    marksContainer.appendChild(ghost);
+    ghosts.push(ghost);
+    tweens.push({
+      tweenType: 'textMark',
+      kind: 'exit',
+      el: ghost,
+      fromX: prev.x,
+      fromY: prev.y,
+      toX: prev.x,
+      toY: prev.y,
+      ghost,
+      fromOpacity: 1,
+      toOpacity: 0,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Axis tick and gridline tween building
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tweens for axis tick labels and gridlines across both x and y axes.
+ * Matches ticks by `data-tick-key` (stamped at render time).
+ */
+function buildAxisTweens(
+  svg: SVGSVGElement,
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  tweens: Tween[],
+  ghosts: SVGElement[],
+): void {
+  // Process each axis orientation
+  buildSingleAxisTweens(svg, prevLayout.axes.x, nextLayout.axes.x, 'x', nextLayout, tweens, ghosts);
+  buildSingleAxisTweens(svg, prevLayout.axes.y, nextLayout.axes.y, 'y', nextLayout, tweens, ghosts);
+}
+
+function buildSingleAxisTweens(
+  svg: SVGSVGElement,
+  prevAxis: AxisLayout | undefined,
+  nextAxis: AxisLayout | undefined,
+  orientation: 'x' | 'y',
+  layout: ChartLayout,
+  tweens: Tween[],
+  ghosts: SVGElement[],
+): void {
+  if (!prevAxis || !nextAxis) return;
+
+  const axisClass = `oc-axis-${orientation}`;
+  const axisGroup = svg.querySelector(`.${axisClass}`) as SVGElement | null;
+  if (!axisGroup) return;
+
+  const isRotated = !!(nextAxis.tickAngle && Math.abs(nextAxis.tickAngle) > 10);
+
+  // Build tick value -> position maps from layouts (NOT from DOM)
+  const prevTickMap = new Map<string, number>();
+  for (const tick of prevAxis.ticks) {
+    prevTickMap.set(serializeKeyValue(tick.value), tick.position);
+  }
+  const nextTickMap = new Map<string, number>();
+  for (const tick of nextAxis.ticks) {
+    nextTickMap.set(serializeKeyValue(tick.value), tick.position);
+  }
+
+  // Position attribute: 'x' for x-axis tick labels, 'y' for y-axis tick labels
+  const posAttr = orientation === 'x' ? 'x' : 'y';
+
+  // Tick labels
+  const tickLabels = axisGroup.querySelectorAll('.oc-axis-tick[data-tick-key]');
+  const matchedNextKeys = new Set<string>();
+
+  for (const labelEl of tickLabels) {
+    const key = labelEl.getAttribute('data-tick-key');
+    if (!key) continue;
+
+    const nextPos = nextTickMap.get(key);
+    const prevPos = prevTickMap.get(key);
+
+    if (prevPos !== undefined && nextPos !== undefined) {
+      // Updated tick: slide to new position
+      matchedNextKeys.add(key);
+      tweens.push({
+        tweenType: 'axisTick',
+        kind: 'update',
+        el: labelEl as SVGElement,
+        posAttr,
+        fromPos: prevPos,
+        toPos: nextPos,
+        crossfade: isRotated,
+      });
+    } else if (prevPos === undefined && nextPos !== undefined) {
+      // Entering tick: fade in
+      matchedNextKeys.add(key);
+      tweens.push({
+        tweenType: 'axisTick',
+        kind: 'enter',
+        el: labelEl as SVGElement,
+        posAttr,
+        fromPos: nextPos,
+        toPos: nextPos,
+        crossfade: false,
+        fromOpacity: 0,
+        toOpacity: 1,
+      });
+    }
+    // Exiting ticks are handled below (they won't be in the new SVG's DOM,
+    // so we clone from the prev state)
+  }
+
+  // Exiting tick labels: create ghost elements
+  for (const [key, prevPos] of prevTickMap) {
+    if (nextTickMap.has(key)) continue;
+    // Find the tick label in the rendered SVG by data-tick-key
+    // It won't be there since the SVG was already re-rendered from nextLayout,
+    // so we need to create a ghost text element
+    const prevTick = prevAxis.ticks.find((t) => serializeKeyValue(t.value) === key);
+    if (!prevTick) continue;
+
+    const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    ghost.setAttribute('class', 'oc-axis-tick oc-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('pointer-events', 'none');
+    ghost.textContent = prevTick.label;
+    // Copy positioning from prevAxis ticks
+    if (orientation === 'x') {
+      ghost.setAttribute('x', String(prevPos));
+      // Approximate the y position (it was already computed in the prev render)
+      ghost.setAttribute('text-anchor', 'middle');
+    } else {
+      ghost.setAttribute('y', String(prevPos));
+      ghost.setAttribute('text-anchor', 'end');
+      ghost.setAttribute('dominant-baseline', 'central');
+    }
+    axisGroup.appendChild(ghost);
+    ghosts.push(ghost);
+
+    tweens.push({
+      tweenType: 'axisTick',
+      kind: 'exit',
+      el: ghost,
+      posAttr,
+      fromPos: prevPos,
+      toPos: prevPos,
+      crossfade: false,
+      ghost,
+      fromOpacity: 1,
+      toOpacity: 0,
+    });
+  }
+
+  // Gridlines
+  const prevGridMap = new Map<string, number>();
+  for (const gridline of prevAxis.gridlines) {
+    // Gridlines share positions with their axis ticks
+    prevGridMap.set(String(gridline.position), gridline.position);
+  }
+  // Build a value->position map for gridlines by matching tick values
+  const prevGridByValue = new Map<string, number>();
+  for (const tick of prevAxis.ticks) {
+    const key = serializeKeyValue(tick.value);
+    // Find matching gridline at same position
+    const matchingGridline = prevAxis.gridlines.find((g) => g.position === tick.position);
+    if (matchingGridline) {
+      prevGridByValue.set(key, matchingGridline.position);
+    }
+  }
+  const nextGridByValue = new Map<string, number>();
+  for (const tick of nextAxis.ticks) {
+    const key = serializeKeyValue(tick.value);
+    const matchingGridline = nextAxis.gridlines.find((g) => g.position === tick.position);
+    if (matchingGridline) {
+      nextGridByValue.set(key, matchingGridline.position);
+    }
+  }
+
+  const gridlines = axisGroup.querySelectorAll('.oc-gridline[data-tick-key]');
+  const matchedGridKeys = new Set<string>();
+
+  for (const glEl of gridlines) {
+    const key = glEl.getAttribute('data-tick-key');
+    if (!key) continue;
+
+    const nextPos = nextGridByValue.get(key);
+    const prevPos = prevGridByValue.get(key);
+
+    if (prevPos !== undefined && nextPos !== undefined) {
+      matchedGridKeys.add(key);
+      tweens.push({
+        tweenType: 'gridline',
+        kind: 'update',
+        el: glEl as SVGElement,
+        orientation,
+        fromPos: prevPos,
+        toPos: nextPos,
+      });
+    } else if (prevPos === undefined && nextPos !== undefined) {
+      matchedGridKeys.add(key);
+      tweens.push({
+        tweenType: 'gridline',
+        kind: 'enter',
+        el: glEl as SVGElement,
+        orientation,
+        fromPos: nextPos,
+        toPos: nextPos,
+        fromOpacity: 0,
+        toOpacity: 1,
+      });
+    }
+  }
+
+  // Exiting gridlines
+  for (const [key, prevPos] of prevGridByValue) {
+    if (nextGridByValue.has(key)) continue;
+
+    const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ghost.setAttribute('class', 'oc-gridline oc-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('pointer-events', 'none');
+    if (orientation === 'y') {
+      // Horizontal gridline at y=prevPos
+      const area = layout.area;
+      ghost.setAttribute('x1', String(area.x));
+      ghost.setAttribute('y1', String(prevPos));
+      ghost.setAttribute('x2', String(area.x + area.width));
+      ghost.setAttribute('y2', String(prevPos));
+    } else {
+      // Vertical gridline at x=prevPos
+      const area = layout.area;
+      ghost.setAttribute('x1', String(prevPos));
+      ghost.setAttribute('y1', String(area.y));
+      ghost.setAttribute('x2', String(prevPos));
+      ghost.setAttribute('y2', String(area.y + area.height));
+    }
+    ghost.setAttribute('stroke-opacity', '0.6');
+    axisGroup.appendChild(ghost);
+    ghosts.push(ghost);
+
+    tweens.push({
+      tweenType: 'gridline',
+      kind: 'exit',
+      el: ghost,
+      orientation,
+      fromPos: prevPos,
+      toPos: prevPos,
       ghost,
       fromOpacity: 1,
       toOpacity: 0,
