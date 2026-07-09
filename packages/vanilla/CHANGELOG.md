@@ -1,5 +1,27 @@
 # Changelog
 
+## [7.7.0](https://github.com/tryopendata/openchart/compare/core-v7.6.1...core-v7.7.0) (2026-07-09)
+
+
+### Features
+
+* add categorical color encoding support ([83f28d6](https://github.com/tryopendata/openchart/commit/83f28d6))
+* SSR/static rendering — renderStaticSVG for server-side SVG generation ([4dd79f2](https://github.com/tryopendata/openchart/commit/4dd79f2))
+* responsive auto-thinning for annotations and endpoint labels ([7ea2226](https://github.com/tryopendata/openchart/commit/7ea2226))
+* theming design tokens — TokenValue, widened ThemeConfig, seriesStrategy, CSS custom props, presets (#94) ([316428c](https://github.com/tryopendata/openchart/commit/316428c))
+* add encoding.facet for small-multiples / faceted charts (#93) ([fac6188](https://github.com/tryopendata/openchart/commit/fac6188))
+* add encoding.color.highlight for editorial emphasis (#92) ([69e5dc1](https://github.com/tryopendata/openchart/commit/69e5dc1))
+* direct labeling gaps — redundancy rule, series cutoff, both-ends labels (#91) ([eba8b90](https://github.com/tryopendata/openchart/commit/eba8b90))
+
+
+### Bug Fixes
+
+* address code review findings ([f4a01b7](https://github.com/tryopendata/openchart/commit/f4a01b7))
+* address code review — missing CSS rules, reentrance guard, caching ([a628717](https://github.com/tryopendata/openchart/commit/a628717))
+* use CSS custom properties in static SVG style block for theme overridability ([fbca86c](https://github.com/tryopendata/openchart/commit/fbca86c))
+* address code review findings for static rendering ([de6454a](https://github.com/tryopendata/openchart/commit/de6454a))
+* editorial defaults audit — tabular-nums, domain line, scatter gridlines (#90) ([769e927](https://github.com/tryopendata/openchart/commit/769e927))
+
 ## Unreleased
 
 ### Added
