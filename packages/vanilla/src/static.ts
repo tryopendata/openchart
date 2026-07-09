@@ -8,12 +8,14 @@ import type {
   LayerSpec,
   ResolvedTheme,
   ThemeConfig,
+  TileMapSpec,
 } from '@opendata-ai/openchart-core';
-import { adaptForLightLineStroke, isLayerSpec } from '@opendata-ai/openchart-core';
-import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
+import { adaptForLightLineStroke, isLayerSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
+import { compileChart, compileLayer, compileTileMap } from '@opendata-ai/openchart-engine';
 import { SVG_NS } from './renderers/svg-dom';
 import { resetSvgIdCounter } from './svg-ids';
 import { renderChartSVG } from './svg-renderer';
+import { renderTileMapSVG } from './tilemap-renderer';
 
 const esmRequire = createRequire(import.meta.url);
 
@@ -142,7 +144,7 @@ function stripInteractiveElements(svg: Element): void {
  * as no code schedules microtasks that outlive the call.
  */
 export function renderStaticSVG(
-  spec: ChartSpec | LayerSpec,
+  spec: ChartSpec | LayerSpec | TileMapSpec,
   options?: StaticRenderOptions,
 ): string {
   if (rendering) {
@@ -174,36 +176,44 @@ export function renderStaticSVG(
       watermark: options?.watermark,
     };
 
-    let layout: ChartLayout;
-    if (isLayerSpec(spec)) {
-      layout = compileLayer(spec, compileOpts);
+    let svg: SVGElement;
+    let themeForStyle: ResolvedTheme;
+
+    if (isTileMapSpec(spec)) {
+      const tileMapLayout = compileTileMap(spec, compileOpts);
+      svg = renderTileMapSVG(tileMapLayout, { animate: false });
+      themeForStyle = tileMapLayout.theme;
     } else {
-      layout = compileChart(spec, compileOpts);
+      let layout: ChartLayout;
+      if (isLayerSpec(spec)) {
+        layout = compileLayer(spec, compileOpts);
+      } else {
+        layout = compileChart(spec, compileOpts);
+      }
+
+      const container = win.document.createElement('div');
+      Object.defineProperty(container, 'getBoundingClientRect', {
+        value: () => ({
+          width,
+          height,
+          top: 0,
+          left: 0,
+          right: width,
+          bottom: height,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }),
+      });
+
+      svg = renderChartSVG(layout, container as unknown as HTMLElement, {
+        animate: false,
+        crosshair: false,
+      });
+
+      stripInteractiveElements(svg);
+      themeForStyle = layout.theme;
     }
-
-    const container = win.document.createElement('div');
-    Object.defineProperty(container, 'getBoundingClientRect', {
-      value: () => ({
-        width,
-        height,
-        top: 0,
-        left: 0,
-        right: width,
-        bottom: height,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }),
-    });
-
-    // renderChartSVG appends to container; the container and SVG are owned by
-    // the happy-dom Window which is closed in the finally block.
-    const svg = renderChartSVG(layout, container as unknown as HTMLElement, {
-      animate: false,
-      crosshair: false,
-    });
-
-    stripInteractiveElements(svg);
 
     const doc = win.document as unknown as Document;
     let defs = svg.querySelector('defs');
@@ -212,7 +222,7 @@ export function renderStaticSVG(
       svg.insertBefore(defs as unknown as Node, svg.firstChild);
     }
     const styleEl = doc.createElementNS(SVG_NS, 'style');
-    styleEl.textContent = buildThemeStyleBlock(layout.theme);
+    styleEl.textContent = buildThemeStyleBlock(themeForStyle);
     defs.insertBefore(styleEl as unknown as Node, defs.firstChild);
 
     const serializer = new (

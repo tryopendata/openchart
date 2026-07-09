@@ -967,7 +967,7 @@ function compileFaceted(
 
     // Compute scales for this panel's area
     const panelScales = computeScales(panelSpecWithDomains, gridPanel.area, panelData);
-    applyColorScaleRange(panelScales, panelSpecWithDomains.encoding, theme);
+    applyColorScaleRange(panelScales, panelSpecWithDomains.encoding, theme, renderSpec.highlight);
     panelScales.defaultColor =
       chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
 

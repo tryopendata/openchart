@@ -13,6 +13,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { textAscent } from '@opendata-ai/openchart-core';
 import { renderLegend } from './renderers/legend';
+import { nextSvgId } from './svg-ids';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -22,8 +23,6 @@ const EASE_VAR_MAP: Record<string, string> = {
   smooth: 'var(--oc-ease-smooth)',
   snappy: 'var(--oc-ease-snappy)',
 };
-
-let gradientIdCounter = 0;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -322,7 +321,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
     parent.insertBefore(defs, parent.firstChild);
   }
 
-  const gradientId = `oc-tilemap-legend-gradient-${gradientIdCounter++}`;
+  const gradientId = nextSvgId('oc-tilemap-legend-gradient');
   const grad = createSVGElement('linearGradient');
   grad.id = gradientId;
   grad.setAttribute('x1', '0%');

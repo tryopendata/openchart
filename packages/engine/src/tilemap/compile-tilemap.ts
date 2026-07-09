@@ -38,6 +38,7 @@ import {
   computeChrome,
   estimateTextWidth,
   formatNumber,
+  pickLabelColor,
   resolveTheme,
   SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
@@ -226,6 +227,7 @@ function compileQuantitative(
         formattedValue,
         hasData,
         theme,
+        isDarkMode: !!isDarkMode,
       }),
     );
   }
@@ -397,6 +399,7 @@ function compileCategorical(
         formattedValue,
         hasData,
         theme,
+        isDarkMode: !!isDarkMode,
         category: hasData ? category : undefined,
       }),
     );
@@ -488,6 +491,7 @@ interface TileMarkOptions {
   formattedValue: string;
   hasData: boolean;
   theme: ResolvedTheme;
+  isDarkMode: boolean;
   category?: string | null;
 }
 
@@ -505,16 +509,20 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
     formattedValue,
     hasData,
     theme,
+    isDarkMode,
     category,
   } = opts;
   const tileCenterX = gridOffsetX + pos.x + tileSize / 2;
   const tileTopY = gridOffsetY + pos.y;
 
+  const textColor = hasData ? pickLabelColor(fill, isDarkMode) : '#ffffff';
+  const isLightText = textColor === '#ffffff';
+
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: tileSize > 24 ? 10 : 7,
     fontWeight: 700,
-    fill: '#ffffff',
+    fill: textColor,
     lineHeight: 1.2,
   };
 
@@ -522,7 +530,7 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
     fontFamily: theme.fonts.family,
     fontSize: tileSize > 24 ? 10 : 7,
     fontWeight: 300,
-    fill: 'rgba(255,255,255,0.6)',
+    fill: isLightText ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
     lineHeight: 1.2,
   };
 
