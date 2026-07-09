@@ -1,5 +1,13 @@
 # Changelog
 
+## [7.9.1](https://github.com/tryopendata/openchart/compare/core-v7.9.0...core-v7.9.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* less aggressive x-axis thinning and tighter inline y-title on mobile (#97) ([1087924](https://github.com/tryopendata/openchart/commit/1087924))
+* tilemap readability on small/mobile widths (#96) ([fc95777](https://github.com/tryopendata/openchart/commit/fc95777))
+
 ## [7.9.0](https://github.com/tryopendata/openchart/compare/core-v7.8.0...core-v7.9.0) (2026-07-09)
 
 
