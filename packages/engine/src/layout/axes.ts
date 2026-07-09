@@ -365,12 +365,18 @@ function thinBandTicksIfNeeded(
   // wide final label (long category name) projects across several bands at an
   // angle, so clear every kept label its footprint overlaps, not just the
   // nearest one — otherwise an earlier kept label still overlaps the endpoint.
+  //
+  // Use true pixel overlap here (no minGap comfort buffer) so a neighbor that
+  // merely falls a few pixels short of the comfort gap — but does not actually
+  // touch the endpoint label — is kept rather than sacrificed. Dropping a
+  // readable short label to seat a near-miss wide endpoint reads as arbitrary
+  // (e.g. losing "2025" beside "2026 (to wk 17)" that clears it by 2px).
   const lastIdx = ticks.length - 1;
   if (!keep[lastIdx]) {
     keep[lastIdx] = true;
     for (let i = lastIdx - 1; i > 0; i--) {
       if (!keep[i]) continue;
-      if (spans[i].right + minGap > spans[lastIdx].left) {
+      if (spans[i].right > spans[lastIdx].left) {
         keep[i] = false;
         continue;
       }
@@ -735,7 +741,17 @@ export function computeAxes(
         );
         return Math.max(max, w);
       }, 0);
-      const titleOff = axisTitleOffset(maxTickLabelWidth, result.y.labelStyle.fontSize, totalWidth);
+      // Inline y-ticks live inside the plot (no left gutter), so the title
+      // clears only the chart edge — pass the inline flag so the offset drops
+      // the tick-label width and the viewport floor. Omitting it reserved a
+      // gutter-sized offset that pushed the rotated title off the left edge of
+      // the container on narrow/large-font charts.
+      const titleOff = axisTitleOffset(
+        maxTickLabelWidth,
+        result.y.labelStyle.fontSize,
+        totalWidth,
+        result.y.tickPosition === 'inline',
+      );
       result.y.titlePosition = {
         x: chartArea.x - titleOff,
         y: chartArea.y + chartArea.height / 2,

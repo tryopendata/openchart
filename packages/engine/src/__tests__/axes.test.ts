@@ -525,6 +525,38 @@ describe('text-aware tick density', () => {
     expect(wideAxes.x!.ticks.length).toBe(categories.length);
   });
 
+  it('keeps a short neighbor that a wide final label only barely reaches', () => {
+    // Regression (mobile): with a short label whose footprint clears the wide
+    // final label by a couple pixels — less than the comfort minGap but with no
+    // real overlap — the last-label protection must NOT drop it. At the phone
+    // width where "2026 (to wk 17)" sits ~2px from "2025", dropping "2025" to
+    // seat the wide endpoint reads as arbitrary. The protection pass keys on
+    // true pixel overlap, not the comfort gap, so "2025" survives.
+    const categories = ['2022', '2023', '2024', '2025', '2026 (to wk 17)'];
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: [122, 47, 266, 2000, 1600][i] })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+
+    // Uses default (real) text measurement. At 300px the band centers sit ~56px
+    // apart; the year labels project to ~17px at -45° and the wide label to
+    // ~54px, leaving "2025" and "2026 (to wk 17)" ~2px apart — a near miss.
+    const area = { x: 60, y: 50, width: 300, height: 300 };
+    const scales = computeScales(barSpec, area, barSpec.data);
+    const axes = computeAxes(scales, area, fullStrategy, theme);
+    expect(axes.x!.tickAngle).toBe(-45);
+    const kept = axes.x!.ticks.map((t) => t.label);
+    expect(kept).toContain('2025');
+    expect(kept).toContain('2026 (to wk 17)');
+    expect(kept.length).toBe(categories.length);
+  });
+
   it('drops every neighbor a very wide final label overlaps, not just the nearest', () => {
     // A final category long enough to project across several bands at -45° must
     // clear ALL kept labels its footprint overlaps. The last-label protection

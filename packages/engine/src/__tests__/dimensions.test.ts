@@ -829,4 +829,45 @@ describe('bottom legend placement (defect-3 regression)', () => {
       );
     });
   });
+
+  it('keeps the inline y-axis title inside the container on narrow, large-font charts', () => {
+    // Regression (mobile): the inline y-tick fix reserved a narrow left margin,
+    // but computeAxes still positioned the rotated y-title with the GUTTER
+    // offset (tick-label width + viewport floor). On a phone at deck-scale
+    // fonts that pushed the title's rotation center to x ≈ -1, clipping the
+    // whole title off the left edge. The title offset now honors the inline
+    // flag, so titlePosition.x stays a comfortable distance inside x = 0.
+    const spec = {
+      mark: { type: 'line' as const, point: true },
+      data: [
+        { year: '2009-10', pct: 94.2 },
+        { year: '2015-16', pct: 93.8 },
+        { year: '2020-21', pct: 95.0 },
+      ],
+      encoding: {
+        x: { field: 'year', type: 'ordinal' as const },
+        y: {
+          field: 'pct',
+          type: 'quantitative' as const,
+          axis: { title: 'Kindergartners with 2-dose MMR', grid: true, format: '.0f' },
+          scale: { domain: [90, 96], nice: false },
+        },
+      },
+      theme: { fonts: { sizes: { body: 21, axisTick: 18 } } },
+      chrome: { title: 'T', subtitle: 'S', source: 'Src' },
+    };
+
+    for (const width of [320, 360, 390]) {
+      const layout = compileChart(spec, { width, height: 600 });
+      const yAxis = layout.axes.y;
+      expect(yAxis?.tickPosition).toBe('inline');
+      const title = yAxis?.titlePosition;
+      expect(title).toBeDefined();
+      // The title is rotated -90° anchored middle; its glyph box straddles the
+      // rotation center by ~half the title font. The left edge must stay on the
+      // canvas (x >= 0). Assert the rotation center clears half a glyph.
+      const halfGlyph = Math.ceil(layout.theme.fonts.sizes.body / 2);
+      expect(title!.x - halfGlyph).toBeGreaterThanOrEqual(0);
+    }
+  });
 });
