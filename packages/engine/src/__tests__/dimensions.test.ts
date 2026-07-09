@@ -162,7 +162,65 @@ describe('computeDimensions', () => {
     expect(dimsWithTitle.margins.left - dimsWithoutTitle.margins.left).toBeGreaterThanOrEqual(11);
   });
 
-  it('y-axis title margin scales with tick label width', () => {
+  it('y-axis title margin scales with tick label width (gutter ticks)', () => {
+    // Bar chart: y-tick labels sit in a left gutter, so the title must clear
+    // them. Wider tick labels ("2,000,000" vs "9") push the title further out.
+    const barBase: NormalizedChartSpec = {
+      ...baseSpec,
+      markType: 'bar',
+      markDef: { type: 'bar' },
+    };
+    const smallValues: NormalizedChartSpec = {
+      ...barBase,
+      data: [
+        { cat: 'a', value: 5 },
+        { cat: 'b', value: 9 },
+      ],
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative', axis: { title: 'Count' } },
+      },
+    };
+    const largeValues: NormalizedChartSpec = {
+      ...barBase,
+      data: [
+        { cat: 'a', value: 1_500_000 },
+        { cat: 'b', value: 2_000_000 },
+      ],
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: {
+          field: 'value',
+          type: 'quantitative',
+          axis: { title: 'Revenue ($)', format: ',.0f' },
+        },
+      },
+    };
+
+    const dimsSmall = computeDimensions(
+      smallValues,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const dimsLarge = computeDimensions(
+      largeValues,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // Explicit format ",.0f" on large values produces "2,000,000" tick labels
+    // that are much wider than the abbreviated "0.0" from small values,
+    // so the y-axis title margin should grow to keep clearance
+    expect(dimsLarge.margins.left).toBeGreaterThan(dimsSmall.margins.left);
+  });
+
+  it('y-axis title margin ignores tick label width for inline ticks (line)', () => {
+    // Line chart with continuous y: tick labels render inline (above their
+    // gridline inside the plot), not in a left gutter. The title only needs to
+    // clear the chart edge, so wide tick values must NOT inflate the margin —
+    // that dead padding is the exact bug this guards against.
     const smallValues: NormalizedChartSpec = {
       ...baseSpec,
       data: [
@@ -203,10 +261,63 @@ describe('computeDimensions', () => {
       lightTheme,
     );
 
-    // Explicit format ",.0f" on large values produces "2,000,000" tick labels
-    // that are much wider than the abbreviated "0.0" from small values,
-    // so the y-axis title margin should grow to keep clearance
-    expect(dimsLarge.margins.left).toBeGreaterThan(dimsSmall.margins.left);
+    expect(dimsLarge.margins.left).toBe(dimsSmall.margins.left);
+  });
+
+  it('reserves gutter margin when an explicit band scale forces gutter ticks (line)', () => {
+    // A line chart's y-tick position is decided by the RESOLVED scale type, not
+    // the field type. An explicit `scale.type: 'band'` on a quantitative field
+    // resolves to a categorical (gutter) axis, so computeAxes draws a gutter
+    // title. The margin reservation must agree — reserving the inline (narrow)
+    // margin here would let the title collide with the gutter tick labels.
+    const bandScaleLine: NormalizedChartSpec = {
+      ...baseSpec,
+      data: [
+        { date: '2020-01-01', value: 1_500_000 },
+        { date: '2021-01-01', value: 2_000_000 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: {
+          field: 'value',
+          type: 'quantitative',
+          scale: { type: 'band' },
+          axis: { title: 'Revenue ($)', format: ',.0f' },
+        },
+      },
+    };
+    const inlineLine: NormalizedChartSpec = {
+      ...baseSpec,
+      data: [
+        { date: '2020-01-01', value: 1_500_000 },
+        { date: '2021-01-01', value: 2_000_000 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: {
+          field: 'value',
+          type: 'quantitative',
+          axis: { title: 'Revenue ($)', format: ',.0f' },
+        },
+      },
+    };
+
+    const bandDims = computeDimensions(
+      bandScaleLine,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    const inlineDims = computeDimensions(
+      inlineLine,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+
+    // The gutter (band-scale) reservation includes the wide tick-label width, so
+    // it must exceed the inline reservation that omits it.
+    expect(bandDims.margins.left).toBeGreaterThan(inlineDims.margins.left);
   });
 
   it('applies dark mode theme adaptation', () => {

@@ -482,6 +482,82 @@ describe('text-aware tick density', () => {
     expect(axes.x!.ticks.length).toBe(categories.length);
   });
 
+  it('keeps narrow band labels when one label is much wider (no global decimation)', () => {
+    // Regression: 5 rotated year labels where "2026 (to wk 17)" is much wider
+    // than the others. The old every-other thinning dropped BOTH "2023" and
+    // "2025" even though the narrow labels had ample room — a single wide label
+    // forced global decimation. Greedy per-label retention keeps the narrow
+    // ones; only the neighbor immediately crowded by the wide final label drops.
+    const categories = ['2022', '2023', '2024', '2025', '2026 (to wk 17)'];
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+
+    // measureText reports the wide label as genuinely wide and the year labels
+    // as narrow, matching real glyph metrics.
+    const measure = (text: string) => ({
+      width: text.length * 8,
+      height: 12,
+    });
+
+    // Narrow area (280px) forces -45° rotation. The middle narrow labels survive
+    // — old every-other thinning would have dropped 2023 too.
+    const narrowArea = { x: 50, y: 50, width: 280, height: 300 };
+    const narrowScales = computeScales(barSpec, narrowArea, barSpec.data);
+    const narrowAxes = computeAxes(narrowScales, narrowArea, fullStrategy, theme, measure);
+    const narrowKept = narrowAxes.x!.ticks.map((t) => t.label);
+    expect(narrowAxes.x!.tickAngle).toBe(-45);
+    expect(narrowKept).toContain('2023');
+    expect(narrowKept).toContain('2024');
+    expect(narrowKept).toContain('2026 (to wk 17)');
+
+    // Wider area (500px) has room for every label — none are thinned.
+    const wideArea = { x: 50, y: 50, width: 500, height: 300 };
+    const wideScales = computeScales(barSpec, wideArea, barSpec.data);
+    const wideAxes = computeAxes(wideScales, wideArea, fullStrategy, theme, measure);
+    expect(wideAxes.x!.ticks.length).toBe(categories.length);
+  });
+
+  it('drops every neighbor a very wide final label overlaps, not just the nearest', () => {
+    // A final category long enough to project across several bands at -45° must
+    // clear ALL kept labels its footprint overlaps. The last-label protection
+    // pass drops each colliding neighbor, not only the immediate one — otherwise
+    // an earlier kept label still overlaps the forced final label.
+    const categories = ['A', 'B', 'C', 'D', 'This Is A Very Long Final Category Name'];
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+    const measure = (text: string) => ({ width: text.length * 8, height: 12 });
+    const narrowArea = { x: 50, y: 50, width: 260, height: 300 };
+    const scales = computeScales(barSpec, narrowArea, barSpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme, measure);
+    expect(axes.x!.tickAngle).toBe(-45);
+
+    const kept = axes.x!.ticks.map((t) => t.label);
+    // The forced final label is always retained.
+    expect(kept).toContain('This Is A Very Long Final Category Name');
+    // Every middle label the wide final label's footprint overlaps is dropped —
+    // not just the nearest one. Before the fix, "B" and "C" would survive and
+    // overlap the final label; only "D" (the immediate neighbor) was dropped.
+    expect(kept).not.toContain('B');
+    expect(kept).not.toContain('C');
+    expect(kept).not.toContain('D');
+  });
+
   it('y-axis gridlines match ticks so every gridline has a label', () => {
     // Force thinning by using a measureText that reports wide labels
     const wideMeasure = () => ({ width: 200, height: 12 });

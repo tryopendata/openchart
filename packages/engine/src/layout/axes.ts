@@ -43,6 +43,59 @@ import type { ResolvedScales } from './scales';
 // them from './layout/axes'.
 export { thinTicksUntilFit, ticksOverlap } from './axes/thinning';
 
+/** Scale types that render as a categorical (non-continuous) y-axis. */
+const CATEGORICAL_SCALE_TYPES = new Set(['band', 'point', 'ordinal']);
+
+/**
+ * Whether the y-axis renders tick labels inline (above their gridline inside
+ * the plot) rather than in a left gutter.
+ *
+ * This is the single source of truth shared by margin reservation (plan.ts,
+ * dimensions.ts) and the renderer's title placement. All three must agree or
+ * the reserved left margin won't match where the title is drawn.
+ *
+ * Editorial line/area charts with a continuous y-axis default to inline ticks.
+ * Continuity is decided by the RESOLVED scale type, not the field type: an
+ * explicit `scale.type` override (e.g. a band scale forced onto a quantitative
+ * field) wins, mirroring buildPositionalScale() in scales.ts. Right-side
+ * (dual-axis) y-axes always use the gutter. An explicit axis.tickPosition wins
+ * over the default.
+ */
+export function yTickPositionIsInline(
+  yChannel:
+    | {
+        type?: string;
+        scale?: { type?: string };
+        axis?: unknown;
+      }
+    | undefined,
+  markType: string,
+  /**
+   * Resolved continuity of the y-scale, when the caller already has the built
+   * scale (computeAxes). When omitted, continuity is inferred from the encoding
+   * (explicit scale.type override, else field type) so the reservation paths
+   * predict the same answer computeAxes will produce.
+   */
+  resolvedContinuous?: boolean,
+): boolean {
+  if (!yChannel) return false;
+  const axisCfg = (yChannel.axis as Record<string, unknown> | undefined) ?? undefined;
+  const explicit = axisCfg?.tickPosition as 'inline' | 'gutter' | undefined;
+  if (explicit) return explicit === 'inline';
+
+  const isLineOrArea = markType === 'line' || markType === 'area';
+  if (!isLineOrArea) return false;
+  if ((axisCfg?.orient as string | undefined) === 'right') return false;
+
+  if (resolvedContinuous !== undefined) return resolvedContinuous;
+
+  // Predict the resolved scale type: explicit override wins, else field type.
+  const explicitScaleType = yChannel.scale?.type;
+  return explicitScaleType
+    ? !CATEGORICAL_SCALE_TYPES.has(explicitScaleType)
+    : yChannel.type === 'quantitative' || yChannel.type === 'temporal';
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -242,36 +295,46 @@ function fitContinuousTicks(
 }
 
 /**
- * Check whether band-scale tick labels overlap at a given rotation angle,
- * using position-based detection. Rotated labels extend diagonally past
- * their band boundaries without colliding, so we check actual footprint
- * along the axis rather than comparing against bandwidth.
+ * Horizontal footprint `[left, right]` of a rotated band tick label, in axis
+ * pixels. Rotated labels are anchored at the tick position (the rotation
+ * pivot), not centered on it: at a negative angle the renderer right-anchors
+ * the text so it extends left of the pivot; at a positive angle it left-anchors
+ * so it extends right. The horizontal projection is `width * cos(angle)`.
+ *
+ * Modeling the footprint as centered (the old behavior) over-estimates each
+ * label's reach by half its width in the wrong direction, which made a single
+ * wide label (e.g. "2026 (to wk 17)") report overlaps against neighbors that
+ * actually clear it — triggering needless thinning of the whole axis.
  */
-function bandTicksOverlapAtAngle(
-  ticks: AxisTick[],
+function labelSpanAtAngle(
+  tick: AxisTick,
   angleDeg: number,
   fontSize: number,
   fontWeight: number,
   measureText?: MeasureTextFn,
-): boolean {
-  if (ticks.length < 2) return false;
+): { left: number; right: number } {
   const angleRad = (Math.abs(angleDeg) * Math.PI) / 180;
   const cosA = angleRad > 0 ? Math.abs(Math.cos(angleRad)) : 1;
-  const minGap = fontSize * 0.5;
-  for (let i = 0; i < ticks.length - 1; i++) {
-    const aWidth = measureLabel(ticks[i].label, fontSize, fontWeight, measureText) * cosA;
-    const bWidth = measureLabel(ticks[i + 1].label, fontSize, fontWeight, measureText) * cosA;
-    const aRight = ticks[i].position + aWidth / 2;
-    const bLeft = ticks[i + 1].position - bWidth / 2;
-    if (aRight + minGap > bLeft) return true;
+  const projected = measureLabel(tick.label, fontSize, fontWeight, measureText) * cosA;
+  if (angleDeg === 0) {
+    // Horizontal labels are centered on the tick.
+    return { left: tick.position - projected / 2, right: tick.position + projected / 2 };
   }
-  return false;
+  if (angleDeg < 0) {
+    // Right-anchored: pivot is the right edge, text extends left.
+    return { left: tick.position - projected, right: tick.position };
+  }
+  // Left-anchored: pivot is the left edge, text extends right.
+  return { left: tick.position, right: tick.position + projected };
 }
 
 /**
- * Thin band-scale tick labels only when they actually overlap at their
- * effective angle. Most grouped bar charts keep every label even at -45°.
- * Only extremely dense charts (50+ categories) will thin.
+ * Thin band-scale tick labels only where they actually collide at their
+ * effective angle, greedily keeping every label that clears the last one
+ * retained. This preserves narrow labels that have room even when a single
+ * wide label elsewhere on the axis forces some thinning near it, instead of
+ * decimating the whole axis every-other. First and last labels are always
+ * kept. Most grouped bar charts keep every label even at -45°.
  */
 function thinBandTicksIfNeeded(
   ticks: AxisTick[],
@@ -280,19 +343,42 @@ function thinBandTicksIfNeeded(
   fontWeight: number,
   measureText?: MeasureTextFn,
 ): AxisTick[] {
-  if (!bandTicksOverlapAtAngle(ticks, angleDeg, fontSize, fontWeight, measureText)) return ticks;
+  if (ticks.length < 3) return ticks;
+  const minGap = fontSize * 0.5;
 
-  let current = ticks;
-  while (current.length > 2) {
-    const thinned = [current[0]];
-    for (let i = 2; i < current.length - 1; i += 2) {
-      thinned.push(current[i]);
+  const spans = ticks.map((t) => labelSpanAtAngle(t, angleDeg, fontSize, fontWeight, measureText));
+
+  // Greedy left-to-right retention: keep a label only if its footprint clears
+  // the last kept label's right edge by minGap. Always keep the first label.
+  const keep = new Array<boolean>(ticks.length).fill(false);
+  keep[0] = true;
+  let lastRight = spans[0].right;
+  for (let i = 1; i < ticks.length; i++) {
+    if (spans[i].left >= lastRight + minGap) {
+      keep[i] = true;
+      lastRight = spans[i].right;
     }
-    if (current.length > 1) thinned.push(current[current.length - 1]);
-    current = thinned;
-    if (!bandTicksOverlapAtAngle(current, angleDeg, fontSize, fontWeight, measureText)) break;
   }
-  return current;
+
+  // Always keep the last label. If keeping it collides with previously kept
+  // labels, drop each colliding neighbor so the endpoint stays labeled. A very
+  // wide final label (long category name) projects across several bands at an
+  // angle, so clear every kept label its footprint overlaps, not just the
+  // nearest one — otherwise an earlier kept label still overlaps the endpoint.
+  const lastIdx = ticks.length - 1;
+  if (!keep[lastIdx]) {
+    keep[lastIdx] = true;
+    for (let i = lastIdx - 1; i > 0; i--) {
+      if (!keep[i]) continue;
+      if (spans[i].right + minGap > spans[lastIdx].left) {
+        keep[i] = false;
+        continue;
+      }
+      break;
+    }
+  }
+
+  return ticks.filter((_, i) => keep[i]);
 }
 
 // ---------------------------------------------------------------------------
@@ -561,13 +647,18 @@ export function computeAxes(
     const yLabelColor = axisConfig?.labelColor;
     // Editorial line/area y-axes default to inline tick labels above their
     // gridlines. Other mark types keep the classic gutter placement. Right-side
-    // y-axes (dual-axis) always use gutter.
+    // y-axes (dual-axis) always use gutter. Uses the shared predicate so the
+    // margin-reservation paths (plan.ts, dimensions.ts) agree with this; here
+    // we pass the RESOLVED scale continuity since the scale is already built.
     const isContinuousYAxis =
       scales.y.type !== 'band' && scales.y.type !== 'point' && scales.y.type !== 'ordinal';
-    const isLineOrArea = dataContext?.markType === 'line' || dataContext?.markType === 'area';
-    const yTickPosition: 'inline' | 'gutter' =
-      axisConfig?.tickPosition ??
-      (isLineOrArea && isContinuousYAxis && axisConfig?.orient !== 'right' ? 'inline' : 'gutter');
+    const yTickPosition: 'inline' | 'gutter' = yTickPositionIsInline(
+      dataContext?.encoding.y,
+      dataContext?.markType ?? '',
+      isContinuousYAxis,
+    )
+      ? 'inline'
+      : 'gutter';
 
     // Inline mode hides the axis line and tick marks by default; the gridlines
     // themselves serve as the visual axis. Explicit user overrides win.
