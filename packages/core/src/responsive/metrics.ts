@@ -88,6 +88,11 @@ export const AXIS_TITLE_GAP = 7;
  * visible clearance remains. Falls back to the viewport-minimum offset when the
  * dynamic value would be smaller (short tick labels on wide containers).
  *
+ * When `inline` is true the y-tick labels render inside the chart area (above
+ * their gridlines) rather than in a left gutter, so the title only needs to
+ * clear the chart edge — no tick-label width and no viewport-minimum floor,
+ * both of which would otherwise leave a dead gap between the title and the plot.
+ *
  * Shared by the engine (margin reservation) and the renderer (title placement)
  * so the reserved space always matches where the title is drawn.
  */
@@ -95,8 +100,13 @@ export function axisTitleOffset(
   maxTickLabelWidth: number,
   titleFontSize: number,
   width: number,
+  inline = false,
 ): number {
   const halfTitleGlyph = Math.ceil(titleFontSize / 2);
+  if (inline) {
+    // No gutter tick labels to clear: title edge + gap + half-glyph only.
+    return TICK_LABEL_OFFSET + AXIS_TITLE_GAP + halfTitleGlyph;
+  }
   const dynamic = TICK_LABEL_OFFSET + maxTickLabelWidth + AXIS_TITLE_GAP + halfTitleGlyph;
   return Math.max(dynamic, getAxisTitleOffset(width));
 }

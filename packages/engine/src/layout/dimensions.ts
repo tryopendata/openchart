@@ -45,6 +45,7 @@ import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
+import { yTickPositionIsInline } from './axes';
 import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
 import type { LayoutPlan } from './plan';
 import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
@@ -306,16 +307,9 @@ export function computeDimensions(
   // gridline inside the chart area; the topmost tick text extends roughly
   // (tickFontSize + INLINE_TICK_OVERHANG_PAD) pixels above area.y, which
   // would otherwise crowd the chrome→chart gap.
-  const yAxisCfgPre = (encoding.y?.axis as Record<string, unknown> | undefined) ?? undefined;
-  const yTickPositionExplicitPre = yAxisCfgPre?.tickPosition as 'inline' | 'gutter' | undefined;
-  const yIsContinuousPre = encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal';
-  const yIsLineOrAreaPre = spec.markType === 'line' || spec.markType === 'area';
-  const yAxisOrientPre = yAxisCfgPre?.orient as 'left' | 'right' | 'top' | 'bottom' | undefined;
-  const yIsInlinePre =
-    (yTickPositionExplicitPre ??
-      (yIsLineOrAreaPre && yIsContinuousPre && yAxisOrientPre !== 'right'
-        ? 'inline'
-        : 'gutter')) === 'inline';
+  // Inline y-tick placement must match computeAxes exactly (shared predicate),
+  // or the reserved left margin won't line up with where the title is drawn.
+  const yIsInlinePre = yTickPositionIsInline(encoding.y, spec.markType);
   const inlineTickOverhang = yIsInlinePre
     ? theme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD
     : 0;
@@ -571,8 +565,13 @@ export function computeDimensions(
     const yFieldForTitle = encoding.y?.field;
     const yAxisFormatForTitle = yAxis?.format as string | undefined;
     let estTickLabelWidth = 0;
+    // Inline y-tick labels render inside the chart area (above their gridlines),
+    // not in a left gutter, so they add no width the rotated title must clear.
+    // Counting them here would reserve a phantom gutter and leave a dead gap
+    // between the title and the plot.
     if (
       yFieldForTitle &&
+      !yIsInlinePre &&
       (encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal')
     ) {
       let maxAbsValForTitle = 0;
@@ -609,7 +608,7 @@ export function computeDimensions(
     // We add another halfGlyph here for the title glyph extending the other way,
     // toward the container edge, so the margin reaches the title's outer edge.
     const titleFontSize = theme.fonts.sizes.body;
-    const offset = axisTitleOffset(estTickLabelWidth, titleFontSize, width);
+    const offset = axisTitleOffset(estTickLabelWidth, titleFontSize, width, yIsInlinePre);
     const halfGlyph = Math.ceil(titleFontSize / 2);
     const rotatedLabelMargin =
       offset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);

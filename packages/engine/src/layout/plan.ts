@@ -33,6 +33,7 @@ import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { computeLegendContent, type LegendContent } from '../legend/compute';
 import { legendGap } from '../legend/wrap';
+import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
 import { buildContinuousTicks, scaleSupportsTickCount, targetTickCount } from './axes/ticks';
 import { computeScales, estimateBandwidth } from './scales';
@@ -177,17 +178,11 @@ export function resolveLayoutPlan(
   // Resolve y-axis inline status
   // -----------------------------------------------------------------------
   const yAxisCfg = (encoding.y?.axis as Record<string, unknown> | undefined) ?? undefined;
-  const yTickPositionExplicit = yAxisCfg?.tickPosition as 'inline' | 'gutter' | undefined;
   const yIsContinuous = encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal';
-  const yIsLineOrArea = renderSpec.markType === 'line' || renderSpec.markType === 'area';
-  const yAxisOrient = yAxisCfg?.orient as string | undefined;
-  // Sparkline display already returned early above, so no sparkline guard needed here.
-  const yIsInline =
-    yTickPositionExplicit === 'inline' ||
-    (yTickPositionExplicit === undefined &&
-      yIsLineOrArea &&
-      yIsContinuous &&
-      yAxisOrient !== 'right');
+  // Inline y-tick placement must match computeAxes exactly (shared predicate),
+  // or the reserved left margin won't line up with where the title is drawn.
+  // Sparkline display already returned early above, so no sparkline guard needed.
+  const yIsInline = yTickPositionIsInline(encoding.y, renderSpec.markType);
   const yAxisSuppressed = encoding.y?.axis === false;
 
   // -----------------------------------------------------------------------
@@ -517,7 +512,11 @@ export function resolveLayoutPlan(
       const yAxisDef = encoding.y?.axis as Record<string, unknown> | undefined;
       if (yAxisDef && (yAxisDef.title || yAxisDef.label) && !isRadial) {
         let estTickLabelWidth = 0;
-        if (encoding.y?.field && yIsContinuous) {
+        // Inline y-tick labels sit above their gridlines inside the chart area,
+        // not in a left gutter, so they add no width the title must clear.
+        // Reserving their width here would leave a dead gap between the title
+        // and the plot. Only gutter (non-inline) tick labels count.
+        if (encoding.y?.field && yIsContinuous && !yIsInline) {
           if (yTickValues.length > 0) {
             const titleProvArea: Rect = {
               x: finalGutter,
@@ -536,7 +535,7 @@ export function resolveLayoutPlan(
           }
         }
         const titleFontSize = theme.fonts.sizes.body;
-        const offset = axisTitleOffset(estTickLabelWidth, titleFontSize, width);
+        const offset = axisTitleOffset(estTickLabelWidth, titleFontSize, width, yIsInline);
         const halfGlyph = Math.ceil(titleFontSize / 2);
         const rotatedLabelMargin =
           offset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);

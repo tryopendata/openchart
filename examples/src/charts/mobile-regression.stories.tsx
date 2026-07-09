@@ -209,3 +209,117 @@ export const GroupedBarsSparseTicks = () => (
     <Chart spec={domainScoresSpec} />
   </div>
 );
+
+// Five short rotated x labels where one label is much wider than the rest.
+// On a phone the axis thinned to every-other (dropping "2023" and "2025")
+// even though the narrow labels had ample room — a single wide label
+// ("2026 (to wk 17)") forced global decimation.
+const oneWideLabelSpec: ChartSpec = {
+  mark: { type: 'bar', cornerRadius: 3 },
+  data: [
+    { year: '2022', cases: 122 },
+    { year: '2023', cases: 47 },
+    { year: '2024', cases: 266 },
+    { year: '2025', cases: 2000 },
+    { year: '2026 (to wk 17)', cases: 1600 },
+  ],
+  encoding: {
+    x: { field: 'year', type: 'nominal', axis: { title: undefined } },
+    y: {
+      field: 'cases',
+      type: 'quantitative',
+      axis: { title: 'Reported measles cases (year to date)', grid: true },
+    },
+    color: { field: 'year', type: 'nominal', legend: null },
+  },
+  legend: { show: false },
+  labels: { density: 'all', format: '~s' },
+  chrome: {
+    title: '2025 was the worst measles year on the weekly record',
+    subtitle: 'US measles cases reported to NNDSS, indigenous and imported',
+    source: 'Source: CDC NNDSS',
+  },
+};
+
+export const OneWideXLabel = () => (
+  <div className="story-chart story-h-500">
+    <Chart spec={oneWideLabelSpec} />
+  </div>
+);
+
+// Five uniform short rotated x labels (percentage buckets). These clearly
+// fit at -45°, so none should be thinned even on a phone.
+const percentBucketsSpec: ChartSpec = {
+  mark: { type: 'bar', cornerRadius: 3 },
+  data: [
+    { bucket: '0-79%', schools: 3100 },
+    { bucket: '80-84%', schools: 1800 },
+    { bucket: '85-89%', schools: 3400 },
+    { bucket: '90-94%', schools: 7000 },
+    { bucket: '95-100%', schools: 21100 },
+  ],
+  encoding: {
+    x: {
+      field: 'bucket',
+      type: 'nominal',
+      axis: { title: 'School-level kindergarten MMR coverage' },
+    },
+    y: {
+      field: 'schools',
+      type: 'quantitative',
+      axis: { title: 'Number of schools', grid: true },
+    },
+    color: { field: 'bucket', type: 'nominal', legend: null },
+  },
+  legend: { show: false },
+  labels: { density: 'all', format: '~s' },
+  chrome: {
+    title: 'More than 5,000 schools sit below 80% MMR coverage',
+    subtitle: 'Distribution of school-level kindergarten MMR rates across 31 states',
+    source: 'Source: Washington Post compilation of state health department records',
+  },
+};
+
+export const UniformShortXLabels = () => (
+  <div className="story-chart story-h-500">
+    <Chart spec={percentBucketsSpec} />
+  </div>
+);
+
+// Inline y-axis (line chart, continuous y). The tick labels render inside the
+// plot above their gridlines, not in a left gutter, so the rotated y-title only
+// needs to clear the chart edge. Deck-scale fonts exaggerate the band: before
+// the inline-aware offset the title reserved gutter+tick width it never used,
+// leaving a large dead gap between the title and the plot.
+const inlineYTitleSpec: ChartSpec = {
+  mark: { type: 'line', point: true, interpolate: 'monotone' },
+  data: [
+    { year: '2009-10', pct: 94.2 },
+    { year: '2012-13', pct: 94.5 },
+    { year: '2015-16', pct: 93.8 },
+    { year: '2018-19', pct: 94.7 },
+    { year: '2020-21', pct: 95.0 },
+    { year: '2023-24', pct: 92.5 },
+  ],
+  encoding: {
+    x: { field: 'year', type: 'ordinal', axis: { title: undefined } },
+    y: {
+      field: 'pct',
+      type: 'quantitative',
+      axis: { title: 'Kindergartners with 2-dose MMR', grid: true, format: '.0f' },
+      scale: { domain: [90, 96], nice: false },
+    },
+  },
+  theme: { fonts: { sizes: { body: 21, axisTick: 18 } } },
+  chrome: {
+    title: 'The national MMR average barely moved: 95.2% to 92.5%',
+    subtitle: 'Two-dose MMR coverage among US kindergartners',
+    source: 'Source: CDC SchoolVaxView',
+  },
+};
+
+export const InlineYTitle = () => (
+  <div className="story-chart story-h-600">
+    <Chart spec={inlineYTitleSpec} />
+  </div>
+);

@@ -310,10 +310,13 @@ function renderAxis(
         );
         return Math.max(max, w);
       }, 0);
+      // Inline y-ticks live inside the plot, so the title clears only the chart
+      // edge — mirror the engine's reservation (see axisTitleOffset).
       const titleOffset = axisTitleOffset(
         maxTickLabelWidth,
         axis.labelStyle.fontSize,
         layout.dimensions.width,
+        isInlineY,
       );
       setAttrs(axisLabel, {
         x: area.x - titleOffset,
