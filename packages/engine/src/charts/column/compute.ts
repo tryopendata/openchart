@@ -22,6 +22,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
@@ -163,7 +164,24 @@ export function computeColumnMarks(
     );
   }
 
+  // Stamp identity keys for data-update transitions
+  const categoryField = xChannel.field;
+  stampColumnKeys(marks, categoryField, colorField);
+
   return applyMarkDefOverrides(marks, spec, bandwidth);
+}
+
+/** Stamp stable identity keys on column marks for data-update transitions. */
+function stampColumnKeys(marks: RectMark[], categoryField: string, colorField?: string): void {
+  const rawKeys = marks.map((m) => {
+    const series = colorField ? String(m.data[colorField] ?? '') : '';
+    const cat = serializeKeyValue(m.data[categoryField]);
+    return `${series}|${cat}`;
+  });
+  const keys = dedupeKeys(rawKeys);
+  for (let i = 0; i < marks.length; i++) {
+    marks[i].key = keys[i];
+  }
 }
 
 /** Compute simple (non-grouped) vertical columns. */

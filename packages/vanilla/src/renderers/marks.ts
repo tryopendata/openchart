@@ -61,7 +61,7 @@ function stampAnimationAttrs(
   mark: { animationIndex?: number },
   fallbackIndex: number,
 ): void {
-  if (!currentAnimation?.enabled) return;
+  if (!currentAnimation?.enter) return;
   const idx = mark.animationIndex ?? fallbackIndex;
   el.setAttribute('data-animation-index', String(idx));
   (el as SVGElement & ElementCSSInlineStyle).style.setProperty('--oc-mark-index', String(idx));
@@ -185,7 +185,7 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
  * stack, right of a horizontal stack) should round so the seams between
  * adjacent segments stay flush.
  */
-function _rectPathWithCorners(
+export function rectPathWithCorners(
   mark: RectMark,
   sides: NonNullable<RectMark['cornerRadiusSides']>,
 ): string {
@@ -219,7 +219,7 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
   g.setAttribute('class', 'oc-mark oc-mark-rect');
   stampAnimationAttrs(g, mark, index);
   // Use engine-provided orientation for animation direction
-  if (currentAnimation?.enabled && mark.orient === 'horizontal') {
+  if (currentAnimation?.enter && mark.orient === 'horizontal') {
     g.setAttribute('data-orient', 'horizontal');
   }
 
@@ -232,7 +232,7 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
     !!sides && (!sides.tl || !sides.tr || !sides.br || !sides.bl) && !!mark.cornerRadius;
   const shapeEl = partialCorners ? createSVGElement('path') : createSVGElement('rect');
   if (partialCorners) {
-    shapeEl.setAttribute('d', _rectPathWithCorners(mark, sides));
+    shapeEl.setAttribute('d', rectPathWithCorners(mark, sides));
   } else {
     setAttrs(shapeEl, {
       x: mark.x,
@@ -459,7 +459,7 @@ export function renderMarks(parent: SVGElement, layout: ChartLayout): SVGElement
 
     // For stacked segments, set stack position for sequential animation chaining.
     // stackPos is computed by the engine on RectMark during compilation.
-    if (currentAnimation?.enabled && mark.type === 'rect') {
+    if (currentAnimation?.enter && mark.type === 'rect') {
       const rect = mark as RectMark;
       if (rect.stackGroup && rect.stackPos !== undefined) {
         el.setAttribute('data-stack-pos', String(rect.stackPos));
@@ -503,7 +503,7 @@ export function renderMarks(parent: SVGElement, layout: ChartLayout): SVGElement
 
     // Stamp animation index so the CSS stagger delay works for overlay labels
     // (they're not children of a .oc-mark-rect group that carries --oc-mark-index).
-    if (currentAnimation?.enabled) {
+    if (currentAnimation?.enter) {
       const idx = rect.animationIndex ?? i;
       label.setAttribute('data-animation-index', String(idx));
       (label as SVGElement & ElementCSSInlineStyle).style.setProperty(

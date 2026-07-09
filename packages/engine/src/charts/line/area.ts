@@ -24,6 +24,7 @@ import {
   stackOrderNone,
 } from 'd3-shape';
 
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, scaleValue, sortByField } from '../utils';
@@ -235,8 +236,16 @@ function computeSingleArea(
       fillOpacity = 1;
     }
 
+    const keyField = encoding.key && 'field' in encoding.key ? encoding.key.field : undefined;
+    const rawPointKeys = validPoints.map((p) =>
+      keyField ? serializeKeyValue(p.row[keyField]) : serializeKeyValue(p.row[xChannel.field]),
+    );
+
     marks.push({
       type: 'area',
+      key: seriesKey === '__default__' ? 'area' : seriesKey,
+      pointKeys: dedupeKeys(rawPointKeys),
+      interpolate: spec.markDef.interpolate ?? 'monotone',
       topPoints,
       bottomPoints,
       path: pathStr,
@@ -402,8 +411,13 @@ function computeStackedArea(
       fillOpacity = 1;
     }
 
+    const rawPointKeys = validPoints.map((_p, idx) => serializeKeyValue(layer[idx]?.data.__x__));
+
     marks.push({
       type: 'area',
+      key: seriesKey,
+      pointKeys: dedupeKeys(rawPointKeys),
+      interpolate: spec.markDef.interpolate ?? 'monotone',
       topPoints,
       bottomPoints,
       path: pathStr,
@@ -463,6 +477,12 @@ export function computeAreaMarks(
   } else {
     marks = computeSingleArea(spec, scales, chartArea);
   }
+
+  // Dedupe area mark keys
+  const areaKeys = dedupeKeys(marks.map((m) => m.key!));
+  marks.forEach((m, i) => {
+    m.key = areaKeys[i];
+  });
 
   const highlight = spec.highlight ?? [];
   if (highlight.length > 0) {

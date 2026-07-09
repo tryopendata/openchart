@@ -134,7 +134,7 @@ function renderRows(
       rowGroup.setAttribute('aria-label', row.aria.label);
     }
 
-    if (animation?.enabled) {
+    if (animation?.enter) {
       rowGroup.setAttribute('data-animation-index', String(row.animationIndex));
       const style = (rowGroup as SVGElement & ElementCSSInlineStyle).style;
       style.setProperty('--oc-mark-index', String(row.animationIndex));
@@ -236,7 +236,7 @@ export function renderBarListSVG(
   opts?: { animate?: boolean },
 ): SVGSVGElement {
   const { width, height, rows, a11y, watermark, animation } = layout;
-  const animate = opts?.animate && animation?.enabled;
+  const animate = opts?.animate && !!animation?.enter;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -251,8 +251,8 @@ export function renderBarListSVG(
   const classes = animate ? 'oc-barlist oc-animate' : 'oc-barlist';
   svg.setAttribute('class', classes);
 
-  if (animate && animation) {
-    svg.style.setProperty('--oc-animation-duration', `${animation.duration}ms`);
+  if (animate && animation?.enter) {
+    svg.style.setProperty('--oc-animation-duration', `${animation.enter.duration}ms`);
     svg.style.setProperty('--oc-animation-stagger', '40ms');
   }
 

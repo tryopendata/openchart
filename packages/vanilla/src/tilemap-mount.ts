@@ -287,7 +287,7 @@ export function createTileMap(
     }
 
     // Setup animation cleanup only when actually animating
-    if (animate && currentLayout.animation?.enabled) {
+    if (animate && currentLayout.animation?.enter) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
         // On animation complete, check if resize was pending
         if (pendingResize && !destroyed) {

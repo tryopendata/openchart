@@ -132,7 +132,7 @@ function inferFieldType(data: DataRow[], field: string): FieldType {
 function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: string[]): Encoding {
   const result = { ...encoding };
 
-  for (const channel of ['x', 'y', 'color', 'size', 'detail'] as const) {
+  for (const channel of ['x', 'y', 'color', 'size', 'detail', 'key'] as const) {
     const spec = result[channel];
     if (!spec) continue;
 

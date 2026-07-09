@@ -665,7 +665,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     currentLayout = compile();
-    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
+    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
     svgElement = renderChartSVG(currentLayout, container, {
       animate: shouldAnimate,

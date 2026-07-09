@@ -209,11 +209,18 @@ export interface MarkAria {
  */
 export interface LineMark {
   type: 'line';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
+  /** Per-point identity keys parallel to `points`, for data-update transitions. */
+  pointKeys?: string[];
   /** Ordered array of points defining the line path. */
   points: Point[];
   /** Pre-computed SVG path string (D3 monotone curve). When present, renderers
    *  should use this instead of reconstructing straight M/L segments from points. */
   path?: string;
+  /** Curve interpolation method used to build the path. Stored so the transition
+   *  driver can reconstruct paths from interpolated point positions. */
+  interpolate?: string;
   /** Stroke color. */
   stroke: string;
   /** Stroke width in pixels. */
@@ -252,6 +259,10 @@ export interface LineMark {
  */
 export interface AreaMark {
   type: 'area';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
+  /** Per-point identity keys parallel to `topPoints`, for data-update transitions. */
+  pointKeys?: string[];
   /** Upper boundary points. */
   topPoints: Point[];
   /** Lower boundary points (baseline, usually y=0). */
@@ -260,6 +271,8 @@ export interface AreaMark {
   path: string;
   /** SVG path string for just the top boundary (for stroking the data line only). */
   topPath: string;
+  /** Curve interpolation method used to build the path. */
+  interpolate?: string;
   /** Fill color or gradient. */
   fill: string | GradientDef;
   /** Fill opacity. */
@@ -296,6 +309,8 @@ export interface AreaMark {
  */
 export interface RectMark {
   type: 'rect';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
   /** X position. */
   x: number;
   /** Y position. */
@@ -369,6 +384,8 @@ export interface ArcMark {
   label?: ResolvedLabel;
   /** Accessibility attributes. */
   aria: MarkAria;
+  /** Stable identity key for data-update transitions. */
+  key?: string;
   /** Index for stagger animation ordering. */
   animationIndex?: number;
 }
@@ -379,6 +396,8 @@ export interface ArcMark {
  */
 export interface PointMark {
   type: 'point';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
   /** Center x position. */
   cx: number;
   /** Center y position. */
@@ -411,6 +430,8 @@ export interface PointMark {
  */
 export interface TextMarkLayout {
   type: 'textMark';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
   /** X position. */
   x: number;
   /** Y position. */
@@ -447,6 +468,8 @@ export interface TextMarkLayout {
  */
 export interface RuleMarkLayout {
   type: 'rule';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
   /** Start x position. */
   x1: number;
   /** Start y position. */
@@ -479,6 +502,8 @@ export interface RuleMarkLayout {
  */
 export interface TickMarkLayout {
   type: 'tick';
+  /** Stable identity key for data-update transitions. */
+  key?: string;
   /** X position. */
   x: number;
   /** Y position. */
@@ -799,10 +824,8 @@ export interface A11yMetadata {
 // Animation (resolved)
 // ---------------------------------------------------------------------------
 
-/** Resolved entrance animation config with all defaults applied. */
-export interface ResolvedAnimation {
-  /** Whether entrance animation is enabled. */
-  enabled: boolean;
+/** One fully-resolved animation phase. */
+export interface ResolvedAnimationPhase {
   /** Duration in ms. */
   duration: number;
   /** Easing preset name. */
@@ -811,6 +834,16 @@ export interface ResolvedAnimation {
   staggerDelay: number;
   /** Stagger ordering. */
   staggerOrder: 'index' | 'value' | 'reverse';
+}
+
+/** Resolved animation config. A phase is present iff that phase is enabled. */
+export interface ResolvedAnimation {
+  /** Entrance animation phase. Present when enter animation is enabled. */
+  enter?: ResolvedAnimationPhase;
+  /** Data-update transition phase. Present when update animation is enabled. */
+  update?: ResolvedAnimationPhase;
+  /** Exit animation phase. Present when exit animation is enabled. */
+  exit?: ResolvedAnimationPhase;
   /** Delay before annotations animate in (ms after marks). */
   annotationDelay: number;
 }

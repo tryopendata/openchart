@@ -943,7 +943,7 @@ describe('compileChart', () => {
     };
     const layout = compileChart(spec, { width: 320, height: 200 });
     expect(layout.display).toBe('sparkline');
-    expect(layout.animation?.enabled).toBe(true);
+    expect(layout.animation?.enter).toBeDefined();
   });
 
   it('breakpoint chrome wins when top-level is sparkline', () => {
@@ -1012,8 +1012,8 @@ describe('compileChart', () => {
       { ...lineSpec, display: 'sparkline' as const, animation: true },
       { width: 400, height: 80 },
     );
-    expect(layout.animation?.enabled).toBe(true);
-    expect(layout.animation?.duration).toBe(1100);
+    expect(layout.animation?.enter).toBeDefined();
+    expect(layout.animation?.enter?.duration).toBe(1100);
   });
 
   it('sparkline + animation: { enter: { duration: 500 } } respects user duration', () => {
@@ -1025,12 +1025,12 @@ describe('compileChart', () => {
       },
       { width: 400, height: 80 },
     );
-    expect(layout.animation?.duration).toBe(500);
+    expect(layout.animation?.enter?.duration).toBe(500);
   });
 
   it('full mode + animation: true uses default 500ms (sparkline bump does not leak)', () => {
     const layout = compileChart({ ...lineSpec, animation: true }, { width: 600, height: 400 });
-    expect(layout.animation?.duration).toBe(500);
+    expect(layout.animation?.enter?.duration).toBe(500);
   });
 
   // ---------------------------------------------------------------------------

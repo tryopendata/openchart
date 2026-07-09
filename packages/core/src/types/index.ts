@@ -69,6 +69,7 @@ export type {
   Rect,
   RectMark,
   ResolvedAnimation,
+  ResolvedAnimationPhase,
   ResolvedAnnotation,
   ResolvedChrome,
   ResolvedChromeElement,

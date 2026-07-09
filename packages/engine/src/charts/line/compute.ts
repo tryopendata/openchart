@@ -20,6 +20,7 @@ import type {
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import { line } from 'd3-shape';
 
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, getSequentialColor, groupByField, scaleValue, sortByField } from '../utils';
@@ -183,8 +184,16 @@ export function computeLineMarks(
     // Create the LineMark with the combined path points.
     // The points array includes all valid points across all segments.
     // dataPoints carries pixel coordinates + original data for voronoi tooltip overlay.
+    const keyField = encoding.key && 'field' in encoding.key ? encoding.key.field : undefined;
+    const rawPointKeys = pointsWithData.map((p) =>
+      keyField ? serializeKeyValue(p.row[keyField]) : serializeKeyValue(p.row[xChannel.field]),
+    );
+
     const lineMark: LineMark = {
       type: 'line',
+      key: seriesStyleKey ?? 'series',
+      pointKeys: dedupeKeys(rawPointKeys),
+      interpolate: spec.markDef.interpolate ?? 'monotone',
       points: allPoints,
       path: combinedPath,
       stroke: strokeColor,
@@ -242,9 +251,13 @@ export function computeLineMarks(
         // color — no white halo, no hollow ring. Marked decorative because the
         // data point already exists on the line and gets described by the a11y
         // data table; the dot is purely visual.
+        const pointKey = keyField
+          ? serializeKeyValue(p.row[keyField])
+          : `${seriesStyleKey ?? ''}|${serializeKeyValue(p.row[xChannel.field])}`;
         if (isSingleEndpoint) {
           bucket.push({
             type: 'point',
+            key: pointKey,
             cx: p.x,
             cy: p.y,
             r: 3.5,
@@ -259,6 +272,7 @@ export function computeLineMarks(
         }
         const pointMark: PointMark = {
           type: 'point',
+          key: pointKey,
           cx: p.x,
           cy: p.y,
           r: visible ? DEFAULT_POINT_RADIUS : 0,
@@ -276,7 +290,25 @@ export function computeLineMarks(
     }
   }
 
-  return [...mutedMarks, ...highlightedMarks];
+  const allMarks = [...mutedMarks, ...highlightedMarks];
+
+  // Dedupe series-level keys across all line marks
+  const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
+  const lineKeys = dedupeKeys(lineMarks.map((m) => m.key!));
+  lineMarks.forEach((m, i) => {
+    m.key = lineKeys[i];
+  });
+
+  // Dedupe point mark keys
+  const pointMarks = allMarks.filter((m): m is PointMark => m.type === 'point');
+  if (pointMarks.length > 0) {
+    const pointKeys = dedupeKeys(pointMarks.map((m) => m.key ?? ''));
+    pointMarks.forEach((m, i) => {
+      m.key = pointKeys[i];
+    });
+  }
+
+  return allMarks;
 }
 
 // ---------------------------------------------------------------------------

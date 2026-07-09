@@ -120,11 +120,7 @@ describe('assignAnimationIndices', () => {
       { type: 'rect', x: 0, y: 0, width: 10, height: 50, fill: '#000' } as RectMark,
     ];
     const animation: ResolvedAnimation = {
-      enabled: true,
-      duration: 500,
-      ease: 'smooth',
-      staggerDelay: 50,
-      staggerOrder: 'value',
+      enter: { duration: 500, ease: 'smooth', staggerDelay: 50, staggerOrder: 'value' },
       annotationDelay: 0,
     };
     assignAnimationIndices(marks, animation);
@@ -165,11 +161,7 @@ describe('assignAnimationIndices', () => {
       } as RectMark,
     ];
     const animation: ResolvedAnimation = {
-      enabled: true,
-      duration: 500,
-      ease: 'smooth',
-      staggerDelay: 50,
-      staggerOrder: 'value',
+      enter: { duration: 500, ease: 'smooth', staggerDelay: 50, staggerOrder: 'value' },
       annotationDelay: 0,
     };
     assignAnimationIndices(marks, animation);
@@ -205,11 +197,7 @@ describe('assignAnimationIndices', () => {
       } as RectMark,
     ];
     const animation: ResolvedAnimation = {
-      enabled: true,
-      duration: 500,
-      ease: 'smooth',
-      staggerDelay: 50,
-      staggerOrder: 'value',
+      enter: { duration: 500, ease: 'smooth', staggerDelay: 50, staggerOrder: 'value' },
       annotationDelay: 0,
     };
     assignAnimationIndices(marks, animation);
@@ -226,16 +214,11 @@ describe('assignAnimationIndices', () => {
     expect(marks[0].animationIndex).toBeUndefined();
   });
 
-  it('is a no-op when animation is disabled', () => {
+  it('is a no-op when animation has no enter phase', () => {
     const marks: Mark[] = [
       { type: 'rect', x: 0, y: 0, width: 10, height: 30, fill: '#000' } as RectMark,
     ];
     const animation: ResolvedAnimation = {
-      enabled: false,
-      duration: 500,
-      ease: 'smooth',
-      staggerDelay: 50,
-      staggerOrder: 'value',
       annotationDelay: 0,
     };
     assignAnimationIndices(marks, animation);
@@ -244,11 +227,7 @@ describe('assignAnimationIndices', () => {
 
   it('handles empty marks array', () => {
     const animation: ResolvedAnimation = {
-      enabled: true,
-      duration: 500,
-      ease: 'smooth',
-      staggerDelay: 50,
-      staggerOrder: 'value',
+      enter: { duration: 500, ease: 'smooth', staggerDelay: 50, staggerOrder: 'value' },
       annotationDelay: 0,
     };
     const marks: Mark[] = [];

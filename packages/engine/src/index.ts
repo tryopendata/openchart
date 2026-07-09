@@ -26,7 +26,25 @@ export {
 // Animation resolution
 // ---------------------------------------------------------------------------
 
-export { clampStaggerDelay, resolveAnimation } from './compiler/animation';
+export {
+  clampStaggerDelay,
+  ENTER_DEFAULTS,
+  EXIT_DEFAULTS,
+  resolveAnimation,
+  UPDATE_DEFAULTS,
+} from './compiler/animation';
+
+// ---------------------------------------------------------------------------
+// Mark keying for data-update transitions
+// ---------------------------------------------------------------------------
+
+export { dedupeKeys, serializeKeyValue } from './compiler/keys';
+
+// ---------------------------------------------------------------------------
+// Geometry helpers for path reconstruction
+// ---------------------------------------------------------------------------
+
+export { buildAreaPath, buildLinePath } from './charts/line/curves';
 
 // ---------------------------------------------------------------------------
 // Graph compilation types

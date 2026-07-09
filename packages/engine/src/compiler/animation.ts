@@ -2,28 +2,53 @@
  * Animation resolver: normalizes AnimationSpec into fully resolved config.
  *
  * Handles the shorthand forms:
- * - true -> { enter: true } -> full defaults
- * - { enter: { duration: 800 } } -> merge with defaults
+ * - true -> all three phases with defaults
+ * - { enter: { duration: 800 } } -> merge with defaults per phase
  * - false/undefined -> undefined (no animation)
+ *
+ * Each phase resolves independently:
+ * - true/config-object -> resolved phase merged onto that phase's defaults
+ * - false -> phase absent
+ * - undefined -> phase present with defaults (animation: {} behaves like true)
+ *
+ * Returns undefined only when ALL phases resolve absent.
  */
 
 import type {
   AnimationConfig,
-  AnimationEase,
   AnimationPhaseConfig,
   AnimationSpec,
   AnimationStagger,
   ResolvedAnimation,
+  ResolvedAnimationPhase,
 } from '@opendata-ai/openchart-core';
 
 /** Default values for entrance animation. */
-const ENTER_DEFAULTS = {
+export const ENTER_DEFAULTS: ResolvedAnimationPhase = {
   duration: 500,
-  ease: 'smooth' as AnimationEase,
+  ease: 'smooth',
   staggerDelay: 80,
-  staggerOrder: 'index' as const,
-  annotationDelay: 200,
-} as const;
+  staggerOrder: 'index',
+};
+
+/** Default values for update (data transition) animation. */
+export const UPDATE_DEFAULTS: ResolvedAnimationPhase = {
+  duration: 500,
+  ease: 'smooth',
+  staggerDelay: 0,
+  staggerOrder: 'index',
+};
+
+/** Default values for exit animation. */
+export const EXIT_DEFAULTS: ResolvedAnimationPhase = {
+  duration: 300,
+  ease: 'smooth',
+  staggerDelay: 0,
+  staggerOrder: 'index',
+};
+
+/** Default annotation delay in ms after marks finish. */
+const DEFAULT_ANNOTATION_DELAY = 200;
 
 /** Maximum total stagger time in ms. Prevents 200-bar charts from taking 6s. */
 const MAX_TOTAL_STAGGER_MS = 2000;
@@ -35,35 +60,31 @@ const MAX_TOTAL_STAGGER_MS = 2000;
 export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnimation | undefined {
   if (spec === undefined || spec === false) return undefined;
 
-  // true -> default enter animation
+  // true -> all three phases with defaults
   if (spec === true) {
     return {
-      enabled: true,
-      duration: ENTER_DEFAULTS.duration,
-      ease: ENTER_DEFAULTS.ease,
-      staggerDelay: ENTER_DEFAULTS.staggerDelay,
-      staggerOrder: ENTER_DEFAULTS.staggerOrder,
-      annotationDelay: ENTER_DEFAULTS.annotationDelay,
+      enter: { ...ENTER_DEFAULTS },
+      update: { ...UPDATE_DEFAULTS },
+      exit: { ...EXIT_DEFAULTS },
+      annotationDelay: DEFAULT_ANNOTATION_DELAY,
     };
   }
 
   // AnimationConfig object
   const config = spec as AnimationConfig;
 
-  // If no enter phase specified or enter is false, no animation
-  if (config.enter === false || (config.enter === undefined && !hasAnyPhase(config))) {
-    return undefined;
-  }
+  const enter = resolvePhase(config.enter, ENTER_DEFAULTS);
+  const update = resolvePhase(config.update, UPDATE_DEFAULTS);
+  const exit = resolvePhase(config.exit, EXIT_DEFAULTS);
 
-  const enterConfig = resolvePhaseConfig(config.enter);
+  // Return undefined only when ALL phases resolve absent
+  if (!enter && !update && !exit) return undefined;
 
   return {
-    enabled: true,
-    duration: enterConfig.duration,
-    ease: enterConfig.ease,
-    staggerDelay: enterConfig.staggerDelay,
-    staggerOrder: enterConfig.staggerOrder,
-    annotationDelay: config.annotationDelay ?? ENTER_DEFAULTS.annotationDelay,
+    enter: enter ?? undefined,
+    update: update ?? undefined,
+    exit: exit ?? undefined,
+    annotationDelay: config.annotationDelay ?? DEFAULT_ANNOTATION_DELAY,
   };
 }
 
@@ -75,48 +96,47 @@ export function clampStaggerDelay(delay: number, elementCount: number): number {
   return Math.min(delay, MAX_TOTAL_STAGGER_MS / elementCount);
 }
 
-function hasAnyPhase(config: AnimationConfig): boolean {
-  return config.enter !== undefined || config.update !== undefined || config.exit !== undefined;
-}
+/**
+ * Resolve a single animation phase.
+ * - false -> null (phase absent)
+ * - undefined -> phase present with defaults
+ * - true -> phase present with defaults
+ * - config object -> merge with defaults
+ */
+function resolvePhase(
+  phase: AnimationPhaseConfig | boolean | undefined,
+  defaults: ResolvedAnimationPhase,
+): ResolvedAnimationPhase | null {
+  if (phase === false) return null;
 
-interface ResolvedPhase {
-  duration: number;
-  ease: AnimationEase;
-  staggerDelay: number;
-  staggerOrder: 'index' | 'value' | 'reverse';
-}
-
-function resolvePhaseConfig(phase: AnimationPhaseConfig | boolean | undefined): ResolvedPhase {
   if (phase === undefined || phase === true) {
-    return {
-      duration: ENTER_DEFAULTS.duration,
-      ease: ENTER_DEFAULTS.ease,
-      staggerDelay: ENTER_DEFAULTS.staggerDelay,
-      staggerOrder: ENTER_DEFAULTS.staggerOrder,
-    };
+    return { ...defaults };
   }
 
   const cfg = phase as AnimationPhaseConfig;
-  const stagger = resolveStagger(cfg.stagger);
+  const stagger = resolveStagger(cfg.stagger, defaults);
 
   return {
-    duration: cfg.duration ?? ENTER_DEFAULTS.duration,
-    ease: cfg.ease ?? ENTER_DEFAULTS.ease,
+    duration: cfg.duration ?? defaults.duration,
+    ease: cfg.ease ?? defaults.ease,
     staggerDelay: stagger.delay,
     staggerOrder: stagger.order,
   };
 }
 
-function resolveStagger(stagger: AnimationStagger | boolean | undefined): {
+function resolveStagger(
+  stagger: AnimationStagger | boolean | undefined,
+  defaults: ResolvedAnimationPhase,
+): {
   delay: number;
   order: 'index' | 'value' | 'reverse';
 } {
   if (stagger === false) return { delay: 0, order: 'index' };
   if (stagger === undefined || stagger === true) {
-    return { delay: ENTER_DEFAULTS.staggerDelay, order: ENTER_DEFAULTS.staggerOrder };
+    return { delay: defaults.staggerDelay, order: defaults.staggerOrder };
   }
   return {
-    delay: stagger.delay ?? ENTER_DEFAULTS.staggerDelay,
-    order: stagger.order ?? ENTER_DEFAULTS.staggerOrder,
+    delay: stagger.delay ?? defaults.staggerDelay,
+    order: stagger.order ?? defaults.staggerOrder,
   };
 }
