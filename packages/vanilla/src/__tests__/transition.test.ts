@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { createChart } from '../mount';
 import { renderChartSVG } from '../svg-renderer';
-import { canTransition, runTransition } from '../transition';
+import { canTransition, normalizePointArrays, runTransition } from '../transition';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -213,14 +213,32 @@ describe('canTransition gate', () => {
     expect(canTransition(args)).toBe(false);
   });
 
-  it('gate 3: fails for non-bar mark type', () => {
+  it('gate 3: fails for unsupported mark type', () => {
     const specA = columnSpec(DATA_A);
     const specB = columnSpec(DATA_B);
     const args = passingGateArgs(specA, specB);
-    // Override both specs to be line charts
+    // Override both specs to be arc (pie) charts which are not supported
+    args.prevSpec = { ...specA, mark: 'arc' };
+    args.nextSpec = { ...specB, mark: 'arc' };
+    expect(canTransition(args)).toBe(false);
+  });
+
+  it('gate 3: passes for line mark type', () => {
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+    const args = passingGateArgs(specA, specB);
     args.prevSpec = { ...specA, mark: 'line' };
     args.nextSpec = { ...specB, mark: 'line' };
-    expect(canTransition(args)).toBe(false);
+    expect(canTransition(args)).toBe(true);
+  });
+
+  it('gate 3: passes for area mark type', () => {
+    const specA = columnSpec(DATA_A);
+    const specB = columnSpec(DATA_B);
+    const args = passingGateArgs(specA, specB);
+    args.prevSpec = { ...specA, mark: 'area' };
+    args.nextSpec = { ...specB, mark: 'area' };
+    expect(canTransition(args)).toBe(true);
   });
 
   it('gate 4: fails when encoding field changes', () => {
@@ -617,5 +635,352 @@ describe('data-key stamping', () => {
       }
     }
     expect(hasKeys).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Line/area morph: normalizePointArrays
+// ---------------------------------------------------------------------------
+
+describe('normalizePointArrays', () => {
+  it('append: inserted point from equals prev tail position', () => {
+    const prevPts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 80 },
+      { x: 100, y: 60 },
+    ];
+    const nextPts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 80 },
+      { x: 100, y: 60 },
+      { x: 150, y: 40 },
+    ];
+    const prevKeys = ['a', 'b', 'c'];
+    const nextKeys = ['a', 'b', 'c', 'd'];
+
+    const [fromPts, toPts] = normalizePointArrays(prevPts, nextPts, prevKeys, nextKeys);
+
+    // Both arrays should have 4 points
+    expect(fromPts.length).toBe(4);
+    expect(toPts.length).toBe(4);
+
+    // The inserted point (d) should start from the prev tail (c's prev position)
+    // because it's at the tail end with only one neighbor before it
+    expect(fromPts[3].x).toBe(100);
+    expect(fromPts[3].y).toBe(60);
+
+    // The "to" for the inserted point should be its next position
+    expect(toPts[3].x).toBe(150);
+    expect(toPts[3].y).toBe(40);
+  });
+
+  it('remove middle: removed point to sits between surviving neighbors', () => {
+    const prevPts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 80 },
+      { x: 100, y: 60 },
+    ];
+    const nextPts = [
+      { x: 0, y: 90 },
+      { x: 100, y: 50 },
+    ];
+    const prevKeys = ['a', 'b', 'c'];
+    const nextKeys = ['a', 'c'];
+
+    const [fromPts, toPts] = normalizePointArrays(prevPts, nextPts, prevKeys, nextKeys);
+
+    expect(fromPts.length).toBe(3);
+    expect(toPts.length).toBe(3);
+
+    // Removed point 'b' (index 1 in merged) should collapse to midpoint
+    // between neighbors 'a' (next: {0,90}) and 'c' (next: {100,50})
+    // t = (50 - 0)/(100 - 0) = 0.5 in prev x, so in next space:
+    // lerp({0,90}, {100,50}, 0.5) = {50, 70}
+    expect(toPts[1].x).toBe(50);
+    expect(toPts[1].y).toBe(70);
+  });
+
+  it('full replacement (zero survivors): returns arrays as-is for crossfade', () => {
+    const prevPts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 80 },
+    ];
+    const nextPts = [
+      { x: 10, y: 90 },
+      { x: 60, y: 70 },
+      { x: 110, y: 50 },
+    ];
+    const prevKeys = ['a', 'b'];
+    const nextKeys = ['x', 'y', 'z'];
+
+    const [fromPts, toPts] = normalizePointArrays(prevPts, nextPts, prevKeys, nextKeys);
+
+    // Zero survivors: arrays returned as-is
+    expect(fromPts).toEqual(prevPts);
+    expect(toPts).toEqual(nextPts);
+  });
+
+  it('value-only change: same keys produce 1:1 mapping', () => {
+    const prevPts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 80 },
+      { x: 100, y: 60 },
+    ];
+    const nextPts = [
+      { x: 0, y: 90 },
+      { x: 50, y: 70 },
+      { x: 100, y: 50 },
+    ];
+    const keys = ['a', 'b', 'c'];
+
+    const [fromPts, toPts] = normalizePointArrays(prevPts, nextPts, keys, keys);
+
+    expect(fromPts).toEqual(prevPts);
+    expect(toPts).toEqual(nextPts);
+  });
+
+  it('insert at head: from position equals nearest surviving endpoint', () => {
+    const prevPts = [
+      { x: 50, y: 80 },
+      { x: 100, y: 60 },
+    ];
+    const nextPts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 80 },
+      { x: 100, y: 60 },
+    ];
+    const prevKeys = ['b', 'c'];
+    const nextKeys = ['a', 'b', 'c'];
+
+    const [fromPts] = normalizePointArrays(prevPts, nextPts, prevKeys, nextKeys);
+
+    expect(fromPts.length).toBe(3);
+    // Inserted at head: from = nearest surviving start = b's prev position
+    expect(fromPts[0].x).toBe(50);
+    expect(fromPts[0].y).toBe(80);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Line chart round-trip invariant
+// ---------------------------------------------------------------------------
+
+/** Build a line chart spec with animation enabled. */
+function lineSpec(data: Array<{ month: string; value: number }>): ChartSpec {
+  return {
+    animation: true,
+    mark: 'line',
+    data,
+    encoding: {
+      x: { field: 'month', type: 'ordinal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  };
+}
+
+/** Build an area chart spec with animation enabled. */
+function areaSpec(data: Array<{ month: string; value: number }>): ChartSpec {
+  return {
+    animation: true,
+    mark: 'area',
+    data,
+    encoding: {
+      x: { field: 'month', type: 'ordinal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  };
+}
+
+const LINE_DATA_A = [
+  { month: 'Jan', value: 100 },
+  { month: 'Feb', value: 200 },
+  { month: 'Mar', value: 150 },
+];
+
+const LINE_DATA_B = [
+  { month: 'Jan', value: 150 },
+  { month: 'Feb', value: 180 },
+  { month: 'Mar', value: 220 },
+];
+
+const LINE_DATA_APPEND = [
+  { month: 'Jan', value: 100 },
+  { month: 'Feb', value: 200 },
+  { month: 'Mar', value: 150 },
+  { month: 'Apr', value: 250 },
+];
+
+const LINE_DATA_REMOVE = [
+  { month: 'Jan', value: 100 },
+  { month: 'Feb', value: 200 },
+];
+
+/**
+ * Extract path d attributes from line/area mark elements.
+ */
+function extractPathD(svg: SVGElement, markClass: string): Map<string, string> {
+  const result = new Map<string, string>();
+  const groups = svg.querySelectorAll(`.${markClass}[data-key]`);
+  for (const g of groups) {
+    const key = g.getAttribute('data-key')!;
+    const path = g.querySelector('path');
+    if (path) {
+      result.set(key, path.getAttribute('d') ?? '');
+    }
+  }
+  return result;
+}
+
+/**
+ * Run a round-trip test for line/area charts.
+ */
+function assertLineAreaRoundTrip(specA: ChartSpec, specB: ChartSpec, markClass: string) {
+  const layoutA = compile(specA);
+  const layoutB = compile(specB);
+
+  const container = createContainer();
+  const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+  runTransition({
+    svg,
+    prevLayout: layoutA,
+    nextLayout: layoutB,
+    animation: layoutB.animation!,
+    onComplete: () => {},
+  });
+
+  runToCompletion();
+
+  // Extract paths after transition
+  const transitioned = extractPathD(svg, markClass);
+
+  // Fresh render for comparison
+  const { svg: freshSvg } = compileAndRender(specB);
+  const fresh = extractPathD(freshSvg, markClass);
+
+  // Same set of keys
+  expect([...transitioned.keys()].sort()).toEqual([...fresh.keys()].sort());
+
+  // Same path d per key (round-trip invariant)
+  for (const [key, tPath] of transitioned) {
+    const fPath = fresh.get(key);
+    expect(fPath).toBeDefined();
+    expect(tPath).toBe(fPath);
+  }
+
+  // No ghost elements remain
+  expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+}
+
+describe('line chart round-trip invariant', () => {
+  it('value-only change: path matches fresh render', () => {
+    assertLineAreaRoundTrip(lineSpec(LINE_DATA_A), lineSpec(LINE_DATA_B), 'oc-mark-line');
+  });
+
+  it('append point: path matches fresh render', () => {
+    assertLineAreaRoundTrip(lineSpec(LINE_DATA_A), lineSpec(LINE_DATA_APPEND), 'oc-mark-line');
+  });
+
+  it('remove point: path matches fresh render', () => {
+    assertLineAreaRoundTrip(lineSpec(LINE_DATA_A), lineSpec(LINE_DATA_REMOVE), 'oc-mark-line');
+  });
+});
+
+describe('area chart round-trip invariant', () => {
+  it('value-only change: path matches fresh render', () => {
+    assertLineAreaRoundTrip(areaSpec(LINE_DATA_A), areaSpec(LINE_DATA_B), 'oc-mark-area');
+  });
+
+  it('append point: path matches fresh render', () => {
+    assertLineAreaRoundTrip(areaSpec(LINE_DATA_A), areaSpec(LINE_DATA_APPEND), 'oc-mark-area');
+  });
+
+  it('remove point: path matches fresh render', () => {
+    assertLineAreaRoundTrip(areaSpec(LINE_DATA_A), areaSpec(LINE_DATA_REMOVE), 'oc-mark-area');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Line/area canTransition gate integration
+// ---------------------------------------------------------------------------
+
+describe('canTransition for line/area', () => {
+  it('passes for line chart with different values', () => {
+    const specA = lineSpec(LINE_DATA_A);
+    const specB = lineSpec(LINE_DATA_B);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
+  });
+
+  it('passes for area chart with different values', () => {
+    const specA = areaSpec(LINE_DATA_A);
+    const specB = areaSpec(LINE_DATA_B);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
+  });
+
+  it('fails for line to area mark type change', () => {
+    const specA = lineSpec(LINE_DATA_A);
+    const specB = areaSpec(LINE_DATA_A); // same data, different mark
+    // Can't call passingGateArgs because the mark types differ and compilation
+    // produces different layouts. Test the gate logic directly.
+    expect(
+      canTransition({
+        prevLayout: compile(specA),
+        nextLayout: compile(specB),
+        prevSpec: specA,
+        nextSpec: specB,
+        isFirstRender: false,
+        entranceInFlight: false,
+      }),
+    ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suppressed-point opacity
+// ---------------------------------------------------------------------------
+
+describe('suppressed-point opacity', () => {
+  it('point with opacity="0" retains opacity="0" after transition', () => {
+    // Create a line chart spec that produces point marks
+    const specWithPoints: ChartSpec = {
+      animation: true,
+      mark: { type: 'line', point: true },
+      data: LINE_DATA_A,
+      encoding: {
+        x: { field: 'month', type: 'ordinal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    const layoutA = compile(specWithPoints);
+    const layoutB = compile({
+      ...specWithPoints,
+      data: LINE_DATA_B,
+    });
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    // Find all point marks and manually set one to opacity="0"
+    // (simulating endpoint-marker suppression)
+    const points = svg.querySelectorAll('circle.oc-mark-point[data-key]');
+    if (points.length > 0) {
+      points[0].setAttribute('opacity', '0');
+    }
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    runToCompletion();
+
+    // The suppressed point should still have opacity="0"
+    if (points.length > 0) {
+      expect(points[0].getAttribute('opacity')).toBe('0');
+    }
   });
 });
