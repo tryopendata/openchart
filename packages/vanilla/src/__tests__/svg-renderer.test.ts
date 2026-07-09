@@ -825,7 +825,12 @@ describe('left y-axis title spacing', () => {
       y: {
         field: 'pct',
         type: 'quantitative',
-        axis: { title: 'Spring 2026 pass rate', format: '.0f%' },
+        // Force gutter ticks: this suite measures title-vs-gutter-label
+        // clearance, which only exists when tick labels sit in a left gutter.
+        // Line charts default to inline ticks (rendered inside the plot), where
+        // there is no gutter label to clear — that case is guarded separately by
+        // the "inline y-axis title inside the container" test in the engine.
+        axis: { title: 'Spring 2026 pass rate', format: '.0f%', tickPosition: 'gutter' },
       },
     },
     chrome: { title: 'Pass rate' },
