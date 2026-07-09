@@ -59,6 +59,7 @@ import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+import { canTransition, runTransition } from './transition';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -192,6 +193,9 @@ export function createChart<TData extends DataRow = DataRow>(
   let isFirstRender = true;
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
+
+  // Data-update transition state
+  let transitionHandle: import('./transition').TransitionHandle | null = null;
 
   // Set when webfonts have loaded and a recompile is owed to reflect final font
   // metrics. The next render() that actually recompiles flips
@@ -621,6 +625,12 @@ export function createChart<TData extends DataRow = DataRow>(
       return;
     }
 
+    // Cancel any in-progress data-update transition
+    if (transitionHandle) {
+      transitionHandle.cancel();
+      transitionHandle = null;
+    }
+
     // Cancel any in-progress entrance animations before tearing down
     if (cleanupAnimations) {
       cleanupAnimations();
@@ -831,6 +841,12 @@ export function createChart<TData extends DataRow = DataRow>(
 
   function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
     if (destroyed) return;
+
+    // Capture pre-update state for transition gating
+    const prevSpec = currentSpec;
+    const prevLayout = currentLayout;
+    const entranceWasRunning = cleanupAnimations != null;
+
     currentSpec = newSpec;
     // A new spec can change theme.fonts.family; rebuild the measurer so layout
     // measures the font compile will actually render with.
@@ -845,6 +861,30 @@ export function createChart<TData extends DataRow = DataRow>(
       selectedElement = updateOpts.selectedElement ?? null;
     }
     render();
+
+    // After render, check if we can run a smooth transition instead of the
+    // instant swap that render() already performed.
+    if (
+      svgElement &&
+      canTransition({
+        prevLayout,
+        nextLayout: currentLayout,
+        prevSpec,
+        nextSpec: newSpec,
+        isFirstRender: false,
+        entranceInFlight: entranceWasRunning,
+      })
+    ) {
+      transitionHandle = runTransition({
+        svg: svgElement as SVGSVGElement,
+        prevLayout,
+        nextLayout: currentLayout,
+        animation: currentLayout.animation!,
+        onComplete: () => {
+          transitionHandle = null;
+        },
+      });
+    }
   }
 
   function resize(): void {
@@ -912,6 +952,12 @@ export function createChart<TData extends DataRow = DataRow>(
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
+
+    // Cancel any in-progress data-update transition
+    if (transitionHandle) {
+      transitionHandle.cancel();
+      transitionHandle = null;
+    }
 
     if (cleanupAnimations) {
       cleanupAnimations();

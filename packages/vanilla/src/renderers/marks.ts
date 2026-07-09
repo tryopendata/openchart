@@ -58,9 +58,13 @@ export function resetMarkRenderState(): void {
  */
 function stampAnimationAttrs(
   el: SVGElement,
-  mark: { animationIndex?: number },
+  mark: { animationIndex?: number; key?: string },
   fallbackIndex: number,
 ): void {
+  // Stamp stable identity key for data-update transitions (always, not just enter)
+  if (mark.key) {
+    el.setAttribute('data-key', mark.key);
+  }
   if (!currentAnimation?.enter) return;
   const idx = mark.animationIndex ?? fallbackIndex;
   el.setAttribute('data-animation-index', String(idx));
@@ -406,6 +410,16 @@ registerMarkRenderer('point', renderPointMark as MarkRenderer<Mark>);
 registerMarkRenderer('textMark', renderTextMark as MarkRenderer<Mark>);
 registerMarkRenderer('rule', renderRuleMark as MarkRenderer<Mark>);
 registerMarkRenderer('tick', renderTickMark as MarkRenderer<Mark>);
+
+/**
+ * Render a single mark to an SVG element without appending it anywhere.
+ * Used by the transition module to create ghost elements for exiting marks.
+ */
+export function renderSingleMark(mark: Mark, index: number): SVGElement | undefined {
+  const renderer = markRenderers[mark.type];
+  if (!renderer) return undefined;
+  return renderer(mark, index);
+}
 
 /** Extract series name from a mark for legend toggle matching. */
 function getMarkSeries(mark: Mark): string | undefined {
