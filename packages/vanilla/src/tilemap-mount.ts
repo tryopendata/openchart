@@ -13,6 +13,7 @@ import type {
   TileMapLayout,
   TileMapSpec,
 } from '@opendata-ai/openchart-core';
+import { BREAKPOINT_COMPACT_MAX, BREAKPOINT_MEDIUM_MAX } from '@opendata-ai/openchart-core';
 import { compileTileMap } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
@@ -27,6 +28,33 @@ import { createMeasureText, resolveFontFamily, scheduleFontReload } from './meas
 import { observeResize } from './resize-observer';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+
+// ---------------------------------------------------------------------------
+// Responsive tile sizing
+// ---------------------------------------------------------------------------
+
+// The state grid is 8 rows tall (see engine/tilemap/layout.ts GRID_ROWS).
+// TILEMAP_TILE_GAP must match the gap passed to computeTilePositions in
+// compile-tilemap.ts (currently 5) so the mount's height budget matches the
+// grid the compiler builds.
+const TILEMAP_GRID_ROWS = 8;
+const TILEMAP_TILE_GAP = 5;
+// Generous vertical reserve for chrome (title/subtitle/source) + padding +
+// legend. Intentionally over-reserved: on narrow widths we WANT tile size to be
+// bound by width, so any excess height budget just lets the map grow taller
+// (which is the desired mobile behavior) rather than starving the tiles.
+const TILEMAP_CHROME_RESERVE = 180;
+
+/**
+ * Target tile size (px) for a given container width. Drives the height budget
+ * on non-desktop widths so the 8-row grid isn't starved to tiny tiles after
+ * chrome is subtracted from a square drawing area. Width still caps the actual
+ * tile size, so these are ceilings the layout grows toward, not guarantees.
+ */
+function pickTargetTileSize(width: number): number {
+  if (width < BREAKPOINT_COMPACT_MAX) return 34; // compact / mobile
+  return 40; // medium (tablet, sidebars)
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -150,9 +178,21 @@ export function createTileMap(
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
     const width = Math.max(rect.width || 600, 100);
-    // Height is derived from content by the compiler (tight viewBox),
-    // so pass a large value to ensure width is the binding constraint.
-    return { width, height: width };
+    // The compiler derives its own tight content height and treats the passed
+    // height as a cap. On desktop, a square budget (height = width) keeps tiles
+    // from ballooning (the 8-row grid becomes the binding constraint at
+    // ~width/8). Below desktop, a square budget starves the grid after chrome,
+    // so give it a height budget sized to a comfortable target tile instead —
+    // the map then grows taller as needed rather than shrinking the tiles.
+    if (width >= BREAKPOINT_MEDIUM_MAX) {
+      return { width, height: width };
+    }
+    const targetTile = pickTargetTileSize(width);
+    const height =
+      targetTile * TILEMAP_GRID_ROWS +
+      TILEMAP_TILE_GAP * (TILEMAP_GRID_ROWS - 1) +
+      TILEMAP_CHROME_RESERVE;
+    return { width, height };
   }
 
   function compile(): TileMapLayout {

@@ -76,6 +76,8 @@
 | Theme demo story | `examples/src/theme.stories.tsx` |
 | Visual regression spec | `e2e/visual/stories.spec.ts` |
 | Visual regression baselines | `e2e/visual/__screenshots__/` |
+| TileMap compile (positions, colors, labels, legend) | `packages/engine/src/tilemap/compile-tilemap.ts`. Grid geometry in `tilemap/layout.ts` (`computeTilePositions`, `US_STATE_TILES`, 12×8 grid). |
+| TileMap responsive sizing (mobile tile size) | Split across two files: the mount `getContainerDimensions()` in `packages/vanilla/src/tilemap-mount.ts` picks the **height budget** (desktop = square `height=width` cap; below 700px a target-tile-derived budget so tiles don't starve), and `compile-tilemap.ts` reclaims horizontal padding on compact widths (`getBreakpoint` + `HPAD_COMPACT_*`) and scales per-tile font/corner-radius/label-centering in `buildTileMark`. Tile size = `min(width-bound, height-bound)`; on mobile width binds. |
 | Release script | `scripts/release.mjs` |
 
 ## Package responsibilities (one-liner each)
