@@ -324,4 +324,151 @@ describe('compileTileMap', () => {
       expect(blueCa.fill).not.toBe(greenCa.fill);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Categorical mode
+  // ---------------------------------------------------------------------------
+
+  describe('categorical mode', () => {
+    const categoricalRecordSpec = {
+      type: 'tilemap' as const,
+      data: {
+        CA: 'medical_only',
+        TX: 'philosophical',
+        NY: 'religious',
+        FL: 'medical_only',
+        WA: 'philosophical',
+      } as Record<string, string>,
+      colors: {
+        medical_only: '#ee4a73',
+        religious: '#e07d00',
+        philosophical: '#06b6d4',
+      },
+    };
+
+    const categoricalTabularSpec = {
+      type: 'tilemap' as const,
+      data: [
+        { state_code: 'CA', exemption_category: 'medical_only' },
+        { state_code: 'TX', exemption_category: 'philosophical' },
+        { state_code: 'NY', exemption_category: 'religious' },
+        { state_code: 'MS', exemption_category: 'medical_only' },
+      ],
+      encoding: {
+        state: { field: 'state_code', type: 'nominal' as const },
+        value: { field: 'exemption_category', type: 'nominal' as const },
+        color: { field: 'exemption_category', type: 'nominal' as const },
+      },
+      colors: {
+        medical_only: '#ee4a73',
+        religious: '#e07d00',
+        philosophical: '#06b6d4',
+      },
+    };
+
+    it('renders 51 tiles with record-map string data', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+      expect(result.tiles).toHaveLength(51);
+    });
+
+    it('assigns distinct fill colors per category', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+      const txTile = result.tiles.find((t) => t.stateCode === 'TX')!;
+      const nyTile = result.tiles.find((t) => t.stateCode === 'NY')!;
+      const flTile = result.tiles.find((t) => t.stateCode === 'FL')!;
+
+      expect(caTile.fill).toBe('#ee4a73');
+      expect(txTile.fill).toBe('#06b6d4');
+      expect(nyTile.fill).toBe('#e07d00');
+      expect(flTile.fill).toBe('#ee4a73');
+    });
+
+    it('uses fillOpacity of 1 for all data tiles (no opacity encoding)', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+      const dataTiles = result.tiles.filter((t) => t.hasData);
+      for (const tile of dataTiles) {
+        expect(tile.fillOpacity).toBe(1);
+      }
+    });
+
+    it('produces categoricalLegend (not gradientLegend)', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      expect(result.gradientLegend).toBeNull();
+      expect(result.categoricalLegend).not.toBeNull();
+      expect(result.categoricalLegend!.type).toBe('categorical');
+    });
+
+    it('legend entries match categories in data order', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const labels = result.categoricalLegend!.entries.map((e) => e.label);
+      expect(labels).toEqual(['Medical Only', 'Philosophical', 'Religious']);
+    });
+
+    it('legend entry colors match the colors map', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const entries = result.categoricalLegend!.entries;
+      expect(entries.find((e) => e.label === 'Medical Only')!.color).toBe('#ee4a73');
+      expect(entries.find((e) => e.label === 'Religious')!.color).toBe('#e07d00');
+      expect(entries.find((e) => e.label === 'Philosophical')!.color).toBe('#06b6d4');
+    });
+
+    it('works with tabular data and explicit encoding', () => {
+      const result = compileTileMap(categoricalTabularSpec, defaultOptions);
+
+      const dataTiles = result.tiles.filter((t) => t.hasData);
+      expect(dataTiles).toHaveLength(4);
+
+      const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+      expect(caTile.fill).toBe('#ee4a73');
+      expect(caTile.formattedValue).toBe('medical_only');
+    });
+
+    it('uses default categorical palette when no colors map provided', () => {
+      const spec = {
+        type: 'tilemap' as const,
+        data: { CA: 'a', TX: 'b', NY: 'c' } as Record<string, string>,
+      };
+      const result = compileTileMap(spec, defaultOptions);
+
+      const dataTiles = result.tiles.filter((t) => t.hasData);
+      const fills = new Set(dataTiles.map((t) => t.fill));
+      expect(fills.size).toBe(3);
+
+      expect(result.categoricalLegend).not.toBeNull();
+    });
+
+    it('missing states get neutral fill in categorical mode', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const akTile = result.tiles.find((t) => t.stateCode === 'AK')!;
+      expect(akTile.hasData).toBe(false);
+      expect(akTile.formattedValue).toBe('–');
+    });
+
+    it('a11y alt text lists categories', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      expect(result.a11y.altText).toContain('categories');
+      expect(result.a11y.altText).toContain('Medical Only');
+    });
+
+    it('hides categorical legend when legend.show is false', () => {
+      const spec = { ...categoricalRecordSpec, legend: { show: false } };
+      const result = compileTileMap(spec, defaultOptions);
+
+      expect(result.categoricalLegend).toBeNull();
+    });
+
+    it('stores category in tile.data', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
+      expect(caTile.data.category).toBe('medical_only');
+    });
+  });
 });

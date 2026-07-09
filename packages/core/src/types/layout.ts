@@ -1374,8 +1374,10 @@ export interface TileMapLayout {
   chrome: ResolvedChrome;
   /** Resolved tile marks with positions, colors, and labels. */
   tiles: TileMapTileMark[];
-  /** Gradient color legend (null if legend is hidden). */
+  /** Gradient color legend for quantitative mode (null if hidden or categorical). */
   gradientLegend: GradientLegendLayout | null;
+  /** Categorical swatch legend for nominal mode (null if hidden or quantitative). */
+  categoricalLegend: CategoricalLegendLayout | null;
   /** Tooltip content descriptors keyed by state code. */
   tooltipDescriptors: Map<string, TooltipContent>;
   /** Accessibility metadata for the tile map. */

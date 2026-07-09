@@ -1782,8 +1782,14 @@ export interface SankeySpec {
 export interface TileMapEncoding {
   /** State code field (required, nominal). Maps to US state abbreviations. */
   state: EncodingChannel;
-  /** Value field (required, quantitative). Maps to the sequential color scale. */
+  /**
+   * Value field. For quantitative mode, maps to a sequential color scale.
+   * For categorical mode (when color channel is present or values are strings),
+   * maps to category labels shown in tooltips.
+   */
   value: EncodingChannel;
+  /** Color encoding channel (optional, nominal). When present, enables categorical coloring. */
+  color?: EncodingChannel;
   /** Tooltip encoding (optional). */
   tooltip?: EncodingChannel | EncodingChannel[];
 }
@@ -1797,16 +1803,24 @@ export interface TileMapSpec {
   /**
    * Data for the tile map. Accepts either:
    * - A record mapping state codes to numeric values: `{ "CA": 12000, "TX": 8500 }`
+   * - A record mapping state codes to string categories: `{ "CA": "high", "TX": "low" }`
    * - Tabular data rows with state and value fields (requires encoding)
    */
-  data: Record<string, number | null> | DataRow[];
+  data: Record<string, number | string | null> | DataRow[];
   /**
    * Encoding channels mapping data fields to visual properties.
    * Required when data is DataRow[]. Auto-generated when data is a record map.
    */
   encoding?: TileMapEncoding;
-  /** Sequential color palette. Defaults to 'blue'. */
+  /** Sequential color palette. Defaults to 'blue'. Only used in quantitative mode. */
   palette?: TileMapPalette;
+  /**
+   * Custom category-to-color mapping for categorical tilemaps.
+   * Keys are category values, values are CSS color strings.
+   * When provided, forces categorical mode regardless of encoding.
+   * Example: `{ "medical_only": "#ee4a73", "religious": "#e07d00", "philosophical": "#06b6d4" }`
+   */
+  colors?: Record<string, string>;
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
   /** Legend display configuration. */

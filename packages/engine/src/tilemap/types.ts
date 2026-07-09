@@ -22,6 +22,7 @@ export interface NormalizedTileMapSpec {
   data: Record<string, unknown>[];
   encoding: TileMapEncoding;
   palette: TileMapPalette;
+  colors?: Record<string, string>;
   chrome: NormalizedChrome;
   legend?: LegendConfig;
   theme: ThemeConfig;

@@ -425,8 +425,10 @@ export function dataTable(data: DataRow[], options?: TableBuilderOptions): Table
 export interface TileMapBuilderOptions {
   /** Encoding channels (required when data is DataRow[]). */
   encoding?: TileMapEncoding;
-  /** Sequential color palette name. */
+  /** Sequential color palette name (quantitative mode only). */
   palette?: TileMapPalette;
+  /** Custom category-to-color mapping. Forces categorical mode. */
+  colors?: Record<string, string>;
   /** Editorial chrome. */
   chrome?: Chrome;
   /** Legend display configuration. */
@@ -457,7 +459,7 @@ export interface TileMapBuilderOptions {
  * ```
  */
 export function tileMap(
-  data: Record<string, number | null> | DataRow[],
+  data: Record<string, number | string | null> | DataRow[],
   options?: TileMapBuilderOptions,
 ): TileMapSpec {
   return {
@@ -465,6 +467,7 @@ export function tileMap(
     data,
     ...(options?.encoding && { encoding: options.encoding }),
     ...(options?.palette && { palette: options.palette }),
+    ...(options?.colors && { colors: options.colors }),
     ...(options?.chrome && { chrome: options.chrome }),
     ...(options?.legend && { legend: options.legend }),
     ...(options?.theme && { theme: options.theme }),

@@ -12,6 +12,7 @@ import type {
   TileMapTileMark,
 } from '@opendata-ai/openchart-core';
 import { textAscent } from '@opendata-ai/openchart-core';
+import { renderLegend } from './renderers/legend';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -438,8 +439,12 @@ export function renderTileMapSVG(
   // Render tiles
   renderTiles(svg, tiles, animate ? animation : undefined);
 
-  // Render gradient legend
-  renderGradientLegend(svg, layout);
+  // Render legend (gradient for quantitative, categorical for nominal)
+  if (layout.categoricalLegend) {
+    renderLegend(svg, layout.categoricalLegend);
+  } else {
+    renderGradientLegend(svg, layout);
+  }
 
   // Render watermark
   if (watermark) {

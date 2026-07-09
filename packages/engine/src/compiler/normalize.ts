@@ -396,13 +396,24 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
     data = Object.entries(spec.data).map(([state, value]) => ({ state, value }));
   }
 
+  // Detect categorical mode: colors map provided, color encoding channel, or string values
+  const isCategorical =
+    spec.colors !== undefined ||
+    spec.encoding?.color !== undefined ||
+    (!Array.isArray(spec.data) && Object.values(spec.data).some((v) => typeof v === 'string'));
+
   // Auto-generate encoding if not provided
   let encoding = spec.encoding;
   if (!encoding) {
     encoding = {
       state: { field: 'state', type: 'nominal' },
-      value: { field: 'value', type: 'quantitative' },
+      value: { field: 'value', type: isCategorical ? 'nominal' : 'quantitative' },
     };
+  }
+
+  // For categorical record maps without explicit color encoding, use value as color channel
+  if (isCategorical && !encoding.color) {
+    encoding = { ...encoding, color: encoding.value };
   }
 
   // Count matched states and warn if low match ratio
@@ -426,6 +437,7 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
     data,
     encoding,
     palette: spec.palette ?? 'blue',
+    colors: spec.colors,
     chrome: normalizeChrome(spec.chrome),
     legend: spec.legend,
     theme: spec.theme ?? {},
