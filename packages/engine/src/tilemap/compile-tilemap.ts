@@ -38,6 +38,9 @@ import {
   computeChrome,
   estimateTextWidth,
   formatNumber,
+  getBreakpoint,
+  HPAD_COMPACT_FRACTION,
+  HPAD_COMPACT_MIN,
   pickLabelColor,
   resolveTheme,
   SEQUENTIAL_PALETTES,
@@ -58,6 +61,10 @@ const TILE_STROKE_WIDTH = 1;
 const LEGEND_SWATCH_SIZE = 10;
 const LEGEND_SWATCH_GAP = 6;
 const LEGEND_ENTRY_GAP = 16;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -118,7 +125,15 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   );
 
   // 4. Compute drawing area (total space minus chrome)
-  const padding = theme.spacing.padding;
+  // On compact (mobile) widths, reclaim horizontal space by shrinking the
+  // padding — every reclaimed pixel widens the tiles, which are width-bound at
+  // these sizes. Mirrors how the chart pipeline uses HPAD_COMPACT_* on narrow
+  // viewports. The tile-area, chrome, and content-height math all read this one
+  // value, so overriding it here keeps every derived measurement consistent.
+  const padding =
+    getBreakpoint(options.width) === 'compact'
+      ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
+      : theme.spacing.padding;
   const fullArea = {
     x: padding,
     y: padding + chrome.topHeight,
@@ -269,7 +284,9 @@ function compileQuantitative(
   };
 
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(tilemapSpec.animation);
-  const padding = theme.spacing.padding;
+  // fullArea.x is the (possibly compact-reduced) padding chosen in compileTileMap;
+  // reuse it so contentHeight matches the drawing area exactly.
+  const padding = fullArea.x;
   const contentHeight =
     tileGridOffsetY +
     tilePositions.gridHeight +
@@ -354,11 +371,18 @@ function compileCategorical(
   }
 
   const showLegend = tilemapSpec.legend?.show !== false;
+  const legendLabelFontSize = 11;
   const legendRowHeight = LEGEND_SWATCH_SIZE + 6;
-  const legendTotalHeight = showLegend ? legendRowHeight : 0;
+  const legendLabels = categories.map(formatCategoryLabel);
 
+  // Estimate legend rows against the full width to reserve tile-area height.
+  // The renderer wraps against the (narrower) grid width, so we recompute the
+  // real row count below and use that for final placement — never under-reserve.
   const legendGap = showLegend ? 8 : 0;
-  const tileAreaHeight = fullArea.height - legendTotalHeight - legendGap;
+  const estimatedRows = showLegend
+    ? countLegendRows(legendLabels, fullArea.width, legendLabelFontSize)
+    : 0;
+  const tileAreaHeight = fullArea.height - legendRowHeight * estimatedRows - legendGap;
   const tilePositions = computeTilePositions(fullArea.width, tileAreaHeight, 5);
 
   const tileGridOffsetX = fullArea.x + (fullArea.width - tilePositions.gridWidth) / 2;
@@ -366,6 +390,13 @@ function compileCategorical(
   const legendX = tileGridOffsetX;
   const legendY = tileGridOffsetY + tilePositions.gridHeight + legendGap;
   const legendWidth = tilePositions.gridWidth;
+
+  // Reserve height for every wrapped row so a legend that spills onto a second
+  // line (common on narrow mobile widths) doesn't collide with the source text.
+  const legendRows = showLegend
+    ? countLegendRows(legendLabels, legendWidth, legendLabelFontSize)
+    : 0;
+  const legendTotalHeight = showLegend ? legendRowHeight * legendRows : 0;
 
   const neutralFill = isDarkMode ? '#1e2a30' : '#e0e0e0';
   const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : '#d0d0d0';
@@ -411,7 +442,7 @@ function compileCategorical(
   if (showLegend) {
     const labelStyle: TextStyle = {
       fontFamily: theme.fonts.family,
-      fontSize: 11,
+      fontSize: legendLabelFontSize,
       fontWeight: 400,
       fill: theme.colors.text,
       lineHeight: 1.2,
@@ -426,7 +457,7 @@ function compileCategorical(
     categoricalLegend = {
       type: 'categorical',
       position: 'bottom',
-      bounds: { x: legendX, y: legendY, width: legendWidth, height: legendRowHeight },
+      bounds: { x: legendX, y: legendY, width: legendWidth, height: legendTotalHeight },
       labelStyle,
       entries,
       swatchSize: LEGEND_SWATCH_SIZE,
@@ -446,7 +477,9 @@ function compileCategorical(
   };
 
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(tilemapSpec.animation);
-  const padding = theme.spacing.padding;
+  // fullArea.x is the (possibly compact-reduced) padding chosen in compileTileMap;
+  // reuse it so contentHeight matches the drawing area exactly.
+  const padding = fullArea.x;
   const contentHeight =
     tileGridOffsetY +
     tilePositions.gridHeight +
@@ -518,9 +551,20 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
   const textColor = hasData ? pickLabelColor(fill, isDarkMode) : '#ffffff';
   const isLightText = textColor === '#ffffff';
 
+  // A two-line layout (code over value) only fits once tiles are large enough;
+  // below that we drop the value and center the code so nothing overflows.
+  const showValue = tileSize >= 24;
+
+  // Scale the code font with the tile so a 2-char label always fits its box,
+  // rather than snapping between two fixed sizes. A 2-char string is ~1.2x the
+  // font size wide; capping font at ~0.5x tile width keeps it inside the tile
+  // with margin, then clamp to a legible [6.5, 11] range.
+  const codeFontSize = clamp(Math.round(tileSize * 0.5 * 10) / 10, 6.5, 11);
+  const valueFontSize = clamp(Math.round(tileSize * 0.42 * 10) / 10, 6.5, 10);
+
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
-    fontSize: tileSize > 24 ? 10 : 7,
+    fontSize: codeFontSize,
     fontWeight: 700,
     fill: textColor,
     lineHeight: 1.2,
@@ -528,22 +572,27 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
 
   const valueLabelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
-    fontSize: tileSize > 24 ? 10 : 7,
+    fontSize: valueFontSize,
     fontWeight: 300,
     fill: isLightText ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
     lineHeight: 1.2,
   };
 
-  const valueLabel =
-    tileSize < 24
-      ? { text: '', x: 0, y: 0, style: valueLabelStyle, visible: false }
-      : {
-          text: formattedValue,
-          x: tileCenterX,
-          y: tileTopY + tileSize * 0.78,
-          style: valueLabelStyle,
-          visible: true,
-        };
+  // Code sits in the upper third when paired with a value, otherwise centered.
+  const codeCenterY = showValue ? tileTopY + tileSize * 0.28 : tileTopY + tileSize * 0.5;
+
+  const valueLabel = showValue
+    ? {
+        text: formattedValue,
+        x: tileCenterX,
+        y: tileTopY + tileSize * 0.78,
+        style: valueLabelStyle,
+        visible: true,
+      }
+    : { text: '', x: 0, y: 0, style: valueLabelStyle, visible: false };
+
+  // Keep corners visibly rounded-rectangular, never near-circular on small tiles.
+  const cornerRadius = Math.min(TILE_CORNER_RADIUS, Math.round(tileSize * 0.22));
 
   const data: Record<string, unknown> = {
     state: stateCode,
@@ -564,14 +613,14 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
     fillOpacity,
     stroke,
     strokeWidth: TILE_STROKE_WIDTH,
-    cornerRadius: TILE_CORNER_RADIUS,
+    cornerRadius,
     value,
     formattedValue,
     hasData,
     label: {
       text: stateCode,
       x: tileCenterX,
-      y: tileTopY + tileSize * 0.28,
+      y: codeCenterY,
       style: labelStyle,
       visible: true,
     },
@@ -615,6 +664,29 @@ function buildTooltips(
 
 function formatCategoryLabel(category: string): string {
   return category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Count how many rows a horizontal categorical legend wraps into for a given
+ * available width. Mirrors the wrap logic in the legend renderer so the compiler
+ * can reserve enough vertical space and avoid the legend overlapping the source
+ * line on narrow (mobile) containers.
+ */
+function countLegendRows(labels: string[], availableWidth: number, fontSize: number): number {
+  if (labels.length === 0) return 0;
+  let rows = 1;
+  let offsetX = 0;
+  for (let i = 0; i < labels.length; i++) {
+    const labelWidth = estimateTextWidth(labels[i], fontSize);
+    const entryWidth = LEGEND_SWATCH_SIZE + LEGEND_SWATCH_GAP + labelWidth + LEGEND_ENTRY_GAP;
+    if (i > 0 && offsetX + entryWidth > availableWidth) {
+      rows++;
+      offsetX = entryWidth;
+    } else {
+      offsetX += entryWidth;
+    }
+  }
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
