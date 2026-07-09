@@ -82,14 +82,15 @@ export function renderChartSVG(
   const classes = opts?.animate ? 'oc-chart oc-animate' : 'oc-chart';
   svg.setAttribute('class', classes);
 
-  // Set animation CSS custom properties when enabled
-  if (animation?.enabled) {
+  // Set animation CSS custom properties when the enter phase is enabled
+  const enterPhase = animation?.enter;
+  if (enterPhase) {
     const markCount = layout.marks.length;
-    const stagger = clampStaggerDelay(animation.staggerDelay, markCount);
-    svg.style.setProperty('--oc-animation-duration', `${animation.duration}ms`);
+    const stagger = clampStaggerDelay(enterPhase.staggerDelay, markCount);
+    svg.style.setProperty('--oc-animation-duration', `${enterPhase.duration}ms`);
     svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[animation.ease] || EASE_VAR_MAP.smooth;
+    svg.style.setProperty('--oc-annotation-delay', `${animation!.annotationDelay}ms`);
+    const easeVar = EASE_VAR_MAP[enterPhase.ease] || EASE_VAR_MAP.smooth;
     svg.style.setProperty('--oc-animation-ease', easeVar);
 
     // Compute per-segment duration for stacked bars so the total bar animation
@@ -105,7 +106,7 @@ export function renderChartSVG(
       }
     }
     if (maxSegments > 0) {
-      const segDuration = Math.round(animation.duration / maxSegments);
+      const segDuration = Math.round(enterPhase.duration / maxSegments);
       svg.style.setProperty('--oc-stack-segment-duration', `${segDuration}ms`);
     }
   }

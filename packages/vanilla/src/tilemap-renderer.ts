@@ -210,7 +210,7 @@ function renderTiles(
   // Base delay spreads tiles across ~800ms window, jitter adds +-40% variation
   // so some tiles pop in clusters while others have longer gaps.
   const tileDelays: number[] = [];
-  if (animation?.enabled) {
+  if (animation?.enter) {
     const baseStagger = 800 / Math.max(tiles.length, 1);
     let seed = 17;
     for (let i = 0; i < tiles.length; i++) {
@@ -231,7 +231,7 @@ function renderTiles(
       tileGroup.setAttribute('aria-label', tile.aria.label);
     }
 
-    if (animation?.enabled) {
+    if (animation?.enter) {
       const idx = tile.animationIndex ?? i;
       tileGroup.setAttribute('data-animation-index', String(idx));
       (tileGroup as SVGElement & ElementCSSInlineStyle).style.setProperty(
@@ -406,7 +406,7 @@ export function renderTileMapSVG(
   opts?: { animate?: boolean },
 ): SVGSVGElement {
   const { width, height, tiles, a11y, watermark, animation } = layout;
-  const animate = opts?.animate && animation?.enabled;
+  const animate = opts?.animate && !!animation?.enter;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -418,13 +418,13 @@ export function renderTileMapSVG(
   const classes = animate ? 'oc-tilemap oc-animate' : 'oc-tilemap';
   svg.setAttribute('class', classes);
 
-  if (animate && animation) {
+  if (animate && animation?.enter) {
     // Target ~1s total: stagger window ~800ms + per-tile pop ~200ms
     const stagger = Math.max(5, Math.round(800 / Math.max(tiles.length, 1)));
-    svg.style.setProperty('--oc-animation-duration', `${animation.duration}ms`);
+    svg.style.setProperty('--oc-animation-duration', `${animation.enter.duration}ms`);
     svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
     svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[animation.ease] || EASE_VAR_MAP.smooth;
+    const easeVar = EASE_VAR_MAP[animation.enter.ease] || EASE_VAR_MAP.smooth;
     svg.style.setProperty('--oc-animation-ease', easeVar);
   }
 

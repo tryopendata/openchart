@@ -47,7 +47,7 @@ describe('animation in compiled layout', () => {
     const spec = { ...barSpec, animation: true } as ChartSpec;
     const layout = compileChart(spec, { width: 600, height: 400 });
     expect(layout.animation).toBeDefined();
-    expect(layout.animation!.enabled).toBe(true);
+    expect(layout.animation!.enter).toBeDefined();
   });
 
   it('layout has no animation config when spec omits animation', () => {

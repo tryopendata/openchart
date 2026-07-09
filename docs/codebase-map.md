@@ -21,7 +21,7 @@
 | CSS tokens (light defaults) | `packages/core/src/styles/tokens.css` |
 | CSS dark overrides (`.oc-dark`) | `packages/core/src/styles/dark.css` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
-| Animation keyframes / rules | `packages/core/src/styles/keyframes.css`, `animation.css` |
+| Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition.ts`. |
 | Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
 | X-axis extent helper + constants | `packages/core/src/responsive/metrics.ts` (`computeXAxisExtentFromLabels`, `X_AXIS_BAND_HEIGHT`, `X_AXIS_TITLE_BAND`, `X_AXIS_TITLE_BAND_ROTATED`) |
 | Text wrapping | `packages/core/src/layout/text-wrap.ts` (`wrapText`) |
@@ -65,6 +65,8 @@
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
 | Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts` |
+| Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition.ts` |
+| Mark key serialization / dedup | `packages/engine/src/compiler/keys.ts` |
 | Tooltip rendering | `packages/vanilla/src/tooltip.ts` |
 | React entry (`<Chart>`, `<DataTable>`, `<Graph>`, `<VizThemeProvider>`) | `packages/react/src/` |
 | Vue entry | `packages/vue/src/` |
@@ -157,9 +159,10 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 
 ## Animation system
 
-- Pure CSS. Keyframes in `packages/core/src/styles/keyframes.css`, rules in `animation.css`.
+- **Entrance animations** are pure CSS. Keyframes in `packages/core/src/styles/keyframes.css`, rules in `animation.css`. The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.
+- **Update/exit transitions** use a rAF loop in `packages/vanilla/src/transition.ts`, not CSS. The driver matches marks by `data-key`, tweens geometry (rect position/size, line/area path morphs, point cx/cy/r, rule/tick endpoints, text x/y), and also transitions axis ticks and gridlines. Supports interruption retargeting via `snapshot()`.
 - The engine resolves `AnimationSpec` → `ResolvedAnimation` (`engine/src/compiler/animation.ts`).
-- The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.
+- Mark keys for matching are serialized in `packages/engine/src/compiler/keys.ts`.
 - Detailed gotchas (SVG ≠ HTML, mount lifecycle, stacked bar segment chaining, orientation): `.claude/rules/svg-animation.md` — **read before touching animation code.**
 
 ## Visual regression

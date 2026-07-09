@@ -20,6 +20,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, getSequentialColor, groupByField } from '../utils';
@@ -77,9 +78,11 @@ export function computeDotMarks(
   const isSequentialColor = colorEnc?.type === 'quantitative';
   const colorField = isSequentialColor ? undefined : colorEnc?.field;
 
+  let marks: (PointMark | RectMark)[];
+
   // Multi-series (categorical): dumbbell chart with connecting bars
   if (colorField) {
-    return computeDumbbellMarks(
+    marks = computeDumbbellMarks(
       spec.data,
       xChannel.field,
       yChannel.field,
@@ -89,20 +92,34 @@ export function computeDotMarks(
       bandwidth,
       scales,
     );
+  } else {
+    // Single series: lollipop stems from baseline
+    marks = computeLollipopMarks(
+      spec.data,
+      xChannel.field,
+      yChannel.field,
+      xScale,
+      yScale,
+      bandwidth,
+      baseline,
+      scales,
+      isSequentialColor,
+    );
   }
 
-  // Single series: lollipop stems from baseline
-  return computeLollipopMarks(
-    spec.data,
-    xChannel.field,
-    yChannel.field,
-    xScale,
-    yScale,
-    bandwidth,
-    baseline,
-    scales,
-    isSequentialColor,
-  );
+  // Stamp keys on point marks (skip rect stems/connectors)
+  const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');
+  const rawKeys = pointMarks.map((m) => {
+    const cat = serializeKeyValue(m.data[yChannel.field]);
+    const series = colorField ? String(m.data[colorField] ?? '') : '';
+    return series ? `${series}|${cat}` : cat;
+  });
+  const keys = dedupeKeys(rawKeys);
+  for (let i = 0; i < pointMarks.length; i++) {
+    pointMarks[i].key = keys[i];
+  }
+
+  return marks;
 }
 
 // ---------------------------------------------------------------------------

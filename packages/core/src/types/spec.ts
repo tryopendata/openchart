@@ -489,6 +489,12 @@ export interface Encoding<TData extends DataRow = DataRow> {
    */
   detail?: EncodingChannel<TData>;
   /**
+   * Identity channel for data-update transitions. Maps a field whose value
+   * uniquely identifies each datum across updates. Mirrors Vega-Lite's key channel.
+   * Not visually encoded. Optional: charts derive sensible default keys.
+   */
+  key?: EncodingChannel<TData>;
+  /**
    * Secondary x position. Used with `x` to define a horizontal span (rect marks, error bars).
    * Both `x` and `x2` must be quantitative.
    */
@@ -1158,15 +1164,13 @@ export interface AnimationPhaseConfig {
 /**
  * Full animation config object. Structured as enter/update/exit phases
  * following Vega's encoding set model.
- *
- * v1 implements enter only. update and exit reserved for v2.
  */
 export interface AnimationConfig {
   /** Entrance animation when chart first renders. */
   enter?: AnimationPhaseConfig | boolean;
-  /** Transition animation when data updates. Reserved for v2. */
+  /** Transition animation when data updates. */
   update?: AnimationPhaseConfig | boolean;
-  /** Exit animation when marks are removed. Reserved for v2. */
+  /** Exit animation when marks are removed. */
   exit?: AnimationPhaseConfig | boolean;
   /** Delay before annotations animate in (ms after marks). Default: 200. */
   annotationDelay?: number;

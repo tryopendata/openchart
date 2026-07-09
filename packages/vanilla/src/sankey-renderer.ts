@@ -77,7 +77,7 @@ function stampAnimationAttrs(
   fallbackIndex: number,
   animation?: ResolvedAnimation,
 ): void {
-  if (!animation?.enabled) return;
+  if (!animation?.enter) return;
   const idx = mark.animationIndex ?? fallbackIndex;
   el.setAttribute('data-animation-index', String(idx));
   (el as SVGElement & ElementCSSInlineStyle).style.setProperty('--oc-mark-index', String(idx));
@@ -560,18 +560,19 @@ export function renderSankeySVG(
   svg.setAttribute('aria-label', layout.a11y.altText);
 
   // Classes: oc-chart oc-sankey, plus oc-animate if animated
-  const animate = animation?.enabled;
+  const enterPhase = animation?.enter;
+  const animate = !!enterPhase;
   const classes = animate ? 'oc-chart oc-sankey oc-animate' : 'oc-chart oc-sankey';
   svg.setAttribute('class', classes);
 
-  // Set animation CSS custom properties when enabled
-  if (animation?.enabled) {
+  // Set animation CSS custom properties when the enter phase is enabled
+  if (enterPhase) {
     const totalMarks = layout.nodes.length + layout.links.length;
-    const stagger = clampStaggerDelay(animation.staggerDelay, totalMarks);
-    svg.style.setProperty('--oc-animation-duration', `${animation.duration}ms`);
+    const stagger = clampStaggerDelay(enterPhase.staggerDelay, totalMarks);
+    svg.style.setProperty('--oc-animation-duration', `${enterPhase.duration}ms`);
     svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[animation.ease] || EASE_VAR_MAP.smooth;
+    svg.style.setProperty('--oc-annotation-delay', `${animation!.annotationDelay}ms`);
+    const easeVar = EASE_VAR_MAP[enterPhase.ease] || EASE_VAR_MAP.smooth;
     svg.style.setProperty('--oc-animation-ease', easeVar);
   }
 

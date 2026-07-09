@@ -9,6 +9,7 @@
 import type { Encoding, Mark, MarkAria, TextMarkLayout } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import type { ChartRenderer } from '../registry';
@@ -82,6 +83,14 @@ export function computeTextMarks(
       data: row as Record<string, unknown>,
       aria,
     });
+  }
+
+  // Stamp keys: position-defining value, fall back to index
+  const posField = xChannel?.field ?? yChannel?.field;
+  const rawKeys = marks.map((m, i) => (posField ? serializeKeyValue(m.data[posField]) : String(i)));
+  const keys = dedupeKeys(rawKeys);
+  for (let i = 0; i < marks.length; i++) {
+    marks[i].key = keys[i];
   }
 
   return marks;

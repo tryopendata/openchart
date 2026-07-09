@@ -246,7 +246,7 @@ export function createTable(
       }
 
       currentLayout = compile();
-      const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
+      const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
       wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
 
       // Set up animation cleanup on first animated render

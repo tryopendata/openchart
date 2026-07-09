@@ -417,14 +417,14 @@ export function renderTable(
 
   // Animation: stamp CSS custom properties and add oc-animate class BEFORE
   // DOM insertion to avoid a flash of final state.
-  if (opts?.animate && layout.animation?.enabled) {
-    const anim = layout.animation;
+  if (opts?.animate && layout.animation?.enter) {
+    const enterPhase = layout.animation.enter;
     const rowCount = layout.rows.length;
-    const stagger = clampStaggerDelay(anim.staggerDelay, rowCount);
+    const stagger = clampStaggerDelay(enterPhase.staggerDelay, rowCount);
     const s = wrapper.style;
-    s.setProperty('--oc-animation-duration', `${anim.duration}ms`);
+    s.setProperty('--oc-animation-duration', `${enterPhase.duration}ms`);
     s.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    s.setProperty('--oc-animation-ease', EASE_VAR_MAP[anim.ease] || EASE_VAR_MAP.smooth);
+    s.setProperty('--oc-animation-ease', EASE_VAR_MAP[enterPhase.ease] || EASE_VAR_MAP.smooth);
     wrapper.classList.add('oc-animate');
   }
 

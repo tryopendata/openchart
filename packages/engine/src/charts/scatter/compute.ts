@@ -20,6 +20,7 @@ import { max, min } from 'd3-array';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import { scaleSqrt } from 'd3-scale';
 
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, getSequentialColor } from '../utils';
@@ -133,6 +134,8 @@ export function computeScatterMarks(
     sizeScale = scaleSqrt().domain([sizeMin, sizeMax]).range([radiusMin, radiusMax]).clamp(true);
   }
 
+  const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
+  const keyField = keyEnc?.field;
   const marks: PointMark[] = [];
 
   for (const row of spec.data) {
@@ -185,6 +188,18 @@ export function computeScatterMarks(
       data: row as Record<string, unknown>,
       aria,
     });
+  }
+
+  // Stamp keys: encoding.key field when set, else seriesKey|x composite
+  const rawKeys = marks.map((m) => {
+    if (keyField) return serializeKeyValue(m.data[keyField]);
+    const cat = colorField ? String(m.data[colorField] ?? '') : '';
+    const xVal = serializeKeyValue(m.data[xChannel.field]);
+    return cat ? `${cat}|${xVal}` : xVal;
+  });
+  const keys = dedupeKeys(rawKeys);
+  for (let i = 0; i < marks.length; i++) {
+    marks[i].key = keys[i];
   }
 
   return marks;

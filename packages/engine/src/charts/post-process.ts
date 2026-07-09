@@ -188,11 +188,11 @@ export function assignAnimationIndices(
   marks: Mark[],
   animation: ResolvedAnimation | undefined,
 ): void {
-  if (!animation?.enabled) return;
+  if (!animation?.enter) return;
 
   // Phase 1: Value-based stagger ordering. Skip stacked rects
   // since they get group-based indices below (avoids wasted work that gets overwritten).
-  if (animation.staggerOrder === 'value') {
+  if (animation.enter.staggerOrder === 'value') {
     const indexed = marks.map((m, i) => ({ mark: m, idx: i }));
     indexed.sort((a, b) => {
       const av = getMarkPrimaryValue(a.mark);

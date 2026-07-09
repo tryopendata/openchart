@@ -224,6 +224,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       },
       "fill": "#06b6d4",
       "height": 57.45223880597016,
+      "key": "|A",
       "label": {
         "connector": undefined,
         "style": {
@@ -258,6 +259,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       },
       "fill": "#06b6d4",
       "height": 57.45223880597016,
+      "key": "|B",
       "label": {
         "connector": undefined,
         "style": {
@@ -292,6 +294,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       },
       "fill": "#06b6d4",
       "height": 57.45223880597016,
+      "key": "|C",
       "label": {
         "connector": undefined,
         "style": {
@@ -1037,8 +1040,14 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 105.2,
         },
       ],
+      "interpolate": "monotone",
+      "key": "US",
       "opacity": undefined,
       "path": "M47,334.25L651.761,105.2",
+      "pointKeys": [
+        "2020-01-01",
+        "2021-01-01",
+      ],
       "points": [
         {
           "x": 47,
@@ -1129,8 +1138,14 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 143.375,
         },
       ],
+      "interpolate": "monotone",
+      "key": "UK",
       "opacity": undefined,
       "path": "M47,296.075L651.761,143.375",
+      "pointKeys": [
+        "2020-01-01",
+        "2021-01-01",
+      ],
       "points": [
         {
           "x": 47,
@@ -1221,8 +1236,14 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 242.62999999999997,
         },
       ],
+      "interpolate": "monotone",
+      "key": "FR",
       "opacity": undefined,
       "path": "M47,349.52L651.761,242.63",
+      "pointKeys": [
+        "2020-01-01",
+        "2021-01-01",
+      ],
       "points": [
         {
           "x": 47,
@@ -1313,8 +1334,14 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 196.82,
         },
       ],
+      "interpolate": "monotone",
+      "key": "DE",
       "opacity": undefined,
       "path": "M47,318.98L651.761,196.82",
+      "pointKeys": [
+        "2020-01-01",
+        "2021-01-01",
+      ],
       "points": [
         {
           "x": 47,
@@ -1804,6 +1831,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 101.27142857142857,
+      "key": "|A",
       "label": {
         "connector": undefined,
         "style": {
@@ -1849,6 +1877,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 185.6642857142857,
+      "key": "|B",
       "label": {
         "connector": undefined,
         "style": {
@@ -1894,6 +1923,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 236.29999999999998,
+      "key": "|C",
       "label": {
         "connector": undefined,
         "style": {
@@ -1939,6 +1969,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 151.90714285714287,
+      "key": "|D",
       "label": {
         "connector": undefined,
         "style": {

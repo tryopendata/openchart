@@ -248,7 +248,7 @@ export function createBarList(
       }
     }
 
-    if (currentLayout.animation?.enabled) {
+    if (currentLayout.animation?.enter) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
         if (pendingResize && !destroyed) {
           pendingResize = false;

@@ -399,7 +399,7 @@ export function createSankey(
     currentLayout = compile();
 
     // Determine if we should animate
-    const shouldAnimate = isFirstRender && currentLayout.animation?.enabled;
+    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     isFirstRender = false;
 
     // Render
@@ -547,7 +547,7 @@ export function createSankey(
     currentLayout = compile();
 
     // Determine if we should animate
-    const shouldAnimate = currentLayout.animation?.enabled;
+    const shouldAnimate = !!currentLayout.animation?.enter;
     isFirstRender = false;
 
     // Render

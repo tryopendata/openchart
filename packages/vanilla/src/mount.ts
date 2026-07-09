@@ -59,6 +59,7 @@ import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+import { canTransition, type GeometrySnapshot, runTransition } from './transition';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -192,6 +193,10 @@ export function createChart<TData extends DataRow = DataRow>(
   let isFirstRender = true;
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
+
+  // Data-update transition state
+  let transitionHandle: import('./transition').TransitionHandle | null = null;
+  let transitionSnapshot: GeometrySnapshot | null = null;
 
   // Set when webfonts have loaded and a recompile is owed to reflect final font
   // metrics. The next render() that actually recompiles flips
@@ -621,6 +626,12 @@ export function createChart<TData extends DataRow = DataRow>(
       return;
     }
 
+    // Cancel any in-progress data-update transition
+    if (transitionHandle) {
+      transitionHandle.cancel();
+      transitionHandle = null;
+    }
+
     // Cancel any in-progress entrance animations before tearing down
     if (cleanupAnimations) {
       cleanupAnimations();
@@ -665,7 +676,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     currentLayout = compile();
-    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enabled;
+    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
     svgElement = renderChartSVG(currentLayout, container, {
       animate: shouldAnimate,
@@ -831,6 +842,19 @@ export function createChart<TData extends DataRow = DataRow>(
 
   function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
     if (destroyed) return;
+
+    // Capture pre-update state for transition gating
+    const prevSpec = currentSpec;
+    const prevLayout = currentLayout;
+    const entranceWasRunning = cleanupAnimations != null;
+
+    // Snapshot in-flight transition geometry before render() cancels it.
+    // This enables retargeting: the next transition starts from the
+    // interrupted position instead of snapping to the previous final state.
+    if (transitionHandle?.running) {
+      transitionSnapshot = transitionHandle.snapshot();
+    }
+
     currentSpec = newSpec;
     // A new spec can change theme.fonts.family; rebuild the measurer so layout
     // measures the font compile will actually render with.
@@ -845,6 +869,38 @@ export function createChart<TData extends DataRow = DataRow>(
       selectedElement = updateOpts.selectedElement ?? null;
     }
     render();
+
+    // After render, check if we can run a smooth transition instead of the
+    // instant swap that render() already performed.
+    if (
+      svgElement &&
+      canTransition({
+        prevLayout,
+        nextLayout: currentLayout,
+        prevSpec,
+        nextSpec: newSpec,
+        isFirstRender: false,
+        entranceInFlight: entranceWasRunning,
+      })
+    ) {
+      // Consume snapshot (if any) for retargeting, then clear
+      const snapshot = transitionSnapshot;
+      transitionSnapshot = null;
+
+      transitionHandle = runTransition({
+        svg: svgElement as SVGSVGElement,
+        prevLayout,
+        nextLayout: currentLayout,
+        animation: currentLayout.animation!,
+        fromSnapshot: snapshot ?? undefined,
+        onComplete: () => {
+          transitionHandle = null;
+        },
+      });
+    } else {
+      // No transition started; clear any stale snapshot
+      transitionSnapshot = null;
+    }
   }
 
   function resize(): void {
@@ -912,6 +968,13 @@ export function createChart<TData extends DataRow = DataRow>(
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
+
+    // Cancel any in-progress data-update transition
+    if (transitionHandle) {
+      transitionHandle.cancel();
+      transitionHandle = null;
+    }
+    transitionSnapshot = null;
 
     if (cleanupAnimations) {
       cleanupAnimations();

@@ -209,9 +209,9 @@ describe('compileTable', () => {
   it('includes resolved animation when spec has animation: true', () => {
     const layout = compileTable({ ...baseSpec, animation: true }, baseOptions);
     expect(layout.animation).toBeDefined();
-    expect(layout.animation!.enabled).toBe(true);
-    expect(layout.animation!.duration).toBe(500);
-    expect(layout.animation!.staggerDelay).toBe(80);
+    expect(layout.animation!.enter).toBeDefined();
+    expect(layout.animation!.enter!.duration).toBe(500);
+    expect(layout.animation!.enter!.staggerDelay).toBe(80);
   });
 
   it('includes resolved animation with custom config', () => {
@@ -220,8 +220,8 @@ describe('compileTable', () => {
       baseOptions,
     );
     expect(layout.animation).toBeDefined();
-    expect(layout.animation!.duration).toBe(800);
-    expect(layout.animation!.ease).toBe('snappy');
+    expect(layout.animation!.enter!.duration).toBe(800);
+    expect(layout.animation!.enter!.ease).toBe('snappy');
   });
 
   it('does not include animation when spec omits it', () => {

@@ -50,11 +50,11 @@ describe('compileChart with animation', () => {
     const layout = compileChart(spec, { width: 600, height: 400 });
 
     expect(layout.animation).toBeDefined();
-    expect(layout.animation!.enabled).toBe(true);
-    expect(layout.animation!.duration).toBe(500);
-    expect(layout.animation!.ease).toBe('smooth');
-    expect(layout.animation!.staggerDelay).toBe(80);
-    expect(layout.animation!.staggerOrder).toBe('index');
+    expect(layout.animation!.enter).toBeDefined();
+    expect(layout.animation!.enter!.duration).toBe(500);
+    expect(layout.animation!.enter!.ease).toBe('smooth');
+    expect(layout.animation!.enter!.staggerDelay).toBe(80);
+    expect(layout.animation!.enter!.staggerOrder).toBe('index');
     expect(layout.animation!.annotationDelay).toBe(200);
   });
 
@@ -80,8 +80,8 @@ describe('compileChart with animation', () => {
     const layout = compileChart(spec, { width: 600, height: 400 });
 
     expect(layout.animation).toBeDefined();
-    expect(layout.animation!.duration).toBe(800);
-    expect(layout.animation!.ease).toBe('smooth');
+    expect(layout.animation!.enter!.duration).toBe(800);
+    expect(layout.animation!.enter!.ease).toBe('smooth');
     expect(layout.animation!.annotationDelay).toBe(500);
   });
 
@@ -152,7 +152,7 @@ describe('compileChart with animation', () => {
     } as ChartSpec;
     const layoutCompact = compileChart(specNoAnim, { width: 350, height: 400 });
     expect(layoutCompact.animation).toBeDefined();
-    expect(layoutCompact.animation!.enabled).toBe(true);
+    expect(layoutCompact.animation!.enter).toBeDefined();
 
     // At full width (> 700), no override applies, so no animation
     const layoutFull = compileChart(specNoAnim, { width: 800, height: 400 });

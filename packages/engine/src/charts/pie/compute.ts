@@ -20,6 +20,7 @@ import { isConditionalDef, isGradientDef } from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
 
+import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { resolveConditionalValue } from '../../transforms/conditional';
@@ -250,6 +251,18 @@ export function computePieMarks(
       data: slice.originalRow as Record<string, unknown>,
       aria,
     });
+  }
+
+  // Stamp keys: slice label (category name) as the natural identity
+  const rawKeys = marks.map((m) => {
+    const label = categoryField
+      ? String(m.data[categoryField] ?? '')
+      : String(m.data.label ?? m.data.name ?? m.data.category ?? '');
+    return serializeKeyValue(label);
+  });
+  const keys = dedupeKeys(rawKeys);
+  for (let i = 0; i < marks.length; i++) {
+    marks[i].key = keys[i];
   }
 
   return marks;

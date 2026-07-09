@@ -10,6 +10,7 @@ import {
   TICK_LABEL_OFFSET,
   textAscent,
 } from '@opendata-ai/openchart-core';
+import { serializeKeyValue } from '@opendata-ai/openchart-engine';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 function appendCompoundLabel(
@@ -68,10 +69,14 @@ function renderAxis(
   // was set to [chartArea.x, chartArea.x + chartArea.width] (and similarly for y).
   // Don't add area.x/area.y again or you'll double-offset everything.
   for (const tick of axis.ticks) {
+    // Stable key for data-update transitions
+    const tickKey = serializeKeyValue(tick.value);
+
     if (orientation === 'x') {
       // Label (no tick marks -- gridlines provide sufficient reference)
       const label = createSVGElement('text');
       label.setAttribute('class', 'oc-axis-tick');
+      label.setAttribute('data-tick-key', tickKey);
 
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         // Rotated labels: anchor at the rotation pivot point
@@ -107,6 +112,7 @@ function renderAxis(
       // edge, no gutter reserved. The gridline itself is the visual axis.
       const label = createSVGElement('text');
       label.setAttribute('class', 'oc-axis-tick oc-axis-tick-inline');
+      label.setAttribute('data-tick-key', tickKey);
       setAttrs(label, {
         x: area.x,
         y: tick.position - 6,
@@ -118,6 +124,7 @@ function renderAxis(
     } else {
       const label = createSVGElement('text');
       label.setAttribute('class', 'oc-axis-tick');
+      label.setAttribute('data-tick-key', tickKey);
       setAttrs(label, {
         x: isRight ? area.x + area.width + TICK_LABEL_OFFSET : area.x - TICK_LABEL_OFFSET,
         y: tick.position,
@@ -207,9 +214,20 @@ function renderAxis(
   // Gridlines (positions are also absolute from the scales)
   // Skip gridlines for right-side y-axis (left y-axis gridlines are sufficient)
   if (!isRight) {
+    // Build position -> tick value map for keying gridlines
+    const posToTickKey = new Map<number, string>();
+    for (const tick of axis.ticks) {
+      posToTickKey.set(tick.position, serializeKeyValue(tick.value));
+    }
+
     for (const gridline of axis.gridlines) {
       const gl = createSVGElement('line');
       gl.setAttribute('class', 'oc-gridline');
+      // Stamp data-tick-key for data-update transitions
+      const glKey = posToTickKey.get(gridline.position);
+      if (glKey) {
+        gl.setAttribute('data-tick-key', glKey);
+      }
       if (orientation === 'y') {
         setAttrs(gl, {
           x1: area.x,
