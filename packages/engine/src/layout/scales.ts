@@ -470,14 +470,24 @@ function evenRange(start: number, end: number, count: number): number[] {
  * each independently. step = width / (n - paddingInner + 2*paddingOuter);
  * bandwidth = step * (1 - paddingInner).
  */
+/** d3 scaleBand padding resolution: `padding` sets both, overrides win. */
+function resolveBandPadding(scaleConfig: EncodingChannel['scale'] | undefined): {
+  paddingInner: number;
+  paddingOuter: number;
+} {
+  const padding = scaleConfig?.padding ?? 0.35;
+  return {
+    paddingInner: scaleConfig?.paddingInner ?? padding,
+    paddingOuter: scaleConfig?.paddingOuter ?? padding,
+  };
+}
+
 export function estimateBandwidth(
   scaleConfig: EncodingChannel['scale'] | undefined,
   plotWidth: number,
   n: number,
 ): number {
-  if (n <= 0) return 0;
-  const padding = scaleConfig?.padding ?? 0.35;
-  const paddingInner = scaleConfig?.paddingInner ?? padding;
+  const { paddingInner } = resolveBandPadding(scaleConfig);
   return estimateBandStep(scaleConfig, plotWidth, n) * (1 - paddingInner);
 }
 
@@ -493,9 +503,7 @@ export function estimateBandStep(
   n: number,
 ): number {
   if (n <= 0) return 0;
-  const padding = scaleConfig?.padding ?? 0.35;
-  const paddingInner = scaleConfig?.paddingInner ?? padding;
-  const paddingOuter = scaleConfig?.paddingOuter ?? padding;
+  const { paddingInner, paddingOuter } = resolveBandPadding(scaleConfig);
   const denom = n - paddingInner + 2 * paddingOuter;
   if (denom <= 0) return 0;
   return plotWidth / denom;

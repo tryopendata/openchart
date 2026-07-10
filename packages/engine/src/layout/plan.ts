@@ -343,8 +343,20 @@ export function resolveLayoutPlan(
       // as buildBandScale so paddingInner/paddingOuter are honored here too.
       const bandwidth = estimateBandwidth(encoding.x?.scale, plotWidth, xLabels.length);
       const step = estimateBandStep(encoding.x?.scale, plotWidth, xLabels.length);
+      // Mirror categoricalTicks' explicit tickCount cap: retained ticks sit a
+      // multiple of the band step apart, so the drawn labels and their anchor
+      // spacing — not the full category set — drive the angle here, matching
+      // what computeAxes measures from actual tick positions.
+      const xTickCount = xAxis?.tickCount as number | undefined;
+      let drawnLabels = xLabels;
+      let anchorSpacing = step;
+      if (xTickCount && xLabels.length > xTickCount) {
+        const capStride = Math.ceil(xLabels.length / xTickCount);
+        drawnLabels = xLabels.filter((_, i) => i % capStride === 0);
+        anchorSpacing = step * capStride;
+      }
       let maxXLabelWidth = 0;
-      for (const label of xLabels) {
+      for (const label of drawnLabels) {
         const w = measure(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
         if (w > maxXLabelWidth) maxXLabelWidth = w;
       }
@@ -352,8 +364,8 @@ export function resolveLayoutPlan(
         undefined,
         maxXLabelWidth,
         bandwidth,
-        xLabels.length,
-        step,
+        drawnLabels.length,
+        anchorSpacing,
         theme.fonts.sizes.axisTick,
       );
     }

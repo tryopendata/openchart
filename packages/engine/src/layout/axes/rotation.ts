@@ -29,7 +29,7 @@
  * the source line).
  */
 
-import { X_AXIS_ROTATED_EXTENT_CAP } from '@opendata-ai/openchart-core';
+import { TICK_LINE_HEIGHT_FACTOR, X_AXIS_ROTATED_EXTENT_CAP } from '@opendata-ai/openchart-core';
 
 /** Band fraction above which flat labels are considered too wide to fit. */
 const BAND_FIT_FRACTION = 0.85;
@@ -39,9 +39,6 @@ const AUTO_ROTATE_ANGLE = -45;
 
 /** Vertical angle used when diagonal ribbons would touch. */
 const STEEP_ROTATE_ANGLE = -90;
-
-/** Line-height multiplier for a label's text ribbon thickness. */
-const LINE_HEIGHT_FACTOR = 1.2;
 
 /** Minimum visible gap between adjacent label ribbons, in px. */
 const LABEL_GAP = 4;
@@ -73,7 +70,7 @@ function rotatedLabelsFit(
   maxLabelWidth: number,
 ): boolean {
   return (
-    ribbonSeparation(spacing, angleDeg) >= fontSize * LINE_HEIGHT_FACTOR + LABEL_GAP ||
+    ribbonSeparation(spacing, angleDeg) >= fontSize * TICK_LINE_HEIGHT_FACTOR + LABEL_GAP ||
     alongTextClearance(spacing, angleDeg) >= maxLabelWidth + LABEL_GAP
   );
 }
@@ -146,7 +143,7 @@ export function bandLabelStride(
   }
   const separation = ribbonSeparation(spacing, angleDeg);
   const clearance = alongTextClearance(spacing, angleDeg);
-  const required = fontSize * LINE_HEIGHT_FACTOR + LABEL_GAP;
+  const required = fontSize * TICK_LINE_HEIGHT_FACTOR + LABEL_GAP;
   const byRibbon = separation > 0 ? Math.ceil(required / separation) : Number.POSITIVE_INFINITY;
   const byLength =
     clearance > 0 ? Math.ceil((maxLabelWidth + LABEL_GAP) / clearance) : Number.POSITIVE_INFINITY;
