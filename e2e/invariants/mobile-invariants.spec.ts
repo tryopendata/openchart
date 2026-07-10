@@ -14,6 +14,8 @@ import { expect, test } from '@playwright/test';
  *   2. No two visible value labels (.oc-mark-label) overlap.
  *   3. X-axis tick labels stay above the source line.
  *   4. A quantitative axis renders at least 2 tick labels.
+ *   5. Horizontal bar marks stay above a readable-thickness floor (opt-in).
+ *   6. Expected band tick labels are present — none silently dropped (opt-in).
  */
 
 interface StoryCase {
@@ -28,8 +30,22 @@ interface StoryCase {
    * MIN_GROUPED_BAR_THICKNESS in the engine (tied to fontSize-10 value labels).
    */
   minBarThickness?: number;
+  /**
+   * Rule 6: band tick labels that must be present. The 7.9.x saga's bug class
+   * was a silently DROPPED label — a chart missing "2025" passes Rules 1-5.
+   * When set, every string here must appear among the visible x tick labels.
+   */
+  expectedXTickLabels?: string[];
+  /**
+   * Playwright projects where this story currently violates a rule — a real,
+   * known rendering bug that predates the project matrix. Marked with
+   * test.fail() so it stays visible and flips to "unexpected pass" (prompting
+   * removal from this list) once the engine bug is fixed.
+   */
+  knownFailingProjects?: string[];
 }
 
+// Every new `mobile-regression` story gets an entry here.
 const stories: StoryCase[] = [
   { name: 'long-wrapped-title', slug: 'mobile-regression--long-title-mobile', quantAxis: 'y' },
   {
@@ -48,12 +64,54 @@ const stories: StoryCase[] = [
     slug: 'mobile-regression--grouped-bars-sparse-ticks',
     quantAxis: 'x',
   },
-  { name: 'rotated-with-source', slug: 'rotated-with-source--rotated-with-source', quantAxis: 'y' },
+  {
+    name: 'rotated-with-source',
+    slug: 'rotated-with-source--rotated-with-source',
+    quantAxis: 'y',
+    // At 360px the rotated "Information Technology" tick label extends
+    // ~11px left of the container (Rule 1). Pre-existing engine bug in the
+    // compact band, exposed when the narrow project was added: the left
+    // gutter doesn't reserve the leading rotated label's horizontal overhang.
+    knownFailingProjects: ['invariants-chromium-mobile-narrow'],
+  },
   { name: 'chrome-all-elements', slug: 'chrome--chrome-all-elements', quantAxis: 'y' },
+  {
+    name: 'one-wide-x-label',
+    slug: 'mobile-regression--one-wide-x-label',
+    quantAxis: 'y',
+    expectedXTickLabels: ['2022', '2023', '2024', '2025', '2026 (to wk 17)'],
+  },
+  {
+    // The production measles repro: axisTick 14 theme. This exact config
+    // shipped broken three times (7.9.0-7.9.2) because only default-theme
+    // tests existed. All five labels must render (at -45°).
+    name: 'one-wide-x-label-large-ticks',
+    slug: 'mobile-regression--one-wide-x-label-large-ticks',
+    quantAxis: 'y',
+    expectedXTickLabels: ['2022', '2023', '2024', '2025', '2026 (to wk 17)'],
+  },
+  {
+    name: 'uniform-short-x-labels',
+    slug: 'mobile-regression--uniform-short-x-labels',
+    quantAxis: 'y',
+    expectedXTickLabels: ['0-79%', '80-84%', '85-89%', '90-94%', '95-100%'],
+  },
+  { name: 'inline-y-title', slug: 'mobile-regression--inline-y-title', quantAxis: 'y' },
 ];
 
-for (const { name, slug, quantAxis, minBarThickness } of stories) {
+for (const {
+  name,
+  slug,
+  quantAxis,
+  minBarThickness,
+  expectedXTickLabels,
+  knownFailingProjects,
+} of stories) {
   test(`mobile invariants: ${name}`, async ({ page }) => {
+    test.fail(
+      knownFailingProjects?.includes(test.info().project.name) ?? false,
+      'known rendering bug on this project — see the story entry comment',
+    );
     await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
     await page.waitForSelector('.oc-root svg.oc-chart');
     // Wait on explicit render-state signals instead of a blind sleep:
@@ -64,7 +122,7 @@ for (const { name, slug, quantAxis, minBarThickness } of stories) {
     await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"]');
     await page.waitForSelector('.oc-root svg.oc-chart:not(.oc-animate)');
 
-    const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg }) => {
+    const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg, expectedXTickLabelsArg }) => {
       const violations: string[] = [];
       const root = document.querySelector('.oc-root');
       const svg = root?.querySelector('svg.oc-chart');
@@ -169,8 +227,27 @@ for (const { name, slug, quantAxis, minBarThickness } of stories) {
         }
       }
 
+      // Rule 6: no band label silently dropped. `startsWith` tolerates a
+      // legitimately truncated label; an entirely dropped one still fails.
+      if (expectedXTickLabelsArg) {
+        const rendered = Array.from(svg.querySelectorAll('.oc-axis-x .oc-axis-tick'))
+          .map((el) => (el.textContent ?? '').trim())
+          .filter((t) => t.length > 0);
+        for (const expected of expectedXTickLabelsArg) {
+          if (!rendered.some((t) => t === expected || t.startsWith(expected))) {
+            violations.push(
+              `expected x tick label missing: "${expected}" (rendered: ${rendered.join(', ')})`,
+            );
+          }
+        }
+      }
+
       return violations;
-    }, { quantAxisArg: quantAxis, minBarThicknessArg: minBarThickness });
+    }, {
+      quantAxisArg: quantAxis,
+      minBarThicknessArg: minBarThickness,
+      expectedXTickLabelsArg: expectedXTickLabels,
+    });
 
     expect(violations, violations.join('\n')).toEqual([]);
   });

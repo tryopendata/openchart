@@ -29,7 +29,7 @@
     "test:visual": "playwright test --project=visual",
     "test:visual:update": "playwright test --project=visual --update-snapshots",
     "test:visual:setup": "playwright install chromium webkit",
-    "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-webkit-mobile",
+    "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow --project=invariants-webkit-mobile",
     "prepare": "husky"
   },
   "overrides": {

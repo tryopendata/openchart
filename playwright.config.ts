@@ -58,6 +58,17 @@ export default defineConfig({
         ...devices['Pixel 7'],
       },
     },
+    // Narrow mobile Chromium: a viewport inside the compact (<400px)
+    // breakpoint band. Pixel 7 is 412px — the compact band CI would
+    // otherwise never see is where the 7.9.x label drops lived.
+    {
+      name: 'invariants-chromium-mobile-narrow',
+      testDir: './e2e/invariants',
+      use: {
+        ...devices['Pixel 7'],
+        viewport: { width: 360, height: 740 },
+      },
+    },
     // Mobile WebKit: Playwright's WebKit shares the engine bugs that break
     // real iOS Safari (dominant-baseline divergence, tspan getBBox). Run on
     // a macOS host for font-metric fidelity; Linux WebKit uses FreeType and
