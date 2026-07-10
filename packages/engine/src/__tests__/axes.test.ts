@@ -1411,6 +1411,31 @@ describe('compact temporal ticks: pinned pre-change output', () => {
 
     expect(axes.y!.ticks.map((t) => t.label)).toEqual(['2025', 'Apr 2025', 'Jul 2025', 'Oct 2025']);
   });
+
+  it('temporal y-axis stays full-format even at starved heights (fallback path)', () => {
+    // Regression guard for the fallback path: compact is x-axis-only (the
+    // planner/renderer y pair must format identically), so even a height so
+    // short that fitContinuousTicks falls through to thinning must keep the
+    // year on every label — never a bare compact month like 'Oct'.
+    const ySpec: NormalizedChartSpec = {
+      ...monthlySpec,
+      markType: 'point',
+      markDef: { type: 'point' },
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'date', type: 'temporal' },
+      },
+    };
+    const starvedArea = { x: 40, y: 40, width: 360, height: 55 };
+    const scales = computeScales(ySpec, starvedArea, ySpec.data);
+    const axes = computeAxes(scales, starvedArea, fullStrategy, theme);
+
+    const labels = axes.y!.ticks.map((t) => t.label);
+    expect(labels.length).toBeGreaterThanOrEqual(2);
+    for (const label of labels) {
+      expect(label).toMatch(/\d{4}/);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

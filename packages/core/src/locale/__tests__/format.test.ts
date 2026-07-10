@@ -189,6 +189,12 @@ describe('formatDate', () => {
       expect(formatDate('2025-04-15', undefined, 'quarter', true, true)).toBe("Q2 '25");
     });
 
+    it('formats quarters with local-time year when useUtc is false', () => {
+      // Mid-quarter local date: quarter and year agree between local and UTC,
+      // exercising the getFullYear() arm of the compact branch.
+      expect(formatDate(new Date(2025, 4, 15), undefined, 'quarter', false, true)).toBe("Q2 '25");
+    });
+
     it('formats weeks as month and day', () => {
       expect(formatDate('2025-03-10', undefined, 'week', true, true)).toBe('Mar 10');
     });

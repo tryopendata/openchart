@@ -265,27 +265,22 @@ function fitContinuousTicks(
   // "drop a tick": at each candidate count, prefer the full format, then try
   // the compact table at the SAME count before stepping the count down. Every
   // returned set is internally consistent — one format family per layout pass.
-  const isTemporal = scale.type === 'time' || scale.type === 'utc';
+  // X-axes only: the planner/renderer y pair must keep formatting identically
+  // (see resolveExplicitTicks), so vertical axes never compact — including
+  // the fallback path below.
+  const useCompact =
+    (scale.type === 'time' || scale.type === 'utc') && orientation === 'horizontal';
 
-  /** First fitting variant at this count: full format, then compact (temporal only). */
-  const fittingCandidate = (n: number): AxisTick[] | undefined => {
-    for (const compact of isTemporal ? [false, true] : [false]) {
-      const candidate = buildContinuousTicks(scale, n, compact);
-      if (candidate.length > tolerance) continue;
-      // Never accept a collapsed set (D3 can return a single nice value for
-      // tight domains) — a lone tick reads as a broken axis.
-      if (candidate.length < MIN_QUANTITATIVE_TICKS) continue;
-      if (!ticksOverlap(candidate, fontSize, fontWeight, measureText, orientation)) {
-        return candidate;
-      }
-    }
-    return undefined;
-  };
+  const fitsCleanly = (candidate: AxisTick[]): boolean =>
+    candidate.length <= tolerance &&
+    !ticksOverlap(candidate, fontSize, fontWeight, measureText, orientation);
 
   // Compact-saves-the-count case: full format overlapped at the initial
   // count, but compact labels may fit without giving up a single tick.
-  const atInitialCount = fittingCandidate(initialCount);
-  if (atInitialCount) return atInitialCount;
+  if (useCompact) {
+    const compactAtInitial = buildContinuousTicks(scale, initialCount, true);
+    if (fitsCleanly(compactAtInitial)) return compactAtInitial;
+  }
 
   // Enforce the floor only when the axis is long enough to fit that many
   // labels without overlap. Very short axes can fall below.
@@ -300,9 +295,12 @@ function fitContinuousTicks(
   let bestWithinFloor: AxisTick[] | undefined;
   let bestWithinFloorCount: number | undefined;
   for (let n = initialCount - 1; n >= 2; n--) {
-    const fit = fittingCandidate(n);
-    if (fit) return fit;
     const candidate = buildContinuousTicks(scale, n);
+    if (fitsCleanly(candidate)) return candidate;
+    if (useCompact) {
+      const compact = buildContinuousTicks(scale, n, true);
+      if (fitsCleanly(compact)) return compact;
+    }
     if (candidate.length >= floor) {
       bestWithinFloor = candidate;
       bestWithinFloorCount = n;
@@ -312,12 +310,12 @@ function fitContinuousTicks(
   // No candidate fit cleanly. Thin whatever most recently met the floor; if
   // nothing did, synthesize a floor-count set directly from the scale so we
   // never hand the overshot initialTicks to the middle-pruning thinner.
-  // Temporal axes rebuild the fallback compact: if the axis is so starved
+  // Compacting axes rebuild the fallback compact: if the axis is so starved
   // that we're thinning below the floor, shorter labels are strictly better.
-  const rawFallback = isTemporal
+  const rawFallback = useCompact
     ? buildContinuousTicks(scale, bestWithinFloorCount ?? floor, true)
     : (bestWithinFloor ?? buildContinuousTicks(scale, floor));
-  const fallback = ensureMinContinuousTicks(scale, rawFallback, floor, isTemporal);
+  const fallback = ensureMinContinuousTicks(scale, rawFallback, floor, useCompact);
   return thinTicksUntilFit(fallback, fontSize, fontWeight, measureText, orientation);
 }
 
