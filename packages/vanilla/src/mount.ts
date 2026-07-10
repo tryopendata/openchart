@@ -21,7 +21,7 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
-import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
+import { compileChart, compileLayer, legendGap } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
   exportCSV,
@@ -121,6 +121,18 @@ export interface ChartInstance {
 }
 
 // ---------------------------------------------------------------------------
+// Container sizing
+// ---------------------------------------------------------------------------
+
+/**
+ * Fallback height when the container doesn't constrain height. For
+ * auto-height ChartSpec mounts this is the fixed budget for the
+ * visualization itself (padding + axes + plot); chrome, the top legend
+ * block, and the metrics bar grow the figure on top of it.
+ */
+const FALLBACK_HEIGHT = 400;
+
+// ---------------------------------------------------------------------------
 // Dark mode resolution
 // ---------------------------------------------------------------------------
 
@@ -194,6 +206,19 @@ export function createChart<TData extends DataRow = DataRow>(
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
 
+  // Auto-height sizing state. `isAutoHeight` latches whether the host
+  // constrains the container's height:
+  //   null  = unknown — every measurement so far was an all-zero rect
+  //           (display:none / detached); keep re-checking each measure.
+  //   true  = auto-height — the figure grows with chrome (ChartSpec only).
+  //   false = explicit height — fit inside the host's box (today's behavior).
+  // The latch matters because the SVG's own style.height gives the container
+  // a nonzero rect after the first render, so auto-height cannot be
+  // re-derived per measure.
+  let isAutoHeight: boolean | null = null;
+  let lastRenderedWidth: number | null = null;
+  let lastRenderedSvgHeight: number | null = null;
+
   // Data-update transition state
   let transitionHandle: import('./transition').TransitionHandle | null = null;
   let transitionSnapshot: GeometrySnapshot | null = null;
@@ -239,8 +264,7 @@ export function createChart<TData extends DataRow = DataRow>(
   // Compilation
   // ---------------------------------------------------------------------------
 
-  function compile(): ChartLayout {
-    const { width, height } = getContainerDimensions();
+  function compileAt(width: number, height: number): ChartLayout {
     const darkMode = resolveDarkMode(options?.darkMode);
 
     const compileOpts: CompileOptions = {
@@ -256,6 +280,61 @@ export function createChart<TData extends DataRow = DataRow>(
       return compileLayer(withRuntimeHidden(currentSpec as LayerSpec) as LayerSpec, compileOpts);
     }
     return compileChart(withRuntimeHidden(currentSpec) as ChartSpec | GraphSpec, compileOpts);
+  }
+
+  /**
+   * Vertical overheads that grow an auto-height figure beyond the
+   * FALLBACK_HEIGHT budget: top+bottom chrome (bottom chrome already includes
+   * a bottom legend's reservation), the top legend block (height + gap), and
+   * the KPI metrics bar. topPad and the axis gap are plot clearance, not
+   * chrome — they stay inside the budget.
+   */
+  function verticalOverheads(layout: ChartLayout, width: number): number {
+    const topLegendBlock =
+      layout.legend.position === 'top' &&
+      'entries' in layout.legend &&
+      layout.legend.entries.length > 0
+        ? layout.legend.bounds.height + legendGap(width)
+        : 0;
+    return (
+      layout.chrome.topHeight +
+      layout.chrome.bottomHeight +
+      topLegendBlock +
+      (layout.metrics?.height ?? 0)
+    );
+  }
+
+  function compile(): ChartLayout {
+    const { width, height } = getContainerDimensions();
+
+    // Auto-height growth applies to ChartSpec mounts only. GraphSpec,
+    // LayerSpec, and sparkline mounts keep the fixed-fallback behavior.
+    const growsWithChrome =
+      isAutoHeight === true &&
+      !isLayerSpec(currentSpec) &&
+      !isGraphSpec(currentSpec as unknown as Record<string, unknown>) &&
+      (currentSpec as ChartSpec).display !== 'sparkline';
+    if (!growsWithChrome) {
+      return compileAt(width, height);
+    }
+
+    // Bounded convergence loop, max 3 compiles. Chrome height depends on
+    // width (text wrap), not height — but the engine's chrome-strip guardrail
+    // strips chrome when the residual plot is too small, which makes chrome
+    // height-dependent at the budget boundary: growing the figure can
+    // un-strip chrome, changing the overheads once more. (Height classes are
+    // not the issue — they only strip below 200/350px, and growing from 400
+    // moves away from those thresholds.) Pass 3 is accepted unconditionally.
+    let layout = compileAt(width, height);
+    const overheads = verticalOverheads(layout, width);
+    if (overheads > 0) {
+      layout = compileAt(width, height + overheads);
+      const overheads2 = verticalOverheads(layout, width);
+      if (overheads2 !== overheads) {
+        layout = compileAt(width, height + overheads2);
+      }
+    }
+    return layout;
   }
 
   function withRuntimeHidden<T extends { hiddenSeries?: string[]; annotations?: Annotation[] }>(
@@ -366,9 +445,21 @@ export function createChart<TData extends DataRow = DataRow>(
         height: Math.max(height || 40, 20),
       };
     }
+    // Latch auto-height on the first NONZERO measurement: height 0 with a
+    // real width means the host doesn't constrain height. An all-zero rect
+    // (display:none / detached) stays "unknown" — keep re-checking until the
+    // container produces a real measurement.
+    if (isAutoHeight === null && (rect.width > 0 || rect.height > 0)) {
+      isAutoHeight = rect.height === 0 && rect.width > 0;
+    }
+
     return {
       width: Math.max(rect.width || 600, 100),
-      height: Math.max(rect.height || 400, 100),
+      // Latched-auto mounts always compile against the fixed budget: after
+      // the first render the container's measured height is just our own
+      // SVG, so reading it back would re-pin whatever we rendered last.
+      height:
+        isAutoHeight === true ? FALLBACK_HEIGHT : Math.max(rect.height || FALLBACK_HEIGHT, 100),
     };
   }
 
@@ -676,6 +767,9 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     currentLayout = compile();
+    // Recorded for the ResizeObserver's self-induced-resize guard.
+    lastRenderedWidth = currentLayout.dimensions.width;
+    lastRenderedSvgHeight = currentLayout.dimensions.height;
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
     svgElement = renderChartSVG(currentLayout, container, {
@@ -1050,7 +1144,27 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Set up responsive resize
   if (options?.responsive !== false) {
-    disconnectResize = observeResize(container, () => {
+    disconnectResize = observeResize(container, (width, height) => {
+      // Self-induced-resize guard, scoped to latched-auto mounts: growing
+      // the SVG grows the container, which re-fires this observer. A fire
+      // whose height matches the SVG we just rendered (and whose width is
+      // unchanged) is our own echo — re-rendering on it would loop; the
+      // 16ms debounce alone doesn't break the cycle.
+      if (isAutoHeight === true) {
+        const widthChanged = width !== lastRenderedWidth;
+        const selfInducedHeight = height === lastRenderedSvgHeight;
+        if (!widthChanged && selfInducedHeight) return;
+        if (!selfInducedHeight) {
+          // Any other height delta is host-driven: un-latch so the next
+          // measure re-derives (and re-latches explicit if the container
+          // now reports a height that isn't ours).
+          isAutoHeight = null;
+        }
+        resize();
+        return;
+      }
+      // Explicit-height (and not-yet-latched) mounts keep today's
+      // re-render-on-every-fire behavior.
       resize();
     });
   }

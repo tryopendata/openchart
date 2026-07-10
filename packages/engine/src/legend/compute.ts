@@ -494,6 +494,11 @@ export function computeLegendContent(
  * @param containerWidth - Full container width, used for responsive legend gap.
  * @param _theme - Resolved theme (reserved for future use).
  * @param xAxisHeight - Height of the x-axis, used for bottom legend positioning.
+ * @param axisGapBelowLegend - The `effectiveAxisGap` the margin stack reserved
+ *   between a top legend and the chart area (inline y-tick labels draw in that
+ *   zone, above `chartArea.y`). The top legend is lifted above it so it
+ *   occupies its reserved slot instead of colliding with the topmost tick
+ *   label. Defaults to 0 so other callers/positions are unaffected.
  * @returns Full LegendLayout with bounds.
  */
 export function placeLegend(
@@ -502,6 +507,7 @@ export function placeLegend(
   containerWidth: number,
   _theme: ResolvedTheme,
   xAxisHeight: number,
+  axisGapBelowLegend: number = 0,
 ): LegendLayout {
   const { position, entries, labelStyle, legendWidth, height, offset } = content;
 
@@ -538,7 +544,7 @@ export function placeLegend(
   } else {
     // top
     boundsX = chartArea.x + offsetDx;
-    boundsY = chartArea.y - gap - height + offsetDy;
+    boundsY = chartArea.y - axisGapBelowLegend - gap - height + offsetDy;
   }
 
   const bounds = { x: boundsX, y: boundsY, width: legendWidth, height };

@@ -640,12 +640,15 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const chartArea = options.frozenChartArea ?? dims.chartArea;
 
   // Place legend in its final position relative to the computed chart area.
+  // effectiveAxisGap lifts a top legend above the inline-tick overhang zone
+  // the margin stack reserved below it.
   const finalLegend = placeLegend(
     plan.legendContent,
     chartArea,
     options.width,
     theme,
     plan.xAxisExtent,
+    dims.effectiveAxisGap,
   );
 
   // Inline y-axis labels: inset the x-scale range start by the widest tick
@@ -898,12 +901,14 @@ function compileFaceted(
   );
   const chartArea = dims.chartArea;
 
+  // Same effectiveAxisGap threading as the regular (non-faceted) path.
   const finalLegend = placeLegend(
     plan.legendContent,
     chartArea,
     options.width,
     theme,
     plan.xAxisExtent,
+    dims.effectiveAxisGap,
   );
 
   // Estimate y-axis gutter width (used as left reservation for outer axes)

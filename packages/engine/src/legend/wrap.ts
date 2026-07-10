@@ -34,6 +34,14 @@ export const ENTRY_GAP_COMPACT = 10;
 /** Default gap between legend bounds and chart area. Zero on narrow viewports. */
 export const LEGEND_GAP = 8;
 
+/**
+ * Minimum gap between the chrome/metrics block above and a top legend.
+ * Without it the legend sits flush against the subtitle (compact widths)
+ * or the metric bar (all widths) once the inline-tick overhang is placed
+ * below the legend where it belongs.
+ */
+export const TOP_LEGEND_GAP_ABOVE = 6;
+
 /** Gap between legend and chart area, responsive to container width. */
 export function legendGap(width: number): number {
   return width < COMPACT_WIDTH ? 0 : LEGEND_GAP;

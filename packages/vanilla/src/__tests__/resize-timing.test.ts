@@ -14,8 +14,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createContainer } from '../__test-fixtures__/dom';
-import { lineSpec } from '../__test-fixtures__/specs';
+import { createAutoHeightContainer, createContainer } from '../__test-fixtures__/dom';
+import { lineSpec, longChromeLineSpec } from '../__test-fixtures__/specs';
 import { createChart } from '../mount';
 
 // ---------------------------------------------------------------------------
@@ -180,5 +180,39 @@ describe('chart resize timing', () => {
     // destroy() removes the SVG; if the timer fired after destroy it would
     // try to render a new one. No SVG should be present.
     expect(container.querySelector('svg')).toBeNull();
+  });
+
+  describe('auto-height observer feedback guard', () => {
+    it('ignores the observer echo from the figure growing itself', async () => {
+      const autoContainer = createAutoHeightContainer(390);
+      const chart = createChart(autoContainer, longChromeLineSpec);
+
+      const grownHeight = chart.layout.dimensions.height;
+      expect(grownHeight).toBeGreaterThan(400);
+      const genBefore = autoContainer.dataset.ocRenderGen;
+
+      // Growing the SVG grows the container, which fires the observer with
+      // our own dimensions. That echo must not trigger a re-render (the
+      // re-render would grow again and loop).
+      fireResize(autoContainer, 390, grownHeight);
+      await vi.runAllTimersAsync();
+      expect(autoContainer.dataset.ocRenderGen).toBe(genBefore);
+
+      chart.destroy();
+    });
+
+    it('still re-renders when the width changes', async () => {
+      const autoContainer = createAutoHeightContainer(390);
+      const chart = createChart(autoContainer, longChromeLineSpec);
+
+      const grownHeight = chart.layout.dimensions.height;
+      const genBefore = autoContainer.dataset.ocRenderGen;
+
+      fireResize(autoContainer, 340, grownHeight);
+      await vi.runAllTimersAsync();
+      expect(autoContainer.dataset.ocRenderGen).not.toBe(genBefore);
+
+      chart.destroy();
+    });
   });
 });

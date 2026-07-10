@@ -3,6 +3,7 @@ import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 import type { NormalizedChartSpec } from '../compiler/types';
+import { INLINE_TICK_OVERHANG_PAD } from '../layout/shared';
 import { computeLegend } from '../legend/compute';
 
 const specWithColor: NormalizedChartSpec = {
@@ -509,6 +510,56 @@ describe('computeLegend', () => {
       const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
       const gap = layout.area.y - legendBottom;
       expect(gap).toBe(0);
+    });
+
+    // Inline y ticks (line/area) draw their topmost label ABOVE chartArea.y,
+    // inside the inlineTickOverhang zone the margin stack reserved. The legend
+    // must sit above that zone, not flush against chartArea.y.
+    const inlineTopLegendSpec = {
+      mark: 'line' as const,
+      data: [
+        { date: '2020-01-01', value: 10, country: 'US' },
+        { date: '2021-01-01', value: 40, country: 'US' },
+        { date: '2020-01-01', value: 15, country: 'UK' },
+        { date: '2021-01-01', value: 35, country: 'UK' },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+        color: { field: 'country', type: 'nominal' as const },
+      },
+      legend: { show: true, position: 'top' as const },
+    };
+
+    it('top legend clears the inline y-tick overhang at compact width', () => {
+      const layout = compileChart(inlineTopLegendSpec, { width: 360, height: 400 });
+
+      expect(layout.legend.position).toBe('top');
+      expect(layout.legend.entries.length).toBeGreaterThan(0);
+
+      const inlineTickOverhang = layout.theme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD;
+      const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
+      expect(legendBottom).toBeLessThanOrEqual(layout.area.y - inlineTickOverhang + 1e-6);
+
+      // Pinned placement. Before the fix the legend bottom sat flush at
+      // chartArea.y (legend bottom was 62 = chartArea.y), overlapping the
+      // topmost inline tick label; it now sits the 17px overhang higher,
+      // while the 6px minimum gap above the legend shifts chartArea down.
+      expect(layout.legend.bounds.y).toBe(31);
+    });
+
+    it('gutter y-ticks keep the legend flush at the legendGap (no overhang shift)', () => {
+      // Bar charts use gutter y-tick labels, so inlineTickOverhang is 0 and
+      // the legend keeps its legendGap-only offset from the chart area.
+      const layout = compileChart(topLegendSpec, { width: 600, height: 400 });
+
+      const legendBottom = layout.legend.bounds.y + layout.legend.bounds.height;
+      expect(layout.area.y - legendBottom).toBe(8);
+
+      // Pinned placement: 17 before the placement fix; the +6 comes from the
+      // TOP_LEGEND_GAP_ABOVE margin (not from any overhang shift — gutter
+      // ticks have no overhang, so the legend-to-chart gap above stays 8).
+      expect(layout.legend.bounds.y).toBe(23);
     });
   });
 

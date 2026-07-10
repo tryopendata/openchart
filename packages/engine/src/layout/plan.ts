@@ -32,7 +32,7 @@ import { format as d3Format } from 'd3-format';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { computeLegendContent, type LegendContent } from '../legend/compute';
-import { legendGap } from '../legend/wrap';
+import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
 import { buildContinuousTicks, scaleSupportsTickCount, targetTickCount } from './axes/ticks';
@@ -395,7 +395,8 @@ export function resolveLayoutPlan(
     const effectiveTopAxisGap = hasTopLegend ? inlineTickOverhang : topAxisGap;
 
     let topMargin = topPad + chrome.topHeight;
-    if (hasTopLegend) topMargin += legendContent.height + gap;
+    // Mirrors the dimensions.ts margin stack: min gap above the top legend.
+    if (hasTopLegend) topMargin += TOP_LEGEND_GAP_ABOVE + legendContent.height + gap;
     topMargin += effectiveTopAxisGap;
 
     const bMargin = bottomMargin(chrome.bottomHeight, padding, xAxisExtent);
