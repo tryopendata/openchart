@@ -3,69 +3,83 @@
  */
 
 import type { ChartLayout, Point, ResolvedAnnotation } from '@opendata-ai/openchart-core';
+import { computeArrowheadPoints } from '@opendata-ai/openchart-engine';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
+// Must match computeArrowheadPoints default (engine geometry.ts)
+const ARROWHEAD_LENGTH = 8;
+
+/** Render an arrowhead polygon at the given tip with tangent direction. */
+function renderArrowhead(
+  parent: SVGElement,
+  tipX: number,
+  tipY: number,
+  tangentX: number,
+  tangentY: number,
+  fill: string,
+): void {
+  const head = computeArrowheadPoints(tipX, tipY, tangentX, tangentY);
+  const arrow = createSVGElement('polygon');
+  arrow.setAttribute('class', 'oc-annotation-connector');
+  setAttrs(arrow, {
+    points: [
+      `${head.tip.x},${head.tip.y}`,
+      `${head.baseLeft.x},${head.baseLeft.y}`,
+      `${head.baseRight.x},${head.baseRight.y}`,
+    ].join(' '),
+    fill,
+  });
+  parent.appendChild(arrow);
+}
+
 /**
- * Render a curved arrow connector from a label to a data point.
- * Uses a cubic bezier that sweeps outward then curves toward the
- * target, with a triangular arrowhead at the tip.
+ * Render a curved connector from a label to a data point.
+ * Optionally draws an arrowhead at the tip.
  */
-function renderCurvedArrow(parent: SVGElement, from: Point, to: Point, stroke: string): void {
-  // Pad above the target so the arrow doesn't sit right on the element.
-  const pad = 6;
+function renderCurvedConnector(
+  parent: SVGElement,
+  from: Point,
+  to: Point,
+  stroke: string,
+  showArrow: boolean,
+): void {
+  const pad = showArrow ? 6 : 0;
   const tipY = to.y - pad;
 
   const dy = tipY - from.y;
   const dist = Math.sqrt((to.x - from.x) ** 2 + dy ** 2) || 1;
 
-  // Arrowhead geometry
-  const arrowLen = 8;
-  const arrowWidth = 4;
-
-  // cp2 directly above target so arrow arrives pointing straight down.
   const bulge = Math.max(dist * 0.4, 35);
   const cp1x = from.x + bulge;
   const cp1y = from.y + dy * 0.35;
   const cp2x = to.x;
   const cp2y = tipY - Math.abs(dy) * 0.25;
 
-  // Tangent at the tip (from cp2 → tip), used for arrowhead direction.
+  // Tangent at the tip (from cp2 to tip).
   const tx = to.x - cp2x;
   const ty = tipY - cp2y;
   const tLen = Math.sqrt(tx * tx + ty * ty) || 1;
   const ux = tx / tLen;
   const uy = ty / tLen;
 
-  // End the curve path at the arrowhead BASE so the stroke doesn't
-  // poke through the filled triangle.
-  const baseX = to.x - ux * arrowLen;
-  const baseY = tipY - uy * arrowLen;
+  // When drawing an arrowhead, end the curve at the arrowhead base
+  // so the stroke doesn't poke through the filled triangle.
+  const endX = showArrow ? to.x - ux * ARROWHEAD_LENGTH : to.x;
+  const endY = showArrow ? tipY - uy * ARROWHEAD_LENGTH : tipY;
 
   const path = createSVGElement('path');
   path.setAttribute('class', 'oc-annotation-connector');
   setAttrs(path, {
-    d: `M ${from.x} ${from.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${baseX} ${baseY}`,
+    d: `M ${from.x} ${from.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`,
     fill: 'none',
     stroke,
     'stroke-width': 1.5,
   });
   parent.appendChild(path);
 
-  // Arrowhead triangle: perpendicular to tangent direction.
-  const px = -uy;
-  const py = ux;
-
-  const arrow = createSVGElement('polygon');
-  arrow.setAttribute('class', 'oc-annotation-connector');
-  setAttrs(arrow, {
-    points: [
-      `${to.x},${tipY}`,
-      `${baseX + px * arrowWidth},${baseY + py * arrowWidth}`,
-      `${baseX - px * arrowWidth},${baseY - py * arrowWidth}`,
-    ].join(' '),
-    fill: stroke,
-  });
-  parent.appendChild(arrow);
+  if (showArrow) {
+    renderArrowhead(parent, to.x, tipY, tx, ty, stroke);
+  }
 }
 
 function renderAnnotation(
@@ -170,7 +184,7 @@ function renderAnnotation(
     if (annotation.label.connector) {
       const c = annotation.label.connector;
       if (c.style === 'curve') {
-        renderCurvedArrow(g, c.from, c.to, c.stroke);
+        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow);
       } else if (c.style === 'drop-line') {
         const connector = createSVGElement('line');
         connector.setAttribute('class', 'oc-annotation-connector oc-annotation-drop-line');
@@ -185,6 +199,29 @@ function renderAnnotation(
           'shape-rendering': 'crispEdges',
         });
         g.appendChild(connector);
+      } else if (c.arrow) {
+        const dx = c.to.x - c.from.x;
+        const dy = c.to.y - c.from.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        const lineEndX = c.to.x - ux * ARROWHEAD_LENGTH;
+        const lineEndY = c.to.y - uy * ARROWHEAD_LENGTH;
+
+        const connector = createSVGElement('line');
+        connector.setAttribute('class', 'oc-annotation-connector');
+        setAttrs(connector, {
+          x1: c.from.x,
+          y1: c.from.y,
+          x2: lineEndX,
+          y2: lineEndY,
+          stroke: c.stroke,
+          'stroke-width': 1,
+          'stroke-opacity': 0.5,
+        });
+        g.appendChild(connector);
+
+        renderArrowhead(g, c.to.x, c.to.y, dx, dy, c.stroke);
       } else {
         const connector = createSVGElement('line');
         connector.setAttribute('class', 'oc-annotation-connector');
@@ -200,11 +237,9 @@ function renderAnnotation(
         g.appendChild(connector);
       }
 
-      // Endpoint marker: bullseye dot at the data point. Outer ring uses the
-      // chart background as fill so it knocks out the line/area beneath; inner
-      // dot is the connector color. Skipped for curve style — the arrowhead
-      // already serves as the endpoint indicator there.
-      if (c.endpoint && c.style !== 'curve') {
+      // Endpoint marker: bullseye dot at the data point. Skipped when an
+      // arrowhead is present — it already serves as the endpoint indicator.
+      if (c.endpoint && !c.arrow) {
         const ring = createSVGElement('circle');
         ring.setAttribute('class', 'oc-annotation-endpoint-ring');
         setAttrs(ring, {

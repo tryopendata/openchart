@@ -682,6 +682,17 @@ export interface AnnotationOffset {
 /** Anchor direction for annotation label placement relative to the data point. */
 export type AnnotationAnchor = 'top' | 'bottom' | 'left' | 'right' | 'auto';
 
+/** Connector type for annotation labels. */
+export type ConnectorType = 'straight' | 'curve' | 'drop-line';
+
+/** Object form of the connector config, allowing arrow control. */
+export interface ConnectorConfig {
+  /** Connector style. */
+  type: ConnectorType;
+  /** Whether to draw an arrowhead at the data-point end. Default: true for curve, false for straight. Drop-line never takes a head. */
+  arrow?: boolean;
+}
+
 /** Style overrides for the dot marker drawn at the connector's data-point endpoint. */
 export interface AnnotationDot {
   /** Circle radius in pixels. Default 5. */
@@ -748,13 +759,14 @@ export interface TextAnnotation extends AnnotationBase {
   anchor?: AnnotationAnchor;
   /**
    * Connector from label to anchor point.
-   * - `true` (default): straight line
-   * - `'straight'`: straight line (alias of `true`)
+   * - `true` (default): straight line, no arrow
+   * - `'straight'`: straight line, no arrow
    * - `'curve'`: curved arrow with arrowhead
-   * - `'drop-line'`: vertical line through the data point's x; label sits beside the line and auto-flips to the opposite side if it would overflow the chart area
+   * - `'drop-line'`: vertical line through the data point's x
+   * - `{ type, arrow? }`: object form for explicit arrow control
    * - `false`: no connector
    */
-  connector?: boolean | 'straight' | 'curve' | 'drop-line';
+  connector?: boolean | ConnectorType | ConnectorConfig;
   /** Per-endpoint offsets for the connector line. Allows fine-tuning where the connector starts and ends. */
   connectorOffset?: {
     /** Offset for the label-end of the connector. */

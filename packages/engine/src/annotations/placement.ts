@@ -579,10 +579,16 @@ export function findBestPlacement(
 export function isAutoPlacement(annotation: {
   anchor?: string;
   offset?: { dx?: number; dy?: number };
-  connector?: string | boolean;
+  connector?: string | boolean | { type?: string };
 }): boolean {
   if (annotation.offset) return false;
   if (annotation.anchor && annotation.anchor !== 'auto') return false;
   if (annotation.connector === 'drop-line') return false;
+  if (
+    typeof annotation.connector === 'object' &&
+    annotation.connector !== null &&
+    annotation.connector.type === 'drop-line'
+  )
+    return false;
   return true;
 }

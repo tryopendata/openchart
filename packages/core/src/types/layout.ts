@@ -574,6 +574,8 @@ export interface ResolvedLabel {
     stroke: string;
     /** Connector style: straight line, curved arrow, or vertical drop-line through the data point. */
     style: 'straight' | 'curve' | 'drop-line';
+    /** Whether to draw an arrowhead at the data-point end. */
+    arrow: boolean;
   };
   /** Background color behind the label text. */
   background?: string;

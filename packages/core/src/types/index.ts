@@ -132,6 +132,8 @@ export type {
   CircleEncoding,
   Condition,
   ConditionalValueDef,
+  ConnectorConfig,
+  ConnectorType,
   DarkMode,
   DataRow,
   Display,

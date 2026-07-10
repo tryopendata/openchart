@@ -4,6 +4,8 @@
  */
 
 import type {
+  ConnectorConfig,
+  ConnectorType,
   Rect,
   ResolvedAnnotation,
   ResolvedLabel,
@@ -36,6 +38,28 @@ import {
   unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
+
+/**
+ * Resolve the connector spec shorthand into a normalized { type, arrow } object.
+ * Returns null when the connector is disabled.
+ */
+function resolveConnectorConfig(
+  connector: TextAnnotation['connector'],
+): { type: ConnectorType; arrow: boolean } | null {
+  if (connector === false) return null;
+
+  if (typeof connector === 'object' && connector !== null && 'type' in connector) {
+    const cfg = connector as ConnectorConfig;
+    const arrow = cfg.type === 'drop-line' ? false : (cfg.arrow ?? cfg.type === 'curve');
+    return { type: cfg.type, arrow };
+  }
+
+  if (connector === 'curve') return { type: 'curve', arrow: true };
+  if (connector === 'drop-line') return { type: 'drop-line', arrow: false };
+
+  // true, 'straight', or undefined all map to straight with no arrow
+  return { type: 'straight', arrow: false };
+}
 
 /** Horizontal gap between the drop-line and the label text. */
 const DROP_LINE_LABEL_GAP = 8;
@@ -82,10 +106,13 @@ export function resolveTextAnnotation(
     isDark,
   );
 
+  // Parse connector spec into { type, arrow } or null (disabled).
+  const connectorConfig = resolveConnectorConfig(annotation.connector);
+
   // Drop-line connector: vertical line through the data point's x with the
   // label sitting flush beside it. Auto-flips to the opposite side if the
   // chosen side would overflow the chart area.
-  if (annotation.connector === 'drop-line') {
+  if (connectorConfig?.type === 'drop-line') {
     return resolveDropLineAnnotation(
       annotation,
       px,
@@ -112,10 +139,10 @@ export function resolveTextAnnotation(
   const labelX = px + finalDelta.dx;
   const labelY = py + finalDelta.dy;
 
-  // Connector: draw unless explicitly disabled
-  const showConnector = annotation.connector !== false;
+  const showConnector = connectorConfig !== null;
   const connectorStyle: 'straight' | 'curve' =
-    annotation.connector === 'curve' ? 'curve' : 'straight';
+    connectorConfig?.type === 'curve' ? 'curve' : 'straight';
+  const connectorArrow = connectorConfig?.arrow ?? false;
 
   // Compute connector origin: pick the edge midpoint closest to the data point
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
@@ -169,6 +196,7 @@ export function resolveTextAnnotation(
           endpoint: { x: px, y: py },
           stroke: annotation.stroke ?? '#999999',
           style: connectorStyle,
+          arrow: connectorArrow,
         }
       : undefined,
     background: annotation.background,
@@ -319,6 +347,7 @@ function resolveDropLineAnnotation(
       endpoint: { x: px, y: py },
       stroke: annotation.stroke ?? defaultTextFill,
       style: 'drop-line',
+      arrow: false,
     },
     background: annotation.background,
     halo: annotation.halo,

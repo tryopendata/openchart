@@ -134,6 +134,7 @@ export function computePieLabels(
         to: { x: mark.centroid.x, y: mark.centroid.y },
         stroke: _textFill,
         style: 'straight',
+        arrow: false,
       };
     }
   }
