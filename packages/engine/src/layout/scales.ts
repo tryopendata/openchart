@@ -478,11 +478,27 @@ export function estimateBandwidth(
   if (n <= 0) return 0;
   const padding = scaleConfig?.padding ?? 0.35;
   const paddingInner = scaleConfig?.paddingInner ?? padding;
+  return estimateBandStep(scaleConfig, plotWidth, n) * (1 - paddingInner);
+}
+
+/**
+ * Estimate d3 scaleBand step (center-to-center band distance) for a given
+ * plot width and category count, using the same padding resolution as
+ * estimateBandwidth. The step — not the bandwidth — is the anchor spacing
+ * that drives rotated-label collision checks.
+ */
+export function estimateBandStep(
+  scaleConfig: EncodingChannel['scale'] | undefined,
+  plotWidth: number,
+  n: number,
+): number {
+  if (n <= 0) return 0;
+  const padding = scaleConfig?.padding ?? 0.35;
+  const paddingInner = scaleConfig?.paddingInner ?? padding;
   const paddingOuter = scaleConfig?.paddingOuter ?? padding;
   const denom = n - paddingInner + 2 * paddingOuter;
   if (denom <= 0) return 0;
-  const step = plotWidth / denom;
-  return step * (1 - paddingInner);
+  return plotWidth / denom;
 }
 
 function buildBandScale(

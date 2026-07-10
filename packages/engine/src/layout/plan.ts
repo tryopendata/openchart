@@ -36,7 +36,7 @@ import { legendGap } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
 import { buildContinuousTicks, scaleSupportsTickCount, targetTickCount } from './axes/ticks';
-import { computeScales, estimateBandwidth } from './scales';
+import { computeScales, estimateBandStep, estimateBandwidth } from './scales';
 import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
 
 // ---------------------------------------------------------------------------
@@ -342,6 +342,7 @@ export function resolveLayoutPlan(
       // bandwidth = step * (1 - paddingInner). Uses the same override resolution
       // as buildBandScale so paddingInner/paddingOuter are honored here too.
       const bandwidth = estimateBandwidth(encoding.x?.scale, plotWidth, xLabels.length);
+      const step = estimateBandStep(encoding.x?.scale, plotWidth, xLabels.length);
       let maxXLabelWidth = 0;
       for (const label of xLabels) {
         const w = measure(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
@@ -352,6 +353,8 @@ export function resolveLayoutPlan(
         maxXLabelWidth,
         bandwidth,
         xLabels.length,
+        step,
+        theme.fonts.sizes.axisTick,
       );
     }
 

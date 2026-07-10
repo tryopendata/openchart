@@ -482,12 +482,11 @@ describe('text-aware tick density', () => {
     expect(axes.x!.ticks.length).toBe(categories.length);
   });
 
-  it('keeps narrow band labels when one label is much wider (no global decimation)', () => {
+  it('keeps all band labels when one label is much wider (no decimation)', () => {
     // Regression: 5 rotated year labels where "2026 (to wk 17)" is much wider
-    // than the others. The old every-other thinning dropped BOTH "2023" and
-    // "2025" even though the narrow labels had ample room — a single wide label
-    // forced global decimation. Greedy per-label retention keeps the narrow
-    // ones; only the neighbor immediately crowded by the wide final label drops.
+    // than the others. Label width cannot cause rotated-label collisions
+    // (parallel ribbons — see ./layout/axes/rotation), so every label is kept.
+    // The old span-based thinning dropped "2023" and "2025" here.
     const categories = ['2022', '2023', '2024', '2025', '2026 (to wk 17)'];
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
@@ -507,16 +506,13 @@ describe('text-aware tick density', () => {
       height: 12,
     });
 
-    // Narrow area (280px) forces -45° rotation. The middle narrow labels survive
-    // — old every-other thinning would have dropped 2023 too.
+    // Narrow area (280px) forces -45° rotation. Every label survives — the
+    // ~47px step separates the diagonal ribbons by far more than a line height.
     const narrowArea = { x: 50, y: 50, width: 280, height: 300 };
     const narrowScales = computeScales(barSpec, narrowArea, barSpec.data);
     const narrowAxes = computeAxes(narrowScales, narrowArea, fullStrategy, theme, measure);
-    const narrowKept = narrowAxes.x!.ticks.map((t) => t.label);
     expect(narrowAxes.x!.tickAngle).toBe(-45);
-    expect(narrowKept).toContain('2023');
-    expect(narrowKept).toContain('2024');
-    expect(narrowKept).toContain('2026 (to wk 17)');
+    expect(narrowAxes.x!.ticks.map((t) => t.label)).toEqual(categories);
 
     // Wider area (500px) has room for every label — none are thinned.
     const wideArea = { x: 50, y: 50, width: 500, height: 300 };
@@ -525,13 +521,11 @@ describe('text-aware tick density', () => {
     expect(wideAxes.x!.ticks.length).toBe(categories.length);
   });
 
-  it('keeps a short neighbor that a wide final label only barely reaches', () => {
-    // Regression (mobile): with a short label whose footprint clears the wide
-    // final label by a couple pixels — less than the comfort minGap but with no
-    // real overlap — the last-label protection must NOT drop it. At the phone
-    // width where "2026 (to wk 17)" sits ~2px from "2025", dropping "2025" to
-    // seat the wide endpoint reads as arbitrary. The protection pass keys on
-    // true pixel overlap, not the comfort gap, so "2025" survives.
+  it('keeps a short neighbor beside a wide final label at phone width', () => {
+    // Regression (mobile): "2025" beside "2026 (to wk 17)" at ~300px. Two
+    // earlier span-model revisions dropped "2025" here (once via minGap
+    // comfort padding, once via a genuine 1-D span overlap at larger fonts)
+    // even though the rendered -45° diagonals never touch.
     const categories = ['2022', '2023', '2024', '2025', '2026 (to wk 17)'];
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
@@ -557,11 +551,38 @@ describe('text-aware tick density', () => {
     expect(kept.length).toBe(categories.length);
   });
 
-  it('drops every neighbor a very wide final label overlaps, not just the nearest', () => {
-    // A final category long enough to project across several bands at -45° must
-    // clear ALL kept labels its footprint overlaps. The last-label protection
-    // pass drops each colliding neighbor, not only the immediate one — otherwise
-    // an earlier kept label still overlaps the forced final label.
+  it('keeps all labels with a larger themed tick font at phone width (deployed blog regression)', () => {
+    // Regression: the deployed blog theme sets axisTick: 14 (default 11). At
+    // ~61px steps the larger font made the 1-D span overlap genuine, so 7.9.2
+    // still dropped "2025" in production while the default theme passed every
+    // test. Ribbon separation at -45° is 61·sin45 ≈ 43px vs the ~21px one line
+    // at 14px needs — the labels never touch, so all five must survive.
+    const categories = ['2022', '2023', '2024', '2025', '2026 (to wk 17)'];
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: [122, 47, 266, 2026, 1602][i] })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+    const blogTheme = resolveTheme({ fonts: { sizes: { axisTick: 14 } } });
+
+    const area = { x: 60, y: 50, width: 330, height: 300 };
+    const scales = computeScales(barSpec, area, barSpec.data);
+    const axes = computeAxes(scales, area, fullStrategy, blogTheme);
+    expect(axes.x!.tickAngle).toBe(-45);
+    expect(axes.x!.ticks.map((t) => t.label)).toEqual(categories);
+  });
+
+  it('keeps every label when one is very long — rotated labels are parallel ribbons', () => {
+    // A very long final category does NOT force neighbors to drop. Rotated
+    // labels all lean at the same angle from their own anchors, so adjacent
+    // labels are parallel ribbons separated by step·sin(angle) — label LENGTH
+    // is irrelevant to collision. The old 1-D horizontal-span model reported
+    // phantom overlaps here and dropped "B", "C", and "D".
     const categories = ['A', 'B', 'C', 'D', 'This Is A Very Long Final Category Name'];
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
@@ -579,15 +600,63 @@ describe('text-aware tick density', () => {
     const axes = computeAxes(scales, narrowArea, fullStrategy, theme, measure);
     expect(axes.x!.tickAngle).toBe(-45);
 
+    // Every category keeps its label — the diagonals never touch.
     const kept = axes.x!.ticks.map((t) => t.label);
-    // The forced final label is always retained.
-    expect(kept).toContain('This Is A Very Long Final Category Name');
-    // Every middle label the wide final label's footprint overlaps is dropped —
-    // not just the nearest one. Before the fix, "B" and "C" would survive and
-    // overlap the final label; only "D" (the immediate neighbor) was dropped.
-    expect(kept).not.toContain('B');
-    expect(kept).not.toContain('C');
-    expect(kept).not.toContain('D');
+    expect(kept).toEqual(categories);
+  });
+
+  it('measures collision at the drawn tick spacing when an explicit tickCount thins upstream', () => {
+    // 40 categories with tickCount: 8 — categoricalTicks retains every 5th
+    // category, so the drawn ticks sit 5 band steps apart. The angle and
+    // stride must use that real spacing: at ~45px apart the 8 labels fit at
+    // -45° with no thinning. Keying on the raw ~9px band step would wrongly
+    // escalate to -90° and stride away half the requested labels.
+    const categories = Array.from({ length: 40 }, (_, i) => `Cat ${i + 1}`);
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal', axis: { tickCount: 8 } },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+    const measure = (text: string) => ({ width: text.length * 6, height: 12 });
+    const area = { x: 50, y: 50, width: 360, height: 300 };
+    const scales = computeScales(barSpec, area, barSpec.data);
+    const axes = computeAxes(scales, area, fullStrategy, theme, measure);
+
+    expect(axes.x!.tickAngle).toBe(-45);
+    expect(axes.x!.ticks.length).toBe(8);
+  });
+
+  it('applies the last-anchored stride when even vertical labels cannot fit', () => {
+    // 40 short categories on a 360px chart: ~9px steps fit nothing at any
+    // angle (a vertical label ribbon needs ~17px), so the safety net keeps
+    // every 2nd label counting back from the LAST category.
+    const categories = Array.from({ length: 40 }, (_, i) => `C${i + 1}`);
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+    const measure = (text: string) => ({ width: text.length * 6, height: 12 });
+    const area = { x: 50, y: 50, width: 360, height: 300 };
+    const scales = computeScales(barSpec, area, barSpec.data);
+    const axes = computeAxes(scales, area, fullStrategy, theme, measure);
+
+    expect(axes.x!.tickAngle).toBe(-90);
+    const kept = axes.x!.ticks.map((t) => t.label);
+    expect(kept.length).toBe(20);
+    // The stride anchors at the final category — the most recent one is
+    // always labeled.
+    expect(kept[kept.length - 1]).toBe('C40');
   });
 
   it('y-axis gridlines match ticks so every gridline has a label', () => {
@@ -978,7 +1047,7 @@ describe('horizontal bar y-axis label thinning regression', () => {
     expect(axes.y!.ticks.length).toBe(countries.length);
   });
 
-  it('still thins x-axis band scale labels at minimal density (column chart)', () => {
+  it('rotates to vertical instead of thinning when diagonals would touch (column chart)', () => {
     const vBarSpec: NormalizedChartSpec = {
       ...hBarSpec,
       markDef: { type: 'bar', orient: 'vertical' },
@@ -991,9 +1060,11 @@ describe('horizontal bar y-axis label thinning regression', () => {
     const scales = computeScales(vBarSpec, narrowArea, vBarSpec.data);
     const axes = computeAxes(scales, narrowArea, minimalStrategy, theme);
 
-    // X-axis band scale with 10 categories at minimal density on a narrow chart
-    // should thin -- showing all 10 on 200px would overlap
-    expect(axes.x!.ticks.length).toBeLessThan(countries.length);
+    // 10 categories at ~19px steps: -45° ribbons would touch (19·sin45 ≈ 14px
+    // < one line height), so the ladder escalates to vertical, where the 19px
+    // step separation fits — every bar keeps its label.
+    expect(axes.x!.tickAngle).toBe(-90);
+    expect(axes.x!.ticks.length).toBe(countries.length);
   });
 });
 

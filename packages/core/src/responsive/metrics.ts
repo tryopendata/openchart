@@ -173,6 +173,14 @@ export const X_AXIS_BAND_HEIGHT = 26;
 export const X_AXIS_TITLE_BAND = 22;
 export const X_AXIS_TITLE_BAND_ROTATED = 20;
 
+/**
+ * Ceiling on the vertical extent reserved for rotated x tick labels. Labels
+ * whose rotated projection exceeds this clip at the reservation edge, so the
+ * angle ladder (engine layout/axes/rotation) avoids -90° for labels longer
+ * than this.
+ */
+export const X_AXIS_ROTATED_EXTENT_CAP = 120;
+
 export interface XAxisExtentInput {
   labels: string[];
   tickAngle?: number;
@@ -207,7 +215,7 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
     const AXIS_TO_LABEL_GAP = 3;
     const rotatedHeight = Math.min(
       maxLabelWidth * Math.sin(angleRad) + lineHeight * Math.cos(angleRad) + AXIS_TO_LABEL_GAP,
-      120,
+      X_AXIS_ROTATED_EXTENT_CAP,
     );
     return input.hasTitle ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
   }
