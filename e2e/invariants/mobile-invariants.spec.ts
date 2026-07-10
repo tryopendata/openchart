@@ -38,11 +38,13 @@ interface StoryCase {
   expectedXTickLabels?: string[];
   /**
    * Playwright projects where this story currently violates a rule — a real,
-   * known rendering bug that predates the project matrix. Marked with
-   * test.fail() so it stays visible and flips to "unexpected pass" (prompting
-   * removal from this list) once the engine bug is fixed.
+   * known rendering bug or platform limitation that predates the project
+   * matrix. Marked with test.fail() so it stays visible and flips to
+   * "unexpected pass" (prompting removal from this list) once fixed. When
+   * `platform` is set, the expected failure applies only on that OS and the
+   * story is still asserted normally everywhere else.
    */
-  knownFailingProjects?: string[];
+  knownFailures?: { project: string; platform?: NodeJS.Platform }[];
 }
 
 // Every new `mobile-regression` story gets an entry here.
@@ -63,6 +65,12 @@ const stories: StoryCase[] = [
     name: 'grouped-bars-sparse-ticks',
     slug: 'mobile-regression--grouped-bars-sparse-ticks',
     quantAxis: 'x',
+    // On Linux at 412px, inside-bar value labels overlap by ~2.5px (Rule 2):
+    // estimateTextWidth (engine charts/bar/labels.ts) is calibrated against
+    // macOS-ish fonts and Liberation digits render wider. Passes on darwin
+    // and on the 360px project. Deliberately NOT fixed by loosening the
+    // overlap epsilon; needs a font-metric-aware calibration.
+    knownFailures: [{ project: 'invariants-chromium-mobile', platform: 'linux' }],
   },
   {
     name: 'rotated-with-source',
@@ -72,7 +80,7 @@ const stories: StoryCase[] = [
     // ~11px left of the container (Rule 1). Pre-existing engine bug in the
     // compact band, exposed when the narrow project was added: the left
     // gutter doesn't reserve the leading rotated label's horizontal overhang.
-    knownFailingProjects: ['invariants-chromium-mobile-narrow'],
+    knownFailures: [{ project: 'invariants-chromium-mobile-narrow' }],
   },
   { name: 'chrome-all-elements', slug: 'chrome--chrome-all-elements', quantAxis: 'y' },
   {
@@ -105,11 +113,15 @@ for (const {
   quantAxis,
   minBarThickness,
   expectedXTickLabels,
-  knownFailingProjects,
+  knownFailures,
 } of stories) {
   test(`mobile invariants: ${name}`, async ({ page }) => {
     test.fail(
-      knownFailingProjects?.includes(test.info().project.name) ?? false,
+      knownFailures?.some(
+        (k) =>
+          k.project === test.info().project.name &&
+          (!k.platform || k.platform === process.platform),
+      ) ?? false,
       'known rendering bug on this project — see the story entry comment',
     );
     await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
