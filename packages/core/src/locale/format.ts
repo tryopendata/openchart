@@ -136,6 +136,22 @@ const GRANULARITY_FORMATS: Record<DateGranularity, string> = {
 };
 
 /**
+ * Compact format strings used by axis ticks when full-format labels overlap.
+ * Month is bare '%b': granularity inference runs per tick, so year-boundary
+ * ticks already render as '2025' and the axis reads "2025 · Feb · Mar".
+ * Year stays '%Y' — abbreviating to "'25" saves too little for the ambiguity.
+ */
+const GRANULARITY_FORMATS_COMPACT: Record<DateGranularity, string> = {
+  year: '%Y',
+  quarter: '', // special-cased below, like GRANULARITY_FORMATS
+  month: '%b',
+  week: '%b %d',
+  day: '%b %d',
+  hour: '%H:%M',
+  minute: '%H:%M',
+};
+
+/**
  * Format a date value for display.
  *
  * @param value - Date object, ISO string, or timestamp number.
@@ -145,12 +161,15 @@ const GRANULARITY_FORMATS: Record<DateGranularity, string> = {
  *   Pass `false` when formatting ticks from a local-time scale (d3 scaleTime),
  *   so that e.g. midnight local isn't misread as an intra-day UTC time.
  *   Defaults to `true` for backward compatibility.
+ * @param compact - Use the compact format table (axis ticks whose full-format
+ *   labels would overlap). Defaults to `false`.
  */
 export function formatDate(
   value: Date | string | number,
   _locale?: string,
   granularity?: DateGranularity,
   useUtc: boolean = true,
+  compact: boolean = false,
 ): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -162,10 +181,14 @@ export function formatDate(
     const q = useUtc
       ? Math.ceil((date.getUTCMonth() + 1) / 3)
       : Math.ceil((date.getMonth() + 1) / 3);
+    if (compact) {
+      const year = useUtc ? date.getUTCFullYear() : date.getFullYear();
+      return `Q${q} '${String(year).slice(-2)}`;
+    }
     return `Q${q} ${date.getFullYear()}`;
   }
 
-  const formatStr = GRANULARITY_FORMATS[gran];
+  const formatStr = (compact ? GRANULARITY_FORMATS_COMPACT : GRANULARITY_FORMATS)[gran];
   if (useUtc) {
     return utcFormat(formatStr)(date);
   }
