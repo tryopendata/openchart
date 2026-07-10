@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 /**
  * Visual regression: canonical story set.
@@ -86,24 +86,6 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
   },
 ];
 
-/**
- * Strip non-deterministic SVG IDs.
- *
- * Gradients and clipPaths get generated IDs like `oc-grad-<nanoid>` that
- * change per mount. Removing them stops Playwright from diffing those bytes.
- * We leave the `url(#...)` references as-is; screenshot comparison only cares
- * about pixels, not the underlying DOM.
- */
-async function stripVolatileIds(page: Page) {
-  await page.evaluate(() => {
-    const root = document.querySelector('.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart');
-    if (!root) return;
-    for (const el of root.querySelectorAll('[id]')) {
-      el.removeAttribute('id');
-    }
-  });
-}
-
 for (const story of stories) {
   test(`visual: ${story.name}`, async ({ page }) => {
     const url = `/?mode=preview&story=${encodeURIComponent(story.slug)}`;
@@ -119,6 +101,7 @@ for (const story of stories) {
           transition-duration: 0s !important;
           transition-delay: 0s !important;
         }
+        .ladle-theme-picker, .oc-github-link { display: none !important; }
       `,
     });
 
@@ -144,8 +127,6 @@ for (const story of stories) {
 
     // One layout tick after fonts finish to settle text measurements.
     await page.waitForTimeout(100);
-
-    await stripVolatileIds(page);
 
     await expect(chart).toHaveScreenshot(`${story.name}.png`);
   });
