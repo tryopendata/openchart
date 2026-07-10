@@ -50,6 +50,7 @@
 | Legend / endpoint-label suppression truth table (per-series UI hides when series hidden) | `packages/engine/src/legend/suppression.ts` |
 | Endpoint labels: compute (placement, leader lines, anti-overlap sweep) | `packages/engine/src/endpoint-labels/compute.ts` |
 | Endpoint labels: number formatting (currency / unit / compact) | `packages/engine/src/endpoint-labels/format.ts` |
+| Compact temporal tick formats (`GRANULARITY_FORMATS_COMPACT`, `formatDate(..., compact)`) | `packages/core/src/locale/format.ts`; the fitting rung that tries compact-at-same-count before thinning lives in `fitContinuousTicks` (`packages/engine/src/layout/axes.ts`). X-axes only — `resolveExplicitTicks` (planner y path) deliberately never compacts; explicit user `axis.format` always wins. |
 | Endpoint labels: text-width prediction for layout reservation | `packages/engine/src/endpoint-labels/predict.ts` |
 | Endpoint labels: shared constants (chip padding, swatch geometry, leader gaps) | `packages/engine/src/endpoint-labels/constants.ts` |
 | Vanilla mount + lifecycle | `packages/vanilla/src/mount.ts` (~2500 lines) |
