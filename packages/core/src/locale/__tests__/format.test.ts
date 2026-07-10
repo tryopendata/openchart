@@ -212,6 +212,12 @@ describe('formatDate', () => {
       expect(formatDate('2025-03-05')).toBe('Mar 05, 2025');
       expect(formatDate('2025-04-15', undefined, 'quarter')).toBe('Q2 2025');
     });
+
+    it('full quarter year follows useUtc at year boundaries', () => {
+      // In negative-offset timezones this instant is still Dec 31 2025 locally;
+      // the UTC quarter (Q1) must pair with the UTC year (2026), not the local one.
+      expect(formatDate(new Date('2026-01-01T00:00:00Z'), undefined, 'quarter')).toBe('Q1 2026');
+    });
   });
 });
 

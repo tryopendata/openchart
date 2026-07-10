@@ -181,11 +181,11 @@ export function formatDate(
     const q = useUtc
       ? Math.ceil((date.getUTCMonth() + 1) / 3)
       : Math.ceil((date.getMonth() + 1) / 3);
+    const year = useUtc ? date.getUTCFullYear() : date.getFullYear();
     if (compact) {
-      const year = useUtc ? date.getUTCFullYear() : date.getFullYear();
       return `Q${q} '${String(year).slice(-2)}`;
     }
-    return `Q${q} ${date.getFullYear()}`;
+    return `Q${q} ${year}`;
   }
 
   const formatStr = (compact ? GRANULARITY_FORMATS_COMPACT : GRANULARITY_FORMATS)[gran];
