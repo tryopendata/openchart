@@ -1412,3 +1412,90 @@ describe('compact temporal ticks: pinned pre-change output', () => {
     expect(axes.y!.ticks.map((t) => t.label)).toEqual(['2025', 'Apr 2025', 'Jul 2025', 'Oct 2025']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Compact temporal tick formats: the fitting rung
+// ---------------------------------------------------------------------------
+// When full-format labels overlap on a temporal x-axis, fitContinuousTicks
+// tries the compact format table at the SAME count before dropping ticks.
+// Pre-change counts below were measured by running these exact inputs against
+// the unmodified engine (git stash) — see plans/compact-temporal-ticks.md.
+
+describe('compact temporal ticks: fitting rung', () => {
+  const monthlySpecOver = (
+    months: number,
+    axis?: Record<string, unknown>,
+  ): NormalizedChartSpec => ({
+    ...lineSpec,
+    data: Array.from({ length: months }, (_, i) => ({
+      date: `2025-${String(i + 1).padStart(2, '0')}-01`,
+      value: 100 + i * 10,
+    })),
+    encoding: {
+      x: { field: 'date', type: 'temporal', ...(axis ? { axis } : {}) },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  });
+
+  const xLabelsAt = (spec: NormalizedChartSpec, width: number): string[] => {
+    const area = { x: 40, y: 40, width, height: 300 };
+    const scales = computeScales(spec, area, spec.data);
+    const axes = computeAxes(scales, area, fullStrategy, theme);
+    return axes.x!.ticks.map((t) => t.label);
+  };
+
+  const COMPACT_MONTH = /^[A-Z][a-z]{2}$/; // 'Feb'
+  const FULL_MONTH = /^[A-Z][a-z]{2} \d{4}$/; // 'Feb 2025'
+  const YEAR_ONLY = /^\d{4}$/; // year-boundary tick, same in both tables
+
+  it('keeps more ticks than pre-change when full labels overlap (Jan-Dec 2025 at 160px)', () => {
+    const labels = xLabelsAt(monthlySpecOver(12), 160);
+
+    // Pre-change output at this width: ['2025', 'Oct 2025'] — the overlap
+    // forced a count step-down to 2. Compact keeps all 4 quarterly ticks.
+    expect(labels).toEqual(['2025', 'Apr', 'Jul', 'Oct']);
+    expect(labels.length).toBeGreaterThan(2);
+
+    // No label carries a year except year-boundary ticks.
+    for (const label of labels) {
+      if (/\d{4}/.test(label)) expect(label).toMatch(YEAR_ONLY);
+    }
+  });
+
+  it('renders bare compact months at monthly tick granularity (Jan-Apr 2025 at 160px)', () => {
+    const labels = xLabelsAt(monthlySpecOver(4), 160);
+
+    // Pre-change output at this width: ['2025', 'Mar 2025'] (2 ticks).
+    expect(labels).toEqual(['2025', 'Feb', 'Mar']);
+    expect(labels).toContain('Feb');
+  });
+
+  it('refit stays internally consistent when D3 overshoots the requested count', () => {
+    // Jan-May 2025: D3 returns 5 monthly ticks for a request of 3 (> the 1.5x
+    // overshoot tolerance), forcing the refit loop. Whatever count/format the
+    // loop lands on, the returned set must be ONE format family — never a mix
+    // of 'Feb' and 'Mar 2025'.
+    const spec = monthlySpecOver(5);
+    for (const width of [100, 140, 180, 240]) {
+      const labels = xLabelsAt(spec, width);
+      const monthLabels = labels.filter((l) => !YEAR_ONLY.test(l));
+      expect(monthLabels.length, `width ${width}`).toBeGreaterThan(0);
+      const allCompact = monthLabels.every((l) => COMPACT_MONTH.test(l));
+      const allFull = monthLabels.every((l) => FULL_MONTH.test(l));
+      expect(
+        allCompact || allFull,
+        `mixed format families at width ${width}: ${JSON.stringify(labels)}`,
+      ).toBe(true);
+    }
+  });
+
+  it('explicit axis.format wins over compact at narrow width', () => {
+    const labels = xLabelsAt(monthlySpecOver(12, { format: '%Y-%m' }), 160);
+
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      expect(label).toMatch(/^\d{4}-\d{2}$/);
+    }
+    expect(labels).toEqual(['2025-01', '2025-10']);
+  });
+});

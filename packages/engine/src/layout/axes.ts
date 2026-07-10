@@ -208,13 +208,14 @@ function ensureMinContinuousTicks(
   scale: ResolvedScales['x' | 'y'],
   ticks: AxisTick[],
   requestedCount: number,
+  compact = false,
 ): AxisTick[] {
   if (ticks.length >= MIN_QUANTITATIVE_TICKS) return ticks;
   if (!scale || !scaleSupportsTickCount(scale)) return ticks;
 
   let best = ticks;
   for (let n = Math.max(requestedCount, MIN_QUANTITATIVE_TICKS) + 1; n <= 10; n++) {
-    const candidate = buildContinuousTicks(scale, n);
+    const candidate = buildContinuousTicks(scale, n, compact);
     if (candidate.length >= MIN_QUANTITATIVE_TICKS) return candidate;
     if (candidate.length > best.length) best = candidate;
   }
@@ -260,6 +261,32 @@ function fitContinuousTicks(
   const overlaps = ticksOverlap(flooredTicks, fontSize, fontWeight, measureText, orientation);
   if (!overshoots && !overlaps) return flooredTicks;
 
+  // Compact temporal formats are a rung between "full labels overlap" and
+  // "drop a tick": at each candidate count, prefer the full format, then try
+  // the compact table at the SAME count before stepping the count down. Every
+  // returned set is internally consistent — one format family per layout pass.
+  const isTemporal = scale.type === 'time' || scale.type === 'utc';
+
+  /** First fitting variant at this count: full format, then compact (temporal only). */
+  const fittingCandidate = (n: number): AxisTick[] | undefined => {
+    for (const compact of isTemporal ? [false, true] : [false]) {
+      const candidate = buildContinuousTicks(scale, n, compact);
+      if (candidate.length > tolerance) continue;
+      // Never accept a collapsed set (D3 can return a single nice value for
+      // tight domains) — a lone tick reads as a broken axis.
+      if (candidate.length < MIN_QUANTITATIVE_TICKS) continue;
+      if (!ticksOverlap(candidate, fontSize, fontWeight, measureText, orientation)) {
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+
+  // Compact-saves-the-count case: full format overlapped at the initial
+  // count, but compact labels may fit without giving up a single tick.
+  const atInitialCount = fittingCandidate(initialCount);
+  if (atInitialCount) return atInitialCount;
+
   // Enforce the floor only when the axis is long enough to fit that many
   // labels without overlap. Very short axes can fall below.
   const minThreshold =
@@ -268,29 +295,29 @@ function fitContinuousTicks(
 
   // Track the smallest candidate that meets the floor. If no candidate fits
   // cleanly, we thin this instead of the overshot `initialTicks` so the
-  // fallback doesn't reintroduce the cascading-to-2-ticks bug.
+  // fallback doesn't reintroduce the cascading-to-2-ticks bug. Bookkeeping
+  // runs against the full-format candidate, exactly as before the compact rung.
   let bestWithinFloor: AxisTick[] | undefined;
+  let bestWithinFloorCount: number | undefined;
   for (let n = initialCount - 1; n >= 2; n--) {
+    const fit = fittingCandidate(n);
+    if (fit) return fit;
     const candidate = buildContinuousTicks(scale, n);
-    const candidateOvershoots = candidate.length > tolerance;
-    const candidateOverlaps = ticksOverlap(
-      candidate,
-      fontSize,
-      fontWeight,
-      measureText,
-      orientation,
-    );
-    if (!candidateOvershoots && !candidateOverlaps) {
-      return candidate;
+    if (candidate.length >= floor) {
+      bestWithinFloor = candidate;
+      bestWithinFloorCount = n;
     }
-    if (candidate.length >= floor) bestWithinFloor = candidate;
   }
 
   // No candidate fit cleanly. Thin whatever most recently met the floor; if
   // nothing did, synthesize a floor-count set directly from the scale so we
   // never hand the overshot initialTicks to the middle-pruning thinner.
-  const rawFallback = bestWithinFloor ?? buildContinuousTicks(scale, floor);
-  const fallback = ensureMinContinuousTicks(scale, rawFallback, floor);
+  // Temporal axes rebuild the fallback compact: if the axis is so starved
+  // that we're thinning below the floor, shorter labels are strictly better.
+  const rawFallback = isTemporal
+    ? buildContinuousTicks(scale, bestWithinFloorCount ?? floor, true)
+    : (bestWithinFloor ?? buildContinuousTicks(scale, floor));
+  const fallback = ensureMinContinuousTicks(scale, rawFallback, floor, isTemporal);
   return thinTicksUntilFit(fallback, fontSize, fontWeight, measureText, orientation);
 }
 
