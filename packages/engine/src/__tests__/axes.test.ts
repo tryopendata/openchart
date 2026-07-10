@@ -1488,10 +1488,16 @@ describe('compact temporal ticks: fitting rung', () => {
   });
 
   it('renders bare compact months at monthly tick granularity (Jan-Apr 2025 at 160px)', () => {
-    const labels = xLabelsAt(monthlySpecOver(4), 160);
+    // End the domain mid-April: a domain ending exactly on Apr 1 includes the
+    // Apr tick only when the runner's timezone is UTC (local time scales place
+    // month boundaries at local midnight, so negative offsets push Apr 1 past
+    // the domain end).
+    const base = monthlySpecOver(4);
+    const spec = { ...base, data: [...base.data, { date: '2025-04-15', value: 145 }] };
+    const labels = xLabelsAt(spec, 160);
 
     // Pre-change output at this width: ['2025', 'Mar 2025'] (2 ticks).
-    expect(labels).toEqual(['2025', 'Feb', 'Mar']);
+    expect(labels).toEqual(['2025', 'Feb', 'Mar', 'Apr']);
     expect(labels).toContain('Feb');
   });
 
