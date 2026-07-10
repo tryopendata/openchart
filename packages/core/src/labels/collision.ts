@@ -183,6 +183,7 @@ export function resolveCollisions(
               to: { x: label.anchorX, y: label.anchorY },
               stroke: label.style.fill,
               style: 'straight' as const,
+              arrow: false,
             }
           : undefined,
       });

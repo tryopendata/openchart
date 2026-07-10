@@ -286,3 +286,135 @@ describe('text annotation: dot + subtitle co-resolution', () => {
     expect(resolved.dot!.y).toBe(resolved.label!.connector!.to.y);
   });
 });
+
+describe('text annotation: connector config', () => {
+  it('bare "curve" string defaults arrow to true', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Curve', connector: 'curve' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('curve');
+    expect(c.arrow).toBe(true);
+  });
+
+  it('bare "straight" string defaults arrow to false', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Straight', connector: 'straight' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('straight');
+    expect(c.arrow).toBe(false);
+  });
+
+  it('boolean true defaults to straight with no arrow', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Default', connector: true },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('straight');
+    expect(c.arrow).toBe(false);
+  });
+
+  it('object form { type: "straight", arrow: true } enables arrow on straight', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Arrow straight',
+        connector: { type: 'straight', arrow: true },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('straight');
+    expect(c.arrow).toBe(true);
+  });
+
+  it('object form { type: "curve", arrow: false } disables arrow on curve', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'No arrow curve',
+        connector: { type: 'curve', arrow: false },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('curve');
+    expect(c.arrow).toBe(false);
+  });
+
+  it('object form { type: "curve" } defaults arrow to true', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Default curve',
+        connector: { type: 'curve' },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('curve');
+    expect(c.arrow).toBe(true);
+  });
+
+  it('connector: false disables connector entirely', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'No connector', connector: false },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.connector).toBeUndefined();
+  });
+
+  it('drop-line string connector always has arrow: false', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Drop line', connector: 'drop-line' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('drop-line');
+    expect(c.arrow).toBe(false);
+  });
+
+  it('object form { type: "drop-line", arrow: true } clamps arrow to false', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Drop line forced',
+        connector: { type: 'drop-line', arrow: true },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const c = annotations[0].label!.connector!;
+    expect(c.style).toBe('drop-line');
+    expect(c.arrow).toBe(false);
+  });
+});

@@ -195,6 +195,50 @@ export function estimateLabelBounds(
   );
 }
 
+/** Arrowhead triangle points: tip + two base corners. */
+export interface ArrowheadPoints {
+  tip: { x: number; y: number };
+  baseLeft: { x: number; y: number };
+  baseRight: { x: number; y: number };
+}
+
+/**
+ * Compute arrowhead triangle geometry at a connector endpoint.
+ * Returns the tip (at the endpoint) and two base corners perpendicular to the
+ * tangent direction.
+ *
+ * @param tipX - X coordinate of the arrowhead tip
+ * @param tipY - Y coordinate of the arrowhead tip
+ * @param tangentX - X component of the tangent direction (toward the tip)
+ * @param tangentY - Y component of the tangent direction (toward the tip)
+ * @param length - Arrow length along the tangent (default 8)
+ * @param halfWidth - Arrow half-width perpendicular to tangent (default 4)
+ */
+export function computeArrowheadPoints(
+  tipX: number,
+  tipY: number,
+  tangentX: number,
+  tangentY: number,
+  length = 8,
+  halfWidth = 4,
+): ArrowheadPoints {
+  const tLen = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
+  const ux = tangentX / tLen;
+  const uy = tangentY / tLen;
+
+  const baseX = tipX - ux * length;
+  const baseY = tipY - uy * length;
+
+  const px = -uy;
+  const py = ux;
+
+  return {
+    tip: { x: tipX, y: tipY },
+    baseLeft: { x: baseX + px * halfWidth, y: baseY + py * halfWidth },
+    baseRight: { x: baseX - px * halfWidth, y: baseY - py * halfWidth },
+  };
+}
+
 /**
  * Recompute the connector origin for a label after it has been repositioned.
  * Encapsulates the pattern of recalculating which edge of the text box the

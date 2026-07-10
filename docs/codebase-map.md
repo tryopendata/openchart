@@ -42,7 +42,7 @@
 | Annotations: top-level compile | `packages/engine/src/annotations/compute.ts` → `computeAnnotations()` |
 | Annotations: text resolution (anchor → offset → connector) | `packages/engine/src/annotations/resolve-text.ts` |
 | Annotations: refline / range | `packages/engine/src/annotations/resolve-refline.ts`, `resolve-range.ts` |
-| Annotations: geometry (text bounds, anchor offsets, connector edges) | `packages/engine/src/annotations/geometry.ts` |
+| Annotations: geometry (text bounds, anchor offsets, connector edges, arrowhead points) | `packages/engine/src/annotations/geometry.ts` (`computeArrowheadPoints`) |
 | Annotations: collision resolution | `packages/engine/src/annotations/collisions.ts` |
 | Annotations: data → pixel resolver | `packages/engine/src/annotations/position.ts` |
 | Annotations: shared constants (`ANCHOR_OFFSET=8`, default font, dash patterns) | `packages/engine/src/annotations/constants.ts` |
@@ -135,7 +135,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
   2. `computeAnchorOffset` → label position offset by `ANCHOR_OFFSET=8` from the data point in the requested anchor direction
   3. `computeConnectorOrigin` → picks the nearest text-box edge for connector start (used for `'straight'` and `'curve'` connectors)
   4. Collision resolution / nudging (`collisions.ts`)
-- **Connector union** today: `boolean | 'straight' | 'curve'`. Renderer hardcodes `text-anchor=middle` for multi-line text — anything that wants per-side anchoring on multi-line text needs to override this in the renderer (`packages/vanilla/src/renderers/annotations.ts`).
+- **Connector spec union**: `boolean | ConnectorType | ConnectorConfig` where `ConnectorType = 'straight' | 'curve' | 'drop-line'` and `ConnectorConfig = { type: ConnectorType, arrow?: boolean }`. Defaults: `arrow=true` for curve, `arrow=false` for straight/drop-line. Resolved connector carries `arrow: boolean`. Arrowhead geometry lives in `annotations/geometry.ts:computeArrowheadPoints`. Renderer hardcodes `text-anchor=middle` for multi-line text.
 - **Shared constants:** `annotations/constants.ts` (`ANCHOR_OFFSET`, default font sizing, dash pattern, refline/text fills for light/dark).
 
 ## Chrome system
