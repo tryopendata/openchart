@@ -1,4 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+
+import { captureStory } from './capture';
 
 /**
  * Mobile visual regression: pixel baselines at a 390x844 viewport (the
@@ -8,8 +10,8 @@ import { expect, test } from '@playwright/test';
  * bugs lived and which the desktop `visual` project (1280x900) never sees.
  *
  * Story set: all mobile-regression stories plus three canonical chart types.
- * Screenshot names carry a `-mobile` suffix so they can't collide with
- * desktop baselines in the shared snapshotDir.
+ * Screenshot names carry a `-mobile` suffix for readability; Playwright
+ * already namespaces baselines per spec file and per project name.
  */
 
 const stories = [
@@ -28,48 +30,6 @@ const stories = [
 
 for (const story of stories) {
   test(`visual mobile: ${story.name}`, async ({ page }) => {
-    const url = `/?mode=preview&story=${encodeURIComponent(story.slug)}`;
-    await page.goto(url);
-
-    // Kill animations so enter/stagger/annotation-delay timings don't leak
-    // into the screenshot. Inject before chart mount completes. Also hide
-    // the Ladle dev overlays (theme picker, GitHub link) — at 390px they sit
-    // over the chart's title zone and would bake dev UI into the baselines.
-    await page.addStyleTag({
-      content: `
-        *, *::before, *::after {
-          animation-duration: 0s !important;
-          animation-delay: 0s !important;
-          transition-duration: 0s !important;
-          transition-delay: 0s !important;
-        }
-        .ladle-theme-picker, .oc-github-link { display: none !important; }
-      `,
-    });
-
-    // Wait for the OpenChart root to appear and contain rendered content.
-    const chart = page.locator('.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart').first();
-    await chart.waitFor({ state: 'visible', timeout: 15_000 });
-
-    // Condition: a rendered chart has at least one <text> or mark shape inside.
-    await page.waitForFunction(
-      () => {
-        const root = document.querySelector('.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart');
-        if (!root) return false;
-        return (
-          root.querySelector('text') !== null ||
-          root.querySelector('rect, path, circle, line') !== null
-        );
-      },
-      { timeout: 10_000 },
-    );
-
-    // Fonts stable.
-    await page.evaluate(() => document.fonts?.ready);
-
-    // One layout tick after fonts finish to settle text measurements.
-    await page.waitForTimeout(100);
-
-    await expect(chart).toHaveScreenshot(`${story.name}-mobile.png`);
+    await captureStory(page, story.slug, `${story.name}-mobile.png`);
   });
 }

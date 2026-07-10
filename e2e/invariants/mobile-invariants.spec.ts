@@ -227,14 +227,16 @@ for (const {
         }
       }
 
-      // Rule 6: no band label silently dropped. `startsWith` tolerates a
-      // legitimately truncated label; an entirely dropped one still fails.
+      // Rule 6: no band label silently dropped. Exact match on purpose: band
+      // tick labels are never ellipsis-truncated today, and a tolerant prefix
+      // check could let a dropped label hide behind a similar neighbor. If
+      // tick truncation is ever introduced, revisit this comparison.
       if (expectedXTickLabelsArg) {
         const rendered = Array.from(svg.querySelectorAll('.oc-axis-x .oc-axis-tick'))
           .map((el) => (el.textContent ?? '').trim())
           .filter((t) => t.length > 0);
         for (const expected of expectedXTickLabelsArg) {
-          if (!rendered.some((t) => t === expected || t.startsWith(expected))) {
+          if (!rendered.includes(expected)) {
             violations.push(
               `expected x tick label missing: "${expected}" (rendered: ${rendered.join(', ')})`,
             );
