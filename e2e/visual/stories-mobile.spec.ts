@@ -23,6 +23,9 @@ const stories = [
   { name: 'mr-one-wide-x-label-large-ticks', slug: 'mobile-regression--one-wide-x-label-large-ticks' },
   { name: 'mr-uniform-short-x-labels', slug: 'mobile-regression--uniform-short-x-labels' },
   { name: 'mr-inline-y-title', slug: 'mobile-regression--inline-y-title' },
+  // Auto-height container (bare .story-chart): the only visual coverage for
+  // the auto-height growth contract — 400px viz budget + chrome overheads.
+  { name: 'mr-auto-height-chrome-growth', slug: 'mobile-regression--auto-height-chrome-growth' },
   { name: 'bar-vertical', slug: 'column--simple-columns' },
   { name: 'line-multi-series', slug: 'line-multiseries--gdp-growth' },
   { name: 'stacked-column', slug: 'column-stacked--energy-mix' },

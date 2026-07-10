@@ -44,7 +44,7 @@ import { format as d3Format } from 'd3-format';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
-import { legendGap } from '../legend/wrap';
+import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
 import type { LayoutPlan } from './plan';
@@ -82,6 +82,14 @@ export interface LayoutDimensions {
    * second legend pass) can position elements below the axis row.
    */
   xAxisHeight: number;
+  /**
+   * The axis gap the margin stack placed between the top legend (or chrome,
+   * when there is no top legend) and the chart area. With a top legend this
+   * is the inline-tick overhang, and `placeLegend` must receive it as
+   * `axisGapBelowLegend` so the legend sits above the reserved tick zone
+   * instead of flush against `chartArea.y` (where inline y-tick labels draw).
+   */
+  effectiveAxisGap: number;
 }
 
 /** Minimum chart area dimensions before guardrails kick in. */
@@ -254,7 +262,15 @@ export function computeDimensions(
       height: Math.max(0, height - margins.top - margins.bottom),
     };
 
-    return { total, chrome, chartArea, margins, theme, xAxisHeight: xAxisSpace };
+    return {
+      total,
+      chrome,
+      chartArea,
+      margins,
+      theme,
+      xAxisHeight: xAxisSpace,
+      effectiveAxisGap: 0,
+    };
   }
 
   // Start with the total rect
@@ -664,18 +680,23 @@ export function computeDimensions(
     if (legendPos === 'right' || legendPos === 'bottom-right') {
       margins.right += legendBoundsWidth + 8;
     } else if (legendPos === 'top') {
-      margins.top += legendHeight + gap;
+      // TOP_LEGEND_GAP_ABOVE keeps the legend from sitting flush against the
+      // subtitle/metric bar now that the axis gap sits BELOW the legend.
+      margins.top += TOP_LEGEND_GAP_ABOVE + legendHeight + gap;
     }
     // 'bottom' is intentionally not handled here -- see bottomLegendReservation
     // above.
   }
 
-  // topAxisGap sits between the legend (or chrome, if no legend) and the
-  // chart area. When a top legend is present, the legendGap already provides
-  // breathing room, so only the inlineTickOverhang is needed (the axisMargin
-  // component would double up with legendGap). Without a top legend, the
-  // full topAxisGap (axisMargin + inlineTickOverhang) applies.
-  margins.top += hasTopLegend ? inlineTickOverhang : topAxisGap;
+  // effectiveAxisGap sits between the legend (or chrome, if no legend) and
+  // the chart area. When a top legend is present, the legendGap already
+  // provides breathing room, so only the inlineTickOverhang is needed (the
+  // axisMargin component would double up with legendGap). Without a top
+  // legend, the full topAxisGap (axisMargin + inlineTickOverhang) applies.
+  // The value is returned so placeLegend can position the top legend above
+  // this reserved zone (inline y-tick labels draw inside it).
+  const effectiveAxisGap = hasTopLegend ? inlineTickOverhang : topAxisGap;
+  margins.top += effectiveAxisGap;
 
   // Chart area is what's left after margins
   let chartArea: Rect = {
@@ -719,7 +740,10 @@ export function computeDimensions(
 
     if (topDelta > 0 || bottomDelta > 0) {
       const gap = legendGap(width);
-      margins.top = newTop + (hasTopLegend ? legendHeight + gap : 0) + fallbackEffectiveAxisGap;
+      margins.top =
+        newTop +
+        (hasTopLegend ? TOP_LEGEND_GAP_ABOVE + legendHeight + gap : 0) +
+        fallbackEffectiveAxisGap;
       margins.bottom = newBottom;
 
       chartArea = {
@@ -765,6 +789,7 @@ export function computeDimensions(
         theme,
         metrics: fallbackMetrics,
         xAxisHeight,
+        effectiveAxisGap: fallbackEffectiveAxisGap,
       };
     }
   }
@@ -773,8 +798,9 @@ export function computeDimensions(
   //   topPad
   //   chrome.topHeight              (title / subtitle / eyebrow)
   //   tentativeMetricsHeight        (KPI bar — placed here)
-  //   [optional top legend band]
-  //   topAxisGap                    (axisMargin + inlineTickOverhang)
+  //   [optional top legend band     (TOP_LEGEND_GAP_ABOVE + legend + legendGap)]
+  //   effectiveAxisGap              (inlineTickOverhang with a top legend,
+  //                                  else axisMargin + inlineTickOverhang)
   //   chartArea
   // The metric bar belongs with chrome, above the legend, so its y is
   // computed off chrome.topHeight only — not the full legend-inclusive
@@ -801,6 +827,7 @@ export function computeDimensions(
     theme,
     metrics: resolvedMetrics,
     xAxisHeight,
+    effectiveAxisGap,
   };
 }
 

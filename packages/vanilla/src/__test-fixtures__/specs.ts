@@ -31,6 +31,33 @@ export const lineSpec: ChartSpec = {
   },
 };
 
+/**
+ * Multi-series line with wrapping chrome and an explicit top legend — the
+ * mobile auto-height growth scenario (long title + subtitle + legend +
+ * source all stack above/below the plot).
+ */
+export const longChromeLineSpec: ChartSpec = {
+  mark: 'line',
+  data: [
+    { date: '2020-01-01', value: 10, country: 'US' },
+    { date: '2021-01-01', value: 40, country: 'US' },
+    { date: '2020-01-01', value: 15, country: 'UK' },
+    { date: '2021-01-01', value: 35, country: 'UK' },
+  ],
+  encoding: {
+    x: { field: 'date', type: 'temporal' },
+    y: { field: 'value', type: 'quantitative' },
+    color: { field: 'country', type: 'nominal' },
+  },
+  legend: { show: true, position: 'top' },
+  chrome: {
+    title:
+      'An intentionally long editorial chart title that wraps to several lines at phone widths',
+    subtitle: 'A methodological subtitle that provides additional context for readers',
+    source: 'World Bank',
+  },
+};
+
 export const singleSeriesLineSpec: ChartSpec = {
   mark: 'line',
   data: [

@@ -52,6 +52,8 @@ function App() {
 
 That's the whole interface. `encoding` maps data fields to visual channels. `chrome` adds editorial framing. The engine figures out the rest.
 
+The fixed-height wrapper is optional. Without one, the chart sizes itself: a 400px budget for the visualization (axes + plot), and titles, legends, and other chrome grow the figure on top of that. Give the wrapper an explicit height when you need the chart to fit a fixed slot.
+
 ## Features
 
 | Category    | What you get                                                                        |

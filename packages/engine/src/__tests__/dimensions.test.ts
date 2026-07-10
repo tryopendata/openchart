@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeDimensions } from '../layout/dimensions';
+import { INLINE_TICK_OVERHANG_PAD } from '../layout/shared';
 import { legendGap } from '../legend/wrap';
 
 const baseSpec: NormalizedChartSpec = {
@@ -596,14 +597,58 @@ describe('computeDimensions', () => {
     // topAxisGap). This means the chart area gains back ~axisMargin (6px)
     // that would otherwise be redundant spacing.
     //
-    // The top margin with legend includes: legendHeight(28) + legendGap(8)
-    // + inlineTickOverhang(17) instead of the no-legend topAxisGap(23).
-    // Net: margin delta = 28 + 8 + 17 - 23 = 30px.
-    // If axisMargin were doubling up: 28 + 8 + 23 - 23 = 36px.
+    // The top margin with legend includes: gapAbove(6) + legendHeight(28)
+    // + legendGap(8) + inlineTickOverhang(17) instead of the no-legend
+    // topAxisGap(23). Net: margin delta = 6 + 28 + 8 + 17 - 23 = 36px.
+    // If axisMargin were doubling up: 6 + 28 + 8 + 23 - 23 = 42px.
     const topMarginDelta = dimsWithTopLegend.margins.top - dimsNoLegend.margins.top;
     expect(topMarginDelta).toBeLessThan(topLegend.bounds.height + legendGap(600) + 1);
     // With a legend present, the chart area should still be shorter
     expect(dimsWithTopLegend.chartArea.height).toBeLessThan(dimsNoLegend.chartArea.height);
+  });
+
+  it('returns effectiveAxisGap on the primary return path', () => {
+    const overhang = lightTheme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD;
+
+    // With a top legend only the inline-tick overhang separates legend and
+    // chart area (placeLegend consumes this to lift the legend above it).
+    const withTopLegend = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      topLegend,
+      lightTheme,
+    );
+    expect(withTopLegend.effectiveAxisGap).toBe(overhang);
+
+    // Without a top legend the full topAxisGap applies.
+    const noLegend = computeDimensions(
+      baseSpec,
+      { width: 600, height: 400 },
+      emptyLegend,
+      lightTheme,
+    );
+    expect(noLegend.effectiveAxisGap).toBe(lightTheme.spacing.axisMargin + overhang);
+  });
+
+  it('returns effectiveAxisGap on the chrome-strip guardrail path', () => {
+    // A cramped height forces the guardrail early-return with stripped chrome.
+    const talkativeSpec: NormalizedChartSpec = {
+      ...baseSpec,
+      chrome: {
+        title: { text: 'A chart title that occupies chrome space' },
+        subtitle: { text: 'A subtitle that gets stripped in compact chrome' },
+        source: { text: 'Source: somewhere' },
+      },
+    };
+    const dims = computeDimensions(
+      talkativeSpec,
+      { width: 600, height: 120 },
+      topLegend,
+      lightTheme,
+    );
+    // Prove the guardrail fired: compact chrome drops the subtitle.
+    expect(dims.chrome.subtitle).toBeUndefined();
+    expect(dims.effectiveAxisGap).toBe(lightTheme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD);
   });
 
   it('tightens legend gap on narrow viewports', () => {

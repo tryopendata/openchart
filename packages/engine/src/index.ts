@@ -113,6 +113,14 @@ export {
 } from './charts/registry';
 
 // ---------------------------------------------------------------------------
+// Legend geometry
+// ---------------------------------------------------------------------------
+
+// Used by the vanilla mount to compute the top-legend block when growing
+// auto-height figures; exporting it keeps the gap math single-sourced.
+export { legendGap } from './legend/wrap';
+
+// ---------------------------------------------------------------------------
 // Data transforms
 // ---------------------------------------------------------------------------
 

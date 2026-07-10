@@ -1,6 +1,13 @@
+import type { ChartLayout } from '@opendata-ai/openchart-core';
+import { legendGap } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createContainer } from '../__test-fixtures__/dom';
-import { barSpec, lineSpec } from '../__test-fixtures__/specs';
+import { createAutoHeightContainer, createContainer } from '../__test-fixtures__/dom';
+import {
+  barSpec,
+  lineSpec,
+  longChromeLineSpec,
+  singleSeriesLineSpec,
+} from '../__test-fixtures__/specs';
 import { createChart } from '../mount';
 
 // ---------------------------------------------------------------------------
@@ -232,6 +239,92 @@ describe('resize observer integration', () => {
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
+
+    chart.destroy();
+  });
+});
+
+describe('auto-height container growth', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  /** The chrome/legend/metrics blocks the mount grows the figure by. */
+  function overheadsOf(layout: ChartLayout, width: number): number {
+    const topLegendBlock =
+      layout.legend.position === 'top' &&
+      'entries' in layout.legend &&
+      layout.legend.entries.length > 0
+        ? layout.legend.bounds.height + legendGap(width)
+        : 0;
+    return (
+      layout.chrome.topHeight +
+      layout.chrome.bottomHeight +
+      topLegendBlock +
+      (layout.metrics?.height ?? 0)
+    );
+  }
+
+  it('grows the figure beyond the 400px budget by the measured overheads', () => {
+    const container = createAutoHeightContainer(390);
+    const chart = createChart(container, longChromeLineSpec);
+
+    const height = chart.layout.dimensions.height;
+    expect(height).toBeGreaterThan(400);
+    expect(height).toBeCloseTo(400 + overheadsOf(chart.layout, 390), 5);
+
+    // The rendered SVG is sized to the grown figure, not the 400 fallback.
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('viewBox')).toBe(`0 0 390 ${height}`);
+    expect((svg as SVGElement).style.height).toBe(`${height}px`);
+
+    chart.destroy();
+  });
+
+  it('keeps explicit-height containers at the host height', () => {
+    const container = createContainer(390, 500);
+    const chart = createChart(container, longChromeLineSpec);
+
+    // Host constrains the box; chrome must fit inside it, not grow it.
+    expect(chart.layout.dimensions.height).toBe(500);
+
+    chart.destroy();
+  });
+
+  it('re-renders against the 400 budget, not the grown height (no re-pin)', () => {
+    const container = createAutoHeightContainer(390);
+    const chart = createChart(container, longChromeLineSpec);
+
+    const grownHeight = chart.layout.dimensions.height;
+    expect(grownHeight).toBeGreaterThan(400);
+
+    // Same spec again: the container now measures at the grown SVG height,
+    // but the latched-auto mount keeps compiling against the 400 budget, so
+    // the figure height is stable.
+    chart.update(longChromeLineSpec);
+    expect(chart.layout.dimensions.height).toBe(grownHeight);
+
+    // Shorter chrome: the figure must shrink toward the budget instead of
+    // staying pinned at the previously grown container height.
+    chart.update(singleSeriesLineSpec);
+    const shrunkHeight = chart.layout.dimensions.height;
+    expect(shrunkHeight).toBeLessThan(grownHeight);
+    expect(shrunkHeight).toBeCloseTo(400 + overheadsOf(chart.layout, 390), 5);
+
+    chart.destroy();
+  });
+
+  it('does not grow sparkline mounts', () => {
+    const container = createAutoHeightContainer(200);
+    const chart = createChart(container, {
+      mark: 'line',
+      data: lineSpec.data,
+      encoding: lineSpec.encoding,
+      display: 'sparkline',
+    });
+
+    // Sparkline auto-height fallback stays at the tiny 40px default.
+    expect(chart.layout.dimensions.height).toBe(40);
 
     chart.destroy();
   });

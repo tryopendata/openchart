@@ -339,3 +339,57 @@ export const InlineYTitle = () => (
     <Chart spec={inlineYTitleSpec} />
   </div>
 );
+
+// Auto-height container + heavy chrome (the mobile-chrome-height bugs, July
+// 2026). At 390px the title wraps to 4 lines; with the old 400px height pin
+// the plot squished toward the 40px guardrail (Bug A), and the top legend
+// sat flush at chartArea.y inside the inline-tick overhang, colliding with
+// the topmost y tick label (Bug B). The container is a bare .story-chart —
+// width-only, no height class — so the figure must grow itself: 400px viz
+// budget + chrome/legend overheads. Only e2e coverage for the auto-height
+// growth path; screenshot lives in e2e/visual/stories-mobile.spec.ts.
+const autoHeightChromeGrowthSpec: ChartSpec = {
+  mark: { type: 'line', point: true, interpolate: 'monotone' },
+  data: [
+    { year: '2019', district: 'Austin ISD (urban)', pct: 100 },
+    { year: '2020', district: 'Austin ISD (urban)', pct: 95.1 },
+    { year: '2021', district: 'Austin ISD (urban)', pct: 92.4 },
+    { year: '2022', district: 'Austin ISD (urban)', pct: 91.0 },
+    { year: '2023', district: 'Austin ISD (urban)', pct: 89.9 },
+    { year: '2024', district: 'Austin ISD (urban)', pct: 88.7 },
+    { year: '2019', district: 'Frisco ISD (suburban)', pct: 100 },
+    { year: '2020', district: 'Frisco ISD (suburban)', pct: 101.8 },
+    { year: '2021', district: 'Frisco ISD (suburban)', pct: 104.6 },
+    { year: '2022', district: 'Frisco ISD (suburban)', pct: 107.9 },
+    { year: '2023', district: 'Frisco ISD (suburban)', pct: 110.3 },
+    { year: '2024', district: 'Frisco ISD (suburban)', pct: 112.8 },
+    { year: '2019', district: 'Roscoe ISD (rural)', pct: 100 },
+    { year: '2020', district: 'Roscoe ISD (rural)', pct: 97.2 },
+    { year: '2021', district: 'Roscoe ISD (rural)', pct: 96.0 },
+    { year: '2022', district: 'Roscoe ISD (rural)', pct: 95.4 },
+    { year: '2023', district: 'Roscoe ISD (rural)', pct: 94.1 },
+    { year: '2024', district: 'Roscoe ISD (rural)', pct: 93.3 },
+  ],
+  encoding: {
+    x: { field: 'year', type: 'ordinal', axis: { title: undefined } },
+    y: {
+      field: 'pct',
+      type: 'quantitative',
+      axis: { title: 'Enrollment, indexed to 2019 = 100', grid: true },
+    },
+    color: { field: 'district', type: 'nominal' },
+  },
+  legend: { position: 'top' },
+  chrome: {
+    title:
+      'Districts that lost enrollment in the pandemic kept losing it, while fast-growing suburban systems never slowed down',
+    subtitle: 'Enrollment as a share of the 2019-20 school year, selected Texas districts',
+    source: 'Source: TEA PEIMS enrollment snapshots, 2019-2024',
+  },
+};
+
+export const AutoHeightChromeGrowth = () => (
+  <div className="story-chart">
+    <Chart spec={autoHeightChromeGrowthSpec} />
+  </div>
+);

@@ -47,6 +47,7 @@
 | Annotations: data → pixel resolver | `packages/engine/src/annotations/position.ts` |
 | Annotations: shared constants (`ANCHOR_OFFSET=8`, default font, dash patterns) | `packages/engine/src/annotations/constants.ts` |
 | Legend layout (entries, wrapping, positioning, `entryPositions`) | `packages/engine/src/legend/compute.ts`, `wrap.ts` |
+| Top-legend / inline-tick clearance (top legend lifted above the reserved inline y-tick overhang) | `packages/engine/src/legend/compute.ts` → `placeLegend(..., axisGapBelowLegend)`, threaded from `computeDimensions`' `effectiveAxisGap` |
 | Legend / endpoint-label suppression truth table (per-series UI hides when series hidden) | `packages/engine/src/legend/suppression.ts` |
 | Endpoint labels: compute (placement, leader lines, anti-overlap sweep) | `packages/engine/src/endpoint-labels/compute.ts` |
 | Endpoint labels: number formatting (currency / unit / compact) | `packages/engine/src/endpoint-labels/format.ts` |
@@ -54,6 +55,7 @@
 | Endpoint labels: text-width prediction for layout reservation | `packages/engine/src/endpoint-labels/predict.ts` |
 | Endpoint labels: shared constants (chip padding, swatch geometry, leader gaps) | `packages/engine/src/endpoint-labels/constants.ts` |
 | Vanilla mount + lifecycle | `packages/vanilla/src/mount.ts` (~2500 lines) |
+| Auto-height growth contract (400px is the viz budget; chrome/legend/metrics overheads grow the figure) | `packages/vanilla/src/mount.ts` → `getContainerDimensions()` + the bounded convergence loop in `compile()` |
 | Vanilla SVG renderer entry | `packages/vanilla/src/svg-renderer.ts` → `renderChartSVG()`, `renderFacetedPanels()` |
 | Static SVG renderer (SSR) | `packages/vanilla/src/static.ts` → `renderStaticSVG()`. Subpath: `@opendata-ai/openchart-vanilla/static`. Requires `happy-dom` peer dep. |
 | Renderer: chrome (title/subtitle/source/byline/footer) | `packages/vanilla/src/renderers/chrome.ts` → `renderChrome()` |
