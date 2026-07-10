@@ -16,6 +16,7 @@ import { expect, test } from '@playwright/test';
  *   4. A quantitative axis renders at least 2 tick labels.
  *   5. Horizontal bar marks stay above a readable-thickness floor (opt-in).
  *   6. Expected band tick labels are present — none silently dropped (opt-in).
+ *   7. Legend entries clear y-axis tick labels — no box intersection (opt-in).
  */
 
 interface StoryCase {
@@ -36,6 +37,15 @@ interface StoryCase {
    * When set, every string here must appear among the visible x tick labels.
    */
   expectedXTickLabels?: string[];
+  /**
+   * Rule 7: no `.oc-legend-entry` box may intersect a `.oc-axis-y
+   * .oc-axis-tick` label box. Bug B of the mobile-chrome-height fix: the
+   * margin stack reserved the inline-tick overhang above chartArea.y, but
+   * placeLegend anchored the top legend flush at chartArea.y — inside that
+   * zone — so the topmost inline tick label overlapped the legend's bottom
+   * row by ~5px. Opt-in for stories with inline y ticks.
+   */
+  checkLegendTickClearance?: boolean;
   /**
    * Playwright projects where this story currently violates a rule — a real,
    * known rendering bug or platform limitation that predates the project
@@ -104,7 +114,22 @@ const stories: StoryCase[] = [
     quantAxis: 'y',
     expectedXTickLabels: ['0-79%', '80-84%', '85-89%', '90-94%', '95-100%'],
   },
-  { name: 'inline-y-title', slug: 'mobile-regression--inline-y-title', quantAxis: 'y' },
+  {
+    name: 'inline-y-title',
+    slug: 'mobile-regression--inline-y-title',
+    quantAxis: 'y',
+    checkLegendTickClearance: true,
+  },
+  {
+    // Auto-height container + 4-line title + top legend + inline y ticks:
+    // the only e2e coverage for the auto-height growth contract (Bug A) and
+    // the Bug B legend/tick collision. Also screenshotted in
+    // e2e/visual/stories-mobile.spec.ts.
+    name: 'auto-height-chrome-growth',
+    slug: 'mobile-regression--auto-height-chrome-growth',
+    quantAxis: 'y',
+    checkLegendTickClearance: true,
+  },
 ];
 
 for (const {
@@ -113,6 +138,7 @@ for (const {
   quantAxis,
   minBarThickness,
   expectedXTickLabels,
+  checkLegendTickClearance,
   knownFailures,
 } of stories) {
   test(`mobile invariants: ${name}`, async ({ page }) => {
@@ -134,7 +160,7 @@ for (const {
     await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"]');
     await page.waitForSelector('.oc-root svg.oc-chart:not(.oc-animate)');
 
-    const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg, expectedXTickLabelsArg }) => {
+    const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg, expectedXTickLabelsArg, checkLegendTickClearanceArg }) => {
       const violations: string[] = [];
       const root = document.querySelector('.oc-root');
       const svg = root?.querySelector('svg.oc-chart');
@@ -256,11 +282,37 @@ for (const {
         }
       }
 
+      // Rule 7: legend entries clear y-axis tick labels. Inline y ticks draw
+      // above their gridline, inside the top margin's reserved overhang; a
+      // top legend placed flush at chartArea.y sits in that same zone and
+      // collides with the topmost tick label. 2px epsilon: WebKit reports
+      // wider text extents than Chromium (documented in vanilla
+      // svg-renderer.ts), so sub-2px box kissing is not a real overlap.
+      if (checkLegendTickClearanceArg) {
+        const CLEARANCE_EPSILON = 2;
+        const entries = Array.from(svg.querySelectorAll('.oc-legend .oc-legend-entry'));
+        const yTicks = Array.from(svg.querySelectorAll('.oc-axis-y .oc-axis-tick'));
+        for (const entry of entries) {
+          const a = entry.getBoundingClientRect();
+          for (const tick of yTicks) {
+            const b = tick.getBoundingClientRect();
+            const xOverlap = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+            const yOverlap = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+            if (xOverlap > CLEARANCE_EPSILON && yOverlap > CLEARANCE_EPSILON) {
+              violations.push(
+                `legend entry overlaps y tick label (${xOverlap.toFixed(1)}x${yOverlap.toFixed(1)}px): ${describe(entry)} vs ${describe(tick)}`,
+              );
+            }
+          }
+        }
+      }
+
       return violations;
     }, {
       quantAxisArg: quantAxis,
       minBarThicknessArg: minBarThickness,
       expectedXTickLabelsArg: expectedXTickLabels,
+      checkLegendTickClearanceArg: checkLegendTickClearance,
     });
 
     expect(violations, violations.join('\n')).toEqual([]);
