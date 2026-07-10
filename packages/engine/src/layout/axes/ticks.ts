@@ -123,16 +123,17 @@ const NUMERIC_SCALE_TYPES = new Set([
 const TEMPORAL_SCALE_TYPES = new Set(['time', 'utc']);
 
 /** Format a tick value based on the scale type. */
-function formatTickLabel(value: unknown, resolvedScale: ResolvedScale): string {
+function formatTickLabel(value: unknown, resolvedScale: ResolvedScale, compact = false): string {
   const axisConfig = resolvedScale.channel.axis || undefined;
   const formatStr = axisConfig?.format;
   const suffix = axisConfig?.labelSuffix ?? '';
 
   if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
+    // Explicit user axis.format always wins, compact or not.
     const temporalFmt = buildTemporalFormatter(formatStr);
     if (temporalFmt) return temporalFmt(value as Date) + suffix;
     const useUtc = resolvedScale.type === 'utc';
-    return formatDate(value as Date, undefined, undefined, useUtc) + suffix;
+    return formatDate(value as Date, undefined, undefined, useUtc, compact) + suffix;
   }
 
   if (NUMERIC_SCALE_TYPES.has(resolvedScale.type)) {
@@ -188,8 +189,15 @@ export function continuousTicks(
  * requesting a smaller `n` never produces squished neighbors — unlike
  * "keep first+last, drop middle" pruning which can stack the last tick
  * next to an endpoint and cascade to 2 ticks.
+ *
+ * `compact` switches temporal labels to the compact format table (bare '%b'
+ * months etc.); numeric and string labels ignore it.
  */
-export function buildContinuousTicks(resolvedScale: ResolvedScale, count: number): AxisTick[] {
+export function buildContinuousTicks(
+  resolvedScale: ResolvedScale,
+  count: number,
+  compact = false,
+): AxisTick[] {
   const scale = resolvedScale.scale as D3ContinuousScale;
   if (!('ticks' in scale) || typeof scale.ticks !== 'function') {
     return continuousTicks(resolvedScale, 'full');
@@ -220,7 +228,7 @@ export function buildContinuousTicks(resolvedScale: ResolvedScale, count: number
   return ticks.map((value: unknown) => ({
     value,
     position: scale(value as number & Date) as number,
-    label: formatTickLabel(value, resolvedScale),
+    label: formatTickLabel(value, resolvedScale, compact),
   }));
 }
 
@@ -315,7 +323,14 @@ export function categoricalTicks(
   return ticks;
 }
 
-/** Resolve explicit tick values from axis config into positioned ticks. */
+/**
+ * Resolve explicit tick values from axis config into positioned ticks.
+ *
+ * Deliberately never compact: this renders the layout planner's precomputed
+ * ticks, and planner/renderer gutter agreement holds only because both sides
+ * format identically. Making this compact without making the planner compact
+ * recreates the reserved-space divergence bug class behind the 7.9.x saga.
+ */
 export function resolveExplicitTicks(values: unknown[], resolvedScale: ResolvedScale): AxisTick[] {
   const scale = resolvedScale.scale;
   return values.map((value) => {

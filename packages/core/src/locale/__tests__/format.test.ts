@@ -171,6 +171,54 @@ describe('formatDate', () => {
     expect(result).toContain('15');
     expect(result).toContain('Jun');
   });
+
+  describe('compact formats', () => {
+    it('formats months as bare month name', () => {
+      expect(formatDate('2025-02-01', undefined, undefined, true, true)).toBe('Feb');
+    });
+
+    it('infers year granularity at year boundaries (compact stays %Y)', () => {
+      expect(formatDate('2025-01-01', undefined, undefined, true, true)).toBe('2025');
+    });
+
+    it('formats days without the year', () => {
+      expect(formatDate('2025-03-05', undefined, undefined, true, true)).toBe('Mar 05');
+    });
+
+    it('formats quarters with apostrophe year', () => {
+      expect(formatDate('2025-04-15', undefined, 'quarter', true, true)).toBe("Q2 '25");
+    });
+
+    it('formats quarters with local-time year when useUtc is false', () => {
+      // Mid-quarter local date: quarter and year agree between local and UTC,
+      // exercising the getFullYear() arm of the compact branch.
+      expect(formatDate(new Date(2025, 4, 15), undefined, 'quarter', false, true)).toBe("Q2 '25");
+    });
+
+    it('formats weeks as month and day', () => {
+      expect(formatDate('2025-03-10', undefined, 'week', true, true)).toBe('Mar 10');
+    });
+
+    it('formats hours as time only', () => {
+      expect(formatDate('2025-03-05T14:00:00Z', undefined, undefined, true, true)).toBe('14:00');
+    });
+
+    it('formats minutes as time only', () => {
+      expect(formatDate('2025-03-05T14:30:00Z', undefined, undefined, true, true)).toBe('14:30');
+    });
+
+    it('default (compact: false) output is unchanged', () => {
+      expect(formatDate('2025-02-01')).toBe('Feb 2025');
+      expect(formatDate('2025-03-05')).toBe('Mar 05, 2025');
+      expect(formatDate('2025-04-15', undefined, 'quarter')).toBe('Q2 2025');
+    });
+
+    it('full quarter year follows useUtc at year boundaries', () => {
+      // In negative-offset timezones this instant is still Dec 31 2025 locally;
+      // the UTC quarter (Q1) must pair with the UTC year (2026), not the local one.
+      expect(formatDate(new Date('2026-01-01T00:00:00Z'), undefined, 'quarter')).toBe('Q1 2026');
+    });
+  });
 });
 
 describe('buildTemporalFormatter', () => {
