@@ -482,6 +482,7 @@ function ThemePicker({
   return (
     <div
       ref={ref}
+      className="ladle-theme-picker"
       style={{
         position: 'fixed',
         top: 12,

@@ -26,10 +26,10 @@
     "typecheck": "bun run --filter './packages/*' typecheck",
     "dev": "cd examples && bun run dev",
     "release": "node scripts/release.mjs",
-    "test:visual": "playwright test --project=visual",
-    "test:visual:update": "playwright test --project=visual --update-snapshots",
+    "test:visual": "playwright test --project=visual --project=visual-mobile",
+    "test:visual:update": "playwright test --project=visual --project=visual-mobile --update-snapshots",
     "test:visual:setup": "playwright install chromium webkit",
-    "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-webkit-mobile",
+    "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow --project=invariants-webkit-mobile",
     "prepare": "husky"
   },
   "overrides": {

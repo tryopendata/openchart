@@ -77,7 +77,10 @@
 | Line chart stories (SingleLine, MultiSeries, FiveSeries, AreaChart…) | `examples/src/charts/line.stories.tsx` |
 | Theme demo story | `examples/src/theme.stories.tsx` |
 | Visual regression spec | `e2e/visual/stories.spec.ts` |
+| Mobile visual regression spec (390px viewport, `visual-mobile` project) | `e2e/visual/stories-mobile.spec.ts` |
 | Visual regression baselines | `e2e/visual/__screenshots__/` |
+| Mobile layout invariants (6 geometry rules incl. Rule 6 label presence; 4 Playwright projects, the chromium ones run in CI) | `e2e/invariants/mobile-invariants.spec.ts` |
+| Blog-theme mobile repro (bugs on labs.tryopendata.ai need `axisTick: 14`, not the 11px default; production mirror story) | `examples/src/charts/mobile-regression.stories.tsx` → `mobile-regression--one-wide-x-label-large-ticks` |
 | TileMap compile (positions, colors, labels, legend) | `packages/engine/src/tilemap/compile-tilemap.ts`. Grid geometry in `tilemap/layout.ts` (`computeTilePositions`, `US_STATE_TILES`, 12×8 grid). |
 | TileMap responsive sizing (mobile tile size) | Split across two files: the mount `getContainerDimensions()` in `packages/vanilla/src/tilemap-mount.ts` picks the **height budget** (desktop = square `height=width` cap; below 700px a target-tile-derived budget so tiles don't starve), and `compile-tilemap.ts` reclaims horizontal padding on compact widths (`getBreakpoint` + `HPAD_COMPACT_*`) and scales per-tile font/corner-radius/label-centering in `buildTileMark`. Tile size = `min(width-bound, height-bound)`; on mobile width binds. |
 | Release script | `scripts/release.mjs` |
