@@ -27,7 +27,7 @@ import {
   X_AXIS_TITLE_BAND_ROTATED,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
-import { resolveBandTickAngle } from './axes/rotation';
+import { bandLabelStride, resolveBandTickAngle } from './axes/rotation';
 import { measureLabel, thinTicksUntilFit, ticksOverlap } from './axes/thinning';
 import {
   buildContinuousTicks,
@@ -295,96 +295,15 @@ function fitContinuousTicks(
 }
 
 /**
- * Horizontal footprint `[left, right]` of a rotated band tick label, in axis
- * pixels. Rotated labels are anchored at the tick position (the rotation
- * pivot), not centered on it: at a negative angle the renderer right-anchors
- * the text so it extends left of the pivot; at a positive angle it left-anchors
- * so it extends right. The horizontal projection is `width * cos(angle)`.
- *
- * Modeling the footprint as centered (the old behavior) over-estimates each
- * label's reach by half its width in the wrong direction, which made a single
- * wide label (e.g. "2026 (to wk 17)") report overlaps against neighbors that
- * actually clear it — triggering needless thinning of the whole axis.
+ * Apply the uniform band-label stride (see bandLabelStride in ./axes/rotation):
+ * keep every Nth label counting back from the LAST one, so the most recent
+ * category is always labeled. Stride 1 — the overwhelmingly common case once
+ * the angle ladder has run — keeps everything.
  */
-function labelSpanAtAngle(
-  tick: AxisTick,
-  angleDeg: number,
-  fontSize: number,
-  fontWeight: number,
-  measureText?: MeasureTextFn,
-): { left: number; right: number } {
-  const angleRad = (Math.abs(angleDeg) * Math.PI) / 180;
-  const cosA = angleRad > 0 ? Math.abs(Math.cos(angleRad)) : 1;
-  const projected = measureLabel(tick.label, fontSize, fontWeight, measureText) * cosA;
-  if (angleDeg === 0) {
-    // Horizontal labels are centered on the tick.
-    return { left: tick.position - projected / 2, right: tick.position + projected / 2 };
-  }
-  if (angleDeg < 0) {
-    // Right-anchored: pivot is the right edge, text extends left.
-    return { left: tick.position - projected, right: tick.position };
-  }
-  // Left-anchored: pivot is the left edge, text extends right.
-  return { left: tick.position, right: tick.position + projected };
-}
-
-/**
- * Thin band-scale tick labels only where they actually collide at their
- * effective angle, greedily keeping every label that clears the last one
- * retained. This preserves narrow labels that have room even when a single
- * wide label elsewhere on the axis forces some thinning near it, instead of
- * decimating the whole axis every-other. First and last labels are always
- * kept. Most grouped bar charts keep every label even at -45°.
- */
-function thinBandTicksIfNeeded(
-  ticks: AxisTick[],
-  angleDeg: number,
-  fontSize: number,
-  fontWeight: number,
-  measureText?: MeasureTextFn,
-): AxisTick[] {
-  if (ticks.length < 3) return ticks;
-  const minGap = fontSize * 0.5;
-
-  const spans = ticks.map((t) => labelSpanAtAngle(t, angleDeg, fontSize, fontWeight, measureText));
-
-  // Greedy left-to-right retention: keep a label only if its footprint clears
-  // the last kept label's right edge by minGap. Always keep the first label.
-  const keep = new Array<boolean>(ticks.length).fill(false);
-  keep[0] = true;
-  let lastRight = spans[0].right;
-  for (let i = 1; i < ticks.length; i++) {
-    if (spans[i].left >= lastRight + minGap) {
-      keep[i] = true;
-      lastRight = spans[i].right;
-    }
-  }
-
-  // Always keep the last label. If keeping it collides with previously kept
-  // labels, drop each colliding neighbor so the endpoint stays labeled. A very
-  // wide final label (long category name) projects across several bands at an
-  // angle, so clear every kept label its footprint overlaps, not just the
-  // nearest one — otherwise an earlier kept label still overlaps the endpoint.
-  //
-  // Use true pixel overlap here (no minGap comfort buffer) so a neighbor that
-  // merely falls a few pixels short of the comfort gap — but does not actually
-  // touch the endpoint label — is kept rather than sacrificed. Dropping a
-  // readable short label to seat a near-miss wide endpoint reads as arbitrary
-  // (e.g. losing "2025" beside "2026 (to wk 17)" that clears it by 2px).
+function applyBandLabelStride(ticks: AxisTick[], stride: number): AxisTick[] {
+  if (stride <= 1 || ticks.length < 3) return ticks;
   const lastIdx = ticks.length - 1;
-  if (!keep[lastIdx]) {
-    keep[lastIdx] = true;
-    for (let i = lastIdx - 1; i > 0; i--) {
-      if (!keep[i]) continue;
-      if (spans[i].right > spans[lastIdx].left) {
-        keep[i] = false;
-        continue;
-      }
-      break;
-    }
-  }
-
-  return ticks.filter((_, i) => keep[i]);
+  return ticks.filter((_, i) => (lastIdx - i) % stride === 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -511,17 +430,40 @@ export function computeAxes(
       major: true,
     }));
 
-    // Determine rotation before thinning so we know the effective label
-    // footprint. Band scales auto-rotate when horizontal labels don't fit.
+    // Band-label policy: choose the shallowest angle at which every label
+    // fits (flat → -45° → -90°), then apply the uniform stride safety net —
+    // stride 1 (keep everything) except at extreme category counts. See
+    // ./axes/rotation for the geometry.
     let tickAngle = axisConfig?.labelAngle;
-    if (tickAngle === undefined && scales.x.type === 'band' && allTicks.length > 1) {
-      const bandwidth = (scales.x.scale as ScaleBand<string>).bandwidth();
+    let bandStride = 1;
+    if (scales.x.type === 'band' && allTicks.length > 1) {
+      const bandScale = scales.x.scale as ScaleBand<string>;
+      const bandwidth = bandScale.bandwidth();
+      // Anchor spacing between the ticks actually drawn — not the raw band
+      // step. categoricalTicks may have applied an explicit tickCount cap, so
+      // retained ticks can sit a multiple of the step apart, and explicit
+      // axis.values subsets can be non-uniform: collision geometry cares
+      // about the closest adjacent pair.
+      let anchorSpacing = Number.POSITIVE_INFINITY;
+      for (let i = 1; i < allTicks.length; i++) {
+        const d = Math.abs(allTicks[i].position - allTicks[i - 1].position);
+        if (d > 0 && d < anchorSpacing) anchorSpacing = d;
+      }
+      if (!Number.isFinite(anchorSpacing)) anchorSpacing = bandScale.step();
       let maxLabelWidth = 0;
       for (const t of allTicks) {
         const w = measureLabel(t.label, fontSize, fontWeight, measureText);
         if (w > maxLabelWidth) maxLabelWidth = w;
       }
-      tickAngle = resolveBandTickAngle(undefined, maxLabelWidth, bandwidth, allTicks.length);
+      tickAngle = resolveBandTickAngle(
+        axisConfig?.labelAngle,
+        maxLabelWidth,
+        bandwidth,
+        allTicks.length,
+        anchorSpacing,
+        fontSize,
+      );
+      bandStride = bandLabelStride(maxLabelWidth, tickAngle, fontSize, anchorSpacing);
     }
 
     // Thin tick labels to prevent overlap (skip for explicit tick values).
@@ -530,10 +472,7 @@ export function computeAxes(
     if (hasExplicitValues) {
       ticks = allTicks;
     } else if (scales.x.type === 'band') {
-      // Band scales: thin only when labels actually overlap at their
-      // effective angle. After rotation, most charts have room for every label.
-      const effectiveAngle = tickAngle ?? 0;
-      ticks = thinBandTicksIfNeeded(allTicks, effectiveAngle, fontSize, fontWeight, measureText);
+      ticks = applyBandLabelStride(allTicks, bandStride);
     } else if (isContinuousX) {
       ticks = fitContinuousTicks(
         scales.x,

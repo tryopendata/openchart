@@ -247,6 +247,22 @@ export const OneWideXLabel = () => (
   </div>
 );
 
+// Same chart with a larger themed tick font (the deployed blog sets
+// axisTick: 14). The bigger glyphs made the old 1-D span overlap genuine, so
+// production still dropped "2025" while the default-theme story passed. All
+// five labels must render at -45° — rotated labels are parallel ribbons and
+// label width cannot make them touch.
+const oneWideLabelThemedSpec: ChartSpec = {
+  ...oneWideLabelSpec,
+  theme: { fonts: { sizes: { axisTick: 14 } } },
+};
+
+export const OneWideXLabelLargeTicks = () => (
+  <div className="story-chart story-h-500">
+    <Chart spec={oneWideLabelThemedSpec} />
+  </div>
+);
+
 // Five uniform short rotated x labels (percentage buckets). These clearly
 // fit at -45°, so none should be thinned even on a phone.
 const percentBucketsSpec: ChartSpec = {

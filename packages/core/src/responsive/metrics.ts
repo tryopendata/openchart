@@ -173,6 +173,22 @@ export const X_AXIS_BAND_HEIGHT = 26;
 export const X_AXIS_TITLE_BAND = 22;
 export const X_AXIS_TITLE_BAND_ROTATED = 20;
 
+/**
+ * Ceiling on the vertical extent reserved for rotated x tick labels. Labels
+ * whose rotated projection exceeds this clip at the reservation edge, so the
+ * angle ladder (engine layout/axes/rotation) avoids -90° for labels longer
+ * than this.
+ */
+export const X_AXIS_ROTATED_EXTENT_CAP = 120;
+
+/**
+ * Line-height multiplier for a tick label's text ribbon. Shared by the
+ * rotated-extent reservation below and the engine's rotation collision test
+ * (layout/axes/rotation) so the reserved space and the fit threshold can't
+ * drift apart.
+ */
+export const TICK_LINE_HEIGHT_FACTOR = 1.2;
+
 export interface XAxisExtentInput {
   labels: string[];
   tickAngle?: number;
@@ -199,7 +215,7 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
     // lineHeight*|cos θ| (the label's own height, which still contributes
     // unless the text is fully vertical). Measuring only the sin term
     // under-reserved space, letting rotated ticks spill into the source line.
-    const lineHeight = input.tickFontSize * 1.2;
+    const lineHeight = input.tickFontSize * TICK_LINE_HEIGHT_FACTOR;
     // Small gap between the axis line and the top of the rotated label band.
     // Mirrors the tick-mark-to-label offset used for flat labels; keeps the
     // reservation matched to the drawn footprint across Blink and WebKit,
@@ -207,7 +223,7 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
     const AXIS_TO_LABEL_GAP = 3;
     const rotatedHeight = Math.min(
       maxLabelWidth * Math.sin(angleRad) + lineHeight * Math.cos(angleRad) + AXIS_TO_LABEL_GAP,
-      120,
+      X_AXIS_ROTATED_EXTENT_CAP,
     );
     return input.hasTitle ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
   }

@@ -34,6 +34,7 @@
 | Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,rule,tick,text}/` |
 | Layout: axes (tick generation, density, label fitting) | `packages/engine/src/layout/axes.ts` (`computeAxes`) |
 | Inline vs gutter y-tick placement (shared predicate) | `packages/engine/src/layout/axes.ts` (`yTickPositionIsInline`) — single source of truth for `computeAxes`, `plan.ts`, and `dimensions.ts`; keyed on resolved scale type, not field type |
+| Band x-label rotation + thinning policy | `packages/engine/src/layout/axes/rotation.ts` (`resolveBandTickAngle`, `bandLabelStride`) — parallel-ribbon collision model, angle ladder flat → -45° → -90°, last-anchored stride safety net; shared by `computeAxes` and `plan.ts` so reserved margin matches rendered angle |
 | Layout: dimensions (chrome reservation, chartArea computation) | `packages/engine/src/layout/dimensions.ts` (`computeDimensions`) |
 | Layout: facet grid geometry (panel rects, responsive column degradation) | `packages/engine/src/layout/facet.ts` (`computeFacetGrid`, `autoColumns`) |
 | Layout: gridlines | `packages/engine/src/layout/gridlines.ts` |

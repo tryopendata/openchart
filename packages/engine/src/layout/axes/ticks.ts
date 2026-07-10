@@ -256,8 +256,8 @@ export function categoricalTicks(
   if (resolvedScale.type === 'band' && orientation === 'horizontal') {
     // Horizontal band scales delegate thinning to the caller (computeAxes)
     // which knows the effective label angle after auto-rotation. Only apply
-    // an explicit tickCount cap here; density-based thinning happens
-    // downstream in thinBandTicksIfNeeded where rotation is accounted for.
+    // an explicit tickCount cap here; the angle ladder + stride safety net
+    // (see ./rotation) handle collisions downstream.
     if (explicitTickCount && domain.length > explicitTickCount) {
       const step = Math.ceil(domain.length / explicitTickCount);
       selectedValues = domain.filter((_: string, i: number) => i % step === 0);
