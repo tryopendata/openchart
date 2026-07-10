@@ -1365,3 +1365,50 @@ describe('quantitative axis minimum tick floor', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Compact temporal tick formats: pinned pre-change behavior
+// ---------------------------------------------------------------------------
+// These two tests pin the exact tick labels produced BEFORE the compact
+// temporal format rung lands in fitContinuousTicks. They must stay green
+// through that change:
+// - wide desktop axes have room for full-format labels, so compact never fires
+// - temporal y ticks are never compact (planner/renderer gutter agreement;
+//   see plans/compact-temporal-ticks.md)
+
+describe('compact temporal ticks: pinned pre-change output', () => {
+  const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+    date: `2025-${String(i + 1).padStart(2, '0')}-01`,
+    value: 100 + i * 10,
+  }));
+
+  const monthlySpec: NormalizedChartSpec = {
+    ...lineSpec,
+    data: monthlyData,
+  };
+
+  it('desktop unchanged: monthly temporal x at ~900px keeps full-format labels', () => {
+    const wideArea = { x: 50, y: 50, width: 900, height: 300 };
+    const scales = computeScales(monthlySpec, wideArea, monthlySpec.data);
+    const axes = computeAxes(scales, wideArea, fullStrategy, theme);
+
+    expect(axes.x!.ticks.map((t) => t.label)).toEqual(['2025', 'Apr 2025', 'Jul 2025', 'Oct 2025']);
+  });
+
+  it('temporal y-axis unaffected: labels at ~360px stay full-format', () => {
+    const ySpec: NormalizedChartSpec = {
+      ...monthlySpec,
+      markType: 'point',
+      markDef: { type: 'point' },
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'date', type: 'temporal' },
+      },
+    };
+    const narrowArea = { x: 40, y: 40, width: 360, height: 300 };
+    const scales = computeScales(ySpec, narrowArea, ySpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme);
+
+    expect(axes.y!.ticks.map((t) => t.label)).toEqual(['2025', 'Apr 2025', 'Jul 2025', 'Oct 2025']);
+  });
+});
