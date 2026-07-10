@@ -26,12 +26,35 @@ export default defineConfig({
     {
       name: 'visual',
       testDir: './e2e/visual',
+      testMatch: /stories\.spec\.ts$/,
       snapshotDir: './e2e/visual/__screenshots__',
       use: {
         ...devices['Desktop Chrome'],
         deviceScaleFactor: 1,
       },
       // Keep strict. Any pixel drift surfaces as a failure.
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.1,
+          animations: 'disabled',
+          caret: 'hide',
+        },
+      },
+    },
+    // Mobile visual regression: 390px viewport puts the story container in
+    // the compact (<400px) breakpoint band. deviceScaleFactor stays 1 so
+    // baselines compare across machines (same rationale as `visual`).
+    {
+      name: 'visual-mobile',
+      testDir: './e2e/visual',
+      testMatch: /stories-mobile\.spec\.ts$/,
+      snapshotDir: './e2e/visual/__screenshots__',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 1,
+      },
       expect: {
         toHaveScreenshot: {
           maxDiffPixelRatio: 0.001,
