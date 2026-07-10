@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.10.0](https://github.com/tryopendata/openchart/compare/core-v7.9.3...core-v7.10.0) (2026-07-10)
+
+
+### Features
+
+* compact temporal tick formats — try shorter labels before dropping ticks (#101) ([894e2df](https://github.com/tryopendata/openchart/commit/894e2df))
+
 ## [7.9.3](https://github.com/tryopendata/openchart/compare/core-v7.9.2...core-v7.9.3) (2026-07-10)
 
 
