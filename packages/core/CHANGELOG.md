@@ -1,5 +1,25 @@
 # Changelog
 
+## [7.11.0](https://github.com/tryopendata/openchart/compare/core-v7.10.0...core-v7.11.0) (2026-07-10)
+
+
+### Features
+
+* compact temporal tick formats — try shorter labels before dropping ticks (#101) ([894e2df](https://github.com/tryopendata/openchart/commit/894e2df))
+* animated data-update transitions (#95) ([94a2873](https://github.com/tryopendata/openchart/commit/94a2873))
+* add categorical color encoding support ([83f28d6](https://github.com/tryopendata/openchart/commit/83f28d6))
+
+
+### Bug Fixes
+
+* grow auto-height figures with chrome instead of squishing the plot (#102) ([26c2450](https://github.com/tryopendata/openchart/commit/26c2450))
+* replace band-label span thinning with parallel-ribbon model (#99) ([7d16588](https://github.com/tryopendata/openchart/commit/7d16588))
+* two mobile axis corner cases from the 7.9.1 fixes (#98) ([bffcc8e](https://github.com/tryopendata/openchart/commit/bffcc8e))
+* less aggressive x-axis thinning and tighter inline y-title on mobile (#97) ([1087924](https://github.com/tryopendata/openchart/commit/1087924))
+* tilemap readability on small/mobile widths (#96) ([fc95777](https://github.com/tryopendata/openchart/commit/fc95777))
+* address code review findings + release v7.8.0 ([d6bcd96](https://github.com/tryopendata/openchart/commit/d6bcd96))
+* address code review findings ([f4a01b7](https://github.com/tryopendata/openchart/commit/f4a01b7))
+
 ## [7.10.0](https://github.com/tryopendata/openchart/compare/core-v7.9.3...core-v7.10.0) (2026-07-10)
 
 
