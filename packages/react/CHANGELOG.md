@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.9.3](https://github.com/tryopendata/openchart/compare/core-v7.9.2...core-v7.9.3) (2026-07-10)
+
+
+### Bug Fixes
+
+* replace band-label span thinning with parallel-ribbon model (#99) ([7d16588](https://github.com/tryopendata/openchart/commit/7d16588))
+
 ## [7.9.2](https://github.com/tryopendata/openchart/compare/core-v7.9.1...core-v7.9.2) (2026-07-09)
 
 
