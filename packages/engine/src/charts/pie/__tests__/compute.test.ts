@@ -209,6 +209,81 @@ describe('computePieMarks', () => {
     });
   });
 
+  describe('angle range (startAngle/endAngle)', () => {
+    function makeHalfDonutSpec(): NormalizedChartSpec {
+      return {
+        markType: 'arc',
+        markDef: {
+          type: 'arc',
+          innerRadius: 0.5,
+          startAngle: -Math.PI / 2,
+          endAngle: Math.PI / 2,
+        },
+        data: [
+          { party: 'Dem', seats: 213 },
+          { party: 'GOP', seats: 222 },
+        ],
+        encoding: {
+          y: { field: 'seats', type: 'quantitative' },
+          color: { field: 'party', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+    }
+
+    it('defaults to a full circle when startAngle/endAngle are unset', () => {
+      const spec = makeBasicPieSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computePieMarks(spec, scales, chartArea, fullStrategy, false);
+
+      const totalSweep = marks.reduce((sum, m) => sum + (m.endAngle - m.startAngle), 0);
+      expect(totalSweep).toBeCloseTo(Math.PI * 2, 1);
+    });
+
+    it('restricts the total sweep to the requested half-donut range', () => {
+      const spec = makeHalfDonutSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computePieMarks(spec, scales, chartArea, fullStrategy, true);
+
+      const minStart = Math.min(...marks.map((m) => m.startAngle));
+      const maxEnd = Math.max(...marks.map((m) => m.endAngle));
+      expect(minStart).toBeCloseTo(-Math.PI / 2, 1);
+      expect(maxEnd).toBeCloseTo(Math.PI / 2, 1);
+    });
+
+    it('half-donut slices still sum proportionally to their seat share', () => {
+      const spec = makeHalfDonutSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computePieMarks(spec, scales, chartArea, fullStrategy, true);
+
+      const gopMark = marks.find((m) => m.aria.label.includes('GOP'));
+      const demMark = marks.find((m) => m.aria.label.includes('Dem'));
+      expect(gopMark).toBeDefined();
+      expect(demMark).toBeDefined();
+      // 222 seats > 213 seats, so GOP's sweep should be larger.
+      const gopSweep = gopMark!.endAngle - gopMark!.startAngle;
+      const demSweep = demMark!.endAngle - demMark!.startAngle;
+      expect(gopSweep).toBeGreaterThan(demSweep);
+    });
+
+    it('half-donut arcs fit within the chart area (non-empty paths, positive radii)', () => {
+      const spec = makeHalfDonutSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computePieMarks(spec, scales, chartArea, fullStrategy, true);
+
+      for (const mark of marks) {
+        expect(mark.path).toBeTruthy();
+        expect(mark.outerRadius).toBeGreaterThan(0);
+        expect(mark.innerRadius).toBeGreaterThan(0);
+      }
+    });
+  });
+
   describe('edge cases', () => {
     it('returns empty array when no value encoding', () => {
       const spec: NormalizedChartSpec = {

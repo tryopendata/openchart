@@ -94,6 +94,8 @@
 | Frozen e2e fixture copies (pinned visual/invariant stories, pixel-identical, `Testing / Fixtures`) + frozen stylesheet | `examples/src/testing/fixtures-*.stories.tsx` (+ `testing.css`, the `.tfix-` frozen namespace). Slugs are `testing--fixtures--*`. Includes `rotated-with-source`, moved here from `examples/src/charts/`. |
 | TileMap compile (positions, colors, labels, legend) | `packages/engine/src/tilemap/compile-tilemap.ts`. Grid geometry in `tilemap/layout.ts` (`computeTilePositions`, `US_STATE_TILES`, 12×8 grid). |
 | TileMap responsive sizing (mobile tile size) | Split across two files: the mount `getContainerDimensions()` in `packages/vanilla/src/tilemap-mount.ts` picks the **height budget** (desktop = square `height=width` cap; below 700px a target-tile-derived budget so tiles don't starve), and `compile-tilemap.ts` reclaims horizontal padding on compact widths (`getBreakpoint` + `HPAD_COMPACT_*`) and scales per-tile font/corner-radius/label-centering in `buildTileMark`. Tile size = `min(width-bound, height-bound)`; on mobile width binds. |
+| Parliament (hemicycle) mark compute (seat-packing, majority line) | `packages/engine/src/charts/parliament/compute.ts` (`computeParliamentMarks`). Emits existing `PointMark`/`RuleMarkLayout`/`TextMarkLayout` (no bespoke layout). Axisless mark, rides the chart pipeline like waffle. Tooltips: `tooltips/compute.ts` `computeParliamentTooltips` (one shared tooltip per party). |
+| Arc angle range (half-donut / election donut) | `markDef.startAngle`/`endAngle` (radians, d3 convention) handled in `packages/engine/src/charts/pie/compute.ts` (`computeSweepBounds` fits a partial sweep). |
 | Release script | `scripts/release.mjs` |
 
 ## Package responsibilities (one-liner each)

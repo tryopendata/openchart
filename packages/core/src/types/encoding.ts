@@ -77,6 +77,8 @@ function optional(...types: FieldType[]): ChannelRule {
  *   theta accepted as an alias like arc), color is the category
  * - calendar: x is the daily date (temporal), color the per-day value
  *   (quantitative); no y channel (the calendar owns its own geometry)
+ * - parliament: no positional axes; theta (aliased to y) is the seat count
+ *   (quantitative), color the party
  */
 export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   bar: {
@@ -191,6 +193,22 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     detail: optional('nominal'),
   },
   waffle: {
+    x: optional(),
+    y: required('quantitative'),
+    color: required('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    theta: optional('quantitative'),
+    detail: optional('nominal'),
+  },
+  // parliament: hemicycle seat chart. Like arc/waffle, no positional axes;
+  // color is the party (required), theta the seat count (aliased to y in the
+  // sugar pass). y is accepted so the theta alias resolves before the rules
+  // check runs.
+  parliament: {
     x: optional(),
     y: required('quantitative'),
     color: required('nominal', 'ordinal'),

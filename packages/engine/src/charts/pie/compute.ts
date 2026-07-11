@@ -87,6 +87,46 @@ function groupSmallSlices(slices: SliceData[], threshold: number): SliceData[] {
   return big;
 }
 
+/**
+ * Bounding box (in unit-radius coordinates) of a circular arc sweep from
+ * startAngle to endAngle, following d3's angle convention: 0 is straight up,
+ * increasing clockwise. Used to fit and center a partial pie/donut sweep
+ * (e.g. a half-donut) within the available chart area, since a restricted
+ * sweep's bounding box is smaller than the full circle's.
+ */
+function computeSweepBounds(
+  startAngle: number,
+  endAngle: number,
+): { minX: number; maxX: number; minY: number; maxY: number } {
+  // Sample the sweep endpoints plus the four cardinal directions (up, right,
+  // down, left) that fall within [startAngle, endAngle], since those are the
+  // only points where x or y can reach an extremum on a circle.
+  const points: Array<{ x: number; y: number }> = [
+    { x: Math.sin(startAngle), y: -Math.cos(startAngle) },
+    { x: Math.sin(endAngle), y: -Math.cos(endAngle) },
+  ];
+
+  const cardinals = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+  const span = endAngle - startAngle;
+  for (const cardinal of cardinals) {
+    // Normalize the cardinal angle to the first occurrence at or after
+    // startAngle, then check whether it still falls within the swept range.
+    const normalized = cardinal + Math.ceil((startAngle - cardinal) / (Math.PI * 2)) * Math.PI * 2;
+    if (normalized <= startAngle + span) {
+      points.push({ x: Math.sin(normalized), y: -Math.cos(normalized) });
+    }
+  }
+
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -108,6 +148,8 @@ export function computePieMarks(
   isDonut = false,
 ): ArcMark[] {
   const encoding = spec.encoding as Encoding;
+  const startAngle = spec.markDef.startAngle ?? 0;
+  const endAngle = spec.markDef.endAngle ?? Math.PI * 2;
 
   // For pie/donut charts, we need a value field (typically y or x) and
   // a category field (typically color). The value field provides the slice sizes.
@@ -176,15 +218,28 @@ export function computePieMarks(
   const pieGenerator = d3Pie<SliceData>()
     .value((d) => d.value)
     .sort(null) // Already sorted
-    .padAngle(0.01);
+    .padAngle(0.01)
+    .startAngle(startAngle)
+    .endAngle(endAngle);
 
   const arcs = pieGenerator(slices);
 
-  // Compute arc dimensions
-  const centerX = chartArea.x + chartArea.width / 2;
-  const centerY = chartArea.y + chartArea.height / 2;
-  const outerRadius = (Math.min(chartArea.width, chartArea.height) / 2) * 0.85;
+  // Compute arc dimensions. A partial sweep (startAngle/endAngle narrower
+  // than a full circle) has a bounding box smaller than the full circle, so
+  // fit the radius and center to the actual sweep rather than the chart
+  // area's full width/height — otherwise a half-donut would render at half
+  // scale with wasted empty space below it.
+  const sweepBounds = computeSweepBounds(startAngle, endAngle);
+  const sweepWidth = sweepBounds.maxX - sweepBounds.minX;
+  const sweepHeight = sweepBounds.maxY - sweepBounds.minY;
+  const outerRadius = Math.min(chartArea.width / sweepWidth, chartArea.height / sweepHeight) * 0.85;
   const innerRadius = isDonut ? outerRadius * 0.6 : 0;
+
+  // Center the sweep's bounding box within the chart area.
+  const centerX =
+    chartArea.x + chartArea.width / 2 - ((sweepBounds.minX + sweepBounds.maxX) / 2) * outerRadius;
+  const centerY =
+    chartArea.y + chartArea.height / 2 - ((sweepBounds.minY + sweepBounds.maxY) / 2) * outerRadius;
 
   const arcGenerator = d3Arc<PieArcDatum<SliceData>>()
     .innerRadius(innerRadius)

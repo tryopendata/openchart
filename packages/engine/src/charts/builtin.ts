@@ -17,6 +17,7 @@ import { calendarRenderer } from './calendar';
 import { columnRenderer } from './column';
 import { dotRenderer } from './dot';
 import { areaRenderer, lineRenderer } from './line';
+import { parliamentRenderer } from './parliament';
 import { donutRenderer, pieRenderer } from './pie';
 import { rangeRenderer } from './range';
 import { type ChartRenderer, registerChartRenderer } from './registry';
@@ -56,6 +57,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   range: rangeRenderer, // dumbbell / arrow / range bar (orientation resolved internally)
   waffle: waffleRenderer, // unit grid for part-to-whole counts
   calendar: calendarRenderer, // weeks x weekdays daily heatmap (no positional scales)
+  parliament: parliamentRenderer, // hemicycle seat dots (no positional scales)
 };
 
 /**

@@ -34,6 +34,7 @@ export { monthlyTemperature } from './monthly-temperature';
 export { nvidiaStock } from './nvidia-stock';
 export { nycTemperatureRange } from './nyc-temperature-range';
 export { olympicMedals } from './olympic-medals';
+export { euParliament, usHouse } from './parliament-seats';
 export { pisaScores } from './pisa-scores';
 export { populationByCountry } from './population';
 export { profitMargins } from './profit-margins';
