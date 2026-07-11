@@ -125,7 +125,10 @@ const DEFICIENCIES: Array<{ type: ColorBlindnessType | 'normal'; label: string }
  * two neighbors merge in any row, this baseline catches it.
  */
 export const ColorblindPaletteAudit: Story = () => (
-  <div style={{ padding: 24, maxWidth: 720, fontFamily: 'system-ui, sans-serif' }}>
+  <div
+    className="story-chart"
+    style={{ padding: 24, maxWidth: 720, fontFamily: 'system-ui, sans-serif' }}
+  >
     <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
       Default categorical palette
     </div>
@@ -137,16 +140,17 @@ export const ColorblindPaletteAudit: Story = () => (
         <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{label}</div>
         <div style={{ display: 'flex', gap: 4 }}>
           {CATEGORICAL_PALETTE.map((color) => (
-            <div
-              key={color}
-              title={color}
-              style={{
-                width: 56,
-                height: 36,
-                borderRadius: 3,
-                background: type === 'normal' ? color : simulateColorBlindness(color, type),
-              }}
-            />
+            // SVG rects (not divs) so the visual-test readiness probe, which
+            // waits for a rendered shape inside the story root, sees this story.
+            <svg key={color} width={56} height={36} role="img" aria-label={color}>
+              <title>{color}</title>
+              <rect
+                width={56}
+                height={36}
+                rx={3}
+                fill={type === 'normal' ? color : simulateColorBlindness(color, type)}
+              />
+            </svg>
           ))}
         </div>
       </div>
