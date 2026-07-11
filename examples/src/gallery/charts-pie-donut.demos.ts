@@ -20,6 +20,8 @@ export const page: PageEntry = {
     { id: 'many-categories', title: 'Too many categories' },
     { id: 'comparison-donuts', title: 'Side-by-side comparison donuts' },
     { id: 'leader-line-labels', title: 'Leader-line labels' },
+    { id: 'waffle', title: 'Waffle' },
+    { id: 'parliament', title: 'Parliament (hemicycle)' },
     { id: 'interactive-donut', title: 'Interactive (hover to read a slice)' },
   ],
 };

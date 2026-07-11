@@ -22,6 +22,8 @@ export const page: PageEntry = {
     { id: 'lollipop', title: 'Lollipop (diverging)' },
     { id: 'dumbbell', title: 'Dumbbell (two-series recipe)' },
     { id: 'strip-plot', title: 'Tick / strip plot' },
+    { id: 'beeswarm', title: 'Beeswarm' },
+    { id: 'calendar-heatmap', title: 'Calendar heatmap' },
     { id: 'range-dumbbell', title: 'Dumbbell (range mark)' },
     { id: 'arrow-plot', title: 'Arrow plot' },
     { id: 'range-bar', title: 'Range bar' },
