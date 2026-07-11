@@ -171,6 +171,17 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--waffle-highlight',
     note: 'color.highlight singles out one category; fractional shares exercise largest-remainder rounding.',
   },
+  // --- Series search (find your country) ---
+  {
+    name: 'series-search',
+    slug: 'testing--fixtures--series-search',
+    note: '40-series line chart with the seriesSearch band, muted context lines, and a highlighted baseline.',
+  },
+  {
+    name: 'series-search-mobile',
+    slug: 'testing--fixtures--series-search-mobile',
+    note: 'Same seriesSearch chart in a 360px container.',
+  },
 ];
 
 for (const story of stories) {

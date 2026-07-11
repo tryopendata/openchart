@@ -784,6 +784,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     area: chartArea,
     chrome,
     metrics: dims.metrics,
+    ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
     axes: {
       x: axes.x,
       y: axes.y,
@@ -1062,6 +1063,7 @@ function compileFaceted(
     area: chartArea,
     chrome: dims.chrome,
     metrics: dims.metrics,
+    ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
     axes: { x: undefined, y: undefined },
     marks: allMarks,
     annotations: [],

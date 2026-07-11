@@ -258,6 +258,37 @@ function normalizeHighlight(encoding: Encoding, data: DataRow[], warnings: strin
 }
 
 // ---------------------------------------------------------------------------
+// Series search normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize `seriesSearch` to a config object, or undefined when disabled.
+ * Search needs a categorical color encoding to enumerate series values;
+ * warns and disables when there isn't one.
+ */
+function normalizeSeriesSearch(
+  spec: ChartSpec,
+  encoding: Encoding,
+  warnings: string[],
+): import('@opendata-ai/openchart-core').SeriesSearchConfig | undefined {
+  if (!spec.seriesSearch) return undefined;
+  const color = encoding.color;
+  const hasCategoricalColor =
+    !!color &&
+    !('condition' in color) &&
+    'field' in color &&
+    !!color.field &&
+    color.type !== 'quantitative';
+  if (!hasCategoricalColor) {
+    warnings.push(
+      '[openchart] seriesSearch requires a categorical color encoding (encoding.color.field with a nominal/ordinal type); ignoring seriesSearch.',
+    );
+    return undefined;
+  }
+  return typeof spec.seriesSearch === 'object' ? { ...spec.seriesSearch } : {};
+}
+
+// ---------------------------------------------------------------------------
 // Spec-level normalization
 // ---------------------------------------------------------------------------
 
@@ -299,6 +330,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     encoding,
     chrome: normalizeChrome(spec.chrome),
     metrics: spec.metrics,
+    seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
     annotations: normalizeAnnotations(spec.annotations),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,

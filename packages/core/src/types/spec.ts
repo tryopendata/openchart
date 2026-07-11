@@ -1165,6 +1165,15 @@ export interface LegendConfig {
 }
 
 /**
+ * Configuration for the searchable series highlight input (`seriesSearch`).
+ * The boolean form (`seriesSearch: true`) uses the defaults.
+ */
+export interface SeriesSearchConfig {
+  /** Placeholder text for the search input. Defaults to "Find a series". */
+  placeholder?: string;
+}
+
+/**
  * Configuration for the endpoint labels column rendered at the chart's right edge
  * for multi-series line/area charts. Each entry pairs the series name with its
  * last formatted value, optionally anchored to the line by an open-circle marker.
@@ -1646,6 +1655,15 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * explicitly set.
    */
   crosshair?: boolean;
+  /**
+   * Searchable series highlight ("find your country"). Renders a compact
+   * search input above the chart with typeahead over the color channel's
+   * distinct values. Selecting a value adds it to the highlight set
+   * (multi-select chips, removable); clearing restores the authored
+   * `encoding.color.highlight` baseline. Requires a categorical color
+   * encoding. Mutually exclusive with edit mode (search wins).
+   */
+  seriesSearch?: boolean | SeriesSearchConfig;
   /**
    * Display mode controlling how much chart chrome is rendered.
    *

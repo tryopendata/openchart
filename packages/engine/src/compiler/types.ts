@@ -107,6 +107,11 @@ export interface NormalizedChartSpec {
   chrome: NormalizedChrome;
   /** Optional KPI metric cells, passed through unchanged. */
   metrics?: import('@opendata-ai/openchart-core').Metric[];
+  /**
+   * Searchable series highlight config. Present only when `seriesSearch` is
+   * enabled AND the spec has a categorical color encoding to search over.
+   */
+  seriesSearch?: import('@opendata-ai/openchart-core').SeriesSearchConfig;
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &

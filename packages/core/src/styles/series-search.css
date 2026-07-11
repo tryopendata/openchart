@@ -1,0 +1,166 @@
+/* ---------------------------------------------------------------------------
+ * Series search (seriesSearch)
+ *
+ * DOM combobox overlaid on the SVG band the engine reserves below chrome.
+ * The wrapper is absolutely positioned by the vanilla adapter (inline
+ * left/top/width/height), so everything here is visual only. All colors come
+ * from --oc-* tokens, which flip in .oc-dark.
+ * --------------------------------------------------------------------------- */
+
+.oc-series-search {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-family: var(--oc-font-family);
+  z-index: 10;
+}
+
+/* Chips: removable filter tokens for the current selection. They flow to the
+ * left of the input and scroll horizontally rather than wrapping over the
+ * chart when a reader picks many series. */
+.oc-series-search-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.oc-series-search-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.oc-series-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--oc-border);
+  border-radius: 999px;
+  background: var(--oc-secondary);
+  color: var(--oc-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.oc-series-search-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--oc-text-muted);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+
+.oc-series-search-chip-remove:hover {
+  color: var(--oc-text);
+  background: var(--oc-hover-bg);
+}
+
+.oc-series-search-chip-remove:focus-visible {
+  outline: 2px solid var(--oc-focus);
+  outline-offset: 1px;
+}
+
+.oc-series-search-chip-remove svg {
+  display: block;
+}
+
+/* Combobox: input + popup listbox. Styling matches the table search input
+ * (border, radius, focus ring) so the two search surfaces read as one system. */
+.oc-series-search-box {
+  position: relative;
+  flex: 0 1 220px;
+  min-width: 120px;
+}
+
+.oc-series-search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--oc-text-muted);
+  pointer-events: none;
+}
+
+.oc-series-search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px 0 28px;
+  border: 1px solid var(--oc-border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--oc-bg);
+  color: var(--oc-text);
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.oc-series-search-input::placeholder {
+  color: var(--oc-text-muted);
+  font-size: 13px;
+}
+
+.oc-series-search-input:focus {
+  outline: none;
+  border-color: var(--oc-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.oc-series-search-listbox {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--oc-border);
+  border-radius: 8px;
+  background: var(--oc-card);
+  box-shadow: var(--oc-tooltip-shadow);
+  z-index: 20;
+}
+
+.oc-series-search-option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--oc-text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.oc-series-search-option[aria-selected="true"],
+.oc-series-search-option:hover {
+  background: var(--oc-hover-bg);
+}
+
+/* The typed substring within each suggestion. */
+.oc-series-search-match {
+  font-weight: 600;
+}
+
+.oc-series-search-empty {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--oc-text-muted);
+}
