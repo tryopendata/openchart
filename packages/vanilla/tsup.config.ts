@@ -4,7 +4,7 @@ import { resolve, dirname } from 'path';
 import { bunSymlinkResolver } from '../../scripts/bun-symlink-resolver';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/static.ts'],
+  entry: ['src/index.ts', 'src/static.ts', 'src/story/index.ts'],
   format: ['esm'],
   dts: true,
   sourcemap: true,

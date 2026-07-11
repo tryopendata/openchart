@@ -73,6 +73,9 @@ export { BarList } from './BarList';
 export type { ChartHandle, ChartProps } from './Chart';
 // Components
 export { Chart } from './Chart';
+export type { ChartStoryHandle, ChartStoryProps } from './ChartStory';
+// Scrollytelling
+export { ChartStory } from './ChartStory';
 export type { DataTableProps } from './DataTable';
 export { DataTable } from './DataTable';
 export type { GraphProps } from './Graph';

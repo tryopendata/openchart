@@ -230,6 +230,27 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--calendar-compact',
     note: '360px scroll host with a 520px min-width inner container; 7px cell floor engaged.',
   },
+  // --- Scrollytelling per-step fixtures (plan 11) ---
+  {
+    name: 'scrolly-step-base',
+    slug: 'charts--scrollytelling--fixture-base',
+    note: 'Story step 0: total-emissions line chart, no highlight, animation off.',
+  },
+  {
+    name: 'scrolly-step-highlight',
+    slug: 'charts--scrollytelling--fixture-highlight',
+    note: 'Story step 1: color.highlight singles out China, other series muted.',
+  },
+  {
+    name: 'scrolly-step-annotated',
+    slug: 'charts--scrollytelling--fixture-annotated',
+    note: 'Story step 2: text annotation marks the China/US crossover, highlight retained.',
+  },
+  {
+    name: 'scrolly-step-reencoded',
+    slug: 'charts--scrollytelling--fixture-re-encoded',
+    note: 'Story step 4: y re-encoded to per-capita (crossfade path), retitled.',
+  },
 ];
 
 for (const story of stories) {
