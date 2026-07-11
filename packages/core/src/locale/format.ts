@@ -70,6 +70,30 @@ export function abbreviateNumber(value: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Ordinal formatting
+// ---------------------------------------------------------------------------
+
+/**
+ * Format a number as an English ordinal: 1 -> "1st", 2 -> "2nd", 3 -> "3rd",
+ * 11 -> "11th", 22 -> "22nd". Values are rounded to the nearest integer first;
+ * intended for rank axes where the domain is integer positions.
+ */
+export function formatOrdinal(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  const n = Math.round(value);
+  const abs = Math.abs(n);
+  const rem100 = abs % 100;
+  const rem10 = abs % 10;
+  let suffix: string;
+  if (rem100 >= 11 && rem100 <= 13) suffix = 'th';
+  else if (rem10 === 1) suffix = 'st';
+  else if (rem10 === 2) suffix = 'nd';
+  else if (rem10 === 3) suffix = 'rd';
+  else suffix = 'th';
+  return `${n}${suffix}`;
+}
+
+// ---------------------------------------------------------------------------
 // d3-format with suffix support
 // ---------------------------------------------------------------------------
 
@@ -89,10 +113,16 @@ const D3_FORMAT_SUFFIX_RE = /^(.*~?[efgsrdxXobcnp%])(.+)$/;
  * Build a number formatter from a d3-format string, with support for a
  * trailing literal suffix that d3-format itself would reject.
  *
+ * Also accepts the OpenChart extension `'ordinal'`, which renders English
+ * ordinals ("1st", "2nd", "3rd") for rank axes.
+ *
  * Returns null if the format string is falsy or unparseable.
  */
 export function buildD3Formatter(formatStr: string | undefined): ((v: number) => string) | null {
   if (!formatStr) return null;
+
+  // OpenChart extension: rank-axis ordinals ("1st", "2nd", "3rd").
+  if (formatStr === 'ordinal') return formatOrdinal;
 
   try {
     const fmt = d3Format(formatStr);

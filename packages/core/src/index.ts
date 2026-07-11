@@ -153,6 +153,7 @@ export {
   buildTemporalFormatter,
   formatDate,
   formatNumber,
+  formatOrdinal,
 } from './locale/index';
 
 // ---------------------------------------------------------------------------
