@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Ladle: Playground for your React Components."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/assets/favicon-gjFwcFbF.svg" />
+    <link rel="mask-icon" href="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20%3e%3cpath%20d='M22,14H9V5A4,4,0,0,0,1,5V8A1,1,0,0,0,3,8V5A2,2,0,0,1,7,5V15a8,8,0,0,0,16,0A1,1,0,0,0,22,14Zm-7,7a6.01,6.01,0,0,1-5.917-5H20.917A6.01,6.01,0,0,1,15,21Z'/%3e%3c/svg%3e" color="#000000" />
+    <link rel="apple-touch-icon" href="/assets/touch-icon-ByyUZD7t.png" />
+    <link
+      rel="manifest"
+      href="/assets/manifest-B-VxemCC.webmanifest"
+      crossorigin="use-credentials"
+    />
+    <title>Ladle</title>
+    <script type="module" crossorigin src="/assets/index-BNG-zg3Y.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BxKl7aRC.css">
+  <!-- Injected into the Ladle index.html <head> (config-folder head.html). -->
+
+<!-- Favicon: simple column-chart glyph in the library accent cyan. No logo
+     asset ships in the repo, so this is a self-contained SVG data URI. -->
+<link
+  rel="icon"
+  type="image/svg+xml"
+  href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23091016'/%3E%3Crect x='7' y='16' width='4.5' height='9' rx='1' fill='%2306b6d4'/%3E%3Crect x='13.75' y='11' width='4.5' height='14' rx='1' fill='%2306b6d4'/%3E%3Crect x='20.5' y='7' width='4.5' height='18' rx='1' fill='%2306b6d4'/%3E%3C/svg%3E"
+/>
+
+<!-- SEO / social metadata -->
+<meta
+  name="description"
+  content="OpenChart Examples — a browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs, each with copyable JSON."
+/>
+<meta property="og:type" content="website" />
+<meta property="og:title" content="OpenChart Examples" />
+<meta
+  property="og:description"
+  content="A browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs."
+/>
+<meta property="og:site_name" content="OpenChart" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="OpenChart Examples" />
+<meta
+  name="twitter:description"
+  content="A browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs."
+/>
+
+<!-- Font stylesheet: Bricolage Grotesque ONLY (page titles / section headings).
+     Inter is deliberately NOT loaded here: the library's chart text stack leads
+     with "Inter Variable", Inter, and the frozen fixture baselines were captured
+     with Inter unavailable (falling back to -apple-system). Loading the Inter
+     webfont would shift every fixture's text metrics and break the visual
+     baselines (constraint C2 fixture freeze). Gallery body/UI text therefore
+     rides the same system-ui/-apple-system fallback the charts use. Ladle
+     copies <link> tags into the width-addon iframe head, so this resolves
+     there too. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=swap"
+/>
+</head>
+
+  <body>
+    <div class="ladle-background"></div>
+    <div id="ladle-root" class="ladle-wrapper"></div>
+  </body>
+</html>

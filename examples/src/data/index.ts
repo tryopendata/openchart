@@ -2,14 +2,38 @@
  * Shared dataset pool for the gallery. See ./README.md for the rules.
  * One module per dataset; re-exported here for a single import site.
  */
+export { bigTechRevenue } from './big-tech-revenue';
+export { browserShare } from './browser-share';
+export { co2Emissions } from './co2-emissions';
+export { collegeFinances } from './college-finances';
+export { commuteTimes } from './commute-times';
+export { costOfLiving } from './cost-of-living';
 export { departmentBudgets } from './department-budgets';
+export { electricityMix } from './electricity-mix';
+export { electricityMixMatrix } from './electricity-mix-matrix';
+export { emissionsRenewables } from './emissions-renewables';
 export { energyMix } from './energy-mix';
+export { evFleet } from './ev-fleet';
+export { federalBudget } from './federal-budget';
 export { usGdpGrowth } from './gdp-growth';
+export { gdpGrowthByCountry } from './gdp-growth-by-country';
 export { householdSpending } from './household-spending';
+export { incomeDistribution } from './income-distribution';
+export { lifeExpectancyGender } from './life-expectancy-gender';
+export { marathonFinishTimes } from './marathon-finish-times';
+export { monthlyTemperature } from './monthly-temperature';
+export { nycTemperatureRange } from './nyc-temperature-range';
 export { olympicMedals } from './olympic-medals';
+export { pisaScores } from './pisa-scores';
 export { populationByCountry } from './population';
 export { programmingLanguages } from './programming-languages';
+export { referenceRates } from './reference-rates';
 export { renewableCapacityAdditions } from './renewable-capacity';
+export { smartphoneShare } from './smartphone-share';
 export { sp500SectorReturns } from './sp500-sectors';
+export { stateEconomies } from './state-economies';
+export { statePopulationChange } from './state-population-change';
 export { temperatureAnomaly } from './temperature-anomaly';
+export { usInflation } from './us-inflation';
 export { usPayrolls } from './us-payrolls';
+export { wealthHealth } from './wealth-health';
