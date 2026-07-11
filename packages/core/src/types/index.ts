@@ -104,6 +104,8 @@ export type {
   TileMapTileMark,
   TooltipContent,
   TooltipField,
+  YouDrawItSample,
+  YouDrawItYInvert,
 } from './layout';
 // Spec types (user input)
 export type {

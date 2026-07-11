@@ -727,12 +727,10 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
           message: 'Spec error: youDrawIt.from is required (the x value where drawing starts)',
           path: 'youDrawIt.from',
           code: 'MISSING_FIELD',
-          suggestion: `Set youDrawIt.from to an x value from your data, e.g. youDrawIt: { from: "${encoding?.x && typeof (encoding.x as Record<string, unknown>).field === 'string' ? spec.data[0]?.[(encoding.x as Record<string, unknown>).field as string] : '...'}" }`,
+          suggestion:
+            'Set youDrawIt.from to an x value from your data, e.g. youDrawIt: { from: "2010" }',
         });
-      } else if (
-        typeof config.from !== 'string' &&
-        typeof config.from !== 'number'
-      ) {
+      } else if (typeof config.from !== 'string' && typeof config.from !== 'number') {
         errors.push({
           message: 'Spec error: youDrawIt.from must be a string or number',
           path: 'youDrawIt.from',
@@ -741,15 +739,13 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         });
       }
 
+      const data = Array.isArray(spec.data) ? (spec.data as Record<string, unknown>[]) : [];
       const colorCh = encoding?.color as Record<string, unknown> | undefined;
       if (colorCh && typeof colorCh === 'object' && typeof colorCh.field === 'string') {
         const colorType =
-          (colorCh.type as string | undefined) ??
-          inferFieldType(spec.data as Record<string, unknown>[], colorCh.field);
+          (colorCh.type as string | undefined) ?? inferFieldType(data, colorCh.field);
         if (colorType !== 'quantitative') {
-          const distinct = new Set(
-            (spec.data as Record<string, unknown>[]).map((row) => row[colorCh.field as string]),
-          );
+          const distinct = new Set(data.map((row) => row[colorCh.field as string]));
           if (distinct.size > 1) {
             errors.push({
               message:

@@ -691,7 +691,11 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
 
   // Resolve "you draw it" geometry (pixel fromX, x-sample positions, target
   // line color/key). Reads marks so it must run after they're computed.
-  const youDrawIt = resolveYouDrawIt(chartSpec.youDrawIt, marks, scales, chartArea);
+  const xFieldForYdi =
+    chartSpec.encoding.x && 'field' in chartSpec.encoding.x
+      ? (chartSpec.encoding.x.field as string | undefined)
+      : undefined;
+  const youDrawIt = resolveYouDrawIt(chartSpec.youDrawIt, marks, scales, chartArea, xFieldForYdi);
 
   // Compute the right-side endpoint labels column for multi-series line/area
   // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.

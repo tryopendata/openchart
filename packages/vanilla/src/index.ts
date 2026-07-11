@@ -67,3 +67,6 @@ export { createTileMap } from './tilemap-mount';
 export type { TooltipManager } from './tooltip';
 // Tooltip
 export { createTooltipManager } from './tooltip';
+export type { YouDrawItController, YouDrawItOptions } from './you-draw-it';
+// You draw it (interactive draw-then-reveal)
+export { createYouDrawIt } from './you-draw-it';

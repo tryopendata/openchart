@@ -182,6 +182,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--series-search-mobile',
     note: 'Same seriesSearch chart in a 360px container.',
   },
+  // --- You draw it (draw-then-reveal) ---
+  {
+    name: 'you-draw-it',
+    slug: 'testing--fixtures--you-draw-it',
+    note: 'Single-series income line drawn up to `from`, then a hatched draw-here region with prompt + skip-to-reveal button. Static pre-interaction state.',
+  },
+  {
+    name: 'you-draw-it-dark',
+    slug: 'testing--fixtures--you-draw-it-dark',
+    note: 'Same you-draw-it chart with darkMode: force; hatch, guess pen, and controls adapt to dark tokens.',
+  },
+  {
+    name: 'you-draw-it-mobile',
+    slug: 'testing--fixtures--you-draw-it-mobile',
+    note: '360px container: prompt + reveal button stay within the drawing region at the compact breakpoint.',
+  },
   // --- Slope + bump recipes (ranking and change) ---
   {
     name: 'slope-market-share',
