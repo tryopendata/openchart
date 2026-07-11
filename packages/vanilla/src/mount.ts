@@ -55,6 +55,7 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
@@ -171,6 +172,26 @@ function hasEditingCallbacks(opts?: MountOptions): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Series search helpers
+// ---------------------------------------------------------------------------
+
+/** The authored encoding.color.highlight as an array (empty when unset). */
+function authoredHighlight(spec: ChartSpec | LayerSpec | GraphSpec): string[] {
+  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return [];
+  const colorEnc = (spec as ChartSpec).encoding?.color;
+  if (!colorEnc || typeof colorEnc !== 'object' || !('field' in colorEnc)) return [];
+  const raw = (colorEnc as { highlight?: string | string[] }).highlight;
+  if (raw == null) return [];
+  return Array.isArray(raw) ? [...raw] : [raw];
+}
+
+/** True when the spec enables the series search input. */
+function wantsSeriesSearch(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
+  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
+  return !!(spec as ChartSpec).seriesSearch;
+}
+
+// ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
 
@@ -239,6 +260,14 @@ export function createChart<TData extends DataRow = DataRow>(
   const runtimeHiddenSeries = new Set<string>();
   const runtimeShownSeries = new Set<string>();
   let textEditCleanup: (() => void) | null = null;
+
+  // Series search state. The control persists across renders (so focus and
+  // chips survive the re-render each selection triggers); the baseline is the
+  // authored encoding.color.highlight, captured before setHighlight mutates
+  // currentSpec, so clearing the search restores it exactly.
+  let seriesSearch: SeriesSearchController | null = null;
+  let searchBaseline: string[] = authoredHighlight(currentSpec);
+  let editSuppressWarned = false;
 
   // Apply the root class up front so getComputedStyle can read --oc-font-family
   // before we build the text measurer.
@@ -803,13 +832,28 @@ export function createChart<TData extends DataRow = DataRow>(
       );
     }
 
+    // seriesSearch and edit mode are mutually exclusive per instance: when
+    // the spec enables seriesSearch, edit interactions are suppressed
+    // (search wins -- the engine already reserved the search band).
+    const editSuppressed = wantsSeriesSearch(currentSpec);
+    if (
+      editSuppressed &&
+      !editSuppressWarned &&
+      (hasEditingCallbacks(options) || options?.onAnnotationEdit)
+    ) {
+      editSuppressWarned = true;
+      console.warn(
+        '[openchart] seriesSearch and edit mode are mutually exclusive; edit interactions are disabled while seriesSearch is enabled.',
+      );
+    }
+
     // Wire legend interactivity
     cleanupLegend = wireLegendInteraction(
       svgElement,
       currentLayout,
       toggleSeriesVisibility,
       options?.onLegendToggle,
-      options?.onEdit,
+      editSuppressed ? undefined : options?.onEdit,
     );
 
     // Wire chart event handlers (mark click/hover/leave, annotation click)
@@ -841,7 +885,7 @@ export function createChart<TData extends DataRow = DataRow>(
         : [];
 
     // Wire annotation drag editing
-    if (options?.onAnnotationEdit || options?.onEdit) {
+    if (!editSuppressed && (options?.onAnnotationEdit || options?.onEdit)) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
@@ -852,7 +896,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire all edit drag handlers when onEdit is provided
-    if (options?.onEdit) {
+    if (!editSuppressed && options?.onEdit) {
       const editCleanups: Array<() => void> = [];
 
       editCleanups.push(
@@ -875,7 +919,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire selection and keyboard edit events when editing callbacks are provided
-    if (hasEditingCallbacks(options)) {
+    if (!editSuppressed && hasEditingCallbacks(options)) {
       makeEditable(svgElement);
       cleanupSelection = wireSelectionEvents();
       cleanupKeyboardEdit = wireKeyboardEditEvents();
@@ -895,6 +939,26 @@ export function createChart<TData extends DataRow = DataRow>(
     // the chart from assistive technology)
     if (!currentLayout.a11y.hidden) {
       srTable = createScreenReaderTable(currentLayout, container);
+    }
+
+    // Mount/refresh the series search overlay on its reserved band. Created
+    // once and kept across renders so typing focus and chips survive the
+    // re-render each selection triggers.
+    if (currentLayout.seriesSearch) {
+      if (!seriesSearch) {
+        seriesSearch = createSeriesSearch({ container, onChange: handleSearchChange });
+      }
+      seriesSearch.update(currentLayout.seriesSearch, svgElement);
+    } else if (seriesSearch) {
+      if (wantsSeriesSearch(currentSpec)) {
+        // The layout stripped the band (e.g. hidden chrome mode at cramped
+        // sizes) but the spec still wants search: keep the control and its
+        // chips, just hide it until the band comes back.
+        seriesSearch.hide();
+      } else {
+        seriesSearch.destroy();
+        seriesSearch = null;
+      }
     }
 
     // Apply container classes for CSS variable scoping and dark mode
@@ -968,6 +1032,10 @@ export function createChart<TData extends DataRow = DataRow>(
     }
     runtimeHiddenSeries.clear();
     runtimeShownSeries.clear();
+    // The new spec is the source of truth: re-capture the authored highlight
+    // baseline and drop any search selections layered on the previous spec.
+    searchBaseline = authoredHighlight(newSpec);
+    seriesSearch?.setSelected([]);
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }
@@ -1013,6 +1081,20 @@ export function createChart<TData extends DataRow = DataRow>(
       return;
     }
     render();
+  }
+
+  /**
+   * Apply a search selection change: the effective highlight is the authored
+   * baseline plus the selected values, so clearing every chip restores the
+   * authored highlight exactly. Fires onHighlightChange on every change.
+   */
+  function handleSearchChange(selected: string[]): void {
+    const merged = [...searchBaseline];
+    for (const v of selected) {
+      if (!merged.includes(v)) merged.push(v);
+    }
+    setHighlight(merged.length > 0 ? merged : null);
+    options?.onHighlightChange?.(merged);
   }
 
   function setHighlight(values: string[] | null): void {
@@ -1111,6 +1193,10 @@ export function createChart<TData extends DataRow = DataRow>(
     }
     selectedElement = null;
     overlayElement = null;
+    if (seriesSearch) {
+      seriesSearch.destroy();
+      seriesSearch = null;
+    }
     if (disconnectResize) {
       disconnectResize();
       disconnectResize = null;

@@ -983,6 +983,31 @@ export interface ResolvedMetricBar {
 }
 
 // ---------------------------------------------------------------------------
+// Series search (resolved)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reserved band for the series search input (`seriesSearch`). The band is
+ * empty SVG space between the chrome/metrics block and the top legend; the
+ * vanilla adapter overlays an absolutely-positioned DOM combobox aligned to
+ * this rect, so mounting it never changes the container's size.
+ */
+export interface ResolvedSeriesSearch {
+  /** Band left x in layout coordinates. */
+  x: number;
+  /** Band top y in layout coordinates. */
+  y: number;
+  /** Band width. */
+  width: number;
+  /** Input row height (the reservation adds a gap below this). */
+  height: number;
+  /** Resolved input placeholder text. */
+  placeholder: string;
+  /** Distinct color-channel values available for search, in data order. */
+  values: string[];
+}
+
+// ---------------------------------------------------------------------------
 // ChartLayout (the main engine output for charts)
 // ---------------------------------------------------------------------------
 
@@ -1033,6 +1058,8 @@ export interface ChartLayout {
   chrome: ResolvedChrome;
   /** Resolved KPI metric bar. Present only when spec.metrics is supplied and fits. */
   metrics?: ResolvedMetricBar;
+  /** Reserved series-search band. Present only when spec.seriesSearch is enabled. */
+  seriesSearch?: ResolvedSeriesSearch;
   /** Resolved axis layouts. */
   axes: {
     x?: AxisLayout;

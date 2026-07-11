@@ -20,6 +20,7 @@ import type {
   Rect,
   ResolvedChrome,
   ResolvedMetricBar,
+  ResolvedSeriesSearch,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import {
@@ -84,6 +85,11 @@ export interface LayoutDimensions {
    */
   metrics?: ResolvedMetricBar;
   /**
+   * Reserved series-search band (below chrome and the metric bar, above the
+   * top legend). Present only when spec.seriesSearch is enabled.
+   */
+  seriesSearch?: ResolvedSeriesSearch;
+  /**
    * Height reserved below the chart area for x-axis tick labels and the
    * (optional) axis title. Exposed so downstream layout code (e.g. the
    * second legend pass) can position elements below the axis row.
@@ -102,6 +108,11 @@ export interface LayoutDimensions {
 /** Minimum chart area dimensions before guardrails kick in. */
 const MIN_CHART_WIDTH = 60;
 const MIN_CHART_HEIGHT = 40;
+
+/** Input row height for the series-search band (matches the DOM input's CSS height). */
+const SERIES_SEARCH_INPUT_HEIGHT = 32;
+/** Gap between the series-search input row and whatever stacks below it. */
+const SERIES_SEARCH_GAP = 12;
 
 /**
  * Per-display minimum chart dimensions. Sparkline mode allows much smaller
@@ -349,13 +360,17 @@ export function computeDimensions(
   // is kept; the rollback path subtracts it back when stripped.
   const wantsMetrics = !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden';
   const tentativeMetricsHeight = wantsMetrics ? metricBarHeight(metricFonts(theme)) : 0;
+  // Series-search band: reserved empty SVG space directly below chrome and
+  // the metric bar. The vanilla adapter overlays a DOM combobox on this rect.
+  const wantsSearch = !!spec.seriesSearch && chromeMode !== 'hidden';
+  const searchReservation = wantsSearch ? SERIES_SEARCH_INPUT_HEIGHT + SERIES_SEARCH_GAP : 0;
   // topAxisGap sits between the legend (or chrome, if no legend) and the
   // chart area. It accounts for the general axis margin plus any inline
   // tick-label overhang. Placing it after the legend (below) keeps the
   // subtitle-to-legend gap tight while reserving physical space for ticks
   // that protrude above the chart area.
   const margins: Margins = {
-    top: topPad + chrome.topHeight + tentativeMetricsHeight,
+    top: topPad + chrome.topHeight + tentativeMetricsHeight + searchReservation,
     right: hPad + (isRadial ? hPad : axisMargin),
     bottom: bottomMargin(chrome.bottomHeight, padding, xAxisHeight),
     left: hPad + (isRadial ? hPad : axisMargin),
@@ -726,7 +741,7 @@ export function computeDimensions(
     const fallbackTopAxisGap =
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
     const fallbackEffectiveAxisGap = hasTopLegend ? inlineTickOverhang : fallbackTopAxisGap;
-    const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
+    const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight + searchReservation;
     const topDelta = margins.top - newTop;
     const newBottom = bottomMargin(fallbackChrome.bottomHeight, padding, xAxisHeight);
     const bottomDelta = margins.bottom - newBottom;
@@ -781,6 +796,13 @@ export function computeDimensions(
         margins,
         theme,
         metrics: fallbackMetrics,
+        seriesSearch: wantsSearch
+          ? resolveSeriesSearch(
+              spec,
+              fallbackMetricsTopY + (fallbackMetrics?.height ?? 0),
+              fallbackMetricsArea,
+            )
+          : undefined,
         xAxisHeight,
         effectiveAxisGap: fallbackEffectiveAxisGap,
       };
@@ -819,8 +841,46 @@ export function computeDimensions(
     margins,
     theme,
     metrics: resolvedMetrics,
+    seriesSearch: wantsSearch
+      ? resolveSeriesSearch(spec, metricsTopY + (resolvedMetrics?.height ?? 0), metricsArea)
+      : undefined,
     xAxisHeight,
     effectiveAxisGap,
+  };
+}
+
+/**
+ * Resolve the series-search band. Spans the full chrome content width
+ * (hPad to width - hPad, same as the metric bar) directly below chrome and
+ * the metric bar. The band itself is empty SVG space: the vanilla adapter
+ * absolutely positions a DOM combobox over it, so mounting the input never
+ * changes the observed container size.
+ */
+function resolveSeriesSearch(
+  spec: NormalizedChartSpec,
+  y: number,
+  area: { x: number; width: number },
+): ResolvedSeriesSearch | undefined {
+  const config = spec.seriesSearch;
+  if (!config) return undefined;
+  const colorEnc = spec.encoding.color;
+  // Normalization already guarantees a categorical color encoding when
+  // seriesSearch survives; these guards narrow the union for TypeScript.
+  if (!colorEnc || 'condition' in colorEnc || !('field' in colorEnc) || !colorEnc.field) {
+    return undefined;
+  }
+  const field = colorEnc.field;
+  // Same enumeration rule as legend entries: skip rows missing the color field.
+  const values = [
+    ...new Set(spec.data.filter((d) => d[field] != null).map((d) => String(d[field]))),
+  ];
+  return {
+    x: area.x,
+    y,
+    width: area.width,
+    height: SERIES_SEARCH_INPUT_HEIGHT,
+    placeholder: config.placeholder ?? 'Find a series',
+    values,
   };
 }
 

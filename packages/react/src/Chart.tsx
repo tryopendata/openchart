@@ -91,6 +91,7 @@ function ChartInner(
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
+    onHighlightChange,
     onAnnotationClick,
     onAnnotationEdit,
     onEdit,
@@ -121,6 +122,7 @@ function ChartInner(
     onMarkHover?: ChartProps['onMarkHover'];
     onMarkLeave?: ChartProps['onMarkLeave'];
     onLegendToggle?: ChartProps['onLegendToggle'];
+    onHighlightChange?: ChartProps['onHighlightChange'];
     onAnnotationClick?: ChartProps['onAnnotationClick'];
     onAnnotationEdit?: ChartProps['onAnnotationEdit'];
     onEdit?: ChartProps['onEdit'];
@@ -134,6 +136,7 @@ function ChartInner(
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
+    onHighlightChange,
     onAnnotationClick,
     onAnnotationEdit,
     onEdit,
@@ -160,6 +163,10 @@ function ChartInner(
   const stableOnMarkLeave = useCallback(() => handlersRef.current.onMarkLeave?.(), []);
   const stableOnLegendToggle = useCallback(
     (series: string, visible: boolean) => handlersRef.current.onLegendToggle?.(series, visible),
+    [],
+  );
+  const stableOnHighlightChange = useCallback(
+    (values: string[]) => handlersRef.current.onHighlightChange?.(values),
     [],
   );
   const stableOnAnnotationClick = useCallback(
@@ -227,6 +234,7 @@ function ChartInner(
       onMarkHover: stableOnMarkHover,
       onMarkLeave: stableOnMarkLeave,
       onLegendToggle: stableOnLegendToggle,
+      onHighlightChange: stableOnHighlightChange,
       onAnnotationClick: stableOnAnnotationClick,
       // Only include editing callbacks when the consumer provides them.
       // The stable wrappers are always truthy, so gating on handlersRef
@@ -256,6 +264,7 @@ function ChartInner(
     stableOnDataPointClick,
     stableOnEdit,
     stableOnLegendToggle,
+    stableOnHighlightChange,
     stableOnMarkClick,
     stableOnMarkHover,
     stableOnMarkLeave,
