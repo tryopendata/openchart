@@ -16,6 +16,7 @@ import { columnRenderer } from './column';
 import { dotRenderer } from './dot';
 import { areaRenderer, lineRenderer } from './line';
 import { donutRenderer, pieRenderer } from './pie';
+import { rangeRenderer } from './range';
 import { type ChartRenderer, registerChartRenderer } from './registry';
 import { ruleRenderer } from './rule';
 import { scatterRenderer } from './scatter';
@@ -48,6 +49,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   rule: ruleRenderer,
   tick: tickRenderer,
   rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
+  range: rangeRenderer, // dumbbell / arrow / range bar (orientation resolved internally)
 };
 
 /**

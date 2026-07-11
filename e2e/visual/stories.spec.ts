@@ -86,6 +86,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rotated-with-source',
     note: 'Column chart with long category labels that auto-rotate, plus source chrome below.',
   },
+  // --- Range marks (dumbbell / arrow / bar) ---
+  {
+    name: 'range-dumbbell',
+    slug: 'testing--fixtures--range-dumbbell',
+    note: 'Horizontal x/x2 dumbbell sorted by end value, muted start dot, both-end labels.',
+  },
+  {
+    name: 'range-arrow',
+    slug: 'testing--fixtures--range-arrow',
+    note: 'Arrow style with colorByDirection: increases green, decreases red, arrowhead at x2.',
+  },
+  {
+    name: 'range-bar',
+    slug: 'testing--fixtures--range-bar',
+    note: 'Vertical y/y2 floating range bars (monthly temperature low to high).',
+  },
 ];
 
 for (const story of stories) {

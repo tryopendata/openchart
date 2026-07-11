@@ -271,6 +271,67 @@ function tooltipsForArea(
 }
 
 // ---------------------------------------------------------------------------
+// Range mark tooltips (start / end / delta)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tooltip descriptors for range marks (dumbbell / arrow / range bar).
+ *
+ * Every mark of a range row (dots, connector rule, bar rect) shares one
+ * tooltip showing the start value, the end value, and the signed delta.
+ * An explicit `encoding.tooltip` overrides the default field set.
+ */
+function computeRangeTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const horizontal = encoding.y?.type === 'nominal' || encoding.y?.type === 'ordinal';
+  const startCh = horizontal ? encoding.x : encoding.y;
+  const endCh = horizontal ? encoding.x2 : encoding.y2;
+  if (!startCh || !endCh) return descriptors;
+
+  const contentFor = (row: DataRow): TooltipContent => {
+    const title = getTooltipTitle(row, encoding);
+    if (encoding.tooltip) {
+      const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+      return { title, fields: buildExplicitTooltipFields(row, channels) };
+    }
+
+    const fields: TooltipField[] = [
+      {
+        label: resolveLabel(startCh),
+        value: formatValue(row[startCh.field], startCh.type, resolveFormat(startCh)),
+      },
+      {
+        label: resolveLabel(endCh),
+        value: formatValue(row[endCh.field], endCh.type, resolveFormat(endCh)),
+      },
+    ];
+
+    const startVal = Number(row[startCh.field]);
+    const endVal = Number(row[endCh.field]);
+    if (Number.isFinite(startVal) && Number.isFinite(endVal)) {
+      const delta = endVal - startVal;
+      const formatted = formatValue(delta, 'quantitative', resolveFormat(startCh));
+      fields.push({ label: 'Change', value: delta > 0 ? `+${formatted}` : formatted });
+    }
+
+    return { title, fields };
+  };
+
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'point' && mark.type !== 'rect' && mark.type !== 'rule') continue;
+    descriptors.set(`${mark.type}-${i}`, contentFor(mark.data as DataRow));
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -285,6 +346,11 @@ export function computeTooltipDescriptors(
   spec: NormalizedChartSpec,
   marks: Mark[],
 ): Map<string, TooltipContent> {
+  // Range marks share one start/end/delta tooltip across every mark of a row.
+  if (spec.markType === 'range') {
+    return computeRangeTooltips(spec, marks);
+  }
+
   const encoding = spec.encoding as Encoding;
   const descriptors = new Map<string, TooltipContent>();
 
