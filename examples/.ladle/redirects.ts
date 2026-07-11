@@ -24,6 +24,12 @@ const TABLES = 'tables--tables';
 const GRAPHS = 'graphs--graphs';
 const SANKEY_TILEMAPS = 'sankey---tile-maps--sankey-and-tile-maps';
 const DASHBOARDS = 'dashboards--dashboards';
+const ANNOTATIONS = 'features--annotations';
+const EDIT_MODE = 'features--edit-mode';
+const ANIMATION = 'features--animation';
+const THEMING = 'features--theming';
+const RESPONSIVE = 'features--responsive';
+const DATA_ENCODING = 'features--data-and-encoding';
 
 export const redirects: Record<string, Redirect> = {
   // charts/bar.stories.tsx
@@ -197,4 +203,86 @@ export const redirects: Record<string, Redirect> = {
   'financial--sector-returns': { story: DASHBOARDS, hash: 'sector-returns' },
   'financial--risk-return': { story: DASHBOARDS, hash: 'crosshair-line' },
   'financial--earnings-season': { story: DASHBOARDS, hash: 'bar-list' },
+
+  // ── Phase 04: Features / Annotations ──
+  // auto-thinning.stories.tsx
+  'auto-thinning--annotation-thinning': { story: ANNOTATIONS, hash: 'auto-thinning' },
+  'auto-thinning--pinned-annotations': { story: ANNOTATIONS, hash: 'auto-thinning' },
+  'auto-thinning--auto-thin-disabled': { story: ANNOTATIONS, hash: 'auto-thinning' },
+
+  // ── Phase 04: Features / Edit Mode ──
+  // annotation-editing.stories.tsx
+  'annotation-editing--chart-editing': { story: EDIT_MODE, hash: 'editor' },
+
+  // ── Phase 04: Features / Animation ──
+  // animation.stories.tsx
+  'animation--bar-smooth': { story: ANIMATION, hash: 'easing' },
+  'animation--bar-snappy': { story: ANIMATION, hash: 'easing' },
+  'animation--column-stagger': { story: ANIMATION, hash: 'stagger' },
+  'animation--line-drawing': { story: ANIMATION, hash: 'line-drawing' },
+  'animation--pie-animation': { story: ANIMATION, hash: 'pie-sweep' },
+  'animation--donut-animation': { story: ANIMATION, hash: 'pie-sweep' },
+  'animation--scatter-animation': { story: ANIMATION, hash: 'entrance' },
+  'animation--area-animation': { story: ANIMATION, hash: 'area-reveal' },
+  'animation--slow-line-with-points': { story: ANIMATION, hash: 'line-drawing' },
+  'animation--many-bars': { story: ANIMATION, hash: 'stacked-chain' },
+  'animation--custom-duration': { story: ANIMATION, hash: 'easing' },
+  'animation--annotation-delay': { story: ANIMATION, hash: 'annotation-delay' },
+  'animation--no-stagger': { story: ANIMATION, hash: 'stagger' },
+  // charts/animation-update.stories.tsx
+  'animation-update--update-transitions': { story: ANIMATION, hash: 'update-transitions' },
+  'animation-update--line-transitions': { story: ANIMATION, hash: 'transitions' },
+  'animation-update--area-transitions': { story: ANIMATION, hash: 'transitions' },
+  'animation-update--scatter-transitions': { story: ANIMATION, hash: 'transitions' },
+
+  // ── Phase 04: Features / Theming ──
+  // theme.stories.tsx
+  'theme--default-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--warm-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--monospace-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--midnight-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--ink-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--ocean-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--botanical-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--neon-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--pastel-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--copper-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--gen-z-theme': { story: THEMING, hash: 'named-themes' },
+  'theme--ft-like-theme': { story: THEMING, hash: 'recreations' },
+  'theme--economist-like-theme': { story: THEMING, hash: 'recreations' },
+  'theme--essay-preset': { story: THEMING, hash: 'presets' },
+  'theme--wire-preset': { story: THEMING, hash: 'presets' },
+  'theme--custom-theme': { story: THEMING, hash: 'custom' },
+
+  // ── Phase 04: Features / Responsive ──
+  // responsive.stories.tsx
+  'responsive--long-title-wrapping': { story: RESPONSIVE, hash: 'drag-resizable' },
+  'responsive--fixed-widths': { story: RESPONSIVE, hash: 'drag-resizable' },
+  'responsive--height-variations': { story: RESPONSIVE, hash: 'extreme-ratios' },
+  'responsive--extreme-ratios': { story: RESPONSIVE, hash: 'extreme-ratios' },
+  'responsive--many-series-compact': { story: RESPONSIVE, hash: 'drag-resizable' },
+  'responsive--column-narrow': { story: RESPONSIVE, hash: 'rotation-ladder' },
+  'responsive--resizable-container': { story: RESPONSIVE, hash: 'drag-resizable' },
+
+  // ── Phase 04: Features / Data & Encoding ──
+  // transforms.stories.tsx
+  'transforms--filter-transform': { story: DATA_ENCODING, hash: 'filter' },
+  'transforms--bin-transform': { story: DATA_ENCODING, hash: 'bin' },
+  'transforms--calculate-transform': { story: DATA_ENCODING, hash: 'calculate' },
+  'transforms--time-unit-transform': { story: DATA_ENCODING, hash: 'time-unit' },
+  // gradient.stories.tsx
+  'gradient--basic-gradient-bars': { story: DATA_ENCODING, hash: 'linear-gradient' },
+  'gradient--conditional-gradients': { story: DATA_ENCODING, hash: 'radial-gradient' },
+  'gradient--area-gradient-fade': { story: DATA_ENCODING, hash: 'area-gradient' },
+  'gradient--donut-radial-gradient': { story: DATA_ENCODING, hash: 'radial-gradient' },
+  'gradient--dark-mode-gradient': { story: DATA_ENCODING, hash: 'linear-gradient' },
+  'gradient--two-color-gradients': { story: DATA_ENCODING, hash: 'linear-gradient' },
+  // charts/facet.stories.tsx
+  'facet--line-grid': { story: DATA_ENCODING, hash: 'facet-shared' },
+  'facet--column-grid': { story: DATA_ENCODING, hash: 'facet-shared' },
+  'facet--donut-grid': { story: DATA_ENCODING, hash: 'radial-gradient' },
+  'facet--mobile-stacking': { story: DATA_ENCODING, hash: 'facet-shared' },
+  'facet--independent-y': { story: DATA_ENCODING, hash: 'facet-independent' },
+  // conditional.stories.tsx
+  'conditional--positive-negative-bars': { story: DATA_ENCODING, hash: 'conditional-encoding' },
 };

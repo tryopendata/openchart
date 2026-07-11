@@ -78,7 +78,7 @@
 | Svelte entry | `packages/svelte/src/` |
 | Ladle stories root | `examples/src/` |
 | Line chart stories (SingleLine, MultiSeries, FiveSeries, AreaChart…) | `examples/src/charts/line.stories.tsx` |
-| Theme demo story | `examples/src/theme.stories.tsx` |
+| Theming gallery page (presets, 11 named themes, custom ThemeConfig, dark adaptation) | `examples/src/gallery/features-theming.stories.tsx` (slug `features--theming`) |
 | Visual regression spec | `e2e/visual/stories.spec.ts` |
 | Mobile visual regression spec (390px viewport, `visual-mobile` project) | `e2e/visual/stories-mobile.spec.ts` |
 | Visual regression baselines | `e2e/visual/__screenshots__/` |

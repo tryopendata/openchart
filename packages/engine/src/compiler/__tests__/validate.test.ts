@@ -470,4 +470,44 @@ describe('validateSpec', () => {
       expect(fieldError!.suggestion).toContain('gamma');
     });
   });
+
+  describe('transform-created fields', () => {
+    it('accepts encoding fields produced by a chained bin + aggregate (histogram)', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: [{ hours: 3.1 }, { hours: 3.4 }, { hours: 4.0 }],
+        transform: [
+          { bin: { step: 0.5 }, field: 'hours', as: 'binStart' },
+          { aggregate: [{ op: 'count', field: 'hours', as: 'finishers' }], groupby: ['binStart'] },
+        ],
+        encoding: {
+          x: { field: 'binStart', type: 'ordinal' },
+          y: { field: 'finishers', type: 'quantitative' },
+        },
+      });
+
+      expect(result.valid).toBe(true);
+      expect(result.errors.find((e) => e.code === 'DATA_FIELD_MISSING')).toBeUndefined();
+    });
+
+    it('accepts an encoding field produced by a window transform', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: [
+          { day: '1', value: 10 },
+          { day: '2', value: 20 },
+        ],
+        transform: [
+          { window: [{ op: 'cumsum', field: 'value', as: 'running' }], sort: [{ field: 'day' }] },
+        ],
+        encoding: {
+          x: { field: 'day', type: 'ordinal' },
+          y: { field: 'running', type: 'quantitative' },
+        },
+      });
+
+      expect(result.valid).toBe(true);
+      expect(result.errors.find((e) => e.code === 'DATA_FIELD_MISSING')).toBeUndefined();
+    });
+  });
 });
