@@ -59,21 +59,21 @@ interface StoryCase {
 
 // Every new `mobile-regression` story gets an entry here.
 const stories: StoryCase[] = [
-  { name: 'long-wrapped-title', slug: 'mobile-regression--long-title-mobile', quantAxis: 'y' },
+  { name: 'long-wrapped-title', slug: 'testing--mobile-regression--long-title-mobile', quantAxis: 'y' },
   {
     name: 'grouped-columns-labels-all',
-    slug: 'mobile-regression--grouped-columns-labels-all',
+    slug: 'testing--mobile-regression--grouped-columns-labels-all',
     quantAxis: 'y',
   },
   {
     name: 'grouped-bars-many-rows',
-    slug: 'mobile-regression--grouped-bars-many-rows',
+    slug: 'testing--mobile-regression--grouped-bars-many-rows',
     quantAxis: 'x',
     minBarThickness: 8,
   },
   {
     name: 'grouped-bars-sparse-ticks',
-    slug: 'mobile-regression--grouped-bars-sparse-ticks',
+    slug: 'testing--mobile-regression--grouped-bars-sparse-ticks',
     quantAxis: 'x',
     // On Linux at 412px, inside-bar value labels overlap by ~2.5px (Rule 2):
     // estimateTextWidth (engine charts/bar/labels.ts) is calibrated against
@@ -84,7 +84,7 @@ const stories: StoryCase[] = [
   },
   {
     name: 'rotated-with-source',
-    slug: 'rotated-with-source--rotated-with-source',
+    slug: 'testing--fixtures--rotated-with-source',
     quantAxis: 'y',
     // At 360px the rotated "Information Technology" tick label extends
     // ~11px left of the container (Rule 1). Pre-existing engine bug in the
@@ -92,10 +92,10 @@ const stories: StoryCase[] = [
     // gutter doesn't reserve the leading rotated label's horizontal overhang.
     knownFailures: [{ project: 'invariants-chromium-mobile-narrow' }],
   },
-  { name: 'chrome-all-elements', slug: 'chrome--chrome-all-elements', quantAxis: 'y' },
+  { name: 'chrome-all-elements', slug: 'testing--fixtures--chrome-all-elements', quantAxis: 'y' },
   {
     name: 'one-wide-x-label',
-    slug: 'mobile-regression--one-wide-x-label',
+    slug: 'testing--mobile-regression--one-wide-x-label',
     quantAxis: 'y',
     expectedXTickLabels: ['2022', '2023', '2024', '2025', '2026 (to wk 17)'],
   },
@@ -104,19 +104,19 @@ const stories: StoryCase[] = [
     // shipped broken three times (7.9.0-7.9.2) because only default-theme
     // tests existed. All five labels must render (at -45°).
     name: 'one-wide-x-label-large-ticks',
-    slug: 'mobile-regression--one-wide-x-label-large-ticks',
+    slug: 'testing--mobile-regression--one-wide-x-label-large-ticks',
     quantAxis: 'y',
     expectedXTickLabels: ['2022', '2023', '2024', '2025', '2026 (to wk 17)'],
   },
   {
     name: 'uniform-short-x-labels',
-    slug: 'mobile-regression--uniform-short-x-labels',
+    slug: 'testing--mobile-regression--uniform-short-x-labels',
     quantAxis: 'y',
     expectedXTickLabels: ['0-79%', '80-84%', '85-89%', '90-94%', '95-100%'],
   },
   {
     name: 'inline-y-title',
-    slug: 'mobile-regression--inline-y-title',
+    slug: 'testing--mobile-regression--inline-y-title',
     quantAxis: 'y',
     checkLegendTickClearance: true,
   },
@@ -126,7 +126,7 @@ const stories: StoryCase[] = [
     // the Bug B legend/tick collision. Also screenshotted in
     // e2e/visual/stories-mobile.spec.ts.
     name: 'auto-height-chrome-growth',
-    slug: 'mobile-regression--auto-height-chrome-growth',
+    slug: 'testing--mobile-regression--auto-height-chrome-growth',
     quantAxis: 'y',
     checkLegendTickClearance: true,
   },

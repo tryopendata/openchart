@@ -40,7 +40,7 @@ test('recompiles once after webfonts resolve', async ({ page }) => {
     });
   });
 
-  await page.goto('/?story=mobile-regression--long-title-mobile&mode=preview');
+  await page.goto('/?story=testing--mobile-regression--long-title-mobile&mode=preview');
   await page.waitForSelector('.oc-root svg.oc-chart');
 
   const root = page.locator('.oc-root');

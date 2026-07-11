@@ -1,0 +1,65 @@
+/**
+ * Broadest non-medical vaccine exemption type allowed, by US state.
+ *
+ * Categorical tilemap data: each state maps to a category string
+ * ('medical_only' | 'religious' | 'philosophical'). Carried over from the
+ * pre-existing categorical tilemap story. This snapshot was not independently
+ * re-verified against a live source here, so it is marked 'Illustrative data'
+ * rather than attributed, per the pool's no-fabricated-citation rule.
+ */
+export const vaccineExemptions = {
+  source: 'Illustrative data',
+  data: {
+    AL: 'religious',
+    AK: 'religious',
+    AZ: 'philosophical',
+    AR: 'philosophical',
+    CA: 'medical_only',
+    CO: 'philosophical',
+    CT: 'religious',
+    DE: 'religious',
+    DC: 'religious',
+    FL: 'religious',
+    GA: 'religious',
+    HI: 'religious',
+    ID: 'philosophical',
+    IL: 'religious',
+    IN: 'religious',
+    IA: 'religious',
+    KS: 'religious',
+    KY: 'religious',
+    LA: 'philosophical',
+    ME: 'philosophical',
+    MD: 'religious',
+    MA: 'religious',
+    MI: 'philosophical',
+    MN: 'philosophical',
+    MS: 'medical_only',
+    MO: 'religious',
+    MT: 'religious',
+    NE: 'religious',
+    NV: 'religious',
+    NH: 'religious',
+    NJ: 'religious',
+    NM: 'religious',
+    NY: 'medical_only',
+    NC: 'religious',
+    ND: 'philosophical',
+    OH: 'philosophical',
+    OK: 'philosophical',
+    OR: 'philosophical',
+    PA: 'philosophical',
+    RI: 'religious',
+    SC: 'religious',
+    SD: 'religious',
+    TN: 'religious',
+    TX: 'philosophical',
+    UT: 'philosophical',
+    VT: 'religious',
+    VA: 'religious',
+    WA: 'philosophical',
+    WV: 'medical_only',
+    WI: 'philosophical',
+    WY: 'religious',
+  },
+} as const;

@@ -128,10 +128,24 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   const transformFields = new Set<string>();
   if (Array.isArray(spec.transform)) {
     for (const t of spec.transform as Record<string, unknown>[]) {
+      // filter/bin/calculate/timeUnit/fold write their output(s) to `as`.
       if (typeof t.as === 'string') transformFields.add(t.as);
       if (Array.isArray(t.as)) {
         for (const f of t.as) {
           if (typeof f === 'string') transformFields.add(f);
+        }
+      }
+      // aggregate/window carry their output field names inside their op arrays,
+      // and aggregate preserves its groupby fields on the output rows.
+      const opList = (t.aggregate ?? t.window) as Record<string, unknown>[] | undefined;
+      if (Array.isArray(opList)) {
+        for (const op of opList) {
+          if (op && typeof op.as === 'string') transformFields.add(op.as);
+        }
+      }
+      if (Array.isArray(t.groupby)) {
+        for (const g of t.groupby) {
+          if (typeof g === 'string') transformFields.add(g);
         }
       }
     }

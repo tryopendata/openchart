@@ -1006,7 +1006,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=line--multi-series)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--line-and-area#multi-series-labels)
 
 ### Area chart
 
@@ -1027,7 +1027,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=line--area-chart)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area)
 
 ### Bar chart (horizontal)
 
@@ -1049,7 +1049,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=bar--simple-bars)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#simple-bars)
 
 ### Column chart (vertical bars)
 
@@ -1071,7 +1071,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=column--simple-columns)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#columns)
 
 ### Pie chart
 
@@ -1091,7 +1091,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=pie--basic-pie)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#pie-inline-labels)
 
 ### Donut chart
 
@@ -1111,7 +1111,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=pie--donut-chart)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#donut-center-metric)
 
 ### Scatter chart
 
@@ -1142,7 +1142,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=scatter--bubble-chart)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#bubble)
 
 ### Dot plot
 
@@ -1163,7 +1163,7 @@ const spec: ChartSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=dot--simple-dot-plot)
+[Live example](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dot-plot)
 
 ### Data table
 
@@ -1212,7 +1212,7 @@ const spec: TableSpec = {
 };
 ```
 
-[Live example](https://tryopendata.github.io/openchart/?story=table-basic--basic)
+[Live example](https://tryopendata.github.io/openchart/?story=tables--tables#basic)
 
 ---
 

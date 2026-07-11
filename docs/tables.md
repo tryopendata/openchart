@@ -28,7 +28,7 @@ const spec = {
 
 For Vue, import from `@opendata-ai/openchart-vue`. For Svelte, import from `@opendata-ai/openchart-svelte`. For vanilla JS, use `createTable(container, spec)` from `@opendata-ai/openchart-vanilla`.
 
-**Live example**: [Basic table](https://tryopendata.github.io/openchart/?story=table-basic--basic)
+**Live example**: [Basic table](https://tryopendata.github.io/openchart/?story=tables--tables#basic)
 
 ---
 
@@ -55,7 +55,7 @@ Color cell backgrounds based on numeric values. Good for spotting high/low value
 | `domain`      | `[number, number]`   | auto from data   | Explicit min/max for the color scale |
 | `colorByField`| `string`             | same column      | Use a different field's values for coloring |
 
-**Live examples**: [Heatmap table](https://tryopendata.github.io/openchart/?story=table-heatmap--heatmap) | [Election results](https://tryopendata.github.io/openchart/?story=table-heatmap--election-results)
+**Live examples**: [Heatmap table](https://tryopendata.github.io/openchart/?story=tables--tables#heatmap-cells) | [Election results](https://tryopendata.github.io/openchart/?story=tables--tables#heatmap-cells)
 
 ### Inline bar
 
@@ -95,7 +95,7 @@ The data for sparklines is an array stored in the row: `{ trend: [15, 16, 17, 18
 | `valuesField`| `string`                      | same column             | Field containing the array of values |
 | `color`      | `string`                      | first categorical color | Sparkline color |
 
-**Live examples**: [Stock sparklines](https://tryopendata.github.io/openchart/?story=table-mini-charts--stock-sparklines) | [Revenue columns](https://tryopendata.github.io/openchart/?story=table-mini-charts--revenue-columns)
+**Live examples**: [Stock sparklines](https://tryopendata.github.io/openchart/?story=tables--tables#sparkline-cells) | [Revenue columns](https://tryopendata.github.io/openchart/?story=tables--tables#sparkline-cells)
 
 ### Flag
 
@@ -109,7 +109,7 @@ Render country names or codes as flag emojis.
 }
 ```
 
-**Live examples**: [Flags table](https://tryopendata.github.io/openchart/?story=table-flags--flags) | [Country comparison](https://tryopendata.github.io/openchart/?story=table-flags--country-comparison)
+**Live examples**: [Flags table](https://tryopendata.github.io/openchart/?story=tables--tables#flag-cells) | [Country comparison](https://tryopendata.github.io/openchart/?story=tables--tables#flag-cells)
 
 ### Image
 

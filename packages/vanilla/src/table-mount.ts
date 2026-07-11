@@ -491,9 +491,18 @@ export function createTable(
   function setState(partial: Partial<TableState>): void {
     if (destroyed) return;
 
-    if (partial.sort !== undefined) internalState.sort = partial.sort;
-    if (partial.search !== undefined) internalState.search = partial.search;
-    if (partial.page !== undefined) internalState.page = partial.page;
+    // In controlled mode compile() reads from options.externalState, so
+    // updating internalState alone would be ignored. Push the new values onto
+    // externalState (the source getState() reads) so the render reflects them.
+    if (isControlled && options?.externalState) {
+      if (partial.sort !== undefined) options.externalState.sort = partial.sort;
+      if (partial.search !== undefined) options.externalState.search = partial.search;
+      if (partial.page !== undefined) options.externalState.page = partial.page;
+    } else {
+      if (partial.sort !== undefined) internalState.sort = partial.sort;
+      if (partial.search !== undefined) internalState.search = partial.search;
+      if (partial.page !== undefined) internalState.page = partial.page;
+    }
 
     render();
   }

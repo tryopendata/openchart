@@ -54,6 +54,24 @@ describe('resolveConditionalValue', () => {
     expect(result).toBe('Category A');
   });
 
+  it('returns a gradient value intact when the test passes (color channels)', () => {
+    const gradient = {
+      gradient: 'radial' as const,
+      stops: [
+        { offset: 0, color: '#4ade80' },
+        { offset: 1, color: '#15803d' },
+      ],
+    };
+    const result = resolveConditionalValue(
+      { source: 'Renewables', share: 30 },
+      {
+        condition: { test: { field: 'source', equal: 'Renewables' }, value: gradient },
+        value: '#e2e8f0',
+      },
+    );
+    expect(result).toEqual(gradient);
+  });
+
   it('returns undefined when no condition matches and no default', () => {
     const result = resolveConditionalValue(
       { v: 5 },

@@ -110,7 +110,7 @@ The `encoding` object maps data fields to visual channels. `type` tells the engi
 
 The chart component fills its parent container. Set width and height on the wrapper element.
 
-See this running: [live example](https://tryopendata.github.io/openchart/?story=line--single-line)
+See this running: [live example](https://tryopendata.github.io/openchart/?story=charts--line-and-area#single-line)
 
 **The rest of this guide uses React for code examples.** The spec is always the same. For Vue, swap the import to `@opendata-ai/openchart-vue` and use `<Chart :spec="spec" />`. For Svelte, import from `@opendata-ai/openchart-svelte` and use `<Chart {spec} />`.
 

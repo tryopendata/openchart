@@ -1,0 +1,68 @@
+<!-- Injected into the Ladle index.html <head> (config-folder head.html). -->
+
+<!-- Favicon: simple column-chart glyph in the library accent cyan. No logo
+     asset ships in the repo, so this is a self-contained SVG data URI. -->
+<link
+  rel="icon"
+  type="image/svg+xml"
+  href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23091016'/%3E%3Crect x='7' y='16' width='4.5' height='9' rx='1' fill='%2306b6d4'/%3E%3Crect x='13.75' y='11' width='4.5' height='14' rx='1' fill='%2306b6d4'/%3E%3Crect x='20.5' y='7' width='4.5' height='18' rx='1' fill='%2306b6d4'/%3E%3C/svg%3E"
+/>
+
+<!-- SEO / social metadata -->
+<meta
+  name="description"
+  content="OpenChart Examples — a browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs, each with copyable JSON."
+/>
+<meta property="og:type" content="website" />
+<meta property="og:title" content="OpenChart Examples" />
+<meta
+  property="og:description"
+  content="A browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs."
+/>
+<meta property="og:site_name" content="OpenChart" />
+<!-- Social crawlers (Twitter/Facebook/LinkedIn/Slack) require ABSOLUTE image
+     and page URLs — relative paths are not resolved by unfurlers. The gallery
+     deploys to a fixed GitHub Pages origin, so these are hardcoded to it. The
+     PNG itself ships from examples/public/og-preview.png, which the build
+     copies to <base>/og-preview.png (base = /openchart/), matching this URL. -->
+<meta property="og:url" content="https://tryopendata.github.io/openchart/" />
+<meta
+  property="og:image"
+  content="https://tryopendata.github.io/openchart/og-preview.png"
+/>
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta
+  property="og:image:alt"
+  content="OpenChart bar chart: India has overtaken China as the most populous country, with population by country for 2025."
+/>
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="OpenChart Examples" />
+<meta
+  name="twitter:description"
+  content="A browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs."
+/>
+<meta
+  name="twitter:image"
+  content="https://tryopendata.github.io/openchart/og-preview.png"
+/>
+<meta
+  name="twitter:image:alt"
+  content="OpenChart bar chart: India has overtaken China as the most populous country, with population by country for 2025."
+/>
+
+<!-- Font stylesheet: Bricolage Grotesque ONLY (page titles / section headings).
+     Inter is deliberately NOT loaded here: the library's chart text stack leads
+     with "Inter Variable", Inter, and the frozen fixture baselines were captured
+     with Inter unavailable (falling back to -apple-system). Loading the Inter
+     webfont would shift every fixture's text metrics and break the visual
+     baselines (constraint C2 fixture freeze). Gallery body/UI text therefore
+     rides the same system-ui/-apple-system fallback the charts use. Ladle
+     copies <link> tags into the width-addon iframe head, so this resolves
+     there too. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=swap"
+/>

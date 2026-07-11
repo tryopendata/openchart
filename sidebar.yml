@@ -190,7 +190,7 @@
             - generic [ref=e18]:
               - img [ref=e20]
               - link "Editable annotations" [ref=e22] [cursor=pointer]:
-                - /url: "?story=annotation-editing--editable-annotations"
+                - /url: "?story=features--edit-mode#editor"
       - treeitem "Bar" [ref=e23]:
         - generic "Bar" [ref=e24] [cursor=pointer]:
           - img [ref=e26]

@@ -46,7 +46,7 @@ const spec = {
 
 Add a `color` encoding to split into multi-series lines. Use `mark: { type: "line", interpolate: "monotone" }` for smooth curves, or `"step"` for stepped lines.
 
-**Live examples**: [Single line](https://tryopendata.github.io/openchart/?story=line--single-line) | [Multi-series](https://tryopendata.github.io/openchart/?story=line--multi-series) | [Five series](https://tryopendata.github.io/openchart/?story=line--five-series) | [Interpolation modes](https://tryopendata.github.io/openchart/?story=line--interpolation-modes)
+**Live examples**: [Single line](https://tryopendata.github.io/openchart/?story=charts--line-and-area#single-line) | [Multi-series](https://tryopendata.github.io/openchart/?story=charts--line-and-area#multi-series-labels) | [Five series](https://tryopendata.github.io/openchart/?story=charts--line-and-area#five-series-legend) | [Interpolation modes](https://tryopendata.github.io/openchart/?story=charts--line-and-area#interpolation)
 
 ---
 
@@ -72,7 +72,7 @@ const spec = {
 
 Add a `color` encoding to split into series. Multi-series area charts default to **overlap** mode — translucent gradient fills layered on a shared baseline, so each series's curve stays readable. Pass `encoding.y.stack: 'zero'` (or `true`, `'normalize'`, `'center'`) to opt into stacked composition over time.
 
-**Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=line--area-chart) | [Multi-series overlap](https://tryopendata.github.io/openchart/?story=line--multi-series-area-overlap) | [Stacked area](https://tryopendata.github.io/openchart/?story=line--multi-series-area-stacked) | [Step area](https://tryopendata.github.io/openchart/?story=line--step-area)
+**Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Multi-series overlap](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Stacked area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#stacked-area) | [Step area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#interpolation)
 
 ---
 
@@ -99,7 +99,7 @@ const spec = {
 
 The engine renders horizontal bars when x is quantitative and y is nominal. Add a `color` encoding for grouped bars.
 
-**Live examples**: [Simple bars](https://tryopendata.github.io/openchart/?story=bar--simple-bars) | [Grouped bars](https://tryopendata.github.io/openchart/?story=bar--grouped-bars) | [Negative values](https://tryopendata.github.io/openchart/?story=bar--negative-values)
+**Live examples**: [Simple bars](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#simple-bars) | [Grouped bars](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns) | [Negative values](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#negative-values)
 
 ---
 
@@ -127,7 +127,7 @@ const spec = {
 
 The mark is still `"bar"`, but the engine flips to vertical columns when x is nominal/ordinal and y is quantitative.
 
-**Live examples**: [Simple columns](https://tryopendata.github.io/openchart/?story=column--simple-columns) | [Grouped columns](https://tryopendata.github.io/openchart/?story=column--grouped-columns) | [Negative values](https://tryopendata.github.io/openchart/?story=column--negative-values)
+**Live examples**: [Simple columns](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#columns) | [Grouped columns](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns) | [Negative values](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#diverging-columns)
 
 ---
 
@@ -203,7 +203,7 @@ const spec = {
 
 The `y` channel maps to slice values, `color` maps to slice categories. No `x` encoding is needed.
 
-**Live examples**: [Basic pie](https://tryopendata.github.io/openchart/?story=pie--basic-pie) | [Small slice grouping](https://tryopendata.github.io/openchart/?story=pie--small-slice-grouping) | [Seven categories](https://tryopendata.github.io/openchart/?story=pie--seven-categories)
+**Live examples**: [Basic pie](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#pie-inline-labels) | [Small slice grouping](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#small-slice-grouping) | [Seven categories](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#many-categories)
 
 ---
 
@@ -228,7 +228,7 @@ const spec = {
 };
 ```
 
-**Live examples**: [Donut chart](https://tryopendata.github.io/openchart/?story=pie--donut-chart) | [Donut with leaders](https://tryopendata.github.io/openchart/?story=donut-leaders--smartphone-market) | [Side-by-side comparison](https://tryopendata.github.io/openchart/?story=donut-comparison--electricity-mix)
+**Live examples**: [Donut chart](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#donut-center-metric) | [Donut with leaders](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#leader-line-labels) | [Side-by-side comparison](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#comparison-donuts)
 
 ---
 
@@ -255,7 +255,7 @@ const spec = {
 
 Add a `color` encoding to group dots by category. Use diverging data (positive and negative values) for lollipop-style charts.
 
-**Live examples**: [Simple dot plot](https://tryopendata.github.io/openchart/?story=dot--simple-dot-plot) | [Colored dots](https://tryopendata.github.io/openchart/?story=dot--colored-dots) | [Diverging lollipop](https://tryopendata.github.io/openchart/?story=dot--diverging-lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=dot-dumbbell--life-expectancy)
+**Live examples**: [Simple dot plot](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dot-plot) | [Colored dots](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dot-plot) | [Diverging lollipop](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dumbbell)
 
 ---
 
@@ -286,7 +286,7 @@ const spec = {
 
 Adding a categorical `color` encoding with 2+ series automatically switches to **dumbbell mode**: a connecting bar spans from the minimum to maximum value for each category, with colored dots at each series value.
 
-**Live examples**: [Diverging lollipop](https://tryopendata.github.io/openchart/?story=dot--diverging-lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=dot-dumbbell--life-expectancy)
+**Live examples**: [Diverging lollipop](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#lollipop) | [Dumbbell chart](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dumbbell)
 
 ---
 
@@ -312,7 +312,7 @@ const spec = {
 
 Add `size` encoding with a quantitative field for bubble charts. Add `color` encoding for grouped scatter.
 
-**Live examples**: [Basic scatter](https://tryopendata.github.io/openchart/?story=scatter--basic-scatter) | [Bubble chart](https://tryopendata.github.io/openchart/?story=scatter--bubble-chart) | [Color grouping](https://tryopendata.github.io/openchart/?story=scatter--color-grouping)
+**Live examples**: [Basic scatter](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#basic-scatter) | [Bubble chart](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#bubble) | [Color grouping](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#color-grouping)
 
 ---
 
@@ -351,7 +351,7 @@ Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'rig
 
 For the full field reference, see [SankeySpec in spec-reference.md](spec-reference.md#sankeyspec).
 
-**Live examples**: [Energy flow](https://tryopendata.github.io/openchart/?story=sankey--energy-flow) | [Budget allocation](https://tryopendata.github.io/openchart/?story=sankey--budget-allocation) | [User journey](https://tryopendata.github.io/openchart/?story=sankey--user-journey)
+**Live examples**: [Energy flow](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#energy-flow) | [Budget allocation](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#budget-allocation) | [User journey](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#user-journey)
 
 ---
 
@@ -412,7 +412,7 @@ const spec = {
 };
 ```
 
-**Live examples**: [Text mark](https://tryopendata.github.io/openchart/?story=marks--text-mark) | [Rule mark](https://tryopendata.github.io/openchart/?story=marks--rule-mark) | [Tick mark](https://tryopendata.github.io/openchart/?story=marks--tick-mark)
+**Live examples**: [Text mark](https://tryopendata.github.io/openchart/?story=charts--building-blocks#text-mark) | [Rule mark](https://tryopendata.github.io/openchart/?story=charts--building-blocks#rule-mark) | [Tick mark](https://tryopendata.github.io/openchart/?story=charts--building-blocks#tick-mark)
 
 ---
 
@@ -461,16 +461,16 @@ Publication-quality charts with responsive variants at different breakpoints:
 
 | Chart type | Live example |
 |------------|-------------|
-| Horizontal bar | [Population by country](https://tryopendata.github.io/openchart/?story=bar-horizontal--population-bar) |
-| Stacked bar | [Household spending](https://tryopendata.github.io/openchart/?story=bar-stacked--household-spending) |
-| Diverging column | [Temperature anomaly](https://tryopendata.github.io/openchart/?story=column-diverging--temperature-anomaly) |
-| Stacked column | [Energy mix](https://tryopendata.github.io/openchart/?story=column-stacked--energy-mix) |
-| Multi-series line | [GDP growth](https://tryopendata.github.io/openchart/?story=line-multiseries--gdp-growth) |
-| Bubble chart | [Emissions vs renewables](https://tryopendata.github.io/openchart/?story=scatter-bubble--emissions-vs-renewables) |
-| Scatter with trend | [Wealth and health](https://tryopendata.github.io/openchart/?story=scatter-trend--wealth-health) |
-| Dumbbell | [Life expectancy](https://tryopendata.github.io/openchart/?story=dot-dumbbell--life-expectancy) |
-| Donut with leaders | [Smartphone market](https://tryopendata.github.io/openchart/?story=donut-leaders--smartphone-market) |
-| Donut comparison | [Electricity mix](https://tryopendata.github.io/openchart/?story=donut-comparison--electricity-mix) |
+| Horizontal bar | [Population by country](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#simple-bars) |
+| Stacked bar | [Household spending](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#stacked-bars) |
+| Diverging column | [Temperature anomaly](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#diverging-columns) |
+| Stacked column | [Energy mix](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#stacked-bars) |
+| Multi-series line | [GDP growth](https://tryopendata.github.io/openchart/?story=charts--line-and-area#multi-series-labels) |
+| Bubble chart | [Emissions vs renewables](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#bubble) |
+| Scatter with trend | [Wealth and health](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#trend-annotation) |
+| Dumbbell | [Life expectancy](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dumbbell) |
+| Donut with leaders | [Smartphone market](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#leader-line-labels) |
+| Donut comparison | [Electricity mix](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#comparison-donuts) |
 
 ---
 

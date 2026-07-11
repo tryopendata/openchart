@@ -15,7 +15,7 @@ import { expect, test } from '@playwright/test';
 
 test('rotated x-axis labels do not overlap source text', async ({ page }) => {
   // Navigate to the story with long category labels (auto-rotated) + source chrome.
-  await page.goto('/?story=rotated-with-source--rotated-with-source&mode=preview');
+  await page.goto('/?story=testing--fixtures--rotated-with-source&mode=preview');
 
   // Wait for the chart to render.
   await page.waitForSelector('.oc-root');

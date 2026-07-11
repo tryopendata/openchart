@@ -25,13 +25,17 @@ export async function captureStory(page: Page, slug: string, screenshotName: str
   });
 
   // Wait for the OpenChart root to appear and contain rendered content.
-  const chart = page.locator('.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart').first();
+  const chart = page
+    .locator('.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart, .tfix-chart')
+    .first();
   await chart.waitFor({ state: 'visible', timeout: 15_000 });
 
   // Condition: a rendered chart has at least one <text> or mark shape inside.
   await page.waitForFunction(
     () => {
-      const root = document.querySelector('.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart');
+      const root = document.querySelector(
+        '.oc-chart-root, .oc-root, svg.oc-sankey, .story-chart, .tfix-chart',
+      );
       if (!root) return false;
       return (
         root.querySelector('text') !== null ||

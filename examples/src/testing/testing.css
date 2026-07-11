@@ -1,0 +1,216 @@
+/* Frozen fixture layout utilities - prefix: tfix- */
+/* Verbatim copy of stories.css with .story- renamed to .tfix-. */
+/* Do not modify: these rules are the pixel contract for the Playwright */
+/* visual baselines. The gallery design system must never touch this file. */
+
+.tfix-column {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.tfix-column-tight {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tfix-heading {
+  margin: 0 0 8px;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+}
+
+.tfix-debug-border {
+  border: 1px solid #eee;
+}
+
+.tfix-centered {
+  margin: 0 auto;
+}
+
+.tfix-chart {
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* Height utilities */
+
+.tfix-h-280 {
+  height: 280px;
+}
+.tfix-h-300 {
+  height: 300px;
+}
+.tfix-h-320 {
+  height: 320px;
+}
+.tfix-h-350 {
+  height: 350px;
+}
+.tfix-h-360 {
+  height: 360px;
+}
+.tfix-h-380 {
+  height: 380px;
+}
+.tfix-h-400 {
+  height: 400px;
+}
+.tfix-h-420 {
+  height: 420px;
+}
+.tfix-h-440 {
+  height: 440px;
+}
+.tfix-h-450 {
+  height: 450px;
+}
+.tfix-h-460 {
+  height: 460px;
+}
+.tfix-h-480 {
+  height: 480px;
+}
+.tfix-h-500 {
+  height: 500px;
+}
+.tfix-h-520 {
+  height: 520px;
+}
+.tfix-h-550 {
+  height: 550px;
+}
+.tfix-h-600 {
+  height: 600px;
+}
+.tfix-h-700 {
+  height: 700px;
+}
+.tfix-h-viewport {
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+/* Flex layout utilities */
+
+.tfix-flex {
+  display: flex;
+}
+.tfix-flex-gap-8 {
+  display: flex;
+  gap: 8px;
+}
+.tfix-flex-gap-16 {
+  display: flex;
+  gap: 16px;
+}
+.tfix-flex-gap-24 {
+  display: flex;
+  gap: 24px;
+}
+.tfix-flex-gap-32 {
+  display: flex;
+  gap: 32px;
+}
+.tfix-flex-1 {
+  flex: 1;
+}
+
+/* Grid layout */
+
+.tfix-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Editorial typography */
+
+.tfix-editorial {
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 16px;
+}
+
+.tfix-editorial-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.tfix-editorial-title-sm {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.tfix-editorial-subtitle {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.55;
+}
+
+.tfix-editorial-subtitle-sm {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.tfix-editorial-source {
+  font-size: 12px;
+  opacity: 0.4;
+  margin: 0;
+  padding-top: 4px;
+}
+
+/* Responsive test fixed-size containers */
+
+.tfix-fixed-size {
+  width: var(--w);
+  height: var(--h);
+}
+
+/* Max-width utilities */
+
+.tfix-max-w-380 {
+  max-width: 380px;
+}
+.tfix-max-w-500 {
+  max-width: 500px;
+}
+.tfix-max-w-650 {
+  max-width: 650px;
+}
+.tfix-max-w-700 {
+  max-width: 700px;
+}
+.tfix-max-w-750 {
+  max-width: 750px;
+}
+.tfix-max-w-800 {
+  max-width: 800px;
+}
+.tfix-max-w-900 {
+  max-width: 900px;
+}
+.tfix-max-w-920 {
+  max-width: 920px;
+}
+.tfix-max-w-1200 {
+  max-width: 1200px;
+}
+
+/* Padding utilities */
+
+.tfix-pad {
+  padding: 16px;
+}
+.tfix-pad-24 {
+  padding: 24px;
+}
+.tfix-pad-top {
+  padding: 16px 16px 0;
+}
+.tfix-pad-sides {
+  padding: 0 16px;
+}

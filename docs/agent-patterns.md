@@ -27,7 +27,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Data shape:** Each row has a time value and a numeric value. Optionally a category column for multi-series.
 
-**Chart type:** `line` (single or multi-series). Use `area` if you want to emphasize volume. See it live: [single line](https://tryopendata.github.io/openchart/?story=line--single-line), [multi-series](https://tryopendata.github.io/openchart/?story=line--multi-series), [area](https://tryopendata.github.io/openchart/?story=line--area-chart)
+**Chart type:** `line` (single or multi-series). Use `area` if you want to emphasize volume. See it live: [single line](https://tryopendata.github.io/openchart/?story=charts--line-and-area#single-line), [multi-series](https://tryopendata.github.io/openchart/?story=charts--line-and-area#multi-series-labels), [area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area)
 
 ```json
 {
@@ -104,7 +104,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Data shape:** Each row has a category and a numeric value. Pre-sort data by value descending. Show top N (typically 5-10) and optionally group the rest as "Other".
 
-**Chart type:** `bar` (horizontal). Horizontal bars make long category labels easy to read. See it live: [simple bars](https://tryopendata.github.io/openchart/?story=bar--simple-bars), [grouped bars](https://tryopendata.github.io/openchart/?story=bar--grouped-bars)
+**Chart type:** `bar` (horizontal). Horizontal bars make long category labels easy to read. See it live: [simple bars](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#simple-bars), [grouped bars](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns)
 
 ```json
 {
@@ -169,7 +169,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Data shape:** Each row is a category with a numeric share/value. Keep to 2-6 categories. Group small slices into "Other".
 
-**Chart type:** `donut` for up to 6 categories. `column` with `color` (stacked) if comparing composition across groups or time periods. See it live: [donut](https://tryopendata.github.io/openchart/?story=pie--donut-chart), [stacked column](https://tryopendata.github.io/openchart/?story=column-stacked--energy-mix)
+**Chart type:** `donut` for up to 6 categories. `column` with `color` (stacked) if comparing composition across groups or time periods. See it live: [donut](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#donut-center-metric), [stacked column](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#stacked-bars)
 
 ```json
 {
@@ -230,7 +230,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Data shape:** Each row has two numeric values. Optional category (color) and a third numeric (size) for bubble charts.
 
-**Chart type:** `scatter`. Add `size` encoding for a bubble chart. Add `color` for group differentiation. See it live: [scatter](https://tryopendata.github.io/openchart/?story=scatter--basic-scatter), [bubble](https://tryopendata.github.io/openchart/?story=scatter--bubble-chart)
+**Chart type:** `scatter`. Add `size` encoding for a bubble chart. Add `color` for group differentiation. See it live: [scatter](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#basic-scatter), [bubble](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#bubble)
 
 ```json
 {
@@ -274,7 +274,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Data shape:** Each row has a period label and a numeric value. Optionally a group column.
 
-**Chart type:** `column` (vertical). Use ordinal for the x-axis since periods are discrete buckets. See it live: [columns](https://tryopendata.github.io/openchart/?story=column--simple-columns), [grouped](https://tryopendata.github.io/openchart/?story=column--grouped-columns)
+**Chart type:** `column` (vertical). Use ordinal for the x-axis since periods are discrete buckets. See it live: [columns](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#columns), [grouped](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns)
 
 ```json
 {
@@ -344,7 +344,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Data shape:** Multiple rows per category, each with a numeric value.
 
-**Chart type:** `dot` (strip plot). Shows individual data points along a numeric axis. See it live: [dot plot](https://tryopendata.github.io/openchart/?story=dot--simple-dot-plot), [colored dots](https://tryopendata.github.io/openchart/?story=dot--colored-dots)
+**Chart type:** `dot` (strip plot). Shows individual data points along a numeric axis. See it live: [dot plot](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dot-plot), [colored dots](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#dot-plot)
 
 ```json
 {
@@ -390,7 +390,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **When to use:** You need to show exact values alongside visual context. The story is about comparing multiple dimensions for a set of items. Tables work well when users need to look up specific values, sort, search, or when there are more than 2-3 dimensions.
 
-**Data shape:** Tabular data with multiple columns. Use visual features to add context without losing precision. See it live: [basic table](https://tryopendata.github.io/openchart/?story=table-basic--basic), [heatmap](https://tryopendata.github.io/openchart/?story=table-heatmap--heatmap), [sparklines](https://tryopendata.github.io/openchart/?story=table-mini-charts--stock-sparklines)
+**Data shape:** Tabular data with multiple columns. Use visual features to add context without losing precision. See it live: [basic table](https://tryopendata.github.io/openchart/?story=tables--tables#basic), [heatmap](https://tryopendata.github.io/openchart/?story=tables--tables#heatmap-cells), [sparklines](https://tryopendata.github.io/openchart/?story=tables--tables#sparkline-cells)
 
 ```json
 {
@@ -631,7 +631,7 @@ Available operations: `sum`, `mean`, `median`, `min`, `max`, `count`. Use `sum` 
 
 ## Network graphs
 
-For network and relationship data, use `type: 'graph'` with `nodes` and `edges` instead of `data` and `encoding`. Graphs use force-directed layout on canvas. See it live: [basic graph](https://tryopendata.github.io/openchart/?story=graph--basic-graph), [community clusters](https://tryopendata.github.io/openchart/?story=graph--community-clusters), [encoded graph](https://tryopendata.github.io/openchart/?story=graph--encoded-graph). See the [spec reference](spec-reference.md#graphspec) for the full GraphSpec definition, the [graphs guide](graphs.md) for layout and encoding details, and the [integration guide](integration-guide.md#graph-visualization) for interaction patterns.
+For network and relationship data, use `type: 'graph'` with `nodes` and `edges` instead of `data` and `encoding`. Graphs use force-directed layout on canvas. See it live: [basic graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic), [community clusters](https://tryopendata.github.io/openchart/?story=graphs--graphs#communities), [encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded). See the [spec reference](spec-reference.md#graphspec) for the full GraphSpec definition, the [graphs guide](graphs.md) for layout and encoding details, and the [integration guide](integration-guide.md#graph-visualization) for interaction patterns.
 
 ---
 

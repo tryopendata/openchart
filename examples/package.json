@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "ladle serve",
-    "build": "ladle build"
+    "build": "ladle build",
+    "check:registry": "node scripts/check-registry-drift.mjs"
   },
   "dependencies": {
     "@opendata-ai/openchart-core": "workspace:*",
