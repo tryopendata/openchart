@@ -198,8 +198,11 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // authored size wins over the container-derived compile options.
   const options = applySpecSize(expandedSpec, optionsInput);
 
-  // Validate + normalize
-  const { spec: normalized } = compileSpec(expandedSpec);
+  // Validate + normalize. Normalize-stage warnings (type mismatches,
+  // beeswarm point budget, sparkline mark advice) surface through the same
+  // console channel as the sugar warnings so they are not silently dropped.
+  const { spec: normalized, warnings: normalizeWarnings } = compileSpec(expandedSpec);
+  emitSpecWarnings(normalizeWarnings);
 
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');

@@ -117,6 +117,7 @@ export type {
   BarListEncoding,
   BarListSpec,
   BarListSpecWithoutData,
+  BeeswarmEncoding,
   BinParams,
   BinTransform,
   CalculateExpression,

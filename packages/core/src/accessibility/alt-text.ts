@@ -40,8 +40,22 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
     parts.push(`showing ${titleText}`);
   }
 
+  // Beeswarm: name the distribution fields (value axis + optional lane).
+  // Skips the generic x-axis description below, which would either say
+  // nothing (quantitative value axis) or repeat the lane count.
+  if (markType === 'beeswarm') {
+    const xIsValue = spec.encoding.x?.type === 'quantitative';
+    const valueField = xIsValue ? spec.encoding.x?.field : spec.encoding.y?.field;
+    const laneField = xIsValue ? spec.encoding.y?.field : spec.encoding.x?.field;
+    if (valueField) {
+      parts.push(
+        `plotting the distribution of ${valueField}${laneField ? ` by ${laneField}` : ''}`,
+      );
+    }
+  }
+
   // Describe the data range
-  if (spec.encoding.x && data.length > 0) {
+  if (spec.encoding.x && markType !== 'beeswarm' && data.length > 0) {
     const field = spec.encoding.x.field;
     const values = data.map((d) => d[field]).filter((v) => v != null);
 

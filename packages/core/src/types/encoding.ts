@@ -70,6 +70,9 @@ function optional(...types: FieldType[]): ChannelRule {
  * - point: both axes are quantitative
  * - text/rule: fully optional positioning
  * - tick/rect: both axes required, any type
+ * - beeswarm: both axes optional at the channel level; the compiler enforces
+ *   the combination (exactly one quantitative value axis, the other axis an
+ *   optional nominal/ordinal lane channel)
  */
 export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   bar: {
@@ -135,6 +138,17 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   lollipop: {
     x: required('quantitative'),
     y: required('nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional('quantitative'),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
+  beeswarm: {
+    x: optional('quantitative', 'nominal', 'ordinal'),
+    y: optional('quantitative', 'nominal', 'ordinal'),
     color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
     opacity: optional('quantitative'),

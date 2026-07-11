@@ -12,6 +12,7 @@
  */
 
 import { barRenderer } from './bar';
+import { beeswarmRenderer } from './beeswarm';
 import { columnRenderer } from './column';
 import { dotRenderer } from './dot';
 import { areaRenderer, lineRenderer } from './line';
@@ -44,6 +45,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   'arc:donut': donutRenderer, // old 'donut'
   circle: dotRenderer, // old 'dot'
   lollipop: dotRenderer, // semantic alias for dot/circle
+  beeswarm: beeswarmRenderer, // dodged distribution dots
   text: textRenderer,
   rule: ruleRenderer,
   tick: tickRenderer,
