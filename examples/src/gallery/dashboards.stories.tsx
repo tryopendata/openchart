@@ -1,0 +1,510 @@
+/**
+ * Dashboards — OpenChart in a product context: dense, composed, and small.
+ *
+ * Six demos across two sections. The first section shows the dashboard
+ * building blocks in isolation (sparkline cards, KPI metric pills, a bar list,
+ * a crosshair line, conditional-color sector bars). The second composes them
+ * into a single mini-dashboard in a full-bleed 2x2 grid so you can see how the
+ * pieces sit together at product density.
+ *
+ * Absorbs and replaces the old `sparkline` and `financial` story files. The
+ * pinned `sparkline--markets-dashboard` and `sparkline--sizes` fixtures live in
+ * Testing with frozen copies, so those slugs are unaffected.
+ */
+
+import type { BarListSpec, ChartSpec } from '@opendata-ai/openchart-core';
+import { BarList, Chart } from '@opendata-ai/openchart-react';
+import { Demo, GalleryPage, Section, useOcMode } from '../components';
+import {
+  indexTotalReturns,
+  marketIndices,
+  nvidiaStock,
+  programmingLanguages,
+  sp500SectorReturns,
+} from '../data';
+import { vBarGradient } from './helpers';
+
+const ACCENT = '#0e7490';
+
+// ---------------------------------------------------------------------------
+// 1. Sparkline card grid — display: 'sparkline'
+// ---------------------------------------------------------------------------
+
+/** Minimal sparkline spec; trend color, endpoint dot, and area gradient all
+ *  come from the engine's sparkline defaults. */
+function sparklineSpec(
+  mark: 'line' | 'area',
+  series: ReadonlyArray<{ t: number; value: number }>,
+): ChartSpec {
+  const base = {
+    data: [...series],
+    encoding: {
+      x: { field: 't', type: 'ordinal' as const },
+      y: { field: 'value', type: 'quantitative' as const },
+    },
+    display: 'sparkline' as const,
+  };
+  return mark === 'area' ? { mark: 'area', ...base } : { mark: 'line', ...base };
+}
+
+function pctChange(series: ReadonlyArray<{ value: number }>): { text: string; up: boolean } {
+  const first = series[0]?.value ?? 0;
+  const last = series[series.length - 1]?.value ?? 0;
+  const delta = first === 0 ? 0 : ((last - first) / first) * 100;
+  const up = delta >= 0;
+  return { text: `${up ? '+' : ''}${delta.toFixed(2)}%`, up };
+}
+
+/** Dashboard surface tokens derived from the resolved gallery mode. Kept in JS
+ *  (inline styles) so these product cards stay self-contained and don't touch
+ *  the shared gallery.css. */
+function dashTokens(dark: boolean) {
+  return {
+    surface: dark ? '#10151d' : '#ffffff',
+    border: dark ? '1px solid #232b38' : '1px solid #e2e8f0',
+    text: dark ? '#e2e8f0' : '#1e293b',
+    muted: dark ? '#94a3b8' : '#64748b',
+    faint: dark ? '#64748b' : '#94a3b8',
+    up: dark ? '#4ade80' : '#16a34a',
+    down: dark ? '#f87171' : '#dc2626',
+    mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+  };
+}
+
+function SparklineCards() {
+  const t = dashTokens(useOcMode() === 'dark');
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gap: 12,
+        color: t.text,
+      }}
+    >
+      {marketIndices.indices.map((idx) => {
+        const change = pctChange(idx.series);
+        const last = idx.series[idx.series.length - 1]?.value ?? 0;
+        return (
+          <div
+            key={idx.symbol}
+            style={{ padding: 16, border: t.border, borderRadius: 8, background: t.surface }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                marginBottom: 4,
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 500, color: t.muted }}>{idx.name}</span>
+              <span style={{ fontFamily: t.mono, fontSize: 11, color: t.faint }}>{idx.symbol}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+              <span
+                style={{
+                  fontSize: 22,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {last.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: change.up ? t.up : t.down,
+                }}
+              >
+                {change.text}
+              </span>
+            </div>
+            <div style={{ height: 44 }}>
+              <Chart spec={sparklineSpec(idx.mark, idx.series)} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const sparklineExampleSpec = sparklineSpec('area', marketIndices.indices[0].series);
+
+// ---------------------------------------------------------------------------
+// 2. KPI metric pills — chrome `metrics` on a compact chart
+// ---------------------------------------------------------------------------
+
+const kpiSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'area', fill: vBarGradient(ACCENT), stroke: ACCENT, strokeWidth: 2 },
+  data: [...nvidiaStock.data],
+  encoding: {
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 4 } },
+    y: {
+      field: 'price',
+      type: 'quantitative',
+      axis: { title: 'Share price', format: '$,.0f' },
+      scale: { zero: false },
+    },
+  },
+  metrics: [
+    { label: 'Close', value: '$186.50', delta: '+7.7%', deltaTone: 'up' },
+    { label: '52-wk high', value: '$202.48' },
+    { label: '52-wk low', value: '$108.36' },
+    { label: '3-yr return', value: '+855%', delta: '9.6×', deltaTone: 'up' },
+  ],
+  labels: { density: 'none' },
+  chrome: {
+    title: 'NVIDIA at a Glance',
+    subtitle: 'NVDA monthly close with headline stats, Jan 2023 to Dec 2025',
+    source: nvidiaStock.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 3. Bar list — ranked movers in a dashboard card
+// ---------------------------------------------------------------------------
+
+const moversSpec: BarListSpec = {
+  type: 'barlist',
+  data: [...programmingLanguages.data].slice(0, 8),
+  encoding: {
+    label: { field: 'language', type: 'nominal' as const },
+    value: { field: 'pct', type: 'quantitative' as const },
+    color: { field: 'category', type: 'nominal' as const },
+  },
+  valueFormat: '.1f',
+  barHeight: 8,
+  chrome: {
+    title: 'Top Movers',
+    subtitle: 'Language popularity index, % share',
+    source: programmingLanguages.source,
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 4. Financial line with crosshair — benchmark comparison
+// ---------------------------------------------------------------------------
+
+const crosshairSpec: ChartSpec = {
+  animation: true,
+  mark: 'line',
+  data: [...indexTotalReturns.data],
+  crosshair: true,
+  encoding: {
+    x: { field: 'date', type: 'temporal', axis: { tickCount: 4 } },
+    y: {
+      field: 'totalReturn',
+      type: 'quantitative',
+      axis: { title: 'Cumulative return (%)', format: '+.0f', grid: true, tickCount: 5 },
+    },
+    color: { field: 'index', type: 'nominal' },
+  },
+  annotations: [{ type: 'refline', y: 0, label: 'Breakeven', style: 'solid', strokeWidth: 1 }],
+  labels: { density: 'endpoints', format: '+.1f' },
+  legend: { show: false },
+  seriesStyles: {
+    'Russell 2000': { lineStyle: 'dashed', opacity: 0.7 },
+  },
+  chrome: {
+    title: 'Big Tech Roars Back While Small Caps Stall',
+    subtitle: 'Cumulative total return by index, rebased to Jan 1 2022 — hover for the crosshair',
+    source: indexTotalReturns.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 5. Sector returns — conditional +/- coloring
+// ---------------------------------------------------------------------------
+
+const sectorReturns = sp500SectorReturns.data.map((d) => ({
+  ...d,
+  direction: d.return >= 0 ? 'Gain' : 'Loss',
+}));
+
+const sectorSpec: ChartSpec = {
+  animation: true,
+  mark: 'bar',
+  data: sectorReturns,
+  encoding: {
+    x: {
+      field: 'return',
+      type: 'quantitative',
+      axis: { title: 'Total return (%)', format: '+.0f' },
+    },
+    y: { field: 'sector', type: 'nominal' },
+    color: {
+      field: 'direction',
+      type: 'nominal',
+      scale: { domain: ['Gain', 'Loss'], range: [ACCENT, '#d1495b'] },
+    },
+  },
+  legend: { show: false },
+  annotations: [
+    { type: 'refline', x: 0, style: 'solid', stroke: '#334155', strokeWidth: 1.5 },
+    {
+      type: 'refline',
+      x: 23.3,
+      label: 'S&P 500: +23.3%',
+      style: 'dashed',
+      stroke: '#64748b',
+      strokeWidth: 1,
+    },
+  ],
+  labels: { density: 'all', format: '+.1f' },
+  chrome: {
+    title: 'Only Materials Ended the Year in the Red',
+    subtitle: 'S&P 500 total return by sector, full year',
+    source: sp500SectorReturns.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 6. Composed mini-dashboard — 2x2 grid, full-bleed
+// ---------------------------------------------------------------------------
+
+const tileTitleStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  marginBottom: 12,
+};
+
+/** KPI pill row rendered as a compact custom card (not a full chart). */
+function KpiTile() {
+  const t = dashTokens(useOcMode() === 'dark');
+  const pills = [
+    { label: 'Revenue', value: '$60.9B', delta: '+94% YoY' },
+    { label: 'Net margin', value: '55.6%', delta: '+12pp' },
+    { label: 'Data center', value: '$47.5B', delta: '+112% YoY' },
+    { label: 'Gross margin', value: '75.0%', delta: '+2pp' },
+  ];
+  return (
+    <div style={{ color: t.text }}>
+      <div style={{ ...tileTitleStyle, color: t.muted }}>Quarterly scorecard</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        {pills.map((p) => (
+          <div key={p.label}>
+            <div style={{ fontSize: 11, color: t.muted, marginBottom: 2 }}>{p.label}</div>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {p.value}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: t.up }}>{p.delta}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** A single sparkline tile for the composed grid. */
+function SparkTile() {
+  const t = dashTokens(useOcMode() === 'dark');
+  const idx = marketIndices.indices[1]; // Nasdaq
+  const change = pctChange(idx.series);
+  const last = idx.series[idx.series.length - 1]?.value ?? 0;
+  return (
+    <div style={{ color: t.text }}>
+      <div style={{ ...tileTitleStyle, color: t.muted }}>Nasdaq</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <span
+          style={{
+            fontSize: 24,
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {last.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            fontVariantNumeric: 'tabular-nums',
+            color: change.up ? t.up : t.down,
+          }}
+        >
+          {change.text}
+        </span>
+      </div>
+      <div style={{ height: 56, marginTop: 12 }}>
+        <Chart spec={sparklineSpec('area', idx.series)} />
+      </div>
+    </div>
+  );
+}
+
+/** Compact bar list for the composed grid. */
+const composedMoversSpec: BarListSpec = {
+  type: 'barlist',
+  data: [...programmingLanguages.data].slice(0, 5),
+  encoding: {
+    label: { field: 'language', type: 'nominal' as const },
+    value: { field: 'pct', type: 'quantitative' as const },
+    color: { field: 'category', type: 'nominal' as const },
+  },
+  valueFormat: '.1f',
+  barHeight: 8,
+  chrome: { title: 'Language leaders' },
+  watermark: false,
+};
+
+/** Compact sector bars for the composed grid. */
+const composedSectorSpec: ChartSpec = {
+  mark: 'bar',
+  data: sectorReturns,
+  encoding: {
+    x: { field: 'return', type: 'quantitative', axis: { format: '+.0f' } },
+    y: { field: 'sector', type: 'nominal' },
+    color: {
+      field: 'direction',
+      type: 'nominal',
+      scale: { domain: ['Gain', 'Loss'], range: [ACCENT, '#d1495b'] },
+    },
+  },
+  legend: { show: false },
+  labels: { density: 'none' },
+  annotations: [{ type: 'refline', x: 0, style: 'solid', strokeWidth: 1 }],
+  chrome: { title: 'Sector returns' },
+  watermark: false,
+};
+
+// Scoped grid CSS for the composed dashboard: a true 2x2 at wide widths that
+// collapses to a single column under 640px. Inline styles can't express a media
+// query, so this one small scoped block lives in the story rather than touching
+// the shared gallery.css. The `.oc-dash-2x2` class is unique to this page.
+const COMPOSED_GRID_CSS = `
+.oc-dash-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .oc-dash-2x2 { grid-template-columns: minmax(0, 1fr); }
+}
+`;
+
+function ComposedDashboard() {
+  const t = dashTokens(useOcMode() === 'dark');
+  const panelStyle: React.CSSProperties = {
+    padding: 16,
+    border: t.border,
+    borderRadius: 8,
+    background: t.surface,
+  };
+  return (
+    <div className="oc-bleed">
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
+      <style dangerouslySetInnerHTML={{ __html: COMPOSED_GRID_CSS }} />
+      <div className="oc-dash-2x2">
+        <div style={panelStyle}>
+          <KpiTile />
+        </div>
+        <div style={panelStyle}>
+          <SparkTile />
+        </div>
+        <div style={panelStyle}>
+          <div style={{ height: 300 }}>
+            <Chart spec={composedSectorSpec} />
+          </div>
+        </div>
+        <div style={panelStyle}>
+          <div style={{ height: 300 }}>
+            <BarList spec={composedMoversSpec} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default { title: 'Dashboards' };
+
+export const Dashboards = () => (
+  <GalleryPage
+    title="Dashboards"
+    lede="The same spec grammar, shrunk for product surfaces. Sparklines strip every bit of chrome to fit a KPI card, metric pills sit above a compact chart, bar lists rank at a glance, and a crosshair tracks the nearest point. The last demo composes them into one dense layout."
+  >
+    <Section
+      id="building-blocks"
+      title="Building blocks"
+      lede="Each dashboard primitive on its own: sparkline cards, KPI pills, a bar list, a crosshair line, and conditional-color bars."
+    >
+      <Demo
+        id="sparkline-cards"
+        title="Sparkline card grid"
+        description="display: 'sparkline' strips chrome, axes, and legend so a mini-chart fits in a card. Trend color, endpoint dot, and area gradient come from the engine's sparkline defaults."
+        specForPanel={sparklineExampleSpec}
+        height={320}
+      >
+        <SparklineCards />
+      </Demo>
+      <Demo
+        id="kpi-metrics"
+        title="KPI metric pills"
+        description="The chrome `metrics` array renders a row of label/value pills above the plot, each with an optional delta and secondary value. They auto-strip when the container is too narrow or short."
+        spec={kpiSpec}
+        height={520}
+      />
+      <Demo
+        id="bar-list"
+        title="Bar list (ranked movers)"
+        description="A compact ranked list with inline proportional bars — the densest way to show a leaderboard in a dashboard card."
+        spec={moversSpec}
+        height={360}
+      />
+      <Demo
+        id="crosshair-line"
+        title="Financial line with crosshair"
+        description="crosshair: true drops a vertical snap line that tracks the nearest data point across every series — hover the plot to see it. Endpoint labels replace a legend."
+        spec={crosshairSpec}
+        height={440}
+      />
+      <Demo
+        id="sector-returns"
+        title="Sector returns (conditional color)"
+        description="A direction field in the data drives a two-color scale so the single losing sector reads instantly against a solid zero reference line."
+        spec={sectorSpec}
+        height={440}
+      />
+    </Section>
+
+    <Section
+      id="composed"
+      title="Composed dashboard"
+      lede="The primitives assembled into one product layout: a 2x2 grid mixing KPI pills, a sparkline tile, and two compact charts. It reflows to a single column on narrow screens."
+    >
+      <Demo
+        id="mini-dashboard"
+        title="Mini-dashboard (2x2 grid)"
+        description="A full-bleed composition — spec-backed charts and custom KPI/sparkline tiles sharing one grid — showing how the pieces sit together at product density."
+        specForPanel={composedSectorSpec}
+        height={640}
+      >
+        <ComposedDashboard />
+      </Demo>
+    </Section>
+  </GalleryPage>
+);

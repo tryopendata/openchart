@@ -1,0 +1,67 @@
+/**
+ * US state unemployment rate, seasonally adjusted, % of labor force.
+ *
+ * Verified against the OpenData MCP dataset `bls/local-unemployment` (enriched
+ * view, `areatype_text = 'Statewide'`, `measure_text = 'unemployment rate'`,
+ * latest observation per state). Values are the most recent seasonally-adjusted
+ * statewide estimates. Keyed by two-letter state code (plus DC) for the tilemap
+ * record-map format. Puerto Rico is excluded (the tile grid covers the 50
+ * states plus DC).
+ */
+export const usStateUnemployment = {
+  source: 'Source: Bureau of Labor Statistics, Local Area Unemployment Statistics',
+  url: 'https://www.bls.gov/lau/',
+  data: {
+    AL: 2.7,
+    AK: 4.8,
+    AZ: 4.7,
+    AR: 4.2,
+    CA: 5.3,
+    CO: 3.8,
+    CT: 4.8,
+    DE: 5.4,
+    DC: 5.7,
+    FL: 4.4,
+    GA: 3.5,
+    HI: 2.4,
+    ID: 3.6,
+    IL: 5.1,
+    IN: 3.6,
+    IA: 3.3,
+    KS: 3.8,
+    KY: 4.2,
+    LA: 4.4,
+    ME: 3.3,
+    MD: 4.3,
+    MA: 4.7,
+    MI: 5.1,
+    MN: 4.9,
+    MS: 3.8,
+    MO: 4.2,
+    MT: 3.6,
+    NE: 3.1,
+    NV: 5.1,
+    NH: 3.0,
+    NJ: 4.9,
+    NM: 4.8,
+    NY: 4.4,
+    NC: 3.7,
+    ND: 2.8,
+    OH: 4.0,
+    OK: 3.9,
+    OR: 5.2,
+    PA: 4.2,
+    RI: 4.9,
+    SC: 4.2,
+    SD: 2.3,
+    TN: 3.3,
+    TX: 4.3,
+    UT: 3.8,
+    VT: 2.6,
+    VA: 3.8,
+    WA: 5.1,
+    WV: 4.5,
+    WI: 4.0,
+    WY: 3.8,
+  },
+} as const;

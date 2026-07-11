@@ -370,6 +370,40 @@ describe('createTable', () => {
     table.destroy();
   });
 
+  it('controlled mode: setState re-renders sorted rows', () => {
+    const externalState = { sort: null, search: '', page: 0 };
+    const table = createTable(container, makeSpec(), { externalState });
+
+    // Default order: Alice, Bob, Charlie...
+    const firstBefore = container.querySelector('tbody tr td')?.textContent;
+    expect(firstBefore).toBe('Alice');
+
+    // Drive a sort through the controlled setState path.
+    table.setState({ sort: { column: 'age', direction: 'asc' } });
+
+    // Youngest (Eve, 22) should now be first.
+    const firstAfter = container.querySelector('tbody tr td')?.textContent;
+    expect(firstAfter).toBe('Eve');
+
+    table.destroy();
+  });
+
+  it('controlled mode: setState re-renders filtered rows', () => {
+    const externalState = { sort: null, search: '', page: 0 };
+    const table = createTable(container, makeSpec({ search: true }), { externalState });
+
+    expect(container.querySelectorAll('tbody tr').length).toBe(5);
+
+    // Filter to a single match through the controlled setState path.
+    table.setState({ search: 'Denver' });
+
+    const rows = container.querySelectorAll('tbody tr');
+    expect(rows.length).toBe(1);
+    expect(rows[0].querySelector('td')?.textContent).toBe('Diana');
+
+    table.destroy();
+  });
+
   it('update() re-renders with new spec', () => {
     const spec = makeSpec();
     const table = createTable(container, spec);

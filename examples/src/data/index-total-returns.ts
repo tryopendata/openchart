@@ -1,0 +1,82 @@
+/**
+ * Cumulative total return by US equity index, rebased to Jan 1 2022 = 0%.
+ *
+ * Editorial data carried over from the existing financial story with its
+ * original citation. Quarterly points, computed from annual index total
+ * returns (2022 through 2025). Used for the multi-series benchmark line with
+ * crosshair on the Dashboards page.
+ */
+export const indexTotalReturns = {
+  source: 'Source: S&P Dow Jones Indices, Nasdaq',
+  url: 'https://www.spglobal.com/spdji/en/',
+  data: [
+    // S&P 500
+    { date: '2022-01-01', totalReturn: 0, index: 'S&P 500' },
+    { date: '2022-04-01', totalReturn: -5.3, index: 'S&P 500' },
+    { date: '2022-07-01', totalReturn: -13.1, index: 'S&P 500' },
+    { date: '2022-10-01', totalReturn: -17.7, index: 'S&P 500' },
+    { date: '2023-01-01', totalReturn: -18.1, index: 'S&P 500' },
+    { date: '2023-04-01', totalReturn: -8.2, index: 'S&P 500' },
+    { date: '2023-07-01', totalReturn: 1.5, index: 'S&P 500' },
+    { date: '2023-10-01', totalReturn: -0.8, index: 'S&P 500' },
+    { date: '2024-01-01', totalReturn: 3.4, index: 'S&P 500' },
+    { date: '2024-04-01', totalReturn: 12.8, index: 'S&P 500' },
+    { date: '2024-07-01', totalReturn: 20.6, index: 'S&P 500' },
+    { date: '2024-10-01', totalReturn: 29.2, index: 'S&P 500' },
+    { date: '2025-01-01', totalReturn: 29.3, index: 'S&P 500' },
+    { date: '2025-04-01', totalReturn: 33.5, index: 'S&P 500' },
+    { date: '2025-07-01', totalReturn: 39.8, index: 'S&P 500' },
+    { date: '2025-10-01', totalReturn: 46.2, index: 'S&P 500' },
+    // NASDAQ
+    { date: '2022-01-01', totalReturn: 0, index: 'NASDAQ' },
+    { date: '2022-04-01', totalReturn: -9.1, index: 'NASDAQ' },
+    { date: '2022-07-01', totalReturn: -22.4, index: 'NASDAQ' },
+    { date: '2022-10-01', totalReturn: -29.5, index: 'NASDAQ' },
+    { date: '2023-01-01', totalReturn: -33.1, index: 'NASDAQ' },
+    { date: '2023-04-01', totalReturn: -15.8, index: 'NASDAQ' },
+    { date: '2023-07-01', totalReturn: 2.5, index: 'NASDAQ' },
+    { date: '2023-10-01', totalReturn: -3.6, index: 'NASDAQ' },
+    { date: '2024-01-01', totalReturn: -4.1, index: 'NASDAQ' },
+    { date: '2024-04-01', totalReturn: 12.4, index: 'NASDAQ' },
+    { date: '2024-07-01', totalReturn: 24.8, index: 'NASDAQ' },
+    { date: '2024-10-01', totalReturn: 36.9, index: 'NASDAQ' },
+    { date: '2025-01-01', totalReturn: 39.1, index: 'NASDAQ' },
+    { date: '2025-04-01', totalReturn: 48.2, index: 'NASDAQ' },
+    { date: '2025-07-01', totalReturn: 56.8, index: 'NASDAQ' },
+    { date: '2025-10-01', totalReturn: 64.7, index: 'NASDAQ' },
+    // Dow Jones
+    { date: '2022-01-01', totalReturn: 0, index: 'Dow Jones' },
+    { date: '2022-04-01', totalReturn: -4.1, index: 'Dow Jones' },
+    { date: '2022-07-01', totalReturn: -9.5, index: 'Dow Jones' },
+    { date: '2022-10-01', totalReturn: -13.2, index: 'Dow Jones' },
+    { date: '2023-01-01', totalReturn: -7.0, index: 'Dow Jones' },
+    { date: '2023-04-01', totalReturn: -1.8, index: 'Dow Jones' },
+    { date: '2023-07-01', totalReturn: 4.5, index: 'Dow Jones' },
+    { date: '2023-10-01', totalReturn: 2.2, index: 'Dow Jones' },
+    { date: '2024-01-01', totalReturn: 7.9, index: 'Dow Jones' },
+    { date: '2024-04-01', totalReturn: 12.1, index: 'Dow Jones' },
+    { date: '2024-07-01', totalReturn: 17.4, index: 'Dow Jones' },
+    { date: '2024-10-01', totalReturn: 24.0, index: 'Dow Jones' },
+    { date: '2025-01-01', totalReturn: 25.8, index: 'Dow Jones' },
+    { date: '2025-04-01', totalReturn: 30.4, index: 'Dow Jones' },
+    { date: '2025-07-01', totalReturn: 36.1, index: 'Dow Jones' },
+    { date: '2025-10-01', totalReturn: 42.5, index: 'Dow Jones' },
+    // Russell 2000
+    { date: '2022-01-01', totalReturn: 0, index: 'Russell 2000' },
+    { date: '2022-04-01', totalReturn: -7.8, index: 'Russell 2000' },
+    { date: '2022-07-01', totalReturn: -17.2, index: 'Russell 2000' },
+    { date: '2022-10-01', totalReturn: -21.5, index: 'Russell 2000' },
+    { date: '2023-01-01', totalReturn: -20.5, index: 'Russell 2000' },
+    { date: '2023-04-01', totalReturn: -13.2, index: 'Russell 2000' },
+    { date: '2023-07-01', totalReturn: -4.5, index: 'Russell 2000' },
+    { date: '2023-10-01', totalReturn: -8.1, index: 'Russell 2000' },
+    { date: '2024-01-01', totalReturn: -7.1, index: 'Russell 2000' },
+    { date: '2024-04-01', totalReturn: -1.8, index: 'Russell 2000' },
+    { date: '2024-07-01', totalReturn: 3.5, index: 'Russell 2000' },
+    { date: '2024-10-01', totalReturn: 8.2, index: 'Russell 2000' },
+    { date: '2025-01-01', totalReturn: 8.4, index: 'Russell 2000' },
+    { date: '2025-04-01', totalReturn: 12.8, index: 'Russell 2000' },
+    { date: '2025-07-01', totalReturn: 17.5, index: 'Russell 2000' },
+    { date: '2025-10-01', totalReturn: 21.5, index: 'Russell 2000' },
+  ],
+} as const;

@@ -20,6 +20,10 @@ const LINE_AREA = 'charts--line-and-area';
 const PIE_DONUT = 'charts--pie-and-donut';
 const SCATTER_DIST = 'charts--scatter-and-distribution';
 const BUILDING_BLOCKS = 'charts--building-blocks';
+const TABLES = 'tables--tables';
+const GRAPHS = 'graphs--graphs';
+const SANKEY_TILEMAPS = 'sankey---tile-maps--sankey-and-tile-maps';
+const DASHBOARDS = 'dashboards--dashboards';
 
 export const redirects: Record<string, Redirect> = {
   // charts/bar.stories.tsx
@@ -132,4 +136,65 @@ export const redirects: Record<string, Redirect> = {
   // charts/dual-axis.stories.tsx
   'dual-axis--revenue-vs-enrollment': { story: BUILDING_BLOCKS, hash: 'dual-axis' },
   'dual-axis--weather-dual-axis': { story: BUILDING_BLOCKS, hash: 'dual-axis' },
+
+  // ── Phase 03: Tables ──
+  // editorial/table.stories.tsx
+  'table--basic': { story: TABLES, hash: 'basic' },
+  'table--basic-compact': { story: TABLES, hash: 'basic' },
+  'table--flags': { story: TABLES, hash: 'flag-cells' },
+  'table--flags-compact': { story: TABLES, hash: 'flag-cells' },
+  'table--country-comparison': { story: TABLES, hash: 'flag-cells' },
+  'table--heatmap': { story: TABLES, hash: 'heatmap-cells' },
+  'table--election-results': { story: TABLES, hash: 'heatmap-cells' },
+  'table--stock-sparklines': { story: TABLES, hash: 'sparkline-cells' },
+  'table--revenue-columns': { story: TABLES, hash: 'sparkline-cells' },
+
+  // ── Phase 03: Graphs ──
+  // graph.stories.tsx
+  'graph--basic-graph': { story: GRAPHS, hash: 'basic' },
+  'graph--community-clusters': { story: GRAPHS, hash: 'communities' },
+  'graph--encoded-graph': { story: GRAPHS, hash: 'encoded' },
+  'graph--with-chrome': { story: GRAPHS, hash: 'chrome' },
+  'graph--search-demo': { story: GRAPHS, hash: 'search' },
+  'graph--scale1k-nodes': { story: GRAPHS, hash: 'scale' },
+  'graph--scale5k-nodes': { story: GRAPHS, hash: 'scale' },
+  'graph--scale10k-nodes': { story: GRAPHS, hash: 'scale' },
+  'graph--scale20k-nodes': { story: GRAPHS, hash: 'scale' },
+  // responsive-graph.stories.tsx
+  'responsive-graph--mobile-portrait': { story: GRAPHS, hash: 'communities' },
+  'responsive-graph--desktop-sizes': { story: GRAPHS, hash: 'communities' },
+  'responsive-graph--resizable': { story: GRAPHS, hash: 'communities' },
+
+  // ── Phase 03: Sankey & Tile Maps ──
+  // charts/sankey.stories.tsx
+  'sankey--energy-flow': { story: SANKEY_TILEMAPS, hash: 'energy-flow' },
+  'sankey--budget-allocation': { story: SANKEY_TILEMAPS, hash: 'budget-allocation' },
+  'sankey--user-journey': { story: SANKEY_TILEMAPS, hash: 'user-journey' },
+  'sankey--custom-colors': { story: SANKEY_TILEMAPS, hash: 'link-coloring' },
+  'sankey--dark-mode': { story: SANKEY_TILEMAPS, hash: 'energy-flow' },
+  'sankey--animated': { story: SANKEY_TILEMAPS, hash: 'energy-flow' },
+  'sankey--compact': { story: SANKEY_TILEMAPS, hash: 'energy-flow' },
+  // charts/tilemap.stories.tsx
+  'tilemap--unemployment-rate': { story: SANKEY_TILEMAPS, hash: 'quantitative' },
+  'tilemap--partial-data': { story: SANKEY_TILEMAPS, hash: 'partial-data' },
+  'tilemap--dark-mode': { story: SANKEY_TILEMAPS, hash: 'quantitative' },
+  'tilemap--green-palette': { story: SANKEY_TILEMAPS, hash: 'palettes' },
+  'tilemap--tabular-data': { story: SANKEY_TILEMAPS, hash: 'quantitative' },
+  'tilemap--with-chrome': { story: SANKEY_TILEMAPS, hash: 'quantitative' },
+  'tilemap--compact': { story: SANKEY_TILEMAPS, hash: 'quantitative' },
+  'tilemap--categorical': { story: SANKEY_TILEMAPS, hash: 'categorical' },
+  'tilemap--categorical-dark': { story: SANKEY_TILEMAPS, hash: 'categorical' },
+
+  // ── Phase 03: Dashboards ──
+  // sparkline.stories.tsx
+  'sparkline--markets-dashboard': { story: DASHBOARDS, hash: 'sparkline-cards' },
+  'sparkline--trend-colors': { story: DASHBOARDS, hash: 'sparkline-cards' },
+  'sparkline--bar-variants': { story: DASHBOARDS, hash: 'sparkline-cards' },
+  'sparkline--sizes': { story: DASHBOARDS, hash: 'sparkline-cards' },
+  // financial.stories.tsx
+  'financial--stock-price': { story: DASHBOARDS, hash: 'kpi-metrics' },
+  'financial--benchmark-comparison': { story: DASHBOARDS, hash: 'crosshair-line' },
+  'financial--sector-returns': { story: DASHBOARDS, hash: 'sector-returns' },
+  'financial--risk-return': { story: DASHBOARDS, hash: 'crosshair-line' },
+  'financial--earnings-season': { story: DASHBOARDS, hash: 'bar-list' },
 };
