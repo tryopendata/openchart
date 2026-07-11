@@ -127,6 +127,9 @@ export function resolveLayoutPlan(
       : padding;
   const encoding = renderSpec.encoding as Encoding;
   const isRadial = renderSpec.markType === 'arc';
+  // Calendar heatmaps have no axes either: they take the same trivial plan
+  // as radial charts (no y-gutter measurement, no x-axis extent).
+  const isAxisless = isRadial || renderSpec.markType === 'calendar';
   const axisMargin = theme.spacing.axisMargin;
 
   // Resolve chromeMode
@@ -138,7 +141,7 @@ export function resolveLayoutPlan(
   // -----------------------------------------------------------------------
   // Sparkline / radial: trivial plan (no y-axis measurement needed)
   // -----------------------------------------------------------------------
-  if (renderSpec.display === 'sparkline' || isRadial) {
+  if (renderSpec.display === 'sparkline' || isAxisless) {
     const legendContent = computeLegendContent(
       chartSpec,
       strategy,

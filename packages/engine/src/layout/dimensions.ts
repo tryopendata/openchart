@@ -281,8 +281,8 @@ export function computeDimensions(
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
 
-  // Radial charts (arc) don't have axes, so skip axis space
-  const isRadial = spec.markType === 'arc';
+  // Radial charts (arc) and calendar heatmaps don't have axes, so skip axis space
+  const isRadial = spec.markType === 'arc' || spec.markType === 'calendar';
   const encoding = spec.encoding as Encoding;
 
   // Estimate x-axis height below chart area: tick labels sit 14px below,

@@ -331,6 +331,52 @@ function computeRangeTooltips(
   return descriptors;
 }
 
+/**
+ * Compute per-day calendar heatmap tooltips.
+ *
+ * Data cells get a formatted date title plus the color value; empty cells
+ * (missing days, marked decorative by the calendar renderer) get no
+ * descriptor at all so no tooltip fires on them. An explicit
+ * `encoding.tooltip` overrides the default field set.
+ */
+function computeCalendarTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const xEnc = encoding.x;
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  if (!xEnc || !colorEnc) return descriptors;
+
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'rect' || mark.aria.decorative) continue;
+    const row = mark.data as DataRow;
+
+    const title = formatValue(row[xEnc.field], 'temporal', resolveFormat(xEnc));
+    if (encoding.tooltip) {
+      const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+      descriptors.set(`rect-${i}`, { title, fields: buildExplicitTooltipFields(row, channels) });
+      continue;
+    }
+
+    descriptors.set(`rect-${i}`, {
+      title,
+      fields: [
+        {
+          label: resolveLabel(colorEnc),
+          value: formatValue(row[colorEnc.field], colorEnc.type, resolveFormat(colorEnc)),
+          color: getRepresentativeColor(mark.fill),
+        },
+      ],
+    });
+  }
+
+  return descriptors;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -349,6 +395,11 @@ export function computeTooltipDescriptors(
   // Range marks share one start/end/delta tooltip across every mark of a row.
   if (spec.markType === 'range') {
     return computeRangeTooltips(spec, marks);
+  }
+  // Calendar heatmaps get one date-titled tooltip per data cell; empty
+  // (missing-day) cells get none.
+  if (spec.markType === 'calendar') {
+    return computeCalendarTooltips(spec, marks);
   }
 
   const encoding = spec.encoding as Encoding;

@@ -641,8 +641,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme));
   }
 
-  // Arc charts (pie/donut) don't use axes or gridlines
-  const isRadial = chartSpec.markType === 'arc';
+  // Arc charts (pie/donut) and calendar heatmaps don't use axes or gridlines:
+  // arcs are radial, calendars compute their own weeks-x-weekdays geometry.
+  const isRadial = chartSpec.markType === 'arc' || chartSpec.markType === 'calendar';
 
   // Compute axes (skip for radial charts).
   // Sparkline mode skips axes by default unless the user explicitly opted into
@@ -907,7 +908,7 @@ function compileFaceted(
   const sharedYDomain =
     yResolve === 'shared' && fullScales.y ? fullScales.y.scale.domain() : undefined;
 
-  const isRadial = chartSpec.markType === 'arc';
+  const isRadial = chartSpec.markType === 'arc' || chartSpec.markType === 'calendar';
   const rendererKey = resolveRendererKey(
     renderSpec.markType,
     panelEncoding as Encoding,

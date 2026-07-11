@@ -33,6 +33,7 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'tick': strip/rug plot marks
  * - 'rect': heatmaps and 2D binned plots
  * - 'range': dumbbell / arrow / range-bar plots spanning two values per category
+ * - 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)
  */
 export type MarkType =
   | 'bar'
@@ -47,7 +48,8 @@ export type MarkType =
   | 'rect'
   | 'lollipop'
   | 'beeswarm'
-  | 'range';
+  | 'range'
+  | 'calendar';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -229,6 +231,17 @@ export interface MarkDef {
    * `encoding.color` takes precedence over direction coloring.
    */
   colorByDirection?: boolean;
+  /**
+   * First day of the week for calendar marks. Only meaningful when `type` is
+   * `'calendar'`. Controls which weekday occupies the top row of each band.
+   * Defaults to 'monday' (ISO week convention).
+   */
+  weekStart?: 'monday' | 'sunday';
+  /**
+   * Corner radius in pixels for calendar day cells. Only meaningful when
+   * `type` is `'calendar'`. Defaults to 1.
+   */
+  cellRadius?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -1458,6 +1471,20 @@ export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding
 }
 
 /**
+ * Encoding for calendar marks (GitHub-style calendar heatmaps).
+ * - `x`: required (temporal, daily dates, one row per day)
+ * - `color`: required (quantitative, the per-day value)
+ *
+ * The calendar computes its own weeks-x-weekdays geometry: no positional
+ * scales or axes. Multi-year data partitions into one stacked band per year,
+ * all bands sharing a single color scale and legend.
+ */
+export interface CalendarEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  color: EncodingChannel<TData>;
+}
+
+/**
  * Encoding for text marks (data-positioned labels).
  * - `text`: required (the field to render as text)
  * - `x`, `y`: optional positioning
@@ -1740,6 +1767,10 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'rule' | (MarkDef & { type: 'rule' });
       encoding: Encoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'calendar' | (MarkDef & { type: 'calendar' });
+      encoding: CalendarEncoding<TData>;
     });
 
 /**
@@ -2441,6 +2472,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'lollipop',
   'beeswarm',
   'range',
+  'calendar',
 ]);
 
 /** @deprecated Use MARK_TYPES instead. */
@@ -2537,4 +2569,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   lollipop: 'Lollipop chart',
   beeswarm: 'Beeswarm chart',
   range: 'Range plot',
+  calendar: 'Calendar heatmap',
 };

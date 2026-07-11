@@ -160,6 +160,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--range-bar',
     note: 'Vertical y/y2 floating range bars (monthly temperature low to high).',
   },
+  // --- Calendar heatmap ---
+  {
+    name: 'calendar-diverging-year',
+    slug: 'testing--fixtures--calendar-diverging-year',
+    note: 'One-year temperature anomaly, diverging redBlue ramp, missing-day gaps, gradient legend.',
+  },
+  {
+    name: 'calendar-sequential-two-years',
+    slug: 'testing--fixtures--calendar-sequential-two-years',
+    note: 'Two stacked year bands (2023/2024) sharing one sequential scale and legend.',
+  },
+  {
+    name: 'calendar-compact',
+    slug: 'testing--fixtures--calendar-compact',
+    note: '360px scroll host with a 520px min-width inner container; 7px cell floor engaged.',
+  },
 ];
 
 for (const story of stories) {

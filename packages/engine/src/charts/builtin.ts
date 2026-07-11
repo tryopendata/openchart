@@ -13,6 +13,7 @@
 
 import { barRenderer } from './bar';
 import { beeswarmRenderer } from './beeswarm';
+import { calendarRenderer } from './calendar';
 import { columnRenderer } from './column';
 import { dotRenderer } from './dot';
 import { areaRenderer, lineRenderer } from './line';
@@ -52,6 +53,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   tick: tickRenderer,
   rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
   range: rangeRenderer, // dumbbell / arrow / range bar (orientation resolved internally)
+  calendar: calendarRenderer, // weeks x weekdays daily heatmap (no positional scales)
 };
 
 /**
