@@ -164,6 +164,123 @@ function validateRangeSpec(spec: Record<string, unknown>, errors: ValidationErro
 }
 
 // ---------------------------------------------------------------------------
+// Calendar mark validation
+// ---------------------------------------------------------------------------
+
+const VALID_WEEK_STARTS = new Set(['monday', 'sunday']);
+
+/**
+ * Calendar heatmaps take daily dates on x and a quantitative value on color;
+ * the weeks-x-weekdays geometry is computed internally, so there is no y
+ * channel. This check enforces the parts the static MARK_ENCODING_RULES
+ * table can't express: no y, a temporal x even when the type is inferred,
+ * every date parseable, one row per day (daily granularity), and valid
+ * mark-level weekStart/cellRadius options.
+ */
+function validateCalendarSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const encoding = spec.encoding as Record<string, Record<string, unknown> | undefined>;
+  const data = spec.data as Record<string, unknown>[];
+
+  if (encoding.y) {
+    errors.push({
+      message:
+        'Spec error: calendar chart does not accept encoding.y (the weeks x weekdays layout is computed from the dates)',
+      path: 'encoding.y',
+      code: 'ENCODING_MISMATCH',
+      suggestion:
+        'Remove encoding.y. A calendar needs only x (temporal, daily dates) and color (quantitative).',
+    });
+  }
+
+  // Mark-level options (weekStart / cellRadius) on the MarkDef object form.
+  if (spec.mark && typeof spec.mark === 'object') {
+    const markDef = spec.mark as Record<string, unknown>;
+    if (markDef.weekStart !== undefined && !VALID_WEEK_STARTS.has(markDef.weekStart as string)) {
+      errors.push({
+        message: `Spec error: mark.weekStart "${markDef.weekStart}" is not a valid week start`,
+        path: 'mark.weekStart',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Use mark: { type: "calendar", weekStart: "monday" } (default, ISO weeks) or "sunday"',
+      });
+    }
+    if (
+      markDef.cellRadius !== undefined &&
+      (typeof markDef.cellRadius !== 'number' ||
+        !Number.isFinite(markDef.cellRadius) ||
+        markDef.cellRadius < 0)
+    ) {
+      errors.push({
+        message: `Spec error: mark.cellRadius must be a non-negative number, got ${JSON.stringify(markDef.cellRadius)}`,
+        path: 'mark.cellRadius',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Use a pixel radius like cellRadius: 1 (default) or cellRadius: 0 for square corners',
+      });
+    }
+  }
+
+  const x = encoding.x;
+  // Missing x already produced a MISSING_FIELD error from the generic loop.
+  if (!x?.field || typeof x.field !== 'string') return;
+
+  // The generic loop rejects a declared non-temporal type against the
+  // encoding rules table; this catches the inferred case (type omitted).
+  const xType = (x.type as string | undefined) ?? inferFieldType(data, x.field);
+  if (xType !== 'temporal') {
+    if (!x.type) {
+      errors.push({
+        message: `Spec error: calendar chart requires temporal encoding.x, but "${x.field}" was inferred as ${xType}`,
+        path: 'encoding.x',
+        code: 'ENCODING_MISMATCH',
+        suggestion: `Provide daily dates in "${x.field}" (ISO 8601 strings like "2024-01-15" or Date objects) and declare x: { field: "${x.field}", type: "temporal" }`,
+      });
+    }
+    return;
+  }
+
+  // Transforms (e.g. a timeUnit aggregation) reshape the data before the
+  // calendar sees it, so per-row date checks only apply to untransformed specs.
+  if (Array.isArray(spec.transform) && spec.transform.length > 0) return;
+
+  // Every date must parse; report the first offender by row index.
+  for (let i = 0; i < data.length; i++) {
+    const value = data[i][x.field];
+    if (value != null && !isParseableDate(value)) {
+      errors.push({
+        message: `Spec error: encoding.x.field "${x.field}" contains an unparseable date at data[${i}]: ${JSON.stringify(value)}`,
+        path: `data[${i}].${x.field}`,
+        code: 'INVALID_VALUE',
+        suggestion: `Fix data[${i}].${x.field} to a parseable date (ISO 8601 strings like "2024-01-15" or Date objects)`,
+      });
+      return;
+    }
+  }
+
+  // Daily granularity: more than one row on the same UTC day means the data
+  // is sub-daily (or duplicated) and cells would silently overwrite.
+  const seenDays = new Map<string, number>();
+  for (let i = 0; i < data.length; i++) {
+    const value = data[i][x.field];
+    if (value == null) continue;
+    const date = value instanceof Date ? value : new Date(value as string | number);
+    if (Number.isNaN(date.getTime())) continue;
+    const dayKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+    const firstIndex = seenDays.get(dayKey);
+    if (firstIndex !== undefined) {
+      errors.push({
+        message: `Spec error: calendar chart requires daily granularity, but data[${firstIndex}] and data[${i}] fall on the same day (${JSON.stringify(value)})`,
+        path: `data[${i}].${x.field}`,
+        code: 'ENCODING_MISMATCH',
+        suggestion: `Aggregate to one row per day first, e.g. transform: [{ timeUnit: "yearmonthdate", field: "${x.field}", as: "day" }] plus an aggregate over the value field, or pre-aggregate the data.`,
+      });
+      return;
+    }
+    seenDays.set(dayKey, i);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Chart validation
 // ---------------------------------------------------------------------------
 
@@ -298,6 +415,11 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   // Range marks: orientation-dependent x2/y2 requirement + mark.style options
   if (markType === 'range') {
     validateRangeSpec(spec, errors);
+  }
+
+  // Calendar marks: temporal daily x, no y, parseable dates, mark options
+  if (markType === 'calendar') {
+    validateCalendarSpec(spec, errors);
   }
 
   // Near-miss: VL's string expression form of calculate. A restricted string

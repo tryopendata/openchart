@@ -293,7 +293,7 @@ export function computeDimensions(
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
 
-  // Axisless charts (arc, waffle) don't have axes, so skip axis space
+  // Axisless charts (arc, waffle, calendar) don't have axes, so skip axis space
   const isRadial = isAxislessMark(spec.markType);
   const encoding = spec.encoding as Encoding;
 

@@ -75,6 +75,8 @@ function optional(...types: FieldType[]): ChannelRule {
  *   optional nominal/ordinal lane channel)
  * - waffle: no positional axes; y is the share value (quantitative, with
  *   theta accepted as an alias like arc), color is the category
+ * - calendar: x is the daily date (temporal), color the per-day value
+ *   (quantitative); no y channel (the calendar owns its own geometry)
  */
 export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   bar: {
@@ -245,6 +247,20 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     tooltip: optional(),
     href: optional(),
     order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
+  // calendar: x is the daily date (temporal), color the per-day value
+  // (quantitative). No y channel: the calendar computes its own
+  // weeks-x-weekdays geometry, so y is left optional here and the dedicated
+  // validator rejects it with a pointed message.
+  calendar: {
+    x: required('temporal'),
+    y: optional(),
+    color: required('quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
     detail: optional('nominal'),
   },
 };

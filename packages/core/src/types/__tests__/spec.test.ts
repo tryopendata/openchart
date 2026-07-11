@@ -139,8 +139,8 @@ describe('type guard mutual exclusivity', () => {
 // ---------------------------------------------------------------------------
 
 describe('MARK_TYPES', () => {
-  it('contains all 14 mark types', () => {
-    expect(MARK_TYPES.size).toBe(14);
+  it('contains all 15 mark types', () => {
+    expect(MARK_TYPES.size).toBe(15);
   });
 
   it('contains expected types', () => {
@@ -159,6 +159,7 @@ describe('MARK_TYPES', () => {
       'beeswarm',
       'range',
       'waffle',
+      'calendar',
     ];
     for (const t of expected) {
       expect(MARK_TYPES.has(t)).toBe(true);

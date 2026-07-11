@@ -129,6 +129,7 @@ export type {
   BinTransform,
   CalculateExpression,
   CalculateTransform,
+  CalendarEncoding,
   ChartSpec,
   ChartSpecOverride,
   ChartSpecWithoutData,

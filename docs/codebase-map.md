@@ -31,7 +31,7 @@
 | Top-level compile entry | `packages/engine/src/compiler/index.ts` → `compile()` |
 | Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()`, `compileFaceted()` |
 | Chart-type registry | `packages/engine/src/charts/registry.ts` |
-| Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,range,rule,tick,text}/` (registered via `charts/builtin.ts`) |
+| Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,range,calendar,rule,tick,text}/` (registered via `charts/builtin.ts`) |
 | Layout: axes (tick generation, density, label fitting) | `packages/engine/src/layout/axes.ts` (`computeAxes`) |
 | Inline vs gutter y-tick placement (shared predicate) | `packages/engine/src/layout/axes.ts` (`yTickPositionIsInline`) — single source of truth for `computeAxes`, `plan.ts`, and `dimensions.ts`; keyed on resolved scale type, not field type |
 | Band x-label rotation + thinning policy | `packages/engine/src/layout/axes/rotation.ts` (`resolveBandTickAngle`, `bandLabelStride`) — parallel-ribbon collision model, angle ladder flat → -45° → -90°, last-anchored stride safety net; shared by `computeAxes` and `plan.ts` so reserved margin matches rendered angle |
@@ -164,7 +164,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 
 - Registration goes through `engine/src/charts/builtin.ts`: a `builtinRenderers` map lists every renderer key and `registerBuiltinRenderers()` loops over it, calling `registerChartRenderer(key, fn)` as a side effect on first import. Chart-type `index.ts` files only export their renderer; they do not self-register.
 - The compile pipeline resolves the renderer key via `resolveRendererKey(markType, encoding, markDef)` (`charts/post-process.ts`; e.g. `'bar'` -> `'bar:vertical'`, `'arc'` -> `'arc:donut'`) and dispatches with `getChartRenderer(key)`.
-- Per-chart-type renderers live under `engine/src/charts/{bar,column,line,pie,scatter,dot,range,rule,tick,text}/`. Each owns its `compute.ts` (mark generation), often with `__tests__/` alongside.
+- Per-chart-type renderers live under `engine/src/charts/{bar,column,line,pie,scatter,dot,range,calendar,rule,tick,text}/`. Each owns its `compute.ts` (mark generation), often with `__tests__/` alongside.
 - Adding a new chart type: create the directory, implement and export the renderer from its `index.ts`, and add it to the `builtinRenderers` map in `builtin.ts`. The pipeline doesn't change.
 
 ## Mark types

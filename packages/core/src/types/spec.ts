@@ -34,6 +34,7 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'rect': heatmaps and 2D binned plots
  * - 'range': dumbbell / arrow / range-bar plots spanning two values per category
  * - 'waffle': unit grids ("x of 100") for part-to-whole counts
+ * - 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)
  */
 export type MarkType =
   | 'bar'
@@ -49,7 +50,8 @@ export type MarkType =
   | 'lollipop'
   | 'beeswarm'
   | 'range'
-  | 'waffle';
+  | 'waffle'
+  | 'calendar';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -242,6 +244,17 @@ export interface MarkDef {
    * `'waffle'`. Rows derive from `units / columns`. Default 10.
    */
   columns?: number;
+  /**
+   * First day of the week for calendar marks. Only meaningful when `type` is
+   * `'calendar'`. Controls which weekday occupies the top row of each band.
+   * Defaults to 'monday' (ISO week convention).
+   */
+  weekStart?: 'monday' | 'sunday';
+  /**
+   * Corner radius in pixels for calendar day cells. Only meaningful when
+   * `type` is `'calendar'`. Defaults to 1.
+   */
+  cellRadius?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -1512,6 +1525,20 @@ export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encodin
 }
 
 /**
+ * Encoding for calendar marks (GitHub-style calendar heatmaps).
+ * - `x`: required (temporal, daily dates, one row per day)
+ * - `color`: required (quantitative, the per-day value)
+ *
+ * The calendar computes its own weeks-x-weekdays geometry: no positional
+ * scales or axes. Multi-year data partitions into one stacked band per year,
+ * all bands sharing a single color scale and legend.
+ */
+export interface CalendarEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  color: EncodingChannel<TData>;
+}
+
+/**
  * Encoding for text marks (data-positioned labels).
  * - `text`: required (the field to render as text)
  * - `x`, `y`: optional positioning
@@ -1807,6 +1834,10 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'rule' | (MarkDef & { type: 'rule' });
       encoding: Encoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'calendar' | (MarkDef & { type: 'calendar' });
+      encoding: CalendarEncoding<TData>;
     });
 
 /**
@@ -2509,6 +2540,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'beeswarm',
   'range',
   'waffle',
+  'calendar',
 ]);
 
 /**
@@ -2516,7 +2548,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
  * (no axis or gridline computation; margins shrink to padding).
  */
 export function isAxislessMark(markType: MarkType): boolean {
-  return markType === 'arc' || markType === 'waffle';
+  return markType === 'arc' || markType === 'waffle' || markType === 'calendar';
 }
 
 /** @deprecated Use MARK_TYPES instead. */
@@ -2614,4 +2646,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   beeswarm: 'Beeswarm chart',
   range: 'Range plot',
   waffle: 'Waffle chart',
+  calendar: 'Calendar heatmap',
 };

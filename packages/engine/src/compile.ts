@@ -642,7 +642,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme));
   }
 
-  // Arc charts (pie/donut) and waffles don't use axes or gridlines
+  // Axisless marks (arc, waffle, calendar) don't use axes or gridlines:
+  // arcs are radial, waffles and calendars compute their own grid geometry.
   const isRadial = isAxislessMark(chartSpec.markType);
 
   // Compute axes (skip for radial charts).
