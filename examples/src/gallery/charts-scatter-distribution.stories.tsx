@@ -1,11 +1,13 @@
 /**
  * Charts / Scatter & Distribution.
  *
- * Nine demos across three sections (Scatter, Distribution, Interactive). Scatter
- * marks map two quantitative axes and add size/color to carry a third and
- * fourth dimension; distribution marks (circle, lollipop, dumbbell, tick) place
- * observations along a category axis. Each chart carries editorial chrome and
- * pulls from the shared dataset pool. Structure copies charts-bar-column.
+ * Twelve demos across four sections (Scatter, Distribution, Range & Change,
+ * Interactive). Scatter marks map two quantitative axes and add size/color to
+ * carry a third and fourth dimension; distribution marks (circle, lollipop,
+ * dumbbell, tick) place observations along a category axis; range marks span
+ * two values per category (dumbbell, arrow, floating bar). Each chart carries
+ * editorial chrome and pulls from the shared dataset pool. Structure copies
+ * charts-bar-column.
  */
 
 import type { ChartSpec, MarkEvent } from '@opendata-ai/openchart-core';
@@ -15,9 +17,12 @@ import { Demo, GalleryPage, Section } from '../components';
 import {
   commuteTimes,
   costOfLiving,
+  electricityShareChange,
   emissionsRenewables,
+  lifeExpectancyChange,
   lifeExpectancyGender,
   marathonFinishTimes,
+  nycTemperatureRange,
   pisaScores,
   statePopulationChange,
   wealthHealth,
@@ -335,6 +340,8 @@ const lollipopSpec: ChartSpec = {
 
 // ---------------------------------------------------------------------------
 // 7. Dumbbell — two series per category auto-switches the dot mark to dumbbell mode
+// (Long-format recipe. When your data has start/end columns, prefer the
+// first-class range mark in the Range & Change section below.)
 // ---------------------------------------------------------------------------
 
 const dumbbellSpec: ChartSpec = {
@@ -404,7 +411,95 @@ const stripSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 9. Interactive — onMarkHover drives a companion readout
+// 9. Range dumbbell — x/x2 span per category, first-class range mark
+// ---------------------------------------------------------------------------
+
+const rangeDumbbellSpec: ChartSpec = {
+  animation: true,
+  mark: 'range',
+  data: [...lifeExpectancyChange.data],
+  encoding: {
+    y: {
+      field: 'country',
+      type: 'nominal',
+      sort: { field: 'y2023', order: 'ascending' },
+    },
+    x: {
+      field: 'y2000',
+      type: 'quantitative',
+      title: '2000',
+      axis: { title: 'Life expectancy at birth (years)' },
+    },
+    x2: { field: 'y2023', title: '2023' },
+  },
+  chrome: {
+    title: 'Everyone Is Living Longer, but the Gaps Persist',
+    subtitle:
+      'Life expectancy at birth, 2000 (gray) vs. 2023 (accent), selected countries. Hover a row for the exact change.',
+    source: lifeExpectancyChange.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 10. Arrow plot — directional change with semantic direction coloring
+// ---------------------------------------------------------------------------
+
+const arrowPlotSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'range', style: 'arrow', colorByDirection: true },
+  data: [...electricityShareChange.data],
+  encoding: {
+    y: {
+      field: 'source',
+      type: 'nominal',
+      sort: { field: 'y2024', order: 'ascending' },
+    },
+    x: {
+      field: 'y2010',
+      type: 'quantitative',
+      title: '2010',
+      axis: { title: 'Share of US electricity generation (%)' },
+    },
+    x2: { field: 'y2024', title: '2024' },
+  },
+  chrome: {
+    title: "Gas and Renewables Ate Coal's Lunch",
+    subtitle:
+      'Share of US electricity generation by source, 2010 to 2024. Green arrows grew, red shrank.',
+    source: electricityShareChange.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 11. Range bar — plain floating bar from low to high (vertical form)
+// ---------------------------------------------------------------------------
+
+const rangeBarSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'range', style: 'bar', fill: ACCENT },
+  data: [...nycTemperatureRange.data],
+  encoding: {
+    x: { field: 'month', type: 'nominal' },
+    y: {
+      field: 'low',
+      type: 'quantitative',
+      title: 'Avg low',
+      axis: { title: 'Temperature (°C)' },
+    },
+    y2: { field: 'high', title: 'Avg high' },
+  },
+  chrome: {
+    title: 'New York Swings 30 Degrees Across the Year',
+    subtitle: 'Average daily low to high temperature by month, Central Park, 2023',
+    source: nycTemperatureRange.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 12. Interactive — onMarkHover drives a companion readout
 // ---------------------------------------------------------------------------
 
 const interactiveSpec: ChartSpec = {
@@ -552,8 +647,8 @@ export const ScatterAndDistribution = () => (
       />
       <Demo
         id="dumbbell"
-        title="Dumbbell"
-        description="Two series per category on the dot mark auto-switch to dumbbell mode: a bar spans the gap between the two values."
+        title="Dumbbell (two-series recipe)"
+        description="Two series per category on the dot mark auto-switch to dumbbell mode. This long-format recipe predates the range mark; prefer mark: 'range' (below) when your data carries start/end columns."
         spec={dumbbellSpec}
         height={520}
       />
@@ -563,6 +658,34 @@ export const ScatterAndDistribution = () => (
         description="The tick mark drops one short line per observation, so a whole distribution's shape and spread read at once."
         spec={stripSpec}
         height={420}
+      />
+    </Section>
+
+    <Section
+      id="range"
+      title="Range & Change"
+      lede="One row, two values. The range mark spans start to end per category: dumbbells compare two points in time, arrows read as directional change, floating bars show plain spans."
+    >
+      <Demo
+        id="range-dumbbell"
+        title="Dumbbell (range mark)"
+        description="x and x2 span each category: muted start dot, accent end dot. Tooltips carry start, end, and the signed change."
+        spec={rangeDumbbellSpec}
+        height={520}
+      />
+      <Demo
+        id="arrow-plot"
+        title="Arrow plot"
+        description="style: 'arrow' puts an arrowhead at the x2 end; colorByDirection colors increases and decreases with the theme's semantic tokens."
+        spec={arrowPlotSpec}
+        height={460}
+      />
+      <Demo
+        id="range-bar"
+        title="Range bar"
+        description="style: 'bar' draws a plain floating bar from y to y2, the simplest read for low/high spans like temperature ranges."
+        spec={rangeBarSpec}
+        height={440}
       />
     </Section>
 

@@ -101,6 +101,7 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     name: 'beeswarm-sized',
     slug: 'testing--fixtures--beeswarm-sized',
     note: 'Size encoding drives per-dot radii; dodge keeps sized dots collision-free.',
+  },
   // --- Continuous color legend ---
   {
     name: 'color-legend-gradient',
@@ -116,6 +117,7 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     name: 'color-legend-dark-diverging',
     slug: 'testing--fixtures--color-legend-dark-diverging',
     note: 'Dark mode diverging ramp with min/neutral/max labels; neutral at the scale center.',
+  },
   // --- Accessibility (plan 06) ---
   {
     name: 'a11y-pattern-fills-stacked',
@@ -141,6 +143,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     name: 'a11y-colorblind-palette-audit',
     slug: 'testing--a11y--colorblind-palette-audit',
     note: 'Default categorical palette simulated for protanopia, deuteranopia, tritanopia, achromatopsia.',
+  },
+  // --- Range marks (dumbbell / arrow / bar) ---
+  {
+    name: 'range-dumbbell',
+    slug: 'testing--fixtures--range-dumbbell',
+    note: 'Horizontal x/x2 dumbbell sorted by end value, muted start dot, both-end labels.',
+  },
+  {
+    name: 'range-arrow',
+    slug: 'testing--fixtures--range-arrow',
+    note: 'Arrow style with colorByDirection: increases green, decreases red, arrowhead at x2.',
+  },
+  {
+    name: 'range-bar',
+    slug: 'testing--fixtures--range-bar',
+    note: 'Vertical y/y2 floating range bars (monthly temperature low to high).',
   },
 ];
 

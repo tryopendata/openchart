@@ -157,6 +157,22 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
+  // Range: x+x2 with nominal y (horizontal) or y+y2 with nominal x (vertical).
+  // The orientation-dependent x2/y2 requirement is enforced by a dedicated
+  // check in the validator; the static table can only mark them optional.
+  range: {
+    x: required('quantitative', 'nominal', 'ordinal'),
+    y: required('quantitative', 'nominal', 'ordinal'),
+    x2: optional('quantitative'),
+    y2: optional('quantitative'),
+    color: optional('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
   arc: {
     x: optional(),
     y: required('quantitative'),

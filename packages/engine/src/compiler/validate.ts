@@ -52,6 +52,118 @@ function isNumeric(value: unknown): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Range mark validation
+// ---------------------------------------------------------------------------
+
+const VALID_RANGE_STYLES = new Set(['dumbbell', 'arrow', 'bar']);
+
+/**
+ * Range marks need an orientation-dependent encoding pair: x + x2 when the
+ * category axis is y (horizontal, the common editorial form), or y + y2 when
+ * the category axis is x (vertical). The static MARK_ENCODING_RULES table
+ * can't express "x2 required only when y is categorical", so this check
+ * enforces it with errors naming exactly what to add.
+ */
+function validateRangeSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const encoding = spec.encoding as Record<string, Record<string, unknown> | undefined>;
+  const data = spec.data as Record<string, unknown>[];
+  const x = encoding.x;
+  const y = encoding.y;
+  // Missing x/y already produced MISSING_FIELD errors from the generic loop.
+  if (!x?.field || typeof x.field !== 'string' || !y?.field || typeof y.field !== 'string') {
+    return;
+  }
+
+  const xType = (x.type as string | undefined) ?? inferFieldType(data, x.field);
+  const yType = (y.type as string | undefined) ?? inferFieldType(data, y.field);
+  const xIsCategory = xType === 'nominal' || xType === 'ordinal';
+  const yIsCategory = yType === 'nominal' || yType === 'ordinal';
+
+  if (xIsCategory && yIsCategory) {
+    errors.push({
+      message:
+        'Spec error: range chart requires a quantitative value axis, but both encoding.x and encoding.y are categorical',
+      path: 'encoding',
+      code: 'ENCODING_MISMATCH',
+      suggestion:
+        'Map the range start to a quantitative channel: x (with x2 for the end) for horizontal ranges, or y (with y2) for vertical ranges',
+    });
+    return;
+  }
+  if (!xIsCategory && !yIsCategory) {
+    errors.push({
+      message:
+        'Spec error: range chart requires a nominal or ordinal category axis, but neither encoding.x nor encoding.y is categorical',
+      path: 'encoding',
+      code: 'ENCODING_MISMATCH',
+      suggestion:
+        'Set encoding.y to a nominal field for horizontal ranges (the common form), or encoding.x for vertical ranges',
+    });
+    return;
+  }
+
+  const availableColumns = data.length > 0 ? Object.keys(data[0]).join(', ') : '';
+  if (yIsCategory) {
+    // Horizontal: x is the range start, x2 the end.
+    if (!encoding.x2) {
+      errors.push({
+        message:
+          'Spec error: range chart requires encoding.x2 (the range end) when encoding.y is the category axis, but none was provided',
+        path: 'encoding.x2',
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.x2 with the field holding the range's end value, e.g. x2: { field: "endValue" }. Available columns: ${availableColumns}`,
+      });
+    }
+    if (encoding.y2) {
+      errors.push({
+        message:
+          'Spec error: encoding.y2 is not used on a horizontal range chart (category axis on y); the range end belongs on x2',
+        path: 'encoding.y2',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Remove encoding.y2, or move the category to encoding.x and the values to y/y2 for a vertical range chart',
+      });
+    }
+  } else {
+    // Vertical: y is the range start, y2 the end.
+    if (!encoding.y2) {
+      errors.push({
+        message:
+          'Spec error: range chart requires encoding.y2 (the range end) when encoding.x is the category axis, but none was provided',
+        path: 'encoding.y2',
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.y2 with the field holding the range's end value, e.g. y2: { field: "endValue" }. Available columns: ${availableColumns}`,
+      });
+    }
+    if (encoding.x2) {
+      errors.push({
+        message:
+          'Spec error: encoding.x2 is not used on a vertical range chart (category axis on x); the range end belongs on y2',
+        path: 'encoding.x2',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Remove encoding.x2, or move the category to encoding.y and the values to x/x2 for a horizontal range chart',
+      });
+    }
+  }
+
+  // markDef options: style must be one of the known variants.
+  const mark = spec.mark;
+  if (mark && typeof mark === 'object' && !Array.isArray(mark)) {
+    const style = (mark as Record<string, unknown>).style;
+    if (style !== undefined && !VALID_RANGE_STYLES.has(style as string)) {
+      errors.push({
+        message: `Spec error: mark.style "${style}" is not valid for range marks. Must be one of: dumbbell, arrow, bar`,
+        path: 'mark.style',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Use mark: { type: "range", style: "dumbbell" } (default), "arrow" for directional change, or "bar" for a plain floating range bar',
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Chart validation
 // ---------------------------------------------------------------------------
 
@@ -181,6 +293,11 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
           'Set the value axis to type: "quantitative" (x for a horizontal swarm, y for a vertical one).',
       });
     }
+  }
+
+  // Range marks: orientation-dependent x2/y2 requirement + mark.style options
+  if (markType === 'range') {
+    validateRangeSpec(spec, errors);
   }
 
   // Near-miss: VL's string expression form of calculate. A restricted string

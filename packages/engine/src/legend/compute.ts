@@ -149,6 +149,7 @@ function swatchShapeForType(markType: string): LegendEntry['shape'] {
     case 'circle':
     case 'lollipop':
     case 'beeswarm':
+    case 'range':
       return 'circle';
     default:
       return 'square';

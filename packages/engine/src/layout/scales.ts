@@ -712,12 +712,14 @@ function buildPositionalScale(
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
     case 'ordinal':
-      // Bar charts use band scales for their categorical axis (both orientations).
-      // Beeswarm lanes are band scales too: each category gets a band whose
-      // center anchors one swarm, on whichever axis carries the nominal channel.
+      // Bar and range charts use band scales for their categorical axis (both
+      // orientations). Beeswarm lanes are band scales too: each category gets
+      // a band whose center anchors one swarm, on whichever axis carries the
+      // nominal channel.
       if (
         chartType === 'bar' ||
         chartType === 'beeswarm' ||
+        chartType === 'range' ||
         ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
       ) {
         return buildBandScale(channel, data, rangeStart, rangeEnd);
@@ -748,10 +750,11 @@ export function computeScales(
   const result: ResolvedScales = {};
   const encoding = spec.encoding as Encoding;
 
-  // Scatter/bubble charts should NOT include zero by default (tight domain fits
-  // data range). Beeswarms follow suit: they plot raw observations whose spread
-  // is the story, and only the quantitative value axis matches the check below.
-  if (spec.markType === 'point' || spec.markType === 'beeswarm') {
+  // Scatter/bubble, beeswarm, and range charts should NOT include zero by
+  // default (they encode position, not length; a tight domain fits the data
+  // range). Beeswarms plot raw observations whose spread is the story, and
+  // only the quantitative value axis matches the check below.
+  if (spec.markType === 'point' || spec.markType === 'beeswarm' || spec.markType === 'range') {
     if (encoding.x?.type === 'quantitative' && encoding.x.scale?.zero === undefined) {
       if (!encoding.x.scale) {
         (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };
@@ -773,6 +776,13 @@ export function computeScales(
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
     let xChannel = encoding.x;
+    // Range charts span x to x2: the x-domain must cover both endpoint fields.
+    // Synthetic rows map x2 values into the x field so buildLinearScale sees them.
+    if (spec.markType === 'range' && encoding.x2 && encoding.x.type === 'quantitative') {
+      const xField = encoding.x.field;
+      const x2Field = encoding.x2.field;
+      xData = [...data, ...data.map((row) => ({ [xField]: row[x2Field] }) as DataRow)];
+    }
     const xStackEnabled =
       encoding.x.stack === true ||
       encoding.x.stack === 'zero' ||
@@ -853,6 +863,12 @@ export function computeScales(
     // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
     let yChannel = encoding.y;
+    // Range charts span y to y2 (vertical form): cover both endpoint fields.
+    if (spec.markType === 'range' && encoding.y2 && encoding.y.type === 'quantitative') {
+      const yField = encoding.y.field;
+      const y2Field = encoding.y2.field;
+      yData = [...data, ...data.map((row) => ({ [yField]: row[y2Field] }) as DataRow)];
+    }
     const isVerticalBar =
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&

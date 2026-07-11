@@ -32,6 +32,7 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'rule': reference lines as data marks
  * - 'tick': strip/rug plot marks
  * - 'rect': heatmaps and 2D binned plots
+ * - 'range': dumbbell / arrow / range-bar plots spanning two values per category
  */
 export type MarkType =
   | 'bar'
@@ -45,7 +46,8 @@ export type MarkType =
   | 'tick'
   | 'rect'
   | 'lollipop'
-  | 'beeswarm';
+  | 'beeswarm'
+  | 'range';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -211,6 +213,22 @@ export interface MarkDef {
    * - `'none'` (default): solid fills only.
    */
   fillPattern?: 'auto' | 'none';
+  /**
+   * Visual style for range marks. Only meaningful when `type` is `'range'`.
+   * - 'dumbbell' (default): a dot at each end joined by a connector line.
+   *   The start dot is muted, the end dot carries the accent color.
+   * - 'arrow': a line with an arrowhead at the x2/y2 end, the strongest
+   *   "change between two points in time" form.
+   * - 'bar': a plain floating range bar spanning start to end.
+   */
+  style?: 'dumbbell' | 'arrow' | 'bar';
+  /**
+   * Color range marks by direction of change. Only meaningful when `type` is
+   * `'range'`. When true, increases (x2 > x, or y2 > y) use the theme's
+   * `positive` semantic color and decreases use `negative`. A field-based
+   * `encoding.color` takes precedence over direction coloring.
+   */
+  colorByDirection?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1428,6 +1446,18 @@ export interface BeeswarmEncoding<TData extends DataRow = DataRow> extends Encod
 }
 
 /**
+ * Encoding for range marks (dumbbell / arrow / range-bar plots).
+ * - Horizontal (the common editorial form): `y` nominal/ordinal category,
+ *   `x` quantitative start, `x2` quantitative end.
+ * - Vertical: `x` nominal/ordinal category, `y` quantitative start,
+ *   `y2` quantitative end.
+ */
+export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
  * Encoding for text marks (data-positioned labels).
  * - `text`: required (the field to render as text)
  * - `x`, `y`: optional positioning
@@ -1690,6 +1720,10 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'beeswarm' | (MarkDef & { type: 'beeswarm' });
       encoding: BeeswarmEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'range' | (MarkDef & { type: 'range' });
+      encoding: RangeEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
       mark: 'text' | (MarkDef & { type: 'text' });
@@ -2406,6 +2440,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'rect',
   'lollipop',
   'beeswarm',
+  'range',
 ]);
 
 /** @deprecated Use MARK_TYPES instead. */
@@ -2501,4 +2536,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   rect: 'Heatmap',
   lollipop: 'Lollipop chart',
   beeswarm: 'Beeswarm chart',
+  range: 'Range plot',
 };

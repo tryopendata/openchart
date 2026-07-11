@@ -180,6 +180,7 @@ export type {
   PointEncoding,
   RadialGradient,
   RangeAnnotation,
+  RangeEncoding,
   RectEncoding,
   RefLineAnnotation,
   RelativeTimeRef,

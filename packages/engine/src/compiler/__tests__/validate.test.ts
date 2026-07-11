@@ -308,6 +308,122 @@ describe('validateSpec', () => {
     });
   });
 
+  describe('range marks', () => {
+    const rangeData = [
+      { country: 'Japan', y2000: 81.1, y2024: 87.9 },
+      { country: 'USA', y2000: 79.5, y2024: 81.3 },
+    ];
+
+    it('accepts a valid horizontal range spec (x + x2, nominal y)', () => {
+      const result = validateSpec({
+        mark: 'range',
+        data: rangeData,
+        encoding: {
+          y: { field: 'country', type: 'nominal' },
+          x: { field: 'y2000', type: 'quantitative' },
+          x2: { field: 'y2024' },
+        },
+      });
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('accepts a valid vertical range spec (y + y2, nominal x)', () => {
+      const result = validateSpec({
+        mark: 'range',
+        data: [{ month: 'Jan', lo: 27, hi: 39 }],
+        encoding: {
+          x: { field: 'month', type: 'nominal' },
+          y: { field: 'lo', type: 'quantitative' },
+          y2: { field: 'hi' },
+        },
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it('rejects a horizontal range spec without x2, naming encoding.x2', () => {
+      const result = validateSpec({
+        mark: 'range',
+        data: rangeData,
+        encoding: {
+          y: { field: 'country', type: 'nominal' },
+          x: { field: 'y2000', type: 'quantitative' },
+        },
+      });
+      expect(result.valid).toBe(false);
+      const err = result.errors.find((e) => e.path === 'encoding.x2');
+      expect(err).toBeDefined();
+      expect(err!.code).toBe('MISSING_FIELD');
+      expect(err!.message).toContain('encoding.x2');
+      expect(err!.suggestion).toContain('x2: { field:');
+    });
+
+    it('rejects a vertical range spec without y2, naming encoding.y2', () => {
+      const result = validateSpec({
+        mark: 'range',
+        data: [{ month: 'Jan', lo: 27, hi: 39 }],
+        encoding: {
+          x: { field: 'month', type: 'nominal' },
+          y: { field: 'lo', type: 'quantitative' },
+        },
+      });
+      expect(result.valid).toBe(false);
+      const err = result.errors.find((e) => e.path === 'encoding.y2');
+      expect(err).toBeDefined();
+      expect(err!.code).toBe('MISSING_FIELD');
+      expect(err!.message).toContain('encoding.y2');
+    });
+
+    it('rejects y2 on a horizontal range spec', () => {
+      const result = validateSpec({
+        mark: 'range',
+        data: rangeData,
+        encoding: {
+          y: { field: 'country', type: 'nominal' },
+          x: { field: 'y2000', type: 'quantitative' },
+          x2: { field: 'y2024' },
+          y2: { field: 'y2024' },
+        },
+      });
+      expect(result.valid).toBe(false);
+      const err = result.errors.find((e) => e.path === 'encoding.y2');
+      expect(err).toBeDefined();
+      expect(err!.code).toBe('INVALID_VALUE');
+    });
+
+    it('rejects a range spec without any categorical axis', () => {
+      const result = validateSpec({
+        mark: 'range',
+        data: rangeData,
+        encoding: {
+          y: { field: 'y2000', type: 'quantitative' },
+          x: { field: 'y2024', type: 'quantitative' },
+        },
+      });
+      expect(result.valid).toBe(false);
+      const err = result.errors.find((e) => e.code === 'ENCODING_MISMATCH');
+      expect(err).toBeDefined();
+      expect(err!.message).toContain('category axis');
+    });
+
+    it('rejects an unknown mark.style value', () => {
+      const result = validateSpec({
+        mark: { type: 'range', style: 'ribbon' },
+        data: rangeData,
+        encoding: {
+          y: { field: 'country', type: 'nominal' },
+          x: { field: 'y2000', type: 'quantitative' },
+          x2: { field: 'y2024' },
+        },
+      });
+      expect(result.valid).toBe(false);
+      const err = result.errors.find((e) => e.path === 'mark.style');
+      expect(err).toBeDefined();
+      expect(err!.code).toBe('INVALID_VALUE');
+      expect(err!.message).toContain('dumbbell, arrow, bar');
+    });
+  });
+
   describe('table specs', () => {
     it('accepts a valid table spec', () => {
       const result = validateSpec({
