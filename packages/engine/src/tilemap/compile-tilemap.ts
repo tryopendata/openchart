@@ -432,6 +432,7 @@ function compileCategorical(
         theme,
         isDarkMode: !!isDarkMode,
         category: hasData ? category : undefined,
+        showValueLabels: false,
       }),
     );
   }
@@ -526,6 +527,7 @@ interface TileMarkOptions {
   theme: ResolvedTheme;
   isDarkMode: boolean;
   category?: string | null;
+  showValueLabels?: boolean;
 }
 
 function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
@@ -544,6 +546,7 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
     theme,
     isDarkMode,
     category,
+    showValueLabels = true,
   } = opts;
   const tileCenterX = gridOffsetX + pos.x + tileSize / 2;
   const tileTopY = gridOffsetY + pos.y;
@@ -553,7 +556,7 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
 
   // A two-line layout (code over value) only fits once tiles are large enough;
   // below that we drop the value and center the code so nothing overflows.
-  const showValue = tileSize >= 24;
+  const showValue = showValueLabels && tileSize >= 24;
 
   // Scale the code font with the tile so a 2-char label always fits its box,
   // rather than snapping between two fixed sizes. A 2-char string is ~1.2x the

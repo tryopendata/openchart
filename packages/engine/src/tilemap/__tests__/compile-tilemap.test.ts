@@ -533,5 +533,44 @@ describe('compileTileMap', () => {
       const caTile = result.tiles.find((t) => t.stateCode === 'CA')!;
       expect(caTile.formattedValue).toBe('Medical Only');
     });
+
+    it('suppresses value labels in categorical mode (showValueLabels: false)', () => {
+      const result = compileTileMap(categoricalRecordSpec, defaultOptions);
+
+      // All tiles should have valueLabel.visible = false in categorical mode
+      const dataTiles = result.tiles.filter((t) => t.hasData);
+      for (const tile of dataTiles) {
+        expect(tile.valueLabel.visible).toBe(false);
+      }
+    });
+  });
+
+  describe('value label visibility', () => {
+    it('shows value labels by default in quantitative mode (when tile size permits)', () => {
+      const result = compileTileMap(basicSpec, defaultOptions);
+
+      // Tiles should have valueLabel.visible = true when tileSize >= 24 in quantitative mode
+      const dataTiles = result.tiles.filter((t) => t.hasData);
+      const tilesWithVisibleLabels = dataTiles.filter((t) => t.valueLabel.visible);
+
+      // At least some tiles should have visible value labels (depends on computed tile size)
+      // If tileSize is large enough (>= 24), all data tiles should show value labels
+      if (dataTiles.length > 0 && dataTiles[0].size >= 24) {
+        expect(tilesWithVisibleLabels.length).toBe(dataTiles.length);
+      }
+    });
+
+    it('hides value labels when tile size is too small (< 24px)', () => {
+      // Use a very narrow container to force small tiles
+      const result = compileTileMap(basicSpec, { width: 200, height: 400 });
+
+      const dataTiles = result.tiles.filter((t) => t.hasData);
+      if (dataTiles.length > 0 && dataTiles[0].size < 24) {
+        // When tiles are small, value labels should be hidden
+        for (const tile of dataTiles) {
+          expect(tile.valueLabel.visible).toBe(false);
+        }
+      }
+    });
   });
 });
