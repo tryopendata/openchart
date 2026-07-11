@@ -1,11 +1,12 @@
 /**
  * Charts / Scatter & Distribution.
  *
- * Twelve demos across four sections (Scatter, Distribution, Range & Change,
- * Interactive). Scatter marks map two quantitative axes and add size/color to
- * carry a third and fourth dimension; distribution marks (circle, lollipop,
- * dumbbell, tick) place observations along a category axis; range marks span
- * two values per category (dumbbell, arrow, floating bar). Each chart carries
+ * Fourteen demos across five sections (Scatter, Distribution, Density over
+ * time, Range & Change, Interactive). Scatter marks map two quantitative axes
+ * and add size/color to carry a third and fourth dimension; distribution marks
+ * (circle, lollipop, dumbbell, tick, beeswarm) place observations along a
+ * category axis; the calendar mark lays a daily value out as a year grid; range
+ * marks span two values per category (dumbbell, arrow, floating bar). Each carries
  * editorial chrome and pulls from the shared dataset pool. Structure copies
  * charts-bar-column.
  */
@@ -29,6 +30,44 @@ import {
 } from '../data';
 
 const ACCENT = '#0e7490';
+
+// ---------------------------------------------------------------------------
+// Beeswarm dataset: 160 synthetic counties, median household income by region.
+// A seeded PRNG (mulberry32) draws income around a per-region mean, then the
+// rows are frozen at module load so the dodge layout is deterministic across
+// runs. Kept inline rather than in the curated data pool because the shape is
+// procedural, not a transcribed real-world table.
+// ---------------------------------------------------------------------------
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const REGION_MEANS: Array<[string, number]> = [
+  ['Northeast', 82],
+  ['Midwest', 68],
+  ['South', 61],
+  ['West', 74],
+];
+
+const countyIncomes = (() => {
+  const rand = mulberry32(0xbee5);
+  const rows: Array<{ region: string; income: number }> = [];
+  for (const [region, mean] of REGION_MEANS) {
+    for (let i = 0; i < 40; i++) {
+      // Two draws averaged -> a soft bell around the regional mean.
+      const spread = (rand() + rand() - 1) * 34;
+      rows.push({ region, income: Math.round((mean + spread) * 10) / 10 });
+    }
+  }
+  return rows;
+})();
 
 // ---------------------------------------------------------------------------
 // 1. Basic scatter — two quantitative axes
@@ -581,6 +620,88 @@ function InteractiveScatter() {
 }
 
 // ---------------------------------------------------------------------------
+// 13. Beeswarm — dodge a whole distribution into a readable cloud
+// ---------------------------------------------------------------------------
+
+const beeswarmSpec: ChartSpec = {
+  animation: true,
+  mark: 'beeswarm',
+  data: countyIncomes,
+  encoding: {
+    x: {
+      field: 'income',
+      type: 'quantitative',
+      axis: { title: 'Median household income ($K)' },
+    },
+    y: { field: 'region', type: 'nominal' },
+    color: { field: 'region', type: 'nominal' },
+    tooltip: [
+      { field: 'region', type: 'nominal', title: 'Region' },
+      { field: 'income', type: 'quantitative', title: 'Income ($K)' },
+    ],
+  },
+  legend: { show: false },
+  chrome: {
+    title: 'The Northeast Earns More, the South Sits Lower',
+    subtitle:
+      'Median household income across 160 counties, grouped by census region. Each dot is one county.',
+    source: 'Illustrative data',
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Calendar dataset: one year of daily temperature anomalies. Same seeded-PRNG
+// + triangle-wave approach as the pinned fixture, kept inline because it is a
+// generated series, not a curated table. Frozen at module load.
+// ---------------------------------------------------------------------------
+
+const DAY_MS = 86400000;
+
+function anomalyDays(): Array<{ date: string; anomaly: number }> {
+  const rand = mulberry32(20240101);
+  const start = Date.UTC(2024, 0, 1);
+  const rows: Array<{ date: string; anomaly: number }> = [];
+  for (let i = 0; i < 366; i++) {
+    const phase = (i % 366) / 366;
+    const seasonal = 1 - Math.abs(phase * 4 - 2); // -1 at Jan 1, +1 mid-year
+    const value = 0.6 + seasonal * 1.2 + (rand() - 0.5) * 2.4;
+    rows.push({
+      date: new Date(start + i * DAY_MS).toISOString().slice(0, 10),
+      anomaly: Math.round(value * 10) / 10,
+    });
+  }
+  return rows;
+}
+
+const anomalyData = anomalyDays();
+
+// ---------------------------------------------------------------------------
+// 14. Calendar heatmap — a daily value laid out as a GitHub-style year grid
+// ---------------------------------------------------------------------------
+
+const calendarSpec: ChartSpec = {
+  mark: 'calendar',
+  data: anomalyData,
+  encoding: {
+    x: { field: 'date', type: 'temporal' },
+    color: {
+      field: 'anomaly',
+      type: 'quantitative',
+      scale: { scheme: 'redBlue' },
+      format: '+.1f',
+    },
+  },
+  chrome: {
+    title: 'A Year That Ran Warm From Spring to Fall',
+    subtitle:
+      'Daily temperature anomaly vs the 1991-2020 normal, degrees C. One cell per day, weeks run top to bottom.',
+    source: 'Illustrative data',
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -658,6 +779,27 @@ export const ScatterAndDistribution = () => (
         description="The tick mark drops one short line per observation, so a whole distribution's shape and spread read at once."
         spec={stripSpec}
         height={420}
+      />
+      <Demo
+        id="beeswarm"
+        title="Beeswarm"
+        description="When ticks overlap into a solid band, the beeswarm dodges every point off its neighbors so no observation hides another. The pile-up along each lane becomes the distribution's shape."
+        spec={beeswarmSpec}
+        height={480}
+      />
+    </Section>
+
+    <Section
+      id="density"
+      title="Density over time"
+      lede="A calendar heatmap trades axes for a date grid: one cell per day, colored by that day's value. It reads seasonality, streaks, and gaps at a glance the way a line chart can't."
+    >
+      <Demo
+        id="calendar-heatmap"
+        title="Calendar heatmap"
+        description="The calendar mark lays a daily series out as a GitHub-style year grid. A diverging color scale splits warm days from cool ones; a sequential scheme suits counts that only run one direction."
+        spec={calendarSpec}
+        height={340}
       />
     </Section>
 

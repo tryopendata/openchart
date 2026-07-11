@@ -17,6 +17,7 @@ export const page: PageEntry = {
     { id: 'single-line', title: 'Single line' },
     { id: 'multi-series-labels', title: 'Multi-series with endpoint labels' },
     { id: 'five-series-legend', title: 'Five-plus series with legend' },
+    { id: 'series-search', title: 'Series search (find your line)' },
     { id: 'area', title: 'Area (single series)' },
     { id: 'stacked-area', title: 'Stacked area' },
     { id: 'interpolation', title: 'Step and interpolation modes' },
