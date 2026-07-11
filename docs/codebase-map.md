@@ -104,6 +104,8 @@
 | "Did you mean" repair hints | levenshtein `editDistance`/`nearestColumn`/`didYouMean` in `packages/engine/src/compiler/validate.ts` (wired into DATA_FIELD_MISSING suggestions). Test: `validate-did-you-mean.test.ts`. |
 | LLM spec-generation eval (manual, per-release) | `scripts/llm-eval/` (`fixtures.json`, `run.mjs`, `README.md`). Hits the Anthropic API; not in CI; `@anthropic-ai/sdk` is not a monorepo dep (dynamic import). |
 | Generating-specs guide | `docs/generating-specs.md` (schema usage, tool-use, strict-mode transform, validate-repair loop). |
+| v8 migration guide | `docs/migrating-v8.md` (breaking changes, before/after specs, jq codemods). Keep in sync with the deprecation warnings. |
+| VL-idiom sugar + deprecation warnings | `packages/engine/src/compile/spec-sugar.ts` (`expandSpecSugar`, `emitSpecWarnings`) — dead channels, stack default, theta, `$schema`. The `'rule'` annotation deprecation warning lives in `compiler/normalize.ts` (`normalizeAnnotations`). Tests: `engine/src/__tests__/spec-sugar.test.ts`. |
 
 ## Package responsibilities (one-liner each)
 
