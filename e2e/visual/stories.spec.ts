@@ -214,6 +214,32 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--calendar-compact',
     note: '360px scroll host with a 520px min-width inner container; 7px cell floor engaged.',
   },
+  // --- Parliament (hemicycle) + election set (plan 22) ---
+  {
+    name: 'parliament-us-house',
+    slug: 'testing--fixtures--parliament-us-house',
+    note: '435-seat two-party hemicycle with the 218-seat majority line and label.',
+  },
+  {
+    name: 'parliament-eu-multi-party',
+    slug: 'testing--fixtures--parliament-eu-multi-party',
+    note: '8-party coalition hemicycle, spectrum-ordered blocks, per-party legend.',
+  },
+  {
+    name: 'parliament-compact',
+    slug: 'testing--fixtures--parliament-compact',
+    note: 'US House hemicycle in a 360px mobile container; auto seat radius shrinks.',
+  },
+  {
+    name: 'election-donut',
+    slug: 'testing--fixtures--election-donut',
+    note: 'Datawrapper-style half-donut via arc startAngle/endAngle (-90 to +90 deg).',
+  },
+  {
+    name: 'election-results-bar',
+    slug: 'testing--fixtures--results-bar',
+    note: 'Two-party horizontal stacked bar with a dashed 218-seat majority refline.',
+  },
 ];
 
 for (const story of stories) {

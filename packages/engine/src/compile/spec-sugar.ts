@@ -321,11 +321,11 @@ function expandChannelSugar(
     }
   }
 
-  // theta: VL's arc value channel, shared by waffle marks (the same
-  // part-to-whole value). Alias for y when y is absent; ignored (with a
+  // theta: VL's arc value channel, shared by waffle and parliament marks (the
+  // same part-to-whole value). Alias for y when y is absent; ignored (with a
   // warning) when y is present. Canonical in v8.
   if (markType && updated.theta && typeof updated.theta === 'object') {
-    const thetaMark = markType === 'arc' || markType === 'waffle';
+    const thetaMark = markType === 'arc' || markType === 'waffle' || markType === 'parliament';
     if (thetaMark && !updated.y) {
       updated.y = updated.theta;
     } else if (markType === 'arc') {
@@ -336,13 +336,32 @@ function expandChannelSugar(
       warnings.push(
         '[openchart] encoding.theta is ignored when encoding.y is present on a waffle mark; encoding.y wins.',
       );
+    } else if (markType === 'parliament') {
+      warnings.push(
+        '[openchart] encoding.theta is ignored when encoding.y is present on a parliament mark; encoding.y wins.',
+      );
     } else {
       warnings.push(
-        '[openchart] encoding.theta is only meaningful on arc and waffle marks and was ignored.',
+        '[openchart] encoding.theta is only meaningful on arc, waffle, and parliament marks and was ignored.',
       );
     }
     delete updated.theta;
     changed = true;
+  }
+
+  // Parliament: party colors carry real-world meaning (red/blue for US parties)
+  // and should never be left to the auto-cycling categorical palette. Nudge the
+  // author toward an explicit color scale range when none is set. Warning only,
+  // so the chart still renders (with palette colors) if they ignore it.
+  if (markType === 'parliament') {
+    const parliamentColor = updated.color as Record<string, unknown> | undefined;
+    const scale = parliamentColor?.scale as Record<string, unknown> | undefined;
+    const hasExplicitColors = Array.isArray(scale?.range) && (scale.range as unknown[]).length > 0;
+    if (parliamentColor && 'field' in parliamentColor && !hasExplicitColors) {
+      warnings.push(
+        '[openchart] parliament chart is using auto-palette colors. Party colors carry meaning; set them explicitly via encoding.color.scale.range (in party order), e.g. color: { field: "party", scale: { range: ["#1b7fa3", "#c44e52"] } }.',
+      );
+    }
   }
 
   // Dead channels: warn once and strip (behavior-identical; the engine ignores them)

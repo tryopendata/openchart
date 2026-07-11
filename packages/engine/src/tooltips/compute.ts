@@ -445,6 +445,74 @@ function computeWaffleTooltips(
 }
 
 // ---------------------------------------------------------------------------
+// Parliament mark tooltips (one shared tooltip per party)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tooltip descriptors for parliament (hemicycle) marks.
+ *
+ * Every seat dot of a party shares one TooltipContent object, so hovering any
+ * of a party's seats shows the same tooltip: the seat count and its share of
+ * the chamber. Keys match the renderer's `point-${index}` mark ids. The
+ * majority line/label (rule/textMark) get no descriptor. An explicit
+ * `encoding.tooltip` overrides the default field set.
+ */
+function computeParliamentTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const valueCh = encoding.y ?? encoding.x;
+  if (!colorEnc || !valueCh) return descriptors;
+
+  // Seat counts per party come straight from the computed seat marks.
+  const seatCounts = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.type !== 'point') continue;
+    const party = String((mark.data as DataRow)[colorEnc.field] ?? '');
+    seatCounts.set(party, (seatCounts.get(party) ?? 0) + 1);
+  }
+  const totalSeats = [...seatCounts.values()].reduce((s, c) => s + c, 0);
+
+  const contentByParty = new Map<string, TooltipContent>();
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'point') continue;
+
+    const row = mark.data as DataRow;
+    const party = String(row[colorEnc.field] ?? '');
+    let content = contentByParty.get(party);
+    if (!content) {
+      if (encoding.tooltip) {
+        const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+        content = { title: party, fields: buildExplicitTooltipFields(row, channels) };
+      } else {
+        const count = seatCounts.get(party) ?? 0;
+        const share = totalSeats > 0 ? `${((count / totalSeats) * 100).toFixed(1)}%` : '';
+        content = {
+          title: party,
+          fields: [
+            {
+              label: resolveLabel(valueCh),
+              value: formatValue(row[valueCh.field], valueCh.type, resolveFormat(valueCh)),
+              color: getRepresentativeColor(mark.fill),
+            },
+            { label: 'Share', value: share },
+          ],
+        };
+      }
+      contentByParty.set(party, content);
+    }
+    descriptors.set(`point-${i}`, content);
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -472,6 +540,12 @@ export function computeTooltipDescriptors(
   // Waffle cells share one tooltip per category (the cells act as one target).
   if (spec.markType === 'waffle') {
     return computeWaffleTooltips(spec, marks);
+  }
+
+  // Parliament seats share one tooltip per party (all of a party's seats act
+  // as one target).
+  if (spec.markType === 'parliament') {
+    return computeParliamentTooltips(spec, marks);
   }
 
   const encoding = spec.encoding as Encoding;

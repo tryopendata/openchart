@@ -47,6 +47,23 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
     parts.push(`dividing ${units} units`);
   }
 
+  // Parliament: name the total seat count and the majority threshold, the two
+  // numbers a reader most wants. Per-party seat counts live on the seat marks'
+  // aria labels; this carries the overall framing.
+  if (markType === 'parliament') {
+    const valueField = spec.encoding.theta?.field ?? spec.encoding.y?.field;
+    if (valueField) {
+      const totalSeats = data.reduce((sum, d) => {
+        const v = Number(d[valueField]);
+        return sum + (Number.isFinite(v) && v > 0 ? v : 0);
+      }, 0);
+      if (totalSeats > 0) {
+        const majority = Math.floor(totalSeats / 2) + 1;
+        parts.push(`with ${totalSeats} seats, ${majority} needed for a majority`);
+      }
+    }
+  }
+
   // Beeswarm: name the distribution fields (value axis + optional lane).
   // Skips the generic x-axis description below, which would either say
   // nothing (quantitative value axis) or repeat the lane count.

@@ -180,6 +180,7 @@ export type {
   MarkType,
   Metric,
   NodeOverride,
+  ParliamentEncoding,
   PointEncoding,
   RadialGradient,
   RangeAnnotation,

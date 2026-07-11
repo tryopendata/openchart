@@ -35,6 +35,7 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'range': dumbbell / arrow / range-bar plots spanning two values per category
  * - 'waffle': unit grids ("x of 100") for part-to-whole counts
  * - 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)
+ * - 'parliament': hemicycle seat-dot chart for election/legislature results
  */
 export type MarkType =
   | 'bar'
@@ -51,7 +52,8 @@ export type MarkType =
   | 'beeswarm'
   | 'range'
   | 'waffle'
-  | 'calendar';
+  | 'calendar'
+  | 'parliament';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -181,6 +183,19 @@ export interface MarkDef {
   innerRadius?: number;
   /** Outer radius for arc marks. */
   outerRadius?: number;
+  /**
+   * Start angle in radians for arc marks. Defaults to 0 (full pie/donut).
+   * Combined with `endAngle`, restricts the pie/donut to a partial sweep,
+   * e.g. `startAngle: -Math.PI / 2, endAngle: Math.PI / 2` for a half-donut
+   * (election-style results donut). Angles follow d3's convention: 0 is
+   * straight up, increasing clockwise. Only meaningful when `type` is `'arc'`.
+   */
+  startAngle?: number;
+  /**
+   * End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut).
+   * See `startAngle`. Only meaningful when `type` is `'arc'`.
+   */
+  endAngle?: number;
   /** Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness. */
   cornerRadius?: number | 'pill';
   /** Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band. */
@@ -255,6 +270,25 @@ export interface MarkDef {
    * `type` is `'calendar'`. Defaults to 1.
    */
   cellRadius?: number;
+  /**
+   * Seat layout shape for parliament marks. Only meaningful when `type` is
+   * `'parliament'`. `'hemicycle'` (default, and currently the only shape)
+   * packs seats into concentric semicircular arcs, party-grouped left to
+   * right.
+   */
+  shape?: 'hemicycle';
+  /**
+   * Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes
+   * dots to fill the available hemicycle rings for the given seat count.
+   * Only meaningful when `type` is `'parliament'`.
+   */
+  seatRadius?: number | 'auto';
+  /**
+   * Whether to draw the majority-threshold line and "N to win" label on
+   * parliament marks. Defaults to true. Only meaningful when `type` is
+   * `'parliament'`.
+   */
+  majorityLine?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1525,6 +1559,16 @@ export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encodin
 }
 
 /**
+ * Encoding for parliament marks (hemicycle seat-dot charts).
+ * - `color`: required (nominal/ordinal, the party)
+ * - `theta`: the quantitative seat count, the same part-to-whole value
+ *   channel arc/waffle marks use. Alias for `y`; provide one of the two.
+ */
+export interface ParliamentEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  color: EncodingChannel<TData> | ConditionalValueDef<TData>;
+}
+
+/**
  * Encoding for calendar marks (GitHub-style calendar heatmaps).
  * - `x`: required (temporal, daily dates, one row per day)
  * - `color`: required (quantitative, the per-day value)
@@ -1838,6 +1882,10 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'calendar' | (MarkDef & { type: 'calendar' });
       encoding: CalendarEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'parliament' | (MarkDef & { type: 'parliament' });
+      encoding: ParliamentEncoding<TData>;
     });
 
 /**
@@ -2217,6 +2265,13 @@ export interface BarListEncoding {
  * - SankeySpec: has `type: 'sankey'`
  * - TileMapSpec: has `type: 'tilemap'`
  * - BarListSpec: has `type: 'barlist'`
+ *
+ * Election parliament (hemicycle) charts are `ChartSpec` with `mark:
+ * 'parliament'`, not a separate top-level type: seat data (party + seats)
+ * maps naturally onto encoding.color/y like arc and waffle, and riding the
+ * existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode
+ * for free instead of a second bespoke compile path (see
+ * `packages/engine/src/charts/parliament/`).
  */
 export type VizSpec =
   | ChartSpec
@@ -2541,6 +2596,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'range',
   'waffle',
   'calendar',
+  'parliament',
 ]);
 
 /**
@@ -2548,7 +2604,12 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
  * (no axis or gridline computation; margins shrink to padding).
  */
 export function isAxislessMark(markType: MarkType): boolean {
-  return markType === 'arc' || markType === 'waffle' || markType === 'calendar';
+  return (
+    markType === 'arc' ||
+    markType === 'waffle' ||
+    markType === 'calendar' ||
+    markType === 'parliament'
+  );
 }
 
 /** @deprecated Use MARK_TYPES instead. */
@@ -2647,4 +2708,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   range: 'Range plot',
   waffle: 'Waffle chart',
   calendar: 'Calendar heatmap',
+  parliament: 'Parliament chart',
 };
