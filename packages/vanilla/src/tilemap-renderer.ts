@@ -11,7 +11,7 @@ import type {
   TileMapLayout,
   TileMapTileMark,
 } from '@opendata-ai/openchart-core';
-import { textAscent } from '@opendata-ai/openchart-core';
+import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { nextSvgId } from './svg-ids';
 
@@ -39,103 +39,48 @@ function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void 
 }
 
 // ---------------------------------------------------------------------------
-// Chrome rendering
+// Chrome rendering (delegates to the shared helper for text wrapping)
 // ---------------------------------------------------------------------------
 
-// Chrome y positions are top-edge coordinates; convert to the alphabetic
-// baseline via textAscent() (WebKit mishandles dominant-baseline:hanging).
 function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-chrome');
 
-  const { chrome } = layout;
+  const { chrome, measureText } = layout;
   const bottomOffset = layout.area.y + layout.area.height;
 
   if (chrome.title) {
-    const text = createSVGElement('text');
-    setAttrs(text, {
-      x: chrome.title.x,
-      y: chrome.title.y + textAscent(chrome.title.style.fontSize),
-    });
-    text.setAttribute('class', 'oc-title');
-    text.setAttribute('font-family', chrome.title.style.fontFamily);
-    text.setAttribute('font-size', String(chrome.title.style.fontSize));
-    text.setAttribute('font-weight', String(chrome.title.style.fontWeight));
-    (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', chrome.title.style.fill);
-    text.textContent = chrome.title.text;
-    g.appendChild(text);
+    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
   }
-
   if (chrome.subtitle) {
-    const text = createSVGElement('text');
-    setAttrs(text, {
-      x: chrome.subtitle.x,
-      y: chrome.subtitle.y + textAscent(chrome.subtitle.style.fontSize),
-    });
-    text.setAttribute('class', 'oc-subtitle');
-    text.setAttribute('font-family', chrome.subtitle.style.fontFamily);
-    text.setAttribute('font-size', String(chrome.subtitle.style.fontSize));
-    text.setAttribute('font-weight', String(chrome.subtitle.style.fontWeight));
-    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
-      'fill',
-      chrome.subtitle.style.fill,
-    );
-    text.textContent = chrome.subtitle.text;
-    g.appendChild(text);
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
   }
-
   if (chrome.source) {
-    const text = createSVGElement('text');
-    setAttrs(text, {
-      x: chrome.source.x,
-      y: bottomOffset + chrome.source.y + textAscent(chrome.source.style.fontSize),
-    });
-    text.setAttribute('class', 'oc-source');
-    text.setAttribute('font-family', chrome.source.style.fontFamily);
-    text.setAttribute('font-size', String(chrome.source.style.fontSize));
-    text.setAttribute('font-weight', String(chrome.source.style.fontWeight));
-    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
-      'fill',
-      chrome.source.style.fill,
+    renderChromeElement(
+      g,
+      { ...chrome.source, y: bottomOffset + chrome.source.y },
+      'oc-source',
+      'source',
+      measureText,
     );
-    text.textContent = chrome.source.text;
-    g.appendChild(text);
   }
-
   if (chrome.byline) {
-    const text = createSVGElement('text');
-    setAttrs(text, {
-      x: chrome.byline.x,
-      y: bottomOffset + chrome.byline.y + textAscent(chrome.byline.style.fontSize),
-    });
-    text.setAttribute('class', 'oc-byline');
-    text.setAttribute('font-family', chrome.byline.style.fontFamily);
-    text.setAttribute('font-size', String(chrome.byline.style.fontSize));
-    text.setAttribute('font-weight', String(chrome.byline.style.fontWeight));
-    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
-      'fill',
-      chrome.byline.style.fill,
+    renderChromeElement(
+      g,
+      { ...chrome.byline, y: bottomOffset + chrome.byline.y },
+      'oc-byline',
+      'byline',
+      measureText,
     );
-    text.textContent = chrome.byline.text;
-    g.appendChild(text);
   }
-
   if (chrome.footer) {
-    const text = createSVGElement('text');
-    setAttrs(text, {
-      x: chrome.footer.x,
-      y: bottomOffset + chrome.footer.y + textAscent(chrome.footer.style.fontSize),
-    });
-    text.setAttribute('class', 'oc-footer');
-    text.setAttribute('font-family', chrome.footer.style.fontFamily);
-    text.setAttribute('font-size', String(chrome.footer.style.fontSize));
-    text.setAttribute('font-weight', String(chrome.footer.style.fontWeight));
-    (text as SVGElement & ElementCSSInlineStyle).style.setProperty(
-      'fill',
-      chrome.footer.style.fill,
+    renderChromeElement(
+      g,
+      { ...chrome.footer, y: bottomOffset + chrome.footer.y },
+      'oc-footer',
+      'footer',
+      measureText,
     );
-    text.textContent = chrome.footer.text;
-    g.appendChild(text);
   }
 
   parent.appendChild(g);
