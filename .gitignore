@@ -32,3 +32,6 @@ e2e/visual/__screenshots__/**/*-diff.png
 
 # Static render example output
 examples/output.svg
+
+# Scratch Ladle build output (e.g. `ladle build --outDir tmp/...` during verification)
+examples/tmp/
