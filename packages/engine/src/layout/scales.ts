@@ -662,9 +662,12 @@ function buildPositionalScale(
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
     case 'ordinal':
-      // Bar charts use band scales for their categorical axis (both orientations)
+      // Bar charts use band scales for their categorical axis (both orientations).
+      // Beeswarm lanes are band scales too: each category gets a band whose
+      // center anchors one swarm, on whichever axis carries the nominal channel.
       if (
         chartType === 'bar' ||
+        chartType === 'beeswarm' ||
         ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
       ) {
         return buildBandScale(channel, data, rangeStart, rangeEnd);
@@ -695,8 +698,10 @@ export function computeScales(
   const result: ResolvedScales = {};
   const encoding = spec.encoding as Encoding;
 
-  // Scatter/bubble charts should NOT include zero by default (tight domain fits data range)
-  if (spec.markType === 'point') {
+  // Scatter/bubble charts should NOT include zero by default (tight domain fits
+  // data range). Beeswarms follow suit: they plot raw observations whose spread
+  // is the story, and only the quantitative value axis matches the check below.
+  if (spec.markType === 'point' || spec.markType === 'beeswarm') {
     if (encoding.x?.type === 'quantitative' && encoding.x.scale?.zero === undefined) {
       if (!encoding.x.scale) {
         (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };

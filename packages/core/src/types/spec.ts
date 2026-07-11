@@ -44,7 +44,8 @@ export type MarkType =
   | 'rule'
   | 'tick'
   | 'rect'
-  | 'lollipop';
+  | 'lollipop'
+  | 'beeswarm';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -1400,6 +1401,19 @@ export interface LollipopEncoding<TData extends DataRow = DataRow> extends Encod
 }
 
 /**
+ * Encoding for beeswarm marks (dodged distribution dots).
+ * - Exactly one positional channel is quantitative: the value axis
+ *   (x = horizontal swarm, y = vertical swarm).
+ * - The other positional channel is optional (nominal/ordinal): grouped
+ *   swarms, one lane per category. The cross axis has no scale; the dodge
+ *   layout computes pixel offsets around each lane center.
+ */
+export interface BeeswarmEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x?: EncodingChannel<TData>;
+  y?: EncodingChannel<TData>;
+}
+
+/**
  * Encoding for text marks (data-positioned labels).
  * - `text`: required (the field to render as text)
  * - `x`, `y`: optional positioning
@@ -1623,6 +1637,10 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'lollipop' | (MarkDef & { type: 'lollipop' });
       encoding: LollipopEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'beeswarm' | (MarkDef & { type: 'beeswarm' });
+      encoding: BeeswarmEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
       mark: 'text' | (MarkDef & { type: 'text' });
@@ -2338,6 +2356,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'tick',
   'rect',
   'lollipop',
+  'beeswarm',
 ]);
 
 /** @deprecated Use MARK_TYPES instead. */
@@ -2432,4 +2451,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   tick: 'Tick plot',
   rect: 'Heatmap',
   lollipop: 'Lollipop chart',
+  beeswarm: 'Beeswarm chart',
 };

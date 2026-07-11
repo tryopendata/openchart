@@ -127,6 +127,7 @@ function swatchShapeForType(markType: string): LegendEntry['shape'] {
     case 'point':
     case 'circle':
     case 'lollipop':
+    case 'beeswarm':
       return 'circle';
     default:
       return 'square';
@@ -294,10 +295,11 @@ export function computeLegendContent(
     entries = [];
   }
 
-  // Bar/column/lollipop redundancy rule: when color.field matches the category
-  // axis field, the legend just repeats the axis labels. Hide it unless the
-  // user explicitly configured the legend.
-  const hasRedundantLegend = spec.markType === 'bar' || spec.markType === 'lollipop';
+  // Bar/column/lollipop/beeswarm redundancy rule: when color.field matches the
+  // category axis field, the legend just repeats the axis labels. Hide it
+  // unless the user explicitly configured the legend.
+  const hasRedundantLegend =
+    spec.markType === 'bar' || spec.markType === 'lollipop' || spec.markType === 'beeswarm';
   if (hasRedundantLegend && entries.length > 0 && !spec.userExplicit?.legend) {
     const colorEnc = spec.encoding.color;
     const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;

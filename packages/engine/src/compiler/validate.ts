@@ -140,6 +140,49 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
+  // Beeswarm axis combination: the channel rules mark both axes optional, so
+  // enforce the shape here. Exactly one positional channel is the quantitative
+  // value axis; the other, when present, is the nominal/ordinal lane channel.
+  // Only declared types are checked; omitted types are inferred later.
+  if (markType === 'beeswarm') {
+    const xChannel = encoding.x as Record<string, unknown> | undefined;
+    const yChannel = encoding.y as Record<string, unknown> | undefined;
+    const xType = xChannel?.type as string | undefined;
+    const yType = yChannel?.type as string | undefined;
+    if (!xChannel && !yChannel) {
+      errors.push({
+        message:
+          'Spec error: beeswarm chart requires a quantitative encoding.x or encoding.y (the value axis)',
+        path: 'encoding',
+        code: 'MISSING_FIELD',
+        suggestion: `Add the value axis, e.g. x: { field: "${[...dataColumns][0] ?? 'myField'}", type: "quantitative" }. Optionally add a nominal channel on the other axis for grouped swarms.`,
+      });
+    } else if (xType === 'quantitative' && yType === 'quantitative') {
+      errors.push({
+        message:
+          'Spec error: beeswarm chart accepts only one quantitative axis (the value axis), but both encoding.x and encoding.y are quantitative',
+        path: 'encoding',
+        code: 'ENCODING_MISMATCH',
+        suggestion:
+          'Keep the value axis quantitative and change the other channel to nominal/ordinal (grouped swarm lanes), or remove it for a single swarm. For two quantitative axes use mark: "point".',
+      });
+    } else if (
+      xType !== 'quantitative' &&
+      yType !== 'quantitative' &&
+      (!xChannel || !!xType) &&
+      (!yChannel || !!yType)
+    ) {
+      errors.push({
+        message:
+          'Spec error: beeswarm chart requires one quantitative axis (the value axis), but neither encoding.x nor encoding.y is quantitative',
+        path: 'encoding',
+        code: 'ENCODING_MISMATCH',
+        suggestion:
+          'Set the value axis to type: "quantitative" (x for a horizontal swarm, y for a vertical one).',
+      });
+    }
+  }
+
   // Near-miss: VL's string expression form of calculate. A restricted string
   // grammar is deliberately not supported (decision: structured form only);
   // point authors at the structured equivalent instead.

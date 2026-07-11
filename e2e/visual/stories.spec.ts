@@ -86,6 +86,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rotated-with-source',
     note: 'Column chart with long category labels that auto-rotate, plus source chrome below.',
   },
+  // --- Beeswarm ---
+  {
+    name: 'beeswarm-basic',
+    slug: 'testing--fixtures--beeswarm-basic',
+    note: 'Single-lane horizontal swarm, ~300 dodged dots, value axis only.',
+  },
+  {
+    name: 'beeswarm-grouped',
+    slug: 'testing--fixtures--beeswarm-grouped',
+    note: 'Four region lanes via nominal y channel with band-scale lane labels.',
+  },
+  {
+    name: 'beeswarm-sized',
+    slug: 'testing--fixtures--beeswarm-sized',
+    note: 'Size encoding drives per-dot radii; dodge keeps sized dots collision-free.',
+  },
 ];
 
 for (const story of stories) {

@@ -261,6 +261,13 @@ function normalizeHighlight(encoding: Encoding, data: DataRow[], warnings: strin
 // Spec-level normalization
 // ---------------------------------------------------------------------------
 
+/**
+ * Beeswarm point budget. Past this count the dodge layout still resolves
+ * every collision, but the swarm piles into a solid band that reads no
+ * better than an overplotted strip, and layout cost keeps growing.
+ */
+const BEESWARM_POINT_BUDGET = 2000;
+
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
   const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
   const markType = resolveMarkType(spec.mark);
@@ -276,6 +283,12 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   ) {
     warnings.push(
       `[openchart] display: 'sparkline' works best with mark: 'line' | 'area' | 'bar' | 'point'. Got mark: '${markType}' — rendering may degrade.`,
+    );
+  }
+
+  if (markType === 'beeswarm' && spec.data.length > BEESWARM_POINT_BUDGET) {
+    warnings.push(
+      `[openchart] beeswarm received ${spec.data.length} data points, past the ~${BEESWARM_POINT_BUDGET}-point budget where individual dots stop being readable and the swarm collapses into a solid band. Sample the data down, or summarize the distribution with mark: 'tick' (strip plot) or a binned histogram (bin transform + mark: 'bar').`,
     );
   }
 
