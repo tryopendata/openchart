@@ -26,7 +26,7 @@ import {
   ENDPOINT_VALUE_FONT_WEIGHT,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
 } from './constants';
-import { formatEndpointValue } from './format';
+import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from './format';
 
 /**
  * Predict the pixel width the endpoint-labels column will need, including
@@ -71,24 +71,14 @@ export function predictEndpointLabelsWidth(
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;
   const wrapWidth = config?.width ?? ENDPOINT_WRAP_WIDTH_DEFAULT;
 
-  // Wrap each series name and find the widest wrapped line.
-  let maxLabelWidth = 0;
-  for (const name of seriesNames) {
-    const lines = wrapText(name, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT, wrapWidth);
-    for (const line of lines) {
-      const w = estimateTextWidth(line, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT);
-      if (w > maxLabelWidth) maxLabelWidth = w;
-    }
-  }
-
-  // Estimate value width from the spec's data + format. We don't know which row
-  // is "last" without computing scales/marks, so we sample the largest absolute
-  // value to bound the formatted width.
+  // Estimate the formatted value from the spec's data + format. We don't know
+  // which row is "last" without computing scales/marks, so we sample the
+  // largest absolute value to bound the formatted width.
   const yField = config?.valueField ?? spec.encoding.y?.field;
   const yFormat =
     config?.format ??
     ((spec.encoding.y?.axis as Record<string, unknown> | undefined)?.format as string | undefined);
-  let valueWidth = 0;
+  let sample = '';
   if (yField) {
     let maxAbs = 0;
     for (const row of spec.data) {
@@ -101,18 +91,45 @@ export function predictEndpointLabelsWidth(
     // expected unformatted value width (compute.ts uses toFixed(2) here,
     // which is roughly the same character count as "1.5K"-style abbreviations
     // for the upper end of each band).
-    let sample: string;
     if (yFormat) {
       sample = formatEndpointValue(maxAbs, yFormat);
     } else if (maxAbs >= 1_000_000_000) sample = '1.5B';
     else if (maxAbs >= 1_000_000) sample = '1.5M';
     else if (maxAbs >= 1_000) sample = '1.5K';
     else sample = String(Math.round(maxAbs * 100) / 100);
-    valueWidth = estimateTextWidth(sample, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT);
   }
 
-  // Column = swatch + gap + max(label width, value width) + small trailing pad.
-  const textColumn = Math.max(maxLabelWidth, valueWidth);
+  // Text-column width for one side, using the same composition + wrapping
+  // math as compute.ts. Default (no content mode): widest wrapped series name
+  // vs. the sampled value on its own second line. Content mode: the composed
+  // single-line text in the label font.
+  const sideTextWidth = (side: 'leading' | 'trailing'): number => {
+    const content = resolveEndpointContent(config?.content, side);
+    let maxWidth = 0;
+    for (const name of seriesNames) {
+      const text = content ? composeEndpointText(content, name, sample) : name;
+      const lines = wrapText(text, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT, wrapWidth);
+      for (const line of lines) {
+        const w = estimateTextWidth(line, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT);
+        if (w > maxWidth) maxWidth = w;
+      }
+    }
+    if (!content && sample) {
+      const w = estimateTextWidth(sample, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT);
+      if (w > maxWidth) maxWidth = w;
+    }
+    return maxWidth;
+  };
+
+  // Both columns share one reserved width (dimensions.ts mirrors the right
+  // reservation onto the left in `ends: 'both'` mode), so take the max of
+  // the sides in play.
+  let textColumn = sideTextWidth('trailing');
+  if (config?.ends === 'both') {
+    textColumn = Math.max(textColumn, sideTextWidth('leading'));
+  }
+
+  // Column = swatch + gap + text column + small trailing pad.
   return ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + textColumn + 4;
 }
 

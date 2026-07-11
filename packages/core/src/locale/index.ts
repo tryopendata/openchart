@@ -9,4 +9,5 @@ export {
   buildTemporalFormatter,
   formatDate,
   formatNumber,
+  formatOrdinal,
 } from './format';

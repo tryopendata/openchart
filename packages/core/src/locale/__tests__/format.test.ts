@@ -5,6 +5,7 @@ import {
   buildTemporalFormatter,
   formatDate,
   formatNumber,
+  formatOrdinal,
 } from '../format';
 
 describe('formatNumber', () => {
@@ -116,6 +117,50 @@ describe('buildD3Formatter', () => {
     expect(fmt).not.toBeNull();
     expect(fmt!(1_500_000_000)).toBe('$1.5B');
     expect(fmt!(2_000_000_000)).toBe('$2B');
+  });
+
+  it("'ordinal' returns the rank-axis ordinal formatter", () => {
+    const fmt = buildD3Formatter('ordinal');
+    expect(fmt).not.toBeNull();
+    expect(fmt!(1)).toBe('1st');
+    expect(fmt!(6)).toBe('6th');
+  });
+});
+
+describe('formatOrdinal', () => {
+  it('formats 1, 2, 3 with st/nd/rd suffixes', () => {
+    expect(formatOrdinal(1)).toBe('1st');
+    expect(formatOrdinal(2)).toBe('2nd');
+    expect(formatOrdinal(3)).toBe('3rd');
+  });
+
+  it('formats 4 through 10 with th', () => {
+    expect(formatOrdinal(4)).toBe('4th');
+    expect(formatOrdinal(10)).toBe('10th');
+  });
+
+  it('uses th for the 11-13 teens, including 111-113', () => {
+    expect(formatOrdinal(11)).toBe('11th');
+    expect(formatOrdinal(12)).toBe('12th');
+    expect(formatOrdinal(13)).toBe('13th');
+    expect(formatOrdinal(111)).toBe('111th');
+    expect(formatOrdinal(112)).toBe('112th');
+  });
+
+  it('applies st/nd/rd past the teens', () => {
+    expect(formatOrdinal(21)).toBe('21st');
+    expect(formatOrdinal(22)).toBe('22nd');
+    expect(formatOrdinal(23)).toBe('23rd');
+    expect(formatOrdinal(101)).toBe('101st');
+  });
+
+  it('rounds non-integers to the nearest rank', () => {
+    expect(formatOrdinal(2.4)).toBe('2nd');
+  });
+
+  it('falls back to String() for non-finite values', () => {
+    expect(formatOrdinal(Number.NaN)).toBe('NaN');
+    expect(formatOrdinal(Number.POSITIVE_INFINITY)).toBe('Infinity');
   });
 });
 

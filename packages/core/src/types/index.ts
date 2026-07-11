@@ -147,6 +147,7 @@ export type {
   Display,
   Encoding,
   EncodingChannel,
+  EndpointLabelContent,
   EndpointLabelsConfig,
   FacetChannel,
   FieldPredicate,

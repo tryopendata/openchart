@@ -1174,6 +1174,13 @@ export interface SeriesSearchConfig {
 }
 
 /**
+ * Content composition for an endpoint-label entry: the series name, the
+ * formatted value, or both joined on one line. See
+ * {@link EndpointLabelsConfig.content}.
+ */
+export type EndpointLabelContent = 'label' | 'value' | 'label value';
+
+/**
  * Configuration for the endpoint labels column rendered at the chart's right edge
  * for multi-series line/area charts. Each entry pairs the series name with its
  * last formatted value, optionally anchored to the line by an open-circle marker.
@@ -1210,6 +1217,20 @@ export interface EndpointLabelsConfig {
    * - `'both'`: labels on both left (leading) and right (trailing) edges.
    */
   ends?: 'end' | 'both';
+  /**
+   * What each entry renders.
+   * - `'label'`: series name only.
+   * - `'value'`: formatted value only.
+   * - `'label value'`: series name and value joined on one line.
+   *
+   * When omitted, entries render the series name with the formatted value on
+   * a second line (the classic endpoint column). Pass an object to set the
+   * leading and trailing columns independently, e.g. the classic slope-chart
+   * look is `{ leading: 'label value', trailing: 'value' }`.
+   */
+  content?:
+    | EndpointLabelContent
+    | { leading?: EndpointLabelContent; trailing?: EndpointLabelContent };
   /** Field to read the displayed value from. Defaults to `encoding.y.field`. */
   valueField?: string;
   /** d3-format string for the value. Defaults to `encoding.y.axis.format`. */

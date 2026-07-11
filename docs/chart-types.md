@@ -476,6 +476,7 @@ Publication-quality charts with responsive variants at different breakpoints:
 
 ## Related docs
 
+- [Ranking and change](ranking-and-change.md) for slope, bump, and range chart recipes
 - [Spec reference](spec-reference.md) for field-by-field type details and encoding rules
 - [Tables](tables.md) for data tables with heatmaps, sparklines, and more
 - [Graphs](graphs.md) for network/relationship visualizations

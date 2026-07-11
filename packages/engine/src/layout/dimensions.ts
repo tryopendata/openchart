@@ -399,8 +399,10 @@ export function computeDimensions(
   // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
   // when the column would be suppressed. `labels.density` is intentionally
   // not checked here — that switch controls only the legacy end-of-line labels.
+  // No extra strategy check either: `sup.showEndpointLabels` already accounts
+  // for the compact strip (and its explicit-opt-in override).
   let endpointWidth = 0;
-  if (sup.showEndpointLabels && !labelsHiddenByStrategy) {
+  if (sup.showEndpointLabels) {
     endpointWidth = predictEndpointLabelsWidth(spec, theme);
     if (endpointWidth > 0) {
       // 16px gap between chart area edge and the column.

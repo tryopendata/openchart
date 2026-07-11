@@ -232,7 +232,7 @@ Applied to the field values before encoding. Useful when your data has multiple 
 | Field       | Type      | Default           | Description                                                                   |
 | ----------- | --------- | ----------------- | ----------------------------------------------------------------------------- |
 | `label`     | `string`  | field name        | Axis label text displayed along the axis.                                     |
-| `format`    | `string`  | auto              | d3-format string for tick labels, e.g. `",.0f"` for comma-separated integers. |
+| `format`    | `string`  | auto              | d3-format string for tick labels, e.g. `",.0f"` for comma-separated integers. Also accepts `"ordinal"` for rank ticks (`1st, 2nd, 3rd`). |
 | `tickCount` | `number`  | auto              | Override the number of ticks. Engine picks a sensible default if omitted.     |
 | `grid`      | `boolean` | `true` for y-axis | Whether to show gridlines for this axis.                                      |
 

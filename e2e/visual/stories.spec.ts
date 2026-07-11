@@ -182,6 +182,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--series-search-mobile',
     note: 'Same seriesSearch chart in a 360px container.',
   },
+  // --- Slope + bump recipes (ranking and change) ---
+  {
+    name: 'slope-market-share',
+    slug: 'testing--fixtures--slope-market-share',
+    note: '5-series 2-point slope: both-end name+value labels, no y axis, no gridlines.',
+  },
+  {
+    name: 'slope-market-share-compact',
+    slug: 'testing--fixtures--slope-market-share-compact',
+    note: '320px container: explicit endpointLabels config keeps both-end labels at the compact breakpoint.',
+  },
+  {
+    name: 'bump-constructors',
+    slug: 'testing--fixtures--bump-constructors',
+    note: '6-season bump: rank 1 at top via scale.reverse, ordinal rank ticks, monotone lines, step points, both-end name labels.',
+  },
 ];
 
 for (const story of stories) {

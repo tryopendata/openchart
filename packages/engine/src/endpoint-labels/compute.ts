@@ -30,7 +30,11 @@ import type {
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
-import { countColorSeries, resolveSuppression } from '../legend/suppression';
+import {
+  countColorSeries,
+  endpointLabelsExplicitlyOn,
+  resolveSuppression,
+} from '../legend/suppression';
 import {
   ENDPOINT_COLUMN_GAP,
   ENDPOINT_ENTRY_GAP,
@@ -47,7 +51,7 @@ import {
   ENDPOINT_VALUE_GAP,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
 } from './constants';
-import { formatEndpointValue } from './format';
+import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from './format';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -251,15 +255,20 @@ export function computeEndpointLabels(
   endpointLabelsDemoted?: boolean,
 ): EndpointLabelsLayout {
   // Compact strategy: drop the column entirely. The traditional legend takes
-  // over series identification at the compact breakpoint.
-  if (strategy?.labelMode === 'none') return emptyLayout(theme);
+  // over series identification at the compact breakpoint. Explicit user
+  // opt-in overrides the strip: slope/bump recipes are unreadable without
+  // their labels, so an author who wrote endpointLabels config keeps it.
+  if (strategy?.labelMode === 'none' && !endpointLabelsExplicitlyOn(spec)) {
+    return emptyLayout(theme);
+  }
 
   const highlight = spec.highlight ?? [];
   const highlightActive = highlight.length > 0;
   const seriesCount = countColorSeries(spec);
   const sup = resolveSuppression(spec, {
     seriesCount,
-    // The 'none' branch above returned; by here labelMode is not 'none'.
+    // The 'none' branch above returned unless the user explicitly opted in,
+    // in which case resolveSuppression's explicit-on override applies anyway.
     labelsHiddenByStrategy: false,
     labelsDensityNone: spec.labels.density === 'none',
     endpointLabelsDemoted,
@@ -298,6 +307,8 @@ export function computeEndpointLabels(
   const markerRadius = config?.markerStyle?.radius ?? ENDPOINT_MARKER_RADIUS;
   const markerStrokeWidth = config?.markerStyle?.strokeWidth ?? ENDPOINT_MARKER_STROKE_WIDTH;
   const markerFill = config?.markerStyle?.fill ?? theme.colors.background;
+  const trailingContent = resolveEndpointContent(config?.content, 'trailing');
+  const leadingContent = resolveEndpointContent(config?.content, 'leading');
 
   // Resolve the styles once.
   const labelStyle: TextStyle = {
@@ -340,14 +351,21 @@ export function computeEndpointLabels(
     const last = lastDataPoint(mark);
     if (!last) continue;
 
+    const rawValue = readValue(mark, valueField);
+    const formatted = formatEndpointValue(rawValue, formatString);
+
+    // Content composition: when `content` is set, the composed text becomes
+    // the label lines and the second-line value is dropped.
+    const labelText = trailingContent
+      ? composeEndpointText(trailingContent, seriesKey, formatted)
+      : seriesKey;
+    const value = trailingContent ? '' : formatted;
     const labelLines = wrapText(
-      seriesKey,
+      labelText,
       ENDPOINT_LABEL_FONT_SIZE,
       ENDPOINT_LABEL_FONT_WEIGHT,
       wrapWidth,
     );
-    const rawValue = readValue(mark, valueField);
-    const value = formatEndpointValue(rawValue, formatString);
 
     // Width of the widest line in this entry (used to size the column).
     let entryWidth = 0;
@@ -475,14 +493,18 @@ export function computeEndpointLabels(
       const first = firstDataPoint(mark);
       if (!first) continue;
 
+      const rawValue = readFirstValue(mark, valueField);
+      const formatted = formatEndpointValue(rawValue, formatString);
+      const labelText = leadingContent
+        ? composeEndpointText(leadingContent, seriesKey, formatted)
+        : seriesKey;
+      const value = leadingContent ? '' : formatted;
       const labelLines = wrapText(
-        seriesKey,
+        labelText,
         ENDPOINT_LABEL_FONT_SIZE,
         ENDPOINT_LABEL_FONT_WEIGHT,
         wrapWidth,
       );
-      const rawValue = readFirstValue(mark, valueField);
-      const value = formatEndpointValue(rawValue, formatString);
 
       let entryWidth = 0;
       for (const line of labelLines) {
