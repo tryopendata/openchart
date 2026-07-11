@@ -980,6 +980,11 @@ export interface RangeAnnotation extends AnnotationBase {
  * Useful for baselines (zero), targets, or thresholds.
  */
 export interface RefLineAnnotation extends AnnotationBase {
+  /**
+   * Discriminant. `'refline'` is canonical. `'rule'` is a deprecated alias
+   * (it collides with the `rule` mark type) kept accepted-with-warning; it is
+   * removed in v9. Use `'refline'`.
+   */
   type: 'refline' | 'rule';
   /** X-axis value for a vertical reference line. */
   x?: string | number;

@@ -710,6 +710,30 @@ describe('deprecation warnings', () => {
     );
     expect(warned().filter((m) => m.includes('stack'))).toHaveLength(0);
   });
+
+  it("warns once for the deprecated 'rule' annotation type, naming the refline replacement", () => {
+    compileChart(
+      {
+        ...base,
+        annotations: [{ type: 'rule', y: 1, label: 'target' }],
+      },
+      OPTIONS,
+    );
+    const messages = warned().filter((m) => m.includes("annotation type 'rule'"));
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain("'refline'");
+  });
+
+  it("does not warn for the canonical 'refline' annotation type", () => {
+    compileChart(
+      {
+        ...base,
+        annotations: [{ type: 'refline', y: 1, label: 'target' }],
+      },
+      OPTIONS,
+    );
+    expect(warned().filter((m) => m.includes("annotation type 'rule'"))).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

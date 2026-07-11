@@ -168,10 +168,18 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 // ---------------------------------------------------------------------------
 
 /** Apply default styles to annotations that don't have them. */
-function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation[] {
+function normalizeAnnotations(
+  annotations: Annotation[] | undefined,
+  warnings: string[],
+): Annotation[] {
   if (!annotations || annotations.length === 0) return [];
 
   return annotations.map((ann) => {
+    if (ann.type === 'rule') {
+      warnings.push(
+        "[openchart] annotation type 'rule' is deprecated (it collides with the rule mark) and will be removed in v9. Use type: 'refline' instead; the behavior is identical.",
+      );
+    }
     switch (ann.type) {
       case 'text':
         return {
@@ -352,7 +360,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     metrics: spec.metrics,
     seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
     youDrawIt: normalizeYouDrawIt(spec),
-    annotations: normalizeAnnotations(spec.annotations),
+    annotations: normalizeAnnotations(spec.annotations, warnings),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
@@ -428,7 +436,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
   };
 }
 
-function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGraphSpec {
+function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGraphSpec {
   // Default layout with chargeStrength and linkDistance
   const defaultLayout = {
     type: 'force' as const,
@@ -450,7 +458,7 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
     layout,
     nodeOverrides: spec.nodeOverrides,
     chrome: normalizeChrome(spec.chrome),
-    annotations: normalizeAnnotations(spec.annotations),
+    annotations: normalizeAnnotations(spec.annotations, warnings),
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
