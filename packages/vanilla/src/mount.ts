@@ -290,10 +290,12 @@ export function createChart<TData extends DataRow = DataRow>(
    * chrome — they stay inside the budget.
    */
   function verticalOverheads(layout: ChartLayout, width: number): number {
+    const legendHasContent =
+      layout.legend.type === 'continuous'
+        ? layout.legend.bounds.height > 0
+        : 'entries' in layout.legend && layout.legend.entries.length > 0;
     const topLegendBlock =
-      layout.legend.position === 'top' &&
-      'entries' in layout.legend &&
-      layout.legend.entries.length > 0
+      layout.legend.position === 'top' && legendHasContent
         ? layout.legend.bounds.height + legendGap(width)
         : 0;
     return (

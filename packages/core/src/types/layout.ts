@@ -735,8 +735,56 @@ export interface GradientLegendLayout extends BaseLegendLayout {
   maxLabel: string;
 }
 
-/** Resolved legend layout — either categorical (swatches) or gradient (continuous bar). */
-export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout;
+/** A positioned value label on a continuous/binned color legend. */
+export interface ContinuousLegendTick {
+  /** The data value this label marks. */
+  value: number;
+  /** Formatted label text (channel format applied). */
+  label: string;
+  /** Label x position (pixel coordinates). */
+  x: number;
+  /** Horizontal text anchor for the label. */
+  anchor: 'start' | 'middle' | 'end';
+}
+
+/** A discrete class swatch in a binned continuous legend. */
+export interface ContinuousLegendBin {
+  /** Swatch x position (pixel coordinates). */
+  x: number;
+  /** Swatch width in pixels. */
+  width: number;
+  /** Fill color. */
+  color: string;
+}
+
+/**
+ * Continuous color legend for quantitative color scales on charts.
+ *
+ * Two rendering modes, resolved from the color channel's scale type:
+ * - `gradient`: a single gradient-filled bar with min/max labels (plus a
+ *   midpoint label at the neutral value for diverging ramps).
+ * - `binned`: a contiguous swatch row (quantile/quantize/threshold scales)
+ *   with boundary value labels between swatches at the class breaks.
+ */
+export interface ContinuousLegendLayout extends BaseLegendLayout {
+  /** Discriminant for legend type. */
+  type: 'continuous';
+  /** Rendering mode: gradient bar or binned swatch row. */
+  mode: 'gradient' | 'binned';
+  /** The color bar rectangle (pixel coordinates). */
+  bar: Rect;
+  /** Gradient color stops (empty in binned mode). */
+  colorStops: GradientColorStop[];
+  /** Class swatches, left to right (empty in gradient mode). */
+  bins: ContinuousLegendBin[];
+  /** Value labels rendered below the bar. */
+  ticks: ContinuousLegendTick[];
+  /** Text baseline y for the value labels (pixel coordinates). */
+  labelY: number;
+}
+
+/** Resolved legend layout: categorical (swatches), gradient (tilemap bar), or continuous (chart color bar). */
+export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout | ContinuousLegendLayout;
 
 // ---------------------------------------------------------------------------
 // Endpoint labels (right-side per-series column for line/area charts)

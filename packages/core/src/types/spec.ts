@@ -272,8 +272,12 @@ export interface AxisConfig {
 
 /** Scale configuration for an encoding channel. */
 export interface ScaleConfig {
-  /** Explicit domain override. Auto-derived from data if omitted. */
-  domain?: [number, number] | string[];
+  /**
+   * Explicit domain override. Auto-derived from data if omitted.
+   * Continuous scales take `[min, max]`; threshold scales take the full
+   * list of class break values; categorical scales take the value list.
+   */
+  domain?: number[] | string[];
   /** Scale type override. Usually inferred from field type. */
   type?: ScaleType;
   /** Whether to nice-ify the domain for clean tick values. Defaults to true. */
