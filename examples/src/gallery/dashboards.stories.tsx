@@ -410,8 +410,13 @@ function ComposedDashboard() {
     borderRadius: 8,
     background: t.surface,
   };
+  // The 2x2 grid fills its Demo card. It is NOT wrapped in `.oc-bleed`: that
+  // breakout is for Showcase pieces where `.oc-bleed` wraps the whole Demo from
+  // OUTSIDE. Here the composition lives INSIDE a `.oc-demo` card (border +
+  // `overflow: hidden`), so a `.oc-bleed` child would break past the card's
+  // clip boundary and get its left edge cut off at wide widths.
   return (
-    <div className="oc-bleed">
+    <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: COMPOSED_GRID_CSS }} />
       <div className="oc-dash-2x2">
@@ -432,7 +437,7 @@ function ComposedDashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -499,7 +504,7 @@ export const Dashboards = () => (
       <Demo
         id="mini-dashboard"
         title="Mini-dashboard (2x2 grid)"
-        description="A full-bleed composition — spec-backed charts and custom KPI/sparkline tiles sharing one grid — showing how the pieces sit together at product density."
+        description="One composition — spec-backed charts and custom KPI/sparkline tiles sharing a 2x2 grid — showing how the pieces sit together at product density."
         specForPanel={composedSectorSpec}
         height={640}
       >

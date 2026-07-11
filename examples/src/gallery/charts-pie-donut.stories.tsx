@@ -29,10 +29,25 @@ const ELECTRICITY_PALETTE = ['#b0b0b0', '#c8c8c8', '#a0a0a0', '#d0d0d0', '#2d8a4
 // 1. Pie with inline (leader-line) slice labels — the default
 // ---------------------------------------------------------------------------
 
+// This lead pie is about clean leader-line labels, so keep every slice above the
+// engine's ~3% auto-group threshold. The source data has a pre-existing "Others"
+// slice AND several sub-3% browsers (Firefox/Samsung/Opera) that would auto-bucket
+// into a second "Other" wedge, colliding two near-identical labels. Fold those
+// tails into the existing "Others" here so nothing auto-groups. (Small-slice
+// bucketing gets its own dedicated demo below.)
+const basicPieData = (() => {
+  const KEEP = new Set(['Chrome', 'Safari', 'Edge']);
+  const kept = browserShare.data.filter((d) => KEEP.has(d.browser));
+  const othersShare = browserShare.data
+    .filter((d) => !KEEP.has(d.browser))
+    .reduce((sum, d) => sum + d.share, 0);
+  return [...kept, { browser: 'Others', share: Math.round(othersShare * 10) / 10 }];
+})();
+
 const basicPieSpec: ChartSpec = {
   animation: true,
   mark: 'arc',
-  data: [...browserShare.data],
+  data: basicPieData,
   encoding: {
     y: { field: 'share', type: 'quantitative' },
     color: { field: 'browser', type: 'nominal' },

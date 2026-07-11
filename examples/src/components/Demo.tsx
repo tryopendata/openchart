@@ -263,15 +263,42 @@ export function Demo({
   }, [visible]);
 
   // Self-scroll to this card when the URL hash targets it (fresh load).
+  //
+  // On a cold `?story=X#id` load the target card can sit thousands of px down
+  // the page, and every card above it lazy-mounts a chart that grows its height
+  // AFTER this effect first runs. A single scrollIntoView lands on the card's
+  // pre-mount position and drifts as the layout above settles. So we re-scroll
+  // across a short window of animation frames until the target's top position
+  // stops moving (or the budget runs out), which tracks the settling layout.
   useEffect(() => {
     if (typeof location === 'undefined') return;
-    if (location.hash === `#${id}`) {
-      setVisible(true);
-      // Defer so the placeholder/viz has laid out.
-      requestAnimationFrame(() => {
-        cardRef.current?.scrollIntoView({ block: 'start' });
-      });
-    }
+    if (location.hash !== `#${id}`) return;
+    setVisible(true);
+
+    let raf = 0;
+    let frames = 0;
+    let lastTop = Number.NaN;
+    let stableFrames = 0;
+    const MAX_FRAMES = 90; // ~1.5s at 60fps — covers lazy-mount + chart layout
+    const STABLE_NEEDED = 4; // consecutive unchanged frames = settled
+
+    const tick = () => {
+      const el = cardRef.current;
+      if (!el) return;
+      el.scrollIntoView({ block: 'start' });
+      const top = Math.round(el.getBoundingClientRect().top);
+      if (top === lastTop) {
+        stableFrames += 1;
+        if (stableFrames >= STABLE_NEEDED) return; // settled — stop re-scrolling
+      } else {
+        stableFrames = 0;
+        lastTop = top;
+      }
+      frames += 1;
+      if (frames < MAX_FRAMES) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [id]);
 
   const panelSpec = spec ?? specForPanel;
