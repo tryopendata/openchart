@@ -77,7 +77,12 @@
 | Vue entry | `packages/vue/src/` |
 | Svelte entry | `packages/svelte/src/` |
 | Ladle stories root | `examples/src/` |
-| Line chart stories (SingleLine, MultiSeries, FiveSeries, AreaChart…) | `examples/src/charts/line.stories.tsx` |
+| Gallery pages (the public site IA: one file per sidebar page, `export default { title: '<Folder>' }`) | `examples/src/gallery/*.stories.tsx`. Charts: `charts-bar-column`, `charts-line-area`, `charts-pie-donut`, `charts-scatter-distribution`, `charts-building-blocks`. Then `tables`, `graphs`, `sankey-tilemaps`, `dashboards`. Features: `features-annotations`, `features-edit-mode`, `features-animation`, `features-theming`, `features-responsive`, `features-data-encoding`. Plus `welcome` (defaultStory), `showcase`, `playground`. |
+| Gallery shell components (page frame, section, lazy-mount Demo card with copyable spec panel, dark-mode context) | `examples/src/components/` (`GalleryPage.tsx`, `Section.tsx`, `Demo.tsx`, `mode-context.ts`, `gallery.css`, barrel `index.ts`). Dark mode keys off `[data-oc-mode]` stamped on the GalleryPage root (crosses the width-addon iframe), never `:root[data-theme]`. `.oc-bleed` is the full-bleed breakout for Showcase. |
+| Shared dataset pool (one module per dataset: `export const x = { source, url?, data } as const`) | `examples/src/data/*.ts`, barrel `examples/src/data/index.ts`. No inline data blobs in story files. |
+| Demo index registry (Welcome's findability index; single source of truth) | `examples/src/gallery/registry.ts` assembles per-page `examples/src/gallery/<page>.demos.ts` sidecars. Sidecars live outside `*.stories.*` on purpose: Ladle turns every named export in a story file into a story, so a shared `export const demos` collides (e.g. all five Charts pages → duplicate `charts--demos`) and fails `ladle build`. |
+| Legacy-slug redirect map (old published `?story=` deep links → new page+anchor; guarantees no 404s after the flip) | `examples/.ladle/redirects.ts`. Provider reads `?story=` on mount and redirects. |
+| Ladle config (defaultStory, storyOrder wildcards, width/theme addons) + head (favicon, OG/twitter meta, Bricolage-only font), shell CSS, 11 named themes | `examples/.ladle/config.mjs`, `head.html`, `shell.css`, `themes.ts`. Social OG image: `examples/public/og-preview.png`. |
 | Theming gallery page (presets, 11 named themes, custom ThemeConfig, dark adaptation) | `examples/src/gallery/features-theming.stories.tsx` (slug `features--theming`) |
 | Visual regression spec | `e2e/visual/stories.spec.ts` |
 | Mobile visual regression spec (390px viewport, `visual-mobile` project) | `e2e/visual/stories-mobile.spec.ts` |

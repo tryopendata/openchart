@@ -31,6 +31,7 @@ const THEMING = 'features--theming';
 const RESPONSIVE = 'features--responsive';
 const DATA_ENCODING = 'features--data-and-encoding';
 const SHOWCASE = 'showcase--showcase';
+const TESTING_FIXTURES = 'testing--fixtures--rotated-with-source';
 
 export const redirects: Record<string, Redirect> = {
   // charts/bar.stories.tsx
@@ -298,4 +299,36 @@ export const redirects: Record<string, Redirect> = {
   'chrome--chrome-with-title-subtitle-source': { story: SHOWCASE, hash: 'full-chrome-bar' },
   'chrome--chrome-title-only': { story: SHOWCASE, hash: 'full-chrome-bar' },
   'chrome--chrome-all-elements': { story: SHOWCASE, hash: 'full-chrome-bar' },
+
+  // ── Testing fixtures (regression pages, moved under Testing/ nav) ──
+  // charts/mobile-regression.stories.tsx -> testing/fixtures-misc.stories.tsx
+  'mobile-regression--long-title-mobile': {
+    story: 'testing--mobile-regression--long-title-mobile',
+  },
+  'mobile-regression--grouped-columns-labels-all': {
+    story: 'testing--mobile-regression--grouped-columns-labels-all',
+  },
+  'mobile-regression--grouped-bars-many-rows': {
+    story: 'testing--mobile-regression--grouped-bars-many-rows',
+  },
+  'mobile-regression--grouped-bars-sparse-ticks': {
+    story: 'testing--mobile-regression--grouped-bars-sparse-ticks',
+  },
+  'mobile-regression--one-wide-x-label': {
+    story: 'testing--mobile-regression--one-wide-x-label',
+  },
+  'mobile-regression--one-wide-x-label-large-ticks': {
+    story: 'testing--mobile-regression--one-wide-x-label-large-ticks',
+  },
+  'mobile-regression--uniform-short-x-labels': {
+    story: 'testing--mobile-regression--uniform-short-x-labels',
+  },
+  'mobile-regression--inline-y-title': {
+    story: 'testing--mobile-regression--inline-y-title',
+  },
+  'mobile-regression--auto-height-chrome-growth': {
+    story: 'testing--mobile-regression--auto-height-chrome-growth',
+  },
+  // charts/rotated-with-source.stories.tsx -> testing/fixtures-misc.stories.tsx
+  'rotated-with-source--rotated-with-source': { story: TESTING_FIXTURES },
 };

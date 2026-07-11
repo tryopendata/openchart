@@ -245,7 +245,7 @@ const isDark = useDarkMode("auto");
 
 ## Theme management
 
-Browse built-in themes: [theme gallery](https://tryopendata.github.io/openchart/?story=theme--default-theme)
+Browse built-in themes: [theme gallery](https://tryopendata.github.io/openchart/?story=features--theming#named-themes)
 
 ### Per-component theme
 
@@ -1279,7 +1279,7 @@ For tables, the HTML structure uses semantic elements (`<table>`, `<thead>`, `<t
 
 ## Graph visualization
 
-Graphs render force-directed network visualizations on canvas. The input is a `GraphSpec` with `nodes` and `edges` instead of `data` and `encoding`. See the [graphs guide](graphs.md) for layout and encoding details, and the [spec reference](spec-reference.md#graphspec) for the full type definition. Live examples: [basic](https://tryopendata.github.io/openchart/?story=graph--basic-graph), [search](https://tryopendata.github.io/openchart/?story=graph--search-demo)
+Graphs render force-directed network visualizations on canvas. The input is a `GraphSpec` with `nodes` and `edges` instead of `data` and `encoding`. See the [graphs guide](graphs.md) for layout and encoding details, and the [spec reference](spec-reference.md#graphspec) for the full type definition. Live examples: [basic](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic), [search](https://tryopendata.github.io/openchart/?story=graphs--graphs#search)
 
 ### React
 

@@ -369,7 +369,10 @@ export function Demo({
             </button>
           </div>
           {specOpen ? (
-            <pre className="oc-spec-code">
+            // tabIndex makes the scrollable code block reachable and scrollable
+            // by keyboard (WCAG 2.1.1 / axe scrollable-region-focusable).
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: required so keyboard users can scroll the overflowing code block
+            <pre className="oc-spec-code" tabIndex={0}>
               <code>
                 <Tokenized text={displayText ?? ''} />
               </code>

@@ -201,7 +201,9 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--oc-text-faint);
+  /* text-muted (not text-faint): faint fails WCAG AA contrast on this small
+     uppercase label in both light and dark modes. */
+  color: var(--oc-text-muted);
   margin: 0 0 var(--oc-space-3);
 }
 
@@ -459,11 +461,13 @@
 }
 
 .oc-spec-code .oc-tok-punct {
-  color: var(--oc-text-faint);
+  /* text-muted (not text-faint): faint fails WCAG AA on the raised code
+     background. */
+  color: var(--oc-text-muted);
 }
 
 .oc-spec-code .oc-tok-comment {
-  color: var(--oc-text-faint);
+  color: var(--oc-text-muted);
   font-style: italic;
 }
 
@@ -494,6 +498,24 @@
 .oc-bleed {
   width: min(100vw - 2 * var(--oc-space-5), 1240px);
   margin-inline: calc(50% - min(50vw - var(--oc-space-5), 620px));
+}
+
+/* ---------------------------------------------------------------------------
+ * Focus visibility
+ *
+ * A consistent, high-contrast focus ring for every keyboard-reachable gallery
+ * control (TOC links, anchor/copy/toggle buttons, the scrollable spec block).
+ * Keyboard-only via :focus-visible so mouse clicks don't show a ring.
+ * ------------------------------------------------------------------------- */
+.oc-toc a:focus-visible,
+.oc-anchor-btn:focus-visible,
+.oc-spec-toggle:focus-visible,
+.oc-spec-copy:focus-visible,
+.oc-spec-fold:focus-visible,
+.oc-spec-code:focus-visible {
+  outline: 2px solid var(--oc-accent);
+  outline-offset: 2px;
+  border-radius: var(--oc-radius-control);
 }
 
 /* ---------------------------------------------------------------------------

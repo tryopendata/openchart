@@ -469,7 +469,7 @@ function InteractiveScatter() {
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-faint)' }}>hovered</span>
+        <span style={{ color: 'var(--oc-text-muted)' }}>hovered</span>
         {hovered ? (
           <span style={{ color: 'var(--oc-text)' }}>
             {hovered.country} — {hovered.co2}t CO2/person, {hovered.renewables}% renewable
@@ -477,7 +477,7 @@ function InteractiveScatter() {
         ) : (
           <span>move over a bubble</span>
         )}
-        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-faint)' }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-muted)' }}>
           {hovered ? hovered.continent : ''}
         </span>
       </div>

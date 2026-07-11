@@ -24,6 +24,9 @@ e2e/visual/__screenshots__/**/*-diff.png
 # Keep committed baselines under e2e/visual/__screenshots__/ despite the
 # root-level *.png exclusion above.
 !e2e/visual/__screenshots__/**/*.png
+# Keep the social-preview asset: it ships to the built site and is referenced
+# by the OG/twitter:image meta tags, so it must be committed.
+!examples/public/og-preview.png
 
 *.tgz
 

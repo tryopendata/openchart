@@ -29,7 +29,7 @@ const spec = {
 
 For Vue, import from `@opendata-ai/openchart-vue`. For Svelte, import from `@opendata-ai/openchart-svelte`. For vanilla JS, use `createGraph(container, spec)` from `@opendata-ai/openchart-vanilla`.
 
-**Live example**: [Basic graph](https://tryopendata.github.io/openchart/?story=graph--basic-graph)
+**Live example**: [Basic graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic)
 
 ---
 
@@ -102,7 +102,7 @@ const spec = {
 | `edgeWidth` | Edge stroke width| quantitative (0.5-4px range)   |
 | `edgeStyle` | Edge line style  | nominal, ordinal (solid/dashed/dotted) |
 
-**Live example**: [Encoded graph](https://tryopendata.github.io/openchart/?story=graph--encoded-graph)
+**Live example**: [Encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded)
 
 ---
 
@@ -119,7 +119,7 @@ layout: {
 
 When `nodeColor` encoding is also set, colors come from the encoding (not from community assignment). Community assignment still affects spatial grouping.
 
-**Live example**: [Community clusters](https://tryopendata.github.io/openchart/?story=graph--community-clusters)
+**Live example**: [Community clusters](https://tryopendata.github.io/openchart/?story=graphs--graphs#communities)
 
 ---
 
@@ -152,7 +152,7 @@ Graphs support several built-in interaction modes:
 - **Zoom/pan**: Mouse wheel or pinch to zoom, drag background to pan
 - **Keyboard navigation**: Tab through nodes, Enter to select
 
-**Live examples**: [Search demo](https://tryopendata.github.io/openchart/?story=graph--search-demo) | [With chrome](https://tryopendata.github.io/openchart/?story=graph--with-chrome)
+**Live examples**: [Search demo](https://tryopendata.github.io/openchart/?story=graphs--graphs#search) | [With chrome](https://tryopendata.github.io/openchart/?story=graphs--graphs#chrome)
 
 ---
 
@@ -181,7 +181,7 @@ const spec = {
 
 The graph renderer has been tested with large networks. See the scale stories for performance characteristics:
 
-[1K nodes](https://tryopendata.github.io/openchart/?story=graph--scale1k-nodes) | [5K nodes](https://tryopendata.github.io/openchart/?story=graph--scale5k-nodes) | [10K nodes](https://tryopendata.github.io/openchart/?story=graph--scale10k-nodes)
+[1K nodes](https://tryopendata.github.io/openchart/?story=graphs--graphs#scale) | [5K nodes](https://tryopendata.github.io/openchart/?story=graphs--graphs#scale) | [10K nodes](https://tryopendata.github.io/openchart/?story=graphs--graphs#scale)
 
 ---
 

@@ -222,7 +222,7 @@ function ScaleGraph({ nodeCount, height }: { nodeCount: number; height: number }
           >
             Load {nodeCount.toLocaleString()}-node graph
           </button>
-          <span style={{ fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-faint)' }}>
+          <span style={{ fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-muted)' }}>
             Generated + rendered on click — nothing runs until you ask
           </span>
         </div>
@@ -256,7 +256,9 @@ function ScaleDemos() {
             onClick={() => setTier(n)}
             style={
               tier === n
-                ? { borderColor: 'var(--oc-accent)', color: 'var(--oc-accent)' }
+                ? // accent-text (not raw accent) for the label: raw accent as
+                  // text fails WCAG AA contrast on the surface.
+                  { borderColor: 'var(--oc-accent)', color: 'var(--oc-accent-text)' }
                 : undefined
             }
           >
@@ -315,7 +317,7 @@ function InteractiveGraph() {
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-faint)' }}>clicked</span>
+        <span style={{ color: 'var(--oc-text-muted)' }}>clicked</span>
         {clicked ? (
           <span style={{ color: 'var(--oc-text)' }}>
             {clicked.label}
@@ -324,7 +326,7 @@ function InteractiveGraph() {
         ) : (
           <span>none yet</span>
         )}
-        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-faint)' }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-muted)' }}>
           hover: {hovered ?? '(none)'}
         </span>
       </div>

@@ -30,6 +30,7 @@ import { page as editMode } from './features-edit-mode.demos';
 import { page as responsive } from './features-responsive.demos';
 import { page as theming } from './features-theming.demos';
 import { page as graphs } from './graphs.demos';
+import { page as playground } from './playground.demos';
 import { page as sankeyTileMaps } from './sankey-tilemaps.demos';
 import { page as showcase } from './showcase.demos';
 import { page as tables } from './tables.demos';
@@ -64,4 +65,5 @@ export const GALLERY: PageEntry[] = [
   responsive,
   dataEncoding,
   showcase,
+  playground,
 ];

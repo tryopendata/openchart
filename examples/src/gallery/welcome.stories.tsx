@@ -159,7 +159,9 @@ const WELCOME_CSS = `
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--oc-text-faint);
+  /* text-muted (not text-faint): faint fails WCAG AA contrast on this small
+     uppercase label in both light and dark modes. */
+  color: var(--oc-text-muted);
   margin: 0 0 var(--oc-space-2);
 }
 .ocw-index-page {
@@ -222,14 +224,26 @@ const WELCOME_CSS = `
 }
 .ocw-footer-note a {
   color: var(--oc-accent-text);
-  text-decoration: none;
+  /* Inline links inside a paragraph must be distinguishable without relying on
+     color alone (WCAG 1.4.1); underline them. */
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .ocw-footer-note a:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+/* Keyboard focus ring for every reachable link on the welcome page. */
+.ocw-index a:focus-visible,
+.ocw-footer-links a:focus-visible,
+.ocw-footer-note a:focus-visible {
+  outline: 2px solid var(--oc-accent);
+  outline-offset: 2px;
+  border-radius: var(--oc-radius-control);
 }
 .ocw-footer-meta {
   font-size: 0.6875rem;
-  color: var(--oc-text-faint);
+  /* text-muted (not text-faint): faint fails WCAG AA contrast at this size. */
+  color: var(--oc-text-muted);
   margin: 0;
 }
 `;

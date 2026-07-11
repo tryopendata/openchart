@@ -71,7 +71,7 @@ const vizStyle: CSSProperties = { padding: '0 var(--oc-space-4) var(--oc-space-4
 const tagStyle: CSSProperties = {
   fontSize: '0.6875rem',
   fontWeight: 600,
-  color: 'var(--oc-text-faint)',
+  color: 'var(--oc-text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
 };

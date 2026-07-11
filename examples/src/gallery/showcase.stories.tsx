@@ -257,7 +257,7 @@ function KeyboardDemo() {
           color: 'var(--oc-text-muted)',
         }}
       >
-        <span style={{ color: 'var(--oc-text-faint)' }}>Try it:</span>
+        <span style={{ color: 'var(--oc-text-muted)' }}>Try it:</span>
         <span>
           <kbd>Tab</kbd> to focus the chart
         </span>

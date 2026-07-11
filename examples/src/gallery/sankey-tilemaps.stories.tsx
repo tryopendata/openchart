@@ -261,7 +261,7 @@ function InteractiveTileMap() {
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-faint)' }}>last click</span>
+        <span style={{ color: 'var(--oc-text-muted)' }}>last click</span>
         {selected ? (
           <span style={{ color: 'var(--oc-text)' }}>
             {selected.stateName} ({selected.stateCode}) —{' '}

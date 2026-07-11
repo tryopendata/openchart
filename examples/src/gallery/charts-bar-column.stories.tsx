@@ -369,7 +369,7 @@ function InteractiveBars() {
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-faint)' }}>last click</span>
+        <span style={{ color: 'var(--oc-text-muted)' }}>last click</span>
         {last ? (
           <span style={{ color: 'var(--oc-text)' }}>
             {last.country} — {last.population.toLocaleString()}
@@ -377,7 +377,7 @@ function InteractiveBars() {
         ) : (
           <span>none yet</span>
         )}
-        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-faint)' }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-muted)' }}>
           highlight: {selected ?? '(cleared)'}
         </span>
       </div>

@@ -211,7 +211,7 @@ function ComparisonDonuts() {
           <Chart spec={electricity2023Spec} />
         </div>
       </div>
-      <p style={{ margin: 0, fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-faint)' }}>
+      <p style={{ margin: 0, fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-muted)' }}>
         {electricityMix.source}
       </p>
     </div>

@@ -428,7 +428,7 @@ function AutoThinning() {
             style={{ width: 200 }}
           />
         </label>
-        <span style={{ color: 'var(--oc-text-faint)' }}>
+        <span style={{ color: 'var(--oc-text-muted)' }}>
           Drag narrow: inline callouts demote to numbered dots with footnotes below.
         </span>
       </div>

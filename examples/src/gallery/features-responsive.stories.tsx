@@ -101,7 +101,7 @@ function ResizeFrame({
         fontSize: 'var(--oc-type-caption)',
       }}
     >
-      <span style={{ color: 'var(--oc-text-faint)' }}>{label}</span>
+      <span style={{ color: 'var(--oc-text-muted)' }}>{label}</span>
       <span style={{ color: color ?? 'var(--oc-text)', fontWeight: 600 }}>{value}</span>
     </span>
   );

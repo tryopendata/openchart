@@ -20,11 +20,35 @@
   content="A browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs."
 />
 <meta property="og:site_name" content="OpenChart" />
+<!-- Social crawlers (Twitter/Facebook/LinkedIn/Slack) require ABSOLUTE image
+     and page URLs — relative paths are not resolved by unfurlers. The gallery
+     deploys to a fixed GitHub Pages origin, so these are hardcoded to it. The
+     PNG itself ships from examples/public/og-preview.png, which the build
+     copies to <base>/og-preview.png (base = /openchart/), matching this URL. -->
+<meta property="og:url" content="https://tryopendata.github.io/openchart/" />
+<meta
+  property="og:image"
+  content="https://tryopendata.github.io/openchart/og-preview.png"
+/>
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta
+  property="og:image:alt"
+  content="OpenChart bar chart: India has overtaken China as the most populous country, with population by country for 2025."
+/>
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="OpenChart Examples" />
 <meta
   name="twitter:description"
   content="A browsable gallery of publication-quality charts, tables, graphs, and flow diagrams built from declarative specs."
+/>
+<meta
+  name="twitter:image"
+  content="https://tryopendata.github.io/openchart/og-preview.png"
+/>
+<meta
+  name="twitter:image:alt"
+  content="OpenChart bar chart: India has overtaken China as the most populous country, with population by country for 2025."
 />
 
 <!-- Font stylesheet: Bricolage Grotesque ONLY (page titles / section headings).
