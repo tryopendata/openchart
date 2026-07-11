@@ -6,7 +6,7 @@
  * stale the instant a step patch triggers a re-render.
  */
 
-import { cameraTransform, FULL_VIEW, type Camera, type ViewBoxSize } from './camera-math';
+import { type Camera, cameraTransform, FULL_VIEW, type ViewBoxSize } from './camera-math';
 
 /** Read the current SVG's viewBox as a `ViewBoxSize`, or null if not yet rendered. */
 export function readViewBox(container: HTMLElement): ViewBoxSize | null {

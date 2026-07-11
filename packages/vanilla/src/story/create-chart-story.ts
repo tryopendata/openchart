@@ -16,9 +16,18 @@
 
 import type { DataRow } from '@opendata-ai/openchart-core';
 import { deepMergeSpec } from '@opendata-ai/openchart-core';
-import { createChart, type ChartInstance, type MountOptions } from '../mount';
+import { type ChartInstance, createChart, type MountOptions } from '../mount';
 import { canTransitionSpecShape } from '../transition';
-import { fitTarget, FULL_VIEW, interpolateCamera, type Camera } from './camera-math';
+import {
+  type Camera,
+  camerasClose,
+  dampCamera,
+  FULL_VIEW,
+  fitTarget,
+  interpolateCamera,
+  scrubCamera,
+  type ViewBoxSize,
+} from './camera-math';
 import { crossfadeUpdate } from './crossfade';
 import { isDataCameraTarget, resolveCameraTarget } from './resolve-camera-target';
 import { createScrollDriver } from './scroll-driver';
@@ -76,7 +85,12 @@ export function createChartStory<TData extends DataRow = DataRow>(
   options: ChartStoryOptions<TData>,
   mountOptions?: MountOptions,
 ): ChartStoryInstance {
-  const { spec: baseSpec, steps, triggerPosition = 0.4, cameraMode = 'step' } = options;
+  const { spec, steps, triggerPosition = 0.4, cameraMode = 'step' } = options;
+  // The story machinery is spec-shape agnostic (it only deep-merges patches
+  // and hands specs to `update()`, which accepts the non-generic union).
+  // Widen once here so the internal helpers don't have to thread `TData`
+  // through a discriminated union that TS can't narrow across variants.
+  const baseSpec = spec as StorySpec;
 
   const editModeRequested = !!(
     mountOptions?.onEdit ||
@@ -107,19 +121,91 @@ export function createChartStory<TData extends DataRow = DataRow>(
     },
   });
 
-  function applyCameraForStep(step: StoryStep | undefined, snap: boolean): void {
-    const vb = readViewBox(container);
-    if (!vb) return;
-
-    if (!step?.camera) {
-      cameraTween.to(fitTarget(FULL_VIEW(vb), vb), { snap: snap || prefersReducedMotion() });
-      return;
-    }
-
+  /** Fit a step's camera (data-coordinate or raw target, or full view) into the viewBox. */
+  function fittedCameraForStep(step: StoryStep | undefined, vb: ViewBoxSize): Camera {
+    if (!step?.camera) return fitTarget(FULL_VIEW(vb), vb);
     const target = isDataCameraTarget(step.camera)
       ? resolveCameraTarget(instance.layout, step.camera)
       : step.camera;
-    cameraTween.to(fitTarget(target, vb), { snap: snap || prefersReducedMotion() });
+    return fitTarget(target, vb);
+  }
+
+  // ---- Scrub-mode camera: self-stopping damping loop toward a live target ---
+  // Step mode eases discretely on step change (the tween above). Scrub mode
+  // reads continuous `stepProgress` and dwells on the active target through a
+  // hold zone, transitioning in the tail of the span. The two modes never run
+  // at once; the settle loop and the step tween are mutually exclusive drivers.
+  let scrubCurrent: Camera | null = null;
+  let scrubTarget: Camera | null = null;
+  let settleRaf = 0;
+  let settling = false;
+
+  function stopSettle(): void {
+    if (settling) {
+      cancelAnimationFrame(settleRaf);
+      settling = false;
+    }
+  }
+
+  function startSettle(): void {
+    if (settling) return;
+    settling = true;
+    let last = performance.now();
+    const tick = (now: number): void => {
+      const target = scrubTarget;
+      const current = scrubCurrent;
+      const vb = readViewBox(container);
+      if (!target || !current || !vb) {
+        settling = false;
+        return;
+      }
+      const dt = Math.min(now - last, 64);
+      last = now;
+      const next = dampCamera(current, target, storyMotion.cameraTau, dt);
+      scrubCurrent = next;
+      applyStoryCamera(container, next, vb);
+      if (camerasClose(next, target)) {
+        scrubCurrent = target;
+        applyStoryCamera(container, target, vb);
+        settling = false;
+        return;
+      }
+      settleRaf = requestAnimationFrame(tick);
+    };
+    settleRaf = requestAnimationFrame(tick);
+  }
+
+  /** Step-mode camera: retargetable eased tween on step change. */
+  function applyCameraForStep(step: StoryStep | undefined, snap: boolean): void {
+    const vb = readViewBox(container);
+    if (!vb) return;
+    cameraTween.to(fittedCameraForStep(step, vb), { snap: snap || prefersReducedMotion() });
+  }
+
+  /** Scrub-mode camera: continuous, driven by the scroll frame's stepProgress. */
+  function applyScrubCamera(frame: { step: number; stepProgress: number }): void {
+    const vb = readViewBox(container);
+    if (!vb) return;
+    const fitted = steps.map((step) => fittedCameraForStep(step, vb));
+    if (fitted.length === 0) return;
+
+    if (prefersReducedMotion()) {
+      const clamped = Math.min(Math.max(frame.step, 0), fitted.length - 1);
+      stopSettle();
+      scrubCurrent = fitted[clamped]!;
+      applyStoryCamera(container, scrubCurrent, vb);
+      return;
+    }
+
+    scrubTarget = scrubCamera(
+      frame.step,
+      frame.stepProgress,
+      fitted,
+      0.65,
+      easingFns.easeInOutCubic,
+    );
+    if (scrubCurrent === null) scrubCurrent = scrubTarget;
+    startSettle();
   }
 
   function goTo(index: number): void {
@@ -134,7 +220,10 @@ export function createChartStory<TData extends DataRow = DataRow>(
     const nextSpec = resolveSpecAtStep(baseSpec, steps, clamped);
 
     const willLikelyMorph =
-      !isFirst && !editModeRequested && prevSpec !== null && canTransitionSpecShape(prevSpec, nextSpec);
+      !isFirst &&
+      !editModeRequested &&
+      prevSpec !== null &&
+      canTransitionSpecShape(prevSpec, nextSpec);
 
     const applyUpdate = () => instance.update(nextSpec);
 
@@ -146,7 +235,10 @@ export function createChartStory<TData extends DataRow = DataRow>(
       crossfadeUpdate(container, applyUpdate, { reducedMotion: prefersReducedMotion() });
     }
 
-    applyCameraForStep(steps[clamped], isFirst);
+    // Step mode drives the camera on each discrete step change. Scrub mode
+    // drives it continuously from the scroll frame instead (see the scroll
+    // subscription below), so it skips the discrete step tween here.
+    if (cameraMode === 'step') applyCameraForStep(steps[clamped], isFirst);
   }
 
   const scrollDriver = editModeRequested ? null : createScrollDriver({ triggerPosition });
@@ -154,15 +246,11 @@ export function createChartStory<TData extends DataRow = DataRow>(
   if (scrollDriver) {
     unsubscribeScroll = scrollDriver.progress.subscribe((frame) => {
       if (frame.step < 0) return;
-      if (cameraMode === 'scrub') {
-        // Scrub mode still advances discrete spec steps at step boundaries;
-        // only the camera reads continuous stepProgress (v1 non-goal is
-        // continuous DATA morph scrubbing, not camera scrub -- see plan
-        // scope: "Should: camera scrub mode").
-        goTo(frame.step);
-      } else {
-        goTo(frame.step);
-      }
+      // Discrete spec steps always advance at step boundaries; the v1 non-goal
+      // is continuous DATA morph scrubbing, not camera scrub. In scrub mode the
+      // camera additionally follows the continuous frame.
+      goTo(frame.step);
+      if (cameraMode === 'scrub') applyScrubCamera(frame);
     });
   }
 
@@ -187,6 +275,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       unsubscribeScroll?.();
       scrollDriver?.destroy();
       cameraTween.cancel();
+      stopSettle();
       instance.destroy();
     },
   };

@@ -14,8 +14,8 @@ export {
   cameraTransform,
   damp,
   dampCamera,
-  fitTarget,
   FULL_VIEW,
+  fitTarget,
   interpolateCamera,
   scrubCamera,
 } from './camera-math';

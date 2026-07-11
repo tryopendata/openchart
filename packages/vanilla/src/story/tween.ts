@@ -64,7 +64,12 @@ export interface Tween<T> {
  * Retargetable tween over an arbitrary shape T.
  */
 export function createTween<T>(config: TweenConfig<T>): Tween<T> {
-  const { lerp: lerpT, duration = storyMotion.base, ease = easingFns.easeOutCubic, onFrame } = config;
+  const {
+    lerp: lerpT,
+    duration = storyMotion.base,
+    ease = easingFns.easeOutCubic,
+    onFrame,
+  } = config;
 
   let current = config.initial;
   let rafId = 0;

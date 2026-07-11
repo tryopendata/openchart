@@ -62,6 +62,9 @@ export { BarList } from './BarList';
 // Components
 export type { ChartProps } from './Chart';
 export { Chart } from './Chart';
+export type { ChartStoryProps } from './ChartStory';
+// Scrollytelling
+export { ChartStory } from './ChartStory';
 // Composables
 export type { UseChartOptions, UseChartReturn } from './composables/useChart';
 export { useChart } from './composables/useChart';
