@@ -332,6 +332,73 @@ function computeRangeTooltips(
 }
 
 // ---------------------------------------------------------------------------
+// Waffle mark tooltips (one shared tooltip per category)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tooltip descriptors for waffle marks.
+ *
+ * Every cell of a category shares literally one TooltipContent object, so
+ * the cells act as a single hover target: moving across a category's cells
+ * keeps showing the same tooltip. Content: the category's value plus its
+ * "x of N units" cell count. An explicit `encoding.tooltip` overrides the
+ * default field set.
+ */
+function computeWaffleTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const valueCh = encoding.y ?? encoding.x;
+  if (!colorEnc || !valueCh) return descriptors;
+
+  const units = Math.max(1, Math.round(spec.markDef.units ?? 100));
+
+  // Cell counts per category come straight from the computed marks.
+  const cellCounts = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.type !== 'rect') continue;
+    const category = String((mark.data as DataRow)[colorEnc.field] ?? '');
+    cellCounts.set(category, (cellCounts.get(category) ?? 0) + 1);
+  }
+
+  const contentByCategory = new Map<string, TooltipContent>();
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'rect') continue;
+
+    const row = mark.data as DataRow;
+    const category = String(row[colorEnc.field] ?? '');
+    let content = contentByCategory.get(category);
+    if (!content) {
+      if (encoding.tooltip) {
+        const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+        content = { title: category, fields: buildExplicitTooltipFields(row, channels) };
+      } else {
+        content = {
+          title: category,
+          fields: [
+            {
+              label: resolveLabel(valueCh),
+              value: formatValue(row[valueCh.field], valueCh.type, resolveFormat(valueCh)),
+              color: getRepresentativeColor(mark.fill),
+            },
+            { label: 'Share', value: `${cellCounts.get(category) ?? 0} of ${units} units` },
+          ],
+        };
+      }
+      contentByCategory.set(category, content);
+    }
+    descriptors.set(`rect-${i}`, content);
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -349,6 +416,11 @@ export function computeTooltipDescriptors(
   // Range marks share one start/end/delta tooltip across every mark of a row.
   if (spec.markType === 'range') {
     return computeRangeTooltips(spec, marks);
+  }
+
+  // Waffle cells share one tooltip per category (the cells act as one target).
+  if (spec.markType === 'waffle') {
+    return computeWaffleTooltips(spec, marks);
   }
 
   const encoding = spec.encoding as Encoding;

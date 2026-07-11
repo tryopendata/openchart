@@ -212,6 +212,7 @@ export type {
   Transform,
   ValueDef,
   VizSpec,
+  WaffleEncoding,
   WindowFieldDef,
   WindowOp,
   WindowSortField,
@@ -220,6 +221,7 @@ export type {
 export {
   CHART_TYPES,
   getRepresentativeColor,
+  isAxislessMark,
   isBarListSpec,
   isChartSpec,
   isConditionalDef,

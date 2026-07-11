@@ -25,7 +25,7 @@ const GRAPHIC_MIN = 3;
 const TEXT_MIN = 4.5;
 
 /** Mark types whose series render as adjacent filled regions when stacked/grouped. */
-const ADJACENT_FILL_MARKS: ReadonlySet<MarkType> = new Set(['bar', 'area', 'arc']);
+const ADJACENT_FILL_MARKS: ReadonlySet<MarkType> = new Set(['bar', 'area', 'arc', 'waffle']);
 
 const fmt = (ratio: number): string => `${ratio.toFixed(2)}:1`;
 

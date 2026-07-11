@@ -23,6 +23,7 @@ import { ruleRenderer } from './rule';
 import { scatterRenderer } from './scatter';
 import { textRenderer } from './text';
 import { tickRenderer } from './tick';
+import { waffleRenderer } from './waffle';
 
 // Mark type mapping from old chart types:
 // - 'bar' -> barRenderer (horizontal bars, old 'bar')
@@ -52,6 +53,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   tick: tickRenderer,
   rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
   range: rangeRenderer, // dumbbell / arrow / range bar (orientation resolved internally)
+  waffle: waffleRenderer, // unit grid for part-to-whole counts
 };
 
 /**
