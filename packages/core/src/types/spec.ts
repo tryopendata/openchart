@@ -1269,7 +1269,7 @@ export interface Metric {
  */
 export interface ArcEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   y: EncodingChannel<TData>;
-  color: EncodingChannel<TData>;
+  color: EncodingChannel<TData> | ConditionalValueDef<TData>;
 }
 
 /**
@@ -2156,9 +2156,10 @@ export interface Condition<TData extends DataRow = DataRow> {
   test: FilterPredicate;
   /**
    * Static value to use when the condition is true.
-   * Accepted values: CSS color string, opacity (0-1), size number, or boolean flag.
+   * Accepted values: CSS color string, opacity (0-1), size number, boolean flag,
+   * or a gradient definition for color channels.
    */
-  value?: string | number | boolean | null;
+  value?: string | number | boolean | null | GradientDef;
   /**
    * Data field to use when the condition is true.
    * Constrained to column names of `TData` when using `ChartSpec<TData>`.
@@ -2179,9 +2180,10 @@ export interface ConditionalValueDef<TData extends DataRow = DataRow> {
   condition: Condition<TData> | Condition<TData>[];
   /**
    * Default value when no condition matches.
-   * Accepted values: CSS color string, opacity (0-1), size number, or boolean flag.
+   * Accepted values: CSS color string, opacity (0-1), size number, boolean flag,
+   * or a gradient definition for color channels.
    */
-  value?: string | number | boolean | null;
+  value?: string | number | boolean | null | GradientDef;
 }
 
 /**

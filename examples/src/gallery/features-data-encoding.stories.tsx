@@ -9,7 +9,7 @@
  * rows — so the spec panels double as copyable recipes.
  */
 
-import type { ChartSpec, Condition, GradientDef } from '@opendata-ai/openchart-core';
+import type { ChartSpec, Condition } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 import { useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
@@ -26,9 +26,8 @@ import {
 const ACCENT = '#0e7490';
 
 /**
- * A conditional-color condition whose value is a gradient. Gradients are valid
- * conditional color values at runtime; the shared `Condition.value` type is
- * narrowed to scalars, so this helper carries the cast in one place.
+ * A conditional-color condition whose value is a gradient. `Condition.value`
+ * accepts a `GradientDef` for color channels, so this reads plainly.
  */
 const gradientWhen = (
   test: Condition['test'],
@@ -43,7 +42,7 @@ const gradientWhen = (
       { offset: 0, color: from },
       { offset: 1, color: to },
     ],
-  } as GradientDef as unknown as Condition['value'],
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -308,10 +307,9 @@ const linearGradientSpec: ChartSpec = {
 // 6b. Gradients — radial on a donut, per-slice via conditional color
 // ---------------------------------------------------------------------------
 
-// Arc marks + a conditional color channel don't line up with ChartSpec's
-// mark-discriminated union in TS (the arc member has no conditional-color
-// slot), though the pairing renders correctly. Author it plainly and cast.
-const radialDonutSpec = {
+// Arc marks accept a conditional color channel (ArcEncoding.color allows a
+// ConditionalValueDef), so this is authored plainly.
+const radialDonutSpec: ChartSpec = {
   animation: true,
   mark: { type: 'arc', innerRadius: 60 },
   // With conditional color (a value def, not a field), the arc layout has no
@@ -338,7 +336,7 @@ const radialDonutSpec = {
     source: electricityMix.source,
     byline: 'Chart: OpenChart',
   },
-} as unknown as ChartSpec;
+};
 
 // ---------------------------------------------------------------------------
 // 6c. Gradients — area fade to transparent at the baseline
