@@ -51,6 +51,62 @@ function isNumeric(value: unknown): boolean {
   return false;
 }
 
+/**
+ * Levenshtein edit distance between two strings (case-insensitive). Used to
+ * turn a misspelled field reference into a "did you mean" repair hint.
+ */
+function editDistance(a: string, b: string): number {
+  const s = a.toLowerCase();
+  const t = b.toLowerCase();
+  const m = s.length;
+  const n = t.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  // Single-row DP: prev[j] holds distance for the previous source char.
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  let curr = new Array<number>(n + 1);
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+/**
+ * Given a misspelled field name and the actual data columns, return the nearest
+ * column when it is close enough to be a plausible typo, else undefined.
+ *
+ * The threshold scales with word length (at most ~40% of the target length, and
+ * never more than 3 edits) so short columns don't match unrelated names.
+ */
+function nearestColumn(field: string, columns: string[]): string | undefined {
+  let best: string | undefined;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const column of columns) {
+    const distance = editDistance(field, column);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = column;
+    }
+  }
+  if (best === undefined) return undefined;
+  const threshold = Math.min(3, Math.max(1, Math.floor(best.length * 0.4)));
+  return bestDistance <= threshold ? best : undefined;
+}
+
+/**
+ * Build the "did you mean" clause appended to DATA_FIELD_MISSING suggestions.
+ * Returns an empty string when no column is a plausible near-match.
+ */
+function didYouMean(field: string, columns: string[]): string {
+  const match = nearestColumn(field, columns);
+  return match ? ` Did you mean "${match}"?` : '';
+}
+
 // ---------------------------------------------------------------------------
 // Range mark validation
 // ---------------------------------------------------------------------------
@@ -354,7 +410,8 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   const rules = MARK_ENCODING_RULES[markType as MarkType];
   const encoding = spec.encoding as Record<string, unknown>;
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-  const availableColumns = [...dataColumns].join(', ');
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
 
   // Validate required channels
   for (const [channel, rule] of Object.entries(rules)) {
@@ -491,7 +548,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
             message: `Spec error: encoding.tooltip[${i}].field "${elem.field}" does not exist in data. Available columns: ${availableColumns}`,
             path: `encoding.tooltip[${i}].field`,
             code: 'DATA_FIELD_MISSING',
-            suggestion: `Use one of the available data columns: ${availableColumns}`,
+            suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(elem.field, columnList)}`,
           });
         }
         if (elem.type && !VALID_FIELD_TYPES.has(elem.type as string)) {
@@ -529,7 +586,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: encoding.${channel}.field "${channelObj.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(channelObj.field, columnList)}`,
       });
     }
 
@@ -672,7 +729,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: encoding.facet.field "${facet.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: 'encoding.facet.field',
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(facet.field as string, columnList)}`,
       });
     }
     if (!facet.type || (facet.type !== 'nominal' && facet.type !== 'ordinal')) {
@@ -812,7 +869,8 @@ function validateTableSpec(spec: Record<string, unknown>, errors: ValidationErro
   }
 
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-  const availableColumns = [...dataColumns].join(', ');
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
   const columns = spec.columns as Record<string, unknown>[];
 
   for (let i = 0; i < columns.length; i++) {
@@ -844,7 +902,7 @@ function validateTableSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: columns[${i}].key "${col.key}" does not exist in data. Available columns: ${availableColumns}`,
         path: `columns[${i}].key`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(col.key as string, columnList)}`,
       });
     }
 
