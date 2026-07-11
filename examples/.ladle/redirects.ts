@@ -30,6 +30,7 @@ const ANIMATION = 'features--animation';
 const THEMING = 'features--theming';
 const RESPONSIVE = 'features--responsive';
 const DATA_ENCODING = 'features--data-and-encoding';
+const SHOWCASE = 'showcase--showcase';
 
 export const redirects: Record<string, Redirect> = {
   // charts/bar.stories.tsx
@@ -285,4 +286,16 @@ export const redirects: Record<string, Redirect> = {
   'facet--independent-y': { story: DATA_ENCODING, hash: 'facet-independent' },
   // conditional.stories.tsx
   'conditional--positive-negative-bars': { story: DATA_ENCODING, hash: 'conditional-encoding' },
+
+  // ── Phase 05: Showcase ──
+  // infographic.stories.tsx
+  'infographic--horizontal-bar': { story: SHOWCASE, hash: 'full-chrome-bar' },
+  'infographic--multi-series-line': { story: SHOWCASE, hash: 'multi-series-line' },
+  'infographic--stacked-column': { story: SHOWCASE, hash: 'stacked-area' },
+  'infographic--stacked-area': { story: SHOWCASE, hash: 'stacked-area' },
+  'infographic--data-table-showcase': { story: SHOWCASE, hash: 'data-table' },
+  // chrome.stories.tsx
+  'chrome--chrome-with-title-subtitle-source': { story: SHOWCASE, hash: 'full-chrome-bar' },
+  'chrome--chrome-title-only': { story: SHOWCASE, hash: 'full-chrome-bar' },
+  'chrome--chrome-all-elements': { story: SHOWCASE, hash: 'full-chrome-bar' },
 };

@@ -3,7 +3,7 @@ export default {
   port: 6006,
   stories: 'src/**/*.stories.{tsx,ts}',
   viteConfig: 'vite.config.ts',
-  // defaultStory added in Phase 05 when the Welcome story exists.
+  defaultStory: 'welcome--welcome',
   addons: {
     theme: { enabled: true, defaultState: 'auto' },
     width: {

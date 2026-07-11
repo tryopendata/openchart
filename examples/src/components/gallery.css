@@ -481,9 +481,19 @@
 
 /* ---------------------------------------------------------------------------
  * Full-bleed breakout wrapper (used by GalleryPage for showcase sections)
+ *
+ * The content column (.oc-gallery-main) is capped at 1040px and centered. A
+ * .oc-bleed child widens past that cap up to 1240px, centered on the column via
+ * symmetric negative margins. It never exceeds the viewport minus the page
+ * gutter (2 x --oc-space-5), so there is no horizontal body scroll — and when
+ * the column is already narrower than the target (mobile, ~390px) the margins
+ * resolve to zero and it collapses to the plain column width. Scoped to
+ * .oc-bleed only, so non-showcase pages that never emit this class are
+ * unaffected.
  * ------------------------------------------------------------------------- */
 .oc-bleed {
-  width: 100%;
+  width: min(100vw - 2 * var(--oc-space-5), 1240px);
+  margin-inline: calc(50% - min(50vw - var(--oc-space-5), 620px));
 }
 
 /* ---------------------------------------------------------------------------
