@@ -86,6 +86,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rotated-with-source',
     note: 'Column chart with long category labels that auto-rotate, plus source chrome below.',
   },
+  // --- Continuous color legend ---
+  {
+    name: 'color-legend-gradient',
+    slug: 'testing--fixtures--color-legend-gradient',
+    note: 'Sequential color scale with the default-on gradient-bar legend (min/max labels).',
+  },
+  {
+    name: 'color-legend-binned',
+    slug: 'testing--fixtures--color-legend-binned',
+    note: 'Threshold scale with 4 breaks: 5 swatches, boundary labels at the class breaks.',
+  },
+  {
+    name: 'color-legend-dark-diverging',
+    slug: 'testing--fixtures--color-legend-dark-diverging',
+    note: 'Dark mode diverging ramp with min/neutral/max labels; neutral at the scale center.',
+  },
 ];
 
 for (const story of stories) {

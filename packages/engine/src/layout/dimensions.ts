@@ -43,6 +43,7 @@ import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
+import { hasLegendContent } from '../legend/compute';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
@@ -53,6 +54,12 @@ import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } f
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
   return { label: theme.fonts.sizes.metricLabel, value: theme.fonts.sizes.metricValue };
+}
+
+/** True when a placed legend layout has visible content (back-compat path). */
+function legendLayoutHasContent(legendLayout: LegendLayout): boolean {
+  if (legendLayout.type === 'continuous') return legendLayout.bounds.height > 0;
+  return 'entries' in legendLayout && legendLayout.entries.length > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,12 +198,10 @@ export function computeDimensions(
   // When a layout plan is present, derive legend info from plan.legendContent;
   // otherwise fall back to the legendLayout parameter (back-compat).
   const bottomLegendReservation = plan
-    ? plan.legendContent.entries.length > 0 && plan.legendContent.position === 'bottom'
+    ? hasLegendContent(plan.legendContent) && plan.legendContent.position === 'bottom'
       ? plan.legendContent.height + legendGap(width)
       : 0
-    : 'entries' in legendLayout &&
-        legendLayout.entries.length > 0 &&
-        legendLayout.position === 'bottom'
+    : legendLayoutHasContent(legendLayout) && legendLayout.position === 'bottom'
       ? legendLayout.bounds.height + legendGap(width)
       : 0;
 
@@ -244,7 +249,7 @@ export function computeDimensions(
     };
 
     // Reserve legend space only when user explicitly opted into a legend.
-    if (userExplicit.legend && 'entries' in legendLayout && legendLayout.entries.length > 0) {
+    if (userExplicit.legend && legendLayoutHasContent(legendLayout)) {
       const gap = legendGap(width);
       if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
         margins.right += legendLayout.bounds.width + 8;
@@ -656,23 +661,11 @@ export function computeDimensions(
   // When a plan is present, derive legend position/size from plan.legendContent;
   // otherwise use the legendLayout parameter (back-compat for non-plan callers).
   const legendHasEntries = plan
-    ? plan.legendContent.entries.length > 0
-    : 'entries' in legendLayout && legendLayout.entries.length > 0;
-  const legendPos = plan
-    ? plan.legendContent.position
-    : 'entries' in legendLayout
-      ? legendLayout.position
-      : 'top';
-  const legendHeight = plan
-    ? plan.legendContent.height
-    : 'entries' in legendLayout
-      ? legendLayout.bounds.height
-      : 0;
-  const legendBoundsWidth = plan
-    ? plan.legendContent.legendWidth
-    : 'entries' in legendLayout
-      ? legendLayout.bounds.width
-      : 0;
+    ? hasLegendContent(plan.legendContent)
+    : legendLayoutHasContent(legendLayout);
+  const legendPos = plan ? plan.legendContent.position : legendLayout.position;
+  const legendHeight = plan ? plan.legendContent.height : legendLayout.bounds.height;
+  const legendBoundsWidth = plan ? plan.legendContent.legendWidth : legendLayout.bounds.width;
 
   const hasTopLegend = legendHasEntries && legendPos === 'top';
   if (legendHasEntries) {

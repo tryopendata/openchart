@@ -31,7 +31,7 @@ import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
-import { computeLegendContent, type LegendContent } from '../legend/compute';
+import { computeLegendContent, hasLegendContent, type LegendContent } from '../legend/compute';
 import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
@@ -149,7 +149,7 @@ export function resolveLayoutPlan(
       measure,
     );
     const bottomLegendReservation =
-      legendContent.entries.length > 0 && legendContent.position === 'bottom'
+      hasLegendContent(legendContent) && legendContent.position === 'bottom'
         ? legendContent.height + legendGap(width)
         : 0;
     const chrome = computeChrome(
@@ -316,7 +316,7 @@ export function resolveLayoutPlan(
 
     // Chrome
     const bottomLegendReservation =
-      legendContent.entries.length > 0 && legendContent.position === 'bottom'
+      hasLegendContent(legendContent) && legendContent.position === 'bottom'
         ? legendContent.height + legendGap(width)
         : 0;
     const chrome = computeChrome(
@@ -386,7 +386,7 @@ export function resolveLayoutPlan(
 
     // Top margin
     const topPad = width < NARROW_VIEWPORT_MAX ? padding + TOP_PAD_EXTRA_NARROW : padding;
-    const hasTopLegend = legendContent.entries.length > 0 && legendContent.position === 'top';
+    const hasTopLegend = hasLegendContent(legendContent) && legendContent.position === 'top';
     const gap = legendGap(width);
     const inlineTickOverhang = yIsInline
       ? theme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD

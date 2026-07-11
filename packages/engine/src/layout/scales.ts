@@ -44,6 +44,7 @@ import {
 } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -595,15 +596,64 @@ function buildSequentialColorScale(
   const explicitRange = channel.scale?.range as string[] | undefined;
   const colors = explicitRange ?? palette;
 
-  const scale = scaleLinear<string>()
-    .domain([domainMin, domainMax])
-    .range([colors[0], colors[colors.length - 1]])
-    .clamp(true);
+  // Explicit multi-stop ranges (e.g. a diverging scheme) interpolate piecewise
+  // through every stop, with evenly-spaced domain pivots to match. Without an
+  // explicit range the endpoints-only form is kept so applyColorScaleRange can
+  // swap in the theme ramp endpoints post-hoc.
+  const stops =
+    explicitRange && explicitRange.length > 2
+      ? explicitRange
+      : [colors[0], colors[colors.length - 1]];
+  const domain =
+    stops.length > 2
+      ? stops.map((_, i) => domainMin + ((domainMax - domainMin) * i) / (stops.length - 1))
+      : [domainMin, domainMax];
+
+  const scale = scaleLinear<string>().domain(domain).range(stops).clamp(true);
 
   // Cast: sequential color scale (number -> string) is structurally incompatible
   // with D3Scale (number -> number), but is only ever accessed via scales.color
   // where consumers already cast appropriately.
   return { scale: scale as unknown as D3Scale, type: 'sequential', channel };
+}
+
+/**
+ * Build a binned color scale (quantile/quantize/threshold) for a quantitative
+ * color encoding with an explicit `scale.type`. The range holds colors: an
+ * explicit `scale.range` wins; otherwise a placeholder sampled from the
+ * default palette that `applyColorScaleRange` replaces with the theme's
+ * sequential ramp.
+ */
+function buildBinnedColorScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  palette: string[],
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+  const explicitRange = channel.scale?.range as string[] | undefined;
+  const scaleType = channel.scale?.type as 'quantile' | 'quantize' | 'threshold';
+
+  if (scaleType === 'threshold') {
+    // Threshold scales require explicit domain breakpoints; colors = breaks + 1.
+    const breaks = (channel.scale?.domain as number[] | undefined) ?? [0.5];
+    const colors = sampleRampColors(explicitRange ?? palette, breaks.length + 1);
+    const scale = scaleThreshold<number, string>().domain(breaks).range(colors);
+    return { scale: scale as unknown as D3Scale, type: 'threshold', channel };
+  }
+
+  const binCount = explicitRange?.length ?? DEFAULT_BIN_COUNT;
+  const colors = explicitRange ?? sampleRampColors(palette, binCount);
+
+  if (scaleType === 'quantile') {
+    const scale = scaleQuantile<string>().domain(values).range(colors);
+    return { scale: scale as unknown as D3Scale, type: 'quantile', channel };
+  }
+
+  const explicitDomain = channel.scale?.domain as [number, number] | undefined;
+  const domainMin = explicitDomain?.[0] ?? min(values) ?? 0;
+  const domainMax = explicitDomain?.[1] ?? max(values) ?? 1;
+  const scale = scaleQuantize<string>().domain([domainMin, domainMax]).range(colors);
+  return { scale: scale as unknown as D3Scale, type: 'quantize', channel };
 }
 
 // ---------------------------------------------------------------------------
@@ -924,8 +974,18 @@ export function computeScales(
     // Only build color scales for field-based encodings, not conditional value defs
     if ('field' in encoding.color) {
       if (encoding.color.type === 'quantitative') {
-        // Sequential color scale for value-based coloring
-        result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
+        const colorScaleType = encoding.color.scale?.type;
+        if (
+          colorScaleType === 'quantile' ||
+          colorScaleType === 'quantize' ||
+          colorScaleType === 'threshold'
+        ) {
+          // Binned color scale: discrete classes for value-based coloring
+          result.color = buildBinnedColorScale(encoding.color, data, defaultPalette);
+        } else {
+          // Sequential color scale for value-based coloring
+          result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
+        }
       } else {
         // Categorical color scale for nominal/ordinal grouping
         result.color = buildOrdinalColorScale(encoding.color, data, defaultPalette);

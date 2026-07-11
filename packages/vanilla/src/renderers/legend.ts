@@ -1,16 +1,110 @@
 /**
- * Legend rendering: swatches + labels with wrap/overflow handling.
+ * Legend rendering: swatches + labels with wrap/overflow handling, plus the
+ * continuous variant (gradient bar / binned swatch row) for quantitative
+ * color scales.
  */
 
-import type { CategoricalLegendLayout, LegendLayout } from '@opendata-ai/openchart-core';
+import type {
+  CategoricalLegendLayout,
+  ContinuousLegendLayout,
+  LegendLayout,
+} from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { nextSvgId } from '../svg-ids';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 function isCategorical(legend: LegendLayout): legend is CategoricalLegendLayout {
   return !legend.type || legend.type === 'categorical';
 }
 
+/**
+ * Render a continuous color legend: a gradient-filled bar (gradient mode) or
+ * a contiguous swatch row (binned mode) with value labels below.
+ *
+ * The gradient ID comes from the shared `nextSvgId` counter like every other
+ * gradient/clip-path def, so IDs stay deterministic at generation time.
+ */
+function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayout): void {
+  if (legend.bounds.width <= 0 || legend.bounds.height <= 0) return;
+
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-legend oc-legend--continuous');
+  g.setAttribute('role', 'img');
+  const first = legend.ticks[0];
+  const last = legend.ticks[legend.ticks.length - 1];
+  if (first && last) {
+    g.setAttribute('aria-label', `Color scale from ${first.label} to ${last.label}`);
+  } else {
+    g.setAttribute('aria-label', 'Color scale');
+  }
+
+  if (legend.mode === 'gradient') {
+    // linearGradient def + one rect. Defs may already exist (clip paths).
+    let defs: SVGElement | null = parent.querySelector('defs');
+    if (!defs) {
+      defs = createSVGElement('defs');
+      parent.insertBefore(defs, parent.firstChild);
+    }
+    const gradientId = nextSvgId('oc-legend-gradient');
+    const grad = createSVGElement('linearGradient');
+    grad.setAttribute('id', gradientId);
+    setAttrs(grad, { x1: '0%', y1: '0%', x2: '100%', y2: '0%' });
+    for (const stop of legend.colorStops) {
+      const s = createSVGElement('stop');
+      const attrs: Record<string, string | number> = {
+        offset: `${stop.offset * 100}%`,
+        'stop-color': stop.color,
+      };
+      if (stop.opacity !== undefined) attrs['stop-opacity'] = stop.opacity;
+      setAttrs(s, attrs);
+      grad.appendChild(s);
+    }
+    defs.appendChild(grad);
+
+    const bar = createSVGElement('rect');
+    bar.setAttribute('class', 'oc-legend-gradient-bar');
+    setAttrs(bar, {
+      x: legend.bar.x,
+      y: legend.bar.y,
+      width: legend.bar.width,
+      height: legend.bar.height,
+      rx: 2,
+      ry: 2,
+      fill: `url(#${gradientId})`,
+    });
+    g.appendChild(bar);
+  } else {
+    // Binned: contiguous class swatches, square-cornered (Datawrapper-style).
+    for (const bin of legend.bins) {
+      const rect = createSVGElement('rect');
+      rect.setAttribute('class', 'oc-legend-bin');
+      setAttrs(rect, {
+        x: bin.x,
+        y: legend.bar.y,
+        width: bin.width,
+        height: legend.bar.height,
+        fill: bin.color,
+      });
+      g.appendChild(rect);
+    }
+  }
+
+  for (const tick of legend.ticks) {
+    const label = createSVGElement('text');
+    setAttrs(label, { x: tick.x, y: legend.labelY, 'text-anchor': tick.anchor });
+    applyTextStyle(label, legend.labelStyle);
+    label.textContent = tick.label;
+    g.appendChild(label);
+  }
+
+  parent.appendChild(g);
+}
+
 export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
+  if (legend.type === 'continuous') {
+    renderContinuousLegend(parent, legend);
+    return;
+  }
   if (!isCategorical(legend) || legend.entries.length === 0) return;
 
   const g = createSVGElement('g');
