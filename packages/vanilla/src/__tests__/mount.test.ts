@@ -103,6 +103,32 @@ describe('createChart', () => {
     chart.destroy();
   });
 
+  it('a11y.description overrides the SVG aria-label', () => {
+    const chart = createChart(container, {
+      ...lineSpec,
+      a11y: { description: 'GDP growth for US and UK.' },
+    });
+
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('aria-label')).toBe('GDP growth for US and UK.');
+
+    chart.destroy();
+  });
+
+  it('a11y.hidden removes the chart from the accessibility tree', () => {
+    const chart = createChart(container, { ...lineSpec, a11y: { hidden: true } });
+
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('aria-hidden')).toBe('true');
+    expect(svg?.getAttribute('role')).toBeNull();
+    expect(svg?.getAttribute('aria-label')).toBeNull();
+    // No screen-reader table, no keyboard tab stop
+    expect(container.querySelector('.oc-sr-only')).toBeNull();
+    expect(container.getAttribute('tabindex')).toBeNull();
+
+    chart.destroy();
+  });
+
   it('layout property returns the compiled layout', () => {
     const chart = createChart(container, lineSpec);
 

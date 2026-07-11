@@ -50,6 +50,7 @@ export type {
   EndpointLabelsLayout,
   FacetLayout,
   FacetPanelLayout,
+  FillPatternType,
   FlagTableCell,
   GradientColorStop,
   GradientLegendLayout,
@@ -78,6 +79,7 @@ export type {
   ResolvedChrome,
   ResolvedChromeElement,
   ResolvedColumn,
+  ResolvedFillPattern,
   ResolvedLabel,
   ResolvedMetricBar,
   ResolvedMetricCell,
@@ -103,6 +105,7 @@ export type {
 } from './layout';
 // Spec types (user input)
 export type {
+  A11yConfig,
   AggregateOp,
   AggregateTransform,
   AnimationConfig,

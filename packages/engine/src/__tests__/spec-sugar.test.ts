@@ -96,6 +96,41 @@ describe('top-level title/subtitle', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Top-level description (alt-text override)
+// ---------------------------------------------------------------------------
+
+describe('top-level description', () => {
+  const base = {
+    mark: 'bar',
+    data: [{ cat: 'A', value: 1 }],
+    encoding: {
+      x: { field: 'cat', type: 'nominal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  };
+
+  it('folds description into a11y.description', () => {
+    const result = expandSpecSugar({ ...base, description: 'Bar chart of one value' });
+    expect(result.a11y).toEqual({ description: 'Bar chart of one value' });
+    expect('description' in result).toBe(false);
+  });
+
+  it('an authored a11y.description wins over the top-level description', () => {
+    const result = expandSpecSugar({
+      ...base,
+      description: 'Sugar text',
+      a11y: { description: 'Authored text' },
+    });
+    expect((result.a11y as Record<string, unknown>).description).toBe('Authored text');
+  });
+
+  it('preserves other a11y fields when folding', () => {
+    const result = expandSpecSugar({ ...base, description: 'Alt', a11y: { hidden: true } });
+    expect(result.a11y).toEqual({ description: 'Alt', hidden: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Bare value defs
 // ---------------------------------------------------------------------------
 

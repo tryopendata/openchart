@@ -7,6 +7,7 @@
  *
  * - `data: { values: [...] }` unwraps to the bare array
  * - top-level `title` / `subtitle` expand into `chrome` (chrome wins on conflict)
+ * - top-level `description` folds into `a11y.description` (a11y wins on conflict)
  * - bare value defs (`color/size/opacity: { value }`) move to mark-level props
  * - channel-level `legend: null | config` on color merges into the top-level legend
  * - `axis: null` becomes `axis: false`
@@ -184,6 +185,18 @@ function expandTopLevelTitle(spec: Record<string, unknown>): Record<string, unkn
   const chrome =
     spec.chrome && typeof spec.chrome === 'object' ? (spec.chrome as Record<string, unknown>) : {};
   return { ...rest, chrome: { ...expanded, ...chrome } };
+}
+
+/**
+ * Fold the top-level `description` (VL's alt-text field) into
+ * `a11y.description`. An authored `a11y.description` wins on conflict.
+ */
+function expandDescriptionSugar(spec: Record<string, unknown>): Record<string, unknown> {
+  if (typeof spec.description !== 'string') return spec;
+  const { description, ...rest } = spec;
+  const a11y =
+    spec.a11y && typeof spec.a11y === 'object' ? (spec.a11y as Record<string, unknown>) : {};
+  return { ...rest, a11y: { description, ...a11y } };
 }
 
 /** Keys accepted for VL compatibility but ignored; warned once and stripped. */
@@ -593,6 +606,7 @@ function expandChartSugar(
 ): Record<string, unknown> {
   let out = unwrapDataValues(spec);
   out = expandTopLevelTitle(out);
+  out = expandDescriptionSugar(out);
   out = stripIgnoredKeys(out, warnings);
   out = applyFixedSizeDefault(out);
   out = expandChannelSugar(out, warnings);

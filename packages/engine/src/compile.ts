@@ -58,9 +58,11 @@ import { getChartRenderer } from './charts/registry';
 import { groupByField } from './charts/utils';
 import { applyColorScaleRange } from './compile/color-scale-range';
 import { filterClippedDomains } from './compile/data-clip';
+import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
 import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
+import { collectContrastWarnings } from './compiler/a11y-warnings';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec } from './compiler/index';
 import {
@@ -633,6 +635,12 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   scales.defaultColor =
     chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
 
+  // Dev-mode WCAG contrast diagnostics. Host-gated via options.dev (never an
+  // env sniff; the engine is isomorphic). Advisory console.warn only.
+  if (options.dev) {
+    emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme));
+  }
+
   // Arc charts (pie/donut) don't use axes or gridlines
   const isRadial = chartSpec.markType === 'arc';
 
@@ -673,6 +681,10 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   const marks: Mark[] = renderer
     ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
     : [];
+
+  // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates
+  // filled marks in place; assignment is deterministic and theme-aware.
+  applyFillPatterns(marks, chartSpec.markDef, theme);
 
   // Compute the right-side endpoint labels column for multi-series line/area
   // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.
@@ -739,16 +751,20 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // Compute tooltip descriptors from marks and encoding
   const tooltipDescriptors = computeTooltipDescriptors(chartSpec, marks);
 
-  // Compute accessibility
-  const altText = generateAltText(
-    {
-      mark: chartSpec.markType,
-      data: chartSpec.data,
-      encoding: chartSpec.encoding,
-      chrome: chartSpec.chrome,
-    } as ChartSpec,
-    chartSpec.data,
-  );
+  // Compute accessibility. An author-provided description (a11y.description,
+  // or top-level `description` folded in by the sugar expansion) replaces the
+  // auto-generated alt text; auto-generation stays the fallback.
+  const altText =
+    chartSpec.a11y?.description ??
+    generateAltText(
+      {
+        mark: chartSpec.markType,
+        data: chartSpec.data,
+        encoding: chartSpec.encoding,
+        chrome: chartSpec.chrome,
+      } as ChartSpec,
+      chartSpec.data,
+    );
   const dataTableFallback = generateDataTable(
     {
       mark: chartSpec.markType,
@@ -781,6 +797,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       dataTableFallback,
       role: 'img',
       keyboardNavigable: marks.length > 0,
+      ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
     },
     theme,
     dimensions: {
@@ -932,6 +949,12 @@ function compileFaceted(
     panelScales.defaultColor =
       chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
 
+    // Dev-mode contrast diagnostics: panels share one palette resolution, so
+    // checking the first panel covers the figure without repeating warnings.
+    if (options.dev && panelLayouts.length === 0) {
+      emitSpecWarnings(collectContrastWarnings(panelScales, chartSpec.markType, theme));
+    }
+
     // Outer-axis economy: only leftmost column gets y ticks, only bottom row gets x ticks.
     // Exception: when scales are independent, every panel needs its own axis ticks.
     const isLeftCol = gridPanel.col === 0;
@@ -1000,7 +1023,12 @@ function compileFaceted(
   // Compute tooltip descriptors from all marks across panels
   const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
 
-  // A11y: mention faceting in alt text
+  // Opt-in per-series fill patterns across all panels at once so a series
+  // gets the same pattern in every panel.
+  applyFillPatterns(allMarks, chartSpec.markDef, theme);
+
+  // A11y: mention faceting in alt text. An author description is used
+  // verbatim (the author already describes the whole figure).
   const panelCount = facetValues.length;
   const baseAltText = generateAltText(
     {
@@ -1011,7 +1039,9 @@ function compileFaceted(
     } as ChartSpec,
     chartSpec.data,
   );
-  const altText = `${baseAltText} Faceted into ${panelCount} panels by ${facetChannel.field}.`;
+  const altText =
+    chartSpec.a11y?.description ??
+    `${baseAltText} Faceted into ${panelCount} panels by ${facetChannel.field}.`;
 
   const dataTableFallback = generateDataTable(
     {
@@ -1041,6 +1071,7 @@ function compileFaceted(
       dataTableFallback,
       role: 'img',
       keyboardNavigable: allMarks.length > 0,
+      ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
     },
     theme,
     dimensions: { width: options.width, height: options.height },

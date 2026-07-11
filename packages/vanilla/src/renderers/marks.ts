@@ -17,11 +17,13 @@ import type {
   PointMark,
   RectMark,
   ResolvedAnimation,
+  ResolvedFillPattern,
   RuleMarkLayout,
   TextMarkLayout,
   TickMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { resolveMarkFill } from '../gradient-utils';
+import { resolvePatternFill } from '../pattern-utils';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
@@ -36,19 +38,40 @@ let currentAnimation: ResolvedAnimation | undefined;
  */
 let currentGradientMap: Map<string, string> = new Map();
 
-/** Set animation + gradient state before rendering marks. */
+/**
+ * Module-level pattern map. Same lifecycle as the gradient map, built from
+ * pattern defs (see pattern-utils.ts).
+ */
+let currentPatternMap: Map<string, string> = new Map();
+
+/** Set animation + gradient + pattern state before rendering marks. */
 export function setMarkRenderState(state: {
   animation: ResolvedAnimation | undefined;
   gradientMap: Map<string, string>;
+  patternMap?: Map<string, string>;
 }): void {
   currentAnimation = state.animation;
   currentGradientMap = state.gradientMap;
+  currentPatternMap = state.patternMap ?? new Map();
 }
 
-/** Reset animation + gradient state after rendering. */
+/** Reset animation + gradient + pattern state after rendering. */
 export function resetMarkRenderState(): void {
   currentAnimation = undefined;
   currentGradientMap = new Map();
+  currentPatternMap = new Map();
+}
+
+/**
+ * Resolve a filled mark's paint: the pattern url when the engine assigned a
+ * fill pattern, the plain/gradient fill otherwise.
+ */
+function resolveFillOrPattern(
+  fill: Parameters<typeof resolveMarkFill>[0],
+  pattern: ResolvedFillPattern | undefined,
+): string {
+  if (pattern) return resolvePatternFill(pattern, currentPatternMap);
+  return resolveMarkFill(fill, currentGradientMap);
 }
 
 /**
@@ -158,7 +181,7 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
     const fill = createSVGElement('path');
     setAttrs(fill, {
       d: mark.path,
-      fill: resolveMarkFill(mark.fill, currentGradientMap),
+      fill: resolveFillOrPattern(mark.fill, mark.pattern),
       'fill-opacity': mark.fillOpacity,
       stroke: 'none',
     });
@@ -248,7 +271,7 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
       setAttrs(shapeEl, { rx: mark.cornerRadius, ry: mark.cornerRadius });
     }
   }
-  shapeEl.setAttribute('fill', String(resolveMarkFill(mark.fill, currentGradientMap)));
+  shapeEl.setAttribute('fill', resolveFillOrPattern(mark.fill, mark.pattern));
   if (mark.stroke) {
     shapeEl.setAttribute('stroke', mark.stroke);
   }
@@ -274,7 +297,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
   const path = createSVGElement('path');
   setAttrs(path, {
     d: mark.path,
-    fill: resolveMarkFill(mark.fill, currentGradientMap),
+    fill: resolveFillOrPattern(mark.fill, mark.pattern),
     stroke: mark.stroke,
     'stroke-width': mark.strokeWidth,
   });

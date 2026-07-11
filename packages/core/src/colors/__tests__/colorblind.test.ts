@@ -42,6 +42,18 @@ describe('simulateColorBlindness', () => {
     expect(simRed).toMatch(/^#[0-9a-f]{6}$/i);
     expect(simGreen).toMatch(/^#[0-9a-f]{6}$/i);
   });
+
+  it('achromatopsia collapses every color to a grey', () => {
+    for (const color of ['#e15759', '#59a14f', '#1b7fa3']) {
+      const sim = simulateColorBlindness(color, 'achromatopsia');
+      const match = sim.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+      expect(match).not.toBeNull();
+      if (match) {
+        const [r, g, b] = [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)];
+        expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThanOrEqual(1);
+      }
+    }
+  });
 });
 
 describe('checkPaletteDistinguishability', () => {

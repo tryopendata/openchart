@@ -62,6 +62,16 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
   };
   document.addEventListener('touchstart', handleDocumentTouch);
 
+  // WCAG 1.4.13: hover-triggered content must be dismissible without moving
+  // the pointer. Document-level so it works while hovering, when the chart
+  // container does not have keyboard focus.
+  const handleDocumentKeydown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && tooltip.style.display === 'block') {
+      hide();
+    }
+  };
+  document.addEventListener('keydown', handleDocumentKeydown);
+
   function show(content: TooltipContent, x: number, y: number, opts?: TooltipShowOptions): void {
     // Fast content identity check: title + field count + first/last field values
     const contentKey = `${content.title}|${content.fields.length}|${content.fields[0]?.value}|${content.fields[content.fields.length - 1]?.value}`;
@@ -148,6 +158,7 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
 
   function destroy(): void {
     document.removeEventListener('touchstart', handleDocumentTouch);
+    document.removeEventListener('keydown', handleDocumentKeydown);
     if (tooltip.parentNode) {
       tooltip.parentNode.removeChild(tooltip);
     }

@@ -1271,7 +1271,7 @@ The library generates accessibility features automatically:
 - **ARIA attributes**: Role, roledescription, and label on the chart container
 - **Keyboard navigation**: Arrow keys navigate between marks, Enter/Space shows tooltip, Escape hides it
 
-These are built into the vanilla adapter and inherited by all framework components (React, Vue, Svelte). No extra configuration needed.
+These are built into the vanilla adapter and inherited by all framework components (React, Vue, Svelte). No extra configuration needed. For author controls (custom alt text, pattern fills, dev-mode contrast warnings) and the WCAG mapping, see the [accessibility guide](accessibility.md).
 
 For tables, the HTML structure uses semantic elements (`<table>`, `<thead>`, `<th scope="col">`, `<tbody>`) with ARIA grid roles, sort state attributes, and a live region that announces sort/search changes to screen readers.
 

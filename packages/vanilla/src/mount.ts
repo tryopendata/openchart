@@ -791,14 +791,17 @@ export function createChart<TData extends DataRow = DataRow>(
     // Wire voronoi overlay tooltip events for line/area charts
     cleanupVoronoiEvents = wireVoronoiTooltipEvents(svgElement, currentLayout, tooltipManager);
 
-    // Wire keyboard navigation
-    cleanupKeyboardNav = wireKeyboardNav(
-      svgElement,
-      container,
-      currentLayout.tooltipDescriptors,
-      tooltipManager,
-      currentLayout,
-    );
+    // Wire keyboard navigation. Skipped when the author hid the chart from
+    // assistive technology (a11y.hidden): a hidden chart must not be a tab stop.
+    if (!currentLayout.a11y.hidden) {
+      cleanupKeyboardNav = wireKeyboardNav(
+        svgElement,
+        container,
+        currentLayout.tooltipDescriptors,
+        tooltipManager,
+        currentLayout,
+      );
+    }
 
     // Wire legend interactivity
     cleanupLegend = wireLegendInteraction(
@@ -888,8 +891,11 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     }
 
-    // Create hidden data table for screen readers
-    srTable = createScreenReaderTable(currentLayout, container);
+    // Create hidden data table for screen readers (not when the author hid
+    // the chart from assistive technology)
+    if (!currentLayout.a11y.hidden) {
+      srTable = createScreenReaderTable(currentLayout, container);
+    }
 
     // Apply container classes for CSS variable scoping and dark mode
     container.classList.add('oc-root');

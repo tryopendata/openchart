@@ -33,6 +33,7 @@ export {
   contrastRatio,
   DIVERGING_PALETTES,
   findAccessibleColor,
+  isOpaqueColor,
   meetsAA,
   pickLabelColor,
   resolveSchemeName,

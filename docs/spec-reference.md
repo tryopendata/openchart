@@ -60,6 +60,8 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options; if neither is set, defaults to `true`. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
+| `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
+| `a11y`        | `A11yConfig`   | `undefined` | Accessibility overrides: `description` (custom alt text, wins over top-level `description`) and `hidden` (hide from assistive technology). |
 
 ### DataRow
 
@@ -101,6 +103,7 @@ The `type` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `strokeWidth`  | `number`                | varies      | all            | Stroke width in pixels. |
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
+| `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
 
 #### Gradients
 

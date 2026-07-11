@@ -314,6 +314,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     seriesStyles: spec.seriesStyles ?? {},
     watermark: spec.watermark ?? true,
     highlight: normalizeHighlight(encoding, spec.data, warnings),
+    a11y: spec.a11y,
     display,
     resolve: spec.resolve,
     // Default empty userExplicit; compileChart overwrites this with the real
