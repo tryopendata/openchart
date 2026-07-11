@@ -97,6 +97,13 @@
 | Parliament (hemicycle) mark compute (seat-packing, majority line) | `packages/engine/src/charts/parliament/compute.ts` (`computeParliamentMarks`). Emits existing `PointMark`/`RuleMarkLayout`/`TextMarkLayout` (no bespoke layout). Axisless mark, rides the chart pipeline like waffle. Tooltips: `tooltips/compute.ts` `computeParliamentTooltips` (one shared tooltip per party). |
 | Arc angle range (half-donut / election donut) | `markDef.startAngle`/`endAngle` (radians, d3 convention) handled in `packages/engine/src/charts/pie/compute.ts` (`computeSweepBounds` fits a partial sweep). |
 | Release script | `scripts/release.mjs` |
+| Published JSON Schema (LLM tool-use) | `packages/core/schema/{vizspec,chart,table}.schema.json` — generated, committed, exported via the core `./schema` subpath (NOT the barrel). Generator: `scripts/generate-schema.mjs` (ts-json-schema-generator over `packages/core/src/types/schema-roots.ts`; hoists a shared `ChartSpecBase` def). |
+| `llms.txt` generator | `scripts/generate-llms.mjs` — hand-written narrative + a mark-encoding table generated from the built core's `MARK_ENCODING_RULES`/`MARK_DISPLAY_NAMES`. Build core first. |
+| Freshness CI (schema + llms.txt) | `bun run check:generated` (both generators in `--check` mode); wired into `.github/workflows/ci.yml` after typecheck. Editing spec types without regenerating fails CI. |
+| Schema/artifact tests | `packages/core/src/schema/__tests__/{schema,generated-artifacts}.test.ts` (ajv-validates all 16 marks, rejects hallucinated fields, asserts artifacts cover every mark). |
+| "Did you mean" repair hints | levenshtein `editDistance`/`nearestColumn`/`didYouMean` in `packages/engine/src/compiler/validate.ts` (wired into DATA_FIELD_MISSING suggestions). Test: `validate-did-you-mean.test.ts`. |
+| LLM spec-generation eval (manual, per-release) | `scripts/llm-eval/` (`fixtures.json`, `run.mjs`, `README.md`). Hits the Anthropic API; not in CI; `@anthropic-ai/sdk` is not a monorepo dep (dynamic import). |
+| Generating-specs guide | `docs/generating-specs.md` (schema usage, tool-use, strict-mode transform, validate-repair loop). |
 
 ## Package responsibilities (one-liner each)
 

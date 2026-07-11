@@ -40,6 +40,11 @@ jobs:
           wait $LINT_PID || { echo "::error::Lint failed"; exit 1; }
           bun run typecheck || { echo "::error::Typecheck failed"; exit 1; }
 
+      # Fail if spec.ts changed without regenerating the schema / llms.txt.
+      # Runs after build (generate:llms imports the built core).
+      - name: Check generated artifacts (schema + llms.txt)
+        run: bun run check:generated || { echo "::error::Generated schema or llms.txt is stale. Run: bun run generate"; exit 1; }
+
       - name: Test
         run: bun run test
 
