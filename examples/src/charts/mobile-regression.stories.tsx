@@ -13,6 +13,8 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 
+export default { title: 'Testing / Mobile Regression' };
+
 // Long wrapped title + subtitle + source + legend. On iOS the hanging-baseline
 // divergence pushed the first title line above the container.
 const longTitleSpec: ChartSpec = {

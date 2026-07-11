@@ -10,14 +10,14 @@ import { expect, test } from '@playwright/test';
  * Story slugs are reused from the visual regression suite.
  */
 const stories = [
-  { name: 'bar-vertical', slug: 'column--simple-columns' },
-  { name: 'bar-horizontal', slug: 'bar--simple-bars' },
-  { name: 'line-multi-series', slug: 'line-multiseries--gdp-growth' },
-  { name: 'stacked-column', slug: 'column-stacked--energy-mix' },
-  { name: 'chart-with-annotations', slug: 'column-diverging--temperature-anomaly' },
-  { name: 'chart-with-full-chrome', slug: 'chrome--chrome-all-elements' },
-  { name: 'pie-with-legend', slug: 'donut-leaders--smartphone-market' },
-  { name: 'multi-series-area-with-legend', slug: 'line--multi-series-area-overlap' },
+  { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
+  { name: 'bar-horizontal', slug: 'testing--fixtures--simple-bars' },
+  { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
+  { name: 'stacked-column', slug: 'testing--fixtures--energy-mix' },
+  { name: 'chart-with-annotations', slug: 'testing--fixtures--temperature-anomaly' },
+  { name: 'chart-with-full-chrome', slug: 'testing--fixtures--chrome-all-elements' },
+  { name: 'pie-with-legend', slug: 'testing--fixtures--smartphone-market' },
+  { name: 'multi-series-area-with-legend', slug: 'testing--fixtures--multi-series-area-overlap' },
 ];
 
 for (const { name, slug } of stories) {

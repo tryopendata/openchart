@@ -15,20 +15,20 @@ import { captureStory } from './capture';
  */
 
 const stories = [
-  { name: 'mr-long-title', slug: 'mobile-regression--long-title-mobile' },
-  { name: 'mr-grouped-columns-labels-all', slug: 'mobile-regression--grouped-columns-labels-all' },
-  { name: 'mr-grouped-bars-many-rows', slug: 'mobile-regression--grouped-bars-many-rows' },
-  { name: 'mr-grouped-bars-sparse-ticks', slug: 'mobile-regression--grouped-bars-sparse-ticks' },
-  { name: 'mr-one-wide-x-label', slug: 'mobile-regression--one-wide-x-label' },
-  { name: 'mr-one-wide-x-label-large-ticks', slug: 'mobile-regression--one-wide-x-label-large-ticks' },
-  { name: 'mr-uniform-short-x-labels', slug: 'mobile-regression--uniform-short-x-labels' },
-  { name: 'mr-inline-y-title', slug: 'mobile-regression--inline-y-title' },
+  { name: 'mr-long-title', slug: 'testing--mobile-regression--long-title-mobile' },
+  { name: 'mr-grouped-columns-labels-all', slug: 'testing--mobile-regression--grouped-columns-labels-all' },
+  { name: 'mr-grouped-bars-many-rows', slug: 'testing--mobile-regression--grouped-bars-many-rows' },
+  { name: 'mr-grouped-bars-sparse-ticks', slug: 'testing--mobile-regression--grouped-bars-sparse-ticks' },
+  { name: 'mr-one-wide-x-label', slug: 'testing--mobile-regression--one-wide-x-label' },
+  { name: 'mr-one-wide-x-label-large-ticks', slug: 'testing--mobile-regression--one-wide-x-label-large-ticks' },
+  { name: 'mr-uniform-short-x-labels', slug: 'testing--mobile-regression--uniform-short-x-labels' },
+  { name: 'mr-inline-y-title', slug: 'testing--mobile-regression--inline-y-title' },
   // Auto-height container (bare .story-chart): the only visual coverage for
   // the auto-height growth contract — 400px viz budget + chrome overheads.
-  { name: 'mr-auto-height-chrome-growth', slug: 'mobile-regression--auto-height-chrome-growth' },
-  { name: 'bar-vertical', slug: 'column--simple-columns' },
-  { name: 'line-multi-series', slug: 'line-multiseries--gdp-growth' },
-  { name: 'stacked-column', slug: 'column-stacked--energy-mix' },
+  { name: 'mr-auto-height-chrome-growth', slug: 'testing--mobile-regression--auto-height-chrome-growth' },
+  { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
+  { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
+  { name: 'stacked-column', slug: 'testing--fixtures--energy-mix' },
 ];
 
 for (const story of stories) {

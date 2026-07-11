@@ -30,5 +30,5 @@ font-size- and width-dependent. Tests for it must sweep both dimensions:
 
 Why: the 7.9.x dropped-label bug passed every default-theme test across three
 patch releases; it only reproduced with `theme: { fonts: { sizes: { axisTick: 14 } } }`
-at phone widths. The `mobile-regression--one-wide-x-label-large-ticks` story
+at phone widths. The `testing--mobile-regression--one-wide-x-label-large-ticks` story
 mirrors that production config.
