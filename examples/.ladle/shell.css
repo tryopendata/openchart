@@ -1,0 +1,325 @@
+/**
+ * Ladle chrome (shell) styling for the OpenChart gallery.
+ *
+ * Replaces the old ~290-line injected `!important` string. This styles the
+ * Ladle app frame: sidebar, search field, addons bar, resize handle, tooltips.
+ * It NEVER enters the width-addon iframe, so it may key dark mode off
+ * `:root[data-theme='dark']` (constraint C3 only restricts *gallery-content*
+ * CSS, which lives in components/gallery.css).
+ *
+ * Recoloring goes through Ladle's own `--ladle-*` custom properties first;
+ * overrides are used only where Ladle exposes no variable. `--ladle-main-padding`
+ * is deliberately never set (constraint C2: fixture baselines depend on it).
+ *
+ * ---------------------------------------------------------------------------
+ * DESIGN TOKENS (shared names with components/gallery.css)
+ * shell.css binds them under :root[data-theme]; gallery.css binds the same
+ * names under [data-oc-mode]. Keep the two token blocks in sync.
+ * ---------------------------------------------------------------------------
+ */
+
+:root,
+:root[data-theme='light'] {
+  /* Neutral ramp (cool/pure) — light */
+  --oc-neutral-0: #ffffff; /* canvas */
+  --oc-neutral-50: #f8fafc; /* raised surface */
+  --oc-neutral-100: #f1f5f9;
+  --oc-neutral-200: #e2e8f0; /* borders */
+  --oc-neutral-300: #cbd5e1;
+  --oc-neutral-400: #94a3b8; /* muted text / icons */
+  --oc-neutral-500: #64748b; /* secondary text */
+  --oc-neutral-600: #475569;
+  --oc-neutral-700: #334155;
+  --oc-neutral-800: #1e293b; /* body text */
+  --oc-neutral-900: #0f172a; /* strong text */
+
+  --oc-surface: var(--oc-neutral-0);
+  --oc-surface-raised: var(--oc-neutral-50);
+  --oc-border: var(--oc-neutral-200);
+  --oc-border-strong: var(--oc-neutral-300);
+  --oc-text: var(--oc-neutral-800);
+  --oc-text-strong: var(--oc-neutral-900);
+  --oc-text-muted: var(--oc-neutral-500);
+  --oc-text-faint: var(--oc-neutral-400);
+
+  /* Accent — library categorical lead (cyan) */
+  --oc-accent: #06b6d4;
+  --oc-accent-strong: #0891b2;
+  --oc-accent-soft: rgba(6, 182, 212, 0.1);
+  --oc-accent-text: #0e7490;
+
+  /* Radius */
+  --oc-radius-card: 8px;
+  --oc-radius-control: 6px;
+
+  /* Spacing scale */
+  --oc-space-1: 4px;
+  --oc-space-2: 8px;
+  --oc-space-3: 12px;
+  --oc-space-4: 16px;
+  --oc-space-5: 24px;
+  --oc-space-6: 32px;
+  --oc-space-8: 48px;
+  --oc-space-10: 64px;
+
+  /* Type scale */
+  --oc-font-display: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --oc-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --oc-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+  --oc-type-page-title: 2.25rem; /* Bricolage */
+  --oc-type-section-title: 1.375rem; /* Bricolage */
+  --oc-type-demo-title: 1rem; /* Inter 600 */
+  --oc-type-body: 0.9375rem;
+  --oc-type-caption: 0.8125rem;
+  --oc-type-mono: 0.8125rem;
+
+  /* Ladle chrome vars (C2: never --ladle-main-padding) */
+  --ladle-bg-color-primary: var(--oc-neutral-0);
+  --ladle-bg-color-secondary: var(--oc-neutral-50);
+  --ladle-color-primary: var(--oc-neutral-800);
+  --ladle-color-accent: var(--oc-accent-text);
+  --ladle-color-hover: var(--oc-accent-text);
+}
+
+:root[data-theme='dark'] {
+  /* Neutral ramp (cool/pure) — dark. Dark uses borders over shadows. */
+  --oc-neutral-0: #0a0e14; /* canvas */
+  --oc-neutral-50: #10151d; /* raised surface / card */
+  --oc-neutral-100: #161c26;
+  --oc-neutral-200: #232b38; /* borders */
+  --oc-neutral-300: #2f3947;
+  --oc-neutral-400: #64748b; /* muted */
+  --oc-neutral-500: #94a3b8; /* secondary text */
+  --oc-neutral-600: #b8c2d0;
+  --oc-neutral-700: #cbd5e1;
+  --oc-neutral-800: #e2e8f0; /* body text */
+  --oc-neutral-900: #f1f5f9; /* strong text */
+
+  --oc-surface: var(--oc-neutral-0);
+  --oc-surface-raised: var(--oc-neutral-50);
+  --oc-border: var(--oc-neutral-200);
+  --oc-border-strong: var(--oc-neutral-300);
+  --oc-text: var(--oc-neutral-800);
+  --oc-text-strong: var(--oc-neutral-900);
+  --oc-text-muted: var(--oc-neutral-500);
+  --oc-text-faint: var(--oc-neutral-400);
+
+  /* Accent — desaturated for dark */
+  --oc-accent: #22d3ee;
+  --oc-accent-strong: #38bdf8;
+  --oc-accent-soft: rgba(34, 211, 238, 0.12);
+  --oc-accent-text: #5ad3e8;
+
+  --ladle-bg-color-primary: var(--oc-neutral-0);
+  --ladle-bg-color-secondary: var(--oc-neutral-50);
+  --ladle-color-primary: var(--oc-neutral-800);
+  --ladle-color-accent: var(--oc-accent-text);
+  --ladle-color-hover: var(--oc-accent-text);
+}
+
+/* ---------------------------------------------------------------------------
+ * Story root: fill height, smooth theme cross-fade.
+ * ------------------------------------------------------------------------- */
+.ladle-story-root {
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+/* ---------------------------------------------------------------------------
+ * Sidebar
+ * ------------------------------------------------------------------------- */
+.ladle-aside {
+  font-family: var(--oc-font-body);
+  font-size: 13px;
+  border-left: 1px solid var(--oc-border);
+  background-color: var(--oc-surface-raised);
+  padding: 20px 14px 20px 12px;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+/* Search field: a real input, not an underline */
+.ladle-aside input {
+  font-family: var(--oc-font-body);
+  font-size: 12.5px;
+  border: 1px solid var(--oc-border);
+  border-radius: var(--oc-radius-control);
+  padding: 8px 12px;
+  background: var(--oc-surface);
+  color: var(--oc-text);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  margin-bottom: 4px;
+}
+
+.ladle-aside input::placeholder {
+  color: var(--oc-text-faint);
+  font-weight: 400;
+}
+
+.ladle-aside input:focus {
+  border-color: var(--oc-accent);
+  box-shadow: 0 0 0 3px var(--oc-accent-soft);
+  outline: none;
+}
+
+/* Tree list */
+.ladle-aside ul {
+  margin: 8px 0 0 0;
+  padding: 0;
+}
+
+.ladle-aside li {
+  margin: 1px 0;
+  font-size: 13px;
+  border-radius: var(--oc-radius-control);
+}
+
+.ladle-aside li > div {
+  padding: 5px 8px;
+  border-radius: var(--oc-radius-control);
+}
+
+.ladle-aside li > div:hover {
+  background: var(--oc-neutral-100);
+}
+
+/* Expanded group label: heavier */
+.ladle-aside li[aria-expanded] > div > div:last-child {
+  font-weight: 600;
+  color: var(--oc-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.ladle-aside li[aria-expanded='false'] svg {
+  opacity: 0.4;
+}
+
+.ladle-aside li[aria-expanded='true'] svg {
+  opacity: 0.6;
+}
+
+/* Nested story links */
+.ladle-aside .ladle-linkable {
+  margin-left: 2px;
+}
+
+.ladle-aside .ladle-linkable a {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--oc-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--oc-radius-control);
+  display: block;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.ladle-aside .ladle-linkable a:hover {
+  background: var(--oc-accent-soft);
+  color: var(--oc-accent-text);
+}
+
+/* Active story */
+.ladle-aside .ladle-active {
+  background: var(--oc-accent-soft);
+}
+
+.ladle-aside .ladle-active a {
+  color: var(--oc-accent-text);
+  font-weight: 600;
+}
+
+.ladle-aside .ladle-linkable svg {
+  opacity: 0.35;
+  width: 14px;
+  height: 14px;
+}
+
+.ladle-aside .ladle-active svg {
+  opacity: 0.6;
+  color: var(--oc-accent-text);
+}
+
+/* ---------------------------------------------------------------------------
+ * Bottom addons bar
+ * ------------------------------------------------------------------------- */
+.ladle-addons {
+  font-family: var(--oc-font-body);
+  background: var(--oc-surface-raised);
+  border-top: 1px solid var(--oc-border);
+  padding: 6px 8px;
+  margin: 0;
+  margin-inline: 0;
+  width: auto;
+  left: 0;
+  right: 0;
+}
+
+.ladle-addons ul {
+  gap: 2px;
+  align-items: center;
+}
+
+.ladle-addons li {
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--oc-radius-control);
+  margin: 0 1px;
+  width: auto;
+  height: auto;
+}
+
+.ladle-addons > ul > li > button {
+  border-radius: var(--oc-radius-control);
+  padding: 7px;
+  color: var(--oc-text-faint);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.ladle-addons > ul > li > button:hover {
+  background: var(--oc-accent-soft);
+  color: var(--oc-accent-text);
+}
+
+.ladle-addons > ul > li > button > label {
+  display: none;
+}
+
+.ladle-addons > ul > li > button svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+}
+
+/* Tooltip */
+.ladle-addon-tooltip {
+  font-family: var(--oc-font-body);
+  font-size: 11px;
+  border-radius: var(--oc-radius-control);
+  padding: 4px 8px;
+  letter-spacing: -0.01em;
+}
+
+/* Resize handle */
+.ladle-resize-handle {
+  width: 1px;
+  background: var(--oc-border);
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion preference
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .ladle-story-root,
+  .ladle-aside input,
+  .ladle-aside .ladle-linkable a,
+  .ladle-addons > ul > li > button {
+    transition: none;
+  }
+}
