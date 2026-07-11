@@ -29,6 +29,10 @@
       "types": "./dist/static.d.ts",
       "import": "./dist/static.js"
     },
+    "./story": {
+      "types": "./dist/story/index.d.ts",
+      "import": "./dist/story/index.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./simulation-worker": "./dist/simulation-worker.js"
   },

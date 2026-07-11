@@ -90,6 +90,41 @@ function cubicOut(t: number): number {
 const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point']);
 
 /**
+ * Spec-shape half of the transition gate (mark type + encoding identity),
+ * usable before either spec has been compiled. Exported so callers that
+ * need to predict transition eligibility ahead of a compile (e.g. the
+ * scrollytelling story layer deciding whether to arm its crossfade
+ * fallback) can reuse the exact same rule the post-compile gate enforces,
+ * rather than re-deriving it and risking drift.
+ *
+ * This is gate checks 3-4 of `canTransition` in isolation; it does NOT
+ * check layout-derived conditions (dimensions, mark count, geometry delta,
+ * sparkline display) since those require a compiled `ChartLayout`.
+ */
+export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): boolean {
+  const prev = prevSpec as Record<string, unknown>;
+  const next = nextSpec as Record<string, unknown>;
+  if (!prev || !next || !('mark' in prev) || !('mark' in next)) return false;
+  const prevMark =
+    typeof prev.mark === 'string' ? prev.mark : (prev.mark as Record<string, unknown>)?.type;
+  const nextMark =
+    typeof next.mark === 'string' ? next.mark : (next.mark as Record<string, unknown>)?.type;
+  if (prevMark !== nextMark) return false;
+  if (!TRANSITIONABLE_MARKS.has(prevMark as string)) return false;
+
+  const prevEnc = (prev as { encoding?: Record<string, Record<string, unknown>> }).encoding;
+  const nextEnc = (next as { encoding?: Record<string, Record<string, unknown>> }).encoding;
+  if (!prevEnc || !nextEnc) return false;
+  return !(
+    prevEnc.x?.field !== nextEnc.x?.field ||
+    prevEnc.x?.type !== nextEnc.x?.type ||
+    prevEnc.y?.field !== nextEnc.y?.field ||
+    prevEnc.y?.type !== nextEnc.y?.type ||
+    prevEnc.color?.field !== nextEnc.color?.field
+  );
+}
+
+/**
  * Determine whether a data-update transition should run instead of
  * a full tear-down + re-render.
  *
@@ -112,30 +147,8 @@ export function canTransition(args: {
   // 2. Resolved animation.update present on next layout
   if (!nextLayout.animation?.update) return false;
 
-  // 3. Both are chart specs (have `mark`), same mark type, type is transitionable
-  const prev = prevSpec as Record<string, unknown>;
-  const next = nextSpec as Record<string, unknown>;
-  if (!('mark' in prev) || !('mark' in next)) return false;
-  const prevMark =
-    typeof prev.mark === 'string' ? prev.mark : (prev.mark as Record<string, unknown>)?.type;
-  const nextMark =
-    typeof next.mark === 'string' ? next.mark : (next.mark as Record<string, unknown>)?.type;
-  if (prevMark !== nextMark) return false;
-  if (!TRANSITIONABLE_MARKS.has(prevMark as string)) return false;
-
-  // 4. Encoding identity unchanged
-  const prevEnc = (prev as { encoding?: Record<string, Record<string, unknown>> }).encoding;
-  const nextEnc = (next as { encoding?: Record<string, Record<string, unknown>> }).encoding;
-  if (!prevEnc || !nextEnc) return false;
-  if (
-    prevEnc.x?.field !== nextEnc.x?.field ||
-    prevEnc.x?.type !== nextEnc.x?.type ||
-    prevEnc.y?.field !== nextEnc.y?.field ||
-    prevEnc.y?.type !== nextEnc.y?.type ||
-    prevEnc.color?.field !== nextEnc.color?.field
-  ) {
-    return false;
-  }
+  // 3-4. Mark type + encoding identity unchanged (spec-shape half of the gate)
+  if (!canTransitionSpecShape(prevSpec, nextSpec)) return false;
 
   // 5. Not sparkline
   if (nextLayout.display === 'sparkline') return false;

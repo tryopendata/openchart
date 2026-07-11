@@ -188,9 +188,14 @@ export function renderChartSVG(
       // Axes render outside clip (labels extend beyond chart area)
       renderAxes(svg, layout);
 
-      // Marks are clipped to chart area so area fills don't cover chrome
+      // Marks are clipped to chart area so area fills don't cover chrome.
+      // `data-oc-marks-group` is a stable hook for external features that
+      // apply their own SVG transform here (e.g. the scrollytelling story
+      // camera) -- composes with clip-path since it's a separate attribute,
+      // unlike CSS transform which would replace a mark's own SVG transform.
       const clippedGroup = createSVGElement('g');
       clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+      clippedGroup.setAttribute('data-oc-marks-group', 'true');
       const markLabelsOverlay = renderMarks(clippedGroup, layout);
 
       // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.

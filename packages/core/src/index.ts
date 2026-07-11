@@ -189,3 +189,9 @@ export {
   scatterChart,
   tileMap,
 } from './helpers/spec-builders';
+
+// ---------------------------------------------------------------------------
+// Helpers: deep-merge for spec patches (used by vanilla/story)
+// ---------------------------------------------------------------------------
+
+export { deepMergeSpec } from './helpers/deep-merge';
