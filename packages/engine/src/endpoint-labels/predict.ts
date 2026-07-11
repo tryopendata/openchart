@@ -45,10 +45,11 @@ export function predictEndpointLabelsWidth(
   const colorEnc = spec.encoding.color;
   if (!colorEnc) return 0;
   if ('condition' in colorEnc) return 0;
+  if (!('field' in colorEnc)) return 0;
   if (colorEnc.type === 'quantitative') return 0;
 
   // Distinct series count.
-  const colorField = 'field' in colorEnc ? colorEnc.field : undefined;
+  const colorField = colorEnc.field;
   if (!colorField) return 0;
   const seriesNames = new Set<string>();
   for (const row of spec.data) {

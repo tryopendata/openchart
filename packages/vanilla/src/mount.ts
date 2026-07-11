@@ -361,8 +361,9 @@ export function createChart<TData extends DataRow = DataRow>(
     if (isLayerSpec(spec)) return Infinity;
     const enc = (spec as ChartSpec).encoding;
     const colorEnc = enc?.color;
-    if (!colorEnc || 'condition' in colorEnc || colorEnc.type === 'quantitative') return Infinity;
+    if (!colorEnc || 'condition' in colorEnc) return Infinity;
     if (!('field' in colorEnc) || !colorEnc.field) return Infinity;
+    if (colorEnc.type === 'quantitative') return Infinity;
     const field = colorEnc.field;
     const seen = new Set<string>();
     for (const row of (spec as ChartSpec).data ?? []) {

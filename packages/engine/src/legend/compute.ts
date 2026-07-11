@@ -141,6 +141,9 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   // Conditional color definitions don't produce legend entries
   if ('condition' in colorEnc) return [];
 
+  // Bare value defs (constant colors) don't produce legend entries either
+  if (!('field' in colorEnc)) return [];
+
   // Sequential (quantitative) color doesn't produce discrete legend entries
   if (colorEnc.type === 'quantitative') return [];
 

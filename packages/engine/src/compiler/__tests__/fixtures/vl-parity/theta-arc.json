@@ -1,0 +1,19 @@
+{
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "mark": "arc",
+    "data": [{ "category": "A", "amount": 30 }, { "category": "B", "amount": 70 }],
+    "encoding": {
+      "theta": { "field": "amount", "type": "quantitative" },
+      "color": { "field": "category", "type": "nominal" }
+    }
+  },
+  "canonical": {
+    "mark": "arc",
+    "data": [{ "category": "A", "amount": 30 }, { "category": "B", "amount": 70 }],
+    "encoding": {
+      "y": { "field": "amount", "type": "quantitative" },
+      "color": { "field": "category", "type": "nominal" }
+    }
+  }
+}

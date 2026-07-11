@@ -1,0 +1,38 @@
+{
+  "layered": true,
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "data": [{ "cat": "A", "value": 10 }, { "cat": "B", "value": 20 }, { "cat": "C", "value": 30 }],
+    "encoding": {
+      "color": { "field": "value", "type": "quantitative", "scale": { "scheme": "blues" } }
+    },
+    "layer": [
+      {
+        "mark": "bar",
+        "encoding": {
+          "x": { "field": "cat", "type": "nominal" },
+          "y": { "field": "value", "type": "quantitative" }
+        }
+      }
+    ]
+  },
+  "canonical": {
+    "data": [{ "cat": "A", "value": 10 }, { "cat": "B", "value": 20 }, { "cat": "C", "value": 30 }],
+    "encoding": {
+      "color": {
+        "field": "value",
+        "type": "quantitative",
+        "scale": { "range": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"] }
+      }
+    },
+    "layer": [
+      {
+        "mark": "bar",
+        "encoding": {
+          "x": { "field": "cat", "type": "nominal" },
+          "y": { "field": "value", "type": "quantitative" }
+        }
+      }
+    ]
+  }
+}

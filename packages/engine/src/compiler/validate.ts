@@ -15,6 +15,8 @@ import {
   MARK_ENCODING_RULES,
   MARK_TYPES,
   type MarkType,
+  resolveSchemeName,
+  SUPPORTED_SCHEME_NAMES,
   type VizSpec,
 } from '@opendata-ai/openchart-core';
 
@@ -59,6 +61,20 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
 
   // Check data
   if (!Array.isArray(spec.data)) {
+    // Near-miss: the VL `data: { url }` form. Fetching is out of scope for a
+    // rendering library, so reject it with a pointed message. The `{ values }`
+    // form is unwrapped by the pre-validation sugar expansion and never
+    // reaches this check on the compile path.
+    if (spec.data && typeof spec.data === 'object' && 'url' in (spec.data as object)) {
+      errors.push({
+        message: 'Spec error: data.url is not supported (openchart does not fetch remote data)',
+        path: 'data.url',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Fetch the data in your application and provide the rows inline: data: [...] or data: { values: [...] }',
+      });
+      return;
+    }
     errors.push({
       message: 'Spec error: "data" must be an array',
       path: 'data',
@@ -121,6 +137,25 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         code: 'MISSING_FIELD',
         suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}) and type (${allowedTypes}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${rule.allowedTypes[0]}" }`,
       });
+    }
+  }
+
+  // Near-miss: VL's string expression form of calculate. A restricted string
+  // grammar is deliberately not supported (decision: structured form only);
+  // point authors at the structured equivalent instead.
+  if (Array.isArray(spec.transform)) {
+    const transforms = spec.transform as Record<string, unknown>[];
+    for (let i = 0; i < transforms.length; i++) {
+      const t = transforms[i];
+      if (t && typeof t === 'object' && typeof t.calculate === 'string') {
+        errors.push({
+          message: `Spec error: transform[${i}].calculate must be a structured expression object, not a string`,
+          path: `transform[${i}].calculate`,
+          code: 'INVALID_TYPE',
+          suggestion:
+            'Use the structured form for single operations, e.g. calculate: { op: "/", field: "a", field2: "b" } with as: "ratio". For running or grouped computations use the window or aggregate transforms.',
+        });
+      }
     }
   }
 
@@ -223,6 +258,23 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         path: `encoding.${channel}.type`,
         code: 'INVALID_VALUE',
         suggestion: `Use one of: ${[...VALID_FIELD_TYPES].join(', ')}`,
+      });
+    }
+
+    // Check scale.scheme names. Known names (including VL aliases) are
+    // resolved to palette ranges by the pre-validation sugar expansion, so a
+    // scheme surviving to this point on the compile path is an unknown name.
+    const channelScale = channelObj.scale as Record<string, unknown> | undefined;
+    if (
+      channelScale &&
+      typeof channelScale.scheme === 'string' &&
+      !resolveSchemeName(channelScale.scheme)
+    ) {
+      errors.push({
+        message: `Spec error: encoding.${channel}.scale.scheme "${channelScale.scheme}" is not a supported scheme name`,
+        path: `encoding.${channel}.scale.scheme`,
+        code: 'INVALID_VALUE',
+        suggestion: `Use one of the supported scheme names: ${[...SUPPORTED_SCHEME_NAMES].join(', ')}. Or provide explicit colors via scale.range.`,
       });
     }
 
@@ -1107,6 +1159,38 @@ export function validateSpec(spec: unknown): ValidationResult {
     hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList;
 
   if (!isChart && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList && !isLayer) {
+    // Near-misses for VL composition operators that are unsupported by decision
+    if ('hconcat' in obj || 'vconcat' in obj) {
+      const key = 'hconcat' in obj ? 'hconcat' : 'vconcat';
+      return {
+        valid: false,
+        errors: [
+          {
+            message: `Spec error: "${key}" composition is not supported`,
+            path: key,
+            code: 'INVALID_VALUE',
+            suggestion:
+              'Render each chart in its own container instead. For small multiples of the same chart, use the facet encoding channel: encoding.facet = { field, type }',
+          },
+        ],
+        normalized: null,
+      };
+    }
+    if ('facet' in obj && 'spec' in obj) {
+      return {
+        valid: false,
+        errors: [
+          {
+            message: 'Spec error: the top-level "facet" operator is not supported',
+            path: 'facet',
+            code: 'INVALID_VALUE',
+            suggestion:
+              'Use the facet encoding channel on a regular chart spec instead: encoding.facet = { field: "category", type: "nominal" }',
+          },
+        ],
+        normalized: null,
+      };
+    }
     return {
       valid: false,
       errors: [

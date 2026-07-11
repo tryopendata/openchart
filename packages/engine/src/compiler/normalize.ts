@@ -138,6 +138,9 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 
     // Skip conditional value definitions - they don't have field/type at the top level
     if ('condition' in spec) continue;
+    // Skip bare value defs (no field). The sugar expansion moves these to
+    // mark-level properties before normalize runs on the compile path.
+    if (!('field' in spec)) continue;
 
     if (!spec.type) {
       const inferred = inferFieldType(data, spec.field);

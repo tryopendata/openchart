@@ -214,6 +214,7 @@ export function countColorSeries(spec: NormalizedChartSpec): number {
   const colorEnc = spec.encoding.color;
   if (!colorEnc) return 0;
   if ('condition' in colorEnc) return 0;
+  if (!('field' in colorEnc)) return 0;
   if (colorEnc.type === 'quantitative') return 0;
   const field = colorEnc.field;
   if (!field) return 0;

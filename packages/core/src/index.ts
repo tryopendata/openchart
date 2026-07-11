@@ -35,7 +35,9 @@ export {
   findAccessibleColor,
   meetsAA,
   pickLabelColor,
+  resolveSchemeName,
   SEQUENTIAL_PALETTES,
+  SUPPORTED_SCHEME_NAMES,
   simulateColorBlindness,
 } from './colors/index';
 

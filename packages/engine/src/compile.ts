@@ -14,14 +14,11 @@
 
 import type {
   AnimationSpec,
-  BinParams,
-  BinTransform,
   ChartLayout,
   ChartSpec,
   CompileOptions,
   CompileTableOptions,
   Encoding,
-  EncodingChannel,
   FacetChannel,
   FacetPanelLayout,
   LayerSpec,
@@ -31,9 +28,6 @@ import type {
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
-  TimeUnit,
-  TimeUnitTransform,
-  Transform,
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
@@ -65,6 +59,7 @@ import { groupByField } from './charts/utils';
 import { applyColorScaleRange } from './compile/color-scale-range';
 import { filterClippedDomains } from './compile/data-clip';
 import { compileLayer as compileLayerImpl } from './compile/layer';
+import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec } from './compiler/index';
@@ -91,76 +86,26 @@ import { computeTooltipDescriptors } from './tooltips/compute';
 import { runTransforms } from './transforms';
 
 // ---------------------------------------------------------------------------
-// Encoding sugar expansion (bin, timeUnit on encoding channels)
+// Spec sugar expansion (VL idioms, bin/timeUnit, deprecation warnings)
 // ---------------------------------------------------------------------------
 
+// Implementation lives in ./compile/spec-sugar; re-exported here so existing
+// deep imports (`import { expandEncodingSugar } from '.../compile'`) keep working.
+export { expandEncodingSugar, expandSpecSugar } from './compile/spec-sugar';
+
 /**
- * Expand encoding-level `bin` and `timeUnit` shorthand into explicit transforms.
- *
- * Vega-Lite allows `encoding.x.bin: true` as sugar for a BinTransform.
- * This function detects those shorthands, generates the corresponding transforms,
- * updates encoding field references to the output field names, and prepends the
- * transforms to the spec's transform array.
- *
- * Mutates nothing; returns a new spec object (shallow copy).
+ * Apply top-level spec `width`/`height` (VL fixed-size sugar) as overrides on
+ * the compile options. Returns the options untouched when the spec carries no
+ * size.
  */
-export function expandEncodingSugar(spec: Record<string, unknown>): Record<string, unknown> {
-  const encoding = spec.encoding as Record<string, EncodingChannel | undefined> | undefined;
-  if (!encoding) return spec;
-
-  const generatedTransforms: Transform[] = [];
-  const updatedEncoding = { ...encoding };
-  let changed = false;
-
-  for (const channel of Object.keys(encoding)) {
-    const ch = encoding[channel];
-    if (!ch || !ch.field) continue;
-
-    // Expand bin shorthand
-    if (ch.bin != null && ch.bin !== false) {
-      const field = ch.field;
-      const outputField = `bin_${field}`;
-      const binTransform: BinTransform = {
-        bin: ch.bin === true ? true : (ch.bin as BinParams),
-        field,
-        as: outputField,
-      };
-      generatedTransforms.push(binTransform);
-
-      // Update encoding to reference binned output field, remove bin property
-      const { bin: _bin, ...rest } = ch;
-      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
-      changed = true;
-    }
-
-    // Expand timeUnit shorthand (read from updated encoding in case bin already ran)
-    const current = updatedEncoding[channel] ?? ch;
-    if (current.timeUnit) {
-      const field = current.field;
-      const unit = current.timeUnit as TimeUnit;
-      const outputField = `${unit}_${field}`;
-      const timeUnitTransform: TimeUnitTransform = {
-        timeUnit: unit,
-        field,
-        as: outputField,
-      };
-      generatedTransforms.push(timeUnitTransform);
-
-      // Update encoding to reference timeUnit output field, remove timeUnit property
-      const { timeUnit: _tu, ...rest } = current;
-      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
-      changed = true;
-    }
-  }
-
-  if (!changed) return spec;
-
-  // Prepend generated transforms before any user-defined transforms
-  const existingTransforms = (spec.transform as Transform[] | undefined) ?? [];
+function applySpecSize(spec: unknown, options: CompileOptions): CompileOptions {
+  if (!spec || typeof spec !== 'object') return options;
+  const sized = spec as Record<string, unknown>;
+  if (typeof sized.width !== 'number' && typeof sized.height !== 'number') return options;
   return {
-    ...spec,
-    encoding: updatedEncoding,
-    transform: [...generatedTransforms, ...existingTransforms],
+    ...options,
+    width: typeof sized.width === 'number' ? sized.width : options.width,
+    height: typeof sized.height === 'number' ? sized.height : options.height,
   };
 }
 
@@ -233,17 +178,25 @@ function applySparklineDefaults(
  * ChartLayout with positions, colors, and marks ready for rendering.
  *
  * @param spec - Raw chart spec (validated and normalized internally).
- * @param options - Compile options (width, height, theme, darkMode).
+ * @param optionsInput - Compile options (width, height, theme, darkMode).
+ *   Top-level spec width/height, when present, override the option values.
  * @returns ChartLayout with all computed positions.
  * @throws Error if spec is invalid or not a chart type.
  */
-export function compileChart(spec: unknown, options: CompileOptions): ChartLayout {
-  // Expand encoding-level bin/timeUnit sugar before validation + normalization.
-  // This converts shorthand (e.g. encoding.x.bin: true) into explicit transforms.
+export function compileChart(spec: unknown, optionsInput: CompileOptions): ChartLayout {
+  // Expand VL-idiom and encoding-level sugar (data {values}, top-level title,
+  // sort-by-value, value defs, scheme names, theta, bin/timeUnit, ...) before
+  // validation + normalization, surfacing any deprecation warnings.
+  const sugarWarnings: string[] = [];
   const expandedSpec =
     spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandEncodingSugar(spec as Record<string, unknown>)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
       : spec;
+  emitSpecWarnings(sugarWarnings);
+
+  // Top-level width/height are fixed-size overrides (VL alignment): the
+  // authored size wins over the container-derived compile options.
+  const options = applySpecSize(expandedSpec, optionsInput);
 
   // Validate + normalize
   const { spec: normalized } = compileSpec(expandedSpec);
@@ -1107,7 +1060,17 @@ function compileFaceted(
 // ---------------------------------------------------------------------------
 
 export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLayout {
-  return compileLayerImpl(spec, options, compileChart);
+  // Expand VL-idiom sugar on the layer spec and every child up front. Leaf
+  // compiles re-run the (idempotent) expansion after encoding inheritance;
+  // warning triggers are stripped or stamped here so each warns exactly once.
+  const sugarWarnings: string[] = [];
+  const expanded = expandSpecSugar(
+    spec as unknown as Record<string, unknown>,
+    sugarWarnings,
+  ) as unknown as LayerSpec;
+  emitSpecWarnings(sugarWarnings);
+  const resolvedOptions = applySpecSize(expanded, options);
+  return compileLayerImpl(expanded, resolvedOptions, compileChart);
 }
 
 // ---------------------------------------------------------------------------

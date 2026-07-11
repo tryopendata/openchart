@@ -145,12 +145,13 @@ function uniqueStrings(values: unknown[]): string[] {
  * - 'ascending': sort alphabetically/numerically ascending
  * - 'descending': sort descending
  * - null | undefined: preserve data order (no sorting)
+ *
+ * VL sort forms ('-y', value arrays, { field, op, order }) are resolved into
+ * an explicit scale.domain by the pre-validation sugar expansion; any that
+ * reach this point fall back to data order.
  */
-function applyCategoricalSort(
-  values: string[],
-  sort: 'ascending' | 'descending' | null | undefined,
-): string[] {
-  if (!sort) return values;
+function applyCategoricalSort(values: string[], sort: EncodingChannel['sort']): string[] {
+  if (sort !== 'ascending' && sort !== 'descending') return values;
 
   const sorted = [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (sort === 'descending') sorted.reverse();

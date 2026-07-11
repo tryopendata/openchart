@@ -1,0 +1,19 @@
+{
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "mark": "bar",
+    "data": [{ "cat": "A", "value": 20 }, { "cat": "B", "value": 50 }, { "cat": "C", "value": 10 }],
+    "encoding": {
+      "x": { "field": "cat", "type": "nominal", "sort": "-y" },
+      "y": { "field": "value", "type": "quantitative" }
+    }
+  },
+  "canonical": {
+    "mark": "bar",
+    "data": [{ "cat": "A", "value": 20 }, { "cat": "B", "value": 50 }, { "cat": "C", "value": 10 }],
+    "encoding": {
+      "x": { "field": "cat", "type": "nominal", "scale": { "domain": ["B", "A", "C"] } },
+      "y": { "field": "value", "type": "quantitative" }
+    }
+  }
+}

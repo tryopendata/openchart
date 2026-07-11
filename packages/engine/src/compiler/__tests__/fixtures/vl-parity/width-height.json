@@ -1,0 +1,23 @@
+{
+  "options": { "width": 400, "height": 300 },
+  "vlOptions": { "width": 800, "height": 600 },
+  "vl": {
+    "mark": "bar",
+    "width": 400,
+    "height": 300,
+    "data": [{ "cat": "A", "value": 10 }, { "cat": "B", "value": 20 }],
+    "encoding": {
+      "x": { "field": "cat", "type": "nominal" },
+      "y": { "field": "value", "type": "quantitative" }
+    }
+  },
+  "canonical": {
+    "mark": "bar",
+    "responsive": false,
+    "data": [{ "cat": "A", "value": 10 }, { "cat": "B", "value": 20 }],
+    "encoding": {
+      "x": { "field": "cat", "type": "nominal" },
+      "y": { "field": "value", "type": "quantitative" }
+    }
+  }
+}

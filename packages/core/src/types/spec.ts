@@ -283,6 +283,15 @@ export interface ScaleConfig {
   clip?: boolean;
   /** Explicit range override. */
   range?: unknown[];
+  /**
+   * Named color scheme (Vega-Lite aligned). Resolved against the core palette
+   * registry (sequential: blue, green, orange, purple, teal; diverging:
+   * redBlue, brownTeal; categorical) during the pre-validation sugar
+   * expansion; common VL names (blues, greens, category10, ...) are accepted
+   * as aliases. Unknown names fail validation with the supported list.
+   * An explicit `range` wins over `scheme`.
+   */
+  scheme?: string;
   /** Reverse the range direction. */
   reverse?: boolean;
   /** Clamp output to the range. */
@@ -318,6 +327,30 @@ export type ScaleType =
   | 'threshold';
 
 /**
+ * Sort a categorical domain by the aggregated values of another field
+ * (Vega-Lite EncodingSortField).
+ */
+export interface SortByField {
+  /** Data field whose values determine the category order. */
+  field: string;
+  /** Aggregate applied per category before comparing. Defaults to 'sum'. */
+  op?: AggregateOp;
+  /** Sort direction. Defaults to 'ascending'. */
+  order?: 'ascending' | 'descending';
+}
+
+/**
+ * A constant value definition for an encoding channel (Vega-Lite aligned).
+ * The VL idiom for a fixed visual property, e.g. `color: { value: '#1b7fa3' }`.
+ * Expanded to the matching mark-level property (fill/stroke, size, opacity)
+ * during the pre-validation sugar expansion.
+ */
+export interface ValueDef {
+  /** The constant value: CSS color string, size number, opacity (0-1), or gradient. */
+  value: string | number | boolean | null | GradientDef;
+}
+
+/**
  * A single encoding channel mapping a data field to a visual property.
  *
  * Follows the Vega-Lite encoding model: field identifies the column,
@@ -348,8 +381,11 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
   type: FieldType;
   /** Optional aggregate to apply before encoding. */
   aggregate?: AggregateOp;
-  /** Axis configuration. Set to `false` to suppress axis entirely (no space reserved). */
-  axis?: AxisConfig | false;
+  /**
+   * Axis configuration. Set to `false` to suppress axis entirely (no space
+   * reserved). `null` is accepted as a VL-aligned alias for `false`.
+   */
+  axis?: AxisConfig | false | null;
   /** Scale configuration. */
   scale?: ScaleConfig;
   /**
@@ -373,6 +409,11 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    *   to opt into stacked areas. Each overlapping series renders as a translucent
    *   gradient band anchored at the y-domain baseline.
    * - **Line**: stacking is not applied (lines always overlap).
+   *
+   * **v8 note:** the multi-series bar/area default realigns with Vega-Lite
+   * (stacked, `'zero'`) in v8. Relying on the implicit default emits a
+   * compile warning in v7; set `stack` explicitly (`null` for
+   * grouped/overlap, `'zero'` for stacked) to keep the current rendering.
    *
    * @example
    * // Stacked horizontal bars (opt-in; default is grouped):
@@ -403,8 +444,22 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * - 'descending': sort domain values descending
    * - null: use data order (no sorting)
    * - undefined: ascending (VL default)
+   * - 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix
+   *   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories
+   *   by value, largest first. Resolved into an explicit domain during the
+   *   pre-validation sugar expansion.
+   * - string[]: explicit value order. Listed values come first (in the given
+   *   order); unlisted data values follow in data order.
+   * - SortByField: sort by the aggregated values of another field.
    */
-  sort?: 'ascending' | 'descending' | null;
+  sort?: 'ascending' | 'descending' | null | 'x' | '-x' | 'y' | '-y' | string[] | SortByField;
+  /**
+   * Legend configuration for this channel (Vega-Lite aligned).
+   * Only meaningful on the `color` channel. `null` hides the legend (the VL
+   * idiom for `legend.show = false`); a config object merges into the
+   * top-level `legend` (top-level keys win on conflict).
+   */
+  legend?: LegendConfig | null;
   /**
    * Display title override (Vega-Lite aligned).
    * Used as the label in tooltips instead of the raw field name.
@@ -475,14 +530,16 @@ export interface Encoding<TData extends DataRow = DataRow> {
   /**
    * Color channel. Required for arc marks (determines pie/donut slice coloring).
    * Optional for all other marks -- used for series differentiation on multi-series charts,
-   * or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates.
+   * or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates,
+   * or a bare `{ value }` constant (VL aligned; expanded to the mark-level fill/stroke).
    */
-  color?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  color?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
    * Size channel. Used by point/bubble charts to scale dot area by a quantitative field.
-   * Accepts a conditional definition to vary size based on data predicates.
+   * Accepts a conditional definition to vary size based on data predicates,
+   * or a bare `{ value }` constant (VL aligned; expanded to `mark.size`).
    */
-  size?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  size?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
    * Detail channel. Groups data into multiple series without mapping to a visual property.
    * Useful when you want separate lines per category but don't need the color to differ.
@@ -506,17 +563,20 @@ export interface Encoding<TData extends DataRow = DataRow> {
   y2?: EncodingChannel<TData>;
   /**
    * Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity
-   * based on data predicates (e.g., highlight selected points).
+   * based on data predicates (e.g., highlight selected points), or a bare `{ value }`
+   * constant (VL aligned; expanded to `mark.opacity`).
    */
-  opacity?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  opacity?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
-   * Point shape encoding. Valid values: 'circle', 'square', 'diamond', 'triangle-up',
-   * 'triangle-down', 'cross'. Used on point/scatter marks to differentiate series by shape.
+   * Point shape encoding.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Differentiate series with `color` or `strokeDash` instead.
    */
   shape?: EncodingChannel<TData>;
   /**
-   * Stroke dash pattern encoding. Maps a nominal field to different dash patterns
-   * on line marks. Useful when color alone doesn't distinguish series well.
+   * Stroke dash pattern encoding. Maps a nominal/ordinal field to different
+   * dash patterns on line and rule marks. Useful when color alone doesn't
+   * distinguish series well.
    */
   strokeDash?: EncodingChannel<TData>;
   /** Rotation angle encoding for point marks. Maps a quantitative field to 0-360 degrees. */
@@ -531,23 +591,30 @@ export interface Encoding<TData extends DataRow = DataRow> {
    * multi-field tooltips. Independent of the x/y/color encoding.
    */
   tooltip?: EncodingChannel<TData> | EncodingChannel<TData>[];
-  /** Hyperlink encoding. Maps a field containing URLs to clickable marks. */
+  /**
+   * Hyperlink encoding.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Handle link navigation in the host application instead.
+   */
   href?: EncodingChannel<TData>;
   /**
-   * Drawing order. Controls z-order and stacking sort order for bar/area marks.
-   * Lower values are drawn first (behind higher values).
+   * Drawing order.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Use `sort` on the relevant channel or pre-sorted data order instead.
    */
   order?: EncodingChannel<TData>;
   /**
-   * Angular position for arc marks (pie/donut).
-   * Optional -- defaults to the `y` channel value when omitted.
-   * Not used by any other mark type.
+   * Angular position (slice value) for arc marks (pie/donut), the Vega-Lite
+   * pie idiom. Accepted as an alias for `y`: when `y` is absent, `theta` is
+   * used as the slice value. When both are present, `y` wins and `theta` is
+   * ignored with a compile warning. `theta` becomes the canonical arc value
+   * channel in v8. Not used by any other mark type.
    */
   theta?: EncodingChannel<TData>;
   /**
    * Radial distance from center for arc marks.
-   * Optional -- only meaningful on donut charts (controls inner radius boundary).
-   * Not used by any other mark type.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Use `mark.innerRadius` / `mark.outerRadius` to control donut radii.
    */
   radius?: EncodingChannel<TData>;
   /**
@@ -1372,12 +1439,36 @@ export interface RectEncoding<TData extends DataRow = DataRow> extends Encoding<
  * @internal
  */
 interface BaseChartSpec<TData extends DataRow = DataRow> {
-  /** Data array: each element is a row with field values. */
+  /**
+   * Data array: each element is a row with field values.
+   * The Vega-Lite object form `{ values: [...] }` is also accepted at runtime
+   * and unwrapped during the pre-validation sugar expansion. `{ url }` is not
+   * supported (openchart does not fetch data).
+   */
   data: TData[];
   /** Data transforms applied in order before encoding (filter, bin, calculate, timeUnit). */
   transform?: Transform[];
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
+  /**
+   * Top-level title sugar (Vega-Lite aligned). Expanded into `chrome.title`
+   * (and `chrome.subtitle` for the object form). `chrome.title` wins when
+   * both are set.
+   */
+  title?: string | { text: string; subtitle?: string };
+  /** Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins. */
+  subtitle?: string;
+  /**
+   * Fixed render width in pixels (Vega-Lite aligned). Overrides the
+   * container-derived width. When both `width` and `height` are set,
+   * `responsive: false` is implied unless `responsive` is set explicitly.
+   * Omit for the default container-driven sizing.
+   */
+  width?: number;
+  /** Fixed render height in pixels (Vega-Lite aligned). See `width`. */
+  height?: number;
+  /** Accepted for Vega-Lite compatibility and ignored (with a compile warning). */
+  $schema?: string;
   /**
    * KPI/metric cells rendered as a horizontal row between subtitle and chart
    * area. Each cell shows a label/value pair with optional delta and secondary
@@ -1688,6 +1779,16 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   transform?: Transform[];
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
+  /** Top-level title sugar (VL aligned). Expanded into `chrome.title`; `chrome.title` wins. */
+  title?: string | { text: string; subtitle?: string };
+  /** Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins. */
+  subtitle?: string;
+  /** Fixed render width in pixels (VL aligned). Overrides the container-derived width. */
+  width?: number;
+  /** Fixed render height in pixels (VL aligned). Overrides the container-derived height. */
+  height?: number;
+  /** Accepted for Vega-Lite compatibility and ignored (with a compile warning). */
+  $schema?: string;
   /** Annotations on the layered view. */
   annotations?: Annotation[];
   /** Label display configuration. `false` disables all labels, `true` uses defaults. */
@@ -2188,11 +2289,11 @@ export interface ConditionalValueDef<TData extends DataRow = DataRow> {
 
 /**
  * Check if a channel definition is a regular EncodingChannel (has 'field' at top level).
- * Use this to narrow `EncodingChannel | ConditionalValueDef` in encoding channels
- * that support conditional encoding (color, size, opacity).
+ * Use this to narrow `EncodingChannel | ConditionalValueDef | ValueDef` in encoding
+ * channels that support conditional encoding (color, size, opacity).
  */
 export function isEncodingChannel<TData extends DataRow = DataRow>(
-  def: EncodingChannel<TData> | ConditionalValueDef<TData> | undefined,
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef | undefined,
 ): def is EncodingChannel<TData> {
   if (!def) return false;
   return 'field' in def && !('condition' in def);
@@ -2202,10 +2303,22 @@ export function isEncodingChannel<TData extends DataRow = DataRow>(
  * Check if a channel definition is a ConditionalValueDef.
  */
 export function isConditionalDef<TData extends DataRow = DataRow>(
-  def: EncodingChannel<TData> | ConditionalValueDef<TData> | undefined,
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef | undefined,
 ): def is ConditionalValueDef<TData> {
   if (!def) return false;
   return 'condition' in def;
+}
+
+/**
+ * Check if a channel definition is a bare ValueDef (constant value, no field
+ * or condition). These are expanded to mark-level properties during the
+ * pre-validation sugar expansion.
+ */
+export function isValueDef<TData extends DataRow = DataRow>(
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef | undefined,
+): def is ValueDef {
+  if (!def) return false;
+  return 'value' in def && !('condition' in def) && !('field' in def);
 }
 
 // ---------------------------------------------------------------------------

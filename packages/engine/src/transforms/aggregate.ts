@@ -10,8 +10,9 @@ import type { AggregateOp, AggregateTransform, DataRow } from '@opendata-ai/open
 
 /**
  * Compute a single aggregate operation over an array of numeric values.
+ * Also used by the sort-by-value sugar expansion in compile/spec-sugar.ts.
  */
-function computeAggregate(op: AggregateOp, values: number[]): number {
+export function computeAggregate(op: AggregateOp, values: number[]): number {
   if (values.length === 0) return 0;
 
   switch (op) {

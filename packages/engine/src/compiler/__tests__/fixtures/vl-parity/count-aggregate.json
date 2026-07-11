@@ -1,0 +1,22 @@
+{
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "mark": "bar",
+    "data": [{ "cat": "A", "v": 1 }, { "cat": "A", "v": 2 }, { "cat": "B", "v": 3 }],
+    "encoding": {
+      "x": { "field": "cat", "type": "nominal" },
+      "y": { "aggregate": "count" }
+    }
+  },
+  "canonical": {
+    "mark": "bar",
+    "data": [{ "cat": "A", "v": 1 }, { "cat": "A", "v": 2 }, { "cat": "B", "v": 3 }],
+    "transform": [
+      { "aggregate": [{ "op": "count", "field": "__count", "as": "__count" }], "groupby": ["cat"] }
+    ],
+    "encoding": {
+      "x": { "field": "cat", "type": "nominal" },
+      "y": { "field": "__count", "type": "quantitative", "title": "Count" }
+    }
+  }
+}
