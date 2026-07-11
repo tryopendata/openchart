@@ -126,6 +126,8 @@ export interface NormalizedChartSpec {
   hiddenSeries: string[];
   /** Per-series visual style overrides. */
   seriesStyles: Record<string, import('@opendata-ai/openchart-core').SeriesStyle>;
+  /** Author accessibility overrides (alt-text description, aria-hidden opt-out). */
+  a11y?: import('@opendata-ai/openchart-core').A11yConfig;
   /** Display mode controlling chrome/axes/legend stripping. Defaults to `'full'`. */
   display: Display;
   /** Resolve configuration for independent/shared scales in faceted charts. */

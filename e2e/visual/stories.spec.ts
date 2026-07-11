@@ -86,6 +86,32 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rotated-with-source',
     note: 'Column chart with long category labels that auto-rotate, plus source chrome below.',
   },
+  // --- Accessibility (plan 06) ---
+  {
+    name: 'a11y-pattern-fills-stacked',
+    slug: 'testing--a11y--pattern-fills-stacked',
+    note: '4-series stacked column with fillPattern: auto (diagonal, dot, crosshatch, vertical).',
+  },
+  {
+    name: 'a11y-pattern-fills-stacked-dark',
+    slug: 'testing--a11y--pattern-fills-stacked-dark',
+    note: 'Same stacked column with darkMode: force; pattern line colors adapt per mode.',
+  },
+  {
+    name: 'a11y-pattern-fills-compact',
+    slug: 'testing--a11y--pattern-fills-compact',
+    note: '360px mobile container; thin segments fall back to solid via the minimum-area rule.',
+  },
+  {
+    name: 'a11y-pattern-fills-donut',
+    slug: 'testing--a11y--pattern-fills-donut',
+    note: 'Donut with patterned slices; the sub-1% sliver keeps a solid fill.',
+  },
+  {
+    name: 'a11y-colorblind-palette-audit',
+    slug: 'testing--a11y--colorblind-palette-audit',
+    note: 'Default categorical palette simulated for protanopia, deuteranopia, tritanopia, achromatopsia.',
+  },
 ];
 
 for (const story of stories) {

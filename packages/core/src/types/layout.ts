@@ -190,6 +190,25 @@ export interface AxisLayout {
 // Marks (data visual elements)
 // ---------------------------------------------------------------------------
 
+/** The four built-in fill pattern shapes for series reinforcement. */
+export type FillPatternType = 'diagonal' | 'dot' | 'crosshatch' | 'vertical';
+
+/**
+ * A resolved per-mark fill pattern (engine output for `mark.fillPattern: 'auto'`).
+ *
+ * The renderer builds one SVG `<pattern>` per unique (type, base, line)
+ * combination: a tile of `base` color overlaid with `line`-colored pattern
+ * geometry. Marks referencing the same resolved pattern share one def.
+ */
+export interface ResolvedFillPattern {
+  /** Pattern shape assigned to this mark's series. */
+  type: FillPatternType;
+  /** Base tile color: the series' solid color. */
+  base: string;
+  /** Pattern line/dot color, contrast-picked against `base`. */
+  line: string;
+}
+
 /** Accessibility attributes for a mark. */
 export interface MarkAria {
   /** ARIA label for the mark. Optional when `decorative: true` — decorative
@@ -277,6 +296,8 @@ export interface AreaMark {
   interpolate?: string;
   /** Fill color or gradient. */
   fill: string | GradientDef;
+  /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
+  pattern?: ResolvedFillPattern;
   /** Fill opacity. */
   fillOpacity: number;
   /** Optional stroke for the top boundary. */
@@ -323,6 +344,8 @@ export interface RectMark {
   height: number;
   /** Fill color or gradient. */
   fill: string | GradientDef;
+  /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
+  pattern?: ResolvedFillPattern;
   /** Stroke color. */
   stroke?: string;
   /** Stroke width. */
@@ -376,6 +399,8 @@ export interface ArcMark {
   endAngle: number;
   /** Fill color or gradient. */
   fill: string | GradientDef;
+  /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
+  pattern?: ResolvedFillPattern;
   /** Stroke color (usually white for slice separation). */
   stroke: string;
   /** Stroke width. */
@@ -828,7 +853,7 @@ export interface TooltipContent {
 
 /** Accessibility metadata for the entire visualization. */
 export interface A11yMetadata {
-  /** Generated alt text describing the visualization. */
+  /** Alt text describing the visualization: the author's `a11y.description` / `description` when set, auto-generated otherwise. */
   altText: string;
   /** Tabular data fallback for screen readers. Each inner array is a row. */
   dataTableFallback: unknown[][];
@@ -836,6 +861,13 @@ export interface A11yMetadata {
   role: string;
   /** Whether the visualization is keyboard-navigable. */
   keyboardNavigable: boolean;
+  /**
+   * Hide the visualization from assistive technology (`aria-hidden="true"`,
+   * no screen-reader table, no keyboard mark navigation). Optional because
+   * only chart compilation sets it, and only on author opt-out via
+   * `a11y.hidden`.
+   */
+  hidden?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1531,6 +1563,13 @@ export interface CompileOptions {
   darkMode?: boolean;
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
+  /**
+   * Enable development-time diagnostics (WCAG contrast warnings via
+   * `console.warn`). The engine is isomorphic, so it never sniffs
+   * `process.env`; the host decides what "dev" means and passes this flag.
+   * Warnings are advisory only and never throw. Defaults to false.
+   */
+  dev?: boolean;
   /**
    * Real text measurement function provided by the adapter.
    * Uses a hidden canvas or DOM element for accurate text dimensions.

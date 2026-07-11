@@ -124,6 +124,32 @@ describe('createTooltipManager lifecycle', () => {
     expect(tooltip.style.display).toBe('none');
   });
 
+  it('Escape dismisses a visible tooltip without pointer movement (WCAG 1.4.13)', () => {
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+
+    manager.show({ title: 'Test', fields: [{ label: 'V', value: '1' }] }, 100, 100);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(tooltip.style.display).toBe('none');
+    manager.destroy();
+  });
+
+  it('destroy() removes the Escape listener', () => {
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+
+    manager.show({ title: 'Test', fields: [{ label: 'V', value: '1' }] }, 100, 100);
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    manager.destroy();
+
+    // Dispatch after destroy: no listener should touch the detached element
+    tooltip.style.display = 'block';
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(tooltip.style.display).toBe('block');
+  });
+
   it('destroy() removes the tooltip element from the DOM', () => {
     const container = createContainer();
     const manager = createTooltipManager(container);

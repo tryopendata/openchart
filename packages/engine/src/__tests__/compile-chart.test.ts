@@ -272,6 +272,36 @@ describe('compileChart', () => {
     expect(layout.a11y.dataTableFallback.length).toBeGreaterThan(0);
     // With marks present, keyboard navigation should be enabled
     expect(layout.a11y.keyboardNavigable).toBe(true);
+    // No author opt-out by default
+    expect(layout.a11y.hidden).toBeUndefined();
+  });
+
+  it('a11y.description replaces the auto-generated alt text', () => {
+    const spec = { ...lineSpec, a11y: { description: 'GDP growth for US and UK, 2020 to 2021.' } };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.a11y.altText).toBe('GDP growth for US and UK, 2020 to 2021.');
+  });
+
+  it('top-level description (VL alias) replaces the auto-generated alt text', () => {
+    const spec = { ...lineSpec, description: 'Two-country GDP comparison.' };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.a11y.altText).toBe('Two-country GDP comparison.');
+  });
+
+  it('a11y.description wins over the top-level description', () => {
+    const spec = {
+      ...lineSpec,
+      description: 'Alias text',
+      a11y: { description: 'Canonical text' },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.a11y.altText).toBe('Canonical text');
+  });
+
+  it('a11y.hidden flows into the layout metadata', () => {
+    const spec = { ...lineSpec, a11y: { hidden: true } };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.a11y.hidden).toBe(true);
   });
 
   it('produces different strategies at different widths', () => {

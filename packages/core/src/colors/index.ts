@@ -8,7 +8,13 @@ export {
   simulateColorBlindness,
 } from './colorblind';
 
-export { contrastRatio, findAccessibleColor, meetsAA, pickLabelColor } from './contrast';
+export {
+  contrastRatio,
+  findAccessibleColor,
+  isOpaqueColor,
+  meetsAA,
+  pickLabelColor,
+} from './contrast';
 export type {
   CategoricalPalette,
   DivergingPalette,

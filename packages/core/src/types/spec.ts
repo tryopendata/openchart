@@ -200,6 +200,16 @@ export interface MarkDef {
    * two competing diagonals.
    */
   trendline?: boolean;
+  /**
+   * Pattern-fill reinforcement for filled marks (bar, area, arc).
+   *
+   * - `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,
+   *   crosshatch, vertical lines) layered over each series color so series
+   *   remain distinguishable without color vision. Marks too small to show
+   *   a legible pattern keep their solid fill.
+   * - `'none'` (default): solid fills only.
+   */
+  fillPattern?: 'auto' | 'none';
 }
 
 // ---------------------------------------------------------------------------
@@ -1429,6 +1439,33 @@ export interface RectEncoding<TData extends DataRow = DataRow> extends Encoding<
 }
 
 // ---------------------------------------------------------------------------
+// Accessibility configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * Author-facing accessibility overrides.
+ *
+ * Everything here is optional; when omitted, openchart auto-generates alt
+ * text, ARIA labels, and a screen-reader data table from the spec and data.
+ */
+export interface A11yConfig {
+  /**
+   * Alt text announced by screen readers for the chart as a whole. Replaces
+   * the auto-generated description. Also settable via the top-level
+   * `description` field (Vega-Lite convention); this field wins when both
+   * are present.
+   */
+  description?: string;
+  /**
+   * Hide the chart from assistive technology entirely (`aria-hidden`).
+   * Use only when the chart is decorative or the surrounding content
+   * already conveys the same information. Also suppresses the hidden
+   * screen-reader data table and keyboard mark navigation.
+   */
+  hidden?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Shared (non-mark-specific) ChartSpec properties
 // ---------------------------------------------------------------------------
 
@@ -1458,6 +1495,14 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   title?: string | { text: string; subtitle?: string };
   /** Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins. */
   subtitle?: string;
+  /**
+   * Alt text for the rendered chart (Vega-Lite aligned). Sugar for
+   * `a11y.description`; `a11y.description` wins when both are set.
+   * When absent, alt text is auto-generated from the spec and data.
+   */
+  description?: string;
+  /** Accessibility overrides. See {@link A11yConfig}. */
+  a11y?: A11yConfig;
   /**
    * Fixed render width in pixels (Vega-Lite aligned). Overrides the
    * container-derived width. When both `width` and `height` are set,

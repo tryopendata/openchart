@@ -14,8 +14,8 @@ import { rgb } from 'd3-color';
 // Types
 // ---------------------------------------------------------------------------
 
-/** The three common types of color vision deficiency. */
-export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia';
+/** The four common types of color vision deficiency. */
+export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
 
 // ---------------------------------------------------------------------------
 // Simulation matrices
@@ -49,10 +49,19 @@ const TRITAN_MATRIX: Matrix3x3 = [
   [0.0, 0.475, 0.525],
 ];
 
+// Total color blindness: every channel collapses to Rec. 709 relative
+// luminance, computed in linear RGB like the other matrices.
+const ACHROMAT_MATRIX: Matrix3x3 = [
+  [0.2126, 0.7152, 0.0722],
+  [0.2126, 0.7152, 0.0722],
+  [0.2126, 0.7152, 0.0722],
+];
+
 const MATRICES: Record<ColorBlindnessType, Matrix3x3> = {
   protanopia: PROTAN_MATRIX,
   deuteranopia: DEUTAN_MATRIX,
   tritanopia: TRITAN_MATRIX,
+  achromatopsia: ACHROMAT_MATRIX,
 };
 
 // ---------------------------------------------------------------------------
