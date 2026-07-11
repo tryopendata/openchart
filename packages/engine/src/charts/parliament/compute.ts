@@ -147,7 +147,16 @@ function resolveMajority(
   if (majorityLine == null || majorityLine === true) {
     return { seats: defaultSeats, label: `${defaultSeats} to win` };
   }
-  const seats = majorityLine.seats ?? defaultSeats;
+  // An explicit `seats` must land inside the chamber (1..totalSeats). `{ seats: 0 }`
+  // or a negative/oversized value would draw the majority marker off the seat
+  // arc where it reads as nothing at all, so warn and fall back to the default.
+  let seats = majorityLine.seats ?? defaultSeats;
+  if (!Number.isFinite(seats) || seats < 1 || seats > totalSeats) {
+    console.warn(
+      `[openchart] parliament majorityLine.seats (${majorityLine.seats}) is outside the valid range 1..${totalSeats}; using the default majority threshold of ${defaultSeats}.`,
+    );
+    seats = defaultSeats;
+  }
   return { seats, label: majorityLine.label ?? `${seats} to win` };
 }
 

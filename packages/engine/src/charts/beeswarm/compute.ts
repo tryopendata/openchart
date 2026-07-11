@@ -124,7 +124,12 @@ export function computeBeeswarmMarks(
   const dots: ResolvedDot[] = [];
 
   for (const row of spec.data) {
-    const value = Number(row[valueChannel.field]);
+    const raw = row[valueChannel.field];
+    // Drop null/undefined explicitly: the validator tolerates them (it only
+    // rejects non-numeric or non-finite present values), but Number(null) is 0,
+    // which would silently place a phantom dot at value 0 instead of skipping.
+    if (raw == null) continue;
+    const value = Number(raw);
     if (!Number.isFinite(value)) continue;
 
     const position = positionScale(value);

@@ -54,8 +54,14 @@ function prefersReducedMotion(): boolean {
 function stepToPatch(step: StoryStep): StorySpecPatch {
   let patch = step.spec ?? {};
   if ('highlight' in step) {
+    // `highlight: null` clears a highlight set by an earlier step. It must map
+    // to `[]` (not `undefined`): deep-merge skips `undefined`, so `?? undefined`
+    // would leave the prior step's highlight in place. An empty array is a real
+    // value that replaces it, and the engine reads `highlight.length > 0` as
+    // active, so `[]` reads as "no highlight."
+    const highlight = step.highlight === null ? [] : (step.highlight ?? undefined);
     patch = deepMergeSpec(patch, {
-      encoding: { color: { highlight: step.highlight ?? undefined } },
+      encoding: { color: { highlight } },
     });
   }
   return patch;
@@ -140,6 +146,30 @@ export function createChartStory<TData extends DataRow = DataRow>(
   let settleRaf = 0;
   let settling = false;
 
+  // Memoized per-step fitted cameras for scrub mode. The fit depends only on
+  // the current layout (rebuilt on instance.update) and the viewBox size, so
+  // recomputing it on every scroll frame is wasted work. Cache keyed on the
+  // layout reference plus the viewBox dimensions; invalidate when either moves.
+  let fittedCache: Camera[] | null = null;
+  let fittedCacheLayout: unknown = null;
+  let fittedCacheVb: ViewBoxSize | null = null;
+
+  function fittedCamerasForScrub(vb: ViewBoxSize): Camera[] {
+    if (
+      fittedCache &&
+      fittedCacheLayout === instance.layout &&
+      fittedCacheVb &&
+      fittedCacheVb.width === vb.width &&
+      fittedCacheVb.height === vb.height
+    ) {
+      return fittedCache;
+    }
+    fittedCache = steps.map((step) => fittedCameraForStep(step, vb));
+    fittedCacheLayout = instance.layout;
+    fittedCacheVb = vb;
+    return fittedCache;
+  }
+
   function stopSettle(): void {
     if (settling) {
       cancelAnimationFrame(settleRaf);
@@ -186,7 +216,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
   function applyScrubCamera(frame: { step: number; stepProgress: number }): void {
     const vb = readViewBox(container);
     if (!vb) return;
-    const fitted = steps.map((step) => fittedCameraForStep(step, vb));
+    const fitted = fittedCamerasForScrub(vb);
     if (fitted.length === 0) return;
 
     if (prefersReducedMotion()) {

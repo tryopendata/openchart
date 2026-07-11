@@ -131,8 +131,13 @@ export function createScrollDriver(options: ScrollDriverOptions = {}): ScrollDri
   const progress: ScrollyProgressStore = {
     get: () => frame,
     subscribe: (cb) => {
-      subscribers.add(cb);
+      // Refresh `frame` from current geometry BEFORE registering `cb`, so the
+      // measure pass notifies only existing subscribers. Then hand the new
+      // subscriber the current frame exactly once. Registering after the
+      // measure avoids the double-invoke that happened when measureAndEmit
+      // changed the frame (looping over cb) and the explicit cb(frame) fired again.
       measureAndEmit();
+      subscribers.add(cb);
       cb(frame);
       return () => {
         subscribers.delete(cb);

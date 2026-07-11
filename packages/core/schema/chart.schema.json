@@ -5535,7 +5535,8 @@
           "enum": [
             "refline",
             "rule"
-          ]
+          ],
+          "description": "Discriminant. `'refline'` is canonical. `'rule'` is a deprecated alias (it collides with the `rule` mark type) kept accepted-with-warning; it is removed in v9. Use `'refline'`."
         },
         "x": {
           "type": [

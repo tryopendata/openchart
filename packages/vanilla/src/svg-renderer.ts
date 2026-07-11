@@ -189,13 +189,20 @@ export function renderChartSVG(
       renderAxes(svg, layout);
 
       // Marks are clipped to chart area so area fills don't cover chrome.
-      // `data-oc-marks-group` is a stable hook for external features that
-      // apply their own SVG transform here (e.g. the scrollytelling story
-      // camera) -- composes with clip-path since it's a separate attribute,
-      // unlike CSS transform which would replace a mark's own SVG transform.
+      // The clip and the camera transform must live on SEPARATE, nested groups:
+      // `clip-path` with the default userSpaceOnUse resolves in the coordinate
+      // system of the element's own `transform`, so putting both on one group
+      // would drag the clip rect along with a story-camera zoom/pan and stop it
+      // masking at the chart-area boundary. The outer group holds the clip fixed
+      // to the area; the inner `data-oc-marks-group` is the stable hook external
+      // features (e.g. the scrollytelling story camera) transform, so the camera
+      // moves inside the clip. SVG transform (not CSS) so it composes with each
+      // mark's own transform rather than replacing it.
+      const clipGroup = createSVGElement('g');
+      clipGroup.setAttribute('clip-path', `url(#${clipId})`);
       const clippedGroup = createSVGElement('g');
-      clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
       clippedGroup.setAttribute('data-oc-marks-group', 'true');
+      clipGroup.appendChild(clippedGroup);
       const markLabelsOverlay = renderMarks(clippedGroup, layout);
 
       // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
@@ -246,7 +253,7 @@ export function renderChartSVG(
         clippedGroup.appendChild(dotsGroup);
       }
 
-      svg.appendChild(clippedGroup);
+      svg.appendChild(clipGroup);
 
       if (markLabelsOverlay) {
         svg.appendChild(markLabelsOverlay);

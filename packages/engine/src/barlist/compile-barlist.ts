@@ -30,7 +30,7 @@ import {
   formatNumber,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-
+import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedBarListSpec } from './types';
@@ -57,7 +57,8 @@ const BARLIST_COLORS = ['#06b6d4', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
 // ---------------------------------------------------------------------------
 
 export function compileBarList(spec: unknown, options: CompileOptions): BarListLayout {
-  const { spec: normalized } = compileSpec(spec);
+  const { spec: normalized, warnings } = compileSpec(spec);
+  emitSpecWarnings(warnings);
 
   if (!('type' in normalized) || normalized.type !== 'barlist') {
     throw new Error(

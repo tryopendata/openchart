@@ -27,7 +27,7 @@ function getOptionalChannels(markType: MarkType): string[] {
 // ---------------------------------------------------------------------------
 
 describe('MARK_ENCODING_RULES', () => {
-  it('has entries for all 12 mark types', () => {
+  it('has entries for all 16 mark types', () => {
     const expectedTypes: MarkType[] = [
       'bar',
       'line',
@@ -41,6 +41,10 @@ describe('MARK_ENCODING_RULES', () => {
       'rect',
       'lollipop',
       'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of expectedTypes) {
       expect(MARK_ENCODING_RULES[type]).toBeDefined();
@@ -290,6 +294,10 @@ describe('common channels across marks', () => {
       'rect',
       'lollipop',
       'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];
@@ -313,6 +321,10 @@ describe('common channels across marks', () => {
       'rect',
       'lollipop',
       'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];
@@ -336,6 +348,10 @@ describe('common channels across marks', () => {
       'rect',
       'lollipop',
       'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];

@@ -196,7 +196,6 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     spec && typeof spec === 'object' && !Array.isArray(spec)
       ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
       : spec;
-  emitSpecWarnings(sugarWarnings);
 
   // Top-level width/height are fixed-size overrides (VL alignment): the
   // authored size wins over the container-derived compile options.
@@ -204,9 +203,11 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
 
   // Validate + normalize. Normalize-stage warnings (type mismatches,
   // beeswarm point budget, sparkline mark advice) surface through the same
-  // console channel as the sugar warnings so they are not silently dropped.
+  // console channel as the sugar warnings. Emit both together in one call so
+  // dedup spans the whole compile: a message produced by both a sugar pass and
+  // a normalize pass prints once, not once per stage.
   const { spec: normalized, warnings: normalizeWarnings } = compileSpec(expandedSpec);
-  emitSpecWarnings(normalizeWarnings);
+  emitSpecWarnings([...sugarWarnings, ...normalizeWarnings]);
 
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');

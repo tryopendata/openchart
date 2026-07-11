@@ -282,6 +282,34 @@ describe('computePieMarks', () => {
         expect(mark.innerRadius).toBeGreaterThan(0);
       }
     });
+
+    it('half-donut swept geometry stays within the chart area bounds', () => {
+      const spec = makeHalfDonutSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computePieMarks(spec, scales, chartArea, fullStrategy, true);
+
+      const left = chartArea.x;
+      const right = chartArea.x + chartArea.width;
+      const top = chartArea.y;
+      const bottom = chartArea.y + chartArea.height;
+
+      // The -PI/2..PI/2 sweep spans the TOP half-disc: its bounding box is
+      // x in [-R, R], y in [-R, 0] relative to center (up is -y here). So the
+      // swept extremes are center.x ± R horizontally and [center.y - R,
+      // center.y] vertically. All must land inside the chart area.
+      for (const mark of marks) {
+        const r = mark.outerRadius;
+        expect(mark.center.x - r).toBeGreaterThanOrEqual(left - 0.5);
+        expect(mark.center.x + r).toBeLessThanOrEqual(right + 0.5);
+        expect(mark.center.y - r).toBeGreaterThanOrEqual(top - 0.5);
+        expect(mark.center.y).toBeLessThanOrEqual(bottom + 0.5);
+        // Centroids (label anchors) must also fall inside the area.
+        expect(mark.centroid.x).toBeGreaterThanOrEqual(left);
+        expect(mark.centroid.x).toBeLessThanOrEqual(right);
+        expect(mark.centroid.y).toBeGreaterThanOrEqual(top);
+        expect(mark.centroid.y).toBeLessThanOrEqual(bottom);
+      }
+    });
   });
 
   describe('edge cases', () => {

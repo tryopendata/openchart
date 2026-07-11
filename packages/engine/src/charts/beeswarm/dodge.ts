@@ -71,7 +71,18 @@ export function dodgeOffsets(
 // Per-lane sweep
 // ---------------------------------------------------------------------------
 
-/** Place one lane's dots, writing results into the shared offsets array. */
+/**
+ * Place one lane's dots, writing results into the shared offsets array.
+ *
+ * The backward scan's early `break` (line ~101) keeps this near-linear when
+ * value positions are spread out: once the horizontal gap to an earlier dot
+ * exceeds any possible collision distance, no earlier dot can collide either.
+ * The degenerate case is many dots sharing one identical value position — the
+ * gap stays 0, the break never fires, and the scan touches every placed dot,
+ * so a lane of N coincident points is O(N^2). The overplotting guard caps the
+ * swarm at ~2000 points, which bounds the worst case; real data spreads out
+ * enough that this stays linear in practice.
+ */
 function dodgeLane(
   indices: number[],
   positions: readonly number[],

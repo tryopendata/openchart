@@ -91,6 +91,9 @@ export function getInstance(): ChartStoryInstance | null {
   style="position:relative;display:grid;grid-template-columns:minmax(0,26rem) minmax(0,1fr);gap:3rem;align-items:start;"
 >
   <div style="position:relative;">
+    <!-- Keyed by index: steps are a fixed ordered list, so the index is the
+         stable identity. Don't reorder or splice narrative entries at runtime
+         (it would remap step refs to the wrong content); rebuild the story. -->
     {#each narrative as block, i (i)}
       <div
         bind:this={stepEls[i]}

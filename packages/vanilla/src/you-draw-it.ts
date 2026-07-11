@@ -340,7 +340,18 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     );
   }
 
-  /** Map a drawn pixel y back to a data value via the linear yInvert anchors. */
+  /**
+   * Map a drawn pixel y back to a data value via the linear yInvert anchors.
+   *
+   * This interpolates linearly in pixel space between the top and bottom
+   * anchors. For a linear y-scale that is exact. For a log or pow scale it is
+   * an approximation: the true inverse is curved, so a guess drawn halfway up
+   * the plot reads back as the arithmetic midpoint of the domain rather than
+   * the geometric (log) or power midpoint. The you-draw-it guess is a rough
+   * "where did the reader think the line went" signal, not a precise readout,
+   * so the linear approximation is acceptable here; revisit if a non-linear
+   * scale ever needs an exact guess value.
+   */
   function pixelYToData(py: number): number {
     if (!config) return py;
     const inv = config.yInvert;

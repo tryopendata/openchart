@@ -25,9 +25,4 @@ export function applyStoryCamera(container: HTMLElement, camera: Camera, vb: Vie
   marksGroup.setAttribute('transform', cameraTransform(camera, vb));
 }
 
-/** Reset the camera to the identity (full viewBox) transform. */
-export function resetStoryCamera(container: HTMLElement, vb: ViewBoxSize): void {
-  applyStoryCamera(container, { cx: vb.width / 2, cy: vb.height / 2, k: 1 }, vb);
-}
-
 export { FULL_VIEW };

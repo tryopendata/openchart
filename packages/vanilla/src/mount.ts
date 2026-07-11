@@ -1086,8 +1086,10 @@ export function createChart<TData extends DataRow = DataRow>(
     // baseline and drop any search selections layered on the previous spec.
     searchBaseline = authoredHighlight(newSpec);
     seriesSearch?.setSelected([]);
-    // A new spec re-arms the youDrawIt/edit conflict warning.
+    // A new spec re-arms the conflict warnings (youDrawIt/edit and
+    // seriesSearch/edit) so a newly-introduced conflict warns once again.
     ydiEditSuppressWarned = false;
+    editSuppressWarned = false;
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }

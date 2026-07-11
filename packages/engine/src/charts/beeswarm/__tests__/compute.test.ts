@@ -91,6 +91,32 @@ describe('beeswarm compile', () => {
     expect(second).toEqual(first);
   });
 
+  it('drops rows whose value is null or the field is missing', () => {
+    // The validator rejects a quantitative field that carries non-numeric or
+    // non-finite values (strings, NaN, Infinity), but tolerates null/undefined
+    // (`val != null` skips them). Those null/missing rows must then be dropped
+    // by the compute pass rather than producing NaN-positioned dots.
+    const spec = {
+      mark: 'beeswarm' as const,
+      data: [
+        { income: 40 },
+        { income: null },
+        { notIncome: 5 }, // field missing entirely -> undefined
+        { income: 90 },
+      ],
+      encoding: {
+        x: { field: 'income', type: 'quantitative' as const },
+      },
+    };
+    const marks = pointMarks(compileChart(spec, OPTIONS));
+    // Only the two rows with finite values (40 and 90) survive.
+    expect(marks).toHaveLength(2);
+    for (const mark of marks) {
+      expect(Number.isFinite(mark.cx)).toBe(true);
+      expect(Number.isFinite(mark.cy)).toBe(true);
+    }
+  });
+
   it('renders only the value axis for a single-lane swarm', () => {
     const layout = compileChart(singleLaneSpec(60), OPTIONS);
     expect(layout.axes.x?.ticks.length).toBeGreaterThan(0);

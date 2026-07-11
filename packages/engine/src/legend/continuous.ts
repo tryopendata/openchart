@@ -30,6 +30,24 @@ import type { NormalizedChartSpec } from '../compiler/types';
 // Constants
 // ---------------------------------------------------------------------------
 
+/**
+ * Min/max over a numeric array via reduce, not `Math.min(...values)`. The spread
+ * form passes every element as a function argument and throws a call-stack
+ * RangeError once the array is large enough (a continuous-color field over a big
+ * dataset), so the reduce keeps large color domains from crashing the legend.
+ * Empty-array result matches the old `Math.min()`/`Math.max()` identity so the
+ * `?? Math.min(...)` fallback callers keep their prior semantics.
+ */
+function extent(values: number[]): [number, number] {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const v of values) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  return [min, max];
+}
+
 /** Height of the gradient bar / swatch row in pixels. */
 export const CONTINUOUS_BAR_HEIGHT = 10;
 
@@ -155,8 +173,9 @@ function resolveBinBreaks(channel: EncodingChannel, values: number[], binCount: 
   }
   // quantize: evenly spaced breaks across the (possibly explicit) domain
   const explicitDomain = channel.scale?.domain as [number, number] | undefined;
-  const domainMin = explicitDomain?.[0] ?? Math.min(...values);
-  const domainMax = explicitDomain?.[1] ?? Math.max(...values);
+  const [valuesMin, valuesMax] = extent(values);
+  const domainMin = explicitDomain?.[0] ?? valuesMin;
+  const domainMax = explicitDomain?.[1] ?? valuesMax;
   const breaks: number[] = [];
   for (let i = 1; i < binCount; i++) {
     breaks.push(domainMin + ((domainMax - domainMin) * i) / binCount);
@@ -237,8 +256,7 @@ export function computeContinuousLegendContent(
   }
 
   // Gradient mode: sequential or diverging ramp.
-  const domainMin = Math.min(...values);
-  const domainMax = Math.max(...values);
+  const [domainMin, domainMax] = extent(values);
   const explicitRange = colorEnc.scale?.range as string[] | undefined;
 
   // Mirror buildSequentialColorScale: multi-stop explicit ranges interpolate

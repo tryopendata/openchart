@@ -154,6 +154,10 @@ export const ChartStory = defineComponent({
             h(
               'div',
               {
+                // Steps are a fixed ordered list, so the index is the stable
+                // identity. Do not reorder or splice narrative entries at runtime
+                // (that would remap step refs to the wrong content); rebuild the
+                // whole story instead.
                 key: i,
                 ref: (el: unknown) => {
                   stepEls.value[i] = el as HTMLElement | null;

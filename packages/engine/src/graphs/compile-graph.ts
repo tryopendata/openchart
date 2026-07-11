@@ -23,7 +23,7 @@ import type {
   TooltipField,
 } from '@opendata-ai/openchart-core';
 import { adaptTheme, computeChrome, resolveTheme } from '@opendata-ai/openchart-core';
-
+import { emitSpecWarnings } from '../compile/spec-sugar';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedGraphSpec } from '../compiler/types';
 import { applyCommunityColors, assignCommunities, buildCommunityColorMap } from './community';
@@ -185,7 +185,8 @@ function buildGraphTooltips(nodes: CompiledGraphNode[]): Map<string, TooltipCont
  */
 export function compileGraph(spec: unknown, options: CompileOptions): GraphCompilation {
   // 1. Validate + normalize
-  const { spec: normalized } = compileSpec(spec);
+  const { spec: normalized, warnings } = compileSpec(spec);
+  emitSpecWarnings(warnings);
 
   if (!('type' in normalized) || normalized.type !== 'graph') {
     throw new Error(

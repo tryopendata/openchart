@@ -15,9 +15,9 @@
  *                        (chose an acceptable mark / referenced the right field).
  *
  * This is run MANUALLY per release (it hits the paid Anthropic API and is not
- * part of CI). Results are printed and written to `baseline.json` so the
- * roadmap's ">=95% one-shot validity" target is measurable and regression-
- * guarded.
+ * part of CI). Results are always printed; passing `--write-baseline` also
+ * persists them to `baseline.json` so the roadmap's ">=95% one-shot validity"
+ * target is measurable and regression-guarded.
  *
  * Usage:
  *   ANTHROPIC_API_KEY=... node scripts/llm-eval/run.mjs

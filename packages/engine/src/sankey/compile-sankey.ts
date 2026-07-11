@@ -34,7 +34,7 @@ import {
   formatNumber,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-
+import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
@@ -217,7 +217,8 @@ function computeNodeLabel(
  */
 export function compileSankey(spec: unknown, options: CompileOptions): SankeyLayout {
   // 1. Validate + normalize via the shared compiler pipeline
-  const { spec: normalized } = compileSpec(spec);
+  const { spec: normalized, warnings } = compileSpec(spec);
+  emitSpecWarnings(warnings);
 
   if (!('type' in normalized) || normalized.type !== 'sankey') {
     throw new Error(

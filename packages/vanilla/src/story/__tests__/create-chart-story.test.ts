@@ -38,6 +38,24 @@ function cameraTransform(container: HTMLElement): string | null {
   return container.querySelector('[data-oc-marks-group]')?.getAttribute('transform') ?? null;
 }
 
+/**
+ * The neutral gray the color-scale-range applies to non-highlighted line
+ * series when a highlight is active (color-scale-range.ts MUTED_COLOR). Its
+ * presence on a line stroke is the observable signal that a highlight is
+ * active; its absence means no highlight.
+ */
+const MUTED_STROKE = '#bfc3c8';
+
+/** Count line-mark strokes painted the muted gray (i.e. non-highlighted series). */
+function mutedStrokeCount(container: HTMLElement): number {
+  const paths = container.querySelectorAll('.oc-mark-line path');
+  let count = 0;
+  for (const p of paths) {
+    if (p.getAttribute('stroke')?.toLowerCase() === MUTED_STROKE) count++;
+  }
+  return count;
+}
+
 describe('createChartStory', () => {
   let container: HTMLDivElement;
 
@@ -124,13 +142,11 @@ describe('createChartStory', () => {
 
     story.goTo(1);
 
-    // The highlight resolves through the color encoding: the non-highlighted
-    // series is dimmed via the muted class the renderer applies.
-    const muted = container.querySelectorAll('.oc-series-muted, [data-oc-muted="true"]');
-    // At minimum the chart re-rendered and stayed valid; highlight sugar is a
-    // pure spec patch so the SVG must still be present.
+    // Highlighting Germany resolves through the color encoding: US (the
+    // non-highlighted series) gets the muted gray stroke. So exactly one line
+    // stroke should be muted.
     expect(container.querySelector('svg')).not.toBeNull();
-    expect(muted.length).toBeGreaterThanOrEqual(0);
+    expect(mutedStrokeCount(container)).toBe(1);
 
     story.destroy();
   });
@@ -141,8 +157,15 @@ describe('createChartStory', () => {
       steps: [{}, { highlight: ['Germany'] }, { highlight: null }],
     });
 
+    // Step 1 highlights Germany, so US is muted.
+    story.goTo(1);
+    expect(mutedStrokeCount(container)).toBe(1);
+
+    // Step 2 clears the highlight (null -> []). No series should stay muted:
+    // if the clear were a no-op, US would still carry the muted gray stroke.
     story.goTo(2);
     expect(container.querySelector('svg')).not.toBeNull();
+    expect(mutedStrokeCount(container)).toBe(0);
 
     story.destroy();
   });

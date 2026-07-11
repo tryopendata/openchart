@@ -52,9 +52,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* 16px glyph, but a >=24px hit area (WCAG 2.5.5 target size) via padding
+     pulled back with negative margin so the chip layout stays tight. */
   width: 16px;
   height: 16px;
-  padding: 0;
+  padding: 4px;
+  margin: -4px -2px -4px -4px;
   border: none;
   border-radius: 50%;
   background: transparent;

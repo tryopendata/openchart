@@ -131,7 +131,7 @@ function generateSchema(rootType) {
   return hoistChartBase(generator.createSchema(rootType));
 }
 
-/** Stable, human-readable serialization (sorted top-level, 2-space indent). */
+/** Stable, human-readable serialization (generator insertion order, 2-space indent). */
 function serialize(schema) {
   return `${JSON.stringify(schema, null, 2)}\n`;
 }
