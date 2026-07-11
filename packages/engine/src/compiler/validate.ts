@@ -706,6 +706,64 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
     });
   }
+
+  // Validate youDrawIt: line marks only, single-series only, "from" required.
+  if (spec.youDrawIt !== undefined && spec.youDrawIt !== false) {
+    if (markType !== 'line') {
+      errors.push({
+        message: `Spec error: youDrawIt is only supported on line charts, but mark is "${markType}"`,
+        path: 'youDrawIt',
+        code: 'ENCODING_MISMATCH',
+        suggestion: 'Remove youDrawIt or change mark to "line".',
+      });
+    } else {
+      const config = spec.youDrawIt as Record<string, unknown>;
+      if (
+        typeof config !== 'object' ||
+        Array.isArray(config) ||
+        (config.from !== 0 && !config.from)
+      ) {
+        errors.push({
+          message: 'Spec error: youDrawIt.from is required (the x value where drawing starts)',
+          path: 'youDrawIt.from',
+          code: 'MISSING_FIELD',
+          suggestion: `Set youDrawIt.from to an x value from your data, e.g. youDrawIt: { from: "${encoding?.x && typeof (encoding.x as Record<string, unknown>).field === 'string' ? spec.data[0]?.[(encoding.x as Record<string, unknown>).field as string] : '...'}" }`,
+        });
+      } else if (
+        typeof config.from !== 'string' &&
+        typeof config.from !== 'number'
+      ) {
+        errors.push({
+          message: 'Spec error: youDrawIt.from must be a string or number',
+          path: 'youDrawIt.from',
+          code: 'INVALID_TYPE',
+          suggestion: 'Provide the x value as a string or number matching your data.',
+        });
+      }
+
+      const colorCh = encoding?.color as Record<string, unknown> | undefined;
+      if (colorCh && typeof colorCh === 'object' && typeof colorCh.field === 'string') {
+        const colorType =
+          (colorCh.type as string | undefined) ??
+          inferFieldType(spec.data as Record<string, unknown>[], colorCh.field);
+        if (colorType !== 'quantitative') {
+          const distinct = new Set(
+            (spec.data as Record<string, unknown>[]).map((row) => row[colorCh.field as string]),
+          );
+          if (distinct.size > 1) {
+            errors.push({
+              message:
+                'Spec error: youDrawIt only supports single-series line charts, but encoding.color has multiple distinct values',
+              path: 'youDrawIt',
+              code: 'ENCODING_MISMATCH',
+              suggestion:
+                'Remove encoding.color (or filter the data to one series) to use youDrawIt.',
+            });
+          }
+        }
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

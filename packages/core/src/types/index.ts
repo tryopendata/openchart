@@ -84,6 +84,7 @@ export type {
   ResolvedMetricBar,
   ResolvedMetricCell,
   ResolvedSeriesSearch,
+  ResolvedYouDrawIt,
   RuleMarkLayout,
   SankeyLayout,
   SankeyLinkMark,
@@ -221,6 +222,7 @@ export type {
   WindowOp,
   WindowSortField,
   WindowTransform,
+  YouDrawItConfig,
 } from './spec';
 export {
   CHART_TYPES,

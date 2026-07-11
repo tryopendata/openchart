@@ -1187,6 +1187,30 @@ export interface SeriesSearchConfig {
 }
 
 /**
+ * Configuration for the "you draw it" interactive engagement format
+ * (`youDrawIt`). The reader draws their guess of the trend from `from` to the
+ * right edge before the real line reveals. Line marks only, single-series only.
+ */
+export interface YouDrawItConfig {
+  /**
+   * The x value (matching `encoding.x`'s domain) where drawing starts. Data
+   * before this point renders normally; data at or after it is hidden behind
+   * a hatched "draw here" region until reveal.
+   */
+  from: string | number;
+  /** Prompt text shown in the hatched drawing region. Defaults to "Draw your guess". */
+  prompt?: string;
+  /** Label for the skip-to-reveal button. Defaults to "Show me". */
+  revealLabel?: string;
+  /**
+   * Optional extra comparison line (e.g. "what everyone else guessed"),
+   * supplied by the host app. Rendered in a third, visually distinct style
+   * alongside the reader's guess and the real line after reveal.
+   */
+  comparisonLine?: Array<{ x: string | number; y: number }>;
+}
+
+/**
  * Content composition for an endpoint-label entry: the series name, the
  * formatted value, or both joined on one line. See
  * {@link EndpointLabelsConfig.content}.
@@ -1712,6 +1736,13 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * encoding. Mutually exclusive with edit mode (search wins).
    */
   seriesSearch?: boolean | SeriesSearchConfig;
+  /**
+   * "You draw it" interactive engagement format: the reader draws their
+   * guess of the trend before the real line reveals. Line marks only,
+   * single-series only. Mutually exclusive with edit mode (validation
+   * warning if both are enabled; youDrawIt is disabled).
+   */
+  youDrawIt?: YouDrawItConfig;
   /**
    * Display mode controlling how much chart chrome is rendered.
    *

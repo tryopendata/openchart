@@ -63,6 +63,7 @@ import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
 import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
+import { resolveYouDrawIt } from './compile/you-draw-it';
 import { collectContrastWarnings } from './compiler/a11y-warnings';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec } from './compiler/index';
@@ -688,6 +689,10 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // filled marks in place; assignment is deterministic and theme-aware.
   applyFillPatterns(marks, chartSpec.markDef, theme);
 
+  // Resolve "you draw it" geometry (pixel fromX, x-sample positions, target
+  // line color/key). Reads marks so it must run after they're computed.
+  const youDrawIt = resolveYouDrawIt(chartSpec.youDrawIt, marks, scales, chartArea);
+
   // Compute the right-side endpoint labels column for multi-series line/area
   // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.
   // dimensions.ts already reserved the right margin via predictEndpointLabelsWidth.
@@ -786,6 +791,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     chrome,
     metrics: dims.metrics,
     ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
+    ...(youDrawIt ? { youDrawIt } : {}),
     axes: {
       x: axes.x,
       y: axes.y,

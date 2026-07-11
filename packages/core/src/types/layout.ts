@@ -1008,6 +1008,35 @@ export interface ResolvedSeriesSearch {
 }
 
 // ---------------------------------------------------------------------------
+// You draw it (resolved)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolved geometry and config for the "you draw it" interactive format
+ * (`youDrawIt`). The vanilla adapter uses this to render the hatched drawing
+ * region, capture pointer input, and mask/reveal the real line. Present only
+ * when the spec enables `youDrawIt` on a valid single-series line chart.
+ */
+export interface ResolvedYouDrawIt {
+  /** Pixel x position of `from` within the chart area (drawing starts here). */
+  fromX: number;
+  /** The chart drawing area, for clamping pointer input and sizing the hatch region. */
+  area: Rect;
+  /** X-sample pixel positions (from the target line's points) at or after `from`, ascending. Drawing snaps to these. */
+  sampleXs: number[];
+  /** Resolved prompt text for the hatched region. */
+  prompt: string;
+  /** Resolved skip-to-reveal button label. */
+  revealLabel: string;
+  /** Stroke color of the target line (the reader's guess uses a distinct pen style, but shares the palette for continuity). */
+  lineColor: string;
+  /** Key of the target line mark, so the vanilla layer can find it in `marks`. */
+  targetKey: string;
+  /** Optional comparison line, resolved to pixel points parallel to the target line's points. */
+  comparisonPoints?: Point[];
+}
+
+// ---------------------------------------------------------------------------
 // ChartLayout (the main engine output for charts)
 // ---------------------------------------------------------------------------
 
@@ -1060,6 +1089,8 @@ export interface ChartLayout {
   metrics?: ResolvedMetricBar;
   /** Reserved series-search band. Present only when spec.seriesSearch is enabled. */
   seriesSearch?: ResolvedSeriesSearch;
+  /** Resolved "you draw it" config. Present only when spec.youDrawIt is enabled and valid. */
+  youDrawIt?: ResolvedYouDrawIt;
   /** Resolved axis layouts. */
   axes: {
     x?: AxisLayout;
