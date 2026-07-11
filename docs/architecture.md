@@ -75,11 +75,11 @@ graph LR
 
 Step by step:
 
-1. **Validate**: Runtime type checking of the raw spec. Catches missing fields, wrong types, invalid encoding combinations.
-2. **Normalize**: Fill in defaults, resolve shorthand, produce a `NormalizedChartSpec` with all optional fields resolved.
+1. **Validate**: Runtime type checking of the raw spec. Catches missing fields, wrong types, invalid encoding combinations. On a missing data field, the validator suggests the nearest real column name (Levenshtein) so the error tells the author how to fix it.
+2. **Normalize**: Fill in defaults, resolve shorthand, produce a `NormalizedChartSpec` with all optional fields resolved. This stage also expands spec sugar (Vega-Lite idioms, bin/timeUnit) and collects deprecation warnings. The engine never calls `console.*`; it returns a structured warnings array that the vanilla adapter surfaces once at its boundary (see Compile warnings below).
 3. **Resolve theme**: Deep-merge user theme overrides onto the default theme. Produces a `ResolvedTheme` with every property set.
 4. **Dark mode adapt**: If dark mode is active, transform colors (lighten backgrounds, adjust palette brightness, swap text colors).
-5. **Compute legend**: Determine legend entries from the color encoding. Calculate space needed for legend positioning.
+5. **Compute legend**: Determine legend entries from the color encoding. Calculate space needed for legend positioning. Categorical color produces swatch entries; a quantitative color scale produces a continuous legend instead, either a gradient bar (sequential/diverging scales) or discrete swatches with class breaks (binned scales like quantile/quantize/threshold).
 6. **Compute dimensions**: Account for chrome (title, subtitle, source, footer), legend, axis labels. Produce the chart area `Rect`.
 7. **Compute scales**: Build d3 scales from the data and encoding. Linear for quantitative, time for temporal, band/ordinal for nominal.
 8. **Compute axes**: Generate tick positions, labels, and format strings from the scales. Responsive strategy controls label density.
@@ -122,7 +122,7 @@ The key difference from charts: the engine output does **not** include x/y posit
 
 The output is a `GraphCompilation` with resolved nodes, edges, simulation config, legend, tooltip descriptors, and the resolved theme. The vanilla adapter creates a canvas element and an animation loop driven by simulation ticks.
 
-Graphs use a separate compilation function (`compileGraph`) rather than the chart registry. The chart registry handles the eight chart types that all share the same scale/axis/mark pipeline. Graphs have fundamentally different input (nodes + edges instead of rows + encoding) and output (simulation config instead of positioned marks), so they get their own path.
+Graphs use a separate compilation function (`compileGraph`) rather than the chart registry. The chart registry handles the mark types that all share the same scale/axis/mark pipeline. Graphs have fundamentally different input (nodes + edges instead of rows + encoding) and output (simulation config instead of positioned marks), so they get their own path.
 
 ## Why headless
 
@@ -131,9 +131,23 @@ The engine knows nothing about the DOM, React, or any rendering target. This is 
 - **SSR**: The engine runs in Node.js. `renderStaticSVG()` from `@opendata-ai/openchart-vanilla/static` generates standalone SVG strings server-side using happy-dom as a DOM shim.
 - **Testing**: Engine output is pure data. Test chart layout math without a browser.
 - **Multiple renderers**: The same spec and layout can be rendered by the vanilla SVG adapter, the React wrapper, the Vue wrapper, the Svelte wrapper, or a hypothetical Canvas/WebGL renderer.
-- **LLM generation**: Specs are plain JSON. An LLM writes data, the engine does the math, an adapter renders.
+- **LLM generation**: Specs are plain JSON. An LLM writes data, the engine does the math, an adapter renders. A JSON Schema for the full spec is published from core's `./schema` subpath (with `additionalProperties: false`, so hallucinated fields and unknown marks are rejected when the schema constrains a model's tool output), and a `llms.txt` summary ships at the repo root. Both are generated from the TS spec types, and a CI check fails the build if either drifts from the types.
 
 The boundary between "compute" and "render" is the layout type. Everything before it is engine territory. Everything after is adapter territory.
+
+## Compile warnings
+
+The engine surfaces non-fatal problems (deprecated spec forms, accessibility contrast issues, ambiguous encodings) as a structured warnings array on its output, never by calling `console.*` itself. Keeping the engine free of side-effect logging is what lets it stay isomorphic and testable. The vanilla adapter is the single boundary that emits these to the console, deduped per compile, so a warning appears once no matter how many internal stages produced it. Deprecation warnings name both the deprecated form and its replacement so the message is self-documenting.
+
+## Interaction layers
+
+A few features add runtime interactivity on top of a rendered chart. These live in the vanilla adapter (not the engine, which stays headless) and are wired through `mount.ts` with a create/update/destroy lifecycle that mirrors the chart itself:
+
+- **seriesSearch**: a "find your series" search box over a dense multi-series line chart. Matching series highlight, the rest mute.
+- **youDrawIt**: an NYT-style draw-then-reveal. The reader draws their guess for the hidden portion of a line, then reveals the real data. Reports the drawn values in data coordinates via an `onReveal` callback.
+- **scrollytelling story API**: a separate vanilla subpath export (`@opendata-ai/openchart-vanilla/story`) that drives a chart through a sequence of narrative steps, each a cumulative patch on a base spec, with camera moves and morph/crossfade transitions between steps. Kept out of the main bundle so charts that don't need it don't pay for it.
+
+Because these are adapter-level, all three framework wrappers inherit them through vanilla. Where two interaction layers would conflict (for example youDrawIt and edit mode), the adapter resolves the conflict explicitly at mount time and warns once.
 
 ### Why three framework packages?
 
@@ -160,7 +174,9 @@ graph TB
 
 This decouples chart-type logic from the compile pipeline. Adding a new chart type means creating a directory under `charts/`, implementing a renderer function, and importing it in `index.ts`. The compile pipeline doesn't change.
 
-Each chart renderer receives `(spec, scales, chartArea, strategy)` and returns `Mark[]`. A `Mark` is a discriminated union (line marks, rect marks, arc marks, point marks) with all positions and colors computed.
+Each chart renderer receives `(spec, scales, chartArea, strategy)` and returns `Mark[]`. A `Mark` is a discriminated union (line marks, rect marks, arc marks, point marks, text marks, rule marks) with all positions and colors computed. Higher-level marks compose from these primitives rather than inventing new geometry: for example, `parliament` (a hemicycle seat chart) emits point marks for the seats, a rule mark for the majority line, and text marks for labels; `waffle` emits a grid of rects.
+
+Some marks are axisless: arc, waffle, calendar, and parliament compute their own internal geometry and have no positional x/y scales, axes, or gridlines. The single predicate `isAxislessMark()` gates the axis/gridline/dimension code paths for all of them, so the pipeline skips axis space and tick computation uniformly rather than special-casing each mark.
 
 ## Table pipeline
 
