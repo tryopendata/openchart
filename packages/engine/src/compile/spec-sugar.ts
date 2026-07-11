@@ -321,17 +321,25 @@ function expandChannelSugar(
     }
   }
 
-  // theta: VL's arc value channel. Alias for y when y is absent; ignored
-  // (with a warning) when y is present. Canonical in v8.
+  // theta: VL's arc value channel, shared by waffle marks (the same
+  // part-to-whole value). Alias for y when y is absent; ignored (with a
+  // warning) when y is present. Canonical in v8.
   if (markType && updated.theta && typeof updated.theta === 'object') {
-    if (markType === 'arc' && !updated.y) {
+    const thetaMark = markType === 'arc' || markType === 'waffle';
+    if (thetaMark && !updated.y) {
       updated.y = updated.theta;
     } else if (markType === 'arc') {
       warnings.push(
         '[openchart] encoding.theta is ignored when encoding.y is present on an arc mark; encoding.y wins. theta becomes the canonical arc value channel in v8.',
       );
+    } else if (markType === 'waffle') {
+      warnings.push(
+        '[openchart] encoding.theta is ignored when encoding.y is present on a waffle mark; encoding.y wins.',
+      );
     } else {
-      warnings.push('[openchart] encoding.theta is only meaningful on arc marks and was ignored.');
+      warnings.push(
+        '[openchart] encoding.theta is only meaningful on arc and waffle marks and was ignored.',
+      );
     }
     delete updated.theta;
     changed = true;

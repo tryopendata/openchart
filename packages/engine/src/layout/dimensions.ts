@@ -30,6 +30,7 @@ import {
   estimateTextWidth,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  isAxislessMark,
   LABEL_GAP_COMPACT,
   LABEL_GAP_DEFAULT,
   MAX_LEFT_LABEL_FRACTION_COMPACT,
@@ -281,8 +282,8 @@ export function computeDimensions(
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
 
-  // Radial charts (arc) don't have axes, so skip axis space
-  const isRadial = spec.markType === 'arc';
+  // Axisless charts (arc, waffle) don't have axes, so skip axis space
+  const isRadial = isAxislessMark(spec.markType);
   const encoding = spec.encoding as Encoding;
 
   // Estimate x-axis height below chart area: tick labels sit 14px below,

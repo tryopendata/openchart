@@ -160,6 +160,17 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--range-bar',
     note: 'Vertical y/y2 floating range bars (monthly temperature low to high).',
   },
+  // --- Waffle marks ---
+  {
+    name: 'waffle-basic',
+    slug: 'testing--fixtures--waffle-basic',
+    note: '10x10 unit grid, three categories, rows fill bottom-left to top-right.',
+  },
+  {
+    name: 'waffle-highlight',
+    slug: 'testing--fixtures--waffle-highlight',
+    note: 'color.highlight singles out one category; fractional shares exercise largest-remainder rounding.',
+  },
 ];
 
 for (const story of stories) {

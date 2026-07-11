@@ -18,6 +18,7 @@ import {
   formatNumber,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  isAxislessMark,
   LABEL_GAP_COMPACT,
   LABEL_GAP_DEFAULT,
   MAX_LEFT_LABEL_FRACTION_COMPACT,
@@ -126,7 +127,7 @@ export function resolveLayoutPlan(
       ? Math.max(Math.round(padding * HPAD_COMPACT_FRACTION), HPAD_COMPACT_MIN)
       : padding;
   const encoding = renderSpec.encoding as Encoding;
-  const isRadial = renderSpec.markType === 'arc';
+  const isRadial = isAxislessMark(renderSpec.markType);
   const axisMargin = theme.spacing.axisMargin;
 
   // Resolve chromeMode

@@ -33,6 +33,7 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'tick': strip/rug plot marks
  * - 'rect': heatmaps and 2D binned plots
  * - 'range': dumbbell / arrow / range-bar plots spanning two values per category
+ * - 'waffle': unit grids ("x of 100") for part-to-whole counts
  */
 export type MarkType =
   | 'bar'
@@ -47,7 +48,8 @@ export type MarkType =
   | 'rect'
   | 'lollipop'
   | 'beeswarm'
-  | 'range';
+  | 'range'
+  | 'waffle';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -229,6 +231,17 @@ export interface MarkDef {
    * `encoding.color` takes precedence over direction coloring.
    */
   colorByDirection?: boolean;
+  /**
+   * Total number of cells in a waffle grid. Only meaningful when `type` is
+   * `'waffle'`. Category values normalize to this many cells via
+   * largest-remainder rounding so the grid always sums exactly. Default 100.
+   */
+  units?: number;
+  /**
+   * Number of columns in a waffle grid. Only meaningful when `type` is
+   * `'waffle'`. Rows derive from `units / columns`. Default 10.
+   */
+  columns?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -638,7 +651,8 @@ export interface Encoding<TData extends DataRow = DataRow> {
   order?: EncodingChannel<TData>;
   /**
    * Angular position (slice value) for arc marks (pie/donut), the Vega-Lite
-   * pie idiom. Accepted as an alias for `y`: when `y` is absent, `theta` is
+   * pie idiom. Waffle marks accept it too (the same part-to-whole value
+   * channel). Accepted as an alias for `y`: when `y` is absent, `theta` is
    * used as the slice value. When both are present, `y` wins and `theta` is
    * ignored with a compile warning. `theta` becomes the canonical arc value
    * channel in v8. Not used by any other mark type.
@@ -1458,6 +1472,16 @@ export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding
 }
 
 /**
+ * Encoding for waffle marks (unit grids for part-to-whole counts).
+ * - `color`: required (nominal/ordinal, the category)
+ * - `theta`: the quantitative share, the same part-to-whole value channel
+ *   arc marks use. Alias for `y`; provide one of the two.
+ */
+export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  color: EncodingChannel<TData> | ConditionalValueDef<TData>;
+}
+
+/**
  * Encoding for text marks (data-positioned labels).
  * - `text`: required (the field to render as text)
  * - `x`, `y`: optional positioning
@@ -1724,6 +1748,10 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'range' | (MarkDef & { type: 'range' });
       encoding: RangeEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'waffle' | (MarkDef & { type: 'waffle' });
+      encoding: WaffleEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
       mark: 'text' | (MarkDef & { type: 'text' });
@@ -2441,7 +2469,16 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'lollipop',
   'beeswarm',
   'range',
+  'waffle',
 ]);
+
+/**
+ * Mark types that lay out inside the chart area without positional axes
+ * (no axis or gridline computation; margins shrink to padding).
+ */
+export function isAxislessMark(markType: MarkType): boolean {
+  return markType === 'arc' || markType === 'waffle';
+}
 
 /** @deprecated Use MARK_TYPES instead. */
 export const CHART_TYPES = MARK_TYPES;
@@ -2537,4 +2574,5 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   lollipop: 'Lollipop chart',
   beeswarm: 'Beeswarm chart',
   range: 'Range plot',
+  waffle: 'Waffle chart',
 };

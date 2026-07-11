@@ -73,6 +73,8 @@ function optional(...types: FieldType[]): ChannelRule {
  * - beeswarm: both axes optional at the channel level; the compiler enforces
  *   the combination (exactly one quantitative value axis, the other axis an
  *   optional nominal/ordinal lane channel)
+ * - waffle: no positional axes; y is the share value (quantitative, with
+ *   theta accepted as an alias like arc), color is the category
  */
 export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   bar: {
@@ -184,6 +186,18 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
     radius: optional('quantitative'),
+    detail: optional('nominal'),
+  },
+  waffle: {
+    x: optional(),
+    y: required('quantitative'),
+    color: required('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    theta: optional('quantitative'),
     detail: optional('nominal'),
   },
   text: {

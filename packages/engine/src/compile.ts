@@ -37,6 +37,7 @@ import {
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
+  isAxislessMark,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from './annotations/compute';
@@ -641,8 +642,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme));
   }
 
-  // Arc charts (pie/donut) don't use axes or gridlines
-  const isRadial = chartSpec.markType === 'arc';
+  // Arc charts (pie/donut) and waffles don't use axes or gridlines
+  const isRadial = isAxislessMark(chartSpec.markType);
 
   // Compute axes (skip for radial charts).
   // Sparkline mode skips axes by default unless the user explicitly opted into
@@ -907,7 +908,7 @@ function compileFaceted(
   const sharedYDomain =
     yResolve === 'shared' && fullScales.y ? fullScales.y.scale.domain() : undefined;
 
-  const isRadial = chartSpec.markType === 'arc';
+  const isRadial = isAxislessMark(chartSpec.markType);
   const rendererKey = resolveRendererKey(
     renderSpec.markType,
     panelEncoding as Encoding,

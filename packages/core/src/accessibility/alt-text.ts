@@ -40,6 +40,13 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
     parts.push(`showing ${titleText}`);
   }
 
+  // Waffle: name the unit framing. Per-category "x of N units" phrasing
+  // lives on the mark aria labels; the chart-level text carries the total.
+  if (markType === 'waffle') {
+    const units = markDef.units ?? 100;
+    parts.push(`dividing ${units} units`);
+  }
+
   // Beeswarm: name the distribution fields (value axis + optional lane).
   // Skips the generic x-axis description below, which would either say
   // nothing (quantitative value axis) or repeat the lane count.
