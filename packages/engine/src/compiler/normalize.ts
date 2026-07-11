@@ -289,6 +289,26 @@ function normalizeSeriesSearch(
 }
 
 // ---------------------------------------------------------------------------
+// You draw it normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize `youDrawIt` to a config object with defaults filled in, or
+ * undefined when disabled. Mark type, single-series, and `from` presence are
+ * enforced by validateSpec before normalize runs; this only fills defaults.
+ */
+function normalizeYouDrawIt(
+  spec: ChartSpec,
+): import('@opendata-ai/openchart-core').YouDrawItConfig | undefined {
+  if (!spec.youDrawIt) return undefined;
+  return {
+    prompt: 'Draw your guess',
+    revealLabel: 'Show me',
+    ...spec.youDrawIt,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Spec-level normalization
 // ---------------------------------------------------------------------------
 
@@ -331,6 +351,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     chrome: normalizeChrome(spec.chrome),
     metrics: spec.metrics,
     seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
+    youDrawIt: normalizeYouDrawIt(spec),
     annotations: normalizeAnnotations(spec.annotations),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,

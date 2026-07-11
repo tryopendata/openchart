@@ -61,6 +61,7 @@ import { createTextEditOverlay } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, type GeometrySnapshot, runTransition } from './transition';
+import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -119,6 +120,16 @@ export interface ChartInstance {
   readonly isEditing: boolean;
   /** Set highlight values on the color encoding and re-render. Pass null to clear. */
   setHighlight(values: string[] | null): void;
+  /**
+   * Reset a "you draw it" (`youDrawIt`) drawing: clears the reader's guess and
+   * returns to the drawing state. No-op when youDrawIt isn't enabled.
+   */
+  resetDrawing(): void;
+  /**
+   * Reveal a "you draw it" drawing programmatically (equivalent to the
+   * skip-to-reveal button). No-op when youDrawIt isn't enabled.
+   */
+  revealDrawing(): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +200,12 @@ function authoredHighlight(spec: ChartSpec | LayerSpec | GraphSpec): string[] {
 function wantsSeriesSearch(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
   if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
   return !!(spec as ChartSpec).seriesSearch;
+}
+
+/** True when the spec enables the "you draw it" interactive format. */
+function wantsYouDrawIt(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
+  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
+  return !!(spec as ChartSpec).youDrawIt;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +285,12 @@ export function createChart<TData extends DataRow = DataRow>(
   let seriesSearch: SeriesSearchController | null = null;
   let searchBaseline: string[] = authoredHighlight(currentSpec);
   let editSuppressWarned = false;
+
+  // "You draw it" state. The controller persists across renders so the reader's
+  // in-progress guess (and revealed state) survive the re-render each resize
+  // triggers; update() re-syncs geometry and re-wires pointer capture.
+  let youDrawIt: YouDrawItController | null = null;
+  let ydiEditSuppressWarned = false;
 
   // Apply the root class up front so getComputedStyle can read --oc-font-family
   // before we build the text measurer.
@@ -961,6 +984,33 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     }
 
+    // Mount/refresh the "you draw it" overlay. Created once and kept across
+    // renders so the reader's in-progress guess survives each resize's
+    // re-render. Mutually exclusive with edit mode: when editing callbacks are
+    // present, youDrawIt is disabled (warn once) per plans 11/17's rule.
+    const ydiEditConflict = wantsYouDrawIt(currentSpec) && hasEditingCallbacks(options);
+    if (ydiEditConflict && !ydiEditSuppressWarned) {
+      ydiEditSuppressWarned = true;
+      console.warn(
+        '[openchart] youDrawIt and edit mode are mutually exclusive; youDrawIt is disabled while editing callbacks are provided.',
+      );
+    }
+    if (currentLayout.youDrawIt && !ydiEditConflict) {
+      if (!youDrawIt) {
+        youDrawIt = createYouDrawIt({ container, onReveal: options?.onReveal });
+      }
+      youDrawIt.update(currentLayout.youDrawIt, svgElement as SVGSVGElement);
+    } else if (youDrawIt) {
+      if (wantsYouDrawIt(currentSpec) && !ydiEditConflict) {
+        // Layout stripped the config (e.g. empty data at this size) but the
+        // spec still wants it: keep the controller (and its guess), just hide.
+        youDrawIt.hide();
+      } else {
+        youDrawIt.destroy();
+        youDrawIt = null;
+      }
+    }
+
     // Apply container classes for CSS variable scoping and dark mode
     container.classList.add('oc-root');
     const isDark = resolveDarkMode(options?.darkMode);
@@ -1036,6 +1086,8 @@ export function createChart<TData extends DataRow = DataRow>(
     // baseline and drop any search selections layered on the previous spec.
     searchBaseline = authoredHighlight(newSpec);
     seriesSearch?.setSelected([]);
+    // A new spec re-arms the youDrawIt/edit conflict warning.
+    ydiEditSuppressWarned = false;
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }
@@ -1197,6 +1249,10 @@ export function createChart<TData extends DataRow = DataRow>(
       seriesSearch.destroy();
       seriesSearch = null;
     }
+    if (youDrawIt) {
+      youDrawIt.destroy();
+      youDrawIt = null;
+    }
     if (disconnectResize) {
       disconnectResize();
       disconnectResize = null;
@@ -1287,5 +1343,13 @@ export function createChart<TData extends DataRow = DataRow>(
       return isTextEditingActive;
     },
     setHighlight,
+    resetDrawing(): void {
+      if (destroyed) return;
+      youDrawIt?.reset();
+    },
+    revealDrawing(): void {
+      if (destroyed) return;
+      youDrawIt?.reveal();
+    },
   };
 }

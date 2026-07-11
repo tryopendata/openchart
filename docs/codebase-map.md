@@ -73,6 +73,8 @@
 | Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition.ts` |
 | Mark key serialization / dedup | `packages/engine/src/compiler/keys.ts` |
 | Tooltip rendering | `packages/vanilla/src/tooltip.ts` |
+| Series search combobox (`seriesSearch`) | `packages/vanilla/src/series-search.ts`; CSS `packages/core/src/styles/series-search.css` |
+| You-draw-it draw-then-reveal (`youDrawIt`) | Engine resolve: `packages/engine/src/compile/you-draw-it.ts` (`ResolvedYouDrawIt`); vanilla overlay + pointer capture: `packages/vanilla/src/you-draw-it.ts` (`createYouDrawIt`), wired in `mount.ts`; CSS `packages/core/src/styles/you-draw-it.css`. Validation in `compiler/validate.ts`. `onReveal` handler in `core/types/events.ts`; `resetDrawing()`/`revealDrawing()` on `ChartInstance`. |
 | React entry (`<Chart>`, `<DataTable>`, `<Graph>`, `<VizThemeProvider>`) | `packages/react/src/` |
 | Vue entry | `packages/vue/src/` |
 | Svelte entry | `packages/svelte/src/` |

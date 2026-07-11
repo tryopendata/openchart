@@ -1008,6 +1008,65 @@ export interface ResolvedSeriesSearch {
 }
 
 // ---------------------------------------------------------------------------
+// You draw it (resolved)
+// ---------------------------------------------------------------------------
+
+/**
+ * One x-sample the reader's drawing snaps to: a pixel x position paired with
+ * its data-x value. `xValue` is the value reported by `onReveal`; it falls
+ * back to the pixel x when the data value can't be recovered.
+ */
+export interface YouDrawItSample {
+  /** Pixel x position within the chart area. */
+  px: number;
+  /** Data-coordinate x value at this sample (from the target line's data). */
+  xValue: string | number;
+}
+
+/**
+ * Linear y pixel-to-data anchors, so the vanilla layer can map a drawn pixel
+ * y back to a data value for `onReveal` without holding the scale object.
+ * Present only when the y scale is invertible (continuous scales).
+ */
+export interface YouDrawItYInvert {
+  /** Top pixel of the drawing area. */
+  topPixel: number;
+  /** Bottom pixel of the drawing area. */
+  bottomPixel: number;
+  /** Data value at the top pixel. */
+  topData: number;
+  /** Data value at the bottom pixel. */
+  bottomData: number;
+}
+
+/**
+ * Resolved geometry and config for the "you draw it" interactive format
+ * (`youDrawIt`). The vanilla adapter uses this to render the hatched drawing
+ * region, capture pointer input, and mask/reveal the real line. Present only
+ * when the spec enables `youDrawIt` on a valid single-series line chart.
+ */
+export interface ResolvedYouDrawIt {
+  /** Pixel x position of `from` within the chart area (drawing starts here). */
+  fromX: number;
+  /** The chart drawing area, for clamping pointer input and sizing the hatch region. */
+  area: Rect;
+  /** X samples (pixel + data value) at or after `from`, ascending by pixel x. Drawing snaps to these. */
+  samples: YouDrawItSample[];
+  /** Resolved prompt text for the hatched region. */
+  prompt: string;
+  /** Resolved skip-to-reveal button label. */
+  revealLabel: string;
+  /** Stroke color of the target line (the reader's guess uses a distinct pen style, but shares the palette for continuity). */
+  lineColor: string;
+  /** seriesKey of the target line mark, so the vanilla layer can find its DOM element. Undefined for a single-series line with no color encoding. */
+  targetSeriesKey?: string;
+  /** Pixel-to-data y anchors for reporting the guess in data coordinates. Absent when the y scale isn't invertible. */
+  yInvert?: YouDrawItYInvert;
+  /** Optional comparison line, resolved to pixel points parallel to the target line's points. */
+  comparisonPoints?: Point[];
+}
+
+// ---------------------------------------------------------------------------
 // ChartLayout (the main engine output for charts)
 // ---------------------------------------------------------------------------
 
@@ -1060,6 +1119,8 @@ export interface ChartLayout {
   metrics?: ResolvedMetricBar;
   /** Reserved series-search band. Present only when spec.seriesSearch is enabled. */
   seriesSearch?: ResolvedSeriesSearch;
+  /** Resolved "you draw it" config. Present only when spec.youDrawIt is enabled and valid. */
+  youDrawIt?: ResolvedYouDrawIt;
   /** Resolved axis layouts. */
   axes: {
     x?: AxisLayout;

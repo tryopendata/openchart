@@ -98,6 +98,7 @@ function ChartInner(
     onSelect,
     onDeselect,
     onTextEdit,
+    onReveal,
     selectedElement: selectedElementProp,
     highlight,
     className,
@@ -129,6 +130,7 @@ function ChartInner(
     onSelect?: ChartProps['onSelect'];
     onDeselect?: ChartProps['onDeselect'];
     onTextEdit?: ChartProps['onTextEdit'];
+    onReveal?: ChartProps['onReveal'];
   }>({});
   handlersRef.current = {
     onDataPointClick,
@@ -143,6 +145,7 @@ function ChartInner(
     onSelect,
     onDeselect,
     onTextEdit,
+    onReveal,
   };
 
   // Stable callback wrappers that read from refs
@@ -198,6 +201,10 @@ function ChartInner(
       handlersRef.current.onTextEdit?.(element, oldText, newText),
     [],
   );
+  const stableOnReveal = useCallback(
+    (guess: Array<{ x: string | number; y: number }>) => handlersRef.current.onReveal?.(guess),
+    [],
+  );
 
   // Expose imperative handle for ref-based control
   useImperativeHandle(
@@ -244,6 +251,7 @@ function ChartInner(
       ...(handlersRef.current.onSelect ? { onSelect: stableOnSelect } : {}),
       ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
       ...(handlersRef.current.onTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
+      ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
       responsive: true,
     };
@@ -272,6 +280,7 @@ function ChartInner(
     stableOnSelect,
     stableOnDeselect,
     stableOnTextEdit,
+    stableOnReveal,
   ]);
 
   // Update chart when spec changes

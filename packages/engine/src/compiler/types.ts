@@ -112,6 +112,8 @@ export interface NormalizedChartSpec {
    * enabled AND the spec has a categorical color encoding to search over.
    */
   seriesSearch?: import('@opendata-ai/openchart-core').SeriesSearchConfig;
+  /** Resolved "you draw it" config with defaults filled in. Present only when `youDrawIt` is enabled. */
+  youDrawIt?: import('@opendata-ai/openchart-core').YouDrawItConfig;
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &

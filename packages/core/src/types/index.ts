@@ -84,6 +84,7 @@ export type {
   ResolvedMetricBar,
   ResolvedMetricCell,
   ResolvedSeriesSearch,
+  ResolvedYouDrawIt,
   RuleMarkLayout,
   SankeyLayout,
   SankeyLinkMark,
@@ -103,6 +104,8 @@ export type {
   TileMapTileMark,
   TooltipContent,
   TooltipField,
+  YouDrawItSample,
+  YouDrawItYInvert,
 } from './layout';
 // Spec types (user input)
 export type {
@@ -221,6 +224,7 @@ export type {
   WindowOp,
   WindowSortField,
   WindowTransform,
+  YouDrawItConfig,
 } from './spec';
 export {
   CHART_TYPES,

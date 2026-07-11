@@ -145,4 +145,10 @@ export interface ChartEventHandlers {
   onDeselect?: (element: ElementRef) => void;
   /** Fired when inline text editing commits. Also flows through onEdit as a 'text-edit' event. */
   onTextEdit?: (element: ElementRef, oldText: string, newText: string) => void;
+  /**
+   * Fired when a "you draw it" (`youDrawIt`) drawing is revealed (button click
+   * or programmatic reveal), with the reader's guess in data coordinates,
+   * ordered by x. For newsrooms aggregating reader guesses.
+   */
+  onReveal?: (guess: Array<{ x: string | number; y: number }>) => void;
 }
