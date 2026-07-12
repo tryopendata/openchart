@@ -177,7 +177,7 @@ const rectangleRangeSpec: ChartSpec = {
       type: 'range',
       x1: '1980',
       x2: '2025',
-      y1: 0.2,
+      y1: 0,
       y2: 1.3,
       label: 'The modern warming era',
       labelAnchor: 'top',

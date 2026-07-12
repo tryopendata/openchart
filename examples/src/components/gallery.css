@@ -133,19 +133,35 @@
 }
 
 /* Two-column layout: content column + sticky TOC rail on wide screens. */
+/* 1280 content track + 48 gap + 200 TOC rail. */
 .oc-gallery-layout {
-  max-width: 1360px;
+  max-width: 1528px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--oc-space-8);
 }
 
+/* The content track is capped at the column width + a full breakout on each
+ * side (1040 + 2*120), not at 1040. The extra 240px is the slack .oc-bleed
+ * eats into; .oc-gallery-main stays capped at 1040 and centered within it, so
+ * body text is unaffected. When the viewport can't spare the full track the
+ * grid shrinks it, the container query sees less slack, and the breakout
+ * narrows to match instead of overshooting. */
 @media (min-width: 1200px) {
   .oc-gallery-layout {
-    grid-template-columns: minmax(0, 1040px) 200px;
+    grid-template-columns: minmax(0, 1280px) 200px;
     justify-content: center;
   }
+}
+
+/* The column's grid cell. This is the container .oc-bleed measures its slack
+ * against, so it must be the cell (not .oc-gallery-layout, whose width also
+ * includes the TOC rail). */
+.oc-gallery-shell {
+  min-width: 0;
+  container-type: inline-size;
+  container-name: gallery-shell;
 }
 
 .oc-gallery-main {
@@ -486,29 +502,34 @@
 /* ---------------------------------------------------------------------------
  * Full-bleed breakout wrapper (used by GalleryPage for showcase sections)
  *
- * The content column (.oc-gallery-main) is capped at 1040px and centered. A
- * .oc-bleed child widens past that cap by a fixed amount on each side via
- * symmetric negative margins RELATIVE TO THE COLUMN only (no `vw`). The earlier
- * version mixed `%` (column-relative) with `vw` (viewport-relative); when the
- * column is not viewport-centered — e.g. the Ladle sidebar shifts it right — the
- * two origins diverge and the left negative margin overshoots the viewport,
- * clipping content off the left edge (the composed-dashboard bug). A fixed,
- * column-relative breakout can't overshoot regardless of where the column sits.
- * The parent's `min-width: 0` + the reset's `max-width: 100%` keep it from
- * forcing horizontal body scroll; below the breakpoint the breakout is dropped
- * so it collapses to plain column width on phones. Scoped to .oc-bleed only.
+ * The content column (.oc-gallery-main) is capped at 1040px and centered inside
+ * .oc-gallery-shell. A .oc-bleed child widens past that cap by symmetric
+ * negative margins RELATIVE TO THE COLUMN only (no `vw`). Mixing `%`
+ * (column-relative) with `vw` (viewport-relative) breaks whenever the column is
+ * not viewport-centered — the Ladle sidebar shifts it right, the two origins
+ * diverge, and the left negative margin overshoots the viewport, clipping
+ * content off the left edge.
+ *
+ * The breakout amount is CLAMPED TO THE SLACK THE COLUMN ACTUALLY HAS, measured
+ * as a container query against .oc-gallery-shell (the column's own parent):
+ * slack = (shell width - column width) / 2. A viewport media query cannot stand
+ * in for this — inside Ladle the sidebar and the TOC rail eat ~570px, so a
+ * 1400px viewport leaves the column zero slack while the media query still
+ * grants the full 120px breakout and clips the left edge. Keying off the shell
+ * means the breakout shrinks to 0 exactly when the room runs out, at any
+ * viewport, in Ladle or standalone.
  * ------------------------------------------------------------------------- */
 .oc-bleed {
-  --oc-bleed-amount: 120px;
+  --oc-bleed-max: 120px;
+  --oc-bleed-amount: 0px;
   width: calc(100% + 2 * var(--oc-bleed-amount));
   margin-inline: calc(-1 * var(--oc-bleed-amount));
 }
 
-/* Below ~1300px the viewport can't spare 120px on each side of the 1040px
- * column, so drop the breakout to avoid clipping / body scroll. */
-@media (max-width: 1300px) {
+@container gallery-shell (min-width: 1040px) {
   .oc-bleed {
-    --oc-bleed-amount: 0px;
+    /* (shell width - 1040px column) / 2, capped at 120px and floored at 0. */
+    --oc-bleed-amount: clamp(0px, (100cqw - 1040px) / 2, var(--oc-bleed-max));
   }
 }
 

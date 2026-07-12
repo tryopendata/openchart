@@ -688,7 +688,10 @@ const calendarSpec: ChartSpec = {
     color: {
       field: 'anomaly',
       type: 'quantitative',
-      scale: { scheme: 'redBlue' },
+      // redBlue ramps red -> blue low-to-high (the ColorBrewer RdBu convention).
+      // Temperature reads the other way round, so reverse it: warm anomalies red,
+      // cool ones blue.
+      scale: { scheme: 'redBlue', reverse: true },
       format: '+.1f',
     },
   },

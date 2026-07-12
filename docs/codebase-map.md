@@ -186,6 +186,20 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - `RectMark.orient` (`'horizontal' | 'vertical'`) — set by the engine from encoding (x: quantitative = horizontal bar, y: quantitative = vertical column). **Don't infer from geometry** in renderers; grouped columns with short bars get misclassified.
 - The renderer (`vanilla/src/renderers/marks.ts`) has one function per mark type and a `registerMarkRenderer<T>` extension hook.
 
+### Text marks (`engine/src/charts/text/index.ts`)
+
+Its real job is **direct labeling**: a text layer over a point/bar layer, not a standalone text scatter. Three constraints, each of which was a shipped bug:
+
+- **`text` must stay in the position-encoding list in `layout/scales.ts`** (alongside `point`/`beeswarm`/`range`, which get `scale.zero = false`). Text encodes position, not length. When it was missing, a text layer resolved a zero-anchored domain while the point layer it labeled resolved a tight one, and every label drifted off its dot — up to 160px at the low end.
+- **`TextMarkLayout.dominantBaseline` is opt-in and only `computeTextMarks` sets it** (to `'central'`). `charts/calendar/compute.ts` and `charts/parliament/compute.ts` also emit `textMark`s and hand-compute their `y` against the SVG default (alphabetic) baseline — calendar's `+ labelFont * 0.35` is a manual centering fudge. Making `central` a renderer default double-corrects both and breaks their visual baselines.
+- **`mark.dx`/`dy` are baked into `mark.x`/`mark.y`**, with the pre-offset anchor kept in `anchorX`/`anchorY`. Don't emit them as SVG `dx`/`dy`: `transition.ts` tweens the `x`/`y` attributes and `marks.ts` rotates about `(mark.x, mark.y)`, so a separate offset attribute leaves both reading the un-offset anchor.
+
+The `size` channel maps a field onto a font-size range with a **linear** scale (`encoding.size.scale.{domain,range}` override it; `mark.fontSize` sets a static size). Linear, not the `scaleSqrt` scatter uses for bubbles — sqrt is right for *area*, but a glyph reads by its height. Note there is **no size legend anywhere in the library** (`engine/src/legend/compute.ts` handles color only), so `size` on text is an unkeyed encoding: use it where it reinforces an axis that's already present.
+
+## Layered scales (`engine/src/compile/layer.ts`)
+
+Shared scales means shared **domains**, not just a shared plot rect. `compileLayer` freezes the primary's chart area for every leaf (`frozenChartArea`), but each leaf otherwise re-fits its own domain from its own rows — so a layer holding fewer or narrower rows than its siblings (a label layer naming only the notable points) lands on a different scale and its marks slide off the ones they annotate. `computeSharedDomains`/`withSharedDomains` union the quantitative x/y extents across all leaves and pin them. The union bails on any channel where a leaf is non-quantitative or has an author-pinned `scale.domain`.
+
 ## Animation system
 
 - **Entrance animations** are pure CSS. Keyframes in `packages/core/src/styles/keyframes.css`, rules in `animation.css`. The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.

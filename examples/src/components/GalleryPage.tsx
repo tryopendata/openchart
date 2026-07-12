@@ -42,13 +42,15 @@ export function GalleryPage({ title, lede, children }: GalleryPageProps) {
   return (
     <div className="oc-gallery" data-oc-mode={mode}>
       <div className="oc-gallery-layout">
-        <main className="oc-gallery-main">
-          <header className="oc-gallery-header">
-            <h1 className="oc-gallery-title">{title}</h1>
-            {lede ? <p className="oc-gallery-lede">{lede}</p> : null}
-          </header>
-          {children}
-        </main>
+        <div className="oc-gallery-shell">
+          <main className="oc-gallery-main">
+            <header className="oc-gallery-header">
+              <h1 className="oc-gallery-title">{title}</h1>
+              {lede ? <p className="oc-gallery-lede">{lede}</p> : null}
+            </header>
+            {children}
+          </main>
+        </div>
         {sections.length > 0 ? (
           <nav className="oc-toc" aria-label="On this page">
             <p className="oc-toc-heading">On this page</p>

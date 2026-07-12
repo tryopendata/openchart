@@ -1,207 +1,108 @@
 /**
- * Scrollytelling stories (plan 11).
+ * Scrollytelling story (plan 11).
  *
- * `ScrollyNarrative` is the interactive dogfood: a 5-step narrative
- * (base -> highlight -> annotate -> camera -> re-encode) driven by scroll
- * through the React `<ChartStory>` shell. Scroll the preview to advance.
+ * `ScrollyNarrative` is the interactive dogfood: a 5-step narrative driven by
+ * scroll through the React `<ChartStory>` shell. Scroll the preview to advance.
  *
- * The `Fixture*` exports pin individual steps at a deterministic state
- * (`animation: false`, controlled `step`) so the Playwright visual suite can
- * lock the rendered chart at each stage. They render into a plain `.tfix-chart`
- * container (not the sticky shell) so the screenshot captures only the chart.
+ * The steps track an argument (obesity stalled after 2021; diabetes did not),
+ * not a tour of the API. Earlier this demo walked the five story primitives in
+ * the order the plan listed them, which is why nothing on screen ever had a
+ * reason to move. See `./scrollytelling-specs.ts` for the beats.
+ *
+ * It is the ONLY export here on purpose. Ladle turns every named export of a
+ * matched story file into a sidebar entry, so the specs live in
+ * `./scrollytelling-specs.ts` (not a story module) and the deterministic
+ * per-step fixtures the visual suite screenshots live under `Testing / Fixtures`
+ * in `../testing/fixtures-scrollytelling.stories.tsx`. Exported from here they
+ * showed up in the public sidebar as four static charts pretending to be
+ * scrollytelling demos.
+ *
+ * Dark mode: `<ChartStory>` mounts its chart through the VANILLA story driver,
+ * which does not read React context — so unlike `<Chart>`, it does not inherit
+ * the `VizThemeProvider` the Ladle provider wraps everything in. The resolved
+ * mode has to be handed down explicitly via `mountOptions.darkMode`, or the
+ * chart renders its light-mode near-black title onto the dark canvas.
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
-import { Chart, ChartStory, type ChartStoryProps } from '@opendata-ai/openchart-react';
-import '../testing/testing.css';
+import { ChartStory } from '@opendata-ai/openchart-react';
+import { useOcMode } from '../components/mode-context';
+import { baseSpec, steps } from './scrollytelling-specs';
 
 export default { title: 'Charts / Scrollytelling' };
 
-// ---------------------------------------------------------------------------
-// Shared data: emissions per capita by country, 2000-2020.
-// ---------------------------------------------------------------------------
-
-type Row = {
-  year: string;
-  value: number;
-  perCapita: number;
-  country: string;
-};
-
-const DATA: Row[] = [
-  { year: '2000', value: 5.9, perCapita: 20.5, country: 'United States' },
-  { year: '2005', value: 6.0, perCapita: 20.2, country: 'United States' },
-  { year: '2010', value: 5.6, perCapita: 18.0, country: 'United States' },
-  { year: '2015', value: 5.2, perCapita: 16.2, country: 'United States' },
-  { year: '2020', value: 4.6, perCapita: 13.9, country: 'United States' },
-  { year: '2000', value: 0.9, perCapita: 10.1, country: 'Germany' },
-  { year: '2005', value: 0.8, perCapita: 9.9, country: 'Germany' },
-  { year: '2010', value: 0.8, perCapita: 9.6, country: 'Germany' },
-  { year: '2015', value: 0.8, perCapita: 8.9, country: 'Germany' },
-  { year: '2020', value: 0.6, perCapita: 7.7, country: 'Germany' },
-  { year: '2000', value: 3.4, perCapita: 2.7, country: 'China' },
-  { year: '2005', value: 5.9, perCapita: 4.5, country: 'China' },
-  { year: '2010', value: 8.8, perCapita: 6.5, country: 'China' },
-  { year: '2015', value: 9.7, perCapita: 7.0, country: 'China' },
-  { year: '2020', value: 10.7, perCapita: 7.4, country: 'China' },
-];
-
-const baseSpec: ChartSpec<Row> = {
-  animation: false,
-  mark: 'line',
-  data: DATA,
-  encoding: {
-    x: { field: 'year', type: 'ordinal' },
-    y: {
-      field: 'value',
-      type: 'quantitative',
-      axis: { title: 'Gt CO2', grid: true },
-    },
-    color: { field: 'country', type: 'nominal' },
-  },
-  chrome: {
-    title: 'Total emissions by country',
-    subtitle: 'Gigatonnes of CO2, 2000-2020',
-    source: 'Global Carbon Project',
-  },
-};
-
-// The five cumulative step patches. Each is a deep-partial VizSpec.
-const steps: ChartStoryProps<Row>['steps'] = [
-  // 0: base
-  {},
-  // 1: highlight China (emphasis sugar)
-  { highlight: ['China'] },
-  // 2: annotate the crossover moment
-  {
-    spec: {
-      annotations: [
-        {
-          type: 'text',
-          x: '2010',
-          y: 8.8,
-          text: 'China overtakes the US',
-          offset: { dy: -18 },
-        },
-      ],
-    },
-  },
-  // 3: camera pans/zooms to the 2010-2020 region
-  { camera: { x: ['2010', '2020'] } },
-  // 4: re-encode to per-capita (outside the morph gate -> crossfade)
-  {
-    spec: {
-      encoding: {
-        y: {
-          field: 'perCapita',
-          type: 'quantitative',
-          axis: { title: 'Tonnes CO2 per person', grid: true },
-        },
-      },
-      chrome: {
-        title: 'Emissions per person',
-        subtitle: 'Tonnes of CO2 per capita, 2000-2020',
-      },
-    },
-  },
-];
+/** Narrative prose. Styled off the gallery `--oc-*` tokens so it tracks the
+ *  theme; unstyled it falls back to the browser default serif on a dark
+ *  canvas, which reads as a different site. */
+const NARRATIVE_CSS = `
+.ocs-step h3 {
+  font-family: var(--oc-font-display, system-ui, -apple-system, sans-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--oc-text-strong, #0f172a);
+  margin: 0 0 0.5rem;
+}
+.ocs-step p {
+  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--oc-text-muted, #64748b);
+  margin: 0;
+  max-width: 34rem;
+}
+`;
 
 const narrative = [
-  <div key="0">
-    <h3>Three trajectories</h3>
+  <div className="ocs-step" key="0">
+    <h3>Two curves, one decade</h3>
     <p>
-      Total emissions tell three very different stories. Scroll to follow how the leaders changed
-      over two decades.
+      Obesity and diagnosed diabetes are supposed to move together, and for ten years they did. Both
+      climbed, year after year, in step. Scroll to follow what happened next.
     </p>
   </div>,
-  <div key="1">
-    <h3>China&apos;s rise</h3>
+  <div className="ocs-step" key="1">
+    <h3>The climb</h3>
     <p>
-      China&apos;s total output climbed steeply through the 2000s as its economy industrialized.
+      Obesity rose from 27.7 percent of adults in the median state to 33.9 percent by 2021, roughly
+      six-tenths of a point every year for a decade.
     </p>
   </div>,
-  <div key="2">
-    <h3>The crossover</h3>
-    <p>Around 2010, China passed the United States to become the largest total emitter.</p>
-  </div>,
-  <div key="3">
-    <h3>The recent decade</h3>
-    <p>Zooming into 2010-2020 shows the gap widening while the US and Germany decline.</p>
-  </div>,
-  <div key="4">
-    <h3>Per person, though</h3>
+  <div className="ocs-step" key="2">
+    <h3>Then it stopped</h3>
     <p>
-      Switch to per-capita and the picture inverts: an American still emits roughly twice what a
-      person in China does.
+      At full scale you cannot see it. Zoom into the last few years and the decade-long climb turns
+      flat: 33.9, then 33.6, then 34.4, then 34.3.
+    </p>
+  </div>,
+  <div className="ocs-step" key="3">
+    <h3>2021 is where they split</h3>
+    <p>
+      The plateau is real, and it is not an artifact of one survey. The CDC&apos;s measured survey
+      sees it too, in the first cycle in decades with no significant increase.
+    </p>
+  </div>,
+  <div className="ocs-step" key="4">
+    <h3>But diabetes never bent</h3>
+    <p>
+      Pull back out and the other line is still going up. Same years, same drugs, same people, and
+      diagnosed diabetes rose every single step to a record. Only one of these curves bent.
     </p>
   </div>,
 ];
 
-export const ScrollyNarrative = () => (
-  <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>
-    <ChartStory spec={baseSpec} steps={steps} narrative={narrative} />
-    <div style={{ height: '60vh' }} />
-  </div>
-);
-
-// ---------------------------------------------------------------------------
-// Deterministic per-step fixtures for the visual suite. Each renders the
-// resolved spec at a pinned step directly through <Chart> so the screenshot
-// captures the chart in isolation (no sticky-scroll chrome, no animation).
-// ---------------------------------------------------------------------------
-
-const highlightSpec: ChartSpec<Row> = {
-  ...baseSpec,
-  encoding: {
-    ...baseSpec.encoding,
-    color: { field: 'country', type: 'nominal', highlight: ['China'] },
-  },
+export const ScrollyNarrative = () => {
+  const mode = useOcMode();
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS constant, no user input */}
+      <style dangerouslySetInnerHTML={{ __html: NARRATIVE_CSS }} />
+      <ChartStory
+        spec={baseSpec}
+        steps={steps}
+        narrative={narrative}
+        mountOptions={{ darkMode: mode === 'dark' ? 'force' : 'off' }}
+      />
+      <div style={{ height: '60vh' }} />
+    </div>
+  );
 };
-
-const annotatedSpec: ChartSpec<Row> = {
-  ...highlightSpec,
-  annotations: [
-    { type: 'text', x: '2010', y: 8.8, text: 'China overtakes the US', offset: { dy: -18 } },
-  ],
-};
-
-const reEncodedSpec: ChartSpec<Row> = {
-  ...annotatedSpec,
-  encoding: {
-    ...annotatedSpec.encoding,
-    y: {
-      field: 'perCapita',
-      type: 'quantitative',
-      axis: { title: 'Tonnes CO2 per person', grid: true },
-    },
-  },
-  chrome: {
-    ...baseSpec.chrome,
-    title: 'Emissions per person',
-    subtitle: 'Tonnes of CO2 per capita, 2000-2020',
-  },
-};
-
-export const FixtureBase = () => (
-  <div className="tfix-chart tfix-h-440">
-    <Chart spec={baseSpec} />
-  </div>
-);
-
-export const FixtureHighlight = () => (
-  <div className="tfix-chart tfix-h-440">
-    <Chart spec={highlightSpec} />
-  </div>
-);
-
-export const FixtureAnnotated = () => (
-  <div className="tfix-chart tfix-h-440">
-    <Chart spec={annotatedSpec} />
-  </div>
-);
-
-export const FixtureReEncoded = () => (
-  <div className="tfix-chart tfix-h-440">
-    <Chart spec={reEncodedSpec} />
-  </div>
-);

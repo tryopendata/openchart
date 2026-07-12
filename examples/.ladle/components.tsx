@@ -49,6 +49,41 @@ function useResolvedDark(ladleTheme: string | undefined): boolean {
   return ladleTheme === 'dark' || (ladleTheme === 'auto' && prefersDark);
 }
 
+/**
+ * Stamp the RESOLVED mode onto `<html data-theme>`.
+ *
+ * Ladle writes the literal `data-theme="auto"` when the theme addon is in auto
+ * mode — it never resolves the OS preference itself. shell.css binds its tokens
+ * under `[data-theme='light']` / `[data-theme='dark']`, so `auto` matches
+ * neither: on a dark-mode OS the Ladle shell (sidebar, search, addons bar)
+ * stayed light while the story content correctly went dark, and the two
+ * disagreed. Rewriting the attribute to the resolved value keeps shell.css a
+ * clean two-value contract and needs no CSS change.
+ *
+ * Ladle re-stamps `auto` whenever it re-renders, and this Provider is a CHILD of
+ * Ladle's App, so our effect runs BEFORE App's and a plain effect loses the
+ * race — the same hazard `useTitleOverride` below documents. So observe the
+ * attribute and re-assert whenever anything else changes it, with the keyed
+ * effect as a cheap fast-path. The observer must ignore its own writes or it
+ * would loop.
+ */
+function useResolvedThemeAttr(resolvedDark: boolean) {
+  const resolved = resolvedDark ? 'dark' : 'light';
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const reassert = () => {
+      if (root.getAttribute('data-theme') !== resolved) {
+        root.setAttribute('data-theme', resolved);
+      }
+    };
+    reassert();
+    const obs = new MutationObserver(reassert);
+    obs.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, [resolved]);
+}
+
 // ---------------------------------------------------------------------------
 // Legacy-slug redirects
 // ---------------------------------------------------------------------------
@@ -359,6 +394,7 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
   const darkMode: DarkMode = resolvedDark ? 'force' : 'off';
   const mode = resolvedDark ? 'dark' : 'light';
 
+  useResolvedThemeAttr(resolvedDark);
   useLegacyRedirect();
   useTitleOverride(globalState.story);
 
