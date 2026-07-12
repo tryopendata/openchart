@@ -49,9 +49,14 @@ const COLLISION_PADDING = 4;
  *   minus any that were skipped by `computeAnnotations`).
  * @param specs - The full spec annotations array, index-aligned with `annotations`.
  *   Non-text specs are ignored; text specs provide `priority` and `responsive`.
- * @param plotArea - The plot rect. Candidates whose label doesn't fit inside it are
- *   demoted: at narrow widths labels spread across different y positions never
- *   pairwise-collide, so collision alone would leave them inline and overflowing.
+ * @param plotArea - The plot rect. Sizes the coverage budget: labels are charged
+ *   against the plot they crowd, so the same label costs a larger share of a
+ *   smaller plot. Omit to skip the budget test.
+ * @param containerBounds - The rect a label must fit inside to stay inline. This
+ *   is the whole chart, NOT the plot: annotations render outside the clip path and
+ *   legitimately sit in the margins (above a peak, below a trough), which is what
+ *   collision avoidance already assumes. Fencing them to the plot would demote
+ *   ordinary callouts. Only labels escaping the chart entirely are demoted.
  *   Omit to skip the containment test.
  */
 export function thinAnnotations(
@@ -59,6 +64,7 @@ export function thinAnnotations(
   specs: Annotation[],
   measure: AnnotationMeasureTextFn,
   plotArea?: Rect,
+  containerBounds?: Rect,
 ): ThinningResult {
   if (annotations.length <= 1) {
     return { annotations, footnotes: [] };
@@ -66,11 +72,20 @@ export function thinAnnotations(
 
   // Build index pairs: (resolved, spec, original index).
   // Only text specs carry priority/responsive; non-text specs are ignored.
-  const entries = annotations.map((a, i) => ({
-    resolved: a,
-    spec: i < specs.length && specs[i].type === 'text' ? (specs[i] as TextAnnotation) : undefined,
-    index: i,
-  }));
+  //
+  // `annotations` is a filtered view of `specs` -- an annotation that resolves to
+  // nothing (position outside the domain) is dropped -- so index into `specs` by
+  // the stamped `specIndex`, never by position in `annotations`. Falling back to
+  // `i` keeps a hand-built layout (no specIndex) working as it did before.
+  const entries = annotations.map((a, i) => {
+    const specIndex = a.specIndex ?? i;
+    const spec = specs[specIndex];
+    return {
+      resolved: a,
+      spec: spec?.type === 'text' ? (spec as TextAnnotation) : undefined,
+      index: i,
+    };
+  });
 
   // Separate pinned (responsive: false) from candidates
   const pinned: typeof entries = [];
@@ -118,6 +133,9 @@ export function thinAnnotations(
   const footnotes: AnnotationFootnote[] = [];
   const plotAreaSize = plotArea ? plotArea.width * plotArea.height : 0;
   const coverageBudget = plotAreaSize * COVERAGE_BUDGET;
+  // Containment is checked against the chart, not the plot — see the param docs.
+  // Callers that pass no container fall back to the plot rect.
+  const containment = containerBounds ?? plotArea;
   let usedArea = 0;
 
   for (const entry of candidates) {
@@ -141,7 +159,7 @@ export function thinAnnotations(
     const candidateArea = bounds.width * bounds.height;
     const overBudget = plotAreaSize > 0 && usedArea + candidateArea > coverageBudget;
 
-    if (overlaps || !fitsWithin(bounds, plotArea) || overBudget) {
+    if (overlaps || !fitsWithin(bounds, containment) || overBudget) {
       const footnoteIndex = footnotes.length + 1;
       footnotes.push({
         index: footnoteIndex,

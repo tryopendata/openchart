@@ -186,6 +186,45 @@ describe('thinAnnotations', () => {
       const result = thinAnnotations(annotations, specs, measure);
       expect(result.footnotes).toHaveLength(0);
     });
+
+    // A callout above a peak or below a trough lands in the margin, outside the
+    // plot but inside the chart. Annotations render outside the clip path, so
+    // that is legal placement and must stay inline. Fencing containment to the
+    // plot demoted ordinary callouts to footnotes.
+    //
+    // The plot is inset inside the chart here (a real top margin exists), so
+    // "above the plot" and "outside the chart" are genuinely different regions.
+    // Roomy enough that the coverage budget stays out of the way — containment
+    // is what's under test here.
+    const insetPlot = { x: 40, y: 60, width: 700, height: 400 };
+    const chart = { x: 0, y: 0, width: 780, height: 520 };
+
+    it('keeps a label sitting in the margin above the plot', () => {
+      // Baseline y=30: bounds span roughly y=18..34, above insetPlot.y (60) but
+      // well inside the chart. Fenced to the plot this demotes; fenced to the
+      // chart it stays inline.
+      const annotations = [makeResolved(50, 120, 'Inside'), makeResolved(50, 30, 'Above the peak')];
+      const specs: Annotation[] = [makeSpec('Inside'), makeSpec('Above the peak')];
+
+      const result = thinAnnotations(annotations, specs, measure, insetPlot, chart);
+
+      expect(result.footnotes).toHaveLength(0);
+      expect(result.annotations[1].footnoteIndex).toBeUndefined();
+    });
+
+    it('still demotes a label that escapes the chart entirely', () => {
+      // x=740 in a 780-wide chart: the text runs past the right edge.
+      const annotations = [
+        makeResolved(50, 120, 'Inside'),
+        makeResolved(740, 120, 'Off the right edge of the chart'),
+      ];
+      const specs: Annotation[] = [makeSpec('Inside'), makeSpec('Off the right edge of the chart')];
+
+      const result = thinAnnotations(annotations, specs, measure, insetPlot, chart);
+
+      expect(result.footnotes).toHaveLength(1);
+      expect(result.annotations[1].footnoteIndex).toBe(1);
+    });
   });
 
   describe('coverage budget', () => {

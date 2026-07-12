@@ -11,18 +11,54 @@ import type {
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import {
   ANCHOR_OFFSET,
+  CONNECTOR_STANDOFF,
   DEFAULT_ANNOTATION_FONT_SIZE,
   DEFAULT_ANNOTATION_FONT_WEIGHT,
   DEFAULT_LINE_HEIGHT,
+  DROP_LINE_TOP_GAP,
+  MIN_CONNECTOR_LENGTH,
 } from './constants';
+import { BOLD_SPAN_FONT_WEIGHT, parseAnnotationSpans } from './rich-text';
 
+/**
+ * Measure one run of text at a given size and weight.
+ *
+ * Deliberately takes no `fontFamily`: neither implementation could use one.
+ * `heuristicMeasure` below is family-blind, and the real canvas measurer gets its
+ * family from the `createMeasureText(fontFamily)` closure, not per call -- so a
+ * family passed here would be silently dropped while implying the opposite.
+ * `style.fontFamily` on a *resolved label* is a different thing: that one is real
+ * and gets rendered.
+ */
 export type AnnotationMeasureTextFn = (
   text: string,
-  font: { fontSize: number; fontWeight: number; fontFamily?: string },
+  font: { fontSize: number; fontWeight: number },
 ) => number;
 
 export const heuristicMeasure: AnnotationMeasureTextFn = (text, { fontSize, fontWeight }) =>
   estimateTextWidth(text, fontSize, fontWeight);
+
+/**
+ * Width of one line of annotation text, `**bold**` spans included: each span is
+ * measured at its own weight and the widths are summed. Measuring the raw string
+ * would count the `**` markers and use one weight for the whole line, so bounds,
+ * collisions, placement, and connector exits would all be wrong for rich text.
+ */
+export function measureRichLine(
+  line: string,
+  style: { fontSize: number; fontWeight: number },
+  measure: AnnotationMeasureTextFn,
+): number {
+  const spans = parseAnnotationSpans(line);
+  let width = 0;
+  for (const span of spans) {
+    width += measure(span.text, {
+      fontSize: style.fontSize,
+      fontWeight: span.bold ? BOLD_SPAN_FONT_WEIGHT : style.fontWeight,
+    });
+  }
+  return width;
+}
 
 /**
  * Compute the bounding box of a text block, aware of textAnchor and multi-line layout.
@@ -37,15 +73,12 @@ export function computeTextBlockBounds(
     fontWeight: number;
     lineHeight: number;
     textAnchor?: 'start' | 'middle' | 'end';
+    fontFamily?: string;
   },
   measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): Rect {
   const lines = text.split('\n');
-  const maxWidth = Math.max(
-    ...lines.map((line) =>
-      measure(line, { fontSize: style.fontSize, fontWeight: style.fontWeight }),
-    ),
-  );
+  const maxWidth = Math.max(...lines.map((line) => measureRichLine(line, style, measure)));
   const height =
     style.fontSize + (lines.length - 1) * style.fontSize * style.lineHeight + style.fontSize * 0.3;
 
@@ -119,59 +152,73 @@ export function applyOffset(
   };
 }
 
+/** Inflation applied to the label box before intersecting the connector ray. */
+const BOX_INFLATE = 2;
+
 /**
- * Compute the connector origin point on the text bounding box.
- * For straight connectors, finds the edge midpoint (top, bottom, left, right)
- * closest to the data point. For curve connectors, always uses the right edge.
+ * Compute where a connector leaves the annotation's text block on its way to the
+ * target. Casts a ray from the box center toward the target, intersects the
+ * (slightly inflated) box, then advances `standoff` px along the ray so the line
+ * never touches the glyphs.
+ *
+ * Returns `null` when the target sits inside the inflated box (a connector would
+ * cross its own text) or when the standoff would overshoot the target.
  */
-export function computeConnectorOrigin(
-  labelX: number,
-  labelY: number,
-  text: string,
-  fontSize: number,
-  fontWeight: number,
+export function connectorExit(
+  bounds: Rect,
   targetX: number,
   targetY: number,
-  connectorStyle: 'straight' | 'curve',
-): { x: number; y: number } {
-  const lines = text.split('\n');
-  const isMultiLine = lines.length > 1;
-  const anchor: 'start' | 'middle' = isMultiLine ? 'middle' : 'start';
-  const box = computeTextBlockBounds(labelX, labelY, text, {
-    fontSize,
-    fontWeight,
-    lineHeight: DEFAULT_LINE_HEIGHT,
-    textAnchor: anchor,
-  });
-  const boxCenterX = box.x + box.width / 2;
-  const boxCenterY = box.y + box.height / 2;
+  standoff = CONNECTOR_STANDOFF,
+): { x: number; y: number; exit: 'horizontal' | 'vertical' } | null {
+  const box = {
+    x: bounds.x - BOX_INFLATE,
+    y: bounds.y - BOX_INFLATE,
+    width: bounds.width + BOX_INFLATE * 2,
+    height: bounds.height + BOX_INFLATE * 2,
+  };
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const halfW = box.width / 2;
+  const halfH = box.height / 2;
 
-  // Curve connectors always start from the right edge
-  if (connectorStyle === 'curve') {
-    return {
-      x: box.x + box.width,
-      y: boxCenterY,
-    };
-  }
+  const dx = targetX - cx;
+  const dy = targetY - cy;
 
-  // Normalize the vector from box center to target by the box half-dimensions.
-  // This accounts for the box aspect ratio: a wide text box should prefer
-  // top/bottom exits even when the target is also offset horizontally.
-  const halfW = box.width / 2 || 1;
-  const halfH = box.height / 2 || 1;
-  const ndx = (targetX - boxCenterX) / halfW;
-  const ndy = (targetY - boxCenterY) / halfH;
+  // Target inside the inflated box: any connector would cross the text.
+  if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH) return null;
+  if (dx === 0 && dy === 0) return null;
 
-  if (Math.abs(ndy) >= Math.abs(ndx)) {
-    // Target is more above/below than left/right → use top or bottom edge
-    return ndy < 0
-      ? { x: boxCenterX, y: box.y } // top
-      : { x: boxCenterX, y: box.y + box.height }; // bottom
-  }
-  // Target is more left/right → use left or right edge
-  return ndx < 0
-    ? { x: box.x, y: boxCenterY } // left
-    : { x: box.x + box.width, y: boxCenterY }; // right
+  // Parametric ray: center + t * (dx, dy). Find the smallest t that lands on an
+  // edge of the box, and which axis that edge belongs to.
+  const tx = halfW > 0 && dx !== 0 ? halfW / Math.abs(dx) : Number.POSITIVE_INFINITY;
+  const ty = halfH > 0 && dy !== 0 ? halfH / Math.abs(dy) : Number.POSITIVE_INFINITY;
+  const t = Math.min(tx, ty);
+  if (!Number.isFinite(t)) return null;
+
+  const exit: 'horizontal' | 'vertical' = tx <= ty ? 'horizontal' : 'vertical';
+
+  const edgeX = cx + dx * t;
+  const edgeY = cy + dy * t;
+
+  // Advance along the ray by the standoff distance.
+  const rayLen = Math.sqrt(dx * dx + dy * dy);
+  const ux = dx / rayLen;
+  const uy = dy / rayLen;
+
+  // Overshoot guard: the standoff must not push the origin past the target.
+  // Measure edge-to-target in pixels rather than scaling the ray by (1 - t):
+  // t is a ratio of box extents, so that form understates the clearance when the
+  // ray leaves through the long side of a wide label, and killed connectors that
+  // had ample room. Whether the line is long enough to be worth drawing is
+  // decided downstream against MIN_CONNECTOR_LENGTH, once the marker pullback is
+  // known — this guard only rejects a standoff that would overshoot the target.
+  const edgeToTarget = Math.hypot(targetX - edgeX, targetY - edgeY);
+  if (standoff >= edgeToTarget) return null;
+
+  const x = edgeX + ux * standoff;
+  const y = edgeY + uy * standoff;
+
+  return { x, y, exit };
 }
 
 /** Estimate the bounding box of an annotation label using its resolved style. */
@@ -190,6 +237,7 @@ export function estimateLabelBounds(
       fontWeight,
       lineHeight: label.style.lineHeight ?? DEFAULT_LINE_HEIGHT,
       textAnchor: label.style.textAnchor ?? 'start',
+      fontFamily: label.style.fontFamily,
     },
     measure,
   );
@@ -203,6 +251,17 @@ export interface ArrowheadPoints {
 }
 
 /**
+ * Arrowhead length along the tangent. Exported because the renderer pulls the
+ * connector's line end back by exactly this much so the stroke stops at the open
+ * V instead of poking through its tip — a hand-copied duplicate on the vanilla
+ * side would silently drift the next time this changes.
+ */
+export const ARROWHEAD_LENGTH = 7;
+
+/** Arrowhead half-width perpendicular to the tangent. */
+export const ARROWHEAD_HALF_WIDTH = 3.5;
+
+/**
  * Compute arrowhead triangle geometry at a connector endpoint.
  * Returns the tip (at the endpoint) and two base corners perpendicular to the
  * tangent direction.
@@ -211,16 +270,16 @@ export interface ArrowheadPoints {
  * @param tipY - Y coordinate of the arrowhead tip
  * @param tangentX - X component of the tangent direction (toward the tip)
  * @param tangentY - Y component of the tangent direction (toward the tip)
- * @param length - Arrow length along the tangent (default 8)
- * @param halfWidth - Arrow half-width perpendicular to tangent (default 4)
+ * @param length - Arrow length along the tangent (default ARROWHEAD_LENGTH)
+ * @param halfWidth - Arrow half-width perpendicular to tangent (default ARROWHEAD_HALF_WIDTH)
  */
 export function computeArrowheadPoints(
   tipX: number,
   tipY: number,
   tangentX: number,
   tangentY: number,
-  length = 8,
-  halfWidth = 4,
+  length = ARROWHEAD_LENGTH,
+  halfWidth = ARROWHEAD_HALF_WIDTH,
 ): ArrowheadPoints {
   const tLen = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
   const ux = tangentX / tLen;
@@ -240,30 +299,76 @@ export function computeArrowheadPoints(
 }
 
 /**
- * Recompute the connector origin for a label after it has been repositioned.
- * Encapsulates the pattern of recalculating which edge of the text box the
- * connector should exit from based on the target data point.
+ * Distance the connector's data-point end is pulled back so the line stops short
+ * of the endpoint marker instead of piercing it.
  */
-export function recomputeConnector(
-  label: ResolvedLabel,
-  targetX: number,
-  targetY: number,
-): ResolvedLabel['connector'] {
-  const connector = label.connector;
-  if (!connector) return connector;
+export function connectorPullbackGap(markerRadius: number, arrow: boolean): number {
+  return arrow ? Math.max(markerRadius + 2, 2) : Math.max(markerRadius + 3, 4);
+}
 
-  const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
-  const fontWeight = label.style.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
-  const connStyle = connector.style === 'curve' ? ('curve' as const) : ('straight' as const);
-  const newFrom = computeConnectorOrigin(
-    label.x,
-    label.y,
-    label.text,
-    fontSize,
-    fontWeight,
-    targetX,
-    targetY,
-    connStyle,
-  );
-  return { ...connector, from: newFrom };
+/**
+ * Rebuild a connector's geometry against a (possibly moved) annotation bounds.
+ *
+ * `from` comes from the ray-box exit; `to` is recomputed by pulling back from
+ * `connector.endpoint` — never from the already-pulled-back `to`, which would
+ * shrink the line a little more on every pass.
+ *
+ * Returns `undefined` when the connector should be suppressed: the target sits
+ * inside the text block, or the resulting line is shorter than
+ * `MIN_CONNECTOR_LENGTH`.
+ */
+export function refreshConnector(
+  connector: NonNullable<ResolvedLabel['connector']>,
+  bounds: Rect,
+  markerRadius: number,
+): ResolvedLabel['connector'] {
+  // `endpoint` is the un-pulled-back data point, and the only valid basis for a
+  // rebuild: pulling back from `to` (already pulled back) shrinks the line a
+  // little more on every pass. Every resolver sets it, but the field is optional
+  // on the public `ResolvedLabel` type, so a layout from another producer could
+  // omit it — bail rather than silently compound the error.
+  if (!connector.endpoint) return undefined;
+  const endpoint = connector.endpoint;
+
+  // A drop-line is not a leader: it's a vertical rule pinned to the data point's
+  // x, running from just above the label box down to the marker. Rebuilding it
+  // from a ray-box exit tilts it into a diagonal (which the renderer draws with
+  // shape-rendering: crispEdges, assuming axis alignment), and the
+  // MIN_CONNECTOR_LENGTH rule below would delete it outright once the label sits
+  // near its point.
+  //
+  // This mirrors `resolveDropLineAnnotation`'s formula exactly — `from` above the
+  // label top, `to` pulled back from the point — so a nudged drop-line keeps the
+  // same geometry it resolved with, just at the label's new position.
+  if (connector.style === 'drop-line') {
+    const gap = connectorPullbackGap(markerRadius, false);
+    return {
+      ...connector,
+      from: { x: endpoint.x, y: bounds.y - DROP_LINE_TOP_GAP },
+      to: { x: endpoint.x, y: endpoint.y - gap },
+      exit: 'vertical',
+    };
+  }
+
+  const exit = connectorExit(bounds, endpoint.x, endpoint.y);
+  if (!exit) return undefined;
+
+  const from = { x: exit.x, y: exit.y };
+
+  const gap = connectorPullbackGap(markerRadius, connector.arrow);
+  const cdx = endpoint.x - from.x;
+  const cdy = endpoint.y - from.y;
+  const dist = Math.sqrt(cdx * cdx + cdy * cdy);
+  const to =
+    dist > 0
+      ? { x: endpoint.x - (cdx / dist) * gap, y: endpoint.y - (cdy / dist) * gap }
+      : { ...endpoint };
+
+  // Min-length check runs AFTER the pullback: a near-degenerate line can flip
+  // direction once its end is pulled back, and checking first would miss it.
+  const lx = to.x - from.x;
+  const ly = to.y - from.y;
+  if (Math.sqrt(lx * lx + ly * ly) < MIN_CONNECTOR_LENGTH) return undefined;
+
+  return { ...connector, from, to, exit: exit.exit };
 }

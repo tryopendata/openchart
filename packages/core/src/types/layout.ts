@@ -616,6 +616,11 @@ export interface ResolvedLabel {
     style: 'straight' | 'curve' | 'drop-line';
     /** Whether to draw an arrowhead at the data-point end. */
     arrow: boolean;
+    /**
+     * Which edge of the label block the connector leaves from. Renderers use it
+     * to shape the curve's control point. Internal; not part of the spec.
+     */
+    exit?: 'horizontal' | 'vertical';
   };
   /** Background color behind the label text. */
   background?: string;
@@ -637,6 +642,16 @@ export interface ResolvedAnnotation {
   type: 'text' | 'range' | 'refline';
   /** Stable identifier from the spec annotation, for selection/edit callbacks. */
   id?: string;
+  /**
+   * Index of the originating annotation in `spec.annotations`.
+   *
+   * The resolved array is a *filtered* view of the spec array -- an annotation
+   * whose position falls outside the scale domain resolves to nothing and is
+   * dropped -- so a resolved array index is NOT a spec index. Anything that has
+   * to reach back to the authored annotation (thinning's priority/responsive
+   * lookup, faceted footnote numbering) must key on this.
+   */
+  specIndex?: number;
   /** Label text (if any). */
   label?: ResolvedLabel;
   /** For range: the highlighted rectangle in pixel coordinates. */
@@ -656,8 +671,9 @@ export interface ResolvedAnnotation {
   /** Z-index for render ordering. Higher values render on top. */
   zIndex?: number;
   /**
-   * For text annotations: optional dot marker drawn at the connector's
-   * data-point endpoint. Coordinates match `label.connector.to` exactly.
+   * For text annotations: the endpoint marker drawn at the data point.
+   * Coordinates sit on the data point itself (plus any `connectorOffset.to`),
+   * not on the pulled-back `label.connector.to`.
    */
   dot?: {
     x: number;

@@ -3,9 +3,10 @@
  *
  * Annotations live in DATA coordinates and resolve to pixels through the same
  * scale system as the marks, so they stay pinned to their data through resize
- * (see the "Data-coordinate stability" demo). Six demos: text callouts, the
- * connector styles (straight / curve / drop-line, with the #103 arrow object
- * form), range bands, reference lines, resize-stability, and auto-thinning.
+ * (see the "Data-coordinate stability" demo). Text callouts, rich text
+ * (`**bold**` spans and the lede stack), the connector styles (straight /
+ * curve / drop-line, with the #103 arrow object form), range bands, reference
+ * lines, resize-stability, and auto-thinning.
  */
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
@@ -33,7 +34,7 @@ const textAnnotationSpec: ChartSpec = {
       type: 'text',
       x: '2022-07-01',
       y: 8.5,
-      text: 'Inflation peaked at 8.5%',
+      text: 'Inflation peaked at **8.5%**',
       subtitle: 'July 2022 — a 40-year high',
       dot: true,
       anchor: 'top',
@@ -45,8 +46,8 @@ const textAnnotationSpec: ChartSpec = {
       y: 0.3,
       text: 'Pandemic trough',
       dot: { radius: 4, stroke: ACCENT },
-      anchor: 'bottom',
-      offset: { dx: 8, dy: 26 },
+      anchor: 'top',
+      offset: { dx: 12, dy: -18 },
     },
   ],
   chrome: {
@@ -78,8 +79,8 @@ const connectorsSpec: ChartSpec = {
       text: 'Curve + arrow',
       subtitle: 'connector: { type: "curve", arrow: true }',
       dot: true,
-      anchor: 'left',
-      offset: { dx: -150, dy: -70 },
+      anchor: 'top',
+      offset: { dx: -190, dy: -60 },
       connector: { type: 'curve', arrow: true },
     },
     // Straight connector, arrow opted out (the default for straight).
@@ -116,7 +117,90 @@ const connectorsSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 3. Range annotations — x-band, y-band, and rectangle
+// 3. Rich text — `**bold**` spans, the lede + subtitle stack
+// ---------------------------------------------------------------------------
+
+// Emphasis lives inside the sentence, not on the whole block: a regular-weight
+// annotation with the one phrase that carries the finding set in bold.
+const richTextSpec: ChartSpec = {
+  animation: true,
+  mark: 'bar',
+  data: [...usPayrolls.data],
+  encoding: {
+    x: { field: 'month', type: 'nominal' },
+    y: { field: 'jobs', type: 'quantitative', axis: { title: 'Jobs added (thousands)' } },
+  },
+  annotations: [
+    {
+      type: 'text',
+      x: 'Oct',
+      y: 12,
+      text: 'Hurricanes and a strike cut\nOctober to **12,000 jobs**',
+      dot: true,
+      anchor: 'top',
+      offset: { dy: -150 },
+      connector: { type: 'curve', arrow: true },
+    },
+    {
+      type: 'text',
+      x: 'Jan',
+      y: 353,
+      text: 'The year opened at **353,000**',
+      dot: true,
+      anchor: 'right',
+      offset: { dx: 4, dy: -10 },
+    },
+  ],
+  chrome: {
+    title: 'One Bad Month in an Otherwise Steady Year',
+    subtitle: 'US nonfarm payroll additions by month, 2024',
+    source: usPayrolls.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// The lede stack: set `subtitle` and the primary line takes bold automatically,
+// with the subtitle in muted regular below it. No fontWeight authoring.
+const ledeSpec: ChartSpec = {
+  animation: true,
+  mark: 'line',
+  data: [...temperatureAnomaly.data],
+  encoding: {
+    x: { field: 'year', type: 'ordinal' },
+    y: { field: 'anomaly', type: 'quantitative', axis: { title: 'Anomaly (°C)' } },
+  },
+  annotations: [
+    {
+      type: 'text',
+      x: '2025',
+      y: 1.17,
+      text: '+1.17°C',
+      subtitle: 'the warmest year on record',
+      dot: true,
+      anchor: 'left',
+      offset: { dx: -16, dy: -22 },
+    },
+    {
+      type: 'text',
+      x: '1980',
+      y: 0.26,
+      text: 'Baseline era',
+      subtitle: 'anomalies stayed under **0.3°C**',
+      dot: true,
+      anchor: 'top',
+      offset: { dx: 0, dy: -30 },
+    },
+  ],
+  chrome: {
+    title: 'A Lede, Then the Context',
+    subtitle: 'Global surface temperature anomaly — subtitle promotes the first line to bold',
+    source: temperatureAnomaly.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 4. Range annotations — x-band, y-band, and rectangle
 // ---------------------------------------------------------------------------
 
 const rangeSpec: ChartSpec = {
@@ -373,6 +457,8 @@ const thinningSpec: ChartSpec = {
     x: { field: 'date', type: 'temporal' },
     y: { field: 'value', type: 'quantitative', axis: { title: 'Index level' } },
   },
+  // Deliberately bare: no offsets, no connector config. Six minimal callouts,
+  // exactly what an author writes first. The defaults have to carry this.
   annotations: [
     { type: 'text', x: '2020-06-01', y: 8, text: 'Pandemic low', responsive: false, priority: 1 },
     { type: 'text', x: '2021-01-01', y: 22, text: 'Recovery begins', priority: 2 },
@@ -487,7 +573,7 @@ export default { title: 'Features' };
 export const Annotations = () => (
   <GalleryPage
     title="Annotations"
-    lede="Annotations are the editorial layer over the data layer. They're authored in data coordinates and resolved to pixels through the same scales as the marks, so a callout, band, or reference line stays pinned to its data through every resize. Text callouts take dot markers and connectors; ranges shade regions; reference lines mark baselines and targets; and when space runs out, auto-thinning demotes overlapping callouts to numbered footnotes."
+    lede="Annotations are the editorial layer over the data layer. They're authored in data coordinates and resolved to pixels through the same scales as the marks, so a callout, band, or reference line stays pinned to its data through every resize. Text callouts take dot markers, connectors, and inline bold spans; ranges shade regions; reference lines mark baselines and targets; and when space runs out, auto-thinning demotes overlapping callouts to numbered footnotes."
   >
     <Section
       id="text"
@@ -499,6 +585,27 @@ export const Annotations = () => (
         title="Text callout with a dot marker"
         description="Place a labelled callout at an (x, y) data point; the dot marks the point and the offset lifts the text clear of the line."
         spec={textAnnotationSpec}
+        height={460}
+      />
+    </Section>
+
+    <Section
+      id="rich-text"
+      title="Rich text"
+      lede="Annotation text is a regular-weight sentence with the key phrase wrapped in double asterisks — emphasis rides inside the copy, never as a bold block. Add a subtitle and the primary line promotes to a bold lede with muted context beneath it, no fontWeight authoring. Spans work in text and subtitle alike; an unmatched pair of asterisks renders literally."
+    >
+      <Demo
+        id="rich-text-emphasis"
+        title="Inline bold spans"
+        description="The finding is the number, so the number is what's bold. The rest of the sentence stays regular weight and out of the way."
+        spec={richTextSpec}
+        height={460}
+      />
+      <Demo
+        id="rich-text-lede"
+        title="The lede + subtitle stack"
+        description="Setting subtitle promotes the primary line to bold automatically. The subtitle takes its own bold spans and renders muted at 85% of the primary size."
+        spec={ledeSpec}
         height={460}
       />
     </Section>

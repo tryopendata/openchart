@@ -12,14 +12,87 @@ import type {
 import { detectCollision } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
-import { CLAMP_MARGIN, NUDGE_PADDING } from './constants';
+import {
+  CLAMP_MARGIN,
+  DEFAULT_ANNOTATION_FONT_SIZE,
+  DEFAULT_LINE_HEIGHT,
+  NUDGE_PADDING,
+  SUBTITLE_FONT_WEIGHT,
+  subtitleFontSize,
+} from './constants';
 import {
   type AnnotationMeasureTextFn,
+  computeTextBlockBounds,
   estimateLabelBounds,
   heuristicMeasure,
-  recomputeConnector,
+  refreshConnector,
+  unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
+import { markerClearance } from './resolve-text';
+
+/** The full block an annotation occupies: label text plus its subtitle. */
+function annotationBlockBounds(
+  annotation: ResolvedAnnotation,
+  label: ResolvedLabel,
+  measure: AnnotationMeasureTextFn,
+): Rect {
+  const labelBounds = estimateLabelBounds(label, measure);
+  const sub = annotation.subtitle;
+  if (!sub) return labelBounds;
+
+  const subBounds = computeTextBlockBounds(
+    sub.x,
+    sub.y,
+    sub.text,
+    {
+      // Every resolver stamps all three, so these fallbacks are unreachable today.
+      // They still come from the constants: a hand-rolled `?? 10` here is a second
+      // definition of the subtitle's type, free to drift from the real one.
+      fontSize: sub.style.fontSize ?? subtitleFontSize(DEFAULT_ANNOTATION_FONT_SIZE),
+      fontWeight: Number(sub.style.fontWeight) || SUBTITLE_FONT_WEIGHT,
+      lineHeight: sub.style.lineHeight ?? DEFAULT_LINE_HEIGHT,
+      textAnchor: sub.style.textAnchor ?? 'start',
+    },
+    measure,
+  );
+  return unionRects(labelBounds, subBounds);
+}
+
+/**
+ * Move an annotation's label (and its subtitle, which carries absolute
+ * coordinates) by (dx, dy), refreshing the connector and both bounds caches.
+ */
+function shiftAnnotation(
+  annotation: ResolvedAnnotation,
+  label: ResolvedLabel,
+  dx: number,
+  dy: number,
+  measure: AnnotationMeasureTextFn,
+): void {
+  const movedLabel: ResolvedLabel = { ...label, x: label.x + dx, y: label.y + dy };
+  if (annotation.subtitle) {
+    annotation.subtitle = {
+      ...annotation.subtitle,
+      x: annotation.subtitle.x + dx,
+      y: annotation.subtitle.y + dy,
+    };
+  }
+
+  movedLabel.bounds = estimateLabelBounds(movedLabel, measure);
+  const blockBounds = annotationBlockBounds(annotation, movedLabel, measure);
+
+  if (movedLabel.connector) {
+    movedLabel.connector = refreshConnector(
+      movedLabel.connector,
+      blockBounds,
+      markerClearance(annotation.dot),
+    );
+  }
+
+  annotation.label = movedLabel;
+  annotation.bounds = blockBounds;
+}
 
 /**
  * Generate candidate displacement vectors to move `selfBounds` clear of each
@@ -70,33 +143,49 @@ export function nudgeAnnotationFromObstacles(
 ): boolean {
   if (annotation.type !== 'text' || !annotation.label) return false;
 
-  const labelBounds = estimateLabelBounds(annotation.label, measure);
+  const label = annotation.label;
+  const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
   const collidingObs = obstacles.filter(
-    (obs) => obs.width > 0 && obs.height > 0 && detectCollision(labelBounds, obs),
+    (obs) => obs.width > 0 && obs.height > 0 && detectCollision(bounds, obs),
   );
 
   if (collidingObs.length === 0) return false;
 
-  // Resolve the data point pixel position for offset calculations
-  const px = resolvePosition(originalAnnotation.x, scales.x);
-  const py = resolvePosition(originalAnnotation.y, scales.y);
-  if (px === null || py === null) return false;
+  // A guard, not an input: the nudge geometry below comes from `bounds` and
+  // `connector.endpoint`, not from the data point. But an annotation whose
+  // position no longer resolves has nothing to anchor a connector to, so refuse
+  // to move it rather than shift a label away from a point we can't locate.
+  if (
+    resolvePosition(originalAnnotation.x, scales.x) === null ||
+    resolvePosition(originalAnnotation.y, scales.y) === null
+  ) {
+    return false;
+  }
 
-  const candidates = generateNudgeCandidates(labelBounds, collidingObs, NUDGE_PADDING);
-  const fontSize = labelBounds.height / Math.max(1, annotation.label.text.split('\n').length);
+  const candidates = generateNudgeCandidates(bounds, collidingObs, NUDGE_PADDING);
+  // Read the size off the label, don't back-derive it from the box: `bounds` is
+  // the label ∪ subtitle union, so dividing its height by the *primary* line
+  // count returns roughly double the real size on a subtitled annotation, which
+  // silently doubles the margin slop below.
+  const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+
+  // A drop-line is a vertical rule running DOWN from the block to the point. Nudge
+  // the block below its own endpoint and the line inverts: it points up, away from
+  // the data, and the block covers the mark it was labelling. The resolver already
+  // placed it (side auto-flip, clamp against the chart top), so the only nudges
+  // worth taking are ones that keep it overhead.
+  const dropLineEndpointY =
+    label.connector?.style === 'drop-line' ? label.connector.endpoint?.y : undefined;
 
   for (const { dx, dy } of candidates) {
-    const newLabelX = annotation.label.x + dx;
-    const newLabelY = annotation.label.y + dy;
+    const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };
 
-    const candidateLabel: ResolvedLabel = {
-      ...annotation.label,
-      x: newLabelX,
-      y: newLabelY,
-      connector: recomputeConnector({ ...annotation.label, x: newLabelX, y: newLabelY }, px, py),
-    };
-
-    const candidateBounds = estimateLabelBounds(candidateLabel, measure);
+    if (
+      dropLineEndpointY !== undefined &&
+      candidateBounds.y + candidateBounds.height > dropLineEndpointY
+    ) {
+      continue;
+    }
 
     // Check no collisions with any obstacle
     const stillCollides = obstacles.some(
@@ -119,8 +208,7 @@ export function nudgeAnnotationFromObstacles(
       labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
     if (inBounds) {
-      annotation.label = candidateLabel;
-      annotation.label.bounds = candidateBounds;
+      shiftAnnotation(annotation, label, dx, dy, measure);
       return true;
     }
   }
@@ -134,7 +222,7 @@ export function nudgeAnnotationFromObstacles(
  * Iterates through text annotations in order, building a list of "placed"
  * bounding rects. When a later annotation overlaps an already-placed one,
  * it tries offset positions (below, above, left, right) to find a
- * non-colliding spot. Recomputes the connector origin after nudging.
+ * non-colliding spot. Recomputes the connector after nudging.
  */
 export function resolveAnnotationCollisions(
   annotations: ResolvedAnnotation[],
@@ -151,37 +239,39 @@ export function resolveAnnotationCollisions(
       continue;
     }
 
-    const bounds = estimateLabelBounds(annotation.label, measure);
+    const label = annotation.label;
+    const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
 
-    // Check against all previously placed annotation labels
+    // Check against all previously placed annotation blocks
     const collidingBounds = placedBounds.filter(
       (pb) => pb.width > 0 && pb.height > 0 && detectCollision(bounds, pb),
     );
 
     if (collidingBounds.length > 0) {
-      // Find the original spec to get data point coordinates for connector recomputation
-      const originalSpec = originalSpecs[i];
+      // `annotations` is a filtered view of `originalSpecs` -- an annotation that
+      // failed to resolve was dropped -- so index by the stamped spec index, not
+      // by position here. Falling back to `i` keeps a hand-built layout working.
+      const originalSpec = originalSpecs[annotation.specIndex ?? i];
 
       if (originalSpec?.type === 'text') {
+        // A guard, not an input: same as in nudgeAnnotationFromObstacles, the
+        // geometry below comes from `bounds` and `connector.endpoint`. Refuse to
+        // move a label whose data point we can no longer locate.
         const px = resolvePosition(originalSpec.x, scales.x);
         const py = resolvePosition(originalSpec.y, scales.y);
 
         if (px !== null && py !== null) {
           const candidates = generateNudgeCandidates(bounds, collidingBounds, NUDGE_PADDING);
-          const fontSize = bounds.height / Math.max(1, annotation.label.text.split('\n').length);
+          // Read the size off the label, don't back-derive it from the box: `bounds` is
+          // the label ∪ subtitle union, so dividing its height by the *primary* line
+          // count returns roughly double the real size on a subtitled annotation, which
+          // silently doubles the margin slop below.
+          const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
 
           for (const { dx, dy } of candidates) {
-            const newLabelX = annotation.label.x + dx;
-            const newLabelY = annotation.label.y + dy;
+            const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };
 
-            const candidateLabel: ResolvedLabel = {
-              ...annotation.label,
-              x: newLabelX,
-              y: newLabelY,
-            };
-            const candidateBounds = estimateLabelBounds(candidateLabel, measure);
-
-            // Check no collisions with any placed label
+            // Check no collisions with any placed block
             const stillCollides = placedBounds.some(
               (pb) => pb.width > 0 && pb.height > 0 && detectCollision(candidateBounds, pb),
             );
@@ -197,17 +287,7 @@ export function resolveAnnotationCollisions(
               labelCenterY <= chartArea.y + chartArea.height + fontSize;
 
             if (inBounds) {
-              annotation.label = {
-                ...annotation.label,
-                x: newLabelX,
-                y: newLabelY,
-                bounds: candidateBounds,
-                connector: recomputeConnector(
-                  { ...annotation.label, x: newLabelX, y: newLabelY },
-                  px,
-                  py,
-                ),
-              };
+              shiftAnnotation(annotation, label, dx, dy, measure);
               break;
             }
           }
@@ -216,7 +296,9 @@ export function resolveAnnotationCollisions(
     }
 
     // Add this annotation's final bounds to the placed list
-    placedBounds.push(estimateLabelBounds(annotation.label, measure));
+    placedBounds.push(
+      annotation.bounds ?? annotationBlockBounds(annotation, annotation.label, measure),
+    );
   }
 }
 
@@ -235,7 +317,8 @@ export function clampAnnotationsToBounds(
   for (const annotation of annotations) {
     if (annotation.type !== 'text' || !annotation.label) continue;
 
-    const bounds = estimateLabelBounds(annotation.label, measure);
+    const label = annotation.label;
+    const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
     let dx = 0;
     let dy = 0;
 
@@ -258,23 +341,6 @@ export function clampAnnotationsToBounds(
 
     if (dx === 0 && dy === 0) continue;
 
-    const newX = annotation.label.x + dx;
-    const newY = annotation.label.y + dy;
-
-    const connector = annotation.label.connector;
-    const newBounds = estimateLabelBounds({ ...annotation.label, x: newX, y: newY }, measure);
-    annotation.label = {
-      ...annotation.label,
-      x: newX,
-      y: newY,
-      bounds: newBounds,
-      connector: connector
-        ? recomputeConnector(
-            { ...annotation.label, x: newX, y: newY },
-            connector.to.x,
-            connector.to.y,
-          )
-        : undefined,
-    };
+    shiftAnnotation(annotation, label, dx, dy, measure);
   }
 }

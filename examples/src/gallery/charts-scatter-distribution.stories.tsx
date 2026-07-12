@@ -91,9 +91,17 @@ const basicScatterSpec: ChartSpec = {
     ],
   },
   annotations: [
-    { type: 'text', x: 14.5, y: 575, text: 'Singapore', anchor: 'left', fontSize: 10 },
-    { type: 'text', x: 14.3, y: 465, text: 'United States', anchor: 'right', fontSize: 10 },
-    { type: 'text', x: 8.4, y: 510, text: 'Estonia', anchor: 'left', fontSize: 10 },
+    { type: 'text', x: 14.5, y: 575, text: 'Singapore', anchor: 'left', fontSize: 10, dot: false },
+    {
+      type: 'text',
+      x: 14.3,
+      y: 465,
+      text: 'United States',
+      anchor: 'right',
+      fontSize: 10,
+      dot: false,
+    },
+    { type: 'text', x: 8.4, y: 510, text: 'Estonia', anchor: 'left', fontSize: 10, dot: false },
     {
       type: 'refline',
       y: 472,
@@ -143,8 +151,7 @@ const bubbleSpec: ChartSpec = {
       text: 'The US has high emissions\nbut modest renewables',
       connector: true,
       anchor: 'left',
-      offset: { dx: -150, dy: -50 },
-      fontSize: 10,
+      offset: { dx: -24, dy: -50 },
     },
     {
       type: 'text',
@@ -152,8 +159,8 @@ const bubbleSpec: ChartSpec = {
       y: 85,
       text: "Brazil's grid is nearly\nall renewable",
       connector: true,
-      anchor: 'top',
-      fontSize: 10,
+      anchor: 'right',
+      offset: { dx: 24, dy: -18 },
     },
   ],
   chrome: {
@@ -195,15 +202,17 @@ const colorScatterSpec: ChartSpec = {
     ],
   },
   annotations: [
-    { type: 'text', x: 131, y: 98, text: 'Zurich', anchor: 'left', fontSize: 10 },
-    { type: 'text', x: 64, y: 91, text: 'Montreal', anchor: 'right', fontSize: 10 },
+    { type: 'text', x: 131, y: 98, text: 'Zurich', anchor: 'left', fontSize: 10, dot: false },
+    { type: 'text', x: 64, y: 91, text: 'Montreal', anchor: 'right', fontSize: 10, dot: false },
     {
       type: 'text',
       x: 120,
       y: 78,
       text: 'Hong Kong:\npricey, lower quality',
-      anchor: 'bottom',
+      anchor: 'right',
+      offset: { dx: 8, dy: -6 },
       fontSize: 10,
+      dot: false,
     },
   ],
   chrome: {
@@ -258,9 +267,8 @@ const trendScatterSpec: ChartSpec = {
       y: 77.3,
       text: 'The US spends the most\nbut lives shorter than peers',
       connector: true,
-      anchor: 'top',
-      offset: { dx: -90, dy: -70 },
-      fontSize: 10,
+      anchor: 'left',
+      offset: { dx: -24, dy: -60 },
     },
     {
       type: 'text',
@@ -270,6 +278,7 @@ const trendScatterSpec: ChartSpec = {
       anchor: 'top',
       offset: { dx: 6, dy: -8 },
       fontSize: 10,
+      dot: false,
     },
     {
       type: 'text',
@@ -279,6 +288,7 @@ const trendScatterSpec: ChartSpec = {
       anchor: 'left',
       offset: { dx: 8, dy: -2 },
       fontSize: 10,
+      dot: false,
     },
     {
       type: 'text',
@@ -288,6 +298,7 @@ const trendScatterSpec: ChartSpec = {
       anchor: 'left',
       offset: { dx: 8, dy: 4 },
       fontSize: 10,
+      dot: false,
     },
   ],
   chrome: {

@@ -331,6 +331,153 @@ verifying the new swatch looks correct.
 
 ---
 
+## 11. Text annotation redesign
+
+**What changed:** Text annotations (`{ type: 'text' }`) were redesigned around
+the NYT/Datawrapper callout language: left-aligned blocks, one endpoint marker,
+two connector voices, inline bold. Six sub-changes, all visual. The spec surface
+is unchanged apart from `**bold**` now being meaningful inside `text` and
+`subtitle`.
+
+**Who's affected:** Any spec with a text annotation. There are no runtime
+warnings for any of this — the specs are valid in both versions, they just
+render differently. Visual regression baselines that include annotations will
+all diff.
+
+**Search for:** `"type": "text"` inside an `annotations` array.
+
+### 11a. Multi-line text is left-aligned, not centered
+
+Multi-line annotation *text* used to force `text-anchor: middle`, so every line
+was centered against its neighbours. Now the lines are left-aligned and ragged
+right (`'start'`), or right-aligned (`'end'`) when `anchor: 'left'` puts the
+block to the left of the point so its right edge faces the data.
+
+Note that this is about how the lines align *against each other*, not where the
+block sits. A `top`/`bottom` anchored block still straddles its data point
+horizontally — "above" still means above, not "up and to the right". You do not
+need to hand-compute a negative `dx` to re-center it.
+
+**Fix:** Usually nothing. Re-check any annotation whose `text` contains `\n` and
+which relies on the old centered *ragging* for its look; the block position is
+unchanged for `top`/`bottom`, and shifts by half a block width only for
+`left`/`right` anchors (where the block now hangs off the facing edge).
+
+```jsonc
+// Lines were centered against each other; they're now flush left.
+// The block still sits centered above the point — no dx needed.
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Supply chain\nunwinds",
+  "anchor": "top" }
+```
+
+### 11b. A default annotation now draws a leader and a marker
+
+Three linked changes:
+
+- The default label setback (`anchor` with no `offset`) moved from 8px to 28px,
+  so a label clears its own marker instead of sitting on top of it.
+- Whenever a connector is enabled and carries no arrowhead (straight,
+  drop-line), an open-ring marker now renders on the data point by default. It
+  used to require `dot: true`. Drop-lines get one too; they silently ignored
+  `dot: true` before.
+- Connectors shorter than 8px are still dropped — a nub between a label and the
+  marker it's already touching reads as noise, not as a leader.
+
+Net effect on a plain `{ type: 'text' }` annotation with no `offset`: it now
+renders a ring on the data point **and** a leader line back to the label. In v7
+it rendered bare text. Arrowed connectors get no default marker — the arrowhead
+already marks the spot.
+
+This is the "minimal spec, publication-ready output" rule: you should not have
+to author an `offset` to get a drawn leader.
+
+**Fix:** To get a bare label with no marker and no leader, set `dot: false` and
+`connector: false`. To pull the label back in toward the point, set a negative
+`offset` — but note that a label close enough to touch its marker will have its
+leader suppressed by the 8px minimum.
+
+```jsonc
+// v7 look: bare text, no marker, no leader
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak",
+  "dot": false, "connector": false }
+
+// Default (v8): ring + leader, no authoring required
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak" }
+```
+
+### 11c. Dot marker defaults changed
+
+`AnnotationDot` defaults: `radius` 5 → 4, `strokeWidth` 2 → 1.5. The default
+`stroke` is now the connector's resolved stroke instead of the theme text color,
+so the marker and the leader read as one system.
+
+**Fix (if needed):** Pin the old look explicitly.
+
+```jsonc
+{ "dot": { "radius": 5, "strokeWidth": 2, "stroke": "#333333" } }
+```
+
+### 11d. Typography: 13px, theme font, bold lede
+
+- Default annotation font size is 13px (was 12px).
+- Annotation text uses `theme.fonts.family` instead of a hardcoded
+  `Inter, system-ui, sans-serif`. This also closes a measure/render font
+  mismatch, so bounds and collision nudging are more accurate.
+- **Lede rule:** when an annotation has a `subtitle` and you set no
+  `fontWeight`, the primary `text` resolves to weight 700 and the subtitle stays
+  400.
+
+**Fix (if needed):** Pin `fontSize: 12` to keep the old size. Set `fontWeight`
+explicitly to opt out of the bold lede.
+
+```jsonc
+{ "type": "text", "x": 4, "y": 90, "text": "Feb. 25", "subtitle": "2015 maximum",
+  "fontWeight": 400 }
+```
+
+### 11e. Connector and arrowhead redesign
+
+Pure rendering changes, no spec change:
+
+- Curve connectors are a single quadratic arc (was a cubic S-curve).
+- Arrowheads are a stroked open V (was a filled triangle). In the DOM they're a
+  `<polyline>`, not a `<polygon>` — update any selector that reaches into the
+  connector SVG.
+- Connectors leave the text block via a ray cast from the block center toward
+  the data point, with a 6px standoff. Curves no longer always exit the right
+  edge.
+- Arrowed connectors take the label's text ink; quiet leaders (non-arrowed
+  straight, drop-line) take a gray hairline.
+
+**If you call `computeArrowheadPoints` from `@opendata-ai/openchart-engine`
+directly:** its defaults changed (`length` 8 → 7, `halfWidth` 4 → 3.5). Pass
+explicit values to keep the old geometry.
+
+```ts
+computeArrowheadPoints(tipX, tipY, tangentX, tangentY, 8, 4);
+```
+
+### 11f. `**bold**` spans now parse in `text` and `subtitle`
+
+`**bold**` marks an inline bold span. It parses in both `text` and `subtitle`.
+Matched pairs previously rendered verbatim as literal asterisks.
+
+**Who's affected:** Only specs whose annotation text contains a *matched pair*
+of `**`. Unmatched `**` (and empty `****`) still render literally.
+
+**Search for:** `**` inside an annotation `text` or `subtitle` string.
+
+**Fix:** Nothing to do unless you were relying on literal `**` pairs showing up
+in the output. If so, break the pair (a single `*` renders as-is) or drop the
+asterisks.
+
+```jsonc
+// New capability: emphasis on the key phrase, not the whole block
+{ "type": "text", "x": "2022-06", "y": 8.5, "text": "Inflation peaked at **8.5%**" }
+```
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
@@ -341,3 +488,7 @@ at compile time with the exact fix. Two items have no runtime warning:
   bar/area specs manually.
 - **ChartType/CHART_TYPES (section 6):** TypeScript build fails immediately
   if you still import them.
+- **Visual-only changes (sections 8-11):** nothing to compile against. Check
+  them by looking at the charts. If you keep screenshot baselines, expect the
+  annotation redesign (section 11) to diff every chart that carries a text
+  annotation.

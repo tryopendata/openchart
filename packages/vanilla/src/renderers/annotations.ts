@@ -3,38 +3,57 @@
  */
 
 import type { ChartLayout, Point, ResolvedAnnotation } from '@opendata-ai/openchart-core';
-import { computeArrowheadPoints } from '@opendata-ai/openchart-engine';
+import {
+  ARROWHEAD_LENGTH,
+  BOLD_SPAN_FONT_WEIGHT,
+  computeArrowheadPoints,
+  parseAnnotationSpans,
+} from '@opendata-ai/openchart-engine';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
-// Must match computeArrowheadPoints default (engine geometry.ts)
-const ARROWHEAD_LENGTH = 8;
+/** Stroke width shared by every connector voice except the drop-line hairline. */
+const CONNECTOR_STROKE_WIDTH = 1.25;
 
-/** Render an arrowhead polygon at the given tip with tangent direction. */
+/**
+ * Render an open-V arrowhead at the given tip with tangent direction. A stroked
+ * polyline, not a filled triangle — the hand-annotated look.
+ */
 function renderArrowhead(
   parent: SVGElement,
   tipX: number,
   tipY: number,
   tangentX: number,
   tangentY: number,
-  fill: string,
+  stroke: string,
 ): void {
   const head = computeArrowheadPoints(tipX, tipY, tangentX, tangentY);
-  const arrow = createSVGElement('polygon');
-  arrow.setAttribute('class', 'oc-annotation-connector');
+  const arrow = createSVGElement('polyline');
+  // `oc-annotation-arrowhead` is what edit mode selects on to find the tip. Both
+  // the straight and the curved connector draw their head through here, and both
+  // keep the shared `oc-annotation-connector` class for styling -- without the
+  // dedicated class the drag code has to select `polyline.oc-annotation-connector`
+  // and rely on no other polyline existing in the group.
+  arrow.setAttribute('class', 'oc-annotation-connector oc-annotation-arrowhead');
   setAttrs(arrow, {
     points: [
-      `${head.tip.x},${head.tip.y}`,
       `${head.baseLeft.x},${head.baseLeft.y}`,
+      `${head.tip.x},${head.tip.y}`,
       `${head.baseRight.x},${head.baseRight.y}`,
     ].join(' '),
-    fill,
+    fill: 'none',
+    stroke,
+    'stroke-width': CONNECTOR_STROKE_WIDTH,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
   });
   parent.appendChild(arrow);
 }
 
 /**
- * Render a curved connector from a label to a data point.
- * Optionally draws an arrowhead at the tip.
+ * Render a curved connector from a label to a data point: a single quadratic
+ * with one decisive bend, no S-swoop. The control point leans along the axis the
+ * connector left the text block on, so a vertical exit sweeps out and down while
+ * a horizontal exit runs flat then dives.
  */
 function renderCurvedConnector(
   parent: SVGElement,
@@ -42,43 +61,62 @@ function renderCurvedConnector(
   to: Point,
   stroke: string,
   showArrow: boolean,
+  exit: 'horizontal' | 'vertical' | undefined,
 ): void {
-  const pad = showArrow ? 6 : 0;
-  const tipY = to.y - pad;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
 
-  const dy = tipY - from.y;
-  const dist = Math.sqrt((to.x - from.x) ** 2 + dy ** 2) || 1;
+  const vertical = exit ? exit === 'vertical' : Math.abs(dy) >= Math.abs(dx);
+  const cpx = from.x + dx * (vertical ? 0.2 : 0.6);
+  const cpy = from.y + dy * (vertical ? 0.6 : 0.2);
 
-  const bulge = Math.max(dist * 0.4, 35);
-  const cp1x = from.x + bulge;
-  const cp1y = from.y + dy * 0.35;
-  const cp2x = to.x;
-  const cp2y = tipY - Math.abs(dy) * 0.25;
-
-  // Tangent at the tip (from cp2 to tip).
-  const tx = to.x - cp2x;
-  const ty = tipY - cp2y;
+  // Tangent at the tip runs from the control point to the tip.
+  const tx = to.x - cpx;
+  const ty = to.y - cpy;
   const tLen = Math.sqrt(tx * tx + ty * ty) || 1;
-  const ux = tx / tLen;
-  const uy = ty / tLen;
 
-  // When drawing an arrowhead, end the curve at the arrowhead base
-  // so the stroke doesn't poke through the filled triangle.
-  const endX = showArrow ? to.x - ux * ARROWHEAD_LENGTH : to.x;
-  const endY = showArrow ? tipY - uy * ARROWHEAD_LENGTH : tipY;
+  // When arrowed, stop the stroke at the arrowhead base so it doesn't poke
+  // through the open V.
+  const endX = showArrow ? to.x - (tx / tLen) * ARROWHEAD_LENGTH : to.x;
+  const endY = showArrow ? to.y - (ty / tLen) * ARROWHEAD_LENGTH : to.y;
 
   const path = createSVGElement('path');
   path.setAttribute('class', 'oc-annotation-connector');
   setAttrs(path, {
-    d: `M ${from.x} ${from.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`,
+    d: `M ${from.x} ${from.y} Q ${cpx} ${cpy} ${endX} ${endY}`,
     fill: 'none',
     stroke,
-    'stroke-width': 1.5,
+    'stroke-width': CONNECTOR_STROKE_WIDTH,
+    'stroke-linecap': 'round',
   });
   parent.appendChild(path);
 
   if (showArrow) {
-    renderArrowhead(parent, to.x, tipY, tx, ty, stroke);
+    renderArrowhead(parent, to.x, to.y, tx, ty, stroke);
+  }
+}
+
+/**
+ * Fill a `<text>` with annotation copy: one `<tspan>` per `**bold**` span, lines
+ * split on `\n`. The first span of each line carries the `x` reset and the `dy`
+ * line advance, so multi-line and inline-bold compose. The engine measures these
+ * same spans at these same weights, so bounds match what lands on screen.
+ */
+function fillRichText(text: SVGElement, content: string, x: number, lineHeight: number): void {
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const spans = parseAnnotationSpans(lines[i]);
+    for (let s = 0; s < spans.length; s++) {
+      const tspan = createSVGElement('tspan');
+      if (s === 0) {
+        setAttrs(tspan, { x, dy: i === 0 ? 0 : lineHeight });
+      }
+      if (spans[s].bold) {
+        tspan.setAttribute('font-weight', String(BOLD_SPAN_FONT_WEIGHT));
+      }
+      tspan.textContent = spans[s].text;
+      text.appendChild(tspan);
+    }
   }
 }
 
@@ -138,13 +176,18 @@ function renderAnnotation(
   // Footnote marker: annotation was demoted by auto-thinning. Render a numbered
   // dot at the data point instead of the full label text.
   if (annotation.footnoteIndex != null && annotation.label) {
+    // Prefer the data point. A suppressed connector (too short to be worth
+    // drawing) still leaves a resolved dot there, so fall through to it before
+    // giving up on the label position.
     const cx =
       annotation.label.connector?.endpoint?.x ??
       annotation.label.connector?.to.x ??
+      annotation.dot?.x ??
       annotation.label.x;
     const cy =
       annotation.label.connector?.endpoint?.y ??
       annotation.label.connector?.to.y ??
+      annotation.dot?.y ??
       annotation.label.y;
     const r = 8;
     const circle = createSVGElement('circle');
@@ -184,8 +227,9 @@ function renderAnnotation(
     if (annotation.label.connector) {
       const c = annotation.label.connector;
       if (c.style === 'curve') {
-        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow);
+        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow, c.exit);
       } else if (c.style === 'drop-line') {
+        // Quiet voice: hairline, slightly recessed, snapped to the pixel grid.
         const connector = createSVGElement('line');
         connector.setAttribute('class', 'oc-annotation-connector oc-annotation-drop-line');
         setAttrs(connector, {
@@ -195,7 +239,7 @@ function renderAnnotation(
           y2: c.to.y,
           stroke: c.stroke,
           'stroke-width': 1,
-          'stroke-opacity': 0.6,
+          'stroke-opacity': 0.7,
           'shape-rendering': 'crispEdges',
         });
         g.appendChild(connector);
@@ -216,8 +260,8 @@ function renderAnnotation(
           x2: lineEndX,
           y2: lineEndY,
           stroke: c.stroke,
-          'stroke-width': 1,
-          'stroke-opacity': 0.5,
+          'stroke-width': CONNECTOR_STROKE_WIDTH,
+          'stroke-linecap': 'round',
         });
         g.appendChild(connector);
 
@@ -231,43 +275,17 @@ function renderAnnotation(
           x2: c.to.x,
           y2: c.to.y,
           stroke: c.stroke,
-          'stroke-width': 1,
-          'stroke-opacity': 0.5,
+          'stroke-width': CONNECTOR_STROKE_WIDTH,
+          'stroke-linecap': 'round',
         });
         g.appendChild(connector);
       }
-
-      // Endpoint marker: bullseye dot at the data point. Skipped when an
-      // arrowhead is present — it already serves as the endpoint indicator.
-      if (c.endpoint && !c.arrow) {
-        const ring = createSVGElement('circle');
-        ring.setAttribute('class', 'oc-annotation-endpoint-ring');
-        setAttrs(ring, {
-          cx: c.endpoint.x,
-          cy: c.endpoint.y,
-          r: 5,
-          fill: bgColor ?? '#ffffff',
-          stroke: c.stroke,
-          'stroke-width': 1.5,
-        });
-        g.appendChild(ring);
-
-        const dot = createSVGElement('circle');
-        dot.setAttribute('class', 'oc-annotation-endpoint-dot');
-        setAttrs(dot, {
-          cx: c.endpoint.x,
-          cy: c.endpoint.y,
-          r: 2,
-          fill: c.stroke,
-        });
-        g.appendChild(dot);
-      }
     }
 
-    // Optional anchor dot: rendered AFTER the connector but BEFORE the label
-    // text so the dot sits on top of the connector and under any text halo.
-    // The engine resolves dot.x/y at the post-gap-pullback connector.to point;
-    // the renderer just stamps coordinates.
+    // Endpoint marker: rendered AFTER the connector but BEFORE the label text so
+    // it sits on top of the leader and under any text halo. The engine resolves
+    // dot.x/y at the data point (never the pulled-back connector tip) and picks
+    // the stroke so marker and leader read as one system.
     if (annotation.dot) {
       const dot = createSVGElement('circle');
       dot.setAttribute('class', 'oc-annotation-dot');
@@ -292,16 +310,7 @@ function renderAnnotation(
     const lineHeight = fontSize * (annotation.label.style.lineHeight ?? 1.3);
     const isMultiLine = lines.length > 1;
 
-    if (isMultiLine) {
-      for (let i = 0; i < lines.length; i++) {
-        const tspan = createSVGElement('tspan');
-        setAttrs(tspan, { x: annotation.label.x, dy: i === 0 ? 0 : lineHeight });
-        tspan.textContent = lines[i];
-        text.appendChild(tspan);
-      }
-    } else {
-      text.textContent = annotation.label.text;
-    }
+    fillRichText(text, annotation.label.text, annotation.label.x, lineHeight);
 
     // Render background rect behind text if specified, otherwise use
     // paint-order stroke halo to knock out lines behind text
@@ -354,7 +363,9 @@ function renderAnnotation(
       sub.setAttribute('class', 'oc-annotation-subtitle');
       setAttrs(sub, { x: annotation.subtitle.x, y: annotation.subtitle.y });
       applyTextStyle(sub, annotation.subtitle.style);
-      sub.textContent = annotation.subtitle.text;
+      const subFontSize = annotation.subtitle.style.fontSize ?? 12;
+      const subLineHeight = subFontSize * (annotation.subtitle.style.lineHeight ?? 1.3);
+      fillRichText(sub, annotation.subtitle.text, annotation.subtitle.x, subLineHeight);
       g.appendChild(sub);
     }
   }

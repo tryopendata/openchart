@@ -178,10 +178,14 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
   return annotations.map((ann) => {
     switch (ann.type) {
       case 'text':
+        // Deliberately does NOT default fontSize/fontWeight. The annotation
+        // layer owns those (DEFAULT_ANNOTATION_FONT_SIZE, and the lede rule
+        // that promotes a subtitle-bearing primary line to bold). Stamping
+        // them here makes `annotation.fontWeight` always defined, so
+        // `resolveLedeFontWeight` can never fire and the size default can
+        // never apply — both features become dead code.
         return {
           ...ann,
-          fontSize: ann.fontSize ?? 12,
-          fontWeight: ann.fontWeight ?? 400,
           opacity: ann.opacity ?? 1,
         };
       case 'range':

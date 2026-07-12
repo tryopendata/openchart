@@ -24,9 +24,9 @@ import {
   nudgeAnnotationFromObstacles,
   resolveAnnotationCollisions,
 } from './collisions';
-import { DEFAULT_ANNOTATION_FONT_WEIGHT, SUBTITLE_FONT_SIZE_RATIO } from './constants';
+import { SUBTITLE_FONT_WEIGHT, SUBTITLE_GAP, subtitleFontSize } from './constants';
 import type { AnnotationMeasureTextFn } from './geometry';
-import { heuristicMeasure } from './geometry';
+import { computeTextBlockBounds, heuristicMeasure, refreshConnector } from './geometry';
 import {
   findBestPlacement,
   isAutoPlacement,
@@ -36,7 +36,12 @@ import {
 import { resolvePosition } from './position';
 import { resolveRangeAnnotation } from './resolve-range';
 import { resolveRefLineAnnotation } from './resolve-refline';
-import { makeAnnotationLabelStyle, resolveTextAnnotation } from './resolve-text';
+import {
+  makeAnnotationLabelStyle,
+  markerClearance,
+  resolveLedeFontWeight,
+  resolveTextAnnotation,
+} from './resolve-text';
 
 export interface AnnotationContext {
   scales: ResolvedScales;
@@ -46,6 +51,8 @@ export interface AnnotationContext {
   obstacles: PlacementObstacle[];
   svg: { width: number; height: number };
   measure: AnnotationMeasureTextFn;
+  /** Theme font stack, so annotation text is measured and rendered in the same face. */
+  fontFamily?: string;
   debugPlacement?: boolean;
   /** When true, annotations that overlap are demoted to footnote markers instead of being hidden. */
   autoThin?: boolean;
@@ -122,7 +129,7 @@ export function computeAnnotations(
   }> = [];
 
   // ---- Pass 1: resolve explicit annotations and queue auto ones ----
-  for (const annotation of spec.annotations) {
+  for (const [specIndex, annotation] of spec.annotations.entries()) {
     if (isCompact && annotation.responsive !== false) {
       continue;
     }
@@ -136,6 +143,7 @@ export function computeAnnotations(
           ctx.chartArea,
           ctx.isDark,
           ctx.measure,
+          ctx.fontFamily,
         );
         if (resolved && ctx.svg.width > 0 && ctx.svg.height > 0 && isAutoPlacement(annotation)) {
           const px = resolvePosition(annotation.x, ctx.scales.x);
@@ -148,16 +156,30 @@ export function computeAnnotations(
               resolved,
               index: annotations.length,
             });
+            // Same contract as the push below -- this branch `continue`s past it.
+            resolved.specIndex = specIndex;
             annotations.push(resolved);
             continue;
           }
         }
         break;
       case 'range':
-        resolved = resolveRangeAnnotation(annotation, ctx.scales, ctx.chartArea, ctx.isDark);
+        resolved = resolveRangeAnnotation(
+          annotation,
+          ctx.scales,
+          ctx.chartArea,
+          ctx.isDark,
+          ctx.fontFamily,
+        );
         break;
       case 'refline':
-        resolved = resolveRefLineAnnotation(annotation, ctx.scales, ctx.chartArea, ctx.isDark);
+        resolved = resolveRefLineAnnotation(
+          annotation,
+          ctx.scales,
+          ctx.chartArea,
+          ctx.isDark,
+          ctx.fontFamily,
+        );
         break;
     }
 
@@ -172,6 +194,10 @@ export function computeAnnotations(
           ctx.measure,
         );
       }
+      // The resolved array is filtered (an out-of-domain annotation resolves to
+      // nothing), so carry the spec index along -- it's the only stable way back
+      // to the authored annotation from here on.
+      resolved.specIndex = specIndex;
       annotations.push(resolved);
     }
   }
@@ -189,18 +215,23 @@ export function computeAnnotations(
 
     for (const entry of autoQueue) {
       const { annotation, anchorX, anchorY, resolved } = entry;
+      // Must mirror resolveTextAnnotation exactly (lede weight, theme font):
+      // findBestPlacement measures with this style, and the resolved annotation
+      // renders with the other one. Any drift and the scored bounds are a lie.
       const labelStyle = makeAnnotationLabelStyle(
         annotation.fontSize,
-        annotation.fontWeight,
+        resolveLedeFontWeight(annotation),
         undefined,
         ctx.isDark,
+        ctx.fontFamily,
       );
 
       const subtitleStyle = annotation.subtitle
         ? {
-            fontSize: labelStyle.fontSize * SUBTITLE_FONT_SIZE_RATIO,
-            fontWeight: DEFAULT_ANNOTATION_FONT_WEIGHT,
+            fontSize: subtitleFontSize(labelStyle.fontSize),
+            fontWeight: SUBTITLE_FONT_WEIGHT,
             lineHeight: labelStyle.lineHeight,
+            fontFamily: labelStyle.fontFamily,
           }
         : undefined;
 
@@ -212,6 +243,7 @@ export function computeAnnotations(
           fontSize: labelStyle.fontSize,
           fontWeight: Number(labelStyle.fontWeight) || 400,
           lineHeight: labelStyle.lineHeight,
+          fontFamily: labelStyle.fontFamily,
         },
         annotation.subtitle,
         subtitleStyle,
@@ -230,32 +262,43 @@ export function computeAnnotations(
           ...resolved.label.style,
           textAnchor: result.textAnchor,
         };
-        resolved.label.bounds = result.bounds;
+        // `result.bounds` is the UNION of the label and its subtitle — the box
+        // placement scored, and the box other annotations must avoid. But
+        // `label.bounds` is the label-only text box by contract (the renderer
+        // sizes the `background` plate from it), so recompute it rather than
+        // stamping the union in and handing a subtitled annotation a plate sized
+        // to both lines. The union goes to `resolved.bounds` below.
+        resolved.label.bounds = computeTextBlockBounds(
+          result.labelX,
+          result.labelY,
+          annotation.text,
+          { ...resolved.label.style, textAnchor: result.textAnchor },
+          ctx.measure,
+        );
+
+        // The subtitle carries absolute coordinates, so it has to follow the
+        // label. findBestPlacement scored the candidate with the subtitle in
+        // exactly this spot, so the stamped result must land there too.
+        if (resolved.subtitle) {
+          const primaryLineCount = annotation.text.split('\n').length;
+          const primaryFontSize = labelStyle.fontSize;
+          resolved.subtitle.x = result.labelX;
+          resolved.subtitle.y =
+            result.labelY +
+            primaryFontSize * labelStyle.lineHeight * primaryLineCount +
+            SUBTITLE_GAP;
+          resolved.subtitle.style = {
+            ...resolved.subtitle.style,
+            textAnchor: result.textAnchor,
+          };
+        }
 
         if (resolved.label.connector) {
-          const box = result.bounds;
-          const cx = box.x + box.width / 2;
-          const cy = box.y + box.height / 2;
-          const isCurve = resolved.label.connector.style === 'curve';
-          if (isCurve) {
-            resolved.label.connector.from = { x: box.x + box.width, y: cy };
-          } else {
-            const halfW = box.width / 2 || 1;
-            const halfH = box.height / 2 || 1;
-            const ndx = (anchorX - cx) / halfW;
-            const ndy = (anchorY - cy) / halfH;
-            if (Math.abs(ndy) >= Math.abs(ndx)) {
-              resolved.label.connector.from = {
-                x: cx,
-                y: ndy < 0 ? box.y : box.y + box.height,
-              };
-            } else {
-              resolved.label.connector.from = {
-                x: ndx < 0 ? box.x : box.x + box.width,
-                y: cy,
-              };
-            }
-          }
+          resolved.label.connector = refreshConnector(
+            resolved.label.connector,
+            result.bounds,
+            markerClearance(resolved.dot),
+          );
         }
       }
       resolved.bounds = result.bounds;
