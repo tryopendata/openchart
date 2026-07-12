@@ -76,12 +76,14 @@ export type { NormalizedTileMapSpec } from './tilemap/types';
 // ---------------------------------------------------------------------------
 
 export type { AnnotationContext } from './annotations/compute';
+export {
+  ARROWHEAD_LENGTH,
+  DEFAULT_ANNOTATION_FONT_SIZE,
+  DEFAULT_LINE_HEIGHT,
+} from './annotations/constants';
 export type { AnnotationMeasureTextFn, ArrowheadPoints } from './annotations/geometry';
 export {
-  ARROWHEAD_HALF_WIDTH,
-  ARROWHEAD_LENGTH,
   computeArrowheadPoints,
-  connectorExit,
   heuristicMeasure,
 } from './annotations/geometry';
 export type { ObstacleKind, PlacementObstacle } from './annotations/placement';

@@ -95,6 +95,34 @@ export const CONNECTOR_STANDOFF = 6;
 export const MIN_CONNECTOR_LENGTH = 8;
 
 /**
+ * Arrowhead length along the tangent. The renderer pulls the connector's line end
+ * back by exactly this much so the stroke stops at the open V instead of poking
+ * through its tip — a hand-copied duplicate on the vanilla side would silently
+ * drift the next time this changes.
+ */
+export const ARROWHEAD_LENGTH = 7;
+
+/** Arrowhead half-width perpendicular to the tangent. */
+export const ARROWHEAD_HALF_WIDTH = 3.5;
+
+/**
+ * Is a connector of this length worth drawing?
+ *
+ * An arrowed connector doesn't stroke its full length: the renderer stops the line
+ * `ARROWHEAD_LENGTH` short and spends that budget on the head. So a bare
+ * `length >= MIN_CONNECTOR_LENGTH` test is arrow-blind — an 8.1px arrowed
+ * connector clears it, and then ships a 1.1px stub with an arrowhead stuck on the
+ * end. The minimum has to be measured against the part that actually gets stroked,
+ * which means the gate has to know about the head.
+ *
+ * Both suppression sites (`resolveTextAnnotation`, `refreshConnector`) call this
+ * instead of comparing against the constant themselves.
+ */
+export function connectorIsDrawable(length: number, arrow: boolean | undefined): boolean {
+  return length - (arrow ? ARROWHEAD_LENGTH : 0) >= MIN_CONNECTOR_LENGTH;
+}
+
+/**
  * Default label setback from the data point when using anchor directions.
  *
  * Sized so a bare `{ type: 'text' }` annotation lands clear of its marker and

@@ -11,12 +11,14 @@ import type {
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import {
   ANCHOR_OFFSET,
+  ARROWHEAD_HALF_WIDTH,
+  ARROWHEAD_LENGTH,
   CONNECTOR_STANDOFF,
+  connectorIsDrawable,
   DEFAULT_ANNOTATION_FONT_SIZE,
   DEFAULT_ANNOTATION_FONT_WEIGHT,
   DEFAULT_LINE_HEIGHT,
   DROP_LINE_TOP_GAP,
-  MIN_CONNECTOR_LENGTH,
 } from './constants';
 import { BOLD_SPAN_FONT_WEIGHT, parseAnnotationSpans } from './rich-text';
 
@@ -250,16 +252,10 @@ export interface ArrowheadPoints {
   baseRight: { x: number; y: number };
 }
 
-/**
- * Arrowhead length along the tangent. Exported because the renderer pulls the
- * connector's line end back by exactly this much so the stroke stops at the open
- * V instead of poking through its tip — a hand-copied duplicate on the vanilla
- * side would silently drift the next time this changes.
- */
-export const ARROWHEAD_LENGTH = 7;
-
-/** Arrowhead half-width perpendicular to the tangent. */
-export const ARROWHEAD_HALF_WIDTH = 3.5;
+// Both live in `constants.ts` (the min-length gate has to reason about the
+// arrowhead's stroke budget, and constants.ts can't import from here without a
+// cycle). Re-exported so the renderer's import path doesn't move.
+export { ARROWHEAD_HALF_WIDTH, ARROWHEAD_LENGTH };
 
 /**
  * Compute arrowhead triangle geometry at a connector endpoint.
@@ -368,7 +364,7 @@ export function refreshConnector(
   // direction once its end is pulled back, and checking first would miss it.
   const lx = to.x - from.x;
   const ly = to.y - from.y;
-  if (Math.sqrt(lx * lx + ly * ly) < MIN_CONNECTOR_LENGTH) return undefined;
+  if (!connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connector.arrow)) return undefined;
 
   return { ...connector, from, to, exit: exit.exit };
 }

@@ -1,6 +1,7 @@
 import type { ChartLayout, LineMark } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { describe, expect, test } from 'vitest';
+import { ANCHOR_OFFSET, ARROWHEAD_LENGTH, MIN_CONNECTOR_LENGTH } from '../annotations/constants';
 import { compileChart } from '../compile';
 
 describe('known layout bugs', () => {
@@ -157,29 +158,94 @@ describe('known layout bugs', () => {
         { width: 800, height: 460 },
       ).annotations ?? [];
 
+    // One test, not three. The `x` pinning is the only assertion the generic
+    // ray-box rebuild actually breaks -- it preserves `style` through its
+    // `{ ...connector }` spread, and this geometry happens to land on
+    // `exit: 'vertical'` either way, so splitting those into their own tests just
+    // manufactured two that pass with the fix reverted.
     test('stay vertical, with x pinned to the data point', () => {
       const annotations = collidingDropLines();
       expect(annotations).toHaveLength(2);
       for (const annotation of annotations) {
         const connector = annotation.label?.connector;
+        // Survived the min-length rule (the generic rebuild can shorten a
+        // drop-line enough to delete it outright).
         expect(connector).toBeDefined();
         // The whole contract of a drop-line: from.x === to.x === the point's x.
         expect(connector?.from.x).toBeCloseTo(connector?.to.x ?? Number.NaN, 5);
         expect(connector?.from.x).toBeCloseTo(annotation.dot?.x ?? Number.NaN, 5);
+        expect(connector?.style).toBe('drop-line');
+        expect(connector?.exit).toBe('vertical');
+      }
+    });
+  });
+
+  // Regression: the engine gated connectors on `length >= MIN_CONNECTOR_LENGTH`,
+  // but the renderer stops an ARROWED stroke `ARROWHEAD_LENGTH` (7px) short and
+  // spends that budget on the head. So an 8.1px arrowed connector cleared the 8px
+  // gate and then shipped a 1.1px stub with an arrowhead stuck on the end. Sharing
+  // the constant didn't fix it: both sides had the number, only one reasoned about
+  // it. The gate now measures what actually gets stroked.
+  describe('the connector min-length gate accounts for the arrowhead', () => {
+    const strokeFor = (arrow: boolean, dy: number) => {
+      const annotation = compileChart(
+        {
+          mark: 'line' as const,
+          data: [
+            { m: 'Jan', v: 10 },
+            { m: 'Feb', v: 50 },
+            { m: 'Mar', v: 30 },
+          ],
+          encoding: {
+            x: { field: 'm' as const, type: 'ordinal' as const },
+            y: { field: 'v' as const, type: 'quantitative' as const },
+          },
+          annotations: [
+            {
+              type: 'text' as const,
+              x: 'Mar',
+              y: 30,
+              text: 'Note',
+              anchor: 'top' as const,
+              offset: { dx: 0, dy },
+              connector: arrow ? { type: 'straight' as const, arrow: true } : 'straight',
+            },
+          ],
+        },
+        { width: 800, height: 460 },
+      ).annotations?.[0];
+
+      const connector = annotation?.label?.connector;
+      if (!connector) return null;
+      const length = Math.hypot(
+        connector.to.x - connector.from.x,
+        connector.to.y - connector.from.y,
+      );
+      // What the renderer actually strokes.
+      return arrow ? length - ARROWHEAD_LENGTH : length;
+    };
+
+    test('an arrowed connector never ships a stroke shorter than the minimum', () => {
+      // dy: 6 is the case that used to slip through -- an 8.10px connector that
+      // stroked 1.10px once the head took its 7px.
+      for (let dy = 0; dy <= 8; dy++) {
+        const stroke = strokeFor(true, dy);
+        if (stroke === null) continue; // suppressed outright, which is correct
+        expect(stroke).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
       }
     });
 
-    test('are not deleted by the leader min-length rule', () => {
-      for (const annotation of collidingDropLines()) {
-        expect(annotation.label?.connector).toBeDefined();
+    test('the plain (non-arrowed) gate is unchanged', () => {
+      // The head costs nothing here, so the full length is the stroke and the
+      // original 8px rule still holds. Guards against "fixing" the arrow case by
+      // tightening the gate for everyone.
+      for (let dy = 0; dy <= 8; dy++) {
+        const stroke = strokeFor(false, dy);
+        if (stroke === null) continue;
+        expect(stroke).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
       }
-    });
-
-    test('keep their drop-line style and vertical exit', () => {
-      for (const annotation of collidingDropLines()) {
-        expect(annotation.label?.connector?.style).toBe('drop-line');
-        expect(annotation.label?.connector?.exit).toBe('vertical');
-      }
+      // And a short-but-legal plain connector still draws.
+      expect(strokeFor(false, 0)).not.toBeNull();
     });
   });
 
@@ -412,7 +478,6 @@ describe('known layout bugs', () => {
       // ANCHOR_OFFSET setback (28px), so the point lies OUTSIDE the block's x-span.
       // A sign check alone (`centerOffset < 0`) still passes for a centered block
       // that has merely drifted — which is the regression this guards.
-      const ANCHOR_OFFSET = 28;
 
       const left = spanAround({ type: 'text', x: 'Feb', y: 50, text: 'Left side', anchor: 'left' });
       // Whole block to the LEFT: its near (right) edge stops one setback short of

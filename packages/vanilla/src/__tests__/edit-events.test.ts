@@ -42,6 +42,27 @@ const textAnnotatedSpec: ChartSpec = {
   ],
 };
 
+/**
+ * Curved connector, which is the ONLY path that draws an arrowhead — and the only
+ * one where edit mode has to find the connector's tip by parsing the arrowhead
+ * polyline (`wireConnectorEndpointDrag`'s curved branch). Every other spec in this
+ * file uses `connector: true` (straight, no arrow), so without this the arrowhead
+ * selector and the tip-parsing code never execute in any test.
+ */
+const curvedAnnotatedSpec: ChartSpec = {
+  ...barSpec,
+  annotations: [
+    {
+      type: 'text',
+      x: 10,
+      y: 'A',
+      text: 'Peak',
+      offset: { dx: 40, dy: -50 },
+      connector: 'curve',
+    },
+  ],
+};
+
 /** Range-only annotation spec. */
 const rangeAnnotatedSpec: ChartSpec = {
   ...lineSpec,
@@ -686,6 +707,74 @@ describe('edit events', () => {
       }
 
       chart.destroy();
+    });
+
+    // A curved connector has no <line> to read x2/y2 from, so edit mode recovers
+    // the tip by parsing the arrowhead polyline (`polyline.oc-annotation-arrowhead`,
+    // whose middle point is the tip). If that selector ever stops matching what the
+    // renderer emits, `querySelector` returns null, the tip silently falls back to
+    // (0, 0), and the "to" handle jumps to the SVG origin. Nothing else in this file
+    // renders an arrowed connector, so these are the only tests that can catch it.
+    describe('curved connector (the arrowhead-tip path)', () => {
+      it('renders exactly one arrowhead polyline that edit mode can find', () => {
+        const chart = createChart(container, curvedAnnotatedSpec, { onEdit: vi.fn() });
+
+        const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement;
+        expect(annotationG).toBeTruthy();
+        // The path the renderer draws...
+        expect(annotationG.querySelector('path.oc-annotation-connector')).toBeTruthy();
+        // ...and the exact selector the drag code uses to find its tip.
+        const arrowheads = annotationG.querySelectorAll('polyline.oc-annotation-arrowhead');
+        expect(arrowheads).toHaveLength(1);
+
+        chart.destroy();
+      });
+
+      it('puts the "to" handle on the arrowhead tip, not at the origin', () => {
+        const chart = createChart(container, curvedAnnotatedSpec, { onEdit: vi.fn() });
+
+        const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement;
+        const arrowhead = annotationG.querySelector(
+          'polyline.oc-annotation-arrowhead',
+        ) as SVGPolylineElement;
+        const toHandle = annotationG.querySelector(
+          '.oc-connector-handle[data-endpoint="to"]',
+        ) as SVGCircleElement;
+        expect(toHandle).toBeTruthy();
+
+        // "baseLeft tip baseRight" -- the tip is the middle point.
+        const [tipX, tipY] = (arrowhead.getAttribute('points')?.split(' ')[1] ?? '').split(',');
+        expect(Number(tipX)).toBeGreaterThan(0);
+
+        expect(Number(toHandle.getAttribute('cx'))).toBeCloseTo(Number(tipX), 3);
+        expect(Number(toHandle.getAttribute('cy'))).toBeCloseTo(Number(tipY), 3);
+
+        chart.destroy();
+      });
+
+      it('dragging the "to" handle of a curved connector fires a real edit', () => {
+        const onEdit = vi.fn();
+        const chart = createChart(container, curvedAnnotatedSpec, { onEdit });
+
+        const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement;
+        const toHandle = annotationG.querySelector(
+          '.oc-connector-handle[data-endpoint="to"]',
+        ) as SVGCircleElement;
+        expect(toHandle).toBeTruthy();
+
+        simulateDrag(toHandle, 100, 100, 130, 115);
+
+        expect(onEdit).toHaveBeenCalledTimes(1);
+        const edit: ElementEdit = onEdit.mock.calls[0][0];
+        expect(edit.type).toBe('annotation-connector');
+        if (edit.type === 'annotation-connector') {
+          expect(edit.endpoint).toBe('to');
+          expect(edit.offset.dx).toBe(30);
+          expect(edit.offset.dy).toBe(15);
+        }
+
+        chart.destroy();
+      });
     });
   });
 

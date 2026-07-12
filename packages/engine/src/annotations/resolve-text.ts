@@ -14,6 +14,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import {
+  connectorIsDrawable,
   DARK_CONNECTOR_STROKE,
   DARK_DOT_FILL,
   DARK_LABEL_BACKGROUND,
@@ -32,7 +33,6 @@ import {
   LIGHT_LABEL_BACKGROUND,
   LIGHT_MUTED_TEXT_FILL,
   LIGHT_TEXT_FILL,
-  MIN_CONNECTOR_LENGTH,
   SUBTITLE_FONT_WEIGHT,
   SUBTITLE_GAP,
   subtitleFontSize,
@@ -340,10 +340,12 @@ export function resolveTextAnnotation(
 
       // Min-length check runs after the pullback: it can flip a near-degenerate
       // line's direction, and a stub shorter than MIN_CONNECTOR_LENGTH reads as
-      // noise — the marker alone says it better.
+      // noise — the marker alone says it better. An arrowed connector spends
+      // ARROWHEAD_LENGTH of its length on the head, so the gate measures what's
+      // actually left to stroke.
       const lx = to.x - from.x;
       const ly = to.y - from.y;
-      if (Math.sqrt(lx * lx + ly * ly) >= MIN_CONNECTOR_LENGTH) {
+      if (connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connectorArrow)) {
         connector = {
           from,
           to,

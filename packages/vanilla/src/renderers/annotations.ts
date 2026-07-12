@@ -7,6 +7,8 @@ import {
   ARROWHEAD_LENGTH,
   BOLD_SPAN_FONT_WEIGHT,
   computeArrowheadPoints,
+  DEFAULT_ANNOTATION_FONT_SIZE,
+  DEFAULT_LINE_HEIGHT,
   parseAnnotationSpans,
 } from '@opendata-ai/openchart-engine';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
@@ -305,37 +307,27 @@ function renderAnnotation(
     setAttrs(text, { x: annotation.label.x, y: annotation.label.y });
     applyTextStyle(text, annotation.label.style);
 
-    const lines = annotation.label.text.split('\n');
-    const fontSize = annotation.label.style.fontSize ?? 12;
-    const lineHeight = fontSize * (annotation.label.style.lineHeight ?? 1.3);
-    const isMultiLine = lines.length > 1;
+    const fontSize = annotation.label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+    const lineHeight = fontSize * (annotation.label.style.lineHeight ?? DEFAULT_LINE_HEIGHT);
 
     fillRichText(text, annotation.label.text, annotation.label.x, lineHeight);
 
     // Render background rect behind text if specified, otherwise use
     // paint-order stroke halo to knock out lines behind text
-    if (annotation.label.background) {
+    if (annotation.label.background && annotation.label.bounds) {
+      // Size the plate from the engine's measured bounds, full stop. There used to
+      // be a fallback branch here that re-derived the box from `fontSize * 0.55`
+      // per character and center-aligned it for multi-line text. It was
+      // unreachable (every resolver stamps `label.bounds`), but it was a third
+      // copy of text geometry living in the renderer, and a *stale* one: it
+      // center-aligned, which the redesign explicitly does not do. Dead code that
+      // contradicts live code is the drift trap, not protection from it.
       const pad = 3;
-      let bgX: number;
-      let bgY: number;
-      let bgW: number;
-      let bgH: number;
-
-      if (annotation.label.bounds) {
-        const b = annotation.label.bounds;
-        bgX = b.x - pad;
-        bgY = b.y - pad;
-        bgW = b.width + pad * 2;
-        bgH = b.height + pad * 2;
-      } else {
-        const charWidth = fontSize * 0.55;
-        const maxLineWidth = Math.max(...lines.map((l) => l.length)) * charWidth;
-        const totalHeight = lines.length * lineHeight;
-        bgX = isMultiLine ? annotation.label.x - maxLineWidth / 2 - pad : annotation.label.x - pad;
-        bgY = annotation.label.y - fontSize + (lineHeight - fontSize) / 2 - pad;
-        bgW = maxLineWidth + pad * 2;
-        bgH = totalHeight + pad * 2;
-      }
+      const b = annotation.label.bounds;
+      const bgX = b.x - pad;
+      const bgY = b.y - pad;
+      const bgW = b.width + pad * 2;
+      const bgH = b.height + pad * 2;
 
       const bgRect = createSVGElement('rect');
       bgRect.setAttribute('class', 'oc-annotation-bg');
@@ -363,8 +355,9 @@ function renderAnnotation(
       sub.setAttribute('class', 'oc-annotation-subtitle');
       setAttrs(sub, { x: annotation.subtitle.x, y: annotation.subtitle.y });
       applyTextStyle(sub, annotation.subtitle.style);
-      const subFontSize = annotation.subtitle.style.fontSize ?? 12;
-      const subLineHeight = subFontSize * (annotation.subtitle.style.lineHeight ?? 1.3);
+      const subFontSize = annotation.subtitle.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+      const subLineHeight =
+        subFontSize * (annotation.subtitle.style.lineHeight ?? DEFAULT_LINE_HEIGHT);
       fillRichText(sub, annotation.subtitle.text, annotation.subtitle.x, subLineHeight);
       g.appendChild(sub);
     }
