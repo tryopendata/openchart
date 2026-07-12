@@ -146,6 +146,13 @@ export function createTileMap(
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
 
+  // Latches whether the host constrains our height. Measured once, on the
+  // first render that produces a real rect: height 0 with a real width means
+  // the host is auto-height and we pick our own budget. Any other height is
+  // an explicit box we must fit inside. Re-reading this after the first paint
+  // would just measure our own SVG, so the value has to latch.
+  let isAutoHeight: boolean | null = null;
+
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
   // the attribute stays honest when resize() defers to pendingResize during
@@ -178,12 +185,26 @@ export function createTileMap(
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
     const width = Math.max(rect.width || 600, 100);
-    // The compiler derives its own tight content height and treats the passed
-    // height as a cap. On desktop, a square budget (height = width) keeps tiles
-    // from ballooning (the 8-row grid becomes the binding constraint at
-    // ~width/8). Below desktop, a square budget starves the grid after chrome,
-    // so give it a height budget sized to a comfortable target tile instead —
-    // the map then grows taller as needed rather than shrinking the tiles.
+
+    if (isAutoHeight === null && (rect.width > 0 || rect.height > 0)) {
+      isAutoHeight = rect.height === 0 && rect.width > 0;
+    }
+
+    // An explicit host height is a hard budget: the compiler derives a tight
+    // content height from whatever we pass, so handing it the container's own
+    // height keeps the SVG inside its box instead of overflowing onto whatever
+    // sits below it.
+    if (isAutoHeight === false && rect.height > 0) {
+      return { width, height: Math.max(rect.height, 100) };
+    }
+
+    // Auto-height host: pick our own budget. The compiler derives its own tight
+    // content height and treats the passed height as a cap. On desktop, a square
+    // budget (height = width) keeps tiles from ballooning (the 8-row grid becomes
+    // the binding constraint at ~width/8). Below desktop, a square budget starves
+    // the grid after chrome, so give it a height budget sized to a comfortable
+    // target tile instead — the map then grows taller as needed rather than
+    // shrinking the tiles.
     if (width >= BREAKPOINT_MEDIUM_MAX) {
       return { width, height: width };
     }

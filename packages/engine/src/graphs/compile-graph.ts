@@ -74,31 +74,32 @@ function buildGraphLegend(
       shape: 'circle' as const,
       active: true,
     }));
-  } else {
+  } else if (nodeColorField) {
     // Build legend from nodeColor encoding: group by the color field value
     // so each legend entry shows the categorical value (e.g. "Dataset", "bls")
     // rather than an arbitrary node label.
     const categoryColors = new Map<string, string>();
     for (const node of nodes) {
-      const category = nodeColorField
-        ? String(node.data[nodeColorField] ?? node.label ?? node.id)
-        : (node.label ?? node.id);
+      const category = String(node.data[nodeColorField] ?? node.label ?? node.id);
       if (!categoryColors.has(category)) {
         categoryColors.set(category, node.fill);
       }
     }
 
     // Only show legend if there are multiple categories
-    if (categoryColors.size <= 1) {
-      entries = [];
-    } else {
-      entries = [...categoryColors.entries()].map(([label, color]) => ({
-        label,
-        color,
-        shape: 'circle' as const,
-        active: true,
-      }));
-    }
+    entries =
+      categoryColors.size <= 1
+        ? []
+        : [...categoryColors.entries()].map(([label, color]) => ({
+            label,
+            color,
+            shape: 'circle' as const,
+            active: true,
+          }));
+  } else {
+    // No communities and no color encoding: every node shares one fill, so a
+    // legend would just list every node label against identical swatches.
+    entries = [];
   }
 
   return {
