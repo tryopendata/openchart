@@ -804,3 +804,40 @@ describe('layer specs', () => {
     expect(warned().filter((m) => m.includes('encoding.href'))).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// options.onWarn sink (isomorphic warning routing, no hardcoded console)
+// ---------------------------------------------------------------------------
+
+describe('options.onWarn warning sink', () => {
+  const deprecated = {
+    mark: 'bar',
+    data: [{ cat: 'A', value: 1 }],
+    encoding: {
+      x: { field: 'cat', type: 'nominal' },
+      y: { field: 'value', type: 'quantitative' },
+      // A dead v8 channel: guaranteed to produce a deprecation warning.
+      href: { field: 'value', type: 'quantitative' },
+    },
+  };
+
+  it('routes warnings to a host-provided sink instead of console.warn', () => {
+    const sink: string[] = [];
+    compileChart(deprecated, { ...OPTIONS, onWarn: (m) => sink.push(m) });
+
+    // The warning reached the sink...
+    expect(sink.some((m) => m.includes('encoding.href'))).toBe(true);
+    // ...and console.warn was NOT touched (the spy caught nothing).
+    expect(warned().filter((m) => m.includes('encoding.href'))).toEqual([]);
+  });
+
+  it('a no-op sink silences warnings entirely (e.g. SSR)', () => {
+    compileChart(deprecated, { ...OPTIONS, onWarn: () => {} });
+    expect(warned()).toEqual([]);
+  });
+
+  it('falls back to console.warn when no sink is provided', () => {
+    compileChart(deprecated, OPTIONS);
+    expect(warned().some((m) => m.includes('encoding.href'))).toBe(true);
+  });
+});

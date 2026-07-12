@@ -207,7 +207,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // dedup spans the whole compile: a message produced by both a sugar pass and
   // a normalize pass prints once, not once per stage.
   const { spec: normalized, warnings: normalizeWarnings } = compileSpec(expandedSpec);
-  emitSpecWarnings([...sugarWarnings, ...normalizeWarnings]);
+  emitSpecWarnings([...sugarWarnings, ...normalizeWarnings], options.onWarn);
 
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');
@@ -641,7 +641,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // Dev-mode WCAG contrast diagnostics. Host-gated via options.dev (never an
   // env sniff; the engine is isomorphic). Advisory console.warn only.
   if (options.dev) {
-    emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme));
+    emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme), options.onWarn);
   }
 
   // Axisless marks (arc, waffle, calendar, parliament) don't use axes or
@@ -967,7 +967,10 @@ function compileFaceted(
     // Dev-mode contrast diagnostics: panels share one palette resolution, so
     // checking the first panel covers the figure without repeating warnings.
     if (options.dev && panelLayouts.length === 0) {
-      emitSpecWarnings(collectContrastWarnings(panelScales, chartSpec.markType, theme));
+      emitSpecWarnings(
+        collectContrastWarnings(panelScales, chartSpec.markType, theme),
+        options.onWarn,
+      );
     }
 
     // Outer-axis economy: only leftmost column gets y ticks, only bottom row gets x ticks.
@@ -1118,7 +1121,7 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
     spec as unknown as Record<string, unknown>,
     sugarWarnings,
   ) as unknown as LayerSpec;
-  emitSpecWarnings(sugarWarnings);
+  emitSpecWarnings(sugarWarnings, options.onWarn);
   const resolvedOptions = applySpecSize(expanded, options);
   return compileLayerImpl(expanded, resolvedOptions, compileChart);
 }

@@ -58,7 +58,7 @@ const BARLIST_COLORS = ['#06b6d4', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
 
 export function compileBarList(spec: unknown, options: CompileOptions): BarListLayout {
   const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings);
+  emitSpecWarnings(warnings, options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'barlist') {
     throw new Error(

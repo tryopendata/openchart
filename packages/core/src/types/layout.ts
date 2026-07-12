@@ -1707,6 +1707,17 @@ export interface CompileOptions {
    */
   dev?: boolean;
   /**
+   * Sink for advisory spec warnings (deprecations, did-you-mean suggestions,
+   * unknown scheme names, overplotting/beeswarm budget notes, etc.). The engine
+   * is isomorphic and side-effect-free by default: rather than writing to the
+   * global `console`, it routes every advisory warning through this callback so
+   * a host can collect, reroute, or silence them (e.g. suppress under SSR, fail
+   * a test on any warning, surface them in a dev overlay). When omitted, the
+   * engine defaults to `console.warn`. Never called with fatal errors, which are
+   * thrown instead.
+   */
+  onWarn?: (message: string) => void;
+  /**
    * Real text measurement function provided by the adapter.
    * Uses a hidden canvas or DOM element for accurate text dimensions.
    * If not provided, the engine falls back to heuristic estimation.

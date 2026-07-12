@@ -186,7 +186,7 @@ function buildGraphTooltips(nodes: CompiledGraphNode[]): Map<string, TooltipCont
 export function compileGraph(spec: unknown, options: CompileOptions): GraphCompilation {
   // 1. Validate + normalize
   const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings);
+  emitSpecWarnings(warnings, options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'graph') {
     throw new Error(

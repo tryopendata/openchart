@@ -84,7 +84,7 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   // mixed-type coercion) the same way the chart path does; without this the
   // primary "your data did not map" diagnostic is computed and then dropped.
   const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings);
+  emitSpecWarnings(warnings, options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'tilemap') {
     throw new Error(

@@ -704,17 +704,27 @@ export function expandSpecSugar(
   return expandChartSugar(spec, warnings);
 }
 
+/** Advisory-warning sink: a host callback, or the console.warn default. */
+export type WarnSink = (message: string) => void;
+
+const defaultWarnSink: WarnSink = (message) => console.warn(message);
+
 /**
- * Surface sugar/deprecation warnings: console.warn each unique message once
- * per compile. Duplicates within a compile (e.g. the same dead channel on two
- * layer children) collapse to one warning.
+ * Surface sugar/deprecation warnings: emit each unique message once per compile.
+ * Duplicates within a compile (e.g. the same dead channel on two layer children)
+ * collapse to one warning.
+ *
+ * The engine is isomorphic and never touches the global `console` on its own:
+ * `sink` is the host-provided `CompileOptions.onWarn` when present, so a host can
+ * collect, reroute, or silence warnings (SSR, tests, dev overlays). It falls back
+ * to `console.warn` only when no sink is passed, preserving the prior behavior.
  */
-export function emitSpecWarnings(warnings: string[]): void {
+export function emitSpecWarnings(warnings: string[], sink: WarnSink = defaultWarnSink): void {
   if (warnings.length === 0) return;
   const seen = new Set<string>();
   for (const warning of warnings) {
     if (seen.has(warning)) continue;
     seen.add(warning);
-    console.warn(warning);
+    sink(warning);
   }
 }

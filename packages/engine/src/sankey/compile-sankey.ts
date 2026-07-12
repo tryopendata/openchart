@@ -218,7 +218,7 @@ function computeNodeLabel(
 export function compileSankey(spec: unknown, options: CompileOptions): SankeyLayout {
   // 1. Validate + normalize via the shared compiler pipeline
   const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings);
+  emitSpecWarnings(warnings, options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'sankey') {
     throw new Error(
