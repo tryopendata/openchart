@@ -419,16 +419,16 @@ describe('computeLegend', () => {
       expect(legend.entries).toHaveLength(3);
     });
 
-    it('suppresses legend for default (overlap) area chart with labels', () => {
-      // v6: area defaults to overlap. Endpoint labels identify series, so
-      // the legend auto-suppresses just like line charts.
+    it('preserves legend for default (stacked) area chart', () => {
+      // v8: area stacks by default (Vega-Lite aligned). Stacked areas keep
+      // the traditional legend rather than auto-suppressing for endpoint labels.
       const areaSpec: NormalizedChartSpec = {
         ...lineWithLabels,
         markType: 'area',
         markDef: { type: 'area' },
       };
       const legend = computeLegend(areaSpec, fullStrategy, theme, chartArea);
-      expect(legend.entries).toHaveLength(0);
+      expect(legend.entries).toHaveLength(3);
     });
 
     it('suppresses legend for explicit overlap area chart (stack: null)', () => {

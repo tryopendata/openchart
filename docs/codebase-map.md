@@ -105,7 +105,7 @@
 | LLM spec-generation eval (manual, per-release) | `scripts/llm-eval/` (`fixtures.json`, `run.mjs`, `README.md`). Hits the Anthropic API; not in CI; `@anthropic-ai/sdk` is not a monorepo dep (dynamic import). |
 | Generating-specs guide | `docs/generating-specs.md` (schema usage, tool-use, strict-mode transform, validate-repair loop). |
 | v8 migration guide | `docs/migrating-v8.md` (breaking changes, before/after specs, jq codemods). Keep in sync with the deprecation warnings. |
-| VL-idiom sugar + deprecation warnings | `packages/engine/src/compile/spec-sugar.ts` (`expandSpecSugar`, `emitSpecWarnings`) — dead channels, stack default, theta, `$schema`. The `'rule'` annotation deprecation warning lives in `compiler/normalize.ts` (`normalizeAnnotations`). Tests: `engine/src/__tests__/spec-sugar.test.ts`. |
+| VL-idiom sugar + deprecation warnings | `packages/engine/src/compile/spec-sugar.ts` (`expandSpecSugar`, `emitSpecWarnings`) — dead channels (`radius`/`shape`/`href`/`order`, removed in v8), stack default, theta<->y (theta is canonical in v8; `y` on arc/waffle/parliament is a deprecated alias, expanded both directions since the engine still reads `y` internally), `'rule'`->`'refline'` annotation alias, `$schema`. All of these run pre-validation so canonical form is all `compiler/normalize.ts`/`validate.ts` ever see. Tests: `engine/src/__tests__/spec-sugar.test.ts`. |
 
 ## Package responsibilities (one-liner each)
 

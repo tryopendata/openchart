@@ -260,7 +260,7 @@ const pieSweepSpec: ChartSpec = {
   mark: 'arc',
   data: [...smartphoneShare.data],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
@@ -275,7 +275,7 @@ const donutSweepSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 60 },
   data: [...smartphoneShare.data],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {

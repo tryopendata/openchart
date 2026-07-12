@@ -21,12 +21,18 @@
 import type {
   DataRow,
   EncodingChannel,
+  LegendLayout,
   Rect,
   ResolvedTheme,
   SizeLegendCircle,
   SizeLegendLayout,
 } from '@opendata-ai/openchart-core';
-import { abbreviateNumber, buildD3Formatter, formatNumber } from '@opendata-ai/openchart-core';
+import {
+  abbreviateNumber,
+  buildD3Formatter,
+  estimateTextWidth,
+  formatNumber,
+} from '@opendata-ai/openchart-core';
 
 import { buildSizeScale, type SizeCurve, sizeScaleDefaultsFor } from '../compile/size-scale';
 
@@ -91,27 +97,71 @@ function niceFloor(value: number): number {
 }
 
 /**
- * Pick the values to key, largest first.
+ * Pick the values to key, largest first. At most `CIRCLE_COUNT` of them.
  *
- * Anchored at the top of the domain and stepped down by halves, then
- * nice-rounded. Values that collapse onto each other after rounding, or fall
- * below the domain floor, are dropped -- better to show two honest circles than
- * three where two are indistinguishable.
+ * **Spaced evenly in radius, not in value.** Radius is what the reader actually
+ * sees, and the mapping to it is non-linear (sqrt, so circle *area* tracks the
+ * value). Stepping the value by halves or by a constant ratio therefore bunches
+ * the small circles together: on `[300k, 1.4B]` the geometric midpoint is 20M,
+ * whose radius sits a couple of pixels off the floor. Walking the *radius* range
+ * in equal steps and inverting back to a value spreads the circles out the way a
+ * published graduated-circle key does.
+ *
+ * The domain top is always keyed first: it is the one value the maximum radius
+ * corresponds to, round number or not.
+ *
+ * Interior values are then nice-rounded, but only when the rounded number still
+ * lands inside the domain and doesn't collapse onto the neighbour above --
+ * `niceFloor(95)` is 50, which on `[90, 100]` is a value the scale never renders.
+ * Prettiness loses to being true.
  */
-function pickValues(domain: [number, number]): number[] {
+function pickValues(domain: [number, number], scale: (v: number) => number): number[] {
   const [lo, hi] = domain;
-  const out: number[] = [];
-  for (let i = 0; i < CIRCLE_COUNT; i++) {
-    const raw = hi / 2 ** i;
+  const rHi = scale(hi);
+  const rLo = scale(lo);
+  const out: number[] = [hi];
+
+  // Invert the scale numerically: it is monotone on [lo, hi], so bisection finds
+  // the value for a target radius without needing the scale's own `.invert`
+  // (which `buildSizeScale` doesn't surface, and which wouldn't exist for a
+  // clamped custom curve anyway).
+  const valueAtRadius = (target: number): number => {
+    let a = lo;
+    let b = hi;
+    for (let i = 0; i < 40; i++) {
+      const mid = (a + b) / 2;
+      if (scale(mid) < target) a = mid;
+      else b = mid;
+    }
+    return (a + b) / 2;
+  };
+
+  for (let i = 1; i < CIRCLE_COUNT; i++) {
+    const targetRadius = rHi - ((rHi - rLo) * i) / (CIRCLE_COUNT - 1);
+    // Bisection lands on float dust (89.99999...), which formats as "90.00".
+    // Snap to 3 significant figures so the fallback label is readable even when
+    // it isn't a round number.
+    const raw = toPrecision(valueAtRadius(targetRadius), 3);
     const nice = niceFloor(raw);
-    if (nice < lo || nice <= 0) continue;
-    if (out.some((v) => v === nice)) continue;
-    out.push(nice);
+    const prev = out[out.length - 1];
+    // Take the round number only when it's in-domain and still distinct.
+    const value = nice >= lo && nice <= hi && nice < prev ? nice : raw;
+    if (!Number.isFinite(value) || value <= 0) continue;
+    if (value < lo || value >= prev) continue;
+    // A zero-anchored domain bisects toward the floor and lands on a value that
+    // is positive only in the float sense (1e-9 of the domain). A bubble of ~zero
+    // magnitude has no area to key, so drop it rather than label a dot "0".
+    if (value < hi * 1e-6) continue;
+    out.push(value);
   }
-  // Always key the top of the domain, even when it isn't a round number: it is
-  // the one value the scale's maximum radius actually corresponds to.
-  if (out.length === 0 || out[0] < hi) out.unshift(hi);
-  return [...new Set(out)];
+  return out;
+}
+
+/** Round to `digits` significant figures. */
+function toPrecision(value: number, digits: number): number {
+  if (!Number.isFinite(value) || value === 0) return value;
+  const magnitude = 10 ** (Math.floor(Math.log10(Math.abs(value))) - digits + 1);
+  return Math.round(value / magnitude) * magnitude;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,8 +217,17 @@ export function computeSizeLegendContent(
   const resolved = buildSizeScale(sizeEncoding, data, options);
   if (!resolved) return null;
 
-  const values = pickValues(resolved.domain);
-  if (values.length === 0) return null;
+  // Circle area encodes magnitude, and a negative magnitude has no area to
+  // encode -- a key for it would be nonsense (and `sqrt` of a negative is NaN).
+  // The marks still render; the channel just isn't keyable, so we say nothing
+  // rather than key it wrongly.
+  if (!(resolved.domain[0] >= 0) || !(resolved.domain[1] > 0)) return null;
+
+  // A lone circle is not a graduated key: it tells the reader only that the
+  // biggest bubble is the biggest datum, which they already assumed. Two is the
+  // minimum that establishes a scale.
+  const values = pickValues(resolved.domain, resolved.scale);
+  if (values.length < 2) return null;
 
   const maxRadius = resolved.scale(resolved.domain[1]);
   if (!Number.isFinite(maxRadius) || maxRadius <= 0) return null;
@@ -179,27 +238,46 @@ export function computeSizeLegendContent(
   const baseline = maxRadius * 2;
   const cx = maxRadius;
 
+  // Labels ride each circle's top edge -- but only if the edges are far enough
+  // apart to hold them. A beeswarm's size range is [2, 10], so the whole stack is
+  // 20px tall and three labels pinned to those edges land on top of each other.
+  // Walk down (largest first) and hold each label at least a line below the last;
+  // the leader line still points at the true edge, so a nudged label stays
+  // unambiguous.
+  const lineHeight = fontSize * 1.25;
+  let prevLabelY = Number.NEGATIVE_INFINITY;
+
   const circles: SizeLegendCircle[] = values.map((value) => {
     const radius = resolved.scale(value);
+    const edgeY = baseline - radius * 2 + fontSize * 0.35;
+    const labelY = Math.max(edgeY, prevLabelY + lineHeight);
+    prevLabelY = labelY;
     return {
       value,
       label: formatValue(value, (sizeEncoding as EncodingChannel).format),
       radius,
       cx,
       cy: baseline - radius,
-      // Label sits on each circle's top edge, to the right of the stack.
-      labelY: baseline - radius * 2 + fontSize * 0.35,
+      labelY,
     };
   });
 
-  // Widest label decides the block width. Rough advance-width estimate is fine:
-  // this is a reservation, and over-reserving by a few px is harmless.
-  const widestLabel = Math.max(...circles.map((c) => c.label.length)) * fontSize * 0.6;
+  // Widest label decides the block width. Measured with the same estimator the
+  // renderer uses -- a char-count heuristic would disagree with what actually
+  // gets drawn, and the sign of that disagreement flips with the font and the
+  // number format (so "it over-reserves today" is not a guarantee).
+  const widestLabel = Math.max(
+    ...circles.map((c) => estimateTextWidth(c.label, fontSize, theme.fonts.weights.normal)),
+  );
+
+  // The label column can now run past the circle stack (see the nudge above), so
+  // the block is as tall as whichever finishes lower.
+  const lastLabelBottom = (circles[circles.length - 1]?.labelY ?? 0) + fontSize * 0.5;
 
   return {
     circles,
     width: maxRadius * 2 + LABEL_GAP + widestLabel,
-    height: baseline + BASELINE_PAD,
+    height: Math.max(baseline, lastLabelBottom) + BASELINE_PAD,
   };
 }
 
@@ -207,20 +285,38 @@ export function computeSizeLegendContent(
  * Place size legend content into chart coordinates.
  *
  * Sits in the right column that `dimensions.ts` reserved, top-aligned with the
- * plot. The content's circle/label coordinates are bounds-relative, so the
- * renderer just translates by `bounds`.
+ * plot. Circle/label coordinates in `content` are bounds-relative; the renderer
+ * adds `bounds.x/y` to each.
+ *
+ * `colorLegend` is the ALREADY-PLACED color legend. When it also lives in the
+ * right column, the size legend starts past its right edge -- `dimensions.ts`
+ * reserved `colorWidth + 8 + sizeWidth + GAP` of right margin, and anchoring
+ * both to the gutter's left edge would stack them on top of each other (a
+ * bubble chart keying continent and population drew the circles straight
+ * through the swatch labels). Anything else -- a top/bottom legend, or none --
+ * leaves the gutter free and the size legend takes it.
  */
 export function placeSizeLegend(
   content: SizeLegendContent,
   chartArea: Rect,
   theme: ResolvedTheme,
+  colorLegend?: LegendLayout | null,
 ): SizeLegendLayout {
+  const gutterX = chartArea.x + chartArea.width + SIZE_LEGEND_GAP;
+  const sharesGutter =
+    colorLegend != null &&
+    (colorLegend.position === 'right' || colorLegend.position === 'bottom-right') &&
+    colorLegend.bounds.width > 0;
+  const x = sharesGutter
+    ? Math.max(gutterX, colorLegend.bounds.x + colorLegend.bounds.width + SIZE_LEGEND_GAP)
+    : gutterX;
+
   return {
     type: 'size',
     channel: 'size',
     position: 'right',
     bounds: {
-      x: chartArea.x + chartArea.width + SIZE_LEGEND_GAP,
+      x,
       y: chartArea.y,
       width: content.width,
       height: content.height,

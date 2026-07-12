@@ -22,6 +22,17 @@ const bubbles: ChartSpec = {
   },
 };
 
+/** Beeswarm: same size channel, but a [2, 10] radius range -- a 20px-tall stack. */
+const swarmSpec: ChartSpec = {
+  mark: { type: 'beeswarm' },
+  data: [...(bubbles.data as object[])] as ChartSpec['data'],
+  encoding: {
+    x: { field: 'gdp', type: 'quantitative' },
+    y: { field: 'region', type: 'nominal' },
+    size: { field: 'pop', type: 'quantitative' },
+  },
+} as ChartSpec;
+
 function sizeLegendOf(spec: ChartSpec, options = OPTIONS): SizeLegendLayout | undefined {
   const layout = compileChart(spec, options);
   return layout.legends.find((l): l is SizeLegendLayout => l.type === 'size');
@@ -100,6 +111,34 @@ describe('size legend', () => {
   });
 
   /**
+   * Clearing the plot is not enough: the color legend is in that same right
+   * gutter. Both used to anchor to `chartArea.x + chartArea.width`, so the
+   * graduated circles drew straight through the swatch labels -- reserving the
+   * margin for both but placing them at the same origin. Caught on a rendered
+   * bubble chart, not by a unit test, which is why this one exists.
+   */
+  it('sits beside the color legend in the right gutter, not on top of it', () => {
+    const layout = compileChart(bubbles, OPTIONS);
+    const size = layout.legends.find((l) => l.type === 'size');
+    const color = layout.legends.find((l) => (l.channel ?? 'color') === 'color');
+    expect(size).toBeDefined();
+    expect(color).toBeDefined();
+    if (!size || !color) return;
+
+    const overlaps =
+      size.bounds.x < color.bounds.x + color.bounds.width &&
+      color.bounds.x < size.bounds.x + size.bounds.width &&
+      size.bounds.y < color.bounds.y + color.bounds.height &&
+      color.bounds.y < size.bounds.y + size.bounds.height;
+    expect(overlaps).toBe(false);
+
+    // The color legend claims the gutter first; the size legend follows it.
+    expect(size.bounds.x).toBeGreaterThanOrEqual(color.bounds.x + color.bounds.width);
+    // ...and the pair still fits inside the SVG.
+    expect(size.bounds.x + size.bounds.width).toBeLessThanOrEqual(OPTIONS.width);
+  });
+
+  /**
    * The size scale clamps, so with an explicit domain every datum past
    * `domain[1]` renders at max radius. Keying the data extent would label the
    * biggest circle with a value it doesn't actually correspond to.
@@ -154,10 +193,97 @@ describe('size legend', () => {
 
   it('rounds the keyed values instead of showing raw data extremes', () => {
     const circles = sizeLegendOf(bubbles)?.circles ?? [];
-    // 1.4B is the domain top and is always keyed; the rest step down by halves
-    // and nice-round, so no label is a long unrounded number.
+    // 1.4B is the domain top and is always keyed; the interior values step down
+    // through the domain and nice-round, so no label is a long unrounded number.
     const labels = circles.map((c) => c.label);
     expect(labels.length).toBeGreaterThan(1);
     expect(labels.some((l) => /^\d+(\.\d)?[KMB]?$/.test(l))).toBe(true);
+  });
+
+  /** CIRCLE_COUNT is 3. An unconditional "always key the top" prepend made it 4. */
+  it('never keys more than three circles', () => {
+    for (const domain of [
+      [0, 1_400_000_000],
+      [0.5, 3],
+      [0, 6],
+      [1, 1000],
+    ] as [number, number][]) {
+      const spec: ChartSpec = {
+        ...bubbles,
+        encoding: {
+          ...bubbles.encoding,
+          size: { field: 'pop', type: 'quantitative', scale: { domain } },
+        },
+      } as ChartSpec;
+      const circles = sizeLegendOf(spec)?.circles ?? [];
+      expect(circles.length).toBeLessThanOrEqual(3);
+    }
+  });
+
+  /**
+   * Stepping down from the top by halves collapsed on a narrow domain: for
+   * [90, 100], both 50 and 25 fall below the floor and get dropped, leaving one
+   * circle -- which keys nothing a reader didn't already assume.
+   */
+  it('still keys a graduated scale on a narrow domain', () => {
+    for (const domain of [
+      [90, 100],
+      [7, 8],
+    ] as [number, number][]) {
+      const spec: ChartSpec = {
+        ...bubbles,
+        encoding: {
+          ...bubbles.encoding,
+          size: { field: 'pop', type: 'quantitative', scale: { domain } },
+        },
+      } as ChartSpec;
+      const circles = sizeLegendOf(spec)?.circles ?? [];
+      expect(circles.length).toBeGreaterThanOrEqual(2);
+      // Strictly descending, so the circles are actually distinguishable.
+      for (let i = 1; i < circles.length; i++) {
+        expect(circles[i].radius).toBeLessThan(circles[i - 1].radius);
+      }
+    }
+  });
+
+  /** Circle *area* encodes magnitude; a negative magnitude has no area to encode. */
+  it('is not emitted for a negative size domain', () => {
+    const spec: ChartSpec = {
+      ...bubbles,
+      encoding: {
+        ...bubbles.encoding,
+        size: { field: 'pop', type: 'quantitative', scale: { domain: [-100, -10] } },
+      },
+    } as ChartSpec;
+    expect(sizeLegendOf(spec)).toBeUndefined();
+  });
+
+  /** The block is a fixed ~90px and can't reflow; on a phone it eats the plot. */
+  it('is suppressed below the compact width', () => {
+    expect(sizeLegendOf(bubbles, { width: 380, height: 300 })).toBeUndefined();
+    expect(sizeLegendOf(bubbles, { width: 800, height: 500 })).toBeDefined();
+  });
+
+  /** KEYED_SIZE_MARKS covers point AND beeswarm, but only point was exercised. */
+  it('is emitted for a beeswarm, whose size channel is also keyed', () => {
+    const legend = sizeLegendOf(swarmSpec);
+    expect(legend).toBeDefined();
+    expect((legend?.circles.length ?? 0) >= 2).toBe(true);
+  });
+
+  /**
+   * A beeswarm's size range is [2, 10], so the whole circle stack is 20px tall.
+   * Labels pinned to each circle's top edge piled on top of each other -- three
+   * unreadable lines of text. Caught by the visual baseline, not by a unit test.
+   */
+  it('keeps labels legible when the circles are too small to space them', () => {
+    for (const spec of [swarmSpec, bubbles]) {
+      const circles = sizeLegendOf(spec)?.circles ?? [];
+      expect(circles.length).toBeGreaterThanOrEqual(2);
+      // Labels run top-down and never collide, whatever the radii.
+      for (let i = 1; i < circles.length; i++) {
+        expect(circles[i].labelY - circles[i - 1].labelY).toBeGreaterThanOrEqual(11);
+      }
+    }
   });
 });

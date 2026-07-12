@@ -256,7 +256,14 @@ const energyColumnSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'year', type: 'ordinal' },
-    y: { field: 'energy', type: 'quantitative', axis: { title: 'Share of global energy (%)' } },
+    y: {
+      field: 'energy',
+      type: 'quantitative',
+      axis: { title: 'Share of global energy (%)' },
+      // Explicit for clarity: this is a composition-of-a-whole chart, stacked
+      // by default since v8.
+      stack: 'zero',
+    },
     color: { field: 'source', type: 'nominal' },
   },
   labels: { density: 'none' },

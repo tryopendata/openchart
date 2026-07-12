@@ -146,7 +146,7 @@ export const pieSpec: ChartSpec = {
   ],
   encoding: {
     color: { field: 'category', type: 'nominal' },
-    y: { field: 'value', type: 'quantitative' },
+    theta: { field: 'value', type: 'quantitative' },
   },
   chrome: {
     title: 'Market Share',

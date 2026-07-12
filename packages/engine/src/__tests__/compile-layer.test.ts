@@ -727,6 +727,52 @@ describe('compileLayer', () => {
     expect(uniqueLabels.has('Y')).toBe(true);
   });
 
+  /**
+   * `legends` is the slot the renderer iterates; `legend` is the back-compat
+   * alias. The merge used to rebuild only `legend`, leaving `legends[0]` as the
+   * primary leaf's *pre-merge* legend -- so the second layer's series silently
+   * vanished from the drawn key while `layout.legend` still listed it.
+   *
+   * The leaves must color on DIFFERENT fields to exercise this: sharing one field
+   * makes the primary spec's concatenated data yield both entries on its own, and
+   * the merge becomes a no-op that proves nothing.
+   */
+  it('merges layer legend entries into `legends`, not just `legend`', () => {
+    const spec: LayerSpec = {
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ name: 'A', value: 10, cat: 'Bars' }],
+          encoding: {
+            x: { field: 'name', type: 'ordinal' as const },
+            y: { field: 'value', type: 'quantitative' as const },
+            color: { field: 'cat', type: 'nominal' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [{ name: 'A', value: 8, series: 'Trend' }],
+          encoding: {
+            x: { field: 'name', type: 'ordinal' as const },
+            y: { field: 'value', type: 'quantitative' as const },
+            color: { field: 'series', type: 'nominal' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const rendered = layout.legends[0];
+    expect('entries' in rendered).toBe(true);
+    if (!('entries' in rendered)) return;
+
+    const labels = rendered.entries.map((e) => e.label);
+    expect(labels).toContain('Bars');
+    expect(labels).toContain('Trend');
+    // What renders is what `legend` advertises.
+    expect(labels).toEqual(layout.legend.entries.map((e) => e.label));
+  });
+
   it('remaps x-coordinates when area is layer 0 and bars are layer 1', () => {
     // Inverse ordering: area/line on left axis, bars on right. The x-remapping
     // logic must detect that layer 1 has bars and remap layer 0's area mark instead.

@@ -334,10 +334,12 @@ const multiSeriesAreaOverlapSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'date', type: 'temporal', axis: { tickCount: 5 } },
-    // No `stack` field -> overlap mode (the new multi-series area default).
     y: {
       field: 'share',
       type: 'quantitative',
+      // Opt OUT of stacking. Multi-series bar/area now defaults to stacked,
+      // so overlap mode requires an explicit `stack: null`.
+      stack: null,
       axis: { format: '.0%', grid: true, tickCount: 5 },
       scale: { domain: [0, 0.5] },
     },

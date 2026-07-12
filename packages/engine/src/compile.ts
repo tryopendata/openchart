@@ -629,7 +629,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // channel is encoded. Consumers that reserve space or hit-test must iterate
   // this rather than read `legend` -- see ChartLayout.legends.
   const sizeLegend = plan.sizeLegendContent
-    ? placeSizeLegend(plan.sizeLegendContent, chartArea, theme)
+    ? placeSizeLegend(plan.sizeLegendContent, chartArea, theme, finalLegend)
     : null;
   const allLegends: LegendLayout[] = [finalLegend, ...(sizeLegend ? [sizeLegend] : [])];
 

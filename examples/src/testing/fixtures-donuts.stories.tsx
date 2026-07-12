@@ -30,7 +30,7 @@ const donutSpec: ChartSpec = {
     { brand: 'Others', share: 21.5 },
   ],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
@@ -66,7 +66,7 @@ const electricity2010: ChartSpec = {
     { source: 'Oil & Other', share: 4.6 },
   ],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'source', type: 'nominal' },
   },
   legend: { position: 'bottom' },
@@ -88,7 +88,7 @@ const electricity2023: ChartSpec = {
     { source: 'Oil & Other', share: 2.7 },
   ],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'source', type: 'nominal' },
   },
   legend: { position: 'bottom' },

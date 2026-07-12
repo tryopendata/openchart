@@ -51,7 +51,7 @@ const basicPieSpec: ChartSpec = {
   mark: 'arc',
   data: basicPieData,
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'browser', type: 'nominal' },
   },
   chrome: {
@@ -71,7 +71,7 @@ const donutSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 70 },
   data: [...federalBudget.data],
   encoding: {
-    y: { field: 'spending', type: 'quantitative' },
+    theta: { field: 'spending', type: 'quantitative' },
     color: { field: 'category', type: 'nominal' },
   },
   chrome: {
@@ -185,7 +185,7 @@ const smallSliceSpec: ChartSpec = {
   mark: 'arc',
   data: [...co2Emissions.data],
   encoding: {
-    y: { field: 'emissions', type: 'quantitative' },
+    theta: { field: 'emissions', type: 'quantitative' },
     color: { field: 'country', type: 'nominal' },
   },
   chrome: {
@@ -227,7 +227,7 @@ const electricity2010Spec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 45 },
   data: [...electricityMix['2010']],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'source', type: 'nominal' },
   },
   labels: { density: 'none' },
@@ -290,7 +290,7 @@ const leaderLineSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 55 },
   data: [...smartphoneShare.data],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
@@ -309,7 +309,7 @@ const interactiveSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 80 },
   data: [...federalBudget.data],
   encoding: {
-    y: { field: 'spending', type: 'quantitative' },
+    theta: { field: 'spending', type: 'quantitative' },
     color: { field: 'category', type: 'nominal' },
   },
   labels: { density: 'none' },

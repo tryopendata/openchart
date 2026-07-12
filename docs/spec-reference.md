@@ -138,7 +138,7 @@ fill: {
 | `x1`, `y1` | `number`      | `0`, `0` | Start point in [0,1] normalized space.        |
 | `x2`, `y2` | `number`      | `0`, `1` | End point. Default is top-to-bottom.           |
 
-**Area chart fill behavior:** Multi-series area charts default to **overlap** mode — a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) so all series stay readable on a shared baseline. Single-series area charts apply a default `fillOpacity` of 0.15. Opting into stacked mode (`stack: 'zero' | true | 'normalize' | 'center'`) switches to the higher-opacity stacked gradient. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap default produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
+**Area chart fill behavior:** Multi-series area charts default to **stacked** mode (`stack: 'zero'`), Vega-Lite aligned — a higher-opacity per-layer gradient (top stop ~0.65 opacity) since each layer sits on solid ground. Single-series area charts apply a default `fillOpacity` of 0.15. Opting out with `stack: null` (or `false`) switches to overlap mode: a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) layered on a shared baseline, comparison-first rather than composition-first. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap mode produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
 
 ---
 
@@ -219,7 +219,7 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
 | `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
-| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column; **non-stacked** (overlap) for area | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars). `'normalize'` for 100% stacked. `'center'` for streamgraph. **Note:** multi-series area charts default to overlap mode (translucent gradients on a shared baseline) — pass `stack: 'zero'` (or `true`) to opt into stacked composition. |
+| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column/area (Vega-Lite aligned) | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars, or overlap gradients for area). `'normalize'` for 100% stacked. `'center'` for streamgraph. |
 
 ### FieldType
 

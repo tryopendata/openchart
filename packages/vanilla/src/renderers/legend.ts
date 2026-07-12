@@ -116,15 +116,28 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
 
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-legend oc-legend--size');
-  g.setAttribute('transform', `translate(${legend.bounds.x}, ${legend.bounds.y})`);
-  g.setAttribute('role', 'img');
-  g.setAttribute('aria-label', 'Size legend');
+  // Decorative, not announced. `role="img"` + a bare "Size legend" label would
+  // tell a screen-reader user a key exists while conveying none of the values it
+  // keys -- pure noise. The magnitudes are already in each mark's own aria label,
+  // which is where a non-sighted reader actually gets them.
+  g.setAttribute('aria-hidden', 'true');
+
+  // Absolute coordinates, NOT a group `transform`. `getBBox()` reports a group's
+  // box in its own local space and ignores the group's transform, so a
+  // translated legend measures as if it sat at the origin -- which is exactly
+  // how a size/color legend collision slipped past the rendered-invariant
+  // overlap checks. Every other legend bakes absolute coords into its children;
+  // this one does too, so the same measurement sees it where it really is.
+  const ox = legend.bounds.x;
+  const oy = legend.bounds.y;
+  const labelX = ox + legend.circles[0].cx + legend.circles[0].radius + 8;
+  const leaderX = ox + legend.circles[0].cx + legend.circles[0].radius + 4;
 
   for (const circle of legend.circles) {
     const c = createSVGElement('circle');
     setAttrs(c, {
-      cx: circle.cx,
-      cy: circle.cy,
+      cx: ox + circle.cx,
+      cy: oy + circle.cy,
       r: circle.radius,
       fill: 'none',
       stroke: legend.stroke,
@@ -135,10 +148,10 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
     // Leader line from the circle's top edge out to its label.
     const line = createSVGElement('line');
     setAttrs(line, {
-      x1: circle.cx,
-      y1: circle.cy - circle.radius,
-      x2: legend.circles[0].cx + legend.circles[0].radius + 4,
-      y2: circle.cy - circle.radius,
+      x1: ox + circle.cx,
+      y1: oy + circle.cy - circle.radius,
+      x2: leaderX,
+      y2: oy + circle.cy - circle.radius,
       stroke: legend.stroke,
       'stroke-width': 1,
       'stroke-dasharray': '2 2',
@@ -147,8 +160,8 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
 
     const label = createSVGElement('text');
     setAttrs(label, {
-      x: legend.circles[0].cx + legend.circles[0].radius + 8,
-      y: circle.labelY,
+      x: labelX,
+      y: oy + circle.labelY,
     });
     applyTextStyle(label, legend.labelStyle);
     label.textContent = circle.label;

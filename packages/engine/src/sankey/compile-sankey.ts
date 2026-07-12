@@ -34,7 +34,7 @@ import {
   formatNumber,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
@@ -216,9 +216,15 @@ function computeNodeLabel(
  * @throws Error if spec is invalid or not a sankey type.
  */
 export function compileSankey(spec: unknown, options: CompileOptions): SankeyLayout {
-  // 1. Validate + normalize via the shared compiler pipeline
-  const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings, options.onWarn);
+  // 1. Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
+  // before validation, then validate + normalize via the shared compiler pipeline.
+  const sugarWarnings: string[] = [];
+  const expandedSpec =
+    spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
+      : spec;
+  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'sankey') {
     throw new Error(
@@ -227,6 +233,9 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   }
 
   const sankeySpec = normalized as NormalizedSankeySpec;
+
+  // Resolve format: encoding-level (v8 canonical) wins over deprecated top-level valueFormat
+  const resolvedValueFormat = sankeySpec.encoding.value.format ?? sankeySpec.valueFormat;
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
   const rawWatermark = (spec as Record<string, unknown>).watermark;
@@ -426,7 +435,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       data: { id: node.id, label: node.label },
       aria: {
         role: 'img',
-        label: `${node.label}: ${formatFlowValue(node.value ?? 0, sankeySpec.valueFormat)}`,
+        label: `${node.label}: ${formatFlowValue(node.value ?? 0, resolvedValueFormat)}`,
       },
       animationIndex: 0, // Reassigned below after sorting by depth
     };
@@ -461,7 +470,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       data: (link as unknown as { data: Record<string, unknown> }).data ?? {},
       aria: {
         role: 'img',
-        label: `${sourceNode.label} to ${targetNode.label}: ${formatFlowValue(link.value, sankeySpec.valueFormat)}`,
+        label: `${sourceNode.label} to ${targetNode.label}: ${formatFlowValue(link.value, resolvedValueFormat)}`,
       },
       // Links animate after nodes
       animationIndex: nodeMarks.length + i,
@@ -480,7 +489,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   );
 
   // 13. Build tooltip descriptors
-  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, sankeySpec.valueFormat);
+  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, resolvedValueFormat);
 
   // 14. Build a11y metadata
   const a11y = {

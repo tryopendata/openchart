@@ -103,13 +103,20 @@ export function compileLayer(
     }
   }
 
+  const mergedLegend = {
+    ...primaryLayout.legend,
+    ...('entries' in pLegend ? { entries: mergedLegendEntries } : {}),
+  } as typeof primaryLayout.legend;
+
   return {
     ...primaryLayout,
     marks: allMarks,
-    legend: {
-      ...primaryLayout.legend,
-      ...('entries' in pLegend ? { entries: mergedLegendEntries } : {}),
-    } as typeof primaryLayout.legend,
+    legend: mergedLegend,
+    // `legends` is what the renderer iterates, so the merged color legend has to
+    // land in it too. Spreading `primaryLayout` alone would leave legends[0] as
+    // the *pre-merge* legend and every leaf past the first would vanish from the
+    // rendered key while `layout.legend` claimed otherwise.
+    legends: [mergedLegend, ...primaryLayout.legends.slice(1)],
   };
 }
 
@@ -389,6 +396,11 @@ function compileLayerIndependent(
   const marks =
     z0 <= z1 ? [...adjustedMarks0, ...taggedMarks1] : [...taggedMarks1, ...adjustedMarks0];
 
+  const mergedLegend = {
+    ...layout0.legend,
+    ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
+  } as typeof layout0.legend;
+
   return {
     ...layout0,
     axes: {
@@ -397,10 +409,10 @@ function compileLayerIndependent(
       y2: y2Axis,
     },
     marks,
-    legend: {
-      ...layout0.legend,
-      ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
-    } as typeof layout0.legend,
+    legend: mergedLegend,
+    // See the note in compileLayer: the renderer reads `legends`, so the merged
+    // legend must replace the primary's entry there as well.
+    legends: [mergedLegend, ...layout0.legends.slice(1)],
     tooltipDescriptors: mergedTooltips,
   };
 }

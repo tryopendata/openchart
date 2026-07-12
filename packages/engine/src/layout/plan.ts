@@ -13,6 +13,7 @@ import {
   abbreviateNumber,
   axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
+  COMPACT_WIDTH,
   computeChrome,
   computeXAxisExtentFromLabels,
   estimateTextWidth,
@@ -36,6 +37,7 @@ import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { computeLegendContent, hasLegendContent, type LegendContent } from '../legend/compute';
 import {
   computeSizeLegendContent,
+  SIZE_LEGEND_GAP,
   type SizeLegendContent,
   sizeLegendScaleFor,
 } from '../legend/size';
@@ -321,10 +323,15 @@ export function resolveLayoutPlan(
   // Size legend: keys a quantitative `size` channel with graduated circles.
   // Independent of the color legend -- a bubble chart keys BOTH continent
   // (color) and population (size), so this is computed alongside, not instead.
-  // Width-independent, so it sits outside the convergence loop.
+  // Its content is width-independent, so it sits outside the convergence loop.
+  //
+  // Dropped below COMPACT_WIDTH. The block is a fixed ~90px (it can't reflow the
+  // way a categorical legend's entries can), which on a phone-width chart is a
+  // quarter of the SVG spent on the key and a plot too narrow to read the bubbles
+  // it explains. The same threshold the color legend goes compact at.
   const sizeScaleOpts = sizeLegendScaleFor(renderSpec.markType);
   const sizeLegendContent =
-    sizeScaleOpts && chartSpec.legend?.show !== false
+    sizeScaleOpts && chartSpec.legend?.show !== false && width >= COMPACT_WIDTH
       ? computeSizeLegendContent(
           renderSpec.encoding.size as EncodingChannel | undefined,
           renderSpec.data,
@@ -369,7 +376,14 @@ export function resolveLayoutPlan(
     // footprint in the bottom margin instead of the (smaller) flat one.
     let effectiveXTickAngle = xTickAngle;
     if (xTickAngle === undefined && xLabels.length > 1) {
-      const rightMarginEst = hPad + (isRadial ? hPad : axisMargin);
+      // The size legend's right column narrows the plot (dimensions.ts reserves
+      // it), so it has to be in this estimate too. Without it the planner sizes
+      // bands against a plot up to ~100px wider than the real one, concludes the
+      // labels fit flat, and computeAxes then rotates them against the true
+      // bandwidth -- reserving the flat footprint for rotated labels and clipping
+      // the axis. Bites a nominal-x beeswarm with a size channel.
+      const sizeLegendReserve = sizeLegendContent ? sizeLegendContent.width + SIZE_LEGEND_GAP : 0;
+      const rightMarginEst = hPad + (isRadial ? hPad : axisMargin) + sizeLegendReserve;
       const plotWidth = Math.max(0, width - leftGutter - Math.max(rightMarginEst, hPad));
       // Mirror d3 scaleBand: step = plotWidth / (n - paddingInner + 2*paddingOuter),
       // bandwidth = step * (1 - paddingInner). Uses the same override resolution

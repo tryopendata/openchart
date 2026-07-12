@@ -250,12 +250,12 @@ export function columnChart(
 /**
  * Create a pie chart spec.
  *
- * Convention: category maps to the color channel, value maps to y.
+ * Convention: category maps to the color channel, value maps to theta.
  * Pie charts have no x-axis.
  *
  * @param data - Array of data rows.
  * @param category - Category field (color channel, nominal).
- * @param value - Value field (y channel, quantitative).
+ * @param value - Value field (theta channel, quantitative).
  * @param options - Optional chrome, annotations, theme, etc.
  *                  Note: color option is ignored since category is used for color.
  */
@@ -268,9 +268,9 @@ export function pieChart(
   const categoryChannel = resolveField(category, data);
   const valueChannel = resolveField(value, data);
 
-  // Pie charts: value on y, category on color (no x-axis)
+  // Pie charts: value on theta (canonical in v8), category on color (no x-axis)
   const encoding: Encoding = {
-    y: valueChannel,
+    theta: valueChannel,
     color: categoryChannel,
   };
   if (options?.size && data) {
@@ -303,12 +303,12 @@ export function areaChart(
 /**
  * Create a donut chart spec.
  *
- * Convention: category maps to the color channel, value maps to y.
+ * Convention: category maps to the color channel, value maps to theta.
  * Donut charts have no x-axis.
  *
  * @param data - Array of data rows.
  * @param category - Category field (color channel, nominal).
- * @param value - Value field (y channel, quantitative).
+ * @param value - Value field (theta channel, quantitative).
  * @param options - Optional chrome, annotations, theme, etc.
  *                  Note: color option is ignored since category is used for color.
  */
@@ -322,7 +322,7 @@ export function donutChart(
   const valueChannel = resolveField(value, data);
 
   const encoding: Encoding = {
-    y: valueChannel,
+    theta: valueChannel,
     color: categoryChannel,
   };
   if (options?.size && data) {
