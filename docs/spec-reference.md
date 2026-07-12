@@ -104,6 +104,15 @@ The `type` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
 | `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
+| `style`        | `'dumbbell' \| 'arrow' \| 'bar'` | `'dumbbell'` | range   | Range mark visual: dot-connector-dot, line with arrowhead at the end, or a plain floating bar. |
+| `colorByDirection` | `boolean`           | `false`     | range          | Color range marks by direction of change: increases use the theme `positive` color, decreases `negative`. A field-based `color` encoding takes precedence. |
+| `units`        | `number`                | `100`       | waffle         | Total cells in the grid. Categories normalize to this via largest-remainder rounding. |
+| `columns`      | `number`                | `10`        | waffle         | Columns per grid. Rows derive from `units / columns`. |
+| `weekStart`    | `'monday' \| 'sunday'`  | `'monday'`  | calendar       | Weekday on the top row of each year band. |
+| `cellRadius`   | `number`                | `1`         | calendar       | Corner radius in pixels for day cells. |
+| `shape`        | `'hemicycle'`           | `'hemicycle'` | parliament   | Seat layout shape (currently the only shape). |
+| `seatRadius`   | `number \| 'auto'`      | `'auto'`    | parliament     | Seat dot radius in pixels. `'auto'` sizes dots to fill the rings for the seat count. |
+| `majorityLine` | `boolean`               | `true`      | parliament     | Draw the majority-threshold line and its "N to win" label. |
 
 #### Gradients
 
@@ -263,6 +272,11 @@ The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. 
 | `donut`    | -- (opt, unused)                 | quantitative (req)     | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | Same as pie with inner radius                     |
 | `dot`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Dot plot. x = values, y = categories              |
 | `scatter`  | quantitative (req)               | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Both axes quantitative. size creates bubble chart |
+| `beeswarm` | quantitative or nominal (opt)    | quantitative or nominal (opt) | nominal, ordinal, quantitative (opt) | quantitative (opt) | nominal (opt) | One position is the quantitative value axis; the other (nominal/ordinal) splits into grouped lanes |
+| `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
+| `waffle`   | -- (opt, unused)                 | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` (alias for y) = share, color = category |
+| `parliament` | -- (opt, unused)               | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` (alias for y) = seat count, color = party |
+| `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
 
 ### Channel purpose per chart type
 
