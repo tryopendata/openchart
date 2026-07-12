@@ -669,6 +669,13 @@ export function computeDimensions(
     margins.right = Math.max(margins.right, hPad + options.rightAxisReserve);
   }
 
+  // Reserve space for the auto-thinning footnote list. Additive, not Math.max:
+  // the footnotes stack above the source/byline/footer row that bottomHeight
+  // already covers, rather than replacing it.
+  if (options.footnoteReserve && options.footnoteReserve > 0) {
+    margins.bottom += options.footnoteReserve;
+  }
+
   // Reserve legend space.
   //
   // Bottom legend: reservation is already baked into `chrome.bottomHeight`

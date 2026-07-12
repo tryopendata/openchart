@@ -223,6 +223,28 @@ export interface MarkDef {
    */
   trendline?: boolean;
   /**
+   * Horizontal pixel offset from the data anchor. Only meaningful when `type`
+   * is `'text'`. Use it to lift a label clear of the mark it annotates instead
+   * of shifting the underlying data value.
+   */
+  dx?: number;
+  /**
+   * Vertical pixel offset from the data anchor (negative = up). Only meaningful
+   * when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten
+   * pixels above its point.
+   */
+  dy?: number;
+  /** Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`. */
+  align?: 'left' | 'center' | 'right';
+  /** Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`. */
+  baseline?: 'top' | 'middle' | 'bottom';
+  /**
+   * Font size in pixels for text marks. Ignored when the `size` encoding channel
+   * is present (which scales font size from a data field). `size` is already
+   * taken by bar thickness, hence the distinct name.
+   */
+  fontSize?: number;
+  /**
    * Pattern-fill reinforcement for filled marks (bar, area, arc).
    *
    * - `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,

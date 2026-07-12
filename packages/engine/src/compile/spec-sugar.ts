@@ -319,6 +319,25 @@ function expandChannelSugar(
         changed = true;
       }
     }
+
+    // scale.reverse on the color channel flips the ramp here, at the one place
+    // the stops are known. The color scale builders read scale.range directly
+    // and never look at reverse (only the positional builders do), so reversing
+    // the range is what makes `reverse` mean anything on color -- and it keeps
+    // the legend, which resolves its ramp from the same scale.range, in step.
+    // Positional channels keep their reverse flag for buildBand/Point/Continuous.
+    if (channel === 'color') {
+      const colorDef = updated[channel] as Record<string, unknown>;
+      const colorScale = colorDef.scale as Record<string, unknown> | undefined;
+      if (colorScale?.reverse && Array.isArray(colorScale.range)) {
+        const { reverse: _reverse, ...scaleRest } = colorScale;
+        updated[channel] = {
+          ...colorDef,
+          scale: { ...scaleRest, range: [...(colorScale.range as string[])].reverse() },
+        };
+        changed = true;
+      }
+    }
   }
 
   // theta: VL's arc value channel, shared by waffle and parliament marks (the

@@ -151,7 +151,7 @@ function uniqueStrings(values: unknown[]): string[] {
  * an explicit scale.domain by the pre-validation sugar expansion; any that
  * reach this point fall back to data order.
  */
-function applyCategoricalSort(values: string[], sort: EncodingChannel['sort']): string[] {
+export function applyCategoricalSort(values: string[], sort: EncodingChannel['sort']): string[] {
   if (sort !== 'ascending' && sort !== 'descending') return values;
 
   const sorted = [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
@@ -511,17 +511,27 @@ export function estimateBandStep(
   return plotWidth / denom;
 }
 
+/**
+ * Gap between bands, as a fraction of the step. The 0.35 default is a *bar*
+ * value: bars need air between them to read as separate quantities. Heatmap
+ * cells are the opposite -- they tile, and the gap is a hairline gutter that
+ * only exists to keep adjacent fills from bleeding into each other.
+ */
+const DEFAULT_BAND_PADDING = 0.35;
+const HEATMAP_BAND_PADDING = 0.04;
+
 function buildBandScale(
   channel: EncodingChannel,
   data: DataRow[],
   rangeStart: number,
   rangeEnd: number,
+  defaultPadding: number = DEFAULT_BAND_PADDING,
 ): ResolvedScale {
   const values = channel.scale?.domain
     ? (channel.scale.domain as string[])
     : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
 
-  const padding = channel.scale?.padding ?? 0.35;
+  const padding = channel.scale?.padding ?? defaultPadding;
   const scale = scaleBand().domain(values).range([rangeStart, rangeEnd]).padding(padding);
 
   if (channel.scale?.paddingInner !== undefined) {
@@ -716,6 +726,15 @@ function buildPositionalScale(
       // orientations). Beeswarm lanes are band scales too: each category gets
       // a band whose center anchors one swarm, on whichever axis carries the
       // nominal channel.
+      //
+      // `rect` is the only mark that needs a band on *both* axes: a heatmap cell
+      // is sized by the bandwidth of each axis, so it takes no `axis` guard. A
+      // point scale would give it zero width and height (and it did: `rect` cells
+      // rendered as invisible zero-area marks). It also tiles, so it takes the
+      // hairline gutter rather than the bar-sized gap.
+      if (chartType === 'rect') {
+        return buildBandScale(channel, data, rangeStart, rangeEnd, HEATMAP_BAND_PADDING);
+      }
       if (
         chartType === 'bar' ||
         chartType === 'beeswarm' ||
@@ -750,11 +769,19 @@ export function computeScales(
   const result: ResolvedScales = {};
   const encoding = spec.encoding as Encoding;
 
-  // Scatter/bubble, beeswarm, and range charts should NOT include zero by
+  // Scatter/bubble, beeswarm, range, and text charts should NOT include zero by
   // default (they encode position, not length; a tight domain fits the data
   // range). Beeswarms plot raw observations whose spread is the story, and
-  // only the quantitative value axis matches the check below.
-  if (spec.markType === 'point' || spec.markType === 'beeswarm' || spec.markType === 'range') {
+  // only the quantitative value axis matches the check below. Text marks must
+  // stay in this list so a text layer resolves the same domain as the point
+  // layer it labels — otherwise the two share a pixel range but not a domain,
+  // and every label drifts off its mark.
+  if (
+    spec.markType === 'point' ||
+    spec.markType === 'beeswarm' ||
+    spec.markType === 'range' ||
+    spec.markType === 'text'
+  ) {
     if (encoding.x?.type === 'quantitative' && encoding.x.scale?.zero === undefined) {
       if (!encoding.x.scale) {
         (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };

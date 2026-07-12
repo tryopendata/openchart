@@ -134,6 +134,17 @@ describe('calendar grid shape', () => {
     const keys = new Set(rects.map((r) => r.key));
     expect(keys.size).toBe(rects.length);
   });
+
+  // Calendar labels hand-compute their y against the SVG default (alphabetic)
+  // baseline — see the `+ labelFont * 0.35` centering in compute.ts. Setting a
+  // dominantBaseline here would double-correct them and shift every label.
+  it('leaves dominantBaseline unset so its hand-computed baselines still hold', () => {
+    const texts = textsOf(layout);
+    expect(texts.length).toBeGreaterThan(0);
+    for (const text of texts) {
+      expect(text.dominantBaseline).toBeUndefined();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -16,10 +16,8 @@ import type {
   PointMark,
   Rect,
 } from '@opendata-ai/openchart-core';
-import { max, min } from 'd3-array';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
-import { scaleSqrt } from 'd3-scale';
-
+import { buildSizeScale } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -117,22 +115,15 @@ export function computeScatterMarks(
   const sizeEnc = encoding.size && 'field' in encoding.size ? encoding.size : undefined;
   const sizeField = sizeEnc?.field;
 
-  // Build a size scale for bubble variant. Domain and radius range are
-  // author-overridable via `encoding.size.scale.{domain,range}`: an explicit
-  // domain (e.g. [0, 900]) keeps the largest datum below the max radius so
-  // dense clusters don't blob together, and an explicit range caps the radii.
-  let sizeScale: ((v: number) => number) | undefined;
-  if (sizeField) {
-    const sizeValues = spec.data.map((d) => Number(d[sizeField])).filter((v) => Number.isFinite(v));
-
-    const explicitDomain = sizeEnc?.scale?.domain as [number, number] | undefined;
-    const [sizeMin, sizeMax] = explicitDomain ?? [min(sizeValues) ?? 0, max(sizeValues) ?? 1];
-
-    const explicitRange = sizeEnc?.scale?.range as [number, number] | undefined;
-    const [radiusMin, radiusMax] = explicitRange ?? [MIN_BUBBLE_RADIUS, MAX_BUBBLE_RADIUS];
-
-    sizeScale = scaleSqrt().domain([sizeMin, sizeMax]).range([radiusMin, radiusMax]).clamp(true);
-  }
+  // Bubbles: sqrt so perceived magnitude tracks disc *area*. Author overrides
+  // (`encoding.size.scale.{domain,range}`) and the degenerate-domain fallback
+  // live in the shared builder, which the size legend also calls so the key and
+  // the marks can never resolve different scales.
+  const resolvedSize = buildSizeScale(sizeEnc, spec.data, {
+    curve: 'sqrt',
+    range: [MIN_BUBBLE_RADIUS, MAX_BUBBLE_RADIUS],
+  });
+  const sizeScale = resolvedSize?.scale;
 
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
   const keyField = keyEnc?.field;

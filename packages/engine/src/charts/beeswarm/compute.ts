@@ -19,10 +19,8 @@ import type {
   PointMark,
   Rect,
 } from '@opendata-ai/openchart-core';
-import { max, min } from 'd3-array';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-import { scaleSqrt } from 'd3-scale';
-
+import { buildSizeScale } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -96,20 +94,13 @@ export function computeBeeswarmMarks(
   const sizeEnc = encoding.size && 'field' in encoding.size ? encoding.size : undefined;
   const sizeField = sizeEnc?.field;
 
-  // Size scale for sized dots: sqrt (area-proportional), same override
-  // surface as scatter (`encoding.size.scale.{domain,range}`).
-  let sizeScale: ((v: number) => number) | undefined;
-  if (sizeField) {
-    const sizeValues = spec.data.map((d) => Number(d[sizeField])).filter((v) => Number.isFinite(v));
-
-    const explicitDomain = sizeEnc?.scale?.domain as [number, number] | undefined;
-    const [sizeMin, sizeMax] = explicitDomain ?? [min(sizeValues) ?? 0, max(sizeValues) ?? 1];
-
-    const explicitRange = sizeEnc?.scale?.range as [number, number] | undefined;
-    const [radiusMin, radiusMax] = explicitRange ?? [MIN_SIZED_RADIUS, MAX_SIZED_RADIUS];
-
-    sizeScale = scaleSqrt().domain([sizeMin, sizeMax]).range([radiusMin, radiusMax]).clamp(true);
-  }
+  // Sized dots: sqrt (area-proportional), same override surface as scatter.
+  // Shared builder so the marks and any size legend resolve one scale.
+  const resolvedSize = buildSizeScale(sizeEnc, spec.data, {
+    curve: 'sqrt',
+    range: [MIN_SIZED_RADIUS, MAX_SIZED_RADIUS],
+  });
+  const sizeScale = resolvedSize?.scale;
 
   // Resolve every renderable dot first: dodge needs the full position/radius
   // arrays before any mark can be placed.

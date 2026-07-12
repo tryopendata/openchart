@@ -21,6 +21,46 @@ import { sampleRampColors } from '../legend/continuous';
 /** Neutral gray applied to muted (non-highlighted) series. */
 const MUTED_COLOR = '#bfc3c8';
 
+/**
+ * Resolve the categorical color range for a color-scale domain.
+ *
+ * Single source of truth for categorical color assignment: the ordinal scale
+ * (which colors the marks) and the legend (which colors the swatches) both go
+ * through this, so highlight muting and the accent-neutral series strategy
+ * stay in sync. Callers pass the domain in the same order the scale uses.
+ *
+ * The result is a d3 ordinal *range*, so callers index it the way d3 does:
+ * `colors[domainIndex % colors.length]`. In the pass-through cases the full
+ * palette comes back unsliced (d3 cycles it), matching the range the scale
+ * carried before this was factored out.
+ */
+export function categoricalColorsForDomain(
+  domain: string[],
+  theme: ResolvedTheme,
+  highlight?: string[],
+): string[] {
+  const palette = theme.colors.categorical;
+
+  if (highlight && highlight.length > 0) {
+    const highlightSet = new Set(highlight);
+    return domain.map((v, i) => (highlightSet.has(v) ? palette[i % palette.length] : MUTED_COLOR));
+  }
+
+  const strategy = theme.seriesStrategy ?? 'palette';
+  if (strategy !== 'accent-neutral') return palette;
+
+  const count = domain.length;
+  if (count <= 1) return [palette[0]];
+  if (count > 4) return palette;
+
+  // Prominence tracks contrast against the surface: on dark canvases the
+  // brightest gray reads strongest, on light canvases the darkest.
+  const neutrals = theme.isDark
+    ? [ACHROMATIC_RAMP.fgMuted, ACHROMATIC_RAMP.fgSubtle, ACHROMATIC_RAMP.fgFaint]
+    : [ACHROMATIC_RAMP.fgFaint, ACHROMATIC_RAMP.fgSubtle, ACHROMATIC_RAMP.fgMuted];
+  return domain.map((_, i) => (i === 0 ? palette[0] : neutrals[(i - 1) % neutrals.length]));
+}
+
 /** Mutates `scales.color.scale.range` in place when no explicit palette was set. */
 export function applyColorScaleRange(
   scales: ResolvedScales,
@@ -56,37 +96,6 @@ export function applyColorScaleRange(
     scale.range(sampleRampColors(seqStops, scale.range().length));
   } else {
     const ordinalScale = scales.color.scale as ScaleOrdinal<string, string>;
-    const palette = theme.colors.categorical;
-    const domain = ordinalScale.domain();
-
-    if (highlight && highlight.length > 0) {
-      const highlightSet = new Set(highlight);
-      const colors = domain.map((v, i) =>
-        highlightSet.has(v) ? palette[i % palette.length] : MUTED_COLOR,
-      );
-      ordinalScale.range(colors);
-    } else {
-      const strategy = theme.seriesStrategy ?? 'palette';
-      if (strategy !== 'accent-neutral') {
-        ordinalScale.range(palette);
-      } else {
-        const count = domain.length;
-        if (count <= 1) {
-          ordinalScale.range([palette[0]]);
-        } else if (count <= 4) {
-          // Prominence tracks contrast against the surface: on dark canvases
-          // the brightest gray reads strongest, on light canvases the darkest.
-          const neutrals = theme.isDark
-            ? [ACHROMATIC_RAMP.fgMuted, ACHROMATIC_RAMP.fgSubtle, ACHROMATIC_RAMP.fgFaint]
-            : [ACHROMATIC_RAMP.fgFaint, ACHROMATIC_RAMP.fgSubtle, ACHROMATIC_RAMP.fgMuted];
-          const colors = domain.map((_, i) =>
-            i === 0 ? palette[0] : neutrals[(i - 1) % neutrals.length],
-          );
-          ordinalScale.range(colors);
-        } else {
-          ordinalScale.range(palette);
-        }
-      }
-    }
+    ordinalScale.range(categoricalColorsForDomain(ordinalScale.domain(), theme, highlight));
   }
 }

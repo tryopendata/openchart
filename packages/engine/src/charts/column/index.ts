@@ -13,7 +13,7 @@ import { computeColumnLabels } from './labels';
 // Column chart renderer
 // ---------------------------------------------------------------------------
 
-export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
+export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
   const marks = computeColumnMarks(spec, scales, chartArea, strategy);
 
   // Compute and attach value labels (respects spec.labels.density)
@@ -27,6 +27,7 @@ export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy,
     spec.labels.prefix,
     valueField,
     spec.labels.color,
+    theme.isDark,
     spec.labels.fontSize,
     spec.labels.suffix,
   );
