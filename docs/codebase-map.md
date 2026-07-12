@@ -44,6 +44,7 @@
 | Annotations: refline / range | `packages/engine/src/annotations/resolve-refline.ts`, `resolve-range.ts` |
 | Annotations: geometry (text bounds, anchor offsets, connector edges, arrowhead points) | `packages/engine/src/annotations/geometry.ts` (`computeArrowheadPoints`) |
 | Annotations: collision resolution | `packages/engine/src/annotations/collisions.ts` |
+| Annotations: auto-thinning (demote callouts → numbered footnotes) | `packages/engine/src/annotations/thinning.ts` → `thinAnnotations()`. Three independent demotion rules: pairwise overlap (padded by `COLLISION_PADDING`), plot containment (`fitsWithin`), and a `COVERAGE_BUDGET` cap on the share of plot area inline labels may claim. The budget is what thins narrow charts — collision resolution spreads labels apart and clamping tucks them back in, so crowded layouts never trip the first two rules. Pinned (`responsive: false`) labels are exempt from the budget. |
 | Annotations: data → pixel resolver | `packages/engine/src/annotations/position.ts` |
 | Annotations: shared constants (`ANCHOR_OFFSET=8`, default font, dash patterns) | `packages/engine/src/annotations/constants.ts` |
 | Legend layout (entries, wrapping, positioning, `entryPositions`) | `packages/engine/src/legend/compute.ts`, `wrap.ts` |

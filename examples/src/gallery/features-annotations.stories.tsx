@@ -433,7 +433,7 @@ function AutoThinning() {
         </span>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oc-space-5)' }}>
-        <div>
+        <div style={{ width, flexShrink: 0 }}>
           <p
             style={{
               margin: '0 0 var(--oc-space-2)',
@@ -445,7 +445,6 @@ function AutoThinning() {
           </p>
           <div
             style={{
-              width: `min(${width}px, 100%)`,
               height: 340,
               border: '1px solid var(--oc-border)',
               borderRadius: 'var(--oc-radius-control)',
@@ -454,7 +453,7 @@ function AutoThinning() {
             <Chart spec={thinningSpec} />
           </div>
         </div>
-        <div>
+        <div style={{ width, flexShrink: 0 }}>
           <p
             style={{
               margin: '0 0 var(--oc-space-2)',
@@ -466,7 +465,6 @@ function AutoThinning() {
           </p>
           <div
             style={{
-              width: `min(${width}px, 100%)`,
               height: 340,
               border: '1px solid var(--oc-border)',
               borderRadius: 'var(--oc-radius-control)',
@@ -580,7 +578,6 @@ export const Annotations = () => (
         title="Narrow-width demotion to numbered footnotes"
         description="Drag toward the left: inline callouts collapse to numbered markers with a footnote list. The pinned 'Pandemic low' stays inline; the autoThin: false copy hides them instead."
         specForPanel={thinningSpec}
-        height={480}
       >
         <AutoThinning />
       </Demo>

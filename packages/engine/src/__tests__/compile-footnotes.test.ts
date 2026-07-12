@@ -71,7 +71,11 @@ describe('auto-thinning footnote reserve', () => {
     // The band the renderer will draw, measured the way core measures it.
     const band = footnotes.length * withFootnotes.theme.fonts.sizes.small * 1.3 + 4;
 
-    expect(pulledUpBy).toBeGreaterThanOrEqual(band);
+    // Epsilon, not a loosened bound: the engine and this line reach the same
+    // band through different float op orders, so an exact >= trips on ~1e-14 of
+    // accumulated error. A reserve that actually went missing would be short by
+    // a whole line (~14px), which this still catches.
+    expect(pulledUpBy).toBeGreaterThanOrEqual(band - 1e-9);
   });
 
   it('leaves the plot alone when nothing demotes', () => {

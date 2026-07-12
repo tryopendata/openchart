@@ -187,4 +187,60 @@ describe('thinAnnotations', () => {
       expect(result.footnotes).toHaveLength(0);
     });
   });
+
+  describe('coverage budget', () => {
+    // Four labels, each well clear of the others and of the plot edges, so
+    // neither the overlap test nor the containment test fires. Only the
+    // coverage budget can demote here — which is the point: at narrow widths
+    // collision resolution spreads labels out and clamping tucks them back in,
+    // leaving a crowded-but-legal layout that the other two rules cannot see.
+    // Editorial-length copy, not toy strings: label area is what the budget
+    // meters, and real callouts ("Recovery begins") are several times wider
+    // than a five-letter placeholder.
+    const TEXTS = ['Recovery begins', 'Strong rebound', 'Record territory', 'Pandemic low'];
+    const spread = () => TEXTS.map((t, i) => makeResolved(5, 20 + i * 40, t));
+    const specs: Annotation[] = TEXTS.map((t) => makeSpec(t));
+
+    it('demotes the crowded tail once labels exceed the budget on a small plot', () => {
+      const annotations = spread();
+      const plotArea = { x: 0, y: 0, width: 160, height: 160 };
+      const result = thinAnnotations(annotations, specs, measure, plotArea);
+
+      // Nothing collides and everything is inside the plot, so a demotion here
+      // is attributable to the budget alone.
+      expect(result.footnotes.length).toBeGreaterThan(0);
+
+      // Priority ties fall back to spec order, so the tail demotes and the head
+      // stays inline.
+      expect(result.annotations[0].footnoteIndex).toBeUndefined();
+      expect(result.annotations[3].footnoteIndex).toBeDefined();
+    });
+
+    it('leaves every label inline when the plot has room', () => {
+      const annotations = spread();
+      const plotArea = { x: 0, y: 0, width: 900, height: 500 };
+      const result = thinAnnotations(annotations, specs, measure, plotArea);
+      expect(result.footnotes).toHaveLength(0);
+    });
+
+    it('does not let a pinned label consume the budget and evict candidates', () => {
+      // The pinned label is enormous — on its own it would blow the budget. It
+      // must not be charged against it, or the candidate that easily fits gets
+      // demoted in its place.
+      const annotations = [
+        makeResolved(5, 20, 'A pinned label that is extremely long and wide'),
+        makeResolved(5, 120, 'Tiny'),
+      ];
+      const pinnedSpecs: Annotation[] = [
+        makeSpec('A pinned label that is extremely long and wide', { responsive: false }),
+        makeSpec('Tiny'),
+      ];
+      const plotArea = { x: 0, y: 0, width: 400, height: 200 };
+      const result = thinAnnotations(annotations, pinnedSpecs, measure, plotArea);
+
+      expect(result.annotations[0].footnoteIndex).toBeUndefined();
+      expect(result.annotations[1].footnoteIndex).toBeUndefined();
+      expect(result.footnotes).toHaveLength(0);
+    });
+  });
 });
