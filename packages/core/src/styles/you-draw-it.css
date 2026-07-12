@@ -1,0 +1,124 @@
+/* ---------------------------------------------------------------------------
+ * You draw it (youDrawIt)
+ *
+ * NYT-style draw-then-reveal. SVG-space elements (hatched region, guess path,
+ * reveal clip) render inside the chart SVG; the prompt + skip-to-reveal button
+ * are an absolutely-positioned HTML overlay the vanilla adapter sizes over the
+ * drawing region (inline left/top/width/height). All colors come from --oc-*
+ * tokens so they flip in .oc-dark.
+ * --------------------------------------------------------------------------- */
+
+/* Hatched "draw here" region. Fill comes from an SVG <pattern> (line color =
+ * the target series color); this only governs overall opacity + fade-out. */
+.oc-ydi-region {
+  opacity: 0.35;
+  transition: opacity 0.4s ease;
+}
+
+.oc-ydi-region[data-ydi-hidden="true"] {
+  opacity: 0;
+}
+
+/* The vertical rule at `from` where drawing begins. */
+.oc-ydi-boundary {
+  stroke: var(--oc-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  stroke-opacity: 0.6;
+}
+
+/* Reader's guess: a distinct pen-like stroke that reads as "yours" against the
+ * solid real line. Dashed + focus-blue so it stays legible in both modes. */
+.oc-ydi-guess {
+  stroke: var(--oc-focus);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 6;
+}
+
+/* Host-supplied comparison line ("what everyone else guessed"). Muted so it
+ * sits behind the reader's guess and the real line. */
+.oc-ydi-comparison {
+  stroke: var(--oc-text-muted);
+  stroke-width: 1.5;
+  stroke-opacity: 0.5;
+  stroke-dasharray: 4 4;
+}
+
+/* Reveal clip rect: the width animates from the `from` boundary to the full
+ * area on reveal, wiping the real line in left-to-right. The vanilla adapter
+ * adds .oc-ydi-clip-animate right before setting the final width; reduced
+ * motion skips the class so the width snaps. */
+.oc-ydi-clip-rect.oc-ydi-clip-animate {
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* HTML controls overlay: prompt (top) + reveal button (bottom-right). */
+.oc-ydi-controls {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  font-family: var(--oc-font-family);
+  padding: 8px;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.oc-ydi-prompt {
+  align-self: center;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--oc-card);
+  border: 1px solid var(--oc-border);
+  color: var(--oc-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: var(--oc-tooltip-shadow);
+}
+
+.oc-ydi-controls.oc-ydi-revealed .oc-ydi-prompt {
+  display: none;
+}
+
+/* Skip-to-reveal button. pointer-events re-enabled (the overlay disables it)
+ * so it stays clickable and keyboard-reachable. Min height enforced inline by
+ * the adapter (>= 24px effective touch target). */
+.oc-ydi-reveal-button {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border: 1px solid var(--oc-border);
+  border-radius: 6px;
+  background: var(--oc-bg);
+  color: var(--oc-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--oc-tooltip-shadow);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.oc-ydi-reveal-button:hover {
+  background: var(--oc-hover-bg);
+}
+
+.oc-ydi-reveal-button:focus-visible {
+  outline: 2px solid var(--oc-focus);
+  outline-offset: 2px;
+}
+
+.oc-ydi-reveal-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

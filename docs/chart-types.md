@@ -355,6 +355,134 @@ For the full field reference, see [SankeySpec in spec-reference.md](spec-referen
 
 ---
 
+## Beeswarm
+
+Distribution of individual observations, dodged apart so no two dots overlap. Better than a histogram when you want every data point visible, and better than a strip plot when the data is dense enough that ticks would pile up.
+
+```ts
+const spec = {
+  mark: "beeswarm",
+  data: [
+    { county: "A", income: 71.2 },
+    { county: "B", income: 54.7 },
+    { county: "C", income: 94.3 },
+    // ...one row per observation
+  ],
+  encoding: {
+    x: { field: "income", type: "quantitative" },
+  },
+};
+```
+
+One positional channel is the quantitative value axis (`x` for a horizontal swarm, `y` for a vertical one). The other positional channel is optional: add a nominal/ordinal `y` (or `x`) to split into grouped lanes, one swarm per category.
+
+**Accepted encodings:**
+- `x` or `y` (quantitative, required) -- the value axis
+- the other position (nominal/ordinal, optional) -- grouped lanes, one per category
+- `color` (optional) -- categorical grouping, or quantitative for a sequential gradient on dots
+- `size` (optional, quantitative) -- scales dot radius; pass `size.scale.range` to cap the radius so tall stacks stay inside the chart area
+
+The cross axis has no scale. The dodge layout computes pixel offsets around each lane center, so lane order and dot packing come from the data, not a positional encoding.
+
+**Live examples**: [Single-lane swarm](https://tryopendata.github.io/openchart/?story=testing--fixtures--beeswarm-basic) | [Grouped lanes](https://tryopendata.github.io/openchart/?story=testing--fixtures--beeswarm-grouped) | [Sized dots](https://tryopendata.github.io/openchart/?story=testing--fixtures--beeswarm-sized)
+
+---
+
+## Waffle
+
+Part-to-whole composition as a grid of unit squares. Each cell is one unit, so "37 of 100" reads directly off the grid. A concrete alternative to a pie when the audience should be able to count.
+
+```ts
+const spec = {
+  mark: "waffle",
+  data: [
+    { tenure: "Own with mortgage", share: 40 },
+    { tenure: "Own outright", share: 26 },
+    { tenure: "Rent", share: 34 },
+  ],
+  encoding: {
+    theta: { field: "share", type: "quantitative" },
+    color: { field: "tenure", type: "nominal" },
+  },
+};
+```
+
+`theta` is the quantitative share value (the same part-to-whole channel arc marks use; it is an alias for `y`, so provide one of the two). `color` is the required category. Values normalize to the grid via largest-remainder rounding, so the cells always sum exactly even when the shares are fractional.
+
+**Mark options:**
+- `units` (default 100) -- total number of cells in the grid
+- `columns` (default 10) -- columns per grid; rows derive from `units / columns`
+
+Set these on the mark object, e.g. `mark: { type: "waffle", units: 50, columns: 10 }`. A categorical `color` encoding accepts `highlight` to single out one category and mute the rest.
+
+**Live examples**: [Basic waffle](https://tryopendata.github.io/openchart/?story=testing--fixtures--waffle-basic) | [Highlighted category](https://tryopendata.github.io/openchart/?story=testing--fixtures--waffle-highlight)
+
+---
+
+## Calendar
+
+GitHub-style calendar heatmap: one cell per day, laid out as weeks (columns) by weekdays (rows), colored by a daily value. Good for daily time series where seasonality and weekday patterns matter more than exact values.
+
+```ts
+const spec = {
+  mark: "calendar",
+  data: [
+    { date: "2023-01-01", reports: 6 },
+    { date: "2023-01-02", reports: 15 },
+    // ...one row per day
+  ],
+  encoding: {
+    x: { field: "date", type: "temporal" },
+    color: { field: "reports", type: "quantitative" },
+  },
+};
+```
+
+`x` is the daily date (temporal, one row per day) and `color` is the quantitative per-day value. There is no `y` channel: the calendar computes its own weeks-by-weekdays geometry, so it owns positional layout with no axes. Multi-year data partitions into one stacked band per year, all bands sharing a single color scale and legend. Days with no data row render as empty cells.
+
+The `color` scale drives the legend. A quantitative `color` encoding produces a **continuous legend** instead of categorical swatches: a gradient bar for sequential/diverging scales, or discrete class swatches for binned scales (`quantile`, `quantize`, `threshold`). Sequential ramps label the min and max; diverging ramps (e.g. `scale: { scheme: "redBlue" }`) add a midpoint label. Any mark with a quantitative `color` encoding gets this legend, not just the calendar.
+
+**Mark options:**
+- `weekStart` (`'monday'` default, or `'sunday'`) -- which weekday occupies the top row
+- `cellRadius` (default 1) -- corner radius in pixels for day cells
+
+**Live examples**: [One year, diverging](https://tryopendata.github.io/openchart/?story=testing--fixtures--calendar-diverging-year) | [Two years, sequential](https://tryopendata.github.io/openchart/?story=testing--fixtures--calendar-sequential-two-years) | [Compact](https://tryopendata.github.io/openchart/?story=testing--fixtures--calendar-compact)
+
+---
+
+## Parliament
+
+Hemicycle seat chart: one dot per seat, packed into concentric semicircular arcs and grouped by party left to right. The standard form for legislative composition, where "who holds a majority" is the question.
+
+```ts
+const spec = {
+  mark: "parliament",
+  data: [
+    { party: "Democratic", seats: 213 },
+    { party: "Republican", seats: 222 },
+  ],
+  encoding: {
+    theta: { field: "seats", type: "quantitative" },
+    color: {
+      field: "party",
+      type: "nominal",
+      scale: { range: ["#1b7fa3", "#c44e52"] },
+    },
+  },
+};
+```
+
+`theta` is the quantitative seat count (an alias for `y`; provide one of the two) and `color` is the required party. Order the data left to right by political group; the layout preserves that order across the arc. Party colors typically come from an explicit `color.scale.range` rather than the default palette.
+
+**Mark options:**
+- `shape` (`'hemicycle'`, the default and only shape)
+- `seatRadius` (`'auto'` default) -- seat dot radius in pixels; `'auto'` sizes dots to fill the rings for the given seat count
+- `majorityLine` (default true) -- draws the majority-threshold line and its "N to win" label
+
+**Live examples**: [US House](https://tryopendata.github.io/openchart/?story=testing--fixtures--parliament-us-house) | [Multi-party](https://tryopendata.github.io/openchart/?story=testing--fixtures--parliament-eu-multi-party) | [Compact](https://tryopendata.github.io/openchart/?story=testing--fixtures--parliament-compact)
+
+---
+
 ## Marks: text, rule, tick
 
 Lower-level mark types for specialized use cases.
@@ -476,6 +604,7 @@ Publication-quality charts with responsive variants at different breakpoints:
 
 ## Related docs
 
+- [Ranking and change](ranking-and-change.md) for slope, bump, and range chart recipes
 - [Spec reference](spec-reference.md) for field-by-field type details and encoding rules
 - [Tables](tables.md) for data tables with heatmaps, sparklines, and more
 - [Graphs](graphs.md) for network/relationship visualizations

@@ -91,12 +91,14 @@ function ChartInner(
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
+    onHighlightChange,
     onAnnotationClick,
     onAnnotationEdit,
     onEdit,
     onSelect,
     onDeselect,
     onTextEdit,
+    onReveal,
     selectedElement: selectedElementProp,
     highlight,
     className,
@@ -121,12 +123,14 @@ function ChartInner(
     onMarkHover?: ChartProps['onMarkHover'];
     onMarkLeave?: ChartProps['onMarkLeave'];
     onLegendToggle?: ChartProps['onLegendToggle'];
+    onHighlightChange?: ChartProps['onHighlightChange'];
     onAnnotationClick?: ChartProps['onAnnotationClick'];
     onAnnotationEdit?: ChartProps['onAnnotationEdit'];
     onEdit?: ChartProps['onEdit'];
     onSelect?: ChartProps['onSelect'];
     onDeselect?: ChartProps['onDeselect'];
     onTextEdit?: ChartProps['onTextEdit'];
+    onReveal?: ChartProps['onReveal'];
   }>({});
   handlersRef.current = {
     onDataPointClick,
@@ -134,12 +138,14 @@ function ChartInner(
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
+    onHighlightChange,
     onAnnotationClick,
     onAnnotationEdit,
     onEdit,
     onSelect,
     onDeselect,
     onTextEdit,
+    onReveal,
   };
 
   // Stable callback wrappers that read from refs
@@ -160,6 +166,10 @@ function ChartInner(
   const stableOnMarkLeave = useCallback(() => handlersRef.current.onMarkLeave?.(), []);
   const stableOnLegendToggle = useCallback(
     (series: string, visible: boolean) => handlersRef.current.onLegendToggle?.(series, visible),
+    [],
+  );
+  const stableOnHighlightChange = useCallback(
+    (values: string[]) => handlersRef.current.onHighlightChange?.(values),
     [],
   );
   const stableOnAnnotationClick = useCallback(
@@ -189,6 +199,10 @@ function ChartInner(
   const stableOnTextEdit = useCallback(
     (element: ElementRef, oldText: string, newText: string) =>
       handlersRef.current.onTextEdit?.(element, oldText, newText),
+    [],
+  );
+  const stableOnReveal = useCallback(
+    (guess: Array<{ x: string | number; y: number }>) => handlersRef.current.onReveal?.(guess),
     [],
   );
 
@@ -227,6 +241,7 @@ function ChartInner(
       onMarkHover: stableOnMarkHover,
       onMarkLeave: stableOnMarkLeave,
       onLegendToggle: stableOnLegendToggle,
+      onHighlightChange: stableOnHighlightChange,
       onAnnotationClick: stableOnAnnotationClick,
       // Only include editing callbacks when the consumer provides them.
       // The stable wrappers are always truthy, so gating on handlersRef
@@ -236,6 +251,7 @@ function ChartInner(
       ...(handlersRef.current.onSelect ? { onSelect: stableOnSelect } : {}),
       ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
       ...(handlersRef.current.onTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
+      ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
       responsive: true,
     };
@@ -256,6 +272,7 @@ function ChartInner(
     stableOnDataPointClick,
     stableOnEdit,
     stableOnLegendToggle,
+    stableOnHighlightChange,
     stableOnMarkClick,
     stableOnMarkHover,
     stableOnMarkLeave,
@@ -263,6 +280,7 @@ function ChartInner(
     stableOnSelect,
     stableOnDeselect,
     stableOnTextEdit,
+    stableOnReveal,
   ]);
 
   // Update chart when spec changes

@@ -190,6 +190,25 @@ export interface AxisLayout {
 // Marks (data visual elements)
 // ---------------------------------------------------------------------------
 
+/** The four built-in fill pattern shapes for series reinforcement. */
+export type FillPatternType = 'diagonal' | 'dot' | 'crosshatch' | 'vertical';
+
+/**
+ * A resolved per-mark fill pattern (engine output for `mark.fillPattern: 'auto'`).
+ *
+ * The renderer builds one SVG `<pattern>` per unique (type, base, line)
+ * combination: a tile of `base` color overlaid with `line`-colored pattern
+ * geometry. Marks referencing the same resolved pattern share one def.
+ */
+export interface ResolvedFillPattern {
+  /** Pattern shape assigned to this mark's series. */
+  type: FillPatternType;
+  /** Base tile color: the series' solid color. */
+  base: string;
+  /** Pattern line/dot color, contrast-picked against `base`. */
+  line: string;
+}
+
 /** Accessibility attributes for a mark. */
 export interface MarkAria {
   /** ARIA label for the mark. Optional when `decorative: true` — decorative
@@ -277,6 +296,8 @@ export interface AreaMark {
   interpolate?: string;
   /** Fill color or gradient. */
   fill: string | GradientDef;
+  /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
+  pattern?: ResolvedFillPattern;
   /** Fill opacity. */
   fillOpacity: number;
   /** Optional stroke for the top boundary. */
@@ -323,6 +344,8 @@ export interface RectMark {
   height: number;
   /** Fill color or gradient. */
   fill: string | GradientDef;
+  /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
+  pattern?: ResolvedFillPattern;
   /** Stroke color. */
   stroke?: string;
   /** Stroke width. */
@@ -376,6 +399,8 @@ export interface ArcMark {
   endAngle: number;
   /** Fill color or gradient. */
   fill: string | GradientDef;
+  /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
+  pattern?: ResolvedFillPattern;
   /** Stroke color (usually white for slice separation). */
   stroke: string;
   /** Stroke width. */
@@ -735,8 +760,56 @@ export interface GradientLegendLayout extends BaseLegendLayout {
   maxLabel: string;
 }
 
-/** Resolved legend layout — either categorical (swatches) or gradient (continuous bar). */
-export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout;
+/** A positioned value label on a continuous/binned color legend. */
+export interface ContinuousLegendTick {
+  /** The data value this label marks. */
+  value: number;
+  /** Formatted label text (channel format applied). */
+  label: string;
+  /** Label x position (pixel coordinates). */
+  x: number;
+  /** Horizontal text anchor for the label. */
+  anchor: 'start' | 'middle' | 'end';
+}
+
+/** A discrete class swatch in a binned continuous legend. */
+export interface ContinuousLegendBin {
+  /** Swatch x position (pixel coordinates). */
+  x: number;
+  /** Swatch width in pixels. */
+  width: number;
+  /** Fill color. */
+  color: string;
+}
+
+/**
+ * Continuous color legend for quantitative color scales on charts.
+ *
+ * Two rendering modes, resolved from the color channel's scale type:
+ * - `gradient`: a single gradient-filled bar with min/max labels (plus a
+ *   midpoint label at the neutral value for diverging ramps).
+ * - `binned`: a contiguous swatch row (quantile/quantize/threshold scales)
+ *   with boundary value labels between swatches at the class breaks.
+ */
+export interface ContinuousLegendLayout extends BaseLegendLayout {
+  /** Discriminant for legend type. */
+  type: 'continuous';
+  /** Rendering mode: gradient bar or binned swatch row. */
+  mode: 'gradient' | 'binned';
+  /** The color bar rectangle (pixel coordinates). */
+  bar: Rect;
+  /** Gradient color stops (empty in binned mode). */
+  colorStops: GradientColorStop[];
+  /** Class swatches, left to right (empty in gradient mode). */
+  bins: ContinuousLegendBin[];
+  /** Value labels rendered below the bar. */
+  ticks: ContinuousLegendTick[];
+  /** Text baseline y for the value labels (pixel coordinates). */
+  labelY: number;
+}
+
+/** Resolved legend layout: categorical (swatches), gradient (tilemap bar), or continuous (chart color bar). */
+export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout | ContinuousLegendLayout;
 
 // ---------------------------------------------------------------------------
 // Endpoint labels (right-side per-series column for line/area charts)
@@ -828,7 +901,7 @@ export interface TooltipContent {
 
 /** Accessibility metadata for the entire visualization. */
 export interface A11yMetadata {
-  /** Generated alt text describing the visualization. */
+  /** Alt text describing the visualization: the author's `a11y.description` / `description` when set, auto-generated otherwise. */
   altText: string;
   /** Tabular data fallback for screen readers. Each inner array is a row. */
   dataTableFallback: unknown[][];
@@ -836,6 +909,13 @@ export interface A11yMetadata {
   role: string;
   /** Whether the visualization is keyboard-navigable. */
   keyboardNavigable: boolean;
+  /**
+   * Hide the visualization from assistive technology (`aria-hidden="true"`,
+   * no screen-reader table, no keyboard mark navigation). Optional because
+   * only chart compilation sets it, and only on author opt-out via
+   * `a11y.hidden`.
+   */
+  hidden?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -903,6 +983,90 @@ export interface ResolvedMetricBar {
 }
 
 // ---------------------------------------------------------------------------
+// Series search (resolved)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reserved band for the series search input (`seriesSearch`). The band is
+ * empty SVG space between the chrome/metrics block and the top legend; the
+ * vanilla adapter overlays an absolutely-positioned DOM combobox aligned to
+ * this rect, so mounting it never changes the container's size.
+ */
+export interface ResolvedSeriesSearch {
+  /** Band left x in layout coordinates. */
+  x: number;
+  /** Band top y in layout coordinates. */
+  y: number;
+  /** Band width. */
+  width: number;
+  /** Input row height (the reservation adds a gap below this). */
+  height: number;
+  /** Resolved input placeholder text. */
+  placeholder: string;
+  /** Distinct color-channel values available for search, in data order. */
+  values: string[];
+}
+
+// ---------------------------------------------------------------------------
+// You draw it (resolved)
+// ---------------------------------------------------------------------------
+
+/**
+ * One x-sample the reader's drawing snaps to: a pixel x position paired with
+ * its data-x value. `xValue` is the value reported by `onReveal`; it falls
+ * back to the pixel x when the data value can't be recovered.
+ */
+export interface YouDrawItSample {
+  /** Pixel x position within the chart area. */
+  px: number;
+  /** Data-coordinate x value at this sample (from the target line's data). */
+  xValue: string | number;
+}
+
+/**
+ * Linear y pixel-to-data anchors, so the vanilla layer can map a drawn pixel
+ * y back to a data value for `onReveal` without holding the scale object.
+ * Present only when the y scale is invertible (continuous scales).
+ */
+export interface YouDrawItYInvert {
+  /** Top pixel of the drawing area. */
+  topPixel: number;
+  /** Bottom pixel of the drawing area. */
+  bottomPixel: number;
+  /** Data value at the top pixel. */
+  topData: number;
+  /** Data value at the bottom pixel. */
+  bottomData: number;
+}
+
+/**
+ * Resolved geometry and config for the "you draw it" interactive format
+ * (`youDrawIt`). The vanilla adapter uses this to render the hatched drawing
+ * region, capture pointer input, and mask/reveal the real line. Present only
+ * when the spec enables `youDrawIt` on a valid single-series line chart.
+ */
+export interface ResolvedYouDrawIt {
+  /** Pixel x position of `from` within the chart area (drawing starts here). */
+  fromX: number;
+  /** The chart drawing area, for clamping pointer input and sizing the hatch region. */
+  area: Rect;
+  /** X samples (pixel + data value) at or after `from`, ascending by pixel x. Drawing snaps to these. */
+  samples: YouDrawItSample[];
+  /** Resolved prompt text for the hatched region. */
+  prompt: string;
+  /** Resolved skip-to-reveal button label. */
+  revealLabel: string;
+  /** Stroke color of the target line (the reader's guess uses a distinct pen style, but shares the palette for continuity). */
+  lineColor: string;
+  /** seriesKey of the target line mark, so the vanilla layer can find its DOM element. Undefined for a single-series line with no color encoding. */
+  targetSeriesKey?: string;
+  /** Pixel-to-data y anchors for reporting the guess in data coordinates. Absent when the y scale isn't invertible. */
+  yInvert?: YouDrawItYInvert;
+  /** Optional comparison line, resolved to pixel points parallel to the target line's points. */
+  comparisonPoints?: Point[];
+}
+
+// ---------------------------------------------------------------------------
 // ChartLayout (the main engine output for charts)
 // ---------------------------------------------------------------------------
 
@@ -953,6 +1117,10 @@ export interface ChartLayout {
   chrome: ResolvedChrome;
   /** Resolved KPI metric bar. Present only when spec.metrics is supplied and fits. */
   metrics?: ResolvedMetricBar;
+  /** Reserved series-search band. Present only when spec.seriesSearch is enabled. */
+  seriesSearch?: ResolvedSeriesSearch;
+  /** Resolved "you draw it" config. Present only when spec.youDrawIt is enabled and valid. */
+  youDrawIt?: ResolvedYouDrawIt;
   /** Resolved axis layouts. */
   axes: {
     x?: AxisLayout;
@@ -1531,6 +1699,24 @@ export interface CompileOptions {
   darkMode?: boolean;
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
+  /**
+   * Enable development-time diagnostics (WCAG contrast warnings via
+   * `console.warn`). The engine is isomorphic, so it never sniffs
+   * `process.env`; the host decides what "dev" means and passes this flag.
+   * Warnings are advisory only and never throw. Defaults to false.
+   */
+  dev?: boolean;
+  /**
+   * Sink for advisory spec warnings (deprecations, did-you-mean suggestions,
+   * unknown scheme names, overplotting/beeswarm budget notes, etc.). The engine
+   * is isomorphic and side-effect-free by default: rather than writing to the
+   * global `console`, it routes every advisory warning through this callback so
+   * a host can collect, reroute, or silence them (e.g. suppress under SSR, fail
+   * a test on any warning, surface them in a dev overlay). When omitted, the
+   * engine defaults to `console.warn`. Never called with fatal errors, which are
+   * thrown instead.
+   */
+  onWarn?: (message: string) => void;
   /**
    * Real text measurement function provided by the adapter.
    * Uses a hidden canvas or DOM element for accurate text dimensions.

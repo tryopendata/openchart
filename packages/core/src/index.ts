@@ -33,9 +33,12 @@ export {
   contrastRatio,
   DIVERGING_PALETTES,
   findAccessibleColor,
+  isOpaqueColor,
   meetsAA,
   pickLabelColor,
+  resolveSchemeName,
   SEQUENTIAL_PALETTES,
+  SUPPORTED_SCHEME_NAMES,
   simulateColorBlindness,
 } from './colors/index';
 
@@ -150,6 +153,7 @@ export {
   buildTemporalFormatter,
   formatDate,
   formatNumber,
+  formatOrdinal,
 } from './locale/index';
 
 // ---------------------------------------------------------------------------
@@ -185,3 +189,9 @@ export {
   scatterChart,
   tileMap,
 } from './helpers/spec-builders';
+
+// ---------------------------------------------------------------------------
+// Helpers: deep-merge for spec patches (used by vanilla/story)
+// ---------------------------------------------------------------------------
+
+export { deepMergeSpec } from './helpers/deep-merge';

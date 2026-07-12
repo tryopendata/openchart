@@ -1,0 +1,21 @@
+{
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "mark": "line",
+    "title": { "text": "Revenue", "subtitle": "By quarter" },
+    "data": [{ "date": "2020-01-01", "value": 1 }, { "date": "2021-01-01", "value": 2 }],
+    "encoding": {
+      "x": { "field": "date", "type": "temporal" },
+      "y": { "field": "value", "type": "quantitative" }
+    }
+  },
+  "canonical": {
+    "mark": "line",
+    "chrome": { "title": "Revenue", "subtitle": "By quarter" },
+    "data": [{ "date": "2020-01-01", "value": 1 }, { "date": "2021-01-01", "value": 2 }],
+    "encoding": {
+      "x": { "field": "date", "type": "temporal" },
+      "y": { "field": "value", "type": "quantitative" }
+    }
+  }
+}

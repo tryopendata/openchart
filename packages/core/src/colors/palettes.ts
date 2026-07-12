@@ -157,3 +157,50 @@ export const DIVERGING_PALETTES: Record<string, string[]> = {
   redBlue: [...DIVERGING_RED_BLUE.stops],
   brownTeal: [...DIVERGING_BROWN_TEAL.stops],
 };
+
+// ---------------------------------------------------------------------------
+// Scheme name resolution (spec-level `scale: { scheme }` support)
+// ---------------------------------------------------------------------------
+
+/**
+ * Vega-Lite scheme-name aliases mapped onto the openchart palettes.
+ * Keys are lowercase. Only schemes with a faithful local equivalent are
+ * aliased; unknown names fail validation with the supported list rather
+ * than silently substituting an unrelated ramp.
+ */
+const VL_SCHEME_ALIASES: Record<string, string> = {
+  blues: 'blue',
+  greens: 'green',
+  oranges: 'orange',
+  purples: 'purple',
+  teals: 'teal',
+  redblue: 'redBlue',
+  brownteal: 'brownTeal',
+  // ColorBrewer BrBG, which brownTeal mirrors
+  brownbluegreen: 'brownTeal',
+  category10: 'categorical',
+  tableau10: 'categorical',
+};
+
+/**
+ * Resolve a scheme name to its palette stops. Accepts openchart palette names
+ * (blue, green, orange, purple, teal, redBlue, brownTeal, categorical) and
+ * common Vega-Lite aliases (blues, greens, ..., redblue, category10).
+ * Case-insensitive. Returns undefined for unknown names.
+ */
+export function resolveSchemeName(name: string): string[] | undefined {
+  const canonical =
+    SEQUENTIAL_PALETTES[name] || DIVERGING_PALETTES[name]
+      ? name
+      : (VL_SCHEME_ALIASES[name.toLowerCase()] ?? name.toLowerCase());
+  if (canonical === 'categorical') return [...CATEGORICAL_PALETTE];
+  return SEQUENTIAL_PALETTES[canonical] ?? DIVERGING_PALETTES[canonical];
+}
+
+/** Scheme names accepted by `scale: { scheme }`, for validation messages. */
+export const SUPPORTED_SCHEME_NAMES: readonly string[] = [
+  ...Object.keys(SEQUENTIAL_PALETTES),
+  ...Object.keys(DIVERGING_PALETTES),
+  'categorical',
+  ...Object.keys(VL_SCHEME_ALIASES),
+];

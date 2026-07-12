@@ -40,8 +40,46 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
     parts.push(`showing ${titleText}`);
   }
 
+  // Waffle: name the unit framing. Per-category "x of N units" phrasing
+  // lives on the mark aria labels; the chart-level text carries the total.
+  if (markType === 'waffle') {
+    const units = markDef.units ?? 100;
+    parts.push(`dividing ${units} units`);
+  }
+
+  // Parliament: name the total seat count and the majority threshold, the two
+  // numbers a reader most wants. Per-party seat counts live on the seat marks'
+  // aria labels; this carries the overall framing.
+  if (markType === 'parliament') {
+    const valueField = spec.encoding.theta?.field ?? spec.encoding.y?.field;
+    if (valueField) {
+      const totalSeats = data.reduce((sum, d) => {
+        const v = Number(d[valueField]);
+        return sum + (Number.isFinite(v) && v > 0 ? v : 0);
+      }, 0);
+      if (totalSeats > 0) {
+        const majority = Math.floor(totalSeats / 2) + 1;
+        parts.push(`with ${totalSeats} seats, ${majority} needed for a majority`);
+      }
+    }
+  }
+
+  // Beeswarm: name the distribution fields (value axis + optional lane).
+  // Skips the generic x-axis description below, which would either say
+  // nothing (quantitative value axis) or repeat the lane count.
+  if (markType === 'beeswarm') {
+    const xIsValue = spec.encoding.x?.type === 'quantitative';
+    const valueField = xIsValue ? spec.encoding.x?.field : spec.encoding.y?.field;
+    const laneField = xIsValue ? spec.encoding.y?.field : spec.encoding.x?.field;
+    if (valueField) {
+      parts.push(
+        `plotting the distribution of ${valueField}${laneField ? ` by ${laneField}` : ''}`,
+      );
+    }
+  }
+
   // Describe the data range
-  if (spec.encoding.x && data.length > 0) {
+  if (spec.encoding.x && markType !== 'beeswarm' && data.length > 0) {
     const field = spec.encoding.x.field;
     const values = data.map((d) => d[field]).filter((v) => v != null);
 

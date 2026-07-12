@@ -1,0 +1,28 @@
+{
+  "layered": true,
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "data": [{ "category": "A", "amount": 30 }, { "category": "B", "amount": 70 }],
+    "layer": [
+      {
+        "mark": "arc",
+        "encoding": {
+          "theta": { "field": "amount", "type": "quantitative" },
+          "color": { "field": "category", "type": "nominal" }
+        }
+      }
+    ]
+  },
+  "canonical": {
+    "data": [{ "category": "A", "amount": 30 }, { "category": "B", "amount": 70 }],
+    "layer": [
+      {
+        "mark": "arc",
+        "encoding": {
+          "y": { "field": "amount", "type": "quantitative" },
+          "color": { "field": "category", "type": "nominal" }
+        }
+      }
+    ]
+  }
+}

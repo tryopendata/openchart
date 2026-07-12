@@ -93,8 +93,10 @@ Each package re-exports the types you need, so you typically only install one.
 | [Getting started](docs/getting-started.md) | Hands-on tutorial from first chart to custom themes, tables, and graphs |
 | [Spec reference](docs/spec-reference.md) | Field-by-field type reference for ChartSpec, TableSpec, and GraphSpec |
 | [Integration guide](docs/integration-guide.md) | Events, controlled tables, export, responsive behavior, vanilla JS lifecycle |
+| [Accessibility](docs/accessibility.md) | What's automatic, what's opt-in (alt text, pattern fills, contrast warnings), WCAG mapping |
 | [Agent patterns](docs/agent-patterns.md) | Visualization patterns and cookbook for LLM-generated charts |
 | [Architecture](docs/architecture.md) | Compilation pipeline, package boundaries, design decisions |
+| [Migrating to v8](docs/migrating-v8.md) | Breaking changes, before/after specs, and jq codemod recipes for the v8 upgrade |
 | [Contributing](CONTRIBUTING.md) | Setup, running tests, adding chart types, PR guidelines |
 
 ## Packages

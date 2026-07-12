@@ -44,6 +44,7 @@ import {
 } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -145,12 +146,13 @@ function uniqueStrings(values: unknown[]): string[] {
  * - 'ascending': sort alphabetically/numerically ascending
  * - 'descending': sort descending
  * - null | undefined: preserve data order (no sorting)
+ *
+ * VL sort forms ('-y', value arrays, { field, op, order }) are resolved into
+ * an explicit scale.domain by the pre-validation sugar expansion; any that
+ * reach this point fall back to data order.
  */
-function applyCategoricalSort(
-  values: string[],
-  sort: 'ascending' | 'descending' | null | undefined,
-): string[] {
-  if (!sort) return values;
+function applyCategoricalSort(values: string[], sort: EncodingChannel['sort']): string[] {
+  if (sort !== 'ascending' && sort !== 'descending') return values;
 
   const sorted = [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (sort === 'descending') sorted.reverse();
@@ -594,15 +596,64 @@ function buildSequentialColorScale(
   const explicitRange = channel.scale?.range as string[] | undefined;
   const colors = explicitRange ?? palette;
 
-  const scale = scaleLinear<string>()
-    .domain([domainMin, domainMax])
-    .range([colors[0], colors[colors.length - 1]])
-    .clamp(true);
+  // Explicit multi-stop ranges (e.g. a diverging scheme) interpolate piecewise
+  // through every stop, with evenly-spaced domain pivots to match. Without an
+  // explicit range the endpoints-only form is kept so applyColorScaleRange can
+  // swap in the theme ramp endpoints post-hoc.
+  const stops =
+    explicitRange && explicitRange.length > 2
+      ? explicitRange
+      : [colors[0], colors[colors.length - 1]];
+  const domain =
+    stops.length > 2
+      ? stops.map((_, i) => domainMin + ((domainMax - domainMin) * i) / (stops.length - 1))
+      : [domainMin, domainMax];
+
+  const scale = scaleLinear<string>().domain(domain).range(stops).clamp(true);
 
   // Cast: sequential color scale (number -> string) is structurally incompatible
   // with D3Scale (number -> number), but is only ever accessed via scales.color
   // where consumers already cast appropriately.
   return { scale: scale as unknown as D3Scale, type: 'sequential', channel };
+}
+
+/**
+ * Build a binned color scale (quantile/quantize/threshold) for a quantitative
+ * color encoding with an explicit `scale.type`. The range holds colors: an
+ * explicit `scale.range` wins; otherwise a placeholder sampled from the
+ * default palette that `applyColorScaleRange` replaces with the theme's
+ * sequential ramp.
+ */
+function buildBinnedColorScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  palette: string[],
+): ResolvedScale {
+  const values = parseNumbers(fieldValues(data, channel.field));
+  const explicitRange = channel.scale?.range as string[] | undefined;
+  const scaleType = channel.scale?.type as 'quantile' | 'quantize' | 'threshold';
+
+  if (scaleType === 'threshold') {
+    // Threshold scales require explicit domain breakpoints; colors = breaks + 1.
+    const breaks = (channel.scale?.domain as number[] | undefined) ?? [0.5];
+    const colors = sampleRampColors(explicitRange ?? palette, breaks.length + 1);
+    const scale = scaleThreshold<number, string>().domain(breaks).range(colors);
+    return { scale: scale as unknown as D3Scale, type: 'threshold', channel };
+  }
+
+  const binCount = explicitRange?.length ?? DEFAULT_BIN_COUNT;
+  const colors = explicitRange ?? sampleRampColors(palette, binCount);
+
+  if (scaleType === 'quantile') {
+    const scale = scaleQuantile<string>().domain(values).range(colors);
+    return { scale: scale as unknown as D3Scale, type: 'quantile', channel };
+  }
+
+  const explicitDomain = channel.scale?.domain as [number, number] | undefined;
+  const domainMin = explicitDomain?.[0] ?? min(values) ?? 0;
+  const domainMax = explicitDomain?.[1] ?? max(values) ?? 1;
+  const scale = scaleQuantize<string>().domain([domainMin, domainMax]).range(colors);
+  return { scale: scale as unknown as D3Scale, type: 'quantize', channel };
 }
 
 // ---------------------------------------------------------------------------
@@ -661,9 +712,14 @@ function buildPositionalScale(
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
     case 'ordinal':
-      // Bar charts use band scales for their categorical axis (both orientations)
+      // Bar and range charts use band scales for their categorical axis (both
+      // orientations). Beeswarm lanes are band scales too: each category gets
+      // a band whose center anchors one swarm, on whichever axis carries the
+      // nominal channel.
       if (
         chartType === 'bar' ||
+        chartType === 'beeswarm' ||
+        chartType === 'range' ||
         ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
       ) {
         return buildBandScale(channel, data, rangeStart, rangeEnd);
@@ -694,8 +750,11 @@ export function computeScales(
   const result: ResolvedScales = {};
   const encoding = spec.encoding as Encoding;
 
-  // Scatter/bubble charts should NOT include zero by default (tight domain fits data range)
-  if (spec.markType === 'point') {
+  // Scatter/bubble, beeswarm, and range charts should NOT include zero by
+  // default (they encode position, not length; a tight domain fits the data
+  // range). Beeswarms plot raw observations whose spread is the story, and
+  // only the quantitative value axis matches the check below.
+  if (spec.markType === 'point' || spec.markType === 'beeswarm' || spec.markType === 'range') {
     if (encoding.x?.type === 'quantitative' && encoding.x.scale?.zero === undefined) {
       if (!encoding.x.scale) {
         (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };
@@ -717,6 +776,13 @@ export function computeScales(
     // Without this, stacked bars would clip past the chart area.
     let xData = data;
     let xChannel = encoding.x;
+    // Range charts span x to x2: the x-domain must cover both endpoint fields.
+    // Synthetic rows map x2 values into the x field so buildLinearScale sees them.
+    if (spec.markType === 'range' && encoding.x2 && encoding.x.type === 'quantitative') {
+      const xField = encoding.x.field;
+      const x2Field = encoding.x2.field;
+      xData = [...data, ...data.map((row) => ({ [xField]: row[x2Field] }) as DataRow)];
+    }
     const xStackEnabled =
       encoding.x.stack === true ||
       encoding.x.stack === 'zero' ||
@@ -797,6 +863,12 @@ export function computeScales(
     // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
     let yChannel = encoding.y;
+    // Range charts span y to y2 (vertical form): cover both endpoint fields.
+    if (spec.markType === 'range' && encoding.y2 && encoding.y.type === 'quantitative') {
+      const yField = encoding.y.field;
+      const y2Field = encoding.y2.field;
+      yData = [...data, ...data.map((row) => ({ [yField]: row[y2Field] }) as DataRow)];
+    }
     const isVerticalBar =
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
@@ -923,8 +995,18 @@ export function computeScales(
     // Only build color scales for field-based encodings, not conditional value defs
     if ('field' in encoding.color) {
       if (encoding.color.type === 'quantitative') {
-        // Sequential color scale for value-based coloring
-        result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
+        const colorScaleType = encoding.color.scale?.type;
+        if (
+          colorScaleType === 'quantile' ||
+          colorScaleType === 'quantize' ||
+          colorScaleType === 'threshold'
+        ) {
+          // Binned color scale: discrete classes for value-based coloring
+          result.color = buildBinnedColorScale(encoding.color, data, defaultPalette);
+        } else {
+          // Sequential color scale for value-based coloring
+          result.color = buildSequentialColorScale(encoding.color, data, defaultPalette);
+        }
       } else {
         // Categorical color scale for nominal/ordinal grouping
         result.color = buildOrdinalColorScale(encoding.color, data, defaultPalette);

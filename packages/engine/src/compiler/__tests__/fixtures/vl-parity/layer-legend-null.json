@@ -1,0 +1,41 @@
+{
+  "layered": true,
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "data": [
+      { "date": "2020-01-01", "value": 1, "group": "A" },
+      { "date": "2021-01-01", "value": 2, "group": "A" },
+      { "date": "2020-01-01", "value": 3, "group": "B" },
+      { "date": "2021-01-01", "value": 4, "group": "B" }
+    ],
+    "encoding": { "color": { "field": "group", "type": "nominal", "legend": null } },
+    "layer": [
+      {
+        "mark": "line",
+        "encoding": {
+          "x": { "field": "date", "type": "temporal" },
+          "y": { "field": "value", "type": "quantitative" }
+        }
+      }
+    ]
+  },
+  "canonical": {
+    "legend": { "show": false },
+    "data": [
+      { "date": "2020-01-01", "value": 1, "group": "A" },
+      { "date": "2021-01-01", "value": 2, "group": "A" },
+      { "date": "2020-01-01", "value": 3, "group": "B" },
+      { "date": "2021-01-01", "value": 4, "group": "B" }
+    ],
+    "encoding": { "color": { "field": "group", "type": "nominal" } },
+    "layer": [
+      {
+        "mark": "line",
+        "encoding": {
+          "x": { "field": "date", "type": "temporal" },
+          "y": { "field": "value", "type": "quantitative" }
+        }
+      }
+    ]
+  }
+}

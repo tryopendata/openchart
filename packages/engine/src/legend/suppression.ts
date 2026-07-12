@@ -121,12 +121,16 @@ export function resolveSuppression(
 
   // Single-series, non-line/area, or compact strategy: never show endpoint
   // column or end-of-line labels. Legend follows its own rules elsewhere.
+  // Explicit user opt-in (endpointLabels config) overrides the compact
+  // strip: slope/bump recipes carry their values on the labels, so an
+  // author who wrote endpointLabels config keeps the column at 320px.
   //
   // Note: `labelsDensityNone` is intentionally NOT in this short-circuit.
   // `labels.density: 'none'` is the legacy switch for end-of-line labels and
   // must not affect the endpoint column or the traditional legend (those
   // are independent concerns governed by the truth table below).
-  if (!isMultiSeries || ctx.labelsHiddenByStrategy) {
+  const strategyHidesEndpoint = ctx.labelsHiddenByStrategy && !endpointLabelsExplicitlyOn(spec);
+  if (!isMultiSeries || strategyHidesEndpoint) {
     return {
       // Defer the legend's own show/hide rules to computeLegend; this helper
       // doesn't override the existing legend behavior for non-multi-series.
@@ -214,6 +218,7 @@ export function countColorSeries(spec: NormalizedChartSpec): number {
   const colorEnc = spec.encoding.color;
   if (!colorEnc) return 0;
   if ('condition' in colorEnc) return 0;
+  if (!('field' in colorEnc)) return 0;
   if (colorEnc.type === 'quantitative') return 0;
   const field = colorEnc.field;
   if (!field) return 0;

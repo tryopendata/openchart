@@ -153,15 +153,17 @@ export function getColor(
 
 /**
  * Get color from a sequential (quantitative) color scale.
- * Maps a numeric value to a color via linear interpolation.
+ * Maps a numeric value to a color via linear interpolation, or to a discrete
+ * class color for binned (quantile/quantize/threshold) color scales.
  */
 export function getSequentialColor(
   scales: ResolvedScales,
   value: number,
   fallback: string = DEFAULT_COLOR,
 ): string | GradientDef {
-  if (scales.color?.type === 'sequential') {
-    const colorScale = scales.color.scale as unknown as (v: number) => string;
+  const type = scales.color?.type;
+  if (type === 'sequential' || type === 'quantile' || type === 'quantize' || type === 'threshold') {
+    const colorScale = scales.color!.scale as unknown as (v: number) => string;
     return colorScale(value);
   }
   return scales.defaultColor ?? fallback;

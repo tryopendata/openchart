@@ -9,9 +9,15 @@
  * own module under `./renderers/`.
  */
 
-import type { ChartLayout, FacetPanelLayout, RectMark } from '@opendata-ai/openchart-core';
+import type {
+  ChartLayout,
+  FacetPanelLayout,
+  RectMark,
+  ResolvedFillPattern,
+} from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs } from './gradient-utils';
+import { buildPatternDefs } from './pattern-utils';
 import { renderAnnotations } from './renderers/annotations';
 import { renderAxes } from './renderers/axes';
 import { renderBrand } from './renderers/brand';
@@ -67,8 +73,14 @@ export function renderChartSVG(
   // height:100% when the ancestor chain uses minHeight instead of height,
   // causing the top of the chart (title) to clip on real mobile devices.
   svg.style.height = `${height}px`;
-  svg.setAttribute('role', layout.a11y.role);
-  svg.setAttribute('aria-label', layout.a11y.altText);
+  // Author opt-out (a11y.hidden) hides the chart from assistive technology;
+  // mount.ts also skips the screen-reader table and keyboard nav wiring.
+  if (layout.a11y.hidden) {
+    svg.setAttribute('aria-hidden', 'true');
+  } else {
+    svg.setAttribute('role', layout.a11y.role);
+    svg.setAttribute('aria-label', layout.a11y.altText);
+  }
 
   // Sparkline display mode: stamp a data attribute so consumers can target
   // sparkline-specific styles. Only set the attribute in sparkline mode so
@@ -154,13 +166,19 @@ export function renderChartSVG(
   // Build gradient defs for marks with gradient fills
   const gradientMap = buildGradientDefs(layout.marks as Array<{ fill?: unknown }>, defs);
 
+  // Build pattern defs for marks with engine-assigned fill patterns
+  const patternMap = buildPatternDefs(
+    layout.marks as Array<{ pattern?: ResolvedFillPattern }>,
+    defs,
+  );
+
   svg.appendChild(defs);
 
   // Prime mark-renderer module-level state so mark sub-renderers can resolve
-  // animation + gradient fills without signature changes. try/finally guarantees
-  // the reset fires even if any downstream renderer throws, so the next render
-  // starts with a clean slate.
-  setMarkRenderState({ animation, gradientMap });
+  // animation + gradient/pattern fills without signature changes. try/finally
+  // guarantees the reset fires even if any downstream renderer throws, so the
+  // next render starts with a clean slate.
+  setMarkRenderState({ animation, gradientMap, patternMap });
   try {
     if (layout.facet) {
       // Faceted rendering: per-panel axes, marks, annotations
@@ -170,9 +188,21 @@ export function renderChartSVG(
       // Axes render outside clip (labels extend beyond chart area)
       renderAxes(svg, layout);
 
-      // Marks are clipped to chart area so area fills don't cover chrome
+      // Marks are clipped to chart area so area fills don't cover chrome.
+      // The clip and the camera transform must live on SEPARATE, nested groups:
+      // `clip-path` with the default userSpaceOnUse resolves in the coordinate
+      // system of the element's own `transform`, so putting both on one group
+      // would drag the clip rect along with a story-camera zoom/pan and stop it
+      // masking at the chart-area boundary. The outer group holds the clip fixed
+      // to the area; the inner `data-oc-marks-group` is the stable hook external
+      // features (e.g. the scrollytelling story camera) transform, so the camera
+      // moves inside the clip. SVG transform (not CSS) so it composes with each
+      // mark's own transform rather than replacing it.
+      const clipGroup = createSVGElement('g');
+      clipGroup.setAttribute('clip-path', `url(#${clipId})`);
       const clippedGroup = createSVGElement('g');
-      clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+      clippedGroup.setAttribute('data-oc-marks-group', 'true');
+      clipGroup.appendChild(clippedGroup);
       const markLabelsOverlay = renderMarks(clippedGroup, layout);
 
       // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
@@ -223,7 +253,7 @@ export function renderChartSVG(
         clippedGroup.appendChild(dotsGroup);
       }
 
-      svg.appendChild(clippedGroup);
+      svg.appendChild(clipGroup);
 
       if (markLabelsOverlay) {
         svg.appendChild(markLabelsOverlay);

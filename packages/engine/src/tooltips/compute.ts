@@ -271,6 +271,248 @@ function tooltipsForArea(
 }
 
 // ---------------------------------------------------------------------------
+// Range mark tooltips (start / end / delta)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tooltip descriptors for range marks (dumbbell / arrow / range bar).
+ *
+ * Every mark of a range row (dots, connector rule, bar rect) shares one
+ * tooltip showing the start value, the end value, and the signed delta.
+ * An explicit `encoding.tooltip` overrides the default field set.
+ */
+function computeRangeTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const horizontal = encoding.y?.type === 'nominal' || encoding.y?.type === 'ordinal';
+  const startCh = horizontal ? encoding.x : encoding.y;
+  const endCh = horizontal ? encoding.x2 : encoding.y2;
+  if (!startCh || !endCh) return descriptors;
+
+  const contentFor = (row: DataRow): TooltipContent => {
+    const title = getTooltipTitle(row, encoding);
+    if (encoding.tooltip) {
+      const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+      return { title, fields: buildExplicitTooltipFields(row, channels) };
+    }
+
+    const fields: TooltipField[] = [
+      {
+        label: resolveLabel(startCh),
+        value: formatValue(row[startCh.field], startCh.type, resolveFormat(startCh)),
+      },
+      {
+        label: resolveLabel(endCh),
+        value: formatValue(row[endCh.field], endCh.type, resolveFormat(endCh)),
+      },
+    ];
+
+    const startVal = Number(row[startCh.field]);
+    const endVal = Number(row[endCh.field]);
+    if (Number.isFinite(startVal) && Number.isFinite(endVal)) {
+      const delta = endVal - startVal;
+      const formatted = formatValue(delta, 'quantitative', resolveFormat(startCh));
+      fields.push({ label: 'Change', value: delta > 0 ? `+${formatted}` : formatted });
+    }
+
+    return { title, fields };
+  };
+
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'point' && mark.type !== 'rect' && mark.type !== 'rule') continue;
+    descriptors.set(`${mark.type}-${i}`, contentFor(mark.data as DataRow));
+  }
+
+  return descriptors;
+}
+
+/**
+ * Compute per-day calendar heatmap tooltips.
+ *
+ * Data cells get a formatted date title plus the color value; empty cells
+ * (missing days, marked decorative by the calendar renderer) get no
+ * descriptor at all so no tooltip fires on them. An explicit
+ * `encoding.tooltip` overrides the default field set.
+ */
+function computeCalendarTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const xEnc = encoding.x;
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  if (!xEnc || !colorEnc) return descriptors;
+
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'rect' || mark.aria.decorative) continue;
+    const row = mark.data as DataRow;
+
+    const title = formatValue(row[xEnc.field], 'temporal', resolveFormat(xEnc));
+    if (encoding.tooltip) {
+      const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+      descriptors.set(`rect-${i}`, { title, fields: buildExplicitTooltipFields(row, channels) });
+      continue;
+    }
+
+    descriptors.set(`rect-${i}`, {
+      title,
+      fields: [
+        {
+          label: resolveLabel(colorEnc),
+          value: formatValue(row[colorEnc.field], colorEnc.type, resolveFormat(colorEnc)),
+          color: getRepresentativeColor(mark.fill),
+        },
+      ],
+    });
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
+// Waffle mark tooltips (one shared tooltip per category)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tooltip descriptors for waffle marks.
+ *
+ * Every cell of a category shares literally one TooltipContent object, so
+ * the cells act as a single hover target: moving across a category's cells
+ * keeps showing the same tooltip. Content: the category's value plus its
+ * "x of N units" cell count. An explicit `encoding.tooltip` overrides the
+ * default field set.
+ */
+function computeWaffleTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const valueCh = encoding.y ?? encoding.x;
+  if (!colorEnc || !valueCh) return descriptors;
+
+  const units = Math.max(1, Math.round(spec.markDef.units ?? 100));
+
+  // Cell counts per category come straight from the computed marks.
+  const cellCounts = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.type !== 'rect') continue;
+    const category = String((mark.data as DataRow)[colorEnc.field] ?? '');
+    cellCounts.set(category, (cellCounts.get(category) ?? 0) + 1);
+  }
+
+  const contentByCategory = new Map<string, TooltipContent>();
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'rect') continue;
+
+    const row = mark.data as DataRow;
+    const category = String(row[colorEnc.field] ?? '');
+    let content = contentByCategory.get(category);
+    if (!content) {
+      if (encoding.tooltip) {
+        const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+        content = { title: category, fields: buildExplicitTooltipFields(row, channels) };
+      } else {
+        content = {
+          title: category,
+          fields: [
+            {
+              label: resolveLabel(valueCh),
+              value: formatValue(row[valueCh.field], valueCh.type, resolveFormat(valueCh)),
+              color: getRepresentativeColor(mark.fill),
+            },
+            { label: 'Share', value: `${cellCounts.get(category) ?? 0} of ${units} units` },
+          ],
+        };
+      }
+      contentByCategory.set(category, content);
+    }
+    descriptors.set(`rect-${i}`, content);
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
+// Parliament mark tooltips (one shared tooltip per party)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build tooltip descriptors for parliament (hemicycle) marks.
+ *
+ * Every seat dot of a party shares one TooltipContent object, so hovering any
+ * of a party's seats shows the same tooltip: the seat count and its share of
+ * the chamber. Keys match the renderer's `point-${index}` mark ids. The
+ * majority line/label (rule/textMark) get no descriptor. An explicit
+ * `encoding.tooltip` overrides the default field set.
+ */
+function computeParliamentTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const valueCh = encoding.y ?? encoding.x;
+  if (!colorEnc || !valueCh) return descriptors;
+
+  // Seat counts per party come straight from the computed seat marks.
+  const seatCounts = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.type !== 'point') continue;
+    const party = String((mark.data as DataRow)[colorEnc.field] ?? '');
+    seatCounts.set(party, (seatCounts.get(party) ?? 0) + 1);
+  }
+  const totalSeats = [...seatCounts.values()].reduce((s, c) => s + c, 0);
+
+  const contentByParty = new Map<string, TooltipContent>();
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'point') continue;
+
+    const row = mark.data as DataRow;
+    const party = String(row[colorEnc.field] ?? '');
+    let content = contentByParty.get(party);
+    if (!content) {
+      if (encoding.tooltip) {
+        const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+        content = { title: party, fields: buildExplicitTooltipFields(row, channels) };
+      } else {
+        const count = seatCounts.get(party) ?? 0;
+        const share = totalSeats > 0 ? `${((count / totalSeats) * 100).toFixed(1)}%` : '';
+        content = {
+          title: party,
+          fields: [
+            {
+              label: resolveLabel(valueCh),
+              value: formatValue(row[valueCh.field], valueCh.type, resolveFormat(valueCh)),
+              color: getRepresentativeColor(mark.fill),
+            },
+            { label: 'Share', value: share },
+          ],
+        };
+      }
+      contentByParty.set(party, content);
+    }
+    descriptors.set(`point-${i}`, content);
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -285,6 +527,27 @@ export function computeTooltipDescriptors(
   spec: NormalizedChartSpec,
   marks: Mark[],
 ): Map<string, TooltipContent> {
+  // Range marks share one start/end/delta tooltip across every mark of a row.
+  if (spec.markType === 'range') {
+    return computeRangeTooltips(spec, marks);
+  }
+  // Calendar heatmaps get one date-titled tooltip per data cell; empty
+  // (missing-day) cells get none.
+  if (spec.markType === 'calendar') {
+    return computeCalendarTooltips(spec, marks);
+  }
+
+  // Waffle cells share one tooltip per category (the cells act as one target).
+  if (spec.markType === 'waffle') {
+    return computeWaffleTooltips(spec, marks);
+  }
+
+  // Parliament seats share one tooltip per party (all of a party's seats act
+  // as one target).
+  if (spec.markType === 'parliament') {
+    return computeParliamentTooltips(spec, marks);
+  }
+
   const encoding = spec.encoding as Encoding;
   const descriptors = new Map<string, TooltipContent>();
 

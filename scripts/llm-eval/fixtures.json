@@ -1,0 +1,305 @@
+{
+  "$comment": "Eval fixtures for plan 20. Each task pairs a natural-language charting request with inline data. The runner asks a reference model to produce an openchart ChartSpec (via the published chart.schema.json as a tool input_schema), then measures (a) schema-valid rate and (b) compile-success rate. `expect.marks` lists mark types that are a reasonable answer for render-correctness scoring; `expect.field` names a data column the spec should reference. Seeded from the VL-guessability idioms in packages/engine/src/compiler/__tests__/fixtures/vl-parity plus a spread across all 16 mark types.",
+  "tasks": [
+    {
+      "id": "bar-popularity",
+      "prompt": "Bar chart of language popularity.",
+      "data": [{ "language": "Python", "popularity": 29 }, { "language": "JavaScript", "popularity": 24 }, { "language": "Go", "popularity": 10 }],
+      "expect": { "marks": ["bar"], "field": "popularity" }
+    },
+    {
+      "id": "bar-horizontal",
+      "prompt": "Horizontal bar chart ranking countries by GDP.",
+      "data": [{ "country": "USA", "gdp": 27 }, { "country": "China", "gdp": 18 }, { "country": "Japan", "gdp": 4 }],
+      "expect": { "marks": ["bar", "barlist"], "field": "gdp" }
+    },
+    {
+      "id": "line-timeseries",
+      "prompt": "Line chart of revenue over time.",
+      "data": [{ "month": "2024-01-01", "revenue": 120 }, { "month": "2024-02-01", "revenue": 135 }, { "month": "2024-03-01", "revenue": 150 }],
+      "expect": { "marks": ["line", "area"], "field": "revenue" }
+    },
+    {
+      "id": "line-multiseries",
+      "prompt": "Line chart of temperature over time, one line per city.",
+      "data": [{ "date": "2024-01-01", "temp": 5, "city": "NYC" }, { "date": "2024-01-01", "temp": 12, "city": "LA" }, { "date": "2024-02-01", "temp": 7, "city": "NYC" }, { "date": "2024-02-01", "temp": 15, "city": "LA" }],
+      "expect": { "marks": ["line"], "field": "temp" }
+    },
+    {
+      "id": "area-cumulative",
+      "prompt": "Area chart of cumulative signups by week.",
+      "data": [{ "week": "2024-W01", "signups": 100 }, { "week": "2024-W02", "signups": 260 }, { "week": "2024-W03", "signups": 430 }],
+      "expect": { "marks": ["area", "line"], "field": "signups" }
+    },
+    {
+      "id": "area-stacked",
+      "prompt": "Stacked area chart of traffic by source over time.",
+      "data": [{ "day": "2024-01-01", "visits": 40, "source": "organic" }, { "day": "2024-01-01", "visits": 20, "source": "paid" }, { "day": "2024-01-02", "visits": 55, "source": "organic" }, { "day": "2024-01-02", "visits": 30, "source": "paid" }],
+      "expect": { "marks": ["area"], "field": "visits" }
+    },
+    {
+      "id": "point-scatter",
+      "prompt": "Scatter plot of horsepower versus miles per gallon.",
+      "data": [{ "hp": 130, "mpg": 21 }, { "hp": 165, "mpg": 18 }, { "hp": 95, "mpg": 33 }],
+      "expect": { "marks": ["point", "circle"], "field": "mpg" }
+    },
+    {
+      "id": "point-bubble",
+      "prompt": "Bubble chart of GDP versus life expectancy sized by population.",
+      "data": [{ "gdp": 65000, "life": 79, "pop": 331 }, { "gdp": 12000, "life": 77, "pop": 1412 }, { "gdp": 40000, "life": 84, "pop": 125 }],
+      "expect": { "marks": ["point", "circle"], "field": "life" }
+    },
+    {
+      "id": "circle-scatter",
+      "prompt": "Dot plot of sepal length versus petal length.",
+      "data": [{ "sepal": 5.1, "petal": 1.4 }, { "sepal": 6.2, "petal": 4.5 }, { "sepal": 7.0, "petal": 5.8 }],
+      "expect": { "marks": ["circle", "point"], "field": "petal" }
+    },
+    {
+      "id": "arc-pie",
+      "prompt": "Pie chart of market share by browser.",
+      "data": [{ "browser": "Chrome", "share": 64 }, { "browser": "Safari", "share": 19 }, { "browser": "Edge", "share": 5 }],
+      "expect": { "marks": ["arc"], "field": "share" }
+    },
+    {
+      "id": "arc-donut",
+      "prompt": "Donut chart of budget allocation by department.",
+      "data": [{ "dept": "R&D", "budget": 45 }, { "dept": "Sales", "budget": 30 }, { "dept": "Ops", "budget": 25 }],
+      "expect": { "marks": ["arc"], "field": "budget" }
+    },
+    {
+      "id": "text-labels",
+      "prompt": "Text mark chart placing each product's rating at its price point.",
+      "data": [{ "price": 10, "rating": 4.2, "label": "A" }, { "price": 25, "rating": 3.8, "label": "B" }, { "price": 40, "rating": 4.9, "label": "C" }],
+      "expect": { "marks": ["text", "point"], "field": "rating" }
+    },
+    {
+      "id": "rule-thresholds",
+      "prompt": "Rule marks showing min-to-max daily temperature range per month.",
+      "data": [{ "month": "Jan", "value": 2 }, { "month": "Feb", "value": 5 }, { "month": "Mar", "value": 11 }],
+      "expect": { "marks": ["rule", "bar", "tick"], "field": "value" }
+    },
+    {
+      "id": "tick-distribution",
+      "prompt": "Tick plot of response times across endpoints.",
+      "data": [{ "endpoint": "/a", "ms": 120 }, { "endpoint": "/b", "ms": 85 }, { "endpoint": "/a", "ms": 140 }, { "endpoint": "/b", "ms": 90 }],
+      "expect": { "marks": ["tick", "point"], "field": "ms" }
+    },
+    {
+      "id": "rect-heatmap",
+      "prompt": "Heatmap of sales by day of week and hour.",
+      "data": [{ "day": "Mon", "hour": 9, "sales": 12 }, { "day": "Mon", "hour": 10, "sales": 18 }, { "day": "Tue", "hour": 9, "sales": 20 }, { "day": "Tue", "hour": 10, "sales": 25 }],
+      "expect": { "marks": ["rect"], "field": "sales" }
+    },
+    {
+      "id": "lollipop-ranking",
+      "prompt": "Lollipop chart of star ratings by feature.",
+      "data": [{ "feature": "Speed", "score": 8.4 }, { "feature": "Design", "score": 7.1 }, { "feature": "Support", "score": 9.2 }],
+      "expect": { "marks": ["lollipop", "bar"], "field": "score" }
+    },
+    {
+      "id": "beeswarm-distribution",
+      "prompt": "Beeswarm plot of salaries across departments.",
+      "data": [{ "dept": "Eng", "salary": 120 }, { "dept": "Eng", "salary": 135 }, { "dept": "Sales", "salary": 95 }, { "dept": "Sales", "salary": 110 }],
+      "expect": { "marks": ["beeswarm", "point", "circle"], "field": "salary" }
+    },
+    {
+      "id": "range-dumbbell",
+      "prompt": "Dumbbell chart comparing 2020 and 2024 values by region.",
+      "data": [{ "region": "North", "y2020": 40, "y2024": 62 }, { "region": "South", "y2020": 55, "y2024": 58 }],
+      "expect": { "marks": ["range", "point"], "field": "region" }
+    },
+    {
+      "id": "waffle-proportion",
+      "prompt": "Waffle chart of poll results by candidate.",
+      "data": [{ "candidate": "A", "pct": 48 }, { "candidate": "B", "pct": 42 }, { "candidate": "C", "pct": 10 }],
+      "expect": { "marks": ["waffle", "bar", "arc"], "field": "pct" }
+    },
+    {
+      "id": "calendar-heatmap",
+      "prompt": "Calendar heatmap of daily commit counts.",
+      "data": [{ "date": "2024-01-01", "commits": 3 }, { "date": "2024-01-02", "commits": 7 }, { "date": "2024-01-03", "commits": 1 }],
+      "expect": { "marks": ["calendar"], "field": "commits" }
+    },
+    {
+      "id": "parliament-seats",
+      "prompt": "Parliament chart of seats won by party.",
+      "data": [{ "party": "Left", "seats": 120 }, { "party": "Center", "seats": 90 }, { "party": "Right", "seats": 140 }],
+      "expect": { "marks": ["parliament", "bar", "arc"], "field": "seats" }
+    },
+    {
+      "id": "bar-count-aggregate",
+      "prompt": "Bar chart of how many orders fall in each status.",
+      "data": [{ "status": "shipped" }, { "status": "pending" }, { "status": "shipped" }, { "status": "cancelled" }, { "status": "shipped" }],
+      "expect": { "marks": ["bar"], "field": "status" }
+    },
+    {
+      "id": "bar-grouped",
+      "prompt": "Grouped bar chart of revenue by quarter and product line.",
+      "data": [{ "quarter": "Q1", "revenue": 30, "line": "A" }, { "quarter": "Q1", "revenue": 22, "line": "B" }, { "quarter": "Q2", "revenue": 35, "line": "A" }, { "quarter": "Q2", "revenue": 28, "line": "B" }],
+      "expect": { "marks": ["bar"], "field": "revenue" }
+    },
+    {
+      "id": "line-with-title",
+      "prompt": "Line chart of daily active users, titled 'Growth accelerates'.",
+      "data": [{ "date": "2024-01-01", "dau": 1000 }, { "date": "2024-01-02", "dau": 1100 }, { "date": "2024-01-03", "dau": 1300 }],
+      "expect": { "marks": ["line"], "field": "dau" }
+    },
+    {
+      "id": "bar-color-value",
+      "prompt": "Bar chart of category totals, all bars colored teal.",
+      "data": [{ "cat": "A", "total": 10 }, { "cat": "B", "total": 20 }, { "cat": "C", "total": 15 }],
+      "expect": { "marks": ["bar"], "field": "total" }
+    },
+    {
+      "id": "bar-sorted",
+      "prompt": "Bar chart of counts sorted from highest to lowest.",
+      "data": [{ "name": "alpha", "count": 3 }, { "name": "beta", "count": 9 }, { "name": "gamma", "count": 5 }],
+      "expect": { "marks": ["bar"], "field": "count" }
+    },
+    {
+      "id": "line-sequential-color",
+      "prompt": "Line chart of price over time colored by a continuous volume scale.",
+      "data": [{ "t": "2024-01-01", "price": 100, "volume": 5 }, { "t": "2024-01-02", "price": 104, "volume": 9 }, { "t": "2024-01-03", "price": 99, "volume": 3 }],
+      "expect": { "marks": ["line", "point"], "field": "price" }
+    },
+    {
+      "id": "table-basic",
+      "prompt": "Table of employees with name, role and salary.",
+      "data": [{ "name": "Ada", "role": "Eng", "salary": 150 }, { "name": "Bo", "role": "PM", "salary": 140 }],
+      "expect": { "type": "table", "field": "salary" }
+    },
+    {
+      "id": "table-formatted",
+      "prompt": "Table of quarterly revenue formatted as currency, right aligned.",
+      "data": [{ "quarter": "Q1", "revenue": 12000 }, { "quarter": "Q2", "revenue": 15000 }],
+      "expect": { "type": "table", "field": "revenue" }
+    },
+    {
+      "id": "scatter-trend",
+      "prompt": "Scatter plot of ad spend versus conversions.",
+      "data": [{ "spend": 100, "conv": 12 }, { "spend": 200, "conv": 19 }, { "spend": 300, "conv": 31 }],
+      "expect": { "marks": ["point", "circle"], "field": "conv" }
+    },
+    {
+      "id": "bar-negative",
+      "prompt": "Bar chart of profit and loss by month, some values negative.",
+      "data": [{ "month": "Jan", "pnl": 20 }, { "month": "Feb", "pnl": -8 }, { "month": "Mar", "pnl": 14 }],
+      "expect": { "marks": ["bar"], "field": "pnl" }
+    },
+    {
+      "id": "line-percentage",
+      "prompt": "Line chart of unemployment rate over years.",
+      "data": [{ "year": "2020-01-01", "rate": 8.1 }, { "year": "2021-01-01", "rate": 5.4 }, { "year": "2022-01-01", "rate": 3.6 }],
+      "expect": { "marks": ["line", "area"], "field": "rate" }
+    },
+    {
+      "id": "arc-half-donut",
+      "prompt": "Half donut gauge of project completion percentage.",
+      "data": [{ "stage": "done", "pct": 72 }, { "stage": "remaining", "pct": 28 }],
+      "expect": { "marks": ["arc"], "field": "pct" }
+    },
+    {
+      "id": "bar-time-buckets",
+      "prompt": "Bar chart of transactions bucketed by amount.",
+      "data": [{ "amount": 5 }, { "amount": 12 }, { "amount": 45 }, { "amount": 8 }, { "amount": 33 }],
+      "expect": { "marks": ["bar"], "field": "amount" }
+    },
+    {
+      "id": "point-categories",
+      "prompt": "Scatter of test score versus study hours colored by class.",
+      "data": [{ "hours": 2, "score": 60, "class": "A" }, { "hours": 5, "score": 85, "class": "B" }, { "hours": 3, "score": 72, "class": "A" }],
+      "expect": { "marks": ["point", "circle"], "field": "score" }
+    },
+    {
+      "id": "line-annotated",
+      "prompt": "Line chart of stock price over time with the peak called out.",
+      "data": [{ "day": "2024-01-01", "price": 150 }, { "day": "2024-01-02", "price": 172 }, { "day": "2024-01-03", "price": 168 }],
+      "expect": { "marks": ["line"], "field": "price" }
+    },
+    {
+      "id": "bar-share",
+      "prompt": "Bar chart of energy sources by percentage of total.",
+      "data": [{ "source": "solar", "share": 18 }, { "source": "wind", "share": 22 }, { "source": "gas", "share": 40 }],
+      "expect": { "marks": ["bar", "barlist"], "field": "share" }
+    },
+    {
+      "id": "area-band",
+      "prompt": "Area chart of forecast values over the next 5 days.",
+      "data": [{ "day": 1, "forecast": 20 }, { "day": 2, "forecast": 24 }, { "day": 3, "forecast": 22 }, { "day": 4, "forecast": 27 }, { "day": 5, "forecast": 30 }],
+      "expect": { "marks": ["area", "line"], "field": "forecast" }
+    },
+    {
+      "id": "rect-matrix",
+      "prompt": "Correlation matrix heatmap between four variables.",
+      "data": [{ "row": "a", "col": "a", "corr": 1 }, { "row": "a", "col": "b", "corr": 0.3 }, { "row": "b", "col": "a", "corr": 0.3 }, { "row": "b", "col": "b", "corr": 1 }],
+      "expect": { "marks": ["rect"], "field": "corr" }
+    },
+    {
+      "id": "lollipop-change",
+      "prompt": "Lollipop chart of percent change by metric.",
+      "data": [{ "metric": "CTR", "change": 12 }, { "metric": "CVR", "change": -4 }, { "metric": "AOV", "change": 7 }],
+      "expect": { "marks": ["lollipop", "bar"], "field": "change" }
+    },
+    {
+      "id": "bar-yearly",
+      "prompt": "Column chart of annual rainfall.",
+      "data": [{ "year": "2021", "mm": 820 }, { "year": "2022", "mm": 910 }, { "year": "2023", "mm": 760 }],
+      "expect": { "marks": ["bar"], "field": "mm" }
+    },
+    {
+      "id": "line-index",
+      "prompt": "Line chart comparing two indices over months.",
+      "data": [{ "month": "2024-01-01", "value": 100, "index": "S&P" }, { "month": "2024-01-01", "value": 100, "index": "Nasdaq" }, { "month": "2024-02-01", "value": 103, "index": "S&P" }, { "month": "2024-02-01", "value": 108, "index": "Nasdaq" }],
+      "expect": { "marks": ["line"], "field": "value" }
+    },
+    {
+      "id": "scatter-quadrant",
+      "prompt": "Scatter of effort versus impact for a set of initiatives.",
+      "data": [{ "effort": 3, "impact": 8, "name": "X" }, { "effort": 7, "impact": 4, "name": "Y" }, { "effort": 5, "impact": 9, "name": "Z" }],
+      "expect": { "marks": ["point", "circle"], "field": "impact" }
+    },
+    {
+      "id": "bar-weekday",
+      "prompt": "Bar chart of average sales per weekday.",
+      "data": [{ "weekday": "Mon", "avg": 200 }, { "weekday": "Tue", "avg": 240 }, { "weekday": "Wed", "avg": 260 }],
+      "expect": { "marks": ["bar"], "field": "avg" }
+    },
+    {
+      "id": "arc-nested",
+      "prompt": "Pie chart of expense categories.",
+      "data": [{ "category": "Rent", "amount": 1200 }, { "category": "Food", "amount": 600 }, { "category": "Transit", "amount": 200 }],
+      "expect": { "marks": ["arc"], "field": "amount" }
+    },
+    {
+      "id": "line-cohort",
+      "prompt": "Line chart of retention percentage by week for each cohort.",
+      "data": [{ "week": 0, "retention": 100, "cohort": "Jan" }, { "week": 1, "retention": 62, "cohort": "Jan" }, { "week": 0, "retention": 100, "cohort": "Feb" }, { "week": 1, "retention": 70, "cohort": "Feb" }],
+      "expect": { "marks": ["line"], "field": "retention" }
+    },
+    {
+      "id": "tick-strip",
+      "prompt": "Strip plot of individual review scores by product.",
+      "data": [{ "product": "P1", "score": 4 }, { "product": "P1", "score": 5 }, { "product": "P2", "score": 3 }, { "product": "P2", "score": 4 }],
+      "expect": { "marks": ["tick", "point"], "field": "score" }
+    },
+    {
+      "id": "beeswarm-ages",
+      "prompt": "Beeswarm of ages by survey group.",
+      "data": [{ "group": "A", "age": 22 }, { "group": "A", "age": 35 }, { "group": "B", "age": 41 }, { "group": "B", "age": 28 }],
+      "expect": { "marks": ["beeswarm", "point", "circle"], "field": "age" }
+    },
+    {
+      "id": "range-arrow",
+      "prompt": "Arrow chart showing before and after conversion rate by page.",
+      "data": [{ "page": "Home", "before": 2.1, "after": 3.4 }, { "page": "Pricing", "before": 4.0, "after": 4.2 }],
+      "expect": { "marks": ["range"], "field": "page" }
+    },
+    {
+      "id": "bar-longtail",
+      "prompt": "Bar chart of pageviews per article, top articles only.",
+      "data": [{ "article": "Guide", "views": 5000 }, { "article": "News", "views": 3200 }, { "article": "FAQ", "views": 1800 }],
+      "expect": { "marks": ["bar", "barlist"], "field": "views" }
+    }
+  ]
+}

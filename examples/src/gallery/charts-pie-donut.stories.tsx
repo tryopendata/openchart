@@ -3,9 +3,10 @@
  *
  * Part-to-whole marks. OpenChart labels slices directly with leader lines
  * instead of leaning on a legend, auto-buckets tiny slices into "Other", and
- * turns a pie into a donut with a single `innerRadius`. Seven demos across
- * three sections (Basics, Comparison, Interaction), all pulling from the shared
- * dataset pool with cited chrome.
+ * turns a pie into a donut with a single `innerRadius`. Waffle and parliament
+ * marks draw the whole as countable units (squares, seats). Nine demos across
+ * four sections (Basics, Comparison, Unit charts, Interaction), all pulling from
+ * the shared dataset pool with cited chrome.
  */
 
 import type { ChartSpec, MarkEvent } from '@opendata-ai/openchart-core';
@@ -19,6 +20,7 @@ import {
   federalBudget,
   programmingLanguages,
   smartphoneShare,
+  usHouse,
 } from '../data';
 
 // Muted palette with Renewables (domain index 4) picked out in vivid green so
@@ -327,6 +329,56 @@ function InteractiveDonut() {
 }
 
 // ---------------------------------------------------------------------------
+// 8. Waffle — a 10x10 grid where one square is one percent
+// ---------------------------------------------------------------------------
+
+const waffleSpec: ChartSpec = {
+  animation: true,
+  mark: 'waffle',
+  data: [
+    { source: 'Fossil fuels', share: 60.6 },
+    { source: 'Renewables', share: 30.3 },
+    { source: 'Nuclear', share: 9.1 },
+  ],
+  encoding: {
+    theta: { field: 'share', type: 'quantitative' },
+    color: { field: 'source', type: 'nominal', highlight: 'Renewables' },
+  },
+  chrome: {
+    title: 'Renewables Now Power 30 of Every 100 Kilowatt-Hours',
+    subtitle:
+      'Share of world electricity generation, 2024. Each square is one percent; shares round to whole cells.',
+    source: 'Illustrative data',
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 9. Parliament — a hemicycle where each dot is a seat
+// ---------------------------------------------------------------------------
+
+const parliamentSpec: ChartSpec = {
+  animation: true,
+  mark: 'parliament',
+  data: [...usHouse.data],
+  encoding: {
+    theta: { field: 'seats', type: 'quantitative' },
+    color: {
+      field: 'party',
+      type: 'nominal',
+      scale: { domain: ['Democratic', 'Republican'], range: [...usHouse.colors] },
+    },
+  },
+  chrome: {
+    title: 'Republicans Hold a Narrow House Majority',
+    subtitle:
+      'US House of Representatives, 435 seats. 218 seats win control. Each dot is one seat.',
+    source: usHouse.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -394,6 +446,27 @@ export const PieAndDonut = () => (
         description="Leader lines let long vendor names sit clear of the arcs without crowding — the editorial pattern for a busy donut."
         spec={leaderLineSpec}
         height={520}
+      />
+    </Section>
+
+    <Section
+      id="unit-charts"
+      title="Unit charts"
+      lede="When the whole is a round count — 100 percent, 435 seats — draw each unit as its own mark. Discrete squares and dots make a share countable, not just estimable from an arc."
+    >
+      <Demo
+        id="waffle"
+        title="Waffle"
+        description="A 10x10 grid where one square is one percent. Shares round to whole cells with a largest-remainder rule so the squares always sum to 100; color.highlight picks out the category the headline is about."
+        spec={waffleSpec}
+        height={480}
+      />
+      <Demo
+        id="parliament"
+        title="Parliament (hemicycle)"
+        description="The parliament mark seats a legislature as a fan of dots, one per seat. It is the honest read for chamber control: a 51-49 split looks like a near-tie, not a landslide the way an arc might exaggerate."
+        spec={parliamentSpec}
+        height={460}
       />
     </Section>
 

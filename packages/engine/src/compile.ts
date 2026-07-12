@@ -14,14 +14,11 @@
 
 import type {
   AnimationSpec,
-  BinParams,
-  BinTransform,
   ChartLayout,
   ChartSpec,
   CompileOptions,
   CompileTableOptions,
   Encoding,
-  EncodingChannel,
   FacetChannel,
   FacetPanelLayout,
   LayerSpec,
@@ -31,9 +28,6 @@ import type {
   ResolvedAnnotation,
   ResolvedTheme,
   TableLayout,
-  TimeUnit,
-  TimeUnitTransform,
-  Transform,
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
@@ -43,6 +37,7 @@ import {
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
+  isAxislessMark,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from './annotations/compute';
@@ -64,8 +59,12 @@ import { getChartRenderer } from './charts/registry';
 import { groupByField } from './charts/utils';
 import { applyColorScaleRange } from './compile/color-scale-range';
 import { filterClippedDomains } from './compile/data-clip';
+import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
+import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
+import { resolveYouDrawIt } from './compile/you-draw-it';
+import { collectContrastWarnings } from './compiler/a11y-warnings';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec } from './compiler/index';
 import {
@@ -91,76 +90,26 @@ import { computeTooltipDescriptors } from './tooltips/compute';
 import { runTransforms } from './transforms';
 
 // ---------------------------------------------------------------------------
-// Encoding sugar expansion (bin, timeUnit on encoding channels)
+// Spec sugar expansion (VL idioms, bin/timeUnit, deprecation warnings)
 // ---------------------------------------------------------------------------
 
+// Implementation lives in ./compile/spec-sugar; re-exported here so existing
+// deep imports (`import { expandEncodingSugar } from '.../compile'`) keep working.
+export { expandEncodingSugar, expandSpecSugar } from './compile/spec-sugar';
+
 /**
- * Expand encoding-level `bin` and `timeUnit` shorthand into explicit transforms.
- *
- * Vega-Lite allows `encoding.x.bin: true` as sugar for a BinTransform.
- * This function detects those shorthands, generates the corresponding transforms,
- * updates encoding field references to the output field names, and prepends the
- * transforms to the spec's transform array.
- *
- * Mutates nothing; returns a new spec object (shallow copy).
+ * Apply top-level spec `width`/`height` (VL fixed-size sugar) as overrides on
+ * the compile options. Returns the options untouched when the spec carries no
+ * size.
  */
-export function expandEncodingSugar(spec: Record<string, unknown>): Record<string, unknown> {
-  const encoding = spec.encoding as Record<string, EncodingChannel | undefined> | undefined;
-  if (!encoding) return spec;
-
-  const generatedTransforms: Transform[] = [];
-  const updatedEncoding = { ...encoding };
-  let changed = false;
-
-  for (const channel of Object.keys(encoding)) {
-    const ch = encoding[channel];
-    if (!ch || !ch.field) continue;
-
-    // Expand bin shorthand
-    if (ch.bin != null && ch.bin !== false) {
-      const field = ch.field;
-      const outputField = `bin_${field}`;
-      const binTransform: BinTransform = {
-        bin: ch.bin === true ? true : (ch.bin as BinParams),
-        field,
-        as: outputField,
-      };
-      generatedTransforms.push(binTransform);
-
-      // Update encoding to reference binned output field, remove bin property
-      const { bin: _bin, ...rest } = ch;
-      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
-      changed = true;
-    }
-
-    // Expand timeUnit shorthand (read from updated encoding in case bin already ran)
-    const current = updatedEncoding[channel] ?? ch;
-    if (current.timeUnit) {
-      const field = current.field;
-      const unit = current.timeUnit as TimeUnit;
-      const outputField = `${unit}_${field}`;
-      const timeUnitTransform: TimeUnitTransform = {
-        timeUnit: unit,
-        field,
-        as: outputField,
-      };
-      generatedTransforms.push(timeUnitTransform);
-
-      // Update encoding to reference timeUnit output field, remove timeUnit property
-      const { timeUnit: _tu, ...rest } = current;
-      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
-      changed = true;
-    }
-  }
-
-  if (!changed) return spec;
-
-  // Prepend generated transforms before any user-defined transforms
-  const existingTransforms = (spec.transform as Transform[] | undefined) ?? [];
+function applySpecSize(spec: unknown, options: CompileOptions): CompileOptions {
+  if (!spec || typeof spec !== 'object') return options;
+  const sized = spec as Record<string, unknown>;
+  if (typeof sized.width !== 'number' && typeof sized.height !== 'number') return options;
   return {
-    ...spec,
-    encoding: updatedEncoding,
-    transform: [...generatedTransforms, ...existingTransforms],
+    ...options,
+    width: typeof sized.width === 'number' ? sized.width : options.width,
+    height: typeof sized.height === 'number' ? sized.height : options.height,
   };
 }
 
@@ -233,20 +182,32 @@ function applySparklineDefaults(
  * ChartLayout with positions, colors, and marks ready for rendering.
  *
  * @param spec - Raw chart spec (validated and normalized internally).
- * @param options - Compile options (width, height, theme, darkMode).
+ * @param optionsInput - Compile options (width, height, theme, darkMode).
+ *   Top-level spec width/height, when present, override the option values.
  * @returns ChartLayout with all computed positions.
  * @throws Error if spec is invalid or not a chart type.
  */
-export function compileChart(spec: unknown, options: CompileOptions): ChartLayout {
-  // Expand encoding-level bin/timeUnit sugar before validation + normalization.
-  // This converts shorthand (e.g. encoding.x.bin: true) into explicit transforms.
+export function compileChart(spec: unknown, optionsInput: CompileOptions): ChartLayout {
+  // Expand VL-idiom and encoding-level sugar (data {values}, top-level title,
+  // sort-by-value, value defs, scheme names, theta, bin/timeUnit, ...) before
+  // validation + normalization, surfacing any deprecation warnings.
+  const sugarWarnings: string[] = [];
   const expandedSpec =
     spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandEncodingSugar(spec as Record<string, unknown>)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
       : spec;
 
-  // Validate + normalize
-  const { spec: normalized } = compileSpec(expandedSpec);
+  // Top-level width/height are fixed-size overrides (VL alignment): the
+  // authored size wins over the container-derived compile options.
+  const options = applySpecSize(expandedSpec, optionsInput);
+
+  // Validate + normalize. Normalize-stage warnings (type mismatches,
+  // beeswarm point budget, sparkline mark advice) surface through the same
+  // console channel as the sugar warnings. Emit both together in one call so
+  // dedup spans the whole compile: a message produced by both a sugar pass and
+  // a normalize pass prints once, not once per stage.
+  const { spec: normalized, warnings: normalizeWarnings } = compileSpec(expandedSpec);
+  emitSpecWarnings([...sugarWarnings, ...normalizeWarnings], options.onWarn);
 
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
     throw new Error('compileChart received a table spec. Use compileTable instead.');
@@ -677,8 +638,16 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   scales.defaultColor =
     chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
 
-  // Arc charts (pie/donut) don't use axes or gridlines
-  const isRadial = chartSpec.markType === 'arc';
+  // Dev-mode WCAG contrast diagnostics. Host-gated via options.dev (never an
+  // env sniff; the engine is isomorphic). Advisory console.warn only.
+  if (options.dev) {
+    emitSpecWarnings(collectContrastWarnings(scales, chartSpec.markType, theme), options.onWarn);
+  }
+
+  // Axisless marks (arc, waffle, calendar, parliament) don't use axes or
+  // gridlines: arcs and parliament hemicycles are radial, waffles and calendars
+  // compute their own grid geometry.
+  const isRadial = isAxislessMark(chartSpec.markType);
 
   // Compute axes (skip for radial charts).
   // Sparkline mode skips axes by default unless the user explicitly opted into
@@ -717,6 +686,18 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   const marks: Mark[] = renderer
     ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
     : [];
+
+  // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates
+  // filled marks in place; assignment is deterministic and theme-aware.
+  applyFillPatterns(marks, chartSpec.markDef, theme);
+
+  // Resolve "you draw it" geometry (pixel fromX, x-sample positions, target
+  // line color/key). Reads marks so it must run after they're computed.
+  const xFieldForYdi =
+    chartSpec.encoding.x && 'field' in chartSpec.encoding.x
+      ? (chartSpec.encoding.x.field as string | undefined)
+      : undefined;
+  const youDrawIt = resolveYouDrawIt(chartSpec.youDrawIt, marks, scales, chartArea, xFieldForYdi);
 
   // Compute the right-side endpoint labels column for multi-series line/area
   // charts. Reads `mark.dataPoints` so it must run AFTER marks are computed.
@@ -783,16 +764,20 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
   // Compute tooltip descriptors from marks and encoding
   const tooltipDescriptors = computeTooltipDescriptors(chartSpec, marks);
 
-  // Compute accessibility
-  const altText = generateAltText(
-    {
-      mark: chartSpec.markType,
-      data: chartSpec.data,
-      encoding: chartSpec.encoding,
-      chrome: chartSpec.chrome,
-    } as ChartSpec,
-    chartSpec.data,
-  );
+  // Compute accessibility. An author-provided description (a11y.description,
+  // or top-level `description` folded in by the sugar expansion) replaces the
+  // auto-generated alt text; auto-generation stays the fallback.
+  const altText =
+    chartSpec.a11y?.description ??
+    generateAltText(
+      {
+        mark: chartSpec.markType,
+        data: chartSpec.data,
+        encoding: chartSpec.encoding,
+        chrome: chartSpec.chrome,
+      } as ChartSpec,
+      chartSpec.data,
+    );
   const dataTableFallback = generateDataTable(
     {
       mark: chartSpec.markType,
@@ -811,6 +796,8 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
     area: chartArea,
     chrome,
     metrics: dims.metrics,
+    ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
+    ...(youDrawIt ? { youDrawIt } : {}),
     axes: {
       x: axes.x,
       y: axes.y,
@@ -825,6 +812,7 @@ export function compileChart(spec: unknown, options: CompileOptions): ChartLayou
       dataTableFallback,
       role: 'img',
       keyboardNavigable: marks.length > 0,
+      ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
     },
     theme,
     dimensions: {
@@ -934,7 +922,7 @@ function compileFaceted(
   const sharedYDomain =
     yResolve === 'shared' && fullScales.y ? fullScales.y.scale.domain() : undefined;
 
-  const isRadial = chartSpec.markType === 'arc';
+  const isRadial = isAxislessMark(chartSpec.markType);
   const rendererKey = resolveRendererKey(
     renderSpec.markType,
     panelEncoding as Encoding,
@@ -975,6 +963,15 @@ function compileFaceted(
     applyColorScaleRange(panelScales, panelSpecWithDomains.encoding, theme, renderSpec.highlight);
     panelScales.defaultColor =
       chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
+
+    // Dev-mode contrast diagnostics: panels share one palette resolution, so
+    // checking the first panel covers the figure without repeating warnings.
+    if (options.dev && panelLayouts.length === 0) {
+      emitSpecWarnings(
+        collectContrastWarnings(panelScales, chartSpec.markType, theme),
+        options.onWarn,
+      );
+    }
 
     // Outer-axis economy: only leftmost column gets y ticks, only bottom row gets x ticks.
     // Exception: when scales are independent, every panel needs its own axis ticks.
@@ -1044,7 +1041,12 @@ function compileFaceted(
   // Compute tooltip descriptors from all marks across panels
   const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
 
-  // A11y: mention faceting in alt text
+  // Opt-in per-series fill patterns across all panels at once so a series
+  // gets the same pattern in every panel.
+  applyFillPatterns(allMarks, chartSpec.markDef, theme);
+
+  // A11y: mention faceting in alt text. An author description is used
+  // verbatim (the author already describes the whole figure).
   const panelCount = facetValues.length;
   const baseAltText = generateAltText(
     {
@@ -1055,7 +1057,9 @@ function compileFaceted(
     } as ChartSpec,
     chartSpec.data,
   );
-  const altText = `${baseAltText} Faceted into ${panelCount} panels by ${facetChannel.field}.`;
+  const altText =
+    chartSpec.a11y?.description ??
+    `${baseAltText} Faceted into ${panelCount} panels by ${facetChannel.field}.`;
 
   const dataTableFallback = generateDataTable(
     {
@@ -1075,6 +1079,7 @@ function compileFaceted(
     area: chartArea,
     chrome: dims.chrome,
     metrics: dims.metrics,
+    ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
     axes: { x: undefined, y: undefined },
     marks: allMarks,
     annotations: [],
@@ -1085,6 +1090,7 @@ function compileFaceted(
       dataTableFallback,
       role: 'img',
       keyboardNavigable: allMarks.length > 0,
+      ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
     },
     theme,
     dimensions: { width: options.width, height: options.height },
@@ -1107,7 +1113,17 @@ function compileFaceted(
 // ---------------------------------------------------------------------------
 
 export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLayout {
-  return compileLayerImpl(spec, options, compileChart);
+  // Expand VL-idiom sugar on the layer spec and every child up front. Leaf
+  // compiles re-run the (idempotent) expansion after encoding inheritance;
+  // warning triggers are stripped or stamped here so each warns exactly once.
+  const sugarWarnings: string[] = [];
+  const expanded = expandSpecSugar(
+    spec as unknown as Record<string, unknown>,
+    sugarWarnings,
+  ) as unknown as LayerSpec;
+  emitSpecWarnings(sugarWarnings, options.onWarn);
+  const resolvedOptions = applySpecSize(expanded, options);
+  return compileLayerImpl(expanded, resolvedOptions, compileChart);
 }
 
 // ---------------------------------------------------------------------------

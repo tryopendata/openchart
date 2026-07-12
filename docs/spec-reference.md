@@ -60,6 +60,8 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options; if neither is set, defaults to `true`. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
+| `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
+| `a11y`        | `A11yConfig`   | `undefined` | Accessibility overrides: `description` (custom alt text, wins over top-level `description`) and `hidden` (hide from assistive technology). |
 
 ### DataRow
 
@@ -101,6 +103,16 @@ The `type` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `strokeWidth`  | `number`                | varies      | all            | Stroke width in pixels. |
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
+| `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
+| `style`        | `'dumbbell' \| 'arrow' \| 'bar'` | `'dumbbell'` | range   | Range mark visual: dot-connector-dot, line with arrowhead at the end, or a plain floating bar. |
+| `colorByDirection` | `boolean`           | `false`     | range          | Color range marks by direction of change: increases use the theme `positive` color, decreases `negative`. A field-based `color` encoding takes precedence. |
+| `units`        | `number`                | `100`       | waffle         | Total cells in the grid. Categories normalize to this via largest-remainder rounding. |
+| `columns`      | `number`                | `10`        | waffle         | Columns per grid. Rows derive from `units / columns`. |
+| `weekStart`    | `'monday' \| 'sunday'`  | `'monday'`  | calendar       | Weekday on the top row of each year band. |
+| `cellRadius`   | `number`                | `1`         | calendar       | Corner radius in pixels for day cells. |
+| `shape`        | `'hemicycle'`           | `'hemicycle'` | parliament   | Seat layout shape (currently the only shape). |
+| `seatRadius`   | `number \| 'auto'`      | `'auto'`    | parliament     | Seat dot radius in pixels. `'auto'` sizes dots to fill the rings for the seat count. |
+| `majorityLine` | `boolean`               | `true`      | parliament     | Draw the majority-threshold line and its "N to win" label. |
 
 #### Gradients
 
@@ -229,7 +241,7 @@ Applied to the field values before encoding. Useful when your data has multiple 
 | Field       | Type      | Default           | Description                                                                   |
 | ----------- | --------- | ----------------- | ----------------------------------------------------------------------------- |
 | `label`     | `string`  | field name        | Axis label text displayed along the axis.                                     |
-| `format`    | `string`  | auto              | d3-format string for tick labels, e.g. `",.0f"` for comma-separated integers. |
+| `format`    | `string`  | auto              | d3-format string for tick labels, e.g. `",.0f"` for comma-separated integers. Also accepts `"ordinal"` for rank ticks (`1st, 2nd, 3rd`). |
 | `tickCount` | `number`  | auto              | Override the number of ticks. Engine picks a sensible default if omitted.     |
 | `grid`      | `boolean` | `true` for y-axis | Whether to show gridlines for this axis.                                      |
 
@@ -260,6 +272,11 @@ The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. 
 | `donut`    | -- (opt, unused)                 | quantitative (req)     | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | Same as pie with inner radius                     |
 | `dot`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Dot plot. x = values, y = categories              |
 | `scatter`  | quantitative (req)               | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Both axes quantitative. size creates bubble chart |
+| `beeswarm` | quantitative or nominal (opt)    | quantitative or nominal (opt) | nominal, ordinal, quantitative (opt) | quantitative (opt) | nominal (opt) | One position is the quantitative value axis; the other (nominal/ordinal) splits into grouped lanes |
+| `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
+| `waffle`   | -- (opt, unused)                 | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` (alias for y) = share, color = category |
+| `parliament` | -- (opt, unused)               | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` (alias for y) = seat count, color = party |
+| `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
 
 ### Channel purpose per chart type
 

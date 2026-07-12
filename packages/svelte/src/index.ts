@@ -60,6 +60,8 @@ export {
 export { default as BarList } from './BarList.svelte';
 // Components
 export { default as Chart } from './Chart.svelte';
+// Scrollytelling
+export { default as ChartStory } from './ChartStory.svelte';
 export type { UseChartOptions, UseChartReturn } from './composables/useChart.svelte.js';
 export { useChart } from './composables/useChart.svelte.js';
 // Composables

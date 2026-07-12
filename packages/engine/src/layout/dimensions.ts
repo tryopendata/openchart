@@ -20,6 +20,7 @@ import type {
   Rect,
   ResolvedChrome,
   ResolvedMetricBar,
+  ResolvedSeriesSearch,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import {
@@ -30,6 +31,7 @@ import {
   estimateTextWidth,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  isAxislessMark,
   LABEL_GAP_COMPACT,
   LABEL_GAP_DEFAULT,
   MAX_LEFT_LABEL_FRACTION_COMPACT,
@@ -43,6 +45,7 @@ import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
+import { hasLegendContent } from '../legend/compute';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
@@ -53,6 +56,12 @@ import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } f
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
   return { label: theme.fonts.sizes.metricLabel, value: theme.fonts.sizes.metricValue };
+}
+
+/** True when a placed legend layout has visible content (back-compat path). */
+function legendLayoutHasContent(legendLayout: LegendLayout): boolean {
+  if (legendLayout.type === 'continuous') return legendLayout.bounds.height > 0;
+  return 'entries' in legendLayout && legendLayout.entries.length > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +86,11 @@ export interface LayoutDimensions {
    */
   metrics?: ResolvedMetricBar;
   /**
+   * Reserved series-search band (below chrome and the metric bar, above the
+   * top legend). Present only when spec.seriesSearch is enabled.
+   */
+  seriesSearch?: ResolvedSeriesSearch;
+  /**
    * Height reserved below the chart area for x-axis tick labels and the
    * (optional) axis title. Exposed so downstream layout code (e.g. the
    * second legend pass) can position elements below the axis row.
@@ -95,6 +109,11 @@ export interface LayoutDimensions {
 /** Minimum chart area dimensions before guardrails kick in. */
 const MIN_CHART_WIDTH = 60;
 const MIN_CHART_HEIGHT = 40;
+
+/** Input row height for the series-search band (matches the DOM input's CSS height). */
+const SERIES_SEARCH_INPUT_HEIGHT = 32;
+/** Gap between the series-search input row and whatever stacks below it. */
+const SERIES_SEARCH_GAP = 12;
 
 /**
  * Per-display minimum chart dimensions. Sparkline mode allows much smaller
@@ -191,12 +210,10 @@ export function computeDimensions(
   // When a layout plan is present, derive legend info from plan.legendContent;
   // otherwise fall back to the legendLayout parameter (back-compat).
   const bottomLegendReservation = plan
-    ? plan.legendContent.entries.length > 0 && plan.legendContent.position === 'bottom'
+    ? hasLegendContent(plan.legendContent) && plan.legendContent.position === 'bottom'
       ? plan.legendContent.height + legendGap(width)
       : 0
-    : 'entries' in legendLayout &&
-        legendLayout.entries.length > 0 &&
-        legendLayout.position === 'bottom'
+    : legendLayoutHasContent(legendLayout) && legendLayout.position === 'bottom'
       ? legendLayout.bounds.height + legendGap(width)
       : 0;
 
@@ -244,7 +261,7 @@ export function computeDimensions(
     };
 
     // Reserve legend space only when user explicitly opted into a legend.
-    if (userExplicit.legend && 'entries' in legendLayout && legendLayout.entries.length > 0) {
+    if (userExplicit.legend && legendLayoutHasContent(legendLayout)) {
       const gap = legendGap(width);
       if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
         margins.right += legendLayout.bounds.width + 8;
@@ -276,8 +293,8 @@ export function computeDimensions(
   // Start with the total rect
   const total: Rect = { x: 0, y: 0, width, height };
 
-  // Radial charts (arc) don't have axes, so skip axis space
-  const isRadial = spec.markType === 'arc';
+  // Axisless charts (arc, waffle, calendar) don't have axes, so skip axis space
+  const isRadial = isAxislessMark(spec.markType);
   const encoding = spec.encoding as Encoding;
 
   // Estimate x-axis height below chart area: tick labels sit 14px below,
@@ -344,13 +361,17 @@ export function computeDimensions(
   // is kept; the rollback path subtracts it back when stripped.
   const wantsMetrics = !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden';
   const tentativeMetricsHeight = wantsMetrics ? metricBarHeight(metricFonts(theme)) : 0;
+  // Series-search band: reserved empty SVG space directly below chrome and
+  // the metric bar. The vanilla adapter overlays a DOM combobox on this rect.
+  const wantsSearch = !!spec.seriesSearch && chromeMode !== 'hidden';
+  const searchReservation = wantsSearch ? SERIES_SEARCH_INPUT_HEIGHT + SERIES_SEARCH_GAP : 0;
   // topAxisGap sits between the legend (or chrome, if no legend) and the
   // chart area. It accounts for the general axis margin plus any inline
   // tick-label overhang. Placing it after the legend (below) keeps the
   // subtitle-to-legend gap tight while reserving physical space for ticks
   // that protrude above the chart area.
   const margins: Margins = {
-    top: topPad + chrome.topHeight + tentativeMetricsHeight,
+    top: topPad + chrome.topHeight + tentativeMetricsHeight + searchReservation,
     right: hPad + (isRadial ? hPad : axisMargin),
     bottom: bottomMargin(chrome.bottomHeight, padding, xAxisHeight),
     left: hPad + (isRadial ? hPad : axisMargin),
@@ -378,8 +399,10 @@ export function computeDimensions(
   // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
   // when the column would be suppressed. `labels.density` is intentionally
   // not checked here — that switch controls only the legacy end-of-line labels.
+  // No extra strategy check either: `sup.showEndpointLabels` already accounts
+  // for the compact strip (and its explicit-opt-in override).
   let endpointWidth = 0;
-  if (sup.showEndpointLabels && !labelsHiddenByStrategy) {
+  if (sup.showEndpointLabels) {
     endpointWidth = predictEndpointLabelsWidth(spec, theme);
     if (endpointWidth > 0) {
       // 16px gap between chart area edge and the column.
@@ -656,23 +679,11 @@ export function computeDimensions(
   // When a plan is present, derive legend position/size from plan.legendContent;
   // otherwise use the legendLayout parameter (back-compat for non-plan callers).
   const legendHasEntries = plan
-    ? plan.legendContent.entries.length > 0
-    : 'entries' in legendLayout && legendLayout.entries.length > 0;
-  const legendPos = plan
-    ? plan.legendContent.position
-    : 'entries' in legendLayout
-      ? legendLayout.position
-      : 'top';
-  const legendHeight = plan
-    ? plan.legendContent.height
-    : 'entries' in legendLayout
-      ? legendLayout.bounds.height
-      : 0;
-  const legendBoundsWidth = plan
-    ? plan.legendContent.legendWidth
-    : 'entries' in legendLayout
-      ? legendLayout.bounds.width
-      : 0;
+    ? hasLegendContent(plan.legendContent)
+    : legendLayoutHasContent(legendLayout);
+  const legendPos = plan ? plan.legendContent.position : legendLayout.position;
+  const legendHeight = plan ? plan.legendContent.height : legendLayout.bounds.height;
+  const legendBoundsWidth = plan ? plan.legendContent.legendWidth : legendLayout.bounds.width;
 
   const hasTopLegend = legendHasEntries && legendPos === 'top';
   if (legendHasEntries) {
@@ -733,7 +744,7 @@ export function computeDimensions(
     const fallbackTopAxisGap =
       isRadial && fallbackChrome.topHeight === 0 ? 0 : axisMargin + inlineTickOverhang;
     const fallbackEffectiveAxisGap = hasTopLegend ? inlineTickOverhang : fallbackTopAxisGap;
-    const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight;
+    const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight + searchReservation;
     const topDelta = margins.top - newTop;
     const newBottom = bottomMargin(fallbackChrome.bottomHeight, padding, xAxisHeight);
     const bottomDelta = margins.bottom - newBottom;
@@ -788,6 +799,13 @@ export function computeDimensions(
         margins,
         theme,
         metrics: fallbackMetrics,
+        seriesSearch: wantsSearch
+          ? resolveSeriesSearch(
+              spec,
+              fallbackMetricsTopY + (fallbackMetrics?.height ?? 0),
+              fallbackMetricsArea,
+            )
+          : undefined,
         xAxisHeight,
         effectiveAxisGap: fallbackEffectiveAxisGap,
       };
@@ -826,8 +844,46 @@ export function computeDimensions(
     margins,
     theme,
     metrics: resolvedMetrics,
+    seriesSearch: wantsSearch
+      ? resolveSeriesSearch(spec, metricsTopY + (resolvedMetrics?.height ?? 0), metricsArea)
+      : undefined,
     xAxisHeight,
     effectiveAxisGap,
+  };
+}
+
+/**
+ * Resolve the series-search band. Spans the full chrome content width
+ * (hPad to width - hPad, same as the metric bar) directly below chrome and
+ * the metric bar. The band itself is empty SVG space: the vanilla adapter
+ * absolutely positions a DOM combobox over it, so mounting the input never
+ * changes the observed container size.
+ */
+function resolveSeriesSearch(
+  spec: NormalizedChartSpec,
+  y: number,
+  area: { x: number; width: number },
+): ResolvedSeriesSearch | undefined {
+  const config = spec.seriesSearch;
+  if (!config) return undefined;
+  const colorEnc = spec.encoding.color;
+  // Normalization already guarantees a categorical color encoding when
+  // seriesSearch survives; these guards narrow the union for TypeScript.
+  if (!colorEnc || 'condition' in colorEnc || !('field' in colorEnc) || !colorEnc.field) {
+    return undefined;
+  }
+  const field = colorEnc.field;
+  // Same enumeration rule as legend entries: skip rows missing the color field.
+  const values = [
+    ...new Set(spec.data.filter((d) => d[field] != null).map((d) => String(d[field]))),
+  ];
+  return {
+    x: area.x,
+    y,
+    width: area.width,
+    height: SERIES_SEARCH_INPUT_HEIGHT,
+    placeholder: config.placeholder ?? 'Find a series',
+    values,
   };
 }
 

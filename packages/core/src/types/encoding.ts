@@ -70,6 +70,15 @@ function optional(...types: FieldType[]): ChannelRule {
  * - point: both axes are quantitative
  * - text/rule: fully optional positioning
  * - tick/rect: both axes required, any type
+ * - beeswarm: both axes optional at the channel level; the compiler enforces
+ *   the combination (exactly one quantitative value axis, the other axis an
+ *   optional nominal/ordinal lane channel)
+ * - waffle: no positional axes; y is the share value (quantitative, with
+ *   theta accepted as an alias like arc), color is the category
+ * - calendar: x is the daily date (temporal), color the per-day value
+ *   (quantitative); no y channel (the calendar owns its own geometry)
+ * - parliament: no positional axes; theta (aliased to y) is the seat count
+ *   (quantitative), color the party
  */
 export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   bar: {
@@ -143,6 +152,33 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
+  beeswarm: {
+    x: optional('quantitative', 'nominal', 'ordinal'),
+    y: optional('quantitative', 'nominal', 'ordinal'),
+    color: optional('nominal', 'ordinal', 'quantitative'),
+    size: optional('quantitative'),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
+  // Range: x+x2 with nominal y (horizontal) or y+y2 with nominal x (vertical).
+  // The orientation-dependent x2/y2 requirement is enforced by a dedicated
+  // check in the validator; the static table can only mark them optional.
+  range: {
+    x: required('quantitative', 'nominal', 'ordinal'),
+    y: required('quantitative', 'nominal', 'ordinal'),
+    x2: optional('quantitative'),
+    y2: optional('quantitative'),
+    color: optional('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
   arc: {
     x: optional(),
     y: required('quantitative'),
@@ -154,6 +190,34 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
     radius: optional('quantitative'),
+    detail: optional('nominal'),
+  },
+  waffle: {
+    x: optional(),
+    y: required('quantitative'),
+    color: required('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    theta: optional('quantitative'),
+    detail: optional('nominal'),
+  },
+  // parliament: hemicycle seat chart. Like arc/waffle, no positional axes;
+  // color is the party (required), theta the seat count (aliased to y in the
+  // sugar pass). y is accepted so the theta alias resolves before the rules
+  // check runs.
+  parliament: {
+    x: optional(),
+    y: required('quantitative'),
+    color: required('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
+    order: optional('quantitative', 'ordinal'),
+    theta: optional('quantitative'),
     detail: optional('nominal'),
   },
   text: {
@@ -201,6 +265,20 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     tooltip: optional(),
     href: optional(),
     order: optional('quantitative', 'ordinal'),
+    detail: optional('nominal'),
+  },
+  // calendar: x is the daily date (temporal), color the per-day value
+  // (quantitative). No y channel: the calendar computes its own
+  // weeks-x-weekdays geometry, so y is left optional here and the dedicated
+  // validator rejects it with a pointed message.
+  calendar: {
+    x: required('temporal'),
+    y: optional(),
+    color: required('quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    href: optional(),
     detail: optional('nominal'),
   },
 };

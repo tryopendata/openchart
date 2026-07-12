@@ -32,6 +32,10 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'rule': reference lines as data marks
  * - 'tick': strip/rug plot marks
  * - 'rect': heatmaps and 2D binned plots
+ * - 'range': dumbbell / arrow / range-bar plots spanning two values per category
+ * - 'waffle': unit grids ("x of 100") for part-to-whole counts
+ * - 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)
+ * - 'parliament': hemicycle seat-dot chart for election/legislature results
  */
 export type MarkType =
   | 'bar'
@@ -44,7 +48,12 @@ export type MarkType =
   | 'rule'
   | 'tick'
   | 'rect'
-  | 'lollipop';
+  | 'lollipop'
+  | 'beeswarm'
+  | 'range'
+  | 'waffle'
+  | 'calendar'
+  | 'parliament';
 
 /** @deprecated Use MarkType instead. Kept for internal migration references. */
 export type ChartType = MarkType;
@@ -174,6 +183,19 @@ export interface MarkDef {
   innerRadius?: number;
   /** Outer radius for arc marks. */
   outerRadius?: number;
+  /**
+   * Start angle in radians for arc marks. Defaults to 0 (full pie/donut).
+   * Combined with `endAngle`, restricts the pie/donut to a partial sweep,
+   * e.g. `startAngle: -Math.PI / 2, endAngle: Math.PI / 2` for a half-donut
+   * (election-style results donut). Angles follow d3's convention: 0 is
+   * straight up, increasing clockwise. Only meaningful when `type` is `'arc'`.
+   */
+  startAngle?: number;
+  /**
+   * End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut).
+   * See `startAngle`. Only meaningful when `type` is `'arc'`.
+   */
+  endAngle?: number;
   /** Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness. */
   cornerRadius?: number | 'pill';
   /** Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band. */
@@ -200,6 +222,77 @@ export interface MarkDef {
    * two competing diagonals.
    */
   trendline?: boolean;
+  /**
+   * Pattern-fill reinforcement for filled marks (bar, area, arc).
+   *
+   * - `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,
+   *   crosshatch, vertical lines) layered over each series color so series
+   *   remain distinguishable without color vision. Marks too small to show
+   *   a legible pattern keep their solid fill.
+   * - `'none'` (default): solid fills only.
+   */
+  fillPattern?: 'auto' | 'none';
+  /**
+   * Visual style for range marks. Only meaningful when `type` is `'range'`.
+   * - 'dumbbell' (default): a dot at each end joined by a connector line.
+   *   The start dot is muted, the end dot carries the accent color.
+   * - 'arrow': a line with an arrowhead at the x2/y2 end, the strongest
+   *   "change between two points in time" form.
+   * - 'bar': a plain floating range bar spanning start to end.
+   */
+  style?: 'dumbbell' | 'arrow' | 'bar';
+  /**
+   * Color range marks by direction of change. Only meaningful when `type` is
+   * `'range'`. When true, increases (x2 > x, or y2 > y) use the theme's
+   * `positive` semantic color and decreases use `negative`. A field-based
+   * `encoding.color` takes precedence over direction coloring.
+   */
+  colorByDirection?: boolean;
+  /**
+   * Total number of cells in a waffle grid. Only meaningful when `type` is
+   * `'waffle'`. Category values normalize to this many cells via
+   * largest-remainder rounding so the grid always sums exactly. Default 100.
+   */
+  units?: number;
+  /**
+   * Number of columns in a waffle grid. Only meaningful when `type` is
+   * `'waffle'`. Rows derive from `units / columns`. Default 10.
+   */
+  columns?: number;
+  /**
+   * First day of the week for calendar marks. Only meaningful when `type` is
+   * `'calendar'`. Controls which weekday occupies the top row of each band.
+   * Defaults to 'monday' (ISO week convention).
+   */
+  weekStart?: 'monday' | 'sunday';
+  /**
+   * Corner radius in pixels for calendar day cells. Only meaningful when
+   * `type` is `'calendar'`. Defaults to 1.
+   */
+  cellRadius?: number;
+  /**
+   * Seat layout shape for parliament marks. Only meaningful when `type` is
+   * `'parliament'`. `'hemicycle'` (default, and currently the only shape)
+   * packs seats into concentric semicircular arcs, party-grouped left to
+   * right.
+   */
+  shape?: 'hemicycle';
+  /**
+   * Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes
+   * dots to fill the available hemicycle rings for the given seat count.
+   * Only meaningful when `type` is `'parliament'`.
+   */
+  seatRadius?: number | 'auto';
+  /**
+   * The majority-threshold line and "N to win" label on parliament marks. Only
+   * meaningful when `type` is `'parliament'`. `true` (default) draws the line at
+   * a simple majority (half the seats plus one); `false` hides it. The object
+   * form overrides the threshold and label: `{ seats }` sets a custom seat count
+   * (e.g. a two-thirds supermajority) and `{ label }` overrides the default
+   * "N to win" text. A `seats` value outside `1..totalSeats` warns and falls
+   * back to the simple-majority default.
+   */
+  majorityLine?: boolean | { seats?: number; label?: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -271,8 +364,12 @@ export interface AxisConfig {
 
 /** Scale configuration for an encoding channel. */
 export interface ScaleConfig {
-  /** Explicit domain override. Auto-derived from data if omitted. */
-  domain?: [number, number] | string[];
+  /**
+   * Explicit domain override. Auto-derived from data if omitted.
+   * Continuous scales take `[min, max]`; threshold scales take the full
+   * list of class break values; categorical scales take the value list.
+   */
+  domain?: number[] | string[];
   /** Scale type override. Usually inferred from field type. */
   type?: ScaleType;
   /** Whether to nice-ify the domain for clean tick values. Defaults to true. */
@@ -283,6 +380,15 @@ export interface ScaleConfig {
   clip?: boolean;
   /** Explicit range override. */
   range?: unknown[];
+  /**
+   * Named color scheme (Vega-Lite aligned). Resolved against the core palette
+   * registry (sequential: blue, green, orange, purple, teal; diverging:
+   * redBlue, brownTeal; categorical) during the pre-validation sugar
+   * expansion; common VL names (blues, greens, category10, ...) are accepted
+   * as aliases. Unknown names fail validation with the supported list.
+   * An explicit `range` wins over `scheme`.
+   */
+  scheme?: string;
   /** Reverse the range direction. */
   reverse?: boolean;
   /** Clamp output to the range. */
@@ -318,6 +424,30 @@ export type ScaleType =
   | 'threshold';
 
 /**
+ * Sort a categorical domain by the aggregated values of another field
+ * (Vega-Lite EncodingSortField).
+ */
+export interface SortByField {
+  /** Data field whose values determine the category order. */
+  field: string;
+  /** Aggregate applied per category before comparing. Defaults to 'sum'. */
+  op?: AggregateOp;
+  /** Sort direction. Defaults to 'ascending'. */
+  order?: 'ascending' | 'descending';
+}
+
+/**
+ * A constant value definition for an encoding channel (Vega-Lite aligned).
+ * The VL idiom for a fixed visual property, e.g. `color: { value: '#1b7fa3' }`.
+ * Expanded to the matching mark-level property (fill/stroke, size, opacity)
+ * during the pre-validation sugar expansion.
+ */
+export interface ValueDef {
+  /** The constant value: CSS color string, size number, opacity (0-1), or gradient. */
+  value: string | number | boolean | null | GradientDef;
+}
+
+/**
  * A single encoding channel mapping a data field to a visual property.
  *
  * Follows the Vega-Lite encoding model: field identifies the column,
@@ -348,8 +478,11 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
   type: FieldType;
   /** Optional aggregate to apply before encoding. */
   aggregate?: AggregateOp;
-  /** Axis configuration. Set to `false` to suppress axis entirely (no space reserved). */
-  axis?: AxisConfig | false;
+  /**
+   * Axis configuration. Set to `false` to suppress axis entirely (no space
+   * reserved). `null` is accepted as a VL-aligned alias for `false`.
+   */
+  axis?: AxisConfig | false | null;
   /** Scale configuration. */
   scale?: ScaleConfig;
   /**
@@ -373,6 +506,11 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    *   to opt into stacked areas. Each overlapping series renders as a translucent
    *   gradient band anchored at the y-domain baseline.
    * - **Line**: stacking is not applied (lines always overlap).
+   *
+   * **v8 note:** the multi-series bar/area default realigns with Vega-Lite
+   * (stacked, `'zero'`) in v8. Relying on the implicit default emits a
+   * compile warning in v7; set `stack` explicitly (`null` for
+   * grouped/overlap, `'zero'` for stacked) to keep the current rendering.
    *
    * @example
    * // Stacked horizontal bars (opt-in; default is grouped):
@@ -403,8 +541,22 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * - 'descending': sort domain values descending
    * - null: use data order (no sorting)
    * - undefined: ascending (VL default)
+   * - 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix
+   *   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories
+   *   by value, largest first. Resolved into an explicit domain during the
+   *   pre-validation sugar expansion.
+   * - string[]: explicit value order. Listed values come first (in the given
+   *   order); unlisted data values follow in data order.
+   * - SortByField: sort by the aggregated values of another field.
    */
-  sort?: 'ascending' | 'descending' | null;
+  sort?: 'ascending' | 'descending' | null | 'x' | '-x' | 'y' | '-y' | string[] | SortByField;
+  /**
+   * Legend configuration for this channel (Vega-Lite aligned).
+   * Only meaningful on the `color` channel. `null` hides the legend (the VL
+   * idiom for `legend.show = false`); a config object merges into the
+   * top-level `legend` (top-level keys win on conflict).
+   */
+  legend?: LegendConfig | null;
   /**
    * Display title override (Vega-Lite aligned).
    * Used as the label in tooltips instead of the raw field name.
@@ -475,14 +627,16 @@ export interface Encoding<TData extends DataRow = DataRow> {
   /**
    * Color channel. Required for arc marks (determines pie/donut slice coloring).
    * Optional for all other marks -- used for series differentiation on multi-series charts,
-   * or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates.
+   * or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates,
+   * or a bare `{ value }` constant (VL aligned; expanded to the mark-level fill/stroke).
    */
-  color?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  color?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
    * Size channel. Used by point/bubble charts to scale dot area by a quantitative field.
-   * Accepts a conditional definition to vary size based on data predicates.
+   * Accepts a conditional definition to vary size based on data predicates,
+   * or a bare `{ value }` constant (VL aligned; expanded to `mark.size`).
    */
-  size?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  size?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
    * Detail channel. Groups data into multiple series without mapping to a visual property.
    * Useful when you want separate lines per category but don't need the color to differ.
@@ -506,17 +660,20 @@ export interface Encoding<TData extends DataRow = DataRow> {
   y2?: EncodingChannel<TData>;
   /**
    * Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity
-   * based on data predicates (e.g., highlight selected points).
+   * based on data predicates (e.g., highlight selected points), or a bare `{ value }`
+   * constant (VL aligned; expanded to `mark.opacity`).
    */
-  opacity?: EncodingChannel<TData> | ConditionalValueDef<TData>;
+  opacity?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
-   * Point shape encoding. Valid values: 'circle', 'square', 'diamond', 'triangle-up',
-   * 'triangle-down', 'cross'. Used on point/scatter marks to differentiate series by shape.
+   * Point shape encoding.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Differentiate series with `color` or `strokeDash` instead.
    */
   shape?: EncodingChannel<TData>;
   /**
-   * Stroke dash pattern encoding. Maps a nominal field to different dash patterns
-   * on line marks. Useful when color alone doesn't distinguish series well.
+   * Stroke dash pattern encoding. Maps a nominal/ordinal field to different
+   * dash patterns on line and rule marks. Useful when color alone doesn't
+   * distinguish series well.
    */
   strokeDash?: EncodingChannel<TData>;
   /** Rotation angle encoding for point marks. Maps a quantitative field to 0-360 degrees. */
@@ -531,23 +688,31 @@ export interface Encoding<TData extends DataRow = DataRow> {
    * multi-field tooltips. Independent of the x/y/color encoding.
    */
   tooltip?: EncodingChannel<TData> | EncodingChannel<TData>[];
-  /** Hyperlink encoding. Maps a field containing URLs to clickable marks. */
+  /**
+   * Hyperlink encoding.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Handle link navigation in the host application instead.
+   */
   href?: EncodingChannel<TData>;
   /**
-   * Drawing order. Controls z-order and stacking sort order for bar/area marks.
-   * Lower values are drawn first (behind higher values).
+   * Drawing order.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Use `sort` on the relevant channel or pre-sorted data order instead.
    */
   order?: EncodingChannel<TData>;
   /**
-   * Angular position for arc marks (pie/donut).
-   * Optional -- defaults to the `y` channel value when omitted.
-   * Not used by any other mark type.
+   * Angular position (slice value) for arc marks (pie/donut), the Vega-Lite
+   * pie idiom. Waffle marks accept it too (the same part-to-whole value
+   * channel). Accepted as an alias for `y`: when `y` is absent, `theta` is
+   * used as the slice value. When both are present, `y` wins and `theta` is
+   * ignored with a compile warning. `theta` becomes the canonical arc value
+   * channel in v8. Not used by any other mark type.
    */
   theta?: EncodingChannel<TData>;
   /**
    * Radial distance from center for arc marks.
-   * Optional -- only meaningful on donut charts (controls inner radius boundary).
-   * Not used by any other mark type.
+   * @deprecated Not implemented (silently ignored) and removed in v8.
+   * Use `mark.innerRadius` / `mark.outerRadius` to control donut radii.
    */
   radius?: EncodingChannel<TData>;
   /**
@@ -819,6 +984,11 @@ export interface RangeAnnotation extends AnnotationBase {
  * Useful for baselines (zero), targets, or thresholds.
  */
 export interface RefLineAnnotation extends AnnotationBase {
+  /**
+   * Discriminant. `'refline'` is canonical. `'rule'` is a deprecated alias
+   * (it collides with the `rule` mark type) kept accepted-with-warning; it is
+   * removed in v9. Use `'refline'`.
+   */
   type: 'refline' | 'rule';
   /** X-axis value for a vertical reference line. */
   x?: string | number;
@@ -1051,6 +1221,46 @@ export interface LegendConfig {
 }
 
 /**
+ * Configuration for the searchable series highlight input (`seriesSearch`).
+ * The boolean form (`seriesSearch: true`) uses the defaults.
+ */
+export interface SeriesSearchConfig {
+  /** Placeholder text for the search input. Defaults to "Find a series". */
+  placeholder?: string;
+}
+
+/**
+ * Configuration for the "you draw it" interactive engagement format
+ * (`youDrawIt`). The reader draws their guess of the trend from `from` to the
+ * right edge before the real line reveals. Line marks only, single-series only.
+ */
+export interface YouDrawItConfig {
+  /**
+   * The x value (matching `encoding.x`'s domain) where drawing starts. Data
+   * before this point renders normally; data at or after it is hidden behind
+   * a hatched "draw here" region until reveal.
+   */
+  from: string | number;
+  /** Prompt text shown in the hatched drawing region. Defaults to "Draw your guess". */
+  prompt?: string;
+  /** Label for the skip-to-reveal button. Defaults to "Show me". */
+  revealLabel?: string;
+  /**
+   * Optional extra comparison line (e.g. "what everyone else guessed"),
+   * supplied by the host app. Rendered in a third, visually distinct style
+   * alongside the reader's guess and the real line after reveal.
+   */
+  comparisonLine?: Array<{ x: string | number; y: number }>;
+}
+
+/**
+ * Content composition for an endpoint-label entry: the series name, the
+ * formatted value, or both joined on one line. See
+ * {@link EndpointLabelsConfig.content}.
+ */
+export type EndpointLabelContent = 'label' | 'value' | 'label value';
+
+/**
  * Configuration for the endpoint labels column rendered at the chart's right edge
  * for multi-series line/area charts. Each entry pairs the series name with its
  * last formatted value, optionally anchored to the line by an open-circle marker.
@@ -1087,6 +1297,20 @@ export interface EndpointLabelsConfig {
    * - `'both'`: labels on both left (leading) and right (trailing) edges.
    */
   ends?: 'end' | 'both';
+  /**
+   * What each entry renders.
+   * - `'label'`: series name only.
+   * - `'value'`: formatted value only.
+   * - `'label value'`: series name and value joined on one line.
+   *
+   * When omitted, entries render the series name with the formatted value on
+   * a second line (the classic endpoint column). Pass an object to set the
+   * leading and trailing columns independently, e.g. the classic slope-chart
+   * look is `{ leading: 'label value', trailing: 'value' }`.
+   */
+  content?:
+    | EndpointLabelContent
+    | { leading?: EndpointLabelContent; trailing?: EndpointLabelContent };
   /** Field to read the displayed value from. Defaults to `encoding.y.field`. */
   valueField?: string;
   /** d3-format string for the value. Defaults to `encoding.y.axis.format`. */
@@ -1333,6 +1557,65 @@ export interface LollipopEncoding<TData extends DataRow = DataRow> extends Encod
 }
 
 /**
+ * Encoding for beeswarm marks (dodged distribution dots).
+ * - Exactly one positional channel is quantitative: the value axis
+ *   (x = horizontal swarm, y = vertical swarm).
+ * - The other positional channel is optional (nominal/ordinal): grouped
+ *   swarms, one lane per category. The cross axis has no scale; the dodge
+ *   layout computes pixel offsets around each lane center.
+ */
+export interface BeeswarmEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x?: EncodingChannel<TData>;
+  y?: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for range marks (dumbbell / arrow / range-bar plots).
+ * - Horizontal (the common editorial form): `y` nominal/ordinal category,
+ *   `x` quantitative start, `x2` quantitative end.
+ * - Vertical: `x` nominal/ordinal category, `y` quantitative start,
+ *   `y2` quantitative end.
+ */
+export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for waffle marks (unit grids for part-to-whole counts).
+ * - `color`: required (nominal/ordinal, the category)
+ * - `theta`: the quantitative share, the same part-to-whole value channel
+ *   arc marks use. Alias for `y`; provide one of the two.
+ */
+export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  color: EncodingChannel<TData> | ConditionalValueDef<TData>;
+}
+
+/**
+ * Encoding for parliament marks (hemicycle seat-dot charts).
+ * - `color`: required (nominal/ordinal, the party)
+ * - `theta`: the quantitative seat count, the same part-to-whole value
+ *   channel arc/waffle marks use. Alias for `y`; provide one of the two.
+ */
+export interface ParliamentEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  color: EncodingChannel<TData> | ConditionalValueDef<TData>;
+}
+
+/**
+ * Encoding for calendar marks (GitHub-style calendar heatmaps).
+ * - `x`: required (temporal, daily dates, one row per day)
+ * - `color`: required (quantitative, the per-day value)
+ *
+ * The calendar computes its own weeks-x-weekdays geometry: no positional
+ * scales or axes. Multi-year data partitions into one stacked band per year,
+ * all bands sharing a single color scale and legend.
+ */
+export interface CalendarEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  color: EncodingChannel<TData>;
+}
+
+/**
  * Encoding for text marks (data-positioned labels).
  * - `text`: required (the field to render as text)
  * - `x`, `y`: optional positioning
@@ -1362,6 +1645,33 @@ export interface RectEncoding<TData extends DataRow = DataRow> extends Encoding<
 }
 
 // ---------------------------------------------------------------------------
+// Accessibility configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * Author-facing accessibility overrides.
+ *
+ * Everything here is optional; when omitted, openchart auto-generates alt
+ * text, ARIA labels, and a screen-reader data table from the spec and data.
+ */
+export interface A11yConfig {
+  /**
+   * Alt text announced by screen readers for the chart as a whole. Replaces
+   * the auto-generated description. Also settable via the top-level
+   * `description` field (Vega-Lite convention); this field wins when both
+   * are present.
+   */
+  description?: string;
+  /**
+   * Hide the chart from assistive technology entirely (`aria-hidden`).
+   * Use only when the chart is decorative or the surrounding content
+   * already conveys the same information. Also suppresses the hidden
+   * screen-reader data table and keyboard mark navigation.
+   */
+  hidden?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Shared (non-mark-specific) ChartSpec properties
 // ---------------------------------------------------------------------------
 
@@ -1372,12 +1682,44 @@ export interface RectEncoding<TData extends DataRow = DataRow> extends Encoding<
  * @internal
  */
 interface BaseChartSpec<TData extends DataRow = DataRow> {
-  /** Data array: each element is a row with field values. */
+  /**
+   * Data array: each element is a row with field values.
+   * The Vega-Lite object form `{ values: [...] }` is also accepted at runtime
+   * and unwrapped during the pre-validation sugar expansion. `{ url }` is not
+   * supported (openchart does not fetch data).
+   */
   data: TData[];
   /** Data transforms applied in order before encoding (filter, bin, calculate, timeUnit). */
   transform?: Transform[];
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
+  /**
+   * Top-level title sugar (Vega-Lite aligned). Expanded into `chrome.title`
+   * (and `chrome.subtitle` for the object form). `chrome.title` wins when
+   * both are set.
+   */
+  title?: string | { text: string; subtitle?: string };
+  /** Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins. */
+  subtitle?: string;
+  /**
+   * Alt text for the rendered chart (Vega-Lite aligned). Sugar for
+   * `a11y.description`; `a11y.description` wins when both are set.
+   * When absent, alt text is auto-generated from the spec and data.
+   */
+  description?: string;
+  /** Accessibility overrides. See {@link A11yConfig}. */
+  a11y?: A11yConfig;
+  /**
+   * Fixed render width in pixels (Vega-Lite aligned). Overrides the
+   * container-derived width. When both `width` and `height` are set,
+   * `responsive: false` is implied unless `responsive` is set explicitly.
+   * Omit for the default container-driven sizing.
+   */
+  width?: number;
+  /** Fixed render height in pixels (Vega-Lite aligned). See `width`. */
+  height?: number;
+  /** Accepted for Vega-Lite compatibility and ignored (with a compile warning). */
+  $schema?: string;
   /**
    * KPI/metric cells rendered as a horizontal row between subtitle and chart
    * area. Each cell shows a label/value pair with optional delta and secondary
@@ -1438,6 +1780,22 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * explicitly set.
    */
   crosshair?: boolean;
+  /**
+   * Searchable series highlight ("find your country"). Renders a compact
+   * search input above the chart with typeahead over the color channel's
+   * distinct values. Selecting a value adds it to the highlight set
+   * (multi-select chips, removable); clearing restores the authored
+   * `encoding.color.highlight` baseline. Requires a categorical color
+   * encoding. Mutually exclusive with edit mode (search wins).
+   */
+  seriesSearch?: boolean | SeriesSearchConfig;
+  /**
+   * "You draw it" interactive engagement format: the reader draws their
+   * guess of the trend before the real line reveals. Line marks only,
+   * single-series only. Mutually exclusive with edit mode (validation
+   * warning if both are enabled; youDrawIt is disabled).
+   */
+  youDrawIt?: YouDrawItConfig;
   /**
    * Display mode controlling how much chart chrome is rendered.
    *
@@ -1534,6 +1892,18 @@ export type ChartSpec<TData extends DataRow = DataRow> =
       encoding: LollipopEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
+      mark: 'beeswarm' | (MarkDef & { type: 'beeswarm' });
+      encoding: BeeswarmEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'range' | (MarkDef & { type: 'range' });
+      encoding: RangeEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'waffle' | (MarkDef & { type: 'waffle' });
+      encoding: WaffleEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
       mark: 'text' | (MarkDef & { type: 'text' });
       encoding: TextEncoding<TData>;
     })
@@ -1548,6 +1918,14 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'rule' | (MarkDef & { type: 'rule' });
       encoding: Encoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'calendar' | (MarkDef & { type: 'calendar' });
+      encoding: CalendarEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'parliament' | (MarkDef & { type: 'parliament' });
+      encoding: ParliamentEncoding<TData>;
     });
 
 /**
@@ -1688,6 +2066,16 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   transform?: Transform[];
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
+  /** Top-level title sugar (VL aligned). Expanded into `chrome.title`; `chrome.title` wins. */
+  title?: string | { text: string; subtitle?: string };
+  /** Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins. */
+  subtitle?: string;
+  /** Fixed render width in pixels (VL aligned). Overrides the container-derived width. */
+  width?: number;
+  /** Fixed render height in pixels (VL aligned). Overrides the container-derived height. */
+  height?: number;
+  /** Accepted for Vega-Lite compatibility and ignored (with a compile warning). */
+  $schema?: string;
   /** Annotations on the layered view. */
   annotations?: Annotation[];
   /** Label display configuration. `false` disables all labels, `true` uses defaults. */
@@ -1917,6 +2305,13 @@ export interface BarListEncoding {
  * - SankeySpec: has `type: 'sankey'`
  * - TileMapSpec: has `type: 'tilemap'`
  * - BarListSpec: has `type: 'barlist'`
+ *
+ * Election parliament (hemicycle) charts are `ChartSpec` with `mark:
+ * 'parliament'`, not a separate top-level type: seat data (party + seats)
+ * maps naturally onto encoding.color/y like arc and waffle, and riding the
+ * existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode
+ * for free instead of a second bespoke compile path (see
+ * `packages/engine/src/charts/parliament/`).
  */
 export type VizSpec =
   | ChartSpec
@@ -2188,11 +2583,11 @@ export interface ConditionalValueDef<TData extends DataRow = DataRow> {
 
 /**
  * Check if a channel definition is a regular EncodingChannel (has 'field' at top level).
- * Use this to narrow `EncodingChannel | ConditionalValueDef` in encoding channels
- * that support conditional encoding (color, size, opacity).
+ * Use this to narrow `EncodingChannel | ConditionalValueDef | ValueDef` in encoding
+ * channels that support conditional encoding (color, size, opacity).
  */
 export function isEncodingChannel<TData extends DataRow = DataRow>(
-  def: EncodingChannel<TData> | ConditionalValueDef<TData> | undefined,
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef | undefined,
 ): def is EncodingChannel<TData> {
   if (!def) return false;
   return 'field' in def && !('condition' in def);
@@ -2202,10 +2597,22 @@ export function isEncodingChannel<TData extends DataRow = DataRow>(
  * Check if a channel definition is a ConditionalValueDef.
  */
 export function isConditionalDef<TData extends DataRow = DataRow>(
-  def: EncodingChannel<TData> | ConditionalValueDef<TData> | undefined,
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef | undefined,
 ): def is ConditionalValueDef<TData> {
   if (!def) return false;
   return 'condition' in def;
+}
+
+/**
+ * Check if a channel definition is a bare ValueDef (constant value, no field
+ * or condition). These are expanded to mark-level properties during the
+ * pre-validation sugar expansion.
+ */
+export function isValueDef<TData extends DataRow = DataRow>(
+  def: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef | undefined,
+): def is ValueDef {
+  if (!def) return false;
+  return 'value' in def && !('condition' in def) && !('field' in def);
 }
 
 // ---------------------------------------------------------------------------
@@ -2225,7 +2632,25 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'tick',
   'rect',
   'lollipop',
+  'beeswarm',
+  'range',
+  'waffle',
+  'calendar',
+  'parliament',
 ]);
+
+/**
+ * Mark types that lay out inside the chart area without positional axes
+ * (no axis or gridline computation; margins shrink to padding).
+ */
+export function isAxislessMark(markType: MarkType): boolean {
+  return (
+    markType === 'arc' ||
+    markType === 'waffle' ||
+    markType === 'calendar' ||
+    markType === 'parliament'
+  );
+}
 
 /** @deprecated Use MARK_TYPES instead. */
 export const CHART_TYPES = MARK_TYPES;
@@ -2319,4 +2744,9 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   tick: 'Tick plot',
   rect: 'Heatmap',
   lollipop: 'Lollipop chart',
+  beeswarm: 'Beeswarm chart',
+  range: 'Range plot',
+  waffle: 'Waffle chart',
+  calendar: 'Calendar heatmap',
+  parliament: 'Parliament chart',
 };

@@ -15,6 +15,8 @@ import {
   MARK_ENCODING_RULES,
   MARK_TYPES,
   type MarkType,
+  resolveSchemeName,
+  SUPPORTED_SCHEME_NAMES,
   type VizSpec,
 } from '@opendata-ai/openchart-core';
 
@@ -49,6 +51,291 @@ function isNumeric(value: unknown): boolean {
   return false;
 }
 
+/**
+ * Levenshtein edit distance between two strings (case-insensitive). Used to
+ * turn a misspelled field reference into a "did you mean" repair hint.
+ */
+function editDistance(a: string, b: string): number {
+  const s = a.toLowerCase();
+  const t = b.toLowerCase();
+  const m = s.length;
+  const n = t.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  // Single-row DP: prev[j] holds distance for the previous source char.
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  let curr = new Array<number>(n + 1);
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+/**
+ * Given a misspelled field name and the actual data columns, return the nearest
+ * column when it is close enough to be a plausible typo, else undefined.
+ *
+ * The threshold scales with word length (at most ~40% of the target length, and
+ * never more than 3 edits) so short columns don't match unrelated names.
+ */
+function nearestColumn(field: string, columns: string[]): string | undefined {
+  let best: string | undefined;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const column of columns) {
+    const distance = editDistance(field, column);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = column;
+    }
+  }
+  if (best === undefined) return undefined;
+  const threshold = Math.min(3, Math.max(1, Math.floor(best.length * 0.4)));
+  return bestDistance <= threshold ? best : undefined;
+}
+
+/**
+ * Build the "did you mean" clause appended to DATA_FIELD_MISSING suggestions.
+ * Returns an empty string when no column is a plausible near-match.
+ */
+function didYouMean(field: string, columns: string[]): string {
+  const match = nearestColumn(field, columns);
+  return match ? ` Did you mean "${match}"?` : '';
+}
+
+// ---------------------------------------------------------------------------
+// Range mark validation
+// ---------------------------------------------------------------------------
+
+const VALID_RANGE_STYLES = new Set(['dumbbell', 'arrow', 'bar']);
+
+/**
+ * Range marks need an orientation-dependent encoding pair: x + x2 when the
+ * category axis is y (horizontal, the common editorial form), or y + y2 when
+ * the category axis is x (vertical). The static MARK_ENCODING_RULES table
+ * can't express "x2 required only when y is categorical", so this check
+ * enforces it with errors naming exactly what to add.
+ */
+function validateRangeSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const encoding = spec.encoding as Record<string, Record<string, unknown> | undefined>;
+  const data = spec.data as Record<string, unknown>[];
+  const x = encoding.x;
+  const y = encoding.y;
+  // Missing x/y already produced MISSING_FIELD errors from the generic loop.
+  if (!x?.field || typeof x.field !== 'string' || !y?.field || typeof y.field !== 'string') {
+    return;
+  }
+
+  const xType = (x.type as string | undefined) ?? inferFieldType(data, x.field);
+  const yType = (y.type as string | undefined) ?? inferFieldType(data, y.field);
+  const xIsCategory = xType === 'nominal' || xType === 'ordinal';
+  const yIsCategory = yType === 'nominal' || yType === 'ordinal';
+
+  if (xIsCategory && yIsCategory) {
+    errors.push({
+      message:
+        'Spec error: range chart requires a quantitative value axis, but both encoding.x and encoding.y are categorical',
+      path: 'encoding',
+      code: 'ENCODING_MISMATCH',
+      suggestion:
+        'Map the range start to a quantitative channel: x (with x2 for the end) for horizontal ranges, or y (with y2) for vertical ranges',
+    });
+    return;
+  }
+  if (!xIsCategory && !yIsCategory) {
+    errors.push({
+      message:
+        'Spec error: range chart requires a nominal or ordinal category axis, but neither encoding.x nor encoding.y is categorical',
+      path: 'encoding',
+      code: 'ENCODING_MISMATCH',
+      suggestion:
+        'Set encoding.y to a nominal field for horizontal ranges (the common form), or encoding.x for vertical ranges',
+    });
+    return;
+  }
+
+  const availableColumns = data.length > 0 ? Object.keys(data[0]).join(', ') : '';
+  if (yIsCategory) {
+    // Horizontal: x is the range start, x2 the end.
+    if (!encoding.x2) {
+      errors.push({
+        message:
+          'Spec error: range chart requires encoding.x2 (the range end) when encoding.y is the category axis, but none was provided',
+        path: 'encoding.x2',
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.x2 with the field holding the range's end value, e.g. x2: { field: "endValue" }. Available columns: ${availableColumns}`,
+      });
+    }
+    if (encoding.y2) {
+      errors.push({
+        message:
+          'Spec error: encoding.y2 is not used on a horizontal range chart (category axis on y); the range end belongs on x2',
+        path: 'encoding.y2',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Remove encoding.y2, or move the category to encoding.x and the values to y/y2 for a vertical range chart',
+      });
+    }
+  } else {
+    // Vertical: y is the range start, y2 the end.
+    if (!encoding.y2) {
+      errors.push({
+        message:
+          'Spec error: range chart requires encoding.y2 (the range end) when encoding.x is the category axis, but none was provided',
+        path: 'encoding.y2',
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.y2 with the field holding the range's end value, e.g. y2: { field: "endValue" }. Available columns: ${availableColumns}`,
+      });
+    }
+    if (encoding.x2) {
+      errors.push({
+        message:
+          'Spec error: encoding.x2 is not used on a vertical range chart (category axis on x); the range end belongs on y2',
+        path: 'encoding.x2',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Remove encoding.x2, or move the category to encoding.y and the values to x/x2 for a horizontal range chart',
+      });
+    }
+  }
+
+  // markDef options: style must be one of the known variants.
+  const mark = spec.mark;
+  if (mark && typeof mark === 'object' && !Array.isArray(mark)) {
+    const style = (mark as Record<string, unknown>).style;
+    if (style !== undefined && !VALID_RANGE_STYLES.has(style as string)) {
+      errors.push({
+        message: `Spec error: mark.style "${style}" is not valid for range marks. Must be one of: dumbbell, arrow, bar`,
+        path: 'mark.style',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Use mark: { type: "range", style: "dumbbell" } (default), "arrow" for directional change, or "bar" for a plain floating range bar',
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Calendar mark validation
+// ---------------------------------------------------------------------------
+
+const VALID_WEEK_STARTS = new Set(['monday', 'sunday']);
+
+/**
+ * Calendar heatmaps take daily dates on x and a quantitative value on color;
+ * the weeks-x-weekdays geometry is computed internally, so there is no y
+ * channel. This check enforces the parts the static MARK_ENCODING_RULES
+ * table can't express: no y, a temporal x even when the type is inferred,
+ * every date parseable, one row per day (daily granularity), and valid
+ * mark-level weekStart/cellRadius options.
+ */
+function validateCalendarSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const encoding = spec.encoding as Record<string, Record<string, unknown> | undefined>;
+  const data = spec.data as Record<string, unknown>[];
+
+  if (encoding.y) {
+    errors.push({
+      message:
+        'Spec error: calendar chart does not accept encoding.y (the weeks x weekdays layout is computed from the dates)',
+      path: 'encoding.y',
+      code: 'ENCODING_MISMATCH',
+      suggestion:
+        'Remove encoding.y. A calendar needs only x (temporal, daily dates) and color (quantitative).',
+    });
+  }
+
+  // Mark-level options (weekStart / cellRadius) on the MarkDef object form.
+  if (spec.mark && typeof spec.mark === 'object') {
+    const markDef = spec.mark as Record<string, unknown>;
+    if (markDef.weekStart !== undefined && !VALID_WEEK_STARTS.has(markDef.weekStart as string)) {
+      errors.push({
+        message: `Spec error: mark.weekStart "${markDef.weekStart}" is not a valid week start`,
+        path: 'mark.weekStart',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Use mark: { type: "calendar", weekStart: "monday" } (default, ISO weeks) or "sunday"',
+      });
+    }
+    if (
+      markDef.cellRadius !== undefined &&
+      (typeof markDef.cellRadius !== 'number' ||
+        !Number.isFinite(markDef.cellRadius) ||
+        markDef.cellRadius < 0)
+    ) {
+      errors.push({
+        message: `Spec error: mark.cellRadius must be a non-negative number, got ${JSON.stringify(markDef.cellRadius)}`,
+        path: 'mark.cellRadius',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Use a pixel radius like cellRadius: 1 (default) or cellRadius: 0 for square corners',
+      });
+    }
+  }
+
+  const x = encoding.x;
+  // Missing x already produced a MISSING_FIELD error from the generic loop.
+  if (!x?.field || typeof x.field !== 'string') return;
+
+  // The generic loop rejects a declared non-temporal type against the
+  // encoding rules table; this catches the inferred case (type omitted).
+  const xType = (x.type as string | undefined) ?? inferFieldType(data, x.field);
+  if (xType !== 'temporal') {
+    if (!x.type) {
+      errors.push({
+        message: `Spec error: calendar chart requires temporal encoding.x, but "${x.field}" was inferred as ${xType}`,
+        path: 'encoding.x',
+        code: 'ENCODING_MISMATCH',
+        suggestion: `Provide daily dates in "${x.field}" (ISO 8601 strings like "2024-01-15" or Date objects) and declare x: { field: "${x.field}", type: "temporal" }`,
+      });
+    }
+    return;
+  }
+
+  // Transforms (e.g. a timeUnit aggregation) reshape the data before the
+  // calendar sees it, so per-row date checks only apply to untransformed specs.
+  if (Array.isArray(spec.transform) && spec.transform.length > 0) return;
+
+  // Every date must parse; report the first offender by row index.
+  for (let i = 0; i < data.length; i++) {
+    const value = data[i][x.field];
+    if (value != null && !isParseableDate(value)) {
+      errors.push({
+        message: `Spec error: encoding.x.field "${x.field}" contains an unparseable date at data[${i}]: ${JSON.stringify(value)}`,
+        path: `data[${i}].${x.field}`,
+        code: 'INVALID_VALUE',
+        suggestion: `Fix data[${i}].${x.field} to a parseable date (ISO 8601 strings like "2024-01-15" or Date objects)`,
+      });
+      return;
+    }
+  }
+
+  // Daily granularity: more than one row on the same UTC day means the data
+  // is sub-daily (or duplicated) and cells would silently overwrite.
+  const seenDays = new Map<string, number>();
+  for (let i = 0; i < data.length; i++) {
+    const value = data[i][x.field];
+    if (value == null) continue;
+    const date = value instanceof Date ? value : new Date(value as string | number);
+    if (Number.isNaN(date.getTime())) continue;
+    const dayKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+    const firstIndex = seenDays.get(dayKey);
+    if (firstIndex !== undefined) {
+      errors.push({
+        message: `Spec error: calendar chart requires daily granularity, but data[${firstIndex}] and data[${i}] fall on the same day (${JSON.stringify(value)})`,
+        path: `data[${i}].${x.field}`,
+        code: 'ENCODING_MISMATCH',
+        suggestion: `Aggregate to one row per day first, e.g. transform: [{ timeUnit: "yearmonthdate", field: "${x.field}", as: "day" }] plus an aggregate over the value field, or pre-aggregate the data.`,
+      });
+      return;
+    }
+    seenDays.set(dayKey, i);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Chart validation
 // ---------------------------------------------------------------------------
@@ -59,6 +346,20 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
 
   // Check data
   if (!Array.isArray(spec.data)) {
+    // Near-miss: the VL `data: { url }` form. Fetching is out of scope for a
+    // rendering library, so reject it with a pointed message. The `{ values }`
+    // form is unwrapped by the pre-validation sugar expansion and never
+    // reaches this check on the compile path.
+    if (spec.data && typeof spec.data === 'object' && 'url' in (spec.data as object)) {
+      errors.push({
+        message: 'Spec error: data.url is not supported (openchart does not fetch remote data)',
+        path: 'data.url',
+        code: 'INVALID_VALUE',
+        suggestion:
+          'Fetch the data in your application and provide the rows inline: data: [...] or data: { values: [...] }',
+      });
+      return;
+    }
     errors.push({
       message: 'Spec error: "data" must be an array',
       path: 'data',
@@ -109,7 +410,8 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   const rules = MARK_ENCODING_RULES[markType as MarkType];
   const encoding = spec.encoding as Record<string, unknown>;
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-  const availableColumns = [...dataColumns].join(', ');
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
 
   // Validate required channels
   for (const [channel, rule] of Object.entries(rules)) {
@@ -121,6 +423,78 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         code: 'MISSING_FIELD',
         suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}) and type (${allowedTypes}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${rule.allowedTypes[0]}" }`,
       });
+    }
+  }
+
+  // Beeswarm axis combination: the channel rules mark both axes optional, so
+  // enforce the shape here. Exactly one positional channel is the quantitative
+  // value axis; the other, when present, is the nominal/ordinal lane channel.
+  // Only declared types are checked; omitted types are inferred later.
+  if (markType === 'beeswarm') {
+    const xChannel = encoding.x as Record<string, unknown> | undefined;
+    const yChannel = encoding.y as Record<string, unknown> | undefined;
+    const xType = xChannel?.type as string | undefined;
+    const yType = yChannel?.type as string | undefined;
+    if (!xChannel && !yChannel) {
+      errors.push({
+        message:
+          'Spec error: beeswarm chart requires a quantitative encoding.x or encoding.y (the value axis)',
+        path: 'encoding',
+        code: 'MISSING_FIELD',
+        suggestion: `Add the value axis, e.g. x: { field: "${[...dataColumns][0] ?? 'myField'}", type: "quantitative" }. Optionally add a nominal channel on the other axis for grouped swarms.`,
+      });
+    } else if (xType === 'quantitative' && yType === 'quantitative') {
+      errors.push({
+        message:
+          'Spec error: beeswarm chart accepts only one quantitative axis (the value axis), but both encoding.x and encoding.y are quantitative',
+        path: 'encoding',
+        code: 'ENCODING_MISMATCH',
+        suggestion:
+          'Keep the value axis quantitative and change the other channel to nominal/ordinal (grouped swarm lanes), or remove it for a single swarm. For two quantitative axes use mark: "point".',
+      });
+    } else if (
+      xType !== 'quantitative' &&
+      yType !== 'quantitative' &&
+      (!xChannel || !!xType) &&
+      (!yChannel || !!yType)
+    ) {
+      errors.push({
+        message:
+          'Spec error: beeswarm chart requires one quantitative axis (the value axis), but neither encoding.x nor encoding.y is quantitative',
+        path: 'encoding',
+        code: 'ENCODING_MISMATCH',
+        suggestion:
+          'Set the value axis to type: "quantitative" (x for a horizontal swarm, y for a vertical one).',
+      });
+    }
+  }
+
+  // Range marks: orientation-dependent x2/y2 requirement + mark.style options
+  if (markType === 'range') {
+    validateRangeSpec(spec, errors);
+  }
+
+  // Calendar marks: temporal daily x, no y, parseable dates, mark options
+  if (markType === 'calendar') {
+    validateCalendarSpec(spec, errors);
+  }
+
+  // Near-miss: VL's string expression form of calculate. A restricted string
+  // grammar is deliberately not supported (decision: structured form only);
+  // point authors at the structured equivalent instead.
+  if (Array.isArray(spec.transform)) {
+    const transforms = spec.transform as Record<string, unknown>[];
+    for (let i = 0; i < transforms.length; i++) {
+      const t = transforms[i];
+      if (t && typeof t === 'object' && typeof t.calculate === 'string') {
+        errors.push({
+          message: `Spec error: transform[${i}].calculate must be a structured expression object, not a string`,
+          path: `transform[${i}].calculate`,
+          code: 'INVALID_TYPE',
+          suggestion:
+            'Use the structured form for single operations, e.g. calculate: { op: "/", field: "a", field2: "b" } with as: "ratio". For running or grouped computations use the window or aggregate transforms.',
+        });
+      }
     }
   }
 
@@ -174,7 +548,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
             message: `Spec error: encoding.tooltip[${i}].field "${elem.field}" does not exist in data. Available columns: ${availableColumns}`,
             path: `encoding.tooltip[${i}].field`,
             code: 'DATA_FIELD_MISSING',
-            suggestion: `Use one of the available data columns: ${availableColumns}`,
+            suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(elem.field, columnList)}`,
           });
         }
         if (elem.type && !VALID_FIELD_TYPES.has(elem.type as string)) {
@@ -212,7 +586,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: encoding.${channel}.field "${channelObj.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(channelObj.field, columnList)}`,
       });
     }
 
@@ -223,6 +597,23 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         path: `encoding.${channel}.type`,
         code: 'INVALID_VALUE',
         suggestion: `Use one of: ${[...VALID_FIELD_TYPES].join(', ')}`,
+      });
+    }
+
+    // Check scale.scheme names. Known names (including VL aliases) are
+    // resolved to palette ranges by the pre-validation sugar expansion, so a
+    // scheme surviving to this point on the compile path is an unknown name.
+    const channelScale = channelObj.scale as Record<string, unknown> | undefined;
+    if (
+      channelScale &&
+      typeof channelScale.scheme === 'string' &&
+      !resolveSchemeName(channelScale.scheme)
+    ) {
+      errors.push({
+        message: `Spec error: encoding.${channel}.scale.scheme "${channelScale.scheme}" is not a supported scheme name`,
+        path: `encoding.${channel}.scale.scheme`,
+        code: 'INVALID_VALUE',
+        suggestion: `Use one of the supported scheme names: ${[...SUPPORTED_SCHEME_NAMES].join(', ')}. Or provide explicit colors via scale.range.`,
       });
     }
 
@@ -338,7 +729,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: encoding.facet.field "${facet.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: 'encoding.facet.field',
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(facet.field as string, columnList)}`,
       });
     }
     if (!facet.type || (facet.type !== 'nominal' && facet.type !== 'ordinal')) {
@@ -371,6 +762,60 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
       suggestion:
         'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
     });
+  }
+
+  // Validate youDrawIt: line marks only, single-series only, "from" required.
+  if (spec.youDrawIt !== undefined && spec.youDrawIt !== false) {
+    if (markType !== 'line') {
+      errors.push({
+        message: `Spec error: youDrawIt is only supported on line charts, but mark is "${markType}"`,
+        path: 'youDrawIt',
+        code: 'ENCODING_MISMATCH',
+        suggestion: 'Remove youDrawIt or change mark to "line".',
+      });
+    } else {
+      const config = spec.youDrawIt as Record<string, unknown>;
+      if (
+        typeof config !== 'object' ||
+        Array.isArray(config) ||
+        (config.from !== 0 && !config.from)
+      ) {
+        errors.push({
+          message: 'Spec error: youDrawIt.from is required (the x value where drawing starts)',
+          path: 'youDrawIt.from',
+          code: 'MISSING_FIELD',
+          suggestion:
+            'Set youDrawIt.from to an x value from your data, e.g. youDrawIt: { from: "2010" }',
+        });
+      } else if (typeof config.from !== 'string' && typeof config.from !== 'number') {
+        errors.push({
+          message: 'Spec error: youDrawIt.from must be a string or number',
+          path: 'youDrawIt.from',
+          code: 'INVALID_TYPE',
+          suggestion: 'Provide the x value as a string or number matching your data.',
+        });
+      }
+
+      const data = Array.isArray(spec.data) ? (spec.data as Record<string, unknown>[]) : [];
+      const colorCh = encoding?.color as Record<string, unknown> | undefined;
+      if (colorCh && typeof colorCh === 'object' && typeof colorCh.field === 'string') {
+        const colorType =
+          (colorCh.type as string | undefined) ?? inferFieldType(data, colorCh.field);
+        if (colorType !== 'quantitative') {
+          const distinct = new Set(data.map((row) => row[colorCh.field as string]));
+          if (distinct.size > 1) {
+            errors.push({
+              message:
+                'Spec error: youDrawIt only supports single-series line charts, but encoding.color has multiple distinct values',
+              path: 'youDrawIt',
+              code: 'ENCODING_MISMATCH',
+              suggestion:
+                'Remove encoding.color (or filter the data to one series) to use youDrawIt.',
+            });
+          }
+        }
+      }
+    }
   }
 }
 
@@ -424,7 +869,8 @@ function validateTableSpec(spec: Record<string, unknown>, errors: ValidationErro
   }
 
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-  const availableColumns = [...dataColumns].join(', ');
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
   const columns = spec.columns as Record<string, unknown>[];
 
   for (let i = 0; i < columns.length; i++) {
@@ -456,7 +902,7 @@ function validateTableSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: columns[${i}].key "${col.key}" does not exist in data. Available columns: ${availableColumns}`,
         path: `columns[${i}].key`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(col.key as string, columnList)}`,
       });
     }
 
@@ -1107,6 +1553,38 @@ export function validateSpec(spec: unknown): ValidationResult {
     hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList;
 
   if (!isChart && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList && !isLayer) {
+    // Near-misses for VL composition operators that are unsupported by decision
+    if ('hconcat' in obj || 'vconcat' in obj) {
+      const key = 'hconcat' in obj ? 'hconcat' : 'vconcat';
+      return {
+        valid: false,
+        errors: [
+          {
+            message: `Spec error: "${key}" composition is not supported`,
+            path: key,
+            code: 'INVALID_VALUE',
+            suggestion:
+              'Render each chart in its own container instead. For small multiples of the same chart, use the facet encoding channel: encoding.facet = { field, type }',
+          },
+        ],
+        normalized: null,
+      };
+    }
+    if ('facet' in obj && 'spec' in obj) {
+      return {
+        valid: false,
+        errors: [
+          {
+            message: 'Spec error: the top-level "facet" operator is not supported',
+            path: 'facet',
+            code: 'INVALID_VALUE',
+            suggestion:
+              'Use the facet encoding channel on a regular chart spec instead: encoding.facet = { field: "category", type: "nominal" }',
+          },
+        ],
+        normalized: null,
+      };
+    }
     return {
       valid: false,
       errors: [

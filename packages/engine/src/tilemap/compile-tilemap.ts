@@ -46,7 +46,7 @@ import {
   SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
 import { scaleLinear } from 'd3-scale';
-
+import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
@@ -79,8 +79,12 @@ function clamp(value: number, min: number, max: number): number {
  * @throws Error if spec is invalid or not a tilemap type.
  */
 export function compileTileMap(spec: unknown, options: CompileOptions): TileMapLayout {
-  // 1. Validate + normalize via the shared compiler pipeline
-  const { spec: normalized } = compileSpec(spec);
+  // 1. Validate + normalize via the shared compiler pipeline. Surface any
+  // normalize warnings (e.g. "only N of M rows have valid US state codes",
+  // mixed-type coercion) the same way the chart path does; without this the
+  // primary "your data did not map" diagnostic is computed and then dropped.
+  const { spec: normalized, warnings } = compileSpec(spec);
+  emitSpecWarnings(warnings, options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'tilemap') {
     throw new Error(

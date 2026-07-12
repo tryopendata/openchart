@@ -55,11 +55,13 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, type GeometrySnapshot, runTransition } from './transition';
+import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -118,6 +120,16 @@ export interface ChartInstance {
   readonly isEditing: boolean;
   /** Set highlight values on the color encoding and re-render. Pass null to clear. */
   setHighlight(values: string[] | null): void;
+  /**
+   * Reset a "you draw it" (`youDrawIt`) drawing: clears the reader's guess and
+   * returns to the drawing state. No-op when youDrawIt isn't enabled.
+   */
+  resetDrawing(): void;
+  /**
+   * Reveal a "you draw it" drawing programmatically (equivalent to the
+   * skip-to-reveal button). No-op when youDrawIt isn't enabled.
+   */
+  revealDrawing(): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +180,32 @@ function makeEditable(svg: SVGElement): void {
 
 function hasEditingCallbacks(opts?: MountOptions): boolean {
   return !!(opts?.onEdit || opts?.onSelect || opts?.onDeselect || opts?.onTextEdit);
+}
+
+// ---------------------------------------------------------------------------
+// Series search helpers
+// ---------------------------------------------------------------------------
+
+/** The authored encoding.color.highlight as an array (empty when unset). */
+function authoredHighlight(spec: ChartSpec | LayerSpec | GraphSpec): string[] {
+  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return [];
+  const colorEnc = (spec as ChartSpec).encoding?.color;
+  if (!colorEnc || typeof colorEnc !== 'object' || !('field' in colorEnc)) return [];
+  const raw = (colorEnc as { highlight?: string | string[] }).highlight;
+  if (raw == null) return [];
+  return Array.isArray(raw) ? [...raw] : [raw];
+}
+
+/** True when the spec enables the series search input. */
+function wantsSeriesSearch(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
+  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
+  return !!(spec as ChartSpec).seriesSearch;
+}
+
+/** True when the spec enables the "you draw it" interactive format. */
+function wantsYouDrawIt(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
+  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
+  return !!(spec as ChartSpec).youDrawIt;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +278,20 @@ export function createChart<TData extends DataRow = DataRow>(
   const runtimeShownSeries = new Set<string>();
   let textEditCleanup: (() => void) | null = null;
 
+  // Series search state. The control persists across renders (so focus and
+  // chips survive the re-render each selection triggers); the baseline is the
+  // authored encoding.color.highlight, captured before setHighlight mutates
+  // currentSpec, so clearing the search restores it exactly.
+  let seriesSearch: SeriesSearchController | null = null;
+  let searchBaseline: string[] = authoredHighlight(currentSpec);
+  let editSuppressWarned = false;
+
+  // "You draw it" state. The controller persists across renders so the reader's
+  // in-progress guess (and revealed state) survive the re-render each resize
+  // triggers; update() re-syncs geometry and re-wires pointer capture.
+  let youDrawIt: YouDrawItController | null = null;
+  let ydiEditSuppressWarned = false;
+
   // Apply the root class up front so getComputedStyle can read --oc-font-family
   // before we build the text measurer.
   container.classList.add('oc-root');
@@ -290,10 +342,12 @@ export function createChart<TData extends DataRow = DataRow>(
    * chrome — they stay inside the budget.
    */
   function verticalOverheads(layout: ChartLayout, width: number): number {
+    const legendHasContent =
+      layout.legend.type === 'continuous'
+        ? layout.legend.bounds.height > 0
+        : 'entries' in layout.legend && layout.legend.entries.length > 0;
     const topLegendBlock =
-      layout.legend.position === 'top' &&
-      'entries' in layout.legend &&
-      layout.legend.entries.length > 0
+      layout.legend.position === 'top' && legendHasContent
         ? layout.legend.bounds.height + legendGap(width)
         : 0;
     return (
@@ -361,8 +415,9 @@ export function createChart<TData extends DataRow = DataRow>(
     if (isLayerSpec(spec)) return Infinity;
     const enc = (spec as ChartSpec).encoding;
     const colorEnc = enc?.color;
-    if (!colorEnc || 'condition' in colorEnc || colorEnc.type === 'quantitative') return Infinity;
+    if (!colorEnc || 'condition' in colorEnc) return Infinity;
     if (!('field' in colorEnc) || !colorEnc.field) return Infinity;
+    if (colorEnc.type === 'quantitative') return Infinity;
     const field = colorEnc.field;
     const seen = new Set<string>();
     for (const row of (spec as ChartSpec).data ?? []) {
@@ -788,14 +843,32 @@ export function createChart<TData extends DataRow = DataRow>(
     // Wire voronoi overlay tooltip events for line/area charts
     cleanupVoronoiEvents = wireVoronoiTooltipEvents(svgElement, currentLayout, tooltipManager);
 
-    // Wire keyboard navigation
-    cleanupKeyboardNav = wireKeyboardNav(
-      svgElement,
-      container,
-      currentLayout.tooltipDescriptors,
-      tooltipManager,
-      currentLayout,
-    );
+    // Wire keyboard navigation. Skipped when the author hid the chart from
+    // assistive technology (a11y.hidden): a hidden chart must not be a tab stop.
+    if (!currentLayout.a11y.hidden) {
+      cleanupKeyboardNav = wireKeyboardNav(
+        svgElement,
+        container,
+        currentLayout.tooltipDescriptors,
+        tooltipManager,
+        currentLayout,
+      );
+    }
+
+    // seriesSearch and edit mode are mutually exclusive per instance: when
+    // the spec enables seriesSearch, edit interactions are suppressed
+    // (search wins -- the engine already reserved the search band).
+    const editSuppressed = wantsSeriesSearch(currentSpec);
+    if (
+      editSuppressed &&
+      !editSuppressWarned &&
+      (hasEditingCallbacks(options) || options?.onAnnotationEdit)
+    ) {
+      editSuppressWarned = true;
+      console.warn(
+        '[openchart] seriesSearch and edit mode are mutually exclusive; edit interactions are disabled while seriesSearch is enabled.',
+      );
+    }
 
     // Wire legend interactivity
     cleanupLegend = wireLegendInteraction(
@@ -803,7 +876,7 @@ export function createChart<TData extends DataRow = DataRow>(
       currentLayout,
       toggleSeriesVisibility,
       options?.onLegendToggle,
-      options?.onEdit,
+      editSuppressed ? undefined : options?.onEdit,
     );
 
     // Wire chart event handlers (mark click/hover/leave, annotation click)
@@ -835,7 +908,7 @@ export function createChart<TData extends DataRow = DataRow>(
         : [];
 
     // Wire annotation drag editing
-    if (options?.onAnnotationEdit || options?.onEdit) {
+    if (!editSuppressed && (options?.onAnnotationEdit || options?.onEdit)) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
@@ -846,7 +919,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire all edit drag handlers when onEdit is provided
-    if (options?.onEdit) {
+    if (!editSuppressed && options?.onEdit) {
       const editCleanups: Array<() => void> = [];
 
       editCleanups.push(
@@ -869,7 +942,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire selection and keyboard edit events when editing callbacks are provided
-    if (hasEditingCallbacks(options)) {
+    if (!editSuppressed && hasEditingCallbacks(options)) {
       makeEditable(svgElement);
       cleanupSelection = wireSelectionEvents();
       cleanupKeyboardEdit = wireKeyboardEditEvents();
@@ -885,8 +958,58 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     }
 
-    // Create hidden data table for screen readers
-    srTable = createScreenReaderTable(currentLayout, container);
+    // Create hidden data table for screen readers (not when the author hid
+    // the chart from assistive technology)
+    if (!currentLayout.a11y.hidden) {
+      srTable = createScreenReaderTable(currentLayout, container);
+    }
+
+    // Mount/refresh the series search overlay on its reserved band. Created
+    // once and kept across renders so typing focus and chips survive the
+    // re-render each selection triggers.
+    if (currentLayout.seriesSearch) {
+      if (!seriesSearch) {
+        seriesSearch = createSeriesSearch({ container, onChange: handleSearchChange });
+      }
+      seriesSearch.update(currentLayout.seriesSearch, svgElement);
+    } else if (seriesSearch) {
+      if (wantsSeriesSearch(currentSpec)) {
+        // The layout stripped the band (e.g. hidden chrome mode at cramped
+        // sizes) but the spec still wants search: keep the control and its
+        // chips, just hide it until the band comes back.
+        seriesSearch.hide();
+      } else {
+        seriesSearch.destroy();
+        seriesSearch = null;
+      }
+    }
+
+    // Mount/refresh the "you draw it" overlay. Created once and kept across
+    // renders so the reader's in-progress guess survives each resize's
+    // re-render. Mutually exclusive with edit mode: when editing callbacks are
+    // present, youDrawIt is disabled (warn once) per plans 11/17's rule.
+    const ydiEditConflict = wantsYouDrawIt(currentSpec) && hasEditingCallbacks(options);
+    if (ydiEditConflict && !ydiEditSuppressWarned) {
+      ydiEditSuppressWarned = true;
+      console.warn(
+        '[openchart] youDrawIt and edit mode are mutually exclusive; youDrawIt is disabled while editing callbacks are provided.',
+      );
+    }
+    if (currentLayout.youDrawIt && !ydiEditConflict) {
+      if (!youDrawIt) {
+        youDrawIt = createYouDrawIt({ container, onReveal: options?.onReveal });
+      }
+      youDrawIt.update(currentLayout.youDrawIt, svgElement as SVGSVGElement);
+    } else if (youDrawIt) {
+      if (wantsYouDrawIt(currentSpec) && !ydiEditConflict) {
+        // Layout stripped the config (e.g. empty data at this size) but the
+        // spec still wants it: keep the controller (and its guess), just hide.
+        youDrawIt.hide();
+      } else {
+        youDrawIt.destroy();
+        youDrawIt = null;
+      }
+    }
 
     // Apply container classes for CSS variable scoping and dark mode
     container.classList.add('oc-root');
@@ -959,6 +1082,14 @@ export function createChart<TData extends DataRow = DataRow>(
     }
     runtimeHiddenSeries.clear();
     runtimeShownSeries.clear();
+    // The new spec is the source of truth: re-capture the authored highlight
+    // baseline and drop any search selections layered on the previous spec.
+    searchBaseline = authoredHighlight(newSpec);
+    seriesSearch?.setSelected([]);
+    // A new spec re-arms the conflict warnings (youDrawIt/edit and
+    // seriesSearch/edit) so a newly-introduced conflict warns once again.
+    ydiEditSuppressWarned = false;
+    editSuppressWarned = false;
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }
@@ -1004,6 +1135,20 @@ export function createChart<TData extends DataRow = DataRow>(
       return;
     }
     render();
+  }
+
+  /**
+   * Apply a search selection change: the effective highlight is the authored
+   * baseline plus the selected values, so clearing every chip restores the
+   * authored highlight exactly. Fires onHighlightChange on every change.
+   */
+  function handleSearchChange(selected: string[]): void {
+    const merged = [...searchBaseline];
+    for (const v of selected) {
+      if (!merged.includes(v)) merged.push(v);
+    }
+    setHighlight(merged.length > 0 ? merged : null);
+    options?.onHighlightChange?.(merged);
   }
 
   function setHighlight(values: string[] | null): void {
@@ -1102,6 +1247,14 @@ export function createChart<TData extends DataRow = DataRow>(
     }
     selectedElement = null;
     overlayElement = null;
+    if (seriesSearch) {
+      seriesSearch.destroy();
+      seriesSearch = null;
+    }
+    if (youDrawIt) {
+      youDrawIt.destroy();
+      youDrawIt = null;
+    }
     if (disconnectResize) {
       disconnectResize();
       disconnectResize = null;
@@ -1192,5 +1345,13 @@ export function createChart<TData extends DataRow = DataRow>(
       return isTextEditingActive;
     },
     setHighlight,
+    resetDrawing(): void {
+      if (destroyed) return;
+      youDrawIt?.reset();
+    },
+    revealDrawing(): void {
+      if (destroyed) return;
+      youDrawIt?.reveal();
+    },
   };
 }

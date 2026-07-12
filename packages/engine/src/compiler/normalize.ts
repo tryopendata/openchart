@@ -20,6 +20,7 @@ import type {
   GraphSpec,
   LabelSpec,
   LayerSpec,
+  MarkDef,
   SankeySpec,
   TableSpec,
   TileMapSpec,
@@ -138,6 +139,9 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 
     // Skip conditional value definitions - they don't have field/type at the top level
     if ('condition' in spec) continue;
+    // Skip bare value defs (no field). The sugar expansion moves these to
+    // mark-level properties before normalize runs on the compile path.
+    if (!('field' in spec)) continue;
 
     if (!spec.type) {
       const inferred = inferFieldType(data, spec.field);
@@ -165,10 +169,18 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 // ---------------------------------------------------------------------------
 
 /** Apply default styles to annotations that don't have them. */
-function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation[] {
+function normalizeAnnotations(
+  annotations: Annotation[] | undefined,
+  warnings: string[],
+): Annotation[] {
   if (!annotations || annotations.length === 0) return [];
 
   return annotations.map((ann) => {
+    if (ann.type === 'rule') {
+      warnings.push(
+        "[openchart] annotation type 'rule' is deprecated (it collides with the rule mark) and will be removed in v9. Use type: 'refline' instead; the behavior is identical.",
+      );
+    }
     switch (ann.type) {
       case 'text':
         return {
@@ -255,8 +267,102 @@ function normalizeHighlight(encoding: Encoding, data: DataRow[], warnings: strin
 }
 
 // ---------------------------------------------------------------------------
+// Series search normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize `seriesSearch` to a config object, or undefined when disabled.
+ * Search needs a categorical color encoding to enumerate series values;
+ * warns and disables when there isn't one.
+ */
+function normalizeSeriesSearch(
+  spec: ChartSpec,
+  encoding: Encoding,
+  warnings: string[],
+): import('@opendata-ai/openchart-core').SeriesSearchConfig | undefined {
+  if (!spec.seriesSearch) return undefined;
+  const color = encoding.color;
+  const hasCategoricalColor =
+    !!color &&
+    !('condition' in color) &&
+    'field' in color &&
+    !!color.field &&
+    color.type !== 'quantitative';
+  if (!hasCategoricalColor) {
+    warnings.push(
+      '[openchart] seriesSearch requires a categorical color encoding (encoding.color.field with a nominal/ordinal type); ignoring seriesSearch.',
+    );
+    return undefined;
+  }
+  return typeof spec.seriesSearch === 'object' ? { ...spec.seriesSearch } : {};
+}
+
+// ---------------------------------------------------------------------------
+// You draw it normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize `youDrawIt` to a config object with defaults filled in, or
+ * undefined when disabled. Mark type, single-series, and `from` presence are
+ * enforced by validateSpec before normalize runs; this only fills defaults.
+ */
+function normalizeYouDrawIt(
+  spec: ChartSpec,
+): import('@opendata-ai/openchart-core').YouDrawItConfig | undefined {
+  if (!spec.youDrawIt) return undefined;
+  return {
+    prompt: 'Draw your guess',
+    revealLabel: 'Show me',
+    ...spec.youDrawIt,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Spec-level normalization
 // ---------------------------------------------------------------------------
+
+/**
+ * Beeswarm point budget. Past this count the dodge layout still resolves
+ * every collision, but the swarm piles into a solid band that reads no
+ * better than an overplotted strip, and layout cost keeps growing.
+ */
+const BEESWARM_POINT_BUDGET = 2000;
+
+/**
+ * Warn when a parliament `majorityLine.seats` override lands outside the chamber
+ * (below 1 or above the seat total). The mark falls back to a simple majority in
+ * that case, so this is a non-fatal warning routed through the shared warnings
+ * array (dedup + single emit boundary) rather than a raw console.warn in mark
+ * computation. Only the object form of majorityLine carries a seat count.
+ */
+function warnParliamentMajorityRange(
+  markDef: MarkDef,
+  encoding: Encoding,
+  data: DataRow[],
+  warnings: string[],
+): void {
+  const majorityLine = markDef.majorityLine;
+  if (!majorityLine || typeof majorityLine !== 'object') return;
+  const requested = majorityLine.seats;
+  if (requested === undefined) return;
+
+  const valueField = encoding.theta?.field ?? encoding.y?.field;
+  if (!valueField) return;
+
+  let totalSeats = 0;
+  for (const row of data) {
+    const v = Number(row[valueField]);
+    if (Number.isFinite(v)) totalSeats += v;
+  }
+  if (totalSeats <= 0) return;
+
+  if (!Number.isFinite(requested) || requested < 1 || requested > totalSeats) {
+    const fallback = Math.floor(totalSeats / 2) + 1;
+    warnings.push(
+      `[openchart] parliament mark.majorityLine.seats (${requested}) is outside the valid range 1..${totalSeats}; using the default majority threshold of ${fallback}.`,
+    );
+  }
+}
 
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
   const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
@@ -276,6 +382,16 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     );
   }
 
+  if (markType === 'beeswarm' && spec.data.length > BEESWARM_POINT_BUDGET) {
+    warnings.push(
+      `[openchart] beeswarm received ${spec.data.length} data points, past the ~${BEESWARM_POINT_BUDGET}-point budget where individual dots stop being readable and the swarm collapses into a solid band. Sample the data down, or summarize the distribution with mark: 'tick' (strip plot) or a binned histogram (bin transform + mark: 'bar').`,
+    );
+  }
+
+  if (markType === 'parliament') {
+    warnParliamentMajorityRange(markDef, encoding, spec.data, warnings);
+  }
+
   return {
     markType,
     markDef,
@@ -283,7 +399,9 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     encoding,
     chrome: normalizeChrome(spec.chrome),
     metrics: spec.metrics,
-    annotations: normalizeAnnotations(spec.annotations),
+    seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
+    youDrawIt: normalizeYouDrawIt(spec),
+    annotations: normalizeAnnotations(spec.annotations, warnings),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
@@ -298,6 +416,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     seriesStyles: spec.seriesStyles ?? {},
     watermark: spec.watermark ?? true,
     highlight: normalizeHighlight(encoding, spec.data, warnings),
+    a11y: spec.a11y,
     display,
     resolve: spec.resolve,
     // Default empty userExplicit; compileChart overwrites this with the real
@@ -358,7 +477,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
   };
 }
 
-function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGraphSpec {
+function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGraphSpec {
   // Default layout with chargeStrength and linkDistance
   const defaultLayout = {
     type: 'force' as const,
@@ -380,7 +499,7 @@ function normalizeGraphSpec(spec: GraphSpec, _warnings: string[]): NormalizedGra
     layout,
     nodeOverrides: spec.nodeOverrides,
     chrome: normalizeChrome(spec.chrome),
-    annotations: normalizeAnnotations(spec.annotations),
+    annotations: normalizeAnnotations(spec.annotations, warnings),
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,

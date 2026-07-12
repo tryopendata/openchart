@@ -37,6 +37,11 @@ const DEFAULT_STROKE_WIDTH = 1.5;
 /** Default radius for point marks (hover targets). */
 const DEFAULT_POINT_RADIUS = 3;
 
+/** Dash patterns cycled through by the strokeDash encoding, assigned in the
+ *  ordinal (first-seen data) order of the field values. The first value
+ *  renders solid so single-value charts keep the default look. */
+const STROKE_DASH_PATTERNS = ['', '6 4', '2 3', '8 4 2 4', '4 4', '1 3'];
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -67,7 +72,23 @@ export function computeLineMarks(
   // Sequential color: single series, per-point coloring. Categorical: group by color field.
   const colorField = isSequentialColor ? undefined : colorEnc?.field;
   const sequentialColorField = isSequentialColor ? colorEnc.field : undefined;
-  const groups = groupByField(spec.data, colorField);
+  // strokeDash encoding: differentiate series by dash pattern (VL aligned).
+  // Without a color channel, the strokeDash field becomes the series grouping
+  // so each dash value renders as its own line. With a color channel, each
+  // series takes the dash of its first row (typically the same field).
+  const dashEnc =
+    encoding.strokeDash && 'field' in encoding.strokeDash ? encoding.strokeDash : undefined;
+  const dashField = dashEnc?.field;
+  const dashIndexByValue = new Map<string, number>();
+  if (dashField) {
+    for (const row of spec.data) {
+      const value = row[dashField];
+      if (value == null) continue;
+      const key = String(value);
+      if (!dashIndexByValue.has(key)) dashIndexByValue.set(key, dashIndexByValue.size);
+    }
+  }
+  const groups = groupByField(spec.data, colorField ?? dashField);
   const mutedMarks: (LineMark | PointMark)[] = [];
   const highlightedMarks: (LineMark | PointMark)[] = [];
   const highlight = spec.highlight ?? [];
@@ -176,10 +197,19 @@ export function computeLineMarks(
       resolvedStrokeWidth = Math.max(1, resolvedStrokeWidth * 0.75);
     }
 
-    // Map lineStyle to SVG strokeDasharray
+    // Map lineStyle to SVG strokeDasharray. Explicit seriesStyles win over
+    // the strokeDash encoding.
     let strokeDasharray: string | undefined;
     if (styleOverride?.lineStyle === 'dashed') strokeDasharray = '6 4';
     else if (styleOverride?.lineStyle === 'dotted') strokeDasharray = '2 3';
+    else if (dashField) {
+      const dashValue = rows[0]?.[dashField];
+      if (dashValue != null) {
+        const idx = dashIndexByValue.get(String(dashValue)) ?? 0;
+        const pattern = STROKE_DASH_PATTERNS[idx % STROKE_DASH_PATTERNS.length];
+        if (pattern) strokeDasharray = pattern;
+      }
+    }
 
     // Create the LineMark with the combined path points.
     // The points array includes all valid points across all segments.

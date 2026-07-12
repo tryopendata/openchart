@@ -496,4 +496,70 @@ describe('computeEndpointLabels', () => {
       expect(entry.marker!.x).toBe(chartArea.x - ENDPOINT_MARKER_RADIUS);
     }
   });
+
+  it("content: 'label value' joins name and value on one line and drops the value line", () => {
+    const spec = makeSpec({ endpointLabels: { content: 'label value' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    const us = layout.entries.find((e) => e.seriesKey === 'US');
+    expect(us!.labelLines[0]).toBe('US 40');
+    expect(us!.value).toBe('');
+  });
+
+  it("content: 'value' renders the formatted value alone", () => {
+    const spec = makeSpec({ endpointLabels: { content: 'value' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    const us = layout.entries.find((e) => e.seriesKey === 'US');
+    expect(us!.labelLines).toEqual(['40']);
+    expect(us!.value).toBe('');
+  });
+
+  it("content: 'label' renders the series name alone", () => {
+    const spec = makeSpec({ endpointLabels: { content: 'label' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    const us = layout.entries.find((e) => e.seriesKey === 'US');
+    expect(us!.labelLines).toEqual(['US']);
+    expect(us!.value).toBe('');
+  });
+
+  it('per-side content object resolves leading and trailing independently', () => {
+    const spec = makeSpec({
+      endpointLabels: {
+        ends: 'both',
+        content: { leading: 'label value', trailing: 'value' },
+      },
+    });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea);
+
+    // Leading: first data point value (value - 5) joined with the name.
+    const usLeading = layout.leading!.find((e) => e.seriesKey === 'US');
+    expect(usLeading!.labelLines[0]).toBe('US 35');
+    // Trailing: last value alone.
+    const usTrailing = layout.entries.find((e) => e.seriesKey === 'US');
+    expect(usTrailing!.labelLines).toEqual(['40']);
+  });
+
+  it('keeps the column at compact breakpoints when endpoint labels are explicitly on', () => {
+    // Slope/bump recipes carry their values on the labels: explicit user
+    // config must survive the compact strategy strip (labelMode: 'none').
+    const spec = makeSpec({ endpointLabels: { ends: 'both', content: 'label value' } });
+    const marks: Mark[] = [makeLineMark('US', 100, 40), makeLineMark('UK', 200, 35, '#cc6633')];
+    const layout = computeEndpointLabels(spec, marks, theme, chartArea, {
+      labelMode: 'none',
+      legendPosition: 'top',
+      annotationPosition: 'tooltip-only',
+      axisLabelDensity: 'minimal',
+      chromeMode: 'full',
+      legendMaxHeight: -1,
+    });
+
+    expect(layout.entries).toHaveLength(2);
+    expect(layout.leading).toHaveLength(2);
+  });
 });

@@ -1,8 +1,8 @@
 /**
  * Charts / Line & Area.
  *
- * Nine demos across three sections (Lines, Areas, Scales & interaction). Line
- * and area marks trace change over a continuous axis — usually time. Each demo
+ * Ten demos across three sections (Lines, Areas, Scales & interaction). Line
+ * and area marks trace change over a continuous axis, usually time. Each demo
  * carries editorial chrome (takeaway title + cited source) and pulls from the
  * shared dataset pool.
  */
@@ -21,6 +21,58 @@ import {
 } from '../data';
 
 const ACCENT = '#0e7490';
+
+// ---------------------------------------------------------------------------
+// Series-search dataset: 30 economies indexed to 2000 = 100. A deterministic
+// formula (per-series growth slope + bounded sine wobble, no Math.random)
+// keeps the layout stable. Kept inline because the shape is generated, not a
+// transcribed real-world table.
+// ---------------------------------------------------------------------------
+
+const SEARCH_COUNTRIES = [
+  'United States',
+  'China',
+  'Japan',
+  'Germany',
+  'India',
+  'United Kingdom',
+  'France',
+  'Italy',
+  'Brazil',
+  'Canada',
+  'South Korea',
+  'Australia',
+  'Mexico',
+  'Spain',
+  'Indonesia',
+  'Netherlands',
+  'Türkiye',
+  'Switzerland',
+  'Poland',
+  'Sweden',
+  'Norway',
+  'Ireland',
+  'Israel',
+  'Nigeria',
+  'Egypt',
+  'South Africa',
+  'Singapore',
+  'Vietnam',
+  'Chile',
+  'Portugal',
+];
+
+const searchSeries = SEARCH_COUNTRIES.flatMap((country, i) =>
+  Array.from({ length: 13 }, (_, t) => {
+    const growth = 1.5 + (i % 7) * 0.55;
+    const wobble = Math.sin(t * (0.6 + (i % 5) * 0.13) + i) * (2 + (i % 4));
+    return {
+      year: `${2000 + t * 2}-01-01`,
+      index: Math.round((100 + growth * t * 2 + wobble) * 10) / 10,
+      country,
+    };
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // 1. Single line — one series, temporal x, annotation on the key moment
@@ -371,6 +423,35 @@ function HighlightLines() {
 }
 
 // ---------------------------------------------------------------------------
+// 10. Series search — a "find your line" combobox over a 30-series tangle
+// ---------------------------------------------------------------------------
+
+const seriesSearchSpec: ChartSpec = {
+  animation: true,
+  mark: 'line',
+  data: searchSeries,
+  encoding: {
+    x: { field: 'year', type: 'temporal', axis: { tickCount: 6 } },
+    y: {
+      field: 'index',
+      type: 'quantitative',
+      axis: { title: 'Output per person (2000 = 100)', grid: true },
+    },
+    color: { field: 'country', type: 'nominal', highlight: ['United States'] },
+  },
+  seriesSearch: { placeholder: 'Find a country' },
+  legend: { show: false },
+  labels: { density: 'none' },
+  chrome: {
+    title: 'Find Your Country in the Tangle',
+    subtitle:
+      'Economic output per person for 30 economies, indexed to 2000 = 100. Search to pull one line to the front.',
+    source: 'Illustrative data',
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -406,6 +487,13 @@ export const LineAndArea = () => (
         description="Past four or five crossing lines, endpoint labels collide and a legend earns its place. Set legend.position to pin it; the legend is interactive out of the box — click an entry to toggle that series."
         spec={fiveSeriesSpec}
         height={460}
+      />
+      <Demo
+        id="series-search"
+        title="Series search (find your line)"
+        description="Once a chart holds dozens of series a legend collapses. seriesSearch adds a combobox above the plot: context lines mute to a wash, and typing a name pulls that one line forward. The initial highlight seeds a starting story."
+        spec={seriesSearchSpec}
+        height={520}
       />
     </Section>
 

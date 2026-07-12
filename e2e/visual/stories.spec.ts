@@ -86,6 +86,197 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rotated-with-source',
     note: 'Column chart with long category labels that auto-rotate, plus source chrome below.',
   },
+  // --- Beeswarm ---
+  {
+    name: 'beeswarm-basic',
+    slug: 'testing--fixtures--beeswarm-basic',
+    note: 'Single-lane horizontal swarm, ~300 dodged dots, value axis only.',
+  },
+  {
+    name: 'beeswarm-grouped',
+    slug: 'testing--fixtures--beeswarm-grouped',
+    note: 'Four region lanes via nominal y channel with band-scale lane labels.',
+  },
+  {
+    name: 'beeswarm-sized',
+    slug: 'testing--fixtures--beeswarm-sized',
+    note: 'Size encoding drives per-dot radii; dodge keeps sized dots collision-free.',
+  },
+  // --- Continuous color legend ---
+  {
+    name: 'color-legend-gradient',
+    slug: 'testing--fixtures--color-legend-gradient',
+    note: 'Sequential color scale with the default-on gradient-bar legend (min/max labels).',
+  },
+  {
+    name: 'color-legend-binned',
+    slug: 'testing--fixtures--color-legend-binned',
+    note: 'Threshold scale with 4 breaks: 5 swatches, boundary labels at the class breaks.',
+  },
+  {
+    name: 'color-legend-dark-diverging',
+    slug: 'testing--fixtures--color-legend-dark-diverging',
+    note: 'Dark mode diverging ramp with min/neutral/max labels; neutral at the scale center.',
+  },
+  // --- Accessibility (plan 06) ---
+  {
+    name: 'a11y-pattern-fills-stacked',
+    slug: 'testing--a11y--pattern-fills-stacked',
+    note: '4-series stacked column with fillPattern: auto (diagonal, dot, crosshatch, vertical).',
+  },
+  {
+    name: 'a11y-pattern-fills-stacked-dark',
+    slug: 'testing--a11y--pattern-fills-stacked-dark',
+    note: 'Same stacked column with darkMode: force; pattern line colors adapt per mode.',
+  },
+  {
+    name: 'a11y-pattern-fills-compact',
+    slug: 'testing--a11y--pattern-fills-compact',
+    note: '360px mobile container; thin segments fall back to solid via the minimum-area rule.',
+  },
+  {
+    name: 'a11y-pattern-fills-donut',
+    slug: 'testing--a11y--pattern-fills-donut',
+    note: 'Donut with patterned slices; the sub-1% sliver keeps a solid fill.',
+  },
+  {
+    name: 'a11y-colorblind-palette-audit',
+    slug: 'testing--a11y--colorblind-palette-audit',
+    note: 'Default categorical palette simulated for protanopia, deuteranopia, tritanopia, achromatopsia.',
+  },
+  // --- Range marks (dumbbell / arrow / bar) ---
+  {
+    name: 'range-dumbbell',
+    slug: 'testing--fixtures--range-dumbbell',
+    note: 'Horizontal x/x2 dumbbell sorted by end value, muted start dot, both-end labels.',
+  },
+  {
+    name: 'range-arrow',
+    slug: 'testing--fixtures--range-arrow',
+    note: 'Arrow style with colorByDirection: increases green, decreases red, arrowhead at x2.',
+  },
+  {
+    name: 'range-bar',
+    slug: 'testing--fixtures--range-bar',
+    note: 'Vertical y/y2 floating range bars (monthly temperature low to high).',
+  },
+  // --- Waffle marks ---
+  {
+    name: 'waffle-basic',
+    slug: 'testing--fixtures--waffle-basic',
+    note: '10x10 unit grid, three categories, rows fill bottom-left to top-right.',
+  },
+  {
+    name: 'waffle-highlight',
+    slug: 'testing--fixtures--waffle-highlight',
+    note: 'color.highlight singles out one category; fractional shares exercise largest-remainder rounding.',
+  },
+  // --- Series search (find your country) ---
+  {
+    name: 'series-search',
+    slug: 'testing--fixtures--series-search',
+    note: '40-series line chart with the seriesSearch band, muted context lines, and a highlighted baseline.',
+  },
+  {
+    name: 'series-search-mobile',
+    slug: 'testing--fixtures--series-search-mobile',
+    note: 'Same seriesSearch chart in a 360px container.',
+  },
+  // --- You draw it (draw-then-reveal) ---
+  {
+    name: 'you-draw-it',
+    slug: 'testing--fixtures--you-draw-it',
+    note: 'Single-series income line drawn up to `from`, then a hatched draw-here region with prompt + skip-to-reveal button. Static pre-interaction state.',
+  },
+  {
+    name: 'you-draw-it-dark',
+    slug: 'testing--fixtures--you-draw-it-dark',
+    note: 'Same you-draw-it chart with darkMode: force; hatch, guess pen, and controls adapt to dark tokens.',
+  },
+  {
+    name: 'you-draw-it-mobile',
+    slug: 'testing--fixtures--you-draw-it-mobile',
+    note: '360px container: prompt + reveal button stay within the drawing region at the compact breakpoint.',
+  },
+  // --- Slope + bump recipes (ranking and change) ---
+  {
+    name: 'slope-market-share',
+    slug: 'testing--fixtures--slope-market-share',
+    note: '5-series 2-point slope: both-end name+value labels, no y axis, no gridlines.',
+  },
+  {
+    name: 'slope-market-share-compact',
+    slug: 'testing--fixtures--slope-market-share-compact',
+    note: '320px container: explicit endpointLabels config keeps both-end labels at the compact breakpoint.',
+  },
+  {
+    name: 'bump-constructors',
+    slug: 'testing--fixtures--bump-constructors',
+    note: '6-season bump: rank 1 at top via scale.reverse, ordinal rank ticks, monotone lines, step points, both-end name labels.',
+  },
+  // --- Calendar heatmap ---
+  {
+    name: 'calendar-diverging-year',
+    slug: 'testing--fixtures--calendar-diverging-year',
+    note: 'One-year temperature anomaly, diverging redBlue ramp, missing-day gaps, gradient legend.',
+  },
+  {
+    name: 'calendar-sequential-two-years',
+    slug: 'testing--fixtures--calendar-sequential-two-years',
+    note: 'Two stacked year bands (2023/2024) sharing one sequential scale and legend.',
+  },
+  {
+    name: 'calendar-compact',
+    slug: 'testing--fixtures--calendar-compact',
+    note: '360px scroll host with a 520px min-width inner container; 7px cell floor engaged.',
+  },
+  // --- Scrollytelling per-step fixtures (plan 11) ---
+  {
+    name: 'scrolly-step-base',
+    slug: 'charts--scrollytelling--fixture-base',
+    note: 'Story step 0: total-emissions line chart, no highlight, animation off.',
+  },
+  {
+    name: 'scrolly-step-highlight',
+    slug: 'charts--scrollytelling--fixture-highlight',
+    note: 'Story step 1: color.highlight singles out China, other series muted.',
+  },
+  {
+    name: 'scrolly-step-annotated',
+    slug: 'charts--scrollytelling--fixture-annotated',
+    note: 'Story step 2: text annotation marks the China/US crossover, highlight retained.',
+  },
+  {
+    name: 'scrolly-step-reencoded',
+    slug: 'charts--scrollytelling--fixture-re-encoded',
+    note: 'Story step 4: y re-encoded to per-capita (crossfade path), retitled.',
+  },
+  // --- Parliament (hemicycle) + election set (plan 22) ---
+  {
+    name: 'parliament-us-house',
+    slug: 'testing--fixtures--parliament-us-house',
+    note: '435-seat two-party hemicycle with the 218-seat majority line and label.',
+  },
+  {
+    name: 'parliament-eu-multi-party',
+    slug: 'testing--fixtures--parliament-eu-multi-party',
+    note: '8-party coalition hemicycle, spectrum-ordered blocks, per-party legend.',
+  },
+  {
+    name: 'parliament-compact',
+    slug: 'testing--fixtures--parliament-compact',
+    note: 'US House hemicycle in a 360px mobile container; auto seat radius shrinks.',
+  },
+  {
+    name: 'election-donut',
+    slug: 'testing--fixtures--election-donut',
+    note: 'Datawrapper-style half-donut via arc startAngle/endAngle (-90 to +90 deg).',
+  },
+  {
+    name: 'election-results-bar',
+    slug: 'testing--fixtures--results-bar',
+    note: 'Two-party horizontal stacked bar with a dashed 218-seat majority refline.',
+  },
 ];
 
 for (const story of stories) {

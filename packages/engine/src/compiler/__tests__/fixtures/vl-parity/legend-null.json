@@ -1,0 +1,32 @@
+{
+  "options": { "width": 600, "height": 400 },
+  "vl": {
+    "mark": "line",
+    "data": [
+      { "date": "2020-01-01", "value": 1, "group": "A" },
+      { "date": "2021-01-01", "value": 2, "group": "A" },
+      { "date": "2020-01-01", "value": 3, "group": "B" },
+      { "date": "2021-01-01", "value": 4, "group": "B" }
+    ],
+    "encoding": {
+      "x": { "field": "date", "type": "temporal" },
+      "y": { "field": "value", "type": "quantitative" },
+      "color": { "field": "group", "type": "nominal", "legend": null }
+    }
+  },
+  "canonical": {
+    "mark": "line",
+    "legend": { "show": false },
+    "data": [
+      { "date": "2020-01-01", "value": 1, "group": "A" },
+      { "date": "2021-01-01", "value": 2, "group": "A" },
+      { "date": "2020-01-01", "value": 3, "group": "B" },
+      { "date": "2021-01-01", "value": 4, "group": "B" }
+    ],
+    "encoding": {
+      "x": { "field": "date", "type": "temporal" },
+      "y": { "field": "value", "type": "quantitative" },
+      "color": { "field": "group", "type": "nominal" }
+    }
+  }
+}

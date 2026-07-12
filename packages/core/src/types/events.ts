@@ -127,6 +127,12 @@ export interface ChartEventHandlers {
   onMarkLeave?: () => void;
   /** Called when a legend entry is toggled (clicked to show/hide a series). */
   onLegendToggle?: (series: string, visible: boolean) => void;
+  /**
+   * Called when the series search (`seriesSearch`) changes the highlight set.
+   * Receives the full set of highlighted values after the change, including
+   * the authored `encoding.color.highlight` baseline.
+   */
+  onHighlightChange?: (values: string[]) => void;
   /** Called when an annotation element is clicked. */
   onAnnotationClick?: (annotation: Annotation, event: MouseEvent) => void;
   /** Called when a text annotation label is dragged to a new position. */
@@ -139,4 +145,10 @@ export interface ChartEventHandlers {
   onDeselect?: (element: ElementRef) => void;
   /** Fired when inline text editing commits. Also flows through onEdit as a 'text-edit' event. */
   onTextEdit?: (element: ElementRef, oldText: string, newText: string) => void;
+  /**
+   * Fired when a "you draw it" (`youDrawIt`) drawing is revealed (button click
+   * or programmatic reveal), with the reader's guess in data coordinates,
+   * ordered by x. For newsrooms aggregating reader guesses.
+   */
+  onReveal?: (guess: Array<{ x: string | number; y: number }>) => void;
 }

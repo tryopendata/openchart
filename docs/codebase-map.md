@@ -31,7 +31,7 @@
 | Top-level compile entry | `packages/engine/src/compiler/index.ts` → `compile()` |
 | Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()`, `compileFaceted()` |
 | Chart-type registry | `packages/engine/src/charts/registry.ts` |
-| Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,rule,tick,text}/` |
+| Chart-type implementations | `packages/engine/src/charts/{bar,column,line,pie,scatter,dot,range,calendar,rule,tick,text}/` (registered via `charts/builtin.ts`) |
 | Layout: axes (tick generation, density, label fitting) | `packages/engine/src/layout/axes.ts` (`computeAxes`) |
 | Inline vs gutter y-tick placement (shared predicate) | `packages/engine/src/layout/axes.ts` (`yTickPositionIsInline`) — single source of truth for `computeAxes`, `plan.ts`, and `dimensions.ts`; keyed on resolved scale type, not field type |
 | Band x-label rotation + thinning policy | `packages/engine/src/layout/axes/rotation.ts` (`resolveBandTickAngle`, `bandLabelStride`) — parallel-ribbon collision model, angle ladder flat → -45° → -90°, last-anchored stride safety net; shared by `computeAxes` and `plan.ts` so reserved margin matches rendered angle |
@@ -73,6 +73,8 @@
 | Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition.ts` |
 | Mark key serialization / dedup | `packages/engine/src/compiler/keys.ts` |
 | Tooltip rendering | `packages/vanilla/src/tooltip.ts` |
+| Series search combobox (`seriesSearch`) | `packages/vanilla/src/series-search.ts`; CSS `packages/core/src/styles/series-search.css` |
+| You-draw-it draw-then-reveal (`youDrawIt`) | Engine resolve: `packages/engine/src/compile/you-draw-it.ts` (`ResolvedYouDrawIt`); vanilla overlay + pointer capture: `packages/vanilla/src/you-draw-it.ts` (`createYouDrawIt`), wired in `mount.ts`; CSS `packages/core/src/styles/you-draw-it.css`. Validation in `compiler/validate.ts`. `onReveal` handler in `core/types/events.ts`; `resetDrawing()`/`revealDrawing()` on `ChartInstance`. |
 | React entry (`<Chart>`, `<DataTable>`, `<Graph>`, `<VizThemeProvider>`) | `packages/react/src/` |
 | Vue entry | `packages/vue/src/` |
 | Svelte entry | `packages/svelte/src/` |
@@ -92,7 +94,18 @@
 | Frozen e2e fixture copies (pinned visual/invariant stories, pixel-identical, `Testing / Fixtures`) + frozen stylesheet | `examples/src/testing/fixtures-*.stories.tsx` (+ `testing.css`, the `.tfix-` frozen namespace). Slugs are `testing--fixtures--*`. Includes `rotated-with-source`, moved here from `examples/src/charts/`. |
 | TileMap compile (positions, colors, labels, legend) | `packages/engine/src/tilemap/compile-tilemap.ts`. Grid geometry in `tilemap/layout.ts` (`computeTilePositions`, `US_STATE_TILES`, 12×8 grid). |
 | TileMap responsive sizing (mobile tile size) | Split across two files: the mount `getContainerDimensions()` in `packages/vanilla/src/tilemap-mount.ts` picks the **height budget** (desktop = square `height=width` cap; below 700px a target-tile-derived budget so tiles don't starve), and `compile-tilemap.ts` reclaims horizontal padding on compact widths (`getBreakpoint` + `HPAD_COMPACT_*`) and scales per-tile font/corner-radius/label-centering in `buildTileMark`. Tile size = `min(width-bound, height-bound)`; on mobile width binds. |
+| Parliament (hemicycle) mark compute (seat-packing, majority line) | `packages/engine/src/charts/parliament/compute.ts` (`computeParliamentMarks`). Emits existing `PointMark`/`RuleMarkLayout`/`TextMarkLayout` (no bespoke layout). Axisless mark, rides the chart pipeline like waffle. Tooltips: `tooltips/compute.ts` `computeParliamentTooltips` (one shared tooltip per party). |
+| Arc angle range (half-donut / election donut) | `markDef.startAngle`/`endAngle` (radians, d3 convention) handled in `packages/engine/src/charts/pie/compute.ts` (`computeSweepBounds` fits a partial sweep). |
 | Release script | `scripts/release.mjs` |
+| Published JSON Schema (LLM tool-use) | `packages/core/schema/{vizspec,chart,table}.schema.json` — generated, committed, exported via the core `./schema` subpath (NOT the barrel). Generator: `scripts/generate-schema.mjs` (ts-json-schema-generator over `packages/core/src/types/schema-roots.ts`; hoists a shared `ChartSpecBase` def). |
+| `llms.txt` generator | `scripts/generate-llms.mjs` — hand-written narrative + a mark-encoding table generated from the built core's `MARK_ENCODING_RULES`/`MARK_DISPLAY_NAMES`. Build core first. |
+| Freshness CI (schema + llms.txt) | `bun run check:generated` (both generators in `--check` mode); wired into `.github/workflows/ci.yml` after typecheck. Editing spec types without regenerating fails CI. |
+| Schema/artifact tests | `packages/core/src/schema/__tests__/{schema,generated-artifacts}.test.ts` (ajv-validates all 16 marks, rejects hallucinated fields, asserts artifacts cover every mark). |
+| "Did you mean" repair hints | levenshtein `editDistance`/`nearestColumn`/`didYouMean` in `packages/engine/src/compiler/validate.ts` (wired into DATA_FIELD_MISSING suggestions). Test: `validate-did-you-mean.test.ts`. |
+| LLM spec-generation eval (manual, per-release) | `scripts/llm-eval/` (`fixtures.json`, `run.mjs`, `README.md`). Hits the Anthropic API; not in CI; `@anthropic-ai/sdk` is not a monorepo dep (dynamic import). |
+| Generating-specs guide | `docs/generating-specs.md` (schema usage, tool-use, strict-mode transform, validate-repair loop). |
+| v8 migration guide | `docs/migrating-v8.md` (breaking changes, before/after specs, jq codemods). Keep in sync with the deprecation warnings. |
+| VL-idiom sugar + deprecation warnings | `packages/engine/src/compile/spec-sugar.ts` (`expandSpecSugar`, `emitSpecWarnings`) — dead channels, stack default, theta, `$schema`. The `'rule'` annotation deprecation warning lives in `compiler/normalize.ts` (`normalizeAnnotations`). Tests: `engine/src/__tests__/spec-sugar.test.ts`. |
 
 ## Package responsibilities (one-liner each)
 
@@ -162,10 +175,10 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 
 ## Chart-type registry (`engine/src/charts/registry.ts`)
 
-- Side-effect registration: importing `engine/src/charts/<type>/index.ts` calls `registerChartRenderer('<type>', fn)`.
-- The compile pipeline calls `getChartRenderer(spec.type)` to dispatch.
-- Per-chart-type renderers live under `engine/src/charts/{bar,column,line,pie,scatter,dot,rule,tick,text}/`. Each owns its `compute.ts` (mark generation), often with `__tests__/` alongside.
-- Adding a new chart type: create the directory, implement the renderer, import it from `engine/src/index.ts`. The pipeline doesn't change.
+- Registration goes through `engine/src/charts/builtin.ts`: a `builtinRenderers` map lists every renderer key and `registerBuiltinRenderers()` loops over it, calling `registerChartRenderer(key, fn)` as a side effect on first import. Chart-type `index.ts` files only export their renderer; they do not self-register.
+- The compile pipeline resolves the renderer key via `resolveRendererKey(markType, encoding, markDef)` (`charts/post-process.ts`; e.g. `'bar'` -> `'bar:vertical'`, `'arc'` -> `'arc:donut'`) and dispatches with `getChartRenderer(key)`.
+- Per-chart-type renderers live under `engine/src/charts/{bar,column,line,pie,scatter,dot,range,calendar,rule,tick,text}/`. Each owns its `compute.ts` (mark generation), often with `__tests__/` alongside.
+- Adding a new chart type: create the directory, implement and export the renderer from its `index.ts`, and add it to the `builtinRenderers` map in `builtin.ts`. The pipeline doesn't change.
 
 ## Mark types
 

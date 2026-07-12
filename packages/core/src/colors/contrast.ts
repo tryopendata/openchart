@@ -29,6 +29,17 @@ export function relativeLuminance(color: string): number {
 // ---------------------------------------------------------------------------
 
 /**
+ * Check whether a color string parses to a fully opaque color.
+ * Contrast ratios are only meaningful against opaque backgrounds; the
+ * default chart background ('transparent') defers to the host page and
+ * can't be checked at compile time.
+ */
+export function isOpaqueColor(color: string): boolean {
+  const c = rgb(color);
+  return c != null && !Number.isNaN(c.r) && c.opacity === 1;
+}
+
+/**
  * Compute the WCAG contrast ratio between two colors.
  * Returns a value between 1 (identical) and 21 (black on white).
  */

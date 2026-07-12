@@ -107,6 +107,13 @@ export interface NormalizedChartSpec {
   chrome: NormalizedChrome;
   /** Optional KPI metric cells, passed through unchanged. */
   metrics?: import('@opendata-ai/openchart-core').Metric[];
+  /**
+   * Searchable series highlight config. Present only when `seriesSearch` is
+   * enabled AND the spec has a categorical color encoding to search over.
+   */
+  seriesSearch?: import('@opendata-ai/openchart-core').SeriesSearchConfig;
+  /** Resolved "you draw it" config with defaults filled in. Present only when `youDrawIt` is enabled. */
+  youDrawIt?: import('@opendata-ai/openchart-core').YouDrawItConfig;
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
@@ -126,6 +133,8 @@ export interface NormalizedChartSpec {
   hiddenSeries: string[];
   /** Per-series visual style overrides. */
   seriesStyles: Record<string, import('@opendata-ai/openchart-core').SeriesStyle>;
+  /** Author accessibility overrides (alt-text description, aria-hidden opt-out). */
+  a11y?: import('@opendata-ai/openchart-core').A11yConfig;
   /** Display mode controlling chrome/axes/legend stripping. Defaults to `'full'`. */
   display: Display;
   /** Resolve configuration for independent/shared scales in faceted charts. */

@@ -27,7 +27,7 @@ function getOptionalChannels(markType: MarkType): string[] {
 // ---------------------------------------------------------------------------
 
 describe('MARK_ENCODING_RULES', () => {
-  it('has entries for all 11 mark types', () => {
+  it('has entries for all 16 mark types', () => {
     const expectedTypes: MarkType[] = [
       'bar',
       'line',
@@ -40,6 +40,11 @@ describe('MARK_ENCODING_RULES', () => {
       'tick',
       'rect',
       'lollipop',
+      'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of expectedTypes) {
       expect(MARK_ENCODING_RULES[type]).toBeDefined();
@@ -229,6 +234,51 @@ describe('lollipop encoding rules', () => {
   });
 });
 
+describe('beeswarm encoding rules', () => {
+  it('marks both axes optional (the compiler enforces the combination)', () => {
+    const rules = MARK_ENCODING_RULES.beeswarm;
+    expect(rules.x.required).toBe(false);
+    expect(rules.y.required).toBe(false);
+  });
+
+  it('accepts quantitative and nominal/ordinal on both axes', () => {
+    const rules = MARK_ENCODING_RULES.beeswarm;
+    for (const axis of [rules.x, rules.y]) {
+      expect(axis.allowedTypes).toContain('quantitative');
+      expect(axis.allowedTypes).toContain('nominal');
+      expect(axis.allowedTypes).toContain('ordinal');
+    }
+  });
+
+  it('supports optional size (quantitative) for sized dots', () => {
+    const rules = MARK_ENCODING_RULES.beeswarm;
+    expect(rules.size.required).toBe(false);
+    expect(rules.size.allowedTypes).toEqual(['quantitative']);
+  });
+});
+
+describe('waffle encoding rules', () => {
+  it('requires a quantitative y (the share value) and a categorical color', () => {
+    const rules = MARK_ENCODING_RULES.waffle;
+    expect(rules.y.required).toBe(true);
+    expect(rules.y.allowedTypes).toEqual(['quantitative']);
+    expect(rules.color.required).toBe(true);
+    expect(rules.color.allowedTypes).toContain('nominal');
+    expect(rules.color.allowedTypes).toContain('ordinal');
+  });
+
+  it('accepts theta as an optional quantitative channel (arc parity)', () => {
+    const rules = MARK_ENCODING_RULES.waffle;
+    expect(rules.theta?.required).toBe(false);
+    expect(rules.theta?.allowedTypes).toEqual(['quantitative']);
+  });
+
+  it('does not require positional x (no axes)', () => {
+    const rules = MARK_ENCODING_RULES.waffle;
+    expect(rules.x.required).toBe(false);
+  });
+});
+
 describe('common channels across marks', () => {
   it('tooltip is optional on all mark types', () => {
     const allTypes: MarkType[] = [
@@ -243,6 +293,11 @@ describe('common channels across marks', () => {
       'tick',
       'rect',
       'lollipop',
+      'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];
@@ -265,6 +320,11 @@ describe('common channels across marks', () => {
       'tick',
       'rect',
       'lollipop',
+      'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];
@@ -287,6 +347,11 @@ describe('common channels across marks', () => {
       'tick',
       'rect',
       'lollipop',
+      'beeswarm',
+      'range',
+      'waffle',
+      'calendar',
+      'parliament',
     ];
     for (const type of allTypes) {
       const rules = MARK_ENCODING_RULES[type];

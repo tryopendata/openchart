@@ -14,8 +14,9 @@
  */
 
 import { ACHROMATIC_RAMP, type Encoding, type ResolvedTheme } from '@opendata-ai/openchart-core';
-import type { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import type { ScaleLinear, ScaleOrdinal, ScaleQuantile } from 'd3-scale';
 import type { ResolvedScales } from '../layout/scales';
+import { sampleRampColors } from '../legend/continuous';
 
 /** Neutral gray applied to muted (non-highlighted) series. */
 const MUTED_COLOR = '#bfc3c8';
@@ -42,6 +43,17 @@ export function applyColorScaleRange(
       seqStops[0],
       seqStops[seqStops.length - 1],
     ]);
+  } else if (
+    scales.color.type === 'quantile' ||
+    scales.color.type === 'quantize' ||
+    scales.color.type === 'threshold'
+  ) {
+    // Binned color scales: replace the placeholder colors with the theme's
+    // sequential ramp, sampled to the class count. Same ramp the gradient
+    // legend and continuous marks use.
+    const seqStops = Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
+    const scale = scales.color.scale as unknown as ScaleQuantile<string>;
+    scale.range(sampleRampColors(seqStops, scale.range().length));
   } else {
     const ordinalScale = scales.color.scale as ScaleOrdinal<string, string>;
     const palette = theme.colors.categorical;

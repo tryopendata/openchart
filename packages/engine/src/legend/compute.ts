@@ -20,6 +20,7 @@
  */
 
 import type {
+  ContinuousLegendLayout,
   LayoutStrategy,
   LegendEntry,
   LegendEntryPosition,
@@ -32,6 +33,12 @@ import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { MeasureFn } from '../layout/plan';
+import {
+  CONTINUOUS_LABEL_GAP,
+  type ContinuousLegendContent,
+  computeContinuousLegendContent,
+  hasContinuousColorScale,
+} from './continuous';
 import { countColorSeries, resolveSuppression } from './suppression';
 import {
   ENTRY_GAP,
@@ -79,6 +86,20 @@ export interface LegendContent {
   relativePositions?: LegendEntryPosition[];
   /** Row advance used to build entry positions. */
   rowHeight?: number;
+  /**
+   * Continuous legend payload (gradient bar / binned swatches). When set,
+   * `entries` is empty and `height`/`legendWidth` describe the bar block.
+   */
+  continuous?: ContinuousLegendContent;
+}
+
+/**
+ * True when the legend has something to render (categorical entries or a
+ * continuous bar). Space-reservation predicates must use this instead of
+ * checking `entries.length` directly.
+ */
+export function hasLegendContent(content: LegendContent): boolean {
+  return content.entries.length > 0 || content.continuous != null;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +148,8 @@ function swatchShapeForType(markType: string): LegendEntry['shape'] {
     case 'point':
     case 'circle':
     case 'lollipop':
+    case 'beeswarm':
+    case 'range':
       return 'circle';
     default:
       return 'square';
@@ -140,6 +163,9 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
 
   // Conditional color definitions don't produce legend entries
   if ('condition' in colorEnc) return [];
+
+  // Bare value defs (constant colors) don't produce legend entries either
+  if (!('field' in colorEnc)) return [];
 
   // Sequential (quantitative) color doesn't produce discrete legend entries
   if (colorEnc.type === 'quantitative') return [];
@@ -274,6 +300,40 @@ export function computeLegendContent(
     return emptyContent('top', theme);
   }
 
+  // Continuous color scale (quantitative color encoding): gradient bar or
+  // binned swatch legend, on by default. Horizontal-bar geometry only, so the
+  // position resolves to top (newsroom map-key convention) unless the user
+  // asks for bottom; right-column positions can't fit the bar.
+  if (hasContinuousColorScale(spec)) {
+    const continuous = computeContinuousLegendContent(spec, theme, availableWidth);
+    const continuousPosition = spec.legend?.position === 'bottom' ? 'bottom' : 'top';
+    if (!continuous) {
+      return emptyContent(continuousPosition, theme);
+    }
+    const labelStyle: TextStyle = {
+      fontFamily: theme.fonts.family,
+      fontSize: theme.fonts.sizes.small,
+      fontWeight: theme.fonts.weights.normal,
+      fill: theme.colors.text,
+      lineHeight: 1.3,
+      fontVariant: 'tabular-nums',
+    };
+    const labelRowHeight = Math.ceil(labelStyle.fontSize * labelStyle.lineHeight);
+    const height = continuous.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+    return {
+      entries: [],
+      position: continuousPosition,
+      labelStyle,
+      rowCount: 1,
+      totalWidth: continuous.barWidth,
+      height,
+      legendWidth: continuous.barWidth,
+      offset: spec.legend?.offset,
+      ...categoricalDefaults(theme),
+      continuous,
+    };
+  }
+
   let entries = extractColorEntries(spec, theme);
 
   // Consult the shared suppression truth table so the legend, endpoint column,
@@ -291,10 +351,11 @@ export function computeLegendContent(
     entries = [];
   }
 
-  // Bar/column/lollipop redundancy rule: when color.field matches the category
-  // axis field, the legend just repeats the axis labels. Hide it unless the
-  // user explicitly configured the legend.
-  const hasRedundantLegend = spec.markType === 'bar' || spec.markType === 'lollipop';
+  // Bar/column/lollipop/beeswarm redundancy rule: when color.field matches the
+  // category axis field, the legend just repeats the axis labels. Hide it
+  // unless the user explicitly configured the legend.
+  const hasRedundantLegend =
+    spec.markType === 'bar' || spec.markType === 'lollipop' || spec.markType === 'beeswarm';
   if (hasRedundantLegend && entries.length > 0 && !spec.userExplicit?.legend) {
     const colorEnc = spec.encoding.color;
     const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
@@ -511,6 +572,35 @@ export function placeLegend(
 ): LegendLayout {
   const { position, entries, labelStyle, legendWidth, height, offset } = content;
 
+  // Continuous legend: gradient bar / binned swatches. Placement mirrors the
+  // categorical top/bottom math; the bar-relative geometry from the content
+  // phase is offset into chart coordinates here.
+  if (content.continuous) {
+    const c = content.continuous;
+    const cDx = offset?.dx ?? 0;
+    const cDy = offset?.dy ?? 0;
+    const cGap = legendGap(containerWidth);
+    const boundsX = chartArea.x + cDx;
+    const boundsY =
+      position === 'bottom'
+        ? chartArea.y + chartArea.height + xAxisHeight + cGap + cDy
+        : chartArea.y - axisGapBelowLegend - cGap - height + cDy;
+    const bounds = { x: boundsX, y: boundsY, width: legendWidth, height };
+    const bar = { x: bounds.x, y: bounds.y, width: c.barWidth, height: c.barHeight };
+    return {
+      type: 'continuous' as const,
+      mode: c.mode,
+      position,
+      bounds,
+      labelStyle,
+      bar,
+      colorStops: c.colorStops,
+      bins: c.bins.map((b) => ({ ...b, x: b.x + bar.x })),
+      ticks: c.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
+      labelY: bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize,
+    } satisfies ContinuousLegendLayout;
+  }
+
   // Empty legend = no bounds
   if (entries.length === 0) {
     return {
@@ -593,6 +683,10 @@ export function computeLegend(
     chartArea.height,
     watermark,
   );
+  // Continuous legends share placeLegend's placement math.
+  if (content.continuous) {
+    return placeLegend(content, chartArea, chartArea.width, theme, 0);
+  }
   const { position, entries, labelStyle, legendWidth, height, offset: off } = content;
   const offsetDx = off?.dx ?? 0;
   const offsetDy = off?.dy ?? 0;

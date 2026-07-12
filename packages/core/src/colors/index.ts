@@ -8,7 +8,13 @@ export {
   simulateColorBlindness,
 } from './colorblind';
 
-export { contrastRatio, findAccessibleColor, meetsAA, pickLabelColor } from './contrast';
+export {
+  contrastRatio,
+  findAccessibleColor,
+  isOpaqueColor,
+  meetsAA,
+  pickLabelColor,
+} from './contrast';
 export type {
   CategoricalPalette,
   DivergingPalette,
@@ -20,9 +26,11 @@ export {
   DIVERGING_BROWN_TEAL,
   DIVERGING_PALETTES,
   DIVERGING_RED_BLUE,
+  resolveSchemeName,
   SEQUENTIAL_BLUE,
   SEQUENTIAL_GREEN,
   SEQUENTIAL_ORANGE,
   SEQUENTIAL_PALETTES,
   SEQUENTIAL_PURPLE,
+  SUPPORTED_SCHEME_NAMES,
 } from './palettes';

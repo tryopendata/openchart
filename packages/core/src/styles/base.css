@@ -73,3 +73,25 @@
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/* ---------------------------------------------------------------------------
+ * Keyboard focus indicators
+ *
+ * --oc-focus carries a light value in tokens.css and a dark value in
+ * dark.css, so both rings stay visible in either mode.
+ * --------------------------------------------------------------------------- */
+
+/* Container ring when the chart itself receives keyboard focus. */
+.oc-root:focus-visible {
+  outline: 2px solid var(--oc-focus);
+  outline-offset: 2px;
+}
+
+/* Mark ring during arrow-key navigation (see wireKeyboardNav). Outline on
+ * SVG elements draws around the mark's bounding box, same technique as
+ * .oc-editable-hover above. */
+.oc-mark-focused {
+  outline: 2px solid var(--oc-focus);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
