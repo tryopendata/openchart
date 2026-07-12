@@ -241,7 +241,7 @@ const CLEAN_THRESHOLD = EPSILON * 16;
 interface DirectionDef {
   ux: number;
   uy: number;
-  textAnchor: 'start' | 'middle' | 'end';
+  textAnchor: 'start' | 'end';
   attach:
     | 'bottom-center'
     | 'bottom-left'
@@ -273,7 +273,7 @@ const UPPER_HALF_ORDER = [3, 4, 5, 2, 1, 0, 7, 6]; // SE, S, SW, E, NE, N, NW, W
 export interface PlacementCandidate {
   labelX: number;
   labelY: number;
-  textAnchor: 'start' | 'middle' | 'end';
+  textAnchor: 'start' | 'end';
   box: Rect;
   directionIndex: number;
   ring: 1 | 2 | 3;
@@ -424,7 +424,7 @@ function scoreCandidate(
 export interface PlacementResult {
   labelX: number;
   labelY: number;
-  textAnchor: 'start' | 'middle' | 'end';
+  textAnchor: 'start' | 'end';
   bounds: Rect;
   score: number;
   debug?: CandidateScoreBreakdown[];

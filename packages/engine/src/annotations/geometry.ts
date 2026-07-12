@@ -15,13 +15,24 @@ import {
   DEFAULT_ANNOTATION_FONT_SIZE,
   DEFAULT_ANNOTATION_FONT_WEIGHT,
   DEFAULT_LINE_HEIGHT,
+  DROP_LINE_TOP_GAP,
   MIN_CONNECTOR_LENGTH,
 } from './constants';
 import { BOLD_SPAN_FONT_WEIGHT, parseAnnotationSpans } from './rich-text';
 
+/**
+ * Measure one run of text at a given size and weight.
+ *
+ * Deliberately takes no `fontFamily`: neither implementation could use one.
+ * `heuristicMeasure` below is family-blind, and the real canvas measurer gets its
+ * family from the `createMeasureText(fontFamily)` closure, not per call -- so a
+ * family passed here would be silently dropped while implying the opposite.
+ * `style.fontFamily` on a *resolved label* is a different thing: that one is real
+ * and gets rendered.
+ */
 export type AnnotationMeasureTextFn = (
   text: string,
-  font: { fontSize: number; fontWeight: number; fontFamily?: string },
+  font: { fontSize: number; fontWeight: number },
 ) => number;
 
 export const heuristicMeasure: AnnotationMeasureTextFn = (text, { fontSize, fontWeight }) =>
@@ -35,7 +46,7 @@ export const heuristicMeasure: AnnotationMeasureTextFn = (text, { fontSize, font
  */
 export function measureRichLine(
   line: string,
-  style: { fontSize: number; fontWeight: number; fontFamily?: string },
+  style: { fontSize: number; fontWeight: number },
   measure: AnnotationMeasureTextFn,
 ): number {
   const spans = parseAnnotationSpans(line);
@@ -44,7 +55,6 @@ export function measureRichLine(
     width += measure(span.text, {
       fontSize: style.fontSize,
       fontWeight: span.bold ? BOLD_SPAN_FONT_WEIGHT : style.fontWeight,
-      fontFamily: style.fontFamily,
     });
   }
   return width;
@@ -241,6 +251,17 @@ export interface ArrowheadPoints {
 }
 
 /**
+ * Arrowhead length along the tangent. Exported because the renderer pulls the
+ * connector's line end back by exactly this much so the stroke stops at the open
+ * V instead of poking through its tip — a hand-copied duplicate on the vanilla
+ * side would silently drift the next time this changes.
+ */
+export const ARROWHEAD_LENGTH = 7;
+
+/** Arrowhead half-width perpendicular to the tangent. */
+export const ARROWHEAD_HALF_WIDTH = 3.5;
+
+/**
  * Compute arrowhead triangle geometry at a connector endpoint.
  * Returns the tip (at the endpoint) and two base corners perpendicular to the
  * tangent direction.
@@ -249,16 +270,16 @@ export interface ArrowheadPoints {
  * @param tipY - Y coordinate of the arrowhead tip
  * @param tangentX - X component of the tangent direction (toward the tip)
  * @param tangentY - Y component of the tangent direction (toward the tip)
- * @param length - Arrow length along the tangent (default 7)
- * @param halfWidth - Arrow half-width perpendicular to tangent (default 3.5)
+ * @param length - Arrow length along the tangent (default ARROWHEAD_LENGTH)
+ * @param halfWidth - Arrow half-width perpendicular to tangent (default ARROWHEAD_HALF_WIDTH)
  */
 export function computeArrowheadPoints(
   tipX: number,
   tipY: number,
   tangentX: number,
   tangentY: number,
-  length = 7,
-  halfWidth = 3.5,
+  length = ARROWHEAD_LENGTH,
+  halfWidth = ARROWHEAD_HALF_WIDTH,
 ): ArrowheadPoints {
   const tLen = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
   const ux = tangentX / tLen;
@@ -301,7 +322,33 @@ export function refreshConnector(
   bounds: Rect,
   markerRadius: number,
 ): ResolvedLabel['connector'] {
-  const endpoint = connector.endpoint ?? connector.to;
+  // `endpoint` is the un-pulled-back data point, and the only valid basis for a
+  // rebuild: pulling back from `to` (already pulled back) shrinks the line a
+  // little more on every pass. Every resolver sets it, but the field is optional
+  // on the public `ResolvedLabel` type, so a layout from another producer could
+  // omit it — bail rather than silently compound the error.
+  if (!connector.endpoint) return undefined;
+  const endpoint = connector.endpoint;
+
+  // A drop-line is not a leader: it's a vertical rule pinned to the data point's
+  // x, running from just above the label box down to the marker. Rebuilding it
+  // from a ray-box exit tilts it into a diagonal (which the renderer draws with
+  // shape-rendering: crispEdges, assuming axis alignment), and the
+  // MIN_CONNECTOR_LENGTH rule below would delete it outright once the label sits
+  // near its point.
+  //
+  // This mirrors `resolveDropLineAnnotation`'s formula exactly — `from` above the
+  // label top, `to` pulled back from the point — so a nudged drop-line keeps the
+  // same geometry it resolved with, just at the label's new position.
+  if (connector.style === 'drop-line') {
+    const gap = connectorPullbackGap(markerRadius, false);
+    return {
+      ...connector,
+      from: { x: endpoint.x, y: bounds.y - DROP_LINE_TOP_GAP },
+      to: { x: endpoint.x, y: endpoint.y - gap },
+      exit: 'vertical',
+    };
+  }
 
   const exit = connectorExit(bounds, endpoint.x, endpoint.y);
   if (!exit) return undefined;

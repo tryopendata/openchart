@@ -642,6 +642,16 @@ export interface ResolvedAnnotation {
   type: 'text' | 'range' | 'refline';
   /** Stable identifier from the spec annotation, for selection/edit callbacks. */
   id?: string;
+  /**
+   * Index of the originating annotation in `spec.annotations`.
+   *
+   * The resolved array is a *filtered* view of the spec array -- an annotation
+   * whose position falls outside the scale domain resolves to nothing and is
+   * dropped -- so a resolved array index is NOT a spec index. Anything that has
+   * to reach back to the authored annotation (thinning's priority/responsive
+   * lookup, faceted footnote numbering) must key on this.
+   */
+  specIndex?: number;
   /** Label text (if any). */
   label?: ResolvedLabel;
   /** For range: the highlighted rectangle in pixel coordinates. */

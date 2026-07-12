@@ -78,6 +78,8 @@ export type { NormalizedTileMapSpec } from './tilemap/types';
 export type { AnnotationContext } from './annotations/compute';
 export type { AnnotationMeasureTextFn, ArrowheadPoints } from './annotations/geometry';
 export {
+  ARROWHEAD_HALF_WIDTH,
+  ARROWHEAD_LENGTH,
   computeArrowheadPoints,
   connectorExit,
   heuristicMeasure,

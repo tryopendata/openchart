@@ -4,14 +4,12 @@
 
 import type { ChartLayout, Point, ResolvedAnnotation } from '@opendata-ai/openchart-core';
 import {
+  ARROWHEAD_LENGTH,
   BOLD_SPAN_FONT_WEIGHT,
   computeArrowheadPoints,
   parseAnnotationSpans,
 } from '@opendata-ai/openchart-engine';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
-
-// Must match computeArrowheadPoints default (engine geometry.ts)
-const ARROWHEAD_LENGTH = 7;
 
 /** Stroke width shared by every connector voice except the drop-line hairline. */
 const CONNECTOR_STROKE_WIDTH = 1.25;
@@ -30,7 +28,12 @@ function renderArrowhead(
 ): void {
   const head = computeArrowheadPoints(tipX, tipY, tangentX, tangentY);
   const arrow = createSVGElement('polyline');
-  arrow.setAttribute('class', 'oc-annotation-connector');
+  // `oc-annotation-arrowhead` is what edit mode selects on to find the tip. Both
+  // the straight and the curved connector draw their head through here, and both
+  // keep the shared `oc-annotation-connector` class for styling -- without the
+  // dedicated class the drag code has to select `polyline.oc-annotation-connector`
+  // and rely on no other polyline existing in the group.
+  arrow.setAttribute('class', 'oc-annotation-connector oc-annotation-arrowhead');
   setAttrs(arrow, {
     points: [
       `${head.baseLeft.x},${head.baseLeft.y}`,

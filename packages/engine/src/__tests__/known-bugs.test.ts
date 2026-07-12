@@ -111,14 +111,196 @@ describe('known layout bugs', () => {
     expect(verticallyOverlaps).toBe(false);
   });
 
-  // Regression: `normalizeSpec` used to stamp `fontSize: 12` / `fontWeight: 400`
-  // onto every text annotation. That made `annotation.fontWeight` always defined,
-  // so the lede rule (subtitle promotes the primary line to bold) could never fire
-  // and DEFAULT_ANNOTATION_FONT_SIZE could never apply — both shipped as dead code.
+  // Regression: the collision pass calls `refreshConnector` on every annotation it
+  // moves, and that rebuilt `from`/`to` from a ray-box exit toward the target. A
+  // drop-line is not a leader — it's a vertical rule pinned to the data point's x
+  // — so the rebuild tilted it into a diagonal (which the renderer then draws with
+  // shape-rendering: crispEdges, assuming axis alignment), and the
+  // MIN_CONNECTOR_LENGTH rule could delete it outright.
   //
-  // Every annotation unit test called the resolvers directly, bypassing normalize,
-  // so all 3305 tests passed while the compiled output was wrong. This test must go
-  // through compileChart: that is the only path where the bug was observable.
+  // Two drop-lines placed close enough to collide is what makes this observable:
+  // a lone annotation is never shifted, so `refreshConnector` never runs and the
+  // bug hides. Against the unfixed code this pair yields a 12.9px-diagonal first
+  // connector and a *deleted* second one.
+  describe('drop-line connectors survive the collision pass', () => {
+    const collidingDropLines = () =>
+      compileChart(
+        {
+          mark: 'line' as const,
+          data: [
+            { m: 'Jan', v: 10 },
+            { m: 'Feb', v: 50 },
+            { m: 'Mar', v: 48 },
+            { m: 'Apr', v: 30 },
+          ],
+          encoding: {
+            x: { field: 'm' as const, type: 'ordinal' as const },
+            y: { field: 'v' as const, type: 'quantitative' as const },
+          },
+          annotations: [
+            {
+              type: 'text' as const,
+              x: 'Feb',
+              y: 50,
+              text: 'First drop-line here',
+              connector: 'drop-line' as const,
+            },
+            {
+              type: 'text' as const,
+              x: 'Mar',
+              y: 48,
+              text: 'Second drop-line here',
+              connector: 'drop-line' as const,
+            },
+          ],
+        },
+        { width: 800, height: 460 },
+      ).annotations ?? [];
+
+    test('stay vertical, with x pinned to the data point', () => {
+      const annotations = collidingDropLines();
+      expect(annotations).toHaveLength(2);
+      for (const annotation of annotations) {
+        const connector = annotation.label?.connector;
+        expect(connector).toBeDefined();
+        // The whole contract of a drop-line: from.x === to.x === the point's x.
+        expect(connector?.from.x).toBeCloseTo(connector?.to.x ?? Number.NaN, 5);
+        expect(connector?.from.x).toBeCloseTo(annotation.dot?.x ?? Number.NaN, 5);
+      }
+    });
+
+    test('are not deleted by the leader min-length rule', () => {
+      for (const annotation of collidingDropLines()) {
+        expect(annotation.label?.connector).toBeDefined();
+      }
+    });
+
+    test('keep their drop-line style and vertical exit', () => {
+      for (const annotation of collidingDropLines()) {
+        expect(annotation.label?.connector?.style).toBe('drop-line');
+        expect(annotation.label?.connector?.exit).toBe('vertical');
+      }
+    });
+  });
+
+  // Regression: `resolveTextAnnotation` bolts the lede rule on (a `subtitle`
+  // promotes the primary line to 700) BEFORE branching to the drop-line resolver,
+  // which used to resolve no subtitle at all. Net effect: authoring a subtitle on
+  // a drop-line silently threw the subtitle away but still bolded the primary --
+  // a field whose only visible effect was a mystery weight change.
+  describe('a drop-line annotation honors its subtitle', () => {
+    // Annotate Mar, not the Feb maximum: a callout on the chart's top value clamps
+    // against the chart edge and has nowhere to go, which is a separate (and
+    // legitimate) degradation. This is the ordinary case.
+    const dropLineWithSubtitle = () =>
+      compileChart(
+        {
+          mark: 'line' as const,
+          data: [
+            { m: 'Jan', v: 10 },
+            { m: 'Feb', v: 50 },
+            { m: 'Mar', v: 30 },
+          ],
+          encoding: {
+            x: { field: 'm' as const, type: 'ordinal' as const },
+            y: { field: 'v' as const, type: 'quantitative' as const },
+          },
+          annotations: [
+            {
+              type: 'text' as const,
+              x: 'Mar',
+              y: 30,
+              text: 'Peak',
+              subtitle: 'the highest month',
+              connector: 'drop-line' as const,
+            },
+          ],
+        },
+        { width: 800, height: 460 },
+      ).annotations?.[0];
+
+    test('resolves the subtitle instead of dropping it', () => {
+      const annotation = dropLineWithSubtitle();
+      expect(annotation?.subtitle?.text).toBe('the highest month');
+    });
+
+    test('still promotes the primary line to a bold lede', () => {
+      expect(dropLineWithSubtitle()?.label?.style.fontWeight).toBe(700);
+    });
+
+    test('renders the subtitle below the primary line, left edges aligned', () => {
+      const annotation = dropLineWithSubtitle();
+      expect(annotation?.subtitle?.y).toBeGreaterThan(annotation?.label?.y ?? Number.NaN);
+      expect(annotation?.subtitle?.x).toBeCloseTo(annotation?.label?.x ?? Number.NaN, 5);
+    });
+
+    test('the whole block stays above the data point, so the line still drops', () => {
+      // A drop-line runs DOWN from the block to the point. The subtitle makes the
+      // block taller and wider, which made it collide with the line mark -- and the
+      // obstacle nudge then shoved it *below* the point, inverting the connector so
+      // it pointed up, away from the data, with the block sitting on the mark.
+      const annotation = dropLineWithSubtitle();
+      const bounds = annotation?.bounds;
+      const dotY = annotation?.dot?.y ?? Number.NaN;
+      expect((bounds?.y ?? Number.NaN) + (bounds?.height ?? Number.NaN)).toBeLessThanOrEqual(dotY);
+
+      const connector = annotation?.label?.connector;
+      expect(connector?.from.y).toBeLessThan(connector?.to.y ?? Number.NaN);
+    });
+
+    test('the block bounds cover the subtitle, so collisions see it', () => {
+      const annotation = dropLineWithSubtitle();
+      const bounds = annotation?.bounds;
+      const labelBounds = annotation?.label?.bounds;
+      // `bounds` is the union; `label.bounds` stays label-only (the renderer sizes
+      // the background plate from it).
+      expect(bounds?.height).toBeGreaterThan(labelBounds?.height ?? Number.NaN);
+    });
+  });
+
+  // Regression: `compute.ts` stamped `result.bounds` (the UNION of label and
+  // subtitle, which is what placement scores) into `label.bounds`, whose contract
+  // is the label-only text box. The renderer sizes the `background` plate from
+  // `label.bounds`, so an auto-placed annotation with a subtitle got a plate sized
+  // to both lines while the explicit path got one sized to the label.
+  test('auto-placed label bounds are the label box, not the label+subtitle union', () => {
+    const layout = compileChart(
+      {
+        mark: 'line' as const,
+        data: [
+          { m: 'Jan', v: 10 },
+          { m: 'Feb', v: 50 },
+          { m: 'Mar', v: 30 },
+        ],
+        encoding: {
+          x: { field: 'm' as const, type: 'ordinal' as const },
+          y: { field: 'v' as const, type: 'quantitative' as const },
+        },
+        annotations: [
+          // No anchor/offset => the auto-placement path.
+          {
+            type: 'text' as const,
+            x: 'Feb',
+            y: 50,
+            text: 'Peak',
+            subtitle: 'a considerably wider subtitle line',
+          },
+        ],
+      },
+      { width: 800, height: 460 },
+    );
+    const annotation = layout.annotations?.[0];
+    const labelBounds = annotation?.label?.bounds;
+    const unionBounds = annotation?.bounds;
+    expect(labelBounds).toBeDefined();
+    expect(unionBounds).toBeDefined();
+
+    // The subtitle is wider and sits below, so the union must be strictly bigger.
+    // If label.bounds were the union, these would be identical.
+    expect(labelBounds?.width).toBeLessThan(unionBounds?.width ?? 0);
+    expect(labelBounds?.height).toBeLessThan(unionBounds?.height ?? 0);
+  });
+
   // Regression: `anchor: 'top'`/`'bottom'` render with textAnchor 'start', so the
   // block used to hang entirely to the RIGHT of its data point — "above" read as
   // "up and to the right", and authors had to hand-compute a negative dx of about
@@ -147,6 +329,31 @@ describe('known layout bugs', () => {
       const pointX = resolved?.dot?.x;
       if (!bounds || pointX === undefined) throw new Error('annotation did not resolve');
       return bounds.x + bounds.width / 2 - pointX;
+    };
+
+    /** The block's horizontal span expressed relative to the data point. */
+    const spanAround = (annotation: Record<string, unknown>) => {
+      const layout = compileChart(
+        {
+          mark: 'line' as const,
+          data: [
+            { m: 'Jan', v: 10 },
+            { m: 'Feb', v: 50 },
+            { m: 'Mar', v: 30 },
+          ],
+          encoding: {
+            x: { field: 'm' as const, type: 'ordinal' as const },
+            y: { field: 'v' as const, type: 'quantitative' as const },
+          },
+          annotations: [annotation],
+        },
+        { width: 800, height: 460 },
+      );
+      const resolved = layout.annotations?.[0];
+      const bounds = resolved?.label?.bounds;
+      const pointX = resolved?.dot?.x;
+      if (!bounds || pointX === undefined) throw new Error('annotation did not resolve');
+      return { left: bounds.x - pointX, right: bounds.x + bounds.width - pointX };
     };
 
     test('a single-line top-anchored block centers on its point', () => {
@@ -201,12 +408,34 @@ describe('known layout bugs', () => {
     });
 
     test('left/right anchors are unaffected (block sits beside the point)', () => {
-      expect(
-        centerOffsetFor({ type: 'text', x: 'Feb', y: 50, text: 'Left side', anchor: 'left' }),
-      ).toBeLessThan(0);
-      expect(
-        centerOffsetFor({ type: 'text', x: 'Feb', y: 50, text: 'Right side', anchor: 'right' }),
-      ).toBeGreaterThan(0);
+      // "Beside", not "straddling": the whole block clears the point by exactly the
+      // ANCHOR_OFFSET setback (28px), so the point lies OUTSIDE the block's x-span.
+      // A sign check alone (`centerOffset < 0`) still passes for a centered block
+      // that has merely drifted — which is the regression this guards.
+      const ANCHOR_OFFSET = 28;
+
+      const left = spanAround({ type: 'text', x: 'Feb', y: 50, text: 'Left side', anchor: 'left' });
+      // Whole block to the LEFT: its near (right) edge stops one setback short of
+      // the point, so the point never falls inside the span.
+      expect(left.right).toBeCloseTo(-ANCHOR_OFFSET, 1);
+      expect(left.left).toBeLessThan(left.right);
+
+      const right = spanAround({
+        type: 'text',
+        x: 'Feb',
+        y: 50,
+        text: 'Right side',
+        anchor: 'right',
+      });
+      // Mirror image: near (left) edge starts one setback past the point.
+      expect(right.left).toBeCloseTo(ANCHOR_OFFSET, 1);
+      expect(right.right).toBeGreaterThan(right.left);
+
+      // And the contrast that gives "beside" its meaning: a top anchor STRADDLES,
+      // i.e. the point lies strictly inside the block's x-span.
+      const top = spanAround({ type: 'text', x: 'Feb', y: 50, text: 'Left side', anchor: 'top' });
+      expect(top.left).toBeLessThan(0);
+      expect(top.right).toBeGreaterThan(0);
     });
   });
 

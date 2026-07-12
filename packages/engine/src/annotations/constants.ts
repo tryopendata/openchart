@@ -69,6 +69,17 @@ export const SUBTITLE_GAP = 2;
 /** Subtitle font size multiplier (relative to primary annotation font size). */
 export const SUBTITLE_FONT_SIZE_RATIO = 0.85;
 
+/**
+ * The subtitle's resolved font size. Rounded, and shared by every caller: the
+ * auto-placement pass measures the subtitle to score candidate bounds while the
+ * resolver sets the size that actually renders. If one rounds and the other
+ * doesn't (13 * 0.85 = 11.05 vs 11), the scored bounds are a lie and the drift
+ * flows into collisions and thinning.
+ */
+export function subtitleFontSize(primaryFontSize: number): number {
+  return Math.round(primaryFontSize * SUBTITLE_FONT_SIZE_RATIO);
+}
+
 /** Gap (px) between the label bounding box and the start of its connector. */
 export const CONNECTOR_STANDOFF = 6;
 
@@ -91,6 +102,9 @@ export const MIN_CONNECTOR_LENGTH = 8;
  * publication-ready. Authors tighten it with `offset`.
  */
 export const ANCHOR_OFFSET = 28;
+
+/** Vertical gap between the top of a drop-line and the top of its label box. */
+export const DROP_LINE_TOP_GAP = 4;
 
 /** Padding between annotation and obstacle when nudging. */
 export const NUDGE_PADDING = 6;

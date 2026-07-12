@@ -24,6 +24,7 @@ import {
   DEFAULT_DOT_RADIUS,
   DEFAULT_DOT_STROKE_WIDTH,
   DEFAULT_LINE_HEIGHT,
+  DROP_LINE_TOP_GAP,
   FALLBACK_FONT_FAMILY,
   LEDE_FONT_WEIGHT,
   LIGHT_CONNECTOR_STROKE,
@@ -32,9 +33,9 @@ import {
   LIGHT_MUTED_TEXT_FILL,
   LIGHT_TEXT_FILL,
   MIN_CONNECTOR_LENGTH,
-  SUBTITLE_FONT_SIZE_RATIO,
   SUBTITLE_FONT_WEIGHT,
   SUBTITLE_GAP,
+  subtitleFontSize,
 } from './constants';
 import {
   type AnnotationMeasureTextFn,
@@ -137,8 +138,6 @@ function resolveLabelBackground(
 
 /** Horizontal gap between the drop-line and the label text. */
 const DROP_LINE_LABEL_GAP = 8;
-/** Vertical gap between the top of the drop-line and the top of the label box. */
-const DROP_LINE_TOP_GAP = 4;
 
 export function makeAnnotationLabelStyle(
   fontSize?: number,
@@ -247,7 +246,7 @@ export function resolveTextAnnotation(
           annotation.subtitle,
           {
             ...labelStyle,
-            fontSize: Math.round(fontSize * SUBTITLE_FONT_SIZE_RATIO),
+            fontSize: subtitleFontSize(fontSize),
             fontWeight: SUBTITLE_FONT_WEIGHT,
             textAnchor: 'start',
           },
@@ -273,11 +272,10 @@ export function resolveTextAnnotation(
   let annotationBounds: Rect = labelBounds;
   if (annotation.subtitle) {
     const primaryLineCount = annotation.text.split('\n').length;
-    const subtitleFontSize = Math.round(fontSize * SUBTITLE_FONT_SIZE_RATIO);
     const mutedFill = isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL;
     const subtitleStyle: TextStyle = {
       ...labelStyle,
-      fontSize: subtitleFontSize,
+      fontSize: subtitleFontSize(fontSize),
       fontWeight: SUBTITLE_FONT_WEIGHT,
       fill: mutedFill,
     };
@@ -403,10 +401,15 @@ function resolveDropLineAnnotation(
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = Number(labelStyle.fontWeight) || DEFAULT_ANNOTATION_FONT_WEIGHT;
   const lines = annotation.text.split('\n');
+  const subtitleLines = annotation.subtitle ? annotation.subtitle.split('\n') : [];
+  const subFontSize = subtitleFontSize(fontSize);
   const estimatedWidth = Math.max(
     0,
-    ...lines.map((line) =>
-      measureRichLine(line, { fontSize, fontWeight, fontFamily: labelStyle.fontFamily }, measure),
+    ...lines.map((line) => measureRichLine(line, { fontSize, fontWeight }, measure)),
+    // The subtitle is often the wider line, and it's what decides whether the
+    // block fits on a side.
+    ...subtitleLines.map((line) =>
+      measureRichLine(line, { fontSize: subFontSize, fontWeight: SUBTITLE_FONT_WEIGHT }, measure),
     ),
   );
 
@@ -434,8 +437,13 @@ function resolveDropLineAnnotation(
   // Drop the label box top a bit above the data point so the label and line
   // share a baseline that reads as "callout above the point".
   const lineHeight = fontSize * DEFAULT_LINE_HEIGHT;
-  const totalHeight = lineHeight * lines.length;
-  // Position the first line so the bottom of the label sits ~12px above py.
+  // The subtitle hangs below the primary lines, so it's part of the block the
+  // 12px setback has to clear -- otherwise it lands on top of the data point.
+  const subtitleHeight = annotation.subtitle
+    ? SUBTITLE_GAP + subFontSize * DEFAULT_LINE_HEIGHT * subtitleLines.length
+    : 0;
+  const totalHeight = lineHeight * lines.length + subtitleHeight;
+  // Position the first line so the bottom of the block sits ~12px above py.
   // Clamp to the chart-area top so multi-line labels near peaks don't escape
   // upward into chrome / metric-bar territory.
   const desiredLabelTopY = py - totalHeight - 12;
@@ -464,6 +472,31 @@ function resolveDropLineAnnotation(
     measure,
   );
 
+  // A subtitle works on a drop-line the same as on any other connector style:
+  // the lede rule already bolded the primary line on the way in, so dropping the
+  // subtitle here would leave a mystery-bold label with no context under it.
+  let subtitle: ResolvedAnnotation['subtitle'] | undefined;
+  let annotationBounds = labelBounds;
+  if (annotation.subtitle) {
+    const subtitleStyle: TextStyle = {
+      ...resolvedStyle,
+      fontSize: subFontSize,
+      fontWeight: SUBTITLE_FONT_WEIGHT,
+      fill: isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL,
+    };
+    const subtitleY = labelBaselineY + lineHeight * lines.length + SUBTITLE_GAP;
+    subtitle = {
+      text: annotation.subtitle,
+      x: labelX,
+      y: subtitleY,
+      style: subtitleStyle,
+    };
+    annotationBounds = unionRects(
+      labelBounds,
+      computeTextBlockBounds(labelX, subtitleY, annotation.subtitle, subtitleStyle, measure),
+    );
+  }
+
   const label: ResolvedLabel = {
     text: annotation.text,
     x: labelX,
@@ -488,11 +521,14 @@ function resolveDropLineAnnotation(
     type: 'text',
     id: annotation.id,
     label,
+    subtitle,
     stroke: annotation.stroke,
     fill: annotation.fill,
     opacity: annotation.opacity,
     zIndex: annotation.zIndex,
     dot,
-    bounds: labelBounds,
+    // Union of label + subtitle. `label.bounds` stays label-only -- the renderer
+    // sizes the `background` plate from that.
+    bounds: annotationBounds,
   };
 }

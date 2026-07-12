@@ -1126,7 +1126,10 @@ describe('computeAnnotations', () => {
       const bounds = ann.bounds!;
 
       expect(connector.exit).toBe('horizontal');
-      expect(connector.from.x).toBeLessThan(bounds.x);
+      // Origin sits left of the (inflated) left edge by the standoff gap. Asserting
+      // only `< bounds.x` would pass for an origin anywhere off to the left, which
+      // is what a broken ray-box intersection produces.
+      expect(connector.from.x).toBeCloseTo(bounds.x - INFLATE - STANDOFF, 1);
     });
 
     it('connector exits right of the label when the data point is right of it', () => {
@@ -1148,7 +1151,8 @@ describe('computeAnnotations', () => {
       const bounds = ann.bounds!;
 
       expect(connector.exit).toBe('horizontal');
-      expect(connector.from.x).toBeGreaterThan(bounds.x + bounds.width);
+      // Mirror of the left-exit case: one standoff gap past the inflated right edge.
+      expect(connector.from.x).toBeCloseTo(bounds.x + bounds.width + INFLATE + STANDOFF, 1);
     });
 
     it('the connector origin always sits outside the annotation block', () => {
@@ -1355,7 +1359,14 @@ describe('computeAnnotations', () => {
         Math.abs(from.x - b.x),
         Math.abs(from.x - (b.x + b.width)),
       );
-      expect(distFromBlock).toBeLessThan(20);
+      // The origin clears the NUDGED block by the standoff gap and no more. The ray
+      // leaves the box diagonally, so the CONNECTOR_STANDOFF (6) splits across x and
+      // y and the perpendicular clearance lands somewhere in (BOX_INFLATE,
+      // BOX_INFLATE + CONNECTOR_STANDOFF] = (2, 8]. A connector rebuilt against the
+      // pre-nudge bounds strands the origin tens of pixels off the block, which the
+      // old 20px window still admitted.
+      expect(distFromBlock).toBeGreaterThan(2);
+      expect(distFromBlock).toBeLessThanOrEqual(8);
     });
 
     // The subtitle carries absolute coordinates, so a nudge that only moved the

@@ -45,7 +45,7 @@ export function wireAnnotationDrag(
     const origY2 = connectorLine ? Number(connectorLine.getAttribute('y2')) : 0;
 
     const curvedPath = annotationG.querySelector('path.oc-annotation-connector');
-    const arrowhead = annotationG.querySelector('polyline.oc-annotation-connector');
+    const arrowhead = annotationG.querySelector('polyline.oc-annotation-arrowhead');
     const hasCurvedConnector = curvedPath !== null;
 
     const origDx = textAnnotation.offset?.dx ?? 0;
@@ -144,7 +144,7 @@ export function wireConnectorEndpointDrag(
       fromY = mMatch ? Number(mMatch[2]) : 0;
       // The open-V arrowhead is a polyline "baseLeft tip baseRight": the tip is
       // the middle point.
-      const arrowhead = annotationG.querySelector('polyline.oc-annotation-connector');
+      const arrowhead = annotationG.querySelector('polyline.oc-annotation-arrowhead');
       const points = arrowhead?.getAttribute('points')?.split(' ') ?? [];
       const [px, py] = (points[1] ?? '0,0').split(',');
       toX = Number(px) || 0;

@@ -72,11 +72,20 @@ export function thinAnnotations(
 
   // Build index pairs: (resolved, spec, original index).
   // Only text specs carry priority/responsive; non-text specs are ignored.
-  const entries = annotations.map((a, i) => ({
-    resolved: a,
-    spec: i < specs.length && specs[i].type === 'text' ? (specs[i] as TextAnnotation) : undefined,
-    index: i,
-  }));
+  //
+  // `annotations` is a filtered view of `specs` -- an annotation that resolves to
+  // nothing (position outside the domain) is dropped -- so index into `specs` by
+  // the stamped `specIndex`, never by position in `annotations`. Falling back to
+  // `i` keeps a hand-built layout (no specIndex) working as it did before.
+  const entries = annotations.map((a, i) => {
+    const specIndex = a.specIndex ?? i;
+    const spec = specs[specIndex];
+    return {
+      resolved: a,
+      spec: spec?.type === 'text' ? (spec as TextAnnotation) : undefined,
+      index: i,
+    };
+  });
 
   // Separate pinned (responsive: false) from candidates
   const pinned: typeof entries = [];

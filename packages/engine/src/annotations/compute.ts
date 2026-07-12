@@ -24,9 +24,9 @@ import {
   nudgeAnnotationFromObstacles,
   resolveAnnotationCollisions,
 } from './collisions';
-import { SUBTITLE_FONT_SIZE_RATIO, SUBTITLE_FONT_WEIGHT, SUBTITLE_GAP } from './constants';
+import { SUBTITLE_FONT_WEIGHT, SUBTITLE_GAP, subtitleFontSize } from './constants';
 import type { AnnotationMeasureTextFn } from './geometry';
-import { heuristicMeasure, refreshConnector } from './geometry';
+import { computeTextBlockBounds, heuristicMeasure, refreshConnector } from './geometry';
 import {
   findBestPlacement,
   isAutoPlacement,
@@ -129,7 +129,7 @@ export function computeAnnotations(
   }> = [];
 
   // ---- Pass 1: resolve explicit annotations and queue auto ones ----
-  for (const annotation of spec.annotations) {
+  for (const [specIndex, annotation] of spec.annotations.entries()) {
     if (isCompact && annotation.responsive !== false) {
       continue;
     }
@@ -156,6 +156,8 @@ export function computeAnnotations(
               resolved,
               index: annotations.length,
             });
+            // Same contract as the push below -- this branch `continue`s past it.
+            resolved.specIndex = specIndex;
             annotations.push(resolved);
             continue;
           }
@@ -192,6 +194,10 @@ export function computeAnnotations(
           ctx.measure,
         );
       }
+      // The resolved array is filtered (an out-of-domain annotation resolves to
+      // nothing), so carry the spec index along -- it's the only stable way back
+      // to the authored annotation from here on.
+      resolved.specIndex = specIndex;
       annotations.push(resolved);
     }
   }
@@ -222,7 +228,7 @@ export function computeAnnotations(
 
       const subtitleStyle = annotation.subtitle
         ? {
-            fontSize: labelStyle.fontSize * SUBTITLE_FONT_SIZE_RATIO,
+            fontSize: subtitleFontSize(labelStyle.fontSize),
             fontWeight: SUBTITLE_FONT_WEIGHT,
             lineHeight: labelStyle.lineHeight,
             fontFamily: labelStyle.fontFamily,
@@ -256,7 +262,19 @@ export function computeAnnotations(
           ...resolved.label.style,
           textAnchor: result.textAnchor,
         };
-        resolved.label.bounds = result.bounds;
+        // `result.bounds` is the UNION of the label and its subtitle — the box
+        // placement scored, and the box other annotations must avoid. But
+        // `label.bounds` is the label-only text box by contract (the renderer
+        // sizes the `background` plate from it), so recompute it rather than
+        // stamping the union in and handing a subtitled annotation a plate sized
+        // to both lines. The union goes to `resolved.bounds` below.
+        resolved.label.bounds = computeTextBlockBounds(
+          result.labelX,
+          result.labelY,
+          annotation.text,
+          { ...resolved.label.style, textAnchor: result.textAnchor },
+          ctx.measure,
+        );
 
         // The subtitle carries absolute coordinates, so it has to follow the
         // label. findBestPlacement scored the candidate with the subtitle in

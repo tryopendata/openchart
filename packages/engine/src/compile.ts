@@ -580,6 +580,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       watermark,
       resolvedAnimation,
       crosshair,
+      spec,
+      optionsInput,
     );
   }
 
@@ -901,6 +903,8 @@ function compileFaceted(
   watermark: boolean,
   resolvedAnimation: ResolvedAnimation | undefined,
   crosshair: boolean,
+  rawSpec: unknown,
+  optionsInput: CompileOptions,
 ): ChartLayout {
   const measure = createMeasureFn(options.measureText);
 
@@ -992,6 +996,11 @@ function compileFaceted(
 
   const allMarks: Mark[] = [];
   const panelLayouts: FacetPanelLayout[] = [];
+  // Footnotes pool across panels into one figure-level list (the renderer draws
+  // a single list below the grid from `chrome.footnotes`), so the numbering is
+  // continuous and each panel's markers index into it.
+  const allFootnotes: import('@opendata-ai/openchart-core').AnnotationFootnote[] = [];
+  const footnoteNumberBySpecIndex = new Map<number, number>();
 
   for (const gridPanel of grid.panels) {
     const panelData = groups.get(gridPanel.key) ?? [];
@@ -1069,7 +1078,7 @@ function compileFaceted(
     const annotationMeasure: AnnotationMeasureTextFn = options.measureText
       ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
       : heuristicMeasure;
-    const panelAnnotations = computeAnnotations(panelSpecWithDomains, {
+    let panelAnnotations = computeAnnotations(panelSpecWithDomains, {
       scales: panelScales,
       chartArea: gridPanel.area,
       strategy,
@@ -1080,6 +1089,51 @@ function compileFaceted(
       fontFamily: theme.fonts.family,
       autoThin: panelSpecWithDomains.autoThin,
     });
+
+    // Auto-thinning, per panel. A panel is its own little chart: the box a label
+    // must stay inside is the panel, not the figure. Thinning against the whole
+    // SVG (what the single-chart path passes) would let a label from the left
+    // column sprawl across its neighbour and still count as "fits".
+    //
+    // The spec's annotations resolve into *every* panel, so the same annotation
+    // can demote in more than one. The footnote list is figure-level and its text
+    // is per-spec-annotation, so number by spec index and reuse that number in
+    // every panel that demoted it -- otherwise the list repeats itself once per
+    // panel.
+    if (chartSpec.autoThin && panelAnnotations.length > 1) {
+      const thinned = thinAnnotations(
+        panelAnnotations,
+        chartSpec.annotations,
+        annotationMeasure,
+        gridPanel.area,
+        gridPanel.area,
+      );
+      panelAnnotations = thinned.annotations;
+      // `thinAnnotations` numbers footnotes 1..n *within the panel it was given*,
+      // so restamp each demoted annotation with its figure-level number. Take the
+      // text from `thinned.footnotes` (the 1-based panel-local index it just
+      // assigned) rather than re-reading `label.text`: thinning owns that string,
+      // and re-deriving it here would be a second producer to drift out of sync.
+      //
+      // Key on `specIndex`, NOT on position: with `resolve.scale.x: 'independent'`
+      // each panel derives its own domain, so an annotation can resolve in one
+      // panel and be dropped in another. Position i then means a different spec
+      // annotation in each panel, and the markers point at other panels' text.
+      for (const a of panelAnnotations) {
+        const panelIndex = a.footnoteIndex;
+        if (panelIndex == null || a.specIndex === undefined) continue;
+        let num = footnoteNumberBySpecIndex.get(a.specIndex);
+        if (num === undefined) {
+          num = allFootnotes.length + 1;
+          footnoteNumberBySpecIndex.set(a.specIndex, num);
+          allFootnotes.push({
+            index: num,
+            text: thinned.footnotes[panelIndex - 1]?.text ?? '',
+          });
+        }
+        a.footnoteIndex = num;
+      }
+    }
 
     allMarks.push(...panelMarks);
 
@@ -1097,6 +1151,28 @@ function compileFaceted(
         fontWeight: theme.fonts.weights.medium,
       },
     });
+  }
+
+  // The footnote list renders below the grid, but nothing reserved space for it
+  // -- thinning only just now discovered how many lines there are. Recompile with
+  // that band carved out of the bottom margin, same contract as the single-chart
+  // path (see the matching block in compileChart). computeDimensions applies
+  // options.footnoteReserve generically, so the facet grid shrinks with it.
+  //
+  // A frozen area short-circuits this, same as the single-chart path: compileLayer
+  // pins every leaf to the primary layout's coordinate space, so the grown bottom
+  // margin is computed and then thrown away. Recursing would re-run the whole
+  // compile up to MAX_FOOTNOTE_PASSES times for an identical layout.
+  if (allFootnotes.length > 0 && !options.frozenChartArea) {
+    const reserve = footnoteBandHeight(allFootnotes.length, theme);
+    const currentReserve = options.footnoteReserve ?? 0;
+    if (reserve > currentReserve && (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES) {
+      return compileChart(rawSpec, {
+        ...optionsInput,
+        footnoteReserve: reserve,
+        footnotePass: (options.footnotePass ?? 0) + 1,
+      });
+    }
   }
 
   // Compute tooltip descriptors from all marks across panels
@@ -1138,7 +1214,7 @@ function compileFaceted(
   // Figure-level marks are the union of all panel marks (for tooltip/keyboard nav)
   return {
     area: chartArea,
-    chrome: dims.chrome,
+    chrome: allFootnotes.length > 0 ? { ...dims.chrome, footnotes: allFootnotes } : dims.chrome,
     metrics: dims.metrics,
     ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
     axes: { x: undefined, y: undefined },

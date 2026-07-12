@@ -12,7 +12,14 @@ import type {
 import { detectCollision } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
-import { CLAMP_MARGIN, NUDGE_PADDING } from './constants';
+import {
+  CLAMP_MARGIN,
+  DEFAULT_ANNOTATION_FONT_SIZE,
+  DEFAULT_LINE_HEIGHT,
+  NUDGE_PADDING,
+  SUBTITLE_FONT_WEIGHT,
+  subtitleFontSize,
+} from './constants';
 import {
   type AnnotationMeasureTextFn,
   computeTextBlockBounds,
@@ -39,9 +46,12 @@ function annotationBlockBounds(
     sub.y,
     sub.text,
     {
-      fontSize: sub.style.fontSize ?? 10,
-      fontWeight: Number(sub.style.fontWeight) || 400,
-      lineHeight: sub.style.lineHeight ?? 1.3,
+      // Every resolver stamps all three, so these fallbacks are unreachable today.
+      // They still come from the constants: a hand-rolled `?? 10` here is a second
+      // definition of the subtitle's type, free to drift from the real one.
+      fontSize: sub.style.fontSize ?? subtitleFontSize(DEFAULT_ANNOTATION_FONT_SIZE),
+      fontWeight: Number(sub.style.fontWeight) || SUBTITLE_FONT_WEIGHT,
+      lineHeight: sub.style.lineHeight ?? DEFAULT_LINE_HEIGHT,
       textAnchor: sub.style.textAnchor ?? 'start',
     },
     measure,
@@ -141,16 +151,41 @@ export function nudgeAnnotationFromObstacles(
 
   if (collidingObs.length === 0) return false;
 
-  // Resolve the data point pixel position for offset calculations
-  const px = resolvePosition(originalAnnotation.x, scales.x);
-  const py = resolvePosition(originalAnnotation.y, scales.y);
-  if (px === null || py === null) return false;
+  // A guard, not an input: the nudge geometry below comes from `bounds` and
+  // `connector.endpoint`, not from the data point. But an annotation whose
+  // position no longer resolves has nothing to anchor a connector to, so refuse
+  // to move it rather than shift a label away from a point we can't locate.
+  if (
+    resolvePosition(originalAnnotation.x, scales.x) === null ||
+    resolvePosition(originalAnnotation.y, scales.y) === null
+  ) {
+    return false;
+  }
 
   const candidates = generateNudgeCandidates(bounds, collidingObs, NUDGE_PADDING);
-  const fontSize = bounds.height / Math.max(1, label.text.split('\n').length);
+  // Read the size off the label, don't back-derive it from the box: `bounds` is
+  // the label ∪ subtitle union, so dividing its height by the *primary* line
+  // count returns roughly double the real size on a subtitled annotation, which
+  // silently doubles the margin slop below.
+  const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+
+  // A drop-line is a vertical rule running DOWN from the block to the point. Nudge
+  // the block below its own endpoint and the line inverts: it points up, away from
+  // the data, and the block covers the mark it was labelling. The resolver already
+  // placed it (side auto-flip, clamp against the chart top), so the only nudges
+  // worth taking are ones that keep it overhead.
+  const dropLineEndpointY =
+    label.connector?.style === 'drop-line' ? label.connector.endpoint?.y : undefined;
 
   for (const { dx, dy } of candidates) {
     const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };
+
+    if (
+      dropLineEndpointY !== undefined &&
+      candidateBounds.y + candidateBounds.height > dropLineEndpointY
+    ) {
+      continue;
+    }
 
     // Check no collisions with any obstacle
     const stillCollides = obstacles.some(
@@ -213,16 +248,25 @@ export function resolveAnnotationCollisions(
     );
 
     if (collidingBounds.length > 0) {
-      // Find the original spec to get data point coordinates for connector recomputation
-      const originalSpec = originalSpecs[i];
+      // `annotations` is a filtered view of `originalSpecs` -- an annotation that
+      // failed to resolve was dropped -- so index by the stamped spec index, not
+      // by position here. Falling back to `i` keeps a hand-built layout working.
+      const originalSpec = originalSpecs[annotation.specIndex ?? i];
 
       if (originalSpec?.type === 'text') {
+        // A guard, not an input: same as in nudgeAnnotationFromObstacles, the
+        // geometry below comes from `bounds` and `connector.endpoint`. Refuse to
+        // move a label whose data point we can no longer locate.
         const px = resolvePosition(originalSpec.x, scales.x);
         const py = resolvePosition(originalSpec.y, scales.y);
 
         if (px !== null && py !== null) {
           const candidates = generateNudgeCandidates(bounds, collidingBounds, NUDGE_PADDING);
-          const fontSize = bounds.height / Math.max(1, label.text.split('\n').length);
+          // Read the size off the label, don't back-derive it from the box: `bounds` is
+          // the label ∪ subtitle union, so dividing its height by the *primary* line
+          // count returns roughly double the real size on a subtitled annotation, which
+          // silently doubles the margin slop below.
+          const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
 
           for (const { dx, dy } of candidates) {
             const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };

@@ -93,9 +93,22 @@ describe('annotation connectors', () => {
       },
     ]);
 
-    expect(container.querySelectorAll('.oc-annotation-dot')).toHaveLength(1);
-    expect(container.querySelector('.oc-annotation-endpoint-ring')).toBeNull();
-    expect(container.querySelector('.oc-annotation-endpoint-dot')).toBeNull();
+    // The bullseye was a ring circle with a filled dot circle stacked on the same
+    // centre. Asserting on `.oc-annotation-endpoint-ring`/`-dot` proved nothing:
+    // the renderer never emitted those classes, so querySelector returned null no
+    // matter what it drew. Count the circles the renderer actually puts at the
+    // data point instead, and pin the single survivor to the open-ring look.
+    const layer = container.querySelector('g.oc-annotations')!;
+    const dots = [...layer.querySelectorAll('circle')];
+    expect(dots).toHaveLength(1);
+
+    const dot = dots[0];
+    expect(dot.getAttribute('class')).toBe('oc-annotation-dot');
+    // Open ring, not a filled bullseye centre: the interior takes the surface fill
+    // and the colour lives in the stroke.
+    expect(dot.getAttribute('fill')).toBe('#ffffff');
+    expect(dot.getAttribute('stroke')).toBe('#8f8f8f');
+    expect(Number(dot.getAttribute('stroke-width'))).toBeGreaterThan(0);
   });
 
   it('gives the arrowed curve the label ink and the plain leader a gray hairline', () => {
