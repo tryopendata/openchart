@@ -130,7 +130,13 @@ function renderAnnotation(
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', `oc-annotation oc-annotation-${annotation.type}`);
-  g.setAttribute('data-annotation-index', String(index));
+  // Edit mode reads this back as `spec.annotations[index]`, so it has to be the
+  // SPEC index, not the render position. `layout.annotations` is both filtered
+  // (an annotation outside the domain resolves to nothing and is dropped) and
+  // re-sorted by `zIndex`, so the two diverge: with a zIndex set, position 0 can
+  // be spec annotation 1, and dragging one label moves the other. Fall back to the
+  // position for a hand-built layout that carries no `specIndex`.
+  g.setAttribute('data-annotation-index', String(annotation.specIndex ?? index));
   if (annotation.id) {
     g.setAttribute('data-annotation-id', annotation.id);
   }

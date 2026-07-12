@@ -24,9 +24,10 @@ import {
   nudgeAnnotationFromObstacles,
   resolveAnnotationCollisions,
 } from './collisions';
-import { SUBTITLE_FONT_WEIGHT, SUBTITLE_GAP, subtitleFontSize } from './constants';
+import { SUBTITLE_FONT_WEIGHT, subtitleFontSize } from './constants';
 import type { AnnotationMeasureTextFn } from './geometry';
-import { computeTextBlockBounds, heuristicMeasure, refreshConnector } from './geometry';
+import { heuristicMeasure } from './geometry';
+import { moveAnnotationTo } from './move';
 import {
   findBestPlacement,
   isAutoPlacement,
@@ -38,7 +39,6 @@ import { resolveRangeAnnotation } from './resolve-range';
 import { resolveRefLineAnnotation } from './resolve-refline';
 import {
   makeAnnotationLabelStyle,
-  markerClearance,
   resolveLedeFontWeight,
   resolveTextAnnotation,
 } from './resolve-text';
@@ -254,57 +254,29 @@ export function computeAnnotations(
         ctx.debugPlacement,
       );
 
-      // Apply placement result to the resolved annotation
+      // Commit the placement. `moveAnnotationTo` owns every piece of the block's
+      // geometry -- label, subtitle, both bounds caches, connector -- so this pass
+      // does not get to invent its own copy of any of them. It used to, and the
+      // copies drifted: this one re-derived the subtitle's baseline from a font-metric
+      // sum spelled `+ 2` while the resolver spelled it `SUBTITLE_GAP`, so a subtitled
+      // callout rendered 3px off from where the search had actually scored it.
       if (resolved.label) {
-        resolved.label.x = result.labelX;
-        resolved.label.y = result.labelY;
-        resolved.label.style = {
-          ...resolved.label.style,
-          textAnchor: result.textAnchor,
-        };
-        // `result.bounds` is the UNION of the label and its subtitle — the box
-        // placement scored, and the box other annotations must avoid. But
-        // `label.bounds` is the label-only text box by contract (the renderer
-        // sizes the `background` plate from it), so recompute it rather than
-        // stamping the union in and handing a subtitled annotation a plate sized
-        // to both lines. The union goes to `resolved.bounds` below.
-        resolved.label.bounds = computeTextBlockBounds(
+        moveAnnotationTo(
+          resolved,
+          resolved.label,
           result.labelX,
           result.labelY,
-          annotation.text,
-          { ...resolved.label.style, textAnchor: result.textAnchor },
           ctx.measure,
+          result.textAnchor,
         );
-
-        // The subtitle carries absolute coordinates, so it has to follow the
-        // label. findBestPlacement scored the candidate with the subtitle in
-        // exactly this spot, so the stamped result must land there too.
-        if (resolved.subtitle) {
-          const primaryLineCount = annotation.text.split('\n').length;
-          const primaryFontSize = labelStyle.fontSize;
-          resolved.subtitle.x = result.labelX;
-          resolved.subtitle.y =
-            result.labelY +
-            primaryFontSize * labelStyle.lineHeight * primaryLineCount +
-            SUBTITLE_GAP;
-          resolved.subtitle.style = {
-            ...resolved.subtitle.style,
-            textAnchor: result.textAnchor,
-          };
-        }
-
-        if (resolved.label.connector) {
-          resolved.label.connector = refreshConnector(
-            resolved.label.connector,
-            result.bounds,
-            markerClearance(resolved.dot),
-          );
-        }
       }
-      resolved.bounds = result.bounds;
 
-      // Add this annotation's bounds as obstacle for subsequent auto annotations
-      workingObstacles.push({ ...result.bounds, kind: 'annotation' } as PlacementObstacle);
+      // Add this annotation's bounds as obstacle for subsequent auto annotations.
+      // Read it back off the annotation rather than reusing `result.bounds`: the
+      // mover is the authority on the block's extent, and `result.bounds` is the
+      // search's own estimate of it. One of them has to be the source of truth.
+      const placedBounds = resolved.bounds ?? result.bounds;
+      workingObstacles.push({ ...placedBounds, kind: 'annotation' } as PlacementObstacle);
     }
   } else if (autoQueue.length > 0) {
     // Fallback: no SVG dimensions, use legacy nudge for auto annotations
@@ -325,46 +297,29 @@ export function computeAnnotations(
   // Resolve annotation-to-annotation collisions for non-auto-placed annotations.
   // When auto placement ran, those annotations already avoid each other via the
   // obstacle-accumulation loop above, so only explicitly placed ones need this.
-  if (autoQueue.length > 0) {
-    // Build aligned pairs of explicit annotations + their specs
-    const autoIndices = new Set(autoQueue.map((q) => q.index));
-    const explicitAnnotations: ResolvedAnnotation[] = [];
-    const explicitSpecs: NormalizedChartSpec['annotations'] = [];
-    let specIdx = 0;
-    for (let i = 0; i < annotations.length; i++) {
-      // Walk specIdx past any compact-skipped specs
-      while (specIdx < spec.annotations.length) {
-        const s = spec.annotations[specIdx];
-        if (!isCompact || s.responsive === false) break;
-        specIdx++;
-      }
-      if (specIdx >= spec.annotations.length) break;
-      if (autoIndices.has(i)) {
-        specIdx++;
-        continue;
-      }
-      explicitAnnotations.push(annotations[i]);
-      explicitSpecs.push(spec.annotations[specIdx]);
-      specIdx++;
-    }
-    if (explicitAnnotations.length > 1) {
-      resolveAnnotationCollisions(
-        explicitAnnotations,
-        explicitSpecs,
-        ctx.scales,
-        ctx.chartArea,
-        ctx.measure,
-      );
-    }
-  } else {
-    resolveAnnotationCollisions(
-      annotations,
-      spec.annotations,
-      ctx.scales,
-      ctx.chartArea,
-      ctx.measure,
-    );
-  }
+  //
+  // There used to be a hand-rolled walk here that built a *compacted* pair of
+  // arrays (explicit annotations + their specs) and passed those. It was the
+  // second representation of the same list, and once `resolveAnnotationCollisions`
+  // started keying on the stamped `specIndex` — a GLOBAL index — the compacted
+  // spec array no longer matched it. Every lookup was off by the number of auto
+  // annotations, and the `type === 'text'` guard swallowed the resulting
+  // `undefined`, so collision avoidance silently did nothing the moment a single
+  // auto-placed annotation was present. Which is the *encouraged* authoring style:
+  // a bare `{ type: 'text' }` is auto-placed by definition.
+  //
+  // So don't rebuild the list. Pass the real one, and let the pass skip the
+  // auto-placed entries itself — `specIndex` already tells it which spec each
+  // resolved annotation came from.
+  const autoIndices = new Set(autoQueue.map((q) => q.index));
+  resolveAnnotationCollisions(
+    annotations,
+    spec.annotations,
+    ctx.scales,
+    ctx.chartArea,
+    ctx.measure,
+    autoQueue.length > 0 ? (i) => autoIndices.has(i) : undefined,
+  );
 
   // Clamp labels that overflow the SVG boundary back inside
   if (ctx.svg.width > 0 && ctx.svg.height > 0) {

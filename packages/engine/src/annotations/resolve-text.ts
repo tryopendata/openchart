@@ -35,6 +35,7 @@ import {
   LIGHT_TEXT_FILL,
   SUBTITLE_FONT_WEIGHT,
   SUBTITLE_GAP,
+  subtitleBaselineY,
   subtitleFontSize,
 } from './constants';
 import {
@@ -279,7 +280,7 @@ export function resolveTextAnnotation(
       fontWeight: SUBTITLE_FONT_WEIGHT,
       fill: mutedFill,
     };
-    const subtitleY = labelY + fontSize * DEFAULT_LINE_HEIGHT * primaryLineCount + SUBTITLE_GAP;
+    const subtitleY = subtitleBaselineY(labelY, fontSize, DEFAULT_LINE_HEIGHT, primaryLineCount);
     subtitle = {
       text: annotation.subtitle,
       x: labelX,
@@ -486,7 +487,9 @@ function resolveDropLineAnnotation(
       fontWeight: SUBTITLE_FONT_WEIGHT,
       fill: isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL,
     };
-    const subtitleY = labelBaselineY + lineHeight * lines.length + SUBTITLE_GAP;
+    // `lineHeight` here is already the pixel line-height (fontSize * ratio), not the
+    // ratio, so the size factor is folded in and passed as 1. Same sum either way.
+    const subtitleY = subtitleBaselineY(labelBaselineY, 1, lineHeight, lines.length);
     subtitle = {
       text: annotation.subtitle,
       x: labelX,

@@ -476,6 +476,41 @@ asterisks.
 { "type": "text", "x": "2022-06", "y": 8.5, "text": "Inflation peaked at **8.5%**" }
 ```
 
+### 11g. `anchor` + `offset` now pins a callout: collision avoidance leaves it alone
+
+An annotation with **both** an `anchor` and a non-zero `offset` is treated as
+hand-placed. It lands exactly where you put it, and the automatic passes (obstacle
+avoidance, annotation-vs-annotation nudging) route *around* it instead of moving it.
+
+Previously the obstacle pass could override an authored offset. Because a line mark
+is one long obstacle, the control was not aimable: on a line chart a right-anchored
+`offset: { dy: -10 }` moved the block by **zero** pixels, while `dy: -15` teleported
+it 56px. Same knob, no monotonicity.
+
+**Who's affected:** Specs that set `anchor` *and* `offset` on a text annotation, and
+were (knowingly or not) relying on the engine to shove the result somewhere else.
+
+**Search for:** text annotations carrying both `anchor` and `offset`.
+
+**Fix:** Check those callouts render where you want. Since the offset is now obeyed
+literally, an offset that was previously being corrected by the nudge will now land
+where it actually says. Values tuned by trial-and-error against the old behavior may
+need retuning — but they will now behave predictably.
+
+An `offset` **without** an `anchor` is unchanged: that annotation is still auto-placed
+by the scored search, the offset just nudges the search result, and it still dodges
+obstacles.
+
+```jsonc
+// Pinned: goes exactly here, nothing moves it.
+{ "type": "text", "x": "1910", "y": -0.42, "text": "Coldest decade on record",
+  "anchor": "top", "offset": { "dx": 200, "dy": -6 } }
+
+// Auto-placed, then nudged: still avoids the line.
+{ "type": "text", "x": "2021", "y": 33.9, "text": "Obesity flattens here",
+  "offset": { "dy": -20 } }
+```
+
 ---
 
 ## Verification

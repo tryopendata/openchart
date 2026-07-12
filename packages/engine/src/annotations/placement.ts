@@ -4,7 +4,7 @@
  */
 
 import { overlapArea, type Rect } from '@opendata-ai/openchart-core';
-import { ANCHOR_OFFSET } from './constants';
+import { ANCHOR_OFFSET, subtitleBaselineY } from './constants';
 import {
   type AnnotationMeasureTextFn,
   computeTextBlockBounds,
@@ -523,8 +523,16 @@ export function findBestPlacement(
 
         // Union with subtitle bounds if present
         if (subtitleText && subtitleStyle) {
-          const primaryLineCount = text.split('\n').length;
-          const subtitleY = labelY + style.fontSize * style.lineHeight * primaryLineCount + 2;
+          // This pass SCORES a candidate subtitle position; the resolver STAMPS the
+          // one that renders. They must agree, or the scored block height is a lie
+          // and the bounds other annotations avoid no longer contain the subtitle.
+          // Hence the shared formula rather than a second copy of the sum.
+          const subtitleY = subtitleBaselineY(
+            labelY,
+            style.fontSize,
+            style.lineHeight,
+            text.split('\n').length,
+          );
           const subBounds = computeTextBlockBounds(
             labelX,
             subtitleY,

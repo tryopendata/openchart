@@ -159,14 +159,32 @@ describe('auto-thinning in faceted charts', () => {
     expect(footnotes.length).toBeLessThanOrEqual(facetedSpec.annotations?.length ?? 0);
 
     // The same spec annotation gets the same number in every panel it demoted in.
+    //
+    // Pair on `specIndex`, not on array position. A panel's annotation list is a
+    // FILTERED, zIndex-SORTED view of the spec's, so `first.annotations[i]` and
+    // `second.annotations[i]` are only the same authored annotation by luck --
+    // and the moment one panel drops one, this silently starts comparing two
+    // different callouts and asserting nothing.
     const [first, second] = layout.facet!.panels;
-    for (let i = 0; i < first.annotations.length; i++) {
-      const a = first.annotations[i];
-      const b = second.annotations[i];
-      if (a.footnoteIndex != null && b.footnoteIndex != null) {
-        expect(b.footnoteIndex).toBe(a.footnoteIndex);
+    const numbering = new Map<number, number>();
+    let pairsChecked = 0;
+
+    for (const panel of [first, second]) {
+      for (const a of panel.annotations) {
+        if (a.footnoteIndex == null || a.specIndex == null) continue;
+        const seen = numbering.get(a.specIndex);
+        if (seen === undefined) {
+          numbering.set(a.specIndex, a.footnoteIndex);
+        } else {
+          expect(a.footnoteIndex).toBe(seen);
+          pairsChecked++;
+        }
       }
     }
+
+    // Guard the guard: if nothing demoted in both panels there is no pairing to
+    // check, and every assertion above is vacuous.
+    expect(pairsChecked).toBeGreaterThan(0);
   });
 
   it('reserves a band for the footnote list below the grid', () => {

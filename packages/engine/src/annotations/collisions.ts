@@ -3,96 +3,14 @@
  * resolving annotation-to-annotation overlaps, and clamping to SVG bounds.
  */
 
-import type {
-  Rect,
-  ResolvedAnnotation,
-  ResolvedLabel,
-  TextAnnotation,
-} from '@opendata-ai/openchart-core';
+import type { Rect, ResolvedAnnotation, TextAnnotation } from '@opendata-ai/openchart-core';
 import { detectCollision } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
-import {
-  CLAMP_MARGIN,
-  DEFAULT_ANNOTATION_FONT_SIZE,
-  DEFAULT_LINE_HEIGHT,
-  NUDGE_PADDING,
-  SUBTITLE_FONT_WEIGHT,
-  subtitleFontSize,
-} from './constants';
-import {
-  type AnnotationMeasureTextFn,
-  computeTextBlockBounds,
-  estimateLabelBounds,
-  heuristicMeasure,
-  refreshConnector,
-  unionRects,
-} from './geometry';
+import { CLAMP_MARGIN, DEFAULT_ANNOTATION_FONT_SIZE, NUDGE_PADDING } from './constants';
+import { type AnnotationMeasureTextFn, heuristicMeasure } from './geometry';
+import { annotationBlockBounds, moveAnnotationBy } from './move';
 import { resolvePosition } from './position';
-import { markerClearance } from './resolve-text';
-
-/** The full block an annotation occupies: label text plus its subtitle. */
-function annotationBlockBounds(
-  annotation: ResolvedAnnotation,
-  label: ResolvedLabel,
-  measure: AnnotationMeasureTextFn,
-): Rect {
-  const labelBounds = estimateLabelBounds(label, measure);
-  const sub = annotation.subtitle;
-  if (!sub) return labelBounds;
-
-  const subBounds = computeTextBlockBounds(
-    sub.x,
-    sub.y,
-    sub.text,
-    {
-      // Every resolver stamps all three, so these fallbacks are unreachable today.
-      // They still come from the constants: a hand-rolled `?? 10` here is a second
-      // definition of the subtitle's type, free to drift from the real one.
-      fontSize: sub.style.fontSize ?? subtitleFontSize(DEFAULT_ANNOTATION_FONT_SIZE),
-      fontWeight: Number(sub.style.fontWeight) || SUBTITLE_FONT_WEIGHT,
-      lineHeight: sub.style.lineHeight ?? DEFAULT_LINE_HEIGHT,
-      textAnchor: sub.style.textAnchor ?? 'start',
-    },
-    measure,
-  );
-  return unionRects(labelBounds, subBounds);
-}
-
-/**
- * Move an annotation's label (and its subtitle, which carries absolute
- * coordinates) by (dx, dy), refreshing the connector and both bounds caches.
- */
-function shiftAnnotation(
-  annotation: ResolvedAnnotation,
-  label: ResolvedLabel,
-  dx: number,
-  dy: number,
-  measure: AnnotationMeasureTextFn,
-): void {
-  const movedLabel: ResolvedLabel = { ...label, x: label.x + dx, y: label.y + dy };
-  if (annotation.subtitle) {
-    annotation.subtitle = {
-      ...annotation.subtitle,
-      x: annotation.subtitle.x + dx,
-      y: annotation.subtitle.y + dy,
-    };
-  }
-
-  movedLabel.bounds = estimateLabelBounds(movedLabel, measure);
-  const blockBounds = annotationBlockBounds(annotation, movedLabel, measure);
-
-  if (movedLabel.connector) {
-    movedLabel.connector = refreshConnector(
-      movedLabel.connector,
-      blockBounds,
-      markerClearance(annotation.dot),
-    );
-  }
-
-  annotation.label = movedLabel;
-  annotation.bounds = blockBounds;
-}
 
 /**
  * Generate candidate displacement vectors to move `selfBounds` clear of each
@@ -129,6 +47,26 @@ export function generateNudgeCandidates(
 }
 
 /**
+ * Did the author hand-place this block, or just nudge one the engine placed?
+ *
+ * BOTH an `anchor` and a non-zero `offset` mean hand-placed: the author picked the
+ * side AND the exact distance, so the block goes there and the automatic passes keep
+ * their hands off it. That is what makes `offset` an aimable control -- without this,
+ * the obstacle pass overrides it, and on a line chart (where the polyline is one long
+ * obstacle) `dy: -10` moved a right-anchored block by ZERO pixels while `dy: -15`
+ * teleported it 56px.
+ *
+ * An offset with NO anchor is a different thing: the block is auto-placed by the scored
+ * search and the offset is a tweak applied on top of wherever the search put it. That
+ * one still wants avoidance -- it never chose a side, so it has no claim to a spot.
+ * (`offset: { dx: 0 }` is likewise not an instruction, just the default spelled out.)
+ */
+function hasExplicitOffset(annotation: TextAnnotation): boolean {
+  if (annotation.anchor === undefined) return false;
+  return (annotation.offset?.dx ?? 0) !== 0 || (annotation.offset?.dy ?? 0) !== 0;
+}
+
+/**
  * Try to reposition a text annotation to avoid overlapping with obstacle rects
  * (legend bounds, etc.). First tries standard anchor alternatives, then
  * calculates specific offsets needed to clear obstacles. Returns true if moved.
@@ -142,6 +80,13 @@ export function nudgeAnnotationFromObstacles(
   measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): boolean {
   if (annotation.type !== 'text' || !annotation.label) return false;
+
+  // An `offset` is the author stating where the block goes. Auto-avoidance is for
+  // annotations that didn't say. Nudging one anyway makes the offset behave like a
+  // suggestion the engine is free to ignore: on a line chart the polyline is one
+  // long obstacle, so `dy: -10` moved a right-anchored block by *zero* pixels and
+  // `dy: -15` teleported it 56px. Same knob, no monotonicity -- unauthorable.
+  if (hasExplicitOffset(originalAnnotation)) return false;
 
   const label = annotation.label;
   const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
@@ -208,7 +153,7 @@ export function nudgeAnnotationFromObstacles(
       labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
     if (inBounds) {
-      shiftAnnotation(annotation, label, dx, dy, measure);
+      moveAnnotationBy(annotation, label, dx, dy, measure);
       return true;
     }
   }
@@ -230,6 +175,16 @@ export function resolveAnnotationCollisions(
   scales: ResolvedScales,
   chartArea: Rect,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
+  /**
+   * Predicate on the index into `annotations`: true for an auto-placed entry.
+   *
+   * The scored placement pass already positioned those to avoid everything, so
+   * they must not be nudged again — but they still occupy space, so they stay in
+   * `placedBounds` and the explicit annotations avoid them. Callers pass the full
+   * annotation list; nobody hand-builds a filtered copy, because a second
+   * representation of the list is what breaks `specIndex` lookups.
+   */
+  isAutoPlaced?: (index: number) => boolean,
 ): void {
   const placedBounds: Rect[] = [];
 
@@ -242,17 +197,31 @@ export function resolveAnnotationCollisions(
     const label = annotation.label;
     const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
 
+    // Auto-placed: already sited by the scored search. Claim its space so the
+    // explicit annotations route around it, then leave it alone.
+    if (isAutoPlaced?.(i)) {
+      placedBounds.push(bounds);
+      continue;
+    }
+
+    // `annotations` is a filtered view of `originalSpecs` -- an annotation that
+    // failed to resolve was dropped -- so index by the stamped spec index, not
+    // by position here. Falling back to `i` keeps a hand-built layout working.
+    const originalSpec = originalSpecs[annotation.specIndex ?? i];
+
+    // Hand-offset: same rule as the obstacle pass. The author said where it goes,
+    // so it keeps its spot and the others route around it.
+    if (originalSpec?.type === 'text' && hasExplicitOffset(originalSpec)) {
+      placedBounds.push(bounds);
+      continue;
+    }
+
     // Check against all previously placed annotation blocks
     const collidingBounds = placedBounds.filter(
       (pb) => pb.width > 0 && pb.height > 0 && detectCollision(bounds, pb),
     );
 
     if (collidingBounds.length > 0) {
-      // `annotations` is a filtered view of `originalSpecs` -- an annotation that
-      // failed to resolve was dropped -- so index by the stamped spec index, not
-      // by position here. Falling back to `i` keeps a hand-built layout working.
-      const originalSpec = originalSpecs[annotation.specIndex ?? i];
-
       if (originalSpec?.type === 'text') {
         // A guard, not an input: same as in nudgeAnnotationFromObstacles, the
         // geometry below comes from `bounds` and `connector.endpoint`. Refuse to
@@ -287,7 +256,7 @@ export function resolveAnnotationCollisions(
               labelCenterY <= chartArea.y + chartArea.height + fontSize;
 
             if (inBounds) {
-              shiftAnnotation(annotation, label, dx, dy, measure);
+              moveAnnotationBy(annotation, label, dx, dy, measure);
               break;
             }
           }
@@ -341,6 +310,6 @@ export function clampAnnotationsToBounds(
 
     if (dx === 0 && dy === 0) continue;
 
-    shiftAnnotation(annotation, label, dx, dy, measure);
+    moveAnnotationBy(annotation, label, dx, dy, measure);
   }
 }

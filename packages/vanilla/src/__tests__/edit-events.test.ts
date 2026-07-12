@@ -43,6 +43,22 @@ const textAnnotatedSpec: ChartSpec = {
 };
 
 /**
+ * Two annotations whose `zIndex` REVERSES their spec order.
+ *
+ * The engine sorts `layout.annotations` by zIndex before handing them to the
+ * renderer, so render position 0 here is spec annotation 1. Every other spec in
+ * this file has exactly one annotation, which makes `index === specIndex`
+ * trivially true and hides the difference entirely.
+ */
+const reorderedAnnotatedSpec: ChartSpec = {
+  ...barSpec,
+  annotations: [
+    { type: 'text', x: 10, y: 'A', text: 'First in the spec', id: 'first', zIndex: 5 },
+    { type: 'text', x: 30, y: 'C', text: 'Second in the spec', id: 'second', zIndex: 1 },
+  ],
+};
+
+/**
  * Curved connector, which is the ONLY path that draws an arrowhead — and the only
  * one where edit mode has to find the connector's tip by parsing the arrowhead
  * polyline (`wireConnectorEndpointDrag`'s curved branch). Every other spec in this
@@ -707,6 +723,56 @@ describe('edit events', () => {
       }
 
       chart.destroy();
+    });
+
+    // The engine sorts annotations by zIndex, so the order the renderer draws them
+    // in is NOT the order they appear in the spec. Edit mode maps a dragged label
+    // back to its spec annotation, and if it maps by render position it edits the
+    // wrong one -- you drag one callout and a different one jumps.
+    describe('drags map to the right spec annotation, whatever the render order', () => {
+      it('drags the annotation you grabbed, not the one that shares its slot', () => {
+        const onEdit = vi.fn();
+        const chart = createChart(container, reorderedAnnotatedSpec, { onEdit });
+
+        // Grab by identity, not by position: this is the one the user clicked.
+        const secondG = container.querySelector(
+          '.oc-annotation-text[data-annotation-id="second"]',
+        ) as SVGGElement;
+        expect(secondG).toBeTruthy();
+
+        simulateDrag(secondG, 100, 100, 120, 110);
+
+        expect(onEdit).toHaveBeenCalledTimes(1);
+        const edit: ElementEdit = onEdit.mock.calls[0][0];
+        expect(edit.type).toBe('annotation');
+        if (edit.type === 'annotation') {
+          // The edit must carry the annotation whose label was actually dragged.
+          // Pre-fix this returned the *other* one (zIndex had swapped their slots).
+          expect(edit.annotation.id).toBe('second');
+        }
+
+        chart.destroy();
+      });
+
+      it('each label carries the index of its own spec annotation', () => {
+        const chart = createChart(container, reorderedAnnotatedSpec, { onEdit: vi.fn() });
+
+        const groups = Array.from(
+          container.querySelectorAll('.oc-annotation-text'),
+        ) as SVGGElement[];
+        expect(groups).toHaveLength(2);
+
+        for (const g of groups) {
+          const id = g.getAttribute('data-annotation-id');
+          const index = Number(g.getAttribute('data-annotation-index'));
+          const expected = reorderedAnnotatedSpec.annotations!.findIndex(
+            (a) => 'id' in a && a.id === id,
+          );
+          expect(index).toBe(expected);
+        }
+
+        chart.destroy();
+      });
     });
 
     // A curved connector has no <line> to read x2/y2 from, so edit mode recovers

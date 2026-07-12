@@ -80,6 +80,22 @@ export function subtitleFontSize(primaryFontSize: number): number {
   return Math.round(primaryFontSize * SUBTITLE_FONT_SIZE_RATIO);
 }
 
+/**
+ * The subtitle's baseline, given the label's. Same contract as `subtitleFontSize`,
+ * and shared for the same reason: the auto-placement pass SCORES a candidate
+ * subtitle position and the resolver STAMPS the one that renders. Two copies of
+ * this sum is two chances to disagree -- and they did, one spelling the gap
+ * `SUBTITLE_GAP` and the other a bare `+ 2`.
+ */
+export function subtitleBaselineY(
+  labelY: number,
+  primaryFontSize: number,
+  primaryLineHeight: number,
+  primaryLineCount: number,
+): number {
+  return labelY + primaryFontSize * primaryLineHeight * primaryLineCount + SUBTITLE_GAP;
+}
+
 /** Gap (px) between the label bounding box and the start of its connector. */
 export const CONNECTOR_STANDOFF = 6;
 
