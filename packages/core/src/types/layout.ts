@@ -127,6 +127,12 @@ export interface AxisTick {
   position: number;
   /** Formatted label string for display. */
   label: string;
+  /**
+   * The untruncated label, set only when `label` was shortened with an ellipsis
+   * to fit the rotated-tick reservation. Renderers should surface this as the
+   * tick's accessible/tooltip text so the full category name is never lost.
+   */
+  fullLabel?: string;
   /** Secondary label text from axis.labelField. */
   subtitle?: string;
 }
@@ -459,10 +465,14 @@ export interface TextMarkLayout {
   type: 'textMark';
   /** Stable identity key for data-update transitions. */
   key?: string;
-  /** X position. */
+  /** X position, including any `dx` offset. */
   x: number;
-  /** Y position. */
+  /** Y position, including any `dy` offset. */
   y: number;
+  /** Data-space anchor before `dx` was applied. Set only when the mark is offset. */
+  anchorX?: number;
+  /** Data-space anchor before `dy` was applied. Set only when the mark is offset. */
+  anchorY?: number;
   /** Text content to display. */
   text: string;
   /** Fill color. */
@@ -475,6 +485,11 @@ export interface TextMarkLayout {
   fontFamily?: string;
   /** Horizontal text alignment. */
   textAnchor: 'start' | 'middle' | 'end';
+  /**
+   * Vertical baseline. Omit for the SVG default (alphabetic), which the calendar
+   * and parliament marks rely on — they hand-compute baseline-relative offsets.
+   */
+  dominantBaseline?: 'auto' | 'hanging' | 'central' | 'text-after-edge';
   /** Rotation angle in degrees. */
   angle?: number;
   /** Original data row. */
@@ -1725,6 +1740,16 @@ export interface CompileOptions {
   measureText?: MeasureTextFn;
   /** Extra pixels to reserve on the right margin for a secondary y-axis. Set by compileLayer when resolve.scale.y is 'independent'. */
   rightAxisReserve?: number;
+  /**
+   * Extra pixels to reserve below the plot for the auto-thinning footnote list.
+   * Chicken-and-egg: thinning needs the chart area to decide what to demote, but
+   * the footnotes it produces need space carved out of that same area. compileChart
+   * resolves it by compiling once to learn the footnote count, then recompiling with
+   * this set. Callers should not set it; it is internal to that second pass.
+   */
+  footnoteReserve?: number;
+  /** Recursion depth of the footnote-reserve convergence pass. Internal to compileChart. */
+  footnotePass?: number;
   /**
    * Use this chart drawing area instead of computing one from chrome, axes,
    * and legend reservations. Set by compileLayer when compiling leaf layers so

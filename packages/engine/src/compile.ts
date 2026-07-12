@@ -32,6 +32,7 @@ import type {
 import {
   adaptTheme,
   computeLabelBounds,
+  footnoteBandHeight,
   generateAltText,
   generateDataTable,
   getBreakpoint,
@@ -116,6 +117,15 @@ function applySpecSize(spec: unknown, options: CompileOptions): CompileOptions {
 // ---------------------------------------------------------------------------
 // Chart compilation
 // ---------------------------------------------------------------------------
+
+/**
+ * Cap on footnote-reserve convergence passes in compileChart. Reserving space
+ * for the footnote list shrinks the plot, which can demote one more label and
+ * grow the list; the count only ever grows and is bounded by the annotation
+ * count, so this terminates on its own. The cap is a guard against a
+ * measurement quirk oscillating, not the normal exit condition.
+ */
+const MAX_FOOTNOTE_PASSES = 3;
 
 /**
  * Inject sparkline-mode visual defaults that depend on the resolved theme.
@@ -754,10 +764,46 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // alignment with the resolved array is preserved.
   let footnotes: import('@opendata-ai/openchart-core').AnnotationFootnote[] | undefined;
   if (chartSpec.autoThin && annotations.length > 1) {
-    const result = thinAnnotations(annotations, chartSpec.annotations, annotationMeasure);
+    const result = thinAnnotations(
+      annotations,
+      chartSpec.annotations,
+      annotationMeasure,
+      chartArea,
+    );
     annotations = result.annotations;
     if (result.footnotes.length > 0) {
       footnotes = result.footnotes;
+
+      // The footnote list renders below the plot, but nothing reserved space for
+      // it — thinning only just now discovered how many lines there are. Recompile
+      // with that band carved out of the bottom margin so the list can't overrun
+      // the source row and the brand watermark.
+      //
+      // Reserving shrinks the plot, which can push a further label out of bounds
+      // and grow the list by one, so re-reserve until the count settles. The
+      // count only ever grows (a smaller plot never keeps more labels inline) and
+      // is bounded by the annotation count, so this terminates; the explicit cap
+      // is a belt-and-braces guard against a measurement quirk oscillating.
+      //
+      // A frozen area short-circuits all of this. `compileLayer` pins every
+      // leaf to the primary layout's coordinate space, and `chartArea` above
+      // takes `frozenChartArea` over anything `computeDimensions` produces --
+      // so a grown bottom margin is computed and then thrown away. The
+      // recursion would re-run the whole compile up to MAX_FOOTNOTE_PASSES
+      // times and return the identical layout. Skip it rather than pay for it.
+      const reserve = footnoteBandHeight(footnotes.length, theme);
+      const currentReserve = options.footnoteReserve ?? 0;
+      if (
+        !options.frozenChartArea &&
+        reserve > currentReserve &&
+        (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
+      ) {
+        return compileChart(spec, {
+          ...optionsInput,
+          footnoteReserve: reserve,
+          footnotePass: (options.footnotePass ?? 0) + 1,
+        });
+      }
     }
   }
 

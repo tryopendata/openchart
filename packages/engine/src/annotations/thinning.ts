@@ -3,8 +3,9 @@
  * overlap to numbered dot markers with footnote text below the chart.
  *
  * Single deterministic pass: run collision resolution once at the full chart
- * area, then greedily place by priority. Annotations that overlap an
- * already-placed one get demoted. No iterative layout convergence.
+ * area, then greedily place by priority. A candidate is demoted when it either
+ * overlaps an already-placed label or escapes the plot area. No iterative
+ * layout convergence.
  */
 
 import type {
@@ -37,11 +38,16 @@ export interface ThinningResult {
  *   minus any that were skipped by `computeAnnotations`).
  * @param specs - The full spec annotations array, index-aligned with `annotations`.
  *   Non-text specs are ignored; text specs provide `priority` and `responsive`.
+ * @param plotArea - The plot rect. Candidates whose label doesn't fit inside it are
+ *   demoted: at narrow widths labels spread across different y positions never
+ *   pairwise-collide, so collision alone would leave them inline and overflowing.
+ *   Omit to skip the containment test.
  */
 export function thinAnnotations(
   annotations: ResolvedAnnotation[],
   specs: Annotation[],
   measure: AnnotationMeasureTextFn,
+  plotArea?: Rect,
 ): ThinningResult {
   if (annotations.length <= 1) {
     return { annotations, footnotes: [] };
@@ -100,7 +106,7 @@ export function thinAnnotations(
       (pb) => pb.width > 0 && pb.height > 0 && detectCollision(bounds, pb),
     );
 
-    if (overlaps) {
+    if (overlaps || !fitsWithin(bounds, plotArea)) {
       const footnoteIndex = footnotes.length + 1;
       footnotes.push({
         index: footnoteIndex,
@@ -113,4 +119,18 @@ export function thinAnnotations(
   }
 
   return { annotations, footnotes };
+}
+
+/**
+ * Whether a label's bounds sit entirely inside the plot. No plot area means no
+ * containment constraint, so everything fits.
+ */
+function fitsWithin(bounds: Rect, plotArea: Rect | undefined): boolean {
+  if (!plotArea || plotArea.width <= 0 || plotArea.height <= 0) return true;
+  return (
+    bounds.x >= plotArea.x &&
+    bounds.y >= plotArea.y &&
+    bounds.x + bounds.width <= plotArea.x + plotArea.width &&
+    bounds.y + bounds.height <= plotArea.y + plotArea.height
+  );
 }

@@ -134,4 +134,57 @@ describe('thinAnnotations', () => {
     expect(result.annotations[1].footnoteIndex).toBeUndefined();
     expect(result.annotations[2].footnoteIndex).toBe(1);
   });
+
+  describe('plot-area containment', () => {
+    // Label `y` is the text baseline, so bounds extend upward from it: a label
+    // at y=40 with a 12px font spans roughly y=28..44. Keep test baselines far
+    // enough from the top edge that a fitting label really does fit.
+    const plotArea = { x: 0, y: 0, width: 120, height: 200 };
+
+    it('demotes a label that overflows the plot even when nothing collides', () => {
+      // Stacked at different y, so the two never pairwise-collide. The second
+      // runs off the right edge and must still demote.
+      const annotations = [
+        makeResolved(0, 40, 'Fits'),
+        makeResolved(60, 120, 'Way too long to fit here'),
+      ];
+      const specs: Annotation[] = [makeSpec('Fits'), makeSpec('Way too long to fit here')];
+      const result = thinAnnotations(annotations, specs, measure, plotArea);
+      expect(result.footnotes).toHaveLength(1);
+      expect(result.footnotes[0].text).toBe('Way too long to fit here');
+      expect(result.annotations[0].footnoteIndex).toBeUndefined();
+      expect(result.annotations[1].footnoteIndex).toBe(1);
+    });
+
+    it('keeps a label that fits inside the plot', () => {
+      const annotations = [makeResolved(0, 40, 'A'), makeResolved(0, 120, 'B')];
+      const specs: Annotation[] = [makeSpec('A'), makeSpec('B')];
+      const result = thinAnnotations(annotations, specs, measure, plotArea);
+      expect(result.footnotes).toHaveLength(0);
+    });
+
+    it('never demotes a pinned label, even when it overflows', () => {
+      const annotations = [
+        makeResolved(0, 40, 'Fits'),
+        makeResolved(60, 120, 'Way too long to fit here'),
+      ];
+      const specs: Annotation[] = [
+        makeSpec('Fits'),
+        makeSpec('Way too long to fit here', { responsive: false }),
+      ];
+      const result = thinAnnotations(annotations, specs, measure, plotArea);
+      expect(result.footnotes).toHaveLength(0);
+      expect(result.annotations[1].footnoteIndex).toBeUndefined();
+    });
+
+    it('applies no containment constraint when plotArea is omitted', () => {
+      const annotations = [
+        makeResolved(0, 40, 'Fits'),
+        makeResolved(60, 120, 'Way too long to fit here'),
+      ];
+      const specs: Annotation[] = [makeSpec('Fits'), makeSpec('Way too long to fit here')];
+      const result = thinAnnotations(annotations, specs, measure);
+      expect(result.footnotes).toHaveLength(0);
+    });
+  });
 });

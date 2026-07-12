@@ -1,6 +1,6 @@
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import { compileLayer } from '../compile';
+import { compileChart, compileLayer } from '../compile';
 import { flattenLayers } from '../compiler/normalize';
 
 // ---------------------------------------------------------------------------
@@ -320,6 +320,79 @@ describe('compileLayer', () => {
     // Layout should compile without error and have marks
     expect(layout.marks.length).toBeGreaterThan(0);
     expect(layout.area.width).toBeGreaterThan(0);
+  });
+
+  it('unions the y domain even when x is nominal', () => {
+    // The channel loop used to `return` on the first channel that couldn't take
+    // part. x is visited first, so a nominal x abandoned y as well: each leaf
+    // then re-fit y to its own rows and every bar rendered full-height,
+    // regardless of value. Bars-plus-labels is the most common layered shape
+    // there is, so the function missed its own headline case.
+    const spec: LayerSpec = {
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [{ n: 'A', v: 50 }],
+          encoding: {
+            x: { field: 'n', type: 'nominal' as const },
+            y: { field: 'v', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'bar' as const,
+          data: [{ n: 'B', v: 100 }],
+          encoding: {
+            x: { field: 'n', type: 'nominal' as const },
+            y: { field: 'v', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const rects = compileLayer(spec, compileOpts).marks.filter((m) => m.type === 'rect');
+    expect(rects).toHaveLength(2);
+
+    // Sharing a zero-based domain, the 50-bar is exactly half the 100-bar.
+    const [half, full] = rects.map((r) => (r as { height: number }).height);
+    expect(half).toBeCloseTo(full / 2, 1);
+  });
+
+  it('gives layered bars the same geometry as the equivalent single chart', () => {
+    // The shared domain is pinned onto each leaf as `scale.domain`, and an
+    // explicit domain skips the `zero !== false` baselining a normal scale
+    // applies. Without folding zero back in, the union lands as a literal
+    // [50, 100] and the 50-bar collapses to a 1px sliver against its baseline.
+    const encoding = {
+      x: { field: 'n', type: 'nominal' as const },
+      y: { field: 'v', type: 'quantitative' as const },
+    };
+    const heights = (layout: { marks: Array<{ type: string }> }) =>
+      layout.marks
+        .filter((m) => m.type === 'rect')
+        .map((r) => Number((r as unknown as { height: number }).height.toFixed(1)));
+
+    const single = compileChart(
+      {
+        mark: 'bar',
+        data: [
+          { n: 'A', v: 50 },
+          { n: 'B', v: 100 },
+        ],
+        encoding,
+      },
+      compileOpts,
+    );
+    const layered = compileLayer(
+      {
+        layer: [
+          { mark: 'bar' as const, data: [{ n: 'A', v: 50 }], encoding },
+          { mark: 'bar' as const, data: [{ n: 'B', v: 100 }], encoding },
+        ],
+      },
+      compileOpts,
+    );
+
+    expect(heights(layered)).toEqual(heights(single));
   });
 
   it('compiles a single-layer LayerSpec identically to a ChartSpec', () => {
