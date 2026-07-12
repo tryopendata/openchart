@@ -8,7 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Breaking Changes
 
-- **area!:** multi-series area charts default to `overlap` mode (gradient-filled, partially translucent) instead of stacked. Pass `mark: { type: 'area', stack: true }` (or `stack: 'zero'`) to opt into the previous stacked behavior. The default change makes per-series comparison the dominant idiom; stacked totals remain a one-flag opt-in.
+- **bar/area!:** multi-series bar and area charts now default to stacked (`stack: 'zero'`) when a `color` encoding is present, matching Vega-Lite. Pass `stack: null` on the value channel to keep the old grouped (bar) or overlap (area) behavior. See [migration guide](docs/migrating-v8.md#1-multi-series-bararea-charts-default-to-stacked).
+- **arc!:** `encoding.theta` is now the canonical value channel for arc, waffle, and parliament marks. `encoding.y` still works at runtime (sugar rewrites it to theta with a deprecation warning) but is removed from the TypeScript type.
+- **encoding!:** dead channels `shape`, `radius`, `href`, and `order` removed from the `Encoding` interface and `MARK_ENCODING_RULES`. They were never implemented. Runtime strips them with a warning for backward compat.
+- **annotations!:** `RefLineAnnotation.type` narrowed from `'refline' | 'rule'` to `'refline'`. Runtime rewrites `'rule'` to `'refline'` with a deprecation warning.
+- **sankey/tilemap/barlist!:** top-level `valueFormat` deprecated in favor of `encoding.value.format`. Both work; encoding-level takes precedence.
+- **core!:** `ChartType` and `CHART_TYPES` exports removed. Use `MarkType` and `MARK_TYPES`.
+- **labels!:** `labels.offsets` marked `@deprecated`. The collision system handles label positioning automatically now.
 
 ### Bug Fixes
 
