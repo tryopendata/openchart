@@ -139,7 +139,9 @@ export const steps: ChartStoryProps<ScrollyRow>['steps'] = [
           x: '2021',
           y: 33.9,
           text: 'Obesity flattens here',
-          offset: { dy: -20 },
+          anchor: 'top',
+          offset: { dy: -26 },
+          connector: true,
         },
       ],
     },
@@ -164,7 +166,9 @@ export const steps: ChartStoryProps<ScrollyRow>['steps'] = [
           x: '2021',
           y: 33.9,
           text: 'Obesity flattens here',
-          offset: { dy: -20 },
+          anchor: 'top',
+          offset: { dy: -26 },
+          connector: true,
         },
         {
           id: 'record',
@@ -172,7 +176,9 @@ export const steps: ChartStoryProps<ScrollyRow>['steps'] = [
           x: '2022',
           y: 11.6,
           text: 'Still climbing, to a record 12.3%',
-          offset: { dy: 30 },
+          anchor: 'top',
+          offset: { dy: -26 },
+          connector: true,
         },
       ],
       chrome: { title: 'Diabetes never bent' },
@@ -214,18 +220,20 @@ const zoomedSpec: ChartSpec<ScrollyRow> = {
   chrome: { ...fixtureBase.chrome, title: 'The climb stalled' },
 };
 
+/**
+ * The annotations a step declares, read back off `steps` rather than retyped.
+ *
+ * These used to be a second copy. The file header claimed the fixtures and the live
+ * demo "can never drift out of sync", and then they did: fixing a callout in `steps`
+ * changed the narrative and left the screenshots -- the things the visual suite
+ * actually guards -- rendering the old spec.
+ */
+const stepAnnotations = (i: number): ChartSpec<ScrollyRow>['annotations'] =>
+  steps[i].spec?.annotations as ChartSpec<ScrollyRow>['annotations'];
+
 const annotatedSpec: ChartSpec<ScrollyRow> = {
   ...zoomedSpec,
-  annotations: [
-    {
-      id: 'divergence',
-      type: 'text',
-      x: '2021',
-      y: 33.9,
-      text: 'Obesity flattens here',
-      offset: { dy: -20 },
-    },
-  ],
+  annotations: stepAnnotations(3),
 };
 
 const payoffSpec: ChartSpec<ScrollyRow> = {
@@ -240,24 +248,7 @@ const payoffSpec: ChartSpec<ScrollyRow> = {
       scale: { domain: [0, 40], clip: false, nice: false },
     },
   },
-  annotations: [
-    {
-      id: 'divergence',
-      type: 'text',
-      x: '2021',
-      y: 33.9,
-      text: 'Obesity flattens here',
-      offset: { dy: -20 },
-    },
-    {
-      id: 'record',
-      type: 'text',
-      x: '2022',
-      y: 11.6,
-      text: 'Still climbing, to a record 12.3%',
-      offset: { dy: 30 },
-    },
-  ],
+  annotations: stepAnnotations(4),
   chrome: { ...fixtureBase.chrome, title: 'Diabetes never bent' },
 };
 

@@ -179,57 +179,28 @@ describe('a callout lands where the anchor says it should', () => {
     }
   });
 
-  test('an offset with no anchor is a tweak, not a placement -- it still gets out of the way', () => {
-    // An `offset` with an `anchor` is a placement and outranks avoidance (above). An
-    // offset with NO anchor is not: the block is sited by the auto-placement search and
-    // the offset just nudges wherever the search put it, so it still has to dodge the
-    // line. Exempting it too drove "Obesity flattens here" straight through its own
-    // curve in the scrollytelling story.
+  test('an offset with NO anchor is honored too -- an offset is a placement either way', () => {
+    // There is exactly one definition of "the author placed this": `isAutoPlacement`,
+    // which disqualifies ANY annotation carrying an offset from the scored search. So
+    // an anchorless offset is hand-placed just like an anchored one, and must be just
+    // as aimable.
     //
-    // The real geometry from that story: a flattening curve, so the block lands in the
-    // shallow region and the offset walks it back down onto the line.
-    const layout: ChartLayout = compileChart(
-      {
-        mark: 'line',
-        data: [
-          { y: '2019', v: 32.2 },
-          { y: '2020', v: 31.8 },
-          { y: '2021', v: 33.8 },
-          { y: '2022', v: 33.5 },
-          { y: '2023', v: 34.2 },
-          { y: '2024', v: 34.1 },
-        ],
-        encoding: {
-          x: { field: 'y', type: 'ordinal' },
-          y: { field: 'v', type: 'quantitative', scale: { domain: [30, 36], nice: false } },
-        },
-        annotations: [
-          { type: 'text', x: '2021', y: 33.8, text: 'Obesity flattens here', offset: { dy: -20 } },
-        ],
-      } as ChartSpec,
-      { width: 1000, height: 440 },
-    );
+    // A gate here that additionally demanded an `anchor` did not create a second tier
+    // of annotation -- it just disagreed with the function that had already routed the
+    // thing, and the whole dead-zone/teleport pathology stayed alive on exactly the
+    // annotations the extra condition excluded:
+    //
+    //   dy=-5 -> moved -2.42px      dy=-10 -> moved -2.42px   (dead zone)
+    //   dy=-15 -> moved -39.75px    dy=-20 -> moved -39.75px  (teleport, then dead again)
+    const rel = (dy: number) => {
+      const a = first([{ type: 'text', x: 'Mar', y: 30, text: 'Peak', offset: { dy } }]);
+      return a.label!.y - a.dot!.y;
+    };
 
-    const b = layout.annotations![0].bounds!;
-    const points = layout.marks.flatMap((m) => ('points' in m ? (m.points ?? []) : []));
-
-    // Sample the SEGMENTS, not just the vertices. The block sits between two data
-    // points, so a vertex-only check sails through while the line runs clean across
-    // the words -- which is how this very assertion was vacuous on the first attempt.
-    const crossesBlock = (() => {
-      for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[i];
-        const p1 = points[i + 1];
-        for (let t = 0; t <= 1; t += 0.02) {
-          const x = p0.x + (p1.x - p0.x) * t;
-          const y = p0.y + (p1.y - p0.y) * t;
-          if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) return true;
-        }
-      }
-      return false;
-    })();
-
-    expect(crossesBlock).toBe(false);
+    const base = rel(-5);
+    for (const dy of [-10, -15, -20, -40]) {
+      expect(rel(dy) - base).toBeCloseTo(dy + 5, 5);
+    }
   });
 
   test('a pinned callout still gets clamped onto the canvas', () => {
@@ -254,17 +225,36 @@ describe('a callout lands where the anchor says it should', () => {
     expect(b.y + b.height).toBeLessThanOrEqual(460);
   });
 
-  test('a hand-offset block keeps its spot; the other one routes around it', () => {
-    // The corollary of "explicit wins": the pinned block does not move to dodge its
-    // neighbour, but it still claims its space, so nothing prints on top of it.
-    const [pinned, other] = annotationsFor([
-      { type: 'text', x: 'Mar', y: 30, text: 'Pinned', anchor: 'top', offset: { dx: 0, dy: -30 } },
-      { type: 'text', x: 'Mar', y: 30, text: 'Other', anchor: 'top' },
-    ]);
+  // Two callouts on the SAME point, so they genuinely fight for the same space. An
+  // earlier version of this test used `dy: -30`, which parked them 13px apart -- they
+  // never collided, so "routes around it" was asserted against a pair that had nothing
+  // to route around, and the ordering bug below shipped underneath it.
+  const PINNED: Ann = {
+    type: 'text',
+    x: 'Mar',
+    y: 30,
+    text: 'Pinned block here',
+    anchor: 'top',
+    offset: { dy: -25 },
+  };
+  const MOVABLE: Ann = { type: 'text', x: 'Mar', y: 30, text: 'Other block here', anchor: 'top' };
 
-    // Sits exactly where it was told to, neighbour or no neighbour.
-    expect(pinned.label!.y - pinned.dot!.y).toBeCloseTo(offsetBy('top', 0, -30).dy, 5);
-    expect(overlaps(pinned.bounds!, other.bounds!)).toBe(false);
+  test.each([
+    ['pinned first', [PINNED, MOVABLE]],
+    ['pinned second', [MOVABLE, PINNED]],
+  ] as const)('a hand-offset block keeps its spot and the other routes around it (%s)', (_, specs) => {
+    const resolved = annotationsFor([...specs]);
+    const pinned = resolved[specs.indexOf(PINNED)];
+    const movable = resolved[specs.indexOf(MOVABLE)];
+
+    // Pinned: exactly where it was told, neighbour or no neighbour.
+    expect(pinned.label!.y - pinned.dot!.y).toBeCloseTo(offsetBy('top', 0, -25).dy, 5);
+
+    // Movable: actually got out of the way. Both halves matter -- asserting only
+    // "they don't overlap" passes on a pair that never overlapped to begin with.
+    const solo = first([MOVABLE]);
+    expect(movable.label!.y - movable.dot!.y).not.toBeCloseTo(solo.label!.y - solo.dot!.y, 1);
+    expect(overlaps(pinned.bounds!, movable.bounds!)).toBe(false);
   });
 
   test('a callout does not sit on top of the line it annotates', () => {
@@ -336,27 +326,40 @@ describe('the leader actually connects the words to the data', () => {
     expect(a.dot).toBeDefined();
   });
 
-  test('whatever leader IS drawn is long enough to read as a line', () => {
-    // Sweep the label in toward its point across both voices. Every connector
-    // that survives must have a strokable length -- never a 1px nub.
-    for (const arrow of [false, true]) {
-      for (let dy = 0; dy <= 26; dy++) {
-        const a = first([
-          {
-            type: 'text',
-            x: 'Mar',
-            y: 30,
-            text: 'Peak',
-            anchor: 'top',
-            offset: { dx: 0, dy },
-            connector: arrow ? { type: 'straight', arrow: true } : 'straight',
-          },
-        ]);
-        const stroke = strokedLength(a);
-        if (stroke === null) continue; // suppressed, which is a valid outcome
-        expect(stroke).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
-      }
+  test.each([
+    false,
+    true,
+  ])('whatever leader IS drawn is long enough to read as a line (arrow: %s)', (arrow) => {
+    // Sweep the label away from its point and back in. Every connector that
+    // survives must have a strokable length -- never a 1px nub with a head on it.
+    //
+    // The sweep has to START far out. An earlier version ran dy 0..26, which only
+    // ever moves the block TOWARD the point: 53 of its 54 iterations hit the
+    // `suppressed` continue, the arrowed branch drew nothing at all, and the whole
+    // test asserted once. It could not have failed if the arrow-aware gate were
+    // deleted, which is the one thing it exists to protect.
+    let asserted = 0;
+
+    for (let dy = -60; dy <= 26; dy++) {
+      const a = first([
+        {
+          type: 'text',
+          x: 'Mar',
+          y: 30,
+          text: 'Peak',
+          anchor: 'top',
+          offset: { dx: 0, dy },
+          connector: arrow ? { type: 'straight', arrow: true } : 'straight',
+        },
+      ]);
+      const stroke = strokedLength(a);
+      if (stroke === null) continue; // suppressed, which is a valid outcome
+      expect(stroke).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
+      asserted++;
     }
+
+    // Guard the guard: a sweep that suppresses everything asserts nothing.
+    expect(asserted).toBeGreaterThan(30);
   });
 
   test('a drop-line hangs straight down from the words to the point', () => {

@@ -10,6 +10,7 @@ import type { ResolvedScales } from '../layout/scales';
 import { CLAMP_MARGIN, DEFAULT_ANNOTATION_FONT_SIZE, NUDGE_PADDING } from './constants';
 import { type AnnotationMeasureTextFn, heuristicMeasure } from './geometry';
 import { annotationBlockBounds, moveAnnotationBy } from './move';
+import { isAutoPlacement } from './placement';
 import { resolvePosition } from './position';
 
 /**
@@ -47,23 +48,28 @@ export function generateNudgeCandidates(
 }
 
 /**
- * Did the author hand-place this block, or just nudge one the engine placed?
+ * Did the author hand-place this block?
  *
- * BOTH an `anchor` and a non-zero `offset` mean hand-placed: the author picked the
- * side AND the exact distance, so the block goes there and the automatic passes keep
- * their hands off it. That is what makes `offset` an aimable control -- without this,
- * the obstacle pass overrides it, and on a line chart (where the polyline is one long
- * obstacle) `dy: -10` moved a right-anchored block by ZERO pixels while `dy: -15`
- * teleported it 56px.
+ * A hand-placed block goes exactly where it was put, and the automatic passes keep
+ * their hands off it. Without that, the obstacle pass overrides the author: on a line
+ * chart the polyline is one long obstacle, so `dy: -10` moved a block by ZERO pixels
+ * while `dy: -15` teleported it 56px. Same knob, no monotonicity -- unaimable.
  *
- * An offset with NO anchor is a different thing: the block is auto-placed by the scored
- * search and the offset is a tweak applied on top of wherever the search put it. That
- * one still wants avoidance -- it never chose a side, so it has no claim to a spot.
- * (`offset: { dx: 0 }` is likewise not an instruction, just the default spelled out.)
+ * `isAutoPlacement` is the ONLY definition of "did the author place this". It already
+ * decides which resolve path an annotation takes, and a non-zero `offset` disqualifies
+ * the scored search there, so an offset ALWAYS means hand-placed -- with or without an
+ * `anchor`. A second, subtly different rule here (an earlier version of this function
+ * additionally demanded an `anchor`) does not create a second tier of annotation; it
+ * just disagrees with the function that actually routed the thing, and the disagreement
+ * shows up as an un-aimable offset on exactly the annotations the extra condition
+ * excluded.
+ *
+ * `offset: { dx: 0 }` is not an instruction, just the default spelled out, so it does
+ * not count -- matching `applyOffset`, which is likewise a no-op for it.
  */
 function hasExplicitOffset(annotation: TextAnnotation): boolean {
-  if (annotation.anchor === undefined) return false;
-  return (annotation.offset?.dx ?? 0) !== 0 || (annotation.offset?.dy ?? 0) !== 0;
+  const moved = (annotation.offset?.dx ?? 0) !== 0 || (annotation.offset?.dy ?? 0) !== 0;
+  return moved && !isAutoPlacement(annotation);
 }
 
 /**
@@ -186,35 +192,42 @@ export function resolveAnnotationCollisions(
    */
   isAutoPlaced?: (index: number) => boolean,
 ): void {
-  const placedBounds: Rect[] = [];
-
-  for (let i = 0; i < annotations.length; i++) {
-    const annotation = annotations[i];
-    if (annotation.type !== 'text' || !annotation.label) {
-      continue;
-    }
-
-    const label = annotation.label;
-    const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
-
-    // Auto-placed: already sited by the scored search. Claim its space so the
-    // explicit annotations route around it, then leave it alone.
-    if (isAutoPlaced?.(i)) {
-      placedBounds.push(bounds);
-      continue;
-    }
-
+  /** Immovable here: sited by the scored search, or hand-placed by the author. */
+  const isPinned = (annotation: ResolvedAnnotation, i: number): boolean => {
+    if (isAutoPlaced?.(i)) return true;
     // `annotations` is a filtered view of `originalSpecs` -- an annotation that
     // failed to resolve was dropped -- so index by the stamped spec index, not
     // by position here. Falling back to `i` keeps a hand-built layout working.
-    const originalSpec = originalSpecs[annotation.specIndex ?? i];
+    const spec = originalSpecs[annotation.specIndex ?? i];
+    return spec?.type === 'text' && hasExplicitOffset(spec);
+  };
 
-    // Hand-offset: same rule as the obstacle pass. The author said where it goes,
-    // so it keeps its spot and the others route around it.
-    if (originalSpec?.type === 'text' && hasExplicitOffset(originalSpec)) {
-      placedBounds.push(bounds);
-      continue;
-    }
+  const isText = (a: ResolvedAnnotation) => a.type === 'text' && !!a.label;
+
+  // Seed with EVERY pinned block before nudging anything.
+  //
+  // This used to be one forward sweep that pushed a pinned block's bounds when it
+  // reached it. That only lets annotations authored *after* a pinned one route
+  // around it -- everything earlier was nudged against a `placedBounds` that did not
+  // contain it yet, so "the pinned block claims its space" held or failed purely on
+  // spec order, and two callouts on the same point printed on top of each other when
+  // the pinned one happened to be listed second.
+  const placedBounds: Rect[] = [];
+  for (let i = 0; i < annotations.length; i++) {
+    const annotation = annotations[i];
+    if (!isText(annotation) || !isPinned(annotation, i)) continue;
+    placedBounds.push(
+      annotation.bounds ?? annotationBlockBounds(annotation, annotation.label!, measure),
+    );
+  }
+
+  for (let i = 0; i < annotations.length; i++) {
+    const annotation = annotations[i];
+    if (!isText(annotation) || isPinned(annotation, i)) continue;
+
+    const label = annotation.label!;
+    const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
+    const originalSpec = originalSpecs[annotation.specIndex ?? i];
 
     // Check against all previously placed annotation blocks
     const collidingBounds = placedBounds.filter(
@@ -265,9 +278,7 @@ export function resolveAnnotationCollisions(
     }
 
     // Add this annotation's final bounds to the placed list
-    placedBounds.push(
-      annotation.bounds ?? annotationBlockBounds(annotation, annotation.label, measure),
-    );
+    placedBounds.push(annotation.bounds ?? annotationBlockBounds(annotation, label, measure));
   }
 }
 

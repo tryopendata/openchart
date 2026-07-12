@@ -86,14 +86,19 @@ export function subtitleFontSize(primaryFontSize: number): number {
  * subtitle position and the resolver STAMPS the one that renders. Two copies of
  * this sum is two chances to disagree -- and they did, one spelling the gap
  * `SUBTITLE_GAP` and the other a bare `+ 2`.
+ *
+ * `primaryLineHeightPx` is the line's height in PIXELS, not the ratio -- so a caller
+ * holding a ratio multiplies by the font size on the way in. Taking the two factors
+ * separately meant the one caller that already had the product had to pass a magic
+ * `1` for the font size, and a signature you have to outsmart is a signature that
+ * will eventually be outsmarted wrong.
  */
 export function subtitleBaselineY(
   labelY: number,
-  primaryFontSize: number,
-  primaryLineHeight: number,
+  primaryLineHeightPx: number,
   primaryLineCount: number,
 ): number {
-  return labelY + primaryFontSize * primaryLineHeight * primaryLineCount + SUBTITLE_GAP;
+  return labelY + primaryLineHeightPx * primaryLineCount + SUBTITLE_GAP;
 }
 
 /** Gap (px) between the label bounding box and the start of its connector. */

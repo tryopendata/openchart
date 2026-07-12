@@ -529,8 +529,7 @@ export function findBestPlacement(
           // Hence the shared formula rather than a second copy of the sum.
           const subtitleY = subtitleBaselineY(
             labelY,
-            style.fontSize,
-            style.lineHeight,
+            style.fontSize * style.lineHeight,
             text.split('\n').length,
           );
           const subBounds = computeTextBlockBounds(
