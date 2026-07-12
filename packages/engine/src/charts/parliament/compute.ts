@@ -149,12 +149,12 @@ function resolveMajority(
   }
   // An explicit `seats` must land inside the chamber (1..totalSeats). `{ seats: 0 }`
   // or a negative/oversized value would draw the majority marker off the seat
-  // arc where it reads as nothing at all, so warn and fall back to the default.
+  // arc where it reads as nothing, so fall back to the default. The user-facing
+  // warning for this fires once from normalize (warnParliamentMajorityRange),
+  // which owns the shared warnings channel; this clamp is the defensive backstop
+  // for direct compute calls.
   let seats = majorityLine.seats ?? defaultSeats;
   if (!Number.isFinite(seats) || seats < 1 || seats > totalSeats) {
-    console.warn(
-      `[openchart] parliament majorityLine.seats (${majorityLine.seats}) is outside the valid range 1..${totalSeats}; using the default majority threshold of ${defaultSeats}.`,
-    );
     seats = defaultSeats;
   }
   return { seats, label: majorityLine.label ?? `${seats} to win` };

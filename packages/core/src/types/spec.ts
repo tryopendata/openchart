@@ -284,11 +284,15 @@ export interface MarkDef {
    */
   seatRadius?: number | 'auto';
   /**
-   * Whether to draw the majority-threshold line and "N to win" label on
-   * parliament marks. Defaults to true. Only meaningful when `type` is
-   * `'parliament'`.
+   * The majority-threshold line and "N to win" label on parliament marks. Only
+   * meaningful when `type` is `'parliament'`. `true` (default) draws the line at
+   * a simple majority (half the seats plus one); `false` hides it. The object
+   * form overrides the threshold and label: `{ seats }` sets a custom seat count
+   * (e.g. a two-thirds supermajority) and `{ label }` overrides the default
+   * "N to win" text. A `seats` value outside `1..totalSeats` warns and falls
+   * back to the simple-majority default.
    */
-  majorityLine?: boolean;
+  majorityLine?: boolean | { seats?: number; label?: string };
 }
 
 // ---------------------------------------------------------------------------

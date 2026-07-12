@@ -20,6 +20,7 @@ import type {
   GraphSpec,
   LabelSpec,
   LayerSpec,
+  MarkDef,
   SankeySpec,
   TableSpec,
   TileMapSpec,
@@ -327,6 +328,42 @@ function normalizeYouDrawIt(
  */
 const BEESWARM_POINT_BUDGET = 2000;
 
+/**
+ * Warn when a parliament `majorityLine.seats` override lands outside the chamber
+ * (below 1 or above the seat total). The mark falls back to a simple majority in
+ * that case, so this is a non-fatal warning routed through the shared warnings
+ * array (dedup + single emit boundary) rather than a raw console.warn in mark
+ * computation. Only the object form of majorityLine carries a seat count.
+ */
+function warnParliamentMajorityRange(
+  markDef: MarkDef,
+  encoding: Encoding,
+  data: DataRow[],
+  warnings: string[],
+): void {
+  const majorityLine = markDef.majorityLine;
+  if (!majorityLine || typeof majorityLine !== 'object') return;
+  const requested = majorityLine.seats;
+  if (requested === undefined) return;
+
+  const valueField = encoding.theta?.field ?? encoding.y?.field;
+  if (!valueField) return;
+
+  let totalSeats = 0;
+  for (const row of data) {
+    const v = Number(row[valueField]);
+    if (Number.isFinite(v)) totalSeats += v;
+  }
+  if (totalSeats <= 0) return;
+
+  if (!Number.isFinite(requested) || requested < 1 || requested > totalSeats) {
+    const fallback = Math.floor(totalSeats / 2) + 1;
+    warnings.push(
+      `[openchart] parliament mark.majorityLine.seats (${requested}) is outside the valid range 1..${totalSeats}; using the default majority threshold of ${fallback}.`,
+    );
+  }
+}
+
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
   const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
   const markType = resolveMarkType(spec.mark);
@@ -349,6 +386,10 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     warnings.push(
       `[openchart] beeswarm received ${spec.data.length} data points, past the ~${BEESWARM_POINT_BUDGET}-point budget where individual dots stop being readable and the swarm collapses into a solid band. Sample the data down, or summarize the distribution with mark: 'tick' (strip plot) or a binned histogram (bin transform + mark: 'bar').`,
     );
+  }
+
+  if (markType === 'parliament') {
+    warnParliamentMajorityRange(markDef, encoding, spec.data, warnings);
   }
 
   return {

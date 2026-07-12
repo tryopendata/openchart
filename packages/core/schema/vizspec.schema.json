@@ -240,8 +240,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -463,8 +479,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -686,8 +718,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -909,8 +957,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -1132,8 +1196,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -1355,8 +1435,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -1578,8 +1674,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -1801,8 +1913,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -2024,8 +2152,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -2247,8 +2391,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -2470,8 +2630,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -2693,8 +2869,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -2916,8 +3108,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -3139,8 +3347,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -3362,8 +3586,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -3585,8 +3825,24 @@
                           "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                         },
                         "majorityLine": {
-                          "type": "boolean",
-                          "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                         }
                       },
                       "required": [
@@ -8700,8 +8956,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -9103,8 +9375,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -9506,8 +9794,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -9909,8 +10213,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -10312,8 +10632,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -10715,8 +11051,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -11118,8 +11470,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -11521,8 +11889,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -11924,8 +12308,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -12327,8 +12727,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -12730,8 +13146,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -13133,8 +13565,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -13536,8 +13984,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -13939,8 +14403,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -14342,8 +14822,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [
@@ -14745,8 +15241,24 @@
                       "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
                     },
                     "majorityLine": {
-                      "type": "boolean",
-                      "description": "Whether to draw the majority-threshold line and \"N to win\" label on parliament marks. Defaults to true. Only meaningful when `type` is `'parliament'`."
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
                     }
                   },
                   "required": [

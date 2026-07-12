@@ -4,7 +4,7 @@ import type {
   RuleMarkLayout,
   TextMarkLayout,
 } from '@opendata-ai/openchart-core';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { compileChart } from '../../../compile';
 
@@ -163,6 +163,64 @@ describe('parliament majority line', () => {
     });
     const label = layout.marks.find((m): m is TextMarkLayout => m.type === 'textMark');
     expect(label?.text).toBe('Supermajority');
+  });
+
+  it('accepts the object majorityLine form through the typed spec API', () => {
+    // Authored as a fully-typed ChartSpec (not the Record<string, unknown>
+    // overrides shim), so this covers the public type surface: MarkDef.
+    // majorityLine must accept { seats, label }, not just boolean.
+    const layout = compileChart(
+      {
+        mark: { type: 'parliament', majorityLine: { seats: 290 } },
+        data: usHouse,
+        encoding: {
+          theta: { field: 'seats', type: 'quantitative' },
+          color: { field: 'party', type: 'nominal', scale: partyColors },
+        },
+      },
+      { width: 640, height: 400 },
+    );
+    const label = layout.marks.find((m): m is TextMarkLayout => m.type === 'textMark');
+    expect(label?.text).toBe('290 to win');
+  });
+
+  describe('out-of-range majorityLine.seats', () => {
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+    const warned = (): string[] => warnSpy.mock.calls.map((c) => String(c[0]));
+
+    it('warns and falls back to the default when seats is above the chamber', () => {
+      // 435-seat house; 999 would draw the marker off the seat arc. The mark
+      // falls back to the simple majority (218) and a warning surfaces through
+      // the shared compile warnings channel (emitted once, deduped).
+      const layout = compileHouse({
+        mark: { type: 'parliament', majorityLine: { seats: 999 } },
+      });
+      const warning = warned().find((w) => w.includes('majorityLine.seats'));
+      expect(warning).toBeDefined();
+      expect(warning).toContain('999');
+      expect(warning).toContain('1..435');
+      expect(warning).toContain('218');
+
+      // The rendered label uses the fallback, not the out-of-range value.
+      const label = layout.marks.find((m): m is TextMarkLayout => m.type === 'textMark');
+      expect(label?.text).toBe('218 to win');
+    });
+
+    it('warns for seats below 1 (e.g. { seats: 0 })', () => {
+      compileHouse({ mark: { type: 'parliament', majorityLine: { seats: 0 } } });
+      expect(warned().some((w) => w.includes('majorityLine.seats'))).toBe(true);
+    });
+
+    it('does not warn for an in-range seats override', () => {
+      compileHouse({ mark: { type: 'parliament', majorityLine: { seats: 290 } } });
+      expect(warned().filter((w) => w.includes('majorityLine.seats'))).toEqual([]);
+    });
   });
 
   it('computes the default majority as floor(total/2)+1 for an odd chamber', () => {
