@@ -49,9 +49,14 @@ const COLLISION_PADDING = 4;
  *   minus any that were skipped by `computeAnnotations`).
  * @param specs - The full spec annotations array, index-aligned with `annotations`.
  *   Non-text specs are ignored; text specs provide `priority` and `responsive`.
- * @param plotArea - The plot rect. Candidates whose label doesn't fit inside it are
- *   demoted: at narrow widths labels spread across different y positions never
- *   pairwise-collide, so collision alone would leave them inline and overflowing.
+ * @param plotArea - The plot rect. Sizes the coverage budget: labels are charged
+ *   against the plot they crowd, so the same label costs a larger share of a
+ *   smaller plot. Omit to skip the budget test.
+ * @param containerBounds - The rect a label must fit inside to stay inline. This
+ *   is the whole chart, NOT the plot: annotations render outside the clip path and
+ *   legitimately sit in the margins (above a peak, below a trough), which is what
+ *   collision avoidance already assumes. Fencing them to the plot would demote
+ *   ordinary callouts. Only labels escaping the chart entirely are demoted.
  *   Omit to skip the containment test.
  */
 export function thinAnnotations(
@@ -59,6 +64,7 @@ export function thinAnnotations(
   specs: Annotation[],
   measure: AnnotationMeasureTextFn,
   plotArea?: Rect,
+  containerBounds?: Rect,
 ): ThinningResult {
   if (annotations.length <= 1) {
     return { annotations, footnotes: [] };
@@ -118,6 +124,9 @@ export function thinAnnotations(
   const footnotes: AnnotationFootnote[] = [];
   const plotAreaSize = plotArea ? plotArea.width * plotArea.height : 0;
   const coverageBudget = plotAreaSize * COVERAGE_BUDGET;
+  // Containment is checked against the chart, not the plot — see the param docs.
+  // Callers that pass no container fall back to the plot rect.
+  const containment = containerBounds ?? plotArea;
   let usedArea = 0;
 
   for (const entry of candidates) {
@@ -141,7 +150,7 @@ export function thinAnnotations(
     const candidateArea = bounds.width * bounds.height;
     const overBudget = plotAreaSize > 0 && usedArea + candidateArea > coverageBudget;
 
-    if (overlaps || !fitsWithin(bounds, plotArea) || overBudget) {
+    if (overlaps || !fitsWithin(bounds, containment) || overBudget) {
       const footnoteIndex = footnotes.length + 1;
       footnotes.push({
         index: footnoteIndex,

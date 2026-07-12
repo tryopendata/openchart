@@ -781,6 +781,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       chartSpec.annotations,
       annotationMeasure,
       chartArea,
+      { x: 0, y: 0, width: dims.total.width, height: dims.total.height },
     );
     annotations = result.annotations;
     if (result.footnotes.length > 0) {
