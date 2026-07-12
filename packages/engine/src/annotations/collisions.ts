@@ -15,11 +15,74 @@ import type { ResolvedScales } from '../layout/scales';
 import { CLAMP_MARGIN, NUDGE_PADDING } from './constants';
 import {
   type AnnotationMeasureTextFn,
+  computeTextBlockBounds,
   estimateLabelBounds,
   heuristicMeasure,
-  recomputeConnector,
+  refreshConnector,
+  unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
+import { markerClearance } from './resolve-text';
+
+/** The full block an annotation occupies: label text plus its subtitle. */
+function annotationBlockBounds(
+  annotation: ResolvedAnnotation,
+  label: ResolvedLabel,
+  measure: AnnotationMeasureTextFn,
+): Rect {
+  const labelBounds = estimateLabelBounds(label, measure);
+  const sub = annotation.subtitle;
+  if (!sub) return labelBounds;
+
+  const subBounds = computeTextBlockBounds(
+    sub.x,
+    sub.y,
+    sub.text,
+    {
+      fontSize: sub.style.fontSize ?? 10,
+      fontWeight: Number(sub.style.fontWeight) || 400,
+      lineHeight: sub.style.lineHeight ?? 1.3,
+      textAnchor: sub.style.textAnchor ?? 'start',
+    },
+    measure,
+  );
+  return unionRects(labelBounds, subBounds);
+}
+
+/**
+ * Move an annotation's label (and its subtitle, which carries absolute
+ * coordinates) by (dx, dy), refreshing the connector and both bounds caches.
+ */
+function shiftAnnotation(
+  annotation: ResolvedAnnotation,
+  label: ResolvedLabel,
+  dx: number,
+  dy: number,
+  measure: AnnotationMeasureTextFn,
+): void {
+  const movedLabel: ResolvedLabel = { ...label, x: label.x + dx, y: label.y + dy };
+  if (annotation.subtitle) {
+    annotation.subtitle = {
+      ...annotation.subtitle,
+      x: annotation.subtitle.x + dx,
+      y: annotation.subtitle.y + dy,
+    };
+  }
+
+  movedLabel.bounds = estimateLabelBounds(movedLabel, measure);
+  const blockBounds = annotationBlockBounds(annotation, movedLabel, measure);
+
+  if (movedLabel.connector) {
+    movedLabel.connector = refreshConnector(
+      movedLabel.connector,
+      blockBounds,
+      markerClearance(annotation.dot),
+    );
+  }
+
+  annotation.label = movedLabel;
+  annotation.bounds = blockBounds;
+}
 
 /**
  * Generate candidate displacement vectors to move `selfBounds` clear of each
@@ -70,9 +133,10 @@ export function nudgeAnnotationFromObstacles(
 ): boolean {
   if (annotation.type !== 'text' || !annotation.label) return false;
 
-  const labelBounds = estimateLabelBounds(annotation.label, measure);
+  const label = annotation.label;
+  const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
   const collidingObs = obstacles.filter(
-    (obs) => obs.width > 0 && obs.height > 0 && detectCollision(labelBounds, obs),
+    (obs) => obs.width > 0 && obs.height > 0 && detectCollision(bounds, obs),
   );
 
   if (collidingObs.length === 0) return false;
@@ -82,21 +146,11 @@ export function nudgeAnnotationFromObstacles(
   const py = resolvePosition(originalAnnotation.y, scales.y);
   if (px === null || py === null) return false;
 
-  const candidates = generateNudgeCandidates(labelBounds, collidingObs, NUDGE_PADDING);
-  const fontSize = labelBounds.height / Math.max(1, annotation.label.text.split('\n').length);
+  const candidates = generateNudgeCandidates(bounds, collidingObs, NUDGE_PADDING);
+  const fontSize = bounds.height / Math.max(1, label.text.split('\n').length);
 
   for (const { dx, dy } of candidates) {
-    const newLabelX = annotation.label.x + dx;
-    const newLabelY = annotation.label.y + dy;
-
-    const candidateLabel: ResolvedLabel = {
-      ...annotation.label,
-      x: newLabelX,
-      y: newLabelY,
-      connector: recomputeConnector({ ...annotation.label, x: newLabelX, y: newLabelY }, px, py),
-    };
-
-    const candidateBounds = estimateLabelBounds(candidateLabel, measure);
+    const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };
 
     // Check no collisions with any obstacle
     const stillCollides = obstacles.some(
@@ -119,8 +173,7 @@ export function nudgeAnnotationFromObstacles(
       labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
     if (inBounds) {
-      annotation.label = candidateLabel;
-      annotation.label.bounds = candidateBounds;
+      shiftAnnotation(annotation, label, dx, dy, measure);
       return true;
     }
   }
@@ -134,7 +187,7 @@ export function nudgeAnnotationFromObstacles(
  * Iterates through text annotations in order, building a list of "placed"
  * bounding rects. When a later annotation overlaps an already-placed one,
  * it tries offset positions (below, above, left, right) to find a
- * non-colliding spot. Recomputes the connector origin after nudging.
+ * non-colliding spot. Recomputes the connector after nudging.
  */
 export function resolveAnnotationCollisions(
   annotations: ResolvedAnnotation[],
@@ -151,9 +204,10 @@ export function resolveAnnotationCollisions(
       continue;
     }
 
-    const bounds = estimateLabelBounds(annotation.label, measure);
+    const label = annotation.label;
+    const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
 
-    // Check against all previously placed annotation labels
+    // Check against all previously placed annotation blocks
     const collidingBounds = placedBounds.filter(
       (pb) => pb.width > 0 && pb.height > 0 && detectCollision(bounds, pb),
     );
@@ -168,20 +222,12 @@ export function resolveAnnotationCollisions(
 
         if (px !== null && py !== null) {
           const candidates = generateNudgeCandidates(bounds, collidingBounds, NUDGE_PADDING);
-          const fontSize = bounds.height / Math.max(1, annotation.label.text.split('\n').length);
+          const fontSize = bounds.height / Math.max(1, label.text.split('\n').length);
 
           for (const { dx, dy } of candidates) {
-            const newLabelX = annotation.label.x + dx;
-            const newLabelY = annotation.label.y + dy;
+            const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };
 
-            const candidateLabel: ResolvedLabel = {
-              ...annotation.label,
-              x: newLabelX,
-              y: newLabelY,
-            };
-            const candidateBounds = estimateLabelBounds(candidateLabel, measure);
-
-            // Check no collisions with any placed label
+            // Check no collisions with any placed block
             const stillCollides = placedBounds.some(
               (pb) => pb.width > 0 && pb.height > 0 && detectCollision(candidateBounds, pb),
             );
@@ -197,17 +243,7 @@ export function resolveAnnotationCollisions(
               labelCenterY <= chartArea.y + chartArea.height + fontSize;
 
             if (inBounds) {
-              annotation.label = {
-                ...annotation.label,
-                x: newLabelX,
-                y: newLabelY,
-                bounds: candidateBounds,
-                connector: recomputeConnector(
-                  { ...annotation.label, x: newLabelX, y: newLabelY },
-                  px,
-                  py,
-                ),
-              };
+              shiftAnnotation(annotation, label, dx, dy, measure);
               break;
             }
           }
@@ -216,7 +252,9 @@ export function resolveAnnotationCollisions(
     }
 
     // Add this annotation's final bounds to the placed list
-    placedBounds.push(estimateLabelBounds(annotation.label, measure));
+    placedBounds.push(
+      annotation.bounds ?? annotationBlockBounds(annotation, annotation.label, measure),
+    );
   }
 }
 
@@ -235,7 +273,8 @@ export function clampAnnotationsToBounds(
   for (const annotation of annotations) {
     if (annotation.type !== 'text' || !annotation.label) continue;
 
-    const bounds = estimateLabelBounds(annotation.label, measure);
+    const label = annotation.label;
+    const bounds = annotation.bounds ?? annotationBlockBounds(annotation, label, measure);
     let dx = 0;
     let dy = 0;
 
@@ -258,23 +297,6 @@ export function clampAnnotationsToBounds(
 
     if (dx === 0 && dy === 0) continue;
 
-    const newX = annotation.label.x + dx;
-    const newY = annotation.label.y + dy;
-
-    const connector = annotation.label.connector;
-    const newBounds = estimateLabelBounds({ ...annotation.label, x: newX, y: newY }, measure);
-    annotation.label = {
-      ...annotation.label,
-      x: newX,
-      y: newY,
-      bounds: newBounds,
-      connector: connector
-        ? recomputeConnector(
-            { ...annotation.label, x: newX, y: newY },
-            connector.to.x,
-            connector.to.y,
-          )
-        : undefined,
-    };
+    shiftAnnotation(annotation, label, dx, dy, measure);
   }
 }

@@ -255,11 +255,11 @@ interface DirectionDef {
 const D = Math.SQRT1_2;
 
 const DIRECTIONS: DirectionDef[] = [
-  { ux: 0, uy: -1, textAnchor: 'middle', attach: 'bottom-center' }, // N
+  { ux: 0, uy: -1, textAnchor: 'start', attach: 'bottom-center' }, // N
   { ux: D, uy: -D, textAnchor: 'start', attach: 'bottom-left' }, // NE
   { ux: 1, uy: 0, textAnchor: 'start', attach: 'left-middle' }, // E
   { ux: D, uy: D, textAnchor: 'start', attach: 'top-left' }, // SE
-  { ux: 0, uy: 1, textAnchor: 'middle', attach: 'top-center' }, // S
+  { ux: 0, uy: 1, textAnchor: 'start', attach: 'top-center' }, // S
   { ux: -D, uy: D, textAnchor: 'end', attach: 'top-right' }, // SW
   { ux: -1, uy: 0, textAnchor: 'end', attach: 'right-middle' }, // W
   { ux: -D, uy: -D, textAnchor: 'end', attach: 'bottom-right' }, // NW
@@ -428,9 +428,11 @@ export function findBestPlacement(
   anchorX: number,
   anchorY: number,
   text: string,
-  style: { fontSize: number; fontWeight: number; lineHeight: number },
+  style: { fontSize: number; fontWeight: number; lineHeight: number; fontFamily?: string },
   subtitleText: string | undefined,
-  subtitleStyle: { fontSize: number; fontWeight: number; lineHeight: number } | undefined,
+  subtitleStyle:
+    | { fontSize: number; fontWeight: number; lineHeight: number; fontFamily?: string }
+    | undefined,
   obstacles: Rect[],
   chartArea: Rect,
   svgRect: Rect,

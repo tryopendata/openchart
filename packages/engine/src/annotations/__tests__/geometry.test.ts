@@ -46,14 +46,14 @@ describe('computeArrowheadPoints', () => {
     expect(baseMidY).toBeLessThan(head.tip.y);
   });
 
-  it('uses defaults of length=8, halfWidth=4', () => {
+  it('uses defaults of length=7, halfWidth=3.5', () => {
     const head = computeArrowheadPoints(100, 200, 0, 1);
-    // For a pure downward tangent, base is 8px above tip
-    expect(head.baseLeft.y).toBeCloseTo(192);
-    expect(head.baseRight.y).toBeCloseTo(192);
-    // Base corners are 4px to each side
-    expect(head.baseLeft.x).toBeCloseTo(96);
-    expect(head.baseRight.x).toBeCloseTo(104);
+    // For a pure downward tangent, base is 7px above tip
+    expect(head.baseLeft.y).toBeCloseTo(193);
+    expect(head.baseRight.y).toBeCloseTo(193);
+    // Base corners are 3.5px to each side
+    expect(head.baseLeft.x).toBeCloseTo(96.5);
+    expect(head.baseRight.x).toBeCloseTo(103.5);
   });
 
   it('handles zero-length tangent gracefully', () => {

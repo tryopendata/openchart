@@ -77,8 +77,14 @@ export type { NormalizedTileMapSpec } from './tilemap/types';
 
 export type { AnnotationContext } from './annotations/compute';
 export type { AnnotationMeasureTextFn, ArrowheadPoints } from './annotations/geometry';
-export { computeArrowheadPoints, heuristicMeasure } from './annotations/geometry';
+export {
+  computeArrowheadPoints,
+  connectorExit,
+  heuristicMeasure,
+} from './annotations/geometry';
 export type { ObstacleKind, PlacementObstacle } from './annotations/placement';
+export type { RichSpan } from './annotations/rich-text';
+export { BOLD_SPAN_FONT_WEIGHT, parseAnnotationSpans } from './annotations/rich-text';
 
 // ---------------------------------------------------------------------------
 // Compiler pipeline (spec validation, normalization, generic compile)

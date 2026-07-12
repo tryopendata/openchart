@@ -68,7 +68,11 @@ describe('computeAnnotations', () => {
     });
 
     it('text annotation label has a connector to the data point', () => {
-      const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Note' }]);
+      // The default 8px anchor offset produces a sub-MIN_CONNECTOR_LENGTH stub,
+      // which is suppressed. Push the label out so a real leader survives.
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Note', offset: { dx: 0, dy: -60 } },
+      ]);
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
@@ -809,8 +813,16 @@ describe('computeAnnotations', () => {
   });
 
   describe('text annotation connector', () => {
-    it('connector is present by default', () => {
-      const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Has connector' }]);
+    it('connector is present by default once the label clears the data point', () => {
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Has connector',
+          offset: { dx: 0, dy: -60 },
+        },
+      ]);
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
@@ -827,22 +839,31 @@ describe('computeAnnotations', () => {
       expect(annotations[0].label!.connector).toBeUndefined();
     });
 
-    it('connector "to" points near the data position with a small gap', () => {
-      const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Connector check' }]);
+    it('connector "to" stops short of the endpoint marker', () => {
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Connector check',
+          offset: { dx: 0, dy: -60 },
+        },
+      ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
       const px = scales.x?.scale(new Date('2020-01-01')) as number;
       const py = scales.y?.scale(20) as number;
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const connector = annotations[0].label!.connector!;
-      // The "to" endpoint is pulled back along the connector direction by a
-      // small gap (~4px), so it won't exactly match the data point.
-      const dx = px - connector.to.x;
-      const dy = py - connector.to.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      expect(dist).toBeGreaterThan(0);
-      expect(dist).toBeLessThanOrEqual(5);
+      const resolved = annotations[0];
+      const connector = resolved.label!.connector!;
+      const dot = resolved.dot!;
+
+      // The "to" endpoint is pulled back so the line clears the marker's edge
+      // instead of piercing it.
+      const dist = Math.hypot(px - connector.to.x, py - connector.to.y);
+      expect(dist).toBeGreaterThan(dot.radius);
+      expect(dist).toBeLessThanOrEqual(dot.radius + dot.strokeWidth / 2 + 3 + 0.001);
     });
   });
 
@@ -1032,12 +1053,16 @@ describe('computeAnnotations', () => {
   });
 
   // -----------------------------------------------------------------
-  // Connector origin auto-selection
+  // Connector origin (ray-box exit with standoff)
   // -----------------------------------------------------------------
 
   describe('connector origin auto-selection', () => {
-    it('connector starts from top edge when data point is above label', () => {
-      // Push label far below AND to the right so the top-center is unambiguously closest
+    // The origin is now a ray-box intersection plus a CONNECTOR_STANDOFF gap,
+    // so it sits just OUTSIDE the edge it exits from rather than on it.
+    const STANDOFF = 6;
+    const INFLATE = 2;
+
+    it('connector exits above the label when the data point is above it', () => {
       const spec = makeSpec([
         {
           type: 'text',
@@ -1051,17 +1076,16 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const label = annotations[0].label!;
-      const connector = label.connector!;
-      const fontSize = 12; // DEFAULT_ANNOTATION_FONT_SIZE
+      const ann = annotations[0];
+      const connector = ann.label!.connector!;
+      const bounds = ann.bounds!;
 
-      // Data point is far above the label, so connector should exit from the top edge
-      const topEdgeY = label.y - fontSize;
-      expect(connector.from.y).toBeCloseTo(topEdgeY, 0);
+      expect(connector.exit).toBe('vertical');
+      // Origin sits above the (inflated) top edge by the standoff gap.
+      expect(connector.from.y).toBeCloseTo(bounds.y - INFLATE - STANDOFF, 0);
     });
 
-    it('connector starts from bottom edge when data point is below label', () => {
-      // Push label far above the data point
+    it('connector exits below the label when the data point is below it', () => {
       const spec = makeSpec([
         {
           type: 'text',
@@ -1075,19 +1099,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const label = annotations[0].label!;
-      const connector = label.connector!;
-      const fontSize = 12;
-      const lineHeight = 1.3;
-      const lines = label.text.split('\n');
+      const ann = annotations[0];
+      const connector = ann.label!.connector!;
+      const bounds = ann.bounds!;
 
-      // Data point is below the label, so connector should exit from the bottom edge
-      const bottomEdgeY = label.y - fontSize + lines.length * fontSize * lineHeight;
-      expect(connector.from.y).toBeCloseTo(bottomEdgeY, 0);
+      expect(connector.exit).toBe('vertical');
+      expect(connector.from.y).toBeCloseTo(bounds.y + bounds.height + INFLATE + STANDOFF, 0);
     });
 
-    it('connector starts from left edge when data point is left of label', () => {
-      // Push label far to the right of the data point
+    it('connector exits left of the label when the data point is left of it', () => {
       const spec = makeSpec([
         {
           type: 'text',
@@ -1101,16 +1121,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const label = annotations[0].label!;
-      const connector = label.connector!;
+      const ann = annotations[0];
+      const connector = ann.label!.connector!;
+      const bounds = ann.bounds!;
 
-      // Data point is to the left, so connector should exit from the left edge
-      // For single-line text, left edge x = label.x
-      expect(connector.from.x).toBeCloseTo(label.x, 0);
+      expect(connector.exit).toBe('horizontal');
+      expect(connector.from.x).toBeLessThan(bounds.x);
     });
 
-    it('connector starts from right edge when data point is right of label', () => {
-      // Push label far to the left of the data point
+    it('connector exits right of the label when the data point is right of it', () => {
       const spec = makeSpec([
         {
           type: 'text',
@@ -1124,18 +1143,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const label = annotations[0].label!;
-      const connector = label.connector!;
+      const ann = annotations[0];
+      const connector = ann.label!.connector!;
+      const bounds = ann.bounds!;
 
-      // Data point is to the right, so connector should exit from the right edge
-      // Right edge is at label.x + textWidth
-      // For single-line "Left of point" with fontSize=12, weight=400:
-      // textWidth = 14 chars * 12 * 0.55 * 1.0 = 92.4
-      expect(connector.from.x).toBeGreaterThan(label.x + 50); // well past the center
+      expect(connector.exit).toBe('horizontal');
+      expect(connector.from.x).toBeGreaterThan(bounds.x + bounds.width);
     });
 
-    it('multi-line text connector uses correct centered bounding box', () => {
-      // Multi-line text with label pushed below data point
+    it('the connector origin always sits outside the annotation block', () => {
       const spec = makeSpec([
         {
           type: 'text',
@@ -1149,17 +1165,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const label = annotations[0].label!;
-      const connector = label.connector!;
-
-      // For multi-line, labelX is the center. The connector should exit
-      // from the top-center since data point is above.
-      // Top-center x should be at labelX (the center of the multi-line text)
-      expect(connector.from.x).toBeCloseTo(label.x, 0);
+      const ann = annotations[0];
+      const { from } = ann.label!.connector!;
+      const b = ann.bounds!;
+      const inside =
+        from.x >= b.x && from.x <= b.x + b.width && from.y >= b.y && from.y <= b.y + b.height;
+      expect(inside).toBe(false);
     });
 
-    it('connector origin changes when label moves to the other side', () => {
-      // Same data point, label pushed right vs left
+    it('connector origin flips sides when the label moves to the other side', () => {
       const specRight = makeSpec([
         {
           type: 'text',
@@ -1183,21 +1197,18 @@ describe('computeAnnotations', () => {
       const scalesRight = computeScales(specRight, chartArea, specRight.data);
       const scalesLeft = computeScales(specLeft, chartArea, specLeft.data);
 
-      const annotationsRight = computeAnnotations(specRight, scalesRight, chartArea, fullStrategy);
-      const annotationsLeft = computeAnnotations(specLeft, scalesLeft, chartArea, fullStrategy);
+      const annRight = computeAnnotations(specRight, scalesRight, chartArea, fullStrategy)[0];
+      const annLeft = computeAnnotations(specLeft, scalesLeft, chartArea, fullStrategy)[0];
 
-      const labelRight = annotationsRight[0].label!;
-      const labelLeft = annotationsLeft[0].label!;
-      const fromRight = labelRight.connector!.from;
-      const fromLeft = labelLeft.connector!.from;
-
-      // When label is to the right of data, connector exits from left edge (= label.x)
-      expect(fromRight.x).toBeCloseTo(labelRight.x, 0);
-      // When label is to the left of data, connector exits from right edge (label.x + textWidth)
-      expect(fromLeft.x).toBeGreaterThan(labelLeft.x + 30); // well past the left edge
+      // Label right of the point: exit off the left edge.
+      expect(annRight.label!.connector!.from.x).toBeLessThan(annRight.bounds!.x);
+      // Label left of the point: exit off the right edge.
+      expect(annLeft.label!.connector!.from.x).toBeGreaterThan(
+        annLeft.bounds!.x + annLeft.bounds!.width,
+      );
     });
 
-    it('connectorOffset is still applied on top of auto-selected origin', () => {
+    it('connectorOffset is still applied on top of the auto-selected origin', () => {
       const specWithOffset = makeSpec([
         {
           type: 'text',
@@ -1231,8 +1242,9 @@ describe('computeAnnotations', () => {
       expect(fromWith.y - fromWithout.y).toBeCloseTo(5, 0);
     });
 
-    it('curve connector still uses right edge regardless of data point position', () => {
-      // Push label below and to the right, but curve should still start from right edge
+    // Curve connectors used to hardcode a right-edge exit regardless of where the
+    // target was; they now use the same ray-box exit as straight connectors.
+    it('curve connector exits toward the data point, not always from the right edge', () => {
       const spec = makeSpec([
         {
           type: 'text',
@@ -1247,13 +1259,13 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const label = annotations[0].label!;
-      const connector = label.connector!;
+      const ann = annotations[0];
+      const connector = ann.label!.connector!;
+      const bounds = ann.bounds!;
 
-      // Curve should start from right edge of text, not top edge
-      // Right edge x ≈ label.x + textWidth
-      // Per-char lookup: "Curve test" = 4.557 * 12 = 54.684
-      expect(connector.from.x).toBeCloseTo(label.x + 54.684, 1);
+      // Data point is straight above the label, so the curve leaves the top.
+      expect(connector.exit).toBe('vertical');
+      expect(connector.from.y).toBeLessThan(bounds.y);
     });
   });
 
@@ -1306,28 +1318,113 @@ describe('computeAnnotations', () => {
 
     it('recomputes connector origin after nudging', () => {
       const spec = makeSpec([
-        { type: 'text', x: '2020-01-01', y: 20, text: 'First note' },
-        { type: 'text', x: '2020-01-01', y: 20, text: 'Second note' },
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'First note',
+          offset: { dx: 0, dy: -60 },
+        },
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Second note',
+          offset: { dx: 0, dy: -60 },
+        },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
-      const nudgedLabel = annotations[1].label!;
+      const nudged = annotations[1];
+      const nudgedLabel = nudged.label!;
 
       // The nudged annotation should still have a connector
       expect(nudgedLabel.connector).toBeDefined();
 
-      // The connector "from" should be near the nudged label position, not the original
-      const connFrom = nudgedLabel.connector!.from;
-      const labelCenterX = nudgedLabel.x;
-      const labelCenterY = nudgedLabel.y;
+      // The origin must sit just outside the nudged block, not the original one.
+      const b = nudged.bounds!;
+      const { from } = nudgedLabel.connector!;
+      const inside =
+        from.x >= b.x && from.x <= b.x + b.width && from.y >= b.y && from.y <= b.y + b.height;
+      expect(inside).toBe(false);
 
-      // Connector origin should be within a reasonable distance of the label
-      const distFromLabel = Math.sqrt(
-        (connFrom.x - labelCenterX) ** 2 + (connFrom.y - labelCenterY) ** 2,
+      const distFromBlock = Math.min(
+        Math.abs(from.y - b.y),
+        Math.abs(from.y - (b.y + b.height)),
+        Math.abs(from.x - b.x),
+        Math.abs(from.x - (b.x + b.width)),
       );
-      // Should be within the label's bounding box range (text width + height)
-      expect(distFromLabel).toBeLessThan(200);
+      expect(distFromBlock).toBeLessThan(20);
+    });
+
+    // The subtitle carries absolute coordinates, so a nudge that only moved the
+    // label used to leave the subtitle stranded at the original position.
+    it('subtitle moves with a nudged label', () => {
+      const spec = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'First note', subtitle: 'Context one' },
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Second note', subtitle: 'Context two' },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+      const single = computeAnnotations(
+        makeSpec([spec.annotations[1]]),
+        scales,
+        chartArea,
+        fullStrategy,
+      )[0];
+
+      const nudged = annotations[1];
+      const dx = nudged.label!.x - single.label!.x;
+      const dy = nudged.label!.y - single.label!.y;
+      expect(Math.abs(dx) + Math.abs(dy)).toBeGreaterThan(0);
+
+      // The subtitle shifted by the same delta as its label.
+      expect(nudged.subtitle!.x).toBeCloseTo(single.subtitle!.x + dx, 5);
+      expect(nudged.subtitle!.y).toBeCloseTo(single.subtitle!.y + dy, 5);
+
+      // And the label/subtitle gap is unchanged.
+      expect(nudged.subtitle!.y - nudged.label!.y).toBeCloseTo(
+        single.subtitle!.y - single.label!.y,
+        5,
+      );
+    });
+
+    // Auto-placement (compute.ts Pass 2) stamps a new label position from the
+    // placement search; the subtitle must land where the search scored it.
+    it('subtitle follows an auto-placed label', () => {
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Auto placed',
+          subtitle: 'Its context line',
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, {
+        scales,
+        chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: 600, height: 400 },
+        measure: (text, font) => text.length * font.fontSize * 0.6,
+      });
+
+      const ann = annotations[0];
+      const label = ann.label!;
+      const sub = ann.subtitle!;
+      const fontSize = label.style.fontSize as number;
+      const lineHeight = label.style.lineHeight as number;
+
+      expect(sub.x).toBeCloseTo(label.x, 5);
+      expect(sub.y).toBeCloseTo(label.y + fontSize * lineHeight * 1 + 2, 5);
+      expect(sub.style.textAnchor).toBe(label.style.textAnchor);
+      // The stamped bounds cover both lines.
+      expect(ann.bounds!.height).toBeGreaterThan(fontSize * lineHeight);
     });
 
     it('resolves three overlapping annotations without any collision', () => {
@@ -1428,7 +1525,14 @@ describe('computeAnnotations', () => {
     it('preserves connector style when nudged away from obstacle', () => {
       // connector: true means "straight line" - obstacle avoidance should not change it
       const spec = makeSpec([
-        { type: 'text', x: '2020-01-01', y: 20, text: 'Explicit connector', connector: true },
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Explicit connector',
+          connector: true,
+          offset: { dx: 0, dy: -60 },
+        },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 

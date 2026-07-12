@@ -21,6 +21,7 @@ export function resolveRefLineAnnotation(
   scales: ResolvedScales,
   chartArea: Rect,
   isDark: boolean,
+  fontFamily?: string,
 ): ResolvedAnnotation | null {
   let start: Point;
   let end: Point;
@@ -128,6 +129,7 @@ export function resolveRefLineAnnotation(
       annotation.fontWeight ?? 400,
       annotation.stroke ?? defaultStroke,
       isDark,
+      fontFamily,
     );
     style.textAnchor = textAnchor;
 

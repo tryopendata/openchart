@@ -616,6 +616,11 @@ export interface ResolvedLabel {
     style: 'straight' | 'curve' | 'drop-line';
     /** Whether to draw an arrowhead at the data-point end. */
     arrow: boolean;
+    /**
+     * Which edge of the label block the connector leaves from. Renderers use it
+     * to shape the curve's control point. Internal; not part of the spec.
+     */
+    exit?: 'horizontal' | 'vertical';
   };
   /** Background color behind the label text. */
   background?: string;
@@ -656,8 +661,9 @@ export interface ResolvedAnnotation {
   /** Z-index for render ordering. Higher values render on top. */
   zIndex?: number;
   /**
-   * For text annotations: optional dot marker drawn at the connector's
-   * data-point endpoint. Coordinates match `label.connector.to` exactly.
+   * For text annotations: the endpoint marker drawn at the data point.
+   * Coordinates sit on the data point itself (plus any `connectorOffset.to`),
+   * not on the pulled-back `label.connector.to`.
    */
   dot?: {
     x: number;

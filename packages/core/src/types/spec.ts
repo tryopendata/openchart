@@ -890,7 +890,13 @@ export interface TextAnnotation extends AnnotationBase {
   x: string | number;
   /** Y-axis data value or position. */
   y: string | number;
-  /** The annotation text. Required for text annotations. */
+  /**
+   * The annotation text. Required for text annotations.
+   *
+   * Supports inline `**bold**` spans, so emphasis lands on the key phrase rather
+   * than the whole block: `'Inflation peaked at **8.5%**'`. Unmatched `**` (and
+   * empty `****`) render literally. `\n` starts a new line.
+   */
   text: string;
   /** Thinning priority (lower = kept longer at narrow widths). When omitted, spec order is used. */
   priority?: number;
@@ -898,6 +904,10 @@ export interface TextAnnotation extends AnnotationBase {
    * Optional muted second-tone text rendered below the primary `text`.
    * Used for supporting context (e.g. methodology, source). Newlines in
    * `text` still produce multi-line primary; subtitle is a separate block.
+   *
+   * Supports the same inline `**bold**` spans as `text`. When a subtitle is
+   * present and no `fontWeight` is set, the primary `text` resolves to weight
+   * 700 — the lede + context stack.
    */
   subtitle?: string;
   /**

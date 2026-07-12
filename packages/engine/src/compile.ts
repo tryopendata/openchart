@@ -767,6 +767,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     obstacles,
     svg: { width: dims.total.width, height: dims.total.height },
     measure: annotationMeasure,
+    fontFamily: theme.fonts.family,
     autoThin: chartSpec.autoThin,
   });
 
@@ -1075,6 +1076,7 @@ function compileFaceted(
       obstacles: [],
       svg: { width: options.width, height: options.height },
       measure: annotationMeasure,
+      fontFamily: theme.fonts.family,
       autoThin: panelSpecWithDomains.autoThin,
     });
 
