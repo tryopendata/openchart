@@ -10,7 +10,7 @@ import type {
 import { estimateTextWidth, textAscent, wrapText } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
-function renderChromeElement(
+export function renderChromeElement(
   parent: SVGElement,
   element: ResolvedChromeElement,
   className: string,
