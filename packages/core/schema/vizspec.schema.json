@@ -6055,7 +6055,7 @@
               "$ref": "#/definitions/ConnectorConfig"
             }
           ],
-          "description": "Connector from label to anchor point.\n- `true` (default): straight line, no arrow\n- `'straight'`: straight line, no arrow\n- `'curve'`: curved arrow with arrowhead\n- `'drop-line'`: vertical line through the data point's x\n- `{ type, arrow? }`: object form for explicit arrow control\n- `false`: no connector\n\nThe connector leaves the text block on the side facing the data point, with a small standoff gap. A leader shorter than 14px is dropped as noise (the marker alone reads better), as is a connector whose target sits inside the text block. Widen `offset` if you want the line back."
+          "description": "Connector from label to anchor point.\n- `true` (default): straight line, no arrow\n- `'straight'`: straight line, no arrow\n- `'curve'`: curved arrow with arrowhead\n- `'drop-line'`: vertical line through the data point's x\n- `{ type, arrow? }`: object form for explicit arrow control\n- `false`: no connector\n\nThe connector leaves the text block on the side facing the data point, with a small standoff gap. A leader shorter than 8px is dropped as noise (the marker alone reads better), as is a connector whose target sits inside the text block. Widen `offset` if you want the line back."
         },
         "connectorOffset": {
           "type": "object",

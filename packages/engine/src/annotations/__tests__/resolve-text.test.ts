@@ -461,8 +461,6 @@ describe('text annotation: dot + subtitle co-resolution', () => {
 });
 
 describe('text annotation: connector suppression', () => {
-  // The default anchor offset is only 8px, so a plain text annotation's leader
-  // would be a sub-14px stub. The marker alone reads better.
   // A label pulled back toward its point leaves no room for a leader: the
   // standoff and marker pullback eat the whole span, and what's left is a nub
   // touching the marker it's meant to point at. Suppress it, keep the dot.
@@ -533,7 +531,7 @@ describe('text annotation: connector suppression', () => {
     const connector = annotations[0].label!.connector!;
     expect(connector).toBeDefined();
     const length = Math.hypot(connector.to.x - connector.from.x, connector.to.y - connector.from.y);
-    expect(length).toBeGreaterThanOrEqual(14);
+    expect(length).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
   });
 });
 

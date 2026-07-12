@@ -406,7 +406,7 @@ The connector leaves the text block (primary text plus subtitle, treated as one 
 - **Emphasis.** An arrowed connector (`'curve'` defaults to `arrow: true`) is drawn in the label's text ink with a small open-V arrowhead, so the gesture reads as part of the sentence.
 - **Quiet.** A non-arrowed straight leader or a `'drop-line'` is a gray hairline. It points without competing with the words.
 
-Connectors are dropped when they'd be noise rather than signal: a leader shorter than 14px, or one whose data point sits inside the text block. The marker still renders. If you want the line back, push the label further out with `offset`.
+Connectors are dropped when they'd be noise rather than signal: a leader shorter than 8px, or one whose data point sits inside the text block. The marker still renders. A default annotation sits far enough off its point (28px) to draw a real leader without any `offset` authoring; you only lose the line by pulling the label back onto its own marker.
 
 #### Dot marker
 

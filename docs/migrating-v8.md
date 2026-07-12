@@ -348,50 +348,61 @@ all diff.
 
 ### 11a. Multi-line text is left-aligned, not centered
 
-Multi-line annotation text used to force `text-anchor: middle`. Now every text
-annotation aligns on the edge that faces the data point: left-aligned
-(`'start'`) by default, right-aligned (`'end'`) when `anchor: 'left'` puts the
-block to the left of the point.
+Multi-line annotation *text* used to force `text-anchor: middle`, so every line
+was centered against its neighbours. Now the lines are left-aligned and ragged
+right (`'start'`), or right-aligned (`'end'`) when `anchor: 'left'` puts the
+block to the left of the point so its right edge faces the data.
 
-**Fix:** Re-check any annotation whose `text` contains `\n`. A block that was
-centered on its anchor point now grows to the right of it, so it can sit further
-right than you expect. Adjust `offset` (or set `anchor`) to reposition.
+Note that this is about how the lines align *against each other*, not where the
+block sits. A `top`/`bottom` anchored block still straddles its data point
+horizontally — "above" still means above, not "up and to the right". You do not
+need to hand-compute a negative `dx` to re-center it.
+
+**Fix:** Usually nothing. Re-check any annotation whose `text` contains `\n` and
+which relies on the old centered *ragging* for its look; the block position is
+unchanged for `top`/`bottom`, and shifts by half a block width only for
+`left`/`right` anchors (where the block now hangs off the facing edge).
 
 ```jsonc
-// Before (v7: centered on x = 300, so the block spanned roughly 240..360)
-{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Supply chain\nunwinds" }
-
-// After (block starts at the anchor point; pull it left to keep the old center)
+// Lines were centered against each other; they're now flush left.
+// The block still sits centered above the point — no dx needed.
 { "type": "text", "x": "2023-Q2", "y": 120, "text": "Supply chain\nunwinds",
-  "offset": { "dx": -60 } }
+  "anchor": "top" }
 ```
 
-### 11b. Short connectors are suppressed; non-arrowed connectors get a marker
+### 11b. A default annotation now draws a leader and a marker
 
-Two linked changes:
+Three linked changes:
 
-- A connector shorter than 14px is dropped. Most plain `{ type: 'text' }`
-  annotations with no `offset` sit only 8px off the data point, so their leader
-  was a stub. Those stubs are gone.
+- The default label setback (`anchor` with no `offset`) moved from 8px to 28px,
+  so a label clears its own marker instead of sitting on top of it.
 - Whenever a connector is enabled and carries no arrowhead (straight,
   drop-line), an open-ring marker now renders on the data point by default. It
   used to require `dot: true`. Drop-lines get one too; they silently ignored
   `dot: true` before.
+- Connectors shorter than 8px are still dropped — a nub between a label and the
+  marker it's already touching reads as noise, not as a leader.
 
-Net effect on a default annotation: the stub leader disappears and a ring
-appears. Arrowed connectors are unaffected (no default marker — the arrowhead
-already marks the spot).
+Net effect on a plain `{ type: 'text' }` annotation with no `offset`: it now
+renders a ring on the data point **and** a leader line back to the label. In v7
+it rendered bare text. Arrowed connectors get no default marker — the arrowhead
+already marks the spot.
 
-**Fix:** To get a bare label with no marker, set `dot: false`. To get the leader
-back, push the label further out with `offset` so the line clears 14px.
+This is the "minimal spec, publication-ready output" rule: you should not have
+to author an `offset` to get a drawn leader.
+
+**Fix:** To get a bare label with no marker and no leader, set `dot: false` and
+`connector: false`. To pull the label back in toward the point, set a negative
+`offset` — but note that a label close enough to touch its marker will have its
+leader suppressed by the 8px minimum.
 
 ```jsonc
-// Bare label, no marker (v7 look, minus the stub)
-{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak", "dot": false }
-
-// Keep a visible leader
+// v7 look: bare text, no marker, no leader
 { "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak",
-  "offset": { "dx": 0, "dy": -40 } }
+  "dot": false, "connector": false }
+
+// Default (v8): ring + leader, no authoring required
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak" }
 ```
 
 ### 11c. Dot marker defaults changed

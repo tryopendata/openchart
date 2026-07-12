@@ -220,15 +220,50 @@ export function resolveTextAnnotation(
   const anchorDelta = computeAnchorOffset(annotation.anchor, px, py, chartArea);
   const finalDelta = applyOffset(anchorDelta, annotation.offset);
 
-  const labelX = px + finalDelta.dx;
+  const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+
+  // A top/bottom anchor means the block sits ABOVE/BELOW the point, so it has to
+  // straddle it horizontally. The text renders with textAnchor 'start', which
+  // would otherwise hang the whole block off to the right and make `anchor: 'top'`
+  // read as "up and to the right" — forcing every author to hand-compute a
+  // negative dx of roughly half the block width. Centering the block is separate
+  // from aligning the text: the lines inside stay left-aligned and ragged right.
+  //
+  // Measured against the widest line of the block (primary vs subtitle), since a
+  // subtitle is often wider and centering on the primary alone reads as off-center.
+  let centeringShift = 0;
+  if (annotation.anchor === 'top' || annotation.anchor === 'bottom') {
+    const primaryWidth = computeTextBlockBounds(
+      0,
+      fontSize,
+      annotation.text,
+      { ...labelStyle, textAnchor: 'start' },
+      measure,
+    ).width;
+    const subtitleWidth = annotation.subtitle
+      ? computeTextBlockBounds(
+          0,
+          fontSize,
+          annotation.subtitle,
+          {
+            ...labelStyle,
+            fontSize: Math.round(fontSize * SUBTITLE_FONT_SIZE_RATIO),
+            fontWeight: SUBTITLE_FONT_WEIGHT,
+            textAnchor: 'start',
+          },
+          measure,
+        ).width
+      : 0;
+    centeringShift = -Math.max(primaryWidth, subtitleWidth) / 2;
+  }
+
+  const labelX = px + finalDelta.dx + centeringShift;
   const labelY = py + finalDelta.dy;
 
   const showConnector = connectorConfig !== null;
   const connectorStyle: 'straight' | 'curve' =
     connectorConfig?.type === 'curve' ? 'curve' : 'straight';
   const connectorArrow = connectorConfig?.arrow ?? false;
-
-  const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
 
   const labelBounds = computeTextBlockBounds(labelX, labelY, annotation.text, labelStyle, measure);
 

@@ -195,11 +195,32 @@ describe('normalizeSpec', () => {
       expect(refline.style).toBe('dashed');
       expect(refline.strokeWidth).toBe(1);
 
+      // Normalize must NOT stamp typography onto text annotations. The
+      // annotation layer owns fontSize (DEFAULT_ANNOTATION_FONT_SIZE) and
+      // fontWeight (the lede rule, which promotes a subtitle-bearing primary
+      // line to bold only when the author left the weight unset). Defaulting
+      // them here makes `fontWeight` always defined, so the lede rule can
+      // never fire and the size default can never apply.
       const text = result.annotations[1] as TextAnnotation;
-      expect(text.fontSize).toBe(12);
+      expect(text.fontSize).toBeUndefined();
+      expect(text.fontWeight).toBeUndefined();
+      expect(text.opacity).toBe(1);
 
       const range = result.annotations[2] as RangeAnnotation;
       expect(range.opacity).toBe(0.1);
+    });
+
+    it('preserves author-set annotation typography through normalization', () => {
+      const spec: ChartSpec = {
+        ...lineSpec,
+        annotations: [
+          { type: 'text', x: '2020-01-01', y: 10, text: 'Start', fontSize: 18, fontWeight: 300 },
+        ],
+      };
+
+      const text = (normalizeSpec(spec) as NormalizedChartSpec).annotations[0] as TextAnnotation;
+      expect(text.fontSize).toBe(18);
+      expect(text.fontWeight).toBe(300);
     });
   });
 

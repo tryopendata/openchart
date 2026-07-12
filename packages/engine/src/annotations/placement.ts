@@ -310,11 +310,20 @@ function labelPositionFromAttachment(
   dir: DirectionDef,
   boxHeight: number,
   fontSize: number,
+  boxWidth: number,
 ): { labelX: number; labelY: number } {
-  const labelX = attachPt.x;
-  let labelY: number;
-
   const attach = dir.attach;
+
+  // A `*-center` attach means the block straddles the point, so `labelX` (the
+  // text's start edge, since these directions render textAnchor 'start') has to
+  // back off by half the block width. Centering the BLOCK is not the same as
+  // center-aligning the TEXT: the lines inside stay left-aligned and ragged
+  // right, per the reference voice. Without this the point sits at the block's
+  // left edge and a "top" anchor reads as "up and to the right".
+  const centered = attach === 'top-center' || attach === 'bottom-center';
+  const labelX = centered ? attachPt.x - boxWidth / 2 : attachPt.x;
+
+  let labelY: number;
   if (attach === 'left-middle' || attach === 'right-middle') {
     labelY = attachPt.y - boxHeight / 2 + fontSize;
   } else if (attach === 'top-left' || attach === 'top-center' || attach === 'top-right') {
@@ -457,6 +466,22 @@ export function findBestPlacement(
   );
   const boxHeight = sampleBounds.height;
 
+  // Centering a `*-center` attach needs the width of the WHOLE block, not just
+  // the primary line: a subtitle is often the wider of the two, and centering on
+  // the primary width alone would leave a lede+subtitle stack visibly off-center
+  // over its point.
+  const subtitleSampleWidth =
+    subtitleText && subtitleStyle
+      ? computeTextBlockBounds(
+          0,
+          subtitleStyle.fontSize,
+          subtitleText,
+          { ...subtitleStyle, textAnchor: 'start' },
+          measure,
+        ).width
+      : 0;
+  const boxWidth = Math.max(sampleBounds.width, subtitleSampleWidth);
+
   // The innermost ring is the default setback for an auto-placed label, so it's
   // the same quantity ANCHOR_OFFSET expresses for the explicit path — keep them
   // as one constant. A 12px ring sat inside the standoff + marker-pullback
@@ -482,6 +507,7 @@ export function findBestPlacement(
           dir,
           boxHeight,
           style.fontSize,
+          boxWidth,
         );
 
         let box = computeTextBlockBounds(

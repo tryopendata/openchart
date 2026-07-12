@@ -941,7 +941,7 @@ export interface TextAnnotation extends AnnotationBase {
    * - `false`: no connector
    *
    * The connector leaves the text block on the side facing the data point, with
-   * a small standoff gap. A leader shorter than 14px is dropped as noise (the
+   * a small standoff gap. A leader shorter than 8px is dropped as noise (the
    * marker alone reads better), as is a connector whose target sits inside the
    * text block. Widen `offset` if you want the line back.
    */
