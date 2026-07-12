@@ -850,15 +850,15 @@ export interface ConnectorConfig {
   arrow?: boolean;
 }
 
-/** Style overrides for the dot marker drawn at the connector's data-point endpoint. */
+/** Style overrides for the dot marker drawn at the data point. */
 export interface AnnotationDot {
-  /** Circle radius in pixels. Default 5. */
+  /** Circle radius in pixels. Default 4. */
   radius?: number;
   /** Fill color. Defaults to theme background for an "open ring" look. */
   fill?: string;
-  /** Stroke color. Defaults to theme text color. */
+  /** Stroke color. Defaults to the connector's resolved stroke, so marker and leader read as one system. */
   stroke?: string;
-  /** Stroke width in pixels. Default 2. */
+  /** Stroke width in pixels. Default 1.5. */
   strokeWidth?: number;
 }
 
@@ -911,9 +911,16 @@ export interface TextAnnotation extends AnnotationBase {
    */
   subtitle?: string;
   /**
-   * Optional dot marker drawn at the connector's data-point endpoint.
-   * `true` enables the default open-ring style. Pass an object to override
-   * radius, fill, stroke, or strokeWidth.
+   * Open-ring marker drawn on the data point itself (not on the pulled-back
+   * connector tip).
+   *
+   * Left unset, a default marker appears whenever a connector is enabled and
+   * carries no arrowhead — the leader points, the ring lands. An arrowed
+   * connector gets no marker unless you ask for one: the head already marks the
+   * spot. `dot: false` is always bare; an explicit `dot` always wins.
+   *
+   * `true` uses the default style; pass an object to override radius, fill,
+   * stroke, or strokeWidth.
    */
   dot?: boolean | AnnotationDot;
   /** Font size override. */
@@ -932,6 +939,11 @@ export interface TextAnnotation extends AnnotationBase {
    * - `'drop-line'`: vertical line through the data point's x
    * - `{ type, arrow? }`: object form for explicit arrow control
    * - `false`: no connector
+   *
+   * The connector leaves the text block on the side facing the data point, with
+   * a small standoff gap. A leader shorter than 14px is dropped as noise (the
+   * marker alone reads better), as is a connector whose target sits inside the
+   * text block. Widen `offset` if you want the line back.
    */
   connector?: boolean | ConnectorType | ConnectorConfig;
   /** Per-endpoint offsets for the connector line. Allows fine-tuning where the connector starts and ends. */

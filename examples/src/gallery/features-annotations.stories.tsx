@@ -373,6 +373,8 @@ const thinningSpec: ChartSpec = {
     x: { field: 'date', type: 'temporal' },
     y: { field: 'value', type: 'quantitative', axis: { title: 'Index level' } },
   },
+  // Deliberately bare: no offsets, no connector config. Six minimal callouts,
+  // exactly what an author writes first. The defaults have to carry this.
   annotations: [
     { type: 'text', x: '2020-06-01', y: 8, text: 'Pandemic low', responsive: false, priority: 1 },
     { type: 'text', x: '2021-01-01', y: 22, text: 'Recovery begins', priority: 2 },

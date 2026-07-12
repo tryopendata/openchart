@@ -194,12 +194,19 @@ export function connectorExit(
   const rayLen = Math.sqrt(dx * dx + dy * dy);
   const ux = dx / rayLen;
   const uy = dy / rayLen;
-  const x = edgeX + ux * standoff;
-  const y = edgeY + uy * standoff;
 
   // Overshoot guard: the standoff must not push the origin past the target.
-  const edgeToTarget = rayLen * (1 - t);
+  // Measure edge-to-target in pixels rather than scaling the ray by (1 - t):
+  // t is a ratio of box extents, so that form understates the clearance when the
+  // ray leaves through the long side of a wide label, and killed connectors that
+  // had ample room. Whether the line is long enough to be worth drawing is
+  // decided downstream against MIN_CONNECTOR_LENGTH, once the marker pullback is
+  // known — this guard only rejects a standoff that would overshoot the target.
+  const edgeToTarget = Math.hypot(targetX - edgeX, targetY - edgeY);
   if (standoff >= edgeToTarget) return null;
+
+  const x = edgeX + ux * standoff;
+  const y = edgeY + uy * standoff;
 
   return { x, y, exit };
 }

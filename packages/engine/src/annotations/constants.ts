@@ -72,11 +72,25 @@ export const SUBTITLE_FONT_SIZE_RATIO = 0.85;
 /** Gap (px) between the label bounding box and the start of its connector. */
 export const CONNECTOR_STANDOFF = 6;
 
-/** Connectors shorter than this read as noise and are suppressed entirely. */
-export const MIN_CONNECTOR_LENGTH = 14;
+/**
+ * Connectors shorter than this are suppressed: a nub between a label and the
+ * marker it's already touching reads as noise, not as a leader.
+ *
+ * Keep this well under the standoff + marker-pullback overhead (~18px), which
+ * is spent before the line is drawn at all. Setting it near or above that
+ * overhead makes the default annotation structurally unable to draw a
+ * connector, however far the author offsets the label.
+ */
+export const MIN_CONNECTOR_LENGTH = 8;
 
-/** Default label offset when using anchor directions. */
-export const ANCHOR_OFFSET = 8;
+/**
+ * Default label setback from the data point when using anchor directions.
+ *
+ * Sized so a bare `{ type: 'text' }` annotation lands clear of its marker and
+ * draws a real leader with no offset authoring — a minimal spec should render
+ * publication-ready. Authors tighten it with `offset`.
+ */
+export const ANCHOR_OFFSET = 28;
 
 /** Padding between annotation and obstacle when nudging. */
 export const NUDGE_PADDING = 6;

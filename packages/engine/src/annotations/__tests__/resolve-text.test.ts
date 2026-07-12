@@ -24,6 +24,7 @@ import {
   LIGHT_DOT_FILL,
   LIGHT_LABEL_BACKGROUND,
   LIGHT_MUTED_TEXT_FILL,
+  MIN_CONNECTOR_LENGTH,
   SUBTITLE_FONT_SIZE_RATIO,
   SUBTITLE_FONT_WEIGHT,
   SUBTITLE_GAP,
@@ -462,8 +463,22 @@ describe('text annotation: dot + subtitle co-resolution', () => {
 describe('text annotation: connector suppression', () => {
   // The default anchor offset is only 8px, so a plain text annotation's leader
   // would be a sub-14px stub. The marker alone reads better.
+  // A label pulled back toward its point leaves no room for a leader: the
+  // standoff and marker pullback eat the whole span, and what's left is a nub
+  // touching the marker it's meant to point at. Suppress it, keep the dot.
+  // (anchor 'top' sets the label ANCHOR_OFFSET above the point; +dy drags it
+  // back down onto it.)
   it('suppresses a connector shorter than MIN_CONNECTOR_LENGTH but keeps the dot', () => {
-    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Tiny leader' }]);
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Tiny leader',
+        anchor: 'top',
+        offset: { dx: 0, dy: 16 },
+      },
+    ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
@@ -471,15 +486,34 @@ describe('text annotation: connector suppression', () => {
     expect(annotations[0].dot).toBeDefined();
   });
 
+  // The default (no offset, no anchor) must draw a leader. A bare annotation is
+  // the spec an author writes first, and floating text with no line back to the
+  // data is exactly what this redesign set out to kill.
+  it('draws a connector for a bare text annotation with no offset', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Default callout' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const connector = annotations[0].label!.connector;
+    expect(connector).toBeDefined();
+    const length = Math.hypot(
+      connector!.to.x - connector!.from.x,
+      connector!.to.y - connector!.from.y,
+    );
+    expect(length).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
+    expect(annotations[0].dot).toBeDefined();
+  });
+
   it('suppresses the connector when the data point lands inside the text block', () => {
-    // Offset pushes the label so its box straddles the data point.
+    // Offset pulls the label back over its own point so the box straddles it.
+    // A connector here would be drawn straight through the text.
     const spec = makeSpec([
       {
         type: 'text',
         x: '2020-01-01',
         y: 20,
         text: 'The point sits inside this label',
-        offset: { dx: -60, dy: 4 },
+        offset: { dx: -110, dy: 4 },
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);

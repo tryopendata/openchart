@@ -4,6 +4,7 @@
  */
 
 import { overlapArea, type Rect } from '@opendata-ai/openchart-core';
+import { ANCHOR_OFFSET } from './constants';
 import {
   type AnnotationMeasureTextFn,
   computeTextBlockBounds,
@@ -456,7 +457,13 @@ export function findBestPlacement(
   );
   const boxHeight = sampleBounds.height;
 
-  const r1 = 12;
+  // The innermost ring is the default setback for an auto-placed label, so it's
+  // the same quantity ANCHOR_OFFSET expresses for the explicit path — keep them
+  // as one constant. A 12px ring sat inside the standoff + marker-pullback
+  // overhead, so an auto-placed label's connector was always shorter than
+  // MIN_CONNECTOR_LENGTH and got suppressed: six bare callouts rendered as
+  // floating text with no leader back to the data.
+  const r1 = ANCHOR_OFFSET;
   const r2 = r1 + boxHeight + 8;
   const r3 = 2 * r2;
 

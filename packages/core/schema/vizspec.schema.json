@@ -6025,7 +6025,7 @@
               "$ref": "#/definitions/AnnotationDot"
             }
           ],
-          "description": "Optional dot marker drawn at the connector's data-point endpoint. `true` enables the default open-ring style. Pass an object to override radius, fill, stroke, or strokeWidth."
+          "description": "Open-ring marker drawn on the data point itself (not on the pulled-back connector tip).\n\nLeft unset, a default marker appears whenever a connector is enabled and carries no arrowhead — the leader points, the ring lands. An arrowed connector gets no marker unless you ask for one: the head already marks the spot. `dot: false` is always bare; an explicit `dot` always wins.\n\n`true` uses the default style; pass an object to override radius, fill, stroke, or strokeWidth."
         },
         "fontSize": {
           "type": "number",
@@ -6055,7 +6055,7 @@
               "$ref": "#/definitions/ConnectorConfig"
             }
           ],
-          "description": "Connector from label to anchor point.\n- `true` (default): straight line, no arrow\n- `'straight'`: straight line, no arrow\n- `'curve'`: curved arrow with arrowhead\n- `'drop-line'`: vertical line through the data point's x\n- `{ type, arrow? }`: object form for explicit arrow control\n- `false`: no connector"
+          "description": "Connector from label to anchor point.\n- `true` (default): straight line, no arrow\n- `'straight'`: straight line, no arrow\n- `'curve'`: curved arrow with arrowhead\n- `'drop-line'`: vertical line through the data point's x\n- `{ type, arrow? }`: object form for explicit arrow control\n- `false`: no connector\n\nThe connector leaves the text block on the side facing the data point, with a small standoff gap. A leader shorter than 14px is dropped as noise (the marker alone reads better), as is a connector whose target sits inside the text block. Widen `offset` if you want the line back."
         },
         "connectorOffset": {
           "type": "object",
@@ -6103,7 +6103,7 @@
       "properties": {
         "radius": {
           "type": "number",
-          "description": "Circle radius in pixels. Default 5."
+          "description": "Circle radius in pixels. Default 4."
         },
         "fill": {
           "type": "string",
@@ -6111,15 +6111,15 @@
         },
         "stroke": {
           "type": "string",
-          "description": "Stroke color. Defaults to theme text color."
+          "description": "Stroke color. Defaults to the connector's resolved stroke, so marker and leader read as one system."
         },
         "strokeWidth": {
           "type": "number",
-          "description": "Stroke width in pixels. Default 2."
+          "description": "Stroke width in pixels. Default 1.5."
         }
       },
       "additionalProperties": false,
-      "description": "Style overrides for the dot marker drawn at the connector's data-point endpoint."
+      "description": "Style overrides for the dot marker drawn at the data point."
     },
     "AnnotationAnchor": {
       "type": "string",

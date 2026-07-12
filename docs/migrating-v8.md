@@ -331,6 +331,142 @@ verifying the new swatch looks correct.
 
 ---
 
+## 11. Text annotation redesign
+
+**What changed:** Text annotations (`{ type: 'text' }`) were redesigned around
+the NYT/Datawrapper callout language: left-aligned blocks, one endpoint marker,
+two connector voices, inline bold. Six sub-changes, all visual. The spec surface
+is unchanged apart from `**bold**` now being meaningful inside `text` and
+`subtitle`.
+
+**Who's affected:** Any spec with a text annotation. There are no runtime
+warnings for any of this — the specs are valid in both versions, they just
+render differently. Visual regression baselines that include annotations will
+all diff.
+
+**Search for:** `"type": "text"` inside an `annotations` array.
+
+### 11a. Multi-line text is left-aligned, not centered
+
+Multi-line annotation text used to force `text-anchor: middle`. Now every text
+annotation aligns on the edge that faces the data point: left-aligned
+(`'start'`) by default, right-aligned (`'end'`) when `anchor: 'left'` puts the
+block to the left of the point.
+
+**Fix:** Re-check any annotation whose `text` contains `\n`. A block that was
+centered on its anchor point now grows to the right of it, so it can sit further
+right than you expect. Adjust `offset` (or set `anchor`) to reposition.
+
+```jsonc
+// Before (v7: centered on x = 300, so the block spanned roughly 240..360)
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Supply chain\nunwinds" }
+
+// After (block starts at the anchor point; pull it left to keep the old center)
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Supply chain\nunwinds",
+  "offset": { "dx": -60 } }
+```
+
+### 11b. Short connectors are suppressed; non-arrowed connectors get a marker
+
+Two linked changes:
+
+- A connector shorter than 14px is dropped. Most plain `{ type: 'text' }`
+  annotations with no `offset` sit only 8px off the data point, so their leader
+  was a stub. Those stubs are gone.
+- Whenever a connector is enabled and carries no arrowhead (straight,
+  drop-line), an open-ring marker now renders on the data point by default. It
+  used to require `dot: true`. Drop-lines get one too; they silently ignored
+  `dot: true` before.
+
+Net effect on a default annotation: the stub leader disappears and a ring
+appears. Arrowed connectors are unaffected (no default marker — the arrowhead
+already marks the spot).
+
+**Fix:** To get a bare label with no marker, set `dot: false`. To get the leader
+back, push the label further out with `offset` so the line clears 14px.
+
+```jsonc
+// Bare label, no marker (v7 look, minus the stub)
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak", "dot": false }
+
+// Keep a visible leader
+{ "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak",
+  "offset": { "dx": 0, "dy": -40 } }
+```
+
+### 11c. Dot marker defaults changed
+
+`AnnotationDot` defaults: `radius` 5 → 4, `strokeWidth` 2 → 1.5. The default
+`stroke` is now the connector's resolved stroke instead of the theme text color,
+so the marker and the leader read as one system.
+
+**Fix (if needed):** Pin the old look explicitly.
+
+```jsonc
+{ "dot": { "radius": 5, "strokeWidth": 2, "stroke": "#333333" } }
+```
+
+### 11d. Typography: 13px, theme font, bold lede
+
+- Default annotation font size is 13px (was 12px).
+- Annotation text uses `theme.fonts.family` instead of a hardcoded
+  `Inter, system-ui, sans-serif`. This also closes a measure/render font
+  mismatch, so bounds and collision nudging are more accurate.
+- **Lede rule:** when an annotation has a `subtitle` and you set no
+  `fontWeight`, the primary `text` resolves to weight 700 and the subtitle stays
+  400.
+
+**Fix (if needed):** Pin `fontSize: 12` to keep the old size. Set `fontWeight`
+explicitly to opt out of the bold lede.
+
+```jsonc
+{ "type": "text", "x": 4, "y": 90, "text": "Feb. 25", "subtitle": "2015 maximum",
+  "fontWeight": 400 }
+```
+
+### 11e. Connector and arrowhead redesign
+
+Pure rendering changes, no spec change:
+
+- Curve connectors are a single quadratic arc (was a cubic S-curve).
+- Arrowheads are a stroked open V (was a filled triangle). In the DOM they're a
+  `<polyline>`, not a `<polygon>` — update any selector that reaches into the
+  connector SVG.
+- Connectors leave the text block via a ray cast from the block center toward
+  the data point, with a 6px standoff. Curves no longer always exit the right
+  edge.
+- Arrowed connectors take the label's text ink; quiet leaders (non-arrowed
+  straight, drop-line) take a gray hairline.
+
+**If you call `computeArrowheadPoints` from `@opendata-ai/openchart-engine`
+directly:** its defaults changed (`length` 8 → 7, `halfWidth` 4 → 3.5). Pass
+explicit values to keep the old geometry.
+
+```ts
+computeArrowheadPoints(tipX, tipY, tangentX, tangentY, 8, 4);
+```
+
+### 11f. `**bold**` spans now parse in `text` and `subtitle`
+
+`**bold**` marks an inline bold span. It parses in both `text` and `subtitle`.
+Matched pairs previously rendered verbatim as literal asterisks.
+
+**Who's affected:** Only specs whose annotation text contains a *matched pair*
+of `**`. Unmatched `**` (and empty `****`) still render literally.
+
+**Search for:** `**` inside an annotation `text` or `subtitle` string.
+
+**Fix:** Nothing to do unless you were relying on literal `**` pairs showing up
+in the output. If so, break the pair (a single `*` renders as-is) or drop the
+asterisks.
+
+```jsonc
+// New capability: emphasis on the key phrase, not the whole block
+{ "type": "text", "x": "2022-06", "y": 8.5, "text": "Inflation peaked at **8.5%**" }
+```
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
@@ -341,3 +477,7 @@ at compile time with the exact fix. Two items have no runtime warning:
   bar/area specs manually.
 - **ChartType/CHART_TYPES (section 6):** TypeScript build fails immediately
   if you still import them.
+- **Visual-only changes (sections 8-11):** nothing to compile against. Check
+  them by looking at the charts. If you keep screenshot baselines, expect the
+  annotation redesign (section 11) to diff every chart that carries a text
+  annotation.
