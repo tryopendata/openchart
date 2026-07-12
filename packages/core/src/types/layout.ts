@@ -713,8 +713,22 @@ export interface LegendEntry {
   overflow?: boolean;
 }
 
+/** The encoding channel a legend keys. */
+export type LegendChannel = 'color' | 'size';
+
 /** Base legend layout fields shared by all legend types. */
 export interface BaseLegendLayout {
+  /**
+   * Which encoding channel this legend keys. Omitted means `'color'` (every
+   * legend was a color legend before size legends existed).
+   *
+   * This is the identity that makes plural legends safe: click-to-toggle-series
+   * must fire for color entries and never for size circles, and selection/drag
+   * must be able to tell two legends apart. Without it, `.oc-legend` and
+   * `data-legend-index` are ambiguous across legends and the DOM queries that
+   * read them silently pick whichever comes first.
+   */
+  channel?: LegendChannel;
   /** Where the legend is positioned relative to the chart area. */
   position: 'top' | 'right' | 'bottom' | 'bottom-right' | 'inline';
   /** Bounding box for the legend (pixel coordinates). */
@@ -823,8 +837,55 @@ export interface ContinuousLegendLayout extends BaseLegendLayout {
   labelY: number;
 }
 
-/** Resolved legend layout: categorical (swatches), gradient (tilemap bar), or continuous (chart color bar). */
-export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout | ContinuousLegendLayout;
+/**
+ * One graduated circle in a size legend: a representative value from the size
+ * scale's domain, drawn at the radius that value actually resolves to.
+ */
+export interface SizeLegendCircle {
+  /** The data value this circle stands for. */
+  value: number;
+  /** Formatted label text. */
+  label: string;
+  /** Radius in pixels -- the *same* scale the marks use, never a re-derivation. */
+  radius: number;
+  /** Center x, relative to the legend bounds. */
+  cx: number;
+  /** Center y, relative to the legend bounds. Circles sit on a common baseline. */
+  cy: number;
+  /** Label baseline y, relative to the legend bounds. */
+  labelY: number;
+}
+
+/**
+ * Size legend: graduated circles keying a quantitative `size` encoding.
+ *
+ * The circles are drawn nested (concentric, sharing a bottom edge) rather than
+ * side by side -- the newsroom convention, and it makes the *ratio* between
+ * magnitudes legible instead of just their order.
+ *
+ * The keyed values come from the scale's DOMAIN, not the data extent. The size
+ * scale clamps, so with an explicit `scale.domain` every datum past `domain[1]`
+ * renders at max radius; keying the data extent would imply the biggest circle
+ * equals the biggest datum when it may not.
+ */
+export interface SizeLegendLayout extends BaseLegendLayout {
+  /** Discriminant for legend type. */
+  type: 'size';
+  /** Graduated circles, smallest first. */
+  circles: SizeLegendCircle[];
+  /** Stroke color for the circle outlines. */
+  stroke: string;
+}
+
+/**
+ * Resolved legend layout: categorical (swatches), gradient (tilemap bar),
+ * continuous (chart color bar), or size (graduated circles).
+ */
+export type LegendLayout =
+  | CategoricalLegendLayout
+  | GradientLegendLayout
+  | ContinuousLegendLayout
+  | SizeLegendLayout;
 
 // ---------------------------------------------------------------------------
 // Endpoint labels (right-side per-series column for line/area charts)
@@ -1147,8 +1208,22 @@ export interface ChartLayout {
   marks: Mark[];
   /** Resolved annotations with pixel positions. */
   annotations: ResolvedAnnotation[];
-  /** Legend layout (position, entries, bounds). */
+  /**
+   * Primary legend (the color legend). Kept as a singular slot: it is what every
+   * existing consumer reads, and a chart's legend is a color legend unless it
+   * says otherwise.
+   */
   legend: LegendLayout;
+  /**
+   * Every legend on the chart, in render order -- the color legend plus, when a
+   * quantitative `size` channel is encoded, a size legend.
+   *
+   * `legend` is `legends[0]` when a color legend exists. Consumers that reserve
+   * space or hit-test **must** iterate this array: a bubble chart keys both
+   * continent (color) and population (size), and reserving margin for only the
+   * first leaves the second drawing on top of the plot.
+   */
+  legends: LegendLayout[];
   /**
    * Right-side endpoint labels column for multi-series line/area charts.
    * Empty `entries` means the column is suppressed (single-series, opt-out, or

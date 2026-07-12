@@ -24,6 +24,42 @@ import { scaleLinear, scaleSqrt } from 'd3-scale';
 /** How a size value maps onto its visual magnitude. */
 export type SizeCurve = 'sqrt' | 'linear';
 
+/**
+ * Per-mark size-scale defaults.
+ *
+ * These live here, next to the builder, rather than in each mark's compute
+ * module -- because the size *legend* needs the exact same numbers, and a key
+ * whose circles are a different size from the bubbles they explain is worse
+ * than no key. One definition, imported by both, so they cannot drift.
+ */
+export const SIZE_SCALE_DEFAULTS = {
+  /** Scatter bubbles. */
+  point: { curve: 'sqrt', range: [3, 30] },
+  /**
+   * Beeswarm dots. Tighter than scatter's 3-30: large radii make the dodge
+   * layout stack dots far past the lane, so the default cap stays low.
+   */
+  beeswarm: { curve: 'sqrt', range: [2, 10] },
+  /**
+   * Text glyphs. Linear, not sqrt -- a word reads by its height, which is
+   * linear in font size, where a disc reads by its area.
+   */
+  text: { curve: 'linear', range: [11, 32] },
+} as const satisfies Record<string, { curve: SizeCurve; range: readonly [number, number] }>;
+
+/** Size-scale options for a mark, or null when the mark has no size channel. */
+export function sizeScaleDefaultsFor(
+  markType: string,
+): { curve: SizeCurve; range: [number, number] } | null {
+  const found = (
+    SIZE_SCALE_DEFAULTS as Record<
+      string,
+      { curve: SizeCurve; range: readonly [number, number] } | undefined
+    >
+  )[markType];
+  return found ? { curve: found.curve, range: [found.range[0], found.range[1]] } : null;
+}
+
 /** A resolved size scale plus the domain and range it was built from. */
 export interface ResolvedSizeScale {
   /** Maps a data value to a visual magnitude (radius, or font size). */
@@ -60,7 +96,7 @@ export interface ResolvedSizeScale {
 export function buildSizeScale(
   sizeEncoding: EncodingChannel | undefined,
   data: readonly DataRow[],
-  options: { curve: SizeCurve; range: [number, number] },
+  options: { curve: SizeCurve; range: readonly [number, number] },
 ): ResolvedSizeScale | null {
   if (!sizeEncoding || !('field' in sizeEncoding) || !sizeEncoding.field) return null;
   const field = sizeEncoding.field;
@@ -94,7 +130,7 @@ export function buildSizeScale(
   }
 
   const explicitRange = sizeEncoding.scale?.range as [number, number] | undefined;
-  const range: [number, number] = explicitRange ?? options.range;
+  const range: [number, number] = explicitRange ?? [options.range[0], options.range[1]];
 
   const build = options.curve === 'linear' ? scaleLinear : scaleSqrt;
   const scale = build().domain(domain).range(range).clamp(true);

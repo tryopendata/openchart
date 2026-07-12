@@ -8,6 +8,7 @@ import type {
   CategoricalLegendLayout,
   ContinuousLegendLayout,
   LegendLayout,
+  SizeLegendLayout,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { nextSvgId } from '../svg-ids';
@@ -100,9 +101,70 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   parent.appendChild(g);
 }
 
+/**
+ * Render a size legend: graduated circles, nested (concentric, sharing a bottom
+ * edge) so the ratio between magnitudes reads, not just their order.
+ *
+ * Emits **no** `data-legend-index`. That attribute is what
+ * `wireLegendInteraction` sweeps up to wire click-to-toggle-series, and a size
+ * circle is not a series -- clicking "500M" must not try to hide a series named
+ * "500M". The circles are inert, and `aria-hidden` keeps them out of the AT tree
+ * as decorative chrome (the values are already in each mark's aria label).
+ */
+function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
+  if (legend.circles.length === 0) return;
+
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-legend oc-legend--size');
+  g.setAttribute('transform', `translate(${legend.bounds.x}, ${legend.bounds.y})`);
+  g.setAttribute('role', 'img');
+  g.setAttribute('aria-label', 'Size legend');
+
+  for (const circle of legend.circles) {
+    const c = createSVGElement('circle');
+    setAttrs(c, {
+      cx: circle.cx,
+      cy: circle.cy,
+      r: circle.radius,
+      fill: 'none',
+      stroke: legend.stroke,
+      'stroke-width': 1,
+    });
+    g.appendChild(c);
+
+    // Leader line from the circle's top edge out to its label.
+    const line = createSVGElement('line');
+    setAttrs(line, {
+      x1: circle.cx,
+      y1: circle.cy - circle.radius,
+      x2: legend.circles[0].cx + legend.circles[0].radius + 4,
+      y2: circle.cy - circle.radius,
+      stroke: legend.stroke,
+      'stroke-width': 1,
+      'stroke-dasharray': '2 2',
+    });
+    g.appendChild(line);
+
+    const label = createSVGElement('text');
+    setAttrs(label, {
+      x: legend.circles[0].cx + legend.circles[0].radius + 8,
+      y: circle.labelY,
+    });
+    applyTextStyle(label, legend.labelStyle);
+    label.textContent = circle.label;
+    g.appendChild(label);
+  }
+
+  parent.appendChild(g);
+}
+
 export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   if (legend.type === 'continuous') {
     renderContinuousLegend(parent, legend);
+    return;
+  }
+  if (legend.type === 'size') {
+    renderSizeLegend(parent, legend);
     return;
   }
   if (!isCategorical(legend) || legend.entries.length === 0) return;

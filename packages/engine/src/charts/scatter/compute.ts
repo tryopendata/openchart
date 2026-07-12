@@ -17,7 +17,7 @@ import type {
   Rect,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
-import { buildSizeScale } from '../../compile/size-scale';
+import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -28,8 +28,6 @@ import { getColor, getSequentialColor } from '../utils';
 // ---------------------------------------------------------------------------
 
 const DEFAULT_POINT_RADIUS = 5;
-const MIN_BUBBLE_RADIUS = 3;
-const MAX_BUBBLE_RADIUS = 30;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -119,10 +117,7 @@ export function computeScatterMarks(
   // (`encoding.size.scale.{domain,range}`) and the degenerate-domain fallback
   // live in the shared builder, which the size legend also calls so the key and
   // the marks can never resolve different scales.
-  const resolvedSize = buildSizeScale(sizeEnc, spec.data, {
-    curve: 'sqrt',
-    range: [MIN_BUBBLE_RADIUS, MAX_BUBBLE_RADIUS],
-  });
+  const resolvedSize = buildSizeScale(sizeEnc, spec.data, SIZE_SCALE_DEFAULTS.point);
   const sizeScale = resolvedSize?.scale;
 
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;

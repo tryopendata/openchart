@@ -20,7 +20,7 @@ import type {
   Rect,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-import { buildSizeScale } from '../../compile/size-scale';
+import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
@@ -37,12 +37,6 @@ import { dodgeOffsets } from './dodge';
  * swarm height: at r=4 a 300-dot swarm stays inside a typical chart area.
  */
 const DEFAULT_DOT_RADIUS = 4;
-
-/** Sized-dot radius bounds (px). Tighter than scatter's 3-30: large radii
- * make the dodge layout stack dots far past the lane, so the default cap
- * stays low. Authors override via `encoding.size.scale.range`. */
-const MIN_SIZED_RADIUS = 2;
-const MAX_SIZED_RADIUS = 10;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -96,10 +90,7 @@ export function computeBeeswarmMarks(
 
   // Sized dots: sqrt (area-proportional), same override surface as scatter.
   // Shared builder so the marks and any size legend resolve one scale.
-  const resolvedSize = buildSizeScale(sizeEnc, spec.data, {
-    curve: 'sqrt',
-    range: [MIN_SIZED_RADIUS, MAX_SIZED_RADIUS],
-  });
+  const resolvedSize = buildSizeScale(sizeEnc, spec.data, SIZE_SCALE_DEFAULTS.beeswarm);
   const sizeScale = resolvedSize?.scale;
 
   // Resolve every renderable dot first: dodge needs the full position/radius

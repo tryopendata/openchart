@@ -8,16 +8,13 @@
 
 import type { Encoding, Mark, MarkAria, TextMarkLayout } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
-import { buildSizeScale } from '../../compile/size-scale';
+import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import type { ChartRenderer } from '../registry';
 import { getColor, scaleValue } from '../utils';
 
-/** Font-size range the `size` channel maps into when the author doesn't set one. */
-const MIN_FONT_SIZE = 11;
-const MAX_FONT_SIZE = 32;
 /** Font size for text marks with no `size` encoding and no `mark.fontSize`. */
 const DEFAULT_FONT_SIZE = 12;
 
@@ -66,10 +63,7 @@ export function computeTextMarks(
   // Unlike scatter/beeswarm, this channel is *not* keyed: the library ships no
   // font-size legend, and no publication uses one. Treat it as emphasis, not as
   // a channel a reader is expected to decode back into a value.
-  const fontSizeScale = buildSizeScale(sizeEncoding, spec.data, {
-    curve: 'linear',
-    range: [MIN_FONT_SIZE, MAX_FONT_SIZE],
-  })?.scale;
+  const fontSizeScale = buildSizeScale(sizeEncoding, spec.data, SIZE_SCALE_DEFAULTS.text)?.scale;
 
   for (const row of spec.data) {
     // Resolve x position (center of chart if no x encoding)

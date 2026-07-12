@@ -60,6 +60,7 @@ export type {
   Gridline,
   HeatmapTableCell,
   ImageTableCell,
+  LegendChannel,
   LegendEntry,
   LegendEntryPosition,
   LegendLayout,
@@ -89,6 +90,8 @@ export type {
   SankeyLayout,
   SankeyLinkMark,
   SankeyNodeMark,
+  SizeLegendCircle,
+  SizeLegendLayout,
   SortState,
   SparklineData,
   SparklineTableCell,
@@ -136,7 +139,6 @@ export type {
   ChartSpec,
   ChartSpecOverride,
   ChartSpecWithoutData,
-  ChartType,
   Chrome,
   ChromeText,
   ChromeTextStyle,
@@ -228,7 +230,6 @@ export type {
   YouDrawItConfig,
 } from './spec';
 export {
-  CHART_TYPES,
   getRepresentativeColor,
   isAxislessMark,
   isBarListSpec,

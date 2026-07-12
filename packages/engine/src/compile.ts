@@ -23,6 +23,7 @@ import type {
   FacetPanelLayout,
   LayerSpec,
   LayoutStrategy,
+  LegendLayout,
   Mark,
   ResolvedAnimation,
   ResolvedAnnotation,
@@ -84,6 +85,7 @@ import { computeGridlines } from './layout/gridlines';
 import { createMeasureFn, resolveLayoutPlan } from './layout/plan';
 import { computeScales } from './layout/scales';
 import { placeLegend } from './legend/compute';
+import { placeSizeLegend } from './legend/size';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
 import { compileTileMap as compileTileMapImpl } from './tilemap/compile-tilemap';
@@ -622,6 +624,15 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     dims.effectiveAxisGap,
   );
 
+  // Every legend on the chart. The color legend is primary (and stays in the
+  // singular `legend` slot); a size legend joins it when a quantitative `size`
+  // channel is encoded. Consumers that reserve space or hit-test must iterate
+  // this rather than read `legend` -- see ChartLayout.legends.
+  const sizeLegend = plan.sizeLegendContent
+    ? placeSizeLegend(plan.sizeLegendContent, chartArea, theme)
+    : null;
+  const allLegends: LegendLayout[] = [finalLegend, ...(sizeLegend ? [sizeLegend] : [])];
+
   // Inline y-axis labels: inset the x-scale range start by the widest tick
   // label width so data marks start to the right of the labels. The plan
   // already measured the real tick labels.
@@ -851,6 +862,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     marks,
     annotations,
     legend: finalLegend,
+    legends: allLegends,
     ...(endpointLabels.entries.length > 0 ? { endpointLabels } : {}),
     tooltipDescriptors,
     a11y: {
@@ -1130,6 +1142,9 @@ function compileFaceted(
     marks: allMarks,
     annotations: [],
     legend: finalLegend,
+    // Facets share one color legend across the grid; the size channel isn't
+    // supported in facet specs, so there is no second legend to carry.
+    legends: [finalLegend],
     tooltipDescriptors,
     a11y: {
       altText,

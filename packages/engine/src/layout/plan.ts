@@ -1,6 +1,7 @@
 import type {
   CompileOptions,
   Encoding,
+  EncodingChannel,
   LayoutStrategy,
   MeasureTextFn,
   Rect,
@@ -33,6 +34,11 @@ import { format as d3Format } from 'd3-format';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { computeLegendContent, hasLegendContent, type LegendContent } from '../legend/compute';
+import {
+  computeSizeLegendContent,
+  type SizeLegendContent,
+  sizeLegendScaleFor,
+} from '../legend/size';
 import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
@@ -56,6 +62,15 @@ export interface LayoutPlan {
   leftGutter: number;
   xAxisExtent: number;
   legendContent: LegendContent;
+  /**
+   * Size legend content, when a quantitative `size` channel is encoded.
+   *
+   * Kept beside `legendContent` rather than inside it: a chart can carry BOTH a
+   * color legend and a size legend, and folding them into one slot is what made
+   * the size channel unkeyable in the first place. `dimensions.ts` reserves
+   * right-margin for this independently of the color legend's position.
+   */
+  sizeLegendContent?: SizeLegendContent | null;
   chrome: ResolvedChrome;
   yTickValues: unknown[];
   yTickCount: number;
@@ -167,6 +182,8 @@ export function resolveLayoutPlan(
       leftGutter: hPad,
       xAxisExtent: 0,
       legendContent,
+      // Sparkline / radial: no positional axes and no bubbles, so no size key.
+      sizeLegendContent: null,
       chrome,
       yTickValues: [],
       yTickCount: 0,
@@ -300,6 +317,21 @@ export function resolveLayoutPlan(
       endpointLabelsDemoted = true;
     }
   }
+
+  // Size legend: keys a quantitative `size` channel with graduated circles.
+  // Independent of the color legend -- a bubble chart keys BOTH continent
+  // (color) and population (size), so this is computed alongside, not instead.
+  // Width-independent, so it sits outside the convergence loop.
+  const sizeScaleOpts = sizeLegendScaleFor(renderSpec.markType);
+  const sizeLegendContent =
+    sizeScaleOpts && chartSpec.legend?.show !== false
+      ? computeSizeLegendContent(
+          renderSpec.encoding.size as EncodingChannel | undefined,
+          renderSpec.data,
+          theme,
+          sizeScaleOpts,
+        )
+      : null;
 
   for (let iter = 0; iter < 2; iter++) {
     // Legend content
@@ -563,6 +595,7 @@ export function resolveLayoutPlan(
         leftGutter: gutterWithTitle,
         xAxisExtent,
         legendContent,
+        sizeLegendContent,
         chrome,
         yTickValues,
         yTickCount,

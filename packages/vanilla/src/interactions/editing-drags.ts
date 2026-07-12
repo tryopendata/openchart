@@ -414,7 +414,9 @@ export function wireLegendDrag(
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
-  const legendG = svg.querySelector('.oc-legend') as SVGGElement | null;
+  // The color legend: it owns `spec.legend.offset`, which is what a drag writes
+  // back. The size legend is not draggable and must not be picked up here.
+  const legendG = svg.querySelector('.oc-legend:not(.oc-legend--size)') as SVGGElement | null;
   if (!legendG) return () => {};
 
   const cleanups: Array<() => void> = [];

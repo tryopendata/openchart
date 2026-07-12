@@ -46,6 +46,7 @@ import { format as d3Format } from 'd3-format';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { hasLegendContent } from '../legend/compute';
+import { SIZE_LEGEND_GAP } from '../legend/size';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
@@ -704,6 +705,18 @@ export function computeDimensions(
     }
     // 'bottom' is intentionally not handled here -- see bottomLegendReservation
     // above.
+  }
+
+  // Size legend: its own right-column reservation, ADDED to whatever the color
+  // legend already took. This is the whole point of the plural slot -- a bubble
+  // chart keys continent (color) and population (size), and reserving for only
+  // one leaves the other drawing on top of the plot.
+  //
+  // Right column, not top: graduated circles are as tall as the largest bubble's
+  // diameter, and a ~60px band across the top of a 400px chart eats the plot.
+  const sizeLegend = plan?.sizeLegendContent;
+  if (sizeLegend) {
+    margins.right += sizeLegend.width + SIZE_LEGEND_GAP;
   }
 
   // effectiveAxisGap sits between the legend (or chrome, if no legend) and
