@@ -4,18 +4,24 @@
  * Without this, `size` is an *unkeyed* channel: a bubble chart shows circles of
  * varying area and gives the reader nothing to decode them with.
  *
- * Two rules drive the whole module, and both are about not lying to the reader.
+ * Three rules drive the module, and they are all about not lying to the reader.
  *
- * **Resolve the same scale the marks resolve.** The radii here come from
+ * **Resolve the same scale the marks resolve.** The values come from
  * `buildSizeScale` -- the identical builder `scatter/compute.ts` and
- * `beeswarm/compute.ts` call -- rather than a re-derivation. A key whose circles
- * are computed independently of the marks is a key that can silently drift from
- * them. (`continuous.ts` mirrors the color path for exactly this reason.)
+ * `beeswarm/compute.ts` call -- rather than a re-derivation. A key computed
+ * independently of the marks is a key that can silently drift from them.
+ * (`continuous.ts` mirrors the color path for exactly this reason.)
  *
  * **Key the domain, not the data extent.** The size scale clamps. With an
  * explicit `scale.domain`, every datum past `domain[1]` renders at max radius,
  * so a circle labeled with the largest *datum* would imply a correspondence that
  * doesn't hold. The domain is what the scale actually promises.
+ *
+ * **A key you can't see keys nothing.** The one place the drawn circles are
+ * allowed to depart from the marks: when the mark's radius range is too small to
+ * read (a beeswarm's [2, 10] is a 20px smudge), the circles are redrawn across
+ * `MIN_LEGIBLE_RANGE`. The labels still carry the true values -- only the swatch
+ * is scaled up, and only when the literal version would be illegible.
  */
 
 import type {
@@ -34,6 +40,8 @@ import {
   formatNumber,
 } from '@opendata-ai/openchart-core';
 
+import { scaleLinear, scaleSqrt } from 'd3-scale';
+
 import { buildSizeScale, type SizeCurve, sizeScaleDefaultsFor } from '../compile/size-scale';
 
 // ---------------------------------------------------------------------------
@@ -48,6 +56,19 @@ const BASELINE_PAD = 2;
 
 /** How many circles to key. Three reads as a scale; two reads as a comparison. */
 const CIRCLE_COUNT = 3;
+
+/**
+ * Smallest radius range the drawn circles are allowed to occupy.
+ *
+ * A beeswarm sizes its dots [2, 10]: rendering the key at those radii puts three
+ * labels next to a 20px smudge that reads as no key at all. When the mark's own
+ * range is smaller than this, the circles are redrawn across [4, 18] -- still
+ * ordered and still proportional to each other, but big enough to see. The key
+ * becomes *indicative* rather than a 1:1 swatch of the marks, which is the right
+ * trade: a key you can't see keys nothing. Marks that already exceed this (a
+ * scatter's [3, 30]) are drawn at their true radii and match the bubbles exactly.
+ */
+const MIN_LEGIBLE_RANGE: readonly [number, number] = [4, 18];
 
 /** Gap between the plot's right edge and the size legend column. */
 export const SIZE_LEGEND_GAP = 12;
@@ -68,6 +89,22 @@ export interface SizeLegendContent {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * A radius scale over an explicit range, bypassing the encoding's own
+ * `scale.range` (which `buildSizeScale` honours, and which is exactly the
+ * too-small range the legible floor exists to escape). Same curve and clamping
+ * as the mark scale, so the circles stay proportional to each other.
+ */
+function buildRadiusScale(
+  curve: SizeCurve,
+  domain: [number, number],
+  range: readonly [number, number],
+): (value: number) => number {
+  const build = curve === 'linear' ? scaleLinear : scaleSqrt;
+  const scale = build().domain(domain).range([range[0], range[1]]).clamp(true);
+  return (value: number) => scale(value);
+}
 
 /** Format a legend value: channel format wins, then the house number style. */
 function formatValue(value: number, formatStr?: string): string {
@@ -229,7 +266,24 @@ export function computeSizeLegendContent(
   const values = pickValues(resolved.domain, resolved.scale);
   if (values.length < 2) return null;
 
-  const maxRadius = resolved.scale(resolved.domain[1]);
+  // Draw at the mark's own radii, unless they're too small to see -- then redraw
+  // across MIN_LEGIBLE_RANGE. The *values* always come from the real scale, so
+  // the labels stay true either way; only the circle sizes are rescaled.
+  //
+  // Test the RESOLVED range, not `options.range`: an explicit
+  // `encoding.size.scale.range` overrides the mark default, and the beeswarm
+  // fixture does exactly that ([2, 8]). Checking the default would miss it.
+  //
+  // The redraw is built straight from the domain rather than through
+  // `buildSizeScale`, which reads the range off the encoding and would hand back
+  // the same too-small range we're trying to escape.
+  const [markMin, markMax] = resolved.range;
+  const needsFloor = markMax - markMin < MIN_LEGIBLE_RANGE[1] - MIN_LEGIBLE_RANGE[0];
+  const drawScale = needsFloor
+    ? buildRadiusScale(options.curve, resolved.domain, MIN_LEGIBLE_RANGE)
+    : resolved.scale;
+
+  const maxRadius = drawScale(resolved.domain[1]);
   if (!Number.isFinite(maxRadius) || maxRadius <= 0) return null;
 
   const fontSize = theme.fonts.sizes.small;
@@ -248,7 +302,7 @@ export function computeSizeLegendContent(
   let prevLabelY = Number.NEGATIVE_INFINITY;
 
   const circles: SizeLegendCircle[] = values.map((value) => {
-    const radius = resolved.scale(value);
+    const radius = drawScale(value);
     const edgeY = baseline - radius * 2 + fontSize * 0.35;
     const labelY = Math.max(edgeY, prevLabelY + lineHeight);
     prevLabelY = labelY;

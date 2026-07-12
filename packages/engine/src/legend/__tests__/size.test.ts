@@ -76,9 +76,38 @@ describe('size legend', () => {
     const maxMarkRadius = Math.max(...points.map((p) => (p as { r: number }).r));
     const maxCircleRadius = Math.max(...(legend?.circles ?? []).map((c) => c.radius));
 
-    // The largest keyed circle corresponds to the top of the domain, which is
-    // the largest datum here -- so it matches the biggest bubble exactly.
+    // A scatter's radii ([3, 30]) are already legible, so the key is drawn at the
+    // marks' true sizes: the largest circle matches the biggest bubble exactly.
     expect(maxCircleRadius).toBeCloseTo(maxMarkRadius, 5);
+  });
+
+  /**
+   * The one place the circles are allowed to depart from the marks. A beeswarm
+   * sizes its dots [2, 10]; drawn literally, the key is a 20px smudge. Scale the
+   * swatch up so it reads -- the labels still carry the true values.
+   */
+  it('enlarges the circles when the marks are too small to key legibly', () => {
+    // Both the mark default ([2, 10]) and an explicit override ([2, 8]) -- the
+    // beeswarm fixture sets the latter, and checking only the default missed it.
+    const explicitRange: ChartSpec = {
+      ...swarmSpec,
+      encoding: {
+        ...swarmSpec.encoding,
+        size: { field: 'pop', type: 'quantitative', scale: { range: [2, 8] } },
+      },
+    } as ChartSpec;
+
+    for (const spec of [swarmSpec, explicitRange]) {
+      const circles = sizeLegendOf(spec)?.circles ?? [];
+      expect(circles.length).toBeGreaterThanOrEqual(2);
+
+      const maxRadius = Math.max(...circles.map((c) => c.radius));
+      // Bigger than the beeswarm's own cap, and still ordered + distinguishable.
+      expect(maxRadius).toBeGreaterThan(10);
+      for (let i = 1; i < circles.length; i++) {
+        expect(circles[i].radius).toBeLessThan(circles[i - 1].radius);
+      }
+    }
   });
 
   it('nests the circles on a shared baseline, largest first', () => {
