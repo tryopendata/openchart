@@ -651,7 +651,7 @@ const lineSpec: ChartSpec = {
       anchor: 'bottom',
       offset: { dx: -40, dy: -20 },
       connector: true,
-      background: '#ffffff',
+      background: true,
     },
     {
       type: 'text',

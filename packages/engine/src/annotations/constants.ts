@@ -30,6 +30,12 @@ export const DARK_MUTED_TEXT_FILL = '#9ca3af';
 export const LIGHT_DOT_FILL = '#ffffff';
 export const DARK_DOT_FILL = '#0a0a0a';
 
+// Surface fills for the text-annotation background plate (the mask that hides
+// chart lines behind label text). `background: true` resolves to these, so
+// authors don't hardcode '#ffffff' and get light-gray-on-white in dark mode.
+export const LIGHT_LABEL_BACKGROUND = '#ffffff';
+export const DARK_LABEL_BACKGROUND = '#0a0a0a';
+
 /** Default annotation dot radius in pixels. */
 export const DEFAULT_DOT_RADIUS = 5;
 

@@ -10,6 +10,7 @@ import { computeScales } from '../../layout/scales';
 import { computeAnnotations } from '../compute';
 import {
   DARK_DOT_FILL,
+  DARK_LABEL_BACKGROUND,
   DARK_MUTED_TEXT_FILL,
   DARK_TEXT_FILL,
   DEFAULT_ANNOTATION_FONT_SIZE,
@@ -17,6 +18,7 @@ import {
   DEFAULT_DOT_STROKE_WIDTH,
   DEFAULT_LINE_HEIGHT,
   LIGHT_DOT_FILL,
+  LIGHT_LABEL_BACKGROUND,
   LIGHT_MUTED_TEXT_FILL,
   LIGHT_TEXT_FILL,
   SUBTITLE_FONT_SIZE_RATIO,
@@ -166,6 +168,53 @@ describe('text annotation: dot', () => {
     expect(offsetDot.y).toBe(withOffset[0].label!.connector!.to.y);
     // And it should differ from the un-offset case (sanity check).
     expect(offsetDot.x).not.toBe(baseDot.x);
+  });
+});
+
+describe('text annotation: background', () => {
+  it('does not populate background when not specified', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No plate' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label.background).toBeUndefined();
+  });
+
+  it('resolves background: true to the light surface in light mode', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: true },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, false);
+
+    expect(annotations[0].label.background).toBe(LIGHT_LABEL_BACKGROUND);
+  });
+
+  // The dark-mode regression: `background: true` must NOT stay white, or the
+  // theme's light text renders light-gray-on-white and is unreadable.
+  it('resolves background: true to the dark surface when isDark is true', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: true },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, true);
+
+    expect(annotations[0].label.background).toBe(DARK_LABEL_BACKGROUND);
+    expect(annotations[0].label.background).not.toBe(LIGHT_LABEL_BACKGROUND);
+  });
+
+  it('passes an explicit background color through unchanged in both modes', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: '#ff00ff' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+
+    expect(
+      computeAnnotations(spec, scales, chartArea, fullStrategy, false)[0].label.background,
+    ).toBe('#ff00ff');
+    expect(
+      computeAnnotations(spec, scales, chartArea, fullStrategy, true)[0].label.background,
+    ).toBe('#ff00ff');
   });
 });
 

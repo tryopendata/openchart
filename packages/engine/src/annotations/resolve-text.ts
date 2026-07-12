@@ -15,6 +15,7 @@ import type {
 import type { ResolvedScales } from '../layout/scales';
 import {
   DARK_DOT_FILL,
+  DARK_LABEL_BACKGROUND,
   DARK_MUTED_TEXT_FILL,
   DARK_TEXT_FILL,
   DEFAULT_ANNOTATION_FONT_SIZE,
@@ -23,6 +24,7 @@ import {
   DEFAULT_DOT_STROKE_WIDTH,
   DEFAULT_LINE_HEIGHT,
   LIGHT_DOT_FILL,
+  LIGHT_LABEL_BACKGROUND,
   LIGHT_MUTED_TEXT_FILL,
   LIGHT_TEXT_FILL,
   SUBTITLE_FONT_SIZE_RATIO,
@@ -59,6 +61,19 @@ function resolveConnectorConfig(
 
   // true, 'straight', or undefined all map to straight with no arrow
   return { type: 'straight', arrow: false };
+}
+
+/**
+ * Resolve `background` to a concrete color. `true` picks the theme surface so
+ * the plate follows light/dark; a string passes through as an explicit override.
+ */
+function resolveLabelBackground(
+  background: string | true | undefined,
+  isDark: boolean,
+): string | undefined {
+  if (background === undefined) return undefined;
+  if (background === true) return isDark ? DARK_LABEL_BACKGROUND : LIGHT_LABEL_BACKGROUND;
+  return background;
 }
 
 /** Horizontal gap between the drop-line and the label text. */
@@ -98,6 +113,7 @@ export function resolveTextAnnotation(
   if (px === null || py === null) return null;
 
   const defaultTextFill = isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL;
+  const labelBackground = resolveLabelBackground(annotation.background, isDark);
 
   const labelStyle = makeAnnotationLabelStyle(
     annotation.fontSize,
@@ -120,6 +136,7 @@ export function resolveTextAnnotation(
       chartArea,
       labelStyle,
       defaultTextFill,
+      labelBackground,
       measure,
     );
   }
@@ -199,7 +216,7 @@ export function resolveTextAnnotation(
           arrow: connectorArrow,
         }
       : undefined,
-    background: annotation.background,
+    background: labelBackground,
     halo: annotation.halo,
     bounds: labelBounds,
   };
@@ -279,6 +296,7 @@ function resolveDropLineAnnotation(
   chartArea: Rect,
   labelStyle: TextStyle,
   defaultTextFill: string,
+  labelBackground: string | undefined,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): ResolvedAnnotation {
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
@@ -349,7 +367,7 @@ function resolveDropLineAnnotation(
       style: 'drop-line',
       arrow: false,
     },
-    background: annotation.background,
+    background: labelBackground,
     halo: annotation.halo,
     bounds: labelBounds,
   };

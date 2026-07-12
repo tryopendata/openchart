@@ -315,7 +315,7 @@ const darkModeSpec: ChartSpec = {
   theme: {
     colors: {
       categorical: ['#2563eb', '#f59e0b', '#10b981'],
-      background: '#ffffff',
+      background: true,
       text: '#0f172a',
       gridline: '#e2e8f0',
       axis: '#94a3b8',

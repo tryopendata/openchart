@@ -961,8 +961,14 @@ export interface TextAnnotation extends AnnotationBase {
     /** Offset for the data-point-end of the connector. */
     to?: AnnotationOffset;
   };
-  /** Background color behind the text. Useful for readability over chart lines. */
-  background?: string;
+  /**
+   * Background plate behind the text, for readability over chart lines.
+   *
+   * `true` uses the theme surface, so the plate follows light/dark mode. A
+   * color string sets it explicitly. Prefer `true`: a hardcoded '#ffffff' stays
+   * white in dark mode and the text turns light-gray-on-white.
+   */
+  background?: string | true;
   /** Whether to show the paint-order stroke halo behind text. Default true. Set false for white text on colored backgrounds. */
   halo?: boolean;
 }
