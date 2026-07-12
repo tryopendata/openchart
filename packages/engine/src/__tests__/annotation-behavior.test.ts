@@ -232,6 +232,28 @@ describe('a callout lands where the anchor says it should', () => {
     expect(crossesBlock).toBe(false);
   });
 
+  test('a pinned callout still gets clamped onto the canvas', () => {
+    // Pinning exempts a callout from AVOIDANCE, not from staying on the page. An
+    // offset that would fling it into the void still gets reeled back in -- otherwise
+    // "explicit wins" becomes a way to render a label nobody can see.
+    const a = first([
+      {
+        type: 'text',
+        x: 'Mar',
+        y: 30,
+        text: 'Way out there',
+        anchor: 'right',
+        offset: { dx: 5000, dy: -4000 },
+      },
+    ]);
+    const b = a.bounds!;
+
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.y).toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width).toBeLessThanOrEqual(800);
+    expect(b.y + b.height).toBeLessThanOrEqual(460);
+  });
+
   test('a hand-offset block keeps its spot; the other one routes around it', () => {
     // The corollary of "explicit wins": the pinned block does not move to dodge its
     // neighbour, but it still claims its space, so nothing prints on top of it.
@@ -538,6 +560,25 @@ describe('callouts get out of each other and stay readable', () => {
       { type: 'text', x: 'Mar', y: 30, text: 'Third callout here' },
       { type: 'text', x: 'Apr', y: 42, text: 'Fourth callout here' },
     ]);
+
+  test('an auto-placed block sits on the side its text alignment says it does', () => {
+    // The scored search picks a side per callout, and a left-side result gets
+    // textAnchor 'end' -- the text then extends LEFT of `label.x` instead of right.
+    // If `bounds` were computed before that flip were applied, it would sit on the
+    // wrong side of the origin: the box other callouts avoid, and that thinning
+    // measures, would be a mirror image of the words on screen.
+    for (const a of crowded()) {
+      if (a.footnoteIndex != null || !a.bounds || !a.label) continue;
+      const b = a.bounds;
+      const lx = a.label.x;
+
+      if (a.label.style.textAnchor === 'end') {
+        expect(b.x + b.width).toBeCloseTo(lx, 0);
+      } else {
+        expect(b.x).toBeCloseTo(lx, 0);
+      }
+    }
+  });
 
   test('no two callout blocks overlap each other', () => {
     const blocks = crowded()
