@@ -2,9 +2,9 @@
 
 v8 is a spec-correctness release. It brings OpenChart's defaults and encoding
 surface into line with Vega-Lite, so a spec that reads correctly in one reads
-correctly in the other. Seven breaking changes, all in the spec layer
-(`@opendata-ai/openchart-core` types and the engine's runtime defaults) —
-nothing in how you mount or render a chart.
+correctly in the other. Seven spec-grammar breaking changes plus three
+visual behavior changes — all in the spec and rendering defaults, nothing
+in how you mount or render a chart.
 
 Most of these are backward-compatible on purpose: your old spec still
 compiles and still renders, and for most of them the console tells you
@@ -36,6 +36,11 @@ Every change below is in the spec you pass to them, not in how you call them.
 - [ ] Drop `labels.offsets` and let the collision system position labels.
 - [ ] Compile with `{ dev: true }` (or just watch the console) and fix every
       `[openchart]` warning it prints — that's the full list, spec by spec.
+- [ ] If your container background isn't white, set
+      `theme.colors.background` explicitly (default changed to transparent).
+- [ ] Multi-series line/area: endpoint labels now replace the legend. Add
+      `legend: { show: true }` if you need the legend back.
+- [ ] Update visual regression baselines (legend swatch shape changed).
 
 ---
 
@@ -320,6 +325,39 @@ marked `@deprecated` in the type only, and will be removed in a future major.
 collision system place labels. If you find a case where the automatic
 placement is worse than your manual offsets were, that's worth reporting —
 it means the collision system has a gap.
+
+---
+
+## Visual breaking changes (no spec edits needed)
+
+These don't require spec changes, but they change how existing charts render.
+If you pin visual regression baselines or screenshot-test your charts, update
+them after upgrading.
+
+### 8. Chart background defaults to `transparent`
+
+Previously the SVG painted an opaque white `<rect>` behind the chart. v8
+defaults `theme.colors.background` to `'transparent'` so charts inherit the
+host container's surface color. If your container has a dark or colored
+background and you relied on the chart painting its own white, set the
+background explicitly:
+
+```ts
+{ theme: { colors: { background: '#ffffff' } } }
+```
+
+### 9. Endpoint labels replace the legend on multi-series line/area
+
+Charts with 2+ line or area series now render a right-side endpoint-label
+column (series name + value at the right edge) instead of a traditional
+bottom legend. The legend is auto-suppressed to avoid redundancy. To keep
+the legend, set `legend: { show: true }` on the spec.
+
+### 10. Legend swatch redesign
+
+The categorical legend swatch changed from a plain square to a rounded chip
+with a colored bar through its midline. This is a visual-only change and
+matches the endpoint-label column's swatch style.
 
 ---
 
