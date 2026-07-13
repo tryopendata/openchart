@@ -57,18 +57,70 @@ describe('resolveFieldFormatter', () => {
   });
 
   describe('years guard', () => {
-    it('renders year-like values as bare integers', () => {
-      const fmt = resolveFieldFormatter({
-        values: [2020, 2021, 2022, 2023, 2024],
-      });
+    it('renders year-like values as bare integers, not compact or comma-grouped', () => {
+      const fmt = resolveFieldFormatter({ values: [1990, 2007, 2024] });
       expect(fmt(2024)).toBe('2024');
+      expect(fmt(1990)).toBe('1990');
     });
 
-    it('does not apply years guard to non-year ranges', () => {
+    it('activates at exact boundaries [1500, 2500]', () => {
+      const fmt = resolveFieldFormatter({ values: [1500, 2500] });
+      expect(fmt(1500)).toBe('1500');
+      expect(fmt(2500)).toBe('2500');
+    });
+
+    it('deactivates when any value falls below 1500', () => {
+      const fmt = resolveFieldFormatter({ values: [1499, 2400] });
+      expect(fmt(1499)).toBe('1.5k');
+    });
+
+    it('deactivates when any value exceeds 2500', () => {
+      const fmt = resolveFieldFormatter({ values: [1600, 2501] });
+      expect(fmt(2501)).toBe('2.5k');
+    });
+
+    it('deactivates for non-integer values', () => {
+      const fmt = resolveFieldFormatter({ values: [2020.5, 2024.5] });
+      expect(fmt(2024.5)).toBe('2k');
+    });
+
+    it('deactivates when mixed with large magnitudes', () => {
+      const fmt = resolveFieldFormatter({ values: [1990, 2024, 50000] });
+      expect(fmt(50000)).toBe('50k');
+    });
+
+    it('deactivates for negative values', () => {
+      const fmtNeg = resolveFieldFormatter({ values: [-2000, 2000] });
+      expect(fmtNeg(2000)).toBe('2k');
+    });
+
+    it('deactivates when range includes zero', () => {
+      const fmtZero = resolveFieldFormatter({ values: [0, 2024] });
+      expect(fmtZero(2024)).toBe('2k');
+    });
+
+    it('explicit format overrides guard: comma-grouped', () => {
       const fmt = resolveFieldFormatter({
-        values: [5000, 10000, 15000],
+        surfaceFormat: ',d',
+        values: [1990, 2024],
       });
-      expect(fmt(10000)).toBe('10k');
+      expect(fmt(2024)).toBe('2,024');
+    });
+
+    it('explicit format overrides guard: SI prefix', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: '~s',
+        values: [1990, 2024],
+      });
+      expect(fmt(2024)).toContain('k');
+    });
+
+    it('table surface still applies guard (no comma-grouping)', () => {
+      const fmt = resolveFieldFormatter({
+        values: [1990, 2024],
+        surface: 'table',
+      });
+      expect(fmt(2024)).toBe('2024');
     });
   });
 
