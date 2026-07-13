@@ -14,8 +14,9 @@
  * camera tween. It does not bridge the two clocks.
  */
 
-import type { DataRow } from '@opendata-ai/openchart-core';
-import { deepMergeSpec } from '@opendata-ai/openchart-core';
+import type { DataRow, MapSpec } from '@opendata-ai/openchart-core';
+import { deepMergeSpec, isMapSpec } from '@opendata-ai/openchart-core';
+import { createMap, type MapInstance, type MapMountOptions } from '../map-mount';
 import { type ChartInstance, createChart, type MountOptions } from '../mount';
 import { canTransitionSpecShape } from '../transition';
 import {
@@ -97,6 +98,23 @@ export function createChartStory<TData extends DataRow = DataRow>(
   // Widen once here so the internal helpers don't have to thread `TData`
   // through a discriminated union that TS can't narrow across variants.
   const baseSpec = spec as StorySpec;
+  const isMap = isMapSpec(baseSpec as unknown as Record<string, unknown>);
+
+  if (isMap && cameraMode === 'scrub') {
+    console.warn(
+      '[openchart] cameraMode: "scrub" is not supported for map stories; falling back to "step" mode. Map camera is driven via geo.focus patches in the spec.',
+    );
+  }
+
+  if (isMap) {
+    for (let i = 0; i < steps.length; i++) {
+      if (steps[i].camera) {
+        console.warn(
+          `[openchart] step[${i}].camera is ignored for map stories. Drive the map camera via geo.focus patches in the spec instead.`,
+        );
+      }
+    }
+  }
 
   const editModeRequested = !!(
     mountOptions?.onEdit ||
@@ -114,24 +132,39 @@ export function createChartStory<TData extends DataRow = DataRow>(
   let destroyed = false;
 
   const initialSpec = resolveSpecAtStep(baseSpec, steps, 0);
-  const instance: ChartInstance = createChart(container, initialSpec, mountOptions);
 
-  const cameraTween = createTween<Camera>({
-    initial: { cx: 0, cy: 0, k: 1 },
-    lerp: interpolateCamera,
-    duration: storyMotion.camera,
-    ease: easingFns.easeInOutCubic,
-    onFrame: (camera) => {
-      const vb = readViewBox(container);
-      if (vb) applyStoryCamera(container, camera, vb);
-    },
-  });
+  // Branch: map vs chart mount
+  let instance: ChartInstance | MapInstance;
+  if (isMap) {
+    const mapOpts: MapMountOptions = {};
+    if (mountOptions?.theme) mapOpts.theme = mountOptions.theme;
+    if (mountOptions?.darkMode) mapOpts.darkMode = mountOptions.darkMode;
+    if (mountOptions?.watermark !== undefined) mapOpts.watermark = mountOptions.watermark;
+    mapOpts.responsive = mountOptions?.responsive;
+    instance = createMap(container, initialSpec as MapSpec, mapOpts);
+  } else {
+    instance = createChart(container, initialSpec as Exclude<StorySpec, MapSpec>, mountOptions);
+  }
+
+  // Chart camera infra (not used for maps)
+  const cameraTween = isMap
+    ? null
+    : createTween<Camera>({
+        initial: { cx: 0, cy: 0, k: 1 },
+        lerp: interpolateCamera,
+        duration: storyMotion.camera,
+        ease: easingFns.easeInOutCubic,
+        onFrame: (camera) => {
+          const vb = readViewBox(container);
+          if (vb) applyStoryCamera(container, camera, vb);
+        },
+      });
 
   /** Fit a step's camera (data-coordinate or raw target, or full view) into the viewBox. */
   function fittedCameraForStep(step: StoryStep | undefined, vb: ViewBoxSize): Camera {
     if (!step?.camera) return fitTarget(FULL_VIEW(vb), vb);
     const target = isDataCameraTarget(step.camera)
-      ? resolveCameraTarget(instance.layout, step.camera)
+      ? resolveCameraTarget((instance as ChartInstance).layout, step.camera)
       : step.camera;
     return fitTarget(target, vb);
   }
@@ -157,7 +190,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
   function fittedCamerasForScrub(vb: ViewBoxSize): Camera[] {
     if (
       fittedCache &&
-      fittedCacheLayout === instance.layout &&
+      fittedCacheLayout === (instance as ChartInstance).layout &&
       fittedCacheVb &&
       fittedCacheVb.width === vb.width &&
       fittedCacheVb.height === vb.height
@@ -165,7 +198,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       return fittedCache;
     }
     fittedCache = steps.map((step) => fittedCameraForStep(step, vb));
-    fittedCacheLayout = instance.layout;
+    fittedCacheLayout = (instance as ChartInstance).layout;
     fittedCacheVb = vb;
     return fittedCache;
   }
@@ -207,6 +240,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
 
   /** Step-mode camera: retargetable eased tween on step change. */
   function applyCameraForStep(step: StoryStep | undefined, snap: boolean): void {
+    if (!cameraTween) return;
     const vb = readViewBox(container);
     if (!vb) return;
     cameraTween.to(fittedCameraForStep(step, vb), { snap: snap || prefersReducedMotion() });
@@ -246,8 +280,15 @@ export function createChartStory<TData extends DataRow = DataRow>(
     const isFirst = currentStep === -1;
     currentStep = clamped;
 
-    const prevSpec = isFirst ? null : resolveSpecAtStep(baseSpec, steps, clamped - 1);
     const nextSpec = resolveSpecAtStep(baseSpec, steps, clamped);
+
+    if (isMap) {
+      // Maps always apply directly: update handles fill + camera via geo.focus
+      (instance as MapInstance).update(nextSpec as MapSpec);
+      return;
+    }
+
+    const prevSpec = isFirst ? null : resolveSpecAtStep(baseSpec, steps, clamped - 1);
 
     const willLikelyMorph =
       !isFirst &&
@@ -255,7 +296,8 @@ export function createChartStory<TData extends DataRow = DataRow>(
       prevSpec !== null &&
       canTransitionSpecShape(prevSpec, nextSpec);
 
-    const applyUpdate = () => instance.update(nextSpec);
+    const applyUpdate = () =>
+      (instance as ChartInstance).update(nextSpec as Exclude<StorySpec, MapSpec>);
 
     if (isFirst || willLikelyMorph || editModeRequested) {
       applyUpdate();
@@ -280,7 +322,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       // is continuous DATA morph scrubbing, not camera scrub. In scrub mode the
       // camera additionally follows the continuous frame.
       goTo(frame.step);
-      if (cameraMode === 'scrub') applyScrubCamera(frame);
+      if (!isMap && cameraMode === 'scrub') applyScrubCamera(frame);
     });
   }
 
@@ -304,7 +346,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       destroyed = true;
       unsubscribeScroll?.();
       scrollDriver?.destroy();
-      cameraTween.cancel();
+      cameraTween?.cancel();
       stopSettle();
       instance.destroy();
     },

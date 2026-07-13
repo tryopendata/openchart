@@ -6,17 +6,18 @@
  * readout panel.
  */
 
-import type { MapSpec } from '@opendata-ai/openchart-core';
-import { GeoMap } from '@opendata-ai/openchart-react';
-import { useState } from 'react';
+import type { MapSpec, VizSpec } from '@opendata-ai/openchart-core';
+import type { MapHandle } from '@opendata-ai/openchart-react';
+import { ChartStory, GeoMap } from '@opendata-ai/openchart-react';
+import { useRef, useState } from 'react';
 // @ts-expect-error -- JSON import, no type declarations for us-atlas
 import usCountiesTopo from 'us-atlas/counties-albers-10m.json';
 // @ts-expect-error -- JSON import, no type declarations for us-atlas
 import usStatesTopo from 'us-atlas/states-albers-10m.json';
 // @ts-expect-error -- JSON import, no type declarations for world-atlas
 import worldTopo from 'world-atlas/countries-110m.json';
-import { Demo, GalleryPage, Section } from '../components';
-import { usUnemployment, worldGdp } from '../data';
+import { Demo, GalleryPage, Section, useOcMode } from '../components';
+import { usUnemployment, usUnemploymentPrior, worldGdp } from '../data';
 
 // ---------------------------------------------------------------------------
 // 1. US state unemployment — pre-projected Albers
@@ -166,6 +167,210 @@ function InteractiveMap() {
 }
 
 // ---------------------------------------------------------------------------
+// Shared button style
+// ---------------------------------------------------------------------------
+
+const btnStyle: React.CSSProperties = {
+  padding: 'var(--oc-space-2) var(--oc-space-4)',
+  borderRadius: 'var(--oc-radius-control)',
+  border: '1px solid var(--oc-border)',
+  background: 'var(--oc-surface-raised)',
+  color: 'var(--oc-text)',
+  cursor: 'pointer',
+  fontSize: 'var(--oc-type-caption)',
+  fontFamily: 'inherit',
+};
+
+// ---------------------------------------------------------------------------
+// 6. Entrance animation — replay via key bump
+// ---------------------------------------------------------------------------
+
+function EntranceAnimationDemo() {
+  const [key, setKey] = useState(0);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+      <div style={{ height: 500 }}>
+        <GeoMap key={key} spec={usStateSpec} />
+      </div>
+      <button type="button" onClick={() => setKey((k) => k + 1)} style={btnStyle}>
+        Replay entrance
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 7. Data-update recolor — toggle between datasets
+// ---------------------------------------------------------------------------
+
+function RecolorDemo() {
+  const [usePrior, setUsePrior] = useState(false);
+  const spec: MapSpec = {
+    ...usStateSpec,
+    data: usePrior ? [...usUnemploymentPrior] : [...usUnemployment.data],
+    chrome: {
+      ...usStateSpec.chrome,
+      subtitle: usePrior ? 'Previous period data' : 'Current period data',
+    },
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+      <div style={{ height: 500 }}>
+        <GeoMap spec={spec} />
+      </div>
+      <button type="button" onClick={() => setUsePrior((v) => !v)} style={btnStyle}>
+        {usePrior ? 'Show current data' : 'Show previous data'}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 8. Zoom to feature — imperative camera API
+// ---------------------------------------------------------------------------
+
+function ZoomDemo() {
+  const mapRef = useRef<MapHandle>(null);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+      <div style={{ height: 500 }}>
+        <GeoMap ref={mapRef} spec={{ ...usStateSpec, animation: false }} />
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => mapRef.current?.instance?.zoomTo('06')}
+          style={btnStyle}
+        >
+          Zoom to California
+        </button>
+        <button
+          type="button"
+          onClick={() => mapRef.current?.instance?.panTo('48')}
+          style={btnStyle}
+        >
+          Pan to Texas
+        </button>
+        <button
+          type="button"
+          onClick={() => mapRef.current?.instance?.resetView()}
+          style={btnStyle}
+        >
+          Reset
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 9. Map scrollytelling — ChartStory with geo.focus
+// ---------------------------------------------------------------------------
+
+const NARRATIVE_CSS = `
+.ocs-map-step h3 {
+  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--oc-text-strong, #0f172a);
+  margin: 0 0 0.5rem;
+}
+.ocs-map-step p {
+  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--oc-text-muted, #64748b);
+  margin: 0;
+  max-width: 34rem;
+}
+`;
+
+const mapStoryBase: MapSpec = {
+  type: 'map',
+  geo: { features: usStatesTopo, projection: 'identity' },
+  data: [...usUnemployment.data],
+  encoding: {
+    key: { field: 'id', type: 'nominal' },
+    color: { field: 'rate', type: 'quantitative' },
+  },
+  chrome: {
+    title: 'A Guided Tour of US Unemployment',
+    subtitle: 'Scroll to explore regional patterns',
+    source: usUnemployment.source,
+  },
+  animation: true,
+};
+
+const mapSteps = [
+  { spec: {} },
+  { spec: { geo: { focus: '06' }, chrome: { subtitle: 'California: 5.3% unemployment' } } },
+  { spec: { geo: { focus: '48' }, chrome: { subtitle: 'Texas: 4.3% unemployment' } } },
+  {
+    spec: {
+      geo: { focus: ['36', '34', '09', '25'] },
+      chrome: { subtitle: 'Northeast corridor' },
+    },
+  },
+  { spec: { geo: { focus: null }, chrome: { subtitle: 'Back to the full picture' } } },
+];
+
+const mapNarrative = [
+  <div className="ocs-map-step" key="0">
+    <h3>The national picture</h3>
+    <p>
+      State unemployment rates range from around 2% to nearly 6%, with the coasts generally running
+      hotter than the interior. Scroll to zoom into individual states.
+    </p>
+  </div>,
+  <div className="ocs-map-step" key="1">
+    <h3>California</h3>
+    <p>
+      At 5.3%, California sits above the national average. High housing costs and a services-heavy
+      economy contribute to persistent slack in the labor market.
+    </p>
+  </div>,
+  <div className="ocs-map-step" key="2">
+    <h3>Texas</h3>
+    <p>
+      Texas comes in at 4.3%, benefiting from a diversified economy spanning energy, tech, and
+      manufacturing. Lower cost of living keeps workforce participation high.
+    </p>
+  </div>,
+  <div className="ocs-map-step" key="3">
+    <h3>The Northeast corridor</h3>
+    <p>
+      New York, New Jersey, Connecticut, and Massachusetts cluster between 4.4% and 4.9%. Dense
+      labor markets and higher wages mask pockets of structural unemployment.
+    </p>
+  </div>,
+  <div className="ocs-map-step" key="4">
+    <h3>The full map</h3>
+    <p>
+      Zooming back out, the pattern is clear: low unemployment in the plains and mountain states,
+      higher rates along the coasts and in the industrial Midwest.
+    </p>
+  </div>,
+];
+
+function MapScrollyDemo() {
+  const mode = useOcMode();
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS constant, no user input */}
+      <style dangerouslySetInnerHTML={{ __html: NARRATIVE_CSS }} />
+      <ChartStory
+        spec={mapStoryBase}
+        steps={mapSteps}
+        narrative={mapNarrative}
+        mountOptions={{ darkMode: mode === 'dark' ? 'force' : 'off' }}
+      />
+      <div style={{ height: '60vh' }} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -231,6 +436,70 @@ export const Maps = () => (
         height={580}
       >
         <InteractiveMap />
+      </Demo>
+    </Section>
+
+    <Section
+      id="entrance-animation"
+      title="Entrance animation"
+      lede="Features fade in with a staggered entrance. Hit the button to remount the map and replay the animation."
+    >
+      <Demo
+        id="entrance-animation"
+        title="Entrance animation"
+        description="Remounting the GeoMap via a React key bump replays the CSS entrance animation. Each feature fades in with a stagger delay."
+        specForPanel={usStateSpec}
+        height={580}
+      >
+        <EntranceAnimationDemo />
+      </Demo>
+    </Section>
+
+    <Section
+      id="data-update-recolor"
+      title="Data-update recolor"
+      lede="Swap the underlying data and the fill colors tween smoothly to the new values. No remount, no flash."
+    >
+      <Demo
+        id="data-update-recolor"
+        title="Data-update recolor"
+        description="Toggling between two datasets triggers a fill tween on every feature. The map instance stays mounted and calls update() with the new spec."
+        specForPanel={usStateSpec}
+        height={580}
+      >
+        <RecolorDemo />
+      </Demo>
+    </Section>
+
+    <Section
+      id="zoom-to-feature"
+      title="Zoom to feature"
+      lede="The imperative camera API lets you programmatically zoom, pan, and reset the map viewport."
+    >
+      <Demo
+        id="zoom-to-feature"
+        title="Zoom to feature"
+        description="useRef<MapHandle> exposes the MapInstance with zoomTo, panTo, and resetView methods. Animation is disabled so the camera is the only motion."
+        specForPanel={usStateSpec}
+        height={580}
+      >
+        <ZoomDemo />
+      </Demo>
+    </Section>
+
+    <Section
+      id="map-scrollytelling"
+      title="Map scrollytelling"
+      lede="ChartStory drives a map through a sequence of geo.focus patches as the reader scrolls. Each step zooms to a feature or region while the narrative text describes what the reader is looking at."
+    >
+      <Demo
+        id="map-scrollytelling"
+        title="Map scrollytelling"
+        description="The story base is a MapSpec. Each step patches geo.focus and chrome.subtitle. The map animates between focus states as the reader scrolls through the narrative."
+        specForPanel={mapStoryBase as unknown as VizSpec}
+        height={800}
+      >
+        <MapScrollyDemo />
       </Demo>
     </Section>
   </GalleryPage>

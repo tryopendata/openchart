@@ -28,6 +28,7 @@ export { createSimulationWorker } from './graph/simulation-worker-url';
 export type { GraphInstance, GraphMountOptions } from './graph-mount';
 // Graph mount API
 export { createGraph } from './graph-mount';
+export type { Camera, MapCameraOptions } from './map-camera';
 export type { MapInstance, MapMountOptions } from './map-mount';
 // Map mount API
 export { createMap } from './map-mount';

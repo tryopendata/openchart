@@ -27,10 +27,13 @@
           "$ref": "#/definitions/TileMapSpec"
         },
         {
+          "$ref": "#/definitions/MapSpec"
+        },
+        {
           "$ref": "#/definitions/BarListSpec"
         }
       ],
-      "description": "Top-level visualization spec: union discriminated by structural shape.\n\n- ChartSpec: has `mark` field (no `type`, no `layer`)\n- LayerSpec: has `layer` field\n- TableSpec: has `type: 'table'`\n- GraphSpec: has `type: 'graph'`\n- SankeySpec: has `type: 'sankey'`\n- TileMapSpec: has `type: 'tilemap'`\n- BarListSpec: has `type: 'barlist'`\n\nElection parliament (hemicycle) charts are `ChartSpec` with `mark: 'parliament'`, not a separate top-level type: seat data (party + seats) maps naturally onto encoding.color/y like arc and waffle, and riding the existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode for free instead of a second bespoke compile path (see `packages/engine/src/charts/parliament/`)."
+      "description": "Top-level visualization spec: union discriminated by structural shape.\n\n- ChartSpec: has `mark` field (no `type`, no `layer`)\n- LayerSpec: has `layer` field\n- TableSpec: has `type: 'table'`\n- GraphSpec: has `type: 'graph'`\n- SankeySpec: has `type: 'sankey'`\n- TileMapSpec: has `type: 'tilemap'`\n- MapSpec: has `type: 'map'`\n- BarListSpec: has `type: 'barlist'`\n\nElection parliament (hemicycle) charts are `ChartSpec` with `mark: 'parliament'`, not a separate top-level type: seat data (party + seats) maps naturally onto encoding.color/y like arc and waffle, and riding the existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode for free instead of a second bespoke compile path (see `packages/engine/src/charts/parliament/`)."
     },
     "ChartSpec": {
       "anyOf": [
@@ -17188,6 +17191,193 @@
         "teal"
       ],
       "description": "Sequential color palette names available for tile maps."
+    },
+    "MapSpec": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "map",
+          "description": "Discriminant: always \"map\"."
+        },
+        "geo": {
+          "$ref": "#/definitions/MapGeo",
+          "description": "Geo configuration: TopoJSON features, join key, and projection."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DataRow"
+          },
+          "description": "Tabular data to join to geo features."
+        },
+        "encoding": {
+          "$ref": "#/definitions/MapEncoding",
+          "description": "Encoding channels mapping data fields to visual properties."
+        },
+        "chrome": {
+          "$ref": "#/definitions/Chrome",
+          "description": "Editorial chrome (title, subtitle, source, byline, footer)."
+        },
+        "legend": {
+          "$ref": "#/definitions/LegendConfig",
+          "description": "Legend display configuration."
+        },
+        "theme": {
+          "$ref": "#/definitions/ThemeConfig",
+          "description": "Theme configuration overrides."
+        },
+        "darkMode": {
+          "$ref": "#/definitions/DarkMode",
+          "description": "Dark mode behavior. Defaults to \"off\"."
+        },
+        "watermark": {
+          "type": "boolean",
+          "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+        },
+        "animation": {
+          "$ref": "#/definitions/AnimationSpec",
+          "description": "Animation configuration for entrance animations."
+        },
+        "valueFormat": {
+          "type": "string",
+          "description": "d3-format string applied to color values in tooltips and legend.",
+          "deprecated": "Use the encoding channel's `format` field instead."
+        }
+      },
+      "required": [
+        "type",
+        "geo",
+        "data",
+        "encoding"
+      ],
+      "additionalProperties": false
+    },
+    "MapGeo": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "description": "TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source."
+        },
+        "idField": {
+          "type": "string",
+          "description": "Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'."
+        },
+        "projection": {
+          "$ref": "#/definitions/MapProjection",
+          "description": "Map projection. Defaults to 'albersUsa'."
+        },
+        "focus": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MapFocus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Focus on specific feature(s). null clears focus from a prior story step."
+        }
+      },
+      "required": [
+        "features"
+      ],
+      "additionalProperties": false,
+      "description": "Geo configuration for map specs."
+    },
+    "MapProjection": {
+      "type": "string",
+      "enum": [
+        "albersUsa",
+        "mercator",
+        "equalEarth",
+        "identity"
+      ],
+      "description": "Supported map projections."
+    },
+    "MapFocus": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number"
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "features": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number"
+                    ]
+                  }
+                }
+              ]
+            },
+            "padding": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "features"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Focus target for map camera: feature id(s) to zoom/pan to."
+    },
+    "MapEncoding": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Join key field in the data (required). Maps data rows to geo features via geo.idField."
+        },
+        "color": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Color encoding (required, quantitative or nominal). Drives fill color of features."
+        },
+        "tooltip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EncodingChannel"
+              }
+            }
+          ],
+          "description": "Tooltip encoding (optional)."
+        }
+      },
+      "required": [
+        "key",
+        "color"
+      ],
+      "additionalProperties": false,
+      "description": "Encoding channels specific to map visualizations."
     },
     "BarListSpec": {
       "type": "object",

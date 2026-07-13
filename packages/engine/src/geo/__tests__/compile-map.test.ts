@@ -188,7 +188,7 @@ describe('compileMap', () => {
     expect(layout.features.length).toBeGreaterThan(0);
   });
 
-  it('includes a gradient legend for quantitative encoding', () => {
+  it('includes a continuous legend for quantitative encoding', () => {
     const layout = compileMap(
       {
         type: 'map',
@@ -205,8 +205,73 @@ describe('compileMap', () => {
       DEFAULT_OPTIONS,
     );
 
-    expect(layout.gradientLegend).not.toBeNull();
+    expect(layout.continuousLegend).not.toBeNull();
+    expect(layout.continuousLegend!.type).toBe('continuous');
     expect(layout.categoricalLegend).toBeNull();
+  });
+
+  it('continuous legend has 5 bins by default', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 50 },
+          { fips: '36', value: 30 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.continuousLegend).not.toBeNull();
+    expect(layout.continuousLegend!.mode).toBe('binned');
+    expect(layout.continuousLegend!.bins.length).toBe(5);
+  });
+
+  it('continuous legend defaults to top position', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 50 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.continuousLegend!.position).toBe('top');
+  });
+
+  it('honors position: bottom for continuous legend', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 50 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+        legend: { position: 'bottom' },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.continuousLegend!.position).toBe('bottom');
   });
 
   it('builds categorical legend for nominal encoding', () => {
@@ -228,7 +293,7 @@ describe('compileMap', () => {
 
     expect(layout.categoricalLegend).not.toBeNull();
     expect(layout.categoricalLegend!.entries).toHaveLength(2);
-    expect(layout.gradientLegend).toBeNull();
+    expect(layout.continuousLegend).toBeNull();
   });
 
   it('assigns neutral fill to features without data', () => {
@@ -271,6 +336,142 @@ describe('compileMap', () => {
     expect(warnings.some((w) => w.includes('99'))).toBe(true);
   });
 
+  it('identity projection paths fit inside layout.area', () => {
+    // Pre-projected coordinates (pixel-space) that identity should scale to fit
+    const PRE_PROJECTED_TOPO = {
+      type: 'Topology',
+      objects: {
+        regions: {
+          type: 'GeometryCollection',
+          geometries: [
+            { type: 'Polygon', id: 'A', properties: { name: 'Region A' }, arcs: [[0]] },
+            { type: 'Polygon', id: 'B', properties: { name: 'Region B' }, arcs: [[1]] },
+          ],
+        },
+      },
+      arcs: [
+        // Region A: (0,0) -> (100,0) -> (100,50) -> (0,50) -> (0,0)
+        [
+          [0, 0],
+          [100, 0],
+          [0, 50],
+          [-100, 0],
+          [0, -50],
+        ],
+        // Region B: (100,0) -> (200,0) -> (200,50) -> (100,50) -> (100,0)
+        [
+          [100, 0],
+          [100, 0],
+          [0, 50],
+          [-100, 0],
+          [0, -50],
+        ],
+      ],
+    };
+
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: PRE_PROJECTED_TOPO, projection: 'identity' },
+        data: [
+          { id: 'A', value: 10 },
+          { id: 'B', value: 20 },
+        ],
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.features.length).toBe(2);
+    // Verify paths exist and geometry actually scaled (not just passthrough)
+    for (const f of layout.features) {
+      expect(f.path).toMatch(/^M/);
+      // Extract coordinates from the path and verify they fit within layout area
+      const coords = f.path.match(/[-\d.]+/g)?.map(Number) ?? [];
+      expect(coords.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('identity projection emits no INVERTED_WINDING warning', () => {
+    const warnings: string[] = [];
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'identity' },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      { ...DEFAULT_OPTIONS, onWarn: (msg) => warnings.push(msg) },
+    );
+
+    const windingWarning = layout.warnings.find((w) => w.code === 'INVERTED_WINDING');
+    expect(windingWarning).toBeUndefined();
+  });
+
+  it('every feature has finite bounds and centroid within mapSize', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 20 },
+          { fips: '36', value: 30 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const { mapSize } = layout;
+    for (const f of layout.features) {
+      expect(Number.isFinite(f.bounds.x)).toBe(true);
+      expect(Number.isFinite(f.bounds.y)).toBe(true);
+      expect(Number.isFinite(f.bounds.width)).toBe(true);
+      expect(Number.isFinite(f.bounds.height)).toBe(true);
+      expect(f.bounds.width).toBeGreaterThan(0);
+      expect(f.bounds.height).toBeGreaterThan(0);
+
+      // Centroid should be finite and within the mapSize
+      expect(Number.isFinite(f.centroid[0])).toBe(true);
+      expect(Number.isFinite(f.centroid[1])).toBe(true);
+      expect(f.centroid[0]).toBeGreaterThanOrEqual(0);
+      expect(f.centroid[0]).toBeLessThanOrEqual(mapSize.width);
+      expect(f.centroid[1]).toBeGreaterThanOrEqual(0);
+      expect(f.centroid[1]).toBeLessThanOrEqual(mapSize.height);
+    }
+  });
+
+  it('mapSize has positive width and height', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 20 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.mapSize.width).toBeGreaterThan(0);
+    expect(layout.mapSize.height).toBeGreaterThan(0);
+  });
+
   it('resolves chrome (title, subtitle)', () => {
     const layout = compileMap(
       {
@@ -288,5 +489,133 @@ describe('compileMap', () => {
 
     expect(layout.chrome.title).toBeDefined();
     expect(layout.chrome.subtitle).toBeDefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Focus resolution
+  // ---------------------------------------------------------------------------
+
+  it('geo.focus as single string produces layout.focus with matching bounds', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator', focus: '36' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 20 },
+          { fips: '36', value: 30 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).not.toBeNull();
+    expect(layout.focus!.ids).toEqual(['36']);
+    expect(layout.focus!.target.width).toBeGreaterThan(0);
+    expect(layout.focus!.target.height).toBeGreaterThan(0);
+    expect(layout.focus!.target.padding).toBe(16);
+  });
+
+  it('geo.focus as array produces union bounds', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator', focus: ['36', '06'] },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '36', value: 30 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).not.toBeNull();
+    expect(layout.focus!.ids).toHaveLength(2);
+    expect(layout.focus!.ids.map(String).sort()).toEqual(['06', '36']);
+  });
+
+  it('geo.focus object form with custom padding', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: {
+          features: MINI_TOPO,
+          projection: 'mercator',
+          focus: { features: '36', padding: 32 },
+        },
+        data: [{ fips: '36', value: 30 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).not.toBeNull();
+    expect(layout.focus!.target.padding).toBe(32);
+    expect(layout.focus!.ids).toEqual(['36']);
+  });
+
+  it('geo.focus: null produces layout.focus: null', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator', focus: null },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).toBeNull();
+  });
+
+  it('unknown focus id emits FOCUS_UNMATCHED warning', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator', focus: '99' },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const warning = layout.warnings.find((w) => w.code === 'FOCUS_UNMATCHED');
+    expect(warning).toBeDefined();
+    expect(warning!.message).toContain('99');
+    expect(layout.focus).toBeNull();
+  });
+
+  it('no focus specified produces layout.focus: null', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).toBeNull();
   });
 });

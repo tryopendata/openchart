@@ -23,9 +23,20 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import {
+  applyMapCamera,
+  cameraForTarget,
+  focusTargetForFeatures,
+  type MapCameraOptions,
+} from './map-camera';
 import { renderMapSVG } from './map-renderer';
+import { captureFeatureFills, runMapFillTransition } from './map-transition';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import type { Camera } from './story/camera-math';
+import { interpolateCamera } from './story/camera-math';
+import type { Tween } from './story/tween';
+import { createTween, easingFns, storyMotion } from './story/tween';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -73,11 +84,33 @@ export interface MapInstance {
   destroy(): void;
   /** The current compiled layout. */
   readonly layout: MapLayout;
+  /** Zoom to one or more features by ID. */
+  zoomTo(featureId: string | number | Array<string | number>, opts?: MapCameraOptions): void;
+  /** Pan to a feature keeping the current zoom level. */
+  panTo(featureId: string | number, opts?: MapCameraOptions): void;
+  /** Fit the camera to an arbitrary bounding box, or reset to full view if no target. */
+  fitBounds(
+    target?: { x: number; y: number; width: number; height: number; padding?: number },
+    opts?: MapCameraOptions,
+  ): void;
+  /** Reset the camera to the full map view. */
+  resetView(opts?: MapCameraOptions): void;
+  /** Get a snapshot of the current camera state. */
+  getCamera(): Camera;
+  /** Set the camera to an exact state (no animation). */
+  setCamera(camera: Camera): void;
 }
 
 // ---------------------------------------------------------------------------
 // Dark mode resolution
 // ---------------------------------------------------------------------------
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
+  );
+}
 
 function resolveDarkMode(mode?: DarkMode): boolean {
   if (mode === 'force') return true;
@@ -114,7 +147,16 @@ export function createMap(
 
   // Animation state
   let animationCleanup: (() => void) | null = null;
+  let fillTransitionHandle: { cancel: () => void } | null = null;
   let pendingResize = false;
+
+  // Camera state
+  let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
+  let currentFocusIds: Array<string | number> | null = null;
+  let cameraTween: Tween<Camera> | null = null;
+
+  // Track whether this is the first render (for snap-to-focus).
+  let isFirstRender = true;
 
   // Set when webfonts have loaded and a recompile is owed.
   let fontsReloadPending = false;
@@ -148,12 +190,14 @@ export function createMap(
       isAutoHeight = rect.height === 0 && rect.width > 0;
     }
 
-    const height =
-      isAutoHeight === true
-        ? Math.round(width * 0.625)
-        : Math.max(rect.height || Math.round(width * 0.625), 100);
+    // Explicit host height is a hard budget: return it as-is so the
+    // compiler keeps the SVG inside its box.
+    if (isAutoHeight === false && rect.height > 0) {
+      return { width, height: Math.max(rect.height, 100) };
+    }
 
-    return { width, height };
+    // Auto-height host: pick our own budget.
+    return { width, height: Math.round(width * 0.625) };
   }
 
   function compile(): MapLayout {
@@ -254,6 +298,52 @@ export function createMap(
   }
 
   // ---------------------------------------------------------------------------
+  // Camera helpers
+  // ---------------------------------------------------------------------------
+
+  function resolveCamera(): Camera {
+    if (currentFocusIds && currentFocusIds.length > 0) {
+      const target = focusTargetForFeatures(currentLayout, currentFocusIds);
+      return cameraForTarget(currentLayout, target);
+    }
+    return cameraForTarget(currentLayout, null);
+  }
+
+  function animateCamera(target: Camera, duration: number): void {
+    if (cameraTween) cameraTween.cancel();
+    cameraTween = createTween<Camera>({
+      initial: currentCamera,
+      lerp: interpolateCamera,
+      duration,
+      ease: easingFns.easeInOutCubic,
+      onFrame(cam) {
+        currentCamera = cam;
+        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+      },
+    });
+    cameraTween.to(target);
+  }
+
+  function updateA11yLive(ids: Array<string | number> | null): void {
+    let liveEl = container.querySelector('.oc-map-live') as HTMLElement | null;
+    if (!liveEl) {
+      liveEl = document.createElement('div');
+      liveEl.className = 'oc-map-live oc-sr-only';
+      liveEl.setAttribute('aria-live', 'polite');
+      container.appendChild(liveEl);
+    }
+    if (!ids || ids.length === 0) {
+      liveEl.textContent = 'Showing full map';
+      return;
+    }
+    const names = ids.map((id) => {
+      const f = currentLayout.features.find((feat) => String(feat.id) === String(id));
+      return f?.name ?? String(id);
+    });
+    liveEl.textContent = `Zoomed to ${names.join(', ')}`;
+  }
+
+  // ---------------------------------------------------------------------------
   // Render + update
   // ---------------------------------------------------------------------------
 
@@ -262,6 +352,10 @@ export function createMap(
     if (animationCleanup) {
       animationCleanup();
       animationCleanup = null;
+    }
+    if (fillTransitionHandle) {
+      fillTransitionHandle.cancel();
+      fillTransitionHandle = null;
     }
 
     // Remove old SVG
@@ -298,6 +392,11 @@ export function createMap(
       });
     }
 
+    // Re-apply camera transform after render if zoomed or focused
+    if (currentCamera.k > 1 + 1e-3 || currentFocusIds) {
+      applyMapCamera(newSvg, currentCamera, currentLayout);
+    }
+
     renderGen += 1;
     container.dataset.ocRenderGen = String(renderGen);
 
@@ -305,6 +404,16 @@ export function createMap(
       fontsReloadPending = false;
       container.dataset.ocFontsState = 'ready';
     }
+
+    // On first render, snap to declarative focus if present
+    if (isFirstRender && currentLayout.focus) {
+      const target = currentLayout.focus.target;
+      currentFocusIds = [...currentLayout.focus.ids];
+      const cam = cameraForTarget(currentLayout, target);
+      currentCamera = cam;
+      if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+    }
+    isFirstRender = false;
   }
 
   function update(newSpec: MapSpec): void {
@@ -314,8 +423,61 @@ export function createMap(
       fontFamily = nextFont;
       measureText = createMeasureText(fontFamily);
     }
+
+    // Capture current fills before re-render
+    const shouldAnimate =
+      !animationCleanup && currentLayout.animation?.update && !prefersReducedMotion();
+    const prevFills = shouldAnimate ? captureFeatureFills(svgElement) : null;
+
+    // Remember previous focus to detect changes
+    const prevFocusIds = currentFocusIds ? currentFocusIds.map(String).sort().join(',') : null;
+    const prevFocusPadding = currentLayout.focus?.target.padding ?? null;
+
     currentLayout = compile();
     render();
+
+    // Run fill tween if conditions met
+    if (
+      shouldAnimate &&
+      prevFills &&
+      prevFills.size > 0 &&
+      svgElement &&
+      currentLayout.animation?.update
+    ) {
+      fillTransitionHandle = runMapFillTransition(svgElement, prevFills, {
+        duration: currentLayout.animation.update.duration,
+      });
+    }
+
+    // Declarative focus from spec: tween camera if focus changed
+    const nextFocus = currentLayout.focus;
+    const nextFocusIds = nextFocus ? nextFocus.ids.map(String).sort().join(',') : null;
+    const nextFocusPadding = nextFocus?.target.padding ?? null;
+
+    if (nextFocusIds !== prevFocusIds || nextFocusPadding !== prevFocusPadding) {
+      if (nextFocus) {
+        currentFocusIds = [...nextFocus.ids];
+        const cam = cameraForTarget(currentLayout, nextFocus.target);
+        const duration = prefersReducedMotion() ? 0 : storyMotion.camera;
+        if (duration === 0) {
+          currentCamera = cam;
+          if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        } else {
+          animateCamera(cam, duration);
+        }
+      } else if (prevFocusIds !== null) {
+        // Focus cleared: tween back to full view
+        currentFocusIds = null;
+        const cam = cameraForTarget(currentLayout, null);
+        const duration = prefersReducedMotion() ? 0 : storyMotion.camera;
+        if (duration === 0) {
+          currentCamera = cam;
+          if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        } else {
+          animateCamera(cam, duration);
+        }
+      }
+    }
   }
 
   function resize(): void {
@@ -329,6 +491,16 @@ export function createMap(
 
     currentLayout = compile();
     render();
+
+    // Re-resolve camera against new layout dimensions (layout focus or imperative)
+    if (currentLayout.focus) {
+      currentFocusIds = [...currentLayout.focus.ids];
+      currentCamera = cameraForTarget(currentLayout, currentLayout.focus.target);
+      if (svgElement) applyMapCamera(svgElement, currentCamera, currentLayout);
+    } else if (currentFocusIds) {
+      currentCamera = resolveCamera();
+      if (svgElement) applyMapCamera(svgElement, currentCamera, currentLayout);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -369,6 +541,14 @@ export function createMap(
       animationCleanup();
       animationCleanup = null;
     }
+    if (fillTransitionHandle) {
+      fillTransitionHandle.cancel();
+      fillTransitionHandle = null;
+    }
+    if (cameraTween) {
+      cameraTween.cancel();
+      cameraTween = null;
+    }
 
     // Clean up events
     if (cleanupTooltipEvents) {
@@ -381,6 +561,10 @@ export function createMap(
       svgElement.remove();
       svgElement = null;
     }
+
+    // Remove a11y live region
+    const liveEl = container.querySelector('.oc-map-live');
+    if (liveEl) liveEl.remove();
 
     // Unmount tooltip manager
     if (tooltipManager) {
@@ -435,6 +619,80 @@ export function createMap(
     destroy,
     get layout(): MapLayout {
       return currentLayout;
+    },
+    zoomTo(featureId: string | number | Array<string | number>, opts?: MapCameraOptions): void {
+      const ids = Array.isArray(featureId) ? featureId : [featureId];
+      const target = focusTargetForFeatures(currentLayout, ids, opts?.padding ?? 16);
+      if (!target) {
+        console.warn(`[openchart] zoomTo: no features found for ids: ${ids.join(', ')}`);
+        return;
+      }
+      currentFocusIds = ids;
+      const cam = cameraForTarget(currentLayout, target);
+      const duration = opts?.duration ?? storyMotion.camera;
+      if (duration === 0 || prefersReducedMotion()) {
+        currentCamera = cam;
+        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        updateA11yLive(ids);
+      } else {
+        animateCamera(cam, duration);
+        updateA11yLive(ids);
+      }
+    },
+    panTo(featureId: string | number, opts?: MapCameraOptions): void {
+      const target = focusTargetForFeatures(currentLayout, [featureId], opts?.padding ?? 16);
+      if (!target) {
+        console.warn(`[openchart] panTo: no feature found for id: ${featureId}`);
+        return;
+      }
+      currentFocusIds = [featureId];
+      // Keep current zoom level
+      const cam = cameraForTarget(currentLayout, target);
+      cam.k = currentCamera.k;
+      const duration = opts?.duration ?? storyMotion.camera;
+      if (duration === 0 || prefersReducedMotion()) {
+        currentCamera = cam;
+        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        updateA11yLive([featureId]);
+      } else {
+        animateCamera(cam, duration);
+        updateA11yLive([featureId]);
+      }
+    },
+    fitBounds(
+      target?: { x: number; y: number; width: number; height: number; padding?: number },
+      opts?: MapCameraOptions,
+    ): void {
+      currentFocusIds = null;
+      const cam = cameraForTarget(currentLayout, target ?? null);
+      const duration = opts?.duration ?? storyMotion.camera;
+      if (duration === 0 || prefersReducedMotion()) {
+        currentCamera = cam;
+        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+      } else {
+        animateCamera(cam, duration);
+      }
+    },
+    resetView(opts?: MapCameraOptions): void {
+      currentFocusIds = null;
+      const cam = cameraForTarget(currentLayout, null);
+      const duration = opts?.duration ?? storyMotion.camera;
+      if (duration === 0 || prefersReducedMotion()) {
+        currentCamera = cam;
+        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        updateA11yLive(null);
+      } else {
+        animateCamera(cam, duration);
+        updateA11yLive(null);
+      }
+    },
+    getCamera(): Camera {
+      return { ...currentCamera };
+    },
+    setCamera(camera: Camera): void {
+      currentCamera = camera;
+      currentFocusIds = null;
+      if (svgElement) applyMapCamera(svgElement, camera, currentLayout);
     },
   };
 }

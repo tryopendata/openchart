@@ -2288,6 +2288,13 @@ export interface TileMapSpec {
 /** Supported map projections. */
 export type MapProjection = 'albersUsa' | 'mercator' | 'equalEarth' | 'identity';
 
+/** Focus target for map camera: feature id(s) to zoom/pan to. */
+export type MapFocus =
+  | string
+  | number
+  | Array<string | number>
+  | { features: string | number | Array<string | number>; padding?: number };
+
 /** Geo configuration for map specs. */
 export interface MapGeo {
   /** TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source. */
@@ -2296,6 +2303,8 @@ export interface MapGeo {
   idField?: string;
   /** Map projection. Defaults to 'albersUsa'. */
   projection?: MapProjection;
+  /** Focus on specific feature(s). null clears focus from a prior story step. */
+  focus?: MapFocus | null;
 }
 
 /** Encoding channels specific to map visualizations. */

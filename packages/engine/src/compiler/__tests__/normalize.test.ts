@@ -2,6 +2,7 @@ import type {
   ChartSpec,
   GraphSpec,
   LayerSpec,
+  MapSpec,
   RangeAnnotation,
   RefLineAnnotation,
   SankeySpec,
@@ -9,6 +10,7 @@ import type {
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import type { NormalizedMapSpec } from '../../geo/types';
 import type { NormalizedSankeySpec } from '../../sankey/types';
 import { normalizeSpec } from '../normalize';
 import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } from '../types';
@@ -351,6 +353,47 @@ describe('normalizeSpec', () => {
       const result = normalizeSpec(layerSpec) as NormalizedChartSpec;
       // Leaf explicitly sets true, which should be preserved
       expect(result.watermark).toBe(true);
+    });
+  });
+
+  describe('map spec normalization', () => {
+    const mapSpec: MapSpec = {
+      type: 'map',
+      geo: {
+        features: {
+          type: 'Topology',
+          objects: { x: { type: 'GeometryCollection', geometries: [] } },
+          arcs: [],
+        },
+      },
+      data: [],
+      encoding: {
+        key: { field: 'id', type: 'nominal' },
+        color: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    it('adds focus: null when not specified', () => {
+      const result = normalizeSpec(mapSpec) as NormalizedMapSpec;
+      expect(result.geo.focus).toBeNull();
+    });
+
+    it('preserves explicit focus value', () => {
+      const specWithFocus: MapSpec = {
+        ...mapSpec,
+        geo: { ...mapSpec.geo, focus: '36' },
+      };
+      const result = normalizeSpec(specWithFocus) as NormalizedMapSpec;
+      expect(result.geo.focus).toBe('36');
+    });
+
+    it('preserves focus: null (explicit clear)', () => {
+      const specWithNull: MapSpec = {
+        ...mapSpec,
+        geo: { ...mapSpec.geo, focus: null },
+      };
+      const result = normalizeSpec(specWithNull) as NormalizedMapSpec;
+      expect(result.geo.focus).toBeNull();
     });
   });
 });

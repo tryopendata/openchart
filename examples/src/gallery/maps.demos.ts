@@ -17,5 +17,9 @@ export const page: PageEntry = {
     { id: 'world-equal-earth', title: 'World equal-earth' },
     { id: 'world-mercator', title: 'World mercator' },
     { id: 'interactive-choropleth', title: 'Interactive choropleth' },
+    { id: 'entrance-animation', title: 'Entrance animation' },
+    { id: 'data-update-recolor', title: 'Data-update recolor' },
+    { id: 'zoom-to-feature', title: 'Zoom to feature' },
+    { id: 'map-scrollytelling', title: 'Map scrollytelling' },
   ],
 };

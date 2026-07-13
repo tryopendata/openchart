@@ -2,11 +2,13 @@ import type {
   CategoricalLegendLayout,
   CompileOptions,
   CompileWarning,
-  GradientColorStop,
-  GradientLegendLayout,
+  ContinuousLegendLayout,
+  EncodingChannel,
   LegendEntry,
   MapBorders,
   MapFeatureMark,
+  MapFocus,
+  MapFocusLayout,
   MapLayout,
   ResolvedAnimation,
   ResolvedTheme,
@@ -34,6 +36,11 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { placeLegend } from '../legend/compute';
+import {
+  CONTINUOUS_LABEL_GAP,
+  computeContinuousLegendContentForChannel,
+} from '../legend/continuous';
 import { joinDataToFeatures } from './join';
 import { createProjection } from './projections';
 import type { NormalizedMapSpec } from './types';
@@ -155,12 +162,45 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
 
   // 8. Legend height reserve
   const showLegend = mapSpec.legend?.show !== false;
-  const legendBarHeight = 6;
-  const legendLabelGap = 6;
-  const legendTotalHeight = showLegend ? legendBarHeight + legendLabelGap + 14 : 0;
-  const legendGap = showLegend ? 8 : 0;
+  const colorEncoding = mapSpec.encoding.color;
+  const isQuantitative = colorEncoding.type === 'quantitative';
+  const legendPosition = mapSpec.legend?.position === 'bottom' ? 'bottom' : 'top';
 
-  const mapAreaHeight = fullArea.height - legendTotalHeight - legendGap;
+  // Compute legend block height. For quantitative maps, use the continuous
+  // legend infrastructure; for categorical, estimate a single swatch row.
+  let legendBlockHeight = 0;
+  let continuousContent: ReturnType<typeof computeContinuousLegendContentForChannel> = null;
+  if (showLegend && isQuantitative) {
+    const colorValues: number[] = [];
+    for (const row of mapSpec.data) {
+      const v = row[colorEncoding.field];
+      if (v != null) {
+        const n = Number(v);
+        if (!Number.isNaN(n)) colorValues.push(n);
+      }
+    }
+    // Maps always use a quantile color scale, so tell the legend infra
+    // to produce binned swatches rather than a gradient bar.
+    const legendChannel: EncodingChannel = {
+      ...(colorEncoding as EncodingChannel),
+      scale: { ...(colorEncoding as EncodingChannel).scale, type: 'quantile' },
+    };
+    continuousContent = computeContinuousLegendContentForChannel(
+      colorValues,
+      legendChannel,
+      theme,
+      fullArea.width,
+    );
+    if (continuousContent) {
+      const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+      legendBlockHeight = continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+    }
+  } else if (showLegend) {
+    legendBlockHeight = 10 + 6; // swatch + gap
+  }
+  const legendReserveGap = legendBlockHeight > 0 ? 8 : 0;
+
+  const mapAreaHeight = fullArea.height - legendBlockHeight - legendReserveGap;
   if (mapAreaHeight <= 0) {
     return emptyLayout(chrome, theme, options, watermark);
   }
@@ -168,26 +208,28 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // 9. Projection + path generator
   const projectionType = mapSpec.geo.projection;
   const projection = createProjection(projectionType, fullArea.width, mapAreaHeight, geoCollection);
-  const pathGen = projection ? geoPath(projection) : geoPath(null);
+  const pathGen = geoPath(projection);
 
-  // 10. Check winding order
-  for (const feat of geoFeatures) {
-    const area = geoArea(feat);
-    if (area > 2 * Math.PI) {
-      const name =
-        ((feat.properties as Record<string, unknown> | null)?.name as string) ??
-        ((feat.properties as Record<string, unknown> | null)?.NAME as string) ??
-        String(feat.id);
-      compileWarnings.push({
-        code: 'INVERTED_WINDING',
-        message:
-          `Feature "${name}" has inverted winding order (geoArea > 2π). ` +
-          'This usually means the exterior ring is wound clockwise (RFC 7946) instead of ' +
-          'counter-clockwise (d3-geo convention). Fix with: npx topojson-rewind your-file.json',
-        context: { featureId: feat.id, featureName: name },
-      });
+  // 10. Check winding order (skip for identity: geoArea uses spherical math
+  // and gives false positives on planar pre-projected coordinates)
+  if (projectionType !== 'identity')
+    for (const feat of geoFeatures) {
+      const area = geoArea(feat);
+      if (area > 2 * Math.PI) {
+        const name =
+          ((feat.properties as Record<string, unknown> | null)?.name as string) ??
+          ((feat.properties as Record<string, unknown> | null)?.NAME as string) ??
+          String(feat.id);
+        compileWarnings.push({
+          code: 'INVERTED_WINDING',
+          message:
+            `Feature "${name}" has inverted winding order (geoArea > 2π). ` +
+            'This usually means the exterior ring is wound clockwise (RFC 7946) instead of ' +
+            'counter-clockwise (d3-geo convention). Fix with: npx topojson-rewind your-file.json',
+          context: { featureId: feat.id, featureName: name },
+        });
+      }
     }
-  }
 
   // 11. Join data to features
   const featureObjs = geoFeatures.map((f) => ({
@@ -205,17 +247,13 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // 12. Check for null-projecting features (albersUsa drops territories)
   const droppedFeatures: string[] = [];
 
-  // 13. Determine color mode
-  const colorEncoding = mapSpec.encoding.color;
-  const isQuantitative = colorEncoding.type === 'quantitative';
-
-  // 14. Build color scale + feature marks
+  // 13. Build color scale + feature marks
   const formatter = buildD3Formatter(mapSpec.valueFormat) ?? formatNumber;
   const neutralFill = isDarkMode ? '#2a2a2a' : '#e8e8e8';
   const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   let featureMarks: MapFeatureMark[];
-  let gradientLegend: GradientLegendLayout | null = null;
+  let continuousLegend: ContinuousLegendLayout | null = null;
   let categoricalLegend: CategoricalLegendLayout | null = null;
 
   if (isQuantitative) {
@@ -229,16 +267,45 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       neutralFill,
       neutralStroke,
       formatter,
-      theme,
-      fullArea,
-      mapAreaHeight,
-      legendGap,
-      showLegend,
-      legendBarHeight,
       droppedFeatures,
     });
     featureMarks = result.marks;
-    gradientLegend = result.legend;
+
+    // Build the continuous legend via the shared infrastructure
+    if (showLegend && continuousContent) {
+      const labelStyle: TextStyle = {
+        fontFamily: theme.fonts.family,
+        fontSize: theme.fonts.sizes.small,
+        fontWeight: theme.fonts.weights.normal,
+        fill: theme.colors.text,
+        lineHeight: 1.3,
+        fontVariant: 'tabular-nums',
+      };
+      const legendContent = {
+        entries: [] as LegendEntry[],
+        position: legendPosition as 'top' | 'bottom',
+        labelStyle,
+        rowCount: 1,
+        totalWidth: continuousContent.barWidth,
+        height: legendBlockHeight,
+        legendWidth: continuousContent.barWidth,
+        swatchSize: 10,
+        swatchGap: 6,
+        entryGap: 16,
+        swatchChipFill: theme.colors.annotationFill,
+        continuous: continuousContent,
+      };
+      const mapArea = {
+        x: fullArea.x,
+        y: fullArea.y,
+        width: fullArea.width,
+        height: mapAreaHeight,
+      };
+      const placed = placeLegend(legendContent, mapArea, options.width, theme, 0);
+      if (placed.type === 'continuous') {
+        continuousLegend = placed;
+      }
+    }
   } else {
     const result = buildCategoricalMarks({
       geoFeatures,
@@ -251,7 +318,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       theme,
       fullArea,
       mapAreaHeight,
-      legendGap,
+      legendReserveGap,
       showLegend,
       droppedFeatures,
     });
@@ -338,14 +405,25 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     keyboardNavigable: featureMarks.length > 0,
   };
 
-  // 18. Animation
+  // 18. Resolve focus
+  const resolvedFocus = resolveFocus(mapSpec.geo.focus, featureMarks, compileWarnings);
+
+  // 19. Animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(mapSpec.animation);
 
-  // 19. Content height
+  // 20. Content height
   const contentHeight =
-    fullArea.y + mapAreaHeight + legendGap + legendTotalHeight + chrome.bottomHeight + padding;
+    fullArea.y +
+    mapAreaHeight +
+    legendReserveGap +
+    legendBlockHeight +
+    chrome.bottomHeight +
+    padding;
 
-  // 20. Emit compile warnings
+  // Anchor bottom chrome below the map + legend
+  chrome.bottomAnchorY = fullArea.y + fullArea.height;
+
+  // 21. Emit compile warnings
   for (const w of compileWarnings) {
     if (options.onWarn) {
       options.onWarn(w.message);
@@ -357,7 +435,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     chrome,
     features: featureMarks,
     borders,
-    gradientLegend,
+    continuousLegend,
     categoricalLegend,
     tooltipDescriptors,
     a11y,
@@ -370,6 +448,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       options.measureText ??
       ((text, fontSize) => ({ width: estimateTextWidth(text, fontSize), height: fontSize })),
     warnings: compileWarnings,
+    mapSize: { width: fullArea.width, height: mapAreaHeight },
+    focus: resolvedFocus,
   };
 }
 
@@ -387,18 +467,11 @@ interface QuantitativeOptions {
   neutralFill: string;
   neutralStroke: string;
   formatter: (n: number) => string;
-  theme: ResolvedTheme;
-  fullArea: { x: number; y: number; width: number; height: number };
-  mapAreaHeight: number;
-  legendGap: number;
-  showLegend: boolean;
-  legendBarHeight: number;
   droppedFeatures: string[];
 }
 
 function buildQuantitativeMarks(opts: QuantitativeOptions): {
   marks: MapFeatureMark[];
-  legend: GradientLegendLayout | null;
 } {
   const {
     geoFeatures,
@@ -410,12 +483,6 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     neutralFill,
     neutralStroke,
     formatter,
-    theme,
-    fullArea,
-    mapAreaHeight,
-    legendGap,
-    showLegend,
-    legendBarHeight,
     droppedFeatures,
   } = opts;
 
@@ -426,17 +493,6 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     if (raw != null) {
       const v = Number(raw);
       if (!Number.isNaN(v)) values.push(v);
-    }
-  }
-
-  let min = 0;
-  let max = 100;
-  if (values.length > 0) {
-    min = values[0];
-    max = values[0];
-    for (let i = 1; i < values.length; i++) {
-      if (values[i] < min) min = values[i];
-      if (values[i] > max) max = values[i];
     }
   }
 
@@ -475,6 +531,13 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     const props = feat.properties as Record<string, unknown> | null;
     const name = (props?.name as string) ?? (props?.NAME as string);
 
+    // Compute projected geometry
+    const b = pathGen.bounds(feat);
+    const rawCentroid = pathGen.centroid(feat);
+    const bounds = { x: b[0][0], y: b[0][1], width: b[1][0] - b[0][0], height: b[1][1] - b[0][1] };
+    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bounds.x + bounds.width / 2;
+    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : bounds.y + bounds.height / 2;
+
     marks.push({
       type: 'map-feature',
       path: pathD,
@@ -491,41 +554,12 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
           : String(featureId),
       },
       animationIndex: animIndex++,
+      bounds,
+      centroid: [cx, cy],
     });
   }
 
-  // Legend
-  let legend: GradientLegendLayout | null = null;
-  if (showLegend && values.length > 0) {
-    const legendX = fullArea.x;
-    const legendY = fullArea.y + mapAreaHeight + legendGap;
-    const legendWidth = fullArea.width;
-
-    const numStops = paletteStops.length;
-    const gradientColorStops: GradientColorStop[] = paletteStops.map((color, i) => ({
-      offset: i / (numStops - 1),
-      color,
-      opacity: 1,
-    }));
-
-    legend = {
-      type: 'gradient',
-      position: 'bottom',
-      bounds: { x: legendX, y: legendY, width: legendWidth, height: legendBarHeight },
-      labelStyle: {
-        fontFamily: theme.fonts.family,
-        fontSize: 11,
-        fontWeight: 400,
-        fill: theme.colors.text,
-        lineHeight: 1.2,
-      },
-      colorStops: gradientColorStops,
-      minLabel: formatter(min),
-      maxLabel: formatter(max),
-    };
-  }
-
-  return { marks, legend };
+  return { marks };
 }
 
 // ---------------------------------------------------------------------------
@@ -543,7 +577,7 @@ interface CategoricalOptions {
   theme: ResolvedTheme;
   fullArea: { x: number; y: number; width: number; height: number };
   mapAreaHeight: number;
-  legendGap: number;
+  legendReserveGap: number;
   showLegend: boolean;
   droppedFeatures: string[];
 }
@@ -563,7 +597,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     theme,
     fullArea,
     mapAreaHeight,
-    legendGap,
+    legendReserveGap,
     showLegend,
     droppedFeatures,
   } = opts;
@@ -617,6 +651,13 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     const props = feat.properties as Record<string, unknown> | null;
     const name = (props?.name as string) ?? (props?.NAME as string);
 
+    // Compute projected geometry
+    const b = pathGen.bounds(feat);
+    const rawCentroid = pathGen.centroid(feat);
+    const bounds = { x: b[0][0], y: b[0][1], width: b[1][0] - b[0][0], height: b[1][1] - b[0][1] };
+    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bounds.x + bounds.width / 2;
+    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : bounds.y + bounds.height / 2;
+
     marks.push({
       type: 'map-feature',
       path: pathD,
@@ -633,6 +674,8 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
           : String(featureId),
       },
       animationIndex: animIndex++,
+      bounds,
+      centroid: [cx, cy],
     });
   }
 
@@ -654,7 +697,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     }));
 
     const legendX = fullArea.x;
-    const legendY = fullArea.y + mapAreaHeight + legendGap;
+    const legendY = fullArea.y + mapAreaHeight + legendReserveGap;
     const legendWidth = fullArea.width;
     const swatchSize = 10;
     const swatchGap = 6;
@@ -677,6 +720,74 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
 }
 
 // ---------------------------------------------------------------------------
+// Focus resolution
+// ---------------------------------------------------------------------------
+
+function resolveFocus(
+  focus: MapFocus | null,
+  features: MapFeatureMark[],
+  warnings: CompileWarning[],
+): MapFocusLayout | null {
+  if (focus === null || focus === undefined) return null;
+
+  // Normalize to { ids, padding }
+  let ids: Array<string | number>;
+  let padding = 16;
+
+  if (typeof focus === 'string' || typeof focus === 'number') {
+    ids = [focus];
+  } else if (Array.isArray(focus)) {
+    ids = focus;
+  } else {
+    // Object form: { features, padding? }
+    const feats = focus.features;
+    ids = typeof feats === 'string' || typeof feats === 'number' ? [feats] : feats;
+    padding = focus.padding ?? 16;
+  }
+
+  // Find matching features and compute union bounds
+  const idSet = new Set(ids.map(String));
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const matchedIds: Array<string | number> = [];
+
+  for (const f of features) {
+    if (idSet.has(String(f.id))) {
+      matchedIds.push(f.id);
+      minX = Math.min(minX, f.bounds.x);
+      minY = Math.min(minY, f.bounds.y);
+      maxX = Math.max(maxX, f.bounds.x + f.bounds.width);
+      maxY = Math.max(maxY, f.bounds.y + f.bounds.height);
+    }
+  }
+
+  // Warn on unmatched ids
+  const unmatchedIds = ids.filter((id) => !matchedIds.some((m) => String(m) === String(id)));
+  if (unmatchedIds.length > 0) {
+    warnings.push({
+      code: 'FOCUS_UNMATCHED',
+      message: `geo.focus references feature id(s) not found in the map: ${unmatchedIds.join(', ')}`,
+      context: { unmatchedIds },
+    });
+  }
+
+  if (matchedIds.length === 0) return null;
+
+  return {
+    target: {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+      padding,
+    },
+    ids: matchedIds,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Empty layout fallback
 // ---------------------------------------------------------------------------
 
@@ -696,7 +807,7 @@ function emptyLayout(
       interiorStroke: 'rgba(0,0,0,0.15)',
       outlineStroke: 'rgba(0,0,0,0.3)',
     },
-    gradientLegend: null,
+    continuousLegend: null,
     categoricalLegend: null,
     tooltipDescriptors: new Map(),
     a11y: {
@@ -714,5 +825,7 @@ function emptyLayout(
       options.measureText ??
       ((text, fontSize) => ({ width: estimateTextWidth(text, fontSize), height: fontSize })),
     warnings: [],
+    mapSize: { width: 0, height: 0 },
+    focus: null,
   };
 }

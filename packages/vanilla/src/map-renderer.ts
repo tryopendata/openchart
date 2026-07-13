@@ -14,7 +14,6 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
-import { nextSvgId } from './svg-ids';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -48,7 +47,7 @@ function renderChrome(parent: SVGElement, layout: MapLayout): void {
   g.setAttribute('class', 'oc-chrome');
 
   const { chrome, measureText } = layout;
-  const bottomOffset = layout.area.y + layout.area.height;
+  const bottomOffset = chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
 
   if (chrome.title) {
     renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
@@ -204,6 +203,7 @@ function renderFeatures(
       'stroke-width': feature.strokeWidth,
     });
     path.setAttribute('data-feature-id', String(feature.id));
+    path.setAttribute('data-key', String(feature.id));
     if (feature.name) {
       path.setAttribute('data-feature-name', feature.name);
     }
@@ -227,97 +227,6 @@ function renderFeatures(
 }
 
 // ---------------------------------------------------------------------------
-// Gradient legend rendering
-// ---------------------------------------------------------------------------
-
-function renderGradientLegend(parent: SVGElement, layout: MapLayout): void {
-  if (!layout.gradientLegend) return;
-
-  const { gradientLegend } = layout;
-  const g = createSVGElement('g');
-  g.setAttribute('class', 'oc-map-legend');
-
-  // Build linear gradient in defs
-  const defs = parent.querySelector('defs') || createSVGElement('defs');
-  const exists = parent.querySelector('defs');
-  if (!exists) {
-    parent.insertBefore(defs, parent.firstChild);
-  }
-
-  const gradientId = nextSvgId('oc-map-legend-gradient');
-  const grad = createSVGElement('linearGradient');
-  grad.id = gradientId;
-  grad.setAttribute('x1', '0%');
-  grad.setAttribute('y1', '0%');
-  grad.setAttribute('x2', '100%');
-  grad.setAttribute('y2', '0%');
-
-  for (const stop of gradientLegend.colorStops) {
-    const s = createSVGElement('stop');
-    const attrs: Record<string, string | number> = {
-      offset: `${stop.offset * 100}%`,
-      'stop-color': stop.color,
-    };
-    if (stop.opacity !== undefined) {
-      attrs['stop-opacity'] = stop.opacity;
-    }
-    setAttrs(s, attrs);
-    grad.appendChild(s);
-  }
-
-  (defs as SVGElement).appendChild(grad);
-
-  // Gradient bar (pill-shaped)
-  const barHeight = gradientLegend.bounds.height;
-  const bar = createSVGElement('rect');
-  setAttrs(bar, {
-    x: gradientLegend.bounds.x,
-    y: gradientLegend.bounds.y,
-    width: gradientLegend.bounds.width,
-    height: barHeight,
-    rx: barHeight / 2,
-    fill: `url(#${gradientId})`,
-  });
-  g.appendChild(bar);
-
-  // Min label
-  const minText = createSVGElement('text');
-  setAttrs(minText, {
-    x: gradientLegend.bounds.x,
-    y: gradientLegend.bounds.y + gradientLegend.bounds.height + 14,
-    'text-anchor': 'start',
-    'font-family': gradientLegend.labelStyle.fontFamily,
-    'font-size': gradientLegend.labelStyle.fontSize,
-    'font-weight': gradientLegend.labelStyle.fontWeight,
-  });
-  (minText as SVGElement & ElementCSSInlineStyle).style.setProperty(
-    'fill',
-    gradientLegend.labelStyle.fill,
-  );
-  minText.textContent = gradientLegend.minLabel;
-  g.appendChild(minText);
-
-  // Max label
-  const maxText = createSVGElement('text');
-  setAttrs(maxText, {
-    x: gradientLegend.bounds.x + gradientLegend.bounds.width,
-    y: gradientLegend.bounds.y + gradientLegend.bounds.height + 14,
-    'text-anchor': 'end',
-    'font-family': gradientLegend.labelStyle.fontFamily,
-    'font-size': gradientLegend.labelStyle.fontSize,
-    'font-weight': gradientLegend.labelStyle.fontWeight,
-  });
-  (maxText as SVGElement & ElementCSSInlineStyle).style.setProperty(
-    'fill',
-    gradientLegend.labelStyle.fill,
-  );
-  maxText.textContent = gradientLegend.maxLabel;
-  g.appendChild(maxText);
-
-  parent.appendChild(g);
-}
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -335,11 +244,11 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
     svg.setAttribute('aria-label', a11y.altText);
   }
 
-  const classes = animate ? 'oc-map oc-chart-root oc-animate' : 'oc-map oc-chart-root';
+  const classes = animate ? 'oc-map oc-animate' : 'oc-map';
   svg.setAttribute('class', classes);
 
   if (animate && animation?.enter) {
-    const stagger = Math.max(5, Math.round(800 / Math.max(features.length, 1)));
+    const stagger = Math.min(80, 800 / Math.max(features.length, 1));
     svg.style.setProperty('--oc-animation-duration', `${animation.enter.duration}ms`);
     svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
     svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
@@ -359,19 +268,25 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   mapGroup.setAttribute('class', 'oc-map-group');
   mapGroup.setAttribute('transform', `translate(${layout.area.x},${layout.area.y})`);
 
+  // Camera group wraps features + borders only (chrome, legend, watermark stay outside)
+  const cameraGroup = createSVGElement('g');
+  cameraGroup.setAttribute('class', 'oc-map-camera');
+  cameraGroup.setAttribute('data-oc-map-camera', '');
+
   // Render features first (so borders overlay them)
-  renderFeatures(mapGroup, features, animate ? animation : undefined);
+  renderFeatures(cameraGroup, features, animate ? animation : undefined);
 
   // Render borders on top of features
-  renderBorders(mapGroup, borders);
+  renderBorders(cameraGroup, borders);
 
+  mapGroup.appendChild(cameraGroup);
   svg.appendChild(mapGroup);
 
-  // Render legend (gradient for quantitative, categorical for nominal)
-  if (layout.categoricalLegend) {
+  // Render legend (continuous for quantitative, categorical for nominal)
+  if (layout.continuousLegend) {
+    renderLegend(svg, layout.continuousLegend);
+  } else if (layout.categoricalLegend) {
     renderLegend(svg, layout.categoricalLegend);
-  } else {
-    renderGradientLegend(svg, layout);
   }
 
   // Render watermark

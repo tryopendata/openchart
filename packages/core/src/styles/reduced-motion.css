@@ -24,7 +24,12 @@
   .oc-animate .oc-mark-label,
   .oc-animate .oc-annotation,
   .oc-animate .oc-sankey-node rect,
-  .oc-animate .oc-sankey-link path {
+  .oc-animate .oc-sankey-link path,
+  .oc-animate .oc-map-feature,
+  .oc-animate .oc-map-borders path,
+  .oc-animate .oc-tilemap-tile,
+  .oc-animate .oc-barlist-row,
+  .oc-animate .oc-barlist-bar {
     animation: none;
   }
 

@@ -1346,6 +1346,75 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
     return;
   }
 
+  // Validate geo.focus if present
+  if ('focus' in geo && geo.focus !== undefined && geo.focus !== null) {
+    const focus = geo.focus;
+    if (typeof focus === 'string' || typeof focus === 'number') {
+      // valid: single id
+    } else if (Array.isArray(focus)) {
+      for (let i = 0; i < focus.length; i++) {
+        if (typeof focus[i] !== 'string' && typeof focus[i] !== 'number') {
+          errors.push({
+            message: `Spec error: geo.focus array element [${i}] must be a string or number`,
+            path: `geo.focus[${i}]`,
+            code: 'INVALID_TYPE',
+            suggestion: 'Each element in the focus array should be a feature id (string or number)',
+          });
+        }
+      }
+    } else if (typeof focus === 'object') {
+      const focusObj = focus as Record<string, unknown>;
+      if (!('features' in focusObj) || focusObj.features == null) {
+        errors.push({
+          message: 'Spec error: geo.focus object must have a "features" property',
+          path: 'geo.focus.features',
+          code: 'MISSING_FIELD',
+          suggestion:
+            'Provide feature id(s) to focus on, e.g. geo: { focus: { features: "36", padding: 32 } }',
+        });
+      } else {
+        const feats = focusObj.features;
+        if (typeof feats !== 'string' && typeof feats !== 'number' && !Array.isArray(feats)) {
+          errors.push({
+            message:
+              'Spec error: geo.focus.features must be a string, number, or array of strings/numbers',
+            path: 'geo.focus.features',
+            code: 'INVALID_TYPE',
+            suggestion: 'Use a feature id or array of ids, e.g. "36" or ["36", "34"]',
+          });
+        } else if (Array.isArray(feats)) {
+          for (let i = 0; i < feats.length; i++) {
+            if (typeof feats[i] !== 'string' && typeof feats[i] !== 'number') {
+              errors.push({
+                message: `Spec error: geo.focus.features[${i}] must be a string or number`,
+                path: `geo.focus.features[${i}]`,
+                code: 'INVALID_TYPE',
+                suggestion: 'Each element should be a feature id (string or number)',
+              });
+            }
+          }
+        }
+        if (focusObj.padding !== undefined && typeof focusObj.padding !== 'number') {
+          errors.push({
+            message: 'Spec error: geo.focus.padding must be a number',
+            path: 'geo.focus.padding',
+            code: 'INVALID_TYPE',
+            suggestion: 'Provide padding as a number in map-local units, e.g. padding: 32',
+          });
+        }
+      }
+    } else {
+      errors.push({
+        message:
+          'Spec error: geo.focus must be a string, number, array of ids, or object with { features, padding? }',
+        path: 'geo.focus',
+        code: 'INVALID_TYPE',
+        suggestion:
+          'Use a feature id, array of ids, or { features: "36", padding: 16 }. Pass null to clear focus.',
+      });
+    }
+  }
+
   const encoding = spec.encoding as Record<string, unknown>;
   for (const channel of ['key', 'color'] as const) {
     const ch = encoding[channel] as Record<string, unknown> | undefined;

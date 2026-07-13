@@ -204,42 +204,37 @@ export function hasContinuousColorScale(spec: NormalizedChartSpec): boolean {
 }
 
 /**
- * Compute continuous legend content from a spec's quantitative color encoding.
+ * Compute continuous legend content from raw numeric values and a color
+ * channel config. Reusable by both chart specs and map specs.
  *
- * Label policy (deliberate, keep it quiet): min/max only for sequential
- * ramps, min/neutral/max for diverging ramps (neutral at the scale's center
- * value); binned scales get one boundary label per class break, positioned
- * between swatches.
+ * Label policy: min/max only for sequential ramps, min/neutral/max for
+ * diverging ramps; binned scales get one boundary label per class break.
  *
- * @returns null when the color encoding is not continuous or has no numeric data.
+ * @returns null when values is empty or bar width resolves to 0.
  */
-export function computeContinuousLegendContent(
-  spec: NormalizedChartSpec,
+export function computeContinuousLegendContentForChannel(
+  values: number[],
+  channel: EncodingChannel,
   theme: ResolvedTheme,
   availableWidth: number,
 ): ContinuousLegendContent | null {
-  if (!hasContinuousColorScale(spec)) return null;
-  const colorEnc = spec.encoding.color as EncodingChannel;
-
-  const values = numericFieldValues(spec, colorEnc.field);
   if (values.length === 0) return null;
 
   const barWidth = resolveBarWidth(availableWidth);
   if (barWidth <= 0) return null;
 
-  const scaleType = colorEnc.scale?.type;
-  const rampColors = resolveRampColors(colorEnc, theme);
-  const formatStr = colorEnc.format;
+  const scaleType = channel.scale?.type;
+  const rampColors = resolveRampColors(channel, theme);
+  const formatStr = channel.format;
   const ctx = computeFieldFormatContext(values);
 
   if (scaleType && BINNED_SCALE_TYPES.has(scaleType)) {
-    // Binned mode: equal-width class swatches, boundary labels at the joints.
-    const explicitRange = colorEnc.scale?.range as string[] | undefined;
+    const explicitRange = channel.scale?.range as string[] | undefined;
     const binCount =
       scaleType === 'threshold'
-        ? ((colorEnc.scale?.domain as number[] | undefined) ?? [0.5]).length + 1
+        ? ((channel.scale?.domain as number[] | undefined) ?? [0.5]).length + 1
         : (explicitRange?.length ?? DEFAULT_BIN_COUNT);
-    const breaks = resolveBinBreaks(colorEnc, values, binCount);
+    const breaks = resolveBinBreaks(channel, values, binCount);
     const colors = sampleRampColors(rampColors, binCount);
     const binWidth = barWidth / binCount;
 
@@ -267,10 +262,8 @@ export function computeContinuousLegendContent(
 
   // Gradient mode: sequential or diverging ramp.
   const [domainMin, domainMax] = extent(values);
-  const explicitRange = colorEnc.scale?.range as string[] | undefined;
+  const explicitRange = channel.scale?.range as string[] | undefined;
 
-  // Mirror buildSequentialColorScale: multi-stop explicit ranges interpolate
-  // piecewise through every stop; the default theme ramp uses its endpoints.
   const stops =
     explicitRange && explicitRange.length > 2
       ? explicitRange
@@ -314,4 +307,21 @@ export function computeContinuousLegendContent(
     bins: [],
     ticks,
   };
+}
+
+/**
+ * Compute continuous legend content from a spec's quantitative color encoding.
+ * Thin wrapper around computeContinuousLegendContentForChannel.
+ *
+ * @returns null when the color encoding is not continuous or has no numeric data.
+ */
+export function computeContinuousLegendContent(
+  spec: NormalizedChartSpec,
+  theme: ResolvedTheme,
+  availableWidth: number,
+): ContinuousLegendContent | null {
+  if (!hasContinuousColorScale(spec)) return null;
+  const colorEnc = spec.encoding.color as EncodingChannel;
+  const values = numericFieldValues(spec, colorEnc.field);
+  return computeContinuousLegendContentForChannel(values, colorEnc, theme, availableWidth);
 }

@@ -584,6 +584,7 @@ function normalizeMapSpec(spec: MapSpec, _warnings: string[]): NormalizedMapSpec
       features: spec.geo.features,
       idField: spec.geo.idField ?? 'id',
       projection: spec.geo.projection ?? 'albersUsa',
+      focus: spec.geo.focus ?? null,
     },
     data: spec.data,
     encoding: spec.encoding,

@@ -11,7 +11,8 @@
 .oc-graph-root,
 .oc-sankey-root,
 .oc-barlist-root,
-.oc-tilemap-root {
+.oc-tilemap-root,
+.oc-map-root {
   width: 100%;
   height: 100%;
 }
@@ -34,7 +35,8 @@
  * BarList SVG container
  * --------------------------------------------------------------------------- */
 
-.oc-tilemap {
+.oc-tilemap,
+.oc-map {
   display: block;
   width: 100%;
   height: auto;

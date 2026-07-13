@@ -1716,6 +1716,12 @@ export interface CompileWarning {
   context?: Record<string, unknown>;
 }
 
+/** Resolved focus target for map camera framing. */
+export interface MapFocusLayout {
+  target: { x: number; y: number; width: number; height: number; padding: number };
+  ids: Array<string | number>;
+}
+
 /** A resolved map feature mark with computed SVG path and fill. */
 export interface MapFeatureMark {
   type: 'map-feature';
@@ -1737,6 +1743,10 @@ export interface MapFeatureMark {
   aria: MarkAria;
   /** Index for stagger animation ordering. */
   animationIndex: number;
+  /** Bounding box in map-local coordinates. */
+  bounds: { x: number; y: number; width: number; height: number };
+  /** Centroid in map-local coordinates. */
+  centroid: [number, number];
 }
 
 /** Border paths for the map (interior borders and coastline/outline). */
@@ -1767,8 +1777,8 @@ export interface MapLayout {
   features: MapFeatureMark[];
   /** Border paths (interior mesh and outline). */
   borders: MapBorders;
-  /** Gradient color legend for quantitative mode (null if hidden or categorical). */
-  gradientLegend: GradientLegendLayout | null;
+  /** Continuous color legend for quantitative mode (null if hidden or categorical). */
+  continuousLegend: ContinuousLegendLayout | null;
   /** Categorical swatch legend for nominal mode (null if hidden or quantitative). */
   categoricalLegend: CategoricalLegendLayout | null;
   /** Tooltip content descriptors keyed by feature ID. */
@@ -1789,6 +1799,10 @@ export interface MapLayout {
   measureText: MeasureTextFn;
   /** Structured compile warnings (unmatched keys, missing data, winding issues). */
   warnings: CompileWarning[];
+  /** The (width, height) passed to the projection's fitSize -- camera fits against this, not the SVG viewBox. */
+  mapSize: { width: number; height: number };
+  /** Resolved focus target for camera framing (null if no focus). */
+  focus: MapFocusLayout | null;
 }
 
 // ---------------------------------------------------------------------------
