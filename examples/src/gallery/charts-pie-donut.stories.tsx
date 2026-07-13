@@ -511,13 +511,7 @@ export const PieAndDonut = () => (
       title="Interaction"
       lede="Wire slice events to a live readout. Here the donut's center number tracks the hovered slice."
     >
-      <Demo
-        id="interactive-donut"
-        title="Interactive (hover to read a slice)"
-        description="onMarkHover updates the center metric; onMarkLeave resets it to the total. The escape hatch renders a stateful React component while the spec panel still shows the base spec."
-        specForPanel={interactiveSpec}
-        height={520}
-      >
+      <Demo id="interactive-donut" specForPanel={interactiveSpec} height={520}>
         <InteractiveDonut />
       </Demo>
     </Section>

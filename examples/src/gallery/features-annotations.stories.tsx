@@ -613,13 +613,7 @@ export const Annotations = () => (
       title="Text callouts"
       lede="A text annotation sits at a data coordinate. A dot marks the point, an anchor picks the side, and a pixel offset nudges the label clear of the data."
     >
-      <Demo
-        id="text-annotation"
-        title="Text callout with a dot marker"
-        description="Place a labelled callout at an (x, y) data point; the dot marks the point and the offset lifts the text clear of the line."
-        spec={textAnnotationSpec}
-        height={460}
-      />
+      <Demo id="text-annotation" spec={textAnnotationSpec} height={460} />
     </Section>
 
     <Section
@@ -648,13 +642,7 @@ export const Annotations = () => (
       title="Connectors"
       lede="A connector links the label back to its data point. Pass a string for a preset, or the object form { type, arrow } to control the arrowhead — the recent connector-arrow feature."
     >
-      <Demo
-        id="connectors"
-        title="Straight, curve, and drop-line"
-        description="Three connector styles on one chart. Curve draws an arrowhead by default; straight opts out; drop-line runs a vertical guide through the point's x."
-        spec={connectorsSpec}
-        height={480}
-      />
+      <Demo id="connectors" spec={connectorsSpec} height={480} />
     </Section>
 
     <Section
@@ -683,13 +671,7 @@ export const Annotations = () => (
       title="Reference lines"
       lede="A refline is a horizontal or vertical rule at a data value — an average, a threshold, or an event marker. Solid, dashed, and dotted styles, or a raw strokeDash override."
     >
-      <Demo
-        id="reference-lines"
-        title="Averages, thresholds, and event markers"
-        description="A dashed average, a dotted stall-speed floor, and a custom-dashed vertical event marker, each with an edge-anchored label."
-        spec={reflineSpec}
-        height={460}
-      />
+      <Demo id="reference-lines" spec={reflineSpec} height={460} />
     </Section>
 
     <Section
@@ -697,13 +679,7 @@ export const Annotations = () => (
       title="Data-coordinate stability"
       lede="Because annotations resolve through the scales, they never drift on resize. Drag the handles and watch the band, the peak dot, and the target line hold their data positions."
     >
-      <Demo
-        id="resize-stability"
-        title="Annotations stay pinned through resize"
-        description="The one interactive demo on this page: drag the width and height sliders. Every annotation recomputes from its data value, not a frozen pixel offset."
-        specForPanel={stabilitySpec}
-        height={520}
-      >
+      <Demo id="resize-stability" specForPanel={stabilitySpec} height={520}>
         <ResizableStability />
       </Demo>
     </Section>
@@ -713,12 +689,7 @@ export const Annotations = () => (
       title="Auto-thinning"
       lede="When callouts can't fit without overlapping, the engine demotes the lowest-priority ones to numbered dot markers with footnotes below the chart. priority ranks what survives; responsive: false pins an annotation so it never thins."
     >
-      <Demo
-        id="auto-thinning"
-        title="Narrow-width demotion to numbered footnotes"
-        description="Drag toward the left: inline callouts collapse to numbered markers with a footnote list. The pinned 'Pandemic low' stays inline; the autoThin: false copy hides them instead."
-        specForPanel={thinningSpec}
-      >
+      <Demo id="auto-thinning" specForPanel={thinningSpec}>
         <AutoThinning />
       </Demo>
     </Section>

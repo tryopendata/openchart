@@ -1,0 +1,46 @@
+/**
+ * Shared gallery design tokens (mode-invariant).
+ *
+ * Spacing, radius, font families, and type scale don't change between light and
+ * dark modes. They used to be duplicated in shell.css (under :root[data-theme])
+ * and gallery.css (under [data-oc-mode]). This file is the single source; both
+ * files import it.
+ *
+ * Mode-DEPENDENT tokens (neutral ramp, accents, semantic aliases) stay in their
+ * respective files because they need different selectors for the iframe
+ * constraint (C3).
+ */
+
+:root,
+[data-oc-mode] {
+  /* Radius */
+  --oc-radius-card: 8px;
+  --oc-radius-control: 6px;
+
+  /* Spacing scale (8px base grid) */
+  --oc-space-1: 4px;
+  --oc-space-2: 8px;
+  --oc-space-3: 12px;
+  --oc-space-4: 16px;
+  --oc-space-5: 24px;
+  --oc-space-6: 32px;
+  --oc-space-8: 48px;
+  --oc-space-10: 64px;
+
+  /* Type families
+   * "Inter Gallery" is a self-hosted alias for Inter Variable. The alias
+   * prevents the @font-face from leaking into chart SVG <text> elements
+   * (which look for "Inter Variable" and should fall back to system-ui to
+   * preserve visual regression baselines). */
+  --oc-font-body: "Inter Gallery", "Inter", system-ui, -apple-system, sans-serif;
+  --oc-font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
+
+  /* Type scale */
+  --oc-type-page-title: 2.25rem;
+  --oc-type-section-title: 1.375rem;
+  --oc-type-demo-title: 1rem;
+  --oc-type-body: 0.9375rem;
+  --oc-type-caption: 0.8125rem;
+  --oc-type-mono: 0.8125rem;
+}

@@ -51,7 +51,7 @@ const WELCOME_CSS = `
   margin: 0 0 var(--oc-space-5);
 }
 .ocw-block-title {
-  font-family: var(--oc-font-display);
+  font-family: var(--oc-font-body);
   font-size: var(--oc-type-section-title);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -156,7 +156,7 @@ const WELCOME_CSS = `
   padding: var(--oc-space-3) var(--oc-space-4) var(--oc-space-4);
 }
 .ocw-card-title {
-  font-family: var(--oc-font-display);
+  font-family: var(--oc-font-body);
   font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.01em;

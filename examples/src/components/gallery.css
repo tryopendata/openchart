@@ -8,22 +8,27 @@
  * tags). The GalleryPage root is React, so `data-oc-mode` crosses into the
  * iframe and dark mode follows there.
  *
- * Token names match .ladle/shell.css. Here they bind under [data-oc-mode].
- * ---------------------------------------------------------------------------
+ * Mode-invariant tokens (spacing, radius, fonts, type scale) live in
+ * src/tokens.css. Mode-dependent tokens (neutral ramp, accents) are declared
+ * here under [data-oc-mode]. shell.css declares the same values under
+ * :root[data-theme] for the outer Ladle chrome.
  */
 
+@import "../tokens.css";
+
 [data-oc-mode="light"] {
-  --oc-neutral-0: #ffffff;
-  --oc-neutral-50: #f8fafc;
-  --oc-neutral-100: #f1f5f9;
-  --oc-neutral-200: #e2e8f0;
-  --oc-neutral-300: #cbd5e1;
-  --oc-neutral-400: #94a3b8;
-  --oc-neutral-500: #64748b;
-  --oc-neutral-600: #475569;
-  --oc-neutral-700: #334155;
-  --oc-neutral-800: #1e293b;
-  --oc-neutral-900: #0f172a;
+  /* Neutral ramp (zinc) */
+  --oc-neutral-0: #fafafa;
+  --oc-neutral-50: #ffffff;
+  --oc-neutral-100: #f4f4f5;
+  --oc-neutral-200: #d4d4d8;
+  --oc-neutral-300: #a1a1aa;
+  --oc-neutral-400: #71717a;
+  --oc-neutral-500: #71717a;
+  --oc-neutral-600: #52525b;
+  --oc-neutral-700: #3f3f46;
+  --oc-neutral-800: #18181b;
+  --oc-neutral-900: #09090b;
 
   --oc-surface: var(--oc-neutral-0);
   --oc-surface-raised: var(--oc-neutral-50);
@@ -38,80 +43,35 @@
   --oc-accent-strong: #0891b2;
   --oc-accent-soft: rgba(6, 182, 212, 0.1);
   --oc-accent-text: #0e7490;
-
-  --oc-radius-card: 8px;
-  --oc-radius-control: 6px;
-
-  --oc-space-1: 4px;
-  --oc-space-2: 8px;
-  --oc-space-3: 12px;
-  --oc-space-4: 16px;
-  --oc-space-5: 24px;
-  --oc-space-6: 32px;
-  --oc-space-8: 48px;
-  --oc-space-10: 64px;
-
-  --oc-font-display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
-  --oc-font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --oc-font-mono:
-    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
-  --oc-type-page-title: 2.25rem;
-  --oc-type-section-title: 1.375rem;
-  --oc-type-demo-title: 1rem;
-  --oc-type-body: 0.9375rem;
-  --oc-type-caption: 0.8125rem;
-  --oc-type-mono: 0.8125rem;
 }
 
 [data-oc-mode="dark"] {
-  --oc-neutral-0: #0a0e14;
-  --oc-neutral-50: #10151d;
-  --oc-neutral-100: #161c26;
-  --oc-neutral-200: #232b38;
-  --oc-neutral-300: #2f3947;
-  --oc-neutral-400: #64748b;
-  --oc-neutral-500: #94a3b8;
-  --oc-neutral-600: #b8c2d0;
-  --oc-neutral-700: #cbd5e1;
-  --oc-neutral-800: #e2e8f0;
-  --oc-neutral-900: #f1f5f9;
+  /* Neutral ramp (zinc-dark) */
+  --oc-neutral-0: #0f1011;
+  --oc-neutral-50: #191a1b;
+  --oc-neutral-100: #1e1f20;
+  --oc-neutral-200: #28282c;
+  --oc-neutral-300: #34343a;
+  --oc-neutral-400: #62666d;
+  --oc-neutral-500: #8a8f98;
+  --oc-neutral-600: #a1a1aa;
+  --oc-neutral-700: #d0d6e0;
+  --oc-neutral-800: #d0d6e0;
+  --oc-neutral-900: #f7f8f8;
 
   --oc-surface: var(--oc-neutral-0);
   --oc-surface-raised: var(--oc-neutral-50);
-  --oc-border: var(--oc-neutral-200);
-  --oc-border-strong: var(--oc-neutral-300);
+  --oc-border: rgba(255, 255, 255, 0.05);
+  --oc-border-strong: rgba(255, 255, 255, 0.08);
   --oc-text: var(--oc-neutral-800);
   --oc-text-strong: var(--oc-neutral-900);
   --oc-text-muted: var(--oc-neutral-500);
   --oc-text-faint: var(--oc-neutral-400);
 
-  --oc-accent: #22d3ee;
-  --oc-accent-strong: #38bdf8;
-  --oc-accent-soft: rgba(34, 211, 238, 0.12);
-  --oc-accent-text: #5ad3e8;
-
-  --oc-radius-card: 8px;
-  --oc-radius-control: 6px;
-
-  --oc-space-1: 4px;
-  --oc-space-2: 8px;
-  --oc-space-3: 12px;
-  --oc-space-4: 16px;
-  --oc-space-5: 24px;
-  --oc-space-6: 32px;
-  --oc-space-8: 48px;
-  --oc-space-10: 64px;
-
-  --oc-font-display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
-  --oc-font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --oc-font-mono:
-    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
-  --oc-type-page-title: 2.25rem;
-  --oc-type-section-title: 1.375rem;
-  --oc-type-demo-title: 1rem;
-  --oc-type-body: 0.9375rem;
-  --oc-type-caption: 0.8125rem;
-  --oc-type-mono: 0.8125rem;
+  --oc-accent: #06b6d4;
+  --oc-accent-strong: #0891b2;
+  --oc-accent-soft: rgba(6, 182, 212, 0.12);
+  --oc-accent-text: #67e8f9;
 }
 
 /* ---------------------------------------------------------------------------
@@ -119,6 +79,9 @@
  * ------------------------------------------------------------------------- */
 .oc-gallery {
   font-family: var(--oc-font-body);
+  font-feature-settings: "cv01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   color: var(--oc-text);
   background: var(--oc-surface);
   min-height: 100%;
@@ -177,11 +140,10 @@
 }
 
 .oc-gallery-title {
-  font-family: var(--oc-font-display);
   font-size: var(--oc-type-page-title);
-  font-weight: 700;
+  font-weight: 590;
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--oc-text-strong);
   margin: 0;
 }
@@ -214,7 +176,7 @@
 .oc-toc-heading {
   font-family: var(--oc-font-body);
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 510;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   /* text-muted (not text-faint): faint fails WCAG AA contrast on this small
@@ -263,11 +225,10 @@
 }
 
 .oc-section-title {
-  font-family: var(--oc-font-display);
   font-size: var(--oc-type-section-title);
-  font-weight: 600;
+  font-weight: 590;
   line-height: 1.2;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   color: var(--oc-text-strong);
   margin: 0;
 }
@@ -332,6 +293,10 @@
   scroll-margin-top: var(--oc-space-6);
 }
 
+[data-oc-mode="dark"] .oc-demo {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .oc-demo-header {
   display: flex;
   align-items: flex-start;
@@ -347,7 +312,7 @@
 .oc-demo-title {
   font-family: var(--oc-font-body);
   font-size: var(--oc-type-demo-title);
-  font-weight: 600;
+  font-weight: 510;
   line-height: 1.3;
   color: var(--oc-text-strong);
   margin: 0;
@@ -363,6 +328,11 @@
 /* Viz mount region */
 .oc-demo-viz {
   padding: var(--oc-space-3) var(--oc-space-5) var(--oc-space-5);
+}
+
+/* Headless: no demo header, section title carries the context. */
+.oc-demo--headless .oc-demo-viz {
+  padding-top: var(--oc-space-4);
 }
 
 .oc-demo-viz > .story-chart {
@@ -386,6 +356,10 @@
   background: var(--oc-surface-raised);
 }
 
+[data-oc-mode="dark"] .oc-spec {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .oc-spec-summary {
   display: flex;
   align-items: center;
@@ -401,7 +375,7 @@
   cursor: pointer;
   font-family: var(--oc-font-body);
   font-size: var(--oc-type-caption);
-  font-weight: 500;
+  font-weight: 510;
   color: var(--oc-text-muted);
   display: inline-flex;
   align-items: center;
@@ -428,7 +402,7 @@
   cursor: pointer;
   font-family: var(--oc-font-body);
   font-size: var(--oc-type-caption);
-  font-weight: 500;
+  font-weight: 510;
   color: var(--oc-text-muted);
   padding: 5px 10px;
   border-radius: var(--oc-radius-control);
@@ -439,6 +413,10 @@
     border-color 0.12s,
     color 0.12s,
     background 0.12s;
+}
+
+[data-oc-mode="dark"] .oc-spec-copy {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .oc-spec-copy:hover {
@@ -473,7 +451,7 @@
 
 .oc-spec-code .oc-tok-num {
   color: var(--oc-text-strong);
-  font-weight: 600;
+  font-weight: 590;
 }
 
 .oc-spec-code .oc-tok-punct {

@@ -35,7 +35,7 @@ export default { title: 'Charts / Scrollytelling' };
  *  canvas, which reads as a different site. */
 const NARRATIVE_CSS = `
 .ocs-step h3 {
-  font-family: var(--oc-font-display, system-ui, -apple-system, sans-serif);
+  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
   font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: -0.01em;

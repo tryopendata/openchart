@@ -1,37 +1,36 @@
 /**
  * Ladle chrome (shell) styling for the OpenChart gallery.
  *
- * Replaces the old ~290-line injected `!important` string. This styles the
- * Ladle app frame: sidebar, search field, addons bar, resize handle, tooltips.
- * It NEVER enters the width-addon iframe, so it may key dark mode off
+ * Styles the Ladle app frame: sidebar, search field, addons bar, resize handle,
+ * tooltips. It NEVER enters the width-addon iframe, so it may key dark mode off
  * `:root[data-theme='dark']` (constraint C3 only restricts *gallery-content*
  * CSS, which lives in components/gallery.css).
  *
- * Recoloring goes through Ladle's own `--ladle-*` custom properties first;
- * overrides are used only where Ladle exposes no variable. `--ladle-main-padding`
- * is deliberately never set (constraint C2: fixture baselines depend on it).
+ * Mode-invariant tokens (spacing, radius, fonts, type scale) live in
+ * src/tokens.css. Mode-dependent tokens (neutral ramp, accents) are declared
+ * here under :root[data-theme]. gallery.css declares the same values under
+ * [data-oc-mode] for the iframe.
  *
- * ---------------------------------------------------------------------------
- * DESIGN TOKENS (shared names with components/gallery.css)
- * shell.css binds them under :root[data-theme]; gallery.css binds the same
- * names under [data-oc-mode]. Keep the two token blocks in sync.
- * ---------------------------------------------------------------------------
+ * `--ladle-main-padding` is deliberately never set (constraint C2: fixture
+ * baselines depend on it).
  */
+
+@import '../src/tokens.css';
 
 :root,
 :root[data-theme='light'] {
-  /* Neutral ramp (cool/pure) — light */
-  --oc-neutral-0: #ffffff; /* canvas */
-  --oc-neutral-50: #f8fafc; /* raised surface */
-  --oc-neutral-100: #f1f5f9;
-  --oc-neutral-200: #e2e8f0; /* borders */
-  --oc-neutral-300: #cbd5e1;
-  --oc-neutral-400: #94a3b8; /* muted text / icons */
-  --oc-neutral-500: #64748b; /* secondary text */
-  --oc-neutral-600: #475569;
-  --oc-neutral-700: #334155;
-  --oc-neutral-800: #1e293b; /* body text */
-  --oc-neutral-900: #0f172a; /* strong text */
+  /* Neutral ramp (zinc) */
+  --oc-neutral-0: #fafafa;
+  --oc-neutral-50: #ffffff;
+  --oc-neutral-100: #f4f4f5;
+  --oc-neutral-200: #d4d4d8;
+  --oc-neutral-300: #a1a1aa;
+  --oc-neutral-400: #71717a;
+  --oc-neutral-500: #71717a;
+  --oc-neutral-600: #52525b;
+  --oc-neutral-700: #3f3f46;
+  --oc-neutral-800: #18181b;
+  --oc-neutral-900: #09090b;
 
   --oc-surface: var(--oc-neutral-0);
   --oc-surface-raised: var(--oc-neutral-50);
@@ -42,36 +41,11 @@
   --oc-text-muted: var(--oc-neutral-500);
   --oc-text-faint: var(--oc-neutral-400);
 
-  /* Accent — library categorical lead (cyan) */
+  /* Accent (cyan) */
   --oc-accent: #06b6d4;
   --oc-accent-strong: #0891b2;
   --oc-accent-soft: rgba(6, 182, 212, 0.1);
   --oc-accent-text: #0e7490;
-
-  /* Radius */
-  --oc-radius-card: 8px;
-  --oc-radius-control: 6px;
-
-  /* Spacing scale */
-  --oc-space-1: 4px;
-  --oc-space-2: 8px;
-  --oc-space-3: 12px;
-  --oc-space-4: 16px;
-  --oc-space-5: 24px;
-  --oc-space-6: 32px;
-  --oc-space-8: 48px;
-  --oc-space-10: 64px;
-
-  /* Type scale */
-  --oc-font-display: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
-  --oc-font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --oc-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
-  --oc-type-page-title: 2.25rem; /* Bricolage */
-  --oc-type-section-title: 1.375rem; /* Bricolage */
-  --oc-type-demo-title: 1rem; /* Inter 600 */
-  --oc-type-body: 0.9375rem;
-  --oc-type-caption: 0.8125rem;
-  --oc-type-mono: 0.8125rem;
 
   /* Ladle chrome vars (C2: never --ladle-main-padding) */
   --ladle-bg-color-primary: var(--oc-neutral-0);
@@ -82,33 +56,33 @@
 }
 
 :root[data-theme='dark'] {
-  /* Neutral ramp (cool/pure) — dark. Dark uses borders over shadows. */
-  --oc-neutral-0: #0a0e14; /* canvas */
-  --oc-neutral-50: #10151d; /* raised surface / card */
-  --oc-neutral-100: #161c26;
-  --oc-neutral-200: #232b38; /* borders */
-  --oc-neutral-300: #2f3947;
-  --oc-neutral-400: #64748b; /* muted */
-  --oc-neutral-500: #94a3b8; /* secondary text */
-  --oc-neutral-600: #b8c2d0;
-  --oc-neutral-700: #cbd5e1;
-  --oc-neutral-800: #e2e8f0; /* body text */
-  --oc-neutral-900: #f1f5f9; /* strong text */
+  /* Neutral ramp (zinc-dark) */
+  --oc-neutral-0: #0f1011;
+  --oc-neutral-50: #191a1b;
+  --oc-neutral-100: #1e1f20;
+  --oc-neutral-200: #28282c;
+  --oc-neutral-300: #34343a;
+  --oc-neutral-400: #62666d;
+  --oc-neutral-500: #8a8f98;
+  --oc-neutral-600: #a1a1aa;
+  --oc-neutral-700: #d0d6e0;
+  --oc-neutral-800: #d0d6e0;
+  --oc-neutral-900: #f7f8f8;
 
   --oc-surface: var(--oc-neutral-0);
   --oc-surface-raised: var(--oc-neutral-50);
-  --oc-border: var(--oc-neutral-200);
-  --oc-border-strong: var(--oc-neutral-300);
+  --oc-border: rgba(255, 255, 255, 0.05);
+  --oc-border-strong: rgba(255, 255, 255, 0.08);
   --oc-text: var(--oc-neutral-800);
   --oc-text-strong: var(--oc-neutral-900);
   --oc-text-muted: var(--oc-neutral-500);
   --oc-text-faint: var(--oc-neutral-400);
 
-  /* Accent — desaturated for dark */
-  --oc-accent: #22d3ee;
-  --oc-accent-strong: #38bdf8;
-  --oc-accent-soft: rgba(34, 211, 238, 0.12);
-  --oc-accent-text: #5ad3e8;
+  /* Accent (cyan, consistent with light) */
+  --oc-accent: #06b6d4;
+  --oc-accent-strong: #0891b2;
+  --oc-accent-soft: rgba(6, 182, 212, 0.12);
+  --oc-accent-text: #67e8f9;
 
   --ladle-bg-color-primary: var(--oc-neutral-0);
   --ladle-bg-color-secondary: var(--oc-neutral-50);
@@ -132,11 +106,18 @@
 .ladle-aside {
   font-family: var(--oc-font-body);
   font-size: 13px;
+  font-feature-settings: "cv01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   border-left: 1px solid var(--oc-border);
   background-color: var(--oc-surface-raised);
   padding: 20px 14px 20px 12px;
   overflow-x: hidden;
   scrollbar-width: thin;
+}
+
+:root[data-theme='dark'] .ladle-aside {
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* Search field: a real input, not an underline */
@@ -186,9 +167,9 @@
   background: var(--oc-neutral-100);
 }
 
-/* Expanded group label: heavier */
+/* Expanded group label */
 .ladle-aside li[aria-expanded] > div > div:last-child {
-  font-weight: 600;
+  font-weight: 510;
   color: var(--oc-text-strong);
   letter-spacing: -0.01em;
 }
@@ -230,7 +211,7 @@
 
 .ladle-aside .ladle-active a {
   color: var(--oc-accent-text);
-  font-weight: 600;
+  font-weight: 510;
 }
 
 .ladle-aside .ladle-linkable svg {
@@ -257,6 +238,10 @@
   width: auto;
   left: 0;
   right: 0;
+}
+
+:root[data-theme='dark'] .ladle-addons {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .ladle-addons ul {

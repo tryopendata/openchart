@@ -431,13 +431,7 @@ export const DataAndEncoding = () => (
       title="Conditional encoding"
       lede="Test a predicate per datum and pick a value. Conditions evaluate in order — first match wins — with a fallback for the rest."
     >
-      <Demo
-        id="conditional-encoding"
-        title="Value-driven color"
-        description="Three ordered predicates bucket each sector's return into a color: strong gains, the lone loss, and the middling pack."
-        spec={conditionalSpec}
-        height={460}
-      />
+      <Demo id="conditional-encoding" spec={conditionalSpec} height={460} />
     </Section>
 
     <Section
@@ -487,13 +481,7 @@ export const DataAndEncoding = () => (
       title="Formatters"
       lede="Number and date formats are d3-format / d3-time-format strings, set per channel or per axis. Axis and tooltip can format the same field differently."
     >
-      <Demo
-        id="formatters"
-        title="Number and date formats"
-        description="Compact SI currency on the axis, full-precision currency in the tooltip, and compact temporal ticks that shorten before they drop."
-        spec={formatSpec}
-        height={420}
-      />
+      <Demo id="formatters" spec={formatSpec} height={420} />
     </Section>
   </GalleryPage>
 );

@@ -808,13 +808,7 @@ export const ScatterAndDistribution = () => (
       title="Density over time"
       lede="A calendar heatmap trades axes for a date grid: one cell per day, colored by that day's value. It reads seasonality, streaks, and gaps at a glance the way a line chart can't."
     >
-      <Demo
-        id="calendar-heatmap"
-        title="Calendar heatmap"
-        description="The calendar mark lays a daily series out as a GitHub-style year grid. A diverging color scale splits warm days from cool ones; a sequential scheme suits counts that only run one direction."
-        spec={calendarSpec}
-        height={340}
-      />
+      <Demo id="calendar-heatmap" spec={calendarSpec} height={340} />
     </Section>
 
     <Section
@@ -850,13 +844,7 @@ export const ScatterAndDistribution = () => (
       title="Interactive"
       lede="Wire chart events to your own React state to build tooltips, readouts, and linked views."
     >
-      <Demo
-        id="interactive"
-        title="Interactive (hover to read out)"
-        description="onMarkHover feeds the hovered datum to a companion readout; the escape hatch renders a stateful component while the spec panel still shows the base spec."
-        specForPanel={interactiveSpec}
-        height={540}
-      >
+      <Demo id="interactive" specForPanel={interactiveSpec} height={540}>
         <InteractiveScatter />
       </Demo>
     </Section>

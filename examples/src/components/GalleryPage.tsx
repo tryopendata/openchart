@@ -4,7 +4,7 @@
  * - Stamps `[data-oc-mode='light'|'dark']` on its root (from the provider's
  *   resolved mode context), which crosses into the width-addon iframe so
  *   gallery-content CSS follows dark mode there (constraint C3).
- * - Renders the page title (Bricolage Grotesque) + lede.
+ * - Renders the page title + lede.
  * - Builds a sticky right-rail TOC from its Section children (hidden < 1200px).
  * - Content column max-width ~1040px, centered; a `.oc-bleed` wrapper is
  *   available for full-bleed showcase sections.

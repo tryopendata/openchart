@@ -433,13 +433,7 @@ export const Responsive = () => (
       title="Faceting"
       lede="Small-multiple grids reflow with the container: the panel grid drops columns and stacks toward a single column as width runs out."
     >
-      <Demo
-        id="facet-stacking"
-        title="Facet column degradation"
-        description="A faceted small-multiples grid. Drag the frame narrower and the auto-computed column count falls, stacking panels toward a single column at compact widths."
-        specForPanel={facetSpec}
-        height={560}
-      >
+      <Demo id="facet-stacking" specForPanel={facetSpec} height={560}>
         <ResizeFrame spec={facetSpec} min={260} max={900} initial={760} heightValue={480} />
       </Demo>
     </Section>
