@@ -133,7 +133,7 @@ describe('compileMap', () => {
         },
         DEFAULT_OPTIONS,
       ),
-    ).toThrow(/us-atlas/);
+    ).toThrow(/features/);
   });
 
   it('throws when geo.features is not valid TopoJSON', () => {

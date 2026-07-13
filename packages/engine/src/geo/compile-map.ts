@@ -291,20 +291,37 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   const borders: MapBorders = { interiorPath, outlinePath, interiorStroke, outlineStroke };
 
   // 16. Tooltips
+  const tooltipChannels = mapSpec.encoding.tooltip
+    ? Array.isArray(mapSpec.encoding.tooltip)
+      ? mapSpec.encoding.tooltip
+      : [mapSpec.encoding.tooltip]
+    : null;
+
   const tooltipDescriptors = new Map<string, TooltipContent>();
   for (const mark of featureMarks) {
     if (!mark.data) continue;
     const fields: TooltipField[] = [];
     const name = mark.name ?? String(mark.id);
     fields.push({ label: 'Region', value: name });
-    if (isQuantitative && mark.data[colorEncoding.field] != null) {
+
+    if (tooltipChannels) {
+      for (const ch of tooltipChannels) {
+        const val = mark.data[ch.field];
+        if (val != null) {
+          fields.push({
+            label: ch.title ?? ch.field,
+            value: ch.type === 'quantitative' ? formatter(Number(val)) : String(val),
+          });
+        }
+      }
+    } else if (isQuantitative && mark.data[colorEncoding.field] != null) {
       fields.push({
-        label: colorEncoding.field,
+        label: colorEncoding.title ?? colorEncoding.field,
         value: formatter(Number(mark.data[colorEncoding.field])),
       });
     } else if (!isQuantitative && mark.data[colorEncoding.field] != null) {
       fields.push({
-        label: colorEncoding.field,
+        label: colorEncoding.title ?? colorEncoding.field,
         value: String(mark.data[colorEncoding.field]),
       });
     }

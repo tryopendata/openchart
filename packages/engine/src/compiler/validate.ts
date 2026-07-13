@@ -1309,6 +1309,68 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
 }
 
 // ---------------------------------------------------------------------------
+// Map validation
+// ---------------------------------------------------------------------------
+
+function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  if (!spec.geo || typeof spec.geo !== 'object') {
+    errors.push({
+      message: 'Spec error: map spec requires a "geo" object with a TopoJSON "features" field',
+      path: 'geo',
+      code: 'MISSING_FIELD',
+      suggestion: 'Add a geo object, e.g. geo: { features: topoJsonData, projection: "identity" }',
+    });
+    return;
+  }
+
+  const geo = spec.geo as Record<string, unknown>;
+  if (!geo.features) {
+    errors.push({
+      message: 'Spec error: geo requires a "features" field containing TopoJSON topology',
+      path: 'geo.features',
+      code: 'MISSING_FIELD',
+      suggestion:
+        'Import a TopoJSON file and pass it as geo.features, e.g. import topo from "us-atlas/states-albers-10m.json"',
+    });
+    return;
+  }
+
+  if (!spec.encoding || typeof spec.encoding !== 'object') {
+    errors.push({
+      message: 'Spec error: map spec requires an "encoding" object with key and color channels',
+      path: 'encoding',
+      code: 'MISSING_FIELD',
+      suggestion:
+        'Add an encoding object, e.g. encoding: { key: { field: "id", type: "nominal" }, color: { field: "value", type: "quantitative" } }',
+    });
+    return;
+  }
+
+  const encoding = spec.encoding as Record<string, unknown>;
+  for (const channel of ['key', 'color'] as const) {
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (!ch || typeof ch !== 'object') {
+      errors.push({
+        message: `Spec error: map encoding requires "${channel}" channel`,
+        path: `encoding.${channel}`,
+        code: 'MISSING_FIELD',
+        suggestion: `Add encoding.${channel}, e.g. ${channel}: { field: "${channel === 'key' ? 'id' : 'value'}", type: "${channel === 'key' ? 'nominal' : 'quantitative'}" }`,
+      });
+      continue;
+    }
+
+    if (!ch.field || typeof ch.field !== 'string') {
+      errors.push({
+        message: `Spec error: encoding.${channel} must have a "field" string`,
+        path: `encoding.${channel}.field`,
+        code: 'MISSING_FIELD',
+        suggestion: `Add a field name, e.g. ${channel}: { field: "${channel === 'key' ? 'id' : 'value'}" }`,
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // BarList validation
 // ---------------------------------------------------------------------------
 
@@ -1661,6 +1723,8 @@ export function validateSpec(spec: unknown): ValidationResult {
     validateSankeySpec(obj, errors);
   } else if (isTileMap) {
     validateTileMapSpec(obj, errors);
+  } else if (isMap) {
+    validateMapSpec(obj, errors);
   } else if (isBarList) {
     validateBarListSpec(obj, errors);
   }

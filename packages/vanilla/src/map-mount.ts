@@ -138,12 +138,22 @@ export function createMap(
   // Helpers
   // ---------------------------------------------------------------------------
 
+  let isAutoHeight: boolean | null = null;
+
   function getContainerDimensions(): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
     const width = Math.max(rect.width || 600, 100);
-    // Maps use a roughly square aspect ratio; let the compiler derive the
-    // tight content height from the projection and chrome.
-    return { width, height: width };
+
+    if (isAutoHeight === null && (rect.width > 0 || rect.height > 0)) {
+      isAutoHeight = rect.height === 0 && rect.width > 0;
+    }
+
+    const height =
+      isAutoHeight === true
+        ? Math.round(width * 0.625)
+        : Math.max(rect.height || Math.round(width * 0.625), 100);
+
+    return { width, height };
   }
 
   function compile(): MapLayout {

@@ -41,29 +41,20 @@ const usStateSpec: MapSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 2. US counties — pre-projected Albers
+// 2. US counties — pre-projected Albers (no data, topology only)
 // ---------------------------------------------------------------------------
-
-// Use a slice of the unemployment data as stand-in county data.
-// Real county FIPS codes are five digits; we generate illustrative values.
-const countyData = usUnemployment.data.map((d) => ({
-  id: `${d.id}001`,
-  rate: d.rate + Math.sin(Number(d.id)) * 1.5,
-}));
 
 const usCountySpec: MapSpec = {
   type: 'map',
   geo: { features: usCountiesTopo, projection: 'identity' },
-  data: countyData,
+  data: [],
   encoding: {
     key: { field: 'id', type: 'nominal' },
     color: { field: 'rate', type: 'quantitative' },
   },
-  valueFormat: '.1f',
   chrome: {
     title: 'County-Level Detail From the Same Pipeline',
-    subtitle: 'Same encoding, different TopoJSON resolution',
-    source: usUnemployment.source,
+    subtitle: '~3,200 features rendered from counties-albers-10m.json',
     byline: 'Chart: OpenChart',
   },
   animation: true,
