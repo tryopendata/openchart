@@ -26,10 +26,16 @@ export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement |
       return svg.querySelector(`[data-chrome-key="${ref.key}"]`) as SVGElement | null;
     case 'series-label':
       return svg.querySelector(`.oc-mark-label[data-series="${ref.series}"]`) as SVGElement | null;
+    // The editable legend is the color legend. Excluding the size legend
+    // explicitly rather than relying on it rendering second: `querySelector`
+    // takes the first match, so a bare `.oc-legend` would silently retarget
+    // (and drag) the wrong legend if render order ever changed.
     case 'legend':
-      return svg.querySelector('.oc-legend') as SVGElement | null;
+      return svg.querySelector('.oc-legend:not(.oc-legend--size)') as SVGElement | null;
     case 'legend-entry':
-      return svg.querySelector(`[data-legend-index="${ref.index}"]`) as SVGElement | null;
+      return svg.querySelector(
+        `.oc-legend:not(.oc-legend--size) [data-legend-index="${ref.index}"]`,
+      ) as SVGElement | null;
   }
 }
 
@@ -66,8 +72,11 @@ export function buildElementRef(
     return elementRef.legendEntry(series, index);
   }
 
+  // Only the color legend is selectable/editable. A click inside the size legend
+  // resolves to no ref rather than reporting the *color* legend's ref, which is
+  // what a bare `.oc-legend` match would do.
   const legendEl = element.closest('.oc-legend');
-  if (legendEl) return elementRef.legend();
+  if (legendEl && !legendEl.classList.contains('oc-legend--size')) return elementRef.legend();
 
   return null;
 }

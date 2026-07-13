@@ -14,7 +14,10 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import {
+  connectorIsDrawable,
+  DARK_CONNECTOR_STROKE,
   DARK_DOT_FILL,
+  DARK_LABEL_BACKGROUND,
   DARK_MUTED_TEXT_FILL,
   DARK_TEXT_FILL,
   DEFAULT_ANNOTATION_FONT_SIZE,
@@ -22,22 +25,82 @@ import {
   DEFAULT_DOT_RADIUS,
   DEFAULT_DOT_STROKE_WIDTH,
   DEFAULT_LINE_HEIGHT,
+  DROP_LINE_TOP_GAP,
+  FALLBACK_FONT_FAMILY,
+  LEDE_FONT_WEIGHT,
+  LIGHT_CONNECTOR_STROKE,
   LIGHT_DOT_FILL,
+  LIGHT_LABEL_BACKGROUND,
   LIGHT_MUTED_TEXT_FILL,
   LIGHT_TEXT_FILL,
-  SUBTITLE_FONT_SIZE_RATIO,
+  SUBTITLE_FONT_WEIGHT,
   SUBTITLE_GAP,
+  subtitleBaselineY,
+  subtitleFontSize,
 } from './constants';
 import {
   type AnnotationMeasureTextFn,
   applyOffset,
   computeAnchorOffset,
-  computeConnectorOrigin,
   computeTextBlockBounds,
+  connectorExit,
+  connectorPullbackGap,
   heuristicMeasure,
+  measureRichLine,
   unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
+
+/** The resolved endpoint marker on a text annotation. */
+type ResolvedDot = NonNullable<ResolvedAnnotation['dot']>;
+
+/**
+ * Two connector voices. An arrowed callout is the emphasis gesture, so it takes
+ * the label's text ink and reads as one stroke with the words. Everything else
+ * (plain leaders, drop-lines) is quiet infrastructure: a gray hairline.
+ *
+ * The marker inherits the same color, so leader and dot read as one system.
+ */
+function defaultConnectorStroke(hasArrow: boolean, isDark: boolean, textInk: string): string {
+  if (hasArrow) return textInk;
+  return isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE;
+}
+
+/**
+ * Resolve the endpoint marker at the data point.
+ *
+ * A default marker (equivalent to `dot: true`) appears whenever a connector is
+ * enabled with no arrowhead: the leader stops short and the marker terminates
+ * it. An arrowhead is already a terminator, so it gets no marker unless the
+ * author asks for one. `dot: false` always means bare.
+ */
+function resolveDot(
+  dotSpec: TextAnnotation['dot'],
+  hasConnector: boolean,
+  hasArrow: boolean,
+  x: number,
+  y: number,
+  isDark: boolean,
+  connectorStroke: string,
+): ResolvedDot | undefined {
+  const useDefault = dotSpec === undefined && hasConnector && !hasArrow;
+  if (!dotSpec && !useDefault) return undefined;
+
+  const dotConfig = typeof dotSpec === 'object' ? dotSpec : {};
+  return {
+    x,
+    y,
+    radius: dotConfig.radius ?? DEFAULT_DOT_RADIUS,
+    fill: dotConfig.fill ?? (isDark ? DARK_DOT_FILL : LIGHT_DOT_FILL),
+    stroke: dotConfig.stroke ?? connectorStroke,
+    strokeWidth: dotConfig.strokeWidth ?? DEFAULT_DOT_STROKE_WIDTH,
+  };
+}
+
+/** Radius the connector must clear at the data point, marker stroke included. */
+export function markerClearance(dot: ResolvedDot | undefined): number {
+  return dot ? dot.radius + dot.strokeWidth / 2 : 0;
+}
 
 /**
  * Resolve the connector spec shorthand into a normalized { type, arrow } object.
@@ -61,22 +124,32 @@ function resolveConnectorConfig(
   return { type: 'straight', arrow: false };
 }
 
+/**
+ * Resolve `background` to a concrete color. `true` picks the theme surface so
+ * the plate follows light/dark; a string passes through as an explicit override.
+ */
+function resolveLabelBackground(
+  background: string | true | undefined,
+  isDark: boolean,
+): string | undefined {
+  if (background === undefined) return undefined;
+  if (background === true) return isDark ? DARK_LABEL_BACKGROUND : LIGHT_LABEL_BACKGROUND;
+  return background;
+}
+
 /** Horizontal gap between the drop-line and the label text. */
 const DROP_LINE_LABEL_GAP = 8;
-/** Vertical gap between the top of the drop-line and the top of the label box. */
-const DROP_LINE_TOP_GAP = 4;
-/** Vertical gap between the bottom of the drop-line and the data point. */
-const DROP_LINE_BOTTOM_GAP = 4;
 
 export function makeAnnotationLabelStyle(
   fontSize?: number,
   fontWeight?: number,
   fill?: string,
   isDark?: boolean,
+  fontFamily?: string,
 ): TextStyle {
   const defaultFill = isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL;
   return {
-    fontFamily: 'Inter, system-ui, sans-serif',
+    fontFamily: fontFamily ?? FALLBACK_FONT_FAMILY,
     fontSize: fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE,
     fontWeight: fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT,
     fill: fill ?? defaultFill,
@@ -85,12 +158,22 @@ export function makeAnnotationLabelStyle(
   };
 }
 
+/**
+ * The primary text's resolved weight. A subtitle turns the primary line into a
+ * lede, so it goes bold unless the author asked for a specific weight.
+ */
+export function resolveLedeFontWeight(annotation: TextAnnotation): number | undefined {
+  if (annotation.fontWeight !== undefined) return annotation.fontWeight;
+  return annotation.subtitle ? LEDE_FONT_WEIGHT : undefined;
+}
+
 export function resolveTextAnnotation(
   annotation: TextAnnotation,
   scales: ResolvedScales,
   chartArea: Rect,
   isDark: boolean,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
+  fontFamily?: string,
 ): ResolvedAnnotation | null {
   const px = resolvePosition(annotation.x, scales.x);
   const py = resolvePosition(annotation.y, scales.y);
@@ -98,12 +181,14 @@ export function resolveTextAnnotation(
   if (px === null || py === null) return null;
 
   const defaultTextFill = isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL;
+  const labelBackground = resolveLabelBackground(annotation.background, isDark);
 
   const labelStyle = makeAnnotationLabelStyle(
     annotation.fontSize,
-    annotation.fontWeight,
+    resolveLedeFontWeight(annotation),
     annotation.fill ?? defaultTextFill,
     isDark,
+    fontFamily,
   );
 
   // Parse connector spec into { type, arrow } or null (disabled).
@@ -119,24 +204,60 @@ export function resolveTextAnnotation(
       py,
       chartArea,
       labelStyle,
-      defaultTextFill,
+      labelBackground,
+      isDark,
       measure,
     );
   }
 
-  // Multi-line non-drop-line: engine sets textAnchor to 'middle' so bounds
-  // and rendering derive from the same anchor (previously the renderer
-  // forced this override, causing bounds to lie).
-  const isMultiLine = annotation.text.includes('\n');
-  if (isMultiLine) {
-    labelStyle.textAnchor = 'middle';
-  }
+  // Text blocks are never center-aligned: the reference annotations align on the
+  // edge that faces the data point, so the block reads as a flag on the leader.
+  // A left anchor puts the block to the left of the point, so its right edge
+  // faces it (`end`); everything else faces left (`start`).
+  labelStyle.textAnchor = annotation.anchor === 'left' ? 'end' : 'start';
 
   // Compute position from anchor direction + user offset
   const anchorDelta = computeAnchorOffset(annotation.anchor, px, py, chartArea);
   const finalDelta = applyOffset(anchorDelta, annotation.offset);
 
-  const labelX = px + finalDelta.dx;
+  const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+
+  // A top/bottom anchor means the block sits ABOVE/BELOW the point, so it has to
+  // straddle it horizontally. The text renders with textAnchor 'start', which
+  // would otherwise hang the whole block off to the right and make `anchor: 'top'`
+  // read as "up and to the right" — forcing every author to hand-compute a
+  // negative dx of roughly half the block width. Centering the block is separate
+  // from aligning the text: the lines inside stay left-aligned and ragged right.
+  //
+  // Measured against the widest line of the block (primary vs subtitle), since a
+  // subtitle is often wider and centering on the primary alone reads as off-center.
+  let centeringShift = 0;
+  if (annotation.anchor === 'top' || annotation.anchor === 'bottom') {
+    const primaryWidth = computeTextBlockBounds(
+      0,
+      fontSize,
+      annotation.text,
+      { ...labelStyle, textAnchor: 'start' },
+      measure,
+    ).width;
+    const subtitleWidth = annotation.subtitle
+      ? computeTextBlockBounds(
+          0,
+          fontSize,
+          annotation.subtitle,
+          {
+            ...labelStyle,
+            fontSize: subtitleFontSize(fontSize),
+            fontWeight: SUBTITLE_FONT_WEIGHT,
+            textAnchor: 'start',
+          },
+          measure,
+        ).width
+      : 0;
+    centeringShift = -Math.max(primaryWidth, subtitleWidth) / 2;
+  }
+
+  const labelX = px + finalDelta.dx + centeringShift;
   const labelY = py + finalDelta.dy;
 
   const showConnector = connectorConfig !== null;
@@ -144,99 +265,22 @@ export function resolveTextAnnotation(
     connectorConfig?.type === 'curve' ? 'curve' : 'straight';
   const connectorArrow = connectorConfig?.arrow ?? false;
 
-  // Compute connector origin: pick the edge midpoint closest to the data point
-  const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
-  const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
-  const { x: connectorFromX, y: connectorFromY } = computeConnectorOrigin(
-    labelX,
-    labelY,
-    annotation.text,
-    fontSize,
-    fontWeight,
-    px,
-    py,
-    connectorStyle,
-  );
-
-  // Apply user-provided connector endpoint offsets
-  const baseFrom = { x: connectorFromX, y: connectorFromY };
-  const baseTo = { x: px, y: py };
-  const adjustedFrom = {
-    x: baseFrom.x + (annotation.connectorOffset?.from?.dx ?? 0),
-    y: baseFrom.y + (annotation.connectorOffset?.from?.dy ?? 0),
-  };
-  const adjustedToRaw = {
-    x: baseTo.x + (annotation.connectorOffset?.to?.dx ?? 0),
-    y: baseTo.y + (annotation.connectorOffset?.to?.dy ?? 0),
-  };
-
-  // Pull the "to" endpoint back along the connector direction so the
-  // line doesn't touch the data point directly (leaves a small gap).
-  const GAP = 4;
-  const cdx = adjustedToRaw.x - adjustedFrom.x;
-  const cdy = adjustedToRaw.y - adjustedFrom.y;
-  const dist = Math.sqrt(cdx * cdx + cdy * cdy);
-  const adjustedTo =
-    dist > GAP * 2
-      ? { x: adjustedToRaw.x - (cdx / dist) * GAP, y: adjustedToRaw.y - (cdy / dist) * GAP }
-      : adjustedToRaw;
-
   const labelBounds = computeTextBlockBounds(labelX, labelY, annotation.text, labelStyle, measure);
 
-  const label: ResolvedLabel = {
-    text: annotation.text,
-    x: labelX,
-    y: labelY,
-    style: labelStyle,
-    visible: true,
-    connector: showConnector
-      ? {
-          from: adjustedFrom,
-          to: adjustedTo,
-          endpoint: { x: px, y: py },
-          stroke: annotation.stroke ?? '#999999',
-          style: connectorStyle,
-          arrow: connectorArrow,
-        }
-      : undefined,
-    background: annotation.background,
-    halo: annotation.halo,
-    bounds: labelBounds,
-  };
-
-  // Resolve dot marker. Uses the connector's "to" endpoint coordinates
-  // (post user-supplied connectorOffset.to) so it sits exactly where the
-  // connector terminates at the data point.
-  let dot: ResolvedAnnotation['dot'] | undefined;
-  if (annotation.dot) {
-    const dotConfig = typeof annotation.dot === 'object' ? annotation.dot : {};
-    const defaultDotFill = isDark ? DARK_DOT_FILL : LIGHT_DOT_FILL;
-    const defaultDotStroke = isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL;
-    dot = {
-      x: adjustedTo.x,
-      y: adjustedTo.y,
-      radius: dotConfig.radius ?? DEFAULT_DOT_RADIUS,
-      fill: dotConfig.fill ?? defaultDotFill,
-      stroke: dotConfig.stroke ?? defaultDotStroke,
-      strokeWidth: dotConfig.strokeWidth ?? DEFAULT_DOT_STROKE_WIDTH,
-    };
-  }
-
-  // Resolve subtitle. Positioned below the primary text block by
-  // (lineHeight * primaryLineCount * fontSize) + gap.
+  // Resolve subtitle first: its bounds are part of the block the connector must
+  // clear, and the subtitle is often the wider of the two lines.
   let subtitle: ResolvedAnnotation['subtitle'] | undefined;
   let annotationBounds: Rect = labelBounds;
   if (annotation.subtitle) {
     const primaryLineCount = annotation.text.split('\n').length;
-    const subtitleFontSize = Math.round(fontSize * SUBTITLE_FONT_SIZE_RATIO);
     const mutedFill = isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL;
     const subtitleStyle: TextStyle = {
       ...labelStyle,
-      fontSize: subtitleFontSize,
-      fontWeight: DEFAULT_ANNOTATION_FONT_WEIGHT,
+      fontSize: subtitleFontSize(fontSize),
+      fontWeight: SUBTITLE_FONT_WEIGHT,
       fill: mutedFill,
     };
-    const subtitleY = labelY + fontSize * DEFAULT_LINE_HEIGHT * primaryLineCount + SUBTITLE_GAP;
+    const subtitleY = subtitleBaselineY(labelY, fontSize * DEFAULT_LINE_HEIGHT, primaryLineCount);
     subtitle = {
       text: annotation.subtitle,
       x: labelX,
@@ -252,6 +296,81 @@ export function resolveTextAnnotation(
     );
     annotationBounds = unionRects(labelBounds, subtitleBounds);
   }
+
+  // The endpoint marker sits on the data point itself (plus any user offset on
+  // the connector's data-side end), never on the pulled-back connector tip.
+  const endpoint = {
+    x: px + (annotation.connectorOffset?.to?.dx ?? 0),
+    y: py + (annotation.connectorOffset?.to?.dy ?? 0),
+  };
+  // Emphasis (arrowed) connectors take the label ink; quiet leaders take gray.
+  // The marker shares the color so it reads as part of the same gesture.
+  const connectorStroke =
+    annotation.stroke ??
+    defaultConnectorStroke(connectorArrow, isDark, labelStyle.fill ?? defaultTextFill);
+  const dot = resolveDot(
+    annotation.dot,
+    showConnector,
+    connectorArrow,
+    endpoint.x,
+    endpoint.y,
+    isDark,
+    connectorStroke,
+  );
+
+  // Connector origin: ray from the block center (label ∪ subtitle) to the data
+  // point, exiting the box with a standoff gap.
+  let connector: ResolvedLabel['connector'];
+  if (showConnector) {
+    const exit = connectorExit(annotationBounds, endpoint.x, endpoint.y);
+    if (exit) {
+      const from = {
+        x: exit.x + (annotation.connectorOffset?.from?.dx ?? 0),
+        y: exit.y + (annotation.connectorOffset?.from?.dy ?? 0),
+      };
+
+      // Pull the data-point end back so the line stops short of the marker.
+      const gap = connectorPullbackGap(markerClearance(dot), connectorArrow);
+      const cdx = endpoint.x - from.x;
+      const cdy = endpoint.y - from.y;
+      const dist = Math.sqrt(cdx * cdx + cdy * cdy);
+      const to =
+        dist > 0
+          ? { x: endpoint.x - (cdx / dist) * gap, y: endpoint.y - (cdy / dist) * gap }
+          : { ...endpoint };
+
+      // Min-length check runs after the pullback: it can flip a near-degenerate
+      // line's direction, and a stub shorter than MIN_CONNECTOR_LENGTH reads as
+      // noise — the marker alone says it better. An arrowed connector spends
+      // ARROWHEAD_LENGTH of its length on the head, so the gate measures what's
+      // actually left to stroke.
+      const lx = to.x - from.x;
+      const ly = to.y - from.y;
+      if (connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connectorArrow)) {
+        connector = {
+          from,
+          to,
+          endpoint,
+          stroke: connectorStroke,
+          style: connectorStyle,
+          arrow: connectorArrow,
+          exit: exit.exit,
+        };
+      }
+    }
+  }
+
+  const label: ResolvedLabel = {
+    text: annotation.text,
+    x: labelX,
+    y: labelY,
+    style: labelStyle,
+    visible: true,
+    connector,
+    background: labelBackground,
+    halo: annotation.halo,
+    bounds: labelBounds,
+  };
 
   return {
     type: 'text',
@@ -278,15 +397,23 @@ function resolveDropLineAnnotation(
   py: number,
   chartArea: Rect,
   labelStyle: TextStyle,
-  defaultTextFill: string,
+  labelBackground: string | undefined,
+  isDark: boolean,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
 ): ResolvedAnnotation {
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
-  const fontWeight = annotation.fontWeight ?? DEFAULT_ANNOTATION_FONT_WEIGHT;
+  const fontWeight = Number(labelStyle.fontWeight) || DEFAULT_ANNOTATION_FONT_WEIGHT;
   const lines = annotation.text.split('\n');
+  const subtitleLines = annotation.subtitle ? annotation.subtitle.split('\n') : [];
+  const subFontSize = subtitleFontSize(fontSize);
   const estimatedWidth = Math.max(
     0,
-    ...lines.map((line) => measure(line, { fontSize, fontWeight })),
+    ...lines.map((line) => measureRichLine(line, { fontSize, fontWeight }, measure)),
+    // The subtitle is often the wider line, and it's what decides whether the
+    // block fits on a side.
+    ...subtitleLines.map((line) =>
+      measureRichLine(line, { fontSize: subFontSize, fontWeight: SUBTITLE_FONT_WEIGHT }, measure),
+    ),
   );
 
   // Pick initial side from anchor; default to 'left' (label sits to the left
@@ -313,8 +440,13 @@ function resolveDropLineAnnotation(
   // Drop the label box top a bit above the data point so the label and line
   // share a baseline that reads as "callout above the point".
   const lineHeight = fontSize * DEFAULT_LINE_HEIGHT;
-  const totalHeight = lineHeight * lines.length;
-  // Position the first line so the bottom of the label sits ~12px above py.
+  // The subtitle hangs below the primary lines, so it's part of the block the
+  // 12px setback has to clear -- otherwise it lands on top of the data point.
+  const subtitleHeight = annotation.subtitle
+    ? SUBTITLE_GAP + subFontSize * DEFAULT_LINE_HEIGHT * subtitleLines.length
+    : 0;
+  const totalHeight = lineHeight * lines.length + subtitleHeight;
+  // Position the first line so the bottom of the block sits ~12px above py.
   // Clamp to the chart-area top so multi-line labels near peaks don't escape
   // upward into chrome / metric-bar territory.
   const desiredLabelTopY = py - totalHeight - 12;
@@ -324,8 +456,16 @@ function resolveDropLineAnnotation(
 
   const resolvedStyle: TextStyle = { ...labelStyle, textAnchor };
 
+  // The drop-line is a connector with no arrow, so it gets the default endpoint
+  // marker too — and the line stops short of it by the same rule as the other
+  // connector styles. Quiet voice: gray hairline, marker in the same gray.
+  const connectorStroke =
+    annotation.stroke ?? (isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE);
+  const dot = resolveDot(annotation.dot, true, false, px, py, isDark, connectorStroke);
+  const bottomGap = connectorPullbackGap(markerClearance(dot), false);
+
   const from = { x: px, y: labelTopY - DROP_LINE_TOP_GAP };
-  const to = { x: px, y: py - DROP_LINE_BOTTOM_GAP };
+  const to = { x: px, y: py - bottomGap };
 
   const labelBounds = computeTextBlockBounds(
     labelX,
@@ -334,6 +474,33 @@ function resolveDropLineAnnotation(
     resolvedStyle,
     measure,
   );
+
+  // A subtitle works on a drop-line the same as on any other connector style:
+  // the lede rule already bolded the primary line on the way in, so dropping the
+  // subtitle here would leave a mystery-bold label with no context under it.
+  let subtitle: ResolvedAnnotation['subtitle'] | undefined;
+  let annotationBounds = labelBounds;
+  if (annotation.subtitle) {
+    const subtitleStyle: TextStyle = {
+      ...resolvedStyle,
+      fontSize: subFontSize,
+      fontWeight: SUBTITLE_FONT_WEIGHT,
+      fill: isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL,
+    };
+    // `lineHeight` here is already the pixel line-height, which is what the shared
+    // formula takes.
+    const subtitleY = subtitleBaselineY(labelBaselineY, lineHeight, lines.length);
+    subtitle = {
+      text: annotation.subtitle,
+      x: labelX,
+      y: subtitleY,
+      style: subtitleStyle,
+    };
+    annotationBounds = unionRects(
+      labelBounds,
+      computeTextBlockBounds(labelX, subtitleY, annotation.subtitle, subtitleStyle, measure),
+    );
+  }
 
   const label: ResolvedLabel = {
     text: annotation.text,
@@ -345,11 +512,12 @@ function resolveDropLineAnnotation(
       from,
       to,
       endpoint: { x: px, y: py },
-      stroke: annotation.stroke ?? defaultTextFill,
+      stroke: connectorStroke,
       style: 'drop-line',
       arrow: false,
+      exit: 'vertical',
     },
-    background: annotation.background,
+    background: labelBackground,
     halo: annotation.halo,
     bounds: labelBounds,
   };
@@ -358,10 +526,14 @@ function resolveDropLineAnnotation(
     type: 'text',
     id: annotation.id,
     label,
+    subtitle,
     stroke: annotation.stroke,
     fill: annotation.fill,
     opacity: annotation.opacity,
     zIndex: annotation.zIndex,
-    bounds: labelBounds,
+    dot,
+    // Union of label + subtitle. `label.bounds` stays label-only -- the renderer
+    // sizes the `background` plate from that.
+    bounds: annotationBounds,
   };
 }

@@ -7,7 +7,12 @@
  */
 
 import type { CellStyle, ColumnConfig, TableCellBase } from '@opendata-ai/openchart-core';
-import { buildD3Formatter, formatDate, formatNumber } from '@opendata-ai/openchart-core';
+import {
+  buildD3Formatter,
+  defaultNumberFormatter,
+  formatDate,
+  resolveNumberFormatter,
+} from '@opendata-ai/openchart-core';
 
 /**
  * Check if a value is numeric (finite number or parseable numeric string).
@@ -46,9 +51,11 @@ export function formatCell(value: unknown, column: ColumnConfig): TableCellBase 
     };
   }
 
-  // If column has a d3-format string and value is numeric
+  // If column has a format string and value is numeric
   if (column.format && isNumericValue(value)) {
-    const formatter = buildD3Formatter(column.format);
+    const formatter =
+      resolveNumberFormatter(column.format, { surface: 'table' }) ??
+      buildD3Formatter(column.format);
     if (formatter) {
       return {
         value,
@@ -58,11 +65,11 @@ export function formatCell(value: unknown, column: ColumnConfig): TableCellBase 
     }
   }
 
-  // Auto-format numbers
+  // Auto-format numbers (tables get full precision, no compact notation)
   if (isNumericValue(value)) {
     return {
       value,
-      formattedValue: formatNumber(value),
+      formattedValue: defaultNumberFormatter({ surface: 'table' })(value),
       style,
     };
   }
@@ -92,14 +99,16 @@ export function formatValueForSearch(value: unknown, column: ColumnConfig): stri
   if (value == null) return '';
 
   if (column.format && isNumericValue(value)) {
-    const formatter = buildD3Formatter(column.format);
+    const formatter =
+      resolveNumberFormatter(column.format, { surface: 'table' }) ??
+      buildD3Formatter(column.format);
     if (formatter) {
       return formatter(value);
     }
   }
 
   if (isNumericValue(value)) {
-    return formatNumber(value);
+    return defaultNumberFormatter({ surface: 'table' })(value);
   }
 
   return String(value);

@@ -43,17 +43,24 @@ function formatChannel(rule) {
 /**
  * Generate the mark encoding grammar table from MARK_ENCODING_RULES. Columns are
  * the positional/value channels that actually vary across marks; the rest
- * (tooltip, href, order, detail) are optional on every mark and documented in
- * prose to keep the table readable.
+ * (tooltip, detail) are optional on every mark and documented in prose to keep
+ * the table readable.
  */
+/** Marks whose canonical value channel is theta (not y). */
+const THETA_MARKS = new Set(['arc', 'waffle', 'parliament']);
+
 function generateMarkTable() {
   const marks = Object.keys(MARK_ENCODING_RULES);
   const rows = marks.map((mark) => {
     const r = MARK_ENCODING_RULES[mark];
+    // For arc/waffle/parliament, show theta as the required value channel
+    // (the user writes theta; spec-sugar rewrites it to y for the engine).
+    const isTheta = THETA_MARKS.has(mark);
     const cells = [
       `\`${mark}\``,
       formatChannel(r.x),
-      formatChannel(r.y),
+      isTheta ? '-' : formatChannel(r.y),
+      isTheta ? 'req (quantitative)' : formatChannel(r.theta),
       formatChannel(r.color),
       formatChannel(r.size),
       MARK_DISPLAY_NAMES[mark] ?? '',
@@ -61,8 +68,8 @@ function generateMarkTable() {
     return `| ${cells.join(' | ')} |`;
   });
   return [
-    '| mark | x | y | color | size | Renders as |',
-    '|------|---|---|-------|------|------------|',
+    '| mark | x | y | theta | color | size | Renders as |',
+    '|------|---|---|-------|-------|------|------------|',
     ...rows,
   ].join('\n');
 }
@@ -118,7 +125,7 @@ There is no \`type: "line"\` grammar. Charts use \`mark\`, following Vega-Lite. 
     y?:     EncodingChannel,
     color?: EncodingChannel | { value: string },
     size?:  EncodingChannel,
-    // also: x2, y2, opacity, strokeDash, text, tooltip, detail, theta, facet
+    // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, facet
   },
   transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, fold, window
   chrome?:    Chrome,            // title, subtitle, source, byline, footer, eyebrow, brand
@@ -157,11 +164,11 @@ Common MarkDef options:
 
 ### Encoding requirements by mark
 
-\`req\`/\`opt\` = required/optional; parentheses list allowed field types. Every mark also accepts optional \`tooltip\`, \`href\`, \`order\`, and \`detail\` channels.
+\`req\`/\`opt\` = required/optional; parentheses list allowed field types. Every mark also accepts optional \`tooltip\` and \`detail\` channels. \`theta\` is the value channel for arc, waffle, and parliament marks.
 
 ${markTable}
 
-An EncodingChannel is \`{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }\`. \`type\` is one of \`quantitative\`, \`temporal\`, \`nominal\`, \`ordinal\`.
+An EncodingChannel is \`{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }\`. \`type\` is one of \`quantitative\`, \`temporal\`, \`nominal\`, \`ordinal\`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set \`stack: null\` on the value channel for grouped bars or overlapping areas.
 
 ### Color legends
 

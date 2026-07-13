@@ -181,6 +181,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -419,6 +449,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -659,6 +719,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -897,6 +987,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -1137,6 +1257,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -1375,6 +1525,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -1615,6 +1795,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -1853,6 +2063,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -2093,6 +2333,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -2331,6 +2601,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -2571,6 +2871,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -2809,6 +3139,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -3049,6 +3409,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -3287,6 +3677,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -3527,6 +3947,36 @@
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                         },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
                         "fillPattern": {
                           "type": "string",
                           "enum": [
@@ -3765,6 +4215,36 @@
                         "trendline": {
                           "type": "boolean",
                           "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                         },
                         "fillPattern": {
                           "type": "string",
@@ -4067,11 +4547,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -4098,24 +4573,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Canonical value channel for arc marks (quantitative — the slice value)."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -4123,11 +4583,11 @@
         }
       },
       "required": [
-        "y",
+        "theta",
         "color"
       ],
       "additionalProperties": false,
-      "description": "Encoding for arc marks (pie/donut charts).\n- `y`: required (quantitative — the slice value)\n- `color`: required (nominal/ordinal — the category)\n- `theta`: optional (defaults to `y` channel)\n- `radius`: optional (donut inner radius)"
+      "description": "Encoding for arc marks (pie/donut charts).\n- `theta`: required (quantitative — the canonical slice value channel)\n- `color`: required (nominal/ordinal — the category)\n- `y`: deprecated alias for `theta`, accepted for backward compatibility"
     },
     "EncodingChannel<DataRow>": {
       "type": "object",
@@ -4184,7 +4644,7 @@
               "type": "null"
             }
           ],
-          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below)\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.\n- **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)   to opt into stacked areas. Each overlapping series renders as a translucent   gradient band anchored at the y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap).\n\n**v8 note:** the multi-series bar/area default realigns with Vega-Lite (stacked, `'zero'`) in v8. Relying on the implicit default emits a compile warning in v7; set `stack` explicitly (`null` for grouped/overlap, `'zero'` for stacked) to keep the current rendering."
+          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
         },
         "bin": {
           "anyOf": [
@@ -4259,7 +4719,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"). For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
         },
         "highlight": {
           "anyOf": [
@@ -4319,7 +4779,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Number format string (d3-format). e.g. \",.0f\" for comma-separated integers."
+          "description": "Number format: d3-format string (e.g. \",.0f\"), or semantic keyword `'percent'` / `'currency'`. When omitted, compact notation (1k, 2.5M) is applied automatically."
         },
         "tickCount": {
           "type": "number",
@@ -5546,7 +6006,7 @@
         },
         "text": {
           "type": "string",
-          "description": "The annotation text. Required for text annotations."
+          "description": "The annotation text. Required for text annotations.\n\nSupports inline `**bold**` spans, so emphasis lands on the key phrase rather than the whole block: `'Inflation peaked at **8.5%**'`. Unmatched `**` (and empty `****`) render literally. `\\n` starts a new line."
         },
         "priority": {
           "type": "number",
@@ -5554,7 +6014,7 @@
         },
         "subtitle": {
           "type": "string",
-          "description": "Optional muted second-tone text rendered below the primary `text`. Used for supporting context (e.g. methodology, source). Newlines in `text` still produce multi-line primary; subtitle is a separate block."
+          "description": "Optional muted second-tone text rendered below the primary `text`. Used for supporting context (e.g. methodology, source). Newlines in `text` still produce multi-line primary; subtitle is a separate block.\n\nSupports the same inline `**bold**` spans as `text`. When a subtitle is present and no `fontWeight` is set, the primary `text` resolves to weight 700 — the lede + context stack."
         },
         "dot": {
           "anyOf": [
@@ -5565,7 +6025,7 @@
               "$ref": "#/definitions/AnnotationDot"
             }
           ],
-          "description": "Optional dot marker drawn at the connector's data-point endpoint. `true` enables the default open-ring style. Pass an object to override radius, fill, stroke, or strokeWidth."
+          "description": "Open-ring marker drawn on the data point itself (not on the pulled-back connector tip).\n\nLeft unset, a default marker appears whenever a connector is enabled and carries no arrowhead — the leader points, the ring lands. An arrowed connector gets no marker unless you ask for one: the head already marks the spot. `dot: false` is always bare; an explicit `dot` always wins.\n\n`true` uses the default style; pass an object to override radius, fill, stroke, or strokeWidth."
         },
         "fontSize": {
           "type": "number",
@@ -5595,7 +6055,7 @@
               "$ref": "#/definitions/ConnectorConfig"
             }
           ],
-          "description": "Connector from label to anchor point.\n- `true` (default): straight line, no arrow\n- `'straight'`: straight line, no arrow\n- `'curve'`: curved arrow with arrowhead\n- `'drop-line'`: vertical line through the data point's x\n- `{ type, arrow? }`: object form for explicit arrow control\n- `false`: no connector"
+          "description": "Connector from label to anchor point.\n- `true` (default): straight line, no arrow\n- `'straight'`: straight line, no arrow\n- `'curve'`: curved arrow with arrowhead\n- `'drop-line'`: vertical line through the data point's x\n- `{ type, arrow? }`: object form for explicit arrow control\n- `false`: no connector\n\nThe connector leaves the text block on the side facing the data point, with a small standoff gap. A leader shorter than 8px is dropped as noise (the marker alone reads better), as is a connector whose target sits inside the text block. Widen `offset` if you want the line back."
         },
         "connectorOffset": {
           "type": "object",
@@ -5613,8 +6073,16 @@
           "description": "Per-endpoint offsets for the connector line. Allows fine-tuning where the connector starts and ends."
         },
         "background": {
-          "type": "string",
-          "description": "Background color behind the text. Useful for readability over chart lines."
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean",
+              "const": true
+            }
+          ],
+          "description": "Background plate behind the text, for readability over chart lines.\n\n`true` uses the theme surface, so the plate follows light/dark mode. A color string sets it explicitly. Prefer `true`: a hardcoded '#ffffff' stays white in dark mode and the text turns light-gray-on-white."
         },
         "halo": {
           "type": "boolean",
@@ -5635,7 +6103,7 @@
       "properties": {
         "radius": {
           "type": "number",
-          "description": "Circle radius in pixels. Default 5."
+          "description": "Circle radius in pixels. Default 4."
         },
         "fill": {
           "type": "string",
@@ -5643,15 +6111,15 @@
         },
         "stroke": {
           "type": "string",
-          "description": "Stroke color. Defaults to theme text color."
+          "description": "Stroke color. Defaults to the connector's resolved stroke, so marker and leader read as one system."
         },
         "strokeWidth": {
           "type": "number",
-          "description": "Stroke width in pixels. Default 2."
+          "description": "Stroke width in pixels. Default 1.5."
         }
       },
       "additionalProperties": false,
-      "description": "Style overrides for the dot marker drawn at the connector's data-point endpoint."
+      "description": "Style overrides for the dot marker drawn at the data point."
     },
     "AnnotationAnchor": {
       "type": "string",
@@ -5814,11 +6282,8 @@
         },
         "type": {
           "type": "string",
-          "enum": [
-            "refline",
-            "rule"
-          ],
-          "description": "Discriminant. `'refline'` is canonical. `'rule'` is a deprecated alias (it collides with the `rule` mark type) kept accepted-with-warning; it is removed in v9. Use `'refline'`."
+          "const": "refline",
+          "description": "Discriminant. `'refline'` is canonical and the only value in the type. `'rule'` (it collides with the `rule` mark type) is still accepted at runtime for backward compatibility -- the spec-sugar pass rewrites it to `'refline'` with a deprecation warning before validation -- but it is not part of this type. Use `'refline'`."
         },
         "x": {
           "type": [
@@ -5916,7 +6381,8 @@
           "additionalProperties": {
             "$ref": "#/definitions/AnnotationOffset"
           },
-          "description": "Per-series pixel offsets for fine-tuning label positions, keyed by series name."
+          "description": "Per-series pixel offsets for fine-tuning label positions, keyed by series name.",
+          "deprecated": "Per-series pixel offsets are a workaround for collision bugs\nnow fixed by the layout engine. Will be removed in a future version."
         },
         "fontSize": {
           "type": "number",
@@ -6746,11 +7212,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -6777,24 +7238,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6877,11 +7323,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -6908,24 +7349,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7008,11 +7434,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7039,24 +7460,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7139,11 +7545,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7170,24 +7571,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7270,11 +7656,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7301,24 +7682,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7401,11 +7767,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7432,24 +7793,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7532,11 +7878,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7563,24 +7904,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7659,11 +7985,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7690,24 +8011,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7787,11 +8093,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7818,24 +8119,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7846,7 +8132,7 @@
         "color"
       ],
       "additionalProperties": false,
-      "description": "Encoding for waffle marks (unit grids for part-to-whole counts).\n- `color`: required (nominal/ordinal, the category)\n- `theta`: the quantitative share, the same part-to-whole value channel   arc marks use. Alias for `y`; provide one of the two."
+      "description": "Encoding for waffle marks (unit grids for part-to-whole counts).\n- `color`: required (nominal/ordinal, the category)\n- `theta`: the canonical quantitative share, the same part-to-whole value   channel arc marks use. `y` is a deprecated alias, accepted for backward   compatibility."
     },
     "TextEncoding<DataRow>": {
       "type": "object",
@@ -7917,11 +8203,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7948,24 +8229,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8047,11 +8313,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8078,24 +8339,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8178,11 +8424,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8209,24 +8450,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8309,11 +8535,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8340,24 +8561,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8426,11 +8632,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8457,24 +8658,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8554,11 +8740,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8585,24 +8766,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8613,7 +8779,7 @@
         "color"
       ],
       "additionalProperties": false,
-      "description": "Encoding for parliament marks (hemicycle seat-dot charts).\n- `color`: required (nominal/ordinal, the party)\n- `theta`: the quantitative seat count, the same part-to-whole value   channel arc/waffle marks use. Alias for `y`; provide one of the two."
+      "description": "Encoding for parliament marks (hemicycle seat-dot charts).\n- `color`: required (nominal/ordinal, the party)\n- `theta`: the canonical quantitative seat count, the same part-to-whole   value channel arc/waffle marks use. `y` is a deprecated alias, accepted   for backward compatibility."
     },
     "LayerSpec": {
       "type": "object",
@@ -8896,6 +9062,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -9316,6 +9512,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -9734,6 +9960,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -10154,6 +10410,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -10572,6 +10858,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -10992,6 +11308,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -11410,6 +11756,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -11830,6 +12206,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -12248,6 +12654,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -12668,6 +13104,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -13086,6 +13552,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -13506,6 +14002,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -13924,6 +14450,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -14344,6 +14900,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -14763,6 +15349,36 @@
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
                     },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
                     "fillPattern": {
                       "type": "string",
                       "enum": [
@@ -15181,6 +15797,36 @@
                     "trendline": {
                       "type": "boolean",
                       "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
                     },
                     "fillPattern": {
                       "type": "string",
@@ -15729,7 +16375,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Number/date format string (d3-format or d3-time-format). Applied to the raw value before display. e.g. \",.0f\" or \"%Y-%m-%d\"."
+          "description": "Number/date format string (d3-format or d3-time-format), or semantic keyword `'percent'` / `'currency'`. e.g. \",.0f\", \"%Y-%m-%d\", \"percent\". Tables always show full precision (no compact notation)."
         },
         "heatmap": {
           "$ref": "#/definitions/HeatmapColumnConfig",
@@ -16188,7 +16834,8 @@
         },
         "valueFormat": {
           "type": "string",
-          "description": "d3-format string applied to flow values in tooltips and ARIA labels. Uses the literal suffix extension: \".0f%\" appends \"%\" to the formatted number (data value 28 renders as \"28%\"). For currency: \"$,.0f\" or \"$~s\". For SI suffixes: \"~s\" (renders 1000 as \"1k\"). When not set, values use the default number formatter."
+          "description": "d3-format string applied to flow values in tooltips and ARIA labels. Uses the literal suffix extension: \".0f%\" appends \"%\" to the formatted number (data value 28 renders as \"28%\"). For currency: \"$,.0f\" or \"$~s\". For SI suffixes: \"~s\" (renders 1000 as \"1k\"). When not set, values use the default number formatter.",
+          "deprecated": "Use the encoding channel's `format` field instead. This\nproperty is expanded into the encoding during compilation."
         }
       },
       "required": [
@@ -16295,7 +16942,7 @@
               "type": "null"
             }
           ],
-          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below)\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.\n- **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)   to opt into stacked areas. Each overlapping series renders as a translucent   gradient band anchored at the y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap).\n\n**v8 note:** the multi-series bar/area default realigns with Vega-Lite (stacked, `'zero'`) in v8. Relying on the implicit default emits a compile warning in v7; set `stack` explicitly (`null` for grouped/overlap, `'zero'` for stacked) to keep the current rendering."
+          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
         },
         "bin": {
           "anyOf": [
@@ -16370,7 +17017,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"). For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
         },
         "highlight": {
           "anyOf": [
@@ -16484,7 +17131,8 @@
         },
         "valueFormat": {
           "type": "string",
-          "description": "d3-format string applied to tile values, legend labels, and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI."
+          "description": "d3-format string applied to tile values, legend labels, and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI.",
+          "deprecated": "Use the encoding channel's `format` field instead. This\nproperty is expanded into the encoding during compilation."
         }
       },
       "required": [
@@ -16602,7 +17250,8 @@
         },
         "valueFormat": {
           "type": "string",
-          "description": "d3-format string applied to bar values and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI."
+          "description": "d3-format string applied to bar values and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI.",
+          "deprecated": "Use the encoding channel's `format` field instead. This\nproperty is expanded into the encoding during compilation."
         }
       },
       "required": [

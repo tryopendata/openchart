@@ -228,6 +228,31 @@ describe('compileGraph', () => {
     });
   });
 
+  describe('legend', () => {
+    it('is empty when there is no color encoding and no clustering', () => {
+      // Every node shares one fill, so a legend would list each node label
+      // against an identical swatch and communicate nothing.
+      const result = compileGraph(makeBasicGraphSpec(), compileOptions);
+
+      expect(result.legend.entries).toEqual([]);
+    });
+
+    it('entries come from the nodeColor field, not node labels', () => {
+      const result = compileGraph(makeEncodedGraphSpec(), compileOptions);
+
+      const labels = result.legend.entries.map((e) => e.label).sort();
+      expect(labels).toEqual(['X', 'Y']);
+    });
+
+    it('is empty when the nodeColor field has only one category', () => {
+      const spec = makeEncodedGraphSpec();
+      for (const node of spec.nodes) node.group = 'X';
+      const result = compileGraph(spec, compileOptions);
+
+      expect(result.legend.entries).toEqual([]);
+    });
+  });
+
   describe('tooltips', () => {
     it('generates tooltip descriptors for each node', () => {
       const result = compileGraph(makeBasicGraphSpec(), compileOptions);

@@ -13,12 +13,12 @@
 import type {
   LabelCandidate,
   LabelDensity,
+  NumberFormatter,
   PointMark,
   Rect,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
-  buildD3Formatter,
   estimateTextWidth,
   getRepresentativeColor,
   resolveCollisions,
@@ -48,12 +48,12 @@ export function computeDotLabels(
   _chartArea: Rect,
   density: LabelDensity = 'auto',
   labelPrefix?: string,
-  labelFormat?: string,
+  labelFormatter?: NumberFormatter | null,
   valueField?: string,
 ): ResolvedLabel[] {
   const targetMarks = filterByDensity(marks, density);
 
-  const formatter = buildD3Formatter(labelFormat);
+  const formatter = labelFormatter ?? null;
   const candidates: LabelCandidate[] = [];
 
   for (const mark of targetMarks) {

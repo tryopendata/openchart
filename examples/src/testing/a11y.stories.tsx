@@ -93,7 +93,7 @@ const patternDonutSpec: ChartSpec = {
   animation: false,
   encoding: {
     color: { field: 'browser', type: 'nominal' },
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
   },
   chrome: {
     title: 'Browser market share',

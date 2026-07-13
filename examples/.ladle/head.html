@@ -51,18 +51,19 @@
   content="OpenChart bar chart: India has overtaken China as the most populous country, with population by country for 2025."
 />
 
-<!-- Font stylesheet: Bricolage Grotesque ONLY (page titles / section headings).
-     Inter is deliberately NOT loaded here: the library's chart text stack leads
-     with "Inter Variable", Inter, and the frozen fixture baselines were captured
-     with Inter unavailable (falling back to -apple-system). Loading the Inter
-     webfont would shift every fixture's text metrics and break the visual
-     baselines (constraint C2 fixture freeze). Gallery body/UI text therefore
-     rides the same system-ui/-apple-system fallback the charts use. Ladle
-     copies <link> tags into the width-addon iframe head, so this resolves
-     there too. -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=swap"
-/>
+<!-- Font: Inter Variable (self-hosted as "Inter Gallery").
+
+     Loaded under the alias "Inter Gallery" so its @font-face does NOT match
+     the chart SVG font stack ("Inter Variable", Inter, …). Chart text keeps
+     falling back to system-ui/-apple-system, preserving frozen visual
+     regression baselines (constraint C2). Ladle copies <style> tags into the
+     width-addon iframe head, so the font resolves there too. -->
+<style>
+  @font-face {
+    font-family: "Inter Gallery";
+    src: url("/fonts/InterVariable.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+</style>

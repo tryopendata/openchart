@@ -59,7 +59,12 @@ export function createScrollDriver(options: ScrollDriverOptions = {}): ScrollDri
 
   let frame: ScrollyFrame = SENTINEL_FRAME;
   let direction: 'down' | 'up' = 'down';
-  let lastScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
+  // Direction is tracked from the container's viewport-relative position, NOT
+  // window.scrollY: in a host that scrolls an inner container rather than the
+  // page (Ladle, modals, dashboard panes, most app shells) window.scrollY is
+  // pinned at 0 and would report no movement. The container's rect top moves
+  // whenever ANY ancestor scrolls, so it works in both cases.
+  let lastTop: number | null = null;
   let reducedMotion = false;
   let ticking = false;
 
@@ -100,12 +105,16 @@ export function createScrollDriver(options: ScrollDriverOptions = {}): ScrollDri
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
-      const currentY = window.scrollY;
-      const delta = currentY - lastScrollY;
-      if (delta > 5 || delta < -5) {
-        direction = delta > 5 ? 'down' : 'up';
+      // The container rising up the viewport (top decreasing) means the reader
+      // is moving down through the story.
+      const currentTop = container?.getBoundingClientRect().top ?? null;
+      if (currentTop !== null && lastTop !== null) {
+        const delta = lastTop - currentTop;
+        if (delta > 5 || delta < -5) {
+          direction = delta > 5 ? 'down' : 'up';
+        }
       }
-      lastScrollY = currentY;
+      lastTop = currentTop;
       ticking = false;
       measureAndEmit();
     });
@@ -124,7 +133,15 @@ export function createScrollDriver(options: ScrollDriverOptions = {}): ScrollDri
   }
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', onScroll, { passive: true });
+    // Capture phase on the document, not just `window` scroll. Scroll events do
+    // not bubble, so a window listener ONLY fires when the page itself scrolls.
+    // Any host that scrolls an inner container instead — Ladle (which sets
+    // `body { overflow: hidden }`), modals, dashboard panes, most app shells —
+    // would never notify the driver and the story sat frozen on step 0.
+    // Capturing on the document sees scroll from any ancestor, and the
+    // measurement below is already viewport-relative (getBoundingClientRect vs
+    // innerHeight), so it needs no other change to work in both layouts.
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true });
     window.addEventListener('resize', onScroll, { passive: true });
   }
 
@@ -148,6 +165,9 @@ export function createScrollDriver(options: ScrollDriverOptions = {}): ScrollDri
   return {
     setContainer(el) {
       container = el;
+      // Seed the direction baseline so the first scroll compares against a real
+      // position rather than reporting a spurious jump from null.
+      lastTop = el?.getBoundingClientRect().top ?? null;
       measureAndEmit();
     },
     registerStep(index, el) {
@@ -172,7 +192,9 @@ export function createScrollDriver(options: ScrollDriverOptions = {}): ScrollDri
     },
     destroy() {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('scroll', onScroll);
+        // `capture: true` must match the addEventListener call or the listener
+        // is not removed.
+        document.removeEventListener('scroll', onScroll, { capture: true });
         window.removeEventListener('resize', onScroll);
       }
       mediaQuery?.removeEventListener('change', onReducedMotionChange);

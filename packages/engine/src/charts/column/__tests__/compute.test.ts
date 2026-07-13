@@ -1,4 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import { buildD3Formatter } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -55,7 +56,9 @@ function makeGroupedColumnSpec(): NormalizedChartSpec {
     ],
     encoding: {
       x: { field: 'month', type: 'nominal' },
-      y: { field: 'sales', type: 'quantitative' },
+      // Grouped is opt-out since v8 (stacked is now the default): stamp
+      // stack: null explicitly so this fixture stays grouped.
+      y: { field: 'sales', type: 'quantitative', stack: null },
       color: { field: 'region', type: 'nominal' },
     },
     chrome: {},
@@ -193,7 +196,7 @@ describe('computeColumnMarks', () => {
     });
   });
 
-  describe('grouped columns (default)', () => {
+  describe('grouped columns (stack: null)', () => {
     it('produces marks for all data rows', () => {
       const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
@@ -351,7 +354,7 @@ describe('computeColumnLabels', () => {
     const spec = makeSimpleColumnSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'auto', '$,.0f');
+    const labels = computeColumnLabels(marks, chartArea, 'auto', buildD3Formatter('$,.0f'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$120');
@@ -379,7 +382,7 @@ describe('computeColumnLabels', () => {
     };
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'all', '$,.2~f');
+    const labels = computeColumnLabels(marks, chartArea, 'all', buildD3Formatter('$,.2~f'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$3.1');
@@ -407,7 +410,7 @@ describe('computeColumnLabels', () => {
     };
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'all', '$,.2~fT');
+    const labels = computeColumnLabels(marks, chartArea, 'all', buildD3Formatter('$,.2~fT'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$3.75T');
@@ -418,7 +421,7 @@ describe('computeColumnLabels', () => {
     const spec = makeSimpleColumnSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'auto', '.0f%');
+    const labels = computeColumnLabels(marks, chartArea, 'auto', buildD3Formatter('.0f%'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('120%');
@@ -432,7 +435,7 @@ describe('computeColumnLabels', () => {
 
 describe('stack modes', () => {
   function makeStackedSpec(
-    stackMode: boolean | 'zero' | 'normalize' | 'center' | null,
+    stackMode: boolean | 'zero' | 'normalize' | 'center' | null | undefined,
   ): NormalizedChartSpec {
     return {
       markType: 'bar',
@@ -521,6 +524,17 @@ describe('stack modes', () => {
 
     for (const mark of marksFalse) {
       expect(mark.stackGroup).toBeUndefined();
+    }
+  });
+
+  it('undefined (omitted) stacks by default (v8 VL-aligned default)', () => {
+    const spec = makeStackedSpec(undefined);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+    expect(marks.length).toBe(4);
+    for (const mark of marks) {
+      expect(mark.stackGroup).toBeDefined();
     }
   });
 });

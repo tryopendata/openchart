@@ -68,6 +68,8 @@ export {
   COMPACT_WIDTH,
   computeChrome,
   estimateTextWidth,
+  FOOTNOTE_LINE_HEIGHT,
+  footnoteBandHeight,
   heuristicMeasure,
   resolveMeasurer,
   textAscent,
@@ -113,11 +115,13 @@ export {
   MAX_LEFT_LABEL_FRACTION_DEFAULT,
   MAX_LEFT_LABEL_FRACTION_MEDIUM,
   MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
+  maxRotatedLabelWidth,
   NARROW_VIEWPORT_MAX,
   TICK_LABEL_OFFSET,
   TICK_LINE_HEIGHT_FACTOR,
   TOP_PAD_EXTRA_NARROW,
   TOP_PAD_NARROW_MAX,
+  truncateRotatedLabel,
   X_AXIS_BAND_HEIGHT,
   X_AXIS_ROTATED_EXTENT_CAP,
   X_AXIS_TITLE_BAND,
@@ -146,14 +150,21 @@ export {
 // Locale: number and date formatting
 // ---------------------------------------------------------------------------
 
-export type { DateGranularity } from './locale/index';
+export type { DateGranularity, FieldFormatContext, NumberFormatter } from './locale/index';
 export {
   abbreviateNumber,
+  buildCompactStepFormatter,
   buildD3Formatter,
   buildTemporalFormatter,
+  computeFieldFormatContext,
+  defaultNumberFormatter,
+  formatCurrency,
   formatDate,
   formatNumber,
   formatOrdinal,
+  formatPercent,
+  isYearContext,
+  resolveNumberFormatter,
 } from './locale/index';
 
 // ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ export function resolveRangeAnnotation(
   scales: ResolvedScales,
   chartArea: Rect,
   isDark: boolean,
+  fontFamily?: string,
 ): ResolvedAnnotation | null {
   let x = chartArea.x;
   let y = chartArea.y;
@@ -79,6 +80,7 @@ export function resolveRangeAnnotation(
       annotation.fontWeight ?? 500,
       undefined,
       isDark,
+      fontFamily,
     );
     if (centered) {
       style.textAnchor = 'middle';

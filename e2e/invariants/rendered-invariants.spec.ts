@@ -45,22 +45,42 @@ for (const { name, slug } of stories) {
         );
       }
 
-      // Collect bounding rects for key layout elements
-      const legend = svg.querySelector('.oc-legend');
+      // Collect bounding rects for key layout elements.
+      // ALL legends, not the first: a chart can key color and size at once, and
+      // `querySelector` would check one and leave the other free to overlap
+      // anything (which is how a size legend drawn on top of the color legend got
+      // past these rules).
+      const legends = [...svg.querySelectorAll('.oc-legend')];
       const axisX = svg.querySelector('.oc-axis.oc-axis-x');
       const source = svg.querySelector('.oc-source');
       const byline = svg.querySelector('.oc-byline');
       const title = svg.querySelector('.oc-title');
       const subtitle = svg.querySelector('.oc-subtitle');
 
-      // Rule 1: Legend doesn't overlap x-axis labels
-      if (legend && axisX) {
-        const legendRect = legend.getBoundingClientRect();
+      // Rule 1: No legend overlaps the x-axis labels
+      if (axisX) {
         const axisRect = axisX.getBoundingClientRect();
-        if (overlaps(legendRect, axisRect)) {
-          violations.push(
-            `legend overlaps x-axis: legend=${JSON.stringify(legendRect.toJSON())} axis=${JSON.stringify(axisRect.toJSON())}`,
-          );
+        for (const l of legends) {
+          const legendRect = l.getBoundingClientRect();
+          if (overlaps(legendRect, axisRect)) {
+            violations.push(
+              `legend overlaps x-axis: legend=${JSON.stringify(legendRect.toJSON())} axis=${JSON.stringify(axisRect.toJSON())}`,
+            );
+          }
+        }
+      }
+
+      // Rule 1b: Legends don't overlap each other. A bubble chart keys color and
+      // size, and both used to anchor to the same right-gutter origin.
+      for (let i = 0; i < legends.length; i++) {
+        for (let j = i + 1; j < legends.length; j++) {
+          const a = legends[i].getBoundingClientRect();
+          const b = legends[j].getBoundingClientRect();
+          if (overlaps(a, b)) {
+            violations.push(
+              `legends overlap: a=${JSON.stringify(a.toJSON())} b=${JSON.stringify(b.toJSON())}`,
+            );
+          }
         }
       }
 
@@ -100,9 +120,9 @@ for (const { name, slug } of stories) {
         }
       }
 
-      // Rule 4: Legend stays within SVG bounds (2px tolerance)
-      if (legend) {
-        const r = legend.getBoundingClientRect();
+      // Rule 4: Every legend stays within SVG bounds (2px tolerance)
+      for (const l of legends) {
+        const r = l.getBoundingClientRect();
         if (
           r.left < svgRect.left - 2 ||
           r.right > svgRect.right + 2 ||

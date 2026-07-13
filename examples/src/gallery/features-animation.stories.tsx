@@ -260,7 +260,7 @@ const pieSweepSpec: ChartSpec = {
   mark: 'arc',
   data: [...smartphoneShare.data],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
@@ -275,7 +275,7 @@ const donutSweepSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 60 },
   data: [...smartphoneShare.data],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
@@ -635,13 +635,7 @@ export const Animation = () => (
       title="Sequencing"
       lede="Choreograph the order in which layers arrive so the reader's eye lands on the data before the labels."
     >
-      <Demo
-        id="annotation-delay"
-        title="Annotation delay"
-        description="The chart enters first; annotations fade in after annotationDelay milliseconds, so the takeaway callouts don't compete with the data reveal."
-        specForPanel={annotationDelaySpec}
-        height={440}
-      >
+      <Demo id="annotation-delay" specForPanel={annotationDelaySpec} height={440}>
         <ReplayChart spec={annotationDelaySpec} height={440} />
       </Demo>
     </Section>

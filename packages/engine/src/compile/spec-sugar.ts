@@ -12,16 +12,19 @@
  * - channel-level `legend: null | config` on color merges into the top-level legend
  * - `axis: null` becomes `axis: false`
  * - `scale: { scheme }` resolves to `scale.range` via the core palette registry
- * - `theta` acts as the arc value channel when `y` is absent (VL pie idiom)
+ * - `theta` is the canonical arc/waffle/parliament value channel in v8; `y` on
+ *   those marks is a deprecated alias, expanded into `theta` (and vice versa,
+ *   since the engine still reads `y` internally) with a warning
+ * - annotation `type: 'rule'` is a deprecated alias for `'refline'`
  * - `aggregate: 'count'` without a field desugars to an aggregate transform
  * - VL sort forms (`'-y'`, value arrays, `{ field, op, order }`) resolve to an
  *   explicit categorical `scale.domain`
  * - encoding-level `bin` / `timeUnit` desugar to transforms (expandEncodingSugar)
  *
- * It also emits deprecation warnings for spec surface scheduled for removal in
- * v8 (`radius`, `shape`, `href`, `order`, the implicit multi-series bar/area
- * stack default) and strips or stamps the triggering forms so each one warns
- * exactly once per compile, even when layer leaves are re-expanded.
+ * It also emits deprecation warnings for spec surface removed in v8
+ * (`radius`, `shape`, `href`, `order`) and strips the triggering forms so
+ * each one warns exactly once per compile, even when layer leaves are
+ * re-expanded.
  *
  * Applied to top-level chart specs (compileChart) and to LayerSpec children
  * (compileLayer) so every sugar works inside layers too.
@@ -38,7 +41,7 @@ import type {
   TimeUnitTransform,
   Transform,
 } from '@opendata-ai/openchart-core';
-import { inferFieldType, resolveSchemeName } from '@opendata-ai/openchart-core';
+import { resolveSchemeName } from '@opendata-ai/openchart-core';
 import { computeAggregate } from '../transforms/aggregate';
 
 // ---------------------------------------------------------------------------
@@ -228,6 +231,31 @@ function applyFixedSizeDefault(spec: Record<string, unknown>): Record<string, un
   return spec;
 }
 
+/**
+ * Rewrite the deprecated annotation `type: 'rule'` to the canonical
+ * `'refline'` (they collide with the `rule` mark type otherwise). Runs before
+ * validation so the canonical form is all validation/normalization ever sees.
+ */
+function expandAnnotationSugar(
+  spec: Record<string, unknown>,
+  warnings: string[],
+): Record<string, unknown> {
+  const annotations = spec.annotations;
+  if (!Array.isArray(annotations) || annotations.length === 0) return spec;
+
+  let changed = false;
+  const updated = annotations.map((ann) => {
+    if (ann && typeof ann === 'object' && (ann as Record<string, unknown>).type === 'rule') {
+      warnings.push("[openchart] annotation type 'rule' is deprecated; use 'refline'.");
+      changed = true;
+      return { ...(ann as Record<string, unknown>), type: 'refline' };
+    }
+    return ann;
+  });
+
+  return changed ? { ...spec, annotations: updated } : spec;
+}
+
 // ---------------------------------------------------------------------------
 // Channel-level sugar (value defs, legend, axis null, scheme, theta, dead channels)
 // ---------------------------------------------------------------------------
@@ -235,12 +263,12 @@ function applyFixedSizeDefault(spec: Record<string, unknown>): Record<string, un
 /** Channels declared in the spec types with zero engine implementation, warned and stripped. */
 const DEAD_CHANNEL_MESSAGES: Record<string, string> = {
   radius:
-    '[openchart] encoding.radius is not implemented (silently ignored) and will be removed in v8. Use mark.innerRadius / mark.outerRadius to control donut radii.',
+    '[openchart] encoding.radius was removed in v8. This channel is stripped for backward compatibility. Use mark.innerRadius / mark.outerRadius to control donut radii.',
   shape:
-    '[openchart] encoding.shape is not implemented (silently ignored) and will be removed in v8. Differentiate series with encoding.color or encoding.strokeDash instead.',
-  href: '[openchart] encoding.href is not implemented (silently ignored) and will be removed in v8. Handle link navigation in the host application instead.',
+    '[openchart] encoding.shape was removed in v8. This channel is stripped for backward compatibility. Differentiate series with encoding.color or encoding.strokeDash instead.',
+  href: '[openchart] encoding.href was removed in v8. This channel is stripped for backward compatibility. Handle link navigation in the host application instead.',
   order:
-    '[openchart] encoding.order is not implemented (silently ignored) and will be removed in v8. Use encoding.<channel>.sort or pre-sorted data order instead.',
+    '[openchart] encoding.order was removed in v8. This channel is stripped for backward compatibility. Use encoding.<channel>.sort or pre-sorted data order instead.',
 };
 
 /**
@@ -319,34 +347,59 @@ function expandChannelSugar(
         changed = true;
       }
     }
+
+    // scale.reverse on the color channel flips the ramp here, at the one place
+    // the stops are known. The color scale builders read scale.range directly
+    // and never look at reverse (only the positional builders do), so reversing
+    // the range is what makes `reverse` mean anything on color -- and it keeps
+    // the legend, which resolves its ramp from the same scale.range, in step.
+    // Positional channels keep their reverse flag for buildBand/Point/Continuous.
+    if (channel === 'color') {
+      const colorDef = updated[channel] as Record<string, unknown>;
+      const colorScale = colorDef.scale as Record<string, unknown> | undefined;
+      if (colorScale?.reverse && Array.isArray(colorScale.range)) {
+        const { reverse: _reverse, ...scaleRest } = colorScale;
+        updated[channel] = {
+          ...colorDef,
+          scale: { ...scaleRest, range: [...(colorScale.range as string[])].reverse() },
+        };
+        changed = true;
+      }
+    }
   }
 
-  // theta: VL's arc value channel, shared by waffle and parliament marks (the
-  // same part-to-whole value). Alias for y when y is absent; ignored (with a
-  // warning) when y is present. Canonical in v8.
-  if (markType && updated.theta && typeof updated.theta === 'object') {
+  // theta: the canonical arc value channel in v8, shared by waffle and
+  // parliament marks (the same part-to-whole value). The engine still reads
+  // encoding.y internally, so both directions of the alias converge on y:
+  // - theta present -> y is populated from theta (theta wins if both are set,
+  //   since it's canonical now)
+  // - only y present -> y is kept and theta is populated from it, with a
+  //   deprecation warning nudging authors toward theta
+  if (markType && (updated.theta || updated.y)) {
     const thetaMark = markType === 'arc' || markType === 'waffle' || markType === 'parliament';
-    if (thetaMark && !updated.y) {
+    const hasTheta = updated.theta && typeof updated.theta === 'object';
+    const hasY = updated.y && typeof updated.y === 'object';
+    if (thetaMark && hasTheta) {
+      if (hasY && JSON.stringify(updated.y) !== JSON.stringify(updated.theta)) {
+        warnings.push(
+          `[openchart] encoding.theta and encoding.y are both set on ${markType}; theta takes precedence and y was dropped.`,
+        );
+      }
       updated.y = updated.theta;
-    } else if (markType === 'arc') {
+      changed = true;
+    } else if (thetaMark && hasY && !hasTheta) {
+      updated.theta = updated.y;
       warnings.push(
-        '[openchart] encoding.theta is ignored when encoding.y is present on an arc mark; encoding.y wins. theta becomes the canonical arc value channel in v8.',
+        `[openchart] encoding.y on ${markType} marks is deprecated in v8; use encoding.theta for the value channel.`,
       );
-    } else if (markType === 'waffle') {
-      warnings.push(
-        '[openchart] encoding.theta is ignored when encoding.y is present on a waffle mark; encoding.y wins.',
-      );
-    } else if (markType === 'parliament') {
-      warnings.push(
-        '[openchart] encoding.theta is ignored when encoding.y is present on a parliament mark; encoding.y wins.',
-      );
-    } else {
+      changed = true;
+    } else if (hasTheta && !thetaMark) {
       warnings.push(
         '[openchart] encoding.theta is only meaningful on arc, waffle, and parliament marks and was ignored.',
       );
+      delete updated.theta;
+      changed = true;
     }
-    delete updated.theta;
-    changed = true;
   }
 
   // Parliament: party colors carry real-world meaning (red/blue for US parties)
@@ -553,75 +606,6 @@ function resolveSortSugar(
 }
 
 // ---------------------------------------------------------------------------
-// Stack-default deprecation warning (v8 realigns with VL)
-// ---------------------------------------------------------------------------
-
-const STACK_DEFAULT_WARNING =
-  "[openchart] The implicit default for multi-series bar/area charts (grouped/overlap) changes to stacked in v8. Set stack explicitly on the value channel: null keeps grouped/overlap, 'zero' opts into stacking.";
-
-/**
- * Warn when a multi-series bar/area chart relies on the implicit stack
- * default that flips in v8, then stamp the current default (`stack: null`)
- * explicitly. The stamp is behavior-identical today (undefined and null both
- * mean grouped/overlap) and keeps the warning to one per compile when layer
- * leaves are re-expanded.
- */
-function warnStackDefault(
-  spec: Record<string, unknown>,
-  warnings: string[],
-  inheritedData?: DataRow[],
-  parentEncoding?: Record<string, unknown>,
-): Record<string, unknown> {
-  const markType = markTypeOf(spec);
-  if (markType !== 'bar' && markType !== 'area') return spec;
-
-  const ownEncoding = (spec.encoding ?? {}) as Record<string, unknown>;
-  const merged = parentEncoding ? { ...parentEncoding, ...ownEncoding } : ownEncoding;
-  const color = merged.color as Record<string, unknown> | undefined;
-  if (!color || typeof color !== 'object' || typeof color.field !== 'string') return spec;
-  const x = merged.x as Record<string, unknown> | undefined;
-  const y = merged.y as Record<string, unknown> | undefined;
-  if (!x || !y || typeof x.field !== 'string' || typeof y.field !== 'string') return spec;
-  if (x.stack !== undefined || y.stack !== undefined) return spec;
-
-  const data = (Array.isArray(spec.data) ? spec.data : inheritedData) as DataRow[] | undefined;
-  if (!data || data.length === 0) return spec;
-
-  // Sequential (quantitative) color is not a series grouping; no stacking applies
-  const colorType = (color.type as string | undefined) ?? inferFieldType(data, color.field);
-  if (colorType === 'quantitative') return spec;
-
-  // The default only matters when some category holds multiple rows. The
-  // category axis is x for area/vertical bar and y for horizontal bar.
-  const xType = (x.type as string | undefined) ?? inferFieldType(data, x.field);
-  const yType = (y.type as string | undefined) ?? inferFieldType(data, y.field);
-  let catField: string | undefined;
-  if (markType === 'area') catField = x.field;
-  else if (yType === 'quantitative') catField = x.field;
-  else if (xType === 'quantitative') catField = y.field;
-  if (!catField) return spec;
-
-  const seen = new Set<string>();
-  let hasDuplicates = false;
-  for (const row of data) {
-    const raw = row[catField];
-    if (raw == null) continue;
-    const key = String(raw);
-    if (seen.has(key)) {
-      hasDuplicates = true;
-      break;
-    }
-    seen.add(key);
-  }
-  if (!hasDuplicates) return spec;
-
-  warnings.push(STACK_DEFAULT_WARNING);
-  const valueKey = catField === x.field ? 'y' : 'x';
-  const valueCh = merged[valueKey] as Record<string, unknown>;
-  return { ...spec, encoding: { ...ownEncoding, [valueKey]: { ...valueCh, stack: null } } };
-}
-
-// ---------------------------------------------------------------------------
 // Composition: chart and layer expansion
 // ---------------------------------------------------------------------------
 
@@ -629,18 +613,17 @@ function expandChartSugar(
   spec: Record<string, unknown>,
   warnings: string[],
   inheritedData?: DataRow[],
-  parentEncoding?: Record<string, unknown>,
 ): Record<string, unknown> {
   let out = unwrapDataValues(spec);
   out = expandTopLevelTitle(out);
   out = expandDescriptionSugar(out);
   out = stripIgnoredKeys(out, warnings);
   out = applyFixedSizeDefault(out);
+  out = expandAnnotationSugar(out, warnings);
   out = expandChannelSugar(out, warnings);
   out = expandEncodingSugar(out);
   out = resolveSortSugar(out, inheritedData);
   out = expandCountAggregate(out);
-  out = warnStackDefault(out, warnings, inheritedData, parentEncoding);
   return out;
 }
 
@@ -653,6 +636,7 @@ function expandLayerSugar(
   let out = unwrapDataValues(spec);
   out = expandTopLevelTitle(out);
   out = stripIgnoredKeys(out, warnings);
+  out = expandAnnotationSugar(out, warnings);
   // Shared encoding gets the mark-independent channel sugar (axis, scheme,
   // legend, dead channels) and sort resolution; mark-dependent sugar (value
   // defs, theta) resolves per leaf after encoding inheritance.
@@ -674,7 +658,7 @@ function expandLayerSugar(
       return expandLayerSugar(childObj, warnings, layerData, mergedEncoding);
     }
     if ('mark' in childObj) {
-      return expandChartSugar(childObj, warnings, layerData, mergedEncoding);
+      return expandChartSugar(childObj, warnings, layerData);
     }
     return child;
   });
@@ -686,11 +670,53 @@ function expandLayerSugar(
 // ---------------------------------------------------------------------------
 
 /**
+ * Expand deprecated `valueFormat` into `encoding.value.format` for
+ * sankey, tilemap, and barlist specs. Encoding-level format wins on conflict.
+ */
+function expandValueFormatSugar(
+  spec: Record<string, unknown>,
+  warnings: string[],
+): Record<string, unknown> {
+  const type = spec.type as string | undefined;
+  if (type !== 'sankey' && type !== 'tilemap' && type !== 'barlist') return spec;
+  if (typeof spec.valueFormat !== 'string') return spec;
+
+  const encoding = spec.encoding as Record<string, unknown> | undefined;
+  const valueCh = encoding?.value as Record<string, unknown> | undefined;
+
+  // Only expand into encoding when encoding.value already exists (the shorthand
+  // tilemap/barlist API may not have explicit encoding — the normalizer infers it).
+  if (!valueCh || typeof valueCh !== 'object') {
+    warnings.push(
+      '[openchart] valueFormat is deprecated; set format on the encoding value channel instead (e.g. encoding.value.format).',
+    );
+    return spec;
+  }
+
+  if (valueCh.format !== undefined) {
+    const { valueFormat: _vf, ...rest } = spec;
+    warnings.push(
+      '[openchart] valueFormat is deprecated; the encoding.value.format field takes precedence and valueFormat was ignored.',
+    );
+    return rest;
+  }
+
+  warnings.push(
+    '[openchart] valueFormat is deprecated; set format on the encoding value channel instead (e.g. encoding.value.format).',
+  );
+  const { valueFormat, ...rest } = spec;
+  return {
+    ...rest,
+    encoding: { ...encoding, value: { ...valueCh, format: valueFormat } },
+  };
+}
+
+/**
  * Expand VL-idiom and encoding-level sugar on a raw chart or layer spec.
- * Non-chart specs (tables, graphs, sankey, tilemap, barlist) pass through
- * unchanged. Deprecation warnings are pushed onto `warnings`; callers surface
- * them (compileChart/compileLayer console.warn each unique message once per
- * compile).
+ * Non-chart specs (tables, graphs, sankey, tilemap, barlist) get valueFormat
+ * expansion only. Deprecation warnings are pushed onto `warnings`; callers
+ * surface them (compileChart/compileLayer console.warn each unique message
+ * once per compile).
  */
 export function expandSpecSugar(
   spec: Record<string, unknown>,
@@ -700,7 +726,9 @@ export function expandSpecSugar(
   if (Array.isArray(spec.layer) && typeof spec.type !== 'string') {
     return expandLayerSugar(spec, warnings);
   }
-  if (!('mark' in spec)) return spec;
+  if (!('mark' in spec)) {
+    return expandValueFormatSugar(spec, warnings);
+  }
   return expandChartSugar(spec, warnings);
 }
 

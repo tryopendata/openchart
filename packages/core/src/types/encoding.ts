@@ -28,15 +28,11 @@ export interface EncodingRule {
   y2?: ChannelRule;
   color: ChannelRule;
   size: ChannelRule;
-  shape?: ChannelRule;
   opacity?: ChannelRule;
   strokeDash?: ChannelRule;
   text?: ChannelRule;
   tooltip?: ChannelRule;
-  href?: ChannelRule;
-  order?: ChannelRule;
   theta?: ChannelRule;
-  radius?: ChannelRule;
   detail: ChannelRule;
 }
 
@@ -90,8 +86,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   line: {
@@ -102,8 +96,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   area: {
@@ -114,8 +106,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   point: {
@@ -123,11 +113,8 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     y: required('quantitative', 'temporal', 'nominal', 'ordinal'),
     color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
-    shape: optional('nominal', 'ordinal'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   circle: {
@@ -137,8 +124,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   lollipop: {
@@ -148,8 +133,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   beeswarm: {
@@ -159,8 +142,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   // Range: x+x2 with nominal y (horizontal) or y+y2 with nominal x (vertical).
@@ -175,21 +156,16 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   arc: {
     x: optional(),
-    y: required('quantitative'),
+    y: optional('quantitative'),
+    theta: required('quantitative'),
     color: required('nominal', 'ordinal'),
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
-    theta: optional('quantitative'),
-    radius: optional('quantitative'),
     detail: optional('nominal'),
   },
   waffle: {
@@ -199,8 +175,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
     detail: optional('nominal'),
   },
@@ -215,8 +189,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
     detail: optional('nominal'),
   },
@@ -228,7 +200,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     text: required(),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
   rule: {
@@ -241,7 +212,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
   tick: {
@@ -251,7 +221,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
   rect: {
@@ -263,8 +232,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   // calendar: x is the daily date (temporal), color the per-day value
@@ -278,7 +245,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
 };

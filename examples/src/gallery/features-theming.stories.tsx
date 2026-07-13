@@ -315,7 +315,7 @@ const darkModeSpec: ChartSpec = {
   theme: {
     colors: {
       categorical: ['#2563eb', '#f59e0b', '#10b981'],
-      background: '#ffffff',
+      background: true,
       text: '#0f172a',
       gridline: '#e2e8f0',
       axis: '#94a3b8',
@@ -461,13 +461,7 @@ export const Theming = () => (
       title="Built-in presets"
       lede="Three ready-made looks ship in the core package: editorial (the default), essay, and wire. Import and pass them directly — the same chart, three personalities."
     >
-      <Demo
-        id="presets"
-        title="editorial · essay · wire"
-        description="One spec rendered in each built-in preset. Import { editorial, essay, wire } from the core package and pass as the theme."
-        specForPanel={{ ...lineSpec, theme: essay }}
-        maxWidth={1040}
-      >
+      <Demo id="presets" specForPanel={{ ...lineSpec, theme: essay }} maxWidth={1040}>
         <PresetGrid />
       </Demo>
     </Section>
@@ -477,12 +471,7 @@ export const Theming = () => (
       title="Theme gallery"
       lede="The eleven named themes the toolbar picker cycles through. Each is a plain ThemeConfig — expand any card to copy the exact object. Pick one in the toolbar to apply it to every page at once."
     >
-      <Demo
-        id="named-themes"
-        title="The eleven named themes"
-        description="Each card renders the same chart under a different named ThemeConfig, with the copyable theme object beneath it."
-        maxWidth={1040}
-      >
+      <Demo id="named-themes" maxWidth={1040}>
         <NamedThemeGrid />
       </Demo>
     </Section>
@@ -492,13 +481,7 @@ export const Theming = () => (
       title="Custom theme"
       lede="Build a ThemeConfig from parts: a categorical palette, a font family with size and weight overrides, spacing, and a border radius. Only the deltas you set are applied; everything else falls back to the defaults."
     >
-      <Demo
-        id="custom"
-        title="A ThemeConfig assembled from parts"
-        description="Colors (with light/dark pairs), fonts, spacing, and borderRadius composed into one theme, rendered live. Copy the spec to see the full object."
-        spec={{ ...barSpec, theme: customTheme }}
-        height={460}
-      />
+      <Demo id="custom" spec={{ ...barSpec, theme: customTheme }} height={460} />
     </Section>
 
     <Section
@@ -506,13 +489,7 @@ export const Theming = () => (
       title="Dark-mode adaptation"
       lede="darkMode takes 'auto' (follow the OS / container), 'force' (always dark), or 'off' (never). When a theme has no explicit dark colors, adaptTheme() swaps the surface and runs a lightness search over the palette so accents stay legible on a dark canvas. The two charts below pin the same spec to force-off and force-dark so the adaptation is visible side by side — the only place this page forces a mode."
     >
-      <Demo
-        id="dark-mode"
-        title="Same spec, forced light vs. forced dark"
-        description="A single-surface theme (no dark pair) rendered at darkMode 'off' and 'force'. This comparison is scoped to these two charts; every other demo on the page follows the toolbar's light/dark toggle."
-        specForPanel={darkModeSpec}
-        maxWidth={1040}
-      >
+      <Demo id="dark-mode" specForPanel={darkModeSpec} maxWidth={1040}>
         <DarkAdaptation />
       </Demo>
     </Section>
@@ -522,12 +499,7 @@ export const Theming = () => (
       title="House-style recreations"
       lede="Two familiar publication styles rebuilt with nothing but a ThemeConfig — proof of the system's range."
     >
-      <Demo
-        id="recreations"
-        title="FT-like and Economist-like"
-        description="Financial Times and Economist house styles approximated through color, font, spacing, and chrome overrides. Copy either ThemeConfig to start from it."
-        maxWidth={1040}
-      >
+      <Demo id="recreations" maxWidth={1040}>
         <RecreationGrid />
       </Demo>
     </Section>

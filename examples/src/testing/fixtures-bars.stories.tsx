@@ -73,7 +73,7 @@ const simpleColumnSpec: ChartSpec = {
       y: 12,
       text: 'Hurricane disruptions\nslowed October hiring',
       anchor: 'top',
-      offset: { dx: 0, dy: -200 },
+      offset: { dx: -62, dy: -166 },
       connector: true,
     },
     {
@@ -171,8 +171,8 @@ const simpleBarSpec: ChartSpec = {
       x: 9.0,
       y: 'Ischaemic heart disease',
       text: 'Heart disease has been\nthe #1 killer since 2000',
-      anchor: 'bottom',
-      offset: { dx: -80, dy: 60 },
+      anchor: 'left',
+      offset: { dx: -18, dy: -118 },
       connector: true,
     },
     {
@@ -180,8 +180,8 @@ const simpleBarSpec: ChartSpec = {
       x: 8.8,
       y: 'COVID-19',
       text: 'COVID entered the\ntop 10 in 2020',
-      anchor: 'top',
-      offset: { dx: -80, dy: -80 },
+      anchor: 'left',
+      offset: { dx: -49, dy: -46 },
       connector: true,
     },
   ],
@@ -256,7 +256,14 @@ const energyColumnSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'year', type: 'ordinal' },
-    y: { field: 'energy', type: 'quantitative', axis: { title: 'Share of global energy (%)' } },
+    y: {
+      field: 'energy',
+      type: 'quantitative',
+      axis: { title: 'Share of global energy (%)' },
+      // Explicit for clarity: this is a composition-of-a-whole chart, stacked
+      // by default since v8.
+      stack: 'zero',
+    },
     color: { field: 'source', type: 'nominal' },
   },
   labels: { density: 'none' },
@@ -314,7 +321,7 @@ const tempSpec: ChartSpec = {
       text: 'Coldest decade on record\nat 0.42°C below average',
       connector: true,
       anchor: 'top',
-      offset: { dx: 200, dy: -20 },
+      offset: { dx: 200, dy: -6 },
     },
     {
       type: 'text',

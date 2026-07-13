@@ -1,17 +1,11 @@
 /**
- * Charts / Building Blocks — the grammar, one primitive at a time.
+ * Charts / Building Blocks — the primitives, each doing the job it's for.
  *
- * Eight demos across three sections (Mark primitives, Composition, Spans &
- * interaction). Each isolates one piece of OpenChart's encoding-centric grammar:
- * the text/rule/tick/rect marks, LayerSpec composition, dual independent axes,
- * and the x2/y2 span channels. Same Demo-card infra and shared-data rules as the
- * Bar & Column template.
- *
- * Grammar note (verified against packages/engine/src): the standalone `rect`
- * mark is registered but not renderable today — it never receives a band scale,
- * so rects collapse to zero width, and it cannot compose a 2D nominal x nominal
- * matrix either. The heatmap-style *sequential color fill* it was meant to show
- * is demonstrated on a `bar` mark instead (same rect geometry, correct scale).
+ * Seven demos across three sections. Every demo leads with the *use case* (label
+ * points directly, draw a reference line, show a distribution) rather than the
+ * primitive in isolation — a mark is not a use case, and a chart nobody would
+ * ship teaches nobody anything. Same Demo-card infra and shared-data rules as
+ * the Bar & Column template.
  */
 
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
@@ -20,7 +14,6 @@ import { useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import {
   collegeFinances,
-  electricityMixMatrix,
   incomeDistribution,
   nycTemperatureRange,
   referenceRates,
@@ -32,45 +25,62 @@ const BLUE = '#0e7490';
 const ORANGE = '#e07b39';
 
 // ---------------------------------------------------------------------------
-// 1. Text mark — data-positioned labels
+// 1. Text mark — direct labeling instead of a legend
 // ---------------------------------------------------------------------------
 
-// The text mark's `size` channel maps a field value straight to font size (px,
-// clamped 8-48), not through a scale — so derive a readable font size from GDP.
-const stateLabels = stateEconomies.data.map((d) => ({
-  ...d,
-  fontSize: Math.round(13 + d.gdp * 5),
-}));
+// A label offset by `dy` can overhang the plot when its point sits at the top of
+// the domain (California here), so give the y-scale headroom for it. Both layers
+// pin the same domain so they stay on one scale.
+const POP_DOMAIN: [number, number] = [5, 43];
+// Same on x: a centered label at the domain edge overhangs by half its width.
+const GDP_DOMAIN: [number, number] = [0.6, 4.25];
 
-const textMarkSpec: ChartSpec = {
+// Direct labeling means labeling the points that carry the story, not all of
+// them: five of these states sit within a label's width of each other down in
+// the corner, and stacking five names in that gap would just produce a smear. So
+// the label layer takes a subset while the point layer keeps every state — the
+// reader still sees all ten, and the separable ones get named on the chart
+// instead of in a legend. This is the ordinary editorial move, not a workaround.
+const LABELED = new Set(['CA', 'TX', 'NY', 'FL', 'IL']);
+
+const directLabelSpec: LayerSpec = {
   animation: true,
-  mark: 'text',
-  data: stateLabels,
-  encoding: {
-    // Headroom on both axes so the largest (California) label isn't clipped at
-    // the plot edge — text marks center on their point, so the glyph overflows.
-    x: {
-      field: 'gdp',
-      type: 'quantitative',
-      scale: { domain: [0, 4.6] },
-      axis: { title: 'GDP ($ trillions)' },
-    },
-    y: {
-      field: 'pop',
-      type: 'quantitative',
-      scale: { domain: [0, 44] },
-      axis: { title: 'Population (millions)' },
-    },
-    text: { field: 'label', type: 'nominal' },
-    size: { field: 'fontSize', type: 'quantitative' },
-  },
   chrome: {
     title: 'California Towers Over Every Other State Economy',
-    subtitle:
-      'The ten largest US state economies by GDP and population, 2023. Label size tracks GDP.',
+    subtitle: 'The ten largest US state economies by GDP and population, 2023',
     source: stateEconomies.source,
     byline: 'Chart: OpenChart',
   },
+  layer: [
+    {
+      mark: { type: 'point', fill: BLUE, opacity: 0.85, trendline: false },
+      data: [...stateEconomies.data],
+      encoding: {
+        x: {
+          field: 'gdp',
+          type: 'quantitative',
+          scale: { domain: GDP_DOMAIN },
+          axis: { title: 'GDP ($ trillions)' },
+        },
+        y: {
+          field: 'pop',
+          type: 'quantitative',
+          scale: { domain: POP_DOMAIN },
+          axis: { title: 'Population (millions)' },
+        },
+      },
+    },
+    {
+      mark: { type: 'text', dy: -14 },
+      data: stateEconomies.data.filter((d) => LABELED.has(d.label)),
+      encoding: {
+        x: { field: 'gdp', type: 'quantitative', scale: { domain: GDP_DOMAIN } },
+        y: { field: 'pop', type: 'quantitative', scale: { domain: POP_DOMAIN } },
+        text: { field: 'label', type: 'nominal' },
+        size: { field: 'gdp', type: 'quantitative', scale: { range: [11, 22] } },
+      },
+    },
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -120,44 +130,7 @@ const tickMarkSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 4. Sequential color — a quantitative color field builds a heatmap-style fill
-// ---------------------------------------------------------------------------
-
-// Pull coal's yearly share out of the source x year matrix so each column is one
-// year. A quantitative color field makes the engine build a *sequential* fill
-// scale (the same mechanism behind heatmap cells), so the value reads twice:
-// from bar height and from color darkness.
-//
-// Grammar note: the standalone `rect` mark is in the registry but is not
-// renderable in the current engine (it never receives a band scale, so rects
-// collapse to zero width — verified against packages/engine/src/layout/
-// scales.ts). Sequential color is therefore demonstrated on a `bar` mark, which
-// shares the rect geometry but resolves its band scale correctly.
-const coalShare = electricityMixMatrix.data
-  .filter((d) => d.source === 'Coal')
-  .map((d) => ({ year: d.year, share: d.share }));
-
-const sequentialColorSpec: ChartSpec = {
-  animation: true,
-  mark: 'bar',
-  data: coalShare,
-  encoding: {
-    x: { field: 'year', type: 'nominal' },
-    y: { field: 'share', type: 'quantitative', axis: { title: 'Coal share (%)' } },
-    // Quantitative color triggers a sequential fill scale: darker = more coal.
-    color: { field: 'share', type: 'quantitative' },
-  },
-  labels: { density: 'all', format: '.0f' },
-  chrome: {
-    title: "Coal's Grip on US Power Is Loosening Fast",
-    subtitle: 'Coal as a share of US electricity generation — fill darkens with the value',
-    source: electricityMixMatrix.source,
-    byline: 'Chart: OpenChart',
-  },
-};
-
-// ---------------------------------------------------------------------------
-// 5. Layered chart — two marks on shared scales
+// 4. Layered chart — two marks on shared scales
 // ---------------------------------------------------------------------------
 
 const avgJobs = Math.round(
@@ -208,7 +181,7 @@ const layerSpec: LayerSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 6. Dual axis — LayerSpec + resolve.scale.y = 'independent'
+// 5. Dual axis — LayerSpec + resolve.scale.y = 'independent'
 // ---------------------------------------------------------------------------
 
 const dualAxisSpec: LayerSpec = {
@@ -268,7 +241,7 @@ const dualAxisSpec: LayerSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 7. Spans — x2/y2 range encoding
+// 6. Spans — x2/y2 range encoding
 // ---------------------------------------------------------------------------
 
 const tempRange = nycTemperatureRange.data.map((d) => ({ ...d, band: 'Daily range' }));
@@ -295,7 +268,7 @@ const spanSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 8. Interactive — compose a layer, toggle it live
+// 7. Interactive — compose a layer, toggle it live
 // ---------------------------------------------------------------------------
 
 const scatterLayer: ChartSpec = {
@@ -303,20 +276,24 @@ const scatterLayer: ChartSpec = {
   data: [...stateEconomies.data],
   encoding: {
     x: { field: 'gdp', type: 'quantitative', axis: { title: 'GDP ($ trillions)' } },
-    y: { field: 'pop', type: 'quantitative', axis: { title: 'Population (millions)' } },
+    y: {
+      field: 'pop',
+      type: 'quantitative',
+      scale: { domain: POP_DOMAIN },
+      axis: { title: 'Population (millions)' },
+    },
   },
 };
 
-// Text marks sit exactly at (x, y) with no offset, so float labels above the
-// points by nudging their y in the data (population + ~1.4M).
-const labelRows = stateEconomies.data.map((d) => ({ ...d, labelPop: d.pop + 1.4 }));
-
+// Both layers encode the same fields; `dy` offsets in pixel space, so the label
+// layer stays on the point layer's scales instead of shifting the data. The
+// domain carries headroom so California's label doesn't overhang the plot.
 const labelLayer: ChartSpec = {
-  mark: { type: 'text' },
-  data: labelRows,
+  mark: { type: 'text', dy: -14 },
+  data: [...stateEconomies.data],
   encoding: {
     x: { field: 'gdp', type: 'quantitative' },
-    y: { field: 'labelPop', type: 'quantitative' },
+    y: { field: 'pop', type: 'quantitative', scale: { domain: POP_DOMAIN } },
     text: { field: 'label', type: 'nominal' },
   },
 };
@@ -380,40 +357,33 @@ export default { title: 'Charts' };
 export const BuildingBlocks = () => (
   <GalleryPage
     title="Building Blocks"
-    lede="OpenChart specs are encoding-centric: you map data fields to visual channels and the engine picks the mark, scale, and axis. These demos strip that idea to its primitives — the text, rule, tick, and rect marks, and the LayerSpec that composes them onto shared or independent scales."
+    lede="OpenChart specs are encoding-centric: you map data fields to visual channels and the engine picks the mark, scale, and axis. These demos show what the smaller marks are actually for — naming points on the chart itself, drawing the line a number has to beat, showing a whole distribution — and how a LayerSpec stacks them onto shared or independent scales."
   >
     <Section
       id="mark-primitives"
-      title="Mark primitives"
-      lede="Beyond bars and lines, four marks turn raw data into labels, reference lines, distribution strips, and value-colored cells."
+      title="Marks with a job"
+      lede="Beyond bars and lines, three marks earn their place: labels that replace a legend, reference lines that give a number something to beat, and ticks that show a distribution without binning it."
     >
       <Demo
         id="text-mark"
-        title="Text mark"
-        description="Position labels directly by data — x/y place each label, and the size channel scales it. No separate annotation layer."
-        spec={textMarkSpec}
-        height={440}
+        title="Label points directly"
+        description="Direct labeling beats a legend: name the points on the chart itself and the reader never looks away from the data. Points and labels are separate layers over the same fields, with a pixel-space dy offset lifting each label clear of its dot. The label layer takes a subset — five states sit within a label's width of each other down in the corner, so naming all ten would just smear — which is the ordinary editorial move: label what carries the story, leave the rest as dots."
+        spec={directLabelSpec}
+        height={460}
       />
       <Demo
         id="rule-mark"
-        title="Rule mark"
-        description="Reference levels authored as data rows rather than annotations, each drawn as a horizontal rule and colored by category."
+        title="Reference lines"
+        description="A benchmark the reader measures against — the policy rate, a target, a prior high. Authored as ordinary data rows, so the levels come from your dataset instead of being hand-placed annotations."
         spec={ruleMarkSpec}
         height={400}
       />
       <Demo
         id="tick-mark"
-        title="Tick mark"
-        description="A strip/rug plot: one short tick per observation makes the spread and skew of a distribution legible without binning."
+        title="Distribution strip"
+        description="One tick per observation. Shows spread, clustering, and skew without collapsing the data into bins — useful when the shape of the distribution is the story."
         spec={tickMarkSpec}
         height={360}
-      />
-      <Demo
-        id="rect-mark"
-        title="Sequential color fill"
-        description="A quantitative color field makes the engine build a sequential fill scale — the mechanism behind heatmap cells — so the value reads twice, from height and from color darkness."
-        spec={sequentialColorSpec}
-        height={420}
       />
     </Section>
 
@@ -424,8 +394,8 @@ export const BuildingBlocks = () => (
     >
       <Demo
         id="layered"
-        title="Layered chart (shared scales)"
-        description="Two marks — columns and a rule — drawn on one set of scales. Composition is just a `layer` array; each entry is a full spec."
+        title="Combo chart (shared scales)"
+        description="Columns and a reference rule on one set of scales — the average drawn as a second layer rather than an annotation. Composition is just a `layer` array; each entry is a full spec."
         spec={layerSpec}
         height={440}
       />
@@ -440,19 +410,19 @@ export const BuildingBlocks = () => (
 
     <Section
       id="spans-interaction"
-      title="Spans & interaction"
+      title="Ranges & interaction"
       lede="The x2/y2 channels turn a single mark into a range; layers can be composed on the fly from state."
     >
       <Demo
         id="spans"
-        title="Spans (x2 / y2)"
+        title="Ranges (x2 / y2)"
         description="A second position channel (here y2) extends each mark into a range — the encoding behind error bands, gantt bars, and min/max spreads."
         spec={spanSpec}
         height={420}
       />
       <Demo
         id="interactive"
-        title="Interactive (compose a layer live)"
+        title="Toggle a layer live"
         description="A checkbox adds or removes the text-label layer at runtime — proof that layering is ordinary array composition, not a special mode. The spec panel shows the both-layers version."
         specForPanel={composedSpecForPanel}
         height={520}

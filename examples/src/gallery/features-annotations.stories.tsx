@@ -3,9 +3,10 @@
  *
  * Annotations live in DATA coordinates and resolve to pixels through the same
  * scale system as the marks, so they stay pinned to their data through resize
- * (see the "Data-coordinate stability" demo). Six demos: text callouts, the
- * connector styles (straight / curve / drop-line, with the #103 arrow object
- * form), range bands, reference lines, resize-stability, and auto-thinning.
+ * (see the "Data-coordinate stability" demo). Text callouts, rich text
+ * (`**bold**` spans and the lede stack), the connector styles (straight /
+ * curve / drop-line, with the #103 arrow object form), range bands, reference
+ * lines, resize-stability, and auto-thinning.
  */
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
@@ -29,24 +30,30 @@ const textAnnotationSpec: ChartSpec = {
     y: { field: 'rate', type: 'quantitative', axis: { title: 'CPI, year-over-year (%)' } },
   },
   annotations: [
+    // The peak sits at the very top of the plot, so "above the point" lands in
+    // the chrome band. Hang the block off the LEFT of the peak instead: the
+    // upper-left plot region (2021, above the line's climb) is open whitespace.
     {
       type: 'text',
       x: '2022-07-01',
       y: 8.5,
-      text: 'Inflation peaked at 8.5%',
+      text: 'Inflation peaked at **8.5%**',
       subtitle: 'July 2022 — a 40-year high',
       dot: true,
-      anchor: 'top',
-      offset: { dx: 0, dy: -28 },
+      anchor: 'left',
+      offset: { dx: -28, dy: -4 },
     },
+    // Right of the trough the line runs flat well ABOVE 0.5 for a year, so a
+    // right-anchored label at the point's own height sits in clear space and the
+    // leader stays horizontal — no line crossings.
     {
       type: 'text',
       x: '2020-04-01',
       y: 0.3,
       text: 'Pandemic trough',
       dot: { radius: 4, stroke: ACCENT },
-      anchor: 'bottom',
-      offset: { dx: 8, dy: 26 },
+      anchor: 'right',
+      offset: { dx: 8, dy: -4 },
     },
   ],
   chrome: {
@@ -78,32 +85,38 @@ const connectorsSpec: ChartSpec = {
       text: 'Curve + arrow',
       subtitle: 'connector: { type: "curve", arrow: true }',
       dot: true,
-      anchor: 'left',
-      offset: { dx: -150, dy: -70 },
+      anchor: 'top',
+      offset: { dx: -190, dy: -60 },
       connector: { type: 'curve', arrow: true },
     },
     // Straight connector, arrow opted out (the default for straight).
+    // Points at the mid-2024 plateau, with the block hung in the empty trough
+    // under the 2024–2025 stretch of the line. Anywhere near the chart's
+    // bottom-left corner fights the drop-line's label for the same space and
+    // gets it demoted to a footnote.
     {
       type: 'text',
-      x: '2023-01-01',
-      y: 19.52,
+      x: '2024-07-01',
+      y: 116.97,
       text: 'Straight, no arrow',
       subtitle: 'connector: { type: "straight", arrow: false }',
       dot: true,
-      anchor: 'top',
-      offset: { dx: 40, dy: -84 },
+      anchor: 'right',
+      offset: { dx: 0, dy: 55 },
       connector: { type: 'straight', arrow: false },
     },
     // Drop-line: a vertical guide through the point's x (never takes an arrow).
+    // NOT at the 2025 peak: the peak touches the plot top, the drop-line label
+    // has no headroom there, and auto-thinning demotes it to a footnote. The
+    // Oct 2023 dip has a tall clear column above it.
     {
       type: 'text',
-      x: '2025-10-01',
-      y: 202.48,
+      x: '2023-10-01',
+      y: 40.75,
       text: 'Drop-line',
       subtitle: 'connector: "drop-line"',
       dot: true,
-      anchor: 'top',
-      offset: { dx: -20, dy: -44 },
+      anchor: 'left',
       connector: 'drop-line',
     },
   ],
@@ -116,7 +129,95 @@ const connectorsSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 3. Range annotations — x-band, y-band, and rectangle
+// 3. Rich text — `**bold**` spans, the lede + subtitle stack
+// ---------------------------------------------------------------------------
+
+// Emphasis lives inside the sentence, not on the whole block: a regular-weight
+// annotation with the one phrase that carries the finding set in bold.
+const richTextSpec: ChartSpec = {
+  animation: true,
+  mark: 'bar',
+  data: [...usPayrolls.data],
+  encoding: {
+    x: { field: 'month', type: 'nominal' },
+    y: { field: 'jobs', type: 'quantitative', axis: { title: 'Jobs added (thousands)' } },
+  },
+  annotations: [
+    // Lift the block clear of the Sep/Nov bar tops and their value labels: at
+    // dy -150 it sat right on "254"/"227". Above ~300K the right half of the
+    // plot is open, and the leader drops through the empty October column.
+    {
+      type: 'text',
+      x: 'Oct',
+      y: 12,
+      text: 'Hurricanes and a strike cut\nOctober to **12,000 jobs**',
+      dot: true,
+      anchor: 'top',
+      offset: { dx: -100, dy: -190 },
+      connector: { type: 'curve', arrow: true },
+    },
+    {
+      type: 'text',
+      x: 'Jan',
+      y: 353,
+      text: 'The year opened at **353,000**',
+      dot: true,
+      anchor: 'right',
+      offset: { dx: 8, dy: -18 },
+    },
+  ],
+  chrome: {
+    title: 'One Bad Month in an Otherwise Steady Year',
+    subtitle: 'US nonfarm payroll additions by month, 2024',
+    source: usPayrolls.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// The lede stack: set `subtitle` and the primary line takes bold automatically,
+// with the subtitle in muted regular below it. No fontWeight authoring.
+const ledeSpec: ChartSpec = {
+  animation: true,
+  mark: 'line',
+  data: [...temperatureAnomaly.data],
+  encoding: {
+    x: { field: 'year', type: 'ordinal' },
+    y: { field: 'anomaly', type: 'quantitative', axis: { title: 'Anomaly (°C)' } },
+  },
+  annotations: [
+    {
+      type: 'text',
+      x: '2025',
+      y: 1.17,
+      text: '+1.17°C',
+      subtitle: 'the warmest year on record',
+      dot: true,
+      anchor: 'left',
+      offset: { dx: -16, dy: -22 },
+    },
+    // Shifted left so the subtitle's right end clears the line rising through
+    // the 1990s — centered on the point, "0.3°C" sat directly on the curve.
+    {
+      type: 'text',
+      x: '1980',
+      y: 0.26,
+      text: 'Baseline era',
+      subtitle: 'anomalies stayed under **0.3°C**',
+      dot: true,
+      anchor: 'top',
+      offset: { dx: -60, dy: -26 },
+    },
+  ],
+  chrome: {
+    title: 'A Lede, Then the Context',
+    subtitle: 'Global surface temperature anomaly — subtitle promotes the first line to bold',
+    source: temperatureAnomaly.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 4. Range annotations — x-band, y-band, and rectangle
 // ---------------------------------------------------------------------------
 
 const rangeSpec: ChartSpec = {
@@ -135,16 +236,24 @@ const rangeSpec: ChartSpec = {
       x2: '2023-01-01',
       label: 'The inflation surge',
       labelAnchor: 'top',
+      // Centered, the label sits right on the CPI peak — the curve clips the
+      // tail of the text. Shift left onto the rising slope, where the line is
+      // still well below label height.
+      labelOffset: { dx: -70, dy: -6 },
       fill: '#d1495b',
       opacity: 0.1,
     },
     // y-band: a horizontal region marking the Fed's 2% target zone.
+    // labelOffset drops the label into the band's lower half — at the band top
+    // it sat directly on the CPI line entering the plot at ~1.5%. Not all the
+    // way to the band floor, though: there it runs into the "0" axis tick.
     {
       type: 'range',
       y1: 0,
       y2: 2,
       label: 'Target band (0–2%)',
       labelAnchor: 'left',
+      labelOffset: { dx: 6, dy: 20 },
       fill: ACCENT,
       opacity: 0.1,
     },
@@ -177,7 +286,7 @@ const rectangleRangeSpec: ChartSpec = {
       type: 'range',
       x1: '1980',
       x2: '2025',
-      y1: 0.2,
+      y1: 0,
       y2: 1.3,
       label: 'The modern warming era',
       labelAnchor: 'top',
@@ -209,7 +318,9 @@ const reflineSpec: ChartSpec = {
   },
   labels: { density: 'none' },
   annotations: [
-    // Horizontal target line, dashed.
+    // Horizontal target line, dashed. At the right edge the label sat on the
+    // Nov/Dec bars; slide it into the Jun–Aug valley, where the line runs
+    // clear above every bar top.
     {
       type: 'refline',
       y: 216,
@@ -218,8 +329,13 @@ const reflineSpec: ChartSpec = {
       stroke: '#64748b',
       strokeWidth: 1,
       labelAnchor: 'right',
+      labelOffset: { dx: -245 },
     },
-    // Horizontal threshold, dotted, styled as a soft floor.
+    // Horizontal threshold, dotted, styled as a soft floor. Every bar except
+    // October crosses the 100K line, and October's gap has the storm-marker
+    // line running through it, so there is no bar-free stretch at label height.
+    // Park the label in the Jun–Aug valley above the bar tops instead; the red
+    // text ties it to the red dotted line below it.
     {
       type: 'refline',
       y: 100,
@@ -228,6 +344,7 @@ const reflineSpec: ChartSpec = {
       stroke: '#d1495b',
       strokeWidth: 1,
       labelAnchor: 'left',
+      labelOffset: { dx: 381, dy: -30 },
     },
     // Vertical marker with a raw strokeDash override (takes precedence over style).
     {
@@ -373,6 +490,8 @@ const thinningSpec: ChartSpec = {
     x: { field: 'date', type: 'temporal' },
     y: { field: 'value', type: 'quantitative', axis: { title: 'Index level' } },
   },
+  // Deliberately bare: no offsets, no connector config. Six minimal callouts,
+  // exactly what an author writes first. The defaults have to carry this.
   annotations: [
     { type: 'text', x: '2020-06-01', y: 8, text: 'Pandemic low', responsive: false, priority: 1 },
     { type: 'text', x: '2021-01-01', y: 22, text: 'Recovery begins', priority: 2 },
@@ -433,7 +552,7 @@ function AutoThinning() {
         </span>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oc-space-5)' }}>
-        <div>
+        <div style={{ width, flexShrink: 0 }}>
           <p
             style={{
               margin: '0 0 var(--oc-space-2)',
@@ -445,7 +564,6 @@ function AutoThinning() {
           </p>
           <div
             style={{
-              width: `min(${width}px, 100%)`,
               height: 340,
               border: '1px solid var(--oc-border)',
               borderRadius: 'var(--oc-radius-control)',
@@ -454,7 +572,7 @@ function AutoThinning() {
             <Chart spec={thinningSpec} />
           </div>
         </div>
-        <div>
+        <div style={{ width, flexShrink: 0 }}>
           <p
             style={{
               margin: '0 0 var(--oc-space-2)',
@@ -466,7 +584,6 @@ function AutoThinning() {
           </p>
           <div
             style={{
-              width: `min(${width}px, 100%)`,
               height: 340,
               border: '1px solid var(--oc-border)',
               borderRadius: 'var(--oc-radius-control)',
@@ -489,18 +606,33 @@ export default { title: 'Features' };
 export const Annotations = () => (
   <GalleryPage
     title="Annotations"
-    lede="Annotations are the editorial layer over the data layer. They're authored in data coordinates and resolved to pixels through the same scales as the marks, so a callout, band, or reference line stays pinned to its data through every resize. Text callouts take dot markers and connectors; ranges shade regions; reference lines mark baselines and targets; and when space runs out, auto-thinning demotes overlapping callouts to numbered footnotes."
+    lede="Annotations are the editorial layer over the data layer. They're authored in data coordinates and resolved to pixels through the same scales as the marks, so a callout, band, or reference line stays pinned to its data through every resize. Text callouts take dot markers, connectors, and inline bold spans; ranges shade regions; reference lines mark baselines and targets; and when space runs out, auto-thinning demotes overlapping callouts to numbered footnotes."
   >
     <Section
       id="text"
       title="Text callouts"
       lede="A text annotation sits at a data coordinate. A dot marks the point, an anchor picks the side, and a pixel offset nudges the label clear of the data."
     >
+      <Demo id="text-annotation" spec={textAnnotationSpec} height={460} />
+    </Section>
+
+    <Section
+      id="rich-text"
+      title="Rich text"
+      lede="Annotation text is a regular-weight sentence with the key phrase wrapped in double asterisks — emphasis rides inside the copy, never as a bold block. Add a subtitle and the primary line promotes to a bold lede with muted context beneath it, no fontWeight authoring. Spans work in text and subtitle alike; an unmatched pair of asterisks renders literally."
+    >
       <Demo
-        id="text-annotation"
-        title="Text callout with a dot marker"
-        description="Place a labelled callout at an (x, y) data point; the dot marks the point and the offset lifts the text clear of the line."
-        spec={textAnnotationSpec}
+        id="rich-text-emphasis"
+        title="Inline bold spans"
+        description="The finding is the number, so the number is what's bold. The rest of the sentence stays regular weight and out of the way."
+        spec={richTextSpec}
+        height={460}
+      />
+      <Demo
+        id="rich-text-lede"
+        title="The lede + subtitle stack"
+        description="Setting subtitle promotes the primary line to bold automatically. The subtitle takes its own bold spans and renders muted at 85% of the primary size."
+        spec={ledeSpec}
         height={460}
       />
     </Section>
@@ -510,13 +642,7 @@ export const Annotations = () => (
       title="Connectors"
       lede="A connector links the label back to its data point. Pass a string for a preset, or the object form { type, arrow } to control the arrowhead — the recent connector-arrow feature."
     >
-      <Demo
-        id="connectors"
-        title="Straight, curve, and drop-line"
-        description="Three connector styles on one chart. Curve draws an arrowhead by default; straight opts out; drop-line runs a vertical guide through the point's x."
-        spec={connectorsSpec}
-        height={480}
-      />
+      <Demo id="connectors" spec={connectorsSpec} height={480} />
     </Section>
 
     <Section
@@ -545,13 +671,7 @@ export const Annotations = () => (
       title="Reference lines"
       lede="A refline is a horizontal or vertical rule at a data value — an average, a threshold, or an event marker. Solid, dashed, and dotted styles, or a raw strokeDash override."
     >
-      <Demo
-        id="reference-lines"
-        title="Averages, thresholds, and event markers"
-        description="A dashed average, a dotted stall-speed floor, and a custom-dashed vertical event marker, each with an edge-anchored label."
-        spec={reflineSpec}
-        height={460}
-      />
+      <Demo id="reference-lines" spec={reflineSpec} height={460} />
     </Section>
 
     <Section
@@ -559,13 +679,7 @@ export const Annotations = () => (
       title="Data-coordinate stability"
       lede="Because annotations resolve through the scales, they never drift on resize. Drag the handles and watch the band, the peak dot, and the target line hold their data positions."
     >
-      <Demo
-        id="resize-stability"
-        title="Annotations stay pinned through resize"
-        description="The one interactive demo on this page: drag the width and height sliders. Every annotation recomputes from its data value, not a frozen pixel offset."
-        specForPanel={stabilitySpec}
-        height={520}
-      >
+      <Demo id="resize-stability" specForPanel={stabilitySpec} height={520}>
         <ResizableStability />
       </Demo>
     </Section>
@@ -575,13 +689,7 @@ export const Annotations = () => (
       title="Auto-thinning"
       lede="When callouts can't fit without overlapping, the engine demotes the lowest-priority ones to numbered dot markers with footnotes below the chart. priority ranks what survives; responsive: false pins an annotation so it never thins."
     >
-      <Demo
-        id="auto-thinning"
-        title="Narrow-width demotion to numbered footnotes"
-        description="Drag toward the left: inline callouts collapse to numbered markers with a footnote list. The pinned 'Pandemic low' stays inline; the autoThin: false copy hides them instead."
-        specForPanel={thinningSpec}
-        height={480}
-      >
+      <Demo id="auto-thinning" specForPanel={thinningSpec}>
         <AutoThinning />
       </Demo>
     </Section>

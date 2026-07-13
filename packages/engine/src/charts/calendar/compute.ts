@@ -29,7 +29,7 @@ import type {
   ResolvedTheme,
   TextMarkLayout,
 } from '@opendata-ai/openchart-core';
-import { formatDate, formatNumber } from '@opendata-ai/openchart-core';
+import { defaultNumberFormatter, formatDate } from '@opendata-ai/openchart-core';
 import { type CountableTimeInterval, utcDay, utcMonday, utcSunday } from 'd3-time';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -220,6 +220,7 @@ export function computeCalendarMarks(
   // -------------------------------------------------------------------------
   // Bands
   // -------------------------------------------------------------------------
+  const calendarFmt = defaultNumberFormatter();
   for (let b = 0; b < bands; b++) {
     const year = sortedYears[b];
     const bandTop = originY + b * (bandHeight + BAND_GAP);
@@ -293,7 +294,9 @@ export function computeCalendarMarks(
           fill: getSequentialColor(scales, datum.value),
           cornerRadius: cellRadius,
           data: datum.row,
-          aria: { label: `${dateLabel}, ${colorEnc.field}: ${formatNumber(datum.value)}` },
+          aria: {
+            label: `${dateLabel}, ${colorEnc.field}: ${calendarFmt(datum.value)}`,
+          },
         });
       } else {
         cellMarks.push({

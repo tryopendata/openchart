@@ -127,6 +127,12 @@ export interface AxisTick {
   position: number;
   /** Formatted label string for display. */
   label: string;
+  /**
+   * The untruncated label, set only when `label` was shortened with an ellipsis
+   * to fit the rotated-tick reservation. Renderers should surface this as the
+   * tick's accessible/tooltip text so the full category name is never lost.
+   */
+  fullLabel?: string;
   /** Secondary label text from axis.labelField. */
   subtitle?: string;
 }
@@ -459,10 +465,14 @@ export interface TextMarkLayout {
   type: 'textMark';
   /** Stable identity key for data-update transitions. */
   key?: string;
-  /** X position. */
+  /** X position, including any `dx` offset. */
   x: number;
-  /** Y position. */
+  /** Y position, including any `dy` offset. */
   y: number;
+  /** Data-space anchor before `dx` was applied. Set only when the mark is offset. */
+  anchorX?: number;
+  /** Data-space anchor before `dy` was applied. Set only when the mark is offset. */
+  anchorY?: number;
   /** Text content to display. */
   text: string;
   /** Fill color. */
@@ -475,6 +485,11 @@ export interface TextMarkLayout {
   fontFamily?: string;
   /** Horizontal text alignment. */
   textAnchor: 'start' | 'middle' | 'end';
+  /**
+   * Vertical baseline. Omit for the SVG default (alphabetic), which the calendar
+   * and parliament marks rely on — they hand-compute baseline-relative offsets.
+   */
+  dominantBaseline?: 'auto' | 'hanging' | 'central' | 'text-after-edge';
   /** Rotation angle in degrees. */
   angle?: number;
   /** Original data row. */
@@ -601,6 +616,11 @@ export interface ResolvedLabel {
     style: 'straight' | 'curve' | 'drop-line';
     /** Whether to draw an arrowhead at the data-point end. */
     arrow: boolean;
+    /**
+     * Which edge of the label block the connector leaves from. Renderers use it
+     * to shape the curve's control point. Internal; not part of the spec.
+     */
+    exit?: 'horizontal' | 'vertical';
   };
   /** Background color behind the label text. */
   background?: string;
@@ -622,6 +642,16 @@ export interface ResolvedAnnotation {
   type: 'text' | 'range' | 'refline';
   /** Stable identifier from the spec annotation, for selection/edit callbacks. */
   id?: string;
+  /**
+   * Index of the originating annotation in `spec.annotations`.
+   *
+   * The resolved array is a *filtered* view of the spec array -- an annotation
+   * whose position falls outside the scale domain resolves to nothing and is
+   * dropped -- so a resolved array index is NOT a spec index. Anything that has
+   * to reach back to the authored annotation (thinning's priority/responsive
+   * lookup, faceted footnote numbering) must key on this.
+   */
+  specIndex?: number;
   /** Label text (if any). */
   label?: ResolvedLabel;
   /** For range: the highlighted rectangle in pixel coordinates. */
@@ -641,8 +671,9 @@ export interface ResolvedAnnotation {
   /** Z-index for render ordering. Higher values render on top. */
   zIndex?: number;
   /**
-   * For text annotations: optional dot marker drawn at the connector's
-   * data-point endpoint. Coordinates match `label.connector.to` exactly.
+   * For text annotations: the endpoint marker drawn at the data point.
+   * Coordinates sit on the data point itself (plus any `connectorOffset.to`),
+   * not on the pulled-back `label.connector.to`.
    */
   dot?: {
     x: number;
@@ -698,8 +729,22 @@ export interface LegendEntry {
   overflow?: boolean;
 }
 
+/** The encoding channel a legend keys. */
+export type LegendChannel = 'color' | 'size';
+
 /** Base legend layout fields shared by all legend types. */
 export interface BaseLegendLayout {
+  /**
+   * Which encoding channel this legend keys. Omitted means `'color'` (every
+   * legend was a color legend before size legends existed).
+   *
+   * This is the identity that makes plural legends safe: click-to-toggle-series
+   * must fire for color entries and never for size circles, and selection/drag
+   * must be able to tell two legends apart. Without it, `.oc-legend` and
+   * `data-legend-index` are ambiguous across legends and the DOM queries that
+   * read them silently pick whichever comes first.
+   */
+  channel?: LegendChannel;
   /** Where the legend is positioned relative to the chart area. */
   position: 'top' | 'right' | 'bottom' | 'bottom-right' | 'inline';
   /** Bounding box for the legend (pixel coordinates). */
@@ -808,8 +853,55 @@ export interface ContinuousLegendLayout extends BaseLegendLayout {
   labelY: number;
 }
 
-/** Resolved legend layout: categorical (swatches), gradient (tilemap bar), or continuous (chart color bar). */
-export type LegendLayout = CategoricalLegendLayout | GradientLegendLayout | ContinuousLegendLayout;
+/**
+ * One graduated circle in a size legend: a representative value from the size
+ * scale's domain, drawn at the radius that value actually resolves to.
+ */
+export interface SizeLegendCircle {
+  /** The data value this circle stands for. */
+  value: number;
+  /** Formatted label text. */
+  label: string;
+  /** Radius in pixels -- the *same* scale the marks use, never a re-derivation. */
+  radius: number;
+  /** Center x, relative to the legend bounds. */
+  cx: number;
+  /** Center y, relative to the legend bounds. Circles sit on a common baseline. */
+  cy: number;
+  /** Label baseline y, relative to the legend bounds. */
+  labelY: number;
+}
+
+/**
+ * Size legend: graduated circles keying a quantitative `size` encoding.
+ *
+ * The circles are drawn nested (concentric, sharing a bottom edge) rather than
+ * side by side -- the newsroom convention, and it makes the *ratio* between
+ * magnitudes legible instead of just their order.
+ *
+ * The keyed values come from the scale's DOMAIN, not the data extent. The size
+ * scale clamps, so with an explicit `scale.domain` every datum past `domain[1]`
+ * renders at max radius; keying the data extent would imply the biggest circle
+ * equals the biggest datum when it may not.
+ */
+export interface SizeLegendLayout extends BaseLegendLayout {
+  /** Discriminant for legend type. */
+  type: 'size';
+  /** Graduated circles, smallest first. */
+  circles: SizeLegendCircle[];
+  /** Stroke color for the circle outlines. */
+  stroke: string;
+}
+
+/**
+ * Resolved legend layout: categorical (swatches), gradient (tilemap bar),
+ * continuous (chart color bar), or size (graduated circles).
+ */
+export type LegendLayout =
+  | CategoricalLegendLayout
+  | GradientLegendLayout
+  | ContinuousLegendLayout
+  | SizeLegendLayout;
 
 // ---------------------------------------------------------------------------
 // Endpoint labels (right-side per-series column for line/area charts)
@@ -1132,8 +1224,22 @@ export interface ChartLayout {
   marks: Mark[];
   /** Resolved annotations with pixel positions. */
   annotations: ResolvedAnnotation[];
-  /** Legend layout (position, entries, bounds). */
+  /**
+   * Primary legend (the color legend). Kept as a singular slot: it is what every
+   * existing consumer reads, and a chart's legend is a color legend unless it
+   * says otherwise.
+   */
   legend: LegendLayout;
+  /**
+   * Every legend on the chart, in render order -- the color legend plus, when a
+   * quantitative `size` channel is encoded, a size legend.
+   *
+   * `legend` is `legends[0]` when a color legend exists. Consumers that reserve
+   * space or hit-test **must** iterate this array: a bubble chart keys both
+   * continent (color) and population (size), and reserving margin for only the
+   * first leaves the second drawing on top of the plot.
+   */
+  legends: LegendLayout[];
   /**
    * Right-side endpoint labels column for multi-series line/area charts.
    * Empty `entries` means the column is suppressed (single-series, opt-out, or
@@ -1807,6 +1913,16 @@ export interface CompileOptions {
   measureText?: MeasureTextFn;
   /** Extra pixels to reserve on the right margin for a secondary y-axis. Set by compileLayer when resolve.scale.y is 'independent'. */
   rightAxisReserve?: number;
+  /**
+   * Extra pixels to reserve below the plot for the auto-thinning footnote list.
+   * Chicken-and-egg: thinning needs the chart area to decide what to demote, but
+   * the footnotes it produces need space carved out of that same area. compileChart
+   * resolves it by compiling once to learn the footnote count, then recompiling with
+   * this set. Callers should not set it; it is internal to that second pass.
+   */
+  footnoteReserve?: number;
+  /** Recursion depth of the footnote-reserve convergence pass. Internal to compileChart. */
+  footnotePass?: number;
   /**
    * Use this chart drawing area instead of computing one from chrome, axes,
    * and legend reservations. Set by compileLayer when compiling leaf layers so

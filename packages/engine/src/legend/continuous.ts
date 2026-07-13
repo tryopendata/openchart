@@ -18,10 +18,15 @@ import type {
   ContinuousLegendBin,
   ContinuousLegendTick,
   EncodingChannel,
+  FieldFormatContext,
   GradientColorStop,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { abbreviateNumber, buildD3Formatter, formatNumber } from '@opendata-ai/openchart-core';
+import {
+  computeFieldFormatContext,
+  defaultNumberFormatter,
+  resolveNumberFormatter,
+} from '@opendata-ai/openchart-core';
 import { scaleQuantile } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -118,13 +123,12 @@ function numericFieldValues(spec: NormalizedChartSpec, field: string): number[] 
 }
 
 /** Format a legend value: channel format wins, then the house number style. */
-function formatLegendValue(value: number, formatStr?: string): string {
+function formatLegendValue(value: number, formatStr?: string, ctx?: FieldFormatContext): string {
   if (formatStr) {
-    const fmt = buildD3Formatter(formatStr);
+    const fmt = resolveNumberFormatter(formatStr, ctx);
     if (fmt) return fmt(value);
   }
-  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
-  return formatNumber(value);
+  return defaultNumberFormatter(ctx)(value);
 }
 
 /**
@@ -133,10 +137,15 @@ function formatLegendValue(value: number, formatStr?: string): string {
  * get a midpoint label at the scale's center value.
  */
 function isDivergingRamp(colors: string[], theme: ResolvedTheme): boolean {
-  const key = colors.map((c) => c.toLowerCase()).join('|');
-  return Object.values(theme.colors.diverging).some(
-    (stops) => stops.map((c) => c.toLowerCase()).join('|') === key,
-  );
+  const norm = (stops: readonly string[]) => stops.map((c) => c.toLowerCase()).join('|');
+  const key = norm(colors);
+  // Match either direction: `scale: { reverse: true }` flips the stops, and a
+  // reversed diverging ramp is still diverging -- it must keep its midpoint label.
+  const flipped = norm([...colors].reverse());
+  return Object.values(theme.colors.diverging).some((stops) => {
+    const themeKey = norm(stops);
+    return themeKey === key || themeKey === flipped;
+  });
 }
 
 /**
@@ -221,6 +230,7 @@ export function computeContinuousLegendContent(
   const scaleType = colorEnc.scale?.type;
   const rampColors = resolveRampColors(colorEnc, theme);
   const formatStr = colorEnc.format;
+  const ctx = computeFieldFormatContext(values);
 
   if (scaleType && BINNED_SCALE_TYPES.has(scaleType)) {
     // Binned mode: equal-width class swatches, boundary labels at the joints.
@@ -240,7 +250,7 @@ export function computeContinuousLegendContent(
     }));
     const ticks: ContinuousLegendTick[] = breaks.map((value, i) => ({
       value,
-      label: formatLegendValue(value, formatStr),
+      label: formatLegendValue(value, formatStr, ctx),
       x: (i + 1) * binWidth,
       anchor: 'middle' as const,
     }));
@@ -273,7 +283,7 @@ export function computeContinuousLegendContent(
   const ticks: ContinuousLegendTick[] = [
     {
       value: domainMin,
-      label: formatLegendValue(domainMin, formatStr),
+      label: formatLegendValue(domainMin, formatStr, ctx),
       x: 0,
       anchor: 'start' as const,
     },
@@ -283,14 +293,14 @@ export function computeContinuousLegendContent(
       const neutral = (domainMin + domainMax) / 2;
       ticks.push({
         value: neutral,
-        label: formatLegendValue(neutral, formatStr),
+        label: formatLegendValue(neutral, formatStr, ctx),
         x: barWidth / 2,
         anchor: 'middle' as const,
       });
     }
     ticks.push({
       value: domainMax,
-      label: formatLegendValue(domainMax, formatStr),
+      label: formatLegendValue(domainMax, formatStr, ctx),
       x: barWidth,
       anchor: 'end' as const,
     });

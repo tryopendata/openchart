@@ -9,19 +9,27 @@ import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeScales } from '../../layout/scales';
 import { computeAnnotations } from '../compute';
 import {
+  DARK_CONNECTOR_STROKE,
   DARK_DOT_FILL,
+  DARK_LABEL_BACKGROUND,
   DARK_MUTED_TEXT_FILL,
-  DARK_TEXT_FILL,
   DEFAULT_ANNOTATION_FONT_SIZE,
+  DEFAULT_ANNOTATION_FONT_WEIGHT,
   DEFAULT_DOT_RADIUS,
   DEFAULT_DOT_STROKE_WIDTH,
   DEFAULT_LINE_HEIGHT,
+  FALLBACK_FONT_FAMILY,
+  LEDE_FONT_WEIGHT,
+  LIGHT_CONNECTOR_STROKE,
   LIGHT_DOT_FILL,
+  LIGHT_LABEL_BACKGROUND,
   LIGHT_MUTED_TEXT_FILL,
-  LIGHT_TEXT_FILL,
+  MIN_CONNECTOR_LENGTH,
   SUBTITLE_FONT_SIZE_RATIO,
+  SUBTITLE_FONT_WEIGHT,
   SUBTITLE_GAP,
 } from '../constants';
+import { heuristicMeasure } from '../geometry';
 
 const chartArea: Rect = { x: 50, y: 20, width: 500, height: 300 };
 
@@ -56,8 +64,79 @@ function makeSpec(annotations: Annotation[]): NormalizedChartSpec {
 }
 
 describe('text annotation: dot', () => {
-  it('does not populate dot when not specified', () => {
-    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No dot' }]);
+  // A connector with no arrowhead needs a terminator at the data point, so the
+  // engine resolves the default marker for it. `dot: false` opts out.
+  it('resolves the default dot when a connector is enabled and no dot key is set', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No dot key' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const dot = annotations[0].dot;
+    expect(dot).toBeDefined();
+    expect(dot!.radius).toBe(DEFAULT_DOT_RADIUS);
+  });
+
+  it('resolves the default dot for an explicit straight connector', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Straight', connector: 'straight' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].dot).toBeDefined();
+  });
+
+  it('resolves the default dot for a drop-line connector', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Drop', connector: 'drop-line' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].dot).toBeDefined();
+  });
+
+  it('honors an explicit dot: true on a drop-line connector', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Drop', connector: 'drop-line', dot: true },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const ann = annotations[0];
+    const px = scales.x!.scale(new Date('2020-01-01')) as number;
+    const py = scales.y!.scale(20) as number;
+    expect(ann.dot).toBeDefined();
+    expect(ann.dot!.x).toBeCloseTo(px, 5);
+    expect(ann.dot!.y).toBeCloseTo(py, 5);
+  });
+
+  // An arrowhead is already a terminator; adding a marker under it double-marks
+  // the data point.
+  it('does not resolve a default dot when the connector has an arrowhead', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Arrowed', connector: 'curve' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].dot).toBeUndefined();
+  });
+
+  it('does not populate dot when the connector is disabled', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Bare', connector: false },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].dot).toBeUndefined();
+  });
+
+  it('dot: false suppresses the default marker', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'No marker', dot: false },
+    ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
@@ -74,7 +153,8 @@ describe('text annotation: dot', () => {
     expect(dot!.radius).toBe(DEFAULT_DOT_RADIUS);
     expect(dot!.strokeWidth).toBe(DEFAULT_DOT_STROKE_WIDTH);
     expect(dot!.fill).toBe(LIGHT_DOT_FILL);
-    expect(dot!.stroke).toBe(LIGHT_TEXT_FILL);
+    // Marker and its (non-arrowed) leader share the quiet gray.
+    expect(dot!.stroke).toBe(LIGHT_CONNECTOR_STROKE);
   });
 
   it('populates dot with dark-mode defaults when isDark is true', () => {
@@ -85,7 +165,7 @@ describe('text annotation: dot', () => {
     const dot = annotations[0].dot;
     expect(dot).toBeDefined();
     expect(dot!.fill).toBe(DARK_DOT_FILL);
-    expect(dot!.stroke).toBe(DARK_TEXT_FILL);
+    expect(dot!.stroke).toBe(DARK_CONNECTOR_STROKE);
   });
 
   it('respects user-supplied dot style overrides', () => {
@@ -121,29 +201,45 @@ describe('text annotation: dot', () => {
     expect(dot!.radius).toBe(3);
     // Other fields fall back to defaults.
     expect(dot!.fill).toBe(LIGHT_DOT_FILL);
-    expect(dot!.stroke).toBe(LIGHT_TEXT_FILL);
+    expect(dot!.stroke).toBe(LIGHT_CONNECTOR_STROKE);
     expect(dot!.strokeWidth).toBe(DEFAULT_DOT_STROKE_WIDTH);
   });
 
-  it('dot coordinates match the connector "to" endpoint exactly', () => {
-    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Co-render', dot: true }]);
+  // The marker sits ON the data point; the connector stops short of it. The old
+  // behavior put the dot at the pulled-back connector tip, which offset it from
+  // the point it was marking.
+  it('dot coordinates sit exactly on the data point, not the pulled-back connector tip', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Co-render',
+        dot: true,
+        offset: { dx: 60, dy: -60 },
+      },
+    ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
     const resolved = annotations[0];
+    const px = scales.x!.scale(new Date('2020-01-01')) as number;
+    const py = scales.y!.scale(20) as number;
+
     expect(resolved.dot).toBeDefined();
-    expect(resolved.label?.connector).toBeDefined();
-    expect(resolved.dot!.x).toBe(resolved.label!.connector!.to.x);
-    expect(resolved.dot!.y).toBe(resolved.label!.connector!.to.y);
+    expect(resolved.dot!.x).toBeCloseTo(px, 5);
+    expect(resolved.dot!.y).toBeCloseTo(py, 5);
+
+    // The connector stops short of the marker.
+    const connector = resolved.label!.connector!;
+    const gap = Math.hypot(px - connector.to.x, py - connector.to.y);
+    expect(gap).toBeGreaterThan(resolved.dot!.radius);
   });
 
   it('dot coordinates apply user connectorOffset.to', () => {
-    const withoutOffset = computeAnnotations(
-      makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'A', dot: true }]),
-      computeScales(makeSpec([]), chartArea, []),
-      chartArea,
-      fullStrategy,
-    );
+    const baseSpec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'A', dot: true }]);
+    const baseScales = computeScales(baseSpec, chartArea, baseSpec.data);
+    const withoutOffset = computeAnnotations(baseSpec, baseScales, chartArea, fullStrategy);
     const baseDot = withoutOffset[0].dot!;
 
     const withOffsetSpec = makeSpec([
@@ -160,12 +256,57 @@ describe('text annotation: dot', () => {
     const withOffset = computeAnnotations(withOffsetSpec, scales2, chartArea, fullStrategy);
     const offsetDot = withOffset[0].dot!;
 
-    // The user's connector offset shifts the data-side endpoint, so the dot
-    // should track it. Exact equality with connector.to must hold.
-    expect(offsetDot.x).toBe(withOffset[0].label!.connector!.to.x);
-    expect(offsetDot.y).toBe(withOffset[0].label!.connector!.to.y);
-    // And it should differ from the un-offset case (sanity check).
-    expect(offsetDot.x).not.toBe(baseDot.x);
+    // The user's connector offset shifts the data-side endpoint, so the marker
+    // tracks it.
+    expect(offsetDot.x).toBeCloseTo(baseDot.x + 10, 5);
+    expect(offsetDot.y).toBeCloseTo(baseDot.y - 5, 5);
+  });
+});
+
+describe('text annotation: background', () => {
+  it('does not populate background when not specified', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No plate' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label.background).toBeUndefined();
+  });
+
+  it('resolves background: true to the light surface in light mode', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: true },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, false);
+
+    expect(annotations[0].label.background).toBe(LIGHT_LABEL_BACKGROUND);
+  });
+
+  // The dark-mode regression: `background: true` must NOT stay white, or the
+  // theme's light text renders light-gray-on-white and is unreadable.
+  it('resolves background: true to the dark surface when isDark is true', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: true },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, true);
+
+    expect(annotations[0].label.background).toBe(DARK_LABEL_BACKGROUND);
+    expect(annotations[0].label.background).not.toBe(LIGHT_LABEL_BACKGROUND);
+  });
+
+  it('passes an explicit background color through unchanged in both modes', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: '#ff00ff' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+
+    expect(
+      computeAnnotations(spec, scales, chartArea, fullStrategy, false)[0].label.background,
+    ).toBe('#ff00ff');
+    expect(
+      computeAnnotations(spec, scales, chartArea, fullStrategy, true)[0].label.background,
+    ).toBe('#ff00ff');
   });
 });
 
@@ -273,24 +414,138 @@ describe('text annotation: dot + subtitle co-resolution', () => {
         text: 'Big moment',
         subtitle: 'Adjusted for inflation',
         dot: true,
+        offset: { dx: 60, dy: -60 },
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
 
     const resolved = annotations[0];
+    const px = scales.x!.scale(new Date('2020-01-01')) as number;
+    const py = scales.y!.scale(20) as number;
+
     expect(resolved.dot).toBeDefined();
     expect(resolved.subtitle).toBeDefined();
-    // Connector + dot still co-render at the same point.
-    expect(resolved.dot!.x).toBe(resolved.label!.connector!.to.x);
-    expect(resolved.dot!.y).toBe(resolved.label!.connector!.to.y);
+    expect(resolved.dot!.x).toBeCloseTo(px, 5);
+    expect(resolved.dot!.y).toBeCloseTo(py, 5);
+    expect(resolved.label!.connector).toBeDefined();
+  });
+
+  // The connector must clear the subtitle too, not just the primary line. The
+  // subtitle is often the wider of the two.
+  it('connector origin clears the subtitle when the subtitle is the wider line', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Short',
+        subtitle: 'A considerably longer subtitle line than the primary',
+        // Label sits below-left of the point, so the connector exits up/right
+        // and would cross the subtitle if bounds ignored it.
+        offset: { dx: 0, dy: 90 },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const ann = annotations[0];
+    const connector = ann.label!.connector!;
+    const bounds = ann.bounds!;
+
+    // The origin must sit outside the full (label ∪ subtitle) block.
+    const insideX = connector.from.x >= bounds.x && connector.from.x <= bounds.x + bounds.width;
+    const insideY = connector.from.y >= bounds.y && connector.from.y <= bounds.y + bounds.height;
+    expect(insideX && insideY).toBe(false);
+  });
+});
+
+describe('text annotation: connector suppression', () => {
+  // A label pulled back toward its point leaves no room for a leader: the
+  // standoff and marker pullback eat the whole span, and what's left is a nub
+  // touching the marker it's meant to point at. Suppress it, keep the dot.
+  // (anchor 'top' sets the label ANCHOR_OFFSET above the point; +dy drags it
+  // back down onto it.)
+  it('suppresses a connector shorter than MIN_CONNECTOR_LENGTH but keeps the dot', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Tiny leader',
+        anchor: 'top',
+        offset: { dx: 0, dy: 16 },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.connector).toBeUndefined();
+    expect(annotations[0].dot).toBeDefined();
+  });
+
+  // The default (no offset, no anchor) must draw a leader. A bare annotation is
+  // the spec an author writes first, and floating text with no line back to the
+  // data is exactly what this redesign set out to kill.
+  it('draws a connector for a bare text annotation with no offset', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Default callout' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const connector = annotations[0].label!.connector;
+    expect(connector).toBeDefined();
+    const length = Math.hypot(
+      connector!.to.x - connector!.from.x,
+      connector!.to.y - connector!.from.y,
+    );
+    expect(length).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
+    expect(annotations[0].dot).toBeDefined();
+  });
+
+  it('suppresses the connector when the data point lands inside the text block', () => {
+    // Offset pulls the label back over its own point so the box straddles it.
+    // A connector here would be drawn straight through the text.
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'The point sits inside this label',
+        offset: { dx: -110, dy: 4 },
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.connector).toBeUndefined();
+    expect(annotations[0].dot).toBeDefined();
+  });
+
+  it('keeps the connector once the label is far enough from the point', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Far label', offset: { dx: 0, dy: -60 } },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const connector = annotations[0].label!.connector!;
+    expect(connector).toBeDefined();
+    const length = Math.hypot(connector.to.x - connector.from.x, connector.to.y - connector.from.y);
+    expect(length).toBeGreaterThanOrEqual(MIN_CONNECTOR_LENGTH);
   });
 });
 
 describe('text annotation: connector config', () => {
   it('bare "curve" string defaults arrow to true', () => {
     const spec = makeSpec([
-      { type: 'text', x: '2020-01-01', y: 20, text: 'Curve', connector: 'curve' },
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Curve',
+        connector: 'curve',
+        offset: { dx: 0, dy: -60 },
+      },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
@@ -302,7 +557,14 @@ describe('text annotation: connector config', () => {
 
   it('bare "straight" string defaults arrow to false', () => {
     const spec = makeSpec([
-      { type: 'text', x: '2020-01-01', y: 20, text: 'Straight', connector: 'straight' },
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Straight',
+        connector: 'straight',
+        offset: { dx: 0, dy: -60 },
+      },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
@@ -314,7 +576,14 @@ describe('text annotation: connector config', () => {
 
   it('boolean true defaults to straight with no arrow', () => {
     const spec = makeSpec([
-      { type: 'text', x: '2020-01-01', y: 20, text: 'Default', connector: true },
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Default',
+        connector: true,
+        offset: { dx: 0, dy: -60 },
+      },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
@@ -332,6 +601,7 @@ describe('text annotation: connector config', () => {
         y: 20,
         text: 'Arrow straight',
         connector: { type: 'straight', arrow: true },
+        offset: { dx: 0, dy: -60 },
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
@@ -350,6 +620,7 @@ describe('text annotation: connector config', () => {
         y: 20,
         text: 'No arrow curve',
         connector: { type: 'curve', arrow: false },
+        offset: { dx: 0, dy: -60 },
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
@@ -368,6 +639,7 @@ describe('text annotation: connector config', () => {
         y: 20,
         text: 'Default curve',
         connector: { type: 'curve' },
+        offset: { dx: 0, dy: -60 },
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
@@ -416,5 +688,101 @@ describe('text annotation: connector config', () => {
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('drop-line');
     expect(c.arrow).toBe(false);
+  });
+});
+
+describe('text annotation: typography', () => {
+  it('defaults to the regular annotation font size and weight', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Plain' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    const style = annotations[0].label!.style;
+    expect(style.fontSize).toBe(DEFAULT_ANNOTATION_FONT_SIZE);
+    expect(style.fontWeight).toBe(DEFAULT_ANNOTATION_FONT_WEIGHT);
+  });
+
+  // Lede rule: a subtitle turns the primary line into a lede, so it goes bold.
+  it('promotes the primary text to the lede weight when a subtitle is present', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Feb. 25', subtitle: '2015 maximum' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.style.fontWeight).toBe(LEDE_FONT_WEIGHT);
+    // The subtitle never inherits it.
+    expect(annotations[0].subtitle!.style.fontWeight).toBe(SUBTITLE_FONT_WEIGHT);
+  });
+
+  it('an explicit fontWeight wins over the lede rule', () => {
+    const spec = makeSpec([
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Feb. 25',
+        subtitle: '2015 maximum',
+        fontWeight: 500,
+      },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.style.fontWeight).toBe(500);
+  });
+
+  it('threads the theme font family into text, range, and refline labels', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Callout' },
+      { type: 'range', x: ['2019-01-01', '2020-01-01'], label: 'Band' },
+      { type: 'refline', y: 25, label: 'Target' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, {
+      scales,
+      chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: 600, height: 360 },
+      measure: heuristicMeasure,
+      fontFamily: 'Georgia, serif',
+    });
+
+    for (const ann of annotations) {
+      expect(ann.label!.style.fontFamily).toBe('Georgia, serif');
+    }
+  });
+
+  it('falls back to the default font stack when no theme font is threaded', () => {
+    const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Callout' }]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.style.fontFamily).toBe(FALLBACK_FONT_FAMILY);
+  });
+});
+
+describe('text annotation: alignment', () => {
+  // Text blocks are never centered: they align on the edge facing the point.
+  it('left-aligns multi-line text instead of centering it', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'First line\nSecond line' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.style.textAnchor).toBe('start');
+  });
+
+  it('right-aligns the block when it sits to the left of the point', () => {
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'First line\nSecond line', anchor: 'left' },
+    ]);
+    const scales = computeScales(spec, chartArea, spec.data);
+    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+
+    expect(annotations[0].label!.style.textAnchor).toBe('end');
   });
 });

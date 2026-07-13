@@ -20,6 +20,7 @@ import { areaRenderer, lineRenderer } from './line';
 import { parliamentRenderer } from './parliament';
 import { donutRenderer, pieRenderer } from './pie';
 import { rangeRenderer } from './range';
+import { rectRenderer } from './rect';
 import { type ChartRenderer, registerChartRenderer } from './registry';
 import { ruleRenderer } from './rule';
 import { scatterRenderer } from './scatter';
@@ -53,7 +54,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   text: textRenderer,
   rule: ruleRenderer,
   tick: tickRenderer,
-  rect: columnRenderer, // rect uses column renderer (RectMark output) as baseline for heatmaps
+  rect: rectRenderer, // heatmap cells (band x band); see charts/rect
   range: rangeRenderer, // dumbbell / arrow / range bar (orientation resolved internally)
   waffle: waffleRenderer, // unit grid for part-to-whole counts
   calendar: calendarRenderer, // weeks x weekdays daily heatmap (no positional scales)

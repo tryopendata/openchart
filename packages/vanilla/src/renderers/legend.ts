@@ -8,6 +8,7 @@ import type {
   CategoricalLegendLayout,
   ContinuousLegendLayout,
   LegendLayout,
+  SizeLegendLayout,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { nextSvgId } from '../svg-ids';
@@ -100,9 +101,83 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   parent.appendChild(g);
 }
 
+/**
+ * Render a size legend: graduated circles, nested (concentric, sharing a bottom
+ * edge) so the ratio between magnitudes reads, not just their order.
+ *
+ * Emits **no** `data-legend-index`. That attribute is what
+ * `wireLegendInteraction` sweeps up to wire click-to-toggle-series, and a size
+ * circle is not a series -- clicking "500M" must not try to hide a series named
+ * "500M". The circles are inert, and `aria-hidden` keeps them out of the AT tree
+ * as decorative chrome (the values are already in each mark's aria label).
+ */
+function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
+  if (legend.circles.length === 0) return;
+
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-legend oc-legend--size');
+  // Decorative, not announced. `role="img"` + a bare "Size legend" label would
+  // tell a screen-reader user a key exists while conveying none of the values it
+  // keys -- pure noise. The magnitudes are already in each mark's own aria label,
+  // which is where a non-sighted reader actually gets them.
+  g.setAttribute('aria-hidden', 'true');
+
+  // Absolute coordinates, NOT a group `transform`. `getBBox()` reports a group's
+  // box in its own local space and ignores the group's transform, so a
+  // translated legend measures as if it sat at the origin -- which is exactly
+  // how a size/color legend collision slipped past the rendered-invariant
+  // overlap checks. Every other legend bakes absolute coords into its children;
+  // this one does too, so the same measurement sees it where it really is.
+  const ox = legend.bounds.x;
+  const oy = legend.bounds.y;
+  const labelX = ox + legend.circles[0].cx + legend.circles[0].radius + 8;
+  const leaderX = ox + legend.circles[0].cx + legend.circles[0].radius + 4;
+
+  for (const circle of legend.circles) {
+    const c = createSVGElement('circle');
+    setAttrs(c, {
+      cx: ox + circle.cx,
+      cy: oy + circle.cy,
+      r: circle.radius,
+      fill: 'none',
+      stroke: legend.stroke,
+      'stroke-width': 1,
+    });
+    g.appendChild(c);
+
+    // Leader line from the circle's top edge out to its label.
+    const line = createSVGElement('line');
+    setAttrs(line, {
+      x1: ox + circle.cx,
+      y1: oy + circle.cy - circle.radius,
+      x2: leaderX,
+      y2: oy + circle.cy - circle.radius,
+      stroke: legend.stroke,
+      'stroke-width': 1,
+      'stroke-dasharray': '2 2',
+    });
+    g.appendChild(line);
+
+    const label = createSVGElement('text');
+    setAttrs(label, {
+      x: labelX,
+      y: oy + circle.labelY,
+    });
+    applyTextStyle(label, legend.labelStyle);
+    label.textContent = circle.label;
+    g.appendChild(label);
+  }
+
+  parent.appendChild(g);
+}
+
 export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   if (legend.type === 'continuous') {
     renderContinuousLegend(parent, legend);
+    return;
+  }
+  if (legend.type === 'size') {
+    renderSizeLegend(parent, legend);
     return;
   }
   if (!isCategorical(legend) || legend.entries.length === 0) return;

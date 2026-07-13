@@ -7,8 +7,31 @@ import type {
   MeasureTextFn,
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, textAscent, wrapText } from '@opendata-ai/openchart-core';
+import {
+  estimateTextWidth,
+  FOOTNOTE_LINE_HEIGHT,
+  footnoteBandHeight as footnoteBandHeightFor,
+  textAscent,
+  wrapText,
+} from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
+
+/**
+ * Vertical space the auto-thinning footnote list occupies below the plot.
+ * Everything on the footer row (source, byline, footer, brand) shifts down by
+ * this much so the footnotes don't land on top of it. Zero when there are no
+ * footnotes. The brand watermark renders from a separate path
+ * (`renderBrand`), so it has to read the same number from here rather than
+ * recompute it.
+ *
+ * A `ChartLayout`-shaped adapter over the core helper -- deliberately not a
+ * second implementation. The engine reserves this band in the bottom margin
+ * from the same function, so a local copy of the arithmetic is a standing
+ * invitation for the two to drift and drop the footnotes onto the watermark.
+ */
+export function footnoteBandHeight(layout: ChartLayout): number {
+  return footnoteBandHeightFor(layout.chrome.footnotes?.length ?? 0, layout.theme);
+}
 
 export function renderChromeElement(
   parent: SVGElement,
@@ -94,17 +117,17 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
 
   // Footnotes from auto-thinned annotations, rendered above source/byline.
   // Each footnote gets its own line to avoid horizontal overflow.
-  let footnoteBandHeight = 0;
+  const bandHeight = footnoteBandHeight(layout);
   if (chrome.footnotes && chrome.footnotes.length > 0) {
     const fontSize = layout.theme.fonts.sizes.small;
     const pad = layout.theme.spacing.padding;
-    const lineHeight = fontSize * 1.3;
+    const lineHeight = fontSize * FOOTNOTE_LINE_HEIGHT;
     const style = {
       fontFamily: layout.theme.fonts.family,
       fontSize,
       fontWeight: layout.theme.fonts.weights.normal,
       fill: layout.theme.chrome.source.color,
-      lineHeight: 1.3,
+      lineHeight: FOOTNOTE_LINE_HEIGHT,
       textAnchor: 'start' as const,
     };
 
@@ -119,13 +142,12 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       el.textContent = `${f.index}. ${f.text}`;
       g.appendChild(el);
     }
-    footnoteBandHeight = chrome.footnotes.length * lineHeight + 4;
   }
 
   if (chrome.source) {
     renderChromeElement(
       g,
-      { ...chrome.source, y: bottomOffset + chrome.source.y + footnoteBandHeight },
+      { ...chrome.source, y: bottomOffset + chrome.source.y + bandHeight },
       'oc-source',
       'source',
       measureText,
@@ -134,7 +156,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.byline) {
     renderChromeElement(
       g,
-      { ...chrome.byline, y: bottomOffset + chrome.byline.y + footnoteBandHeight },
+      { ...chrome.byline, y: bottomOffset + chrome.byline.y + bandHeight },
       'oc-byline',
       'byline',
       measureText,
@@ -143,14 +165,14 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.footer) {
     renderChromeElement(
       g,
-      { ...chrome.footer, y: bottomOffset + chrome.footer.y + footnoteBandHeight },
+      { ...chrome.footer, y: bottomOffset + chrome.footer.y + bandHeight },
       'oc-footer',
       'footer',
       measureText,
     );
   }
   if (chrome.brand) {
-    const brandY = bottomOffset + chrome.brand.y + footnoteBandHeight;
+    const brandY = bottomOffset + chrome.brand.y + bandHeight;
     renderChromeElement(g, { ...chrome.brand, y: brandY }, 'oc-brand', 'brand', measureText);
     // Accent dot to the left of the brand text. text-anchor=end means
     // brand.x is the right edge, so the dot sits 12px left of the measured
