@@ -54,6 +54,16 @@ describe('resolveFieldFormatter', () => {
       });
       expect(fmt(200)).toContain('$');
     });
+
+    it('ordinal keyword formats with suffix', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: 'ordinal',
+        values: [1, 2, 3],
+      });
+      expect(fmt(1)).toBe('1st');
+      expect(fmt(2)).toBe('2nd');
+      expect(fmt(3)).toBe('3rd');
+    });
   });
 
   describe('years guard', () => {

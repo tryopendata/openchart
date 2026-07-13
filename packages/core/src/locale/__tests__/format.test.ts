@@ -103,6 +103,14 @@ describe('abbreviateNumber', () => {
     expect(abbreviateNumber(999999999)).toBe('1B');
   });
 
+  it('rolls up 999950 to 1M (rounding boundary)', () => {
+    expect(abbreviateNumber(999950)).toBe('1M');
+  });
+
+  it('keeps 999949 as 999.9k (below roll-up boundary)', () => {
+    expect(abbreviateNumber(999949)).toBe('999.9k');
+  });
+
   it('handles -1500000', () => {
     expect(abbreviateNumber(-1500000)).toBe('-1.5M');
   });
@@ -145,6 +153,14 @@ describe('formatCurrency', () => {
 
   it('full mode includes cents for non-integers', () => {
     expect(formatCurrency(12666.5)).toBe('$12,666.50');
+  });
+
+  it('handles negative non-integer in full mode', () => {
+    expect(formatCurrency(-42.5)).toBe('-$42.50');
+  });
+
+  it('handles negative non-integer in compact mode', () => {
+    expect(formatCurrency(-42.5, { compact: true })).toBe('-$42.50');
   });
 });
 

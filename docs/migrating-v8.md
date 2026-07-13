@@ -212,8 +212,9 @@ a specific axis:
 ```
 
 **New semantic keywords:** `'percent'` and `'currency'` can now be used as
-format strings anywhere a d3-format string is accepted. `'percent'` multiplies
-by 100 and appends `%`; `'currency'` prepends `$` with comma grouping.
+format strings anywhere a d3-format string is accepted. `'percent'`
+auto-detects whether values are fractions (0-1 range) or already percentages
+and formats accordingly; `'currency'` prepends `$` with comma grouping.
 
 ---
 

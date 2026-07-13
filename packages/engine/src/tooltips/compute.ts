@@ -73,7 +73,7 @@ type ChannelFormatter = NumberFormatter | ((v: Date | string | number) => string
 
 function cacheKey(ch: EncodingChannel): string {
   const fmt = resolveFormat(ch);
-  return fmt ? `${ch.field}::${fmt}` : ch.field;
+  return fmt ? `${ch.field}::${ch.type}::${fmt}` : `${ch.field}::${ch.type}`;
 }
 
 /** Build a per-channel formatter cache for tooltip display. */
