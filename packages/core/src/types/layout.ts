@@ -1745,6 +1745,10 @@ export interface MapBorders {
   interiorPath: string;
   /** SVG path `d` for the outer boundary / coastline. */
   outlinePath: string;
+  /** Stroke color for interior borders. */
+  interiorStroke: string;
+  /** Stroke color for outer boundary. */
+  outlineStroke: string;
 }
 
 /**

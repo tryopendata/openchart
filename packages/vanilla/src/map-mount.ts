@@ -295,11 +295,6 @@ export function createMap(
       fontsReloadPending = false;
       container.dataset.ocFontsState = 'ready';
     }
-
-    // Emit compile warnings
-    for (const warning of currentLayout.warnings) {
-      console.warn(`[openchart] ${warning.code}: ${warning.message}`);
-    }
   }
 
   function update(newSpec: MapSpec): void {

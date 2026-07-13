@@ -152,7 +152,7 @@ function renderBorders(parent: SVGElement, borders: MapBorders): void {
     setAttrs(interior, {
       d: borders.interiorPath,
       fill: 'none',
-      stroke: '#fff',
+      stroke: borders.interiorStroke,
       'stroke-width': 0.5,
       'stroke-linejoin': 'round',
     });
@@ -167,7 +167,7 @@ function renderBorders(parent: SVGElement, borders: MapBorders): void {
     setAttrs(outline, {
       d: borders.outlinePath,
       fill: 'none',
-      stroke: '#fff',
+      stroke: borders.outlineStroke,
       'stroke-width': 1,
       'stroke-linejoin': 'round',
     });

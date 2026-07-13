@@ -10,8 +10,8 @@ function detectKeyFormat(keys: string[]): string | null {
   if (allNumeric) {
     const maxLen = Math.max(...keys.map((k) => k.length));
     if (maxLen <= 2) return 'state-fips';
-    if (maxLen <= 5) return 'county-fips';
     if (maxLen <= 3) return 'iso-numeric';
+    if (maxLen <= 5) return 'county-fips';
   }
   if (keys.every((k) => /^[A-Z]{2}$/.test(k))) return 'iso-alpha2';
   if (keys.every((k) => /^[A-Z]{3}$/.test(k))) return 'iso-alpha3';
@@ -55,6 +55,7 @@ export function joinDataToFeatures(
 
   const joined = new Map<string | number, Record<string, unknown>>();
   const usedDataKeys = new Set<string>();
+  let lowerLookup: Map<string, Record<string, unknown>> | null = null;
   let unmatchedFeatureCount = 0;
 
   for (const feature of features) {
@@ -67,13 +68,13 @@ export function joinDataToFeatures(
 
     // Try case-insensitive fallback for name-based joins
     if (!match) {
-      const lower = featureId.toLowerCase();
-      for (const [key, row] of dataLookup) {
-        if (key.toLowerCase() === lower) {
-          match = row;
-          break;
+      if (!lowerLookup) {
+        lowerLookup = new Map<string, Record<string, unknown>>();
+        for (const [key, row] of dataLookup) {
+          lowerLookup.set(key.toLowerCase(), row);
         }
       }
+      match = lowerLookup.get(featureId.toLowerCase());
     }
 
     if (match) {

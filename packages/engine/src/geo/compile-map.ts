@@ -35,7 +35,7 @@ import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { joinDataToFeatures } from './join';
-import { computeIdentityTransform, createProjection } from './projections';
+import { createProjection } from './projections';
 import type { NormalizedMapSpec } from './types';
 
 function validateGeoFeatures(geo: NormalizedMapSpec['geo']): Topology {
@@ -170,17 +170,6 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   const projection = createProjection(projectionType, fullArea.width, mapAreaHeight, geoCollection);
   const pathGen = projection ? geoPath(projection) : geoPath(null);
 
-  // For identity projection, compute a transform to fit pre-projected coords
-  let identityTransform: { scale: number; translateX: number; translateY: number } | null = null;
-  if (projectionType === 'identity') {
-    identityTransform = computeIdentityTransform(
-      pathGen,
-      geoCollection,
-      fullArea.width,
-      mapAreaHeight,
-    );
-  }
-
   // 10. Check winding order
   for (const feat of geoFeatures) {
     const area = geoArea(feat);
@@ -294,19 +283,12 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     (a, b) => a === b,
   );
 
-  let interiorPath: string;
-  let outlinePath: string;
-  if (identityTransform) {
-    const rawInterior = pathGen(interiorMesh) ?? '';
-    const rawOutline = pathGen(outlineMesh) ?? '';
-    interiorPath = rawInterior;
-    outlinePath = rawOutline;
-  } else {
-    interiorPath = pathGen(interiorMesh) ?? '';
-    outlinePath = pathGen(outlineMesh) ?? '';
-  }
+  const interiorPath = pathGen(interiorMesh) ?? '';
+  const outlinePath = pathGen(outlineMesh) ?? '';
 
-  const borders: MapBorders = { interiorPath, outlinePath };
+  const interiorStroke = isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
+  const outlineStroke = isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
+  const borders: MapBorders = { interiorPath, outlinePath, interiorStroke, outlineStroke };
 
   // 16. Tooltips
   const tooltipDescriptors = new Map<string, TooltipContent>();
@@ -430,8 +412,16 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     }
   }
 
-  const min = values.length > 0 ? Math.min(...values) : 0;
-  const max = values.length > 0 ? Math.max(...values) : 100;
+  let min = 0;
+  let max = 100;
+  if (values.length > 0) {
+    min = values[0];
+    max = values[0];
+    for (let i = 1; i < values.length; i++) {
+      if (values[i] < min) min = values[i];
+      if (values[i] > max) max = values[i];
+    }
+  }
 
   const paletteStops = [...(SEQUENTIAL_PALETTES[palette] ?? SEQUENTIAL_PALETTES.blue)];
   const colorScale = scaleQuantile<string>().domain(values).range(paletteStops);
@@ -480,7 +470,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
       aria: {
         role: 'img',
         label: name
-          ? `${name}: ${hasData ? formatter(Number(dataRow[colorField])) : 'no data'}`
+          ? `${name}: ${hasData && dataRow[colorField] != null && !Number.isNaN(Number(dataRow[colorField])) ? formatter(Number(dataRow[colorField])) : 'no data'}`
           : String(featureId),
       },
       animationIndex: animIndex++,
@@ -683,7 +673,12 @@ function emptyLayout(
     area: { x: 0, y: 0, width: 0, height: 0 },
     chrome,
     features: [],
-    borders: { interiorPath: '', outlinePath: '' },
+    borders: {
+      interiorPath: '',
+      outlinePath: '',
+      interiorStroke: 'rgba(0,0,0,0.15)',
+      outlineStroke: 'rgba(0,0,0,0.3)',
+    },
     gradientLegend: null,
     categoricalLegend: null,
     tooltipDescriptors: new Map(),
