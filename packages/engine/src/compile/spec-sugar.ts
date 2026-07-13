@@ -18,9 +18,9 @@
  *   explicit categorical `scale.domain`
  * - encoding-level `bin` / `timeUnit` desugar to transforms (expandEncodingSugar)
  *
- * It also emits deprecation warnings for spec surface scheduled for removal in
- * v8 (`radius`, `shape`, `href`, `order`, the implicit multi-series bar/area
- * stack default) and strips or stamps the triggering forms so each one warns
+ * It also emits warnings for removed encoding channels (`radius`, `shape`,
+ * `href`, `order`) and deprecated forms (`y` on arc/waffle/parliament instead
+ * of `theta`) and strips or stamps the triggering forms so each one warns
  * exactly once per compile, even when layer leaves are re-expanded.
  *
  * Applied to top-level chart specs (compileChart) and to LayerSpec children
@@ -232,15 +232,15 @@ function applyFixedSizeDefault(spec: Record<string, unknown>): Record<string, un
 // Channel-level sugar (value defs, legend, axis null, scheme, theta, dead channels)
 // ---------------------------------------------------------------------------
 
-/** Channels declared in the spec types with zero engine implementation, warned and stripped. */
+/** Channels removed in v8 that the engine never implemented. Warned and stripped for graceful degradation of stored v7 specs. */
 const DEAD_CHANNEL_MESSAGES: Record<string, string> = {
   radius:
-    '[openchart] encoding.radius is not implemented (silently ignored) and will be removed in v8. Use mark.innerRadius / mark.outerRadius to control donut radii.',
+    '[openchart] encoding.radius was removed in v8. Use mark.innerRadius / mark.outerRadius to control donut radii.',
   shape:
-    '[openchart] encoding.shape is not implemented (silently ignored) and will be removed in v8. Differentiate series with encoding.color or encoding.strokeDash instead.',
-  href: '[openchart] encoding.href is not implemented (silently ignored) and will be removed in v8. Handle link navigation in the host application instead.',
+    '[openchart] encoding.shape was removed in v8. Differentiate series with encoding.color or encoding.strokeDash instead.',
+  href: '[openchart] encoding.href was removed in v8. Handle link navigation in the host application instead.',
   order:
-    '[openchart] encoding.order is not implemented (silently ignored) and will be removed in v8. Use encoding.<channel>.sort or pre-sorted data order instead.',
+    '[openchart] encoding.order was removed in v8. Use encoding.<channel>.sort or pre-sorted data order instead.',
 };
 
 /**
@@ -321,32 +321,39 @@ function expandChannelSugar(
     }
   }
 
-  // theta: VL's arc value channel, shared by waffle and parliament marks (the
-  // same part-to-whole value). Alias for y when y is absent; ignored (with a
-  // warning) when y is present. Canonical in v8.
-  if (markType && updated.theta && typeof updated.theta === 'object') {
+  // theta: canonical arc/waffle/parliament value channel since v8. The engine
+  // still reads `y` internally, so theta is rewritten to y for the pipeline.
+  // `y` on these marks is a deprecated alias rewritten to theta (then to y).
+  if (markType) {
     const thetaMark = markType === 'arc' || markType === 'waffle' || markType === 'parliament';
-    if (thetaMark && !updated.y) {
-      updated.y = updated.theta;
-    } else if (markType === 'arc') {
-      warnings.push(
-        '[openchart] encoding.theta is ignored when encoding.y is present on an arc mark; encoding.y wins. theta becomes the canonical arc value channel in v8.',
-      );
-    } else if (markType === 'waffle') {
-      warnings.push(
-        '[openchart] encoding.theta is ignored when encoding.y is present on a waffle mark; encoding.y wins.',
-      );
-    } else if (markType === 'parliament') {
-      warnings.push(
-        '[openchart] encoding.theta is ignored when encoding.y is present on a parliament mark; encoding.y wins.',
-      );
-    } else {
+    if (thetaMark) {
+      if (updated.y && typeof updated.y === 'object' && !updated.theta) {
+        warnings.push(
+          `[openchart] encoding.y on ${markType} marks is deprecated; use encoding.theta instead. y is accepted as an alias but will be removed in a future major.`,
+        );
+        updated.theta = updated.y;
+        delete updated.y;
+        changed = true;
+      } else if (updated.y && updated.theta) {
+        warnings.push(
+          `[openchart] Both encoding.theta and encoding.y are set on a ${markType} mark; encoding.theta wins and encoding.y is ignored.`,
+        );
+        delete updated.y;
+        changed = true;
+      }
+      // Rewrite theta -> y for the internal pipeline (engine reads y)
+      if (updated.theta && typeof updated.theta === 'object') {
+        updated.y = updated.theta;
+        delete updated.theta;
+        changed = true;
+      }
+    } else if (updated.theta && typeof updated.theta === 'object') {
       warnings.push(
         '[openchart] encoding.theta is only meaningful on arc, waffle, and parliament marks and was ignored.',
       );
+      delete updated.theta;
+      changed = true;
     }
-    delete updated.theta;
-    changed = true;
   }
 
   // Parliament: party colors carry real-world meaning (red/blue for US parties)
@@ -557,14 +564,13 @@ function resolveSortSugar(
 // ---------------------------------------------------------------------------
 
 const STACK_DEFAULT_WARNING =
-  "[openchart] The implicit default for multi-series bar/area charts (grouped/overlap) changes to stacked in v8. Set stack explicitly on the value channel: null keeps grouped/overlap, 'zero' opts into stacking.";
+  '[openchart] Multi-series bar/area charts now default to stacked (Vega-Lite aligned). To keep grouped/overlap, set stack: null on the value channel.';
 
 /**
  * Warn when a multi-series bar/area chart relies on the implicit stack
- * default that flips in v8, then stamp the current default (`stack: null`)
- * explicitly. The stamp is behavior-identical today (undefined and null both
- * mean grouped/overlap) and keeps the warning to one per compile when layer
- * leaves are re-expanded.
+ * default that changed in v8 (grouped/overlap -> stacked). If the user
+ * hasn't set stack explicitly, the engine now stacks by default; this
+ * warning tells them to set stack: null if they want the old behavior.
  */
 function warnStackDefault(
   spec: Record<string, unknown>,
@@ -616,9 +622,7 @@ function warnStackDefault(
   if (!hasDuplicates) return spec;
 
   warnings.push(STACK_DEFAULT_WARNING);
-  const valueKey = catField === x.field ? 'y' : 'x';
-  const valueCh = merged[valueKey] as Record<string, unknown>;
-  return { ...spec, encoding: { ...ownEncoding, [valueKey]: { ...valueCh, stack: null } } };
+  return spec;
 }
 
 // ---------------------------------------------------------------------------

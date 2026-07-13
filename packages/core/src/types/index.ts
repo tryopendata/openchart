@@ -12,7 +12,6 @@ export type {
   GraphChannelRule,
 } from './encoding';
 export {
-  CHART_ENCODING_RULES,
   GRAPH_ENCODING_RULES,
   MARK_ENCODING_RULES,
 } from './encoding';
@@ -136,7 +135,6 @@ export type {
   ChartSpec,
   ChartSpecOverride,
   ChartSpecWithoutData,
-  ChartType,
   Chrome,
   ChromeText,
   ChromeTextStyle,
@@ -228,7 +226,6 @@ export type {
   YouDrawItConfig,
 } from './spec';
 export {
-  CHART_TYPES,
   getRepresentativeColor,
   isAxislessMark,
   isBarListSpec,

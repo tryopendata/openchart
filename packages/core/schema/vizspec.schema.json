@@ -4067,11 +4067,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -4098,24 +4093,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -4123,11 +4103,10 @@
         }
       },
       "required": [
-        "y",
         "color"
       ],
       "additionalProperties": false,
-      "description": "Encoding for arc marks (pie/donut charts).\n- `y`: required (quantitative — the slice value)\n- `color`: required (nominal/ordinal — the category)\n- `theta`: optional (defaults to `y` channel)\n- `radius`: optional (donut inner radius)"
+      "description": "Encoding for arc marks (pie/donut charts).\n- `theta`: canonical value channel (quantitative, the slice value)\n- `color`: required (nominal/ordinal — the category)\n- `y`: deprecated alias for `theta`, accepted via spec-sugar rewrite"
     },
     "EncodingChannel<DataRow>": {
       "type": "object",
@@ -4184,7 +4163,7 @@
               "type": "null"
             }
           ],
-          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below)\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.\n- **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)   to opt into stacked areas. Each overlapping series renders as a translucent   gradient band anchored at the y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap).\n\n**v8 note:** the multi-series bar/area default realigns with Vega-Lite (stacked, `'zero'`) in v8. Relying on the implicit default emits a compile warning in v7; set `stack` explicitly (`null` for grouped/overlap, `'zero'` for stacked) to keep the current rendering."
+          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below)\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)\n\n**Defaults (v8, Vega-Lite aligned):**\n- **Bar/Column/Area**: defaults to stacked (`'zero'`). Set `stack: null` for grouped/overlap.\n- **Line**: stacking is not applied (lines always overlap)."
         },
         "bin": {
           "anyOf": [
@@ -6746,11 +6725,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -6777,24 +6751,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6877,11 +6836,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -6908,24 +6862,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7008,11 +6947,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7039,24 +6973,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7139,11 +7058,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7170,24 +7084,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7270,11 +7169,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7301,24 +7195,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7401,11 +7280,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7432,24 +7306,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7532,11 +7391,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7563,24 +7417,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7659,11 +7498,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7690,24 +7524,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7787,11 +7606,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7818,24 +7632,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7846,7 +7645,7 @@
         "color"
       ],
       "additionalProperties": false,
-      "description": "Encoding for waffle marks (unit grids for part-to-whole counts).\n- `color`: required (nominal/ordinal, the category)\n- `theta`: the quantitative share, the same part-to-whole value channel   arc marks use. Alias for `y`; provide one of the two."
+      "description": "Encoding for waffle marks (unit grids for part-to-whole counts).\n- `color`: required (nominal/ordinal, the category)\n- `theta`: canonical value channel (quantitative share); `y` is a deprecated alias"
     },
     "TextEncoding<DataRow>": {
       "type": "object",
@@ -7917,11 +7716,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -7948,24 +7742,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8047,11 +7826,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8078,24 +7852,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8178,11 +7937,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8209,24 +7963,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8309,11 +8048,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8340,24 +8074,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8426,11 +8145,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8457,24 +8171,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8554,11 +8253,6 @@
           ],
           "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
         },
-        "shape": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Point shape encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nDifferentiate series with `color` or `strokeDash` instead."
-        },
         "strokeDash": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
@@ -8585,24 +8279,9 @@
           ],
           "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
         },
-        "href": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Hyperlink encoding.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nHandle link navigation in the host application instead."
-        },
-        "order": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Drawing order.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `sort` on the relevant channel or pre-sorted data order instead."
-        },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Angular position (slice value) for arc marks (pie/donut), the Vega-Lite pie idiom. Waffle marks accept it too (the same part-to-whole value channel). Accepted as an alias for `y`: when `y` is absent, `theta` is used as the slice value. When both are present, `y` wins and `theta` is ignored with a compile warning. `theta` becomes the canonical arc value channel in v8. Not used by any other mark type."
-        },
-        "radius": {
-          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Radial distance from center for arc marks.",
-          "deprecated": "Not implemented (silently ignored) and removed in v8.\nUse `mark.innerRadius` / `mark.outerRadius` to control donut radii."
+          "description": "Angular position (slice value) for arc marks (pie/donut), waffle, and parliament marks (part-to-whole value channel). Canonical since v8. `y` is accepted as a deprecated alias: when `theta` is absent, `y` is rewritten to `theta` with a deprecation warning. When both are present, `theta` wins. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8613,7 +8292,7 @@
         "color"
       ],
       "additionalProperties": false,
-      "description": "Encoding for parliament marks (hemicycle seat-dot charts).\n- `color`: required (nominal/ordinal, the party)\n- `theta`: the quantitative seat count, the same part-to-whole value   channel arc/waffle marks use. Alias for `y`; provide one of the two."
+      "description": "Encoding for parliament marks (hemicycle seat-dot charts).\n- `color`: required (nominal/ordinal, the party)\n- `theta`: canonical value channel (quantitative seat count); `y` is a deprecated alias"
     },
     "LayerSpec": {
       "type": "object",
@@ -16295,7 +15974,7 @@
               "type": "null"
             }
           ],
-          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below)\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.\n- **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)   to opt into stacked areas. Each overlapping series renders as a translucent   gradient band anchored at the y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap).\n\n**v8 note:** the multi-series bar/area default realigns with Vega-Lite (stacked, `'zero'`) in v8. Relying on the implicit default emits a compile warning in v7; set `stack` explicitly (`null` for grouped/overlap, `'zero'` for stacked) to keep the current rendering."
+          "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below)\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)\n\n**Defaults (v8, Vega-Lite aligned):**\n- **Bar/Column/Area**: defaults to stacked (`'zero'`). Set `stack: null` for grouped/overlap.\n- **Line**: stacking is not applied (lines always overlap)."
         },
         "bin": {
           "anyOf": [

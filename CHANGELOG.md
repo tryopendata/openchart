@@ -8,7 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Breaking Changes
 
-- **area!:** multi-series area charts default to `overlap` mode (gradient-filled, partially translucent) instead of stacked. Pass `mark: { type: 'area', stack: true }` (or `stack: 'zero'`) to opt into the previous stacked behavior. The default change makes per-series comparison the dominant idiom; stacked totals remain a one-flag opt-in.
+- **encoding!:** remove `radius`, `shape`, `href`, and `order` encoding channels from TypeScript types. These were declared but never implemented (silently ignored). The engine gracefully strips them with a warning if present in existing specs. Use `mark.innerRadius`/`mark.outerRadius` (radius), `color`/`strokeDash` (shape), host app navigation (href), or `sort`/pre-sorted data (order) instead. See [migrating-v8.md](docs/migrating-v8.md#removed-encoding-channels).
+- **encoding!:** `theta` is now the canonical value channel for arc, waffle, and parliament marks. `y` is accepted as a deprecated alias (rewritten to `theta` with a warning). Matches the Vega-Lite pie idiom. See [migrating-v8.md](docs/migrating-v8.md#arc-value-channel-theta-is-canonical).
+- **bar/area!:** multi-series bar and area charts default to stacked (Vega-Lite aligned). Set `stack: null` on the value channel to keep grouped/overlap behavior. See [migrating-v8.md](docs/migrating-v8.md#stack-default-the-one-to-check-first).
+- **types!:** remove deprecated `ChartType` type alias (use `MarkType`), `CHART_TYPES` constant (use `MARK_TYPES`), and `CHART_ENCODING_RULES` constant (use `MARK_ENCODING_RULES`).
 
 ### Bug Fixes
 

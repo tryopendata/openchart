@@ -1,19 +1,13 @@
 # Migrating to v8
 
 v8 is a spec-correctness release. Its headline feature is faceting (small
-multiples), and alongside it a small set of breaking changes bring OpenChart's
+multiples), and alongside it a set of breaking changes bring OpenChart's
 defaults and encoding surface into line with Vega-Lite, so a spec that reads
 correctly in one reads correctly in the other.
 
-This page is the checklist. Every breaking item below already emits a
-deprecation warning in v7, so you can find the specs that need attention before
-v8 ships: compile your charts, watch the console, and fix what it names. Once
-the warnings are gone, the v8 upgrade is a no-op for your specs.
-
-> The v8 version numbers here are the target. Until v8 is published, treat this
-> as the list of deprecations the v7 warnings point at. Nothing described under
-> "Breaking in v8" has changed yet; the warnings run during the deprecation
-> window so you can migrate ahead of the flip.
+This page is the checklist. The v7 line emitted deprecation warnings for every
+breaking change below, so if you fixed the warnings before upgrading, v8 is a
+no-op.
 
 ## Wrapper package APIs are unchanged
 
@@ -28,19 +22,18 @@ you mount it.
 
 v8 leads with faceting: partition a chart into a grid of small-multiple panels
 with a `facet` channel. It shipped additively during the v7 cycle, so it is not
-a breaking change; v8 release notes lead with it as the cycle's marquee
-capability. See the spec reference for the `facet` channel and `resolve`.
+a breaking change. See the spec reference for the `facet` channel and `resolve`.
 
-## Breaking in v8
+## Breaking changes
 
 | Change | Before (v7) | After (v8) | Why |
 | --- | --- | --- | --- |
 | Multi-series bar/area stack default | grouped bars / overlapping areas | stacked | Vega-Lite defaults to stacked; the same spec now renders the same chart |
-| Arc value channel | `theta` accepted as an alias for `y` | `theta` is canonical; `y` accepted with a warning | Matches the Vega-Lite pie idiom |
-| `radius` encoding | declared, silently ignored | removed | Never implemented; use `mark.innerRadius` / `mark.outerRadius` |
-| `shape` encoding | declared, silently ignored | removed | Never implemented; differentiate series with `color` or `strokeDash` |
-| `href` encoding | declared, silently ignored | removed | Never implemented; handle links in the host app |
-| `order` encoding | declared, silently ignored | removed | Never implemented; use `sort` or pre-sorted data |
+| Arc value channel | `y` is the slice value, `theta` is an alias | `theta` is canonical; `y` accepted with a deprecation warning | Matches the Vega-Lite pie idiom |
+| `radius` encoding | declared, silently ignored | removed from types; warns if present in spec | Never implemented; use `mark.innerRadius` / `mark.outerRadius` |
+| `shape` encoding | declared, silently ignored | removed from types; warns if present in spec | Never implemented; differentiate series with `color` or `strokeDash` |
+| `href` encoding | declared, silently ignored | removed from types; warns if present in spec | Never implemented; handle links in the host app |
+| `order` encoding | declared, silently ignored | removed from types; warns if present in spec | Never implemented; use `sort` or pre-sorted data |
 | `ChartType` / `CHART_TYPES` exports | deprecated aliases | removed | Use `MarkType` / `MARK_TYPES` |
 
 Two more deprecations are kept accepted through v8 so you have a full window,
@@ -48,23 +41,22 @@ then removed in a later major:
 
 | Change | Before | Replacement | Status |
 | --- | --- | --- | --- |
-| `'rule'` annotation type | `{ type: 'rule', ... }` | `{ type: 'refline', ... }` (identical behavior; `'rule'` collides with the `rule` mark) | Warns now |
-| `valueFormat` on sankey / tilemap / barlist | top-level `valueFormat` | `encoding.value.format` (the field every chart encoding already uses) | Deprecated in v8, when the engine starts reading `encoding.value.format` for these types; `valueFormat` keeps working as an alias |
+| `'rule'` annotation type | `{ type: 'rule', ... }` | `{ type: 'refline', ... }` (identical behavior; `'rule'` collides with the `rule` mark) | Warns; accepted |
+| `valueFormat` on sankey / tilemap / barlist | top-level `valueFormat` | `encoding.value.format` | Deprecated alias; still works |
 
 ### Stack default (the one to check first)
 
-This is the change most likely to alter a chart you already ship, because it is
-silent: a v7 multi-series bar renders grouped, the same spec on v8 renders
-stacked, with no error. The v7 warning fires whenever a bar or area chart with a
-color field relies on the implicit default:
+This is the change most likely to alter a chart you already ship. A v7
+multi-series bar renders grouped; the same spec on v8 renders stacked. The
+engine emits a warning when no explicit `stack` value is set.
 
-```
-[openchart] The implicit default for multi-series bar/area charts
-(grouped/overlap) changes to stacked in v8. Set stack explicitly on the value
-channel: null keeps grouped/overlap, 'zero' opts into stacking.
+**Search:** find bar/area specs with a `color` encoding but no explicit `stack`:
+
+```bash
+grep -rn '"color"' specs/ | xargs grep -L '"stack"'
 ```
 
-Set `stack` explicitly and the warning goes away and v8 is a no-op:
+**Fix:** set `stack` explicitly on the value channel:
 
 ```jsonc
 // Keep grouped bars / overlapping areas (the v7 look):
@@ -80,29 +72,41 @@ Set `stack` explicitly and the warning goes away and v8 is a no-op:
 }
 ```
 
-### Arc value channel
+### Arc value channel (theta is canonical)
+
+**Search:** find arc/waffle/parliament specs using `y` instead of `theta`:
+
+```bash
+grep -rn '"arc"\|"waffle"\|"parliament"' specs/ | xargs grep '"y"'
+```
+
+**Fix:** rename `encoding.y` to `encoding.theta`:
 
 ```jsonc
-// v7: y is the slice value, theta is an accepted alias
-"mark": "arc",
-"encoding": {
-  "y": { "field": "count", "type": "quantitative" },
-  "color": { "field": "category", "type": "nominal" }
-}
+// Before (v7):
+{ "mark": "arc", "encoding": { "y": { "field": "count", "type": "quantitative" }, ... } }
 
-// v8: theta is canonical (y still accepted, with a warning)
-"mark": "arc",
-"encoding": {
-  "theta": { "field": "count", "type": "quantitative" },
-  "color": { "field": "category", "type": "nominal" }
-}
+// After (v8):
+{ "mark": "arc", "encoding": { "theta": { "field": "count", "type": "quantitative" }, ... } }
 ```
+
+Using `y` still works in v8 (it is rewritten to `theta` internally), but
+produces a deprecation warning. Migrate to `theta` to silence it.
 
 ### Removed encoding channels
 
 `radius`, `shape`, `href`, and `order` were declared in the encoding types but
-had no engine implementation, so they were silently dropped. Each warns in v7
-and is removed in v8. Drop them from your specs; the replacements:
+had no engine implementation. They are removed from TypeScript types in v8.
+The engine still accepts them gracefully (strips and warns) so existing stored
+JSON specs don't break at runtime.
+
+**Search:**
+
+```bash
+grep -rn '"radius"\|"shape"\|"href"\|"order"' specs/
+```
+
+**Fix:** drop the channel from the encoding. Replacements:
 
 - `radius`: use `mark.innerRadius` / `mark.outerRadius` for donut radii.
 - `shape`: differentiate series with `color`, or `strokeDash` on line marks.
@@ -130,12 +134,9 @@ format from `encoding.value.format` and keeps `valueFormat` as an alias, so
 // Still valid: top-level valueFormat
 { "type": "barlist", "valueFormat": "$,.0f", "encoding": { "value": { "field": "amount" } } }
 
-// Preferred in v8: format on the value encoding
+// Preferred: format on the value encoding
 { "type": "barlist", "encoding": { "value": { "field": "amount", "format": "$,.0f" } } }
 ```
-
-Do not migrate this on v7: the engine does not read `encoding.value.format` for
-these chart types until v8, so the encoding form is a no-op until then.
 
 ## Codemod recipes
 
@@ -152,7 +153,7 @@ jq '(.encoding.y // empty) |= (. + { stack: null })' spec.json
 Rename `y` to `theta` on arc marks:
 
 ```bash
-jq 'if .mark == "arc" then .encoding.theta = .encoding.y | del(.encoding.y) else . end' spec.json
+jq 'if .mark == "arc" or .mark == "waffle" or .mark == "parliament" then .encoding.theta = .encoding.y | del(.encoding.y) else . end' spec.json
 ```
 
 Drop a removed encoding channel:
@@ -167,7 +168,7 @@ Rename the `'rule'` annotation type to `'refline'`:
 jq '(.annotations // []) |= map(if .type == "rule" then .type = "refline" else . end)' spec.json
 ```
 
-Move `valueFormat` onto the value encoding (run on v8 or later, not v7):
+Move `valueFormat` onto the value encoding:
 
 ```bash
 jq 'if has("valueFormat") then .encoding.value.format = .valueFormat | del(.valueFormat) else . end' spec.json

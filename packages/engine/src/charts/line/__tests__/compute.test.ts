@@ -517,8 +517,7 @@ describe('computeAreaMarks', () => {
     expect(seriesKeys).toContain('UK');
   });
 
-  it('overlap (default): produces multiple AreaMarks for multi-series', () => {
-    // v6 default: multi-series with color but no `stack` overlaps instead of stacking.
+  it('stacked (default): multi-series with no explicit stack stacks by default', () => {
     const spec = makeMultiSeriesSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea);
@@ -527,10 +526,15 @@ describe('computeAreaMarks', () => {
     const seriesKeys = marks.map((m) => m.seriesKey).filter(Boolean);
     expect(seriesKeys).toContain('US');
     expect(seriesKeys).toContain('UK');
+    // Stacked layers should have different baselines
+    const firstBottom = marks[0].bottomPoints[0]?.y;
+    const secondBottom = marks[1].bottomPoints[0]?.y;
+    expect(firstBottom).not.toBe(secondBottom);
   });
 
-  it('overlap: every series shares the same baseline (no stacking offset)', () => {
+  it('overlap (stack: null): every series shares the same baseline', () => {
     const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = null;
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea);
 
@@ -544,8 +548,9 @@ describe('computeAreaMarks', () => {
     expect(baselines.size).toBe(1);
   });
 
-  it('overlap: each series uses a translucent gradient fill', () => {
+  it('overlap (stack: null): each series uses a translucent gradient fill', () => {
     const spec = makeMultiSeriesSpec();
+    spec.encoding.y!.stack = null;
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea);
 
@@ -560,19 +565,7 @@ describe('computeAreaMarks', () => {
     }
   });
 
-  it('overlap: stack: null is treated the same as undefined (overlap)', () => {
-    const spec = makeMultiSeriesSpec();
-    spec.encoding.y!.stack = null;
-    const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeAreaMarks(spec, scales, chartArea);
-
-    expect(marks).toHaveLength(2);
-    // Same baseline -> overlap, not stacked
-    const baselines = new Set(marks.flatMap((m) => m.bottomPoints.map((p) => p.y)));
-    expect(baselines.size).toBe(1);
-  });
-
-  it('overlap: stack: false is treated the same as undefined (overlap)', () => {
+  it('overlap: stack: false opts out of stacking', () => {
     const spec = makeMultiSeriesSpec();
     spec.encoding.y!.stack = false;
     const scales = computeScales(spec, chartArea, spec.data);

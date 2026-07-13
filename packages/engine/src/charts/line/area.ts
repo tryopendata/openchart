@@ -39,23 +39,15 @@ const DEFAULT_FILL_OPACITY = 0.15;
 /**
  * Resolve `encoding.y.stack` to a boolean: should we stack this area chart?
  *
- * Vega-Lite-aligned semantics:
- * - undefined | null | false  -> overlap (NEW DEFAULT for area)
- * - true | 'zero' | 'normalize' | 'center' -> stacked
- *
- * This is a v6 breaking change. Previously, multi-series with `color`
- * implicitly stacked. Now overlap is the default; stacking is opt-in.
+ * v8 (VL aligned): default is stacked for multi-series area.
+ * - null | false -> overlap
+ * - undefined | true | 'zero' | 'normalize' | 'center' -> stacked
  */
 function isStacked(stackProp: unknown): boolean {
-  if (stackProp === undefined || stackProp === null || stackProp === false) {
+  if (stackProp === null || stackProp === false) {
     return false;
   }
-  return (
-    stackProp === true ||
-    stackProp === 'zero' ||
-    stackProp === 'normalize' ||
-    stackProp === 'center'
-  );
+  return true;
 }
 
 // Gradient stops calibrated by series count. Solo areas can carry richer fills

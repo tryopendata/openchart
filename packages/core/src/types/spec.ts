@@ -55,9 +55,6 @@ export type MarkType =
   | 'calendar'
   | 'parliament';
 
-/** @deprecated Use MarkType instead. Kept for internal migration references. */
-export type ChartType = MarkType;
-
 // ---------------------------------------------------------------------------
 // Gradient definitions (Vega-aligned)
 // ---------------------------------------------------------------------------
@@ -500,25 +497,17 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * - 'center': center stacks around zero (streamgraph style)
    * - null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)
    *
-   * **Defaults differ by chart type:**
-   * - **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.
-   * - **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)
-   *   to opt into stacked areas. Each overlapping series renders as a translucent
-   *   gradient band anchored at the y-domain baseline.
+   * **Defaults (v8, Vega-Lite aligned):**
+   * - **Bar/Column/Area**: defaults to stacked (`'zero'`). Set `stack: null` for grouped/overlap.
    * - **Line**: stacking is not applied (lines always overlap).
    *
-   * **v8 note:** the multi-series bar/area default realigns with Vega-Lite
-   * (stacked, `'zero'`) in v8. Relying on the implicit default emits a
-   * compile warning in v7; set `stack` explicitly (`null` for
-   * grouped/overlap, `'zero'` for stacked) to keep the current rendering.
+   * @example
+   * // Grouped horizontal bars (opt-out; default is stacked):
+   * "x": { "field": "revenue", "type": "quantitative", "stack": null }
    *
    * @example
-   * // Stacked horizontal bars (opt-in; default is grouped):
-   * "x": { "field": "revenue", "type": "quantitative", "stack": "zero" }
-   *
-   * @example
-   * // Stacked area (opt-in; default is overlap):
-   * "y": { "field": "value", "type": "quantitative", "stack": "zero" }
+   * // Overlapping area (opt-out; default is stacked):
+   * "y": { "field": "value", "type": "quantitative", "stack": null }
    */
   stack?: boolean | 'zero' | 'normalize' | 'center' | null;
   /**
@@ -665,12 +654,6 @@ export interface Encoding<TData extends DataRow = DataRow> {
    */
   opacity?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
-   * Point shape encoding.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Differentiate series with `color` or `strokeDash` instead.
-   */
-  shape?: EncodingChannel<TData>;
-  /**
    * Stroke dash pattern encoding. Maps a nominal/ordinal field to different
    * dash patterns on line and rule marks. Useful when color alone doesn't
    * distinguish series well.
@@ -689,32 +672,13 @@ export interface Encoding<TData extends DataRow = DataRow> {
    */
   tooltip?: EncodingChannel<TData> | EncodingChannel<TData>[];
   /**
-   * Hyperlink encoding.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Handle link navigation in the host application instead.
-   */
-  href?: EncodingChannel<TData>;
-  /**
-   * Drawing order.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Use `sort` on the relevant channel or pre-sorted data order instead.
-   */
-  order?: EncodingChannel<TData>;
-  /**
-   * Angular position (slice value) for arc marks (pie/donut), the Vega-Lite
-   * pie idiom. Waffle marks accept it too (the same part-to-whole value
-   * channel). Accepted as an alias for `y`: when `y` is absent, `theta` is
-   * used as the slice value. When both are present, `y` wins and `theta` is
-   * ignored with a compile warning. `theta` becomes the canonical arc value
-   * channel in v8. Not used by any other mark type.
+   * Angular position (slice value) for arc marks (pie/donut), waffle, and
+   * parliament marks (part-to-whole value channel). Canonical since v8.
+   * `y` is accepted as a deprecated alias: when `theta` is absent, `y` is
+   * rewritten to `theta` with a deprecation warning. When both are present,
+   * `theta` wins. Not used by any other mark type.
    */
   theta?: EncodingChannel<TData>;
-  /**
-   * Radial distance from center for arc marks.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Use `mark.innerRadius` / `mark.outerRadius` to control donut radii.
-   */
-  radius?: EncodingChannel<TData>;
   /**
    * Facet channel: partitions data into a grid of small-multiple panels.
    * Each unique value of the facet field produces one panel. Panels share
@@ -1486,13 +1450,11 @@ export interface Metric {
 
 /**
  * Encoding for arc marks (pie/donut charts).
- * - `y`: required (quantitative — the slice value)
+ * - `theta`: canonical value channel (quantitative, the slice value)
  * - `color`: required (nominal/ordinal — the category)
- * - `theta`: optional (defaults to `y` channel)
- * - `radius`: optional (donut inner radius)
+ * - `y`: deprecated alias for `theta`, accepted via spec-sugar rewrite
  */
 export interface ArcEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
-  y: EncodingChannel<TData>;
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
 }
 
@@ -1584,8 +1546,7 @@ export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding
 /**
  * Encoding for waffle marks (unit grids for part-to-whole counts).
  * - `color`: required (nominal/ordinal, the category)
- * - `theta`: the quantitative share, the same part-to-whole value channel
- *   arc marks use. Alias for `y`; provide one of the two.
+ * - `theta`: canonical value channel (quantitative share); `y` is a deprecated alias
  */
 export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
@@ -1594,8 +1555,7 @@ export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encodin
 /**
  * Encoding for parliament marks (hemicycle seat-dot charts).
  * - `color`: required (nominal/ordinal, the party)
- * - `theta`: the quantitative seat count, the same part-to-whole value
- *   channel arc/waffle marks use. Alias for `y`; provide one of the two.
+ * - `theta`: canonical value channel (quantitative seat count); `y` is a deprecated alias
  */
 export interface ParliamentEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
@@ -2651,9 +2611,6 @@ export function isAxislessMark(markType: MarkType): boolean {
     markType === 'parliament'
   );
 }
-
-/** @deprecated Use MARK_TYPES instead. */
-export const CHART_TYPES = MARK_TYPES;
 
 /**
  * Extract the mark type string from a mark field (string or MarkDef).

@@ -58,7 +58,7 @@ function makeGroupedBarSpec(): NormalizedChartSpec {
       { category: 'Q3', value: 70, region: 'West' },
     ],
     encoding: {
-      x: { field: 'value', type: 'quantitative' },
+      x: { field: 'value', type: 'quantitative', stack: null },
       y: { field: 'category', type: 'nominal' },
       color: { field: 'region', type: 'nominal' },
     },
@@ -214,7 +214,7 @@ describe('computeBarMarks', () => {
     });
   });
 
-  describe('grouped bars (default)', () => {
+  describe('grouped bars (stack: null)', () => {
     it('produces marks for all data rows', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
@@ -329,7 +329,7 @@ describe('computeBarMarks', () => {
         markDef: { type: 'bar' },
         data,
         encoding: {
-          x: { field: 'dollars', type: 'quantitative' },
+          x: { field: 'dollars', type: 'quantitative', stack: null },
           y: { field: 'district', type: 'nominal' },
           color: { field: 'source', type: 'nominal' },
         },
@@ -473,7 +473,7 @@ describe('computeBarMarks', () => {
           x: {
             field: 'pay',
             type: 'quantitative',
-            ...(stackZero ? { stack: 'zero' } : {}),
+            stack: stackZero ? 'zero' : null,
           },
           y: { field: 'size', type: 'nominal' },
           color: { field: 'year', type: 'nominal' },
@@ -487,7 +487,7 @@ describe('computeBarMarks', () => {
       };
     }
 
-    it('groups by default: bars sit at different y positions within each category', () => {
+    it('groups with stack:null: bars sit at different y positions within each category', () => {
       const spec = makeWageSpec(false);
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
@@ -500,7 +500,7 @@ describe('computeBarMarks', () => {
       expect(smallFirmMarks[0].y).not.toBe(smallFirmMarks[1].y);
     });
 
-    it('groups by default: scale domain covers max individual value, not stacked sum', () => {
+    it('groups with stack:null: scale domain covers max individual value, not stacked sum', () => {
       const spec = makeWageSpec(false);
       const scales = computeScales(spec, chartArea, spec.data);
 

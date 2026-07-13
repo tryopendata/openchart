@@ -327,14 +327,14 @@ describe('theta on arc marks', () => {
     expect(warned()).toEqual([]);
   });
 
-  it('warns once and ignores theta when y is also present', () => {
-    compileChart(
+  it('warns and uses theta when both y and theta are present (theta wins)', () => {
+    const layout = compileChart(
       {
         mark: 'arc',
         data,
         encoding: {
           y: { field: 'amount', type: 'quantitative' },
-          theta: { field: 'category', type: 'quantitative' },
+          theta: { field: 'amount', type: 'quantitative' },
           color: { field: 'category', type: 'nominal' },
         },
       },
@@ -342,7 +342,28 @@ describe('theta on arc marks', () => {
     );
     const messages = warned().filter((m) => m.includes('encoding.theta'));
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('v8');
+    expect(messages[0]).toContain('theta wins');
+    const arcs = layout.marks.filter((m) => m.type === 'arc');
+    expect(arcs.length).toBe(2);
+  });
+
+  it('warns when y is used as a deprecated alias for theta on arc marks', () => {
+    const layout = compileChart(
+      {
+        mark: 'arc',
+        data,
+        encoding: {
+          y: { field: 'amount', type: 'quantitative' },
+          color: { field: 'category', type: 'nominal' },
+        },
+      },
+      OPTIONS,
+    );
+    const messages = warned().filter((m) => m.includes('encoding.y on arc'));
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain('encoding.theta');
+    const arcs = layout.marks.filter((m) => m.type === 'arc');
+    expect(arcs.length).toBe(2);
   });
 });
 
@@ -607,7 +628,7 @@ describe('deprecation warnings', () => {
     'shape',
     'href',
     'order',
-  ] as const)('warns exactly once for the dead %s channel, naming the removal version', (channel) => {
+  ] as const)('warns exactly once for the removed %s channel, naming v8', (channel) => {
     compileChart(
       {
         ...base,
@@ -617,7 +638,7 @@ describe('deprecation warnings', () => {
     );
     const messages = warned().filter((m) => m.includes(`encoding.${channel}`));
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('v8');
+    expect(messages[0]).toContain('removed in v8');
   });
 
   it('warns once for $schema and strips it', () => {
@@ -649,7 +670,7 @@ describe('deprecation warnings', () => {
     );
     const messages = warned().filter((m) => m.includes('stack'));
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('v8');
+    expect(messages[0]).toContain('stacked');
   });
 
   it('warns for a multi-series area relying on the implicit stack default', () => {

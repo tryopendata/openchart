@@ -72,22 +72,22 @@ describe('bar encoding rules', () => {
     expect(getOptionalChannels('bar')).toContain('y2');
   });
 
-  it('supports opacity, tooltip, href, order, detail', () => {
+  it('supports opacity, tooltip, detail', () => {
     const optionals = getOptionalChannels('bar');
     expect(optionals).toContain('opacity');
     expect(optionals).toContain('tooltip');
-    expect(optionals).toContain('href');
-    expect(optionals).toContain('order');
     expect(optionals).toContain('detail');
   });
 
-  it('does not support shape, strokeDash, text, theta, radius', () => {
+  it('does not support removed channels (shape, href, order, radius) or irrelevant ones', () => {
     const channels = getChannelNames('bar');
     expect(channels).not.toContain('shape');
+    expect(channels).not.toContain('href');
+    expect(channels).not.toContain('order');
+    expect(channels).not.toContain('radius');
     expect(channels).not.toContain('strokeDash');
     expect(channels).not.toContain('text');
     expect(channels).not.toContain('theta');
-    expect(channels).not.toContain('radius');
   });
 });
 
@@ -104,14 +104,15 @@ describe('line encoding rules', () => {
     expect(getOptionalChannels('line')).toContain('strokeDash');
   });
 
-  it('does not support shape, text, theta, radius, x2, y2', () => {
+  it('does not support text, theta, x2, y2, or removed channels', () => {
     const channels = getChannelNames('line');
-    expect(channels).not.toContain('shape');
     expect(channels).not.toContain('text');
     expect(channels).not.toContain('theta');
-    expect(channels).not.toContain('radius');
     expect(channels).not.toContain('x2');
     expect(channels).not.toContain('y2');
+    expect(channels).not.toContain('href');
+    expect(channels).not.toContain('order');
+    expect(channels).not.toContain('radius');
   });
 });
 
@@ -127,8 +128,8 @@ describe('point encoding rules', () => {
     }
   });
 
-  it('supports shape as optional', () => {
-    expect(getOptionalChannels('point')).toContain('shape');
+  it('does not have removed shape channel', () => {
+    expect(getChannelNames('point')).not.toContain('shape');
   });
 
   it('supports size as optional quantitative', () => {
@@ -139,7 +140,7 @@ describe('point encoding rules', () => {
 });
 
 describe('arc encoding rules', () => {
-  it('requires y (quantitative) and color (nominal/ordinal)', () => {
+  it('requires y (quantitative, internally) and color (nominal/ordinal)', () => {
     const rules = MARK_ENCODING_RULES.arc;
     expect(rules.y.required).toBe(true);
     expect(rules.y.allowedTypes).toContain('quantitative');
@@ -147,10 +148,13 @@ describe('arc encoding rules', () => {
     expect(rules.color.allowedTypes).toContain('nominal');
   });
 
-  it('supports theta and radius as optional', () => {
+  it('supports theta as optional (rewritten to y by spec-sugar before validation)', () => {
     const optionals = getOptionalChannels('arc');
     expect(optionals).toContain('theta');
-    expect(optionals).toContain('radius');
+  });
+
+  it('does not have removed radius channel', () => {
+    expect(getChannelNames('arc')).not.toContain('radius');
   });
 });
 
@@ -193,11 +197,10 @@ describe('tick encoding rules', () => {
     expect(getRequiredChannels('tick')).toContain('y');
   });
 
-  it('supports opacity, tooltip, href, detail', () => {
+  it('supports opacity, tooltip, detail', () => {
     const optionals = getOptionalChannels('tick');
     expect(optionals).toContain('opacity');
     expect(optionals).toContain('tooltip');
-    expect(optionals).toContain('href');
     expect(optionals).toContain('detail');
   });
 });
@@ -208,12 +211,11 @@ describe('rect encoding rules', () => {
     expect(getRequiredChannels('rect')).toContain('y');
   });
 
-  it('supports x2, y2, opacity, order', () => {
+  it('supports x2, y2, opacity', () => {
     const optionals = getOptionalChannels('rect');
     expect(optionals).toContain('x2');
     expect(optionals).toContain('y2');
     expect(optionals).toContain('opacity');
-    expect(optionals).toContain('order');
   });
 });
 
@@ -258,7 +260,7 @@ describe('beeswarm encoding rules', () => {
 });
 
 describe('waffle encoding rules', () => {
-  it('requires a quantitative y (the share value) and a categorical color', () => {
+  it('requires y (quantitative, internally) and a categorical color', () => {
     const rules = MARK_ENCODING_RULES.waffle;
     expect(rules.y.required).toBe(true);
     expect(rules.y.allowedTypes).toEqual(['quantitative']);
@@ -267,7 +269,7 @@ describe('waffle encoding rules', () => {
     expect(rules.color.allowedTypes).toContain('ordinal');
   });
 
-  it('accepts theta as an optional quantitative channel (arc parity)', () => {
+  it('supports theta as optional (rewritten to y by spec-sugar before validation)', () => {
     const rules = MARK_ENCODING_RULES.waffle;
     expect(rules.theta?.required).toBe(false);
     expect(rules.theta?.allowedTypes).toEqual(['quantitative']);
@@ -303,33 +305,6 @@ describe('common channels across marks', () => {
       const rules = MARK_ENCODING_RULES[type];
       if (rules.tooltip) {
         expect(rules.tooltip.required).toBe(false);
-      }
-    }
-  });
-
-  it('href is optional on all mark types that have it', () => {
-    const allTypes: MarkType[] = [
-      'bar',
-      'line',
-      'area',
-      'point',
-      'circle',
-      'arc',
-      'text',
-      'rule',
-      'tick',
-      'rect',
-      'lollipop',
-      'beeswarm',
-      'range',
-      'waffle',
-      'calendar',
-      'parliament',
-    ];
-    for (const type of allTypes) {
-      const rules = MARK_ENCODING_RULES[type];
-      if (rules.href) {
-        expect(rules.href.required).toBe(false);
       }
     }
   });

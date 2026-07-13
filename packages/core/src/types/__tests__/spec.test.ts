@@ -8,7 +8,6 @@ import type {
   VizSpec,
 } from '../spec';
 import {
-  CHART_TYPES,
   isChartSpec,
   isGraphSpec,
   isRangeAnnotation,
@@ -171,10 +170,6 @@ describe('MARK_TYPES', () => {
     expect(MARK_TYPES.has('table')).toBe(false);
     expect(MARK_TYPES.has('graph')).toBe(false);
     expect(MARK_TYPES.has('map')).toBe(false);
-  });
-
-  it('CHART_TYPES is an alias for MARK_TYPES', () => {
-    expect(CHART_TYPES).toBe(MARK_TYPES);
   });
 });
 

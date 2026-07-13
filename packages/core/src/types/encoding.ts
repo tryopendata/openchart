@@ -28,15 +28,11 @@ export interface EncodingRule {
   y2?: ChannelRule;
   color: ChannelRule;
   size: ChannelRule;
-  shape?: ChannelRule;
   opacity?: ChannelRule;
   strokeDash?: ChannelRule;
   text?: ChannelRule;
   tooltip?: ChannelRule;
-  href?: ChannelRule;
-  order?: ChannelRule;
   theta?: ChannelRule;
-  radius?: ChannelRule;
   detail: ChannelRule;
 }
 
@@ -90,8 +86,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   line: {
@@ -102,8 +96,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   area: {
@@ -114,8 +106,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   point: {
@@ -123,11 +113,8 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     y: required('quantitative', 'temporal', 'nominal', 'ordinal'),
     color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional('quantitative'),
-    shape: optional('nominal', 'ordinal'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   circle: {
@@ -137,8 +124,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   lollipop: {
@@ -148,8 +133,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   beeswarm: {
@@ -159,8 +142,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   // Range: x+x2 with nominal y (horizontal) or y+y2 with nominal x (vertical).
@@ -175,10 +156,11 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
+  // arc: theta is the canonical value channel (v8). Internally y stays
+  // required because spec-sugar rewrites theta -> y before validation;
+  // the user-facing truth is theta=required, shown in llms.txt.
   arc: {
     x: optional(),
     y: required('quantitative'),
@@ -186,12 +168,10 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
-    radius: optional('quantitative'),
     detail: optional('nominal'),
   },
+  // waffle: same theta->y rewrite as arc/parliament.
   waffle: {
     x: optional(),
     y: required('quantitative'),
@@ -199,15 +179,14 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
     detail: optional('nominal'),
   },
   // parliament: hemicycle seat chart. Like arc/waffle, no positional axes;
-  // color is the party (required), theta the seat count (aliased to y in the
-  // sugar pass). y is accepted so the theta alias resolves before the rules
-  // check runs.
+  // color is the party (required), theta the seat count (canonical since v8).
+  // y is accepted as a deprecated alias, rewritten to theta in spec-sugar.
+  // Internally y stays required because spec-sugar rewrites theta -> y before
+  // validation; the user-facing truth is theta=required, shown in llms.txt.
   parliament: {
     x: optional(),
     y: required('quantitative'),
@@ -215,8 +194,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     theta: optional('quantitative'),
     detail: optional('nominal'),
   },
@@ -228,7 +205,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     text: required(),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
   rule: {
@@ -241,7 +217,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
   tick: {
@@ -251,7 +226,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
   rect: {
@@ -263,8 +237,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
-    order: optional('quantitative', 'ordinal'),
     detail: optional('nominal'),
   },
   // calendar: x is the daily date (temporal), color the per-day value
@@ -278,13 +250,9 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    href: optional(),
     detail: optional('nominal'),
   },
 };
-
-/** @deprecated Use MARK_ENCODING_RULES instead. */
-export const CHART_ENCODING_RULES = MARK_ENCODING_RULES;
 
 // ---------------------------------------------------------------------------
 // Graph encoding rules

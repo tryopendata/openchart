@@ -55,7 +55,7 @@ function makeGroupedColumnSpec(): NormalizedChartSpec {
     ],
     encoding: {
       x: { field: 'month', type: 'nominal' },
-      y: { field: 'sales', type: 'quantitative' },
+      y: { field: 'sales', type: 'quantitative', stack: null },
       color: { field: 'region', type: 'nominal' },
     },
     chrome: {},
@@ -193,7 +193,7 @@ describe('computeColumnMarks', () => {
     });
   });
 
-  describe('grouped columns (default)', () => {
+  describe('grouped columns (stack: null)', () => {
     it('produces marks for all data rows', () => {
       const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);

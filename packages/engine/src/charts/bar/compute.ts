@@ -138,14 +138,10 @@ export function computeBarMarks(
     const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
     if (needsStacking) {
-      // stack: true/'zero'/'normalize'/'center' -> stacked; default (undefined/null/false) -> grouped
-      const stackEnabled =
-        xChannel.stack === true ||
-        xChannel.stack === 'zero' ||
-        xChannel.stack === 'normalize' ||
-        xChannel.stack === 'center';
+      // v8: default is stacked (VL aligned). null/false -> grouped; undefined/true/'zero'/etc -> stacked
+      const stackDisabled = xChannel.stack === null || xChannel.stack === false;
 
-      if (!stackEnabled) {
+      if (stackDisabled) {
         marks = computeGroupedBars(
           spec.data,
           xChannel.field,
