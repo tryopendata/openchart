@@ -30,6 +30,7 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import type { NormalizedBarListSpec } from '../barlist/types';
+import type { NormalizedMapSpec } from '../geo/types';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
 
@@ -193,6 +194,7 @@ export type NormalizedSpec =
   | NormalizedGraphSpec
   | NormalizedSankeySpec
   | NormalizedTileMapSpec
+  | NormalizedMapSpec
   | NormalizedBarListSpec;
 
 // ---------------------------------------------------------------------------

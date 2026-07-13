@@ -20,6 +20,7 @@ import type {
   GraphSpec,
   LabelSpec,
   LayerSpec,
+  MapSpec,
   MarkDef,
   SankeySpec,
   TableSpec,
@@ -31,6 +32,7 @@ import {
   isChartSpec,
   isGraphSpec,
   isLayerSpec,
+  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -38,6 +40,7 @@ import {
   resolveMarkType,
 } from '@opendata-ai/openchart-core';
 import type { NormalizedBarListSpec } from '../barlist/types';
+import type { NormalizedMapSpec } from '../geo/types';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import { STATE_CODE_SET } from '../tilemap/layout';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
@@ -577,6 +580,26 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
   };
 }
 
+function normalizeMapSpec(spec: MapSpec, _warnings: string[]): NormalizedMapSpec {
+  return {
+    type: 'map',
+    geo: {
+      features: spec.geo.features,
+      idField: spec.geo.idField ?? 'id',
+      projection: spec.geo.projection ?? 'albersUsa',
+    },
+    data: spec.data,
+    encoding: spec.encoding,
+    chrome: normalizeChrome(spec.chrome),
+    legend: spec.legend,
+    theme: spec.theme ?? {},
+    darkMode: spec.darkMode ?? 'off',
+    watermark: spec.watermark ?? true,
+    animation: spec.animation,
+    valueFormat: spec.valueFormat,
+  };
+}
+
 function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): NormalizedBarListSpec {
   return {
     type: 'barlist',
@@ -631,12 +654,15 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   if (isTileMapSpec(spec)) {
     return normalizeTileMapSpec(spec, warnings);
   }
+  if (isMapSpec(spec)) {
+    return normalizeMapSpec(spec, warnings);
+  }
   if (isBarListSpec(spec)) {
     return normalizeBarListSpec(spec, warnings);
   }
   // Should never happen after validation
   throw new Error(
-    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', type: 'tilemap', or type: 'barlist'.`,
+    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', type: 'tilemap', type: 'map', or type: 'barlist'.`,
   );
 }
 

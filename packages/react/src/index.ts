@@ -45,6 +45,7 @@ export type {
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
+  NormalizedMapSpec,
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
@@ -60,6 +61,7 @@ export {
   compileBarList,
   compileChart,
   compileGraph,
+  compileMap,
   compileSankey,
   compileTable,
   compileTileMap,
@@ -89,6 +91,8 @@ export type { UseTableReturn } from './hooks/useTable';
 export { useTable } from './hooks/useTable';
 export type { UseTableStateOptions, UseTableStateReturn } from './hooks/useTableState';
 export { useTableState } from './hooks/useTableState';
+export type { MapHandle, MapProps } from './Map';
+export { GeoMap } from './Map';
 export type { SankeyHandle, SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeContext';

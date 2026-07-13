@@ -9,6 +9,7 @@ import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core
 import {
   isBarListSpec,
   isGraphSpec,
+  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -18,6 +19,7 @@ import { BarList } from './BarList';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
+import { GeoMap } from './Map';
 import { Sankey } from './Sankey';
 import { TileMap } from './TileMap';
 
@@ -72,6 +74,9 @@ export const Visualization = defineComponent({
       }
       if (isBarListSpec(spec)) {
         return h(BarList, { ...sharedProps, spec });
+      }
+      if (isMapSpec(spec)) {
+        return h(GeoMap, { ...sharedProps, spec });
       }
       return h(Chart, { ...sharedProps, spec });
     };

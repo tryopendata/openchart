@@ -251,6 +251,22 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'charts--scrollytelling--fixture-re-encoded',
     note: 'Story step 4: y re-encoded to per-capita (crossfade path), retitled.',
   },
+  // --- Map (choropleth) ---
+  {
+    name: 'map-us-states-light',
+    slug: 'testing--fixtures-maps--us-states-light',
+    note: 'US state choropleth, pre-projected Albers, light mode, sequential color ramp.',
+  },
+  {
+    name: 'map-us-states-dark',
+    slug: 'testing--fixtures-maps--us-states-dark',
+    note: 'Same US state choropleth with darkMode: force.',
+  },
+  {
+    name: 'map-world-equal-earth',
+    slug: 'testing--fixtures-maps--world-equal-earth',
+    note: 'World countries equal-earth projection, GDP per capita sequential fill.',
+  },
   // --- Parliament (hemicycle) + election set (plan 22) ---
   {
     name: 'parliament-us-house',

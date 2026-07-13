@@ -13,7 +13,15 @@
  */
 
 import type { VizSpec } from '@opendata-ai/openchart-core';
-import { BarList, Chart, DataTable, Graph, Sankey, TileMap } from '@opendata-ai/openchart-react';
+import {
+  BarList,
+  Chart,
+  DataTable,
+  GeoMap,
+  Graph,
+  Sankey,
+  TileMap,
+} from '@opendata-ai/openchart-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -63,6 +71,8 @@ function renderViz(spec: VizSpec) {
         return <Sankey spec={spec} />;
       case 'tilemap':
         return <TileMap spec={spec} />;
+      case 'map':
+        return <GeoMap spec={spec} />;
       case 'barlist':
         return <BarList spec={spec} />;
     }

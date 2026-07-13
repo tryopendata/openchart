@@ -1547,12 +1547,23 @@ export function validateSpec(spec: unknown): ValidationResult {
   const isGraph = obj.type === 'graph';
   const isSankey = obj.type === 'sankey';
   const isTileMap = obj.type === 'tilemap';
+  const isMap = obj.type === 'map';
   const isBarList = obj.type === 'barlist';
-  const isLayer = hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList;
+  const isLayer =
+    hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isMap && !isBarList;
   const isChart =
-    hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList;
+    hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isMap && !isBarList;
 
-  if (!isChart && !isTable && !isGraph && !isSankey && !isTileMap && !isBarList && !isLayer) {
+  if (
+    !isChart &&
+    !isTable &&
+    !isGraph &&
+    !isSankey &&
+    !isTileMap &&
+    !isMap &&
+    !isBarList &&
+    !isLayer
+  ) {
     // Near-misses for VL composition operators that are unsupported by decision
     if ('hconcat' in obj || 'vconcat' in obj) {
       const key = 'hconcat' in obj ? 'hconcat' : 'vconcat';
@@ -1590,10 +1601,10 @@ export function validateSpec(spec: unknown): ValidationResult {
       errors: [
         {
           message:
-            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap/barlist',
+            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap/map/barlist',
           path: 'mark',
           code: 'MISSING_FIELD',
-          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field (type: "table", type: "graph", type: "sankey", type: "tilemap", or type: "barlist"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
+          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field (type: "table", type: "graph", type: "sankey", type: "tilemap", type: "map", or type: "barlist"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
         },
       ],
       normalized: null,

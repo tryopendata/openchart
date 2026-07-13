@@ -14,6 +14,7 @@ import type {
   ElementEdit,
   GraphSpec,
   LayerSpec,
+  MapSpec,
   MarkEvent,
   SankeySpec,
   SortState,
@@ -75,6 +76,16 @@ export interface SankeyProps {
   onlinkclick?: (link: Record<string, unknown>) => void;
   onnodehover?: (node: Record<string, unknown> | null) => void;
   onlinkhover?: (link: Record<string, unknown> | null) => void;
+  class?: string;
+  style?: string;
+}
+
+export interface MapProps {
+  spec: MapSpec;
+  theme?: ThemeConfig;
+  darkMode?: DarkMode;
+  onmarkclick?: (event: MarkEvent) => void;
+  onmarkhover?: (event: MarkEvent) => void;
   class?: string;
   style?: string;
 }

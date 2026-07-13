@@ -18,6 +18,8 @@
   "devDependencies": {
     "@ladle/react": "^5.1.1",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "us-atlas": "^3.0.1",
+    "world-atlas": "^2.0.2"
   }
 }
