@@ -30,6 +30,9 @@ const textAnnotationSpec: ChartSpec = {
     y: { field: 'rate', type: 'quantitative', axis: { title: 'CPI, year-over-year (%)' } },
   },
   annotations: [
+    // The peak sits at the very top of the plot, so "above the point" lands in
+    // the chrome band. Hang the block off the LEFT of the peak instead: the
+    // upper-left plot region (2021, above the line's climb) is open whitespace.
     {
       type: 'text',
       x: '2022-07-01',
@@ -37,17 +40,20 @@ const textAnnotationSpec: ChartSpec = {
       text: 'Inflation peaked at **8.5%**',
       subtitle: 'July 2022 — a 40-year high',
       dot: true,
-      anchor: 'top',
-      offset: { dx: 0, dy: -28 },
+      anchor: 'left',
+      offset: { dx: -28, dy: -4 },
     },
+    // Right of the trough the line runs flat well ABOVE 0.5 for a year, so a
+    // right-anchored label at the point's own height sits in clear space and the
+    // leader stays horizontal — no line crossings.
     {
       type: 'text',
       x: '2020-04-01',
       y: 0.3,
       text: 'Pandemic trough',
       dot: { radius: 4, stroke: ACCENT },
-      anchor: 'top',
-      offset: { dx: 12, dy: -18 },
+      anchor: 'right',
+      offset: { dx: 8, dy: -4 },
     },
   ],
   chrome: {
@@ -84,27 +90,33 @@ const connectorsSpec: ChartSpec = {
       connector: { type: 'curve', arrow: true },
     },
     // Straight connector, arrow opted out (the default for straight).
+    // Points at the mid-2024 plateau, with the block hung in the empty trough
+    // under the 2024–2025 stretch of the line. Anywhere near the chart's
+    // bottom-left corner fights the drop-line's label for the same space and
+    // gets it demoted to a footnote.
     {
       type: 'text',
-      x: '2023-01-01',
-      y: 19.52,
+      x: '2024-07-01',
+      y: 116.97,
       text: 'Straight, no arrow',
       subtitle: 'connector: { type: "straight", arrow: false }',
       dot: true,
-      anchor: 'top',
-      offset: { dx: 40, dy: -84 },
+      anchor: 'right',
+      offset: { dx: 0, dy: 55 },
       connector: { type: 'straight', arrow: false },
     },
     // Drop-line: a vertical guide through the point's x (never takes an arrow).
+    // NOT at the 2025 peak: the peak touches the plot top, the drop-line label
+    // has no headroom there, and auto-thinning demotes it to a footnote. The
+    // Oct 2023 dip has a tall clear column above it.
     {
       type: 'text',
-      x: '2025-10-01',
-      y: 202.48,
+      x: '2023-10-01',
+      y: 40.75,
       text: 'Drop-line',
       subtitle: 'connector: "drop-line"',
       dot: true,
-      anchor: 'top',
-      offset: { dx: -20, dy: -44 },
+      anchor: 'left',
       connector: 'drop-line',
     },
   ],
@@ -131,6 +143,9 @@ const richTextSpec: ChartSpec = {
     y: { field: 'jobs', type: 'quantitative', axis: { title: 'Jobs added (thousands)' } },
   },
   annotations: [
+    // Lift the block clear of the Sep/Nov bar tops and their value labels: at
+    // dy -150 it sat right on "254"/"227". Above ~300K the right half of the
+    // plot is open, and the leader drops through the empty October column.
     {
       type: 'text',
       x: 'Oct',
@@ -138,7 +153,7 @@ const richTextSpec: ChartSpec = {
       text: 'Hurricanes and a strike cut\nOctober to **12,000 jobs**',
       dot: true,
       anchor: 'top',
-      offset: { dy: -150 },
+      offset: { dx: -100, dy: -190 },
       connector: { type: 'curve', arrow: true },
     },
     {
@@ -148,7 +163,7 @@ const richTextSpec: ChartSpec = {
       text: 'The year opened at **353,000**',
       dot: true,
       anchor: 'right',
-      offset: { dx: 4, dy: -10 },
+      offset: { dx: 8, dy: -18 },
     },
   ],
   chrome: {
@@ -180,6 +195,8 @@ const ledeSpec: ChartSpec = {
       anchor: 'left',
       offset: { dx: -16, dy: -22 },
     },
+    // Shifted left so the subtitle's right end clears the line rising through
+    // the 1990s — centered on the point, "0.3°C" sat directly on the curve.
     {
       type: 'text',
       x: '1980',
@@ -188,7 +205,7 @@ const ledeSpec: ChartSpec = {
       subtitle: 'anomalies stayed under **0.3°C**',
       dot: true,
       anchor: 'top',
-      offset: { dx: 0, dy: -30 },
+      offset: { dx: -60, dy: -26 },
     },
   ],
   chrome: {
@@ -219,16 +236,24 @@ const rangeSpec: ChartSpec = {
       x2: '2023-01-01',
       label: 'The inflation surge',
       labelAnchor: 'top',
+      // Centered, the label sits right on the CPI peak — the curve clips the
+      // tail of the text. Shift left onto the rising slope, where the line is
+      // still well below label height.
+      labelOffset: { dx: -70, dy: -6 },
       fill: '#d1495b',
       opacity: 0.1,
     },
     // y-band: a horizontal region marking the Fed's 2% target zone.
+    // labelOffset drops the label into the band's lower half — at the band top
+    // it sat directly on the CPI line entering the plot at ~1.5%. Not all the
+    // way to the band floor, though: there it runs into the "0" axis tick.
     {
       type: 'range',
       y1: 0,
       y2: 2,
       label: 'Target band (0–2%)',
       labelAnchor: 'left',
+      labelOffset: { dx: 6, dy: 20 },
       fill: ACCENT,
       opacity: 0.1,
     },
@@ -293,7 +318,9 @@ const reflineSpec: ChartSpec = {
   },
   labels: { density: 'none' },
   annotations: [
-    // Horizontal target line, dashed.
+    // Horizontal target line, dashed. At the right edge the label sat on the
+    // Nov/Dec bars; slide it into the Jun–Aug valley, where the line runs
+    // clear above every bar top.
     {
       type: 'refline',
       y: 216,
@@ -302,8 +329,13 @@ const reflineSpec: ChartSpec = {
       stroke: '#64748b',
       strokeWidth: 1,
       labelAnchor: 'right',
+      labelOffset: { dx: -245 },
     },
-    // Horizontal threshold, dotted, styled as a soft floor.
+    // Horizontal threshold, dotted, styled as a soft floor. Every bar except
+    // October crosses the 100K line, and October's gap has the storm-marker
+    // line running through it, so there is no bar-free stretch at label height.
+    // Park the label in the Jun–Aug valley above the bar tops instead; the red
+    // text ties it to the red dotted line below it.
     {
       type: 'refline',
       y: 100,
@@ -312,6 +344,7 @@ const reflineSpec: ChartSpec = {
       stroke: '#d1495b',
       strokeWidth: 1,
       labelAnchor: 'left',
+      labelOffset: { dx: 381, dy: -30 },
     },
     // Vertical marker with a raw strokeDash override (takes precedence over style).
     {
