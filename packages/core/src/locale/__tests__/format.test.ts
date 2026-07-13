@@ -49,7 +49,7 @@ describe('formatNumber', () => {
 
   it('still uses ,.2f for normal-sized decimals', () => {
     expect(formatNumber(0.5)).toBe('0.50');
-    expect(formatNumber(3.14159)).toBe('3.14');
+    expect(formatNumber(3.14567)).toBe('3.15');
   });
 });
 

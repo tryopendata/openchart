@@ -169,7 +169,7 @@ export function formatPercent(value: number, options?: { fraction?: boolean }): 
   if (fraction) {
     return d3Format('.1~%')(value);
   }
-  return d3Format(',.1~f')(value) + '%';
+  return `${d3Format(',.1~f')(value)}%`;
 }
 
 export function formatCurrency(value: number, options?: { compact?: boolean }): string {
@@ -179,9 +179,9 @@ export function formatCurrency(value: number, options?: { compact?: boolean }): 
 
   if (compact) {
     if (abs >= 1000) {
-      return sign + '$' + abbreviateNumber(abs);
+      return `${sign}$${abbreviateNumber(abs)}`;
     }
-    return sign + '$' + formatNumber(abs);
+    return `${sign}$${formatNumber(abs)}`;
   }
   if (Number.isInteger(value)) {
     return sign + d3Format('$,')(abs);
@@ -271,7 +271,7 @@ export function resolveNumberFormatter(
       const stepFmt = buildCompactStepFormatter(ctx.step);
       return (v: number) => {
         const sign = v < 0 ? '-' : '';
-        return sign + '$' + stepFmt(Math.abs(v));
+        return `${sign}$${stepFmt(Math.abs(v))}`;
       };
     }
     return (v: number) => formatCurrency(v, { compact: !isTable });
