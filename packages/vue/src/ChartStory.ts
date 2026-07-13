@@ -104,6 +104,14 @@ export const ChartStory = defineComponent({
     onMounted(() => {
       const mount = mountRef.value;
       if (!mount) return;
+
+      const blocks = props.narrative ?? [];
+      if (blocks.length > 0 && blocks.length !== props.steps.length) {
+        console.warn(
+          `[openchart] ChartStory: narrative length (${blocks.length}) does not match steps length (${props.steps.length}). Each step should have a corresponding narrative element.`,
+        );
+      }
+
       story = createChartStory(
         mount,
         {

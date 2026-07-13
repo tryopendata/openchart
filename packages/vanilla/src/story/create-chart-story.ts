@@ -106,14 +106,10 @@ export function createChartStory<TData extends DataRow = DataRow>(
     );
   }
 
-  if (isMap) {
-    for (let i = 0; i < steps.length; i++) {
-      if (steps[i].camera) {
-        console.warn(
-          `[openchart] step[${i}].camera is ignored for map stories. Drive the map camera via geo.focus patches in the spec instead.`,
-        );
-      }
-    }
+  if (isMap && steps.some((s) => s.camera)) {
+    console.warn(
+      '[openchart] step.camera is ignored for map stories. Drive the map camera via geo.focus patches in the spec instead.',
+    );
   }
 
   const editModeRequested = !!(
@@ -136,11 +132,14 @@ export function createChartStory<TData extends DataRow = DataRow>(
   // Branch: map vs chart mount
   let instance: ChartInstance | MapInstance;
   if (isMap) {
-    const mapOpts: MapMountOptions = {};
-    if (mountOptions?.theme) mapOpts.theme = mountOptions.theme;
-    if (mountOptions?.darkMode) mapOpts.darkMode = mountOptions.darkMode;
-    if (mountOptions?.watermark !== undefined) mapOpts.watermark = mountOptions.watermark;
-    mapOpts.responsive = mountOptions?.responsive;
+    // Not a spread: MapMountOptions callback signatures differ from MountOptions.
+    // When adding fields to MapMountOptions, check if they should transfer here.
+    const mapOpts: MapMountOptions = {
+      theme: mountOptions?.theme,
+      darkMode: mountOptions?.darkMode,
+      watermark: mountOptions?.watermark,
+      responsive: mountOptions?.responsive,
+    };
     instance = createMap(container, initialSpec as MapSpec, mapOpts);
   } else {
     instance = createChart(container, initialSpec as Exclude<StorySpec, MapSpec>, mountOptions);

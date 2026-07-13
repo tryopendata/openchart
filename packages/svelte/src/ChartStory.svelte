@@ -46,6 +46,12 @@ const stepEls: Array<HTMLElement | null> = $state([]);
 let story: ChartStoryInstance | null = null;
 
 onMount(() => {
+  if (narrative.length !== steps.length) {
+    console.warn(
+      `[openchart] ChartStory: narrative length (${narrative.length}) does not match steps length (${steps.length}). Each step should have a corresponding narrative element.`,
+    );
+  }
+
   story = createChartStory(
     mountEl,
     {

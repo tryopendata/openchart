@@ -111,6 +111,12 @@ export function ChartStory<TData extends DataRow = DataRow>({
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const storyRef = useRef<ChartStoryInstance | null>(null);
 
+  if (narrative.length !== steps.length) {
+    console.warn(
+      `[openchart] ChartStory: narrative length (${narrative.length}) does not match steps length (${steps.length}). Each step should have a corresponding narrative element.`,
+    );
+  }
+
   // Mount once; the vanilla driver owns updates so React never re-mounts on
   // spec/step churn (matching the <Chart /> imperative-update pattern).
   const optionsRef = useRef<{

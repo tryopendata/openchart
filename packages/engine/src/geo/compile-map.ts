@@ -196,7 +196,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       legendBlockHeight = continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
     }
   } else if (showLegend) {
-    legendBlockHeight = 10 + 6; // swatch + gap
+    const labelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+    legendBlockHeight = Math.max(10, labelHeight) + 6;
   }
   const legendReserveGap = legendBlockHeight > 0 ? 8 : 0;
 
@@ -212,7 +213,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
 
   // 10. Check winding order (skip for identity: geoArea uses spherical math
   // and gives false positives on planar pre-projected coordinates)
-  if (projectionType !== 'identity')
+  if (projectionType !== 'identity') {
     for (const feat of geoFeatures) {
       const area = geoArea(feat);
       if (area > 2 * Math.PI) {
@@ -230,6 +231,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
         });
       }
     }
+  }
 
   // 11. Join data to features
   const featureObjs = geoFeatures.map((f) => ({
@@ -411,7 +413,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // 19. Animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(mapSpec.animation);
 
-  // 20. Content height
+  // 20. Anchor bottom chrome below the map + legend, then compute total height
+  chrome.bottomAnchorY = fullArea.y + fullArea.height;
   const contentHeight =
     fullArea.y +
     mapAreaHeight +
@@ -419,9 +422,6 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     legendBlockHeight +
     chrome.bottomHeight +
     padding;
-
-  // Anchor bottom chrome below the map + legend
-  chrome.bottomAnchorY = fullArea.y + fullArea.height;
 
   // 21. Emit compile warnings
   for (const w of compileWarnings) {
@@ -531,12 +531,16 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     const props = feat.properties as Record<string, unknown> | null;
     const name = (props?.name as string) ?? (props?.NAME as string);
 
-    // Compute projected geometry
+    // Compute projected geometry (guard non-finite bounds from degenerate features)
     const b = pathGen.bounds(feat);
+    const bx = Number.isFinite(b[0][0]) ? b[0][0] : 0;
+    const by = Number.isFinite(b[0][1]) ? b[0][1] : 0;
+    const bw = Number.isFinite(b[1][0]) ? b[1][0] - bx : 0;
+    const bh = Number.isFinite(b[1][1]) ? b[1][1] - by : 0;
+    const bounds = { x: bx, y: by, width: bw, height: bh };
     const rawCentroid = pathGen.centroid(feat);
-    const bounds = { x: b[0][0], y: b[0][1], width: b[1][0] - b[0][0], height: b[1][1] - b[0][1] };
-    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bounds.x + bounds.width / 2;
-    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : bounds.y + bounds.height / 2;
+    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bx + bw / 2;
+    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : by + bh / 2;
 
     marks.push({
       type: 'map-feature',
@@ -651,12 +655,16 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     const props = feat.properties as Record<string, unknown> | null;
     const name = (props?.name as string) ?? (props?.NAME as string);
 
-    // Compute projected geometry
+    // Compute projected geometry (guard non-finite bounds from degenerate features)
     const b = pathGen.bounds(feat);
+    const bx = Number.isFinite(b[0][0]) ? b[0][0] : 0;
+    const by = Number.isFinite(b[0][1]) ? b[0][1] : 0;
+    const bw = Number.isFinite(b[1][0]) ? b[1][0] - bx : 0;
+    const bh = Number.isFinite(b[1][1]) ? b[1][1] - by : 0;
+    const bounds = { x: bx, y: by, width: bw, height: bh };
     const rawCentroid = pathGen.centroid(feat);
-    const bounds = { x: b[0][0], y: b[0][1], width: b[1][0] - b[0][0], height: b[1][1] - b[0][1] };
-    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bounds.x + bounds.width / 2;
-    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : bounds.y + bounds.height / 2;
+    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bx + bw / 2;
+    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : by + bh / 2;
 
     marks.push({
       type: 'map-feature',
