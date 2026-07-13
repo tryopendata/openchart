@@ -57,9 +57,7 @@ export function cameraForTarget(layout: MapLayout, target?: CameraTarget | null)
   const vb = layout.mapSize;
   if (!target) return fitTarget(FULL_VIEW(vb), vb);
   const cam = fitTarget(target, vb);
-  // Clamp zoom to [1, 40]
-  cam.k = Math.max(1, Math.min(40, cam.k));
-  return cam;
+  return { ...cam, k: Math.max(1, Math.min(40, cam.k)) };
 }
 
 /**

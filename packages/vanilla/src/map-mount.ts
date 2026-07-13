@@ -106,10 +106,12 @@ export interface MapInstance {
 // ---------------------------------------------------------------------------
 
 function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
-  );
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
 }
 
 function resolveDarkMode(mode?: DarkMode): boolean {
@@ -393,7 +395,7 @@ export function createMap(
     }
 
     // Re-apply camera transform after render if zoomed or focused
-    if (currentCamera.k > 1 + 1e-3 || currentFocusIds) {
+    if (currentCamera.k > 1 + 1e-3 || (currentFocusIds && currentFocusIds.length > 0)) {
       applyMapCamera(newSvg, currentCamera, currentLayout);
     }
 
@@ -424,10 +426,9 @@ export function createMap(
       measureText = createMeasureText(fontFamily);
     }
 
-    // Capture current fills before re-render
-    const shouldAnimate =
-      !animationCleanup && currentLayout.animation?.update && !prefersReducedMotion();
-    const prevFills = shouldAnimate ? captureFeatureFills(svgElement) : null;
+    // Capture fills optimistically; gate the tween on the *new* layout's animation config after compile
+    const canAnimate = !animationCleanup && !prefersReducedMotion();
+    const prevFills = canAnimate ? captureFeatureFills(svgElement) : null;
 
     // Remember previous focus to detect changes
     const prevFocusIds = currentFocusIds ? currentFocusIds.map(String).sort().join(',') : null;
@@ -436,9 +437,9 @@ export function createMap(
     currentLayout = compile();
     render();
 
-    // Run fill tween if conditions met
+    // Run fill tween if the *new* layout enables update animation
     if (
-      shouldAnimate &&
+      canAnimate &&
       prevFills &&
       prevFills.size > 0 &&
       svgElement &&

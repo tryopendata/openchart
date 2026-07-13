@@ -8,9 +8,7 @@
  */
 
 import { interpolateRgb } from 'd3-interpolate';
-
-const EASE_IN_OUT_CUBIC = (t: number): number =>
-  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+import { easingFns } from './story/tween';
 
 export function captureFeatureFills(svg: SVGElement | null): Map<string, string> {
   const fills = new Map<string, string>();
@@ -44,7 +42,10 @@ export function runMapFillTransition(
     }
   }
 
-  if (tweens.length === 0) return { cancel: () => {} };
+  if (tweens.length === 0 || opts.duration <= 0) {
+    for (const tw of tweens) tw.el.setAttribute('fill', tw.to);
+    return { cancel: () => {} };
+  }
 
   const duration = opts.duration;
   let startTime: number | null = null;
@@ -56,7 +57,7 @@ export function runMapFillTransition(
     if (startTime === null) startTime = now;
     const elapsed = now - startTime;
     const t = Math.min(1, elapsed / duration);
-    const eased = EASE_IN_OUT_CUBIC(t);
+    const eased = easingFns.easeInOutCubic(t);
 
     for (const tw of tweens) {
       tw.el.setAttribute('fill', tw.interp(eased));
