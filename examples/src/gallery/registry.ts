@@ -32,8 +32,10 @@ import { page as theming } from './features-theming.demos';
 import { page as graphs } from './graphs.demos';
 import { page as playground } from './playground.demos';
 import { page as sankeyTileMaps } from './sankey-tilemaps.demos';
+import { page as scrollytelling } from './scrollytelling.demos';
 import { page as showcase } from './showcase.demos';
 import { page as tables } from './tables.demos';
+import { page as youDrawIt } from './you-draw-it.demos';
 
 export type Demo = { id: string; title: string };
 
@@ -64,6 +66,8 @@ export const GALLERY: PageEntry[] = [
   theming,
   responsive,
   dataEncoding,
+  youDrawIt,
+  scrollytelling,
   showcase,
   playground,
 ];

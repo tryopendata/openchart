@@ -24,5 +24,7 @@ export const page: PageEntry = {
     { id: 'facet-shared', title: 'Small multiples (shared scale)' },
     { id: 'facet-independent', title: 'Independent scales' },
     { id: 'formatters', title: 'Number and date formats' },
+    { id: 'fill-patterns', title: 'Fill patterns' },
+    { id: 'dash-encoding', title: 'Dash encoding' },
   ],
 };

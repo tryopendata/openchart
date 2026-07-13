@@ -18,6 +18,7 @@ import { Demo, GalleryPage, Section } from '../components';
 import {
   commuteTimes,
   costOfLiving,
+  electricityMixMatrix,
   electricityShareChange,
   emissionsRenewables,
   lifeExpectancyChange,
@@ -716,6 +717,33 @@ const calendarSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 15. Rect heatmap — two categorical axes + sequential color
+// ---------------------------------------------------------------------------
+
+const heatmapSpec: ChartSpec = {
+  animation: true,
+  mark: 'rect',
+  data: [...electricityMixMatrix.data],
+  encoding: {
+    x: { field: 'year', type: 'nominal' },
+    y: { field: 'source', type: 'nominal' },
+    color: {
+      field: 'share',
+      type: 'quantitative',
+      scale: { scheme: 'blues' },
+      format: '.1f',
+    },
+  },
+  chrome: {
+    title: "Gas Rose as Coal's Share Halved",
+    subtitle:
+      'Share of US electricity generation by source (%), 2016-2023. Darker cells = larger share.',
+    source: electricityMixMatrix.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -809,6 +837,20 @@ export const ScatterAndDistribution = () => (
       lede="A calendar heatmap trades axes for a date grid: one cell per day, colored by that day's value. It reads seasonality, streaks, and gaps at a glance the way a line chart can't."
     >
       <Demo id="calendar-heatmap" spec={calendarSpec} height={340} />
+    </Section>
+
+    <Section
+      id="heatmap"
+      title="Heatmap"
+      lede="The rect mark puts one cell per row on a two-way categorical grid. A sequential color channel maps a quantitative value to intensity — the standard matrix read for source-by-year or feature-by-feature."
+    >
+      <Demo
+        id="rect-heatmap"
+        title="Rect heatmap"
+        description="Two nominal axes (source, year) and a quantitative color channel produce a matrix heatmap. The diagonal of coal falling and gas rising reads at a glance."
+        spec={heatmapSpec}
+        height={380}
+      />
     </Section>
 
     <Section

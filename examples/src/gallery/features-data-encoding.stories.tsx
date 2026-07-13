@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import {
   co2Emissions,
+  energyMix,
   gdpGrowthByCountry,
   marathonFinishTimes,
   nvidiaStock,
@@ -379,6 +380,50 @@ const formatSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 9. Fill patterns — accessibility: mark.fillPattern assigns per-series SVG
+// patterns so series remain distinguishable without color
+// ---------------------------------------------------------------------------
+
+const fillPatternSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'bar', fillPattern: 'auto' },
+  data: [...energyMix.data],
+  encoding: {
+    x: { field: 'year', type: 'ordinal' },
+    y: { field: 'energy', type: 'quantitative', stack: 'zero', axis: { title: 'Share (%)' } },
+    color: { field: 'source', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Pattern Fills Make Series Readable Without Color',
+    subtitle:
+      'Global primary energy mix (share of total, %). Each series gets a unique hatch pattern alongside its color.',
+    source: energyMix.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 10. Dash encoding — strokeDash maps a nominal field to dash patterns on lines
+// ---------------------------------------------------------------------------
+
+const dashEncodingSpec: ChartSpec = {
+  mark: 'line',
+  data: [...gdpGrowthByCountry.data],
+  encoding: {
+    x: { field: 'date', type: 'temporal', axis: { format: '%Y' } },
+    y: { field: 'gdp', type: 'quantitative', axis: { title: 'GDP growth (%)' } },
+    strokeDash: { field: 'country', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Dash Patterns Distinguish Series in Monochrome',
+    subtitle:
+      'Annual real GDP growth by country. Each country gets a distinct dash pattern via the strokeDash channel.',
+    source: gdpGrowthByCountry.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -482,6 +527,27 @@ export const DataAndEncoding = () => (
       lede="Number and date formats are d3-format / d3-time-format strings, set per channel or per axis. Axis and tooltip can format the same field differently."
     >
       <Demo id="formatters" spec={formatSpec} height={420} />
+    </Section>
+
+    <Section
+      id="accessibility"
+      title="Accessibility encoding"
+      lede="Fill patterns and dash patterns add a second visual channel that works without color, for print, grayscale, and colorblind readers."
+    >
+      <Demo
+        id="fill-patterns"
+        title="Fill patterns"
+        description="mark.fillPattern: 'auto' assigns a unique hatch, dot, or crosshatch pattern to each series. Patterns overlay the color fill so the chart remains readable in grayscale."
+        spec={fillPatternSpec}
+        height={460}
+      />
+      <Demo
+        id="dash-encoding"
+        title="Dash encoding"
+        description="The strokeDash channel maps a nominal field to distinct dash patterns on line marks, differentiating series without relying on color alone."
+        spec={dashEncodingSpec}
+        height={420}
+      />
     </Section>
   </GalleryPage>
 );

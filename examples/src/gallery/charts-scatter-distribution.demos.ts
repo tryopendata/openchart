@@ -24,6 +24,7 @@ export const page: PageEntry = {
     { id: 'strip-plot', title: 'Tick / strip plot' },
     { id: 'beeswarm', title: 'Beeswarm' },
     { id: 'calendar-heatmap', title: 'Calendar heatmap' },
+    { id: 'rect-heatmap', title: 'Rect heatmap' },
     { id: 'range-dumbbell', title: 'Dumbbell (range mark)' },
     { id: 'arrow-plot', title: 'Arrow plot' },
     { id: 'range-bar', title: 'Range bar' },

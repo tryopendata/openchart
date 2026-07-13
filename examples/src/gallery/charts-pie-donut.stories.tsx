@@ -415,6 +415,35 @@ const parliamentSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 10. Half-donut — partial arc sweep via startAngle/endAngle
+// ---------------------------------------------------------------------------
+
+const halfDonutSpec: ChartSpec = {
+  animation: true,
+  mark: {
+    type: 'arc',
+    innerRadius: 0.55,
+    startAngle: -Math.PI / 2,
+    endAngle: Math.PI / 2,
+  },
+  data: [...usHouse.data],
+  encoding: {
+    theta: { field: 'seats', type: 'quantitative' },
+    color: {
+      field: 'party',
+      type: 'nominal',
+      scale: { domain: ['Democratic', 'Republican'], range: [...usHouse.colors] },
+    },
+  },
+  chrome: {
+    title: 'A Half-Donut of Chamber Control',
+    subtitle: '435 House seats rendered as a 180-degree arc via startAngle/endAngle.',
+    source: usHouse.source,
+    byline: 'Chart: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -503,6 +532,20 @@ export const PieAndDonut = () => (
         description="The parliament mark seats a legislature as a fan of dots, one per seat. It is the honest read for chamber control: a 51-49 split looks like a near-tie, not a landslide the way an arc might exaggerate."
         spec={parliamentSpec}
         height={460}
+      />
+    </Section>
+
+    <Section
+      id="partial-sweep"
+      title="Partial sweep"
+      lede="Restrict the arc to less than a full circle with startAngle/endAngle. A 180-degree half-donut is a classic election viz — the midpoint maps to the majority threshold."
+    >
+      <Demo
+        id="half-donut"
+        title="Half-donut (election arc)"
+        description="startAngle: -PI/2 and endAngle: PI/2 restrict the donut to the top semicircle. The midpoint lines up with the 218-seat majority line, so the visual balance reads as political balance."
+        spec={halfDonutSpec}
+        height={420}
       />
     </Section>
 
