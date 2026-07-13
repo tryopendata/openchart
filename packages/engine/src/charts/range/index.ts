@@ -43,10 +43,12 @@ export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, 
 
   const startField = startChannel && 'field' in startChannel ? startChannel.field : undefined;
   const endField = endChannel && 'field' in endChannel ? endChannel.field : undefined;
+  const startValues = startField ? spec.data.map((r) => r[startField]) : [];
+  const endValues = endField ? spec.data.map((r) => r[endField]) : [];
   const labelFormatter = resolveFieldFormatter({
     surfaceFormat: spec.labels.format,
     channelFormat: startChannel && 'format' in startChannel ? startChannel.format : undefined,
-    values: startField ? spec.data.map((r) => r[startField]) : [],
+    values: [...startValues, ...endValues],
   });
   const labels = computeRangeLabels(
     pairs,

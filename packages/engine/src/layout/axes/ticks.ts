@@ -7,7 +7,6 @@
 
 import type { AxisLabelDensity, AxisTick, DataRow } from '@opendata-ai/openchart-core';
 import {
-  buildD3Formatter,
   buildTemporalFormatter,
   formatDate,
   resolveNumberFormatter,
@@ -156,8 +155,6 @@ function formatTickLabel(
       };
       const fmt = resolveNumberFormatter(formatStr, ctx);
       if (fmt) return fmt(num) + suffix;
-      const d3Fmt = buildD3Formatter(formatStr);
-      if (d3Fmt) return d3Fmt(num) + suffix;
     }
     const fmt = resolveFieldFormatter({
       channelFormat: resolvedScale.channel.format,

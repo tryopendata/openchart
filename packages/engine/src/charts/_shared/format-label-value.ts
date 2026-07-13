@@ -8,7 +8,9 @@
 import type { FieldFormatContext } from '@opendata-ai/openchart-core';
 import { defaultNumberFormatter } from '@opendata-ai/openchart-core';
 
+const defaultFmt = defaultNumberFormatter();
+
 /** Format a label value for display (compact by default). */
 export function formatLabelValue(value: number, ctx?: FieldFormatContext): string {
-  return defaultNumberFormatter(ctx)(value);
+  return (ctx ? defaultNumberFormatter(ctx) : defaultFmt)(value);
 }

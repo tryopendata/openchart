@@ -7,6 +7,8 @@
 import type { EndpointLabelContent, NumberFormatter } from '@opendata-ai/openchart-core';
 import { defaultNumberFormatter } from '@opendata-ai/openchart-core';
 
+const defaultFmt = defaultNumberFormatter();
+
 /**
  * Format a value for an endpoint label. When a pre-built formatter is
  * supplied (resolved from the spec's format/encoding), it is used directly.
@@ -20,7 +22,7 @@ export function formatEndpointValue(
   if (value == null) return '';
   if (typeof value === 'string') return value;
   if (formatter) return formatter(value);
-  return defaultNumberFormatter()(value);
+  return defaultFmt(value);
 }
 
 /**

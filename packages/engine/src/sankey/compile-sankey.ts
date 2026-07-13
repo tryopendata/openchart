@@ -613,9 +613,11 @@ function buildSankeyLegend(
 // Tooltip builder
 // ---------------------------------------------------------------------------
 
+const defaultFmt = defaultNumberFormatter();
+
 function formatFlowValue(value: number, formatter?: NumberFormatter | null): string {
   if (formatter) return formatter(value);
-  return defaultNumberFormatter()(value);
+  return defaultFmt(value);
 }
 
 function buildTooltipDescriptors(

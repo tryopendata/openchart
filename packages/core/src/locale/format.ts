@@ -69,7 +69,8 @@ export function abbreviateNumber(value: number): string {
     const { threshold, suffix, divisor } = UNIT_TABLE[i];
     if (absValue >= threshold) {
       const mantissa = d3Format('.1~f')(absValue / divisor);
-      // Roll-up: if mantissa rounds to 1000, use the next unit up
+      // Roll-up: if mantissa rounds to 1000, use the next unit up.
+      // When i === 0 (T), there's no larger unit so we emit "1000T".
       if (mantissa === '1000' && i > 0) {
         return `${sign}1${UNIT_TABLE[i - 1].suffix}`;
       }
@@ -259,6 +260,10 @@ export function resolveNumberFormatter(
   if (formatStr === 'ordinal') return formatOrdinal;
 
   if (formatStr === 'percent') {
+    // Heuristic: if all values fit in [0,1] (maxAbs <= 1), treat them as
+    // fractions (0.45 -> "45%"). Values > 1 are treated as pre-scaled
+    // (45 -> "45%"). Datasets like [0, 0.5, 1.1] are ambiguous; the <= 1
+    // threshold errs on the side of the most common convention (fractions).
     const fraction = ctx?.extent
       ? Math.max(Math.abs(ctx.extent[0]), Math.abs(ctx.extent[1])) <= 1
       : true;
@@ -299,7 +304,12 @@ export function defaultNumberFormatter(ctx?: FieldFormatContext): NumberFormatte
 
   return (v: number) => {
     if (!Number.isFinite(v)) return String(v);
-    // Contextless per-value year check (ARIA path)
+    // When no context is provided (ARIA marks, standalone helpers) we
+    // fall back to a per-value year heuristic: integers in [1500, 2500]
+    // render bare. This trades false positives on non-year integers
+    // (e.g. "connections: 2024") for avoiding "2k" on actual year axes.
+    // Callers with field context should always pass it to get the
+    // field-level isYearContext check instead.
     if (ctx?.extent === undefined && ctx?.allIntegers === undefined) {
       if (Number.isInteger(v) && v >= 1500 && v <= 2500) return String(v);
     }

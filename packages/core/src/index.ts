@@ -164,7 +164,6 @@ export {
   formatOrdinal,
   formatPercent,
   isYearContext,
-  isYearLikeValues,
   resolveNumberFormatter,
 } from './locale/index';
 

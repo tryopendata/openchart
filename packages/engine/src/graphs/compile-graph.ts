@@ -35,7 +35,7 @@ import { applyCommunityColors, assignCommunities, buildCommunityColorMap } from 
 import { resolveEdgeVisuals, resolveNodeVisuals } from './encoding';
 import type { CompiledGraphNode, GraphCompilation, SimulationConfig } from './types';
 
-const graphNumberFormatter = defaultNumberFormatter();
+const graphNumberFormatter = defaultNumberFormatter({ allIntegers: false, surface: 'chart' });
 
 // ---------------------------------------------------------------------------
 // Constants
