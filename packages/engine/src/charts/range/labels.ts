@@ -16,11 +16,11 @@
 import type {
   LabelCandidate,
   LabelDensity,
+  NumberFormatter,
   PointMark,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
-  buildD3Formatter,
   estimateTextWidth,
   getRepresentativeColor,
   resolveCollisions,
@@ -125,7 +125,7 @@ export function computeRangeLabels(
   horizontal: boolean,
   density: LabelDensity = 'auto',
   labelPrefix?: string,
-  labelFormat?: string,
+  labelFormatter?: NumberFormatter | null,
   startField?: string,
   endField?: string,
 ): ResolvedLabel[] {
@@ -133,7 +133,7 @@ export function computeRangeLabels(
 
   const indexed = pairs.map((pair, pairIndex) => ({ pair, pairIndex }));
   const targetPairs = filterByDensity(indexed, density);
-  const formatter = buildD3Formatter(labelFormat);
+  const formatter = labelFormatter ?? null;
   const candidates: LabelCandidate[] = [];
 
   for (const { pair, pairIndex } of targetPairs) {

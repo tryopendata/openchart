@@ -9,15 +9,15 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   AXIS_TITLE_TRAILING_PAD,
-  abbreviateNumber,
   BREAKPOINT_COMPACT_MAX,
+  computeFieldFormatContext,
+  defaultNumberFormatter,
   estimateTextWidth,
-  formatNumber,
   getAxisTitleOffset,
+  resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
 } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { flattenLayers } from '../compiler/index';
@@ -75,9 +75,16 @@ export function compileLayer(
   // axes. Freeze the primary's area (and inherit its theme) for every leaf.
   const leafOptions: CompileOptions = { ...options, frozenChartArea: primaryLayout.area };
 
+  // Shared scales means shared *domains*, not just a shared plot rect. Each leaf
+  // otherwise re-fits its own domain from its own rows, so a layer holding fewer
+  // or narrower rows than its siblings (a label layer naming only the notable
+  // points, say) lands on a different scale and its marks slide off the ones
+  // they annotate. Union the quantitative domains across every leaf and pin them.
+  const sharedDomains = computeSharedDomains(leaves);
+
   for (const { leaf } of indexedLeaves) {
     const themedLeaf = {
-      ...(leaf as ChartSpec),
+      ...withSharedDomains(leaf as ChartSpec, sharedDomains),
       theme: (leaf as ChartSpec).theme ?? spec.theme,
       darkMode: (leaf as ChartSpec).darkMode ?? spec.darkMode,
     };
@@ -96,13 +103,20 @@ export function compileLayer(
     }
   }
 
+  const mergedLegend = {
+    ...primaryLayout.legend,
+    ...('entries' in pLegend ? { entries: mergedLegendEntries } : {}),
+  } as typeof primaryLayout.legend;
+
   return {
     ...primaryLayout,
     marks: allMarks,
-    legend: {
-      ...primaryLayout.legend,
-      ...('entries' in pLegend ? { entries: mergedLegendEntries } : {}),
-    } as typeof primaryLayout.legend,
+    legend: mergedLegend,
+    // `legends` is what the renderer iterates, so the merged color legend has to
+    // land in it too. Spreading `primaryLayout` alone would leave legends[0] as
+    // the *pre-merge* legend and every leaf past the first would vanish from the
+    // rendered key while `layout.legend` claimed otherwise.
+    legends: [mergedLegend, ...primaryLayout.legends.slice(1)],
   };
 }
 
@@ -142,18 +156,15 @@ function estimateYAxisLabelWidth(
     const v = Number(row[yField]);
     if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
   }
+  const ctx = computeFieldFormatContext(data.map((r) => r[yField]));
   let sampleLabel: string;
   if (yAxisFormat) {
-    try {
-      const fmt = d3Format(yAxisFormat);
-      sampleLabel = fmt(maxAbsVal);
-    } catch {
-      sampleLabel = String(maxAbsVal);
-    }
+    const fmt = resolveNumberFormatter(yAxisFormat, ctx);
+    sampleLabel = fmt ? fmt(maxAbsVal) : String(maxAbsVal);
   } else {
-    // Use the same formatting as tick labels instead of hardcoded magnitude guesses
-    sampleLabel =
-      Math.abs(maxAbsVal) >= 1000 ? abbreviateNumber(maxAbsVal) : formatNumber(maxAbsVal);
+    sampleLabel = defaultNumberFormatter({ ...ctx, extent: ctx.extent ?? [0, maxAbsVal] })(
+      maxAbsVal,
+    );
   }
   const hasNeg = data.some((r) => Number(r[yField]) < 0);
   const labelEst = (hasNeg ? '-' : '') + sampleLabel;
@@ -382,6 +393,11 @@ function compileLayerIndependent(
   const marks =
     z0 <= z1 ? [...adjustedMarks0, ...taggedMarks1] : [...taggedMarks1, ...adjustedMarks0];
 
+  const mergedLegend = {
+    ...layout0.legend,
+    ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
+  } as typeof layout0.legend;
+
   return {
     ...layout0,
     axes: {
@@ -390,10 +406,10 @@ function compileLayerIndependent(
       y2: y2Axis,
     },
     marks,
-    legend: {
-      ...layout0.legend,
-      ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
-    } as typeof layout0.legend,
+    legend: mergedLegend,
+    // See the note in compileLayer: the renderer reads `legends`, so the merged
+    // legend must replace the primary's entry there as well.
+    legends: [mergedLegend, ...layout0.legends.slice(1)],
     tooltipDescriptors: mergedTooltips,
   };
 }
@@ -506,6 +522,86 @@ function withYDomain(leaf: ChartSpec, domain: [number, number]): ChartSpec {
       },
     },
   } as ChartSpec;
+}
+
+type SharedDomains = { x?: [number, number]; y?: [number, number] };
+
+/**
+ * Union the quantitative x/y extents across every leaf.
+ *
+ * Only channels that every leaf encodes *quantitatively* are unioned — a leaf
+ * mixing a nominal x with a quantitative one has no common numeric domain, and
+ * an author-pinned `scale.domain` on any leaf is left to win on its own.
+ */
+function computeSharedDomains(leaves: ChartSpec[]): SharedDomains {
+  const shared: SharedDomains = {};
+
+  for (const channel of ['x', 'y'] as const) {
+    let lo = Number.POSITIVE_INFINITY;
+    let hi = Number.NEGATIVE_INFINITY;
+    let sawAny = false;
+    let usable = true;
+
+    for (const leaf of leaves) {
+      const enc = (leaf.encoding as Encoding | undefined)?.[channel];
+      // Skip *this channel* if any leaf can't take part: no encoding, a
+      // non-quantitative type, or a domain the author already pinned. Bailing
+      // out of the whole function here would abandon the other channel too --
+      // a nominal x would silently strand a quantitative y, which is the most
+      // common layered shape there is (bars plus their value labels).
+      if (!enc || !('field' in enc) || enc.type !== 'quantitative' || enc.scale?.domain) {
+        usable = false;
+        break;
+      }
+
+      for (const row of leaf.data ?? []) {
+        const v = Number((row as DataRow)[enc.field]);
+        if (!Number.isFinite(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+        sawAny = true;
+      }
+    }
+
+    if (!usable || !sawAny || lo > hi) continue;
+
+    // Pin the union through zero the way an unpinned scale would.
+    //
+    // `withSharedDomains` writes this extent onto each leaf as `scale.domain`,
+    // and `resolveQuantitativeScale` takes an explicit domain *verbatim* --
+    // skipping the `zero !== false` baselining it would otherwise apply. So a
+    // raw [50, 100] union lands as a literal domain and the 50-bar collapses
+    // to a sliver against its own baseline. Fold zero in here, honouring an
+    // explicit `zero: false` on any leaf (a sparkline opting out of it).
+    const wantsZero = leaves.every((leaf) => {
+      const enc = (leaf.encoding as Encoding | undefined)?.[channel];
+      return enc && 'scale' in enc ? enc.scale?.zero !== false : true;
+    });
+    shared[channel] = wantsZero ? [Math.min(0, lo), Math.max(0, hi)] : [lo, hi];
+  }
+
+  return shared;
+}
+
+/** Pin the shared domains onto a leaf's quantitative x/y channels. */
+function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
+  if (!shared.x && !shared.y) return leaf;
+
+  const encoding = { ...(leaf.encoding as Record<string, unknown>) };
+
+  for (const channel of ['x', 'y'] as const) {
+    const domain = shared[channel];
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (!domain || !ch) continue;
+    encoding[channel] = {
+      ...ch,
+      scale: { ...((ch.scale as object) ?? {}), domain },
+    };
+  }
+
+  // ChartSpec is a union discriminated on `mark`, and spreading widens the
+  // encoding past whichever member `leaf` is, so re-assert the original type.
+  return { ...leaf, encoding } as unknown as ChartSpec;
 }
 
 function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {

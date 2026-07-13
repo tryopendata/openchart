@@ -283,9 +283,9 @@ function makePristineState(): EditableState {
         y: 71.42,
         text: 'Holiday peak:\n$71.4B devices',
         fontSize: 11,
-        anchor: 'top',
+        anchor: 'left',
         connector: true,
-        offset: { dx: 0, dy: -30 },
+        offset: { dx: -110, dy: -50 },
       },
       {
         type: 'text',
@@ -293,9 +293,9 @@ function makePristineState(): EditableState {
         y: 22.17,
         text: 'Cloud overtakes\n2022 devices floor',
         fontSize: 11,
-        anchor: 'top',
+        anchor: 'left',
         connector: true,
-        offset: { dx: 0, dy: 24 },
+        offset: { dx: -30, dy: -34 },
       },
     ],
     chrome: {

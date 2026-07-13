@@ -24,6 +24,7 @@ import type {
   Rect,
   RectMark,
 } from '@opendata-ai/openchart-core';
+import { formatPercent } from '@opendata-ai/openchart-core';
 
 import { serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -162,7 +163,7 @@ export function computeWaffleMarks(
     const category = categories[c];
     const count = cellCounts[c];
     const value = categoryTotals.get(category)!;
-    const percentage = ((value / total) * 100).toFixed(1);
+    const percentStr = total > 0 ? formatPercent(value / total) : '0%';
     const row = categoryRows.get(category)!;
     const catKey = serializeKeyValue(category);
     const fill = getColor(scales, category);
@@ -170,7 +171,7 @@ export function computeWaffleMarks(
     // One SR stop per category: the first cell carries the label, the rest
     // are decorative duplicates (100 cells would drown screen reader users).
     const aria: MarkAria = {
-      label: `${category}: ${count} of ${units} units (${percentage}%)`,
+      label: `${category}: ${count} of ${units} units (${percentStr})`,
     };
 
     for (let k = 0; k < count; k++, cellIndex++) {

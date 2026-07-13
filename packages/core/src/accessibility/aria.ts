@@ -5,6 +5,7 @@
  * users to explore data points individually.
  */
 
+import { defaultNumberFormatter } from '../locale/format';
 import type { Mark } from '../types/layout';
 
 /**
@@ -62,12 +63,13 @@ export function generateAriaLabels(marks: Mark[]): Map<string, string> {
   return labels;
 }
 
-/** Format a data value for use in an ARIA label. */
+const ariaNumberFormatter = defaultNumberFormatter();
+
 function formatValue(value: unknown): string {
   if (value == null) return 'N/A';
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (typeof value === 'number') {
-    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+    return ariaNumberFormatter(value);
   }
   return String(value);
 }

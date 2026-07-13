@@ -174,10 +174,13 @@ export const X_AXIS_TITLE_BAND = 22;
 export const X_AXIS_TITLE_BAND_ROTATED = 20;
 
 /**
- * Ceiling on the vertical extent reserved for rotated x tick labels. Labels
- * whose rotated projection exceeds this clip at the reservation edge, so the
- * angle ladder (engine layout/axes/rotation) avoids -90° for labels longer
- * than this.
+ * Ceiling on the vertical extent reserved for rotated x tick labels. The angle
+ * ladder (engine layout/axes/rotation) avoids -90° for labels longer than this.
+ *
+ * The cap bounds the RESERVATION, so a label whose rotated projection exceeds it
+ * must be truncated to fit — see `truncateRotatedLabel`. Reserving a capped band
+ * while drawing the full string is what let long ticks spill past the axis and
+ * collide with the source line.
  */
 export const X_AXIS_ROTATED_EXTENT_CAP = 120;
 
@@ -188,6 +191,15 @@ export const X_AXIS_ROTATED_EXTENT_CAP = 120;
  * drift apart.
  */
 export const TICK_LINE_HEIGHT_FACTOR = 1.2;
+
+/**
+ * Gap between the axis line and the top of the rotated label band. Mirrors the
+ * tick-mark-to-label offset used for flat labels; keeps the reservation matched
+ * to the drawn footprint across Blink and WebKit, whose rotated-glyph metrics
+ * differ by a couple of pixels. Shared by the extent reservation and the
+ * truncation budget so they stay in lockstep.
+ */
+const AXIS_TO_LABEL_GAP = 3;
 
 export interface XAxisExtentInput {
   labels: string[];
@@ -216,11 +228,6 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
     // unless the text is fully vertical). Measuring only the sin term
     // under-reserved space, letting rotated ticks spill into the source line.
     const lineHeight = input.tickFontSize * TICK_LINE_HEIGHT_FACTOR;
-    // Small gap between the axis line and the top of the rotated label band.
-    // Mirrors the tick-mark-to-label offset used for flat labels; keeps the
-    // reservation matched to the drawn footprint across Blink and WebKit,
-    // whose rotated-glyph metrics differ by a couple of pixels.
-    const AXIS_TO_LABEL_GAP = 3;
     const rotatedHeight = Math.min(
       maxLabelWidth * Math.sin(angleRad) + lineHeight * Math.cos(angleRad) + AXIS_TO_LABEL_GAP,
       X_AXIS_ROTATED_EXTENT_CAP,
@@ -229,4 +236,62 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
   }
 
   return input.hasTitle ? baseHeight + X_AXIS_TITLE_BAND : baseHeight;
+}
+
+/**
+ * The widest a rotated tick label may be before its vertical projection exceeds
+ * `X_AXIS_ROTATED_EXTENT_CAP`.
+ *
+ * Inverts the rotated-extent formula in `computeXAxisExtentFromLabels`:
+ *
+ *   extent = width*sin(θ) + lineHeight*cos(θ) + gap
+ *   width  = (cap - lineHeight*cos(θ) - gap) / sin(θ)
+ *
+ * Deriving it from the same terms (rather than hardcoding a second number) keeps
+ * the truncation budget and the space reservation locked together — if one
+ * changes, the other follows.
+ */
+export function maxRotatedLabelWidth(tickAngle: number, tickFontSize: number): number {
+  const angleRad = Math.abs(tickAngle) * (Math.PI / 180);
+  const sin = Math.sin(angleRad);
+  // A flat (or near-flat) label has no vertical projection to bound.
+  if (sin <= 0.001) return Number.POSITIVE_INFINITY;
+  const lineHeight = tickFontSize * TICK_LINE_HEIGHT_FACTOR;
+  const usable = X_AXIS_ROTATED_EXTENT_CAP - lineHeight * Math.cos(angleRad) - AXIS_TO_LABEL_GAP;
+  return Math.max(0, usable / sin);
+}
+
+/**
+ * Truncate a rotated tick label with an ellipsis so it fits inside the capped
+ * reservation. Returns the label unchanged when it already fits.
+ *
+ * Binary-search on character count against the real measure function, so it
+ * respects proportional fonts rather than assuming a fixed character width.
+ */
+export function truncateRotatedLabel(
+  label: string,
+  tickAngle: number,
+  tickFontSize: number,
+  tickFontWeight: number,
+  measure: (text: string, fontSize: number, fontWeight?: number) => number = estimateTextWidth,
+): string {
+  const budget = maxRotatedLabelWidth(tickAngle, tickFontSize);
+  if (!Number.isFinite(budget)) return label;
+  if (measure(label, tickFontSize, tickFontWeight) <= budget) return label;
+
+  const ELLIPSIS = '…';
+  // Nothing sensible fits: keep a single character + ellipsis rather than
+  // returning an empty tick.
+  let lo = 0;
+  let hi = label.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const candidate = label.slice(0, mid) + ELLIPSIS;
+    if (measure(candidate, tickFontSize, tickFontWeight) <= budget) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return lo > 0 ? label.slice(0, lo).trimEnd() + ELLIPSIS : ELLIPSIS;
 }

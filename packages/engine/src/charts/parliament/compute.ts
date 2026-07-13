@@ -32,6 +32,7 @@ import type {
   RuleMarkLayout,
   TextMarkLayout,
 } from '@opendata-ai/openchart-core';
+import { formatPercent } from '@opendata-ai/openchart-core';
 
 import { serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
@@ -237,7 +238,7 @@ export function computeParliamentMarks(
     const count = partyTotals.get(party) ?? 0;
     if (count <= 0) continue;
     const row = partyRows.get(party)!;
-    const share = ((count / totalSeats) * 100).toFixed(1);
+    const shareStr = totalSeats > 0 ? formatPercent(count / totalSeats) : '0%';
     const fill = getColor(scales, party);
     const partyKey = serializeKeyValue(party);
 
@@ -252,7 +253,7 @@ export function computeParliamentMarks(
       // decorative duplicates (435 seats would drown screen reader users).
       const aria: MarkAria =
         k === 0
-          ? { label: `${party}: ${count} seats (${share}%)` }
+          ? { label: `${party}: ${count} seats (${shareStr})` }
           : { label: `${party} seat`, decorative: true };
 
       const seat: PointMark = {

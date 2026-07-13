@@ -158,20 +158,16 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     tooltip: optional(),
     detail: optional('nominal'),
   },
-  // arc: theta is the canonical value channel (v8). Internally y stays
-  // required because spec-sugar rewrites theta -> y before validation;
-  // the user-facing truth is theta=required, shown in llms.txt.
   arc: {
     x: optional(),
-    y: required('quantitative'),
+    y: optional('quantitative'),
+    theta: required('quantitative'),
     color: required('nominal', 'ordinal'),
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
-    theta: optional('quantitative'),
     detail: optional('nominal'),
   },
-  // waffle: same theta->y rewrite as arc/parliament.
   waffle: {
     x: optional(),
     y: required('quantitative'),
@@ -183,10 +179,9 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     detail: optional('nominal'),
   },
   // parliament: hemicycle seat chart. Like arc/waffle, no positional axes;
-  // color is the party (required), theta the seat count (canonical since v8).
-  // y is accepted as a deprecated alias, rewritten to theta in spec-sugar.
-  // Internally y stays required because spec-sugar rewrites theta -> y before
-  // validation; the user-facing truth is theta=required, shown in llms.txt.
+  // color is the party (required), theta the seat count (aliased to y in the
+  // sugar pass). y is accepted so the theta alias resolves before the rules
+  // check runs.
   parliament: {
     x: optional(),
     y: required('quantitative'),
@@ -253,6 +248,9 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     detail: optional('nominal'),
   },
 };
+
+/** @deprecated Use MARK_ENCODING_RULES instead. */
+export const CHART_ENCODING_RULES = MARK_ENCODING_RULES;
 
 // ---------------------------------------------------------------------------
 // Graph encoding rules

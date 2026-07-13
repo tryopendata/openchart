@@ -501,13 +501,7 @@ export const Dashboards = () => (
       title="Composed dashboard"
       lede="The primitives assembled into one product layout: a 2x2 grid mixing KPI pills, a sparkline tile, and two compact charts. It reflows to a single column on narrow screens."
     >
-      <Demo
-        id="mini-dashboard"
-        title="Mini-dashboard (2x2 grid)"
-        description="One composition — spec-backed charts and custom KPI/sparkline tiles sharing a 2x2 grid — showing how the pieces sit together at product density."
-        specForPanel={composedSectorSpec}
-        height={640}
-      >
+      <Demo id="mini-dashboard" specForPanel={composedSectorSpec} height={640}>
         <ComposedDashboard />
       </Demo>
     </Section>

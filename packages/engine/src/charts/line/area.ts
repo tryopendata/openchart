@@ -4,10 +4,9 @@
  * Uses D3 area() generator to produce AreaMark[] with top/bottom
  * boundary points and SVG path strings.
  *
- * Multi-series behavior (v6 redesign):
- * - Default for multi-series with `color` is **overlap** (one translucent
- *   gradient band per series, layered with low opacity).
- * - Stacked rendering is opt-in via `encoding.y.stack: 'zero' | true | 'normalize' | 'center'`.
+ * Multi-series behavior (v8: VL-aligned defaults):
+ * - Default for multi-series with `color` is **stacked** from a zero baseline.
+ * - Overlap rendering is opt-out via `encoding.y.stack: null | false`.
  * - Single series always renders one gradient-filled area.
  */
 
@@ -39,15 +38,12 @@ const DEFAULT_FILL_OPACITY = 0.15;
 /**
  * Resolve `encoding.y.stack` to a boolean: should we stack this area chart?
  *
- * v8 (VL aligned): default is stacked for multi-series area.
- * - null | false -> overlap
- * - undefined | true | 'zero' | 'normalize' | 'center' -> stacked
+ * Vega-Lite-aligned semantics:
+ * - undefined | true | 'zero' | 'normalize' | 'center' -> stacked (default)
+ * - null | false -> overlap (opt-out)
  */
 function isStacked(stackProp: unknown): boolean {
-  if (stackProp === null || stackProp === false) {
-    return false;
-  }
-  return true;
+  return stackProp !== null && stackProp !== false;
 }
 
 // Gradient stops calibrated by series count. Solo areas can carry richer fills
@@ -445,14 +441,11 @@ function computeStackedArea(
  * Compute area marks from a normalized chart spec.
  *
  * Behavior depends on `encoding.y.stack` (Vega-Lite aligned):
- * - `undefined | null | false` -> overlap (default for multi-series)
- * - `true | 'zero' | 'normalize' | 'center'` -> stacked
+ * - `undefined | true | 'zero' | 'normalize' | 'center'` -> stacked (default for multi-series)
+ * - `null | false` -> overlap
  *
  * Single-series specs always render one gradient-filled area; the `stack`
  * branch only matters when a `color` encoding is present.
- *
- * BREAKING CHANGE (v6): multi-series no longer auto-stacks. Pass
- * `encoding.y.stack: 'zero'` (or `true`) to opt back into the old behavior.
  */
 export function computeAreaMarks(
   spec: NormalizedChartSpec,

@@ -22,6 +22,7 @@ export const page: PageEntry = {
     { id: 'leader-line-labels', title: 'Leader-line labels' },
     { id: 'waffle', title: 'Waffle' },
     { id: 'parliament', title: 'Parliament (hemicycle)' },
+    { id: 'half-donut', title: 'Half-donut (election arc)' },
     { id: 'interactive-donut', title: 'Interactive (hover to read a slice)' },
   ],
 };

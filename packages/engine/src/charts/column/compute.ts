@@ -95,10 +95,10 @@ export function computeColumnMarks(
     const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
     if (needsStacking) {
-      // v8: default is stacked (VL aligned). null/false -> grouped; undefined/true/'zero'/etc -> stacked
-      const stackDisabled = yChannel.stack === null || yChannel.stack === false;
+      // stack: undefined/true/'zero'/'normalize'/'center' -> stacked (default); null/false -> grouped
+      const stackEnabled = yChannel.stack !== null && yChannel.stack !== false;
 
-      if (stackDisabled) {
+      if (!stackEnabled) {
         marks = computeGroupedColumns(
           spec.data,
           xChannel.field,

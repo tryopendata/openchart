@@ -281,7 +281,12 @@ export function renderChartSVG(
       }
     }
 
-    renderLegend(svg, layout.legend);
+    // Every legend, not just the primary: a bubble chart carries a color legend
+    // AND a size legend. Falls back to the singular slot for layouts built by
+    // paths that don't populate `legends` (graph, sankey).
+    for (const legend of layout.legends ?? [layout.legend]) {
+      renderLegend(svg, legend);
+    }
 
     // Chrome renders on top so titles are never obscured by chart elements
     renderChrome(svg, layout);

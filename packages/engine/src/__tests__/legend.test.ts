@@ -419,16 +419,16 @@ describe('computeLegend', () => {
       expect(legend.entries).toHaveLength(3);
     });
 
-    it('suppresses legend for default (overlap) area chart with labels', () => {
-      // v6: area defaults to overlap. Endpoint labels identify series, so
-      // the legend auto-suppresses just like line charts.
+    it('preserves legend for default (stacked) area chart', () => {
+      // v8: area stacks by default (Vega-Lite aligned). Stacked areas keep
+      // the traditional legend rather than auto-suppressing for endpoint labels.
       const areaSpec: NormalizedChartSpec = {
         ...lineWithLabels,
         markType: 'area',
         markDef: { type: 'area' },
       };
       const legend = computeLegend(areaSpec, fullStrategy, theme, chartArea);
-      expect(legend.entries).toHaveLength(0);
+      expect(legend.entries).toHaveLength(3);
     });
 
     it('suppresses legend for explicit overlap area chart (stack: null)', () => {
@@ -651,6 +651,71 @@ describe('computeLegend', () => {
         'Other D/F campus',
       ]);
       expect(legend.entries).toHaveLength(3);
+    });
+  });
+
+  describe('swatch colors match mark colors', () => {
+    const energySpec = {
+      mark: 'waffle' as const,
+      data: [
+        { source: 'Fossil fuels', share: 60 },
+        { source: 'Renewables', share: 30 },
+        { source: 'Nuclear', share: 10 },
+      ],
+      encoding: {
+        theta: { field: 'share', type: 'quantitative' as const },
+        color: { field: 'source', type: 'nominal' as const },
+      },
+    };
+
+    /**
+     * Map each category to the fill its marks actually render with. Waffle
+     * cells carry the category in `data`, not `seriesKey`, so key off the
+     * color field.
+     */
+    function markFillByLabel(layout: ReturnType<typeof compileChart>): Map<string, string> {
+      const fills = new Map<string, string>();
+      for (const mark of layout.marks) {
+        const label = mark.data?.source;
+        const fill = 'fill' in mark ? mark.fill : undefined;
+        if (typeof label === 'string' && typeof fill === 'string') fills.set(label, fill);
+      }
+      return fills;
+    }
+
+    it('mutes the swatches of non-highlighted series alongside their marks', () => {
+      const layout = compileChart(
+        {
+          ...energySpec,
+          encoding: {
+            ...energySpec.encoding,
+            color: { ...energySpec.encoding.color, highlight: 'Renewables' },
+          },
+        },
+        { width: 600, height: 400 },
+      );
+
+      const fills = markFillByLabel(layout);
+      expect(layout.legend.entries.length).toBe(3);
+      for (const entry of layout.legend.entries) {
+        expect(entry.color).toBe(fills.get(entry.label));
+      }
+
+      // The muted pair share one gray; the highlighted series does not.
+      const highlighted = layout.legend.entries.find((e) => e.label === 'Renewables');
+      const muted = layout.legend.entries.filter((e) => e.label !== 'Renewables');
+      expect(muted.map((e) => e.color)).toEqual([muted[0].color, muted[0].color]);
+      expect(highlighted?.color).not.toBe(muted[0].color);
+    });
+
+    it('matches mark colors when no highlight is active', () => {
+      const layout = compileChart(energySpec, { width: 600, height: 400 });
+
+      const fills = markFillByLabel(layout);
+      expect(layout.legend.entries.length).toBe(3);
+      for (const entry of layout.legend.entries) {
+        expect(entry.color).toBe(fills.get(entry.label));
+      }
     });
   });
 });

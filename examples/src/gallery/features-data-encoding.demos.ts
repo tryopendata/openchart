@@ -20,10 +20,11 @@ export const page: PageEntry = {
     { id: 'time-unit', title: 'TimeUnit (seasonal roll-up)' },
     { id: 'conditional-encoding', title: 'Value-driven color' },
     { id: 'linear-gradient', title: 'Linear gradient on bars' },
-    { id: 'radial-gradient', title: 'Radial gradient on a donut' },
     { id: 'area-gradient', title: 'Area fade to transparent' },
     { id: 'facet-shared', title: 'Small multiples (shared scale)' },
     { id: 'facet-independent', title: 'Independent scales' },
     { id: 'formatters', title: 'Number and date formats' },
+    { id: 'fill-patterns', title: 'Fill patterns' },
+    { id: 'dash-encoding', title: 'Dash encoding' },
   ],
 };

@@ -353,6 +353,11 @@ function renderTextMark(mark: TextMarkLayout, index: number): SVGElement {
     'font-size': mark.fontSize,
     'text-anchor': mark.textAnchor,
   });
+  // Only when set: calendar and parliament text marks hand-compute their y
+  // against the default alphabetic baseline, so stamping one would shift them.
+  if (mark.dominantBaseline) {
+    text.setAttribute('dominant-baseline', mark.dominantBaseline);
+  }
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', mark.fill);
   if (mark.fontWeight) {
     text.setAttribute('font-weight', String(mark.fontWeight));

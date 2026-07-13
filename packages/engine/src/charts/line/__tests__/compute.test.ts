@@ -517,7 +517,8 @@ describe('computeAreaMarks', () => {
     expect(seriesKeys).toContain('UK');
   });
 
-  it('stacked (default): multi-series with no explicit stack stacks by default', () => {
+  it('stacked (default): produces multiple AreaMarks for multi-series without an explicit stack', () => {
+    // v8 VL-aligned default: multi-series with color stacks unless `stack: null | false`.
     const spec = makeMultiSeriesSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea);
@@ -526,13 +527,13 @@ describe('computeAreaMarks', () => {
     const seriesKeys = marks.map((m) => m.seriesKey).filter(Boolean);
     expect(seriesKeys).toContain('US');
     expect(seriesKeys).toContain('UK');
-    // Stacked layers should have different baselines
+    // Stacked layers should have different baselines (one stacks on top of the other)
     const firstBottom = marks[0].bottomPoints[0]?.y;
     const secondBottom = marks[1].bottomPoints[0]?.y;
     expect(firstBottom).not.toBe(secondBottom);
   });
 
-  it('overlap (stack: null): every series shares the same baseline', () => {
+  it('overlap (stack: null): every series shares the same baseline (no stacking offset)', () => {
     const spec = makeMultiSeriesSpec();
     spec.encoding.y!.stack = null;
     const scales = computeScales(spec, chartArea, spec.data);
@@ -565,7 +566,7 @@ describe('computeAreaMarks', () => {
     }
   });
 
-  it('overlap: stack: false opts out of stacking', () => {
+  it('stack: false opts into overlap rendering, same as stack: null', () => {
     const spec = makeMultiSeriesSpec();
     spec.encoding.y!.stack = false;
     const scales = computeScales(spec, chartArea, spec.data);
@@ -695,9 +696,11 @@ describe('computeAreaMarks', () => {
       }
     });
 
-    it('sorts unsorted temporal data for overlap (multi-series default)', () => {
+    it('sorts unsorted temporal data for overlap (stack: null)', () => {
+      const base = makeMultiSeriesSpec();
+      base.encoding.y!.stack = null;
       const spec: NormalizedChartSpec = {
-        ...makeMultiSeriesSpec(),
+        ...base,
         data: [
           { date: '2022-01-01', value: 30, country: 'US' },
           { date: '2020-01-01', value: 10, country: 'US' },

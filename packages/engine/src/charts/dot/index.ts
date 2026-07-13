@@ -5,6 +5,7 @@
  */
 
 import type { Mark, PointMark } from '@opendata-ai/openchart-core';
+import { resolveFieldFormatter } from '../../format/field-format';
 import type { ChartRenderer } from '../registry';
 import { computeDotMarks } from './compute';
 import { computeDotLabels } from './labels';
@@ -28,12 +29,18 @@ export const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _t
   // Compute and attach labels to point marks (respects spec.labels.density)
   const valueField =
     spec.encoding?.x && 'field' in spec.encoding.x ? spec.encoding.x.field : undefined;
+  const labelFormatter = resolveFieldFormatter({
+    surfaceFormat: spec.labels.format,
+    channelFormat:
+      spec.encoding?.x && 'format' in spec.encoding.x ? spec.encoding.x.format : undefined,
+    values: valueField ? spec.data.map((r) => r[valueField]) : [],
+  });
   const labels = computeDotLabels(
     pointMarks,
     chartArea,
     spec.labels.density,
     spec.labels.prefix,
-    spec.labels.format,
+    labelFormatter,
     valueField,
   );
   let labelIdx = 0;

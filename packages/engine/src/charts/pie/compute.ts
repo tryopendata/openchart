@@ -16,7 +16,7 @@ import type {
   MarkAria,
   Rect,
 } from '@opendata-ai/openchart-core';
-import { isConditionalDef, isGradientDef } from '@opendata-ai/openchart-core';
+import { formatPercent, isConditionalDef, isGradientDef } from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
 
@@ -282,10 +282,10 @@ export function computePieMarks(
     // Compute centroid (for label positioning), offset to chart center
     const centroidResult = arcGenerator.centroid(arcDatum);
 
-    const percentage = total > 0 ? ((slice.value / total) * 100).toFixed(1) : '0';
+    const percentStr = total > 0 ? formatPercent(slice.value / total) : '0%';
 
     const aria: MarkAria = {
-      label: `${slice.label}: ${slice.value} (${percentage}%)`,
+      label: `${slice.label}: ${slice.value} (${percentStr})`,
     };
 
     marks.push({

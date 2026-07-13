@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   abbreviateNumber,
+  buildCompactStepFormatter,
   buildD3Formatter,
   buildTemporalFormatter,
+  computeFieldFormatContext,
+  defaultNumberFormatter,
+  formatCurrency,
   formatDate,
   formatNumber,
   formatOrdinal,
+  formatPercent,
+  isYearContext,
+  isYearLikeValues,
+  resolveNumberFormatter,
 } from '../format';
 
 describe('formatNumber', () => {
@@ -23,7 +31,7 @@ describe('formatNumber', () => {
 
   it('handles negative numbers', () => {
     // d3-format uses unicode minus sign (U+2212), not ASCII hyphen-minus
-    expect(formatNumber(-1234)).toBe('\u22121,234');
+    expect(formatNumber(-1234)).toBe('−1,234');
   });
 
   it('handles Infinity', () => {
@@ -32,6 +40,16 @@ describe('formatNumber', () => {
 
   it('handles NaN', () => {
     expect(formatNumber(NaN)).toBe('NaN');
+  });
+
+  it('preserves small decimals instead of rounding to 0.00', () => {
+    expect(formatNumber(0.0034)).toBe('0.0034');
+    expect(formatNumber(0.000012)).toBe('0.000012');
+  });
+
+  it('still uses ,.2f for normal-sized decimals', () => {
+    expect(formatNumber(0.5)).toBe('0.50');
+    expect(formatNumber(3.14567)).toBe('3.15');
   });
 });
 
@@ -44,13 +62,13 @@ describe('abbreviateNumber', () => {
     expect(abbreviateNumber(2300000000)).toBe('2.3B');
   });
 
-  it('abbreviates thousands', () => {
-    expect(abbreviateNumber(2300)).toBe('2.3K');
+  it('abbreviates thousands with lowercase k', () => {
+    expect(abbreviateNumber(2300)).toBe('2.3k');
   });
 
   it('drops trailing .0', () => {
     expect(abbreviateNumber(1000000)).toBe('1M');
-    expect(abbreviateNumber(2000)).toBe('2K');
+    expect(abbreviateNumber(2000)).toBe('2k');
   });
 
   it('does not abbreviate small numbers', () => {
@@ -63,6 +81,286 @@ describe('abbreviateNumber', () => {
 
   it('abbreviates trillions', () => {
     expect(abbreviateNumber(1_200_000_000_000)).toBe('1.2T');
+  });
+
+  it('trims 1020000 to 1M', () => {
+    expect(abbreviateNumber(1020000)).toBe('1M');
+  });
+
+  it('renders 18900 as 18.9k', () => {
+    expect(abbreviateNumber(18900)).toBe('18.9k');
+  });
+
+  it('renders 1000 as 1k', () => {
+    expect(abbreviateNumber(1000)).toBe('1k');
+  });
+
+  it('rolls up 999999 to 1M', () => {
+    expect(abbreviateNumber(999999)).toBe('1M');
+  });
+
+  it('rolls up 999999999 to 1B', () => {
+    expect(abbreviateNumber(999999999)).toBe('1B');
+  });
+
+  it('rolls up 999950 to 1M (rounding boundary)', () => {
+    expect(abbreviateNumber(999950)).toBe('1M');
+  });
+
+  it('keeps 999949 as 999.9k (below roll-up boundary)', () => {
+    expect(abbreviateNumber(999949)).toBe('999.9k');
+  });
+
+  it('handles -1500000', () => {
+    expect(abbreviateNumber(-1500000)).toBe('-1.5M');
+  });
+});
+
+describe('formatPercent', () => {
+  it('formats fractions (default) with .1~%', () => {
+    expect(formatPercent(0.847)).toBe('84.7%');
+    expect(formatPercent(0.5)).toBe('50%');
+    expect(formatPercent(1)).toBe('100%');
+  });
+
+  it('formats pre-scaled values with fraction: false', () => {
+    expect(formatPercent(84.7, { fraction: false })).toBe('84.7%');
+    expect(formatPercent(1200, { fraction: false })).toBe('1,200%');
+  });
+});
+
+describe('formatCurrency', () => {
+  it('compact mode abbreviates >= 1000', () => {
+    expect(formatCurrency(1900, { compact: true })).toBe('$1.9k');
+    expect(formatCurrency(12666, { compact: true })).toBe('$12.7k');
+  });
+
+  it('compact mode uses ASCII minus for negatives', () => {
+    expect(formatCurrency(-1900, { compact: true })).toBe('-$1.9k');
+  });
+
+  it('compact mode keeps small numbers full', () => {
+    expect(formatCurrency(42, { compact: true })).toBe('$42');
+  });
+
+  it('full mode (default) formats integers without cents', () => {
+    expect(formatCurrency(12666)).toBe('$12,666');
+  });
+
+  it('full mode uses ASCII minus for negatives', () => {
+    expect(formatCurrency(-12666)).toBe('-$12,666');
+  });
+
+  it('full mode includes cents for non-integers', () => {
+    expect(formatCurrency(12666.5)).toBe('$12,666.50');
+  });
+
+  it('handles negative non-integer in full mode', () => {
+    expect(formatCurrency(-42.5)).toBe('-$42.50');
+  });
+
+  it('handles negative non-integer in compact mode', () => {
+    expect(formatCurrency(-42.5, { compact: true })).toBe('-$42.50');
+  });
+});
+
+describe('isYearLikeValues', () => {
+  it('returns true for year-like integer arrays', () => {
+    expect(isYearLikeValues([1500, 2024, 2500])).toBe(true);
+  });
+
+  it('returns false for empty arrays', () => {
+    expect(isYearLikeValues([])).toBe(false);
+  });
+
+  it('returns false when values are below 1500', () => {
+    expect(isYearLikeValues([1499])).toBe(false);
+  });
+
+  it('returns false when values are above 2500', () => {
+    expect(isYearLikeValues([2501])).toBe(false);
+  });
+
+  it('returns false for non-integer values', () => {
+    expect(isYearLikeValues([2024.5])).toBe(false);
+  });
+
+  it('returns false when range includes zero', () => {
+    expect(isYearLikeValues([0, 2024])).toBe(false);
+  });
+
+  it('returns false for negative values', () => {
+    expect(isYearLikeValues([-2000])).toBe(false);
+  });
+});
+
+describe('computeFieldFormatContext', () => {
+  it('computes extent and allIntegers from numeric values', () => {
+    const ctx = computeFieldFormatContext([10, 20, 30]);
+    expect(ctx.extent).toEqual([10, 30]);
+    expect(ctx.allIntegers).toBe(true);
+  });
+
+  it('detects non-integers', () => {
+    const ctx = computeFieldFormatContext([10, 20.5, 30]);
+    expect(ctx.allIntegers).toBe(false);
+  });
+
+  it('coerces numeric strings', () => {
+    const ctx = computeFieldFormatContext(['10', '20', '30']);
+    expect(ctx.extent).toEqual([10, 30]);
+  });
+
+  it('skips non-finite values', () => {
+    const ctx = computeFieldFormatContext([10, NaN, null, undefined, 30]);
+    expect(ctx.extent).toEqual([10, 30]);
+  });
+
+  it('returns empty context for empty input', () => {
+    const ctx = computeFieldFormatContext([]);
+    expect(ctx.extent).toBeUndefined();
+    expect(ctx.allIntegers).toBeUndefined();
+  });
+
+  it('sets surface when provided', () => {
+    const ctx = computeFieldFormatContext([1, 2], 'table');
+    expect(ctx.surface).toBe('table');
+  });
+});
+
+describe('isYearContext', () => {
+  it('returns true for year-like integer ranges', () => {
+    expect(isYearContext({ extent: [1990, 2024], allIntegers: true })).toBe(true);
+  });
+
+  it('returns false when non-integers', () => {
+    expect(isYearContext({ extent: [1990, 2024], allIntegers: false })).toBe(false);
+  });
+
+  it('returns false when out of range', () => {
+    expect(isYearContext({ extent: [0, 2024], allIntegers: true })).toBe(false);
+  });
+
+  it('returns false for undefined ctx', () => {
+    expect(isYearContext(undefined)).toBe(false);
+  });
+});
+
+describe('resolveNumberFormatter', () => {
+  it('returns null for empty string', () => {
+    expect(resolveNumberFormatter('')).toBeNull();
+  });
+
+  it('returns null for undefined', () => {
+    expect(resolveNumberFormatter(undefined)).toBeNull();
+  });
+
+  it('resolves ordinal keyword', () => {
+    const fmt = resolveNumberFormatter('ordinal');
+    expect(fmt!(1)).toBe('1st');
+  });
+
+  it('resolves percent keyword with fraction detection (extent <= 1)', () => {
+    const fmt = resolveNumberFormatter('percent', { extent: [0, 0.9] });
+    expect(fmt!(0.847)).toBe('84.7%');
+  });
+
+  it('resolves percent keyword with pre-scaled detection (extent > 1)', () => {
+    const fmt = resolveNumberFormatter('percent', { extent: [0, 98] });
+    expect(fmt!(84.7)).toBe('84.7%');
+  });
+
+  it('resolves currency keyword for tables (full precision)', () => {
+    const fmt = resolveNumberFormatter('currency', { surface: 'table' });
+    expect(fmt!(12666)).toBe('$12,666');
+  });
+
+  it('resolves currency keyword for charts (compact)', () => {
+    const fmt = resolveNumberFormatter('currency');
+    expect(fmt!(1900)).toBe('$1.9k');
+  });
+
+  it('resolves d3 format strings', () => {
+    const fmt = resolveNumberFormatter('$,.0f');
+    expect(fmt!(1234)).toBe('$1,234');
+  });
+
+  it('currency with step uses step-derived decimals', () => {
+    const fmt = resolveNumberFormatter('currency', {
+      step: 500000,
+      stepReference: 2000000,
+    });
+    expect(fmt!(1500000)).toBe('$1.5M');
+  });
+});
+
+describe('defaultNumberFormatter', () => {
+  it('contextless: per-value year check (ARIA path)', () => {
+    const fmt = defaultNumberFormatter();
+    expect(fmt(2024)).toBe('2024');
+    expect(fmt(2600)).toBe('2.6k');
+  });
+
+  it('year context returns bare year string', () => {
+    const fmt = defaultNumberFormatter({ extent: [1990, 2024], allIntegers: true });
+    expect(fmt(2024)).toBe('2024');
+  });
+
+  it('table surface returns full precision', () => {
+    const fmt = defaultNumberFormatter({ surface: 'table' });
+    expect(fmt(1020000)).toBe('1,020,000');
+  });
+
+  it('step-aware compact when step and reference >= 1000', () => {
+    const fmt = defaultNumberFormatter({ step: 500000, stepReference: 2000000 });
+    expect(fmt(500000)).toBe('500k');
+    expect(fmt(1000000)).toBe('1M');
+    expect(fmt(1500000)).toBe('1.5M');
+  });
+
+  it('per-value compact/formatNumber for chart surface', () => {
+    const fmt = defaultNumberFormatter({ extent: [0, 2000000] });
+    expect(fmt(1020000)).toBe('1M');
+    expect(fmt(42)).toBe('42');
+  });
+
+  it('does not apply per-value year check when context has extent', () => {
+    const fmt = defaultNumberFormatter({ extent: [-2000, 2000], allIntegers: true });
+    expect(fmt(2000)).toBe('2k');
+  });
+});
+
+describe('buildCompactStepFormatter', () => {
+  it('formats per-value units with step-derived decimals', () => {
+    const fmt = buildCompactStepFormatter(500000);
+    expect(fmt(0)).toBe('0');
+    expect(fmt(500000)).toBe('500k');
+    expect(fmt(1000000)).toBe('1M');
+    expect(fmt(1500000)).toBe('1.5M');
+  });
+
+  it('step-derived decimals prevent misleading rounding', () => {
+    const fmt = buildCompactStepFormatter(1250000);
+    expect(fmt(1250000)).toBe('1.25M');
+    expect(fmt(2500000)).toBe('2.5M');
+  });
+
+  it('degenerate narrow domain falls back to comma-grouped', () => {
+    const fmt = buildCompactStepFormatter(1);
+    expect(fmt(2021)).toBe('2,021');
+  });
+
+  it('handles non-finite values', () => {
+    const fmt = buildCompactStepFormatter(500000);
+    expect(fmt(Infinity)).toBe('Infinity');
+    expect(fmt(NaN)).toBe('NaN');
+  });
+
+  it('sub-1k ticks render plain', () => {
+    const fmt = buildCompactStepFormatter(200);
+    expect(fmt(200)).toBe('200');
+    expect(fmt(400)).toBe('400');
+    expect(fmt(1000)).toBe('1k');
   });
 });
 
@@ -194,8 +492,6 @@ describe('formatDate', () => {
   });
 
   it('infers year granularity for bare year strings regardless of timezone', () => {
-    // "2020" parses as 2020-01-01T00:00:00Z. In negative-offset timezones,
-    // local getHours()/getDate() would see Dec 31 2019 — the UTC fix prevents that.
     const result = formatDate('2020');
     expect(result).toBe('2020');
   });
@@ -235,8 +531,6 @@ describe('formatDate', () => {
     });
 
     it('formats quarters with local-time year when useUtc is false', () => {
-      // Mid-quarter local date: quarter and year agree between local and UTC,
-      // exercising the getFullYear() arm of the compact branch.
       expect(formatDate(new Date(2025, 4, 15), undefined, 'quarter', false, true)).toBe("Q2 '25");
     });
 
@@ -259,8 +553,6 @@ describe('formatDate', () => {
     });
 
     it('full quarter year follows useUtc at year boundaries', () => {
-      // In negative-offset timezones this instant is still Dec 31 2025 locally;
-      // the UTC quarter (Q1) must pair with the UTC year (2026), not the local one.
       expect(formatDate(new Date('2026-01-01T00:00:00Z'), undefined, 'quarter')).toBe('Q1 2026');
     });
   });
@@ -309,7 +601,6 @@ describe('buildTemporalFormatter', () => {
   it('handles numeric timestamps', () => {
     const fmt = buildTemporalFormatter('%Y');
     expect(fmt).not.toBeNull();
-    // 2020-01-01T00:00:00Z
     expect(fmt!(1577836800000)).toBe('2020');
   });
 });

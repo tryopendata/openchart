@@ -1,0 +1,164 @@
+import { describe, expect, it } from 'vitest';
+import { resolveFieldFormatter } from '../field-format';
+
+describe('resolveFieldFormatter', () => {
+  describe('precedence', () => {
+    it('surfaceFormat wins over channelFormat', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: '.0%',
+        channelFormat: ',.0f',
+        values: [0.5, 0.75, 1.0],
+      });
+      expect(fmt(0.5)).toBe('50%');
+    });
+
+    it('channelFormat is used when surfaceFormat is absent', () => {
+      const fmt = resolveFieldFormatter({
+        channelFormat: '.0%',
+        values: [0.5, 0.75, 1.0],
+      });
+      expect(fmt(0.5)).toBe('50%');
+    });
+
+    it('falls back to default when both formats are absent', () => {
+      const fmt = resolveFieldFormatter({
+        values: [1000, 2000, 3000],
+      });
+      const result = fmt(2000);
+      expect(result).toBe('2k');
+    });
+
+    it('treats empty string as unset', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: '',
+        channelFormat: '',
+        values: [10000, 20000],
+      });
+      expect(fmt(10000)).toBe('10k');
+    });
+  });
+
+  describe('semantic keywords', () => {
+    it('percent keyword formats as percentage', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: 'percent',
+        values: [0.25, 0.5, 0.75],
+      });
+      expect(fmt(0.5)).toBe('50%');
+    });
+
+    it('currency keyword formats with $', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: 'currency',
+        values: [100, 200, 300],
+      });
+      expect(fmt(200)).toContain('$');
+    });
+
+    it('ordinal keyword formats with suffix', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: 'ordinal',
+        values: [1, 2, 3],
+      });
+      expect(fmt(1)).toBe('1st');
+      expect(fmt(2)).toBe('2nd');
+      expect(fmt(3)).toBe('3rd');
+    });
+  });
+
+  describe('years guard', () => {
+    it('renders year-like values as bare integers, not compact or comma-grouped', () => {
+      const fmt = resolveFieldFormatter({ values: [1990, 2007, 2024] });
+      expect(fmt(2024)).toBe('2024');
+      expect(fmt(1990)).toBe('1990');
+    });
+
+    it('activates at exact boundaries [1500, 2500]', () => {
+      const fmt = resolveFieldFormatter({ values: [1500, 2500] });
+      expect(fmt(1500)).toBe('1500');
+      expect(fmt(2500)).toBe('2500');
+    });
+
+    it('deactivates when any value falls below 1500', () => {
+      const fmt = resolveFieldFormatter({ values: [1499, 2400] });
+      expect(fmt(1499)).toBe('1.5k');
+    });
+
+    it('deactivates when any value exceeds 2500', () => {
+      const fmt = resolveFieldFormatter({ values: [1600, 2501] });
+      expect(fmt(2501)).toBe('2.5k');
+    });
+
+    it('deactivates for non-integer values', () => {
+      const fmt = resolveFieldFormatter({ values: [2020.5, 2024.5] });
+      expect(fmt(2024.5)).toBe('2k');
+    });
+
+    it('deactivates when mixed with large magnitudes', () => {
+      const fmt = resolveFieldFormatter({ values: [1990, 2024, 50000] });
+      expect(fmt(50000)).toBe('50k');
+    });
+
+    it('deactivates for negative values', () => {
+      const fmtNeg = resolveFieldFormatter({ values: [-2000, 2000] });
+      expect(fmtNeg(2000)).toBe('2k');
+    });
+
+    it('deactivates when range includes zero', () => {
+      const fmtZero = resolveFieldFormatter({ values: [0, 2024] });
+      expect(fmtZero(2024)).toBe('2k');
+    });
+
+    it('explicit format overrides guard: comma-grouped', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: ',d',
+        values: [1990, 2024],
+      });
+      expect(fmt(2024)).toBe('2,024');
+    });
+
+    it('explicit format overrides guard: SI prefix', () => {
+      const fmt = resolveFieldFormatter({
+        surfaceFormat: '~s',
+        values: [1990, 2024],
+      });
+      expect(fmt(2024)).toContain('k');
+    });
+
+    it('table surface still applies guard (no comma-grouping)', () => {
+      const fmt = resolveFieldFormatter({
+        values: [1990, 2024],
+        surface: 'table',
+      });
+      expect(fmt(2024)).toBe('2024');
+    });
+  });
+
+  describe('step threading', () => {
+    it('step is applied to the context', () => {
+      const fmt = resolveFieldFormatter({
+        values: [0, 5000, 10000, 15000, 20000],
+        step: 5000,
+      });
+      expect(fmt(15000)).toBe('15k');
+    });
+  });
+
+  describe('chart vs table surface', () => {
+    it('chart surface gets compact formatting', () => {
+      const fmt = resolveFieldFormatter({
+        values: [1000, 2000, 3000],
+        surface: 'chart',
+      });
+      expect(fmt(2000)).toBe('2k');
+    });
+
+    it('table surface gets full precision', () => {
+      const fmt = resolveFieldFormatter({
+        values: [1000, 2000, 3000],
+        surface: 'table',
+      });
+      expect(fmt(2000)).toBe('2,000');
+    });
+  });
+});

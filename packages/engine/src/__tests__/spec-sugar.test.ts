@@ -6,8 +6,7 @@
  * defs, channel-level legend, axis: null, scale.scheme resolution, theta as
  * the arc value channel, count-without-field, VL sort forms, width/height
  * fixed sizing, strokeDash on line marks, and the exactly-one-warning
- * contract for v8-deprecated surface (radius/shape/href/order, $schema, the
- * implicit stack default).
+ * contract for v8-deprecated surface (radius/shape/href/order, $schema).
  */
 
 import type { LayerSpec, LineMark } from '@opendata-ai/openchart-core';
@@ -310,7 +309,7 @@ describe('theta on arc marks', () => {
     { category: 'B', amount: 70 },
   ];
 
-  it('uses theta as the value channel when y is absent (no warning)', () => {
+  it('uses theta as the canonical value channel (no warning)', () => {
     const layout = compileChart(
       {
         mark: 'arc',
@@ -327,7 +326,47 @@ describe('theta on arc marks', () => {
     expect(warned()).toEqual([]);
   });
 
-  it('warns and uses theta when both y and theta are present (theta wins)', () => {
+  it('warns once when only the deprecated y alias is used', () => {
+    const layout = compileChart(
+      {
+        mark: 'arc',
+        data,
+        encoding: {
+          y: { field: 'amount', type: 'quantitative' },
+          color: { field: 'category', type: 'nominal' },
+        },
+      },
+      OPTIONS,
+    );
+    const arcs = layout.marks.filter((m) => m.type === 'arc');
+    expect(arcs.length).toBe(2);
+    const messages = warned().filter((m) => m.includes('encoding.y'));
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain('v8');
+    expect(messages[0]).toContain('theta');
+  });
+
+  it('prefers theta over y when both are present (theta is canonical)', () => {
+    const layout = compileChart(
+      {
+        mark: 'arc',
+        data,
+        encoding: {
+          y: { field: 'category', type: 'quantitative' },
+          theta: { field: 'amount', type: 'quantitative' },
+          color: { field: 'category', type: 'nominal' },
+        },
+      },
+      OPTIONS,
+    );
+    const arcs = layout.marks.filter((m) => m.type === 'arc');
+    expect(arcs.length).toBe(2);
+    expect(warned()).toEqual([
+      '[openchart] encoding.theta and encoding.y are both set on arc; theta takes precedence and y was dropped.',
+    ]);
+  });
+
+  it('does not warn when theta and y are identical', () => {
     const layout = compileChart(
       {
         mark: 'arc',
@@ -340,30 +379,9 @@ describe('theta on arc marks', () => {
       },
       OPTIONS,
     );
-    const messages = warned().filter((m) => m.includes('encoding.theta'));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('theta wins');
     const arcs = layout.marks.filter((m) => m.type === 'arc');
     expect(arcs.length).toBe(2);
-  });
-
-  it('warns when y is used as a deprecated alias for theta on arc marks', () => {
-    const layout = compileChart(
-      {
-        mark: 'arc',
-        data,
-        encoding: {
-          y: { field: 'amount', type: 'quantitative' },
-          color: { field: 'category', type: 'nominal' },
-        },
-      },
-      OPTIONS,
-    );
-    const messages = warned().filter((m) => m.includes('encoding.y on arc'));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('encoding.theta');
-    const arcs = layout.marks.filter((m) => m.type === 'arc');
-    expect(arcs.length).toBe(2);
+    expect(warned()).toEqual([]);
   });
 });
 
@@ -628,7 +646,7 @@ describe('deprecation warnings', () => {
     'shape',
     'href',
     'order',
-  ] as const)('warns exactly once for the removed %s channel, naming v8', (channel) => {
+  ] as const)('warns exactly once for the dead %s channel, naming the removal version', (channel) => {
     compileChart(
       {
         ...base,
@@ -638,7 +656,7 @@ describe('deprecation warnings', () => {
     );
     const messages = warned().filter((m) => m.includes(`encoding.${channel}`));
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('removed in v8');
+    expect(messages[0]).toContain('v8');
   });
 
   it('warns once for $schema and strips it', () => {
@@ -649,87 +667,6 @@ describe('deprecation warnings', () => {
     expect('$schema' in result).toBe(false);
     compileChart({ ...base, $schema: 'https://vega.github.io/schema/vega-lite/v5.json' }, OPTIONS);
     expect(warned().filter((m) => m.includes('$schema'))).toHaveLength(1);
-  });
-
-  it('warns once when a multi-series bar relies on the implicit stack default', () => {
-    compileChart(
-      {
-        mark: 'bar',
-        data: [
-          { cat: 'A', value: 1, group: 'g1' },
-          { cat: 'A', value: 2, group: 'g2' },
-          { cat: 'B', value: 3, group: 'g1' },
-        ],
-        encoding: {
-          x: { field: 'cat', type: 'nominal' },
-          y: { field: 'value', type: 'quantitative' },
-          color: { field: 'group', type: 'nominal' },
-        },
-      },
-      OPTIONS,
-    );
-    const messages = warned().filter((m) => m.includes('stack'));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('stacked');
-  });
-
-  it('warns for a multi-series area relying on the implicit stack default', () => {
-    compileChart(
-      {
-        mark: 'area',
-        data: [
-          { date: '2020-01-01', value: 1, group: 'g1' },
-          { date: '2020-01-01', value: 2, group: 'g2' },
-          { date: '2021-01-01', value: 3, group: 'g1' },
-          { date: '2021-01-01', value: 4, group: 'g2' },
-        ],
-        encoding: {
-          x: { field: 'date', type: 'temporal' },
-          y: { field: 'value', type: 'quantitative' },
-          color: { field: 'group', type: 'nominal' },
-        },
-      },
-      OPTIONS,
-    );
-    expect(warned().filter((m) => m.includes('stack'))).toHaveLength(1);
-  });
-
-  it('does not warn when stack is set explicitly', () => {
-    compileChart(
-      {
-        mark: 'bar',
-        data: [
-          { cat: 'A', value: 1, group: 'g1' },
-          { cat: 'A', value: 2, group: 'g2' },
-        ],
-        encoding: {
-          x: { field: 'cat', type: 'nominal' },
-          y: { field: 'value', type: 'quantitative', stack: 'zero' },
-          color: { field: 'group', type: 'nominal' },
-        },
-      },
-      OPTIONS,
-    );
-    expect(warned().filter((m) => m.includes('stack'))).toHaveLength(0);
-  });
-
-  it('does not warn for single-row-per-category colored bars', () => {
-    compileChart(
-      {
-        mark: 'bar',
-        data: [
-          { cat: 'A', value: 1, group: 'g1' },
-          { cat: 'B', value: 2, group: 'g2' },
-        ],
-        encoding: {
-          x: { field: 'cat', type: 'nominal' },
-          y: { field: 'value', type: 'quantitative' },
-          color: { field: 'group', type: 'nominal' },
-        },
-      },
-      OPTIONS,
-    );
-    expect(warned().filter((m) => m.includes('stack'))).toHaveLength(0);
   });
 
   it("warns once for the deprecated 'rule' annotation type, naming the refline replacement", () => {

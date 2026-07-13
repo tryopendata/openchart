@@ -11,7 +11,15 @@ export function wireLegendInteraction(
   onLegendToggle?: (series: string, visible: boolean) => void,
   onEdit?: (edit: ElementEdit) => void,
 ): () => void {
-  const legendEntries = svg.querySelectorAll('[data-legend-index]');
+  // Scoped OUT of the size legend explicitly. Clicking a legend entry toggles a
+  // *series*, and a size legend's circles are values, not series -- clicking
+  // "500M" must not try to hide a series by that name. The size legend already
+  // emits no `data-legend-index`, but a bare `[data-legend-index]` sweep would
+  // silently pick one up the moment that changed, and the failure would be a
+  // click that quietly hides the wrong thing rather than an error.
+  const legendEntries = svg.querySelectorAll(
+    '.oc-legend:not(.oc-legend--size) [data-legend-index]',
+  );
   const cleanups: Array<() => void> = [];
 
   for (const entry of legendEntries) {

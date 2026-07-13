@@ -303,6 +303,44 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(specA, specA))).toBe(false);
   });
 
+  it('gate 9: passes when only an annotation was added', () => {
+    // Regression: gate 9 used to inspect layout.marks only. Annotations are not
+    // marks, so an annotate-only step reported "nothing changed", the whole
+    // transition was skipped, and the annotation popped in on render()'s
+    // instant swap -- with the fade code sitting unreachable further down.
+    const specA = columnSpec(DATA_A);
+    const specB: ChartSpec = {
+      ...columnSpec(DATA_A),
+      annotations: [{ type: 'text', x: 'Q1', y: 100, text: 'Note' }],
+    };
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
+  });
+
+  it('gate 9: passes when only the highlight changed', () => {
+    // Regression: a highlight mute recolors marks without moving them, so this
+    // also read as a zero-delta and snapped.
+    const base: ChartSpec = {
+      animation: true,
+      mark: 'line',
+      data: [
+        { month: 'Jan', value: 10, series: 'A' },
+        { month: 'Feb', value: 20, series: 'A' },
+        { month: 'Jan', value: 30, series: 'B' },
+        { month: 'Feb', value: 40, series: 'B' },
+      ],
+      encoding: {
+        x: { field: 'month', type: 'ordinal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'series', type: 'nominal' },
+      },
+    };
+    const highlighted: ChartSpec = {
+      ...base,
+      encoding: { ...base.encoding, color: { field: 'series', type: 'nominal', highlight: ['A'] } },
+    };
+    expect(canTransition(passingGateArgs(base, highlighted))).toBe(true);
+  });
+
   it('gate 10: fails when prefers-reduced-motion is active', () => {
     const original = window.matchMedia;
     vi.stubGlobal('matchMedia', (query: string) => ({
@@ -1497,15 +1535,11 @@ describe('React StrictMode double-mount', () => {
 // ---------------------------------------------------------------------------
 
 describe('secondary element crossfade', () => {
-  it('annotations start at opacity 0 during transition', () => {
-    // Create a spec with annotations
-    const specA: ChartSpec = {
-      ...columnSpec(DATA_A),
-      annotations: [{ type: 'text', x: 'Q1', y: 100, text: 'Note' }],
-    };
+  it('fades in an annotation that did not exist before', () => {
+    const specA: ChartSpec = columnSpec(DATA_A);
     const specB: ChartSpec = {
       ...columnSpec(DATA_B),
-      annotations: [{ type: 'text', x: 'Q1', y: 150, text: 'Updated' }],
+      annotations: [{ type: 'text', x: 'Q1', y: 150, text: 'Note' }],
     };
 
     const layoutA = compile(specA);
@@ -1522,18 +1556,42 @@ describe('secondary element crossfade', () => {
       onComplete: () => {},
     });
 
-    // After applying from-states, annotations should be at opacity 0
     const annotations = svg.querySelectorAll('.oc-annotation');
+    expect(annotations.length).toBeGreaterThan(0);
     for (const ann of annotations) {
       expect((ann as SVGElement).style.opacity).toBe('0');
     }
 
-    // Run to completion
     runToCompletion();
 
-    // After completion, annotation opacity should be restored (empty = visible)
     for (const ann of annotations) {
-      expect((ann as SVGElement).style.opacity).toBe('');
+      expect((ann as SVGElement).style.opacity).toBe('1');
+    }
+  });
+
+  it('does not re-fade an annotation that was already on screen', () => {
+    // The blink bug: the old blanket crossfade drove EVERY annotation from
+    // opacity 0 on every update, so an unchanged annotation flickered out and
+    // back in whenever any other part of the chart moved.
+    const annotation = { type: 'text' as const, x: 'Q1', y: 100, text: 'Note' };
+    const layoutA = compile({ ...columnSpec(DATA_A), annotations: [annotation] });
+    const layoutB = compile({ ...columnSpec(DATA_B), annotations: [annotation] });
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    const annotations = svg.querySelectorAll('.oc-annotation');
+    expect(annotations.length).toBeGreaterThan(0);
+    for (const ann of annotations) {
+      expect((ann as SVGElement).style.opacity).not.toBe('0');
     }
   });
 
@@ -1588,5 +1646,132 @@ describe('secondary element crossfade', () => {
       // After completion, opacity restored
       expect(epLabels.style.opacity).toBe('');
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mark color interpolation
+// ---------------------------------------------------------------------------
+
+describe('mark color interpolation', () => {
+  const COLORED: ChartSpec = {
+    animation: true,
+    mark: 'line',
+    data: [
+      { month: 'Jan', value: 10, series: 'A' },
+      { month: 'Feb', value: 20, series: 'A' },
+      { month: 'Jan', value: 30, series: 'B' },
+      { month: 'Feb', value: 40, series: 'B' },
+    ],
+    encoding: {
+      x: { field: 'month', type: 'ordinal' },
+      y: { field: 'value', type: 'quantitative' },
+      color: { field: 'series', type: 'nominal' },
+    },
+  };
+
+  const HIGHLIGHTED: ChartSpec = {
+    ...COLORED,
+    encoding: {
+      ...COLORED.encoding,
+      color: { field: 'series', type: 'nominal', highlight: ['A'] },
+    },
+  };
+
+  it('tweens stroke through an intermediate color instead of snapping', () => {
+    const layoutA = compile(COLORED);
+    const layoutB = compile(HIGHLIGHTED);
+
+    // The highlight must actually recolor something, else this proves nothing.
+    const strokesA = layoutA.marks.map((m) => (m as { stroke?: string }).stroke);
+    const strokesB = layoutB.marks.map((m) => (m as { stroke?: string }).stroke);
+    expect(strokesA).not.toEqual(strokesB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // At t=0 the muted line must be back at its ORIGINAL color, not the
+    // already-rendered muted gray -- that is what makes it a fade and not a snap.
+    const muted = layoutB.marks.findIndex(
+      (m, i) =>
+        (m as { stroke?: string }).stroke !== (layoutA.marks[i] as { stroke?: string }).stroke,
+    );
+    expect(muted).toBeGreaterThanOrEqual(0);
+    const key = (layoutB.marks[muted] as { key?: string }).key;
+    const el = svg.querySelector(`[data-key="${key}"]`) as SVGElement;
+    const shape = (el.querySelector('path, line, rect, circle') as SVGElement) ?? el;
+
+    const from = (layoutA.marks[muted] as { stroke?: string }).stroke;
+    const to = (layoutB.marks[muted] as { stroke?: string }).stroke;
+
+    pumpRaf(0);
+    const atStart = shape.getAttribute('stroke');
+    expect(atStart).not.toBe(to);
+
+    runToCompletion();
+    // And it lands exactly on the final color.
+    const atEnd = shape.getAttribute('stroke');
+    expect(atEnd).toBe(to);
+    expect(atEnd).not.toBe(from);
+  });
+
+  it('strokes the area top-line, never the closed fill path', () => {
+    // An area mark is two stacked paths: the closed fill shape (stroke: none)
+    // and `.oc-area-top`, which traces the data points alone. A blanket
+    // `querySelector` grabs the *first* one, so a stroke tween would outline
+    // the whole closed shape -- baseline included -- and snapTweenToFinal
+    // would leave that outline on screen permanently.
+    const AREA: ChartSpec = { ...COLORED, mark: 'area' };
+    const AREA_HL: ChartSpec = {
+      ...AREA,
+      encoding: {
+        ...AREA.encoding,
+        color: { field: 'series', type: 'nominal', highlight: ['A'] },
+      },
+    };
+
+    const layoutA = compile(AREA);
+    const layoutB = compile(AREA_HL);
+
+    const muted = layoutB.marks.findIndex(
+      (m, i) =>
+        (m as { stroke?: string }).stroke !== (layoutA.marks[i] as { stroke?: string }).stroke,
+    );
+    expect(muted).toBeGreaterThanOrEqual(0);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+    runToCompletion();
+
+    const key = (layoutB.marks[muted] as { key?: string }).key;
+    const group = svg.querySelector(`[data-key="${key}"]`) as SVGElement;
+    const areaTop = group.querySelector('.oc-area-top') as SVGElement;
+    const fillPath = group.querySelector('path:not(.oc-area-top)') as SVGElement;
+    expect(areaTop).toBeTruthy();
+    expect(fillPath).toBeTruthy();
+
+    // The stroke landed on the top-line...
+    const to = (layoutB.marks[muted] as { stroke?: string }).stroke;
+    expect(areaTop.getAttribute('stroke')).toBe(to);
+
+    // ...and the fill path is still unstroked. Anything else is an outline
+    // traced around the entire filled region.
+    expect(fillPath.getAttribute('stroke')).toBe('none');
   });
 });

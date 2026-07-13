@@ -47,7 +47,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
     y?:     EncodingChannel,
     color?: EncodingChannel | { value: string },
     size?:  EncodingChannel,
-    // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, facet
+    // also: x2, y2, opacity, strokeDash, text, tooltip, detail, theta, facet
   },
   transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, fold, window
   chrome?:    Chrome,            // title, subtitle, source, byline, footer, eyebrow, brand
@@ -86,28 +86,28 @@ Common MarkDef options:
 
 ### Encoding requirements by mark
 
-`req`/`opt` = required/optional; parentheses list allowed field types. Every mark also accepts optional `tooltip` and `detail` channels. `theta` is the value channel for arc, waffle, and parliament marks.
+`req`/`opt` = required/optional; parentheses list allowed field types. Every mark also accepts optional `tooltip`, `href`, `order`, and `detail` channels.
 
-| mark | x | y | theta | color | size | Renders as |
-|------|---|---|-------|-------|------|------------|
-| `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
-| `line` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Line chart |
-| `area` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
-| `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
-| `circle` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Dot plot |
-| `lollipop` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Lollipop chart |
-| `beeswarm` | opt (quantitative, nominal, ordinal) | opt (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Beeswarm chart |
-| `range` | req (quantitative, nominal, ordinal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal) | opt | Range plot |
-| `arc` | opt | - | req (quantitative) | req (nominal, ordinal) | opt | Pie chart |
-| `waffle` | opt | - | req (quantitative) | req (nominal, ordinal) | opt | Waffle chart |
-| `parliament` | opt | - | req (quantitative) | req (nominal, ordinal) | opt | Parliament chart |
-| `text` | opt | opt | - | opt | opt (quantitative) | Text chart |
-| `rule` | opt | opt | - | opt | opt | Rule chart |
-| `tick` | req | req | - | opt | opt | Tick plot |
-| `rect` | req | req | - | opt | opt | Heatmap |
-| `calendar` | req (temporal) | opt | - | req (quantitative) | opt | Calendar heatmap |
+| mark | x | y | color | size | Renders as |
+|------|---|---|-------|------|------------|
+| `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt | Bar chart |
+| `line` | req (temporal, ordinal) | req (quantitative) | opt (nominal, ordinal, quantitative) | opt | Line chart |
+| `area` | req (temporal, ordinal) | req (quantitative) | opt (nominal, ordinal, quantitative) | opt | Area chart |
+| `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
+| `circle` | req (quantitative) | req (nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt (quantitative) | Dot plot |
+| `lollipop` | req (quantitative) | req (nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt (quantitative) | Lollipop chart |
+| `beeswarm` | opt (quantitative, nominal, ordinal) | opt (quantitative, nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt (quantitative) | Beeswarm chart |
+| `range` | req (quantitative, nominal, ordinal) | req (quantitative, nominal, ordinal) | opt (nominal, ordinal) | opt | Range plot |
+| `arc` | opt | opt (quantitative) | req (nominal, ordinal) | opt | Pie chart |
+| `waffle` | opt | req (quantitative) | req (nominal, ordinal) | opt | Waffle chart |
+| `parliament` | opt | req (quantitative) | req (nominal, ordinal) | opt | Parliament chart |
+| `text` | opt | opt | opt | opt (quantitative) | Text chart |
+| `rule` | opt | opt | opt | opt | Rule chart |
+| `tick` | req | req | opt | opt | Tick plot |
+| `rect` | req | req | opt | opt | Heatmap |
+| `calendar` | req (temporal) | opt | req (quantitative) | opt | Calendar heatmap |
 
-An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
+An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`.
 
 ### Color legends
 

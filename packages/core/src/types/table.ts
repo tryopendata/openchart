@@ -83,8 +83,9 @@ export interface ColumnConfig {
   /** Explicit column width (CSS value like "200px" or "20%"). Auto-sized if omitted. */
   width?: string;
   /**
-   * Number/date format string (d3-format or d3-time-format).
-   * Applied to the raw value before display. e.g. ",.0f" or "%Y-%m-%d".
+   * Number/date format string (d3-format or d3-time-format), or semantic
+   * keyword `'percent'` / `'currency'`. e.g. ",.0f", "%Y-%m-%d", "percent".
+   * Tables always show full precision (no compact notation).
    */
   format?: string;
 

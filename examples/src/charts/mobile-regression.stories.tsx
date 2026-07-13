@@ -85,6 +85,8 @@ const groupedLabelsSpec: ChartSpec = {
       type: 'quantitative',
       axis: { title: '% meeting grade level', grid: true },
       scale: { domain: [0, 60], nice: false },
+      // Grouped is opt-out since v8 (stacked is now the default).
+      stack: null,
     },
     color: { field: 'district', type: 'nominal' },
   },
@@ -148,6 +150,8 @@ const manyRowsSpec: ChartSpec = {
       field: 'dollars',
       type: 'quantitative',
       axis: { title: undefined, format: '$~s', grid: true },
+      // Grouped is opt-out since v8 (stacked is now the default).
+      stack: null,
     },
     color: { field: 'source', type: 'nominal' },
   },
@@ -194,6 +198,8 @@ const domainScoresSpec: ChartSpec = {
       type: 'quantitative',
       axis: { title: 'TEA domain score', grid: true },
       scale: { domain: [0, 100], nice: false },
+      // Grouped is opt-out since v8 (stacked is now the default).
+      stack: null,
     },
     color: { field: 'domain', type: 'nominal' },
   },

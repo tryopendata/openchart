@@ -169,24 +169,23 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 // ---------------------------------------------------------------------------
 
 /** Apply default styles to annotations that don't have them. */
-function normalizeAnnotations(
-  annotations: Annotation[] | undefined,
-  warnings: string[],
-): Annotation[] {
+function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation[] {
   if (!annotations || annotations.length === 0) return [];
 
+  // The spec-sugar pass rewrites the deprecated `type: 'rule'` annotation
+  // alias to `'refline'` (with a warning) before validation/normalization
+  // ever runs, so by this point every annotation is in canonical form.
   return annotations.map((ann) => {
-    if (ann.type === 'rule') {
-      warnings.push(
-        "[openchart] annotation type 'rule' is deprecated (it collides with the rule mark) and will be removed in v9. Use type: 'refline' instead; the behavior is identical.",
-      );
-    }
     switch (ann.type) {
       case 'text':
+        // Deliberately does NOT default fontSize/fontWeight. The annotation
+        // layer owns those (DEFAULT_ANNOTATION_FONT_SIZE, and the lede rule
+        // that promotes a subtitle-bearing primary line to bold). Stamping
+        // them here makes `annotation.fontWeight` always defined, so
+        // `resolveLedeFontWeight` can never fire and the size default can
+        // never apply — both features become dead code.
         return {
           ...ann,
-          fontSize: ann.fontSize ?? 12,
-          fontWeight: ann.fontWeight ?? 400,
           opacity: ann.opacity ?? 1,
         };
       case 'range':
@@ -196,10 +195,8 @@ function normalizeAnnotations(
           fill: ann.fill ?? '#000000',
         };
       case 'refline':
-      case 'rule':
         return {
           ...ann,
-          type: 'refline' as const,
           style: ann.style ?? 'dashed',
           strokeWidth: ann.strokeWidth ?? 1,
           stroke: ann.stroke ?? '#666666',
@@ -401,7 +398,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     metrics: spec.metrics,
     seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
     youDrawIt: normalizeYouDrawIt(spec),
-    annotations: normalizeAnnotations(spec.annotations, warnings),
+    annotations: normalizeAnnotations(spec.annotations),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
@@ -477,7 +474,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
   };
 }
 
-function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGraphSpec {
+function normalizeGraphSpec(spec: GraphSpec): NormalizedGraphSpec {
   // Default layout with chargeStrength and linkDistance
   const defaultLayout = {
     type: 'force' as const,
@@ -499,7 +496,7 @@ function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGrap
     layout,
     nodeOverrides: spec.nodeOverrides,
     chrome: normalizeChrome(spec.chrome),
-    annotations: normalizeAnnotations(spec.annotations, warnings),
+    annotations: normalizeAnnotations(spec.annotations),
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
@@ -623,7 +620,7 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
     return normalizeTableSpec(spec, warnings);
   }
   if (isGraphSpec(spec)) {
-    return normalizeGraphSpec(spec, warnings);
+    return normalizeGraphSpec(spec);
   }
   if (isSankeySpec(spec)) {
     return normalizeSankeySpec(spec, warnings);

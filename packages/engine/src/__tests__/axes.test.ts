@@ -1,5 +1,5 @@
 import type { AxisTick, Encoding, LayoutStrategy } from '@opendata-ai/openchart-core';
-import { resolveTheme } from '@opendata-ai/openchart-core';
+import { maxRotatedLabelWidth, resolveTheme } from '@opendata-ai/openchart-core';
 import { scaleLinear, scaleLog } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -600,9 +600,56 @@ describe('text-aware tick density', () => {
     const axes = computeAxes(scales, narrowArea, fullStrategy, theme, measure);
     expect(axes.x!.tickAngle).toBe(-45);
 
-    // Every category keeps its label — the diagonals never touch.
-    const kept = axes.x!.ticks.map((t) => t.label);
+    // Every category keeps a tick — the diagonals never touch, so no label is
+    // DROPPED. (The long one is ellipsized to fit the capped rotated-label
+    // band, which is a separate concern from decimation; its full text is
+    // preserved on `fullLabel`.)
+    expect(axes.x!.ticks).toHaveLength(categories.length);
+    const kept = axes.x!.ticks.map((t) => t.fullLabel ?? t.label);
     expect(kept).toEqual(categories);
+  });
+
+  it('truncates rotated labels that would overflow the capped reservation', () => {
+    // Regression: the layout clamps the reserved rotated-label band to
+    // X_AXIS_ROTATED_EXTENT_CAP (120px) but nothing shortened the drawn string,
+    // so a long label rendered straight past the axis and through the source
+    // line. Long labels must now be ellipsized to fit that band, with the full
+    // text retained on `fullLabel` for tooltips and the a11y table.
+    const categories = ['Short', 'An Extremely Long Category Label That Cannot Possibly Fit'];
+    const barSpec: NormalizedChartSpec = {
+      ...lineSpec,
+      markType: 'bar',
+      markDef: { type: 'bar', orient: 'vertical' },
+      data: categories.map((cat, i) => ({ cat, val: (i + 1) * 10 })),
+      encoding: {
+        x: { field: 'cat', type: 'nominal' },
+        y: { field: 'val', type: 'quantitative' },
+      },
+    };
+    const measure = (text: string) => ({ width: text.length * 8, height: 12 });
+    const area = { x: 50, y: 50, width: 260, height: 300 };
+    const scales = computeScales(barSpec, area, barSpec.data);
+    const axes = computeAxes(scales, area, fullStrategy, theme, measure);
+
+    const ticks = axes.x!.ticks;
+    const angle = axes.x!.tickAngle!;
+    expect(Math.abs(angle)).toBeGreaterThan(10);
+
+    // The short label is untouched and carries no fullLabel.
+    const short = ticks.find((t) => t.value === 'Short')!;
+    expect(short.label).toBe('Short');
+    expect(short.fullLabel).toBeUndefined();
+
+    // The long one is ellipsized, but its full text survives on fullLabel.
+    const long = ticks.find((t) => t.value === categories[1])!;
+    expect(long.label).not.toBe(categories[1]);
+    expect(long.label.endsWith('…')).toBe(true);
+    expect(long.fullLabel).toBe(categories[1]);
+
+    // And the drawn label now fits the budget the reservation is computed from,
+    // so it cannot overflow the band.
+    const budget = maxRotatedLabelWidth(angle, theme.fonts.sizes.axisTick);
+    expect(measure(long.label).width).toBeLessThanOrEqual(budget);
   });
 
   it('measures collision at the drawn tick spacing when an explicit tickCount thins upstream', () => {

@@ -16,6 +16,7 @@ import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { resolveFieldFormatter } from '../format/field-format';
 import { endpointLabelsExplicitlyOn } from '../legend/suppression';
 import {
   ENDPOINT_GAP,
@@ -75,28 +76,23 @@ export function predictEndpointLabelsWidth(
   // which row is "last" without computing scales/marks, so we sample the
   // largest absolute value to bound the formatted width.
   const yField = config?.valueField ?? spec.encoding.y?.field;
-  const yFormat =
+  const surfaceFormat =
     config?.format ??
     ((spec.encoding.y?.axis as Record<string, unknown> | undefined)?.format as string | undefined);
   let sample = '';
   if (yField) {
+    const values = spec.data.map((r) => r[yField]);
     let maxAbs = 0;
-    for (const row of spec.data) {
-      const v = Number(row[yField]);
-      if (Number.isFinite(v) && Math.abs(v) > maxAbs) maxAbs = Math.abs(v);
+    for (const v of values) {
+      const n = Number(v);
+      if (Number.isFinite(n) && Math.abs(n) > maxAbs) maxAbs = Math.abs(n);
     }
-    // When the user supplied a format string, run it through the same
-    // formatter compute.ts will use so width prediction matches reality.
-    // Without one, fall back to a magnitude-aware sample that bounds the
-    // expected unformatted value width (compute.ts uses toFixed(2) here,
-    // which is roughly the same character count as "1.5K"-style abbreviations
-    // for the upper end of each band).
-    if (yFormat) {
-      sample = formatEndpointValue(maxAbs, yFormat);
-    } else if (maxAbs >= 1_000_000_000) sample = '1.5B';
-    else if (maxAbs >= 1_000_000) sample = '1.5M';
-    else if (maxAbs >= 1_000) sample = '1.5K';
-    else sample = String(Math.round(maxAbs * 100) / 100);
+    const formatter = resolveFieldFormatter({
+      surfaceFormat,
+      channelFormat: spec.encoding.y?.format,
+      values,
+    });
+    sample = formatEndpointValue(maxAbs, formatter);
   }
 
   // Text-column width for one side, using the same composition + wrapping

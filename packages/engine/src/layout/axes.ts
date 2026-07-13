@@ -24,6 +24,7 @@ import {
   computeXAxisExtentFromLabels,
   estimateTextWidth,
   getAxisTitleOffset,
+  truncateRotatedLabel,
   X_AXIS_TITLE_BAND_ROTATED,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
@@ -513,6 +514,30 @@ export function computeAxes(
       ticks = thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText);
     }
 
+    // Truncate rotated labels that would overflow the capped reservation.
+    // computeXAxisExtentFromLabels clamps the reserved band to
+    // X_AXIS_ROTATED_EXTENT_CAP, but nothing shortened the drawn string, so a
+    // long label rendered straight past the axis and through the source line.
+    // Clip to the same budget the reservation is computed from. `fullLabel`
+    // carries the original text so tooltips and the a11y table stay complete.
+    if (tickAngle && Math.abs(tickAngle) > 10) {
+      // MeasureTextFn returns { width }, not a number — adapt it the same way
+      // measureLabel does, or every comparison against the width budget is NaN
+      // and the search collapses every label to a bare ellipsis.
+      const measureWidth = (text: string, size: number, weight?: number) =>
+        measureLabel(text, size, weight ?? fontWeight, measureText);
+      ticks = ticks.map((t) => {
+        const truncated = truncateRotatedLabel(
+          t.label,
+          tickAngle,
+          fontSize,
+          fontWeight,
+          measureWidth,
+        );
+        return truncated === t.label ? t : { ...t, label: truncated, fullLabel: t.label };
+      });
+    }
+
     const axisTitle = axisConfig?.title;
     const xLabelColor = axisConfig?.labelColor;
     // X-axis defaults to gutter (no inline mode is sensible for the x axis
@@ -637,8 +662,11 @@ export function computeAxes(
 
     result.y = {
       ticks,
-      // Y-axis gridlines are shown by default (standard editorial practice)
-      gridlines,
+      // Y-axis gridlines are shown by default (standard editorial practice).
+      // Not for heatmaps: the cells tile the plot, so a gridline can only draw
+      // *through* them. The cell grid already is the grid. Explicit `grid: true`
+      // still wins.
+      gridlines: (axisConfig?.grid ?? dataContext?.markType !== 'rect') ? gridlines : [],
       label: axisTitle,
       labelStyle: yLabelColor ? { ...axisLabelStyle, fill: yLabelColor } : axisLabelStyle,
       tickLabelStyle: yLabelColor ? { ...tickLabelStyle, fill: yLabelColor } : tickLabelStyle,

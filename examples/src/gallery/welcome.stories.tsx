@@ -11,10 +11,16 @@
  * children escape hatch — no Sections, so no right-rail TOC.
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
-import { Chart } from '@opendata-ai/openchart-react';
+import type {
+  ChartSpec,
+  GraphSpec,
+  SankeySpec,
+  TableSpec,
+  VizSpec,
+} from '@opendata-ai/openchart-core';
+import { BarList, Chart, DataTable, Graph, Sankey } from '@opendata-ai/openchart-react';
 import { Demo, GalleryPage } from '../components';
-import { bigTechRevenue, browserShare, electricityMix, evFleet, usInflation } from '../data';
+import { bigTechRevenue, programmingLanguages, stockPerformance } from '../data';
 import { GALLERY, type PageEntry } from './registry';
 
 // ---------------------------------------------------------------------------
@@ -45,7 +51,7 @@ const WELCOME_CSS = `
   margin: 0 0 var(--oc-space-5);
 }
 .ocw-block-title {
-  font-family: var(--oc-font-display);
+  font-family: var(--oc-font-body);
   font-size: var(--oc-type-section-title);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -112,19 +118,45 @@ const WELCOME_CSS = `
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
+/* 160px, not the old 120px: graph-mount floors its canvas at 200px tall, and a
+   shorter box gets that canvas crammed into it (network centers for the wrong
+   height, then clips). Scaling the graph down instead is worse — a transform
+   shrinks its alpha-0.35 edge hairlines below a device pixel and the network
+   stops reading as a network. So every preview gets one taller, uniform box. */
 .ocw-card-chart {
-  height: 120px;
+  height: 160px;
   padding: var(--oc-space-3) var(--oc-space-4) 0;
   min-width: 0;
+  /* Table and bar-list previews are DOM (not SVG) and lay out at their natural
+     height. Clip them to the card box instead of letting them stretch it. */
+  overflow: hidden;
 }
 .ocw-card-chart > .story-chart {
   height: 100%;
+}
+/* The table preview reads as a thumbnail, not a live table: no hover rows, no
+   sort affordances, and the header row shrunk to a caption. */
+.ocw-card-chart[data-kind='tables'] .story-chart {
+  pointer-events: none;
+  font-size: 0.75rem;
+}
+/* The graph gets the 200px its mount floors at, centered in the 160px card box
+   so the overflow is trimmed evenly top and bottom rather than all off the top.
+   pointer-events: none because zoom/pan/drag have no off switch on the mount,
+   and a thumbnail inside a link shouldn't swallow the click. */
+.ocw-card-chart[data-kind='graphs'] {
+  padding: 0;
+}
+.ocw-card-chart[data-kind='graphs'] .story-chart {
+  height: 200px;
+  margin-top: -20px;
+  pointer-events: none;
 }
 .ocw-card-body {
   padding: var(--oc-space-3) var(--oc-space-4) var(--oc-space-4);
 }
 .ocw-card-title {
-  font-family: var(--oc-font-display);
+  font-family: var(--oc-font-body);
   font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -281,8 +313,8 @@ const heroSpec: ChartSpec = {
       x: '2024-01-01',
       y: 638,
       text: 'Amazon crosses\n$600B in 2024',
-      anchor: 'right',
-      offset: { dx: -8, dy: -28 },
+      anchor: 'left',
+      offset: { dx: -12, dy: -24 },
       connector: true,
     },
   ],
@@ -322,62 +354,180 @@ const quickStartSpec: ChartSpec = {
 // 3. Section cards — one compact chart per sidebar group.
 // ---------------------------------------------------------------------------
 
-/** Flatten one series to the `{ t, value }` shape a sparkline wants. */
-function series(values: ReadonlyArray<number>): { t: number; value: number }[] {
-  return values.map((value, t) => ({ t, value }));
-}
-
-/** A compact sparkline per group, sized to sit in a 120px card. Sparkline
- *  display strips chrome/axes/legend for an edge-to-edge mini chart, so every
- *  card reads as one consistent system. */
-function cardSpec(kind: SectionCard['chartKind']): ChartSpec {
-  const base = {
-    encoding: {
-      x: { field: 't', type: 'ordinal' as const },
-      y: { field: 'value', type: 'quantitative' as const },
-    },
-    display: 'sparkline' as const,
-  };
+/**
+ * Each card previews the viz type its section is actually about — a table card
+ * renders a table, a graph card renders a network. Every preview is the real
+ * component driven by the real spec, stripped to a miniature: no chrome, no
+ * legend, no watermark, no search or pagination, so it fits a 120px card and
+ * reads as a thumbnail rather than a chart in its own right.
+ */
+function cardSpec(kind: SectionCard['chartKind']): VizSpec {
   switch (kind) {
-    case 'charts':
-      return {
-        mark: 'line',
-        data: series(
-          bigTechRevenue.data.filter((d) => d.company === 'Amazon').map((d) => d.revenue),
-        ),
-        ...base,
+    // Charts — a column chart. The hero above is already a line, so the card
+    // shows a different mark to widen what "Charts" advertises. Both axes are
+    // off (`axis: false`): at 132px the category names rotate and clip, and a
+    // thumbnail doesn't need to be readable, only recognizable.
+    case 'charts': {
+      const spec: ChartSpec = {
+        mark: 'bar',
+        data: programmingLanguages.data.slice(0, 6).map((d) => ({ ...d })),
+        encoding: {
+          x: { field: 'language', type: 'nominal', axis: false },
+          y: { field: 'pct', type: 'quantitative', axis: false },
+        },
+        labels: { density: 'none' },
+        watermark: false,
       };
-    case 'tables':
-      return {
-        mark: 'area',
-        data: series(usInflation.data.slice(-10).map((d) => d.rate)),
-        ...base,
+      return spec;
+    }
+    // Tables — a real DataTable: a few rows, compact density, one heatmap column
+    // and one inline-bar column so the cell types read at thumbnail size.
+    case 'tables': {
+      const spec: TableSpec = {
+        type: 'table',
+        data: stockPerformance.data.slice(0, 3).map((d) => ({
+          ticker: d.ticker,
+          price: d.price,
+          ytdChange: d.ytdChange,
+        })),
+        columns: [
+          { key: 'ticker', label: 'Ticker' },
+          { key: 'price', label: 'Price', format: '$,.0f', align: 'right' },
+          { key: 'ytdChange', label: 'YTD', format: '.0f', align: 'right', bar: {} },
+        ],
+        compact: true,
+        watermark: false,
       };
-    case 'graphs':
-      return {
-        mark: 'line',
-        data: series(evFleet.data.map((d) => d.fleet)),
-        ...base,
+      return spec;
+    }
+    // Graphs — a real force-directed network, rendered bare: nodes and edges,
+    // no labels. The engine falls back to `label = node.id` when nodeLabel is
+    // omitted, so a label-free graph needs nodeLabel pointed at a field that is
+    // present but empty ("n0"/"n7" callouts are noise on a thumbnail). Pointing
+    // it at a field no node carries blanks the whole canvas, so `blank: ''` it
+    // is. Labels are drawn to canvas, so CSS can't hide them.
+    case 'graphs': {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: Array.from({ length: 18 }, (_, i) => ({
+          id: `n${i}`,
+          community: `c${i % 3}`,
+          blank: '',
+        })),
+        edges: [
+          ...Array.from({ length: 18 }, (_, i) => ({
+            source: `n${i}`,
+            target: `n${(i + 1) % 18}`,
+          })),
+          ...Array.from({ length: 8 }, (_, i) => ({
+            source: `n${i}`,
+            target: `n${(i * 5 + 4) % 18}`,
+          })),
+        ],
+        encoding: {
+          nodeColor: { field: 'community', type: 'nominal' },
+          nodeLabel: { field: 'blank' },
+        },
+        // No clustering: cluster forces pull the whole network into one tight
+        // ball at this size. Plain repulsion + a long link distance spreads the
+        // ring out so the edges — the thing that makes it read as a network —
+        // are actually visible.
+        layout: { type: 'force', chargeStrength: -140, linkDistance: 42 },
+        watermark: false,
       };
-    case 'sankey':
-      return {
-        mark: 'area',
-        data: series(electricityMix['2023'].map((d) => d.share)),
-        ...base,
+      return spec;
+    }
+    // Sankey & Tile Maps — a real Sankey. A funnel is the flow shape that stays
+    // legible at thumbnail size (a 50-state tile grid does not). Sankey node
+    // labels can't be turned off, so the card uses its own short-named funnel
+    // rather than the page's `userJourney` ("Landing Page", "Onboarding", …),
+    // whose labels would swamp a 132px box.
+    case 'sankey': {
+      const spec: SankeySpec = {
+        type: 'sankey',
+        data: [
+          { source: 'Visit', target: 'Trial', value: 32 },
+          { source: 'Visit', target: 'Bounce', value: 68 },
+          { source: 'Trial', target: 'Paid', value: 7 },
+          { source: 'Trial', target: 'Churn', value: 25 },
+        ],
+        encoding: {
+          source: { field: 'source', type: 'nominal' },
+          target: { field: 'target', type: 'nominal' },
+          value: { field: 'value', type: 'quantitative' },
+        },
+        nodeWidth: 6,
+        nodePadding: 6,
+        // 'left' keeps the right-column labels inside the box; with 'auto' they
+        // hang off the node's right edge and clip against the card border.
+        nodeLabelAlign: 'left',
+        legend: { show: false },
+        watermark: false,
       };
+      return spec;
+    }
+    // Dashboards — a BarList, the ranked-list primitive the dashboards page
+    // composes into cards. The sparkline grid on that page is chart-shaped;
+    // the bar list reads as a dashboard widget at 120px.
     case 'dashboards':
       return {
-        mark: 'area',
-        data: series(usInflation.data.map((d) => d.rate)),
-        ...base,
+        type: 'barlist',
+        data: programmingLanguages.data.slice(0, 4).map((d) => ({ ...d })),
+        encoding: {
+          label: { field: 'language', type: 'nominal' },
+          value: { field: 'pct', type: 'quantitative' },
+        },
+        valueFormat: '.1f',
+        barHeight: 6,
+        watermark: false,
       };
-    case 'features':
-      return {
+    // Features — a line carrying an annotation. Annotations are the flagship
+    // feature on that page, so the card shows the editorial layer (a marked
+    // point plus a callout), not just another bare line.
+    case 'features': {
+      const revenue = bigTechRevenue.data.filter((d) => d.company === 'Amazon');
+      const spec: ChartSpec = {
         mark: 'line',
-        data: series(browserShare.data.map((d) => d.share)),
-        ...base,
+        data: revenue.map((d, t) => ({ t, value: d.revenue })),
+        encoding: {
+          x: { field: 't', type: 'ordinal', axis: false },
+          y: { field: 'value', type: 'quantitative', axis: false },
+        },
+        annotations: [
+          {
+            type: 'refline',
+            y: 500,
+            style: 'dashed',
+            label: '$500B',
+          },
+        ],
+        labels: { density: 'none' },
+        endpointLabels: false,
+        legend: { show: false },
+        watermark: false,
       };
+      return spec;
+    }
   }
+}
+
+/** Dispatch a card spec to the component that renders it. */
+function CardViz({ spec }: { spec: VizSpec }) {
+  if ('type' in spec) {
+    switch (spec.type) {
+      case 'table':
+        return <DataTable spec={spec} />;
+      case 'graph':
+        // Tooltip and legend are mount props, not spec fields — a thumbnail
+        // wants neither.
+        return <Graph spec={spec} tooltip={false} legend={false} />;
+      case 'sankey':
+        return <Sankey spec={spec} />;
+      case 'barlist':
+        return <BarList spec={spec} />;
+    }
+  }
+  return <Chart spec={spec as ChartSpec} />;
 }
 
 type SectionCard = {
@@ -430,9 +580,9 @@ function SectionCards() {
     <div className="ocw-cards">
       {SECTION_CARDS.map((card) => (
         <a key={card.group} className="ocw-card" href={`?story=${firstSlugForGroup(card.group)}`}>
-          <div className="ocw-card-chart">
+          <div className="ocw-card-chart" data-kind={card.chartKind}>
             <div className="story-chart">
-              <Chart spec={cardSpec(card.chartKind)} />
+              <CardViz spec={cardSpec(card.chartKind)} />
             </div>
           </div>
           <div className="ocw-card-body">

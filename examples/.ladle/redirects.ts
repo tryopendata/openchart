@@ -274,15 +274,15 @@ export const redirects: Record<string, Redirect> = {
   'transforms--time-unit-transform': { story: DATA_ENCODING, hash: 'time-unit' },
   // gradient.stories.tsx
   'gradient--basic-gradient-bars': { story: DATA_ENCODING, hash: 'linear-gradient' },
-  'gradient--conditional-gradients': { story: DATA_ENCODING, hash: 'radial-gradient' },
+  'gradient--conditional-gradients': { story: DATA_ENCODING, hash: 'linear-gradient' },
   'gradient--area-gradient-fade': { story: DATA_ENCODING, hash: 'area-gradient' },
-  'gradient--donut-radial-gradient': { story: DATA_ENCODING, hash: 'radial-gradient' },
+  'gradient--donut-radial-gradient': { story: DATA_ENCODING, hash: 'linear-gradient' },
   'gradient--dark-mode-gradient': { story: DATA_ENCODING, hash: 'linear-gradient' },
   'gradient--two-color-gradients': { story: DATA_ENCODING, hash: 'linear-gradient' },
   // charts/facet.stories.tsx
   'facet--line-grid': { story: DATA_ENCODING, hash: 'facet-shared' },
   'facet--column-grid': { story: DATA_ENCODING, hash: 'facet-shared' },
-  'facet--donut-grid': { story: DATA_ENCODING, hash: 'radial-gradient' },
+  'facet--donut-grid': { story: DATA_ENCODING, hash: 'facet-shared' },
   'facet--mobile-stacking': { story: DATA_ENCODING, hash: 'facet-shared' },
   'facet--independent-y': { story: DATA_ENCODING, hash: 'facet-independent' },
   // conditional.stories.tsx

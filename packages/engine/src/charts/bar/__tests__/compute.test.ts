@@ -1,4 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import { buildD3Formatter } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -58,6 +59,8 @@ function makeGroupedBarSpec(): NormalizedChartSpec {
       { category: 'Q3', value: 70, region: 'West' },
     ],
     encoding: {
+      // Grouped is opt-out since v8 (stacked is now the default): stamp
+      // stack: null explicitly so this fixture stays grouped.
       x: { field: 'value', type: 'quantitative', stack: null },
       y: { field: 'category', type: 'nominal' },
       color: { field: 'region', type: 'nominal' },
@@ -214,6 +217,45 @@ describe('computeBarMarks', () => {
     });
   });
 
+  describe('stack: undefined (omitted) stacks by default (v8 VL-aligned default)', () => {
+    function makeDefaultStackBarSpec(): NormalizedChartSpec {
+      return {
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        data: [
+          { category: 'Q1', value: 50, region: 'East' },
+          { category: 'Q1', value: 40, region: 'West' },
+          { category: 'Q2', value: 60, region: 'East' },
+          { category: 'Q2', value: 55, region: 'West' },
+        ],
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'category', type: 'nominal' },
+          color: { field: 'region', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+    }
+
+    it('stacks segments end-to-end without an explicit stack property', () => {
+      const spec = makeDefaultStackBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
+
+      const q1Marks = marks.filter((m) => m.aria.label.includes('Q1'));
+      expect(q1Marks).toHaveLength(2);
+      expect(q1Marks[0].y).toBe(q1Marks[1].y);
+      const [first, second] = q1Marks;
+      expect(second.x).toBeCloseTo(first.x + first.width, 0);
+      expect(marks.every((m) => m.stackGroup !== undefined)).toBe(true);
+    });
+  });
+
   describe('grouped bars (stack: null)', () => {
     it('produces marks for all data rows', () => {
       const spec = makeGroupedBarSpec();
@@ -329,6 +371,9 @@ describe('computeBarMarks', () => {
         markDef: { type: 'bar' },
         data,
         encoding: {
+          // Grouped is opt-out since v8 (stacked is now the default): stamp
+          // stack: null explicitly since this test exercises the
+          // grouped-bar-only readable-floor reclaim.
           x: { field: 'dollars', type: 'quantitative', stack: null },
           y: { field: 'district', type: 'nominal' },
           color: { field: 'source', type: 'nominal' },
@@ -470,6 +515,8 @@ describe('computeBarMarks', () => {
         markDef: { type: 'bar' },
         data: wageData,
         encoding: {
+          // Grouped is opt-out since v8 (stacked is now the default): stamp
+          // stack: null explicitly for the grouped case.
           x: {
             field: 'pay',
             type: 'quantitative',
@@ -487,7 +534,7 @@ describe('computeBarMarks', () => {
       };
     }
 
-    it('groups with stack:null: bars sit at different y positions within each category', () => {
+    it('grouped (stack: null): bars sit at different y positions within each category', () => {
       const spec = makeWageSpec(false);
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
@@ -500,12 +547,12 @@ describe('computeBarMarks', () => {
       expect(smallFirmMarks[0].y).not.toBe(smallFirmMarks[1].y);
     });
 
-    it('groups with stack:null: scale domain covers max individual value, not stacked sum', () => {
+    it('grouped (stack: null): scale domain covers max individual value, not stacked sum', () => {
       const spec = makeWageSpec(false);
       const scales = computeScales(spec, chartArea, spec.data);
 
       // Max individual pay is 74800. Stacked sum for 5000+ employees = 62300 + 74800 = 137100.
-      // Default grouped bars should NOT extend domain to 137100.
+      // Grouped bars should NOT extend domain to 137100.
       const xScale = scales.x!.scale;
       const domain = xScale.domain() as number[];
       expect(domain[1]).toBeLessThan(137100);
@@ -711,7 +758,7 @@ describe('computeBarLabels', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
-    const labels = computeBarLabels(marks, chartArea, 'auto', '$,.0f');
+    const labels = computeBarLabels(marks, chartArea, 'auto', buildD3Formatter('$,.0f'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$50');
@@ -740,7 +787,7 @@ describe('computeBarLabels', () => {
     };
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
-    const labels = computeBarLabels(marks, chartArea, 'all', '$,.2~fT');
+    const labels = computeBarLabels(marks, chartArea, 'all', buildD3Formatter('$,.2~fT'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$3.75T');
@@ -751,7 +798,7 @@ describe('computeBarLabels', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
-    const labels = computeBarLabels(marks, chartArea, 'auto', '.0f%');
+    const labels = computeBarLabels(marks, chartArea, 'auto', buildD3Formatter('.0f%'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('50%');

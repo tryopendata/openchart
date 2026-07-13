@@ -7,13 +7,12 @@
 
 import type { AxisLabelDensity, AxisTick, DataRow } from '@opendata-ai/openchart-core';
 import {
-  abbreviateNumber,
-  buildD3Formatter,
   buildTemporalFormatter,
   formatDate,
-  formatNumber,
+  resolveNumberFormatter,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
+import { resolveFieldFormatter } from '../../format/field-format';
 import type { D3CategoricalScale, D3ContinuousScale, ResolvedScale } from '../scales';
 
 /**
@@ -122,8 +121,18 @@ const NUMERIC_SCALE_TYPES = new Set([
 /** Set of temporal scale types. */
 const TEMPORAL_SCALE_TYPES = new Set(['time', 'utc']);
 
+interface TickContext {
+  step?: number;
+  maxAbsTick?: number;
+}
+
 /** Format a tick value based on the scale type. */
-function formatTickLabel(value: unknown, resolvedScale: ResolvedScale, compact = false): string {
+function formatTickLabel(
+  value: unknown,
+  resolvedScale: ResolvedScale,
+  compact = false,
+  tickContext?: TickContext,
+): string {
   const axisConfig = resolvedScale.channel.axis || undefined;
   const formatStr = axisConfig?.format;
   const suffix = axisConfig?.labelSuffix ?? '';
@@ -139,15 +148,52 @@ function formatTickLabel(value: unknown, resolvedScale: ResolvedScale, compact =
   if (NUMERIC_SCALE_TYPES.has(resolvedScale.type)) {
     const num = value as number;
     if (formatStr) {
-      const fmt = buildD3Formatter(formatStr);
+      const ctx = {
+        ...resolvedScale.formatContext,
+        step: tickContext?.step,
+        stepReference: tickContext?.maxAbsTick,
+      };
+      const fmt = resolveNumberFormatter(formatStr, ctx);
       if (fmt) return fmt(num) + suffix;
     }
-    // Abbreviate large numbers for axis labels
-    if (Math.abs(num) >= 1000) return abbreviateNumber(num) + suffix;
-    return formatNumber(num) + suffix;
+    const fmt = resolveFieldFormatter({
+      channelFormat: resolvedScale.channel.format,
+      context: {
+        ...resolvedScale.formatContext,
+        step: tickContext?.step,
+        stepReference: tickContext?.maxAbsTick,
+      },
+    });
+    return fmt(num) + suffix;
   }
 
   return String(value) + suffix;
+}
+
+function computeTickContext(ticks: unknown[]): TickContext | undefined {
+  if (ticks.length < 2) return undefined;
+  const nums = ticks.filter((v) => typeof v === 'number' && Number.isFinite(v)) as number[];
+  if (nums.length < 2) return undefined;
+
+  const firstGap = Math.abs(nums[1] - nums[0]);
+  if (firstGap === 0) return undefined;
+
+  let uniform = true;
+  for (let i = 2; i < nums.length; i++) {
+    const gap = Math.abs(nums[i] - nums[i - 1]);
+    const relDiff = Math.abs(gap - firstGap) / Math.max(firstGap, 1e-15);
+    if (relDiff > 1e-9) {
+      uniform = false;
+      break;
+    }
+  }
+
+  if (!uniform) return undefined;
+
+  return {
+    step: firstGap,
+    maxAbsTick: Math.max(Math.abs(nums[0]), Math.abs(nums[nums.length - 1])),
+  };
 }
 
 /**
@@ -225,10 +271,12 @@ export function buildContinuousTicks(
     }
   }
 
+  const tickCtx = computeTickContext(ticks);
+
   return ticks.map((value: unknown) => ({
     value,
     position: scale(value as number & Date) as number,
-    label: formatTickLabel(value, resolvedScale, compact),
+    label: formatTickLabel(value, resolvedScale, compact, tickCtx),
   }));
 }
 
@@ -333,6 +381,7 @@ export function categoricalTicks(
  */
 export function resolveExplicitTicks(values: unknown[], resolvedScale: ResolvedScale): AxisTick[] {
   const scale = resolvedScale.scale;
+  const tickCtx = computeTickContext(values);
   return values.map((value) => {
     let position: number;
     if (TEMPORAL_SCALE_TYPES.has(resolvedScale.type)) {
@@ -354,7 +403,7 @@ export function resolveExplicitTicks(values: unknown[], resolvedScale: ResolvedS
     return {
       value,
       position,
-      label: formatTickLabel(value, resolvedScale),
+      label: formatTickLabel(value, resolvedScale, false, tickCtx),
     };
   });
 }

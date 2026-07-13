@@ -31,8 +31,10 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
+import { categoricalColorsForDomain } from '../compile/color-scale-range';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { MeasureFn } from '../layout/plan';
+import { applyCategoricalSort } from '../layout/scales';
 import {
   CONTINUOUS_LABEL_GAP,
   type ContinuousLegendContent,
@@ -181,8 +183,20 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   ];
   const explicitDomain = colorEnc.scale?.domain as string[] | undefined;
   const explicitRange = colorEnc.scale?.range as string[] | undefined;
-  const palette = explicitRange ?? theme.colors.categorical;
   const shape = swatchShapeForType(spec.markType);
+
+  // Reproduce the ordinal color scale's domain so swatch colors index the
+  // palette exactly like the mark colors do. `buildOrdinalColorScale` takes an
+  // explicit domain verbatim, otherwise sorts the data values by `sort`.
+  const scaleDomain = explicitDomain
+    ? explicitDomain.map(String)
+    : applyCategoricalSort(dataValues, colorEnc.sort);
+
+  // Colors come from the same resolver the scale uses, so `highlight` muting
+  // and the accent-neutral series strategy show up in the legend too. An
+  // explicit range always wins (the scale honours it verbatim).
+  const domainColors =
+    explicitRange ?? categoricalColorsForDomain(scaleDomain, theme, spec.highlight);
 
   // Order legend entries by explicit domain when provided so the author
   // controls which entries render first (and which get truncated last when
@@ -202,16 +216,14 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
 
   return uniqueValues
     .map((value, i) => {
-      // When explicit domain+range are provided, look up the color by domain index
-      // so legend colors match the mark colors exactly.
-      let colorIndex = i;
-      if (explicitDomain && explicitRange) {
-        const domainIdx = explicitDomain.indexOf(value);
-        if (domainIdx >= 0) colorIndex = domainIdx;
-      }
+      // Look the value up in the scale domain so the color matches the mark
+      // even when legend order differs from domain order. Values outside the
+      // domain (a data value not in an explicit domain) fall back to position.
+      const domainIdx = scaleDomain.indexOf(value);
+      const colorIndex = domainIdx >= 0 ? domainIdx : i;
       return {
         label: value,
-        color: palette[colorIndex % palette.length],
+        color: domainColors[colorIndex % domainColors.length],
         shape,
         active: !hiddenSet.has(value),
       };

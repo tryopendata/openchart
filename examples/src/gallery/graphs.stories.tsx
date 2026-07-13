@@ -21,20 +21,49 @@ import { generateRandomGraph, generateScaleFreeGraph } from '../graphs/helpers';
 const ILLUSTRATIVE = 'Illustrative data';
 
 // ---------------------------------------------------------------------------
-// 1. Basic force-directed graph — 20 nodes, ring + cross-links
+// 1. Basic force-directed graph — who reviews whose pull requests
 // ---------------------------------------------------------------------------
+
+/**
+ * A code-review network: an edge means "reviewed a PR for". Three teams sit at
+ * the core (platform, web, data) with a handful of cross-team reviewers wiring
+ * them together, so the force layout has real structure to pull apart.
+ */
+const reviewPairs: Array<[string, string]> = [
+  // Platform team
+  ['Ava', 'Liam'],
+  ['Liam', 'Mia'],
+  ['Mia', 'Ava'],
+  ['Noah', 'Ava'],
+  ['Noah', 'Liam'],
+  // Web team
+  ['Zoe', 'Ethan'],
+  ['Ethan', 'Chloe'],
+  ['Chloe', 'Zoe'],
+  ['Leo', 'Chloe'],
+  ['Leo', 'Ethan'],
+  // Data team
+  ['Isla', 'Owen'],
+  ['Owen', 'Nora'],
+  ['Nora', 'Isla'],
+  ['Kai', 'Nora'],
+  ['Kai', 'Owen'],
+  // Cross-team reviewers stitch the three clusters together
+  ['Mia', 'Zoe'],
+  ['Chloe', 'Isla'],
+  ['Owen', 'Ava'],
+  ['Leo', 'Kai'],
+  ['Noah', 'Isla'],
+];
 
 const basicSpec: GraphSpec = {
   type: 'graph',
-  nodes: Array.from({ length: 20 }, (_, i) => ({ id: `n${i}`, label: `Node ${i}` })),
-  edges: [
-    ...Array.from({ length: 20 }, (_, i) => ({ source: `n${i}`, target: `n${(i + 1) % 20}` })),
-    ...Array.from({ length: 10 }, (_, i) => ({ source: `n${i}`, target: `n${(i + 7) % 20}` })),
-  ],
+  nodes: [...new Set(reviewPairs.flat())].map((name) => ({ id: name, label: name })),
+  edges: reviewPairs.map(([source, target]) => ({ source, target })),
   layout: { type: 'force', chargeStrength: -120, linkDistance: 40 },
   chrome: {
     title: 'A Force Layout Untangles a Small Network',
-    subtitle: '20 nodes in a ring with a few cross-links',
+    subtitle: 'Fifteen engineers; an edge means one reviewed the other’s pull request',
     source: ILLUSTRATIVE,
   },
 };
@@ -55,33 +84,98 @@ const communitySpec: GraphSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 3. Encoded graph — node size and color driven by data
+// 3. Encoded graph — a research knowledge graph, three channels at once
 // ---------------------------------------------------------------------------
 
-const types = ['person', 'org', 'project', 'resource'];
+/**
+ * A knowledge graph over a research org: people belong to labs, labs fund
+ * projects, projects consume datasets. `citations` drives node size, `kind`
+ * drives color, and `confidence` (how well-established the link is) drives
+ * edge width — three data fields, three visual channels, one layout.
+ */
+type KnowledgeNode = { id: string; label: string; citations: number; kind: string };
+
+const knowledgeNodes: KnowledgeNode[] = [
+  // Labs
+  { id: 'lab-vision', label: 'Vision Lab', citations: 92, kind: 'Lab' },
+  { id: 'lab-language', label: 'Language Lab', citations: 88, kind: 'Lab' },
+  { id: 'lab-robotics', label: 'Robotics Lab', citations: 61, kind: 'Lab' },
+  // Researchers
+  { id: 'p-chen', label: 'Wei Chen', citations: 74, kind: 'Researcher' },
+  { id: 'p-okafor', label: 'Ada Okafor', citations: 68, kind: 'Researcher' },
+  { id: 'p-silva', label: 'Marco Silva', citations: 55, kind: 'Researcher' },
+  { id: 'p-hoffman', label: 'Ruth Hoffman', citations: 49, kind: 'Researcher' },
+  { id: 'p-nakamura', label: 'Yuki Nakamura', citations: 44, kind: 'Researcher' },
+  { id: 'p-bello', label: 'Ines Bello', citations: 38, kind: 'Researcher' },
+  { id: 'p-dubois', label: 'Luc Dubois', citations: 33, kind: 'Researcher' },
+  { id: 'p-ferrari', label: 'Gia Ferrari', citations: 27, kind: 'Researcher' },
+  // Projects
+  { id: 'proj-atlas', label: 'Atlas', citations: 80, kind: 'Project' },
+  { id: 'proj-lumen', label: 'Lumen', citations: 66, kind: 'Project' },
+  { id: 'proj-harbor', label: 'Harbor', citations: 52, kind: 'Project' },
+  { id: 'proj-cobalt', label: 'Cobalt', citations: 41, kind: 'Project' },
+  { id: 'proj-tessera', label: 'Tessera', citations: 29, kind: 'Project' },
+  // Datasets
+  { id: 'ds-imagenet', label: 'ImageNet', citations: 96, kind: 'Dataset' },
+  { id: 'ds-commoncrawl', label: 'Common Crawl', citations: 84, kind: 'Dataset' },
+  { id: 'ds-openstreet', label: 'OpenStreetMap', citations: 58, kind: 'Dataset' },
+  { id: 'ds-census', label: 'US Census', citations: 47, kind: 'Dataset' },
+  { id: 'ds-arxiv', label: 'arXiv', citations: 39, kind: 'Dataset' },
+];
+
+const knowledgeEdges: Array<{ source: string; target: string; confidence: number }> = [
+  // Researchers -> labs (affiliation, well established)
+  { source: 'p-chen', target: 'lab-vision', confidence: 0.98 },
+  { source: 'p-okafor', target: 'lab-language', confidence: 0.96 },
+  { source: 'p-silva', target: 'lab-robotics', confidence: 0.95 },
+  { source: 'p-hoffman', target: 'lab-vision', confidence: 0.93 },
+  { source: 'p-nakamura', target: 'lab-language', confidence: 0.91 },
+  { source: 'p-bello', target: 'lab-robotics', confidence: 0.88 },
+  { source: 'p-dubois', target: 'lab-vision', confidence: 0.72 },
+  { source: 'p-ferrari', target: 'lab-language', confidence: 0.64 },
+  // Labs -> projects (funding)
+  { source: 'lab-vision', target: 'proj-atlas', confidence: 0.9 },
+  { source: 'lab-vision', target: 'proj-cobalt', confidence: 0.61 },
+  { source: 'lab-language', target: 'proj-lumen', confidence: 0.87 },
+  { source: 'lab-language', target: 'proj-tessera', confidence: 0.55 },
+  { source: 'lab-robotics', target: 'proj-harbor', confidence: 0.83 },
+  { source: 'lab-robotics', target: 'proj-cobalt', confidence: 0.48 },
+  // Researchers -> projects (contribution)
+  { source: 'p-chen', target: 'proj-atlas', confidence: 0.86 },
+  { source: 'p-hoffman', target: 'proj-atlas', confidence: 0.7 },
+  { source: 'p-okafor', target: 'proj-lumen', confidence: 0.82 },
+  { source: 'p-nakamura', target: 'proj-lumen', confidence: 0.59 },
+  { source: 'p-silva', target: 'proj-harbor', confidence: 0.78 },
+  { source: 'p-bello', target: 'proj-harbor', confidence: 0.51 },
+  { source: 'p-dubois', target: 'proj-cobalt', confidence: 0.43 },
+  { source: 'p-ferrari', target: 'proj-tessera', confidence: 0.37 },
+  // Projects -> datasets (consumption)
+  { source: 'proj-atlas', target: 'ds-imagenet', confidence: 0.94 },
+  { source: 'proj-atlas', target: 'ds-openstreet', confidence: 0.46 },
+  { source: 'proj-lumen', target: 'ds-commoncrawl', confidence: 0.92 },
+  { source: 'proj-lumen', target: 'ds-arxiv', confidence: 0.68 },
+  { source: 'proj-harbor', target: 'ds-openstreet', confidence: 0.81 },
+  { source: 'proj-harbor', target: 'ds-census', confidence: 0.57 },
+  { source: 'proj-cobalt', target: 'ds-imagenet', confidence: 0.65 },
+  { source: 'proj-cobalt', target: 'ds-census', confidence: 0.4 },
+  { source: 'proj-tessera', target: 'ds-arxiv', confidence: 0.53 },
+  { source: 'proj-tessera', target: 'ds-commoncrawl', confidence: 0.35 },
+];
 
 const encodedSpec: GraphSpec = {
   type: 'graph',
-  nodes: Array.from({ length: 30 }, (_, i) => ({
-    id: `n${i}`,
-    label: `Item ${i}`,
-    weight: ((i * 37) % 80) + 20,
-    kind: types[i % types.length],
-  })),
-  edges: Array.from({ length: 45 }, (_, i) => ({
-    source: `n${i % 30}`,
-    target: `n${(i * 7 + 3) % 30}`,
-    confidence: ((i * 13) % 100) / 100,
-  })),
+  nodes: knowledgeNodes,
+  edges: knowledgeEdges,
   encoding: {
-    nodeSize: { field: 'weight' },
+    nodeSize: { field: 'citations' },
     nodeColor: { field: 'kind' },
+    nodeLabel: { field: 'label' },
     edgeWidth: { field: 'confidence' },
   },
   layout: { type: 'force', chargeStrength: -150, linkDistance: 35 },
   chrome: {
     title: 'Three Channels, One Layout',
-    subtitle: 'Node size = weight, node color = kind, edge width = confidence',
+    subtitle: 'Size = citations, color = entity kind, edge width = link confidence',
     source: ILLUSTRATIVE,
   },
 };
@@ -90,22 +184,53 @@ const encodedSpec: GraphSpec = {
 // 4. Graph with chrome — editorial framing on a network
 // ---------------------------------------------------------------------------
 
+/**
+ * The Lexington Avenue line as a graph. Local service (the 6) runs the corridor
+ * stop by stop; express service (the 4/5) skips ahead, so the express edges are
+ * the shortcuts that fold the line in on itself. Stations are sized by weekday
+ * ridership. Express stops are the ones the 4/5 actually serve.
+ */
+const lexStations: Array<{ id: string; label: string; ridership: number; express: boolean }> = [
+  { id: 'brooklyn-bridge', label: 'Brooklyn Bridge', ridership: 21000, express: true },
+  { id: 'canal', label: 'Canal St', ridership: 12000, express: false },
+  { id: 'spring', label: 'Spring St', ridership: 8000, express: false },
+  { id: 'bleecker', label: 'Bleecker St', ridership: 14000, express: false },
+  { id: 'astor', label: 'Astor Pl', ridership: 11000, express: false },
+  { id: 'union-square', label: '14 St–Union Sq', ridership: 45000, express: true },
+  { id: '23rd', label: '23 St', ridership: 13000, express: false },
+  { id: '28th', label: '28 St', ridership: 9000, express: false },
+  { id: '33rd', label: '33 St', ridership: 16000, express: false },
+  { id: 'grand-central', label: 'Grand Central', ridership: 42000, express: true },
+  { id: '51st', label: '51 St', ridership: 18000, express: false },
+  { id: '59th', label: '59 St', ridership: 27000, express: true },
+  { id: '68th', label: '68 St–Hunter', ridership: 15000, express: false },
+  { id: '77th', label: '77 St', ridership: 10000, express: false },
+  { id: '86th', label: '86 St', ridership: 24000, express: true },
+];
+
+const expressStops = lexStations.filter((s) => s.express);
+
 const chromeSpec: GraphSpec = {
   type: 'graph',
-  nodes: Array.from({ length: 15 }, (_, i) => ({
-    id: `s${i}`,
-    label: `Station ${i}`,
-    ridership: ((i * 6100) % 45000) + 5000,
-  })),
+  nodes: lexStations,
   edges: [
-    ...Array.from({ length: 15 }, (_, i) => ({ source: `s${i}`, target: `s${(i + 1) % 15}` })),
-    ...Array.from({ length: 5 }, (_, i) => ({ source: `s${i}`, target: `s${(i + 5) % 15}` })),
+    // Local service: every station in corridor order.
+    ...lexStations.slice(0, -1).map((station, i) => ({
+      source: station.id,
+      target: lexStations[i + 1].id,
+    })),
+    // Express service: skips the locals, short-circuiting the corridor.
+    ...expressStops.slice(0, -1).map((station, i) => ({
+      source: station.id,
+      target: expressStops[i + 1].id,
+    })),
   ],
-  encoding: { nodeSize: { field: 'ridership' } },
+  encoding: { nodeSize: { field: 'ridership' }, nodeLabel: { field: 'label' } },
   layout: { type: 'force', chargeStrength: -100, linkDistance: 50 },
   chrome: {
-    title: 'A Transit Map as a Graph',
-    subtitle: 'Stations sized by ridership; express links cross the ring',
+    title: 'A Transit Line as a Graph',
+    subtitle:
+      'Lexington Avenue stations sized by weekday ridership; express trains skip the locals',
     source: ILLUSTRATIVE,
     byline: 'Chart: OpenChart',
   },

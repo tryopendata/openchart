@@ -20,7 +20,8 @@ import { useEffect, useRef, useState } from 'react';
 export type DemoProps = {
   /** Anchor slug, unique per page. */
   id: string;
-  title: string;
+  /** Omit when the parent Section's title already covers this demo. */
+  title?: string;
   /** One line: when/why to use this pattern. */
   description?: string;
   /** Any VizSpec. Omit when using `children`. */
@@ -342,22 +343,29 @@ export function Demo({
     specView && dataExpanded && panelSpec ? JSON.stringify(panelSpec, null, 2) : specView?.display;
 
   return (
-    <div className="oc-demo" id={id} ref={cardRef} style={wrapperStyle}>
-      <div className="oc-demo-header">
-        <div className="oc-demo-header-text">
-          <h3 className="oc-demo-title">{title}</h3>
-          {description ? <p className="oc-demo-description">{description}</p> : null}
+    <div
+      className={`oc-demo${title ? '' : ' oc-demo--headless'}`}
+      id={id}
+      ref={cardRef}
+      style={wrapperStyle}
+    >
+      {title ? (
+        <div className="oc-demo-header">
+          <div className="oc-demo-header-text">
+            <h3 className="oc-demo-title">{title}</h3>
+            {description ? <p className="oc-demo-description">{description}</p> : null}
+          </div>
+          <button
+            type="button"
+            className="oc-anchor-btn"
+            onClick={copyLink}
+            aria-label={copied === 'link' ? 'Link copied' : `Copy link to "${title}"`}
+            title={copied === 'link' ? 'Link copied' : 'Copy link to this demo'}
+          >
+            <LinkIcon />
+          </button>
         </div>
-        <button
-          type="button"
-          className="oc-anchor-btn"
-          onClick={copyLink}
-          aria-label={copied === 'link' ? 'Link copied' : `Copy link to "${title}"`}
-          title={copied === 'link' ? 'Link copied' : 'Copy link to this demo'}
-        >
-          <LinkIcon />
-        </button>
-      </div>
+      ) : null}
 
       <div className="oc-demo-viz" style={wrapperStyle}>
         {visible ? (

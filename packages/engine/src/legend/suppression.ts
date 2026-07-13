@@ -148,12 +148,8 @@ export function resolveSuppression(
     spec.encoding.y?.type === 'quantitative' ? spec.encoding.y : spec.encoding.x
   ) as Encoding[keyof Encoding] | undefined;
   const stackValue = quantChannel && 'stack' in quantChannel ? quantChannel.stack : undefined;
-  const isStacked = isArea
-    ? stackValue === true ||
-      stackValue === 'zero' ||
-      stackValue === 'normalize' ||
-      stackValue === 'center'
-    : false;
+  // v8 VL-aligned default: area stacks unless stack is explicitly null/false.
+  const isStacked = isArea ? stackValue !== null && stackValue !== false : false;
 
   // Stacked area: revert to the pre-v6 behavior — show legend, no endpoint column.
   if (isStacked) {
