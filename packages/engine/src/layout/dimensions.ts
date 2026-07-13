@@ -28,6 +28,8 @@ import {
   axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   computeChrome,
+  computeFieldFormatContext,
+  defaultNumberFormatter,
   estimateTextWidth,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
@@ -39,9 +41,9 @@ import {
   MAX_LEFT_LABEL_FRACTION_MEDIUM,
   MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
   NARROW_VIEWPORT_MAX,
+  resolveNumberFormatter,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
@@ -561,25 +563,16 @@ export function computeDimensions(
         if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
       }
 
+      const ctx = computeFieldFormatContext(spec.data.map((r) => r[yField]));
       let sampleLabel: string;
       if (yAxisFormat) {
-        // Use the actual d3-format to produce a realistic label estimate
-        try {
-          const fmt = d3Format(yAxisFormat);
-          sampleLabel = fmt(maxAbsVal);
-        } catch {
-          sampleLabel = String(maxAbsVal);
-        }
+        const fmt = resolveNumberFormatter(yAxisFormat, ctx);
+        sampleLabel = fmt ? fmt(maxAbsVal) : String(maxAbsVal);
       } else {
-        // Fallback: estimate from magnitude
-        if (maxAbsVal >= 1_000_000_000) sampleLabel = '1.5B';
-        else if (maxAbsVal >= 1_000_000) sampleLabel = '1.5M';
-        else if (maxAbsVal >= 1_000) sampleLabel = '1.5K';
-        else if (maxAbsVal >= 100) sampleLabel = '100';
-        else if (maxAbsVal >= 10) sampleLabel = '10';
-        else sampleLabel = '0.0';
+        sampleLabel = defaultNumberFormatter({ ...ctx, extent: ctx.extent ?? [0, maxAbsVal] })(
+          maxAbsVal,
+        );
       }
-      // Account for negative sign
       const negPrefix = spec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
       const labelEst = negPrefix + sampleLabel;
       const labelWidth = estimateTextWidth(
@@ -618,21 +611,16 @@ export function computeDimensions(
         const v = Number(row[yFieldForTitle]);
         if (Number.isFinite(v) && Math.abs(v) > maxAbsValForTitle) maxAbsValForTitle = Math.abs(v);
       }
+      const ctxForTitle = computeFieldFormatContext(spec.data.map((r) => r[yFieldForTitle!]));
       let sampleLabelForTitle: string;
       if (yAxisFormatForTitle) {
-        try {
-          const fmt = d3Format(yAxisFormatForTitle);
-          sampleLabelForTitle = fmt(maxAbsValForTitle);
-        } catch {
-          sampleLabelForTitle = String(maxAbsValForTitle);
-        }
+        const fmt = resolveNumberFormatter(yAxisFormatForTitle, ctxForTitle);
+        sampleLabelForTitle = fmt ? fmt(maxAbsValForTitle) : String(maxAbsValForTitle);
       } else {
-        if (maxAbsValForTitle >= 1_000_000_000) sampleLabelForTitle = '1.5B';
-        else if (maxAbsValForTitle >= 1_000_000) sampleLabelForTitle = '1.5M';
-        else if (maxAbsValForTitle >= 1_000) sampleLabelForTitle = '1.5K';
-        else if (maxAbsValForTitle >= 100) sampleLabelForTitle = '100';
-        else if (maxAbsValForTitle >= 10) sampleLabelForTitle = '10';
-        else sampleLabelForTitle = '0.0';
+        sampleLabelForTitle = defaultNumberFormatter({
+          ...ctxForTitle,
+          extent: ctxForTitle.extent ?? [0, maxAbsValForTitle],
+        })(maxAbsValForTitle);
       }
       const negPrefixForTitle = spec.data.some((r) => Number(r[yFieldForTitle]) < 0) ? '-' : '';
       estTickLabelWidth = estimateTextWidth(

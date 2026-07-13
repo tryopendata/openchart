@@ -16,6 +16,7 @@ import type {
   CompileOptions,
   LegendEntry,
   LegendLayout,
+  NumberFormatter,
   Rect,
   ResolvedAnimation,
   ResolvedTheme,
@@ -28,15 +29,15 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
-  buildD3Formatter,
   computeChrome,
+  defaultNumberFormatter,
   estimateTextWidth,
-  formatNumber,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { resolveFieldFormatter } from '../format/field-format';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
 import type { NormalizedSankeySpec } from './types';
@@ -286,6 +287,10 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const targetField = sankeySpec.encoding.target.field;
   const valueField = sankeySpec.encoding.value.field;
   const colorField = sankeySpec.encoding.color?.field;
+  const flowFmt = resolveFieldFormatter({
+    surfaceFormat: sankeySpec.valueFormat,
+    values: sankeySpec.data.map((r) => r[valueField]),
+  });
 
   // 5b. Pre-compute legend to reserve vertical space
   //     We need the color map first, so build a temporary one from raw data
@@ -426,7 +431,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       data: { id: node.id, label: node.label },
       aria: {
         role: 'img',
-        label: `${node.label}: ${formatFlowValue(node.value ?? 0, sankeySpec.valueFormat)}`,
+        label: `${node.label}: ${formatFlowValue(node.value ?? 0, flowFmt)}`,
       },
       animationIndex: 0, // Reassigned below after sorting by depth
     };
@@ -461,7 +466,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       data: (link as unknown as { data: Record<string, unknown> }).data ?? {},
       aria: {
         role: 'img',
-        label: `${sourceNode.label} to ${targetNode.label}: ${formatFlowValue(link.value, sankeySpec.valueFormat)}`,
+        label: `${sourceNode.label} to ${targetNode.label}: ${formatFlowValue(link.value, flowFmt)}`,
       },
       // Links animate after nodes
       animationIndex: nodeMarks.length + i,
@@ -480,7 +485,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   );
 
   // 13. Build tooltip descriptors
-  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, sankeySpec.valueFormat);
+  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, flowFmt);
 
   // 14. Build a11y metadata
   const a11y = {
@@ -599,27 +604,23 @@ function buildSankeyLegend(
 // Tooltip builder
 // ---------------------------------------------------------------------------
 
-function formatFlowValue(value: number, valueFormat?: string): string {
-  if (valueFormat) {
-    const fmt = buildD3Formatter(valueFormat);
-    if (fmt) return fmt(value);
-  }
-  return formatNumber(value);
+function formatFlowValue(value: number, formatter?: NumberFormatter | null): string {
+  if (formatter) return formatter(value);
+  return defaultNumberFormatter()(value);
 }
 
 function buildTooltipDescriptors(
   nodes: SankeyNodeMark[],
   links: SankeyLinkMark[],
-  valueFormat?: string,
+  formatter?: NumberFormatter | null,
 ): Map<string, TooltipContent> {
   const descriptors = new Map<string, TooltipContent>();
 
-  // Node tooltips: keyed by "node-{nodeId}" to match renderer data-mark-id
   for (const node of nodes) {
     const fields: TooltipField[] = [
       {
         label: 'Total flow',
-        value: formatFlowValue(node.value, valueFormat),
+        value: formatFlowValue(node.value, formatter),
       },
     ];
     descriptors.set(`node-${node.nodeId}`, {
@@ -628,13 +629,12 @@ function buildTooltipDescriptors(
     });
   }
 
-  // Link tooltips: keyed by "link-{sourceId}-{targetId}" to match renderer data-mark-id
   for (let i = 0; i < links.length; i++) {
     const link = links[i];
     const fields: TooltipField[] = [
       {
         label: 'Flow',
-        value: formatFlowValue(link.value, valueFormat),
+        value: formatFlowValue(link.value, formatter),
       },
     ];
     descriptors.set(`link-${link.sourceId}-${link.targetId}-${i}`, {

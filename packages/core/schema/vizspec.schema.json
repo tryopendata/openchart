@@ -4259,7 +4259,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"). For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
         },
         "highlight": {
           "anyOf": [
@@ -4319,7 +4319,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Number format string (d3-format). e.g. \",.0f\" for comma-separated integers."
+          "description": "Number format: d3-format string (e.g. \",.0f\"), or semantic keyword `'percent'` / `'currency'`. When omitted, compact notation (1k, 2.5M) is applied automatically."
         },
         "tickCount": {
           "type": "number",
@@ -15729,7 +15729,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Number/date format string (d3-format or d3-time-format). Applied to the raw value before display. e.g. \",.0f\" or \"%Y-%m-%d\"."
+          "description": "Number/date format string (d3-format or d3-time-format), or semantic keyword `'percent'` / `'currency'`. e.g. \",.0f\", \"%Y-%m-%d\", \"percent\". Tables always show full precision (no compact notation)."
         },
         "heatmap": {
           "$ref": "#/definitions/HeatmapColumnConfig",
@@ -16370,7 +16370,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"). For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+          "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
         },
         "highlight": {
           "anyOf": [

@@ -1,4 +1,5 @@
 import type { RectMark } from '@opendata-ai/openchart-core';
+import { buildD3Formatter } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { computeBarLabels } from '../labels';
 
@@ -163,7 +164,7 @@ describe('computeBarLabels with $~s format and abbreviated aria values', () => {
       makeAbbreviatedMark(2, 14000, '14K'),
     ];
 
-    const labels = computeBarLabels(thousandMarks, chartArea, 'all', '$~s');
+    const labels = computeBarLabels(thousandMarks, chartArea, 'all', buildD3Formatter('$~s'));
     expect(labels).toHaveLength(3);
     expect(labels[0].text).toBe('$6k');
     expect(labels[1].text).toBe('$7k');
@@ -173,7 +174,7 @@ describe('computeBarLabels with $~s format and abbreviated aria values', () => {
   it('$~s format works for millions', () => {
     const millionMarks: RectMark[] = [makeAbbreviatedMark(0, 1500000, '1.5M')];
 
-    const labels = computeBarLabels(millionMarks, chartArea, 'all', '$~s');
+    const labels = computeBarLabels(millionMarks, chartArea, 'all', buildD3Formatter('$~s'));
     expect(labels).toHaveLength(1);
     expect(labels[0].text).toBe('$1.5M');
   });
@@ -181,7 +182,7 @@ describe('computeBarLabels with $~s format and abbreviated aria values', () => {
   it('handles comma-formatted aria values', () => {
     const commaMarks: RectMark[] = [makeAbbreviatedMark(0, 500, '500')];
 
-    const labels = computeBarLabels(commaMarks, chartArea, 'all', '$,.0f');
+    const labels = computeBarLabels(commaMarks, chartArea, 'all', buildD3Formatter('$,.0f'));
     expect(labels).toHaveLength(1);
     expect(labels[0].text).toBe('$500');
   });
@@ -211,7 +212,7 @@ describe('computeBarLabels with Unicode minus (U+2212) in aria values', () => {
       makeUnicodeMinusMark(1, '\u22125'), // −5
     ];
 
-    const labels = computeBarLabels(unicodeMarks, chartArea, 'all', '+.0f%');
+    const labels = computeBarLabels(unicodeMarks, chartArea, 'all', buildD3Formatter('+.0f%'));
     expect(labels).toHaveLength(2);
     expect(labels[0].text).toBe('\u221234%'); // −34%
     expect(labels[1].text).toBe('\u22125%'); // −5%

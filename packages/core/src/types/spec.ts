@@ -320,7 +320,11 @@ export type AggregateOp =
 export interface AxisConfig {
   /** Axis title text. If omitted, the field name is used. */
   title?: string;
-  /** Number format string (d3-format). e.g. ",.0f" for comma-separated integers. */
+  /**
+   * Number format: d3-format string (e.g. ",.0f"), or semantic keyword
+   * `'percent'` / `'currency'`. When omitted, compact notation (1k, 2.5M)
+   * is applied automatically.
+   */
   format?: string;
   /** Override tick count. Engine picks a sensible default if omitted. */
   tickCount?: number;
@@ -565,7 +569,8 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
   title?: string;
   /**
    * Format string for values (Vega-Lite aligned).
-   * For quantitative fields: d3-format string (e.g. ",.0f", "$,.2f").
+   * For quantitative fields: d3-format string (e.g. ",.0f", "$,.2f"),
+   * or semantic keyword `'percent'` / `'currency'`.
    * For temporal fields: d3-time-format string (e.g. "%Y", "%b %d").
    * Used in tooltips; `axis.format` takes precedence for axis tick labels.
    */

@@ -178,11 +178,11 @@ describe('computeWaffleMarks', () => {
   it('labels the first cell of each category "x of N units" and marks the rest decorative', () => {
     const marks = marksFor(makeWaffleSpec());
 
-    expect(marks[0].aria.label).toBe('Fossil: 60 of 100 units (60.0%)');
+    expect(marks[0].aria.label).toBe('Fossil: 60 of 100 units (60%)');
     expect(marks[0].aria.decorative).toBeUndefined();
-    expect(marks[1].aria.label).toBe('Fossil: 60 of 100 units (60.0%)');
+    expect(marks[1].aria.label).toBe('Fossil: 60 of 100 units (60%)');
     expect(marks[1].aria.decorative).toBe(true);
-    expect(marks[60].aria.label).toBe('Renewables: 30 of 100 units (30.0%)');
+    expect(marks[60].aria.label).toBe('Renewables: 30 of 100 units (30%)');
     expect(marks[60].aria.decorative).toBeUndefined();
   });
 

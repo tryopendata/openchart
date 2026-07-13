@@ -141,10 +141,10 @@ describe('computeTooltipDescriptors', () => {
       // Should have fields for y (value) and x (date)
       expect(content.fields.length).toBeGreaterThanOrEqual(1);
 
-      // The value field should be formatted with commas
+      // The value field should use compact notation (smart default formatting)
       const valueField = content.fields.find((f) => f.label === 'value');
       expect(valueField).toBeDefined();
-      expect(valueField!.value).toBe('1,500');
+      expect(valueField!.value).toBe('1.5k');
     });
 
     it('tooltip title uses temporal x-axis value', () => {

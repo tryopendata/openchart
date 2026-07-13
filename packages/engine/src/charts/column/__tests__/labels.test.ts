@@ -1,4 +1,5 @@
 import type { RectMark } from '@opendata-ai/openchart-core';
+import { buildD3Formatter } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { computeColumnLabels } from '../labels';
 
@@ -98,7 +99,12 @@ describe('computeColumnLabels positioning', () => {
   });
 
   it('applies labelFormat to numeric values', () => {
-    const labels = computeColumnLabels([makeMark(0, 1234)], chartArea, 'all', ',.0f');
+    const labels = computeColumnLabels(
+      [makeMark(0, 1234)],
+      chartArea,
+      'all',
+      buildD3Formatter(',.0f'),
+    );
     expect(labels[0].text).toBe('1,234');
   });
 });

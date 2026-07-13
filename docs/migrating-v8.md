@@ -42,6 +42,9 @@ capability. See the spec reference for the `facet` channel and `resolve`.
 | `href` encoding | declared, silently ignored | removed | Never implemented; handle links in the host app |
 | `order` encoding | declared, silently ignored | removed | Never implemented; use `sort` or pre-sorted data |
 | `ChartType` / `CHART_TYPES` exports | deprecated aliases | removed | Use `MarkType` / `MARK_TYPES` |
+| Default number formatting | raw `formatNumber` (comma-grouped, 2 decimals) | compact notation on charts (1k, 2.5M); full precision in tables | Readable axis/tooltip labels without manual format strings |
+| `K` abbreviation casing | uppercase `K` (1K, 500K) | lowercase `k` (1k, 500k) | SI convention; uppercase K is kelvin |
+| Percent formatting | `((v/total)*100).toFixed(1) + '%'` | `formatPercent(fraction)` (trailing-zero-trimmed) | `60.0%` becomes `60%`; `33.3%` stays `33.3%` |
 
 Two more deprecations are kept accepted through v8 so you have a full window,
 then removed in a later major:
@@ -136,6 +139,39 @@ format from `encoding.value.format` and keeps `valueFormat` as an alias, so
 
 Do not migrate this on v7: the engine does not read `encoding.value.format` for
 these chart types until v8, so the encoding form is a no-op until then.
+
+### Default number formatting
+
+v8 applies compact notation automatically on chart surfaces: axis ticks,
+tooltips, value labels, and endpoint labels show `1k`, `2.5M`, `1.2B` instead
+of `1,000`, `2,500,000`, `1,200,000,000`. Tables keep full precision.
+
+**What changes without any spec edits:**
+
+- Axis tick `1,000,000` becomes `1M`; `50,000` becomes `50k`
+- Years (integers in 1500-2500) render bare: `2024` not `2,024`
+- Percent labels drop trailing zeros: `60%` not `60.0%`
+- Abbreviation casing: `k` not `K` (SI convention)
+
+**To keep v7 formatting on a specific axis:**
+
+```jsonc
+"encoding": {
+  "y": {
+    "field": "revenue",
+    "type": "quantitative",
+    "axis": { "format": ",.0f" }
+  }
+}
+```
+
+Any explicit `format` string (on `axis`, channel, or `valueFormat`) takes
+precedence over the new defaults. Specs that already set format strings are
+unaffected.
+
+**New semantic keywords:** `'percent'` and `'currency'` can be used as format
+strings anywhere a d3-format string is accepted. `'percent'` multiplies by 100
+and appends `%`; `'currency'` prepends `$` with comma grouping.
 
 ## Codemod recipes
 

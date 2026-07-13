@@ -30,6 +30,7 @@ import type {
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { resolveFieldFormatter } from '../format/field-format';
 import {
   countColorSeries,
   endpointLabelsExplicitlyOn,
@@ -300,9 +301,14 @@ export function computeEndpointLabels(
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;
   const wrapWidth = config?.width ?? ENDPOINT_WRAP_WIDTH_DEFAULT;
   const valueField = config?.valueField ?? spec.encoding.y?.field;
-  const formatString =
+  const surfaceFormat =
     config?.format ??
     ((spec.encoding.y?.axis as Record<string, unknown> | undefined)?.format as string | undefined);
+  const endpointFormatter = resolveFieldFormatter({
+    surfaceFormat,
+    channelFormat: spec.encoding.y?.format,
+    values: valueField ? spec.data.map((r) => r[valueField]) : [],
+  });
   const showMarker = config?.showMarker !== false;
   const markerRadius = config?.markerStyle?.radius ?? ENDPOINT_MARKER_RADIUS;
   const markerStrokeWidth = config?.markerStyle?.strokeWidth ?? ENDPOINT_MARKER_STROKE_WIDTH;
@@ -352,7 +358,7 @@ export function computeEndpointLabels(
     if (!last) continue;
 
     const rawValue = readValue(mark, valueField);
-    const formatted = formatEndpointValue(rawValue, formatString);
+    const formatted = formatEndpointValue(rawValue, endpointFormatter);
 
     // Content composition: when `content` is set, the composed text becomes
     // the label lines and the second-line value is dropped.
@@ -494,7 +500,7 @@ export function computeEndpointLabels(
       if (!first) continue;
 
       const rawValue = readFirstValue(mark, valueField);
-      const formatted = formatEndpointValue(rawValue, formatString);
+      const formatted = formatEndpointValue(rawValue, endpointFormatter);
       const labelText = leadingContent
         ? composeEndpointText(leadingContent, seriesKey, formatted)
         : seriesKey;

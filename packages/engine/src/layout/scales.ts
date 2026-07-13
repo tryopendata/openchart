@@ -10,9 +10,11 @@ import type {
   DataRow,
   Encoding,
   EncodingChannel,
+  FieldFormatContext,
   Rect,
   ScaleType,
 } from '@opendata-ai/openchart-core';
+import { computeFieldFormatContext } from '@opendata-ai/openchart-core';
 import { extent, max, min } from 'd3-array';
 import type {
   ScaleBand,
@@ -92,6 +94,8 @@ export interface ResolvedScale {
   type: ResolvedScaleType;
   /** The encoding channel this scale was derived from. */
   channel: EncodingChannel;
+  /** Per-field formatting context (extent, allIntegers) from the ORIGINAL data. */
+  formatContext?: FieldFormatContext;
 }
 
 /** All resolved scales for a chart. */
@@ -854,6 +858,9 @@ export function computeScales(
       spec.markType,
       'x',
     );
+    if (result.x && encoding.x.type === 'quantitative' && encoding.x.field) {
+      result.x.formatContext = computeFieldFormatContext(data.map((r) => r[encoding.x!.field]));
+    }
   }
 
   if (encoding.y) {
@@ -976,6 +983,9 @@ export function computeScales(
       spec.markType,
       'y',
     );
+    if (result.y && encoding.y.type === 'quantitative' && encoding.y.field) {
+      result.y.formatContext = computeFieldFormatContext(data.map((r) => r[encoding.y!.field]));
+    }
   }
 
   if (encoding.color) {

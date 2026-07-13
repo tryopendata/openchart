@@ -1,15 +1,14 @@
 /**
  * Shared numeric value formatter for data labels.
  *
- * Used by bar, column, and dot label computation to display a value:
- * abbreviated (K/M/B/T) for magnitudes >= 1000, otherwise the default
- * numeric format.
+ * Used by bar, column, and dot label computation to display a value
+ * with smart compact defaults (k/M/B/T).
  */
 
-import { abbreviateNumber, formatNumber } from '@opendata-ai/openchart-core';
+import type { FieldFormatContext } from '@opendata-ai/openchart-core';
+import { defaultNumberFormatter } from '@opendata-ai/openchart-core';
 
-/** Format a label value for display (abbreviate large numbers). */
-export function formatLabelValue(value: number): string {
-  if (Math.abs(value) >= 1000) return abbreviateNumber(value);
-  return formatNumber(value);
+/** Format a label value for display (compact by default). */
+export function formatLabelValue(value: number, ctx?: FieldFormatContext): string {
+  return defaultNumberFormatter(ctx)(value);
 }

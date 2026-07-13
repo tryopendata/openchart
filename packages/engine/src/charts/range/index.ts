@@ -5,6 +5,7 @@
  */
 
 import type { PointMark } from '@opendata-ai/openchart-core';
+import { resolveFieldFormatter } from '../../format/field-format';
 import type { ChartRenderer } from '../registry';
 import { computeRangeMarks, resolveRangeOrientation } from './compute';
 import { computeRangeLabels, type RangeDotPair } from './labels';
@@ -40,14 +41,21 @@ export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, 
   const startChannel = horizontal ? encoding.x : encoding.y;
   const endChannel = horizontal ? encoding.x2 : encoding.y2;
 
+  const startField = startChannel && 'field' in startChannel ? startChannel.field : undefined;
+  const endField = endChannel && 'field' in endChannel ? endChannel.field : undefined;
+  const labelFormatter = resolveFieldFormatter({
+    surfaceFormat: spec.labels.format,
+    channelFormat: startChannel && 'format' in startChannel ? startChannel.format : undefined,
+    values: startField ? spec.data.map((r) => r[startField]) : [],
+  });
   const labels = computeRangeLabels(
     pairs,
     horizontal,
     spec.labels.density,
     spec.labels.prefix,
-    spec.labels.format,
-    startChannel && 'field' in startChannel ? startChannel.field : undefined,
-    endChannel && 'field' in endChannel ? endChannel.field : undefined,
+    labelFormatter,
+    startField,
+    endField,
   );
 
   // Attach labels back onto their dots via the index carried through the

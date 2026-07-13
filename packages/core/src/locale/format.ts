@@ -23,9 +23,11 @@ import { timeFormat, utcFormat } from 'd3-time-format';
  */
 export function formatNumber(value: number, _locale?: string): string {
   if (!Number.isFinite(value)) return String(value);
-  // Auto-detect: use integer format for whole numbers, 2dp for decimals
   if (Number.isInteger(value)) {
     return d3Format(',')(value);
+  }
+  if (Math.abs(value) < 0.005) {
+    return d3Format('.2~r')(value);
   }
   return d3Format(',.2f')(value);
 }
@@ -34,35 +36,44 @@ export function formatNumber(value: number, _locale?: string): string {
 // Number abbreviation
 // ---------------------------------------------------------------------------
 
-/** Suffixes for abbreviated numbers. */
-const ABBREVIATIONS: Array<{ threshold: number; suffix: string; divisor: number }> = [
+const UNIT_TABLE: Array<{ threshold: number; suffix: string; divisor: number }> = [
   { threshold: 1_000_000_000_000, suffix: 'T', divisor: 1_000_000_000_000 },
   { threshold: 1_000_000_000, suffix: 'B', divisor: 1_000_000_000 },
   { threshold: 1_000_000, suffix: 'M', divisor: 1_000_000 },
-  { threshold: 1_000, suffix: 'K', divisor: 1_000 },
+  { threshold: 1_000, suffix: 'k', divisor: 1_000 },
 ];
 
-/**
- * Abbreviate a large number with a suffix.
- *
- * Examples:
- * - 1500000 -> "1.5M"
- * - 2300 -> "2.3K"
- * - 42 -> "42"
- * - 1000000000 -> "1B"
- */
+function unitFor(abs: number): { suffix: string; divisor: number } {
+  for (const entry of UNIT_TABLE) {
+    if (abs >= entry.threshold) return entry;
+  }
+  return { suffix: '', divisor: 1 };
+}
+
+function fractionDigits(x: number): number {
+  const a = Math.abs(x);
+  for (let p = 0; p <= 3; p++) {
+    const scaled = a * 10 ** p;
+    if (Math.abs(scaled - Math.round(scaled)) < 1e-9) return p;
+  }
+  return 4;
+}
+
 export function abbreviateNumber(value: number): string {
   if (!Number.isFinite(value)) return String(value);
 
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
-  for (const { threshold, suffix, divisor } of ABBREVIATIONS) {
+  for (let i = 0; i < UNIT_TABLE.length; i++) {
+    const { threshold, suffix, divisor } = UNIT_TABLE[i];
     if (absValue >= threshold) {
-      const abbreviated = absValue / divisor;
-      // Use .1f precision, drop trailing .0
-      const formatted = abbreviated % 1 === 0 ? String(abbreviated) : d3Format('.1f')(abbreviated);
-      return `${sign}${formatted}${suffix}`;
+      const mantissa = d3Format('.1~f')(absValue / divisor);
+      // Roll-up: if mantissa rounds to 1000, use the next unit up
+      if (mantissa === '1000' && i > 0) {
+        return `${sign}1${UNIT_TABLE[i - 1].suffix}`;
+      }
+      return `${sign}${mantissa}${suffix}`;
     }
   }
 
@@ -145,6 +156,180 @@ export function buildD3Formatter(formatStr: string | undefined): ((v: number) =>
     }
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Number formatter type + semantic formatters
+// ---------------------------------------------------------------------------
+
+export type NumberFormatter = (value: number) => string;
+
+export function formatPercent(value: number, options?: { fraction?: boolean }): string {
+  const fraction = options?.fraction ?? true;
+  if (fraction) {
+    return d3Format('.1~%')(value);
+  }
+  return d3Format(',.1~f')(value) + '%';
+}
+
+export function formatCurrency(value: number, options?: { compact?: boolean }): string {
+  const compact = options?.compact ?? false;
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  if (compact) {
+    if (abs >= 1000) {
+      return sign + '$' + abbreviateNumber(abs);
+    }
+    return sign + '$' + formatNumber(abs);
+  }
+  if (Number.isInteger(value)) {
+    return sign + d3Format('$,')(abs);
+  }
+  return sign + d3Format('$,.2f')(abs);
+}
+
+// ---------------------------------------------------------------------------
+// Years guard
+// ---------------------------------------------------------------------------
+
+export function isYearLikeValues(values: readonly number[]): boolean {
+  if (values.length === 0) return false;
+  for (const v of values) {
+    if (!Number.isFinite(v) || !Number.isInteger(v) || v < 1500 || v > 2500) return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Field format context
+// ---------------------------------------------------------------------------
+
+export interface FieldFormatContext {
+  extent?: [number, number];
+  allIntegers?: boolean;
+  surface?: 'chart' | 'table';
+  step?: number;
+  stepReference?: number;
+}
+
+export function computeFieldFormatContext(
+  values: Iterable<unknown>,
+  surface?: 'chart' | 'table',
+): FieldFormatContext {
+  let min = Infinity;
+  let max = -Infinity;
+  let allIntegers = true;
+  let hasFinite = false;
+
+  for (const raw of values) {
+    const v = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+    if (!Number.isFinite(v)) continue;
+    hasFinite = true;
+    if (v < min) min = v;
+    if (v > max) max = v;
+    if (allIntegers && !Number.isInteger(v)) allIntegers = false;
+  }
+
+  const ctx: FieldFormatContext = {};
+  if (hasFinite) {
+    ctx.extent = [min, max];
+    ctx.allIntegers = allIntegers;
+  }
+  if (surface) ctx.surface = surface;
+  return ctx;
+}
+
+export function isYearContext(ctx: FieldFormatContext | undefined): boolean {
+  if (!ctx?.extent || !ctx.allIntegers) return false;
+  const [min, max] = ctx.extent;
+  return min >= 1500 && max <= 2500;
+}
+
+// ---------------------------------------------------------------------------
+// Keyword-aware formatter resolution
+// ---------------------------------------------------------------------------
+
+export function resolveNumberFormatter(
+  formatStr: string | undefined,
+  ctx?: FieldFormatContext,
+): NumberFormatter | null {
+  if (!formatStr) return null;
+
+  if (formatStr === 'ordinal') return formatOrdinal;
+
+  if (formatStr === 'percent') {
+    const fraction = ctx?.extent
+      ? Math.max(Math.abs(ctx.extent[0]), Math.abs(ctx.extent[1])) <= 1
+      : true;
+    return (v: number) => formatPercent(v, { fraction });
+  }
+
+  if (formatStr === 'currency') {
+    const isTable = ctx?.surface === 'table';
+    if (!isTable && ctx?.step != null && (ctx.stepReference ?? 0) >= 1000) {
+      const stepFmt = buildCompactStepFormatter(ctx.step);
+      return (v: number) => {
+        const sign = v < 0 ? '-' : '';
+        return sign + '$' + stepFmt(Math.abs(v));
+      };
+    }
+    return (v: number) => formatCurrency(v, { compact: !isTable });
+  }
+
+  return buildD3Formatter(formatStr);
+}
+
+// ---------------------------------------------------------------------------
+// Default number formatter
+// ---------------------------------------------------------------------------
+
+export function defaultNumberFormatter(ctx?: FieldFormatContext): NumberFormatter {
+  if (isYearContext(ctx)) {
+    return (v: number) => String(Math.round(v));
+  }
+
+  if (ctx?.surface === 'table') {
+    return formatNumber;
+  }
+
+  if (ctx?.step != null && (ctx.stepReference ?? maxAbs(ctx.extent)) >= 1000) {
+    return buildCompactStepFormatter(ctx.step);
+  }
+
+  return (v: number) => {
+    if (!Number.isFinite(v)) return String(v);
+    // Contextless per-value year check (ARIA path)
+    if (ctx?.extent === undefined && ctx?.allIntegers === undefined) {
+      if (Number.isInteger(v) && v >= 1500 && v <= 2500) return String(v);
+    }
+    return Math.abs(v) >= 1000 ? abbreviateNumber(v) : formatNumber(v);
+  };
+}
+
+function maxAbs(extent: [number, number] | undefined): number {
+  if (!extent) return 0;
+  return Math.max(Math.abs(extent[0]), Math.abs(extent[1]));
+}
+
+// ---------------------------------------------------------------------------
+// Step-aware compact tick formatter
+// ---------------------------------------------------------------------------
+
+export function buildCompactStepFormatter(step: number): NumberFormatter {
+  return (v: number) => {
+    if (v === 0) return '0';
+    if (!Number.isFinite(v)) return String(v);
+    const abs = Math.abs(v);
+    if (abs < 1000) return formatNumber(v);
+    const { suffix, divisor } = unitFor(abs);
+    const p = fractionDigits(step / divisor);
+    if (p > 2) {
+      return Number.isInteger(v) ? d3Format(',')(v) : d3Format(',.2f')(v);
+    }
+    const sign = v < 0 ? '-' : '';
+    return sign + d3Format(`.${p}~f`)(abs / divisor) + suffix;
+  };
 }
 
 // ---------------------------------------------------------------------------

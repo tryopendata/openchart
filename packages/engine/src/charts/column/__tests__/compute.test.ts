@@ -1,4 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import { buildD3Formatter } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -351,7 +352,7 @@ describe('computeColumnLabels', () => {
     const spec = makeSimpleColumnSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'auto', '$,.0f');
+    const labels = computeColumnLabels(marks, chartArea, 'auto', buildD3Formatter('$,.0f'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$120');
@@ -379,7 +380,7 @@ describe('computeColumnLabels', () => {
     };
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'all', '$,.2~f');
+    const labels = computeColumnLabels(marks, chartArea, 'all', buildD3Formatter('$,.2~f'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$3.1');
@@ -407,7 +408,7 @@ describe('computeColumnLabels', () => {
     };
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'all', '$,.2~fT');
+    const labels = computeColumnLabels(marks, chartArea, 'all', buildD3Formatter('$,.2~fT'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$3.75T');
@@ -418,7 +419,7 @@ describe('computeColumnLabels', () => {
     const spec = makeSimpleColumnSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
-    const labels = computeColumnLabels(marks, chartArea, 'auto', '.0f%');
+    const labels = computeColumnLabels(marks, chartArea, 'auto', buildD3Formatter('.0f%'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('120%');

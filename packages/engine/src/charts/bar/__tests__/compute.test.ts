@@ -1,4 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import { buildD3Formatter } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -711,7 +712,7 @@ describe('computeBarLabels', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
-    const labels = computeBarLabels(marks, chartArea, 'auto', '$,.0f');
+    const labels = computeBarLabels(marks, chartArea, 'auto', buildD3Formatter('$,.0f'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$50');
@@ -740,7 +741,7 @@ describe('computeBarLabels', () => {
     };
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
-    const labels = computeBarLabels(marks, chartArea, 'all', '$,.2~fT');
+    const labels = computeBarLabels(marks, chartArea, 'all', buildD3Formatter('$,.2~fT'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('$3.75T');
@@ -751,7 +752,7 @@ describe('computeBarLabels', () => {
     const spec = makeSimpleBarSpec();
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
-    const labels = computeBarLabels(marks, chartArea, 'auto', '.0f%');
+    const labels = computeBarLabels(marks, chartArea, 'auto', buildD3Formatter('.0f%'));
 
     const texts = labels.map((l) => l.text);
     expect(texts).toContain('50%');

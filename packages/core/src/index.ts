@@ -146,14 +146,22 @@ export {
 // Locale: number and date formatting
 // ---------------------------------------------------------------------------
 
-export type { DateGranularity } from './locale/index';
+export type { DateGranularity, FieldFormatContext, NumberFormatter } from './locale/index';
 export {
   abbreviateNumber,
+  buildCompactStepFormatter,
   buildD3Formatter,
   buildTemporalFormatter,
+  computeFieldFormatContext,
+  defaultNumberFormatter,
+  formatCurrency,
   formatDate,
   formatNumber,
   formatOrdinal,
+  formatPercent,
+  isYearContext,
+  isYearLikeValues,
+  resolveNumberFormatter,
 } from './locale/index';
 
 // ---------------------------------------------------------------------------

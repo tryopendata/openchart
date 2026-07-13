@@ -22,13 +22,20 @@ import type {
   TooltipContent,
   TooltipField,
 } from '@opendata-ai/openchart-core';
-import { adaptTheme, computeChrome, resolveTheme } from '@opendata-ai/openchart-core';
+import {
+  adaptTheme,
+  computeChrome,
+  defaultNumberFormatter,
+  resolveTheme,
+} from '@opendata-ai/openchart-core';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedGraphSpec } from '../compiler/types';
 import { applyCommunityColors, assignCommunities, buildCommunityColorMap } from './community';
 import { resolveEdgeVisuals, resolveNodeVisuals } from './encoding';
 import type { CompiledGraphNode, GraphCompilation, SimulationConfig } from './types';
+
+const graphNumberFormatter = defaultNumberFormatter();
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -144,7 +151,7 @@ function buildGraphTooltips(nodes: CompiledGraphNode[]): Map<string, TooltipCont
 
       fields.push({
         label: key,
-        value: typeof value === 'number' ? value.toLocaleString() : String(value),
+        value: typeof value === 'number' ? graphNumberFormatter(value) : String(value),
       });
     }
 

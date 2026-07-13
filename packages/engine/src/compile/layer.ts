@@ -9,15 +9,15 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   AXIS_TITLE_TRAILING_PAD,
-  abbreviateNumber,
   BREAKPOINT_COMPACT_MAX,
+  computeFieldFormatContext,
+  defaultNumberFormatter,
   estimateTextWidth,
-  formatNumber,
   getAxisTitleOffset,
+  resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
 } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { flattenLayers } from '../compiler/index';
@@ -142,18 +142,15 @@ function estimateYAxisLabelWidth(
     const v = Number(row[yField]);
     if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
   }
+  const ctx = computeFieldFormatContext(data.map((r) => r[yField]));
   let sampleLabel: string;
   if (yAxisFormat) {
-    try {
-      const fmt = d3Format(yAxisFormat);
-      sampleLabel = fmt(maxAbsVal);
-    } catch {
-      sampleLabel = String(maxAbsVal);
-    }
+    const fmt = resolveNumberFormatter(yAxisFormat, ctx);
+    sampleLabel = fmt ? fmt(maxAbsVal) : String(maxAbsVal);
   } else {
-    // Use the same formatting as tick labels instead of hardcoded magnitude guesses
-    sampleLabel =
-      Math.abs(maxAbsVal) >= 1000 ? abbreviateNumber(maxAbsVal) : formatNumber(maxAbsVal);
+    sampleLabel = defaultNumberFormatter({ ...ctx, extent: ctx.extent ?? [0, maxAbsVal] })(
+      maxAbsVal,
+    );
   }
   const hasNeg = data.some((r) => Number(r[yField]) < 0);
   const labelEst = (hasNeg ? '-' : '') + sampleLabel;

@@ -1,6 +1,7 @@
 import type {
   CompileOptions,
   Encoding,
+  FieldFormatContext,
   LayoutStrategy,
   MeasureTextFn,
   Rect,
@@ -9,13 +10,13 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   AXIS_TITLE_TRAILING_PAD,
-  abbreviateNumber,
   axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   computeChrome,
+  computeFieldFormatContext,
   computeXAxisExtentFromLabels,
+  defaultNumberFormatter,
   estimateTextWidth,
-  formatNumber,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   isAxislessMark,
@@ -26,9 +27,9 @@ import {
   MAX_LEFT_LABEL_FRACTION_MEDIUM,
   MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
   NARROW_VIEWPORT_MAX,
+  resolveNumberFormatter,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
@@ -86,9 +87,16 @@ export function createMeasureFn(measureText?: MeasureTextFn): MeasureFn {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Format a sample label from magnitude for gutter seeding. */
-function sampleLabelFromMagnitude(maxAbsVal: number): string {
-  return maxAbsVal >= 1_000 ? abbreviateNumber(maxAbsVal) : formatNumber(maxAbsVal);
+function sampleLabelFromContext(
+  maxAbsVal: number,
+  yAxisFormat: string | undefined,
+  ctx: FieldFormatContext,
+): string {
+  if (yAxisFormat) {
+    const fmt = resolveNumberFormatter(yAxisFormat, ctx);
+    if (fmt) return fmt(maxAbsVal);
+  }
+  return defaultNumberFormatter({ ...ctx, extent: ctx.extent ?? [0, maxAbsVal] })(maxAbsVal);
 }
 
 // ---------------------------------------------------------------------------
@@ -232,7 +240,7 @@ export function resolveLayoutPlan(
         leftGutter = Math.max(leftGutter, reserved);
       }
     } else {
-      // Quantitative: seed with a formatted label (better than '1.5B' guess)
+      // Quantitative: seed with a formatted label
       const yField = encoding.y.field;
       const yAxisFormat = yAxisCfg?.format as string | undefined;
       let maxAbsVal = 0;
@@ -240,16 +248,8 @@ export function resolveLayoutPlan(
         const v = Number(row[yField]);
         if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
       }
-      let sampleLabel: string;
-      if (yAxisFormat) {
-        try {
-          sampleLabel = d3Format(yAxisFormat)(maxAbsVal);
-        } catch {
-          sampleLabel = String(maxAbsVal);
-        }
-      } else {
-        sampleLabel = sampleLabelFromMagnitude(maxAbsVal);
-      }
+      const ctx = computeFieldFormatContext(renderSpec.data.map((r) => r[yField]));
+      const sampleLabel = sampleLabelFromContext(maxAbsVal, yAxisFormat, ctx);
       const negPrefix = renderSpec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
       const labelWidth = measure(
         negPrefix + sampleLabel,
@@ -502,16 +502,8 @@ export function resolveLayoutPlan(
             const v = Number(row[yField]);
             if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
           }
-          let sample: string;
-          if (yAxisFormat) {
-            try {
-              sample = d3Format(yAxisFormat)(maxAbsVal);
-            } catch {
-              sample = String(maxAbsVal);
-            }
-          } else {
-            sample = sampleLabelFromMagnitude(maxAbsVal);
-          }
+          const ctx = computeFieldFormatContext(renderSpec.data.map((r) => r[yField]));
+          const sample = sampleLabelFromContext(maxAbsVal, yAxisFormat, ctx);
           const neg = renderSpec.data.some((r) => Number(r[encoding.y!.field]) < 0) ? '-' : '';
           const maxLabelWidth = measure(
             neg + sample,

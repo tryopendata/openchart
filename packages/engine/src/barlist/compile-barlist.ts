@@ -24,15 +24,14 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
-  buildD3Formatter,
   computeChrome,
   estimateTextWidth,
-  formatNumber,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { resolveFieldFormatter } from '../format/field-format';
 import type { NormalizedBarListSpec } from './types';
 
 // ---------------------------------------------------------------------------
@@ -160,7 +159,10 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
   }
 
   // Value formatter
-  const formatter = buildD3Formatter(barlistSpec.valueFormat) ?? formatNumber;
+  const formatter = resolveFieldFormatter({
+    surfaceFormat: barlistSpec.valueFormat,
+    values: validRows.map((r) => r[valueField]),
+  });
 
   // Compute label width: measure all labels and use a consistent width
   const measureText =

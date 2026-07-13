@@ -14,6 +14,7 @@ import type {
   EncodingChannel,
   LineMark,
   Mark,
+  NumberFormatter,
   PointMark,
   RectMark,
   TooltipContent,
@@ -21,37 +22,36 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   buildTemporalFormatter,
+  defaultNumberFormatter,
   formatDate,
-  formatNumber,
+  formatPercent,
   getRepresentativeColor,
 } from '@opendata-ai/openchart-core';
-import { format as d3Format } from 'd3-format';
 
 import type { NormalizedChartSpec } from '../compiler/types';
+import { resolveFieldFormatter } from '../format/field-format';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Format a raw data value for tooltip display. */
-function formatValue(value: unknown, fieldType?: string, format?: string): string {
+function formatValue(
+  value: unknown,
+  fieldType?: string,
+  formatter?: NumberFormatter | ((v: Date | string | number) => string) | null,
+): string {
   if (value == null) return '';
 
   if (fieldType === 'temporal' || value instanceof Date) {
-    const temporalFmt = buildTemporalFormatter(format);
-    if (temporalFmt) return temporalFmt(value as Date | string | number);
+    if (formatter)
+      return (formatter as (v: Date | string | number) => string)(value as Date | string | number);
     return formatDate(value as Date | string | number);
   }
 
   if (typeof value === 'number') {
-    if (format) {
-      try {
-        return d3Format(format)(value);
-      } catch {
-        return formatNumber(value);
-      }
-    }
-    return formatNumber(value);
+    if (formatter) return (formatter as NumberFormatter)(value);
+    return defaultNumberFormatter()(value);
   }
 
   return String(value);
@@ -69,61 +69,116 @@ function resolveFormat(ch: EncodingChannel): string | undefined {
   return ch.format ?? ax?.format;
 }
 
+type ChannelFormatter = NumberFormatter | ((v: Date | string | number) => string) | null;
+
+function cacheKey(ch: EncodingChannel): string {
+  const fmt = resolveFormat(ch);
+  return fmt ? `${ch.field}::${fmt}` : ch.field;
+}
+
+/** Build a per-channel formatter cache for tooltip display. */
+function buildFormatterCache(
+  data: DataRow[],
+  channels: EncodingChannel[],
+): Map<string, ChannelFormatter> {
+  const cache = new Map<string, ChannelFormatter>();
+  for (const ch of channels) {
+    const key = cacheKey(ch);
+    if (cache.has(key)) continue;
+    const fmt = resolveFormat(ch);
+    if (ch.type === 'temporal') {
+      const temporalFmt = buildTemporalFormatter(fmt);
+      cache.set(key, temporalFmt ?? null);
+    } else if (ch.type === 'quantitative') {
+      cache.set(
+        key,
+        resolveFieldFormatter({
+          surfaceFormat: fmt,
+          values: data.map((r) => r[ch.field]),
+        }),
+      );
+    } else {
+      cache.set(key, null);
+    }
+  }
+  return cache;
+}
+
+function getFormatter(
+  cache: Map<string, ChannelFormatter>,
+  ch: EncodingChannel,
+): ChannelFormatter | undefined {
+  return cache.get(cacheKey(ch));
+}
+
 /** Build tooltip fields from explicit tooltip encoding channels. */
-function buildExplicitTooltipFields(row: DataRow, channels: EncodingChannel[]): TooltipField[] {
+function buildExplicitTooltipFields(
+  row: DataRow,
+  channels: EncodingChannel[],
+  formatters: Map<string, ChannelFormatter>,
+): TooltipField[] {
   return channels.map((ch) => ({
     label: resolveLabel(ch),
-    value: formatValue(row[ch.field], ch.type, resolveFormat(ch)),
+    value: formatValue(row[ch.field], ch.type, getFormatter(formatters, ch)),
   }));
 }
 
 /** Build tooltip fields from a data row based on the spec encoding. */
-function buildFields(row: DataRow, encoding: Encoding, color?: string): TooltipField[] {
+function buildFields(
+  row: DataRow,
+  encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
+  color?: string,
+): TooltipField[] {
   if (encoding.tooltip) {
     const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-    return buildExplicitTooltipFields(row, channels);
+    return buildExplicitTooltipFields(row, channels, formatters);
   }
 
   const fields: TooltipField[] = [];
 
-  // Color/series field (e.g. "Source: Coal") so the user knows which series
   if (encoding.color && 'field' in encoding.color) {
     fields.push({
       label: resolveLabel(encoding.color),
       value: formatValue(
         row[encoding.color.field],
         encoding.color.type,
-        resolveFormat(encoding.color),
+        getFormatter(formatters, encoding.color),
       ),
       color,
     });
   }
 
-  // Y-axis value (the "main" value in most charts)
   if (encoding.y) {
     fields.push({
       label: resolveLabel(encoding.y),
-      value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
+      value: formatValue(
+        row[encoding.y.field],
+        encoding.y.type,
+        getFormatter(formatters, encoding.y),
+      ),
       color: encoding.color ? undefined : color,
     });
   }
 
-  // X-axis value (often the category or date)
   if (encoding.x) {
     fields.push({
       label: resolveLabel(encoding.x),
-      value: formatValue(row[encoding.x.field], encoding.x.type, resolveFormat(encoding.x)),
+      value: formatValue(
+        row[encoding.x.field],
+        encoding.x.type,
+        getFormatter(formatters, encoding.x),
+      ),
     });
   }
 
-  // Size (for scatter/bubble) - skip conditional size definitions
   if (encoding.size && 'field' in encoding.size) {
     fields.push({
       label: resolveLabel(encoding.size),
       value: formatValue(
         row[encoding.size.field],
         encoding.size.type,
-        resolveFormat(encoding.size),
+        getFormatter(formatters, encoding.size),
       ),
     });
   }
@@ -183,15 +238,14 @@ function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
 function tooltipsForLine(
   mark: LineMark,
   encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
   _markIndex: number,
 ): Array<[string, TooltipContent]> {
-  // Populate tooltip content on each dataPoint for voronoi overlay lookup.
-  // Line marks don't emit per-mark tooltip descriptors (the overlay handles it).
   if (mark.dataPoints) {
     for (const dp of mark.dataPoints) {
       dp.tooltip = {
         title: getTooltipTitle(dp.datum, encoding),
-        fields: buildFields(dp.datum, encoding, mark.stroke),
+        fields: buildFields(dp.datum, encoding, formatters, mark.stroke),
       };
     }
   }
@@ -201,10 +255,11 @@ function tooltipsForLine(
 function tooltipsForPoint(
   mark: PointMark,
   encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
   markIndex: number,
 ): Array<[string, TooltipContent]> {
   const title = getTooltipTitle(mark.data, encoding);
-  const fields = buildFields(mark.data, encoding, getRepresentativeColor(mark.fill));
+  const fields = buildFields(mark.data, encoding, formatters, getRepresentativeColor(mark.fill));
 
   return [[`point-${markIndex}`, { title, fields }]];
 }
@@ -212,10 +267,11 @@ function tooltipsForPoint(
 function tooltipsForRect(
   mark: RectMark,
   encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
   markIndex: number,
 ): Array<[string, TooltipContent]> {
   const title = getTooltipTitle(mark.data, encoding);
-  const fields = buildFields(mark.data, encoding, getRepresentativeColor(mark.fill));
+  const fields = buildFields(mark.data, encoding, formatters, getRepresentativeColor(mark.fill));
 
   return [[`rect-${markIndex}`, { title, fields }]];
 }
@@ -223,26 +279,34 @@ function tooltipsForRect(
 function tooltipsForArc(
   mark: ArcMark,
   encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
   markIndex: number,
 ): Array<[string, TooltipContent]> {
   const row = mark.data;
   const fields: TooltipField[] = [];
 
-  // For pie/donut, show the category and its value
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   if (colorEnc) {
     const categoryName = String(row[colorEnc.field] ?? '');
     if (encoding.y) {
       fields.push({
         label: categoryName,
-        value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
+        value: formatValue(
+          row[encoding.y.field],
+          encoding.y.type,
+          getFormatter(formatters, encoding.y),
+        ),
         color: getRepresentativeColor(mark.fill),
       });
     }
   } else if (encoding.y) {
     fields.push({
       label: resolveLabel(encoding.y),
-      value: formatValue(row[encoding.y.field], encoding.y.type, resolveFormat(encoding.y)),
+      value: formatValue(
+        row[encoding.y.field],
+        encoding.y.type,
+        getFormatter(formatters, encoding.y),
+      ),
       color: getRepresentativeColor(mark.fill),
     });
   }
@@ -255,15 +319,14 @@ function tooltipsForArc(
 function tooltipsForArea(
   mark: AreaMark,
   encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
   _markIndex: number,
 ): Array<[string, TooltipContent]> {
-  // Populate tooltip content on each dataPoint for voronoi overlay lookup.
-  // Area marks don't emit per-mark tooltip descriptors (the overlay handles it).
   if (mark.dataPoints) {
     for (const dp of mark.dataPoints) {
       dp.tooltip = {
         title: getTooltipTitle(dp.datum, encoding),
-        fields: buildFields(dp.datum, encoding, getRepresentativeColor(mark.fill)),
+        fields: buildFields(dp.datum, encoding, formatters, getRepresentativeColor(mark.fill)),
       };
     }
   }
@@ -293,21 +356,27 @@ function computeRangeTooltips(
   const endCh = horizontal ? encoding.x2 : encoding.y2;
   if (!startCh || !endCh) return descriptors;
 
+  const allChannels = [startCh, endCh, encoding.color, encoding.tooltip]
+    .flat()
+    .filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
+  const fmtCache = buildFormatterCache(spec.data, allChannels);
+  const startFmt = getFormatter(fmtCache, startCh);
+
   const contentFor = (row: DataRow): TooltipContent => {
     const title = getTooltipTitle(row, encoding);
     if (encoding.tooltip) {
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-      return { title, fields: buildExplicitTooltipFields(row, channels) };
+      return { title, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
     }
 
     const fields: TooltipField[] = [
       {
         label: resolveLabel(startCh),
-        value: formatValue(row[startCh.field], startCh.type, resolveFormat(startCh)),
+        value: formatValue(row[startCh.field], startCh.type, getFormatter(fmtCache, startCh)),
       },
       {
         label: resolveLabel(endCh),
-        value: formatValue(row[endCh.field], endCh.type, resolveFormat(endCh)),
+        value: formatValue(row[endCh.field], endCh.type, getFormatter(fmtCache, endCh)),
       },
     ];
 
@@ -315,7 +384,9 @@ function computeRangeTooltips(
     const endVal = Number(row[endCh.field]);
     if (Number.isFinite(startVal) && Number.isFinite(endVal)) {
       const delta = endVal - startVal;
-      const formatted = formatValue(delta, 'quantitative', resolveFormat(startCh));
+      const formatted = startFmt
+        ? (startFmt as NumberFormatter)(delta)
+        : defaultNumberFormatter()(delta);
       fields.push({ label: 'Change', value: delta > 0 ? `+${formatted}` : formatted });
     }
 
@@ -350,15 +421,29 @@ function computeCalendarTooltips(
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   if (!xEnc || !colorEnc) return descriptors;
 
+  const allChannels = [
+    xEnc,
+    colorEnc,
+    ...(encoding.tooltip
+      ? Array.isArray(encoding.tooltip)
+        ? encoding.tooltip
+        : [encoding.tooltip]
+      : []),
+  ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
+  const fmtCache = buildFormatterCache(spec.data, allChannels);
+
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i];
     if (mark.type !== 'rect' || mark.aria.decorative) continue;
     const row = mark.data as DataRow;
 
-    const title = formatValue(row[xEnc.field], 'temporal', resolveFormat(xEnc));
+    const title = formatValue(row[xEnc.field], 'temporal', getFormatter(fmtCache, xEnc));
     if (encoding.tooltip) {
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-      descriptors.set(`rect-${i}`, { title, fields: buildExplicitTooltipFields(row, channels) });
+      descriptors.set(`rect-${i}`, {
+        title,
+        fields: buildExplicitTooltipFields(row, channels, fmtCache),
+      });
       continue;
     }
 
@@ -367,7 +452,7 @@ function computeCalendarTooltips(
       fields: [
         {
           label: resolveLabel(colorEnc),
-          value: formatValue(row[colorEnc.field], colorEnc.type, resolveFormat(colorEnc)),
+          value: formatValue(row[colorEnc.field], colorEnc.type, getFormatter(fmtCache, colorEnc)),
           color: getRepresentativeColor(mark.fill),
         },
       ],
@@ -401,9 +486,19 @@ function computeWaffleTooltips(
   const valueCh = encoding.y ?? encoding.x;
   if (!colorEnc || !valueCh) return descriptors;
 
+  const allChannels = [
+    valueCh,
+    colorEnc,
+    ...(encoding.tooltip
+      ? Array.isArray(encoding.tooltip)
+        ? encoding.tooltip
+        : [encoding.tooltip]
+      : []),
+  ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
+  const fmtCache = buildFormatterCache(spec.data, allChannels);
+
   const units = Math.max(1, Math.round(spec.markDef.units ?? 100));
 
-  // Cell counts per category come straight from the computed marks.
   const cellCounts = new Map<string, number>();
   for (const mark of marks) {
     if (mark.type !== 'rect') continue;
@@ -422,14 +517,14 @@ function computeWaffleTooltips(
     if (!content) {
       if (encoding.tooltip) {
         const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-        content = { title: category, fields: buildExplicitTooltipFields(row, channels) };
+        content = { title: category, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
       } else {
         content = {
           title: category,
           fields: [
             {
               label: resolveLabel(valueCh),
-              value: formatValue(row[valueCh.field], valueCh.type, resolveFormat(valueCh)),
+              value: formatValue(row[valueCh.field], valueCh.type, getFormatter(fmtCache, valueCh)),
               color: getRepresentativeColor(mark.fill),
             },
             { label: 'Share', value: `${cellCounts.get(category) ?? 0} of ${units} units` },
@@ -468,7 +563,17 @@ function computeParliamentTooltips(
   const valueCh = encoding.y ?? encoding.x;
   if (!colorEnc || !valueCh) return descriptors;
 
-  // Seat counts per party come straight from the computed seat marks.
+  const allChannels = [
+    valueCh,
+    colorEnc,
+    ...(encoding.tooltip
+      ? Array.isArray(encoding.tooltip)
+        ? encoding.tooltip
+        : [encoding.tooltip]
+      : []),
+  ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
+  const fmtCache = buildFormatterCache(spec.data, allChannels);
+
   const seatCounts = new Map<string, number>();
   for (const mark of marks) {
     if (mark.type !== 'point') continue;
@@ -488,16 +593,16 @@ function computeParliamentTooltips(
     if (!content) {
       if (encoding.tooltip) {
         const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-        content = { title: party, fields: buildExplicitTooltipFields(row, channels) };
+        content = { title: party, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
       } else {
         const count = seatCounts.get(party) ?? 0;
-        const share = totalSeats > 0 ? `${((count / totalSeats) * 100).toFixed(1)}%` : '';
+        const share = totalSeats > 0 ? formatPercent(count / totalSeats) : '';
         content = {
           title: party,
           fields: [
             {
               label: resolveLabel(valueCh),
-              value: formatValue(row[valueCh.field], valueCh.type, resolveFormat(valueCh)),
+              value: formatValue(row[valueCh.field], valueCh.type, getFormatter(fmtCache, valueCh)),
               color: getRepresentativeColor(mark.fill),
             },
             { label: 'Share', value: share },
@@ -551,25 +656,38 @@ export function computeTooltipDescriptors(
   const encoding = spec.encoding as Encoding;
   const descriptors = new Map<string, TooltipContent>();
 
+  const allChannels = [
+    encoding.x,
+    encoding.y,
+    encoding.color && 'field' in encoding.color ? encoding.color : undefined,
+    encoding.size && 'field' in encoding.size ? encoding.size : undefined,
+    ...(encoding.tooltip
+      ? Array.isArray(encoding.tooltip)
+        ? encoding.tooltip
+        : [encoding.tooltip]
+      : []),
+  ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
+  const formatters = buildFormatterCache(spec.data, allChannels);
+
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i];
     let entries: Array<[string, TooltipContent]> = [];
 
     switch (mark.type) {
       case 'line':
-        entries = tooltipsForLine(mark, encoding, i);
+        entries = tooltipsForLine(mark, encoding, formatters, i);
         break;
       case 'area':
-        entries = tooltipsForArea(mark, encoding, i);
+        entries = tooltipsForArea(mark, encoding, formatters, i);
         break;
       case 'point':
-        entries = tooltipsForPoint(mark, encoding, i);
+        entries = tooltipsForPoint(mark, encoding, formatters, i);
         break;
       case 'rect':
-        entries = tooltipsForRect(mark, encoding, i);
+        entries = tooltipsForRect(mark, encoding, formatters, i);
         break;
       case 'arc':
-        entries = tooltipsForArc(mark, encoding, i);
+        entries = tooltipsForArc(mark, encoding, formatters, i);
         break;
     }
 

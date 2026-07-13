@@ -16,11 +16,11 @@
 import type {
   LabelCandidate,
   LabelDensity,
+  NumberFormatter,
   RectMark,
   ResolvedLabel,
 } from '@opendata-ai/openchart-core';
 import {
-  buildD3Formatter,
   estimateTextWidth,
   getRepresentativeColor,
   resolveCollisions,
@@ -50,7 +50,7 @@ export function computeColumnLabels(
   marks: RectMark[],
   _chartArea: { x: number; y: number; width: number; height: number },
   density: LabelDensity = 'auto',
-  labelFormat?: string,
+  labelFormatter?: NumberFormatter | null,
   labelPrefix?: string,
   valueField?: string,
   labelColor?: string,
@@ -60,7 +60,7 @@ export function computeColumnLabels(
   const FONT_SIZE = fontSize ?? LABEL_FONT_SIZE;
   const targetMarks = filterByDensity(marks, density);
 
-  const formatter = buildD3Formatter(labelFormat);
+  const formatter = labelFormatter ?? null;
 
   const candidates: LabelCandidate[] = [];
 

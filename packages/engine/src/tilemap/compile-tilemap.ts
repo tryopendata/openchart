@@ -33,11 +33,9 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
-  buildD3Formatter,
   CATEGORICAL_PALETTE,
   computeChrome,
   estimateTextWidth,
-  formatNumber,
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
@@ -49,6 +47,7 @@ import { scaleLinear } from 'd3-scale';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { resolveFieldFormatter } from '../format/field-format';
 import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
 import type { NormalizedTileMapSpec } from './types';
 
@@ -212,7 +211,10 @@ function compileQuantitative(
   const legendY = tileGridOffsetY + tilePositions.gridHeight + legendGap;
   const legendWidth = tilePositions.gridWidth;
 
-  const formatter = buildD3Formatter(tilemapSpec.valueFormat) ?? formatNumber;
+  const formatter = resolveFieldFormatter({
+    surfaceFormat: tilemapSpec.valueFormat,
+    values: Array.from(stateValueMap.values()),
+  });
   const neutralFill = isDarkMode ? '#1e2a30' : '#e0e0e0';
   const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : '#d0d0d0';
 

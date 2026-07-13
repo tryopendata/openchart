@@ -132,7 +132,7 @@
         },
         "format": {
           "type": "string",
-          "description": "Number/date format string (d3-format or d3-time-format). Applied to the raw value before display. e.g. \",.0f\" or \"%Y-%m-%d\"."
+          "description": "Number/date format string (d3-format or d3-time-format), or semantic keyword `'percent'` / `'currency'`. e.g. \",.0f\", \"%Y-%m-%d\", \"percent\". Tables always show full precision (no compact notation)."
         },
         "heatmap": {
           "$ref": "#/definitions/HeatmapColumnConfig",
