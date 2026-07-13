@@ -11,7 +11,7 @@
 
 import type { ChartSpec, MarkEvent } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import {
   browserShare,
@@ -51,7 +51,7 @@ const basicPieSpec: ChartSpec = {
   mark: 'arc',
   data: basicPieData,
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'browser', type: 'nominal' },
   },
   chrome: {
@@ -71,7 +71,7 @@ const donutSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 70 },
   data: [...federalBudget.data],
   encoding: {
-    y: { field: 'spending', type: 'quantitative' },
+    theta: { field: 'spending', type: 'quantitative' },
     color: { field: 'category', type: 'nominal' },
   },
   chrome: {
@@ -83,29 +83,75 @@ const donutSpec: ChartSpec = {
 };
 
 /**
- * The engine has no built-in center-metric config, so the metric is a plain
- * absolutely-positioned overlay centered over the donut hole. The donut's
- * `innerRadius` leaves the room; the overlay is `pointer-events: none` so it
- * never steals hover/tooltip targets from the slices underneath.
+ * Track the donut hole's real center, in coordinates relative to the wrapper.
+ *
+ * The engine has no built-in center-metric config, so the metric is an overlay.
+ * It must NOT simply center itself on the chart container: the arc is not at the
+ * container's center, because chrome (title/subtitle) pushes it down and the
+ * legend pushes it left. Both donuts here used to flex-center over `inset: 0`
+ * and then correct with a hardcoded `paddingTop`, which overshot by ~45px and
+ * dropped the text onto the slices.
+ *
+ * Instead, read the arc group's own transform origin — the engine translates the
+ * group to the pie's center, so that point IS the donut center. Deliberately NOT
+ * the group's bounding-box center: the bbox spans only the drawn slices, which
+ * are not symmetric about the center (uneven slices and leader-line labels skew
+ * it), so the bbox center sits ~36px off. `getScreenCTM()` gives the translated
+ * origin in screen coordinates. Re-measures on resize, since the arc moves when
+ * the layout reflows.
  */
+function useArcCenter(wrapperRef: React.RefObject<HTMLDivElement | null>) {
+  const [center, setCenter] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const measure = () => {
+      const arc = wrapper.querySelector('.oc-mark-arc');
+      if (!(arc instanceof SVGGraphicsElement)) return;
+      const ctm = arc.getScreenCTM();
+      if (!ctm) return;
+      const w = wrapper.getBoundingClientRect();
+      setCenter({ x: ctm.e - w.left, y: ctm.f - w.top });
+    };
+
+    measure();
+    const obs = new ResizeObserver(measure);
+    obs.observe(wrapper);
+    return () => obs.disconnect();
+  }, [wrapperRef]);
+
+  return center;
+}
+
+/** Overlay styles: pinned to the measured arc center, translated back by half
+ *  its own size so the text is centered ON that point rather than starting at
+ *  it. `pointer-events: none` so it never steals hover targets from the slices
+ *  underneath. Hidden until measured, to avoid a flash at the wrong spot. */
+function centerOverlayStyle(center: { x: number; y: number } | null): React.CSSProperties {
+  return {
+    position: 'absolute',
+    left: center?.x ?? 0,
+    top: center?.y ?? 0,
+    transform: 'translate(-50%, -50%)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    pointerEvents: 'none',
+    textAlign: 'center',
+    visibility: center ? 'visible' : 'hidden',
+  };
+}
+
 function CenterMetricDonut() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const center = useArcCenter(wrapperRef);
+
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div ref={wrapperRef} style={{ position: 'relative', height: '100%' }}>
       <Chart spec={donutSpec} />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-          // Nudge below the chrome so the text sits in the donut hole, not the title.
-          paddingTop: 96,
-          textAlign: 'center',
-        }}
-      >
+      <div style={centerOverlayStyle(center)}>
         <span
           style={{
             fontSize: 32,
@@ -139,7 +185,7 @@ const smallSliceSpec: ChartSpec = {
   mark: 'arc',
   data: [...co2Emissions.data],
   encoding: {
-    y: { field: 'emissions', type: 'quantitative' },
+    theta: { field: 'emissions', type: 'quantitative' },
     color: { field: 'country', type: 'nominal' },
   },
   chrome: {
@@ -181,7 +227,7 @@ const electricity2010Spec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 45 },
   data: [...electricityMix['2010']],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'source', type: 'nominal' },
   },
   labels: { density: 'none' },
@@ -244,7 +290,7 @@ const leaderLineSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 55 },
   data: [...smartphoneShare.data],
   encoding: {
-    y: { field: 'share', type: 'quantitative' },
+    theta: { field: 'share', type: 'quantitative' },
     color: { field: 'brand', type: 'nominal' },
   },
   chrome: {
@@ -263,7 +309,7 @@ const interactiveSpec: ChartSpec = {
   mark: { type: 'arc', innerRadius: 80 },
   data: [...federalBudget.data],
   encoding: {
-    y: { field: 'spending', type: 'quantitative' },
+    theta: { field: 'spending', type: 'quantitative' },
     color: { field: 'category', type: 'nominal' },
   },
   labels: { density: 'none' },
@@ -278,6 +324,8 @@ const TOTAL_SHARE = federalBudget.data.reduce((sum, d) => sum + d.spending, 0);
 
 function InteractiveDonut() {
   const [hovered, setHovered] = useState<{ category: string; spending: number } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const center = useArcCenter(wrapperRef);
 
   const onMarkHover = (e: MarkEvent) => {
     const category = e.datum.category as string;
@@ -291,25 +339,13 @@ function InteractiveDonut() {
   const label = hovered ? hovered.category : 'of the budget';
 
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div ref={wrapperRef} style={{ position: 'relative', height: '100%' }}>
       <Chart
         spec={interactiveSpec}
         onMarkHover={onMarkHover}
         onMarkLeave={() => setHovered(null)}
       />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-          paddingTop: 84,
-          textAlign: 'center',
-        }}
-      >
+      <div style={centerOverlayStyle(center)}>
         <span style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: 'var(--oc-text)' }}>
           {primary}
         </span>
@@ -475,13 +511,7 @@ export const PieAndDonut = () => (
       title="Interaction"
       lede="Wire slice events to a live readout. Here the donut's center number tracks the hovered slice."
     >
-      <Demo
-        id="interactive-donut"
-        title="Interactive (hover to read a slice)"
-        description="onMarkHover updates the center metric; onMarkLeave resets it to the total. The escape hatch renders a stateful React component while the spec panel still shows the base spec."
-        specForPanel={interactiveSpec}
-        height={520}
-      >
+      <Demo id="interactive-donut" specForPanel={interactiveSpec} height={520}>
         <InteractiveDonut />
       </Demo>
     </Section>

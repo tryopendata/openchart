@@ -34,7 +34,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
@@ -217,9 +217,15 @@ function computeNodeLabel(
  * @throws Error if spec is invalid or not a sankey type.
  */
 export function compileSankey(spec: unknown, options: CompileOptions): SankeyLayout {
-  // 1. Validate + normalize via the shared compiler pipeline
-  const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings, options.onWarn);
+  // 1. Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
+  // before validation, then validate + normalize via the shared compiler pipeline.
+  const sugarWarnings: string[] = [];
+  const expandedSpec =
+    spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
+      : spec;
+  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'sankey') {
     throw new Error(
@@ -228,6 +234,9 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   }
 
   const sankeySpec = normalized as NormalizedSankeySpec;
+
+  // Resolve format: encoding-level (v8 canonical) wins over deprecated top-level valueFormat
+  const resolvedValueFormat = sankeySpec.encoding.value.format ?? sankeySpec.valueFormat;
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
   const rawWatermark = (spec as Record<string, unknown>).watermark;
@@ -288,7 +297,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const valueField = sankeySpec.encoding.value.field;
   const colorField = sankeySpec.encoding.color?.field;
   const flowFmt = resolveFieldFormatter({
-    surfaceFormat: sankeySpec.valueFormat,
+    surfaceFormat: resolvedValueFormat,
     values: sankeySpec.data.map((r) => r[valueField]),
   });
 

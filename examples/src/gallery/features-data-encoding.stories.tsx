@@ -9,13 +9,12 @@
  * rows — so the spec panels double as copyable recipes.
  */
 
-import type { ChartSpec, Condition } from '@opendata-ai/openchart-core';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
 import { useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import {
   co2Emissions,
-  electricityMix,
   gdpGrowthByCountry,
   marathonFinishTimes,
   nvidiaStock,
@@ -24,26 +23,6 @@ import {
 } from '../data';
 
 const ACCENT = '#0e7490';
-
-/**
- * A conditional-color condition whose value is a gradient. `Condition.value`
- * accepts a `GradientDef` for color channels, so this reads plainly.
- */
-const gradientWhen = (
-  test: Condition['test'],
-  from: string,
-  to: string,
-  gradient: 'linear' | 'radial' = 'radial',
-): Condition => ({
-  test,
-  value: {
-    gradient,
-    stops: [
-      { offset: 0, color: from },
-      { offset: 1, color: to },
-    ],
-  },
-});
 
 // ---------------------------------------------------------------------------
 // 1. Filter transform — interactive on/off toggle (the page's interactive demo)
@@ -304,42 +283,7 @@ const linearGradientSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 6b. Gradients — radial on a donut, per-slice via conditional color
-// ---------------------------------------------------------------------------
-
-// Arc marks accept a conditional color channel (ArcEncoding.color allows a
-// ConditionalValueDef), so this is authored plainly.
-const radialDonutSpec: ChartSpec = {
-  animation: true,
-  mark: { type: 'arc', innerRadius: 60 },
-  // With conditional color (a value def, not a field), the arc layout has no
-  // category field to name slices, so it falls back to "Slice N". Aliasing the
-  // source into `category` restores the real slice labels.
-  data: electricityMix['2023'].map((d) => ({ ...d, category: d.source })),
-  encoding: {
-    y: { field: 'share', type: 'quantitative' },
-    color: {
-      condition: [
-        gradientWhen({ field: 'source', equal: 'Coal' }, '#94a3b8', '#475569'),
-        gradientWhen({ field: 'source', equal: 'Natural Gas' }, '#38bdf8', '#0369a1'),
-        gradientWhen({ field: 'source', equal: 'Renewables' }, '#4ade80', '#15803d'),
-        gradientWhen({ field: 'source', equal: 'Hydro' }, '#22d3ee', '#0e7490'),
-        gradientWhen({ field: 'source', equal: 'Nuclear' }, '#c4b5fd', '#7c3aed'),
-      ],
-      value: '#e2e8f0',
-    },
-  },
-  labels: { density: 'all', format: '.0f' },
-  chrome: {
-    title: 'Radial Gradients Lift Each Donut Slice off the Page',
-    subtitle: 'Global electricity mix, 2023. Per-slice radial gradients via conditional color.',
-    source: electricityMix.source,
-    byline: 'Chart: OpenChart',
-  },
-};
-
-// ---------------------------------------------------------------------------
-// 6c. Gradients — area fade to transparent at the baseline
+// 6b. Gradients — area fade to transparent at the baseline
 // ---------------------------------------------------------------------------
 
 const areaGradientSpec: ChartSpec = {
@@ -487,13 +431,7 @@ export const DataAndEncoding = () => (
       title="Conditional encoding"
       lede="Test a predicate per datum and pick a value. Conditions evaluate in order — first match wins — with a fallback for the rest."
     >
-      <Demo
-        id="conditional-encoding"
-        title="Value-driven color"
-        description="Three ordered predicates bucket each sector's return into a color: strong gains, the lone loss, and the middling pack."
-        spec={conditionalSpec}
-        height={460}
-      />
+      <Demo id="conditional-encoding" spec={conditionalSpec} height={460} />
     </Section>
 
     <Section
@@ -507,13 +445,6 @@ export const DataAndEncoding = () => (
         description="A single left-to-right linear gradient on mark.fill fades every bar in from its base."
         spec={linearGradientSpec}
         height={420}
-      />
-      <Demo
-        id="radial-gradient"
-        title="Radial gradient on a donut"
-        description="Per-slice radial gradients through conditional color, lighter at the center of each arc."
-        spec={radialDonutSpec}
-        height={440}
       />
       <Demo
         id="area-gradient"
@@ -550,13 +481,7 @@ export const DataAndEncoding = () => (
       title="Formatters"
       lede="Number and date formats are d3-format / d3-time-format strings, set per channel or per axis. Axis and tooltip can format the same field differently."
     >
-      <Demo
-        id="formatters"
-        title="Number and date formats"
-        description="Compact SI currency on the axis, full-precision currency in the tooltip, and compact temporal ticks that shorten before they drop."
-        spec={formatSpec}
-        height={420}
-      />
+      <Demo id="formatters" spec={formatSpec} height={420} />
     </Section>
   </GalleryPage>
 );

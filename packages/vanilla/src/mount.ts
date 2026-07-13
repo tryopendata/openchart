@@ -342,14 +342,18 @@ export function createChart<TData extends DataRow = DataRow>(
    * chrome — they stay inside the budget.
    */
   function verticalOverheads(layout: ChartLayout, width: number): number {
-    const legendHasContent =
-      layout.legend.type === 'continuous'
-        ? layout.legend.bounds.height > 0
-        : 'entries' in layout.legend && layout.legend.entries.length > 0;
-    const topLegendBlock =
-      layout.legend.position === 'top' && legendHasContent
-        ? layout.legend.bounds.height + legendGap(width)
-        : 0;
+    // Sum EVERY top legend, not just the primary. A chart can carry a color
+    // legend and a size legend; counting one and growing the container by its
+    // height alone leaves the other squeezing the plot.
+    let topLegendBlock = 0;
+    for (const legend of layout.legends ?? [layout.legend]) {
+      if (legend.position !== 'top') continue;
+      const hasContent =
+        legend.type === 'continuous' || legend.type === 'size'
+          ? legend.bounds.height > 0
+          : 'entries' in legend && legend.entries.length > 0;
+      if (hasContent) topLegendBlock += legend.bounds.height + legendGap(width);
+    }
     return (
       layout.chrome.topHeight +
       layout.chrome.bottomHeight +
@@ -638,7 +642,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
     const handleMouseEnter = (e: Event) => {
       const target = (e.target as Element).closest(
-        '[data-annotation-index], [data-chrome-key], .oc-mark-label[data-series], .oc-legend, [data-legend-index]',
+        '[data-annotation-index], [data-chrome-key], .oc-mark-label[data-series], .oc-legend:not(.oc-legend--size), [data-legend-index]',
       );
       if (target) {
         (target as SVGElement).classList.add('oc-editable-hover');

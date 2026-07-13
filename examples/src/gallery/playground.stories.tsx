@@ -119,7 +119,7 @@ function buildSpec(args: PlaygroundArgs): ChartSpec {
       mark: { type: 'arc', innerRadius: 70 },
       data: DONUT_DATA,
       encoding: {
-        y: { field: 'revenue', type: 'quantitative' },
+        theta: { field: 'revenue', type: 'quantitative' },
         color: { field: 'company', type: 'nominal' },
       },
       legend: legendConfig,

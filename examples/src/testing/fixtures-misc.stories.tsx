@@ -9,7 +9,7 @@
  */
 
 import type { Story } from '@ladle/react';
-import type { ChartSpec, SankeySpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, LayerSpec, SankeySpec } from '@opendata-ai/openchart-core';
 import { Chart, Sankey, useDarkMode, useVizDarkMode } from '@opendata-ai/openchart-react';
 import './testing.css';
 
@@ -445,3 +445,115 @@ export const Sizes: Story = () => {
     </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Text mark: direct labeling in a layer
+// ---------------------------------------------------------------------------
+
+/**
+ * Pins the text mark's positioning contract, which shipped broken and untested:
+ * a text layer must resolve the *same* scale domain as the point layer it labels
+ * (it didn't — labels drifted up to 160px off their dots), labels must center on
+ * their anchor, and `dy` must offset in pixel space. The label layer deliberately
+ * carries a subset of the rows, since a narrower extent used to re-fit the
+ * domain and slide every label sideways.
+ */
+const textLabelStates = [
+  { label: 'CA', gdp: 3.9, pop: 39.0 },
+  { label: 'TX', gdp: 2.6, pop: 30.5 },
+  { label: 'NY', gdp: 2.1, pop: 19.6 },
+  { label: 'FL', gdp: 1.6, pop: 22.6 },
+  { label: 'IL', gdp: 1.1, pop: 12.5 },
+  { label: 'PA', gdp: 1.0, pop: 12.9 },
+  { label: 'OH', gdp: 0.9, pop: 11.8 },
+  { label: 'GA', gdp: 0.8, pop: 11.0 },
+  { label: 'NJ', gdp: 0.8, pop: 9.3 },
+  { label: 'WA', gdp: 0.8, pop: 7.8 },
+];
+
+const TEXT_LABEL_POP_DOMAIN: [number, number] = [5, 43];
+// A centered label at the domain edge overhangs by half its width, and nothing
+// in the engine reserves room for it, so pad the x-domain for California's.
+const TEXT_LABEL_GDP_DOMAIN: [number, number] = [0.6, 4.25];
+const TEXT_LABELED = new Set(['CA', 'TX', 'NY', 'FL', 'IL']);
+
+const textMarkLabelSpec: LayerSpec = {
+  chrome: {
+    title: 'California Towers Over Every Other State Economy',
+    subtitle: 'Direct labeling: a text layer over a point layer on shared scales',
+  },
+  layer: [
+    {
+      mark: { type: 'point', fill: '#0e7490', opacity: 0.85, trendline: false },
+      data: textLabelStates,
+      encoding: {
+        x: {
+          field: 'gdp',
+          type: 'quantitative',
+          scale: { domain: TEXT_LABEL_GDP_DOMAIN },
+          axis: { title: 'GDP ($ trillions)' },
+        },
+        y: {
+          field: 'pop',
+          type: 'quantitative',
+          scale: { domain: TEXT_LABEL_POP_DOMAIN },
+          axis: { title: 'Population (millions)' },
+        },
+      },
+    },
+    {
+      mark: { type: 'text', dy: -14 },
+      data: textLabelStates.filter((d) => TEXT_LABELED.has(d.label)),
+      encoding: {
+        x: { field: 'gdp', type: 'quantitative', scale: { domain: TEXT_LABEL_GDP_DOMAIN } },
+        y: { field: 'pop', type: 'quantitative', scale: { domain: TEXT_LABEL_POP_DOMAIN } },
+        text: { field: 'label', type: 'nominal' },
+        size: { field: 'gdp', type: 'quantitative', scale: { range: [11, 22] } },
+      },
+    },
+  ],
+};
+
+export const TextMarkLabels: Story = () => (
+  <div className="tfix-chart" style={{ width: 720, height: 440 }}>
+    <Chart spec={textMarkLabelSpec} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Rect mark (heatmap)
+//
+// `mark: 'rect'` used to alias the column renderer, which needs a linear y
+// scale; a heatmap bands both axes, so it emitted zero marks and rendered a
+// blank chart. Pinned so the cells can't silently vanish again.
+// ---------------------------------------------------------------------------
+
+const HOURS = ['9am', '11am', '1pm', '3pm', '5pm'];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+/** Deterministic pseudo-traffic: no Math.random, so the baseline is stable. */
+const trafficByHour: ChartSpec = {
+  mark: { type: 'rect' },
+  data: DAYS.flatMap((day, di) =>
+    HOURS.map((hour, hi) => ({
+      day,
+      hour,
+      visits: 20 + ((di * 7 + hi * 13) % 11) * 8 + (hi === 2 ? 30 : 0),
+    })),
+  ),
+  chrome: {
+    title: 'Midday Is When the Office Fills Up',
+    subtitle: 'Average visits by weekday and hour',
+  },
+  encoding: {
+    x: { field: 'day', type: 'nominal' },
+    y: { field: 'hour', type: 'nominal' },
+    color: { field: 'visits', type: 'quantitative' },
+  },
+};
+
+export const RectHeatmap: Story = () => (
+  <div className="tfix-chart" style={{ width: 720, height: 440 }}>
+    <Chart spec={trafficByHour} />
+  </div>
+);

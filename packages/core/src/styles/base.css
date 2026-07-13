@@ -10,13 +10,10 @@
 .oc-table-root,
 .oc-graph-root,
 .oc-sankey-root,
-.oc-barlist-root {
-  width: 100%;
-  height: 100%;
-}
-
+.oc-barlist-root,
 .oc-tilemap-root {
   width: 100%;
+  height: 100%;
 }
 
 .oc-table-root {

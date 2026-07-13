@@ -48,6 +48,7 @@ import {
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { hasLegendContent } from '../legend/compute';
+import { SIZE_LEGEND_GAP } from '../legend/size';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
@@ -446,17 +447,15 @@ export function computeDimensions(
     }
   }
 
-  // (3) Right-edge text annotations. Stacks ADDITIVELY on top of any
-  // endpoint-labels reservation so the annotation text lands between the
-  // chart area's right edge and the endpoint column. When no endpoint column
-  // is reserved, behaves as before (max-of with the existing margin).
+  // (3) Right-edge text annotations. The annotation text and the endpoint
+  // column occupy the same right-side space, so take the max rather than
+  // stacking additively.
   if (
     strategy?.annotationPosition !== 'tooltip-only' &&
     spec.annotations.length > 0 &&
     encoding.x
   ) {
     const xField = encoding.x.field;
-    // Find the maximum x value in the data
     let maxX: string | number | undefined;
     for (const row of spec.data) {
       const v = row[xField];
@@ -468,28 +467,12 @@ export function computeDimensions(
         if (ann.type === 'text' && String(ann.x) === maxXStr) {
           const textWidth = estimateTextWidth(ann.text, ann.fontSize ?? 11, ann.fontWeight ?? 600);
           const dx = ann.offset?.dx ?? 0;
-          // How much text extends right of the anchor point depends on alignment:
-          // - anchor "right" or "left": text is off to one side, full width extends
-          // - anchor "top"/"bottom"/"auto"/undefined: text is centered, half extends right
           const anchor = ann.anchor ?? 'auto';
           const baseRightExtent =
-            anchor === 'left'
-              ? textWidth
-              : // text is to the right of anchor
-                anchor === 'right'
-                ? 0
-                : // text is to the left of anchor
-                  textWidth / 2; // centered (top/bottom/auto)
+            anchor === 'right' ? textWidth : anchor === 'left' ? 0 : textWidth / 2;
           const rightOverflow = Math.max(0, baseRightExtent + dx);
           if (rightOverflow > 0) {
-            if (endpointWidth > 0) {
-              // Endpoint column already reserved space at the far right; the
-              // annotation lands BETWEEN the chart edge and the column, so
-              // stack additively rather than max-of.
-              margins.right += rightOverflow + 12;
-            } else {
-              margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
-            }
+            margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
           }
         }
       }
@@ -657,6 +640,13 @@ export function computeDimensions(
     margins.right = Math.max(margins.right, hPad + options.rightAxisReserve);
   }
 
+  // Reserve space for the auto-thinning footnote list. Additive, not Math.max:
+  // the footnotes stack above the source/byline/footer row that bottomHeight
+  // already covers, rather than replacing it.
+  if (options.footnoteReserve && options.footnoteReserve > 0) {
+    margins.bottom += options.footnoteReserve;
+  }
+
   // Reserve legend space.
   //
   // Bottom legend: reservation is already baked into `chrome.bottomHeight`
@@ -685,6 +675,18 @@ export function computeDimensions(
     }
     // 'bottom' is intentionally not handled here -- see bottomLegendReservation
     // above.
+  }
+
+  // Size legend: its own right-column reservation, ADDED to whatever the color
+  // legend already took. This is the whole point of the plural slot -- a bubble
+  // chart keys continent (color) and population (size), and reserving for only
+  // one leaves the other drawing on top of the plot.
+  //
+  // Right column, not top: graduated circles are as tall as the largest bubble's
+  // diameter, and a ~60px band across the top of a 400px chart eats the plot.
+  const sizeLegend = plan?.sizeLegendContent;
+  if (sizeLegend) {
+    margins.right += sizeLegend.width + SIZE_LEGEND_GAP;
   }
 
   // effectiveAxisGap sits between the legend (or chrome, if no legend) and

@@ -137,10 +137,15 @@ function formatLegendValue(value: number, formatStr?: string, ctx?: FieldFormatC
  * get a midpoint label at the scale's center value.
  */
 function isDivergingRamp(colors: string[], theme: ResolvedTheme): boolean {
-  const key = colors.map((c) => c.toLowerCase()).join('|');
-  return Object.values(theme.colors.diverging).some(
-    (stops) => stops.map((c) => c.toLowerCase()).join('|') === key,
-  );
+  const norm = (stops: readonly string[]) => stops.map((c) => c.toLowerCase()).join('|');
+  const key = norm(colors);
+  // Match either direction: `scale: { reverse: true }` flips the stops, and a
+  // reversed diverging ramp is still diverging -- it must keep its midpoint label.
+  const flipped = norm([...colors].reverse());
+  return Object.values(theme.colors.diverging).some((stops) => {
+    const themeKey = norm(stops);
+    return themeKey === key || themeKey === flipped;
+  });
 }
 
 /**

@@ -138,7 +138,7 @@ fill: {
 | `x1`, `y1` | `number`      | `0`, `0` | Start point in [0,1] normalized space.        |
 | `x2`, `y2` | `number`      | `0`, `1` | End point. Default is top-to-bottom.           |
 
-**Area chart fill behavior:** Multi-series area charts default to **overlap** mode — a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) so all series stay readable on a shared baseline. Single-series area charts apply a default `fillOpacity` of 0.15. Opting into stacked mode (`stack: 'zero' | true | 'normalize' | 'center'`) switches to the higher-opacity stacked gradient. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap default produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
+**Area chart fill behavior:** Multi-series area charts default to **stacked** mode (`stack: 'zero'`), Vega-Lite aligned — a higher-opacity per-layer gradient (top stop ~0.65 opacity) since each layer sits on solid ground. Single-series area charts apply a default `fillOpacity` of 0.15. Opting out with `stack: null` (or `false`) switches to overlap mode: a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) layered on a shared baseline, comparison-first rather than composition-first. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap mode produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
 
 ---
 
@@ -219,7 +219,7 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
 | `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
-| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column; **non-stacked** (overlap) for area | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars). `'normalize'` for 100% stacked. `'center'` for streamgraph. **Note:** multi-series area charts default to overlap mode (translucent gradients on a shared baseline) — pass `stack: 'zero'` (or `true`) to opt into stacked composition. |
+| `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column/area (Vega-Lite aligned) | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars, or overlap gradients for area). `'normalize'` for 100% stacked. `'center'` for streamgraph. |
 
 ### FieldType
 
@@ -369,22 +369,55 @@ A callout label positioned at a data coordinate.
 | `type`       | `'text'`             | (required)             | Discriminant.                                                                                                          |
 | `x`          | `string \| number`   | (required)             | X-axis data value or position.                                                                                         |
 | `y`          | `string \| number`   | (required)             | Y-axis data value or position.                                                                                         |
-| `text`       | `string`             | (required)             | The annotation text.                                                                                                   |
-| `subtitle`   | `string`             | `undefined`            | Optional muted second-tone text rendered below `text`. Use for supporting context (methodology, source, etc.).         |
-| `dot`        | `boolean \| AnnotationDot` | `undefined`      | When set, draws an open-ring marker at the connector's data-point endpoint. `true` uses default open-ring style; pass an object to override radius, fill, stroke, or strokeWidth. |
+| `text`       | `string`             | (required)             | The annotation text. Supports `\n` for line breaks and `**bold**` spans.                                               |
+| `subtitle`   | `string`             | `undefined`            | Optional muted second-tone text rendered below `text`. Use for supporting context (methodology, source, etc.). Supports `**bold**` too. |
+| `dot`        | `boolean \| AnnotationDot` | see below        | Open-ring marker on the data point. Appears by default on non-arrowed connectors. `false` for none, an object to restyle. |
 | `label`      | `string`             | `undefined`            | Additional label text.                                                                                                 |
-| `fontSize`   | `number`             | theme default          | Font size override in pixels.                                                                                          |
-| `fontWeight` | `number`             | theme default          | Font weight override.                                                                                                  |
+| `fontSize`   | `number`             | `13`                   | Font size override in pixels.                                                                                          |
+| `fontWeight` | `number`             | `400` (`700` with a `subtitle`) | Font weight override.                                                                                         |
 | `offset`     | `AnnotationOffset`   | `undefined`            | Pixel offset from computed position. `{ dx?: number, dy?: number }`.                                                   |
 | `anchor`     | `AnnotationAnchor`   | `'auto'`               | Label placement direction: `'top'`, `'bottom'`, `'left'`, `'right'`, `'auto'`.                                         |
-| `connector`  | `boolean \| 'curve'` | `true`                 | `true` draws a straight connector line, `'curve'` draws a curved arrow with arrowhead, `false` disables the connector. |
-| `background` | `string`             | `undefined`            | Background color behind the text. Renders a masking rect for readability over chart lines.                             |
+| `connector`  | `boolean \| ConnectorType \| ConnectorConfig` | `true` | `'straight'`, `'curve'`, or `'drop-line'`; `{ type, arrow? }` for explicit arrow control; `false` disables it.     |
+| `connectorOffset` | `{ from?, to? }` | `undefined`            | Per-endpoint pixel offsets for the connector line.                                                                     |
+| `background` | `string \| true`     | `undefined`            | Background plate behind the text, for readability over chart lines. `true` follows the theme surface.                  |
 | `fill`       | `string`             | theme `annotationFill` | Fill color.                                                                                                            |
-| `stroke`     | `string`             | theme `annotationText` | Stroke color.                                                                                                          |
+| `stroke`     | `string`             | theme `annotationText` | Stroke color. Also overrides the connector and marker stroke.                                                          |
 | `opacity`    | `number`             | `1`                    | Opacity (0 to 1).                                                                                                      |
 | `zIndex`     | `number`             | `0`                    | Render ordering. Higher values render on top.                                                                          |
 
-The `text` field supports `\n` for multi-line annotations. Each line renders as a separate `<tspan>` element, auto-centered within the label.
+#### Text: line breaks, bold spans, and the lede rule
+
+`\n` starts a new line. Each line renders as its own `<tspan>`. Multi-line blocks are left-aligned by default, or right-aligned when `anchor: 'left'` puts the block to the left of the point, so the block's facing edge lines up with the leader.
+
+`**bold**` marks an inline bold span in `text` and in `subtitle`. Emphasis belongs on the key phrase, not the whole block:
+
+```ts
+{ type: 'text', x: '2022-06', y: 8.5, text: 'Inflation peaked at **8.5%**' }
+```
+
+Only matched pairs turn bold. An unmatched `**` (and an empty `****`) renders literally, so specs with stray asterisks aren't mangled. Bold spans are measured at weight 700, so bounds, collision nudging, and connector exits all account for them.
+
+When a `subtitle` is present and you set no `fontWeight`, the primary text resolves to weight 700 and the subtitle stays 400. That's the lede + context stack ("Feb. 25" over "2015 maximum"). Setting `fontWeight` explicitly opts out.
+
+#### Connectors
+
+The connector leaves the text block (primary text plus subtitle, treated as one box) on the side facing the data point, with a 6px standoff gap, and stops short of the marker at the other end. Two voices:
+
+- **Emphasis.** An arrowed connector (`'curve'` defaults to `arrow: true`) is drawn in the label's text ink with a small open-V arrowhead, so the gesture reads as part of the sentence.
+- **Quiet.** A non-arrowed straight leader or a `'drop-line'` is a gray hairline. It points without competing with the words.
+
+Connectors are dropped when they'd be noise rather than signal: a leader shorter than 8px, or one whose data point sits inside the text block. The marker still renders. A default annotation sits far enough off its point (28px) to draw a real leader without any `offset` authoring; you only lose the line by pulling the label back onto its own marker.
+
+#### Dot marker
+
+| Field         | Type     | Default                     | Description                       |
+| ------------- | -------- | --------------------------- | --------------------------------- |
+| `radius`      | `number` | `4`                         | Circle radius in pixels.          |
+| `fill`        | `string` | theme background            | Interior fill (the "open ring").  |
+| `stroke`      | `string` | the connector's stroke      | Ring color.                       |
+| `strokeWidth` | `number` | `1.5`                       | Ring width in pixels.             |
+
+The marker sits on the data point itself, not on the pulled-back connector tip. You get one by default when a connector is enabled and carries no arrowhead, including drop-lines. An arrowed connector gets no marker unless you ask for one, since the arrowhead already marks the spot. `dot: false` is always bare; an explicit `dot` always wins.
 
 ### RangeAnnotation
 

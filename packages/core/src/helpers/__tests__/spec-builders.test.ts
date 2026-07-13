@@ -203,12 +203,12 @@ describe('columnChart', () => {
 // ---------------------------------------------------------------------------
 
 describe('pieChart', () => {
-  it('maps category to color channel and value to y', () => {
+  it('maps category to color channel and value to theta', () => {
     const spec = pieChart(categoricalData, 'name', 'count');
 
     expect(spec.mark).toBe('arc');
-    // Arc (pie) convention: value on y, category on color, no x
-    expect(spec.encoding.y).toEqual({ field: 'count', type: 'quantitative' });
+    // Arc (pie) convention: value on theta (canonical), category on color, no x
+    expect(spec.encoding.theta).toEqual({ field: 'count', type: 'quantitative' });
     expect(spec.encoding.color).toEqual({ field: 'name', type: 'nominal' });
     expect(spec.encoding.x).toBeUndefined();
   });

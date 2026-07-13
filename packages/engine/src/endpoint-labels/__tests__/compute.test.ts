@@ -323,9 +323,17 @@ describe('computeEndpointLabels', () => {
   });
 
   it('handles area marks (overlap, not stacked)', () => {
+    // v8: area stacks by default, and stacked areas suppress the endpoint
+    // column in favor of the traditional legend. Stamp stack: null to
+    // exercise the overlap path this test targets.
     const spec = makeSpec({
       markType: 'area',
       markDef: { type: 'area' },
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', stack: null },
+        color: { field: 'country', type: 'nominal' },
+      },
     });
     const marks: Mark[] = [makeAreaMark('US', 100, 40), makeAreaMark('UK', 200, 35, '#cc6633')];
     const layout = computeEndpointLabels(spec, marks, theme, chartArea);
@@ -338,9 +346,16 @@ describe('computeEndpointLabels', () => {
     // derived LineMark per series (see linesFromAreas in
     // packages/engine/src/charts/line/index.ts). Without dedupe, each series
     // produces two endpoint entries.
+    // v8: stamp stack: null so this overlap-mode fixture still shows the
+    // endpoint column (stacked areas suppress it in favor of the legend).
     const spec = makeSpec({
       markType: 'area',
       markDef: { type: 'area' },
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', stack: null },
+        color: { field: 'country', type: 'nominal' },
+      },
     });
     const lineColor = '#3366cc';
     const areaColor = '#ddee99'; // fake gradient-derived color, distinct from the line stroke
@@ -420,9 +435,16 @@ describe('computeEndpointLabels', () => {
   it('dedupe prefers line mark even when area appears later in the marks array', () => {
     // Defect-1 regression: area marks listed AFTER line marks should not
     // overwrite the line's canonical stroke color in the endpoint entry.
+    // v8: stamp stack: null so this overlap-mode fixture still shows the
+    // endpoint column (stacked areas suppress it in favor of the legend).
     const spec = makeSpec({
       markType: 'area',
       markDef: { type: 'area' },
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', stack: null },
+        color: { field: 'country', type: 'nominal' },
+      },
     });
     const lineColor = '#3366cc';
     const areaColor = '#ddee99';

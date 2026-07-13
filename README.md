@@ -97,6 +97,7 @@ Each package re-exports the types you need, so you typically only install one.
 | [Agent patterns](docs/agent-patterns.md) | Visualization patterns and cookbook for LLM-generated charts |
 | [Architecture](docs/architecture.md) | Compilation pipeline, package boundaries, design decisions |
 | [Migrating to v8](docs/migrating-v8.md) | Breaking changes, before/after specs, and jq codemod recipes for the v8 upgrade |
+| [Theming tokens](docs/theming-tokens.md) | Design token system, `TokenValue` light/dark pairs, `seriesStrategy`, named presets |
 | [Contributing](CONTRIBUTING.md) | Setup, running tests, adding chart types, PR guidelines |
 
 ## Packages

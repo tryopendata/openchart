@@ -41,9 +41,12 @@ export function computeTickMarks(
   const colorField = colorEncoding?.field;
   const marks: TickMarkLayout[] = [];
 
-  // Determine orientation: ticks are perpendicular to the quantitative axis
-  const isHorizontal = xChannel.type === 'quantitative' && yChannel.type !== 'quantitative';
-  const orient: 'horizontal' | 'vertical' = isHorizontal ? 'horizontal' : 'vertical';
+  // Ticks run perpendicular to the quantitative axis: a quantitative x (values
+  // spread left-to-right along a categorical row) gets vertical strokes, and a
+  // quantitative y gets horizontal ones. Drawing them parallel instead makes
+  // neighbouring observations butt end-to-end and read as one continuous bar.
+  const isQuantX = xChannel.type === 'quantitative' && yChannel.type !== 'quantitative';
+  const orient: 'horizontal' | 'vertical' = isQuantX ? 'vertical' : 'horizontal';
 
   for (const row of spec.data) {
     const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
@@ -78,7 +81,7 @@ export function computeTickMarks(
   }
 
   // Stamp keys: position-defining value, fall back to index
-  const posField = isHorizontal ? xChannel.field : yChannel.field;
+  const posField = isQuantX ? xChannel.field : yChannel.field;
   const rawKeys = marks.map((m) => serializeKeyValue(m.data[posField]));
   const keys = dedupeKeys(rawKeys);
   for (let i = 0; i < marks.length; i++) {

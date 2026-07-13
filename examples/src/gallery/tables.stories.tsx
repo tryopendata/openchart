@@ -402,12 +402,7 @@ export const Tables = () => (
       title="Basics"
       lede="A column list with d3-format strings, editorial chrome, and the built-in search and pager. This is the whole table API before any cell features."
     >
-      <Demo
-        id="basic"
-        title="Basic table"
-        description="Formatted numeric columns, a takeaway title, and cited source chrome — sortable, searchable, paginated out of the box."
-        spec={basicSpec}
-      />
+      <Demo id="basic" spec={basicSpec} />
     </Section>
 
     <Section

@@ -413,15 +413,25 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   const columnList = [...dataColumns];
   const availableColumns = columnList.join(', ');
 
-  // Validate required channels
+  // Validate required channels. Arc's canonical channel is theta; waffle and
+  // parliament still key on y with theta as an alias. For backward compat,
+  // validateSpec (a public entry point that callers may invoke on un-expanded
+  // specs) accepts y as satisfying a theta requirement and vice versa on
+  // theta-capable marks.
+  const THETA_MARKS = new Set(['arc', 'waffle', 'parliament']);
+  const isThetaMark = THETA_MARKS.has(markType as string);
   for (const [channel, rule] of Object.entries(rules)) {
-    if (rule.required && !encoding[channel]) {
+    if (!rule.required) continue;
+    const satisfiedByAlias =
+      isThetaMark && ((channel === 'theta' && encoding.y) || (channel === 'y' && encoding.theta));
+    if (!encoding[channel] && !satisfiedByAlias) {
       const allowedTypes = rule.allowedTypes.join(' or ');
+      const suggestedChannel = channel === 'y' && isThetaMark ? 'theta' : channel;
       errors.push({
-        message: `Spec error: ${markType} chart requires encoding.${channel} but none was provided`,
-        path: `encoding.${channel}`,
+        message: `Spec error: ${markType} chart requires encoding.${suggestedChannel} but none was provided`,
+        path: `encoding.${suggestedChannel}`,
         code: 'MISSING_FIELD',
-        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}) and type (${allowedTypes}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${rule.allowedTypes[0]}" }`,
+        suggestion: `Add encoding.${suggestedChannel} with a field from your data (${availableColumns}) and type (${allowedTypes}). Example: ${suggestedChannel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${rule.allowedTypes[0]}" }`,
       });
     }
   }

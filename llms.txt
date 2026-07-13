@@ -98,7 +98,7 @@ Common MarkDef options:
 | `lollipop` | req (quantitative) | req (nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt (quantitative) | Lollipop chart |
 | `beeswarm` | opt (quantitative, nominal, ordinal) | opt (quantitative, nominal, ordinal) | opt (nominal, ordinal, quantitative) | opt (quantitative) | Beeswarm chart |
 | `range` | req (quantitative, nominal, ordinal) | req (quantitative, nominal, ordinal) | opt (nominal, ordinal) | opt | Range plot |
-| `arc` | opt | req (quantitative) | req (nominal, ordinal) | opt | Pie chart |
+| `arc` | opt | opt (quantitative) | req (nominal, ordinal) | opt | Pie chart |
 | `waffle` | opt | req (quantitative) | req (nominal, ordinal) | opt | Waffle chart |
 | `parliament` | opt | req (quantitative) | req (nominal, ordinal) | opt | Parliament chart |
 | `text` | opt | opt | opt | opt (quantitative) | Text chart |

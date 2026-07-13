@@ -157,6 +157,30 @@ function estimateLineCount(
 // ---------------------------------------------------------------------------
 
 /**
+ * Line-height multiplier for the auto-thinning footnote list.
+ *
+ * Exported because the chrome renderer steps each footnote line down by it
+ * while the band height below is computed from it -- the two have to agree, or
+ * the last line drifts outside the band that was reserved for it.
+ */
+export const FOOTNOTE_LINE_HEIGHT = 1.3;
+/** Gap below the footnote list, separating it from the source row. */
+const FOOTNOTE_BAND_GAP = 4;
+
+/**
+ * Vertical space a footnote list of `count` lines occupies below the plot.
+ *
+ * Single source of truth, deliberately: the engine reserves this band in the
+ * bottom margin, the chrome renderer shifts the source row down by it, and the
+ * brand watermark shifts by it too. When those three disagree the footnotes
+ * land on top of the watermark, which is exactly the bug this centralizes away.
+ */
+export function footnoteBandHeight(count: number, theme: ResolvedTheme): number {
+  if (count <= 0) return 0;
+  return count * theme.fonts.sizes.small * FOOTNOTE_LINE_HEIGHT + FOOTNOTE_BAND_GAP;
+}
+
+/**
  * Compute resolved chrome layout from a Chrome spec and resolved theme.
  *
  * Produces positioned text elements and total chrome heights (top and bottom).

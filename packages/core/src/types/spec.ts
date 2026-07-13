@@ -55,9 +55,6 @@ export type MarkType =
   | 'calendar'
   | 'parliament';
 
-/** @deprecated Use MarkType instead. Kept for internal migration references. */
-export type ChartType = MarkType;
-
 // ---------------------------------------------------------------------------
 // Gradient definitions (Vega-aligned)
 // ---------------------------------------------------------------------------
@@ -222,6 +219,28 @@ export interface MarkDef {
    * two competing diagonals.
    */
   trendline?: boolean;
+  /**
+   * Horizontal pixel offset from the data anchor. Only meaningful when `type`
+   * is `'text'`. Use it to lift a label clear of the mark it annotates instead
+   * of shifting the underlying data value.
+   */
+  dx?: number;
+  /**
+   * Vertical pixel offset from the data anchor (negative = up). Only meaningful
+   * when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten
+   * pixels above its point.
+   */
+  dy?: number;
+  /** Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`. */
+  align?: 'left' | 'center' | 'right';
+  /** Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`. */
+  baseline?: 'top' | 'middle' | 'bottom';
+  /**
+   * Font size in pixels for text marks. Ignored when the `size` encoding channel
+   * is present (which scales font size from a data field). `size` is already
+   * taken by bar thickness, hence the distinct name.
+   */
+  fontSize?: number;
   /**
    * Pattern-fill reinforcement for filled marks (bar, area, arc).
    *
@@ -498,31 +517,28 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * The string forms are still the canonical input — the boolean shorthand is
    * normalized to the matching string before reaching layout.
    *
-   * - undefined: chart-type default (see below)
+   * - undefined: chart-type default (see below) -- stacked for bar/column/area
    * - true | 'zero': stack from zero baseline
    * - 'normalize': stack and normalize to fraction of total (0-1 per category)
    * - 'center': center stacks around zero (streamgraph style)
-   * - null | false: no stacking -- renders overlap (area) or grouped/dodged (bar)
+   * - null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)
    *
    * **Defaults differ by chart type:**
-   * - **Bar/Column**: defaults to grouped (side-by-side). Use `stack: 'zero'` (or `true`) for stacked bars.
-   * - **Area**: defaults to overlap (v6 breaking change). Use `stack: 'zero'` (or `true`)
-   *   to opt into stacked areas. Each overlapping series renders as a translucent
-   *   gradient band anchored at the y-domain baseline.
+   * - **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use
+   *   `stack: null` (or `false`) for grouped/side-by-side bars.
+   * - **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use
+   *   `stack: null` (or `false`) to opt into overlap rendering, where each
+   *   series renders as a translucent gradient band anchored at the
+   *   y-domain baseline.
    * - **Line**: stacking is not applied (lines always overlap).
    *
-   * **v8 note:** the multi-series bar/area default realigns with Vega-Lite
-   * (stacked, `'zero'`) in v8. Relying on the implicit default emits a
-   * compile warning in v7; set `stack` explicitly (`null` for
-   * grouped/overlap, `'zero'` for stacked) to keep the current rendering.
+   * @example
+   * // Grouped horizontal bars (opt-out; default is stacked):
+   * "x": { "field": "revenue", "type": "quantitative", "stack": null }
    *
    * @example
-   * // Stacked horizontal bars (opt-in; default is grouped):
-   * "x": { "field": "revenue", "type": "quantitative", "stack": "zero" }
-   *
-   * @example
-   * // Stacked area (opt-in; default is overlap):
-   * "y": { "field": "value", "type": "quantitative", "stack": "zero" }
+   * // Overlap area (opt-out; default is stacked):
+   * "y": { "field": "value", "type": "quantitative", "stack": null }
    */
   stack?: boolean | 'zero' | 'normalize' | 'center' | null;
   /**
@@ -670,12 +686,6 @@ export interface Encoding<TData extends DataRow = DataRow> {
    */
   opacity?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
-   * Point shape encoding.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Differentiate series with `color` or `strokeDash` instead.
-   */
-  shape?: EncodingChannel<TData>;
-  /**
    * Stroke dash pattern encoding. Maps a nominal/ordinal field to different
    * dash patterns on line and rule marks. Useful when color alone doesn't
    * distinguish series well.
@@ -694,32 +704,14 @@ export interface Encoding<TData extends DataRow = DataRow> {
    */
   tooltip?: EncodingChannel<TData> | EncodingChannel<TData>[];
   /**
-   * Hyperlink encoding.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Handle link navigation in the host application instead.
-   */
-  href?: EncodingChannel<TData>;
-  /**
-   * Drawing order.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Use `sort` on the relevant channel or pre-sorted data order instead.
-   */
-  order?: EncodingChannel<TData>;
-  /**
-   * Angular position (slice value) for arc marks (pie/donut), the Vega-Lite
-   * pie idiom. Waffle marks accept it too (the same part-to-whole value
-   * channel). Accepted as an alias for `y`: when `y` is absent, `theta` is
-   * used as the slice value. When both are present, `y` wins and `theta` is
-   * ignored with a compile warning. `theta` becomes the canonical arc value
-   * channel in v8. Not used by any other mark type.
+   * Angular position (slice value) for arc marks (pie/donut), the canonical
+   * value channel in v8. Waffle and parliament marks accept it too (the same
+   * part-to-whole value channel). `y` is still accepted on these marks as a
+   * deprecated alias for backward compatibility (a compile warning is emitted
+   * and `y` is populated from `theta` internally). Not used by any other mark
+   * type.
    */
   theta?: EncodingChannel<TData>;
-  /**
-   * Radial distance from center for arc marks.
-   * @deprecated Not implemented (silently ignored) and removed in v8.
-   * Use `mark.innerRadius` / `mark.outerRadius` to control donut radii.
-   */
-  radius?: EncodingChannel<TData>;
   /**
    * Facet channel: partitions data into a grid of small-multiple panels.
    * Each unique value of the facet field produces one panel. Panels share
@@ -863,15 +855,15 @@ export interface ConnectorConfig {
   arrow?: boolean;
 }
 
-/** Style overrides for the dot marker drawn at the connector's data-point endpoint. */
+/** Style overrides for the dot marker drawn at the data point. */
 export interface AnnotationDot {
-  /** Circle radius in pixels. Default 5. */
+  /** Circle radius in pixels. Default 4. */
   radius?: number;
   /** Fill color. Defaults to theme background for an "open ring" look. */
   fill?: string;
-  /** Stroke color. Defaults to theme text color. */
+  /** Stroke color. Defaults to the connector's resolved stroke, so marker and leader read as one system. */
   stroke?: string;
-  /** Stroke width in pixels. Default 2. */
+  /** Stroke width in pixels. Default 1.5. */
   strokeWidth?: number;
 }
 
@@ -903,7 +895,13 @@ export interface TextAnnotation extends AnnotationBase {
   x: string | number;
   /** Y-axis data value or position. */
   y: string | number;
-  /** The annotation text. Required for text annotations. */
+  /**
+   * The annotation text. Required for text annotations.
+   *
+   * Supports inline `**bold**` spans, so emphasis lands on the key phrase rather
+   * than the whole block: `'Inflation peaked at **8.5%**'`. Unmatched `**` (and
+   * empty `****`) render literally. `\n` starts a new line.
+   */
   text: string;
   /** Thinning priority (lower = kept longer at narrow widths). When omitted, spec order is used. */
   priority?: number;
@@ -911,12 +909,23 @@ export interface TextAnnotation extends AnnotationBase {
    * Optional muted second-tone text rendered below the primary `text`.
    * Used for supporting context (e.g. methodology, source). Newlines in
    * `text` still produce multi-line primary; subtitle is a separate block.
+   *
+   * Supports the same inline `**bold**` spans as `text`. When a subtitle is
+   * present and no `fontWeight` is set, the primary `text` resolves to weight
+   * 700 — the lede + context stack.
    */
   subtitle?: string;
   /**
-   * Optional dot marker drawn at the connector's data-point endpoint.
-   * `true` enables the default open-ring style. Pass an object to override
-   * radius, fill, stroke, or strokeWidth.
+   * Open-ring marker drawn on the data point itself (not on the pulled-back
+   * connector tip).
+   *
+   * Left unset, a default marker appears whenever a connector is enabled and
+   * carries no arrowhead — the leader points, the ring lands. An arrowed
+   * connector gets no marker unless you ask for one: the head already marks the
+   * spot. `dot: false` is always bare; an explicit `dot` always wins.
+   *
+   * `true` uses the default style; pass an object to override radius, fill,
+   * stroke, or strokeWidth.
    */
   dot?: boolean | AnnotationDot;
   /** Font size override. */
@@ -935,6 +944,11 @@ export interface TextAnnotation extends AnnotationBase {
    * - `'drop-line'`: vertical line through the data point's x
    * - `{ type, arrow? }`: object form for explicit arrow control
    * - `false`: no connector
+   *
+   * The connector leaves the text block on the side facing the data point, with
+   * a small standoff gap. A leader shorter than 8px is dropped as noise (the
+   * marker alone reads better), as is a connector whose target sits inside the
+   * text block. Widen `offset` if you want the line back.
    */
   connector?: boolean | ConnectorType | ConnectorConfig;
   /** Per-endpoint offsets for the connector line. Allows fine-tuning where the connector starts and ends. */
@@ -944,8 +958,14 @@ export interface TextAnnotation extends AnnotationBase {
     /** Offset for the data-point-end of the connector. */
     to?: AnnotationOffset;
   };
-  /** Background color behind the text. Useful for readability over chart lines. */
-  background?: string;
+  /**
+   * Background plate behind the text, for readability over chart lines.
+   *
+   * `true` uses the theme surface, so the plate follows light/dark mode. A
+   * color string sets it explicitly. Prefer `true`: a hardcoded '#ffffff' stays
+   * white in dark mode and the text turns light-gray-on-white.
+   */
+  background?: string | true;
   /** Whether to show the paint-order stroke halo behind text. Default true. Set false for white text on colored backgrounds. */
   halo?: boolean;
 }
@@ -990,11 +1010,13 @@ export interface RangeAnnotation extends AnnotationBase {
  */
 export interface RefLineAnnotation extends AnnotationBase {
   /**
-   * Discriminant. `'refline'` is canonical. `'rule'` is a deprecated alias
-   * (it collides with the `rule` mark type) kept accepted-with-warning; it is
-   * removed in v9. Use `'refline'`.
+   * Discriminant. `'refline'` is canonical and the only value in the type.
+   * `'rule'` (it collides with the `rule` mark type) is still accepted at
+   * runtime for backward compatibility -- the spec-sugar pass rewrites it to
+   * `'refline'` with a deprecation warning before validation -- but it is not
+   * part of this type. Use `'refline'`.
    */
-  type: 'refline' | 'rule';
+  type: 'refline';
   /** X-axis value for a vertical reference line. */
   x?: string | number;
   /** Y-axis value for a horizontal reference line. */
@@ -1194,7 +1216,11 @@ export interface LabelConfig {
   suffix?: string;
   /** Fixed CSS color for all labels. Overrides the default fill-derived color. */
   color?: string;
-  /** Per-series pixel offsets for fine-tuning label positions, keyed by series name. */
+  /**
+   * Per-series pixel offsets for fine-tuning label positions, keyed by series name.
+   * @deprecated Per-series pixel offsets are a workaround for collision bugs
+   * now fixed by the layout engine. Will be removed in a future version.
+   */
   offsets?: Record<string, AnnotationOffset>;
   /** Font size in pixels for bar/column value labels. */
   fontSize?: number;
@@ -1491,13 +1517,13 @@ export interface Metric {
 
 /**
  * Encoding for arc marks (pie/donut charts).
- * - `y`: required (quantitative — the slice value)
+ * - `theta`: required (quantitative — the canonical slice value channel)
  * - `color`: required (nominal/ordinal — the category)
- * - `theta`: optional (defaults to `y` channel)
- * - `radius`: optional (donut inner radius)
+ * - `y`: deprecated alias for `theta`, accepted for backward compatibility
  */
 export interface ArcEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
-  y: EncodingChannel<TData>;
+  /** Canonical value channel for arc marks (quantitative — the slice value). */
+  theta: EncodingChannel<TData>;
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
 }
 
@@ -1589,8 +1615,9 @@ export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding
 /**
  * Encoding for waffle marks (unit grids for part-to-whole counts).
  * - `color`: required (nominal/ordinal, the category)
- * - `theta`: the quantitative share, the same part-to-whole value channel
- *   arc marks use. Alias for `y`; provide one of the two.
+ * - `theta`: the canonical quantitative share, the same part-to-whole value
+ *   channel arc marks use. `y` is a deprecated alias, accepted for backward
+ *   compatibility.
  */
 export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
@@ -1599,8 +1626,9 @@ export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encodin
 /**
  * Encoding for parliament marks (hemicycle seat-dot charts).
  * - `color`: required (nominal/ordinal, the party)
- * - `theta`: the quantitative seat count, the same part-to-whole value
- *   channel arc/waffle marks use. Alias for `y`; provide one of the two.
+ * - `theta`: the canonical quantitative seat count, the same part-to-whole
+ *   value channel arc/waffle marks use. `y` is a deprecated alias, accepted
+ *   for backward compatibility.
  */
 export interface ParliamentEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
@@ -2179,6 +2207,8 @@ export interface SankeySpec {
    * number (data value 28 renders as "28%"). For currency: "$,.0f" or "$~s".
    * For SI suffixes: "~s" (renders 1000 as "1k"). When not set, values use
    * the default number formatter.
+   * @deprecated Use the encoding channel's `format` field instead. This
+   * property is expanded into the encoding during compilation.
    */
   valueFormat?: string;
 }
@@ -2245,6 +2275,8 @@ export interface TileMapSpec {
   /**
    * d3-format string applied to tile values, legend labels, and tooltips.
    * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
+   * @deprecated Use the encoding channel's `format` field instead. This
+   * property is expanded into the encoding during compilation.
    */
   valueFormat?: string;
 }
@@ -2282,6 +2314,8 @@ export interface BarListSpec {
   /**
    * d3-format string applied to bar values and tooltips.
    * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
+   * @deprecated Use the encoding channel's `format` field instead. This
+   * property is expanded into the encoding during compilation.
    */
   valueFormat?: string;
 }
@@ -2657,9 +2691,6 @@ export function isAxislessMark(markType: MarkType): boolean {
   );
 }
 
-/** @deprecated Use MARK_TYPES instead. */
-export const CHART_TYPES = MARK_TYPES;
-
 /**
  * Extract the mark type string from a mark field (string or MarkDef).
  */
@@ -2727,9 +2758,14 @@ export function isRangeAnnotation(annotation: Annotation): annotation is RangeAn
   return annotation.type === 'range';
 }
 
-/** Check if an annotation is a RefLineAnnotation. */
+/**
+ * Check if an annotation is a RefLineAnnotation. Also accepts the deprecated
+ * `'rule'` type at runtime (pre-sugar-expansion input), since `annotation.type`
+ * may not yet be narrowed to the canonical `'refline'` form.
+ */
 export function isRefLineAnnotation(annotation: Annotation): annotation is RefLineAnnotation {
-  return annotation.type === 'refline' || annotation.type === 'rule';
+  const type: string = annotation.type;
+  return type === 'refline' || type === 'rule';
 }
 
 // ---------------------------------------------------------------------------

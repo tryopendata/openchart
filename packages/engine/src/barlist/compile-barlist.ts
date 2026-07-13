@@ -28,7 +28,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
@@ -56,8 +56,15 @@ const BARLIST_COLORS = ['#06b6d4', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
 // ---------------------------------------------------------------------------
 
 export function compileBarList(spec: unknown, options: CompileOptions): BarListLayout {
-  const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings, options.onWarn);
+  // Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
+  // before validation, then validate + normalize via the shared pipeline.
+  const sugarWarnings: string[] = [];
+  const expandedSpec =
+    spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
+      : spec;
+  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'barlist') {
     throw new Error(
@@ -158,9 +165,9 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     return palette[idx % palette.length];
   }
 
-  // Value formatter
+  // Value formatter: prefer encoding-level format (v8 canonical), fall back to deprecated valueFormat
   const formatter = resolveFieldFormatter({
-    surfaceFormat: barlistSpec.valueFormat,
+    surfaceFormat: barlistSpec.encoding.value.format ?? barlistSpec.valueFormat,
     values: validRows.map((r) => r[valueField]),
   });
 

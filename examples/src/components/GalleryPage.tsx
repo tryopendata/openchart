@@ -4,7 +4,7 @@
  * - Stamps `[data-oc-mode='light'|'dark']` on its root (from the provider's
  *   resolved mode context), which crosses into the width-addon iframe so
  *   gallery-content CSS follows dark mode there (constraint C3).
- * - Renders the page title (Bricolage Grotesque) + lede.
+ * - Renders the page title + lede.
  * - Builds a sticky right-rail TOC from its Section children (hidden < 1200px).
  * - Content column max-width ~1040px, centered; a `.oc-bleed` wrapper is
  *   available for full-bleed showcase sections.
@@ -42,13 +42,15 @@ export function GalleryPage({ title, lede, children }: GalleryPageProps) {
   return (
     <div className="oc-gallery" data-oc-mode={mode}>
       <div className="oc-gallery-layout">
-        <main className="oc-gallery-main">
-          <header className="oc-gallery-header">
-            <h1 className="oc-gallery-title">{title}</h1>
-            {lede ? <p className="oc-gallery-lede">{lede}</p> : null}
-          </header>
-          {children}
-        </main>
+        <div className="oc-gallery-shell">
+          <main className="oc-gallery-main">
+            <header className="oc-gallery-header">
+              <h1 className="oc-gallery-title">{title}</h1>
+              {lede ? <p className="oc-gallery-lede">{lede}</p> : null}
+            </header>
+            {children}
+          </main>
+        </div>
         {sections.length > 0 ? (
           <nav className="oc-toc" aria-label="On this page">
             <p className="oc-toc-heading">On this page</p>

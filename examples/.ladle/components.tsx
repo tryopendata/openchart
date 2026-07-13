@@ -28,6 +28,36 @@ import { redirects } from './redirects';
 import { themeNames, themes } from './themes';
 
 // ---------------------------------------------------------------------------
+// Design tokens (JS side) — single source for all inline styles.
+// CSS tokens live in src/tokens.css + shell.css + gallery.css.
+// ---------------------------------------------------------------------------
+
+const PALETTE = {
+  light: {
+    bg: '#ffffff',
+    bgCanvas: '#fafafa',
+    border: '#d4d4d8',
+    text: '#09090b',
+    textMuted: '#71717a',
+    hoverBg: '#f4f4f5',
+    activeBg: 'rgba(6,182,212,0.1)',
+    accent: '#0e7490',
+  },
+  dark: {
+    bg: '#191a1b',
+    bgCanvas: '#0f1011',
+    border: 'rgba(255,255,255,0.08)',
+    text: '#f7f8f8',
+    textMuted: '#8a8f98',
+    hoverBg: 'rgba(6,182,212,0.12)',
+    activeBg: 'rgba(6,182,212,0.14)',
+    accent: '#67e8f9',
+  },
+} as const;
+
+type OcMode = 'light' | 'dark';
+
+// ---------------------------------------------------------------------------
 // Dark bridge: resolve dark from globalState + matchMedia
 // ---------------------------------------------------------------------------
 
@@ -49,6 +79,41 @@ function useResolvedDark(ladleTheme: string | undefined): boolean {
   return ladleTheme === 'dark' || (ladleTheme === 'auto' && prefersDark);
 }
 
+/**
+ * Stamp the RESOLVED mode onto `<html data-theme>`.
+ *
+ * Ladle writes the literal `data-theme="auto"` when the theme addon is in auto
+ * mode — it never resolves the OS preference itself. shell.css binds its tokens
+ * under `[data-theme='light']` / `[data-theme='dark']`, so `auto` matches
+ * neither: on a dark-mode OS the Ladle shell (sidebar, search, addons bar)
+ * stayed light while the story content correctly went dark, and the two
+ * disagreed. Rewriting the attribute to the resolved value keeps shell.css a
+ * clean two-value contract and needs no CSS change.
+ *
+ * Ladle re-stamps `auto` whenever it re-renders, and this Provider is a CHILD of
+ * Ladle's App, so our effect runs BEFORE App's and a plain effect loses the
+ * race — the same hazard `useTitleOverride` below documents. So observe the
+ * attribute and re-assert whenever anything else changes it, with the keyed
+ * effect as a cheap fast-path. The observer must ignore its own writes or it
+ * would loop.
+ */
+function useResolvedThemeAttr(resolvedDark: boolean) {
+  const resolved = resolvedDark ? 'dark' : 'light';
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const reassert = () => {
+      if (root.getAttribute('data-theme') !== resolved) {
+        root.setAttribute('data-theme', resolved);
+      }
+    };
+    reassert();
+    const obs = new MutationObserver(reassert);
+    obs.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, [resolved]);
+}
+
 // ---------------------------------------------------------------------------
 // Legacy-slug redirects
 // ---------------------------------------------------------------------------
@@ -63,8 +128,6 @@ function useLegacyRedirect() {
     if (!target) return;
     params.set('story', target.story);
     const hash = target.hash ? `#${target.hash}` : '';
-    // Replace so the legacy URL doesn't linger in history; Ladle picks up the
-    // new ?story= on the resulting location change.
     history.replaceState(null, '', `${location.pathname}?${params.toString()}${hash}`);
   }, []);
 }
@@ -150,11 +213,11 @@ function Swatches({ colors, size = 8 }: { colors?: string[]; size?: number }) {
 function ThemePicker({
   selected,
   onChange,
-  dark,
+  mode,
 }: {
   selected: string;
   onChange: (name: string) => void;
-  dark: boolean;
+  mode: OcMode;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -168,14 +231,7 @@ function ThemePicker({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Cool/pure neutrals; borders over shadows in dark.
-  const bg = dark ? '#10151d' : '#ffffff';
-  const border = dark ? '#232b38' : '#e2e8f0';
-  const text = dark ? '#e2e8f0' : '#1e293b';
-  const textMuted = dark ? '#94a3b8' : '#64748b';
-  const hoverBg = dark ? 'rgba(34,211,238,0.12)' : '#f1f5f9';
-  const activeBg = dark ? 'rgba(34,211,238,0.14)' : 'rgba(6,182,212,0.1)';
-  const accent = dark ? '#5ad3e8' : '#0e7490';
+  const p = PALETTE[mode];
 
   return (
     <div
@@ -186,7 +242,7 @@ function ThemePicker({
         top: 12,
         left: 12,
         zIndex: 9999,
-        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+        fontFamily: "'Inter Gallery', 'Inter', system-ui, -apple-system, sans-serif",
       }}
     >
       <button
@@ -196,15 +252,15 @@ function ThemePicker({
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          background: bg,
-          border: `1px solid ${border}`,
+          background: p.bg,
+          border: `1px solid ${p.border}`,
           borderRadius: 8,
           padding: '6px 12px',
           cursor: 'pointer',
           fontSize: 12,
-          fontWeight: 500,
+          fontWeight: 510,
           fontFamily: 'inherit',
-          color: text,
+          color: p.text,
           transition: 'border-color 0.15s',
           outline: 'none',
           lineHeight: 1,
@@ -212,16 +268,16 @@ function ThemePicker({
       >
         <span
           style={{
-            color: textMuted,
+            color: p.textMuted,
             fontSize: 10,
-            fontWeight: 600,
+            fontWeight: 590,
             letterSpacing: '0.04em',
             textTransform: 'uppercase' as const,
           }}
         >
           Theme
         </span>
-        <span style={{ width: 1, height: 14, background: border, flexShrink: 0 }} />
+        <span style={{ width: 1, height: 14, background: p.border, flexShrink: 0 }} />
         <span>{selected}</span>
         <Swatches colors={themeSwatch(selected).categorical} />
         <svg
@@ -237,7 +293,7 @@ function ThemePicker({
         >
           <path
             d="M1 1L5 5L9 1"
-            stroke={textMuted}
+            stroke={p.textMuted}
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -252,8 +308,8 @@ function ThemePicker({
             top: 'calc(100% + 4px)',
             left: 0,
             minWidth: 220,
-            background: bg,
-            border: `1px solid ${border}`,
+            background: p.bg,
+            border: `1px solid ${p.border}`,
             borderRadius: 10,
             overflow: 'hidden',
             padding: 4,
@@ -277,10 +333,10 @@ function ThemePicker({
                   padding: '7px 10px',
                   border: 'none',
                   borderRadius: 6,
-                  background: isActive ? activeBg : 'transparent',
-                  color: isActive ? accent : text,
+                  background: isActive ? p.activeBg : 'transparent',
+                  color: isActive ? p.accent : p.text,
                   fontSize: 12,
-                  fontWeight: isActive ? 600 : 400,
+                  fontWeight: isActive ? 590 : 400,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
                   textAlign: 'left' as const,
@@ -288,7 +344,7 @@ function ThemePicker({
                   lineHeight: 1,
                 }}
                 onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.background = hoverBg;
+                  if (!isActive) e.currentTarget.style.background = p.hoverBg;
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) e.currentTarget.style.background = 'transparent';
@@ -309,7 +365,8 @@ function ThemePicker({
 // GitHub link (keep `.oc-github-link` class — C1)
 // ---------------------------------------------------------------------------
 
-function GitHubLink({ dark }: { dark: boolean }) {
+function GitHubLink({ mode }: { mode: OcMode }) {
+  const p = PALETTE[mode];
   return (
     <a
       href="https://github.com/tryopendata/openchart"
@@ -326,9 +383,9 @@ function GitHubLink({ dark }: { dark: boolean }) {
         alignItems: 'center',
         gap: 8,
         fontSize: 15,
-        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-        fontWeight: 500,
-        color: dark ? '#94a3b8' : '#64748b',
+        fontFamily: "'Inter Gallery', 'Inter', system-ui, -apple-system, sans-serif",
+        fontWeight: 510,
+        color: p.textMuted,
         textDecoration: 'none',
         opacity: 0.85,
         transition: 'opacity 0.15s',
@@ -357,28 +414,27 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
   const theme = themes[selected];
   const resolvedDark = useResolvedDark(globalState.theme);
   const darkMode: DarkMode = resolvedDark ? 'force' : 'off';
-  const mode = resolvedDark ? 'dark' : 'light';
+  const mode: OcMode = resolvedDark ? 'dark' : 'light';
 
+  useResolvedThemeAttr(resolvedDark);
   useLegacyRedirect();
   useTitleOverride(globalState.story);
 
-  // Themed canvas so no white/black gutter shows through around stories that
-  // don't fill the frame. Uses the theme background when a named theme sets
-  // one, else the resolved neutral canvas.
   const swatch = themeSwatch(selected);
-  const bg = swatch.background ?? (resolvedDark ? '#0a0e14' : '#ffffff');
-  const fg = swatch.text ?? (resolvedDark ? '#e2e8f0' : '#1e293b');
+  const p = PALETTE[mode];
+  const bg = swatch.background ?? p.bgCanvas;
+  const fg = swatch.text ?? p.text;
 
   const modeCtx = useMemo(() => mode, [mode]);
 
   return (
     <OcModeContext.Provider value={modeCtx}>
       <VizThemeProvider theme={theme} darkMode={darkMode}>
-        <ThemePicker selected={selected} onChange={setSelected} dark={resolvedDark} />
+        <ThemePicker selected={selected} onChange={setSelected} mode={mode} />
         <div className="ladle-story-root" style={{ background: bg, color: fg }}>
           {children}
         </div>
-        <GitHubLink dark={resolvedDark} />
+        <GitHubLink mode={mode} />
       </VizThemeProvider>
     </OcModeContext.Provider>
   );

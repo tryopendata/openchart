@@ -31,6 +31,7 @@ import type {
   PointMark,
   RectMark,
   ResolvedAnimation,
+  ResolvedAnnotation,
   RuleMarkLayout,
   TextMarkLayout,
   TickMarkLayout,
@@ -42,8 +43,45 @@ import {
   EXIT_DEFAULTS,
   serializeKeyValue,
 } from '@opendata-ai/openchart-engine';
+import { interpolateRgb } from 'd3-interpolate';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
 import { rectPathWithCorners, renderSingleMark } from './renderers/marks';
+
+/**
+ * Stable identity for an annotation across layout snapshots.
+ *
+ * Annotations have no engine-assigned `mark.key`. When the author supplies
+ * `annotation.id` that is the identity; otherwise fall back to type + text,
+ * which is stable as long as the annotation keeps saying the same thing.
+ *
+ * Deliberately NOT keyed on position: an annotation that moves is the same
+ * annotation and should tween to its new spot, not cross-fade with itself.
+ * And deliberately NOT `data-annotation-index`: that is positional, so
+ * inserting an annotation ahead of another would renumber it and make every
+ * later annotation look brand new and re-fade.
+ *
+ * Duplicate keys (same type and text twice) are disambiguated by occurrence
+ * order in `keyAnnotations` below, not here.
+ */
+function annotationKey(a: ResolvedAnnotation): string {
+  if (a.id) return `id:${a.id}`;
+  return `${a.type}:${a.label?.text ?? ''}`;
+}
+
+/**
+ * Key a layout's annotations, suffixing duplicates so every key is unique
+ * within the snapshot. Two annotations sharing a key would otherwise both
+ * match the same element and fight over it.
+ */
+function keyAnnotations(annotations: ResolvedAnnotation[]): string[] {
+  const seen = new Map<string, number>();
+  return annotations.map((a) => {
+    const base = annotationKey(a);
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    return n === 0 ? base : `${base}#${n}`;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -167,8 +205,8 @@ export function canTransition(args: {
   // 8. Mark count <= 500
   if (nextLayout.marks.length > 500) return false;
 
-  // 9. Geometry actually changed (zero-delta check)
-  if (!hasGeometryChanged(prevLayout, nextLayout)) return false;
+  // 9. Something visible actually changed (zero-delta check)
+  if (!hasVisibleChange(prevLayout, nextLayout)) return false;
 
   // 10. prefers-reduced-motion not active
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
@@ -180,6 +218,58 @@ export function canTransition(args: {
   }
 
   return true;
+}
+
+/**
+ * Check whether anything the transition can animate differs between layouts.
+ *
+ * Gate check 9. This is broader than geometry on purpose: a step that only
+ * recolors (an `encoding.color.highlight` mute) or only adds an annotation
+ * moves no mark by a single pixel. Testing geometry alone reported "nothing
+ * changed" for those, vetoing the transition and leaving `render()`'s instant
+ * swap as the only thing that happened -- so the highlight snapped and the
+ * annotation popped in, even though the machinery to fade both already existed
+ * further down this file.
+ */
+function hasVisibleChange(prevLayout: ChartLayout, nextLayout: ChartLayout): boolean {
+  return (
+    hasGeometryChanged(prevLayout, nextLayout) ||
+    hasColorChanged(prevLayout, nextLayout) ||
+    hasAnnotationChanged(prevLayout, nextLayout)
+  );
+}
+
+/** Check if any mark's fill or stroke differs (e.g. a highlight mute). */
+function hasColorChanged(prevLayout: ChartLayout, nextLayout: ChartLayout): boolean {
+  const prevMarks = prevLayout.marks;
+  const nextMarks = nextLayout.marks;
+  if (prevMarks.length !== nextMarks.length) return true;
+
+  for (let i = 0; i < prevMarks.length; i++) {
+    const p = prevMarks[i] as { fill?: string; stroke?: string };
+    const n = nextMarks[i] as { fill?: string; stroke?: string };
+    if (p.fill !== n.fill || p.stroke !== n.stroke) return true;
+  }
+  return false;
+}
+
+/** Check if annotations were added, removed, reordered, or moved. */
+function hasAnnotationChanged(prevLayout: ChartLayout, nextLayout: ChartLayout): boolean {
+  const prev = prevLayout.annotations ?? [];
+  const next = nextLayout.annotations ?? [];
+  if (prev.length !== next.length) return true;
+
+  const prevKeys = keyAnnotations(prev);
+  const nextKeys = keyAnnotations(next);
+
+  for (let i = 0; i < prev.length; i++) {
+    if (prevKeys[i] !== nextKeys[i]) return true;
+    const p = prev[i];
+    const n = next[i];
+    if (p.label?.x !== n.label?.x || p.label?.y !== n.label?.y) return true;
+    if (p.opacity !== n.opacity) return true;
+  }
+  return false;
 }
 
 /** Check if any mark geometry differs between prev and next layouts. */
@@ -364,6 +454,48 @@ interface GridlineTween {
   toOpacity?: number;
 }
 
+/**
+ * Fill/stroke interpolation, kept separate from the geometry tweens rather
+ * than bolted onto each of them.
+ *
+ * Color is orthogonal to geometry: a highlight mute recolors marks that do not
+ * move, and a normal data update moves marks that do not recolor. Threading
+ * from/to colors through all nine geometry variants would touch every builder
+ * to express something none of them need. A parallel tween on the same rAF
+ * loop composes instead -- a mark that both moves and recolors simply gets two
+ * tweens, each doing one job.
+ *
+ * Targets the shape element (rect/path/circle/line) rather than the mark <g>,
+ * since that is where the renderer writes fill and stroke.
+ */
+interface ColorTween {
+  tweenType: 'color';
+  kind: 'update';
+  el: SVGElement;
+  attr: 'fill' | 'stroke';
+  from: string;
+  to: string;
+  /** Never set; present so the shared opacity step can read the union. */
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+/**
+ * Annotation enter/update/exit. Entering annotations fade in, surviving ones
+ * tween to their new position, exiting ones fade out.
+ */
+interface AnnotationTween {
+  tweenType: 'annotation';
+  kind: 'update' | 'enter' | 'exit';
+  el: SVGElement;
+  /** Pixel delta applied as a transform; annotations position via many child attrs. */
+  fromDx: number;
+  fromDy: number;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
 type Tween =
   | RectTween
   | LineTween
@@ -373,7 +505,9 @@ type Tween =
   | TickTween
   | TextMarkTween
   | AxisTickTween
-  | GridlineTween;
+  | GridlineTween
+  | ColorTween
+  | AnnotationTween;
 
 // ---------------------------------------------------------------------------
 // Geometry helpers (rect)
@@ -878,8 +1012,15 @@ export function runTransition(args: {
   // Axis tick/gridline transitions
   buildAxisTweens(svg, prevLayout, nextLayout, tweens, ghosts);
 
-  // Secondary element crossfade: annotations, endpoint labels, mark labels
-  // fade in from opacity 0 delayed at 40% of the update duration.
+  // Mark fill/stroke (a highlight mute recolors marks that never move)
+  buildColorTweens(prevLayout, nextLayout, marksContainer, tweens);
+
+  // Annotations: keyed diff, so only NEW annotations fade in and surviving
+  // ones hold steady instead of blinking.
+  buildAnnotationTweens(svg, prevLayout, nextLayout, tweens);
+
+  // Secondary element crossfade: endpoint labels and mark labels still use the
+  // blanket fade (annotations were promoted to the keyed path above).
   const secondaryEls = collectSecondaryElements(svg);
   // Store original opacities so we can restore them on completion
   const secondaryOriginalOpacity = secondaryEls.map((el) => el.style.opacity ?? '');
@@ -1062,12 +1203,18 @@ export function runTransition(args: {
 // Secondary element helpers
 // ---------------------------------------------------------------------------
 
-/** Collect annotation, endpoint-label, and mark-label groups for crossfade. */
+/**
+ * Collect endpoint-label and mark-label groups for the blanket crossfade.
+ *
+ * Annotations used to be in here, which is why an annotation that was already
+ * on screen blinked out and back in on every update: the blanket fade drives
+ * every element it collects from opacity 0, with no notion of which ones are
+ * actually new. They now go through `buildAnnotationTweens` instead, which
+ * diffs them by key. Do not re-add them here -- the blanket fade runs after the
+ * tweens and would clobber the keyed opacity.
+ */
 function collectSecondaryElements(svg: SVGSVGElement): SVGElement[] {
   const els: SVGElement[] = [];
-  for (const el of svg.querySelectorAll('.oc-annotation')) {
-    els.push(el as SVGElement);
-  }
   const epLabels = svg.querySelector('.oc-endpoint-labels') as SVGElement | null;
   if (epLabels) els.push(epLabels);
   const markLabels = svg.querySelector('.oc-mark-labels') as SVGElement | null;
@@ -1203,6 +1350,23 @@ function applyTweenState(
       }
       break;
     }
+    case 'color': {
+      tw.el.setAttribute(tw.attr, interpolateRgb(tw.from, tw.to)(eased));
+      break;
+    }
+    case 'annotation': {
+      // Ease the offset back to zero: the group is already rendered at its
+      // final position, so (0,0) is the destination. SVG transform attribute,
+      // not CSS -- CSS transform would replace any SVG transform attribute
+      // (see .claude/rules/svg-animation.md), and this composes cleanly since
+      // the annotations renderer sets none.
+      const dx = tw.fromDx * (1 - eased);
+      const dy = tw.fromDy * (1 - eased);
+      if (dx !== 0 || dy !== 0) {
+        tw.el.setAttribute('transform', `translate(${dx} ${dy})`);
+      }
+      break;
+    }
   }
 
   // Apply opacity interpolation if defined
@@ -1260,6 +1424,15 @@ function snapTweenToFinal(tw: Tween): void {
         tw.el.setAttribute('x1', String(tw.toPos));
         tw.el.setAttribute('x2', String(tw.toPos));
       }
+      break;
+    case 'color':
+      tw.el.setAttribute(tw.attr, tw.to);
+      break;
+    case 'annotation':
+      // The group is rendered at its final position; drop the offset entirely
+      // rather than writing translate(0 0), so the DOM returns to the exact
+      // shape render() produced.
+      tw.el.removeAttribute('transform');
       break;
   }
 
@@ -2245,6 +2418,163 @@ function buildTextMarkTweens(
       toOpacity: 0,
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Color tween building
+// ---------------------------------------------------------------------------
+
+/**
+ * The child element a mark's `fill` or `stroke` is actually written to.
+ *
+ * Resolved per attribute, not once per mark: an area is two stacked paths, and
+ * they do not carry the same channels. `renderAreaMark` appends the closed fill
+ * shape first (`stroke: 'none'`) and the `.oc-area-top` line second -- that
+ * second path is the only thing carrying the stroke, and it traces the data
+ * points alone rather than the baseline. A blanket `querySelector` returns the
+ * *first* match, so writing a stroke through it would paint an outline around
+ * the whole closed area (baseline included) and `snapTweenToFinal` would leave
+ * it there for good.
+ */
+function markShapeElement(el: SVGElement, attr: 'fill' | 'stroke'): SVGElement {
+  if (el.tagName === 'circle' || el.tagName === 'rect' || el.tagName === 'path') return el;
+  if (attr === 'stroke') {
+    const areaTop = el.querySelector('.oc-area-top') as SVGElement | null;
+    if (areaTop) return areaTop;
+  }
+  return (el.querySelector('rect, path, circle, line') as SVGElement | null) ?? el;
+}
+
+/** Gradient fills are `url(#id)` refs and cannot be interpolated numerically. */
+function isInterpolableColor(v: unknown): v is string {
+  return typeof v === 'string' && v !== '' && v !== 'none' && !v.startsWith('url(');
+}
+
+/**
+ * Build fill/stroke tweens for marks present in both layouts whose color moved.
+ *
+ * Mark-type agnostic on purpose: every mark carries `fill`/`stroke` resolved by
+ * the compiler, so matching on `key` and diffing the two strings covers rects,
+ * lines, areas and points in one pass. Marks whose color did not change emit no
+ * tween, so the common data-update case costs nothing.
+ */
+function buildColorTweens(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  marksContainer: SVGElement,
+  tweens: Tween[],
+): void {
+  type Colored = { key?: string; fill?: unknown; stroke?: unknown };
+  const prevByKey = new Map<string, Colored>();
+  for (const m of prevLayout.marks as Colored[]) {
+    if (m.key) prevByKey.set(m.key, m);
+  }
+
+  for (const next of nextLayout.marks as Colored[]) {
+    if (!next.key) continue;
+    const prev = prevByKey.get(next.key);
+    if (!prev) continue;
+
+    const group = marksContainer.querySelector(`[data-key="${next.key}"]`) as SVGElement | null;
+    if (!group) continue;
+
+    for (const attr of ['fill', 'stroke'] as const) {
+      const from = prev[attr];
+      const to = next[attr];
+      if (from === to) continue;
+      if (!isInterpolableColor(from) || !isInterpolableColor(to)) continue;
+      tweens.push({
+        tweenType: 'color',
+        kind: 'update',
+        el: markShapeElement(group, attr),
+        attr,
+        from,
+        to,
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Annotation tween building
+// ---------------------------------------------------------------------------
+
+/**
+ * Build keyed enter/update/exit tweens for annotations.
+ *
+ * Follows the `buildAxisTweens` pattern rather than the mark builders': the
+ * annotation group is a SIBLING of the clipped marks group, so it must be
+ * queried from the `svg` root. A `marksContainer.querySelector` would never
+ * find it.
+ *
+ * Surviving annotations tween from their old position to their new one via a
+ * transform offset (the alternative -- re-resolving label x/y, connector path,
+ * dot, subtitle and background rect individually -- is a lot of surface for no
+ * extra fidelity). Entering ones fade in. See the note at the bottom for why
+ * exiting ones do not fade out.
+ */
+function buildAnnotationTweens(
+  svg: SVGSVGElement,
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  tweens: Tween[],
+): void {
+  const prev = prevLayout.annotations ?? [];
+  const next = nextLayout.annotations ?? [];
+  if (prev.length === 0 && next.length === 0) return;
+
+  const container = svg.querySelector('.oc-annotations');
+  if (!container) return;
+
+  const prevByKey = new Map(keyAnnotations(prev).map((k, i) => [k, prev[i]]));
+  const nextKeys = keyAnnotations(next);
+
+  // The rendered DOM matches nextLayout, so index i is nextKeys[i].
+  const els = container.querySelectorAll('.oc-annotation');
+
+  for (let i = 0; i < next.length; i++) {
+    const el = els[i] as SVGElement | undefined;
+    if (!el) continue;
+    const before = prevByKey.get(nextKeys[i]);
+
+    if (!before) {
+      // Entering: fade in on the annotation cadence.
+      tweens.push({
+        tweenType: 'annotation',
+        kind: 'enter',
+        el,
+        fromDx: 0,
+        fromDy: 0,
+        fromOpacity: 0,
+        toOpacity: 1,
+      });
+      continue;
+    }
+
+    // Surviving: hold at full opacity, slide from the old position if it moved.
+    const dx = (before.label?.x ?? 0) - (next[i].label?.x ?? 0);
+    const dy = (before.label?.y ?? 0) - (next[i].label?.y ?? 0);
+    if (dx === 0 && dy === 0) continue;
+    tweens.push({
+      tweenType: 'annotation',
+      kind: 'update',
+      el,
+      fromDx: dx,
+      fromDy: dy,
+    });
+  }
+
+  // Exiting annotations are NOT ghosted. render() has already torn down the old
+  // SVG, so the removed node is gone and there is nothing left to clone -- the
+  // elements still in the DOM belong to nextLayout, and cloning one by the old
+  // index would ghost an annotation that actually survived. Building a faithful
+  // ghost would mean re-rendering the annotation from prevLayout (the marks
+  // path can do this via `renderSingleMark`; annotations have no such entry
+  // point that takes a single ResolvedAnnotation).
+  //
+  // So a removed annotation disappears immediately. That matches the behavior
+  // before this change and is not what the blink bug was about; adding a real
+  // exit fade means exposing a single-annotation renderer first.
 }
 
 // ---------------------------------------------------------------------------

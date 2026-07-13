@@ -233,23 +233,28 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
   // --- Scrollytelling per-step fixtures (plan 11) ---
   {
     name: 'scrolly-step-base',
-    slug: 'charts--scrollytelling--fixture-base',
-    note: 'Story step 0: total-emissions line chart, no highlight, animation off.',
+    slug: 'testing--fixtures--scrolly-base',
+    note: 'Story step 0: obesity + diabetes, full 2011-2024 run, no highlight, animation off.',
   },
   {
     name: 'scrolly-step-highlight',
-    slug: 'charts--scrollytelling--fixture-highlight',
-    note: 'Story step 1: color.highlight singles out China, other series muted.',
+    slug: 'testing--fixtures--scrolly-highlight',
+    note: 'Story step 1: color.highlight singles out obesity, diabetes muted to gray.',
+  },
+  {
+    name: 'scrolly-step-zoomed',
+    slug: 'testing--fixtures--scrolly-zoomed',
+    note: 'Story step 2: x-domain clipped to 2019-2024. The axis must relabel to the window.',
   },
   {
     name: 'scrolly-step-annotated',
-    slug: 'charts--scrollytelling--fixture-annotated',
-    note: 'Story step 2: text annotation marks the China/US crossover, highlight retained.',
+    slug: 'testing--fixtures--scrolly-annotated',
+    note: 'Story step 3: text annotation names the 2021 divergence, zoom + highlight retained.',
   },
   {
-    name: 'scrolly-step-reencoded',
-    slug: 'charts--scrollytelling--fixture-re-encoded',
-    note: 'Story step 4: y re-encoded to per-capita (crossfade path), retitled.',
+    name: 'scrolly-step-payoff',
+    slug: 'testing--fixtures--scrolly-payoff',
+    note: 'Story step 4: highlight flips to diabetes, the curve that never bent. Retitled.',
   },
   // --- Parliament (hemicycle) + election set (plan 22) ---
   {
@@ -276,6 +281,18 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     name: 'election-results-bar',
     slug: 'testing--fixtures--results-bar',
     note: 'Two-party horizontal stacked bar with a dashed 218-seat majority refline.',
+  },
+  // --- Text mark (direct labeling) ---
+  {
+    name: 'text-mark-labels',
+    slug: 'testing--fixtures--text-mark-labels',
+    note: 'Text layer over a point layer: labels must sit on their dots (they used to drift up to 160px), centered on the anchor, offset by dy. The label layer holds a subset, which used to re-fit the domain and slide every label sideways.',
+  },
+  // --- Rect mark (heatmap) ---
+  {
+    name: 'rect-heatmap',
+    slug: 'testing--fixtures--rect-heatmap',
+    note: 'Two-way heatmap: band scales on BOTH axes (rect used to alias the column renderer, which needs a linear y, so it emitted zero marks and rendered blank). Cells tile with a hairline gutter and draw no gridlines.',
   },
 ];
 

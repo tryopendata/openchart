@@ -108,3 +108,72 @@ describe('computeColumnLabels positioning', () => {
     expect(labels[0].text).toBe('1,234');
   });
 });
+
+describe('computeColumnLabels stacked segments', () => {
+  /** One segment of a stacked column, positioned by its top edge. */
+  function makeStackedMark(y: number, height: number, fill: string, value: number): RectMark {
+    return {
+      type: 'rect',
+      x: 0,
+      y,
+      width: 60,
+      height,
+      fill,
+      stackGroup: 'Cat0',
+      data: { category: 'Cat0', value },
+      aria: { label: `Cat0: ${value}` },
+    };
+  }
+
+  it('centers the label inside its own segment, not above it', () => {
+    // Above a stacked segment's top edge is the next segment up, not the
+    // background, so the label must stay within its own band.
+    const mark = makeStackedMark(100, 80, '#0e7490', 33);
+    const labels = computeColumnLabels([mark], chartArea, 'all');
+
+    expect(labels).toHaveLength(1);
+    expect(labels[0].y).toBeGreaterThan(mark.y);
+    expect(labels[0].y).toBeLessThan(mark.y + mark.height);
+  });
+
+  it('picks a fill that contrasts with its own segment', () => {
+    // A dark segment takes white text; a light segment takes near-black. The
+    // old code tinted the text with the segment's own series color, which put
+    // colored text on a colored fill.
+    const dark = computeColumnLabels([makeStackedMark(100, 80, '#0e7490', 33)], chartArea, 'all');
+    const light = computeColumnLabels([makeStackedMark(100, 80, '#e2e8f0', 33)], chartArea, 'all');
+
+    expect(dark[0].style.fill).toBe('#ffffff');
+    expect(light[0].style.fill).toBe('#111111');
+  });
+
+  it('hides the label when the segment is too short to hold it', () => {
+    // A ~4% segment (Nuclear in the energy-mix demo) can't fit a 10px label
+    // without spilling into its neighbours.
+    const labels = computeColumnLabels([makeStackedMark(100, 6, '#0e7490', 4)], chartArea, 'all');
+
+    expect(labels).toHaveLength(1);
+    expect(labels[0].visible).toBe(false);
+  });
+
+  it('an explicit labels.color still wins over the contrast pick', () => {
+    const labels = computeColumnLabels(
+      [makeStackedMark(100, 80, '#0e7490', 33)],
+      chartArea,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      '#ff00ff',
+    );
+
+    expect(labels[0].style.fill).toBe('#ff00ff');
+  });
+
+  it('leaves unstacked columns labeling above the bar', () => {
+    const mark = makeMark(0, 20);
+    const labels = computeColumnLabels([mark], chartArea, 'all');
+
+    expect(labels[0].y).toBeLessThan(mark.y);
+  });
+});

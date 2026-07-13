@@ -119,7 +119,7 @@ const electionDonutSpec: ChartSpec = {
     { party: 'Republican', seats: 222 },
   ],
   encoding: {
-    y: { field: 'seats', type: 'quantitative' },
+    theta: { field: 'seats', type: 'quantitative' },
     color: { field: 'party', type: 'nominal', scale: { range: ['#1b7fa3', '#c44e52'] } },
   },
   chrome: {

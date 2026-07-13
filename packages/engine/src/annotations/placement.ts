@@ -4,6 +4,7 @@
  */
 
 import { overlapArea, type Rect } from '@opendata-ai/openchart-core';
+import { ANCHOR_OFFSET, subtitleBaselineY } from './constants';
 import {
   type AnnotationMeasureTextFn,
   computeTextBlockBounds,
@@ -240,7 +241,7 @@ const CLEAN_THRESHOLD = EPSILON * 16;
 interface DirectionDef {
   ux: number;
   uy: number;
-  textAnchor: 'start' | 'middle' | 'end';
+  textAnchor: 'start' | 'end';
   attach:
     | 'bottom-center'
     | 'bottom-left'
@@ -255,11 +256,11 @@ interface DirectionDef {
 const D = Math.SQRT1_2;
 
 const DIRECTIONS: DirectionDef[] = [
-  { ux: 0, uy: -1, textAnchor: 'middle', attach: 'bottom-center' }, // N
+  { ux: 0, uy: -1, textAnchor: 'start', attach: 'bottom-center' }, // N
   { ux: D, uy: -D, textAnchor: 'start', attach: 'bottom-left' }, // NE
   { ux: 1, uy: 0, textAnchor: 'start', attach: 'left-middle' }, // E
   { ux: D, uy: D, textAnchor: 'start', attach: 'top-left' }, // SE
-  { ux: 0, uy: 1, textAnchor: 'middle', attach: 'top-center' }, // S
+  { ux: 0, uy: 1, textAnchor: 'start', attach: 'top-center' }, // S
   { ux: -D, uy: D, textAnchor: 'end', attach: 'top-right' }, // SW
   { ux: -1, uy: 0, textAnchor: 'end', attach: 'right-middle' }, // W
   { ux: -D, uy: -D, textAnchor: 'end', attach: 'bottom-right' }, // NW
@@ -272,7 +273,7 @@ const UPPER_HALF_ORDER = [3, 4, 5, 2, 1, 0, 7, 6]; // SE, S, SW, E, NE, N, NW, W
 export interface PlacementCandidate {
   labelX: number;
   labelY: number;
-  textAnchor: 'start' | 'middle' | 'end';
+  textAnchor: 'start' | 'end';
   box: Rect;
   directionIndex: number;
   ring: 1 | 2 | 3;
@@ -309,11 +310,20 @@ function labelPositionFromAttachment(
   dir: DirectionDef,
   boxHeight: number,
   fontSize: number,
+  boxWidth: number,
 ): { labelX: number; labelY: number } {
-  const labelX = attachPt.x;
-  let labelY: number;
-
   const attach = dir.attach;
+
+  // A `*-center` attach means the block straddles the point, so `labelX` (the
+  // text's start edge, since these directions render textAnchor 'start') has to
+  // back off by half the block width. Centering the BLOCK is not the same as
+  // center-aligning the TEXT: the lines inside stay left-aligned and ragged
+  // right, per the reference voice. Without this the point sits at the block's
+  // left edge and a "top" anchor reads as "up and to the right".
+  const centered = attach === 'top-center' || attach === 'bottom-center';
+  const labelX = centered ? attachPt.x - boxWidth / 2 : attachPt.x;
+
+  let labelY: number;
   if (attach === 'left-middle' || attach === 'right-middle') {
     labelY = attachPt.y - boxHeight / 2 + fontSize;
   } else if (attach === 'top-left' || attach === 'top-center' || attach === 'top-right') {
@@ -414,7 +424,7 @@ function scoreCandidate(
 export interface PlacementResult {
   labelX: number;
   labelY: number;
-  textAnchor: 'start' | 'middle' | 'end';
+  textAnchor: 'start' | 'end';
   bounds: Rect;
   score: number;
   debug?: CandidateScoreBreakdown[];
@@ -428,9 +438,11 @@ export function findBestPlacement(
   anchorX: number,
   anchorY: number,
   text: string,
-  style: { fontSize: number; fontWeight: number; lineHeight: number },
+  style: { fontSize: number; fontWeight: number; lineHeight: number; fontFamily?: string },
   subtitleText: string | undefined,
-  subtitleStyle: { fontSize: number; fontWeight: number; lineHeight: number } | undefined,
+  subtitleStyle:
+    | { fontSize: number; fontWeight: number; lineHeight: number; fontFamily?: string }
+    | undefined,
   obstacles: Rect[],
   chartArea: Rect,
   svgRect: Rect,
@@ -454,7 +466,29 @@ export function findBestPlacement(
   );
   const boxHeight = sampleBounds.height;
 
-  const r1 = 12;
+  // Centering a `*-center` attach needs the width of the WHOLE block, not just
+  // the primary line: a subtitle is often the wider of the two, and centering on
+  // the primary width alone would leave a lede+subtitle stack visibly off-center
+  // over its point.
+  const subtitleSampleWidth =
+    subtitleText && subtitleStyle
+      ? computeTextBlockBounds(
+          0,
+          subtitleStyle.fontSize,
+          subtitleText,
+          { ...subtitleStyle, textAnchor: 'start' },
+          measure,
+        ).width
+      : 0;
+  const boxWidth = Math.max(sampleBounds.width, subtitleSampleWidth);
+
+  // The innermost ring is the default setback for an auto-placed label, so it's
+  // the same quantity ANCHOR_OFFSET expresses for the explicit path — keep them
+  // as one constant. A 12px ring sat inside the standoff + marker-pullback
+  // overhead, so an auto-placed label's connector was always shorter than
+  // MIN_CONNECTOR_LENGTH and got suppressed: six bare callouts rendered as
+  // floating text with no leader back to the data.
+  const r1 = ANCHOR_OFFSET;
   const r2 = r1 + boxHeight + 8;
   const r3 = 2 * r2;
 
@@ -473,6 +507,7 @@ export function findBestPlacement(
           dir,
           boxHeight,
           style.fontSize,
+          boxWidth,
         );
 
         let box = computeTextBlockBounds(
@@ -488,8 +523,15 @@ export function findBestPlacement(
 
         // Union with subtitle bounds if present
         if (subtitleText && subtitleStyle) {
-          const primaryLineCount = text.split('\n').length;
-          const subtitleY = labelY + style.fontSize * style.lineHeight * primaryLineCount + 2;
+          // This pass SCORES a candidate subtitle position; the resolver STAMPS the
+          // one that renders. They must agree, or the scored block height is a lie
+          // and the bounds other annotations avoid no longer contain the subtitle.
+          // Hence the shared formula rather than a second copy of the sum.
+          const subtitleY = subtitleBaselineY(
+            labelY,
+            style.fontSize * style.lineHeight,
+            text.split('\n').length,
+          );
           const subBounds = computeTextBlockBounds(
             labelX,
             subtitleY,

@@ -265,15 +265,31 @@ describe('resolveSuppression - special cases', () => {
     expect(result.showEndpointLabels).toBe(true);
   });
 
-  it('overlap area (no stack): runs through 8-cell table', () => {
+  it('overlap area (stack: null): runs through 8-cell table', () => {
     const spec = makeMultiSeriesLineSpec({
       markType: 'area',
       markDef: { type: 'area' },
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative', stack: null },
+        color: { field: 'country', type: 'nominal' },
+      },
     });
     const result = resolveSuppression(spec, baseCtx);
     // Cell 1 behavior: legend hidden, column on
     expect(result.showTraditionalLegend).toBe(false);
     expect(result.showEndpointLabels).toBe(true);
+  });
+
+  it('area with no explicit stack: stacks by default (v8), legend shown, column off', () => {
+    const spec = makeMultiSeriesLineSpec({
+      markType: 'area',
+      markDef: { type: 'area' },
+    });
+    const result = resolveSuppression(spec, baseCtx);
+    expect(result.showTraditionalLegend).toBe(true);
+    expect(result.showEndpointLabels).toBe(false);
+    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   it('endpointLabels: { show: false } counts as explicit off', () => {

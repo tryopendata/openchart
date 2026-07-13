@@ -70,7 +70,7 @@ const spec = {
 };
 ```
 
-Add a `color` encoding to split into series. Multi-series area charts default to **overlap** mode — translucent gradient fills layered on a shared baseline, so each series's curve stays readable. Pass `encoding.y.stack: 'zero'` (or `true`, `'normalize'`, `'center'`) to opt into stacked composition over time.
+Add a `color` encoding to split into series. Multi-series area charts default to **stacked** composition (`stack: 'zero'`), Vega-Lite aligned. Pass `encoding.y.stack: null` (or `false`) to opt into overlap mode instead — translucent gradient fills layered on a shared baseline, so each series's curve stays readable, comparison-first rather than composition-first.
 
 **Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Multi-series overlap](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Stacked area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#stacked-area) | [Step area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#interpolation)
 
@@ -135,7 +135,7 @@ The mark is still `"bar"`, but the engine flips to vertical columns when x is no
 
 When a bar or column chart has a `color` encoding, values are **stacked by default** (one segment per series, stacked from zero). Control this with the `stack` property on the quantitative encoding channel.
 
-> **Area charts are different.** Multi-series area defaults to **overlap** (translucent gradients per series, shared zero baseline) — comparison-first rather than composition-first. To stack a multi-series area, opt in explicitly with `stack: 'zero'` (or any of the values below). The `stack` property and its values otherwise behave the same way for area charts.
+> **Area charts follow the same default.** Multi-series area also stacks by default (`stack: 'zero'`). Set `stack: null` to opt into overlap mode instead — translucent gradients per series on a shared zero baseline, comparison-first rather than composition-first. The `stack` property and its values otherwise behave the same way for area charts.
 
 ### Grouped (side-by-side) bars
 

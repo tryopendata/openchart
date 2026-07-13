@@ -45,7 +45,7 @@ export function wireAnnotationDrag(
     const origY2 = connectorLine ? Number(connectorLine.getAttribute('y2')) : 0;
 
     const curvedPath = annotationG.querySelector('path.oc-annotation-connector');
-    const arrowhead = annotationG.querySelector('polygon.oc-annotation-connector');
+    const arrowhead = annotationG.querySelector('polyline.oc-annotation-arrowhead');
     const hasCurvedConnector = curvedPath !== null;
 
     const origDx = textAnnotation.offset?.dx ?? 0;
@@ -142,10 +142,11 @@ export function wireConnectorEndpointDrag(
       const mMatch = pathD.match(/M\s*([\d.e+-]+)\s+([\d.e+-]+)/);
       fromX = mMatch ? Number(mMatch[1]) : 0;
       fromY = mMatch ? Number(mMatch[2]) : 0;
-      const arrowhead = annotationG.querySelector('polygon.oc-annotation-connector');
-      const points = arrowhead?.getAttribute('points') ?? '';
-      const firstPoint = points.split(' ')[0] ?? '0,0';
-      const [px, py] = firstPoint.split(',');
+      // The open-V arrowhead is a polyline "baseLeft tip baseRight": the tip is
+      // the middle point.
+      const arrowhead = annotationG.querySelector('polyline.oc-annotation-arrowhead');
+      const points = arrowhead?.getAttribute('points')?.split(' ') ?? [];
+      const [px, py] = (points[1] ?? '0,0').split(',');
       toX = Number(px) || 0;
       toY = Number(py) || 0;
     }
@@ -414,7 +415,9 @@ export function wireLegendDrag(
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
-  const legendG = svg.querySelector('.oc-legend') as SVGGElement | null;
+  // The color legend: it owns `spec.legend.offset`, which is what a drag writes
+  // back. The size legend is not draggable and must not be picked up here.
+  const legendG = svg.querySelector('.oc-legend:not(.oc-legend--size)') as SVGGElement | null;
   if (!legendG) return () => {};
 
   const cleanups: Array<() => void> = [];

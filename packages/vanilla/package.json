@@ -61,6 +61,7 @@
     "@opendata-ai/openchart-core": "workspace:*",
     "@opendata-ai/openchart-engine": "workspace:*",
     "d3-force": "^3.0.0",
+    "d3-interpolate": "^3.0.0",
     "d3-quadtree": "^3.0.1"
   },
   "peerDependencies": {
@@ -73,6 +74,7 @@
   },
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
+    "@types/d3-interpolate": "^3.0.4",
     "@types/d3-quadtree": "^3.0.6"
   }
 }

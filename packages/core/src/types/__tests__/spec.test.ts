@@ -8,7 +8,6 @@ import type {
   VizSpec,
 } from '../spec';
 import {
-  CHART_TYPES,
   isChartSpec,
   isGraphSpec,
   isRangeAnnotation,
@@ -171,10 +170,6 @@ describe('MARK_TYPES', () => {
     expect(MARK_TYPES.has('table')).toBe(false);
     expect(MARK_TYPES.has('graph')).toBe(false);
     expect(MARK_TYPES.has('map')).toBe(false);
-  });
-
-  it('CHART_TYPES is an alias for MARK_TYPES', () => {
-    expect(CHART_TYPES).toBe(MARK_TYPES);
   });
 });
 
@@ -429,13 +424,13 @@ describe('type-level spec construction', () => {
 
 describe('type-level rejection', () => {
   it('compiles with @ts-expect-error annotations intact (runtime no-op)', () => {
-    // Arc requires y + color. Missing color must error.
+    // Arc requires theta + color. Missing color must error.
     const _arcMissingColor: ChartSpec = {
       mark: 'arc',
       data: [],
       // @ts-expect-error ArcEncoding requires color channel
       encoding: {
-        y: { field: 'value', type: 'quantitative' },
+        theta: { field: 'value', type: 'quantitative' },
       },
     };
 
@@ -469,10 +464,14 @@ describe('type-level rejection', () => {
       },
     };
 
-    // Arc without theta must compile (theta is optional per MARK_ENCODING_RULES).
-    const _arcNoTheta: ChartSpec = {
+    // Arc with only the deprecated y alias (no theta) must error: ArcEncoding
+    // requires theta, the canonical value channel in v8. y is still accepted
+    // at runtime (spec-sugar expands it into theta with a warning), but the
+    // type no longer allows authoring it directly.
+    const _arcDeprecatedYOnly: ChartSpec = {
       mark: 'arc',
       data: [],
+      // @ts-expect-error ArcEncoding requires theta; y alone is not enough
       encoding: {
         y: { field: 'value', type: 'quantitative' },
         color: { field: 'category', type: 'nominal' },
@@ -493,7 +492,7 @@ describe('type-level rejection', () => {
     void _textMissingText;
     void _typoField;
     void _validTyped;
-    void _arcNoTheta;
+    void _arcDeprecatedYOnly;
     void _untypedSpec;
     expect(true).toBe(true);
   });

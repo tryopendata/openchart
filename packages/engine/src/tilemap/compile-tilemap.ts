@@ -44,7 +44,7 @@ import {
   SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
 import { scaleLinear } from 'd3-scale';
-import { emitSpecWarnings } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
@@ -78,12 +78,19 @@ function clamp(value: number, min: number, max: number): number {
  * @throws Error if spec is invalid or not a tilemap type.
  */
 export function compileTileMap(spec: unknown, options: CompileOptions): TileMapLayout {
-  // 1. Validate + normalize via the shared compiler pipeline. Surface any
-  // normalize warnings (e.g. "only N of M rows have valid US state codes",
-  // mixed-type coercion) the same way the chart path does; without this the
-  // primary "your data did not map" diagnostic is computed and then dropped.
-  const { spec: normalized, warnings } = compileSpec(spec);
-  emitSpecWarnings(warnings, options.onWarn);
+  // 1. Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
+  // before validation, then validate + normalize via the shared compiler
+  // pipeline. Surface any normalize warnings (e.g. "only N of M rows have
+  // valid US state codes", mixed-type coercion) the same way the chart path
+  // does; without this the primary "your data did not map" diagnostic is
+  // computed and then dropped.
+  const sugarWarnings: string[] = [];
+  const expandedSpec =
+    spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
+      : spec;
+  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
 
   if (!('type' in normalized) || normalized.type !== 'tilemap') {
     throw new Error(
@@ -211,8 +218,9 @@ function compileQuantitative(
   const legendY = tileGridOffsetY + tilePositions.gridHeight + legendGap;
   const legendWidth = tilePositions.gridWidth;
 
+  // Encoding-level format (v8 canonical) wins over deprecated top-level valueFormat
   const formatter = resolveFieldFormatter({
-    surfaceFormat: tilemapSpec.valueFormat,
+    surfaceFormat: tilemapSpec.encoding.value.format ?? tilemapSpec.valueFormat,
     values: Array.from(stateValueMap.values()),
   });
   const neutralFill = isDarkMode ? '#1e2a30' : '#e0e0e0';

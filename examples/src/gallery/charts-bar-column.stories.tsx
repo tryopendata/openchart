@@ -66,7 +66,7 @@ const columnsSpec: ChartSpec = {
       y: 12,
       text: 'Hurricanes and strikes\nstalled October hiring',
       anchor: 'top',
-      offset: { dx: 0, dy: -190 },
+      offset: { dy: -170 },
       connector: true,
     },
     {
@@ -112,8 +112,7 @@ const groupedColumnsSpec: ChartSpec = {
       x: '2023',
       y: 346,
       text: 'Solar nearly tripled\nwind additions by 2023',
-      anchor: 'top',
-      offset: { dx: -70, dy: -16 },
+      anchor: 'left',
       connector: false,
     },
   ],

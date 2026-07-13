@@ -149,6 +149,9 @@ describe('parliament majority line', () => {
     expect(rule).toBeDefined();
     expect(label).toBeDefined();
     expect(label?.text).toBe('218 to win');
+    // The label sits at `lineTop - 6`, which assumes the SVG default (alphabetic)
+    // baseline. Stamping a dominantBaseline would shift it off the rule.
+    expect(label?.dominantBaseline).toBeUndefined();
   });
 
   it('omits the majority line when majorityLine is false', () => {

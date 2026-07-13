@@ -106,6 +106,15 @@ function renderAxis(
 
       applyTextStyle(label, axis.tickLabelStyle);
       label.textContent = tick.label;
+      // The engine ellipsizes rotated labels that would overflow the reserved
+      // band and stashes the original in `fullLabel`. Expose it as a <title> so
+      // the complete category is still reachable on hover and to a screen
+      // reader — truncation is a visual affordance, not data loss.
+      if (tick.fullLabel) {
+        const title = createSVGElement('title');
+        title.textContent = tick.fullLabel;
+        label.appendChild(title);
+      }
       g.appendChild(label);
     } else if (isInlineY) {
       // Inline y-tick: label sits above its gridline at the chart-area left
