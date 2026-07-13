@@ -1706,6 +1706,92 @@ export interface TileMapLayout {
 }
 
 // ---------------------------------------------------------------------------
+// MapLayout (engine output for map visualizations)
+// ---------------------------------------------------------------------------
+
+/** A structured compile warning with a code and context. */
+export interface CompileWarning {
+  code: string;
+  message: string;
+  context?: Record<string, unknown>;
+}
+
+/** A resolved map feature mark with computed SVG path and fill. */
+export interface MapFeatureMark {
+  type: 'map-feature';
+  /** SVG path `d` attribute for this feature's shape. */
+  path: string;
+  /** CSS fill color. */
+  fill: string;
+  /** CSS stroke color (border). */
+  stroke: string;
+  /** Stroke width in px. */
+  strokeWidth: number;
+  /** Feature ID (from TopoJSON). */
+  id: string | number;
+  /** Feature name (from properties, if available). */
+  name?: string;
+  /** Original joined data row (null if no data matched this feature). */
+  data: Record<string, unknown> | null;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex: number;
+}
+
+/** Border paths for the map (interior borders and coastline/outline). */
+export interface MapBorders {
+  /** SVG path `d` for interior borders between features. */
+  interiorPath: string;
+  /** SVG path `d` for the outer boundary / coastline. */
+  outlinePath: string;
+  /** Stroke color for interior borders. */
+  interiorStroke: string;
+  /** Stroke color for outer boundary. */
+  outlineStroke: string;
+}
+
+/**
+ * MapLayout: the complete engine output for map visualizations.
+ *
+ * Contains everything an adapter needs to render the map: dimensions,
+ * chrome, feature paths, borders, legend, tooltip descriptors, and
+ * accessibility metadata.
+ */
+export interface MapLayout {
+  /** The map drawing area (after chrome and legend are subtracted). */
+  area: Rect;
+  /** Resolved chrome text elements with positions and styles. */
+  chrome: ResolvedChrome;
+  /** Resolved feature marks with paths, fills, and joined data. */
+  features: MapFeatureMark[];
+  /** Border paths (interior mesh and outline). */
+  borders: MapBorders;
+  /** Gradient color legend for quantitative mode (null if hidden or categorical). */
+  gradientLegend: GradientLegendLayout | null;
+  /** Categorical swatch legend for nominal mode (null if hidden or quantitative). */
+  categoricalLegend: CategoricalLegendLayout | null;
+  /** Tooltip content descriptors keyed by feature ID. */
+  tooltipDescriptors: Map<string, TooltipContent>;
+  /** Accessibility metadata for the map. */
+  a11y: A11yMetadata;
+  /** Resolved theme. */
+  theme: ResolvedTheme;
+  /** Total SVG width in pixels. */
+  width: number;
+  /** Total SVG height in pixels. */
+  height: number;
+  /** Resolved animation config (undefined if animation is disabled). */
+  animation: ResolvedAnimation | undefined;
+  /** Whether to render the watermark. */
+  watermark: boolean;
+  /** Text measurement function for the rendering adapter. */
+  measureText: MeasureTextFn;
+  /** Structured compile warnings (unmatched keys, missing data, winding issues). */
+  warnings: CompileWarning[];
+}
+
+// ---------------------------------------------------------------------------
 // BarListLayout (engine output for bar list visualizations)
 // ---------------------------------------------------------------------------
 

@@ -30,6 +30,7 @@ import { page as editMode } from './features-edit-mode.demos';
 import { page as responsive } from './features-responsive.demos';
 import { page as theming } from './features-theming.demos';
 import { page as graphs } from './graphs.demos';
+import { page as maps } from './maps.demos';
 import { page as playground } from './playground.demos';
 import { page as sankeyTileMaps } from './sankey-tilemaps.demos';
 import { page as scrollytelling } from './scrollytelling.demos';
@@ -59,6 +60,7 @@ export const GALLERY: PageEntry[] = [
   tables,
   graphs,
   sankeyTileMaps,
+  maps,
   dashboards,
   annotations,
   editMode,

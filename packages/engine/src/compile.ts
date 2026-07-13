@@ -76,6 +76,7 @@ import {
   trendColor,
 } from './compiler/sparkline-defaults';
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
+import { compileMap as compileMapImpl } from './geo/compile-map';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
 import { computeAxes } from './layout/axes';
@@ -232,6 +233,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     (normalized as unknown as Record<string, unknown>).type === 'sankey'
   ) {
     throw new Error('compileChart received a sankey spec. Use compileSankey instead.');
+  }
+  if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'map') {
+    throw new Error('compileChart received a map spec. Use compileMap instead.');
   }
 
   let chartSpec = normalized as NormalizedChartSpec;
@@ -1373,6 +1377,29 @@ export function compileTileMap(
   options: CompileOptions,
 ): import('@opendata-ai/openchart-core').TileMapLayout {
   return compileTileMapImpl(spec, options);
+}
+
+// ---------------------------------------------------------------------------
+// Map compilation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a map spec into a MapLayout.
+ *
+ * Takes a raw map spec, validates, normalizes, resolves theme and chrome,
+ * projects geo features, joins data, builds feature marks with color fills,
+ * and returns a MapLayout ready for rendering.
+ *
+ * @param spec - Raw map spec (validated and normalized internally).
+ * @param options - Compile options (width, height, theme, darkMode).
+ * @returns MapLayout with computed positions and visual properties.
+ * @throws Error if spec is invalid or not a map type.
+ */
+export function compileMap(
+  spec: unknown,
+  options: CompileOptions,
+): import('@opendata-ai/openchart-core').MapLayout {
+  return compileMapImpl(spec, options);
 }
 
 // ---------------------------------------------------------------------------

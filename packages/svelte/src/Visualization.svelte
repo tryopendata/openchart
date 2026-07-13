@@ -9,6 +9,7 @@ import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core
 import {
   isBarListSpec,
   isGraphSpec,
+  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -16,6 +17,7 @@ import {
 import BarList from './BarList.svelte';
 import Chart from './Chart.svelte';
 import DataTable from './DataTable.svelte';
+import GeoMap from './GeoMap.svelte';
 import Graph from './Graph.svelte';
 import Sankey from './Sankey.svelte';
 import TileMap from './TileMap.svelte';
@@ -45,6 +47,8 @@ let {
   <TileMap {spec} {theme} {darkMode} class={className} {style} />
 {:else if isBarListSpec(spec)}
   <BarList {spec} {theme} {darkMode} class={className} {style} />
+{:else if isMapSpec(spec)}
+  <GeoMap {spec} {theme} {darkMode} class={className} {style} />
 {:else}
   <Chart {spec} {theme} {darkMode} class={className} {style} />
 {/if}

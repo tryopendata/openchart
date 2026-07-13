@@ -51,6 +51,8 @@ export { temperatureAnomaly } from './temperature-anomaly';
 export { usInflation } from './us-inflation';
 export { usPayrolls } from './us-payrolls';
 export { usStateUnemployment } from './us-state-unemployment';
+export { usUnemployment } from './us-unemployment';
 export { userJourney } from './user-journey';
 export { vaccineExemptions } from './vaccine-exemptions';
 export { wealthHealth } from './wealth-health';
+export { worldGdp } from './world-gdp';

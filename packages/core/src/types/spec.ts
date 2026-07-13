@@ -2282,6 +2282,61 @@ export interface TileMapSpec {
 }
 
 // ---------------------------------------------------------------------------
+// Map spec (choropleth / symbol maps)
+// ---------------------------------------------------------------------------
+
+/** Supported map projections. */
+export type MapProjection = 'albersUsa' | 'mercator' | 'equalEarth' | 'identity';
+
+/** Geo configuration for map specs. */
+export interface MapGeo {
+  /** TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source. */
+  features: unknown;
+  /** Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'. */
+  idField?: string;
+  /** Map projection. Defaults to 'albersUsa'. */
+  projection?: MapProjection;
+}
+
+/** Encoding channels specific to map visualizations. */
+export interface MapEncoding {
+  /** Join key field in the data (required). Maps data rows to geo features via geo.idField. */
+  key: EncodingChannel;
+  /** Color encoding (required, quantitative or nominal). Drives fill color of features. */
+  color: EncodingChannel;
+  /** Tooltip encoding (optional). */
+  tooltip?: EncodingChannel | EncodingChannel[];
+}
+
+export interface MapSpec {
+  /** Discriminant: always "map". */
+  type: 'map';
+  /** Geo configuration: TopoJSON features, join key, and projection. */
+  geo: MapGeo;
+  /** Tabular data to join to geo features. */
+  data: DataRow[];
+  /** Encoding channels mapping data fields to visual properties. */
+  encoding: MapEncoding;
+  /** Editorial chrome (title, subtitle, source, byline, footer). */
+  chrome?: Chrome;
+  /** Legend display configuration. */
+  legend?: LegendConfig;
+  /** Theme configuration overrides. */
+  theme?: ThemeConfig;
+  /** Dark mode behavior. Defaults to "off". */
+  darkMode?: DarkMode;
+  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  watermark?: boolean;
+  /** Animation configuration for entrance animations. */
+  animation?: AnimationSpec;
+  /**
+   * d3-format string applied to color values in tooltips and legend.
+   * @deprecated Use the encoding channel's `format` field instead.
+   */
+  valueFormat?: string;
+}
+
+// ---------------------------------------------------------------------------
 // BarList spec (ranked horizontal bar list)
 // ---------------------------------------------------------------------------
 
@@ -2343,6 +2398,7 @@ export interface BarListEncoding {
  * - GraphSpec: has `type: 'graph'`
  * - SankeySpec: has `type: 'sankey'`
  * - TileMapSpec: has `type: 'tilemap'`
+ * - MapSpec: has `type: 'map'`
  * - BarListSpec: has `type: 'barlist'`
  *
  * Election parliament (hemicycle) charts are `ChartSpec` with `mark:
@@ -2359,6 +2415,7 @@ export type VizSpec =
   | GraphSpec
   | SankeySpec
   | TileMapSpec
+  | MapSpec
   | BarListSpec;
 
 /**
@@ -2374,6 +2431,8 @@ export type GraphSpecWithoutData = Omit<GraphSpec, 'nodes' | 'edges'>;
 export type SankeySpecWithoutData = Omit<SankeySpec, 'data'>;
 /** TileMap spec without runtime data, for persistence/storage. */
 export type TileMapSpecWithoutData = Omit<TileMapSpec, 'data'>;
+/** Map spec without runtime data, for persistence/storage. */
+export type MapSpecWithoutData = Omit<MapSpec, 'data'>;
 /** BarList spec without runtime data, for persistence/storage. */
 export type BarListSpecWithoutData = Omit<BarListSpec, 'data'>;
 /** Union of data-stripped spec types for persistence/storage. */
@@ -2383,6 +2442,7 @@ export type StoredVizSpec =
   | GraphSpecWithoutData
   | SankeySpecWithoutData
   | TileMapSpecWithoutData
+  | MapSpecWithoutData
   | BarListSpecWithoutData;
 
 // ---------------------------------------------------------------------------
@@ -2742,6 +2802,11 @@ export function isTileMapSpec(spec: VizSpec | Record<string, unknown>): spec is 
 /** Check if a spec is a BarListSpec. */
 export function isBarListSpec(spec: VizSpec | Record<string, unknown>): spec is BarListSpec {
   return 'type' in spec && (spec as Record<string, unknown>).type === 'barlist';
+}
+
+/** Check if a spec is a MapSpec. */
+export function isMapSpec(spec: VizSpec | Record<string, unknown>): spec is MapSpec {
+  return 'type' in spec && (spec as Record<string, unknown>).type === 'map';
 }
 
 // ---------------------------------------------------------------------------

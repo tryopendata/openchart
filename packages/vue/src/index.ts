@@ -36,6 +36,7 @@ export type {
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
+  NormalizedMapSpec,
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
@@ -50,6 +51,7 @@ export {
   compileBarList,
   compileChart,
   compileGraph,
+  compileMap,
   compileSankey,
   compileTable,
   getChartRenderer,
@@ -81,6 +83,8 @@ export type { DataTableProps } from './DataTable';
 export { DataTable } from './DataTable';
 export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
+export type { MapProps } from './Map';
+export { GeoMap } from './Map';
 export type { SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeProvider';

@@ -36,6 +36,7 @@ export type {
   NormalizedChartSpec,
   NormalizedChrome,
   NormalizedGraphSpec,
+  NormalizedMapSpec,
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
@@ -50,6 +51,7 @@ export {
   compileBarList,
   compileChart,
   compileGraph,
+  compileMap,
   compileSankey,
   compileTable,
   getChartRenderer,
@@ -78,6 +80,7 @@ export { useTableState } from './composables/useTableState.svelte.js';
 // Context
 export { getVizDarkMode, getVizTheme, setVizDarkMode, setVizTheme } from './context.js';
 export { default as DataTable } from './DataTable.svelte';
+export { default as GeoMap } from './GeoMap.svelte';
 export { default as Graph } from './Graph.svelte';
 export { default as Sankey } from './Sankey.svelte';
 export { default as VizThemeProvider } from './ThemeProvider.svelte';
@@ -88,6 +91,7 @@ export type {
   ChartProps,
   DataTableProps,
   GraphProps,
+  MapProps,
   SankeyProps,
   TileMapProps,
   VisualizationProps,

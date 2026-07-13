@@ -9,6 +9,7 @@ import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core
 import {
   isBarListSpec,
   isGraphSpec,
+  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -18,6 +19,7 @@ import { BarList } from './BarList';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { Graph } from './Graph';
+import { GeoMap } from './Map';
 import { Sankey } from './Sankey';
 import { TileMap } from './TileMap';
 
@@ -70,6 +72,11 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
   if (isBarListSpec(spec)) {
     return (
       <BarList spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
+    );
+  }
+  if (isMapSpec(spec)) {
+    return (
+      <GeoMap spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );
   }
   return (
