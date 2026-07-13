@@ -445,17 +445,15 @@ export function computeDimensions(
     }
   }
 
-  // (3) Right-edge text annotations. Stacks ADDITIVELY on top of any
-  // endpoint-labels reservation so the annotation text lands between the
-  // chart area's right edge and the endpoint column. When no endpoint column
-  // is reserved, behaves as before (max-of with the existing margin).
+  // (3) Right-edge text annotations. The annotation text and the endpoint
+  // column occupy the same right-side space, so take the max rather than
+  // stacking additively.
   if (
     strategy?.annotationPosition !== 'tooltip-only' &&
     spec.annotations.length > 0 &&
     encoding.x
   ) {
     const xField = encoding.x.field;
-    // Find the maximum x value in the data
     let maxX: string | number | undefined;
     for (const row of spec.data) {
       const v = row[xField];
@@ -467,28 +465,12 @@ export function computeDimensions(
         if (ann.type === 'text' && String(ann.x) === maxXStr) {
           const textWidth = estimateTextWidth(ann.text, ann.fontSize ?? 11, ann.fontWeight ?? 600);
           const dx = ann.offset?.dx ?? 0;
-          // How much text extends right of the anchor point depends on alignment:
-          // - anchor "right" or "left": text is off to one side, full width extends
-          // - anchor "top"/"bottom"/"auto"/undefined: text is centered, half extends right
           const anchor = ann.anchor ?? 'auto';
           const baseRightExtent =
-            anchor === 'left'
-              ? textWidth
-              : // text is to the right of anchor
-                anchor === 'right'
-                ? 0
-                : // text is to the left of anchor
-                  textWidth / 2; // centered (top/bottom/auto)
+            anchor === 'right' ? textWidth : anchor === 'left' ? 0 : textWidth / 2;
           const rightOverflow = Math.max(0, baseRightExtent + dx);
           if (rightOverflow > 0) {
-            if (endpointWidth > 0) {
-              // Endpoint column already reserved space at the far right; the
-              // annotation lands BETWEEN the chart edge and the column, so
-              // stack additively rather than max-of.
-              margins.right += rightOverflow + 12;
-            } else {
-              margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
-            }
+            margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
           }
         }
       }
