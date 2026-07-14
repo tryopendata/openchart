@@ -44,7 +44,7 @@ function bumpVersion(current, bump) {
     case 'minor': return `${major}.${minor + 1}.0`;
     case 'major': return `${major + 1}.0.0`;
     default: {
-      if (/^\d+\.\d+\.\d+$/.test(bump)) return bump;
+      if (/^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/.test(bump)) return bump;
       console.error(`Invalid bump type: ${bump}`);
       console.error('Usage: node scripts/release.mjs [patch|minor|major|x.y.z]');
       process.exit(1);
