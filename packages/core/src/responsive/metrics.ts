@@ -235,7 +235,9 @@ export function computeXAxisExtentFromLabels(input: XAxisExtentInput): number {
     return input.hasTitle ? rotatedHeight + X_AXIS_TITLE_BAND_ROTATED : rotatedHeight;
   }
 
-  return input.hasTitle ? baseHeight + X_AXIS_TITLE_BAND : baseHeight;
+  const tickExtent = 4 + input.tickFontSize + Math.max(11, Math.ceil(input.tickFontSize * 0.7));
+  const flatHeight = Math.max(baseHeight, tickExtent);
+  return input.hasTitle ? flatHeight + X_AXIS_TITLE_BAND : flatHeight;
 }
 
 /**

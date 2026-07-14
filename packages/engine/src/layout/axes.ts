@@ -25,6 +25,7 @@ import {
   estimateTextWidth,
   getAxisTitleOffset,
   truncateRotatedLabel,
+  X_AXIS_TITLE_BAND,
   X_AXIS_TITLE_BAND_ROTATED,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
@@ -705,12 +706,12 @@ export function computeAxes(
     });
 
     if (result.x.label) {
-      // Rotated: place the title just below the tick band (extent already
-      // includes the rotated label height and the title band). Flat: fixed 35px.
-      const rotatedBand = isRotated ? result.x.extent - X_AXIS_TITLE_BAND_ROTATED + 14 : 35;
+      const titleBand = isRotated ? X_AXIS_TITLE_BAND_ROTATED : X_AXIS_TITLE_BAND;
+      const tickBand = result.x.extent - titleBand;
+      const titleY = isRotated ? tickBand + 14 : tickBand + 9;
       result.x.titlePosition = {
         x: chartArea.x + chartArea.width / 2,
-        y: chartArea.y + chartArea.height + rotatedBand,
+        y: chartArea.y + chartArea.height + titleY,
       };
     }
   }

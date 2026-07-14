@@ -266,6 +266,9 @@ function getSVGBackgroundColor(svgElement: SVGElement): string {
  * @returns The SVG markup as a string.
  */
 export function exportSVG(svgElement: SVGElement): string {
+  if (!svgElement.getAttribute('xmlns')) {
+    svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  }
   const serializer = new XMLSerializer();
   return serializer.serializeToString(svgElement);
 }

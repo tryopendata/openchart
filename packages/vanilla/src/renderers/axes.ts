@@ -281,16 +281,14 @@ function renderAxis(
       }
       setAttrs(axisLabel, attrs);
     } else if (orientation === 'x') {
-      let titleY = area.y + area.height + 35;
+      const tickFontSize = axis.tickLabelStyle.fontSize;
+      const tickBand = Math.max(26, 4 + tickFontSize + Math.max(11, Math.ceil(tickFontSize * 0.7)));
+      let titleY = area.y + area.height + tickBand + 9;
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         const angleRad = Math.abs(axis.tickAngle) * (Math.PI / 180);
         let maxLabelWidth = 40;
         for (const tick of axis.ticks) {
-          const w = estimateTextWidth(
-            tick.label,
-            axis.tickLabelStyle.fontSize,
-            axis.tickLabelStyle.fontWeight,
-          );
+          const w = estimateTextWidth(tick.label, tickFontSize, axis.tickLabelStyle.fontWeight);
           if (w > maxLabelWidth) maxLabelWidth = w;
         }
         const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);

@@ -62,11 +62,11 @@ describe('dedupeKeys', () => {
   });
 
   it('suffixes duplicates with occurrence index', () => {
-    expect(dedupeKeys(['a', 'a', 'a'])).toEqual(['a\x010', 'a\x011', 'a\x012']);
+    expect(dedupeKeys(['a', 'a', 'a'])).toEqual(['a⸱0', 'a⸱1', 'a⸱2']);
   });
 
   it('only suffixes keys that appear more than once', () => {
-    expect(dedupeKeys(['a', 'b', 'a'])).toEqual(['a\x010', 'b', 'a\x011']);
+    expect(dedupeKeys(['a', 'b', 'a'])).toEqual(['a⸱0', 'b', 'a⸱1']);
   });
 
   it('handles empty array', () => {
@@ -78,12 +78,6 @@ describe('dedupeKeys', () => {
   });
 
   it('handles multiple duplicate groups', () => {
-    expect(dedupeKeys(['x', 'y', 'x', 'y', 'z'])).toEqual([
-      'x\x010',
-      'y\x010',
-      'x\x011',
-      'y\x011',
-      'z',
-    ]);
+    expect(dedupeKeys(['x', 'y', 'x', 'y', 'z'])).toEqual(['x⸱0', 'y⸱0', 'x⸱1', 'y⸱1', 'z']);
   });
 });
