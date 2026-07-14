@@ -254,40 +254,62 @@ const trendScatterSpec: ChartSpec = {
   },
   annotations: [
     {
+      // Anchored, not nudged. This replaces a `dx: -640` -- a pixel count tuned
+      // against one plot width, which at the gallery's 934px dragged the label to
+      // x=-31, clean off the canvas.
+      //
+      // `left` puts it ABOVE the line at the line's start, which is the only
+      // corner going spare: the right end is under the US callout, and *below*
+      // the left end is India's bubble (the biggest circle here -- the line runs
+      // straight through it). No labelOffset: the engine's default 4px nudge
+      // already clears the line, and every px added here was what pushed the
+      // label back down onto India.
       type: 'refline',
       y: 73,
       label: 'World avg: 73 yrs',
+      labelAnchor: 'left',
       style: 'dashed',
       stroke: '#64748b',
       strokeWidth: 1,
-      labelOffset: { dx: -640, dy: 12 },
     },
     {
+      // Below-left of the US bubble, which is the rightmost point on the chart --
+      // so the block has to open leftward or it runs off the plot. It used to be
+      // anchored ABOVE, where it collided with the Japan label and pushed up under
+      // the subtitle. Below the bubble is empty (the US is the high-GDP outlier;
+      // nothing else is out here), and the connector still reaches its dot.
       type: 'text',
       x: 63544,
       y: 77.3,
       text: 'The US spends the most\nbut lives shorter than peers',
       connector: true,
       anchor: 'left',
-      offset: { dx: -24, dy: -60 },
+      offset: { dx: 8, dy: 62 },
     },
     {
+      // Japan is the highest point on the chart (84.6, the y-max), so `anchor:
+      // 'top'` had nowhere to put this but on top of the subtitle. Anchor right
+      // and it labels the dot from the side, inside the plot.
       type: 'text',
       x: 39313,
       y: 84.6,
       text: 'Japan',
-      anchor: 'top',
-      offset: { dx: 6, dy: -8 },
+      anchor: 'right',
+      offset: { dx: 8, dy: 0 },
       fontSize: 10,
       dot: false,
     },
+    // `anchor: 'left'` means the label ENDS at the point (textAnchor: 'end'), so
+    // it renders to the LEFT of it -- and these two are the leftmost bubbles on
+    // the chart, which put both labels out on top of the y-axis. Anchoring right
+    // starts the text at the point and runs it into open plot instead.
     {
       type: 'text',
       x: 1901,
       y: 70.2,
       text: 'India',
-      anchor: 'left',
-      offset: { dx: 8, dy: -2 },
+      anchor: 'right',
+      offset: { dx: 10, dy: -2 },
       fontSize: 10,
       dot: false,
     },
@@ -296,8 +318,8 @@ const trendScatterSpec: ChartSpec = {
       x: 926,
       y: 66.6,
       text: 'Ethiopia',
-      anchor: 'left',
-      offset: { dx: 8, dy: 4 },
+      anchor: 'right',
+      offset: { dx: 10, dy: 4 },
       fontSize: 10,
       dot: false,
     },

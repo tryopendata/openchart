@@ -376,14 +376,24 @@ export function resolveLayoutPlan(
     // footprint in the bottom margin instead of the (smaller) flat one.
     let effectiveXTickAngle = xTickAngle;
     if (xTickAngle === undefined && xLabels.length > 1) {
-      // The size legend's right column narrows the plot (dimensions.ts reserves
+      // The right-hand legend column narrows the plot (dimensions.ts reserves
       // it), so it has to be in this estimate too. Without it the planner sizes
       // bands against a plot up to ~100px wider than the real one, concludes the
       // labels fit flat, and computeAxes then rotates them against the true
       // bandwidth -- reserving the flat footprint for rotated labels and clipping
       // the axis. Bites a nominal-x beeswarm with a size channel.
+      //
+      // Mirrors the shared-column reservation in dimensions.ts: the color and
+      // size legends stack in ONE column, so it is the wider of the two, not the
+      // sum. These two must agree -- an estimate wider than the real margin
+      // rotates labels that would have fit.
+      const colorInGutter =
+        hasLegendContent(legendContent) &&
+        (legendContent.position === 'right' || legendContent.position === 'bottom-right');
+      const colorLegendReserve = colorInGutter ? legendContent.legendWidth + 8 : 0;
       const sizeLegendReserve = sizeLegendContent ? sizeLegendContent.width + SIZE_LEGEND_GAP : 0;
-      const rightMarginEst = hPad + (isRadial ? hPad : axisMargin) + sizeLegendReserve;
+      const legendReserve = Math.max(colorLegendReserve, sizeLegendReserve);
+      const rightMarginEst = hPad + (isRadial ? hPad : axisMargin) + legendReserve;
       const plotWidth = Math.max(0, width - leftGutter - Math.max(rightMarginEst, hPad));
       // Mirror d3 scaleBand: step = plotWidth / (n - paddingInner + 2*paddingOuter),
       // bandwidth = step * (1 - paddingInner). Uses the same override resolution

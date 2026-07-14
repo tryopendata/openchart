@@ -73,6 +73,14 @@ const MIN_LEGIBLE_RANGE: readonly [number, number] = [4, 18];
 /** Gap between the plot's right edge and the size legend column. */
 export const SIZE_LEGEND_GAP = 12;
 
+/**
+ * Vertical gap between the color legend and the size legend stacked beneath it.
+ *
+ * Bigger than the row gap *inside* either block, so the two read as two keys in
+ * one column rather than one long key whose last few rows happen to be circles.
+ */
+export const SIZE_LEGEND_STACK_GAP = 16;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -343,12 +351,15 @@ export function computeSizeLegendContent(
  * adds `bounds.x/y` to each.
  *
  * `colorLegend` is the ALREADY-PLACED color legend. When it also lives in the
- * right column, the size legend starts past its right edge -- `dimensions.ts`
- * reserved `colorWidth + 8 + sizeWidth + GAP` of right margin, and anchoring
- * both to the gutter's left edge would stack them on top of each other (a
- * bubble chart keying continent and population drew the circles straight
- * through the swatch labels). Anything else -- a top/bottom legend, or none --
- * leaves the gutter free and the size legend takes it.
+ * right column, the two share ONE column and the size legend stacks BELOW it.
+ *
+ * Side-by-side is the obvious placement and it is the wrong one. Two right-hand
+ * legends cost `colorWidth + sizeWidth + 2*GAP` of gutter -- on a 934px bubble
+ * chart, 213px, nearly a quarter of the canvas -- and every pixel comes out of
+ * the plot. Yet each block is only ~70px tall, so the column below them is dead
+ * space: the chart pays for a 213px-wide gutter to render 70px of key. Stacking
+ * costs `max(colorWidth, sizeWidth)` instead, and spends the empty vertical room
+ * that was already reserved and already paid for.
  */
 export function placeSizeLegend(
   content: SizeLegendContent,
@@ -361,9 +372,16 @@ export function placeSizeLegend(
     colorLegend != null &&
     (colorLegend.position === 'right' || colorLegend.position === 'bottom-right') &&
     colorLegend.bounds.width > 0;
-  const x = sharesGutter
-    ? Math.max(gutterX, colorLegend.bounds.x + colorLegend.bounds.width + SIZE_LEGEND_GAP)
-    : gutterX;
+
+  // Left-align with the color legend rather than the gutter: `dimensions.ts`
+  // reserves the column at `max(colorWidth, sizeWidth)`, so whichever block is
+  // narrower sits inside a column sized by the other. Sharing the left edge
+  // keys them as one column; anchoring to `gutterX` would leave the narrower
+  // one floating away from its partner.
+  const x = sharesGutter ? colorLegend.bounds.x : gutterX;
+  const y = sharesGutter
+    ? colorLegend.bounds.y + colorLegend.bounds.height + SIZE_LEGEND_STACK_GAP
+    : chartArea.y;
 
   return {
     type: 'size',
@@ -371,7 +389,7 @@ export function placeSizeLegend(
     position: 'right',
     bounds: {
       x,
-      y: chartArea.y,
+      y,
       width: content.width,
       height: content.height,
     },

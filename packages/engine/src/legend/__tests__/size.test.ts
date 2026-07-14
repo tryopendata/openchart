@@ -146,7 +146,7 @@ describe('size legend', () => {
    * margin for both but placing them at the same origin. Caught on a rendered
    * bubble chart, not by a unit test, which is why this one exists.
    */
-  it('sits beside the color legend in the right gutter, not on top of it', () => {
+  it('stacks below the color legend in a shared right column, not on top of it', () => {
     const layout = compileChart(bubbles, OPTIONS);
     const size = layout.legends.find((l) => l.type === 'size');
     const color = layout.legends.find((l) => (l.channel ?? 'color') === 'color');
@@ -161,10 +161,40 @@ describe('size legend', () => {
       color.bounds.y < size.bounds.y + size.bounds.height;
     expect(overlaps).toBe(false);
 
-    // The color legend claims the gutter first; the size legend follows it.
-    expect(size.bounds.x).toBeGreaterThanOrEqual(color.bounds.x + color.bounds.width);
-    // ...and the pair still fits inside the SVG.
+    // Stacked, not side by side: the size legend starts below the color
+    // legend's bottom edge, and the two share a left edge (one column).
+    expect(size.bounds.y).toBeGreaterThanOrEqual(color.bounds.y + color.bounds.height);
+    expect(size.bounds.x).toBe(color.bounds.x);
+    // ...and the column still fits inside the SVG, horizontally and vertically.
     expect(size.bounds.x + size.bounds.width).toBeLessThanOrEqual(OPTIONS.width);
+    expect(size.bounds.y + size.bounds.height).toBeLessThanOrEqual(OPTIONS.height);
+  });
+
+  /**
+   * The point of stacking. Side by side, the two legends each carved their own
+   * width out of the gutter (`color + size + 2*gap`) to draw two blocks that are
+   * each only ~70px tall -- a 934px bubble chart spent ~213px of canvas on a key
+   * that used a fraction of it. One shared column costs the wider of the two, and
+   * the plot keeps the difference.
+   */
+  it('gives the plot back the width the second gutter column used to cost', () => {
+    const withBoth = compileChart(bubbles, OPTIONS);
+    const colorOnly = compileChart(
+      { ...bubbles, encoding: { ...bubbles.encoding, size: undefined } } as ChartSpec,
+      OPTIONS,
+    );
+
+    const size = withBoth.legends.find((l): l is SizeLegendLayout => l.type === 'size');
+    const color = withBoth.legends.find((l) => (l.channel ?? 'color') === 'color');
+    expect(size).toBeDefined();
+    expect(color).toBeDefined();
+    if (!size || !color) return;
+
+    // Adding a size legend must not cost the plot a second column. It may still
+    // narrow the plot (the size block can be wider than the color block), but by
+    // at most the difference between them -- never by the size block's full width.
+    const lostWidth = colorOnly.area.width - withBoth.area.width;
+    expect(lostWidth).toBeLessThan(size.bounds.width);
   });
 
   /**

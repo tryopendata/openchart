@@ -663,31 +663,41 @@ export function computeDimensions(
   const legendHeight = plan ? plan.legendContent.height : legendLayout.bounds.height;
   const legendBoundsWidth = plan ? plan.legendContent.legendWidth : legendLayout.bounds.width;
 
+  const sizeLegend = plan?.sizeLegendContent;
+  const colorLegendInGutter =
+    legendHasEntries && (legendPos === 'right' || legendPos === 'bottom-right');
+
   const hasTopLegend = legendHasEntries && legendPos === 'top';
   if (legendHasEntries) {
     const gap = legendGap(width);
-    if (legendPos === 'right' || legendPos === 'bottom-right') {
-      margins.right += legendBoundsWidth + 8;
-    } else if (legendPos === 'top') {
+    if (legendPos === 'top') {
       // TOP_LEGEND_GAP_ABOVE keeps the legend from sitting flush against the
       // subtitle/metric bar now that the axis gap sits BELOW the legend.
       margins.top += TOP_LEGEND_GAP_ABOVE + legendHeight + gap;
     }
-    // 'bottom' is intentionally not handled here -- see bottomLegendReservation
-    // above.
+    // 'right'/'bottom-right' fall through to the shared right-column reservation
+    // below; 'bottom' is intentionally not handled here -- see
+    // bottomLegendReservation above.
   }
 
-  // Size legend: its own right-column reservation, ADDED to whatever the color
-  // legend already took. This is the whole point of the plural slot -- a bubble
-  // chart keys continent (color) and population (size), and reserving for only
-  // one leaves the other drawing on top of the plot.
+  // Right-hand legend column. The color legend and the size legend SHARE it,
+  // stacked vertically (see placeSizeLegend), so it is reserved at the width of
+  // the wider block -- not the sum.
+  //
+  // Reserving the sum is what the additive version did, and it charged the plot
+  // twice: a bubble chart keying continent (67px) and population (92px) gave up
+  // ~213px of a 934px canvas to render two blocks that are each ~70px tall. The
+  // column below them was dead space. Taking the max spends that empty vertical
+  // room instead and hands the difference back to the plot.
   //
   // Right column, not top: graduated circles are as tall as the largest bubble's
   // diameter, and a ~60px band across the top of a 400px chart eats the plot.
-  const sizeLegend = plan?.sizeLegendContent;
-  if (sizeLegend) {
-    margins.right += sizeLegend.width + SIZE_LEGEND_GAP;
-  }
+  //
+  // Each block keeps its own gap (the color legend's 8, the size legend's 12) so
+  // a chart with only one of them reserves exactly what it did before.
+  const colorReserve = colorLegendInGutter ? legendBoundsWidth + 8 : 0;
+  const sizeReserve = sizeLegend ? sizeLegend.width + SIZE_LEGEND_GAP : 0;
+  margins.right += Math.max(colorReserve, sizeReserve);
 
   // effectiveAxisGap sits between the legend (or chrome, if no legend) and
   // the chart area. When a top legend is present, the legendGap already
