@@ -10,10 +10,9 @@
  * surfaces it within the gallery framework so it shows up in the index.
  */
 
-import type { VizSpec } from '@opendata-ai/openchart-core';
 import { ChartStory } from '@opendata-ai/openchart-react';
 import { baseSpec, steps } from '../charts/scrollytelling-specs';
-import { Demo, GalleryPage, Section } from '../components';
+import { GalleryPage, Section } from '../components';
 import { useOcMode } from '../components/mode-context';
 
 const NARRATIVE_CSS = `
@@ -106,15 +105,7 @@ export const Scrollytelling = () => (
       title="Scroll-driven narrative"
       lede="Five steps track an argument: obesity stalled after 2021, but diabetes did not. Scroll to advance the story."
     >
-      <Demo
-        id="scrolly-narrative"
-        title="Scroll-driven narrative"
-        description="Each step applies a cumulative patch to the base spec. The chart transitions between states as the reader scrolls. Scroll down inside the demo to advance."
-        specForPanel={baseSpec as unknown as VizSpec}
-        height={800}
-      >
-        <ScrollyNarrativeDemo />
-      </Demo>
+      <ScrollyNarrativeDemo />
     </Section>
   </GalleryPage>
 );

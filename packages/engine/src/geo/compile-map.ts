@@ -36,7 +36,6 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
-import { placeLegend } from '../legend/compute';
 import {
   CONTINUOUS_LABEL_GAP,
   computeContinuousLegendContentForChannel,
@@ -273,7 +272,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     });
     featureMarks = result.marks;
 
-    // Build the continuous legend via the shared infrastructure
+    // Build the continuous legend. Maps place it directly (not via placeLegend,
+    // which does cartesian-specific positioning above the chart area).
     if (showLegend && continuousContent) {
       const labelStyle: TextStyle = {
         fontFamily: theme.fonts.family,
@@ -283,30 +283,35 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
         lineHeight: 1.3,
         fontVariant: 'tabular-nums',
       };
-      const legendContent = {
-        entries: [] as LegendEntry[],
-        position: legendPosition as 'top' | 'bottom',
-        labelStyle,
-        rowCount: 1,
-        totalWidth: continuousContent.barWidth,
+      const legendX = fullArea.x;
+      const legendY =
+        legendPosition === 'bottom'
+          ? fullArea.y + mapAreaHeight + legendReserveGap
+          : fullArea.y + legendReserveGap;
+      const bounds = {
+        x: legendX,
+        y: legendY,
+        width: continuousContent.barWidth,
         height: legendBlockHeight,
-        legendWidth: continuousContent.barWidth,
-        swatchSize: 10,
-        swatchGap: 6,
-        entryGap: 16,
-        swatchChipFill: theme.colors.annotationFill,
-        continuous: continuousContent,
       };
-      const mapArea = {
-        x: fullArea.x,
-        y: fullArea.y,
-        width: fullArea.width,
-        height: mapAreaHeight,
+      const bar = {
+        x: bounds.x,
+        y: bounds.y,
+        width: continuousContent.barWidth,
+        height: continuousContent.barHeight,
       };
-      const placed = placeLegend(legendContent, mapArea, options.width, theme, 0);
-      if (placed.type === 'continuous') {
-        continuousLegend = placed;
-      }
+      continuousLegend = {
+        type: 'continuous' as const,
+        mode: continuousContent.mode,
+        position: legendPosition,
+        bounds,
+        labelStyle,
+        bar,
+        colorStops: continuousContent.colorStops,
+        bins: continuousContent.bins.map((b) => ({ ...b, x: b.x + bar.x })),
+        ticks: continuousContent.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
+        labelY: bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize,
+      };
     }
   } else {
     const result = buildCategoricalMarks({
@@ -413,7 +418,19 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // 19. Animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(mapSpec.animation);
 
-  // 20. Anchor bottom chrome below the map + legend, then compute total height
+  // 20. Compute the map drawing area (offset when legend is at top)
+  const mapAreaY =
+    legendPosition === 'top' && legendBlockHeight > 0
+      ? fullArea.y + legendBlockHeight + legendReserveGap
+      : fullArea.y;
+  const mapArea = {
+    x: fullArea.x,
+    y: mapAreaY,
+    width: fullArea.width,
+    height: mapAreaHeight,
+  };
+
+  // 21. Anchor bottom chrome below the map + legend, then compute total height
   chrome.bottomAnchorY = fullArea.y + fullArea.height;
   const contentHeight =
     fullArea.y +
@@ -423,7 +440,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     chrome.bottomHeight +
     padding;
 
-  // 21. Emit compile warnings
+  // 22. Emit compile warnings
   for (const w of compileWarnings) {
     if (options.onWarn) {
       options.onWarn(w.message);
@@ -431,7 +448,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   }
 
   return {
-    area: fullArea,
+    area: mapArea,
     chrome,
     features: featureMarks,
     borders,

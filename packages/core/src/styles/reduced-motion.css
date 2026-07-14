@@ -6,7 +6,8 @@
   .oc-table-sort-btn::before,
   .oc-table-sort-btn::after,
   .oc-table-search input,
-  .oc-table-pagination button {
+  .oc-table-pagination button,
+  .oc-map-feature {
     transition: none;
   }
 

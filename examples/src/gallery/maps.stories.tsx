@@ -6,7 +6,7 @@
  * readout panel.
  */
 
-import type { MapSpec, VizSpec } from '@opendata-ai/openchart-core';
+import type { MapSpec } from '@opendata-ai/openchart-core';
 import type { MapHandle } from '@opendata-ai/openchart-react';
 import { ChartStory, GeoMap } from '@opendata-ai/openchart-react';
 import { useRef, useState } from 'react';
@@ -246,10 +246,10 @@ function ZoomDemo() {
         </button>
         <button
           type="button"
-          onClick={() => mapRef.current?.instance?.panTo('48')}
+          onClick={() => mapRef.current?.instance?.zoomTo('48')}
           style={btnStyle}
         >
-          Pan to Texas
+          Zoom to Texas
         </button>
         <button
           type="button"
@@ -412,14 +412,14 @@ export const Maps = () => (
         title="World equal-earth"
         description="Equal Earth preserves area, so country sizes are visually honest. ISO numeric codes in the data join to countries-110m.json features."
         spec={worldEqualEarthSpec}
-        height={400}
+        height={600}
       />
       <Demo
         id="world-mercator"
         title="World mercator"
         description="Mercator inflates polar regions but preserves local angles. Same data, same encoding, different projection."
         spec={worldMercatorSpec}
-        height={400}
+        height={600}
       />
     </Section>
 
@@ -492,15 +492,7 @@ export const Maps = () => (
       title="Map scrollytelling"
       lede="ChartStory drives a map through a sequence of geo.focus patches as the reader scrolls. Each step zooms to a feature or region while the narrative text describes what the reader is looking at."
     >
-      <Demo
-        id="map-scrollytelling"
-        title="Map scrollytelling"
-        description="The story base is a MapSpec. Each step patches geo.focus and chrome.subtitle. The map animates between focus states as the reader scrolls through the narrative."
-        specForPanel={mapStoryBase as unknown as VizSpec}
-        height={800}
-      >
-        <MapScrollyDemo />
-      </Demo>
+      <MapScrollyDemo />
     </Section>
   </GalleryPage>
 );

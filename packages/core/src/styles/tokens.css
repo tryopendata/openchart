@@ -16,7 +16,8 @@
 .oc-graph-root,
 .oc-sankey-root,
 .oc-tilemap-root,
-.oc-barlist-root {
+.oc-barlist-root,
+.oc-map-root {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 

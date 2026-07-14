@@ -62,6 +62,19 @@
   }
 }
 
+/* Map feature entrance: fade in while transitioning fill from a neutral base
+   to the data-driven color stored in --oc-feature-fill. */
+@keyframes oc-enter-map-fill {
+  from {
+    fill: var(--oc-secondary);
+    opacity: 0;
+  }
+  to {
+    fill: var(--oc-feature-fill);
+    opacity: 1;
+  }
+}
+
 /* Pure opacity fade (no transform). Safe for elements with existing transforms
    like arc groups that use translate() for positioning. */
 @keyframes oc-enter-fade-only {

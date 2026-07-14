@@ -354,6 +354,25 @@ export function createMap(
     liveEl.textContent = `Zoomed to ${names.join(', ')}`;
   }
 
+  function applyFocusDim(ids: Array<string | number> | null): void {
+    if (!svgElement) return;
+    const features = svgElement.querySelectorAll('.oc-map-feature');
+    if (!ids || ids.length === 0) {
+      for (const el of features) {
+        (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('opacity');
+      }
+      return;
+    }
+    const focusSet = new Set(ids.map(String));
+    for (const el of features) {
+      const fid = el.getAttribute('data-feature-id');
+      (el as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        'opacity',
+        fid && focusSet.has(fid) ? '1' : '0.25',
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Render + update
   // ---------------------------------------------------------------------------
@@ -394,11 +413,16 @@ export function createMap(
     }
 
     // Setup animation cleanup only when actually animating
-    if (animate && currentLayout.animation?.enter) {
+    const isAnimating = animate && !!currentLayout.animation?.enter;
+    if (isAnimating) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
         if (pendingResize && !destroyed) {
           pendingResize = false;
           resize();
+        }
+        // Apply deferred focus dim after animation completes
+        if (currentFocusIds && currentFocusIds.length > 0) {
+          applyFocusDim(currentFocusIds);
         }
       });
     }
@@ -423,6 +447,7 @@ export function createMap(
       const cam = cameraForTarget(currentLayout, target);
       currentCamera = cam;
       if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+      if (!isAnimating) applyFocusDim(currentFocusIds);
     }
     isFirstRender = false;
   }
@@ -469,10 +494,12 @@ export function createMap(
         currentFocusIds = [...nextFocus.ids];
         const cam = cameraForTarget(currentLayout, nextFocus.target);
         driveCamera(cam, prefersReducedMotion() ? 0 : storyMotion.camera);
+        applyFocusDim(currentFocusIds);
       } else if (prevFocusIds !== null) {
         currentFocusIds = null;
         const cam = cameraForTarget(currentLayout, null);
         driveCamera(cam, prefersReducedMotion() ? 0 : storyMotion.camera);
+        applyFocusDim(null);
       }
     }
   }
@@ -499,6 +526,7 @@ export function createMap(
       currentCamera = cameraForTarget(currentLayout, currentLayout.focus.target);
       if (svgElement) applyMapCamera(svgElement, currentCamera, currentLayout);
     }
+    applyFocusDim(currentFocusIds);
   }
 
   // ---------------------------------------------------------------------------
@@ -628,6 +656,7 @@ export function createMap(
       currentFocusIds = ids;
       const cam = cameraForTarget(currentLayout, target);
       driveCamera(cam, opts?.duration ?? storyMotion.camera);
+      applyFocusDim(ids);
       updateA11yLive(ids);
     },
     panTo(featureId: string | number, opts?: MapCameraOptions): void {
@@ -636,7 +665,6 @@ export function createMap(
         console.warn(`[openchart] panTo: no feature found for id: ${featureId}`);
         return;
       }
-      currentFocusIds = [featureId];
       const cam: Camera = {
         cx: target.x + target.width / 2,
         cy: target.y + target.height / 2,
@@ -652,11 +680,13 @@ export function createMap(
       currentFocusIds = null;
       const cam = cameraForTarget(currentLayout, target ?? null);
       driveCamera(cam, opts?.duration ?? storyMotion.camera);
+      applyFocusDim(null);
     },
     resetView(opts?: MapCameraOptions): void {
       currentFocusIds = null;
       const cam = cameraForTarget(currentLayout, null);
       driveCamera(cam, opts?.duration ?? storyMotion.camera);
+      applyFocusDim(null);
       updateA11yLive(null);
     },
     getCamera(): Camera {

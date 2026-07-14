@@ -122,13 +122,13 @@
     animation-delay: var(--oc-tile-delay, 0ms);
   }
 
-  /* Map features: fade-only entrance with stagger.
-     Fade-only is mandatory — features live inside a translate()'d <g>;
-     CSS transform would replace the SVG transform attribute. */
+  /* Map features: fill color reveal with shuffled stagger.
+     Per-feature --oc-map-delay is computed in the renderer via a seeded
+     Fisher-Yates shuffle so features pop in organically. */
   & .oc-map-feature {
-    animation: oc-enter-fade-only var(--oc-animation-duration)
+    animation: oc-enter-map-fill var(--oc-animation-duration)
       var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-    animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
+    animation-delay: var(--oc-map-delay, 0ms);
   }
 
   /* Map borders: fade in near the end of the feature sweep */

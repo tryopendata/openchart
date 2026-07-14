@@ -186,10 +186,31 @@ function renderFeatures(
   parent: SVGElement,
   features: MapFeatureMark[],
   animation?: ResolvedAnimation,
+  staggerBudget = 0,
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-map-features');
   g.setAttribute('role', 'list');
+
+  const maxIdx = features.length - 1;
+
+  // Build evenly spaced delays then shuffle for organic pop-in
+  const shuffledDelays: number[] = [];
+  if (staggerBudget > 0 && maxIdx > 0) {
+    for (let i = 0; i <= maxIdx; i++) {
+      shuffledDelays.push((i / maxIdx) * staggerBudget);
+    }
+    // Seeded Fisher-Yates shuffle (deterministic per-map via first feature id)
+    let seed = 0x9e3779b9 ^ (features.length * 2654435761);
+    for (let i = maxIdx; i > 0; i--) {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = seed ^ (seed >>> 15);
+      t = Math.imul(t, t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      const r = ((t ^ (t >>> 14)) >>> 0) % (i + 1);
+      [shuffledDelays[i], shuffledDelays[r]] = [shuffledDelays[r], shuffledDelays[i]];
+    }
+  }
 
   for (let i = 0; i < features.length; i++) {
     const feature = features[i];
@@ -214,10 +235,12 @@ function renderFeatures(
     if (animation?.enter) {
       const idx = feature.animationIndex ?? i;
       path.setAttribute('data-animation-index', String(idx));
-      (path as SVGElement & ElementCSSInlineStyle).style.setProperty(
-        '--oc-mark-index',
-        String(idx),
-      );
+      const s = (path as SVGElement & ElementCSSInlineStyle).style;
+      s.setProperty('--oc-mark-index', String(idx));
+      s.setProperty('--oc-feature-fill', feature.fill);
+      if (staggerBudget > 0 && maxIdx > 0) {
+        s.setProperty('--oc-map-delay', `${shuffledDelays[i]}ms`);
+      }
     }
 
     g.appendChild(path);
@@ -247,10 +270,14 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   const classes = animate ? 'oc-map oc-animate' : 'oc-map';
   svg.setAttribute('class', classes);
 
+  let mapStaggerBudget = 0;
   if (animate && animation?.enter) {
-    const stagger = Math.min(80, 800 / Math.max(features.length, 1));
-    svg.style.setProperty('--oc-animation-duration', `${animation.enter.duration}ms`);
-    svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
+    const dur = animation.enter.duration;
+    const perFeature = Math.min(dur, 500);
+    mapStaggerBudget = Math.round(dur * 1.2);
+    const n = Math.max(features.length, 1);
+    svg.style.setProperty('--oc-animation-duration', `${perFeature}ms`);
+    svg.style.setProperty('--oc-animation-stagger', `${n > 1 ? mapStaggerBudget / (n - 1) : 0}ms`);
     svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
     const easeVar = EASE_VAR_MAP[animation.enter.ease] || EASE_VAR_MAP.smooth;
     svg.style.setProperty('--oc-animation-ease', easeVar);
@@ -274,7 +301,7 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   cameraGroup.setAttribute('data-oc-map-camera', '');
 
   // Render features first (so borders overlay them)
-  renderFeatures(cameraGroup, features, animate ? animation : undefined);
+  renderFeatures(cameraGroup, features, animate ? animation : undefined, mapStaggerBudget);
 
   // Render borders on top of features
   renderBorders(cameraGroup, borders);

@@ -42,6 +42,10 @@
   height: auto;
 }
 
+.oc-map-feature {
+  transition: opacity 400ms ease;
+}
+
 .oc-barlist {
   display: block;
   width: 100%;
