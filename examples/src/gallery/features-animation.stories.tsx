@@ -32,7 +32,7 @@ const ACCENT = '#0e7490';
 function ReplayChart({ spec, height = 420 }: { spec: ChartSpec; height?: number }) {
   const [nonce, setNonce] = useState(0);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height }}>
         <Chart key={nonce} spec={spec} />
       </div>
@@ -57,8 +57,8 @@ function ReplayPair({
 }) {
   const [nonce, setNonce] = useState(0);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-4)', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-4)', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 300px', minWidth: 0, height }}>
           <Chart key={nonce} spec={left} />
         </div>
@@ -135,8 +135,8 @@ function StaggerRow() {
   const [nonce, setNonce] = useState(0);
   const specs = [staggerIndexSpec, staggerValueSpec, staggerReverseSpec];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-4)', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-4)', flexWrap: 'wrap' }}>
         {specs.map((s, i) => (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length static list
@@ -457,11 +457,11 @@ function UpdateTransitionsDemo() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 420 }}>
         <Chart spec={spec} />
       </div>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-2, 8px)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2, 8px)', flexWrap: 'wrap' }}>
         <button type="button" className="oc-spec-copy" onClick={addPoint}>
           Add point
         </button>
@@ -527,11 +527,11 @@ function EnterExitDemo() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 440 }}>
         <Chart spec={spec} />
       </div>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-2, 8px)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2, 8px)', flexWrap: 'wrap' }}>
         {ALL_SOURCES.map((source) => {
           const on = active.has(source);
           return (
@@ -542,7 +542,7 @@ function EnterExitDemo() {
               aria-pressed={on}
               onClick={() => toggle(source)}
               style={
-                on ? { borderColor: 'var(--oc-accent)', color: 'var(--oc-accent)' } : undefined
+                on ? { borderColor: 'var(--gx-accent)', color: 'var(--gx-accent)' } : undefined
               }
             >
               {on ? `Hide ${source}` : `Show ${source}`}

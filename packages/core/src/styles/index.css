@@ -4,9 +4,12 @@
  * CSS with oc- prefix for all class names.
  * CSS custom properties for theme overrides.
  * Dark mode via .oc-dark class on the container.
+ * Cascade layers: oc.tokens, oc.base, oc.components, oc.animation, oc.reduced-motion.
  */
 
 /* For optimal typography, load Inter: https://fonts.google.com/specimen/Inter */
+
+@layer oc.tokens, oc.base, oc.components, oc.animation, oc.reduced-motion;
 
 @import "./tokens.css";
 @import "./dark.css";

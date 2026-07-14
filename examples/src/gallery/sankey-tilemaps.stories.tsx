@@ -197,7 +197,7 @@ function PaletteGrid() {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: 'var(--oc-space-4)',
+        gap: 'var(--gx-space-4)',
       }}
     >
       {paletteSpecs.map((spec) => (
@@ -233,7 +233,7 @@ function InteractiveTileMap() {
   } | null>(null);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 560 }}>
         <TileMap
           spec={interactiveSpec}
@@ -250,20 +250,20 @@ function InteractiveTileMap() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-3)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
           fontFamily:
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-muted)' }}>last click</span>
+        <span style={{ color: 'var(--gx-text-muted)' }}>last click</span>
         {selected ? (
-          <span style={{ color: 'var(--oc-text)' }}>
+          <span style={{ color: 'var(--gx-text)' }}>
             {selected.stateName} ({selected.stateCode}) —{' '}
             {selected.value === null ? 'no data' : `${selected.value}%`}
           </span>

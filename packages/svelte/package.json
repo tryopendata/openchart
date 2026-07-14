@@ -46,7 +46,7 @@
     "declarative"
   ],
   "scripts": {
-    "build": "svelte-package -i src -o dist && cp node_modules/@opendata-ai/openchart-core/dist/styles.css dist/styles.css",
+    "build": "svelte-package -i src -o dist && cp node_modules/@opendata-ai/openchart-core/dist/styles.css dist/styles.css && test -f node_modules/@opendata-ai/openchart-core/dist/styles.css.map && cp node_modules/@opendata-ai/openchart-core/dist/styles.css.map dist/styles.css.map || true",
     "test": "vitest run",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json"
   },

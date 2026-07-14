@@ -14,33 +14,33 @@
 :root,
 [data-oc-mode] {
   /* Radius */
-  --oc-radius-card: 8px;
-  --oc-radius-control: 6px;
+  --gx-radius-card: 8px;
+  --gx-radius-control: 6px;
 
   /* Spacing scale (8px base grid) */
-  --oc-space-1: 4px;
-  --oc-space-2: 8px;
-  --oc-space-3: 12px;
-  --oc-space-4: 16px;
-  --oc-space-5: 24px;
-  --oc-space-6: 32px;
-  --oc-space-8: 48px;
-  --oc-space-10: 64px;
+  --gx-space-1: 4px;
+  --gx-space-2: 8px;
+  --gx-space-3: 12px;
+  --gx-space-4: 16px;
+  --gx-space-5: 24px;
+  --gx-space-6: 32px;
+  --gx-space-8: 48px;
+  --gx-space-10: 64px;
 
   /* Type families
    * "Inter Gallery" is a self-hosted alias for Inter Variable. The alias
    * prevents the @font-face from leaking into chart SVG <text> elements
    * (which look for "Inter Variable" and should fall back to system-ui to
    * preserve visual regression baselines). */
-  --oc-font-body: "Inter Gallery", "Inter", system-ui, -apple-system, sans-serif;
-  --oc-font-mono:
+  --gx-font-body: "Inter Gallery", "Inter", system-ui, -apple-system, sans-serif;
+  --gx-font-mono:
     ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
 
   /* Type scale */
-  --oc-type-page-title: 2.25rem;
-  --oc-type-section-title: 1.375rem;
-  --oc-type-demo-title: 1rem;
-  --oc-type-body: 0.9375rem;
-  --oc-type-caption: 0.8125rem;
-  --oc-type-mono: 0.8125rem;
+  --gx-type-page-title: 2.25rem;
+  --gx-type-section-title: 1.375rem;
+  --gx-type-demo-title: 1rem;
+  --gx-type-body: 0.9375rem;
+  --gx-type-caption: 0.8125rem;
+  --gx-type-mono: 0.8125rem;
 }

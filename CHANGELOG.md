@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **sankey/tilemap/barlist!:** top-level `valueFormat` deprecated in favor of `encoding.value.format`. Both work; encoding-level takes precedence.
 - **core!:** `ChartType` and `CHART_TYPES` exports removed. Use `MarkType` and `MARK_TYPES`.
 - **labels!:** `labels.offsets` marked `@deprecated`. The collision system handles label positioning automatically now.
+- **line!:** line charts now default to `scale.zero: false` so the y-axis domain fits the data range instead of anchoring at zero. This produces tighter, more readable line charts but changes the visual appearance of existing specs. Set `encoding.y.scale.zero: true` to restore the v7 behavior. See [migration guide](docs/migrating-v8.md#15-line-charts-default-to-zeroscale-false).
+- **css!:** stylesheet now uses [cascade layers](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer) (`@layer oc.tokens, oc.base, oc.components, oc.animation, oc.reduced-motion`). Un-layered consumer CSS now beats all openchart rules regardless of specificity. See [migration guide](docs/migrating-v8.md#14-stylesheet-uses-cascade-layers-oc).
+- **css!:** removed unused CSS custom properties `--oc-space-1`, `--oc-space-3`, `--oc-space-6`, `--oc-space-8`, `--oc-text-subtle`. Added `--oc-focus-ring`, `--oc-focus-ring-strong`, `--oc-editable-hover`. See [migration guide](docs/migrating-v8.md#13-removed-css-custom-properties).
 - **annotations!:** text-annotation callouts redesigned. Multi-line text is left-aligned instead of centered; the default label setback goes 8px → 28px and connectors shorter than 8px are suppressed, so a plain `{type:'text'}` annotation now draws a real leader with no `offset` authoring; non-arrowed connectors (including drop-lines) get a default open-ring marker on the data point (`dot: false` plus `connector: false` restores a bare label); dot defaults change (radius 5 → 4, strokeWidth 2 → 1.5, stroke follows the connector ink instead of the theme text color); default font goes 12px → 13px and uses `theme.fonts.family` instead of a hardcoded Inter stack; a `subtitle` promotes the primary text to weight 700 unless `fontWeight` is set; `**bold**` spans now parse in `text` and `subtitle`. Curves are a single quadratic and arrowheads are a stroked open-V `<polyline>` (`computeArrowheadPoints` defaults: length 8 → 7, halfWidth 4 → 3.5). See [migration guide](docs/migrating-v8.md#11-text-annotation-redesign).
 
 ### Bug Fixes
@@ -38,6 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **theme:** `seriesStrategy` field controls how categorical colors are assigned based on series count. Default `'palette'` preserves current behavior. `'accent-neutral'` enables editorial conventions where 1-series charts use the accent color, 2-4 series use accent + neutral grays (surface-aware: darkest-first on light backgrounds, brightest-first on dark), and 5+ series use the full palette.
 - **theme:** 3 named presets exported from core: `editorial` (current default), `essay` (serif, warm, generous spacing), `wire` (monospace, dense, tight chrome). Import as `import { essay, wire } from '@opendata-ai/openchart-core'` and pass as the `theme` prop.
 - **theme:** CSS custom properties (`--oc-*`) now generated from the resolved JS theme at mount time, stamped per-container via `setProperty`. The static values in `tokens.css`/`dark.css` remain as SSR fallback defaults. Two charts with different themes on the same page each get correct custom property values.
+- **map:** add choropleth map visualization with world (Equal Earth, Mercator) and US (states, counties) projections. Supports `color` encoding with sequential/diverging scales, continuous legend, entrance animation (shuffled stagger for organic pop-in, bulk fade for >200 features), dark mode, tooltips, and responsive resizing. Camera system with `zoomTo`/`panTo`/`fitBounds`/`resetView` API and declarative `geo.focus` for zoom-to-feature. Integrates with the story layer for scrollytelling narratives. `MapInstance` returned from `createChart()` when spec type is `'map'`.
+- **facet:** add faceted charts via `encoding.facet` channel. Splits data into small-multiple panels by a nominal field. Y-axis gridlines shown on all panels, tick labels on leftmost only. X-axis labels on every panel. Panel height auto-grows when too short (with recursion guard).
+- **core:** CSS token codegen from single source of truth (`token-definitions.ts`). `tokens.css` and `dark.css` are now generated files; CI drift detection via `check:generated`. New public exports: `CSS_TOKENS`, `CSS_TOKEN_ROOT_SELECTORS`, `cssTokenDefault()`.
+- **core:** CSS sourcemaps (`styles.css.map`) now ship in all 5 packages for dev-tools debugging.
 
 ### Bug Fixes
 
@@ -57,12 +64,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **theme:** chart background defaults to `transparent` so charts inherit the host container's surface color instead of painting an opaque white rect (breaking change — update visual regression baselines if pinning screenshots).
 - **areas:** stacked area gradient in light mode fades cleanly to transparent at the base instead of bottoming out at 35% opacity, which was creating a visible colored wash where bands overlapped.
 - **renderer:** font smoothing (`-webkit-font-smoothing: antialiased`, `-moz-osx-font-smoothing: grayscale`) applied to all chart text for crisper rendering on macOS and iOS.
+- **map:** exclude Antarctica from mercator `fitSize` to prevent polar inflation distorting the viewport.
+- **map:** legend positioned directly in `compile-map` to avoid cartesian-specific placement colliding with map subtitles.
+- **facet:** y-axis gridlines now render on all panels (previously only the leftmost panel had gridlines).
+- **facet:** x-axis labels now render on every panel instead of only the bottom row.
 
 ### Internal
 
 - **engine:** unified suppression truth table (`legend/suppression.ts`) consulted by the legend, endpoint-labels, and end-of-line label compute paths so the three stay in sync.
 - **engine:** factored `formatEndpointValue` so width prediction (before scales) uses the same formatter the renderer eventually applies.
 - **engine:** added bidirectional-sweep fuzz test (200 deterministic trials) asserting stack invariants.
+- **css:** adopt cascade layers (`@layer oc.*`) across all 15 CSS partials. Reduced-motion rewritten as a single catch-all in the last-declared layer, replacing the 53-line hand-maintained selector mirror.
+- **css:** enable Biome CSS linting (formatter was already active; linter rules are new).
+- **vanilla:** deduplicate `EASE_VAR_MAP` and animation-var stamping into shared `animation-vars.ts` (was copy-pasted in 6 renderers). Extract `applySrOnlyStyles` helper into `dom-helpers.ts`.
+- **vanilla:** replace hardcoded token fallback strings in `static.ts` and `theme-tokens.ts` with `cssTokenDefault()` imports from core.
+- **examples:** rename 43 gallery-defined `--oc-*` CSS custom properties to `--gx-*` to eliminate namespace collision with runtime tokens.
 
 ### Features (carryover from prior unreleased work)
 

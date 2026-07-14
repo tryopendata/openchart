@@ -1,100 +1,102 @@
-/* ---------------------------------------------------------------------------
- * Wrapper roots
- * --------------------------------------------------------------------------- */
+@layer oc.base {
+  /* ---------------------------------------------------------------------------
+   * Wrapper roots
+   * --------------------------------------------------------------------------- */
 
-.oc-chart-root {
-  width: 100%;
-  height: 100%;
-}
+  .oc-chart-root {
+    width: 100%;
+    height: 100%;
+  }
 
-.oc-table-root,
-.oc-graph-root,
-.oc-sankey-root,
-.oc-barlist-root,
-.oc-tilemap-root,
-.oc-map-root {
-  width: 100%;
-  height: 100%;
-}
+  .oc-table-root,
+  .oc-graph-root,
+  .oc-sankey-root,
+  .oc-barlist-root,
+  .oc-tilemap-root,
+  .oc-map-root {
+    width: 100%;
+    height: 100%;
+  }
 
-.oc-table-root {
-  overflow: auto;
-}
+  .oc-table-root {
+    overflow: auto;
+  }
 
-/* ---------------------------------------------------------------------------
- * Chart container
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Chart container
+   * --------------------------------------------------------------------------- */
 
-.oc-chart {
-  font-family: var(--oc-font-family);
-  display: block;
-  width: 100%;
-}
+  .oc-chart {
+    font-family: var(--oc-font-family);
+    display: block;
+    width: 100%;
+  }
 
-/* ---------------------------------------------------------------------------
- * BarList SVG container
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * BarList SVG container
+   * --------------------------------------------------------------------------- */
 
-.oc-tilemap,
-.oc-map {
-  display: block;
-  width: 100%;
-  height: auto;
-}
+  .oc-tilemap,
+  .oc-map {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
 
-.oc-map-feature {
-  transition: opacity 400ms ease;
-}
+  .oc-map-feature {
+    transition: opacity 400ms ease;
+  }
 
-.oc-barlist {
-  display: block;
-  width: 100%;
-}
+  .oc-barlist {
+    display: block;
+    width: 100%;
+  }
 
-/* ---------------------------------------------------------------------------
- * Screen reader only utility
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Screen reader only utility
+   * --------------------------------------------------------------------------- */
 
-.oc-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border-width: 0;
-}
+  .oc-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
 
-/* ---------------------------------------------------------------------------
- * Editable hover feedback
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Editable hover feedback
+   * --------------------------------------------------------------------------- */
 
-.oc-editable-hover {
-  outline: 1.5px solid rgba(79, 70, 229, 0.35);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
+  .oc-editable-hover {
+    outline: 1.5px solid var(--oc-editable-hover);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 
-/* ---------------------------------------------------------------------------
- * Keyboard focus indicators
- *
- * --oc-focus carries a light value in tokens.css and a dark value in
- * dark.css, so both rings stay visible in either mode.
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Keyboard focus indicators
+   *
+   * --oc-focus carries a light value in tokens.css and a dark value in
+   * dark.css, so both rings stay visible in either mode.
+   * --------------------------------------------------------------------------- */
 
-/* Container ring when the chart itself receives keyboard focus. */
-.oc-root:focus-visible {
-  outline: 2px solid var(--oc-focus);
-  outline-offset: 2px;
-}
+  /* Container ring when the chart itself receives keyboard focus. */
+  .oc-root:focus-visible {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: 2px;
+  }
 
-/* Mark ring during arrow-key navigation (see wireKeyboardNav). Outline on
- * SVG elements draws around the mark's bounding box, same technique as
- * .oc-editable-hover above. */
-.oc-mark-focused {
-  outline: 2px solid var(--oc-focus);
-  outline-offset: 1px;
-  border-radius: 2px;
+  /* Mark ring during arrow-key navigation (see wireKeyboardNav). Outline on
+   * SVG elements draws around the mark's bounding box, same technique as
+   * .oc-editable-hover above. */
+  .oc-mark-focused {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: 1px;
+    border-radius: 2px;
+  }
 }

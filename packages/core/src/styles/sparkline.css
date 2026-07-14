@@ -1,14 +1,16 @@
-/**
- * Sparkline display mode.
- *
- * Stamped on the SVG root as data-display="sparkline" by the renderer when
- * the spec sets display: 'sparkline'. Strips any inherited padding/margin
- * so the mark renders truly edge-to-edge in tight container layouts (KPI
- * cards, table cells, dashboard tiles).
- */
+@layer oc.components {
+  /**
+   * Sparkline display mode.
+   *
+   * Stamped on the SVG root as data-display="sparkline" by the renderer when
+   * the spec sets display: 'sparkline'. Strips any inherited padding/margin
+   * so the mark renders truly edge-to-edge in tight container layouts (KPI
+   * cards, table cells, dashboard tiles).
+   */
 
-.oc-chart[data-display="sparkline"] {
-  display: block;
-  margin: 0;
-  padding: 0;
+  .oc-chart[data-display="sparkline"] {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
 }

@@ -5,7 +5,7 @@
  * install + copyable snippet, a browse grid of section cards, a generated demo
  * index (built from `registry.ts` so it can't drift), and a footer of links.
  *
- * The page renders inside GalleryPage so the shared `--oc-*` tokens and
+ * The page renders inside GalleryPage so the shared `--gx-*` tokens and
  * `[data-oc-mode]` resolve (light/dark, and inside the width-addon iframe).
  * Everything below the header is bespoke JSX passed through GalleryPage's
  * children escape hatch — no Sections, so no right-rail TOC.
@@ -24,7 +24,7 @@ import { bigTechRevenue, programmingLanguages, stockPerformance } from '../data'
 import { GALLERY, type PageEntry } from './registry';
 
 // ---------------------------------------------------------------------------
-// Scoped styles. Keyed off the shared `--oc-*` tokens (defined under
+// Scoped styles. Keyed off the shared `--gx-*` tokens (defined under
 // `[data-oc-mode]` on the GalleryPage root), so they resolve in light/dark and
 // inside the width-addon iframe. Injected once rather than editing the shared
 // gallery.css that sibling pages also touch.
@@ -32,89 +32,89 @@ import { GALLERY, type PageEntry } from './registry';
 
 const WELCOME_CSS = `
 .ocw-hero {
-  margin: 0 0 var(--oc-space-8);
+  margin: 0 0 var(--gx-space-8);
 }
 .ocw-hero-chart {
-  margin-top: var(--oc-space-5);
-  border: 1px solid var(--oc-border);
-  border-radius: var(--oc-radius-card);
-  background: var(--oc-surface);
-  padding: var(--oc-space-5);
+  margin-top: var(--gx-space-5);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-card);
+  background: var(--gx-surface);
+  padding: var(--gx-space-5);
 }
 .ocw-hero-chart > .story-chart {
   height: 440px;
 }
 .ocw-block {
-  margin: 0 0 var(--oc-space-10);
+  margin: 0 0 var(--gx-space-10);
 }
 .ocw-block-head {
-  margin: 0 0 var(--oc-space-5);
+  margin: 0 0 var(--gx-space-5);
 }
 .ocw-block-title {
-  font-family: var(--oc-font-body);
-  font-size: var(--oc-type-section-title);
+  font-family: var(--gx-font-body);
+  font-size: var(--gx-type-section-title);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--oc-text-strong);
-  margin: 0 0 var(--oc-space-2);
+  color: var(--gx-text-strong);
+  margin: 0 0 var(--gx-space-2);
 }
 .ocw-block-lede {
-  font-size: var(--oc-type-body);
+  font-size: var(--gx-type-body);
   line-height: 1.6;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   margin: 0;
   max-width: 62ch;
 }
 .ocw-install {
   display: flex;
   flex-direction: column;
-  gap: var(--oc-space-3);
+  gap: var(--gx-space-3);
 }
 .ocw-install-cmd {
-  font-family: var(--oc-font-mono);
-  font-size: var(--oc-type-mono);
-  color: var(--oc-text);
-  background: var(--oc-surface-raised);
-  border: 1px solid var(--oc-border);
-  border-radius: var(--oc-radius-control);
-  padding: var(--oc-space-3) var(--oc-space-4);
+  font-family: var(--gx-font-mono);
+  font-size: var(--gx-type-mono);
+  color: var(--gx-text);
+  background: var(--gx-surface-raised);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-control);
+  padding: var(--gx-space-3) var(--gx-space-4);
 }
 .ocw-install-cmd .ocw-prompt {
-  color: var(--oc-text-faint);
+  color: var(--gx-text-faint);
   user-select: none;
 }
 .ocw-install-note {
-  font-size: var(--oc-type-caption);
+  font-size: var(--gx-type-caption);
   line-height: 1.6;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   margin: 0;
 }
 .ocw-install-note code {
-  font-family: var(--oc-font-mono);
+  font-family: var(--gx-font-mono);
   font-size: 0.85em;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--oc-accent-soft);
-  color: var(--oc-accent-text);
+  background: var(--gx-accent-soft);
+  color: var(--gx-accent-text);
 }
 .ocw-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--oc-space-4);
+  gap: var(--gx-space-4);
 }
 .ocw-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--oc-border);
-  border-radius: var(--oc-radius-card);
-  background: var(--oc-surface);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-card);
+  background: var(--gx-surface);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
   transition: border-color 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 .ocw-card:hover {
-  border-color: var(--oc-accent);
+  border-color: var(--gx-accent);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
@@ -125,7 +125,7 @@ const WELCOME_CSS = `
    stops reading as a network. So every preview gets one taller, uniform box. */
 .ocw-card-chart {
   height: 160px;
-  padding: var(--oc-space-3) var(--oc-space-4) 0;
+  padding: var(--gx-space-3) var(--gx-space-4) 0;
   min-width: 0;
   /* Table and bar-list previews are DOM (not SVG) and lay out at their natural
      height. Clip them to the card box instead of letting them stretch it. */
@@ -153,56 +153,56 @@ const WELCOME_CSS = `
   pointer-events: none;
 }
 .ocw-card-body {
-  padding: var(--oc-space-3) var(--oc-space-4) var(--oc-space-4);
+  padding: var(--gx-space-3) var(--gx-space-4) var(--gx-space-4);
 }
 .ocw-card-title {
-  font-family: var(--oc-font-body);
+  font-family: var(--gx-font-body);
   font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--oc-text-strong);
+  color: var(--gx-text-strong);
   margin: 0 0 4px;
 }
 .ocw-card-desc {
-  font-size: var(--oc-type-caption);
+  font-size: var(--gx-type-caption);
   line-height: 1.5;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   margin: 0;
 }
 .ocw-card-count {
-  margin-top: var(--oc-space-2);
-  font-family: var(--oc-font-mono);
+  margin-top: var(--gx-space-2);
+  font-family: var(--gx-font-mono);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--oc-accent-text);
+  color: var(--gx-accent-text);
 }
 .ocw-index {
   columns: 3 220px;
-  column-gap: var(--oc-space-6);
+  column-gap: var(--gx-space-6);
 }
 .ocw-index-group {
   break-inside: avoid;
-  margin: 0 0 var(--oc-space-5);
+  margin: 0 0 var(--gx-space-5);
 }
 .ocw-index-group-title {
-  font-family: var(--oc-font-mono);
+  font-family: var(--gx-font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   /* text-muted (not text-faint): faint fails WCAG AA contrast on this small
      uppercase label in both light and dark modes. */
-  color: var(--oc-text-muted);
-  margin: 0 0 var(--oc-space-2);
+  color: var(--gx-text-muted);
+  margin: 0 0 var(--gx-space-2);
 }
 .ocw-index-page {
-  margin: 0 0 var(--oc-space-3);
+  margin: 0 0 var(--gx-space-3);
 }
 .ocw-index-page-title {
-  font-size: var(--oc-type-caption);
+  font-size: var(--gx-type-caption);
   font-weight: 600;
-  color: var(--oc-text);
+  color: var(--gx-text);
   margin: 0 0 2px;
 }
 .ocw-index ul {
@@ -215,47 +215,47 @@ const WELCOME_CSS = `
 }
 .ocw-index a {
   display: block;
-  font-size: var(--oc-type-caption);
+  font-size: var(--gx-type-caption);
   line-height: 1.5;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   text-decoration: none;
   padding: 1px 0;
 }
 .ocw-index a:hover {
-  color: var(--oc-accent-text);
+  color: var(--gx-accent-text);
 }
 .ocw-footer {
-  border-top: 1px solid var(--oc-border);
-  padding-top: var(--oc-space-5);
-  margin-top: var(--oc-space-8);
+  border-top: 1px solid var(--gx-border);
+  padding-top: var(--gx-space-5);
+  margin-top: var(--gx-space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--oc-space-3);
+  gap: var(--gx-space-3);
 }
 .ocw-footer-links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--oc-space-4);
+  gap: var(--gx-space-4);
   align-items: center;
 }
 .ocw-footer-links a {
-  font-size: var(--oc-type-caption);
+  font-size: var(--gx-type-caption);
   font-weight: 500;
-  color: var(--oc-text);
+  color: var(--gx-text);
   text-decoration: none;
 }
 .ocw-footer-links a:hover {
-  color: var(--oc-accent-text);
+  color: var(--gx-accent-text);
 }
 .ocw-footer-note {
-  font-size: var(--oc-type-caption);
+  font-size: var(--gx-type-caption);
   line-height: 1.6;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   margin: 0;
   max-width: 74ch;
 }
 .ocw-footer-note a {
-  color: var(--oc-accent-text);
+  color: var(--gx-accent-text);
   /* Inline links inside a paragraph must be distinguishable without relying on
      color alone (WCAG 1.4.1); underline them. */
   text-decoration: underline;
@@ -268,14 +268,14 @@ const WELCOME_CSS = `
 .ocw-index a:focus-visible,
 .ocw-footer-links a:focus-visible,
 .ocw-footer-note a:focus-visible {
-  outline: 2px solid var(--oc-accent);
+  outline: 2px solid var(--gx-accent);
   outline-offset: 2px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
 }
 .ocw-footer-meta {
   font-size: 0.6875rem;
   /* text-muted (not text-faint): faint fails WCAG AA contrast at this size. */
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   margin: 0;
 }
 `;
@@ -685,7 +685,7 @@ export const Welcome = () => {
             <code>@opendata-ai/openchart-vanilla</code>. The spec is identical across all four.
           </p>
         </div>
-        <div style={{ marginTop: 'var(--oc-space-4)' }}>
+        <div style={{ marginTop: 'var(--gx-space-4)' }}>
           <Demo
             id="quick-start"
             title="A complete chart from one spec"

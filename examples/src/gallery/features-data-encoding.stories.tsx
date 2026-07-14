@@ -83,8 +83,8 @@ function FilterToggle() {
   const spec = filtered ? filterBaseSpec : filterOffSpec;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gx-space-3)' }}>
         <button
           type="button"
           className="oc-spec-copy"
@@ -95,8 +95,8 @@ function FilterToggle() {
         </button>
         <span
           style={{
-            fontSize: 'var(--oc-type-caption)',
-            color: 'var(--oc-text-muted)',
+            fontSize: 'var(--gx-type-caption)',
+            color: 'var(--gx-text-muted)',
             fontFamily:
               'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
           }}

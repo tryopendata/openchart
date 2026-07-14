@@ -279,11 +279,11 @@ const controlledSpec: TableSpec = {
 
 const PAGE_SIZE = 6;
 const controlBtn: React.CSSProperties = {
-  padding: 'var(--oc-space-2) var(--oc-space-3)',
-  border: '1px solid var(--oc-border)',
-  borderRadius: 'var(--oc-radius-control)',
-  background: 'var(--oc-surface)',
-  color: 'var(--oc-text)',
+  padding: 'var(--gx-space-2) var(--gx-space-3)',
+  border: '1px solid var(--gx-border)',
+  borderRadius: 'var(--gx-radius-control)',
+  background: 'var(--gx-surface)',
+  color: 'var(--gx-text)',
   font: 'inherit',
   cursor: 'pointer',
 };
@@ -317,12 +317,12 @@ function ControlledTable() {
   const sortLabel = sort ? `${sort.column} ${sort.direction === 'desc' ? '↓' : '↑'}` : 'none';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-3)',
+          gap: 'var(--gx-space-3)',
           flexWrap: 'wrap',
         }}
       >
@@ -337,18 +337,18 @@ function ControlledTable() {
           style={{
             flex: '1 1 220px',
             minWidth: 180,
-            padding: 'var(--oc-space-2) var(--oc-space-3)',
-            border: '1px solid var(--oc-border)',
-            borderRadius: 'var(--oc-radius-control)',
-            background: 'var(--oc-surface)',
-            color: 'var(--oc-text)',
+            padding: 'var(--gx-space-2) var(--gx-space-3)',
+            border: '1px solid var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface)',
+            color: 'var(--gx-text)',
             font: 'inherit',
           }}
         />
         <button type="button" onClick={cycleSort} style={controlBtn}>
           Sort: {sortLabel}
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gx-space-2)' }}>
           <button
             type="button"
             onClick={() => setPage(Math.max(0, clampedPage - 1))}
@@ -357,7 +357,7 @@ function ControlledTable() {
           >
             Prev
           </button>
-          <span style={{ fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-muted)' }}>
+          <span style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
             Page {clampedPage + 1} / {pageCount}
           </span>
           <button

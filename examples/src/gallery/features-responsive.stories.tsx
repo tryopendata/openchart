@@ -98,26 +98,26 @@ function ResizeFrame({
         gap: 6,
         fontFamily:
           'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
-        fontSize: 'var(--oc-type-caption)',
+        fontSize: 'var(--gx-type-caption)',
       }}
     >
-      <span style={{ color: 'var(--oc-text-muted)' }}>{label}</span>
-      <span style={{ color: color ?? 'var(--oc-text)', fontWeight: 600 }}>{value}</span>
+      <span style={{ color: 'var(--gx-text-muted)' }}>{label}</span>
+      <span style={{ color: color ?? 'var(--gx-text)', fontWeight: 600 }}>{value}</span>
     </span>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
-          gap: 'var(--oc-space-4)',
-          padding: 'var(--oc-space-2) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
+          gap: 'var(--gx-space-4)',
+          padding: 'var(--gx-space-2) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
         }}
       >
         {chip('breakpoint', bp, bpColor)}
@@ -144,8 +144,8 @@ function ResizeFrame({
           height: showHeight ? height : heightValue,
           overflow: 'auto',
           maxWidth: '100%',
-          border: '1px dashed var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
+          border: '1px dashed var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
           padding: 4,
           boxSizing: 'border-box',
           transition: draggingRef.current ? 'none' : 'width 0.12s ease, height 0.12s ease',
@@ -176,7 +176,7 @@ function ResizeFrame({
               width: 4,
               height: 40,
               borderRadius: 2,
-              background: 'var(--oc-border-strong, var(--oc-border))',
+              background: 'var(--gx-border-strong, var(--gx-border))',
             }}
           />
         </div>
@@ -194,8 +194,8 @@ function ResizeFrame({
               height: 16,
               cursor: 'nwse-resize',
               touchAction: 'none',
-              borderRight: '2px solid var(--oc-border-strong, var(--oc-border))',
-              borderBottom: '2px solid var(--oc-border-strong, var(--oc-border))',
+              borderRight: '2px solid var(--gx-border-strong, var(--gx-border))',
+              borderBottom: '2px solid var(--gx-border-strong, var(--gx-border))',
               borderBottomRightRadius: 3,
             }}
           />
@@ -295,9 +295,9 @@ function ExtremeRatios() {
     <figure style={{ margin: 0 }}>
       <figcaption
         style={{
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
-          marginBottom: 'var(--oc-space-2)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
+          marginBottom: 'var(--gx-space-2)',
           fontFamily:
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
@@ -309,8 +309,8 @@ function ExtremeRatios() {
           width: w,
           height: h,
           maxWidth: '100%',
-          border: '1px dashed var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
+          border: '1px dashed var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
           padding: 4,
           boxSizing: 'border-box',
         }}
@@ -321,12 +321,12 @@ function ExtremeRatios() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-5)' }}>
       {frame('Ultra-wide banner', 900, 130)}
       <div
         style={{
           display: 'flex',
-          gap: 'var(--oc-space-5)',
+          gap: 'var(--gx-space-5)',
           flexWrap: 'wrap',
           alignItems: 'flex-start',
         }}

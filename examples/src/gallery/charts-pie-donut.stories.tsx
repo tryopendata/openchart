@@ -157,7 +157,7 @@ function CenterMetricDonut() {
             fontSize: 32,
             fontWeight: 700,
             lineHeight: 1,
-            color: 'var(--oc-text)',
+            color: 'var(--gx-text)',
           }}
         >
           $6.9T
@@ -165,8 +165,8 @@ function CenterMetricDonut() {
         <span
           style={{
             marginTop: 4,
-            fontSize: 'var(--oc-type-caption)',
-            color: 'var(--oc-text-muted)',
+            fontSize: 'var(--gx-type-caption)',
+            color: 'var(--gx-text-muted)',
           }}
         >
           total outlays
@@ -244,14 +244,14 @@ const electricity2023Spec: ChartSpec = {
 
 function ComparisonDonuts() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div>
         <h3
           style={{
             margin: 0,
-            fontSize: 'var(--oc-type-h3, 18px)',
+            fontSize: 'var(--gx-type-h3, 18px)',
             fontWeight: 600,
-            color: 'var(--oc-text)',
+            color: 'var(--gx-text)',
           }}
         >
           Renewables Have Quadrupled Their Share Since 2010
@@ -259,14 +259,14 @@ function ComparisonDonuts() {
         <p
           style={{
             margin: '4px 0 0',
-            fontSize: 'var(--oc-type-caption)',
-            color: 'var(--oc-text-muted)',
+            fontSize: 'var(--gx-type-caption)',
+            color: 'var(--gx-text-muted)',
           }}
         >
           Share of global electricity generation by source (%)
         </p>
       </div>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-4)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-4)', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 260px', height: 360 }}>
           <Chart spec={electricity2010Spec} />
         </div>
@@ -274,7 +274,7 @@ function ComparisonDonuts() {
           <Chart spec={electricity2023Spec} />
         </div>
       </div>
-      <p style={{ margin: 0, fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-muted)' }}>
+      <p style={{ margin: 0, fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
         {electricityMix.source}
       </p>
     </div>
@@ -346,15 +346,15 @@ function InteractiveDonut() {
         onMarkLeave={() => setHovered(null)}
       />
       <div style={centerOverlayStyle(center)}>
-        <span style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: 'var(--oc-text)' }}>
+        <span style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: 'var(--gx-text)' }}>
           {primary}
         </span>
         <span
           style={{
             marginTop: 4,
             maxWidth: 140,
-            fontSize: 'var(--oc-type-caption)',
-            color: 'var(--oc-text-muted)',
+            fontSize: 'var(--gx-type-caption)',
+            color: 'var(--gx-text-muted)',
           }}
         >
           {label}

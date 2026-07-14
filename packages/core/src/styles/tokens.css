@@ -1,110 +1,113 @@
-/* ---------------------------------------------------------------------------
- * Custom properties (light mode defaults)
- *
- * These are FALLBACK defaults. At runtime, the JS theme engine stamps the
- * resolved theme as inline --oc-* custom properties on each .oc-root
- * container (see packages/vanilla/src/theme-tokens.ts). These CSS values
- * serve as fallbacks for contexts where JS hasn't mounted yet (SSR, static
- * HTML examples).
- * --------------------------------------------------------------------------- */
+/* GENERATED FILE — do not edit. Source: packages/core/src/styles/token-definitions.ts. Regenerate: bun run generate:tokens */
 
-.oc-root,
-.oc-chart-root,
-.oc-table-wrapper,
-.oc-table-root,
-.oc-graph-wrapper,
-.oc-graph-root,
-.oc-sankey-root,
-.oc-tilemap-root,
-.oc-barlist-root,
-.oc-map-root {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer oc.tokens {
+  /* ---------------------------------------------------------------------------
+   * Custom properties (light mode defaults)
+   *
+   * These are FALLBACK defaults. At runtime, the JS theme engine stamps the
+   * resolved theme as inline --oc-* custom properties on each .oc-root
+   * container (see packages/vanilla/src/theme-tokens.ts). These CSS values
+   * serve as fallbacks for contexts where JS hasn't mounted yet (SSR, static
+   * HTML examples).
+   * --------------------------------------------------------------------------- */
 
-  /* Opt out of iOS text auto-inflation so measured widths match rendered text. */
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+  .oc-root,
+  .oc-chart-root,
+  .oc-table-wrapper,
+  .oc-table-root,
+  .oc-graph-wrapper,
+  .oc-graph-root,
+  .oc-sankey-root,
+  .oc-tilemap-root,
+  .oc-barlist-root,
+  .oc-map-root {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 
-  --oc-font-family:
-    "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --oc-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    /* Opt out of iOS text auto-inflation so measured widths match rendered text. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 
-  /* Animation easing presets via CSS linear() */
-  --oc-ease-smooth: linear(
-    0,
-    0.157,
-    0.438,
-    0.64,
-    0.766,
-    0.85,
-    0.906,
-    0.941,
-    0.964,
-    0.978,
-    0.988,
-    0.994,
-    0.998,
-    1
-  );
-  --oc-ease-snappy: linear(
-    0,
-    0.012,
-    0.048,
-    0.108,
-    0.194,
-    0.302,
-    0.426,
-    0.559,
-    0.69,
-    0.808,
-    0.905,
-    0.973,
-    1.013,
-    1.028,
-    1.023,
-    1.006,
-    0.984,
-    0.966,
-    0.957,
-    0.957,
-    0.964,
-    0.975,
-    0.986,
-    0.995,
-    1,
-    1.003,
-    1.002,
-    1,
-    0.998,
-    0.998,
-    0.999,
-    1
-  );
+    --oc-font-family:
+      "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --oc-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
 
-  /* Animation timing defaults */
-  --oc-animation-duration: 500ms;
-  --oc-animation-stagger: 80ms;
-  --oc-annotation-delay: 200ms;
+    /* Animation easing presets via CSS linear() */
+    --oc-ease-smooth: linear(
+      0,
+      0.157,
+      0.438,
+      0.64,
+      0.766,
+      0.85,
+      0.906,
+      0.941,
+      0.964,
+      0.978,
+      0.988,
+      0.994,
+      0.998,
+      1
+    );
+    --oc-ease-snappy: linear(
+      0,
+      0.012,
+      0.048,
+      0.108,
+      0.194,
+      0.302,
+      0.426,
+      0.559,
+      0.69,
+      0.808,
+      0.905,
+      0.973,
+      1.013,
+      1.028,
+      1.023,
+      1.006,
+      0.984,
+      0.966,
+      0.957,
+      0.957,
+      0.964,
+      0.975,
+      0.986,
+      0.995,
+      1,
+      1.003,
+      1.002,
+      1,
+      0.998,
+      0.998,
+      0.999,
+      1
+    );
 
-  /* Typography scale (editorial design system) */
-  --oc-title-size: 26px;
-  --oc-title-weight: 590;
-  --oc-title-tracking: -0.022em;
-  --oc-subtitle-size: 14px;
-  --oc-subtitle-weight: 450;
-  --oc-source-size: 11px;
-  --oc-source-weight: 450;
-  --oc-body-size: 13px;
-  --oc-eyebrow-size: 11px;
-  --oc-eyebrow-weight: 550;
-  --oc-eyebrow-tracking: 0.08em;
+    /* Animation timing defaults */
+    --oc-animation-duration: 500ms;
+    --oc-animation-stagger: 80ms;
+    --oc-annotation-delay: 200ms;
 
-  /* Surfaces (light mode defaults) */
-  --oc-bg: #ffffff;
-  --oc-card: #ffffff;
-  --oc-secondary: #f4f4f5; /* zinc-100, raised surface */
+    /* Typography scale (editorial design system) */
+    --oc-title-size: 26px;
+    --oc-title-weight: 590;
+    --oc-title-tracking: -0.022em;
+    --oc-subtitle-size: 14px;
+    --oc-subtitle-weight: 450;
+    --oc-source-size: 11px;
+    --oc-source-weight: 450;
+    --oc-body-size: 13px;
+    --oc-eyebrow-size: 11px;
+    --oc-eyebrow-weight: 550;
+    --oc-eyebrow-tracking: 0.08em;
 
-  /*
+    /* Surfaces (light mode defaults) */
+    --oc-bg: #ffffff;
+    --oc-card: #ffffff;
+    --oc-secondary: #f4f4f5; /* zinc-100, raised surface */
+
+    /*
    * Text levels. Names invert across modes: in light mode "muted" sits at
    * a lighter zinc step than "subtle" because both are picked relative to
    * the active background, not from a fixed lightness ladder. The intent
@@ -116,38 +119,38 @@
    *   Dark mode (dark.css): inverts the surface tokens but keeps the same
    *               muted -> subtle -> faint progression away from primary.
    */
-  --oc-text: #09090b;
-  --oc-text-secondary: #3f3f46;
-  --oc-text-muted: #71717a;
-  --oc-text-subtle: #a1a1aa;
-  --oc-text-faint: #d4d4d8;
+    --oc-text: #09090b;
+    --oc-text-secondary: #3f3f46;
+    --oc-text-muted: #71717a;
+    --oc-text-faint: #d4d4d8;
 
-  /* Lines */
-  --oc-gridline: rgba(0, 0, 0, 0.1);
-  --oc-axis: rgba(0, 0, 0, 0.1);
-  --oc-border: rgba(0, 0, 0, 0.08);
-  --oc-border-radius: 2px;
+    /* Lines */
+    --oc-gridline: rgba(0, 0, 0, 0.1);
+    --oc-axis: rgba(0, 0, 0, 0.1);
+    --oc-border: rgba(0, 0, 0, 0.08);
+    --oc-border-radius: 2px;
 
-  /* Brand and semantic */
-  --oc-accent: #06b6d4;
-  --oc-accent-strong: #0891b2; /* darker cyan for line strokes on light bg */
-  --oc-positive: #10b981;
-  --oc-negative: #e11d48;
-  --oc-focus: #3b82f6;
+    /* Brand and semantic */
+    --oc-accent: #06b6d4;
+    --oc-accent-strong: #0891b2; /* darker cyan for line strokes on light bg */
+    --oc-positive: #10b981;
+    --oc-negative: #e11d48;
+    --oc-focus: #3b82f6;
+    /* static, intentionally NOT derived from --oc-focus and NOT flipped in dark mode */
+    --oc-focus-ring: rgba(59, 130, 246, 0.1);
+    --oc-focus-ring-strong: rgba(59, 130, 246, 0.25);
+    --oc-editable-hover: rgba(79, 70, 229, 0.35); /* edit-mode hover outline, indigo one-off */
 
-  /* Spacing scale (4px base) */
-  --oc-space-1: 4px;
-  --oc-space-2: 8px;
-  --oc-space-3: 12px;
-  --oc-space-4: 16px;
-  --oc-space-6: 24px;
-  --oc-space-8: 32px;
+    /* Spacing scale (4px base) — only --oc-space-2/4 are consumed (JS-stamped) */
+    --oc-space-2: 8px;
+    --oc-space-4: 16px;
 
-  /* Interactive states */
-  --oc-hover-bg: rgba(0, 0, 0, 0.025);
-  --oc-tooltip-bg: rgba(255, 255, 255, 0.88);
-  --oc-tooltip-border: rgba(0, 0, 0, 0.08);
-  --oc-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
-  --oc-tooltip-text: #09090b;
-  --oc-legend-text: #3f3f46;
+    /* Interactive states */
+    --oc-hover-bg: rgba(0, 0, 0, 0.025);
+    --oc-tooltip-bg: rgba(255, 255, 255, 0.88);
+    --oc-tooltip-border: rgba(0, 0, 0, 0.08);
+    --oc-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
+    --oc-tooltip-text: #09090b;
+    --oc-legend-text: #3f3f46;
+  }
 }

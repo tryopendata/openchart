@@ -1,53 +1,67 @@
 /* ---------------------------------------------------------------------------
  * Reduced motion
+ *
+ * Catch-all: last-declared layer beats every earlier layer regardless of
+ * specificity. No !important, no hand-maintained selector mirror.
+ *
+ * Selector list matches CSS_TOKEN_ROOT_SELECTORS in token-definitions.ts.
  * --------------------------------------------------------------------------- */
 
-@media (prefers-reduced-motion: reduce) {
-  .oc-table-sort-btn::before,
-  .oc-table-sort-btn::after,
-  .oc-table-search input,
-  .oc-table-pagination button,
-  .oc-map-feature {
-    transition: none;
-  }
-
-  /* Disable all chart entrance animations */
-  .oc-animate .oc-mark-rect rect,
-  .oc-animate .oc-mark-bar rect,
-  .oc-animate .oc-mark-arc,
-  .oc-animate .oc-mark-line,
-  .oc-animate .oc-mark-area,
-  .oc-animate circle.oc-mark-point,
-  .oc-animate circle.oc-mark-circle,
-  .oc-animate .oc-mark-text text,
-  .oc-animate .oc-mark-rule line,
-  .oc-animate .oc-mark-tick line,
-  .oc-animate .oc-mark-label,
-  .oc-animate .oc-annotation,
-  .oc-animate .oc-sankey-node rect,
-  .oc-animate .oc-sankey-link path,
-  .oc-animate .oc-map-feature,
-  .oc-animate .oc-map-features[data-bulk-animate],
-  .oc-animate .oc-map-borders path,
-  .oc-animate .oc-tilemap-tile,
-  .oc-animate .oc-barlist-row,
-  .oc-animate .oc-barlist-bar {
-    animation: none;
-  }
-
-  /* Disable all table entrance animations */
-  .oc-table-wrapper.oc-animate > .oc-chrome,
-  .oc-table-wrapper.oc-animate thead,
-  .oc-table-wrapper.oc-animate tbody tr,
-  .oc-table-wrapper.oc-animate tbody td,
-  .oc-table-wrapper.oc-animate td.oc-table-heatmap,
-  .oc-table-wrapper.oc-animate td.oc-table-category,
-  .oc-table-wrapper.oc-animate .oc-table-bar-fill,
-  .oc-table-wrapper.oc-animate .oc-table-sparkline > svg,
-  .oc-table-wrapper.oc-animate .oc-table-sparkline-dot,
-  .oc-table-wrapper.oc-animate .oc-table-sparkline-labels,
-  .oc-table-wrapper.oc-animate .oc-table-search,
-  .oc-table-wrapper.oc-animate .oc-table-pagination {
-    animation: none;
+@layer oc.reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    :is(
+        .oc-root,
+        .oc-chart-root,
+        .oc-table-wrapper,
+        .oc-table-root,
+        .oc-graph-wrapper,
+        .oc-graph-root,
+        .oc-sankey-root,
+        .oc-tilemap-root,
+        .oc-barlist-root,
+        .oc-map-root
+      ),
+    :is(
+        .oc-root,
+        .oc-chart-root,
+        .oc-table-wrapper,
+        .oc-table-root,
+        .oc-graph-wrapper,
+        .oc-graph-root,
+        .oc-sankey-root,
+        .oc-tilemap-root,
+        .oc-barlist-root,
+        .oc-map-root
+      )
+      *,
+    :is(
+        .oc-root,
+        .oc-chart-root,
+        .oc-table-wrapper,
+        .oc-table-root,
+        .oc-graph-wrapper,
+        .oc-graph-root,
+        .oc-sankey-root,
+        .oc-tilemap-root,
+        .oc-barlist-root,
+        .oc-map-root
+      )
+      *::before,
+    :is(
+        .oc-root,
+        .oc-chart-root,
+        .oc-table-wrapper,
+        .oc-table-root,
+        .oc-graph-wrapper,
+        .oc-graph-root,
+        .oc-sankey-root,
+        .oc-tilemap-root,
+        .oc-barlist-root,
+        .oc-map-root
+      )
+      *::after {
+      animation: none;
+      transition: none;
+    }
   }
 }

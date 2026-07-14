@@ -318,18 +318,18 @@ function ComposedLayers() {
   const [withLabels, setWithLabels] = useState(true);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <label
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-2)',
-          padding: 'var(--oc-space-2) var(--oc-space-3)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-2)',
+          padding: 'var(--gx-space-2) var(--gx-space-3)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
           alignSelf: 'flex-start',
           cursor: 'pointer',
         }}

@@ -18,8 +18,10 @@
 | Dark-mode adapter (binary-search lightness) | `packages/core/src/theme/dark-mode.ts` → `adaptTheme()`, `adaptColorForDarkMode()` |
 | Categorical palette (`CATEGORICAL_PALETTE`) and sequential/diverging | `packages/core/src/colors/palettes.ts` |
 | Color contrast / accessibility helpers | `packages/core/src/colors/contrast.ts`, `colorblind.ts` |
-| CSS tokens (light defaults) | `packages/core/src/styles/tokens.css` |
-| CSS dark overrides (`.oc-dark`) | `packages/core/src/styles/dark.css` |
+| CSS token source of truth | `packages/core/src/styles/token-definitions.ts` |
+| CSS tokens (light defaults) — **generated** | `packages/core/src/styles/tokens.css` |
+| CSS dark overrides (`.oc-dark`) — **generated** | `packages/core/src/styles/dark.css` |
+| CSS token generator | `scripts/generate-css-tokens.mjs` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
 | Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition.ts`. |
 | Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
@@ -185,7 +187,8 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - **Default theme:** `DEFAULT_THEME` literal in `packages/core/src/theme/defaults.ts`. Single source of truth.
 - **User overrides:** `ThemeConfig` (partial) → `resolveTheme()` deep-merges onto `DEFAULT_THEME` → `ResolvedTheme` (every field set).
 - **Dark mode:** `adaptTheme(resolved)` in `dark-mode.ts` swaps surface tokens, adapts categorical palette via binary-search on lightness to preserve contrast against the dark background.
-- **CSS tokens** (`tokens.css`, `dark.css`) are *parallel* to the JS theme — both have to stay in sync. Tokens used by chrome/axes/legend; the JS theme is consulted by mark renderers, scale colorings, etc. When you add a token to one, add it to the other.
+- **CSS tokens** (`tokens.css`, `dark.css`) are **generated** from `packages/core/src/styles/token-definitions.ts`. Run `bun run generate:tokens` after editing. CI enforces freshness via `check:generated`.
+- **Cascade layers:** all CSS is wrapped in `@layer oc.*` sub-layers declared in `index.css`: `oc.tokens, oc.base, oc.components, oc.animation, oc.reduced-motion`. Consumer un-layered CSS beats all openchart rules (v8 breaking change, see `docs/migrating-v8.md` section 14).
 
 ## Chart-type registry (`engine/src/charts/registry.ts`)
 

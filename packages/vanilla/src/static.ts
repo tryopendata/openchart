@@ -10,7 +10,12 @@ import type {
   ThemeConfig,
   TileMapSpec,
 } from '@opendata-ai/openchart-core';
-import { adaptForLightLineStroke, isLayerSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
+import {
+  adaptForLightLineStroke,
+  cssTokenDefault,
+  isLayerSpec,
+  isTileMapSpec,
+} from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer, compileTileMap } from '@opendata-ai/openchart-engine';
 import { SVG_NS } from './renderers/svg-dom';
 import { resetSvgIdCounter } from './svg-ids';
@@ -52,12 +57,12 @@ function resolveStaticDarkMode(mode?: DarkMode): boolean {
 }
 
 function buildThemeStyleBlock(theme: ResolvedTheme): string {
-  const accent = theme.colors.categorical[0] ?? '#06b6d4';
+  const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
   const bg =
     theme.colors.background === 'transparent'
       ? theme.isDark
-        ? '#09090b'
-        : '#ffffff'
+        ? cssTokenDefault('--oc-bg', 'dark')
+        : cssTokenDefault('--oc-bg', 'light')
       : theme.colors.background;
 
   const props = [
@@ -65,7 +70,7 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `--oc-font-mono: ${theme.fonts.mono}`,
     `--oc-title-size: ${theme.chrome.title.fontSize}px`,
     `--oc-title-weight: ${theme.chrome.title.fontWeight}`,
-    `--oc-title-tracking: -0.022em`, // sync with tokens.css
+    `--oc-title-tracking: ${cssTokenDefault('--oc-title-tracking', 'light')}`,
     `--oc-subtitle-size: ${theme.chrome.subtitle.fontSize}px`,
     `--oc-subtitle-weight: ${theme.chrome.subtitle.fontWeight}`,
     `--oc-source-size: ${theme.chrome.source.fontSize}px`,
@@ -73,11 +78,11 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `--oc-body-size: ${theme.fonts.sizes.body}px`,
     `--oc-eyebrow-size: ${theme.chrome.eyebrow.fontSize}px`,
     `--oc-eyebrow-weight: ${theme.chrome.eyebrow.fontWeight}`,
-    `--oc-eyebrow-tracking: 0.08em`, // sync with tokens.css
+    `--oc-eyebrow-tracking: ${cssTokenDefault('--oc-eyebrow-tracking', 'light')}`,
     `--oc-bg: ${bg}`,
     `--oc-text: ${theme.colors.text}`,
     `--oc-text-muted: ${theme.colors.axis}`,
-    `--oc-text-faint: ${theme.isDark ? '#52525b' : '#d4d4d8'}`,
+    `--oc-text-faint: ${theme.isDark ? cssTokenDefault('--oc-text-faint', 'dark') : cssTokenDefault('--oc-text-faint', 'light')}`,
     `--oc-gridline: ${theme.colors.gridline}`,
     `--oc-axis: ${theme.colors.axis}`,
     `--oc-border-radius: ${theme.borderRadius}px`,
@@ -85,7 +90,7 @@ function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `--oc-accent-strong: ${adaptForLightLineStroke(accent)}`,
     `--oc-positive: ${theme.colors.positive}`,
     `--oc-negative: ${theme.colors.negative}`,
-    `--oc-legend-text: ${theme.isDark ? '#d0d6e0' : '#3f3f46'}`,
+    `--oc-legend-text: ${theme.isDark ? cssTokenDefault('--oc-legend-text', 'dark') : cssTokenDefault('--oc-legend-text', 'light')}`,
     `--oc-space-2: ${theme.spacing.chromeGap * 2}px`,
     `--oc-space-4: ${theme.spacing.padding}px`,
   ];

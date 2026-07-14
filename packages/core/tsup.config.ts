@@ -17,8 +17,8 @@ export default defineConfig({
     const dest = resolve('dist/styles.css');
     mkdirSync(dirname(dest), { recursive: true });
     execSync(
-      `lightningcss --bundle --minify --targets '>= 0.25%' ${src} -o ${dest}`,
-      { stdio: 'inherit' },
+      `lightningcss --bundle --minify --sourcemap --targets '>= 0.25%' ${src} -o styles.css`,
+      { stdio: 'inherit', cwd: dirname(dest) },
     );
   },
 });

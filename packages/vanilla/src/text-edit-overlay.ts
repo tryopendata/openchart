@@ -153,7 +153,7 @@ export function createTextEditOverlay(config: TextEditOverlayConfig): { destroy:
     lineHeight: styles.lineHeight,
     padding: '2px 4px',
     margin: '0',
-    border: '1px solid rgba(79, 70, 229, 0.4)',
+    border: '1px solid rgba(79, 70, 229, 0.4)', // intentionally 0.4, not --oc-editable-hover (0.35)
     borderRadius: '3px',
     background: 'rgba(255, 255, 255, 0.95)',
     outline: 'none',

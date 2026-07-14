@@ -283,7 +283,7 @@ function InterpolationModes() {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: 'var(--oc-space-4)',
+        gap: 'var(--gx-space-4)',
       }}
     >
       <div style={{ height: 260 }}>
@@ -390,8 +390,8 @@ function HighlightLines() {
   const [active, setActive] = useState<string | null>(null);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--gx-space-2)' }}>
         {COMPANIES.map((company) => (
           <button
             key={company}
@@ -402,12 +402,12 @@ function HighlightLines() {
             onBlur={() => setActive(null)}
             aria-pressed={active === company}
             style={{
-              padding: 'var(--oc-space-2) var(--oc-space-3)',
-              border: '1px solid var(--oc-border)',
-              borderRadius: 'var(--oc-radius-control)',
-              background: active === company ? ACCENT : 'var(--oc-surface-raised)',
-              color: active === company ? '#ffffff' : 'var(--oc-text)',
-              fontSize: 'var(--oc-type-caption)',
+              padding: 'var(--gx-space-2) var(--gx-space-3)',
+              border: '1px solid var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
+              background: active === company ? ACCENT : 'var(--gx-surface-raised)',
+              color: active === company ? '#ffffff' : 'var(--gx-text)',
+              fontSize: 'var(--gx-type-caption)',
               cursor: 'pointer',
             }}
           >

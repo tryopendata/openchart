@@ -1,133 +1,135 @@
-/* ---------------------------------------------------------------------------
- * Animation keyframes
- * --------------------------------------------------------------------------- */
+@layer oc.animation {
+  /* ---------------------------------------------------------------------------
+   * Animation keyframes
+   * --------------------------------------------------------------------------- */
 
-/* Bar entrance: clip-path reveal bottom-to-top + fade in (vertical columns).
-   Bars grow upward from baseline with a soft opacity fade. */
-@keyframes oc-enter-bar {
-  from {
-    clip-path: inset(100% 0 0 0);
-    opacity: 0;
+  /* Bar entrance: clip-path reveal bottom-to-top + fade in (vertical columns).
+     Bars grow upward from baseline with a soft opacity fade. */
+  @keyframes oc-enter-bar {
+    from {
+      clip-path: inset(100% 0 0 0);
+      opacity: 0;
+    }
+    75% {
+      opacity: 1;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
   }
-  75% {
-    opacity: 1;
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-    opacity: 1;
-  }
-}
 
-/* Bar entrance: clip-path reveal left-to-right + fade in (horizontal bars).
-   Bars grow rightward from axis with a soft opacity fade. */
-@keyframes oc-enter-bar-h {
-  from {
-    clip-path: inset(0 100% 0 0);
-    opacity: 0;
+  /* Bar entrance: clip-path reveal left-to-right + fade in (horizontal bars).
+     Bars grow rightward from axis with a soft opacity fade. */
+  @keyframes oc-enter-bar-h {
+    from {
+      clip-path: inset(0 100% 0 0);
+      opacity: 0;
+    }
+    75% {
+      opacity: 1;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
   }
-  75% {
-    opacity: 1;
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-    opacity: 1;
-  }
-}
 
-/* Line/area entrance: clip-path reveal left-to-right + fade in.
-   Lines draw in following reading direction with a soft lead-in. */
-@keyframes oc-enter-line {
-  from {
-    clip-path: inset(0 100% 0 0);
-    opacity: 0;
+  /* Line/area entrance: clip-path reveal left-to-right + fade in.
+     Lines draw in following reading direction with a soft lead-in. */
+  @keyframes oc-enter-line {
+    from {
+      clip-path: inset(0 100% 0 0);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
   }
-  15% {
-    opacity: 1;
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-    opacity: 1;
-  }
-}
 
-/* Point/arc entrance: scale up + fade in from center */
-@keyframes oc-enter-point {
-  from {
-    opacity: 0;
-    transform: scale(0.3);
+  /* Point/arc entrance: scale up + fade in from center */
+  @keyframes oc-enter-point {
+    from {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 
-/* Map feature entrance: fade in while transitioning fill from a neutral base
-   to the data-driven color stored in --oc-feature-fill. */
-@keyframes oc-enter-map-fill {
-  from {
-    fill: var(--oc-secondary);
-    opacity: 0;
+  /* Map feature entrance: fade in while transitioning fill from a neutral base
+     to the data-driven color stored in --oc-feature-fill. */
+  @keyframes oc-enter-map-fill {
+    from {
+      fill: var(--oc-secondary);
+      opacity: 0;
+    }
+    to {
+      fill: var(--oc-feature-fill);
+      opacity: 1;
+    }
   }
-  to {
-    fill: var(--oc-feature-fill);
-    opacity: 1;
-  }
-}
 
-/* Pure opacity fade (no transform). Safe for elements with existing transforms
-   like arc groups that use translate() for positioning. */
-@keyframes oc-enter-fade-only {
-  from {
-    opacity: 0;
+  /* Pure opacity fade (no transform). Safe for elements with existing transforms
+     like arc groups that use translate() for positioning. */
+  @keyframes oc-enter-fade-only {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
-  to {
-    opacity: 1;
-  }
-}
 
-/* Fade + subtle slide up for text, rule, tick, annotations */
-@keyframes oc-enter-fade {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
+  /* Fade + subtle slide up for text, rule, tick, annotations */
+  @keyframes oc-enter-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-/* Table row entrance: slide up only, no opacity (cells fade independently
-   to avoid opacity compounding between row and cell animations) */
-@keyframes oc-table-enter-row {
-  from {
-    transform: translateY(6px);
+  /* Table row entrance: slide up only, no opacity (cells fade independently
+     to avoid opacity compounding between row and cell animations) */
+  @keyframes oc-table-enter-row {
+    from {
+      transform: translateY(6px);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
-  to {
-    transform: translateY(0);
-  }
-}
 
-/* Table bar fill entrance: clip-path grow only, no opacity
-   (preserves resting opacity: 0.15 from table.css) */
-@keyframes oc-table-enter-bar-fill {
-  from {
-    clip-path: inset(0 100% 0 0);
+  /* Table bar fill entrance: clip-path grow only, no opacity
+     (preserves resting opacity: 0.15 from table.css) */
+  @keyframes oc-table-enter-bar-fill {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
   }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
 
-/* Tooltip entrance */
-@keyframes oc-tooltip-in {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  /* Tooltip entrance */
+  @keyframes oc-tooltip-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

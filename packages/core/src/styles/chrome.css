@@ -1,180 +1,174 @@
-/* ---------------------------------------------------------------------------
- * Chrome (eyebrow, title, subtitle, source, byline, footer, brand)
- * --------------------------------------------------------------------------- */
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Chrome (eyebrow, title, subtitle, source, byline, footer, brand)
+   * --------------------------------------------------------------------------- */
 
-.oc-chrome {
-  font-family: var(--oc-font-family);
-}
+  .oc-chrome {
+    font-family: var(--oc-font-family);
+  }
 
-.oc-eyebrow {
-  font-size: var(--oc-eyebrow-size);
-  font-weight: var(--oc-eyebrow-weight);
-  letter-spacing: var(--oc-eyebrow-tracking);
-  text-transform: uppercase;
-  fill: var(--oc-accent);
-}
+  .oc-eyebrow {
+    font-size: var(--oc-eyebrow-size);
+    font-weight: var(--oc-eyebrow-weight);
+    letter-spacing: var(--oc-eyebrow-tracking);
+    text-transform: uppercase;
+    fill: var(--oc-accent);
+  }
 
-.oc-title {
-  font-size: var(--oc-title-size);
-  font-weight: var(--oc-title-weight);
-  letter-spacing: var(--oc-title-tracking);
-  fill: var(--oc-text);
-}
+  .oc-title {
+    font-size: var(--oc-title-size);
+    font-weight: var(--oc-title-weight);
+    letter-spacing: var(--oc-title-tracking);
+    fill: var(--oc-text);
+  }
 
-.oc-subtitle {
-  font-size: var(--oc-subtitle-size);
-  font-weight: var(--oc-subtitle-weight);
-  fill: var(--oc-text-muted);
-}
+  .oc-subtitle {
+    font-size: var(--oc-subtitle-size);
+    font-weight: var(--oc-subtitle-weight);
+    fill: var(--oc-text-muted);
+  }
 
-.oc-source,
-.oc-byline,
-.oc-footer {
-  font-size: var(--oc-source-size);
-  font-weight: var(--oc-source-weight);
-  fill: var(--oc-text-muted);
-}
+  .oc-source,
+  .oc-byline,
+  .oc-footer {
+    font-size: var(--oc-source-size);
+    font-weight: var(--oc-source-weight);
+    fill: var(--oc-text-muted);
+  }
 
-.oc-brand {
-  font-size: 11px;
-  font-weight: 510;
-  letter-spacing: 0.02em;
-  fill: var(--oc-text-faint);
-}
+  .oc-brand {
+    font-size: 11px;
+    font-weight: 510;
+    letter-spacing: 0.02em;
+    fill: var(--oc-text-faint);
+  }
 
-.oc-brand-dot {
-  fill: var(--oc-accent);
-}
+  .oc-brand-dot {
+    fill: var(--oc-accent);
+  }
 
-.oc-eyebrow-dot {
-  fill: var(--oc-accent);
-}
+  .oc-eyebrow-dot {
+    fill: var(--oc-accent);
+  }
 
-/* ---------------------------------------------------------------------------
- * Metric bar (.oc-metrics) — optional row of label/value cells above chart
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Metric bar (.oc-metrics) — optional row of label/value cells above chart
+   * --------------------------------------------------------------------------- */
 
-.oc-metrics {
-  font-family: var(--oc-font-family);
-}
+  .oc-metrics {
+    font-family: var(--oc-font-family);
+  }
 
-.oc-metric-label {
-  font-size: 10px;
-  font-weight: 510;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  fill: var(--oc-text-muted);
-}
+  .oc-metric-label {
+    font-size: 10px;
+    font-weight: 510;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    fill: var(--oc-text-muted);
+  }
 
-.oc-metric-value {
-  font-size: 22px;
-  font-weight: 510;
-  letter-spacing: -0.01em;
-  fill: var(--oc-text);
-  font-variant-numeric: tabular-nums;
-}
+  .oc-metric-value {
+    font-size: 22px;
+    font-weight: 510;
+    letter-spacing: -0.01em;
+    fill: var(--oc-text);
+    font-variant-numeric: tabular-nums;
+  }
 
-.oc-metric-delta-up {
-  fill: var(--oc-positive);
-  font-size: 12px;
-  font-weight: 510;
-}
+  .oc-metric-delta-up {
+    fill: var(--oc-positive);
+    font-size: 12px;
+    font-weight: 510;
+  }
 
-.oc-metric-delta-down {
-  fill: var(--oc-negative);
-  font-size: 12px;
-  font-weight: 510;
-}
+  .oc-metric-delta-down {
+    fill: var(--oc-negative);
+    font-size: 12px;
+    font-weight: 510;
+  }
 
-.oc-metric-secondary {
-  fill: var(--oc-positive);
-  font-size: 12px;
-  font-weight: 400;
-}
+  .oc-metric-secondary {
+    fill: var(--oc-positive);
+    font-size: 12px;
+    font-weight: 400;
+  }
 
-/* ---------------------------------------------------------------------------
- * Axis tick labels — inline variant sits above each gridline at the
- * chart-area left edge (no left gutter). Used by line/area y-axes.
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Axis tick labels — inline variant sits above each gridline at the
+   * chart-area left edge (no left gutter). Used by line/area y-axes.
+   * --------------------------------------------------------------------------- */
 
-.oc-axis-tick-inline {
-  font-size: 11px;
-  font-weight: 400;
-  fill: var(--oc-text-muted);
-}
+  .oc-axis-tick-inline {
+    font-size: 11px;
+    font-weight: 400;
+    fill: var(--oc-text-muted);
+  }
 
-/* ---------------------------------------------------------------------------
- * Endpoint labels (right-side per-series column for line/area charts)
- *
- * Swatch idiom: a thicker colored stroke segment with an optional thinner
- * lighter strip below. Mirrors the refreshed traditional legend swatch so a
- * single chart never shows two swatch idioms (mock-2 alignment). Per-series
- * color is stamped inline by the renderer; CSS tokens here cover the muted
- * value text and the leader line so theme overrides flow through naturally.
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Endpoint labels (right-side per-series column for line/area charts)
+   *
+   * Swatch idiom: a thicker colored stroke segment with an optional thinner
+   * lighter strip below. Mirrors the refreshed traditional legend swatch so a
+   * single chart never shows two swatch idioms (mock-2 alignment). Per-series
+   * color is stamped inline by the renderer; CSS tokens here cover the muted
+   * value text and the leader line so theme overrides flow through naturally.
+   * --------------------------------------------------------------------------- */
 
-.oc-endpoint-labels {
-  font-family: var(--oc-font-family);
-}
+  .oc-endpoint-labels {
+    font-family: var(--oc-font-family);
+  }
 
-.oc-endpoint-label {
-  /* Color set inline per series; this fallback only kicks in if the renderer
-     ever omits the inline fill. */
-  fill: var(--oc-endpoint-label-color, var(--oc-text));
-}
+  .oc-endpoint-label {
+    /* Color set inline per series; this fallback only kicks in if the renderer
+       ever omits the inline fill. */
+    fill: var(--oc-endpoint-label-color, var(--oc-text));
+  }
 
-.oc-endpoint-value {
-  fill: var(--oc-endpoint-value-color, var(--oc-text-muted));
-}
+  .oc-endpoint-value {
+    fill: var(--oc-endpoint-value-color, var(--oc-text-muted));
+  }
 
-.oc-endpoint-leader {
-  stroke: var(--oc-endpoint-leader-color, currentColor);
-}
+  .oc-endpoint-leader {
+    stroke: var(--oc-endpoint-leader-color, currentColor);
+  }
 
-.oc-endpoint-marker {
-  /* Fill/stroke set inline (open-ring style: bg fill, series stroke). */
-}
+  /* .oc-endpoint-marker — fill/stroke set inline (open-ring style: bg fill, series stroke). */
+  /* .oc-endpoint-swatch — color set inline per series. */
 
-.oc-endpoint-swatch {
-  /* Color set inline per series. */
-}
+  /* ---------------------------------------------------------------------------
+   * Annotation dot + subtitle (text-annotation extensions)
+   * --------------------------------------------------------------------------- */
 
-/* ---------------------------------------------------------------------------
- * Annotation dot + subtitle (text-annotation extensions)
- * --------------------------------------------------------------------------- */
+  /* .oc-annotation-dot — fill/stroke resolved by the engine (open-ring default = bg fill, series stroke). */
 
-.oc-annotation-dot {
-  /* Fill/stroke resolved by the engine. Open-ring default = bg fill, series
-     stroke. */
-}
+  .oc-annotation-subtitle {
+    fill: var(--oc-annotation-subtitle-color, var(--oc-text-muted));
+  }
 
-.oc-annotation-subtitle {
-  fill: var(--oc-annotation-subtitle-color, var(--oc-text-muted));
-}
+  /* ---------------------------------------------------------------------------
+   * Table footer chrome
+   * --------------------------------------------------------------------------- */
 
-/* ---------------------------------------------------------------------------
- * Table footer chrome
- * --------------------------------------------------------------------------- */
+  /* Footer row: source/footer text on the left, brand watermark on the right,
+   * sharing a single baseline. gap keeps them apart if the row gets narrow. */
+  .oc-table-footer-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 16px 16px 4px;
+  }
 
-/* Footer row: source/footer text on the left, brand watermark on the right,
- * sharing a single baseline. gap keeps them apart if the row gets narrow. */
-.oc-table-footer-row {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding: 16px 16px 4px;
-}
+  /* Chrome block sits inside the flex row now, so it no longer owns the
+   * footer's top padding or horizontal inset (the row provides both). */
+  .oc-chrome-footer {
+    padding-top: 0;
+  }
 
-/* Chrome block sits inside the flex row now, so it no longer owns the
- * footer's top padding or horizontal inset (the row provides both). */
-.oc-chrome-footer {
-  padding-top: 0;
-}
-
-/* Brand watermark: pushed to the right edge (margin-left:auto holds it there
- * even when the source text is absent), never shrinks below its own text. */
-.oc-table-footer-row .oc-table-ref {
-  margin-left: auto;
-  flex-shrink: 0;
-  text-align: right;
+  /* Brand watermark: pushed to the right edge (margin-left:auto holds it there
+   * even when the source text is absent), never shrinks below its own text. */
+  .oc-table-footer-row .oc-table-ref {
+    margin-left: auto;
+    flex-shrink: 0;
+    text-align: right;
+  }
 }

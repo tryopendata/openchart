@@ -30,23 +30,23 @@ import { baseSpec, steps } from './scrollytelling-specs';
 
 export default { title: 'Charts / Scrollytelling' };
 
-/** Narrative prose. Styled off the gallery `--oc-*` tokens so it tracks the
+/** Narrative prose. Styled off the gallery `--gx-*` tokens so it tracks the
  *  theme; unstyled it falls back to the browser default serif on a dark
  *  canvas, which reads as a different site. */
 const NARRATIVE_CSS = `
 .ocs-step h3 {
-  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-family: var(--gx-font-body, system-ui, -apple-system, sans-serif);
   font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--oc-text-strong, #0f172a);
+  color: var(--gx-text-strong, #0f172a);
   margin: 0 0 0.5rem;
 }
 .ocs-step p {
-  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-family: var(--gx-font-body, system-ui, -apple-system, sans-serif);
   font-size: 1rem;
   line-height: 1.65;
-  color: var(--oc-text-muted, #64748b);
+  color: var(--gx-text-muted, #64748b);
   margin: 0;
   max-width: 34rem;
 }

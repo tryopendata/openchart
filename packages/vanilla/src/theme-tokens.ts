@@ -8,15 +8,15 @@
  */
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
-import { adaptForLightLineStroke } from '@opendata-ai/openchart-core';
+import { adaptForLightLineStroke, cssTokenDefault } from '@opendata-ai/openchart-core';
 
 export function stampThemeProperties(el: HTMLElement, theme: ResolvedTheme): void {
-  const accent = theme.colors.categorical[0] ?? '#06b6d4';
+  const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
   const bg =
     theme.colors.background === 'transparent'
       ? theme.isDark
-        ? '#09090b'
-        : '#ffffff'
+        ? cssTokenDefault('--oc-bg', 'dark')
+        : cssTokenDefault('--oc-bg', 'light')
       : theme.colors.background;
 
   const props: [string, string][] = [

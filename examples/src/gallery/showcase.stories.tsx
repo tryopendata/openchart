@@ -239,7 +239,7 @@ const keyboardSpec: ChartSpec = {
 
 function KeyboardDemo() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 460 }}>
         <Chart spec={keyboardSpec} />
       </div>
@@ -248,16 +248,16 @@ function KeyboardDemo() {
           display: 'flex',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-3)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
         }}
       >
-        <span style={{ color: 'var(--oc-text-muted)' }}>Try it:</span>
+        <span style={{ color: 'var(--gx-text-muted)' }}>Try it:</span>
         <span>
           <kbd>Tab</kbd> to focus the chart
         </span>

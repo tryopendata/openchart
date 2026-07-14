@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import { copyFileSync, mkdirSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 
 export default defineConfig({
@@ -22,5 +22,6 @@ export default defineConfig({
     const dest = resolve('dist/styles.css');
     mkdirSync(dirname(dest), { recursive: true });
     copyFileSync(src, dest);
+    if (existsSync(`${src}.map`)) copyFileSync(`${src}.map`, `${dest}.map`);
   },
 });

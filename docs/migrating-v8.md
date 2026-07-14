@@ -554,6 +554,118 @@ off the data, say what you actually meant with `anchor` instead of a magic offse
 
 ---
 
+## 13. Removed CSS custom properties
+
+**What changed:** The following `--oc-*` CSS custom properties were removed from
+the stylesheet:
+
+- `--oc-space-1` (was `4px`)
+- `--oc-space-3` (was `12px`)
+- `--oc-space-6` (was `24px`)
+- `--oc-space-8` (was `32px`)
+- `--oc-text-subtle` (was `#a1a1aa` light, `#71717a` dark)
+
+These were defined in the stylesheet but never consumed by any `var()` in
+openchart's own CSS. `--oc-space-2` and `--oc-space-4` are kept (they are
+stamped at mount time from the theme spacing config). If your app reads these
+removed properties via `getComputedStyle()` or `var()`, replace with the literal
+values shown above.
+
+**New tokens added:**
+
+- `--oc-focus-ring: rgba(59, 130, 246, 0.1)` — focus ring shadow color
+- `--oc-focus-ring-strong: rgba(59, 130, 246, 0.25)` — stronger focus ring
+  (e.g. graph search input)
+- `--oc-editable-hover: rgba(79, 70, 229, 0.35)` — edit-mode hover outline
+
+These are intentionally static (no dark-mode override) to match v7 rendering.
+
+---
+
+## 14. Stylesheet uses cascade layers (`oc.*`)
+
+**What changed:** All openchart CSS rules are now wrapped in
+[cascade layers](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer),
+organized as sub-layers of a single `oc` parent:
+
+```
+oc.tokens → oc.base → oc.components → oc.animation → oc.reduced-motion
+```
+
+**Why this matters:** Un-layered CSS always beats layered CSS regardless of
+specificity. If your app has un-layered global resets or normalizers, they will
+now override openchart styles where they previously lost on specificity.
+
+**Most common breakage:** Tailwind v3 preflight (or any un-layered global reset)
+includes rules like:
+
+```css
+button { background-color: transparent; border: 0; }
+svg { display: block; }
+```
+
+These previously lost to openchart selectors like `.oc-table-pagination button`
+(specificity `0,1,1` vs `0,0,1`). With layers, the un-layered preflight now
+wins and strips table pagination button styling.
+
+**Fix:** Wrap your reset/normalize in a layer declared before `oc`:
+
+```css
+@layer reset, oc;
+@layer reset { /* your global reset rules here */ }
+```
+
+Tailwind v4+ already layers preflight and needs no change.
+
+**Reduced-motion broadened:** All stylesheet-driven animations and transitions
+inside openchart roots are now disabled under `prefers-reduced-motion: reduce`.
+Previously only a curated list was covered. Inline-style transitions (e.g. data
+update crossfades) are unaffected. This is an intentional accessibility
+improvement.
+
+---
+
+## 15. Line charts default to `scale.zero: false`
+
+**What changed:** Line charts now default to `scale.zero: false` on the
+quantitative y-axis, so the domain fits the data range instead of anchoring
+at zero. This produces tighter, more readable line charts with less dead
+space, matching standard editorial practice.
+
+**Who's affected:** Any line chart spec that does not explicitly set
+`encoding.y.scale.zero`. The chart will render the same data but the y-axis
+range will be tighter, which changes the visual shape of the line.
+
+**No console warning.** This is a silent behavior change.
+
+**Search for:** Specs where `mark` is `'line'` and `encoding.y` has no
+`scale.zero` set.
+
+**Fix:** Add `scale: { zero: true }` to the y encoding to restore the v7
+behavior:
+
+```jsonc
+// Before (v7: y-axis anchored at zero)
+{
+  "mark": "line",
+  "encoding": {
+    "x": { "field": "date", "type": "temporal" },
+    "y": { "field": "price", "type": "quantitative" }
+  }
+}
+
+// After (explicit zero-anchored y-axis, same as v7)
+{
+  "mark": "line",
+  "encoding": {
+    "x": { "field": "date", "type": "temporal" },
+    "y": { "field": "price", "type": "quantitative", "scale": { "zero": true } }
+  }
+}
+```
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
@@ -568,3 +680,7 @@ at compile time with the exact fix. Two items have no runtime warning:
   them by looking at the charts. If you keep screenshot baselines, expect the
   annotation redesign (section 11) to diff every chart that carries a text
   annotation.
+- **CSS layers (section 14):** if you use Tailwind v3 or any un-layered
+  global reset, test table pagination buttons and search inputs first.
+- **Line chart zero (section 15):** silent behavior change. Audit line chart
+  specs manually; y-axis domains will be tighter.

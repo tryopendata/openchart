@@ -9,6 +9,8 @@
 import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
 import { BRAND_FONT_SIZE } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
+import { stampAnimationVars } from './animation-vars';
+import { applySrOnlyStyles } from './dom-helpers';
 import { renderCell } from './renderers/table-cells';
 
 /** Options for renderTable(). */
@@ -16,12 +18,6 @@ export interface TableRenderOptions {
   /** Whether to apply entrance animation on this render. */
   animate?: boolean;
 }
-
-/** CSS easing preset map for animation custom properties. */
-const EASE_VAR_MAP: Record<string, string> = {
-  smooth: 'var(--oc-ease-smooth)',
-  snappy: 'var(--oc-ease-snappy)',
-};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -338,15 +334,7 @@ export function renderTable(
     // the external stylesheet, e.g. CDN / esm.sh usage)
     const caption = document.createElement('caption');
     caption.className = 'oc-sr-only';
-    caption.style.position = 'absolute';
-    caption.style.width = '1px';
-    caption.style.height = '1px';
-    caption.style.padding = '0';
-    caption.style.margin = '-1px';
-    caption.style.overflow = 'hidden';
-    caption.style.clipPath = 'inset(50%)';
-    caption.style.whiteSpace = 'nowrap';
-    caption.style.borderWidth = '0';
+    applySrOnlyStyles(caption);
     caption.textContent = layout.a11y.summary;
     table.appendChild(caption);
 
@@ -380,15 +368,7 @@ export function renderTable(
   // Live region for screen reader announcements (sort changes, search results)
   const liveRegion = document.createElement('div');
   liveRegion.className = 'oc-table-live-region oc-sr-only';
-  liveRegion.style.position = 'absolute';
-  liveRegion.style.width = '1px';
-  liveRegion.style.height = '1px';
-  liveRegion.style.padding = '0';
-  liveRegion.style.margin = '-1px';
-  liveRegion.style.overflow = 'hidden';
-  liveRegion.style.clipPath = 'inset(50%)';
-  liveRegion.style.whiteSpace = 'nowrap';
-  liveRegion.style.borderWidth = '0';
+  applySrOnlyStyles(liveRegion);
   liveRegion.setAttribute('aria-live', 'polite');
   liveRegion.setAttribute('aria-atomic', 'true');
   liveRegion.setAttribute('role', 'status');
@@ -421,10 +401,11 @@ export function renderTable(
     const enterPhase = layout.animation.enter;
     const rowCount = layout.rows.length;
     const stagger = clampStaggerDelay(enterPhase.staggerDelay, rowCount);
-    const s = wrapper.style;
-    s.setProperty('--oc-animation-duration', `${enterPhase.duration}ms`);
-    s.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    s.setProperty('--oc-animation-ease', EASE_VAR_MAP[enterPhase.ease] || EASE_VAR_MAP.smooth);
+    stampAnimationVars(wrapper, {
+      duration: enterPhase.duration,
+      stagger,
+      ease: enterPhase.ease,
+    });
     wrapper.classList.add('oc-animate');
   }
 

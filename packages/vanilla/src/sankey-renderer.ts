@@ -25,16 +25,11 @@ import {
   wrapText,
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
+import { stampAnimationVars } from './animation-vars';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const BRAND_URL = 'https://tryopendata.ai';
-
-/** CSS easing preset map for inline style custom properties. */
-const EASE_VAR_MAP: Record<string, string> = {
-  smooth: 'var(--oc-ease-smooth)',
-  snappy: 'var(--oc-ease-snappy)',
-};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -569,11 +564,12 @@ export function renderSankeySVG(
   if (enterPhase) {
     const totalMarks = layout.nodes.length + layout.links.length;
     const stagger = clampStaggerDelay(enterPhase.staggerDelay, totalMarks);
-    svg.style.setProperty('--oc-animation-duration', `${enterPhase.duration}ms`);
-    svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    svg.style.setProperty('--oc-annotation-delay', `${animation!.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[enterPhase.ease] || EASE_VAR_MAP.smooth;
-    svg.style.setProperty('--oc-animation-ease', easeVar);
+    stampAnimationVars(svg, {
+      duration: enterPhase.duration,
+      stagger,
+      annotationDelay: animation!.annotationDelay,
+      ease: enterPhase.ease,
+    });
   }
 
   // Background

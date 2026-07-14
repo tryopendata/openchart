@@ -1,130 +1,135 @@
-/* ---------------------------------------------------------------------------
- * Graph
- * --------------------------------------------------------------------------- */
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Graph
+   * --------------------------------------------------------------------------- */
 
-.oc-graph-wrapper {
-  position: relative;
-  overflow: hidden;
-  background: var(--oc-bg);
-  font-family: var(--oc-font-family);
-  width: 100%;
-  height: 100%;
-}
-
-.oc-graph-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  cursor: grab;
-}
-
-.oc-graph-canvas--dragging {
-  cursor: grabbing;
-}
-
-.oc-graph-chrome {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding: 16px 16px 8px;
-  pointer-events: none;
-
-  & .oc-title {
-    font-size: var(--oc-title-size);
-    font-weight: var(--oc-title-weight);
-    letter-spacing: var(--oc-title-tracking);
-    color: var(--oc-text);
-    margin: 0 0 4px;
-    --_stroke: color-mix(in srgb, var(--oc-bg) 80%, transparent);
-    text-shadow:
-      -2px -2px 0 var(--_stroke),
-      2px -2px 0 var(--_stroke),
-      -2px 2px 0 var(--_stroke),
-      2px 2px 0 var(--_stroke),
-      0 -2px 0 var(--_stroke),
-      0 2px 0 var(--_stroke),
-      -2px 0 0 var(--_stroke),
-      2px 0 0 var(--_stroke);
-  }
-
-  & .oc-subtitle {
-    font-size: var(--oc-subtitle-size);
-    color: var(--oc-text-secondary);
-    margin: 0;
-    --_stroke: color-mix(in srgb, var(--oc-bg) 80%, transparent);
-    text-shadow:
-      -1px -1px 0 var(--_stroke),
-      1px -1px 0 var(--_stroke),
-      -1px 1px 0 var(--_stroke),
-      1px 1px 0 var(--_stroke);
-  }
-}
-
-.oc-graph-legend {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--oc-bg);
-  border: 1px solid var(--oc-border);
-  border-radius: var(--oc-border-radius);
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--oc-text-secondary);
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.oc-graph-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 0;
-}
-
-.oc-graph-legend-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.oc-graph-search {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-
-  & input {
-    font-family: var(--oc-font-family);
-    font-size: var(--oc-body-size);
-    padding: 6px 10px;
-    border: 1px solid var(--oc-border);
-    border-radius: var(--oc-border-radius);
+  .oc-graph-wrapper {
+    position: relative;
+    overflow: hidden;
     background: var(--oc-bg);
-    color: var(--oc-text);
-    outline: none;
+    font-family: var(--oc-font-family);
+    width: 100%;
+    height: 100%;
+  }
 
-    &:focus {
-      border-color: var(--oc-focus);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  .oc-graph-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+
+  .oc-graph-canvas--dragging {
+    cursor: grabbing;
+  }
+
+  .oc-graph-chrome {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    padding: 16px 16px 8px;
+    pointer-events: none;
+
+    & .oc-title {
+      font-size: var(--oc-title-size);
+      font-weight: var(--oc-title-weight);
+      letter-spacing: var(--oc-title-tracking);
+      color: var(--oc-text);
+      margin: 0 0 4px;
+      --_stroke: color-mix(in srgb, var(--oc-bg) 80%, transparent);
+      text-shadow:
+        -2px -2px 0 var(--_stroke),
+        2px -2px 0 var(--_stroke),
+        -2px 2px 0 var(--_stroke),
+        2px 2px 0 var(--_stroke),
+        0 -2px 0 var(--_stroke),
+        0 2px 0 var(--_stroke),
+        -2px 0 0 var(--_stroke),
+        2px 0 0 var(--_stroke);
+    }
+
+    & .oc-subtitle {
+      font-size: var(--oc-subtitle-size);
+      color: var(--oc-text-secondary);
+      margin: 0;
+      --_stroke: color-mix(in srgb, var(--oc-bg) 80%, transparent);
+      text-shadow:
+        -1px -1px 0 var(--_stroke),
+        1px -1px 0 var(--_stroke),
+        -1px 1px 0 var(--_stroke),
+        1px 1px 0 var(--_stroke);
     }
   }
-}
 
-/* Dark mode graph overrides (darker bg for canvas-based rendering) */
-.oc-dark .oc-graph-wrapper,
-.oc-graph-wrapper.oc-dark {
-  --oc-bg: #0d1117;
-}
+  .oc-graph-legend {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--oc-bg);
+    border: 1px solid var(--oc-border);
+    border-radius: var(--oc-border-radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--oc-text-secondary);
+    max-height: 200px;
+    overflow-y: auto;
+  }
 
-.oc-dark .oc-graph-legend,
-.oc-dark.oc-graph-wrapper .oc-graph-legend {
-  background: rgba(13, 17, 23, 0.85);
-  border-color: rgba(255, 255, 255, 0.1);
-}
+  .oc-graph-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+  }
 
-.oc-dark .oc-graph-search input {
-  background: rgba(13, 17, 23, 0.85);
-  border-color: rgba(255, 255, 255, 0.1);
+  .oc-graph-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .oc-graph-search {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+
+    & input {
+      font-family: var(--oc-font-family);
+      font-size: var(--oc-body-size);
+      padding: 6px 10px;
+      border: 1px solid var(--oc-border);
+      border-radius: var(--oc-border-radius);
+      background: var(--oc-bg);
+      color: var(--oc-text);
+      outline: none;
+
+      &:focus {
+        border-color: var(--oc-focus);
+        box-shadow: 0 0 0 2px var(--oc-focus-ring-strong);
+      }
+    }
+  }
+
+  /* Dark mode graph overrides (darker bg for canvas-based rendering) */
+  .oc-dark .oc-graph-wrapper,
+  .oc-graph-wrapper.oc-dark {
+    /* GitHub-dark canvas background, intentionally not a token */
+    --oc-bg: #0d1117;
+  }
+
+  /*
+   * graph-mount.ts stamps .oc-dark on both .oc-graph-wrapper and
+   * .oc-graph-container simultaneously, so the self-variant
+   * (.oc-dark.oc-graph-wrapper) and descendant variant
+   * (.oc-dark .oc-graph-legend) resolve identically.
+   */
+  .oc-dark .oc-graph-legend,
+  .oc-dark.oc-graph-wrapper .oc-graph-legend,
+  .oc-dark .oc-graph-search input {
+    background: rgba(13, 17, 23, 0.85);
+    border-color: var(--oc-border);
+  }
 }

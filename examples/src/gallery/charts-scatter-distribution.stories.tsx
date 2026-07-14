@@ -614,7 +614,7 @@ function InteractiveScatter() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 460 }}>
         <Chart
           spec={interactiveSpec}
@@ -626,26 +626,26 @@ function InteractiveScatter() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-3)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
           fontFamily:
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-muted)' }}>hovered</span>
+        <span style={{ color: 'var(--gx-text-muted)' }}>hovered</span>
         {hovered ? (
-          <span style={{ color: 'var(--oc-text)' }}>
+          <span style={{ color: 'var(--gx-text)' }}>
             {hovered.country} — {hovered.co2}t CO2/person, {hovered.renewables}% renewable
           </span>
         ) : (
           <span>move over a bubble</span>
         )}
-        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-muted)' }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--gx-text-muted)' }}>
           {hovered ? hovered.continent : ''}
         </span>
       </div>

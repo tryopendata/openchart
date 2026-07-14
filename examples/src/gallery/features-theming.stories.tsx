@@ -24,7 +24,7 @@ import { Demo, GalleryPage, Section } from '../components';
 import { programmingLanguages, usInflation } from '../data';
 
 // ---------------------------------------------------------------------------
-// Layout styles — inline so this page adds no shared CSS. The --oc-* tokens
+// Layout styles — inline so this page adds no shared CSS. The --gx-* tokens
 // resolve because these nodes live under the GalleryPage [data-oc-mode] root
 // (which also crosses into the width-addon iframe; constraint C3).
 // ---------------------------------------------------------------------------
@@ -32,17 +32,17 @@ import { programmingLanguages, usInflation } from '../data';
 const grid = (min: string): CSSProperties => ({
   display: 'grid',
   gridTemplateColumns: `repeat(auto-fill, minmax(${min}, 1fr))`,
-  gap: 'var(--oc-space-5)',
+  gap: 'var(--gx-space-5)',
 });
 
 const cellStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--oc-space-3)',
+  gap: 'var(--gx-space-3)',
   margin: 0,
-  border: '1px solid var(--oc-border)',
-  borderRadius: 'var(--oc-radius-card)',
-  background: 'var(--oc-surface)',
+  border: '1px solid var(--gx-border)',
+  borderRadius: 'var(--gx-radius-card)',
+  background: 'var(--gx-surface)',
   overflow: 'hidden',
 };
 
@@ -50,28 +50,28 @@ const capStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 2,
-  padding: 'var(--oc-space-4) var(--oc-space-4) 0',
+  padding: 'var(--gx-space-4) var(--gx-space-4) 0',
 };
 
 const nameStyle: CSSProperties = {
-  fontFamily: 'var(--oc-font-mono)',
-  fontSize: 'var(--oc-type-caption)',
+  fontFamily: 'var(--gx-font-mono)',
+  fontSize: 'var(--gx-type-caption)',
   fontWeight: 600,
-  color: 'var(--oc-text-strong)',
+  color: 'var(--gx-text-strong)',
 };
 
 const noteStyle: CSSProperties = {
-  fontSize: 'var(--oc-type-caption)',
+  fontSize: 'var(--gx-type-caption)',
   lineHeight: 1.45,
-  color: 'var(--oc-text-muted)',
+  color: 'var(--gx-text-muted)',
 };
 
-const vizStyle: CSSProperties = { padding: '0 var(--oc-space-4) var(--oc-space-4)' };
+const vizStyle: CSSProperties = { padding: '0 var(--gx-space-4) var(--gx-space-4)' };
 
 const tagStyle: CSSProperties = {
   fontSize: '0.6875rem',
   fontWeight: 600,
-  color: 'var(--oc-text-muted)',
+  color: 'var(--gx-text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
 };
@@ -259,8 +259,8 @@ function NamedThemeGrid() {
                 display: 'flex',
                 alignItems: 'baseline',
                 justifyContent: 'space-between',
-                gap: 'var(--oc-space-2)',
-                padding: 'var(--oc-space-4) var(--oc-space-4) 0',
+                gap: 'var(--gx-space-2)',
+                padding: 'var(--gx-space-4) var(--gx-space-4) 0',
               }}
             >
               <span style={nameStyle}>{name}</span>

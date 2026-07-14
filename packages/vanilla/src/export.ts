@@ -286,11 +286,12 @@ export async function exportSVGWithFonts(
   svgElement: SVGElement,
   options?: SVGExportOptions,
 ): Promise<string> {
+  const clone = svgElement.cloneNode(true) as SVGElement;
   const shouldEmbed = options?.embedFonts ?? true;
   if (shouldEmbed) {
-    await embedFonts(svgElement);
+    await embedFonts(clone);
   }
-  return exportSVG(svgElement);
+  return exportSVG(clone);
 }
 
 // ---------------------------------------------------------------------------
@@ -310,18 +311,18 @@ export async function exportSVGWithFonts(
 export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptions): Promise<Blob> {
   const dpi = options?.dpi ?? 2;
   const shouldEmbed = options?.embedFonts ?? true;
+  const { width, height } = getSVGDimensions(svgElement);
+  const clone = svgElement.cloneNode(true) as SVGElement;
 
   if (shouldEmbed) {
-    await embedFonts(svgElement);
+    await embedFonts(clone);
   }
 
-  const { width, height } = getSVGDimensions(svgElement);
+  const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
 
-  // Ensure the SVG has explicit width/height attributes so that when loaded
-  // as a standalone Image blob the browser knows the intrinsic size. Without
-  // these, browsers may default to 300x150 or use heuristics that break at
-  // non-1x DPI scaling.
-  const svgString = ensureSVGDimensions(exportSVG(svgElement), width, height);
+  if (!width || !height) {
+    throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = width * dpi;
@@ -354,7 +355,11 @@ export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptio
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load SVG as image'));
+      reject(
+        new Error(
+          `Failed to load SVG as image (width=${width}, height=${height}, svgLength=${svgString.length})`,
+        ),
+      );
     };
 
     img.src = url;
@@ -376,13 +381,19 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
   const dpi = options?.dpi ?? 2;
   const quality = options?.quality ?? 0.92;
   const shouldEmbed = options?.embedFonts ?? true;
+  const { width, height } = getSVGDimensions(svgElement);
+  const backgroundColor = getSVGBackgroundColor(svgElement);
+  const clone = svgElement.cloneNode(true) as SVGElement;
 
   if (shouldEmbed) {
-    await embedFonts(svgElement);
+    await embedFonts(clone);
   }
 
-  const { width, height } = getSVGDimensions(svgElement);
-  const svgString = ensureSVGDimensions(exportSVG(svgElement), width, height);
+  const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
+
+  if (!width || !height) {
+    throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = width * dpi;
@@ -393,8 +404,7 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
     throw new Error('Canvas 2D context not available');
   }
 
-  // Fill with the chart's actual background color (not hardcoded white)
-  ctx.fillStyle = getSVGBackgroundColor(svgElement);
+  ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.scale(dpi, dpi);
@@ -423,7 +433,11 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load SVG as image'));
+      reject(
+        new Error(
+          `Failed to load SVG as image (width=${width}, height=${height}, svgLength=${svgString.length})`,
+        ),
+      );
     };
 
     img.src = url;

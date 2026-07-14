@@ -7,6 +7,7 @@
 
 import type { BarListLayout, BarListRowMark, ResolvedAnimation } from '@opendata-ai/openchart-core';
 import { textAscent } from '@opendata-ai/openchart-core';
+import { stampAnimationVars } from './animation-vars';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -252,8 +253,7 @@ export function renderBarListSVG(
   svg.setAttribute('class', classes);
 
   if (animate && animation?.enter) {
-    svg.style.setProperty('--oc-animation-duration', `${animation.enter.duration}ms`);
-    svg.style.setProperty('--oc-animation-stagger', '40ms');
+    stampAnimationVars(svg, { duration: animation.enter.duration, stagger: 40 });
   }
 
   renderChrome(svg, layout);

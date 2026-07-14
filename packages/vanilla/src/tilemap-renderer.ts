@@ -11,6 +11,7 @@ import type {
   TileMapLayout,
   TileMapTileMark,
 } from '@opendata-ai/openchart-core';
+import { stampAnimationVars } from './animation-vars';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { nextSvgId } from './svg-ids';
@@ -18,11 +19,6 @@ import { nextSvgId } from './svg-ids';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const BRAND_URL = 'https://tryopendata.ai';
-
-const EASE_VAR_MAP: Record<string, string> = {
-  smooth: 'var(--oc-ease-smooth)',
-  snappy: 'var(--oc-ease-snappy)',
-};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -366,11 +362,12 @@ export function renderTileMapSVG(
   if (animate && animation?.enter) {
     // Target ~1s total: stagger window ~800ms + per-tile pop ~200ms
     const stagger = Math.max(5, Math.round(800 / Math.max(tiles.length, 1)));
-    svg.style.setProperty('--oc-animation-duration', `${animation.enter.duration}ms`);
-    svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[animation.enter.ease] || EASE_VAR_MAP.smooth;
-    svg.style.setProperty('--oc-animation-ease', easeVar);
+    stampAnimationVars(svg, {
+      duration: animation.enter.duration,
+      stagger,
+      annotationDelay: animation.annotationDelay,
+      ease: animation.enter.ease,
+    });
   }
 
   // Empty defs element (will be filled by gradient legend)

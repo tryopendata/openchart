@@ -130,7 +130,7 @@ function InteractiveMap() {
   } | null>(null);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 500 }}>
         <GeoMap spec={interactiveSpec} onMarkHover={(feature) => setHovered(feature)} />
       </div>
@@ -138,20 +138,20 @@ function InteractiveMap() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-3)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
           fontFamily:
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-muted)' }}>hovered</span>
+        <span style={{ color: 'var(--gx-text-muted)' }}>hovered</span>
         {hovered ? (
-          <span style={{ color: 'var(--oc-text)' }}>
+          <span style={{ color: 'var(--gx-text)' }}>
             {hovered.name ?? hovered.id}
             {hovered.data?.rate != null ? ` — ${hovered.data.rate}%` : ''}
           </span>
@@ -168,13 +168,13 @@ function InteractiveMap() {
 // ---------------------------------------------------------------------------
 
 const btnStyle: React.CSSProperties = {
-  padding: 'var(--oc-space-2) var(--oc-space-4)',
-  borderRadius: 'var(--oc-radius-control)',
-  border: '1px solid var(--oc-border)',
-  background: 'var(--oc-surface-raised)',
-  color: 'var(--oc-text)',
+  padding: 'var(--gx-space-2) var(--gx-space-4)',
+  borderRadius: 'var(--gx-radius-control)',
+  border: '1px solid var(--gx-border)',
+  background: 'var(--gx-surface-raised)',
+  color: 'var(--gx-text)',
   cursor: 'pointer',
-  fontSize: 'var(--oc-type-caption)',
+  fontSize: 'var(--gx-type-caption)',
   fontFamily: 'inherit',
 };
 
@@ -185,7 +185,7 @@ const btnStyle: React.CSSProperties = {
 function EntranceAnimationDemo() {
   const [key, setKey] = useState(0);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 500 }}>
         <GeoMap key={key} spec={usStateSpec} />
       </div>
@@ -211,7 +211,7 @@ function RecolorDemo() {
     },
   };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 500 }}>
         <GeoMap spec={spec} />
       </div>
@@ -229,11 +229,11 @@ function RecolorDemo() {
 function ZoomDemo() {
   const mapRef = useRef<MapHandle>(null);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 500 }}>
         <GeoMap ref={mapRef} spec={{ ...usStateSpec, animation: false }} />
       </div>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => mapRef.current?.instance?.zoomTo('06')}
@@ -266,18 +266,18 @@ function ZoomDemo() {
 
 const NARRATIVE_CSS = `
 .ocs-map-step h3 {
-  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-family: var(--gx-font-body, system-ui, -apple-system, sans-serif);
   font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--oc-text-strong, #0f172a);
+  color: var(--gx-text-strong, #0f172a);
   margin: 0 0 0.5rem;
 }
 .ocs-map-step p {
-  font-family: var(--oc-font-body, system-ui, -apple-system, sans-serif);
+  font-family: var(--gx-font-body, system-ui, -apple-system, sans-serif);
   font-size: 1rem;
   line-height: 1.65;
-  color: var(--oc-text-muted, #64748b);
+  color: var(--gx-text-muted, #64748b);
   margin: 0;
   max-width: 34rem;
 }

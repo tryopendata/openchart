@@ -71,10 +71,10 @@ function DrawThenRevealDemo() {
       </div>
       <p
         style={{
-          fontFamily: 'var(--oc-font-body, system-ui, sans-serif)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
-          marginTop: 'var(--oc-space-3)',
+          fontFamily: 'var(--gx-font-body, system-ui, sans-serif)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
+          marginTop: 'var(--gx-space-3)',
         }}
       >
         {summary}

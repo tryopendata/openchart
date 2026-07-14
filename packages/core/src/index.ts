@@ -206,3 +206,10 @@ export {
 // ---------------------------------------------------------------------------
 
 export { deepMergeSpec } from './helpers/deep-merge';
+
+// ---------------------------------------------------------------------------
+// CSS token definitions (single source of truth for tokens.css / dark.css)
+// ---------------------------------------------------------------------------
+
+export type { CssTokenDef } from './styles/token-definitions';
+export { CSS_TOKEN_ROOT_SELECTORS, CSS_TOKENS, cssTokenDefault } from './styles/token-definitions';

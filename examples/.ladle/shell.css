@@ -15,80 +15,80 @@
  * baselines depend on it).
  */
 
-@import '../src/tokens.css';
+@import "../src/tokens.css";
 
 :root,
-:root[data-theme='light'] {
+:root[data-theme="light"] {
   /* Neutral ramp (zinc) */
-  --oc-neutral-0: #fafafa;
-  --oc-neutral-50: #ffffff;
-  --oc-neutral-100: #f4f4f5;
-  --oc-neutral-200: #d4d4d8;
-  --oc-neutral-300: #a1a1aa;
-  --oc-neutral-400: #71717a;
-  --oc-neutral-500: #71717a;
-  --oc-neutral-600: #52525b;
-  --oc-neutral-700: #3f3f46;
-  --oc-neutral-800: #18181b;
-  --oc-neutral-900: #09090b;
+  --gx-neutral-0: #fafafa;
+  --gx-neutral-50: #ffffff;
+  --gx-neutral-100: #f4f4f5;
+  --gx-neutral-200: #d4d4d8;
+  --gx-neutral-300: #a1a1aa;
+  --gx-neutral-400: #71717a;
+  --gx-neutral-500: #71717a;
+  --gx-neutral-600: #52525b;
+  --gx-neutral-700: #3f3f46;
+  --gx-neutral-800: #18181b;
+  --gx-neutral-900: #09090b;
 
-  --oc-surface: var(--oc-neutral-0);
-  --oc-surface-raised: var(--oc-neutral-50);
-  --oc-border: var(--oc-neutral-200);
-  --oc-border-strong: var(--oc-neutral-300);
-  --oc-text: var(--oc-neutral-800);
-  --oc-text-strong: var(--oc-neutral-900);
-  --oc-text-muted: var(--oc-neutral-500);
-  --oc-text-faint: var(--oc-neutral-400);
+  --gx-surface: var(--gx-neutral-0);
+  --gx-surface-raised: var(--gx-neutral-50);
+  --gx-border: var(--gx-neutral-200);
+  --gx-border-strong: var(--gx-neutral-300);
+  --gx-text: var(--gx-neutral-800);
+  --gx-text-strong: var(--gx-neutral-900);
+  --gx-text-muted: var(--gx-neutral-500);
+  --gx-text-faint: var(--gx-neutral-400);
 
   /* Accent (cyan) */
-  --oc-accent: #06b6d4;
-  --oc-accent-strong: #0891b2;
-  --oc-accent-soft: rgba(6, 182, 212, 0.1);
-  --oc-accent-text: #0e7490;
+  --gx-accent: #06b6d4;
+  --gx-accent-strong: #0891b2;
+  --gx-accent-soft: rgba(6, 182, 212, 0.1);
+  --gx-accent-text: #0e7490;
 
   /* Ladle chrome vars (C2: never --ladle-main-padding) */
-  --ladle-bg-color-primary: var(--oc-neutral-0);
-  --ladle-bg-color-secondary: var(--oc-neutral-50);
-  --ladle-color-primary: var(--oc-neutral-800);
-  --ladle-color-accent: var(--oc-accent-text);
-  --ladle-color-hover: var(--oc-accent-text);
+  --ladle-bg-color-primary: var(--gx-neutral-0);
+  --ladle-bg-color-secondary: var(--gx-neutral-50);
+  --ladle-color-primary: var(--gx-neutral-800);
+  --ladle-color-accent: var(--gx-accent-text);
+  --ladle-color-hover: var(--gx-accent-text);
 }
 
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   /* Neutral ramp (zinc-dark) */
-  --oc-neutral-0: #0f1011;
-  --oc-neutral-50: #191a1b;
-  --oc-neutral-100: #1e1f20;
-  --oc-neutral-200: #28282c;
-  --oc-neutral-300: #34343a;
-  --oc-neutral-400: #62666d;
-  --oc-neutral-500: #8a8f98;
-  --oc-neutral-600: #a1a1aa;
-  --oc-neutral-700: #d0d6e0;
-  --oc-neutral-800: #d0d6e0;
-  --oc-neutral-900: #f7f8f8;
+  --gx-neutral-0: #0f1011;
+  --gx-neutral-50: #191a1b;
+  --gx-neutral-100: #1e1f20;
+  --gx-neutral-200: #28282c;
+  --gx-neutral-300: #34343a;
+  --gx-neutral-400: #62666d;
+  --gx-neutral-500: #8a8f98;
+  --gx-neutral-600: #a1a1aa;
+  --gx-neutral-700: #d0d6e0;
+  --gx-neutral-800: #d0d6e0;
+  --gx-neutral-900: #f7f8f8;
 
-  --oc-surface: var(--oc-neutral-0);
-  --oc-surface-raised: var(--oc-neutral-50);
-  --oc-border: rgba(255, 255, 255, 0.05);
-  --oc-border-strong: rgba(255, 255, 255, 0.08);
-  --oc-text: var(--oc-neutral-800);
-  --oc-text-strong: var(--oc-neutral-900);
-  --oc-text-muted: var(--oc-neutral-500);
-  --oc-text-faint: var(--oc-neutral-400);
+  --gx-surface: var(--gx-neutral-0);
+  --gx-surface-raised: var(--gx-neutral-50);
+  --gx-border: rgba(255, 255, 255, 0.05);
+  --gx-border-strong: rgba(255, 255, 255, 0.08);
+  --gx-text: var(--gx-neutral-800);
+  --gx-text-strong: var(--gx-neutral-900);
+  --gx-text-muted: var(--gx-neutral-500);
+  --gx-text-faint: var(--gx-neutral-400);
 
   /* Accent (cyan, consistent with light) */
-  --oc-accent: #06b6d4;
-  --oc-accent-strong: #0891b2;
-  --oc-accent-soft: rgba(6, 182, 212, 0.12);
-  --oc-accent-text: #67e8f9;
+  --gx-accent: #06b6d4;
+  --gx-accent-strong: #0891b2;
+  --gx-accent-soft: rgba(6, 182, 212, 0.12);
+  --gx-accent-text: #67e8f9;
 
-  --ladle-bg-color-primary: var(--oc-neutral-0);
-  --ladle-bg-color-secondary: var(--oc-neutral-50);
-  --ladle-color-primary: var(--oc-neutral-800);
-  --ladle-color-accent: var(--oc-accent-text);
-  --ladle-color-hover: var(--oc-accent-text);
+  --ladle-bg-color-primary: var(--gx-neutral-0);
+  --ladle-bg-color-secondary: var(--gx-neutral-50);
+  --ladle-color-primary: var(--gx-neutral-800);
+  --ladle-color-accent: var(--gx-accent-text);
+  --ladle-color-hover: var(--gx-accent-text);
 }
 
 /* ---------------------------------------------------------------------------
@@ -104,31 +104,31 @@
  * Sidebar
  * ------------------------------------------------------------------------- */
 .ladle-aside {
-  font-family: var(--oc-font-body);
+  font-family: var(--gx-font-body);
   font-size: 13px;
   font-feature-settings: "cv01", "ss03";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  border-left: 1px solid var(--oc-border);
-  background-color: var(--oc-surface-raised);
+  border-left: 1px solid var(--gx-border);
+  background-color: var(--gx-surface-raised);
   padding: 20px 14px 20px 12px;
   overflow-x: hidden;
   scrollbar-width: thin;
 }
 
-:root[data-theme='dark'] .ladle-aside {
+:root[data-theme="dark"] .ladle-aside {
   background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* Search field: a real input, not an underline */
 .ladle-aside input {
-  font-family: var(--oc-font-body);
+  font-family: var(--gx-font-body);
   font-size: 12.5px;
-  border: 1px solid var(--oc-border);
-  border-radius: var(--oc-radius-control);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-control);
   padding: 8px 12px;
-  background: var(--oc-surface);
-  color: var(--oc-text);
+  background: var(--gx-surface);
+  color: var(--gx-text);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -136,13 +136,13 @@
 }
 
 .ladle-aside input::placeholder {
-  color: var(--oc-text-faint);
+  color: var(--gx-text-faint);
   font-weight: 400;
 }
 
 .ladle-aside input:focus {
-  border-color: var(--oc-accent);
-  box-shadow: 0 0 0 3px var(--oc-accent-soft);
+  border-color: var(--gx-accent);
+  box-shadow: 0 0 0 3px var(--gx-accent-soft);
   outline: none;
 }
 
@@ -155,30 +155,30 @@
 .ladle-aside li {
   margin: 1px 0;
   font-size: 13px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
 }
 
 .ladle-aside li > div {
   padding: 5px 8px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
 }
 
 .ladle-aside li > div:hover {
-  background: var(--oc-neutral-100);
+  background: var(--gx-neutral-100);
 }
 
 /* Expanded group label */
 .ladle-aside li[aria-expanded] > div > div:last-child {
   font-weight: 510;
-  color: var(--oc-text-strong);
+  color: var(--gx-text-strong);
   letter-spacing: -0.01em;
 }
 
-.ladle-aside li[aria-expanded='false'] svg {
+.ladle-aside li[aria-expanded="false"] svg {
   opacity: 0.4;
 }
 
-.ladle-aside li[aria-expanded='true'] svg {
+.ladle-aside li[aria-expanded="true"] svg {
   opacity: 0.6;
 }
 
@@ -190,9 +190,9 @@
 .ladle-aside .ladle-linkable a {
   font-size: 13px;
   font-weight: 400;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   padding: 4px 8px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
   display: block;
   transition:
     background 0.1s,
@@ -200,17 +200,17 @@
 }
 
 .ladle-aside .ladle-linkable a:hover {
-  background: var(--oc-accent-soft);
-  color: var(--oc-accent-text);
+  background: var(--gx-accent-soft);
+  color: var(--gx-accent-text);
 }
 
 /* Active story */
 .ladle-aside .ladle-active {
-  background: var(--oc-accent-soft);
+  background: var(--gx-accent-soft);
 }
 
 .ladle-aside .ladle-active a {
-  color: var(--oc-accent-text);
+  color: var(--gx-accent-text);
   font-weight: 510;
 }
 
@@ -222,16 +222,16 @@
 
 .ladle-aside .ladle-active svg {
   opacity: 0.6;
-  color: var(--oc-accent-text);
+  color: var(--gx-accent-text);
 }
 
 /* ---------------------------------------------------------------------------
  * Bottom addons bar
  * ------------------------------------------------------------------------- */
 .ladle-addons {
-  font-family: var(--oc-font-body);
-  background: var(--oc-surface-raised);
-  border-top: 1px solid var(--oc-border);
+  font-family: var(--gx-font-body);
+  background: var(--gx-surface-raised);
+  border-top: 1px solid var(--gx-border);
   padding: 6px 8px;
   margin: 0;
   margin-inline: 0;
@@ -240,7 +240,7 @@
   right: 0;
 }
 
-:root[data-theme='dark'] .ladle-addons {
+:root[data-theme="dark"] .ladle-addons {
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -252,24 +252,24 @@
 .ladle-addons li {
   background: transparent;
   box-shadow: none;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
   margin: 0 1px;
   width: auto;
   height: auto;
 }
 
 .ladle-addons > ul > li > button {
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
   padding: 7px;
-  color: var(--oc-text-faint);
+  color: var(--gx-text-faint);
   transition:
     background 0.12s,
     color 0.12s;
 }
 
 .ladle-addons > ul > li > button:hover {
-  background: var(--oc-accent-soft);
-  color: var(--oc-accent-text);
+  background: var(--gx-accent-soft);
+  color: var(--gx-accent-text);
 }
 
 .ladle-addons > ul > li > button > label {
@@ -284,9 +284,9 @@
 
 /* Tooltip */
 .ladle-addon-tooltip {
-  font-family: var(--oc-font-body);
+  font-family: var(--gx-font-body);
   font-size: 11px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
   padding: 4px 8px;
   letter-spacing: -0.01em;
 }
@@ -294,7 +294,7 @@
 /* Resize handle */
 .ladle-resize-handle {
   width: 1px;
-  background: var(--oc-border);
+  background: var(--gx-border);
 }
 
 /* ---------------------------------------------------------------------------

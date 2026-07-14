@@ -16,6 +16,7 @@ import type {
   ResolvedFillPattern,
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
+import { stampAnimationVars } from './animation-vars';
 import { buildGradientDefs } from './gradient-utils';
 import { buildPatternDefs } from './pattern-utils';
 import { renderAnnotations } from './renderers/annotations';
@@ -32,12 +33,6 @@ import { nextSvgId } from './svg-ids';
 // Re-export registerMarkRenderer so external consumers can still register
 // custom mark renderers via the vanilla package entry point.
 export { registerMarkRenderer } from './renderers/marks';
-
-/** CSS easing preset map for inline style custom properties. */
-const EASE_VAR_MAP: Record<string, string> = {
-  smooth: 'var(--oc-ease-smooth)',
-  snappy: 'var(--oc-ease-snappy)',
-};
 
 /**
  * Render a compiled ChartLayout into an SVG element and append it to a container.
@@ -99,11 +94,6 @@ export function renderChartSVG(
   if (enterPhase) {
     const markCount = layout.marks.length;
     const stagger = clampStaggerDelay(enterPhase.staggerDelay, markCount);
-    svg.style.setProperty('--oc-animation-duration', `${enterPhase.duration}ms`);
-    svg.style.setProperty('--oc-animation-stagger', `${stagger}ms`);
-    svg.style.setProperty('--oc-annotation-delay', `${animation!.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[enterPhase.ease] || EASE_VAR_MAP.smooth;
-    svg.style.setProperty('--oc-animation-ease', easeVar);
 
     // Compute per-segment duration for stacked bars so the total bar animation
     // time stays consistent regardless of segment count.
@@ -117,10 +107,16 @@ export function renderChartSVG(
         }
       }
     }
-    if (maxSegments > 0) {
-      const segDuration = Math.round(enterPhase.duration / maxSegments);
-      svg.style.setProperty('--oc-stack-segment-duration', `${segDuration}ms`);
-    }
+    const stackSegmentDuration =
+      maxSegments > 0 ? Math.round(enterPhase.duration / maxSegments) : undefined;
+
+    stampAnimationVars(svg, {
+      duration: enterPhase.duration,
+      stagger,
+      annotationDelay: animation!.annotationDelay,
+      ease: enterPhase.ease,
+      stackSegmentDuration,
+    });
   }
 
   // Background. Sparkline mode skips the background rect entirely so the

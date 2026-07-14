@@ -256,7 +256,7 @@ function SearchGraph() {
   const [query, setQuery] = useState('');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 460 }}>
         <Graph ref={ref} spec={searchSpec} />
       </div>
@@ -264,12 +264,12 @@ function SearchGraph() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
+          gap: 'var(--gx-space-3)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
         }}
       >
         <input
@@ -286,11 +286,11 @@ function SearchGraph() {
             flex: 1,
             minWidth: 0,
             padding: '6px 10px',
-            border: '1px solid var(--oc-border)',
-            borderRadius: 'var(--oc-radius-control)',
-            background: 'var(--oc-surface)',
-            color: 'var(--oc-text)',
-            fontSize: 'var(--oc-type-caption)',
+            border: '1px solid var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface)',
+            color: 'var(--gx-text)',
+            fontSize: 'var(--gx-type-caption)',
           }}
         />
         <button
@@ -328,16 +328,16 @@ function ScaleGraph({ nodeCount, height }: { nodeCount: number; height: number }
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 'var(--oc-space-3)',
+            gap: 'var(--gx-space-3)',
             height: '100%',
-            border: '1px dashed var(--oc-border)',
-            borderRadius: 'var(--oc-radius-control)',
-            background: 'var(--oc-surface-raised)',
-            color: 'var(--oc-text-muted)',
+            border: '1px dashed var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface-raised)',
+            color: 'var(--gx-text-muted)',
             textAlign: 'center',
           }}
         >
-          <span style={{ fontSize: 'var(--oc-type-caption)' }}>
+          <span style={{ fontSize: 'var(--gx-type-caption)' }}>
             {nodeCount.toLocaleString()} nodes, ~{(nodeCount * 2).toLocaleString()} edges
           </span>
           <button
@@ -347,7 +347,7 @@ function ScaleGraph({ nodeCount, height }: { nodeCount: number; height: number }
           >
             Load {nodeCount.toLocaleString()}-node graph
           </button>
-          <span style={{ fontSize: 'var(--oc-type-caption)', color: 'var(--oc-text-muted)' }}>
+          <span style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
             Generated + rendered on click — nothing runs until you ask
           </span>
         </div>
@@ -370,8 +370,8 @@ function ScaleDemos() {
   const [tier, setTier] = useState<(typeof SCALE_TIERS)[number]>(1000);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
-      <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', flexWrap: 'wrap' }}>
         {SCALE_TIERS.map((n) => (
           <button
             key={n}
@@ -383,7 +383,7 @@ function ScaleDemos() {
               tier === n
                 ? // accent-text (not raw accent) for the label: raw accent as
                   // text fails WCAG AA contrast on the surface.
-                  { borderColor: 'var(--oc-accent)', color: 'var(--oc-accent-text)' }
+                  { borderColor: 'var(--gx-accent)', color: 'var(--gx-accent-text)' }
                 : undefined
             }
           >
@@ -417,7 +417,7 @@ function InteractiveGraph() {
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 460 }}>
         <Graph
           spec={interactiveSpec}
@@ -431,27 +431,27 @@ function InteractiveGraph() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-3)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
           fontFamily:
             'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
         }}
       >
-        <span style={{ color: 'var(--oc-text-muted)' }}>clicked</span>
+        <span style={{ color: 'var(--gx-text-muted)' }}>clicked</span>
         {clicked ? (
-          <span style={{ color: 'var(--oc-text)' }}>
+          <span style={{ color: 'var(--gx-text)' }}>
             {clicked.label}
             {clicked.community ? ` — ${clicked.community}` : ''}
           </span>
         ) : (
           <span>none yet</span>
         )}
-        <span style={{ marginLeft: 'auto', color: 'var(--oc-text-muted)' }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--gx-text-muted)' }}>
           hover: {hovered ?? '(none)'}
         </span>
       </div>

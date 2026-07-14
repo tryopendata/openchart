@@ -411,21 +411,21 @@ function ResizableStability() {
   const [height, setHeight] = useState(360);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 'var(--oc-space-5)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-5)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
         }}
       >
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-2)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--gx-space-2)' }}>
           Width: {width}px
           <input
             type="range"
@@ -436,7 +436,7 @@ function ResizableStability() {
             style={{ width: 160 }}
           />
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-2)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--gx-space-2)' }}>
           Height: {height}px
           <input
             type="range"
@@ -452,8 +452,8 @@ function ResizableStability() {
         style={{
           width: `min(${width}px, 100%)`,
           height,
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
           transition: 'width 0.12s ease, height 0.12s ease',
         }}
       >
@@ -521,22 +521,22 @@ function AutoThinning() {
   const [width, setWidth] = useState(760);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-4)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-4)' }}>
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
-          gap: 'var(--oc-space-4)',
-          padding: 'var(--oc-space-3) var(--oc-space-4)',
-          border: '1px solid var(--oc-border)',
-          borderRadius: 'var(--oc-radius-control)',
-          background: 'var(--oc-surface-raised)',
-          fontSize: 'var(--oc-type-caption)',
-          color: 'var(--oc-text-muted)',
+          gap: 'var(--gx-space-4)',
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
         }}
       >
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-2)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--gx-space-2)' }}>
           Width: {width}px
           <input
             type="range"
@@ -547,17 +547,17 @@ function AutoThinning() {
             style={{ width: 200 }}
           />
         </label>
-        <span style={{ color: 'var(--oc-text-muted)' }}>
+        <span style={{ color: 'var(--gx-text-muted)' }}>
           Drag narrow: inline callouts demote to numbered dots with footnotes below.
         </span>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oc-space-5)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--gx-space-5)' }}>
         <div style={{ width, flexShrink: 0 }}>
           <p
             style={{
-              margin: '0 0 var(--oc-space-2)',
-              fontSize: 'var(--oc-type-caption)',
-              color: 'var(--oc-text-muted)',
+              margin: '0 0 var(--gx-space-2)',
+              fontSize: 'var(--gx-type-caption)',
+              color: 'var(--gx-text-muted)',
             }}
           >
             autoThin on (default)
@@ -565,8 +565,8 @@ function AutoThinning() {
           <div
             style={{
               height: 340,
-              border: '1px solid var(--oc-border)',
-              borderRadius: 'var(--oc-radius-control)',
+              border: '1px solid var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
             }}
           >
             <Chart spec={thinningSpec} />
@@ -575,9 +575,9 @@ function AutoThinning() {
         <div style={{ width, flexShrink: 0 }}>
           <p
             style={{
-              margin: '0 0 var(--oc-space-2)',
-              fontSize: 'var(--oc-type-caption)',
-              color: 'var(--oc-text-muted)',
+              margin: '0 0 var(--gx-space-2)',
+              fontSize: 'var(--gx-type-caption)',
+              color: 'var(--gx-text-muted)',
             }}
           >
             autoThin off
@@ -585,8 +585,8 @@ function AutoThinning() {
           <div
             style={{
               height: 340,
-              border: '1px solid var(--oc-border)',
-              borderRadius: 'var(--oc-radius-control)',
+              border: '1px solid var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
             }}
           >
             <Chart spec={thinningDisabledSpec} />

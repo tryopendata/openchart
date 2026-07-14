@@ -1,16 +1,18 @@
-/* ---------------------------------------------------------------------------
- * Legend
- * --------------------------------------------------------------------------- */
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Legend
+   * --------------------------------------------------------------------------- */
 
-.oc-legend {
-  font-family: var(--oc-font-family);
-  font-size: var(--oc-body-size);
-}
+  .oc-legend {
+    font-family: var(--oc-font-family);
+    font-size: var(--oc-body-size);
+  }
 
-.oc-legend-entry {
-  cursor: default;
-}
+  .oc-legend-entry {
+    cursor: default;
+  }
 
-.oc-legend text {
-  fill: var(--oc-legend-text);
+  .oc-legend text {
+    fill: var(--oc-legend-text);
+  }
 }

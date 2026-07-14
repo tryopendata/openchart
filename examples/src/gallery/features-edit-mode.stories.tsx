@@ -27,7 +27,7 @@ import { GalleryPage, Section } from '../components';
 import { segmentRevenue } from '../data';
 
 // ---------------------------------------------------------------------------
-// Scoped styles. Keyed off the shared `--oc-*` tokens (defined under
+// Scoped styles. Keyed off the shared `--gx-*` tokens (defined under
 // `[data-oc-mode]` on the GalleryPage root, so they resolve in light/dark AND
 // inside the width-addon iframe). Injected once via a <style> tag rather than
 // touching the shared gallery.css that sibling pages also edit.
@@ -35,32 +35,32 @@ import { segmentRevenue } from '../data';
 
 const STUDIO_CSS = `
 .ocem-inline-code {
-  font-family: var(--oc-font-mono);
+  font-family: var(--gx-font-mono);
   font-size: 0.85em;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--oc-accent-soft);
-  color: var(--oc-accent-text);
+  background: var(--gx-accent-soft);
+  color: var(--gx-accent-text);
 }
 .ocem-studio {
-  border: 1px solid var(--oc-border);
-  border-radius: var(--oc-radius-card);
-  background: var(--oc-surface);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-card);
+  background: var(--gx-surface);
   overflow: hidden;
 }
 .ocem-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--oc-space-4);
+  gap: var(--gx-space-4);
   flex-wrap: wrap;
-  padding: var(--oc-space-3) var(--oc-space-5);
-  border-bottom: 1px solid var(--oc-border);
-  background: var(--oc-surface-raised);
+  padding: var(--gx-space-3) var(--gx-space-5);
+  border-bottom: 1px solid var(--gx-border);
+  background: var(--gx-surface-raised);
 }
 .ocem-selected {
   display: flex;
   align-items: center;
-  gap: var(--oc-space-2);
+  gap: var(--gx-space-2);
   min-width: 0;
 }
 .ocem-selected-label {
@@ -68,38 +68,38 @@ const STUDIO_CSS = `
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--oc-text-faint);
+  color: var(--gx-text-faint);
 }
 .ocem-selected-ref {
-  font-family: var(--oc-font-mono);
-  font-size: var(--oc-type-mono);
-  color: var(--oc-accent-text);
-  background: var(--oc-accent-soft);
+  font-family: var(--gx-font-mono);
+  font-size: var(--gx-type-mono);
+  color: var(--gx-accent-text);
+  background: var(--gx-accent-soft);
   padding: 2px 8px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
 }
 .ocem-selected-none {
-  font-size: var(--oc-type-caption);
-  color: var(--oc-text-faint);
+  font-size: var(--gx-type-caption);
+  color: var(--gx-text-faint);
 }
 .ocem-reset {
   margin-left: auto;
   appearance: none;
-  border: 1px solid var(--oc-border-strong);
-  background: var(--oc-surface);
-  color: var(--oc-text-muted);
-  font-family: var(--oc-font-body);
-  font-size: var(--oc-type-caption);
+  border: 1px solid var(--gx-border-strong);
+  background: var(--gx-surface);
+  color: var(--gx-text-muted);
+  font-family: var(--gx-font-body);
+  font-size: var(--gx-type-caption);
   font-weight: 500;
   padding: 5px 12px;
-  border-radius: var(--oc-radius-control);
+  border-radius: var(--gx-radius-control);
   cursor: pointer;
   transition: border-color 0.12s, color 0.12s, background 0.12s, opacity 0.12s;
 }
 .ocem-reset:not(:disabled):hover {
-  border-color: var(--oc-accent);
-  color: var(--oc-accent-text);
-  background: var(--oc-accent-soft);
+  border-color: var(--gx-accent);
+  color: var(--gx-accent-text);
+  background: var(--gx-accent-soft);
 }
 .ocem-reset:disabled {
   opacity: 0.45;
@@ -116,38 +116,38 @@ const STUDIO_CSS = `
   }
 }
 .ocem-chart-card {
-  padding: var(--oc-space-4) var(--oc-space-5) var(--oc-space-5);
+  padding: var(--gx-space-4) var(--gx-space-5) var(--gx-space-5);
   min-width: 0;
 }
 .ocem-chart-card > .story-chart {
   max-width: 100%;
 }
 .ocem-hint {
-  margin: var(--oc-space-3) 0 0;
-  font-size: var(--oc-type-caption);
+  margin: var(--gx-space-3) 0 0;
+  font-size: var(--gx-type-caption);
   line-height: 1.5;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
 }
 .ocem-kbd {
-  font-family: var(--oc-font-mono);
+  font-family: var(--gx-font-mono);
   font-size: 0.75em;
   padding: 1px 5px;
   border-radius: 4px;
-  border: 1px solid var(--oc-border-strong);
-  background: var(--oc-surface-raised);
-  color: var(--oc-text);
+  border: 1px solid var(--gx-border-strong);
+  background: var(--gx-surface-raised);
+  color: var(--gx-text);
 }
 .ocem-rail {
   display: flex;
   flex-direction: column;
   gap: 0;
-  border-top: 1px solid var(--oc-border);
-  background: var(--oc-surface-raised);
+  border-top: 1px solid var(--gx-border);
+  background: var(--gx-surface-raised);
 }
 @media (min-width: 900px) {
   .ocem-rail {
     border-top: none;
-    border-left: 1px solid var(--oc-border);
+    border-left: 1px solid var(--gx-border);
   }
 }
 .ocem-panel {
@@ -156,34 +156,34 @@ const STUDIO_CSS = `
   min-width: 0;
 }
 .ocem-panel + .ocem-panel {
-  border-top: 1px solid var(--oc-border);
+  border-top: 1px solid var(--gx-border);
 }
 .ocem-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--oc-space-3) var(--oc-space-4);
+  padding: var(--gx-space-3) var(--gx-space-4);
 }
 .ocem-panel-title {
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--oc-text-muted);
-  font-family: var(--oc-font-mono);
+  color: var(--gx-text-muted);
+  font-family: var(--gx-font-mono);
 }
 .ocem-panel-meta {
   font-size: 0.6875rem;
-  color: var(--oc-text-faint);
-  font-family: var(--oc-font-mono);
+  color: var(--gx-text-faint);
+  font-family: var(--gx-font-mono);
 }
 .ocem-diff {
   margin: 0;
-  padding: 0 var(--oc-space-4) var(--oc-space-4);
-  font-family: var(--oc-font-mono);
+  padding: 0 var(--gx-space-4) var(--gx-space-4);
+  font-family: var(--gx-font-mono);
   font-size: 0.75rem;
   line-height: 1.5;
-  color: var(--oc-text-muted);
+  color: var(--gx-text-muted);
   overflow: auto;
   max-height: 340px;
   white-space: pre;
@@ -193,12 +193,12 @@ const STUDIO_CSS = `
   display: block;
 }
 .ocem-diff-changed {
-  color: var(--oc-accent-text);
-  background: var(--oc-accent-soft);
+  color: var(--gx-accent-text);
+  background: var(--gx-accent-soft);
   font-weight: 600;
 }
 .ocem-log {
-  padding: 0 var(--oc-space-4) var(--oc-space-4);
+  padding: 0 var(--gx-space-4) var(--gx-space-4);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -207,15 +207,15 @@ const STUDIO_CSS = `
 }
 .ocem-log-empty {
   margin: 0;
-  font-size: var(--oc-type-caption);
-  color: var(--oc-text-faint);
+  font-size: var(--gx-type-caption);
+  color: var(--gx-text-faint);
   line-height: 1.5;
 }
 .ocem-log-row {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-family: var(--oc-font-mono);
+  font-family: var(--gx-font-mono);
   font-size: 0.75rem;
   padding: 1px 0;
 }
@@ -232,7 +232,7 @@ const STUDIO_CSS = `
   flex-shrink: 0;
 }
 .ocem-log-detail {
-  color: var(--oc-text);
+  color: var(--gx-text);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

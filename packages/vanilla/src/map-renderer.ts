@@ -12,17 +12,13 @@ import type {
   MapLayout,
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
+import { stampAnimationVars } from './animation-vars';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const BRAND_URL = 'https://tryopendata.ai';
-
-const EASE_VAR_MAP: Record<string, string> = {
-  smooth: 'var(--oc-ease-smooth)',
-  snappy: 'var(--oc-ease-snappy)',
-};
 
 // Above this count, skip per-feature CSS fill animations (not GPU-compositable)
 // and fade the entire features group with a single opacity animation instead.
@@ -291,14 +287,13 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
       mapStaggerBudget = Math.round(dur * 1.2);
     }
     const n = Math.max(features.length, 1);
-    svg.style.setProperty('--oc-animation-duration', `${perFeature}ms`);
-    svg.style.setProperty(
-      '--oc-animation-stagger',
-      `${!bulk && n > 1 ? mapStaggerBudget / (n - 1) : 0}ms`,
-    );
-    svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
-    const easeVar = EASE_VAR_MAP[animation.enter.ease] || EASE_VAR_MAP.smooth;
-    svg.style.setProperty('--oc-animation-ease', easeVar);
+    const stagger = !bulk && n > 1 ? mapStaggerBudget / (n - 1) : 0;
+    stampAnimationVars(svg, {
+      duration: perFeature,
+      stagger,
+      annotationDelay: animation.annotationDelay,
+      ease: animation.enter.ease,
+    });
   }
 
   // Empty defs element (will be filled by gradient legend)

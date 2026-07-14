@@ -1,132 +1,126 @@
-/* ---------------------------------------------------------------------------
- * Tooltip
- * Editorial card matching the new design system: zinc surface, cyan accent,
- * Inter Variable, mono numerics. Sized for a slice tooltip that lists every
- * series at the snapped x.
- * --------------------------------------------------------------------------- */
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Tooltip
+   * Editorial card matching the new design system: zinc surface, cyan accent,
+   * Inter Variable, mono numerics. Sized for a slice tooltip that lists every
+   * series at the snapped x.
+   * --------------------------------------------------------------------------- */
 
-.oc-tooltip {
-  position: absolute;
-  display: none;
-  pointer-events: none;
-  z-index: 1000;
-  background: var(--oc-tooltip-bg);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--oc-tooltip-border);
-  border-radius: var(--oc-border-radius, 4px);
-  box-shadow: var(--oc-tooltip-shadow);
-  color: var(--oc-tooltip-text);
-  font-family: var(--oc-font-family);
-  font-size: 12px;
-  padding: 0;
-  max-width: 280px;
-  min-width: 160px;
-  line-height: 1.4;
-  animation: oc-tooltip-in 120ms ease-out;
-  transition:
-    left 100ms ease-in-out,
-    top 100ms ease-in-out;
-
-  & .oc-tooltip-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px 6px;
-  }
-
-  & .oc-tooltip-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  & .oc-tooltip-title {
-    font-weight: 590;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--oc-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  & .oc-tooltip-body {
-    padding: 6px 12px 10px;
-    border-top: 1px solid var(--oc-tooltip-border);
-  }
-
-  /* No separator when body is the only child */
-  & .oc-tooltip-body:first-child {
-    border-top: none;
-    padding-top: 10px;
-  }
-
-  & .oc-tooltip-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 2px 0;
-  }
-
-  & .oc-tooltip-row-swatch {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 6px;
-    flex-shrink: 0;
-    transform: translateY(-1px);
-  }
-
-  & .oc-tooltip-label {
-    color: var(--oc-text-secondary);
-    font-size: 12px;
-    font-weight: 400;
-    white-space: nowrap;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  & .oc-tooltip-value {
-    font-weight: 510;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
+  .oc-tooltip {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    z-index: 1000;
+    background: var(--oc-tooltip-bg);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--oc-tooltip-border);
+    border-radius: var(--oc-border-radius, 2px);
+    box-shadow: var(--oc-tooltip-shadow);
     color: var(--oc-tooltip-text);
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-family: var(--oc-font-family);
+    font-size: 12px;
+    padding: 0;
+    max-width: 280px;
+    min-width: 160px;
+    line-height: 1.4;
+    animation: oc-tooltip-in 120ms ease-out;
+    transition:
+      left 100ms ease-in-out,
+      top 100ms ease-in-out;
+
+    & .oc-tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px 6px;
+    }
+
+    & .oc-tooltip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    & .oc-tooltip-title {
+      font-weight: 590;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--oc-text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    & .oc-tooltip-body {
+      padding: 6px 12px 10px;
+      border-top: 1px solid var(--oc-tooltip-border);
+    }
+
+    /* No separator when body is the only child */
+    & .oc-tooltip-body:first-child {
+      border-top: none;
+      padding-top: 10px;
+    }
+
+    & .oc-tooltip-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 2px 0;
+    }
+
+    & .oc-tooltip-row-swatch {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      flex-shrink: 0;
+      transform: translateY(-1px);
+    }
+
+    & .oc-tooltip-label {
+      color: var(--oc-text-secondary);
+      font-size: 12px;
+      font-weight: 400;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    & .oc-tooltip-value {
+      font-weight: 510;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      color: var(--oc-tooltip-text);
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
-}
 
-/* ---------------------------------------------------------------------------
- * Crosshair guideline + per-series snap dots (line/area charts)
- * Animate the snap between adjacent points so the indicator slides instead
- * of jumping. ~50ms ease-in-out keeps the motion crisp without lagging.
- * --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+   * Crosshair guideline + per-series snap dots (line/area charts)
+   * Animate the snap between adjacent points so the indicator slides instead
+   * of jumping. ~50ms ease-in-out keeps the motion crisp without lagging.
+   * --------------------------------------------------------------------------- */
 
-.oc-crosshair {
-  pointer-events: none;
-  transition:
-    x1 50ms ease-in-out,
-    x2 50ms ease-in-out;
-}
+  .oc-crosshair {
+    pointer-events: none;
+    transition:
+      x1 50ms ease-in-out,
+      x2 50ms ease-in-out;
+  }
 
-.oc-snap-dots circle {
-  pointer-events: none;
-  transition:
-    cx 50ms ease-in-out,
-    cy 50ms ease-in-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .oc-tooltip,
-  .oc-crosshair,
   .oc-snap-dots circle {
-    transition: none;
+    pointer-events: none;
+    transition:
+      cx 50ms ease-in-out,
+      cy 50ms ease-in-out;
   }
 }

@@ -20,7 +20,7 @@ import type {
   LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
+import { cssTokenDefault, isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
 import {
   compileChart,
   compileLayer,
@@ -168,7 +168,7 @@ function resolveDarkMode(mode?: DarkMode): boolean {
 
 const EDITABLE_HOVER_CSS = `
 .oc-editable-hover {
-  outline: 1.5px solid rgba(79, 70, 229, 0.35);
+  outline: 1.5px solid ${cssTokenDefault('--oc-editable-hover', 'light')};
   outline-offset: 2px;
   border-radius: 2px;
 }
