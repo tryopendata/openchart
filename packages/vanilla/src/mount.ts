@@ -21,7 +21,12 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
-import { compileChart, compileLayer, legendGap } from '@opendata-ai/openchart-engine';
+import {
+  compileChart,
+  compileLayer,
+  facetMinHeight,
+  legendGap,
+} from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
   exportCSV,
@@ -340,6 +345,10 @@ export function createChart<TData extends DataRow = DataRow>(
    * a bottom legend's reservation), the top legend block (height + gap), and
    * the KPI metrics bar. topPad and the axis gap are plot clearance, not
    * chrome — they stay inside the budget.
+   *
+   * For faceted charts, extra rows beyond what the base budget can fit
+   * also contribute: each additional row needs space for the panel itself
+   * plus its header and gap.
    */
   function verticalOverheads(layout: ChartLayout, width: number): number {
     // Sum EVERY top legend, not just the primary. A chart can carry a color
@@ -354,11 +363,23 @@ export function createChart<TData extends DataRow = DataRow>(
           : 'entries' in legend && legend.entries.length > 0;
       if (hasContent) topLegendBlock += legend.bounds.height + legendGap(width);
     }
+
+    let facetGrowth = 0;
+    if (layout.facet) {
+      const needed = facetMinHeight(layout.facet.panels.length, layout.facet.columns);
+      const budgetForPanels =
+        FALLBACK_HEIGHT - layout.chrome.topHeight - layout.chrome.bottomHeight - topLegendBlock;
+      if (needed > budgetForPanels) {
+        facetGrowth = needed - budgetForPanels;
+      }
+    }
+
     return (
       layout.chrome.topHeight +
       layout.chrome.bottomHeight +
       topLegendBlock +
-      (layout.metrics?.height ?? 0)
+      (layout.metrics?.height ?? 0) +
+      facetGrowth
     );
   }
 

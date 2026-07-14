@@ -10,11 +10,8 @@ import type { MapSpec } from '@opendata-ai/openchart-core';
 import type { MapHandle } from '@opendata-ai/openchart-react';
 import { ChartStory, GeoMap } from '@opendata-ai/openchart-react';
 import { useRef, useState } from 'react';
-// @ts-expect-error -- JSON import, no type declarations for us-atlas
 import usCountiesTopo from 'us-atlas/counties-albers-10m.json';
-// @ts-expect-error -- JSON import, no type declarations for us-atlas
 import usStatesTopo from 'us-atlas/states-albers-10m.json';
-// @ts-expect-error -- JSON import, no type declarations for world-atlas
 import worldTopo from 'world-atlas/countries-110m.json';
 import { Demo, GalleryPage, Section, useOcMode } from '../components';
 import { usUnemployment, usUnemploymentPrior, worldGdp } from '../data';

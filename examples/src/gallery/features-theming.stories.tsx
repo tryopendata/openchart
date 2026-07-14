@@ -310,15 +310,17 @@ const customTheme: ThemeConfig = {
 
 const darkModeSpec: ChartSpec = {
   ...lineSpec,
-  // A single-hex background (no light/dark pair) so adaptTheme() has to do the
-  // surface swap + palette lightness search when forced dark — the whole point.
+  // An authored-light theme with NO {light,dark} pairs, so forcing dark makes
+  // adaptTheme() do the real work: swap the light surface for a dark one, and
+  // run the lightness search over the palette. Text/gridline/axis are left at
+  // their light defaults on purpose — adaptTheme only substitutes dark values
+  // for tokens the author left at the default, so pinning them here (e.g.
+  // text: '#0f172a') would be read as an explicit override and survive into
+  // dark mode as near-black text on a near-black canvas.
   theme: {
     colors: {
       categorical: ['#2563eb', '#f59e0b', '#10b981'],
-      background: true,
-      text: '#0f172a',
-      gridline: '#e2e8f0',
-      axis: '#94a3b8',
+      background: '#ffffff',
     },
   },
   chrome: {

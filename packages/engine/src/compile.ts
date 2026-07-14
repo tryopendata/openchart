@@ -81,7 +81,7 @@ import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
 import { computeAxes } from './layout/axes';
 import { computeDimensions } from './layout/dimensions';
-import { computeFacetGrid } from './layout/facet';
+import { computeFacetGrid, facetMinHeight, MIN_PANEL_HEIGHT } from './layout/facet';
 import { computeGridlines } from './layout/gridlines';
 import { createMeasureFn, resolveLayoutPlan } from './layout/plan';
 import { computeScales } from './layout/scales';
@@ -978,6 +978,23 @@ function compileFaceted(
     bottom: bottomReservation,
   });
 
+  // If panels are too short, grow the compile height and restart (once).
+  if (
+    !optionsInput.facetHeightGrown &&
+    grid.panels.length > 0 &&
+    grid.panels[0].area.height < MIN_PANEL_HEIGHT
+  ) {
+    const neededChartHeight = facetMinHeight(facetValues.length, grid.columns);
+    const heightGrowth = neededChartHeight - chartArea.height;
+    if (heightGrowth > 0) {
+      return compileChart(rawSpec, {
+        ...optionsInput,
+        height: options.height + heightGrowth,
+        facetHeightGrown: true,
+      });
+    }
+  }
+
   // Resolve scale for determining if we use 'independent' or 'shared'
   const resolveConfig = chartSpec.resolve;
   const yResolve = resolveConfig?.scale?.y ?? 'shared';
@@ -1046,24 +1063,31 @@ function compileFaceted(
       );
     }
 
-    // Outer-axis economy: only leftmost column gets y ticks, only bottom row gets x ticks.
-    // Exception: when scales are independent, every panel needs its own axis ticks.
     const isLeftCol = gridPanel.col === 0;
-    const isBottomRow = gridPanel.row === grid.rows - 1;
 
     const panelAxes = isRadial
       ? { x: undefined, y: undefined }
       : computeAxes(panelScales, gridPanel.area, strategy, theme, options.measureText, {
           data: panelData,
           encoding: panelSpecWithDomains.encoding as Encoding,
-          skipX: xResolve === 'shared' ? !isBottomRow : false,
-          skipY: yResolve === 'shared' ? !isLeftCol : false,
           markType: chartSpec.markType,
           totalWidth: gridPanel.area.width,
         });
 
     if (!isRadial) {
       computeGridlines(panelAxes, gridPanel.area);
+    }
+
+    // Strip y-axis tick labels from non-leftmost panels (gridlines stay).
+    // X-axis labels show on every panel for readability.
+    if (yResolve === 'shared' && !isLeftCol && panelAxes.y) {
+      panelAxes.y = {
+        ...panelAxes.y,
+        ticks: [],
+        label: undefined,
+        domainLine: false,
+        tickMarks: false,
+      };
     }
 
     // Compute marks for this panel

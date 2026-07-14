@@ -317,13 +317,13 @@ function renderFacetedPanels(
     g.setAttribute('class', 'oc-facet-panel');
     g.setAttribute('data-facet', panel.key);
 
-    // Panel background for visual grouping
+    // Panel background for visual grouping (starts below the header)
     const bg = createSVGElement('rect');
     setAttrs(bg, {
       x: panel.area.x,
-      y: panel.header.y - panel.header.fontSize * 0.6,
+      y: panel.area.y,
       width: panel.area.width,
-      height: panel.area.height + panel.header.fontSize + 4,
+      height: panel.area.height,
       rx: 3,
       fill: layout.theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
     });

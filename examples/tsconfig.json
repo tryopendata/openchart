@@ -1,13 +1,15 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
+    // Never emitted by tsc — Ladle/Vite builds this package. The config exists
+    // purely for `typecheck`, so there's no outDir/rootDir: a rootDir of `src`
+    // rejects the `.ladle/*` modules the stories legitimately import.
+    "noEmit": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src", ".ladle"],
+  "exclude": ["node_modules", "dist", "build"]
 }

@@ -62,15 +62,21 @@ describe('computeScales', () => {
     expect(scales.y).toBeDefined();
     expect(scales.y!.type).toBe('linear');
 
-    // Y is inverted (SVG coordinates)
+    // Y is inverted (SVG coordinates); line charts default to zero: false
     const domain = scales.y!.scale.domain();
-    expect(domain[0]).toBeLessThanOrEqual(0); // Should include 0
+    expect(domain[0]).toBeLessThanOrEqual(10);
     expect(domain[1]).toBeGreaterThanOrEqual(50);
   });
 
-  it('includes zero in quantitative domain by default', () => {
+  it('line charts exclude zero by default (zero: false)', () => {
     const scales = computeScales(lineSpec, chartArea, lineSpec.data);
     const domain = scales.y!.scale.domain();
+    expect(domain[0]).toBeGreaterThan(0);
+  });
+
+  it('bar charts include zero by default', () => {
+    const scales = computeScales(barSpec, chartArea, barSpec.data);
+    const domain = scales.x!.scale.domain();
     expect(domain[0]).toBe(0);
   });
 

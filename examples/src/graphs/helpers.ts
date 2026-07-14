@@ -6,7 +6,7 @@
  * - generateScaleFreeGraph: preferential attachment (Barabasi-Albert model)
  */
 
-import type { GraphSpec } from '@opendata-ai/openchart-core';
+import type { GraphNode, GraphSpec } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Deterministic pseudo-random (seeded for stable stories)
@@ -113,7 +113,7 @@ export function generateRandomGraph(
   const communityMembers: number[][] = communityNames.map(() => []);
 
   const nodes = Array.from({ length: nodeCount }, (_, i) => {
-    const node: Record<string, unknown> = {
+    const node: GraphNode = {
       id: `n${i}`,
       label: nameForIndex(i),
     };
@@ -168,6 +168,7 @@ export function generateRandomGraph(
 
   if (communityNames.length > 0) {
     spec.layout = {
+      type: 'force',
       clustering: { field: 'community' },
     };
   }

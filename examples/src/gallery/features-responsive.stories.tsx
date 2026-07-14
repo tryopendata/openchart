@@ -142,6 +142,7 @@ function ResizeFrame({
           position: 'relative',
           width,
           height: showHeight ? height : heightValue,
+          overflow: 'auto',
           maxWidth: '100%',
           border: '1px dashed var(--oc-border)',
           borderRadius: 'var(--oc-radius-control)',

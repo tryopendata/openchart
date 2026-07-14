@@ -63,7 +63,7 @@ function annotationsFor(annotations: Ann[], width = 800, height = 460): Resolved
       data: SERIES,
       encoding: {
         x: { field: 'm', type: 'ordinal' },
-        y: { field: 'v', type: 'quantitative' },
+        y: { field: 'v', type: 'quantitative', scale: { zero: true } },
       },
       annotations,
     } as ChartSpec,
@@ -540,7 +540,7 @@ describe('the endpoint marker', () => {
         data: SERIES,
         encoding: {
           x: { field: 'm', type: 'ordinal' },
-          y: { field: 'v', type: 'quantitative' },
+          y: { field: 'v', type: 'quantitative', scale: { zero: true } },
         },
         annotations: [{ type: 'text', x: 'Mar', y: 30, text: 'Peak', anchor: 'top' }],
       } as ChartSpec,

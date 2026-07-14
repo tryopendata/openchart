@@ -1941,6 +1941,8 @@ export interface CompileOptions {
   footnoteReserve?: number;
   /** Recursion depth of the footnote-reserve convergence pass. Internal to compileChart. */
   footnotePass?: number;
+  /** Set after facet height growth to prevent unbounded recursion. Internal to compileFaceted. */
+  facetHeightGrown?: boolean;
   /**
    * Use this chart drawing area instead of computing one from chrome, axes,
    * and legend reservations. Set by compileLayer when compiling leaf layers so

@@ -42,7 +42,7 @@ const rangeDumbbellSpec: ChartSpec = {
       title: '2000',
       axis: { title: 'Life expectancy at birth (years)' },
     },
-    x2: { field: 'y2023', title: '2023' },
+    x2: { field: 'y2023', type: 'quantitative', title: '2023' },
   },
   chrome: {
     title: 'Everyone Is Living Longer, but the Gaps Persist',
@@ -84,7 +84,7 @@ const rangeArrowSpec: ChartSpec = {
       title: '2010',
       axis: { title: 'Share of US electricity generation (%)' },
     },
-    x2: { field: 'y2024', title: '2024' },
+    x2: { field: 'y2024', type: 'quantitative', title: '2024' },
   },
   chrome: {
     title: "Gas and Renewables Ate Coal's Lunch",
@@ -128,7 +128,7 @@ const rangeBarSpec: ChartSpec = {
       title: 'Avg low',
       axis: { title: 'Temperature (°C)' },
     },
-    y2: { field: 'high', title: 'Avg high' },
+    y2: { field: 'high', type: 'quantitative', title: 'Avg high' },
   },
   chrome: {
     title: 'New York Swings 30 Degrees Across the Year',

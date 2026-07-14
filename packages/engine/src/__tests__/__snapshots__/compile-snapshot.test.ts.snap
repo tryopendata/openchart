@@ -630,15 +630,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "gridlines": [
         {
           "major": true,
-          "position": 410.59999999999997,
+          "position": 391.51249999999993,
         },
         {
           "major": true,
-          "position": 372.42499999999995,
-        },
-        {
-          "major": true,
-          "position": 334.25,
+          "position": 343.79375,
         },
         {
           "major": true,
@@ -646,19 +642,15 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         },
         {
           "major": true,
-          "position": 257.9,
+          "position": 248.35625,
         },
         {
           "major": true,
-          "position": 219.725,
+          "position": 200.6375,
         },
         {
           "major": true,
-          "position": 181.55,
-        },
-        {
-          "major": true,
-          "position": 143.375,
+          "position": 152.91875,
         },
         {
           "major": true,
@@ -695,43 +687,33 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "tickPosition": "inline",
       "ticks": [
         {
-          "label": "0",
-          "position": 410.59999999999997,
-          "value": 0,
-        },
-        {
-          "label": "5",
-          "position": 372.42499999999995,
-          "value": 5,
-        },
-        {
           "label": "10",
-          "position": 334.25,
+          "position": 391.51249999999993,
           "value": 10,
         },
         {
           "label": "15",
-          "position": 296.075,
+          "position": 343.79375,
           "value": 15,
         },
         {
           "label": "20",
-          "position": 257.9,
+          "position": 296.075,
           "value": 20,
         },
         {
           "label": "25",
-          "position": 219.725,
+          "position": 248.35625,
           "value": 25,
         },
         {
           "label": "30",
-          "position": 181.55,
+          "position": 200.6375,
           "value": 30,
         },
         {
           "label": "35",
-          "position": 143.375,
+          "position": 152.91875,
           "value": 35,
         },
         {
@@ -826,11 +808,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "color": "#ee4a73",
-        "dataY": 143.375,
+        "dataY": 152.91875,
         "labelLines": [
           "UK",
         ],
-        "labelY": 139.95,
+        "labelY": 146.41875,
         "marker": {
           "dataX": 651.76115,
           "fill": "transparent",
@@ -838,7 +820,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "stroke": "#ee4a73",
           "strokeWidth": 2,
           "x": 655.76115,
-          "y": 143.375,
+          "y": 152.91875,
         },
         "seriesKey": "UK",
         "showLeader": false,
@@ -846,11 +828,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "color": "#00b054",
-        "dataY": 242.62999999999997,
+        "dataY": 276.98749999999995,
         "labelLines": [
           "FR",
         ],
-        "labelY": 236.12999999999997,
+        "labelY": 270.48749999999995,
         "marker": {
           "dataX": 651.76115,
           "fill": "transparent",
@@ -858,7 +840,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "stroke": "#00b054",
           "strokeWidth": 2,
           "x": 655.76115,
-          "y": 242.62999999999997,
+          "y": 276.98749999999995,
         },
         "seriesKey": "FR",
         "showLeader": false,
@@ -866,11 +848,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
       {
         "color": "#a46bf5",
-        "dataY": 196.82,
+        "dataY": 219.725,
         "labelLines": [
           "DE",
         ],
-        "labelY": 190.32,
+        "labelY": 213.225,
         "marker": {
           "dataX": 651.76115,
           "fill": "transparent",
@@ -878,7 +860,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "stroke": "#a46bf5",
           "strokeWidth": 2,
           "x": 655.76115,
-          "y": 196.82,
+          "y": 219.725,
         },
         "seriesKey": "DE",
         "showLeader": false,
@@ -1117,7 +1099,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 334.25,
+          "y": 391.51249999999993,
         },
         {
           "datum": {
@@ -1151,7 +1133,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "interpolate": "monotone",
       "key": "US",
       "opacity": undefined,
-      "path": "M47,334.25L651.761,105.2",
+      "path": "M47,391.512L651.761,105.2",
       "pointKeys": [
         "2020-01-01",
         "2021-01-01",
@@ -1159,7 +1141,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "points": [
         {
           "x": 47,
-          "y": 334.25,
+          "y": 391.51249999999993,
         },
         {
           "x": 651.76115,
@@ -1215,7 +1197,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 296.075,
+          "y": 343.79375,
         },
         {
           "datum": {
@@ -1243,13 +1225,13 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2021",
           },
           "x": 651.76115,
-          "y": 143.375,
+          "y": 152.91875,
         },
       ],
       "interpolate": "monotone",
       "key": "UK",
       "opacity": undefined,
-      "path": "M47,296.075L651.761,143.375",
+      "path": "M47,343.794L651.761,152.919",
       "pointKeys": [
         "2020-01-01",
         "2021-01-01",
@@ -1257,11 +1239,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "points": [
         {
           "x": 47,
-          "y": 296.075,
+          "y": 343.79375,
         },
         {
           "x": 651.76115,
-          "y": 143.375,
+          "y": 152.91875,
         },
       ],
       "seriesKey": "UK",
@@ -1313,7 +1295,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 349.52000000000004,
+          "y": 410.59999999999997,
         },
         {
           "datum": {
@@ -1341,13 +1323,13 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2021",
           },
           "x": 651.76115,
-          "y": 242.62999999999997,
+          "y": 276.98749999999995,
         },
       ],
       "interpolate": "monotone",
       "key": "FR",
       "opacity": undefined,
-      "path": "M47,349.52L651.761,242.63",
+      "path": "M47,410.6L651.761,276.987",
       "pointKeys": [
         "2020-01-01",
         "2021-01-01",
@@ -1355,11 +1337,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "points": [
         {
           "x": 47,
-          "y": 349.52000000000004,
+          "y": 410.59999999999997,
         },
         {
           "x": 651.76115,
-          "y": 242.62999999999997,
+          "y": 276.98749999999995,
         },
       ],
       "seriesKey": "FR",
@@ -1411,7 +1393,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2020",
           },
           "x": 47,
-          "y": 318.97999999999996,
+          "y": 372.42499999999995,
         },
         {
           "datum": {
@@ -1439,13 +1421,13 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
             "title": "2021",
           },
           "x": 651.76115,
-          "y": 196.82,
+          "y": 219.725,
         },
       ],
       "interpolate": "monotone",
       "key": "DE",
       "opacity": undefined,
-      "path": "M47,318.98L651.761,196.82",
+      "path": "M47,372.425L651.761,219.725",
       "pointKeys": [
         "2020-01-01",
         "2021-01-01",
@@ -1453,11 +1435,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "points": [
         {
           "x": 47,
-          "y": 318.97999999999996,
+          "y": 372.42499999999995,
         },
         {
           "x": 651.76115,
-          "y": 196.82,
+          "y": 219.725,
         },
       ],
       "seriesKey": "DE",

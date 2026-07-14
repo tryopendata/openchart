@@ -24,6 +24,10 @@ const EASE_VAR_MAP: Record<string, string> = {
   snappy: 'var(--oc-ease-snappy)',
 };
 
+// Above this count, skip per-feature CSS fill animations (not GPU-compositable)
+// and fade the entire features group with a single opacity animation instead.
+const BULK_ANIMATION_THRESHOLD = 200;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -192,11 +196,18 @@ function renderFeatures(
   g.setAttribute('class', 'oc-map-features');
   g.setAttribute('role', 'list');
 
+  const bulk = features.length > BULK_ANIMATION_THRESHOLD;
+
+  if (bulk && animation?.enter) {
+    g.setAttribute('data-bulk-animate', '');
+  }
+
   const maxIdx = features.length - 1;
 
   // Build evenly spaced delays then shuffle for organic pop-in
+  // (skipped in bulk mode where the whole group fades as one)
   const shuffledDelays: number[] = [];
-  if (staggerBudget > 0 && maxIdx > 0) {
+  if (!bulk && staggerBudget > 0 && maxIdx > 0) {
     for (let i = 0; i <= maxIdx; i++) {
       shuffledDelays.push((i / maxIdx) * staggerBudget);
     }
@@ -232,7 +243,8 @@ function renderFeatures(
       path.setAttribute('aria-label', feature.aria.label);
     }
 
-    if (animation?.enter) {
+    // Per-feature animation props only in non-bulk mode
+    if (!bulk && animation?.enter) {
       const idx = feature.animationIndex ?? i;
       path.setAttribute('data-animation-index', String(idx));
       const s = (path as SVGElement & ElementCSSInlineStyle).style;
@@ -270,14 +282,20 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   const classes = animate ? 'oc-map oc-animate' : 'oc-map';
   svg.setAttribute('class', classes);
 
+  const bulk = features.length > BULK_ANIMATION_THRESHOLD;
   let mapStaggerBudget = 0;
   if (animate && animation?.enter) {
     const dur = animation.enter.duration;
     const perFeature = Math.min(dur, 500);
-    mapStaggerBudget = Math.round(dur * 1.2);
+    if (!bulk) {
+      mapStaggerBudget = Math.round(dur * 1.2);
+    }
     const n = Math.max(features.length, 1);
     svg.style.setProperty('--oc-animation-duration', `${perFeature}ms`);
-    svg.style.setProperty('--oc-animation-stagger', `${n > 1 ? mapStaggerBudget / (n - 1) : 0}ms`);
+    svg.style.setProperty(
+      '--oc-animation-stagger',
+      `${!bulk && n > 1 ? mapStaggerBudget / (n - 1) : 0}ms`,
+    );
     svg.style.setProperty('--oc-annotation-delay', `${animation.annotationDelay}ms`);
     const easeVar = EASE_VAR_MAP[animation.enter.ease] || EASE_VAR_MAP.smooth;
     svg.style.setProperty('--oc-animation-ease', easeVar);

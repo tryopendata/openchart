@@ -252,7 +252,12 @@ const payoffSpec: ChartSpec<ScrollyRow> = {
   chrome: { ...fixtureBase.chrome, title: 'Diabetes never bent' },
 };
 
-export const scrollySpecs = {
+// Annotated rather than inferred: the inferred type would reference core's
+// internal BaseChartSpec, which isn't exported, so tsc can't name it (TS4023).
+export const scrollySpecs: Record<
+  'base' | 'highlight' | 'zoomed' | 'annotated' | 'payoff',
+  ChartSpec<ScrollyRow>
+> = {
   base: fixtureBase,
   highlight: highlightSpec,
   zoomed: zoomedSpec,

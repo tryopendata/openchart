@@ -129,6 +129,9 @@ export {
 // Legend geometry
 // ---------------------------------------------------------------------------
 
+// Used by the vanilla mount to compute facet height growth for auto-height
+// figures; single-sourcing avoids constant divergence with facet.ts.
+export { facetMinHeight } from './layout/facet';
 // Used by the vanilla mount to compute the top-legend block when growing
 // auto-height figures; exporting it keeps the gap math single-sourced.
 export { legendGap } from './legend/wrap';

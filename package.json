@@ -23,7 +23,7 @@
     "lint": "biome check packages/ examples/src/",
     "lint:fix": "biome check --write packages/ examples/src/",
     "format": "biome format --write packages/ examples/src/",
-    "typecheck": "bun run --filter './packages/*' typecheck",
+    "typecheck": "bun run --filter './packages/*' typecheck && bun run --filter '@opendata-ai/examples' typecheck",
     "dev": "cd examples && bun run dev",
     "release": "node scripts/release.mjs",
     "generate:schema": "node scripts/generate-schema.mjs",

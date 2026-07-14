@@ -339,8 +339,13 @@ export function Demo({
     }
   };
 
+  // `width: 100%` is load-bearing next to the auto margins: the card is a flex
+  // item in a column container (.oc-section-body), where `margin-inline: auto`
+  // resolves on the cross axis and cancels the default `align-self: stretch`.
+  // Without an explicit width the card then shrink-to-fits its content instead
+  // of filling the column, and grid children collapse to a narrow strip.
   const wrapperStyle: React.CSSProperties = {
-    ...(maxWidth ? { maxWidth, marginInline: 'auto' } : null),
+    ...(maxWidth ? { maxWidth, width: '100%', marginInline: 'auto' } : null),
   };
   const vizStyle: React.CSSProperties = {
     ...(height ? { height } : null),

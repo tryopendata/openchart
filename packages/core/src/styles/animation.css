@@ -131,6 +131,18 @@
     animation-delay: var(--oc-map-delay, 0ms);
   }
 
+  /* Bulk mode: high feature counts (counties, ~3k+) get a single group
+     fade instead of per-feature fill animations. opacity is GPU-compositable
+     so this stays smooth regardless of child count. */
+  & .oc-map-features[data-bulk-animate] {
+    animation: oc-enter-fade-only var(--oc-animation-duration)
+      var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+  }
+
+  & .oc-map-features[data-bulk-animate] .oc-map-feature {
+    animation: none;
+  }
+
   /* Map borders: fade in near the end of the feature sweep */
   & .oc-map-borders path {
     animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.4) ease-in both;

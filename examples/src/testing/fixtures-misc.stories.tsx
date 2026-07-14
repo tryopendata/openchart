@@ -222,15 +222,23 @@ function minimalSpec(
   mark: 'line' | 'area' | 'bar',
   data: { date: string; value: number }[],
 ): ChartSpec {
-  return {
-    mark,
-    data,
-    encoding: {
-      x: { field: 'date', type: mark === 'bar' ? 'ordinal' : 'temporal' },
-      y: { field: 'value', type: 'quantitative' },
-    },
-    display: 'sparkline',
-  };
+  const y = { field: 'value', type: 'quantitative' } as const;
+  // ChartSpec is a union discriminated on `mark`, so an object with a widened
+  // 'line' | 'area' | 'bar' mark matches no single arm. Building each spec under
+  // a literal mark keeps the discriminant narrow enough for TS to pick the arm.
+  if (mark === 'bar') {
+    return {
+      mark,
+      data,
+      encoding: { x: { field: 'date', type: 'ordinal' }, y },
+      display: 'sparkline',
+    };
+  }
+  const x = { field: 'date', type: 'temporal' } as const;
+  if (mark === 'line') {
+    return { mark, data, encoding: { x, y }, display: 'sparkline' };
+  }
+  return { mark, data, encoding: { x, y }, display: 'sparkline' };
 }
 
 function formatChange(first: number, last: number): { pct: string; up: boolean } {

@@ -773,15 +773,13 @@ export function computeScales(
   const result: ResolvedScales = {};
   const encoding = spec.encoding as Encoding;
 
-  // Scatter/bubble, beeswarm, range, and text charts should NOT include zero by
-  // default (they encode position, not length; a tight domain fits the data
-  // range). Beeswarms plot raw observations whose spread is the story, and
-  // only the quantitative value axis matches the check below. Text marks must
-  // stay in this list so a text layer resolves the same domain as the point
-  // layer it labels — otherwise the two share a pixel range but not a domain,
-  // and every label drifts off its mark.
+  // Marks that encode position (not length) default to zero: false so the
+  // domain fits the data range. Line charts show trends — anchoring at zero
+  // wastes space. Scatter/beeswarm encode raw observations whose spread is
+  // the story. Text marks must match the point layer they label.
   if (
     spec.markType === 'point' ||
+    spec.markType === 'line' ||
     spec.markType === 'beeswarm' ||
     spec.markType === 'range' ||
     spec.markType === 'text'

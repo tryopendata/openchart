@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "ladle serve",
     "build": "ladle build",
+    "typecheck": "tsc --noEmit",
     "check:registry": "node scripts/check-registry-drift.mjs"
   },
   "dependencies": {

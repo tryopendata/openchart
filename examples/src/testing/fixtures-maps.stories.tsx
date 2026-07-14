@@ -9,9 +9,7 @@
 
 import type { MapSpec } from '@opendata-ai/openchart-core';
 import { GeoMap } from '@opendata-ai/openchart-react';
-// @ts-expect-error -- JSON import, no type declarations for us-atlas
 import usStatesTopo from 'us-atlas/states-albers-10m.json';
-// @ts-expect-error -- JSON import, no type declarations for world-atlas
 import worldTopo from 'world-atlas/countries-110m.json';
 import './testing.css';
 
