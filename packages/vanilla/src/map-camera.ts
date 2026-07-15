@@ -78,10 +78,28 @@ export function applyMapCamera(svg: SVGElement, camera: Camera, layout: MapLayou
     for (const p of paths) {
       p.setAttribute('vector-effect', 'non-scaling-stroke');
     }
+    // Counter-scale point radii so dots keep constant screen size through zoom
+    const points = svg.querySelectorAll('.oc-map-point');
+    for (const p of points) {
+      const baseR = Number(p.getAttribute('data-base-r') ?? 5);
+      const baseSW = Number(p.getAttribute('data-base-stroke-width') ?? 1);
+      p.setAttribute('r', String(baseR / camera.k));
+      p.setAttribute('stroke-width', String(baseSW / camera.k));
+      p.setAttribute('vector-effect', 'non-scaling-stroke');
+    }
   } else {
     cameraGroup.removeAttribute('transform');
     const paths = svg.querySelectorAll('.oc-map-feature, .oc-map-borders path');
     for (const p of paths) {
+      p.removeAttribute('vector-effect');
+    }
+    // Reset point radii when not zoomed
+    const points = svg.querySelectorAll('.oc-map-point');
+    for (const p of points) {
+      const baseR = Number(p.getAttribute('data-base-r') ?? 5);
+      const baseSW = Number(p.getAttribute('data-base-stroke-width') ?? 1);
+      p.setAttribute('r', String(baseR));
+      p.setAttribute('stroke-width', String(baseSW));
       p.removeAttribute('vector-effect');
     }
   }

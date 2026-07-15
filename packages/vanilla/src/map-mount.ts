@@ -292,6 +292,75 @@ export function createMap(
       });
     }
 
+    // Wire point interactions
+    const pointMarksByKey = new Map(layout.pointMarks.map((p) => [p.key, p]));
+    const pointElements = svg.querySelectorAll('.oc-map-point');
+    for (const el of pointElements) {
+      const pointKey = el.getAttribute('data-point-key');
+      if (!pointKey) continue;
+
+      const content = layout.tooltipDescriptors.get(`point:${pointKey}`);
+      const pointMark = pointMarksByKey.get(pointKey);
+
+      const handlePointMouseEnter = (e: Event) => {
+        const mouseEvent = e as MouseEvent;
+        (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
+        (el as SVGElement & ElementCSSInlineStyle).style.setProperty('filter', 'brightness(1.15)');
+        if (content && tooltipManager && options?.tooltip !== false) {
+          const svgRect = svg.getBoundingClientRect();
+          const x = mouseEvent.clientX - svgRect.left;
+          const y = mouseEvent.clientY - svgRect.top;
+          tooltipManager.show(content, x, y);
+        }
+        if (pointMark) {
+          options?.onMarkHover?.({
+            id: pointKey,
+            name: pointKey,
+            data: pointMark.data,
+          });
+        }
+      };
+
+      const handlePointMouseMove = (e: Event) => {
+        if (content && tooltipManager && options?.tooltip !== false) {
+          const mouseEvent = e as MouseEvent;
+          const svgRect = svg.getBoundingClientRect();
+          const x = mouseEvent.clientX - svgRect.left;
+          const y = mouseEvent.clientY - svgRect.top;
+          tooltipManager.show(content, x, y);
+        }
+      };
+
+      const handlePointMouseLeave = () => {
+        (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('cursor');
+        (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('filter');
+        tooltipManager?.hide();
+        options?.onMarkHover?.(null);
+      };
+
+      const handlePointClick = () => {
+        if (pointMark) {
+          options?.onMarkClick?.({
+            id: pointKey,
+            name: pointKey,
+            data: pointMark.data,
+          });
+        }
+      };
+
+      el.addEventListener('mouseenter', handlePointMouseEnter);
+      el.addEventListener('mousemove', handlePointMouseMove);
+      el.addEventListener('mouseleave', handlePointMouseLeave);
+      el.addEventListener('click', handlePointClick);
+
+      cleanups.push(() => {
+        el.removeEventListener('mouseenter', handlePointMouseEnter);
+        el.removeEventListener('mousemove', handlePointMouseMove);
+        el.removeEventListener('mouseleave', handlePointMouseLeave);
+        el.removeEventListener('click', handlePointClick);
+      });
+    }
+
     return () => {
       for (const cleanup of cleanups) {
         cleanup();

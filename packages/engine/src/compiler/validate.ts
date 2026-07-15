@@ -1416,25 +1416,86 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
   }
 
   const encoding = spec.encoding as Record<string, unknown>;
-  for (const channel of ['key', 'color'] as const) {
-    const ch = encoding[channel] as Record<string, unknown> | undefined;
-    if (!ch || typeof ch !== 'object') {
-      errors.push({
-        message: `Spec error: map encoding requires "${channel}" channel`,
-        path: `encoding.${channel}`,
-        code: 'MISSING_FIELD',
-        suggestion: `Add encoding.${channel}, e.g. ${channel}: { field: "${channel === 'key' ? 'id' : 'value'}", type: "${channel === 'key' ? 'nominal' : 'quantitative'}" }`,
-      });
-      continue;
-    }
+  const hasPoints = spec.points && typeof spec.points === 'object' && !Array.isArray(spec.points);
 
-    if (!ch.field || typeof ch.field !== 'string') {
+  // key is always required
+  const keyCh = encoding.key as Record<string, unknown> | undefined;
+  if (!keyCh || typeof keyCh !== 'object') {
+    errors.push({
+      message: 'Spec error: map encoding requires "key" channel',
+      path: 'encoding.key',
+      code: 'MISSING_FIELD',
+      suggestion: 'Add encoding.key, e.g. key: { field: "id", type: "nominal" }',
+    });
+  } else if (!keyCh.field || typeof keyCh.field !== 'string') {
+    errors.push({
+      message: 'Spec error: encoding.key must have a "field" string',
+      path: 'encoding.key.field',
+      code: 'MISSING_FIELD',
+      suggestion: 'Add a field name, e.g. key: { field: "id" }',
+    });
+  }
+
+  // color is required UNLESS points is present (basemap-only mode)
+  const colorCh = encoding.color as Record<string, unknown> | undefined;
+  if (!hasPoints) {
+    if (!colorCh || typeof colorCh !== 'object') {
       errors.push({
-        message: `Spec error: encoding.${channel} must have a "field" string`,
-        path: `encoding.${channel}.field`,
+        message:
+          'Spec error: map encoding requires "color" channel (or add a "points" layer for basemap-only mode)',
+        path: 'encoding.color',
         code: 'MISSING_FIELD',
-        suggestion: `Add a field name, e.g. ${channel}: { field: "${channel === 'key' ? 'id' : 'value'}" }`,
+        suggestion: 'Add encoding.color, e.g. color: { field: "value", type: "quantitative" }',
       });
+    } else if (!colorCh.field || typeof colorCh.field !== 'string') {
+      errors.push({
+        message: 'Spec error: encoding.color must have a "field" string',
+        path: 'encoding.color.field',
+        code: 'MISSING_FIELD',
+        suggestion: 'Add a field name, e.g. color: { field: "value" }',
+      });
+    }
+  } else if (
+    colorCh &&
+    typeof colorCh === 'object' &&
+    (!colorCh.field || typeof colorCh.field !== 'string')
+  ) {
+    errors.push({
+      message: 'Spec error: encoding.color must have a "field" string when provided',
+      path: 'encoding.color.field',
+      code: 'MISSING_FIELD',
+      suggestion: 'Add a field name, e.g. color: { field: "value" }',
+    });
+  }
+
+  // Validate points layer if present
+  if (hasPoints) {
+    const points = spec.points as Record<string, unknown>;
+    if (!Array.isArray(points.data)) {
+      errors.push({
+        message: 'Spec error: points.data must be an array of data rows',
+        path: 'points.data',
+        code: 'INVALID_TYPE',
+        suggestion: 'Provide data as an array of objects with lat/lng fields',
+      });
+    }
+    for (const ch of ['longitude', 'latitude'] as const) {
+      const enc = points[ch] as Record<string, unknown> | undefined;
+      if (!enc || typeof enc !== 'object') {
+        errors.push({
+          message: `Spec error: points requires "${ch}" encoding channel`,
+          path: `points.${ch}`,
+          code: 'MISSING_FIELD',
+          suggestion: `Add points.${ch}, e.g. ${ch}: { field: "${ch === 'longitude' ? 'lon' : 'lat'}", type: "quantitative" }`,
+        });
+      } else if (!enc.field || typeof enc.field !== 'string') {
+        errors.push({
+          message: `Spec error: points.${ch} must have a "field" string`,
+          path: `points.${ch}.field`,
+          code: 'MISSING_FIELD',
+          suggestion: `Add a field name, e.g. ${ch}: { field: "${ch === 'longitude' ? 'lon' : 'lat'}" }`,
+        });
+      }
     }
   }
 }

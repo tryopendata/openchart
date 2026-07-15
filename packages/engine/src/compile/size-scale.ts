@@ -45,6 +45,8 @@ export const SIZE_SCALE_DEFAULTS = {
    * linear in font size, where a disc reads by its area.
    */
   text: { curve: 'linear', range: [11, 32] },
+  /** Map point dots. sqrt for area-proportional, tighter range than scatter. */
+  mapPoint: { curve: 'sqrt', range: [3, 20] },
 } as const satisfies Record<string, { curve: SizeCurve; range: readonly [number, number] }>;
 
 /** Size-scale options for a mark, or null when the mark has no size channel. */

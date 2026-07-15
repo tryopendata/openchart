@@ -290,4 +290,85 @@ describe('createMap', () => {
 
     instance.destroy();
   });
+
+  // ---------------------------------------------------------------------------
+  // Point layer rendering
+  // ---------------------------------------------------------------------------
+
+  describe('point layer', () => {
+    const pointSpec = {
+      type: 'map' as const,
+      geo: { features: MINI_TOPO, projection: 'mercator' as const },
+      data: [],
+      encoding: {
+        key: { field: 'id', type: 'nominal' as const },
+      },
+      points: {
+        data: [
+          { lat: 34, lon: -118, name: 'LA', value: 100 },
+          { lat: 40.7, lon: -74, name: 'NYC', value: 500 },
+        ],
+        longitude: { field: 'lon', type: 'quantitative' as const },
+        latitude: { field: 'lat', type: 'quantitative' as const },
+        size: { field: 'value', type: 'quantitative' as const },
+        key: { field: 'name', type: 'nominal' as const },
+      },
+    };
+
+    it('renders point circles inside camera group', () => {
+      const instance = createMap(container, pointSpec, { responsive: false });
+
+      const cameraGroup = container.querySelector('[data-oc-map-camera]');
+      expect(cameraGroup).not.toBeNull();
+
+      const points = cameraGroup!.querySelectorAll('.oc-map-point');
+      expect(points.length).toBe(2);
+
+      instance.destroy();
+    });
+
+    it('stores data-base-r on point circles', () => {
+      const instance = createMap(container, pointSpec, { responsive: false });
+
+      const points = container.querySelectorAll('.oc-map-point');
+      expect(points.length).toBe(2);
+
+      for (const p of points) {
+        const baseR = p.getAttribute('data-base-r');
+        expect(baseR).not.toBeNull();
+        const r = p.getAttribute('r');
+        expect(r).not.toBeNull();
+        expect(baseR).toBe(r);
+      }
+
+      instance.destroy();
+    });
+
+    it('counter-scales radius when camera is zoomed', () => {
+      const instance = createMap(container, pointSpec, { responsive: false });
+
+      // Grab initial radii
+      const pointsBefore = container.querySelectorAll('.oc-map-point');
+      const initialRadii = Array.from(pointsBefore).map((p) =>
+        Number(p.getAttribute('data-base-r')),
+      );
+      expect(initialRadii.length).toBe(2);
+      for (const r of initialRadii) {
+        expect(r).toBeGreaterThan(0);
+      }
+
+      // Zoom to New York which will scale > 1
+      instance.zoomTo('36', { duration: 0 });
+
+      // After zoom, r should be smaller than base-r (counter-scaled)
+      const pointsAfter = container.querySelectorAll('.oc-map-point');
+      for (let i = 0; i < pointsAfter.length; i++) {
+        const currentR = Number(pointsAfter[i].getAttribute('r'));
+        const baseR = Number(pointsAfter[i].getAttribute('data-base-r'));
+        expect(currentR).toBeLessThan(baseR);
+      }
+
+      instance.destroy();
+    });
+  });
 });

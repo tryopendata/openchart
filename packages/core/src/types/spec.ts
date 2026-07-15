@@ -2311,10 +2311,28 @@ export interface MapGeo {
 export interface MapEncoding {
   /** Join key field in the data (required). Maps data rows to geo features via geo.idField. */
   key: EncodingChannel;
-  /** Color encoding (required, quantitative or nominal). Drives fill color of features. */
-  color: EncodingChannel;
+  /** Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode). */
+  color?: EncodingChannel;
   /** Tooltip encoding (optional). */
   tooltip?: EncodingChannel | EncodingChannel[];
+}
+
+/** Point/symbol layer rendered above choropleth features. */
+export interface MapPointsLayer {
+  /** Tabular data for the points. Independent of the choropleth data join. */
+  data: DataRow[];
+  /** Field holding longitude (x coordinate). */
+  longitude: EncodingChannel;
+  /** Field holding latitude (y coordinate). */
+  latitude: EncodingChannel;
+  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). */
+  size?: EncodingChannel;
+  /** Optional color encoding (nominal or quantitative). Independent scale from choropleth. */
+  color?: EncodingChannel;
+  /** Tooltip channel(s), same shape as MapEncoding.tooltip. */
+  tooltip?: EncodingChannel | EncodingChannel[];
+  /** Stable id field for transitions and event callbacks. */
+  key?: EncodingChannel;
 }
 
 export interface MapSpec {
@@ -2336,6 +2354,8 @@ export interface MapSpec {
   darkMode?: DarkMode;
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
+  /** Optional point/symbol layer rendered above choropleth features. */
+  points?: MapPointsLayer;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
   /**
@@ -2441,7 +2461,9 @@ export type SankeySpecWithoutData = Omit<SankeySpec, 'data'>;
 /** TileMap spec without runtime data, for persistence/storage. */
 export type TileMapSpecWithoutData = Omit<TileMapSpec, 'data'>;
 /** Map spec without runtime data, for persistence/storage. */
-export type MapSpecWithoutData = Omit<MapSpec, 'data'>;
+export type MapSpecWithoutData = Omit<MapSpec, 'data' | 'points'> & {
+  points?: Omit<MapPointsLayer, 'data'>;
+};
 /** BarList spec without runtime data, for persistence/storage. */
 export type BarListSpecWithoutData = Omit<BarListSpec, 'data'>;
 /** Union of data-stripped spec types for persistence/storage. */

@@ -4,6 +4,7 @@ import type {
   LegendConfig,
   MapEncoding,
   MapGeo,
+  MapPointsLayer,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 
@@ -21,4 +22,5 @@ export interface NormalizedMapSpec {
   watermark: boolean;
   animation?: AnimationSpec;
   valueFormat?: string;
+  points?: MapPointsLayer;
 }

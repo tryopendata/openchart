@@ -21,5 +21,6 @@ export const page: PageEntry = {
     { id: 'data-update-recolor', title: 'Data-update recolor' },
     { id: 'zoom-to-feature', title: 'Zoom to feature' },
     { id: 'map-scrollytelling', title: 'Map scrollytelling' },
+    { id: 'point-layer', title: 'Point layer' },
   ],
 };

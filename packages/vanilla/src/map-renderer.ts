@@ -10,6 +10,7 @@ import type {
   MapBorders,
   MapFeatureMark,
   MapLayout,
+  MapPointMark,
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
@@ -258,6 +259,51 @@ function renderFeatures(
 }
 
 // ---------------------------------------------------------------------------
+// Point mark rendering
+// ---------------------------------------------------------------------------
+
+function renderPointMarks(
+  parent: SVGElement,
+  points: MapPointMark[],
+  animation?: ResolvedAnimation,
+): void {
+  if (points.length === 0) return;
+
+  const g = createSVGElement('g');
+  g.setAttribute('class', 'oc-map-points');
+  g.setAttribute('role', 'list');
+
+  for (const pt of points) {
+    const circle = createSVGElement('circle');
+    circle.setAttribute('class', 'oc-map-point');
+    circle.setAttribute('role', 'listitem');
+    setAttrs(circle, {
+      cx: pt.cx,
+      cy: pt.cy,
+      r: pt.r,
+      fill: pt.fill,
+      stroke: pt.stroke,
+      'stroke-width': pt.strokeWidth,
+    });
+    circle.setAttribute('data-point-key', pt.key);
+    circle.setAttribute('data-base-r', String(pt.r));
+    circle.setAttribute('data-base-stroke-width', String(pt.strokeWidth));
+    if (pt.aria?.label) {
+      circle.setAttribute('aria-label', pt.aria.label);
+    }
+    if (animation?.enter) {
+      (circle as unknown as ElementCSSInlineStyle).style.setProperty(
+        '--oc-mark-index',
+        String(pt.animationIndex),
+      );
+    }
+    g.appendChild(circle);
+  }
+
+  parent.appendChild(g);
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -319,6 +365,9 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   // Render borders on top of features
   renderBorders(cameraGroup, borders);
 
+  // Render point marks inside camera group (above borders)
+  renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined);
+
   mapGroup.appendChild(cameraGroup);
   svg.appendChild(mapGroup);
 
@@ -327,6 +376,14 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
     renderLegend(svg, layout.continuousLegend);
   } else if (layout.categoricalLegend) {
     renderLegend(svg, layout.categoricalLegend);
+  }
+
+  // Render point legends
+  if (layout.pointCategoricalLegend) {
+    renderLegend(svg, layout.pointCategoricalLegend);
+  }
+  if (layout.pointContinuousLegend) {
+    renderLegend(svg, layout.pointContinuousLegend);
   }
 
   // Render watermark

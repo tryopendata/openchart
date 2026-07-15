@@ -10,6 +10,7 @@ import type {
   MapFocus,
   MapFocusLayout,
   MapLayout,
+  MapPointMark,
   ResolvedAnimation,
   ResolvedTheme,
   TextStyle,
@@ -33,10 +34,12 @@ import { geoArea, geoPath } from 'd3-geo';
 import { scaleQuantile } from 'd3-scale';
 import { feature as topoFeature, mesh as topoMesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
+import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import {
+  CONTINUOUS_BAR_HEIGHT,
   CONTINUOUS_LABEL_GAP,
   computeContinuousLegendContentForChannel,
 } from '../legend/continuous';
@@ -162,14 +165,14 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // 8. Legend height reserve
   const showLegend = mapSpec.legend?.show !== false;
   const colorEncoding = mapSpec.encoding.color;
-  const isQuantitative = colorEncoding.type === 'quantitative';
+  const isQuantitative = colorEncoding?.type === 'quantitative';
   const legendPosition = mapSpec.legend?.position === 'bottom' ? 'bottom' : 'top';
 
   // Compute legend block height. For quantitative maps, use the continuous
   // legend infrastructure; for categorical, estimate a single swatch row.
   let legendBlockHeight = 0;
   let continuousContent: ReturnType<typeof computeContinuousLegendContentForChannel> = null;
-  if (showLegend && isQuantitative) {
+  if (showLegend && colorEncoding && isQuantitative) {
     const colorValues: number[] = [];
     for (const row of mapSpec.data) {
       const v = row[colorEncoding.field];
@@ -181,8 +184,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     // Maps always use a quantile color scale, so tell the legend infra
     // to produce binned swatches rather than a gradient bar.
     const legendChannel: EncodingChannel = {
-      ...(colorEncoding as EncodingChannel),
-      scale: { ...(colorEncoding as EncodingChannel).scale, type: 'quantile' },
+      ...colorEncoding,
+      scale: { ...colorEncoding.scale, type: 'quantile' },
     };
     continuousContent = computeContinuousLegendContentForChannel(
       colorValues,
@@ -194,10 +197,22 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       legendBlockHeight = continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
     }
-  } else if (showLegend) {
+  } else if (showLegend && colorEncoding) {
     const labelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
     legendBlockHeight = Math.max(10, labelHeight) + 6;
   }
+
+  // Reserve height for point color legend if applicable
+  if (showLegend && mapSpec.points?.color) {
+    if (mapSpec.points.color.type === 'quantitative') {
+      const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+      legendBlockHeight += CONTINUOUS_BAR_HEIGHT + CONTINUOUS_LABEL_GAP + labelRowHeight + 8;
+    } else {
+      const ptLabelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+      legendBlockHeight += Math.max(10, ptLabelHeight) + 6 + 8; // swatch row + gap
+    }
+  }
+
   const legendReserveGap = legendBlockHeight > 0 ? 8 : 0;
 
   const mapAreaHeight = fullArea.height - legendBlockHeight - legendReserveGap;
@@ -243,7 +258,12 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     mapSpec.encoding.key.field,
     mapSpec.geo.idField,
   );
-  compileWarnings.push(...joinWarnings);
+  // In basemap-only mode (empty data + points layer), all features are intentionally unmatched
+  const filteredJoinWarnings =
+    mapSpec.data.length === 0 && mapSpec.points
+      ? joinWarnings.filter((w) => w.code !== 'UNMATCHED_FEATURES')
+      : joinWarnings;
+  compileWarnings.push(...filteredJoinWarnings);
 
   // 12. Check for null-projecting features (albersUsa drops territories)
   const droppedFeatures: string[] = [];
@@ -257,13 +277,22 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   let continuousLegend: ContinuousLegendLayout | null = null;
   let categoricalLegend: CategoricalLegendLayout | null = null;
 
-  if (isQuantitative) {
+  if (!colorEncoding) {
+    // Basemap-only mode: all features get neutral fill, no legend
+    featureMarks = buildBasemapMarks({
+      geoFeatures,
+      pathGen,
+      neutralFill,
+      neutralStroke,
+      droppedFeatures,
+    });
+  } else if (isQuantitative) {
     const result = buildQuantitativeMarks({
       geoFeatures,
       pathGen,
       joined,
       colorField: colorEncoding.field,
-      palette: mapSpec.encoding.color.scale?.scheme ?? 'blue',
+      palette: colorEncoding.scale?.scheme ?? 'blue',
       isDarkMode: !!isDarkMode,
       neutralFill,
       neutralStroke,
@@ -364,6 +393,234 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   const outlineStroke = isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
   const borders: MapBorders = { interiorPath, outlinePath, interiorStroke, outlineStroke };
 
+  // 15b. Point marks (symbol layer above choropleth)
+  const pointMarks: MapPointMark[] = [];
+  let pointCategoricalLegend: CategoricalLegendLayout | null = null;
+  let pointContinuousLegend: ContinuousLegendLayout | null = null;
+
+  if (mapSpec.points) {
+    const pts = mapSpec.points;
+    const lonField = pts.longitude.field;
+    const latField = pts.latitude.field;
+    const keyChannel = pts.key;
+
+    // Size scale
+    const sizeScale = buildSizeScale(pts.size, pts.data, SIZE_SCALE_DEFAULTS.mapPoint);
+
+    // Color scale (independent from choropleth)
+    let pointColorScale: ((val: unknown) => string) | null = null;
+    const pointCategories: string[] = [];
+    const pointCategoryColors = new Map<string, string>();
+
+    if (pts.color) {
+      if (pts.color.type === 'quantitative') {
+        const colorValues: number[] = [];
+        for (const row of pts.data) {
+          const raw = row[pts.color.field];
+          if (raw != null) {
+            const v = Number(raw);
+            if (Number.isFinite(v)) colorValues.push(v);
+          }
+        }
+        if (colorValues.length > 0) {
+          const palette = pts.color.scale?.scheme ?? 'blue';
+          const paletteStops = [...(SEQUENTIAL_PALETTES[palette] ?? SEQUENTIAL_PALETTES.blue)];
+          const qScale = scaleQuantile<string>().domain(colorValues).range(paletteStops);
+          pointColorScale = (val: unknown) => {
+            const v = Number(val);
+            return Number.isFinite(v) ? qScale(v) : CATEGORICAL_PALETTE[0];
+          };
+        }
+      } else {
+        // nominal / ordinal
+        const seen = new Set<string>();
+        for (const row of pts.data) {
+          const raw = row[pts.color.field];
+          if (raw != null) {
+            const cat = String(raw);
+            if (!seen.has(cat)) {
+              seen.add(cat);
+              pointCategories.push(cat);
+              pointCategoryColors.set(
+                cat,
+                CATEGORICAL_PALETTE[(pointCategories.length - 1) % CATEGORICAL_PALETTE.length],
+              );
+            }
+          }
+        }
+        pointColorScale = (val: unknown) => {
+          if (val == null) return CATEGORICAL_PALETTE[0];
+          return pointCategoryColors.get(String(val)) ?? CATEGORICAL_PALETTE[0];
+        };
+      }
+    }
+
+    const defaultFill = CATEGORICAL_PALETTE[0];
+    let animIndex = 0;
+
+    for (let i = 0; i < pts.data.length; i++) {
+      const row = pts.data[i];
+      const lon = Number(row[lonField]);
+      const lat = Number(row[latField]);
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+
+      const projected = projection([lon, lat]);
+      if (!projected) {
+        compileWarnings.push({
+          code: 'POINT_NULL_PROJECTION',
+          message: `Point at [${lon}, ${lat}] projects to null and was dropped.`,
+          context: { lon, lat },
+        });
+        continue;
+      }
+
+      const r = sizeScale ? sizeScale.scale(Number(row[sizeScale.field])) : 5;
+      const fill =
+        pointColorScale && pts.color ? pointColorScale(row[pts.color.field]) : defaultFill;
+      const key = keyChannel ? String(row[keyChannel.field] ?? i) : String(i);
+      const stroke = isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)';
+
+      pointMarks.push({
+        type: 'map-point',
+        cx: projected[0],
+        cy: projected[1],
+        r,
+        fill,
+        stroke,
+        strokeWidth: 1,
+        key,
+        data: row as Record<string, unknown>,
+        aria: { role: 'img', label: key },
+        animationIndex: animIndex++,
+      });
+    }
+
+    // Point categorical legend
+    if (
+      pts.color &&
+      pts.color.type !== 'quantitative' &&
+      pointCategories.length > 0 &&
+      showLegend
+    ) {
+      const labelStyle: TextStyle = {
+        fontFamily: theme.fonts.family,
+        fontSize: theme.fonts.sizes.small,
+        fontWeight: theme.fonts.weights.normal,
+        fill: theme.colors.text,
+        lineHeight: 1.2,
+      };
+
+      const entries: LegendEntry[] = pointCategories.map((cat) => ({
+        label: cat,
+        color: pointCategoryColors.get(cat)!,
+        shape: 'circle' as const,
+      }));
+
+      // Position below the choropleth legend (or at the legend position if none)
+      const choroplethLegendHeight = continuousLegend
+        ? continuousLegend.bounds.height
+        : categoricalLegend
+          ? categoricalLegend.bounds.height
+          : 0;
+      const choroplethLegendGap = choroplethLegendHeight > 0 ? 8 : 0;
+      const legendX = fullArea.x;
+      const legendY =
+        fullArea.y +
+        mapAreaHeight +
+        legendReserveGap +
+        choroplethLegendHeight +
+        choroplethLegendGap;
+      const legendWidth = fullArea.width;
+      const swatchSize = 10;
+      const swatchGap = 6;
+      const entryGap = 16;
+
+      pointCategoricalLegend = {
+        type: 'categorical',
+        position: 'bottom',
+        bounds: { x: legendX, y: legendY, width: legendWidth, height: swatchSize + 6 },
+        labelStyle,
+        entries,
+        swatchSize,
+        swatchGap,
+        entryGap,
+        swatchChipFill: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+      };
+    }
+
+    // Point continuous legend (quantitative color)
+    if (pts.color && pts.color.type === 'quantitative' && showLegend) {
+      const ptColorValues: number[] = [];
+      for (const row of pts.data) {
+        const v = row[pts.color.field];
+        if (v != null) {
+          const n = Number(v);
+          if (Number.isFinite(n)) ptColorValues.push(n);
+        }
+      }
+      const ptLegendChannel: EncodingChannel = {
+        ...pts.color,
+        scale: { ...pts.color.scale, type: 'quantile' },
+      };
+      const ptContinuousContent = computeContinuousLegendContentForChannel(
+        ptColorValues,
+        ptLegendChannel,
+        theme,
+        fullArea.width,
+      );
+      if (ptContinuousContent) {
+        const labelStyle: TextStyle = {
+          fontFamily: theme.fonts.family,
+          fontSize: theme.fonts.sizes.small,
+          fontWeight: theme.fonts.weights.normal,
+          fill: theme.colors.text,
+          lineHeight: 1.3,
+          fontVariant: 'tabular-nums',
+        };
+        const choroplethLegendHeight = continuousLegend
+          ? continuousLegend.bounds.height
+          : categoricalLegend
+            ? categoricalLegend.bounds.height
+            : 0;
+        const choroplethLegendGap = choroplethLegendHeight > 0 ? 8 : 0;
+        const legendX = fullArea.x;
+        const legendY =
+          fullArea.y +
+          mapAreaHeight +
+          legendReserveGap +
+          choroplethLegendHeight +
+          choroplethLegendGap;
+        const ptLabelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+        const ptLegendHeight =
+          ptContinuousContent.barHeight + CONTINUOUS_LABEL_GAP + ptLabelRowHeight;
+        const bounds = {
+          x: legendX,
+          y: legendY,
+          width: ptContinuousContent.barWidth,
+          height: ptLegendHeight,
+        };
+        const bar = {
+          x: bounds.x,
+          y: bounds.y,
+          width: ptContinuousContent.barWidth,
+          height: ptContinuousContent.barHeight,
+        };
+        pointContinuousLegend = {
+          type: 'continuous' as const,
+          mode: ptContinuousContent.mode,
+          position: 'bottom',
+          bounds,
+          labelStyle,
+          bar,
+          colorStops: ptContinuousContent.colorStops,
+          bins: ptContinuousContent.bins.map((b) => ({ ...b, x: b.x + bar.x })),
+          ticks: ptContinuousContent.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
+          labelY: bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize,
+        };
+      }
+    }
+  }
+
   // 16. Tooltips
   const tooltipChannels = mapSpec.encoding.tooltip
     ? Array.isArray(mapSpec.encoding.tooltip)
@@ -388,12 +645,12 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
           });
         }
       }
-    } else if (isQuantitative && mark.data[colorEncoding.field] != null) {
+    } else if (colorEncoding && isQuantitative && mark.data[colorEncoding.field] != null) {
       fields.push({
         label: colorEncoding.title ?? colorEncoding.field,
         value: formatter(Number(mark.data[colorEncoding.field])),
       });
-    } else if (!isQuantitative && mark.data[colorEncoding.field] != null) {
+    } else if (colorEncoding && !isQuantitative && mark.data[colorEncoding.field] != null) {
       fields.push({
         label: colorEncoding.title ?? colorEncoding.field,
         value: String(mark.data[colorEncoding.field]),
@@ -402,14 +659,79 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     tooltipDescriptors.set(String(mark.id), { fields });
   }
 
+  // Point tooltips (keyed with 'point:' prefix to disambiguate from feature IDs)
+  if (mapSpec.points && pointMarks.length > 0) {
+    const ptTooltipChannels = mapSpec.points.tooltip
+      ? Array.isArray(mapSpec.points.tooltip)
+        ? mapSpec.points.tooltip
+        : [mapSpec.points.tooltip]
+      : null;
+
+    for (const pm of pointMarks) {
+      const fields: TooltipField[] = [];
+      if (ptTooltipChannels) {
+        for (const ch of ptTooltipChannels) {
+          const val = pm.data[ch.field];
+          if (val != null) {
+            fields.push({
+              label: ch.title ?? ch.field,
+              value: ch.type === 'quantitative' ? formatter(Number(val)) : String(val),
+            });
+          }
+        }
+      } else {
+        // Auto-populate from key, color, and size channels
+        const pts = mapSpec.points!;
+        if (pts.key) {
+          const val = pm.data[pts.key.field];
+          if (val != null)
+            fields.push({ label: pts.key.title ?? pts.key.field, value: String(val) });
+        }
+        if (pts.color) {
+          const val = pm.data[pts.color.field];
+          if (val != null)
+            fields.push({
+              label: pts.color.title ?? pts.color.field,
+              value: pts.color.type === 'quantitative' ? formatter(Number(val)) : String(val),
+            });
+        }
+        if (pts.size) {
+          const val = pm.data[pts.size.field];
+          if (val != null)
+            fields.push({ label: pts.size.title ?? pts.size.field, value: formatter(Number(val)) });
+        }
+      }
+      if (fields.length > 0) {
+        tooltipDescriptors.set(`point:${pm.key}`, { fields });
+      }
+    }
+  }
+
   // 17. Accessibility
+  const a11yDataField = colorEncoding?.field;
   const a11y = {
-    altText: `Map showing ${geoFeatures.length} regions with ${isQuantitative ? 'quantitative' : 'categorical'} data`,
-    dataTableFallback: featureMarks
-      .filter((m) => m.data)
-      .map((m) => [m.name ?? String(m.id), String(m.data?.[colorEncoding.field] ?? '')]),
+    altText:
+      pointMarks.length > 0
+        ? colorEncoding
+          ? `Map showing ${geoFeatures.length} regions with ${isQuantitative ? 'quantitative' : 'categorical'} data and ${pointMarks.length} point markers`
+          : `Map showing ${geoFeatures.length} regions with ${pointMarks.length} point markers`
+        : colorEncoding
+          ? `Map showing ${geoFeatures.length} regions with ${isQuantitative ? 'quantitative' : 'categorical'} data`
+          : `Map showing ${geoFeatures.length} regions`,
+    dataTableFallback: [
+      ...featureMarks
+        .filter((m) => m.data)
+        .map((m) => [
+          m.name ?? String(m.id),
+          a11yDataField ? String(m.data?.[a11yDataField] ?? '') : '',
+        ]),
+      ...pointMarks.map((pm) => [
+        pm.key,
+        mapSpec.points?.color ? String(pm.data[mapSpec.points.color.field] ?? '') : '',
+      ]),
+    ],
     role: 'img' as const,
-    keyboardNavigable: featureMarks.length > 0,
+    keyboardNavigable: featureMarks.length > 0 || pointMarks.length > 0,
   };
 
   // 18. Resolve focus
@@ -454,6 +776,9 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     borders,
     continuousLegend,
     categoricalLegend,
+    pointMarks,
+    pointCategoricalLegend,
+    pointContinuousLegend,
     tooltipDescriptors,
     a11y,
     theme,
@@ -468,6 +793,65 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     mapSize: { width: fullArea.width, height: mapAreaHeight },
     focus: resolvedFocus,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Basemap-only marks (neutral fill, no color encoding)
+// ---------------------------------------------------------------------------
+
+interface BasemapOptions {
+  geoFeatures: GeoJSON.Feature[];
+  pathGen: ReturnType<typeof geoPath>;
+  neutralFill: string;
+  neutralStroke: string;
+  droppedFeatures: string[];
+}
+
+function buildBasemapMarks(opts: BasemapOptions): MapFeatureMark[] {
+  const { geoFeatures, pathGen, neutralFill, neutralStroke, droppedFeatures } = opts;
+  const marks: MapFeatureMark[] = [];
+  let animIndex = 0;
+
+  for (const feat of geoFeatures) {
+    const pathD = pathGen(feat);
+    if (!pathD) {
+      const name =
+        ((feat.properties as Record<string, unknown> | null)?.name as string) ?? String(feat.id);
+      droppedFeatures.push(name);
+      continue;
+    }
+
+    const featureId = feat.id as string | number;
+    const props = feat.properties as Record<string, unknown> | null;
+    const name = (props?.name as string) ?? (props?.NAME as string);
+
+    const b = pathGen.bounds(feat);
+    const bx = Number.isFinite(b[0][0]) ? b[0][0] : 0;
+    const by = Number.isFinite(b[0][1]) ? b[0][1] : 0;
+    const bw = Number.isFinite(b[1][0]) ? b[1][0] - bx : 0;
+    const bh = Number.isFinite(b[1][1]) ? b[1][1] - by : 0;
+    const bounds = { x: bx, y: by, width: bw, height: bh };
+    const rawCentroid = pathGen.centroid(feat);
+    const cx = Number.isFinite(rawCentroid[0]) ? rawCentroid[0] : bx + bw / 2;
+    const cy = Number.isFinite(rawCentroid[1]) ? rawCentroid[1] : by + bh / 2;
+
+    marks.push({
+      type: 'map-feature',
+      path: pathD,
+      fill: neutralFill,
+      stroke: neutralStroke,
+      strokeWidth: 0.5,
+      id: featureId,
+      name,
+      data: null,
+      aria: { role: 'img', label: name ?? String(featureId) },
+      animationIndex: animIndex++,
+      bounds,
+      centroid: [cx, cy],
+    });
+  }
+
+  return marks;
 }
 
 // ---------------------------------------------------------------------------
@@ -834,6 +1218,9 @@ function emptyLayout(
     },
     continuousLegend: null,
     categoricalLegend: null,
+    pointMarks: [],
+    pointCategoricalLegend: null,
+    pointContinuousLegend: null,
     tooltipDescriptors: new Map(),
     a11y: {
       altText: 'Empty map',

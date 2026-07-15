@@ -150,6 +150,14 @@
       animation-delay: calc(var(--oc-animation-duration) * 0.7);
     }
 
+    /* Map points: fade in after borders with staggered delay.
+       Pure opacity fade (no scale transform) to avoid conflicting with
+       camera counter-scaling of the r attribute. */
+    & .oc-map-point {
+      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.4) ease-in both;
+      animation-delay: calc(var(--oc-animation-duration) * 0.8 + var(--oc-mark-index, 0) * 15ms);
+    }
+
     /* Sankey nodes: fade in with stagger by column depth (left-to-right) */
     & .oc-sankey-node rect {
       animation: oc-enter-fade-only var(--oc-animation-duration)

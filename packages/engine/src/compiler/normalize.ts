@@ -595,6 +595,7 @@ function normalizeMapSpec(spec: MapSpec, _warnings: string[]): NormalizedMapSpec
     watermark: spec.watermark ?? true,
     animation: spec.animation,
     valueFormat: spec.valueFormat,
+    points: spec.points,
   };
 }
 

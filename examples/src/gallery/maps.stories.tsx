@@ -11,6 +11,7 @@ import type { MapHandle } from '@opendata-ai/openchart-react';
 import { ChartStory, GeoMap } from '@opendata-ai/openchart-react';
 import { useRef, useState } from 'react';
 import usCountiesTopo from 'us-atlas/counties-albers-10m.json';
+import usStatesUnprojected from 'us-atlas/states-10m.json';
 import usStatesTopo from 'us-atlas/states-albers-10m.json';
 import worldTopo from 'world-atlas/countries-110m.json';
 import { Demo, GalleryPage, Section, useOcMode } from '../components';
@@ -368,6 +369,43 @@ function MapScrollyDemo() {
 }
 
 // ---------------------------------------------------------------------------
+// 10. Point layer — basemap with symbol overlay
+// ---------------------------------------------------------------------------
+
+const pointLayerSpec: MapSpec = {
+  type: 'map',
+  geo: { features: usStatesUnprojected, projection: 'albersUsa' },
+  data: [],
+  encoding: {
+    key: { field: 'id', type: 'nominal' },
+  },
+  points: {
+    data: [
+      { lat: 30.27, lon: -97.74, name: 'Austin', value: 950, category: 'A' },
+      { lat: 29.76, lon: -95.37, name: 'Houston', value: 2300, category: 'B' },
+      { lat: 32.78, lon: -96.8, name: 'Dallas', value: 1300, category: 'A' },
+      { lat: 29.42, lon: -98.49, name: 'San Antonio', value: 1400, category: 'C' },
+      { lat: 31.76, lon: -106.44, name: 'El Paso', value: 680, category: 'B' },
+    ],
+    longitude: { field: 'lon', type: 'quantitative' },
+    latitude: { field: 'lat', type: 'quantitative' },
+    size: { field: 'value', type: 'quantitative' },
+    color: { field: 'category', type: 'nominal' },
+    tooltip: [
+      { field: 'name', type: 'nominal', title: 'City' },
+      { field: 'value', type: 'quantitative', title: 'Population (k)' },
+      { field: 'category', type: 'nominal', title: 'Category' },
+    ],
+    key: { field: 'name', type: 'nominal' },
+  },
+  chrome: {
+    title: 'Texas Major Cities',
+    subtitle: 'Size = population, color = category',
+  },
+  animation: true,
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -490,6 +528,20 @@ export const Maps = () => (
       lede="ChartStory drives a map through a sequence of geo.focus patches as the reader scrolls. Each step zooms to a feature or region while the narrative text describes what the reader is looking at."
     >
       <MapScrollyDemo />
+    </Section>
+
+    <Section
+      id="point-layer"
+      title="Point layer"
+      lede="Overlay point symbols on a basemap using lat/lon coordinates. The points layer has independent size and color encodings that project through the same geo projection as the features."
+    >
+      <Demo
+        id="point-layer"
+        title="Point layer"
+        description="A basemap-only spec (no choropleth color) with synthetic point data overlaid. Size encodes population, color encodes category. Points counter-scale when the camera zooms."
+        spec={pointLayerSpec}
+        height={500}
+      />
     </Section>
   </GalleryPage>
 );

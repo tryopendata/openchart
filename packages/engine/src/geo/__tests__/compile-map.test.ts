@@ -618,4 +618,215 @@ describe('compileMap', () => {
 
     expect(layout.focus).toBeNull();
   });
+
+  // ---------------------------------------------------------------------------
+  // Point layer
+  // ---------------------------------------------------------------------------
+
+  describe('point layer', () => {
+    it('compiles points through projection', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [],
+          encoding: { key: { field: 'id', type: 'nominal' } },
+          points: {
+            data: [
+              { lat: 34, lon: -118, name: 'LA' },
+              { lat: 40.7, lon: -74, name: 'NYC' },
+            ],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      expect(layout.pointMarks).toHaveLength(2);
+      for (const pm of layout.pointMarks) {
+        expect(Number.isFinite(pm.cx)).toBe(true);
+        expect(Number.isFinite(pm.cy)).toBe(true);
+      }
+    });
+
+    it('drops null-projecting points with warning', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'albersUsa' },
+          data: [],
+          encoding: { key: { field: 'id', type: 'nominal' } },
+          points: {
+            data: [{ lat: 0, lon: 0, name: 'Pacific' }],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      expect(layout.pointMarks).toHaveLength(0);
+      const warning = layout.warnings.find((w) => w.code === 'POINT_NULL_PROJECTION');
+      expect(warning).toBeDefined();
+    });
+
+    it('builds sqrt size scale for points', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [],
+          encoding: { key: { field: 'id', type: 'nominal' } },
+          points: {
+            data: [
+              { lat: 34, lon: -118, name: 'A', value: 10 },
+              { lat: 40.7, lon: -74, name: 'B', value: 1000 },
+            ],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            size: { field: 'value', type: 'quantitative' },
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      expect(layout.pointMarks).toHaveLength(2);
+      const radii = layout.pointMarks.map((pm) => pm.r);
+      expect(radii[0]).not.toBe(radii[1]);
+      // Map point size scale range is [3, 20]
+      for (const r of radii) {
+        expect(r).toBeGreaterThanOrEqual(3);
+        expect(r).toBeLessThanOrEqual(20);
+      }
+    });
+
+    it('builds independent categorical color scale', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [],
+          encoding: { key: { field: 'id', type: 'nominal' } },
+          points: {
+            data: [
+              { lat: 34, lon: -118, name: 'A', cat: 'x' },
+              { lat: 40.7, lon: -74, name: 'B', cat: 'y' },
+              { lat: 37, lon: -100, name: 'C', cat: 'z' },
+            ],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            color: { field: 'cat', type: 'nominal' },
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      expect(layout.pointMarks).toHaveLength(3);
+      const fills = layout.pointMarks.map((pm) => pm.fill);
+      // 3 different categories should produce 3 different colors
+      expect(new Set(fills).size).toBe(3);
+    });
+
+    it('basemap-only: neutral fill when no encoding.color', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [],
+          encoding: { key: { field: 'id', type: 'nominal' } },
+          points: {
+            data: [{ lat: 34, lon: -118, name: 'LA' }],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      // Features should all have the neutral fill (#e8e8e8 in light mode)
+      for (const f of layout.features) {
+        expect(f.fill).toBe('#e8e8e8');
+      }
+    });
+
+    it('generates point tooltips with point: prefix', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [],
+          encoding: { key: { field: 'id', type: 'nominal' } },
+          points: {
+            data: [
+              { lat: 34, lon: -118, name: 'LA', value: 100 },
+              { lat: 40.7, lon: -74, name: 'NYC', value: 200 },
+            ],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            tooltip: [
+              { field: 'name', type: 'nominal', title: 'City' },
+              { field: 'value', type: 'quantitative', title: 'Pop' },
+            ],
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      const pointKeys = [...layout.tooltipDescriptors.keys()].filter((k) => k.startsWith('point:'));
+      expect(pointKeys).toHaveLength(2);
+      expect(pointKeys).toContain('point:LA');
+      expect(pointKeys).toContain('point:NYC');
+
+      const laTooltip = layout.tooltipDescriptors.get('point:LA');
+      expect(laTooltip).toBeDefined();
+      expect(laTooltip!.fields).toHaveLength(2);
+      expect(laTooltip!.fields[0].label).toBe('City');
+    });
+
+    it('handles points alongside choropleth', () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [
+            { fips: '06', value: 10 },
+            { fips: '48', value: 20 },
+          ],
+          encoding: {
+            key: { field: 'fips', type: 'nominal' },
+            color: { field: 'value', type: 'quantitative' },
+          },
+          points: {
+            data: [
+              { lat: 34, lon: -118, name: 'LA', pop: 400 },
+              { lat: 31, lon: -100, name: 'TX City', pop: 200 },
+            ],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            key: { field: 'name', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      // Choropleth features should have color-encoded fills
+      const matchedFeature = layout.features.find((f) => f.id === '06');
+      expect(matchedFeature).toBeDefined();
+      expect(matchedFeature!.fill).not.toBe('#e8e8e8');
+
+      // Point marks should also be present
+      expect(layout.pointMarks).toHaveLength(2);
+      for (const pm of layout.pointMarks) {
+        expect(Number.isFinite(pm.cx)).toBe(true);
+        expect(Number.isFinite(pm.cy)).toBe(true);
+      }
+    });
+  });
 });

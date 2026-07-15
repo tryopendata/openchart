@@ -1749,6 +1749,31 @@ export interface MapFeatureMark {
   centroid: [number, number];
 }
 
+/** A resolved map point mark with projected coordinates and visual properties. */
+export interface MapPointMark {
+  type: 'map-point';
+  /** Projected center x in map-local coordinates. */
+  cx: number;
+  /** Projected center y in map-local coordinates. */
+  cy: number;
+  /** Radius in pixels (base radius before camera counter-scaling). */
+  r: number;
+  /** CSS fill color. */
+  fill: string;
+  /** CSS stroke color. */
+  stroke: string;
+  /** Stroke width in px. */
+  strokeWidth: number;
+  /** Stable key for events and transitions. */
+  key: string;
+  /** Original data row. */
+  data: Record<string, unknown>;
+  /** Accessibility attributes. */
+  aria: MarkAria;
+  /** Index for stagger animation ordering. */
+  animationIndex: number;
+}
+
 /** Border paths for the map (interior borders and coastline/outline). */
 export interface MapBorders {
   /** SVG path `d` for interior borders between features. */
@@ -1777,6 +1802,12 @@ export interface MapLayout {
   features: MapFeatureMark[];
   /** Border paths (interior mesh and outline). */
   borders: MapBorders;
+  /** Resolved point marks for the symbol layer (empty array if no points layer). */
+  pointMarks: MapPointMark[];
+  /** Categorical legend for the point color channel (null if no point color). */
+  pointCategoricalLegend: CategoricalLegendLayout | null;
+  /** Continuous legend for the point color channel (null if no point color). */
+  pointContinuousLegend: ContinuousLegendLayout | null;
   /** Continuous color legend for quantitative mode (null if hidden or categorical). */
   continuousLegend: ContinuousLegendLayout | null;
   /** Categorical swatch legend for nominal mode (null if hidden or quantitative). */
