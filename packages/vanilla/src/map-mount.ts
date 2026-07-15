@@ -40,6 +40,19 @@ import type { Tween } from './story/tween';
 import { createTween, easingFns, storyMotion } from './story/tween';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
+/**
+ * A stable string for a resolved focus, used to detect focus changes between
+ * `update()` calls. Includes the target rect (rounded) so a points focus
+ * (which has empty ids) still re-fits when the fitted cluster moves; ids alone
+ * would miss that. `null` focus -> null (no camera target).
+ */
+function focusSignature(focus: MapLayout['focus']): string | null {
+  if (!focus) return null;
+  const t = focus.target;
+  const ids = focus.ids.map(String).sort().join(',');
+  return `${ids}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.width)},${Math.round(t.height)},${t.padding}`;
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -534,9 +547,12 @@ export function createMap(
     const canAnimate = !animationCleanup && !prefersReducedMotion();
     const prevFills = canAnimate ? captureFeatureFills(svgElement) : null;
 
-    // Remember previous focus to detect changes
+    // Remember previous focus to detect changes. The signature includes the
+    // target rect, not just ids+padding, so a points-focus ({ points: true },
+    // which resolves to empty ids) still re-fits the camera when the fitted
+    // cluster moves between steps.
     const prevFocusIds = currentFocusIds ? currentFocusIds.map(String).sort().join(',') : null;
-    const prevFocusPadding = currentLayout.focus?.target.padding ?? null;
+    const prevFocusSig = focusSignature(currentLayout.focus);
 
     currentLayout = compile();
     render();
@@ -556,10 +572,9 @@ export function createMap(
 
     // Declarative focus from spec: tween camera if focus changed
     const nextFocus = currentLayout.focus;
-    const nextFocusIds = nextFocus ? nextFocus.ids.map(String).sort().join(',') : null;
-    const nextFocusPadding = nextFocus?.target.padding ?? null;
+    const nextFocusSig = focusSignature(nextFocus);
 
-    if (nextFocusIds !== prevFocusIds || nextFocusPadding !== prevFocusPadding) {
+    if (nextFocusSig !== prevFocusSig) {
       if (nextFocus) {
         currentFocusIds = [...nextFocus.ids];
         const cam = cameraForTarget(currentLayout, nextFocus.target);

@@ -1364,13 +1364,40 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
       }
     } else if (typeof focus === 'object') {
       const focusObj = focus as Record<string, unknown>;
-      if (!('features' in focusObj) || focusObj.features == null) {
+      if ('points' in focusObj) {
+        // Points form: { points: true | { field, value }, padding? } fits the
+        // point layer's cluster (all points, or a matching subset).
+        const pts = focusObj.points;
+        const isSubset =
+          typeof pts === 'object' &&
+          pts !== null &&
+          typeof (pts as Record<string, unknown>).field === 'string' &&
+          'value' in (pts as Record<string, unknown>);
+        if (pts !== true && !isSubset) {
+          errors.push({
+            message:
+              'Spec error: geo.focus.points must be true or { field: string, value: string | number }',
+            path: 'geo.focus.points',
+            code: 'INVALID_TYPE',
+            suggestion:
+              'Use { points: true } to fit all points, or { points: { field: "rating", value: "F" } } to fit a subset.',
+          });
+        }
+        if (focusObj.padding !== undefined && typeof focusObj.padding !== 'number') {
+          errors.push({
+            message: 'Spec error: geo.focus.padding must be a number',
+            path: 'geo.focus.padding',
+            code: 'INVALID_TYPE',
+            suggestion: 'Provide padding as a number in map-local units, e.g. padding: 16',
+          });
+        }
+      } else if (!('features' in focusObj) || focusObj.features == null) {
         errors.push({
-          message: 'Spec error: geo.focus object must have a "features" property',
+          message: 'Spec error: geo.focus object must have a "features" or "points" property',
           path: 'geo.focus.features',
           code: 'MISSING_FIELD',
           suggestion:
-            'Provide feature id(s) to focus on, e.g. geo: { focus: { features: "36", padding: 32 } }',
+            'Provide feature id(s) to focus on, e.g. { features: "36", padding: 32 }, or { points: true } to fit the point cluster.',
         });
       } else {
         const feats = focusObj.features;
@@ -1406,11 +1433,11 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
     } else {
       errors.push({
         message:
-          'Spec error: geo.focus must be a string, number, array of ids, or object with { features, padding? }',
+          'Spec error: geo.focus must be a string, number, array of ids, or object with { features, padding? } or { points: true, padding? }',
         path: 'geo.focus',
         code: 'INVALID_TYPE',
         suggestion:
-          'Use a feature id, array of ids, or { features: "36", padding: 16 }. Pass null to clear focus.',
+          'Use a feature id, array of ids, { features: "36", padding: 16 }, or { points: true }. Pass null to clear focus.',
       });
     }
   }

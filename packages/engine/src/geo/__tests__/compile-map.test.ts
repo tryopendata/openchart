@@ -582,6 +582,129 @@ describe('compileMap', () => {
     expect(layout.focus).toBeNull();
   });
 
+  it('geo.focus { points: true } fits the point cluster, not any feature', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: {
+          features: MINI_TOPO,
+          projection: 'mercator',
+          focus: { points: true, padding: 4 },
+        },
+        data: [],
+        encoding: { key: { field: 'id', type: 'nominal' } },
+        points: {
+          data: [
+            { lat: 34, lon: -118, name: 'LA' },
+            { lat: 40.7, lon: -74, name: 'NYC' },
+          ],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          key: { field: 'name', type: 'nominal' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).not.toBeNull();
+    expect(layout.focus!.target.padding).toBe(4);
+    // No feature ids: an all-points focus dims no features.
+    expect(layout.focus!.ids).toEqual([]);
+    // The target spans the two points (plus their radii), which sit far apart,
+    // so it has real width and height.
+    expect(layout.focus!.target.width).toBeGreaterThan(0);
+    expect(layout.focus!.target.height).toBeGreaterThan(0);
+    // The fitted cluster must be smaller than the full map extent.
+    expect(layout.focus!.target.width).toBeLessThan(layout.mapSize.width);
+  });
+
+  it('geo.focus { points: { field, value } } fits only the matching subset', () => {
+    const opts = {
+      data: [
+        { lat: 34, lon: -118, name: 'LA', rating: 'A' },
+        { lat: 40.7, lon: -74, name: 'NYC', rating: 'F' },
+      ],
+      longitude: { field: 'lon', type: 'quantitative' as const },
+      latitude: { field: 'lat', type: 'quantitative' as const },
+      key: { field: 'name', type: 'nominal' as const },
+    };
+    const all = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator', focus: { points: true } },
+        data: [],
+        encoding: { key: { field: 'id', type: 'nominal' } },
+        points: opts,
+      },
+      DEFAULT_OPTIONS,
+    );
+    const subset = compileMap(
+      {
+        type: 'map',
+        geo: {
+          features: MINI_TOPO,
+          projection: 'mercator',
+          focus: { points: { field: 'rating', value: 'A' } },
+        },
+        data: [],
+        encoding: { key: { field: 'id', type: 'nominal' } },
+        points: opts,
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(subset.focus).not.toBeNull();
+    // One point vs two: the subset target is strictly smaller than the all-points target.
+    expect(subset.focus!.target.width).toBeLessThan(all.focus!.target.width);
+  });
+
+  it('geo.focus { points: { field, value } } with no match emits FOCUS_UNMATCHED', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: {
+          features: MINI_TOPO,
+          projection: 'mercator',
+          focus: { points: { field: 'rating', value: 'Z' } },
+        },
+        data: [],
+        encoding: { key: { field: 'id', type: 'nominal' } },
+        points: {
+          data: [{ lat: 34, lon: -118, name: 'LA', rating: 'A' }],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          key: { field: 'name', type: 'nominal' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).toBeNull();
+    expect(layout.warnings.some((w) => w.code === 'FOCUS_UNMATCHED')).toBe(true);
+  });
+
+  it('geo.focus { points: true } with no points emits FOCUS_UNMATCHED and no focus', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: {
+          features: MINI_TOPO,
+          projection: 'mercator',
+          focus: { points: true },
+        },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.focus).toBeNull();
+    expect(layout.warnings.some((w) => w.code === 'FOCUS_UNMATCHED')).toBe(true);
+  });
+
   it('unknown focus id emits FOCUS_UNMATCHED warning', () => {
     const layout = compileMap(
       {

@@ -761,7 +761,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   };
 
   // 18. Resolve focus
-  const resolvedFocus = resolveFocus(mapSpec.geo.focus, featureMarks, compileWarnings);
+  const resolvedFocus = resolveFocus(mapSpec.geo.focus, featureMarks, pointMarks, compileWarnings);
 
   // 19. Animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(mapSpec.animation);
@@ -1172,9 +1172,53 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
 function resolveFocus(
   focus: MapFocus | null,
   features: MapFeatureMark[],
+  pointMarks: MapPointMark[],
   warnings: CompileWarning[],
 ): MapFocusLayout | null {
   if (focus === null || focus === undefined) return null;
+
+  // Points form fits the union of the point layer's circle bounds (cx +/- r)
+  // rather than any feature. Use it when the points cluster in a small part of a
+  // large feature, so fitting the feature would leave the cluster small and
+  // off-center. `points: true` fits every point; `points: { field, value }`
+  // fits only the matching subset, so a story can pan between sub-clusters.
+  if (typeof focus === 'object' && !Array.isArray(focus) && 'points' in focus) {
+    const filter = focus.points;
+    const matched =
+      filter === true
+        ? pointMarks
+        : pointMarks.filter((p) => p.data[filter.field] === filter.value);
+
+    if (matched.length === 0) {
+      const detail =
+        filter === true
+          ? 'the map has no points to fit'
+          : `no points match { field: "${filter.field}", value: ${JSON.stringify(filter.value)} }`;
+      warnings.push({
+        code: 'FOCUS_UNMATCHED',
+        message: `geo.focus.points is set but ${detail}`,
+        context: {},
+      });
+      return null;
+    }
+    const padding = focus.padding ?? 16;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of matched) {
+      minX = Math.min(minX, p.cx - p.r);
+      minY = Math.min(minY, p.cy - p.r);
+      maxX = Math.max(maxX, p.cx + p.r);
+      maxY = Math.max(maxY, p.cy + p.r);
+    }
+    return {
+      target: { x: minX, y: minY, width: maxX - minX, height: maxY - minY, padding },
+      // No feature ids: focus-dim is a feature concept, so a points focus
+      // dims no features (there are no "other" features to mute).
+      ids: [],
+    };
+  }
 
   // Normalize to { ids, padding }
   let ids: Array<string | number>;

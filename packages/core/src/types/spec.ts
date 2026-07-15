@@ -2289,11 +2289,19 @@ export interface TileMapSpec {
 export type MapProjection = 'albersUsa' | 'mercator' | 'equalEarth' | 'identity';
 
 /** Focus target for map camera: feature id(s) to zoom/pan to. */
+/**
+ * Fit the point layer's cluster. `true` fits every point; `{ field, value }`
+ * fits only the points whose data row has `row[field] === value` (e.g. only the
+ * campuses rated "F"), which lets a story pan between sub-clusters.
+ */
+export type MapPointsFocus = true | { field: string; value: string | number };
+
 export type MapFocus =
   | string
   | number
   | Array<string | number>
-  | { features: string | number | Array<string | number>; padding?: number };
+  | { features: string | number | Array<string | number>; padding?: number }
+  | { points: MapPointsFocus; padding?: number };
 
 /** Geo configuration for map specs. */
 export interface MapGeo {
@@ -2303,7 +2311,14 @@ export interface MapGeo {
   idField?: string;
   /** Map projection. Defaults to 'albersUsa'. */
   projection?: MapProjection;
-  /** Focus on specific feature(s). null clears focus from a prior story step. */
+  /**
+   * Focus the camera. A feature id (or array) fits those features; `{ features, padding }`
+   * adds breathing room; `{ points: true, padding }` fits the points layer's cluster
+   * instead of any feature (use when points occupy a small part of a large feature, so
+   * fitting the feature would leave the cluster small and off-center);
+   * `{ points: { field, value }, padding }` fits only the matching point subset, so a
+   * story can pan between sub-clusters. null clears focus from a prior story step.
+   */
   focus?: MapFocus | null;
 }
 
