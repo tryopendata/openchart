@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.0.0-rc.4](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.3...core-v8.0.0-rc.4) (2026-07-15)
+
+
+### Bug Fixes
+
+* map entrance animation flash on focus-zoomed maps ([2b983c8](https://github.com/tryopendata/openchart/commit/2b983c8))
+
 ## [8.0.0-rc.3](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.2...core-v8.0.0-rc.3) (2026-07-15)
 
 
