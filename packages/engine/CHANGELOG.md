@@ -1,5 +1,57 @@
 # Changelog
 
+## [8.0.0-rc.3](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.2...core-v8.0.0-rc.3) (2026-07-15)
+
+
+### Features
+
+* add point/symbol layer to GeoMap ([f83a82f](https://github.com/tryopendata/openchart/commit/f83a82f))
+* geo/choropleth map visualization (type: 'map') ([9e48aad](https://github.com/tryopendata/openchart/commit/9e48aad))
+* v8 breaking release — stack flip, theta canonical, dead channel removal ([3649bf9](https://github.com/tryopendata/openchart/commit/3649bf9))
+* default compact number formatting across all chart surfaces ([81e10d3](https://github.com/tryopendata/openchart/commit/81e10d3))
+* redesign callouts for editorial quality ([28e9375](https://github.com/tryopendata/openchart/commit/28e9375))
+* VL-aligned spec grammar for v8 ([f20cc4c](https://github.com/tryopendata/openchart/commit/f20cc4c))
+* plural legend slot and a size legend for bubble charts ([42879e6](https://github.com/tryopendata/openchart/commit/42879e6))
+
+
+### Bug Fixes
+
+* SVG export failure and x-axis title overlap at large font sizes ([690ff18](https://github.com/tryopendata/openchart/commit/690ff18))
+* allow pre-release versions in release script ([2dda73a](https://github.com/tryopendata/openchart/commit/2dda73a))
+* v8 ([3e8bdd9](https://github.com/tryopendata/openchart/commit/3e8bdd9))
+* facet gridlines, x-axis labels, panel height growth, line chart zero:false, map bulk animation, examples typecheck ([e9267ad](https://github.com/tryopendata/openchart/commit/e9267ad))
+* map legend collision, entrance animation, focus dim, mercator fitting ([20a9f81](https://github.com/tryopendata/openchart/commit/20a9f81))
+* address remaining code review findings for map infra ([cf15da1](https://github.com/tryopendata/openchart/commit/cf15da1))
+* address code review findings for geo/choropleth ([3915d93](https://github.com/tryopendata/openchart/commit/3915d93))
+* map layout, legend, animation, camera, focus, and story integration ([66dc26b](https://github.com/tryopendata/openchart/commit/66dc26b))
+* map container overflow, county demo data join, tooltip channel, validation ([5e1df21](https://github.com/tryopendata/openchart/commit/5e1df21))
+* address code review findings for geo/choropleth ([e102747](https://github.com/tryopendata/openchart/commit/e102747))
+* address code review findings for number formatting ([ab7b65e](https://github.com/tryopendata/openchart/commit/ab7b65e))
+* code review findings for default number formatting ([45afb80](https://github.com/tryopendata/openchart/commit/45afb80))
+* right-edge annotation margin collapsed chart width ([d86c808](https://github.com/tryopendata/openchart/commit/d86c808))
+* annotations ([a97494b](https://github.com/tryopendata/openchart/commit/a97494b))
+* an offset means hand-placed, with or without an anchor ([ce46eba](https://github.com/tryopendata/openchart/commit/ce46eba))
+* make offset an aimable control, give geometry one owner ([febb4c3](https://github.com/tryopendata/openchart/commit/febb4c3))
+* make the connector gate arrow-aware, and test the edit path ([4c7ad9d](https://github.com/tryopendata/openchart/commit/4c7ad9d))
+* close the gaps the review found ([c418b7a](https://github.com/tryopendata/openchart/commit/c418b7a))
+* let the defaults own annotation typography and centering ([a216435](https://github.com/tryopendata/openchart/commit/a216435))
+* make a bare text annotation draw its leader ([842c1dc](https://github.com/tryopendata/openchart/commit/842c1dc))
+* let callouts live in the margin without demoting ([fdca221](https://github.com/tryopendata/openchart/commit/fdca221))
+* thin crowded callouts at narrow widths ([e141172](https://github.com/tryopendata/openchart/commit/e141172))
+* make the size legend readable at any scale ([61bf709](https://github.com/tryopendata/openchart/commit/61bf709))
+* code review ([b22d89d](https://github.com/tryopendata/openchart/commit/b22d89d))
+* scroll-driver capture, rotated-label truncation, graph compile ([9894585](https://github.com/tryopendata/openchart/commit/9894585))
+* tween mark color and key annotations across data updates ([77d23df](https://github.com/tryopendata/openchart/commit/77d23df))
+* share layered domains per channel, and centralize the footnote band ([05855bf](https://github.com/tryopendata/openchart/commit/05855bf))
+* rect heatmap, mark geometry, and size/color scale correctness ([950f714](https://github.com/tryopendata/openchart/commit/950f714))
+* text wrapping for chrome and suppress categorical value labels (#105) ([7f3a655](https://github.com/tryopendata/openchart/commit/7f3a655))
+
+
+### Refactoring
+
+* CSS infrastructure overhaul (cascade layers, token codegen, sourcemaps) ([227cec3](https://github.com/tryopendata/openchart/commit/227cec3))
+* align gallery design system with OpenData ([0b7a7fa](https://github.com/tryopendata/openchart/commit/0b7a7fa))
+
 ## [8.0.0-rc.2](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.1...core-v8.0.0-rc.2) (2026-07-14)
 
 
