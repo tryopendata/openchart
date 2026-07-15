@@ -374,7 +374,11 @@ function MapScrollyDemo() {
 
 const pointLayerSpec: MapSpec = {
   type: 'map',
-  geo: { features: usStatesUnprojected, projection: 'albersUsa' },
+  geo: {
+    features: usStatesUnprojected,
+    projection: 'albersUsa',
+    focus: { features: '48', padding: 8 },
+  },
   data: [],
   encoding: {
     key: { field: 'id', type: 'nominal' },

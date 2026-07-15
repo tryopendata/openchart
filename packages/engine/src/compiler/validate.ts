@@ -1418,22 +1418,26 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
   const encoding = spec.encoding as Record<string, unknown>;
   const hasPoints = spec.points && typeof spec.points === 'object' && !Array.isArray(spec.points);
 
-  // key is always required
+  // key is required unless basemap-only mode (points present + empty/no choropleth data)
+  const specData = spec.data as unknown[] | undefined;
+  const isBasemapOnly = hasPoints && (!specData || specData.length === 0);
   const keyCh = encoding.key as Record<string, unknown> | undefined;
-  if (!keyCh || typeof keyCh !== 'object') {
-    errors.push({
-      message: 'Spec error: map encoding requires "key" channel',
-      path: 'encoding.key',
-      code: 'MISSING_FIELD',
-      suggestion: 'Add encoding.key, e.g. key: { field: "id", type: "nominal" }',
-    });
-  } else if (!keyCh.field || typeof keyCh.field !== 'string') {
-    errors.push({
-      message: 'Spec error: encoding.key must have a "field" string',
-      path: 'encoding.key.field',
-      code: 'MISSING_FIELD',
-      suggestion: 'Add a field name, e.g. key: { field: "id" }',
-    });
+  if (!isBasemapOnly) {
+    if (!keyCh || typeof keyCh !== 'object') {
+      errors.push({
+        message: 'Spec error: map encoding requires "key" channel',
+        path: 'encoding.key',
+        code: 'MISSING_FIELD',
+        suggestion: 'Add encoding.key, e.g. key: { field: "id", type: "nominal" }',
+      });
+    } else if (!keyCh.field || typeof keyCh.field !== 'string') {
+      errors.push({
+        message: 'Spec error: encoding.key must have a "field" string',
+        path: 'encoding.key.field',
+        code: 'MISSING_FIELD',
+        suggestion: 'Add a field name, e.g. key: { field: "id" }',
+      });
+    }
   }
 
   // color is required UNLESS points is present (basemap-only mode)
@@ -1494,6 +1498,17 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
           path: `points.${ch}.field`,
           code: 'MISSING_FIELD',
           suggestion: `Add a field name, e.g. ${ch}: { field: "${ch === 'longitude' ? 'lon' : 'lat'}" }`,
+        });
+      }
+    }
+    for (const ch of ['size', 'color', 'key'] as const) {
+      const enc = points[ch] as Record<string, unknown> | undefined;
+      if (enc && typeof enc === 'object' && (!enc.field || typeof enc.field !== 'string')) {
+        errors.push({
+          message: `Spec error: points.${ch} must have a "field" string when provided`,
+          path: `points.${ch}.field`,
+          code: 'MISSING_FIELD',
+          suggestion: `Add a field name, e.g. ${ch}: { field: "myField" }`,
         });
       }
     }

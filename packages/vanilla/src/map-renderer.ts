@@ -14,6 +14,7 @@ import type {
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
+import { FOCUS_DIM_OPACITY } from './map-camera';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 
@@ -188,6 +189,7 @@ function renderFeatures(
   features: MapFeatureMark[],
   animation?: ResolvedAnimation,
   staggerBudget = 0,
+  focusIds?: Set<string>,
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-map-features');
@@ -240,13 +242,25 @@ function renderFeatures(
       path.setAttribute('aria-label', feature.aria.label);
     }
 
+    // Under a focus, features outside the set rest at the dim opacity. Set it
+    // as the resting inline opacity (correct in every render path) and as the
+    // entrance animation's target so they fade straight to dim instead of
+    // hitting full opacity and snapping down when the dim lands post-animation.
+    const dimmed = focusIds ? !focusIds.has(String(feature.id)) : false;
+    const s = (path as SVGElement & ElementCSSInlineStyle).style;
+    if (dimmed) {
+      s.setProperty('opacity', String(FOCUS_DIM_OPACITY));
+    }
+
     // Per-feature animation props only in non-bulk mode
     if (!bulk && animation?.enter) {
       const idx = feature.animationIndex ?? i;
       path.setAttribute('data-animation-index', String(idx));
-      const s = (path as SVGElement & ElementCSSInlineStyle).style;
       s.setProperty('--oc-mark-index', String(idx));
       s.setProperty('--oc-feature-fill', feature.fill);
+      if (dimmed) {
+        s.setProperty('--oc-feature-target-opacity', String(FOCUS_DIM_OPACITY));
+      }
       if (staggerBudget > 0 && maxIdx > 0) {
         s.setProperty('--oc-map-delay', `${shuffledDelays[i]}ms`);
       }
@@ -271,17 +285,16 @@ function renderPointMarks(
 
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-map-points');
-  g.setAttribute('role', 'list');
 
   for (const pt of points) {
     const circle = createSVGElement('circle');
     circle.setAttribute('class', 'oc-map-point');
-    circle.setAttribute('role', 'listitem');
     setAttrs(circle, {
       cx: pt.cx,
       cy: pt.cy,
       r: pt.r,
       fill: pt.fill,
+      'fill-opacity': pt.fillOpacity,
       stroke: pt.stroke,
       'stroke-width': pt.strokeWidth,
     });
@@ -292,10 +305,9 @@ function renderPointMarks(
       circle.setAttribute('aria-label', pt.aria.label);
     }
     if (animation?.enter) {
-      (circle as unknown as ElementCSSInlineStyle).style.setProperty(
-        '--oc-mark-index',
-        String(pt.animationIndex),
-      );
+      const s = (circle as unknown as ElementCSSInlineStyle).style;
+      s.setProperty('--oc-mark-index', String(pt.animationIndex));
+      s.setProperty('transform-origin', `${pt.cx}px ${pt.cy}px`);
     }
     g.appendChild(circle);
   }
@@ -346,9 +358,6 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   const defs = createSVGElement('defs');
   svg.appendChild(defs);
 
-  // Render chrome
-  renderChrome(svg, layout);
-
   // Create map group offset to the drawing area
   const mapGroup = createSVGElement('g');
   mapGroup.setAttribute('class', 'oc-map-group');
@@ -359,8 +368,21 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   cameraGroup.setAttribute('class', 'oc-map-camera');
   cameraGroup.setAttribute('data-oc-map-camera', '');
 
+  // Features outside the focus set rest dimmed; the renderer stamps that so it's
+  // correct in every render path and the entrance fades straight to it. This
+  // handles *declarative* focus (layout.focus from the spec) only. Imperative
+  // focus set via zoomTo()/panTo() never re-renders, so it dims through
+  // applyMapCamera + applyFocusDim on the live SVG instead.
+  const focusIdSet = layout.focus ? new Set(layout.focus.ids.map(String)) : undefined;
+
   // Render features first (so borders overlay them)
-  renderFeatures(cameraGroup, features, animate ? animation : undefined, mapStaggerBudget);
+  renderFeatures(
+    cameraGroup,
+    features,
+    animate ? animation : undefined,
+    mapStaggerBudget,
+    focusIdSet,
+  );
 
   // Render borders on top of features
   renderBorders(cameraGroup, borders);
@@ -371,6 +393,11 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   mapGroup.appendChild(cameraGroup);
   svg.appendChild(mapGroup);
 
+  // Render chrome AFTER the map group so the title/subtitle paint on top of a
+  // focus-zoomed map that overflows up into the chrome band. Earlier SVG
+  // children paint underneath later ones, so chrome must come last of the two.
+  renderChrome(svg, layout);
+
   // Render legend (continuous for quantitative, categorical for nominal)
   if (layout.continuousLegend) {
     renderLegend(svg, layout.continuousLegend);
@@ -378,12 +405,49 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
     renderLegend(svg, layout.categoricalLegend);
   }
 
-  // Render point legends
-  if (layout.pointCategoricalLegend) {
-    renderLegend(svg, layout.pointCategoricalLegend);
-  }
-  if (layout.pointContinuousLegend) {
-    renderLegend(svg, layout.pointContinuousLegend);
+  // Render point legends with a semi-transparent background so they read
+  // clearly over map geography (e.g. AK/HI insets in Albers USA).
+  const ptLegend = layout.pointCategoricalLegend ?? layout.pointContinuousLegend;
+  if (ptLegend) {
+    const isDark = layout.theme.isDark;
+    const padX = 10;
+    const padY = 8;
+
+    // Compute content width from entries so the background wraps tightly
+    const swatchSize =
+      'swatchSize' in ptLegend ? (ptLegend as { swatchSize: number }).swatchSize : 10;
+    const swatchGap = 'swatchGap' in ptLegend ? (ptLegend as { swatchGap: number }).swatchGap : 6;
+    const entryGap = 'entryGap' in ptLegend ? (ptLegend as { entryGap: number }).entryGap : 16;
+    let contentWidth = ptLegend.bounds.width;
+    if ('entries' in ptLegend && ptLegend.entries) {
+      const cat = ptLegend as typeof layout.pointCategoricalLegend & {
+        entries: Array<{ label: string }>;
+      };
+      if (cat && cat.entries.length > 0) {
+        const fontSize = ptLegend.labelStyle.fontSize;
+        let w = 0;
+        for (const entry of cat.entries) {
+          w += swatchSize + swatchGap + entry.label.length * fontSize * 0.6 + entryGap;
+        }
+        w -= entryGap;
+        contentWidth = Math.min(w, ptLegend.bounds.width);
+      }
+    }
+
+    // Center the background rect vertically around the swatch content
+    const contentCenterY = ptLegend.bounds.y + swatchSize / 2;
+    const bgHeight = swatchSize + padY * 2;
+    const bg = createSVGElement('rect');
+    setAttrs(bg, {
+      x: ptLegend.bounds.x - padX,
+      y: contentCenterY - bgHeight / 2,
+      width: contentWidth + padX * 2,
+      height: bgHeight,
+      rx: 4,
+      fill: isDark ? 'rgba(24,24,27,0.9)' : 'rgba(255,255,255,0.9)',
+    });
+    svg.appendChild(bg);
+    renderLegend(svg, ptLegend);
   }
 
   // Render watermark

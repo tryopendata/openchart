@@ -247,23 +247,27 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     }
   }
 
-  // 11. Join data to features
-  const featureObjs = geoFeatures.map((f) => ({
-    id: f.id as string | number,
-    properties: (f.properties ?? {}) as Record<string, unknown>,
-  }));
-  const { joined, warnings: joinWarnings } = joinDataToFeatures(
-    featureObjs,
-    mapSpec.data,
-    mapSpec.encoding.key.field,
-    mapSpec.geo.idField,
-  );
-  // In basemap-only mode (empty data + points layer), all features are intentionally unmatched
-  const filteredJoinWarnings =
-    mapSpec.data.length === 0 && mapSpec.points
-      ? joinWarnings.filter((w) => w.code !== 'UNMATCHED_FEATURES')
-      : joinWarnings;
-  compileWarnings.push(...filteredJoinWarnings);
+  // 11. Join data to features (skip when no key channel, e.g. basemap-only mode)
+  let joined = new Map<string | number, Record<string, unknown>>();
+  if (mapSpec.encoding.key) {
+    const featureObjs = geoFeatures.map((f) => ({
+      id: f.id as string | number,
+      properties: (f.properties ?? {}) as Record<string, unknown>,
+    }));
+    const joinResult = joinDataToFeatures(
+      featureObjs,
+      mapSpec.data,
+      mapSpec.encoding.key.field,
+      mapSpec.geo.idField,
+    );
+    joined = joinResult.joined;
+    // In basemap-only mode (empty data + points layer), all features are intentionally unmatched
+    const filteredJoinWarnings =
+      mapSpec.data.length === 0 && mapSpec.points
+        ? joinResult.warnings.filter((w) => w.code !== 'UNMATCHED_FEATURES')
+        : joinResult.warnings;
+    compileWarnings.push(...filteredJoinWarnings);
+  }
 
   // 12. Check for null-projecting features (albersUsa drops territories)
   const droppedFeatures: string[] = [];
@@ -348,6 +352,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       pathGen,
       joined,
       colorField: colorEncoding.field,
+      colorScale: colorEncoding.scale,
       isDarkMode: !!isDarkMode,
       neutralFill,
       neutralStroke,
@@ -432,8 +437,17 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
           };
         }
       } else {
-        // nominal / ordinal
-        const seen = new Set<string>();
+        // nominal / ordinal: honor scale.domain (category order) and scale.range (explicit colors)
+        const explicitDomain = pts.color.scale?.domain as string[] | undefined;
+        const explicitRange = pts.color.scale?.range as string[] | undefined;
+
+        if (explicitDomain && Array.isArray(explicitDomain)) {
+          for (const cat of explicitDomain) {
+            pointCategories.push(String(cat));
+          }
+        }
+        // Also pick up any categories in the data that aren't in the explicit domain
+        const seen = new Set<string>(pointCategories);
         for (const row of pts.data) {
           const raw = row[pts.color.field];
           if (raw != null) {
@@ -441,22 +455,27 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
             if (!seen.has(cat)) {
               seen.add(cat);
               pointCategories.push(cat);
-              pointCategoryColors.set(
-                cat,
-                CATEGORICAL_PALETTE[(pointCategories.length - 1) % CATEGORICAL_PALETTE.length],
-              );
             }
           }
         }
+
+        const colorSource =
+          explicitRange && Array.isArray(explicitRange) ? explicitRange : CATEGORICAL_PALETTE;
+        for (let i = 0; i < pointCategories.length; i++) {
+          pointCategoryColors.set(pointCategories[i], colorSource[i % colorSource.length]);
+        }
+
         pointColorScale = (val: unknown) => {
-          if (val == null) return CATEGORICAL_PALETTE[0];
-          return pointCategoryColors.get(String(val)) ?? CATEGORICAL_PALETTE[0];
+          if (val == null) return colorSource[0];
+          return pointCategoryColors.get(String(val)) ?? colorSource[0];
         };
       }
     }
 
     const defaultFill = CATEGORICAL_PALETTE[0];
+    const pointOpacity = pts.opacity ?? 0.65;
     let animIndex = 0;
+    const droppedPoints: Array<[number, number]> = [];
 
     for (let i = 0; i < pts.data.length; i++) {
       const row = pts.data[i];
@@ -466,11 +485,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
 
       const projected = projection([lon, lat]);
       if (!projected) {
-        compileWarnings.push({
-          code: 'POINT_NULL_PROJECTION',
-          message: `Point at [${lon}, ${lat}] projects to null and was dropped.`,
-          context: { lon, lat },
-        });
+        droppedPoints.push([lon, lat]);
         continue;
       }
 
@@ -488,10 +503,26 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
         fill,
         stroke,
         strokeWidth: 1,
+        fillOpacity: pointOpacity,
         key,
         data: row as Record<string, unknown>,
         aria: { role: 'img', label: key },
         animationIndex: animIndex++,
+      });
+    }
+
+    if (droppedPoints.length > 0) {
+      const sample = droppedPoints
+        .slice(0, 3)
+        .map(([lo, la]) => `[${lo}, ${la}]`)
+        .join(', ');
+      compileWarnings.push({
+        code: 'POINT_NULL_PROJECTION',
+        message:
+          `${droppedPoints.length} point(s) project to null and were dropped (e.g. ${sample}). ` +
+          'This is common with albersUsa which excludes territories. ' +
+          'Consider using projection: "mercator" or "equalEarth".',
+        context: { count: droppedPoints.length, samples: droppedPoints.slice(0, 5) },
       });
     }
 
@@ -516,19 +547,19 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
         shape: 'circle' as const,
       }));
 
-      // Position below the choropleth legend (or at the legend position if none)
-      const choroplethLegendHeight = continuousLegend
-        ? continuousLegend.bounds.height
-        : categoricalLegend
-          ? categoricalLegend.bounds.height
+      // Position below the map. Only offset by choropleth legend height when
+      // the choropleth legend is also at the bottom (not 'top').
+      const bottomChoroplethHeight =
+        legendPosition === 'bottom'
+          ? (continuousLegend?.bounds.height ?? categoricalLegend?.bounds.height ?? 0)
           : 0;
-      const choroplethLegendGap = choroplethLegendHeight > 0 ? 8 : 0;
+      const choroplethLegendGap = bottomChoroplethHeight > 0 ? 8 : 0;
       const legendX = fullArea.x;
       const legendY =
         fullArea.y +
         mapAreaHeight +
         legendReserveGap +
-        choroplethLegendHeight +
+        bottomChoroplethHeight +
         choroplethLegendGap;
       const legendWidth = fullArea.width;
       const swatchSize = 10;
@@ -577,19 +608,14 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
           lineHeight: 1.3,
           fontVariant: 'tabular-nums',
         };
-        const choroplethLegendHeight = continuousLegend
-          ? continuousLegend.bounds.height
-          : categoricalLegend
-            ? categoricalLegend.bounds.height
+        const bottomChoroplethH =
+          legendPosition === 'bottom'
+            ? (continuousLegend?.bounds.height ?? categoricalLegend?.bounds.height ?? 0)
             : 0;
-        const choroplethLegendGap = choroplethLegendHeight > 0 ? 8 : 0;
+        const choroplethLegendGap = bottomChoroplethH > 0 ? 8 : 0;
         const legendX = fullArea.x;
         const legendY =
-          fullArea.y +
-          mapAreaHeight +
-          legendReserveGap +
-          choroplethLegendHeight +
-          choroplethLegendGap;
+          fullArea.y + mapAreaHeight + legendReserveGap + bottomChoroplethH + choroplethLegendGap;
         const ptLabelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
         const ptLegendHeight =
           ptContinuousContent.barHeight + CONTINUOUS_LABEL_GAP + ptLabelRowHeight;
@@ -976,6 +1002,7 @@ interface CategoricalOptions {
   pathGen: ReturnType<typeof geoPath>;
   joined: Map<string | number, Record<string, unknown>>;
   colorField: string;
+  colorScale?: { domain?: unknown; range?: unknown };
   isDarkMode: boolean;
   neutralFill: string;
   neutralStroke: string;
@@ -996,6 +1023,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     pathGen,
     joined,
     colorField,
+    colorScale: scaleConfig,
     isDarkMode,
     neutralFill,
     neutralStroke,
@@ -1007,9 +1035,15 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     droppedFeatures,
   } = opts;
 
-  // Collect unique categories in data order
+  // Collect unique categories: honor scale.domain for order, then append any unseen from data
   const categories: string[] = [];
-  const seen = new Set<string>();
+  const explicitDomain = scaleConfig?.domain;
+  if (explicitDomain && Array.isArray(explicitDomain)) {
+    for (const cat of explicitDomain) {
+      categories.push(String(cat));
+    }
+  }
+  const seen = new Set<string>(categories);
   for (const row of joined.values()) {
     const raw = row[colorField];
     if (raw != null) {
@@ -1021,9 +1055,12 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     }
   }
 
+  const explicitRange = scaleConfig?.range;
+  const colorSource =
+    explicitRange && Array.isArray(explicitRange) ? explicitRange : CATEGORICAL_PALETTE;
   const categoryColors = new Map<string, string>();
   for (let i = 0; i < categories.length; i++) {
-    categoryColors.set(categories[i], CATEGORICAL_PALETTE[i % CATEGORICAL_PALETTE.length]);
+    categoryColors.set(categories[i], colorSource[i % colorSource.length]);
   }
 
   const marks: MapFeatureMark[] = [];

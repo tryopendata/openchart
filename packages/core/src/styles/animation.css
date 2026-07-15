@@ -150,12 +150,13 @@
       animation-delay: calc(var(--oc-animation-duration) * 0.7);
     }
 
-    /* Map points: fade in after borders with staggered delay.
-       Pure opacity fade (no scale transform) to avoid conflicting with
-       camera counter-scaling of the r attribute. */
+    /* Map points: gentle scale (0.75->1) + fade pop-in after borders.
+       transform-origin set per-circle in the renderer so scale happens
+       around each circle's own center, not the SVG origin. */
     & .oc-map-point {
-      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.4) ease-in both;
-      animation-delay: calc(var(--oc-animation-duration) * 0.8 + var(--oc-mark-index, 0) * 15ms);
+      animation: oc-enter-map-point calc(var(--oc-animation-duration) * 0.4)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: calc(var(--oc-animation-duration) * 0.8 + var(--oc-mark-index, 0) * 60ms);
     }
 
     /* Sankey nodes: fade in with stagger by column depth (left-to-right) */

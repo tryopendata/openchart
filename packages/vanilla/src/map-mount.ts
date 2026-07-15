@@ -26,6 +26,7 @@ import {
 import {
   applyMapCamera,
   cameraForTarget,
+  FOCUS_DIM_OPACITY,
   focusTargetForFeatures,
   type MapCameraOptions,
 } from './map-camera';
@@ -43,6 +44,13 @@ import { createTooltipManager, type TooltipManager } from './tooltip';
 // Types
 // ---------------------------------------------------------------------------
 
+export type MapMarkEvent = {
+  kind: 'feature' | 'point';
+  id: string | number;
+  name?: string;
+  data: Record<string, unknown> | null;
+};
+
 export interface MapMountOptions {
   /** Theme overrides. */
   theme?: ThemeConfig;
@@ -54,20 +62,10 @@ export interface MapMountOptions {
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
   tooltip?: boolean;
-  /** Callback when a feature is clicked. */
-  onMarkClick?: (feature: {
-    id: string | number;
-    name?: string;
-    data: Record<string, unknown> | null;
-  }) => void;
-  /** Callback when a feature is hovered (null on mouse leave). */
-  onMarkHover?: (
-    feature: {
-      id: string | number;
-      name?: string;
-      data: Record<string, unknown> | null;
-    } | null,
-  ) => void;
+  /** Callback when a feature or point is clicked. */
+  onMarkClick?: (event: MapMarkEvent) => void;
+  /** Callback when a feature or point is hovered (null on mouse leave). */
+  onMarkHover?: (event: MapMarkEvent | null) => void;
 }
 
 export interface MapInstance {
@@ -245,6 +243,7 @@ export function createMap(
         }
         if (feature) {
           options?.onMarkHover?.({
+            kind: 'feature',
             id: feature.id,
             name: feature.name,
             data: feature.data,
@@ -272,6 +271,7 @@ export function createMap(
       const handleClick = () => {
         if (feature) {
           options?.onMarkClick?.({
+            kind: 'feature',
             id: feature.id,
             name: feature.name,
             data: feature.data,
@@ -314,8 +314,8 @@ export function createMap(
         }
         if (pointMark) {
           options?.onMarkHover?.({
+            kind: 'point',
             id: pointKey,
-            name: pointKey,
             data: pointMark.data,
           });
         }
@@ -341,8 +341,8 @@ export function createMap(
       const handlePointClick = () => {
         if (pointMark) {
           options?.onMarkClick?.({
+            kind: 'point',
             id: pointKey,
-            name: pointKey,
             data: pointMark.data,
           });
         }
@@ -437,7 +437,7 @@ export function createMap(
       const fid = el.getAttribute('data-feature-id');
       (el as SVGElement & ElementCSSInlineStyle).style.setProperty(
         'opacity',
-        fid && focusSet.has(fid) ? '1' : '0.25',
+        fid && focusSet.has(fid) ? '1' : String(FOCUS_DIM_OPACITY),
       );
     }
   }
@@ -457,18 +457,19 @@ export function createMap(
       fillTransitionHandle = null;
     }
 
-    // Remove old SVG
-    if (svgElement) {
+    // Render new SVG before removing old to avoid a paint gap
+    const oldSvg = svgElement;
+    const newSvg = renderMapSVG(currentLayout, { animate });
+
+    if (oldSvg) {
       if (cleanupTooltipEvents) {
         cleanupTooltipEvents();
         cleanupTooltipEvents = null;
       }
-      svgElement.remove();
+      container.replaceChild(newSvg, oldSvg);
+    } else {
+      container.appendChild(newSvg);
     }
-
-    // Render new SVG
-    const newSvg = renderMapSVG(currentLayout, { animate });
-    container.appendChild(newSvg);
     svgElement = newSvg;
 
     // Wire interactions

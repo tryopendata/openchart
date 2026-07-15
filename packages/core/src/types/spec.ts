@@ -2309,8 +2309,8 @@ export interface MapGeo {
 
 /** Encoding channels specific to map visualizations. */
 export interface MapEncoding {
-  /** Join key field in the data (required). Maps data rows to geo features via geo.idField. */
-  key: EncodingChannel;
+  /** Join key field in the data. Required for choropleth; optional in basemap-only mode (points layer with empty data). */
+  key?: EncodingChannel;
   /** Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode). */
   color?: EncodingChannel;
   /** Tooltip encoding (optional). */
@@ -2325,14 +2325,16 @@ export interface MapPointsLayer {
   longitude: EncodingChannel;
   /** Field holding latitude (y coordinate). */
   latitude: EncodingChannel;
-  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). */
+  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). No size legend is rendered in v1; explain the scale in chrome.subtitle if needed. */
   size?: EncodingChannel;
   /** Optional color encoding (nominal or quantitative). Independent scale from choropleth. */
   color?: EncodingChannel;
   /** Tooltip channel(s), same shape as MapEncoding.tooltip. */
   tooltip?: EncodingChannel | EncodingChannel[];
-  /** Stable id field for transitions and event callbacks. */
+  /** Stable id for event callbacks. Data-update transitions for points are not yet supported. */
   key?: EncodingChannel;
+  /** Fill opacity for point circles. Default 0.65. Range 0-1. */
+  opacity?: number;
 }
 
 export interface MapSpec {

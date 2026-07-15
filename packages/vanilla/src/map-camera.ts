@@ -12,6 +12,9 @@ import { cameraTransform, FULL_VIEW, fitTarget } from './story/camera-math';
 
 export type { Camera } from './story/camera-math';
 
+/** Resting opacity for features outside the current focus set. */
+export const FOCUS_DIM_OPACITY = 0.25;
+
 export interface MapCameraOptions {
   /** Transition duration in ms. 0 snaps instantly. Default 600. */
   duration?: number;
@@ -78,14 +81,16 @@ export function applyMapCamera(svg: SVGElement, camera: Camera, layout: MapLayou
     for (const p of paths) {
       p.setAttribute('vector-effect', 'non-scaling-stroke');
     }
-    // Counter-scale point radii so dots keep constant screen size through zoom
+    // Counter-scale point radii so dots keep constant screen size through zoom.
+    // Only use attribute counter-scaling (r/k, stroke-width/k) without
+    // vector-effect: the group transform scales both back to constant screen
+    // size. Adding vector-effect on top would double-compensate stroke.
     const points = svg.querySelectorAll('.oc-map-point');
     for (const p of points) {
       const baseR = Number(p.getAttribute('data-base-r') ?? 5);
       const baseSW = Number(p.getAttribute('data-base-stroke-width') ?? 1);
       p.setAttribute('r', String(baseR / camera.k));
       p.setAttribute('stroke-width', String(baseSW / camera.k));
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
     }
   } else {
     cameraGroup.removeAttribute('transform');

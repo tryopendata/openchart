@@ -7,14 +7,12 @@
  */
 
 import type { DarkMode, MapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
-
-type MapFeatureEvent = {
-  id: string | number;
-  name?: string;
-  data: Record<string, unknown> | null;
-};
-
-import { createMap, type MapInstance, type MapMountOptions } from '@opendata-ai/openchart-vanilla';
+import {
+  createMap,
+  type MapInstance,
+  type MapMarkEvent,
+  type MapMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   defineComponent,
@@ -61,8 +59,8 @@ export const GeoMap = defineComponent({
     },
   },
   emits: {
-    'mark-click': (_event: MapFeatureEvent) => true,
-    'mark-hover': (_event: MapFeatureEvent | null) => true,
+    'mark-click': (_event: MapMarkEvent) => true,
+    'mark-hover': (_event: MapMarkEvent | null) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);

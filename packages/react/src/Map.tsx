@@ -9,7 +9,12 @@
  */
 
 import type { DarkMode, MapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
-import { createMap, type MapInstance, type MapMountOptions } from '@opendata-ai/openchart-vanilla';
+import {
+  createMap,
+  type MapInstance,
+  type MapMarkEvent,
+  type MapMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   forwardRef,
@@ -20,12 +25,6 @@ import {
 } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
-type MapFeatureEvent = {
-  id: string | number;
-  name?: string;
-  data: Record<string, unknown> | null;
-};
-
 export interface MapProps {
   /** The map spec to render. */
   spec: MapSpec;
@@ -34,9 +33,9 @@ export interface MapProps {
   /** Dark mode: "auto", "force", or "off". */
   darkMode?: DarkMode;
   /** Callback when a map feature is clicked. */
-  onMarkClick?: (feature: MapFeatureEvent) => void;
+  onMarkClick?: (feature: MapMarkEvent) => void;
   /** Callback when a map feature is hovered (null when hover ends). */
-  onMarkHover?: (feature: MapFeatureEvent | null) => void;
+  onMarkHover?: (feature: MapMarkEvent | null) => void;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -70,11 +69,11 @@ export const GeoMap = forwardRef<MapHandle, MapProps>(function GeoMap(
   };
 
   const stableOnMarkClick = useCallback(
-    (feature: MapFeatureEvent) => handlersRef.current.onMarkClick?.(feature),
+    (feature: MapMarkEvent) => handlersRef.current.onMarkClick?.(feature),
     [],
   );
   const stableOnMarkHover = useCallback(
-    (feature: MapFeatureEvent | null) => handlersRef.current.onMarkHover?.(feature),
+    (feature: MapMarkEvent | null) => handlersRef.current.onMarkHover?.(feature),
     [],
   );
 

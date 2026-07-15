@@ -7,14 +7,12 @@
 -->
 <script lang="ts">
 import type { DarkMode, MapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
-
-type MapFeatureEvent = {
-  id: string | number;
-  name?: string;
-  data: Record<string, unknown> | null;
-};
-
-import { createMap, type MapInstance, type MapMountOptions } from '@opendata-ai/openchart-vanilla';
+import {
+  createMap,
+  type MapInstance,
+  type MapMarkEvent,
+  type MapMountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
 
@@ -30,8 +28,8 @@ let {
   spec: MapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
-  onmarkclick?: (event: MapFeatureEvent) => void;
-  onmarkhover?: (event: MapFeatureEvent | null) => void;
+  onmarkclick?: (event: MapMarkEvent) => void;
+  onmarkhover?: (event: MapMarkEvent | null) => void;
   class?: string;
   style?: string;
 } = $props();

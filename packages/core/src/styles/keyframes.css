@@ -64,7 +64,10 @@
   }
 
   /* Map feature entrance: fade in while transitioning fill from a neutral base
-     to the data-driven color stored in --oc-feature-fill. */
+     to the data-driven color stored in --oc-feature-fill. The target opacity is
+     --oc-feature-target-opacity (default 1) so features under a focus dim
+     animate straight to their dimmed rest opacity instead of hitting 1 and then
+     snapping down when the dim is applied post-animation. */
   @keyframes oc-enter-map-fill {
     from {
       fill: var(--oc-secondary);
@@ -72,7 +75,20 @@
     }
     to {
       fill: var(--oc-feature-fill);
+      opacity: var(--oc-feature-target-opacity, 1);
+    }
+  }
+
+  /* Map point pop-in: gentle scale from 0.75 + fade. Uses transform-origin to
+     scale from the circle's own center (cx/cy) rather than the SVG origin. */
+  @keyframes oc-enter-map-point {
+    from {
+      opacity: 0;
+      transform: scale(0.75);
+    }
+    to {
       opacity: 1;
+      transform: scale(1);
     }
   }
 

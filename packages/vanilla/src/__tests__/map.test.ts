@@ -291,6 +291,41 @@ describe('createMap', () => {
     instance.destroy();
   });
 
+  it('chrome paints after the map group so the title sits above a zoomed map', () => {
+    const chromeSpec = {
+      ...basicMapSpec,
+      chrome: { title: 'Test Title' },
+    };
+    const instance = createMap(container, chromeSpec, { responsive: false });
+
+    const svg = container.querySelector('svg')!;
+    const kids = [...svg.children];
+    const mapGroupIdx = kids.findIndex((k) => k.classList.contains('oc-map-group'));
+    const chromeIdx = kids.findIndex((k) => k.classList.contains('oc-chrome'));
+    expect(mapGroupIdx).toBeGreaterThanOrEqual(0);
+    expect(chromeIdx).toBeGreaterThan(mapGroupIdx);
+
+    instance.destroy();
+  });
+
+  it('features outside geo.focus rest at the dim opacity', () => {
+    const focusSpec = {
+      ...basicMapSpec,
+      geo: { ...basicMapSpec.geo, focus: '36' },
+    };
+    const instance = createMap(container, focusSpec, { responsive: false });
+
+    const focused = container.querySelector('.oc-map-feature[data-feature-id="36"]') as SVGElement;
+    const dimmed = container.querySelector('.oc-map-feature[data-feature-id="06"]') as SVGElement;
+    expect(focused).not.toBeNull();
+    expect(dimmed).not.toBeNull();
+    // Focused feature is full opacity; a feature outside the focus set is dimmed.
+    expect(dimmed.style.opacity).toBe('0.25');
+    expect(focused.style.opacity === '' || focused.style.opacity === '1').toBe(true);
+
+    instance.destroy();
+  });
+
   // ---------------------------------------------------------------------------
   // Point layer rendering
   // ---------------------------------------------------------------------------

@@ -1764,7 +1764,9 @@ export interface MapPointMark {
   stroke: string;
   /** Stroke width in px. */
   strokeWidth: number;
-  /** Stable key for events and transitions. */
+  /** Fill opacity (0-1). */
+  fillOpacity: number;
+  /** Stable key for events. */
   key: string;
   /** Original data row. */
   data: Record<string, unknown>;
