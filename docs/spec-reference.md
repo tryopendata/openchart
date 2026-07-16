@@ -253,6 +253,16 @@ Applied to the field values before encoding. Useful when your data has multiple 
 | `type`   | `'linear'` \| `'log'` \| `'time'` \| `'band'` \| `'point'` \| `'ordinal'` | inferred from FieldType | Scale type override.                    |
 | `nice`   | `boolean`                                                                 | `true`                  | Round domain to clean tick values.      |
 | `zero`   | `boolean`                                                                 | `true` (quantitative)   | Whether the domain should include zero. |
+| `range`  | `string[]` (color channels)                                               | palette-derived         | Explicit output values, e.g. exact colors. Wins over `scheme`. |
+| `scheme` | `string`                                                                  | palette default         | Named color ramp (Vega-Lite aligned): sequential `blue`/`green`/`orange`/`purple`/`teal`, diverging `redBlue`/`brownTeal`; common VL aliases (`blues`, `category10`, ...) accepted. |
+
+`scheme` is only meaningful where the compile path reads it: chart color
+channels and quantitative map color (maps accept the sequential names only).
+Sankey, tilemap, bar list, graph, and categorical map channels never read it,
+and validation rejects it there with the mechanism that family actually uses
+(`theme.colors.categorical` for sankey, top-level `palette` for tilemap,
+`scale.range` for graph and categorical maps). See the
+[v8 migration guide](./migrating-v8.md#16-scalescheme-is-validated-on-every-spec-family).
 
 ---
 
@@ -915,7 +925,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 
 ### GraphEncoding
 
-Each channel is a `GraphEncodingChannel` with `field`, optional `type`, and optional `scale` (same `ScaleConfig` as chart encodings). When `scale.domain` and `scale.range` are provided, the engine uses them directly instead of auto-deriving from the data. This is useful for controlling deterministic color assignment.
+Each channel is a `GraphEncodingChannel` with `field`, optional `type`, and optional `scale` (same `ScaleConfig` as chart encodings). When `scale.domain` and `scale.range` are provided, the engine uses them directly instead of auto-deriving from the data. This is useful for controlling deterministic color assignment. `scale.scheme` is not read by the graph compile path and fails validation — use `scale.range` for explicit colors.
 
 | Channel     | Field type constraint          | Purpose                                  |
 | ----------- | ------------------------------ | ---------------------------------------- |
@@ -987,7 +997,7 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `source`  | `EncodingChannel`                  | yes      | Source node field (nominal).          |
 | `target`  | `EncodingChannel`                  | yes      | Target node field (nominal).          |
 | `value`   | `EncodingChannel`                  | yes      | Flow value field (quantitative).      |
-| `color`   | `EncodingChannel`                  | no       | Color encoding for nodes/links.       |
+| `color`   | `EncodingChannel`                  | no       | Groups nodes into color categories. Colors cycle `theme.colors.categorical`; `scale.scheme` is not read and fails validation. |
 | `tooltip` | `EncodingChannel \| EncodingChannel[]` | no  | Tooltip encoding.                     |
 
 ### Sankey example
