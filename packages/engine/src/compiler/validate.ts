@@ -107,6 +107,41 @@ function didYouMean(field: string, columns: string[]): string {
   return match ? ` Did you mean "${match}"?` : '';
 }
 
+/**
+ * Push an INVALID_VALUE error when a channel carries an unrecognized
+ * scale.scheme name. Known names (including VL aliases) resolve via the core
+ * palette registry: on the chart compile path they are expanded to scale.range
+ * by the pre-validation sugar pass, and non-chart spec families skip that
+ * expansion, so `resolveSchemeName` failing means the name is unknown on
+ * every path.
+ */
+function checkSchemeName(
+  channelObj: Record<string, unknown>,
+  channelPath: string,
+  errors: ValidationError[],
+): void {
+  const scale = channelObj.scale as Record<string, unknown> | undefined;
+  if (scale && typeof scale.scheme === 'string' && !resolveSchemeName(scale.scheme)) {
+    errors.push({
+      message: `Spec error: ${channelPath}.scale.scheme "${scale.scheme}" is not a supported scheme name`,
+      path: `${channelPath}.scale.scheme`,
+      code: 'INVALID_VALUE',
+      suggestion: `Use one of the supported scheme names: ${[...SUPPORTED_SCHEME_NAMES].join(', ')}. Or provide explicit colors via scale.range.`,
+    });
+  }
+}
+
+/**
+ * Run the unknown-scheme check across every object-valued channel of an
+ * encoding block. Tooltip arrays are skipped (array entries carry no scale).
+ */
+function checkEncodingSchemes(encoding: Record<string, unknown>, errors: ValidationError[]): void {
+  for (const [channel, ch] of Object.entries(encoding)) {
+    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) continue;
+    checkSchemeName(ch as Record<string, unknown>, `encoding.${channel}`, errors);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Range mark validation
 // ---------------------------------------------------------------------------
@@ -613,19 +648,7 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     // Check scale.scheme names. Known names (including VL aliases) are
     // resolved to palette ranges by the pre-validation sugar expansion, so a
     // scheme surviving to this point on the compile path is an unknown name.
-    const channelScale = channelObj.scale as Record<string, unknown> | undefined;
-    if (
-      channelScale &&
-      typeof channelScale.scheme === 'string' &&
-      !resolveSchemeName(channelScale.scheme)
-    ) {
-      errors.push({
-        message: `Spec error: encoding.${channel}.scale.scheme "${channelScale.scheme}" is not a supported scheme name`,
-        path: `encoding.${channel}.scale.scheme`,
-        code: 'INVALID_VALUE',
-        suggestion: `Use one of the supported scheme names: ${[...SUPPORTED_SCHEME_NAMES].join(', ')}. Or provide explicit colors via scale.range.`,
-      });
-    }
+    checkSchemeName(channelObj, `encoding.${channel}`, errors);
 
     // Check field type is allowed for this channel
     if (channelRule && channelObj.type && channelRule.allowedTypes.length > 0) {
@@ -1022,7 +1045,7 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: edges[${i}].source "${edge.source}" does not reference an existing node id`,
         path: `edges[${i}].source`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the existing node ids: ${[...nodeIds].slice(0, 5).join(', ')}${nodeIds.size > 5 ? '...' : ''}`,
+        suggestion: `Use one of the existing node ids: ${[...nodeIds].slice(0, 5).join(', ')}${nodeIds.size > 5 ? '...' : ''}.${didYouMean(edge.source, [...nodeIds])}`,
       });
     }
 
@@ -1038,7 +1061,7 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
         message: `Spec error: edges[${i}].target "${edge.target}" does not reference an existing node id`,
         path: `edges[${i}].target`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the existing node ids: ${[...nodeIds].slice(0, 5).join(', ')}${nodeIds.size > 5 ? '...' : ''}`,
+        suggestion: `Use one of the existing node ids: ${[...nodeIds].slice(0, 5).join(', ')}${nodeIds.size > 5 ? '...' : ''}.${didYouMean(edge.target, [...nodeIds])}`,
       });
     }
   }
@@ -1059,7 +1082,7 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
           message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist on nodes. Available fields: ${[...nodeFields].join(', ')}`,
           path: `encoding.${channel}.field`,
           code: 'DATA_FIELD_MISSING',
-          suggestion: `Use one of the node fields: ${[...nodeFields].join(', ')}`,
+          suggestion: `Use one of the node fields: ${[...nodeFields].join(', ')}.${didYouMean(ch.field, [...nodeFields])}`,
         });
       }
     }
@@ -1072,10 +1095,13 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
           message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist on edges. Available fields: ${[...edgeFields].join(', ')}`,
           path: `encoding.${channel}.field`,
           code: 'DATA_FIELD_MISSING',
-          suggestion: `Use one of the edge fields: ${[...edgeFields].join(', ')}`,
+          suggestion: `Use one of the edge fields: ${[...edgeFields].join(', ')}.${didYouMean(ch.field, [...edgeFields])}`,
         });
       }
     }
+
+    // Unknown scale.scheme names on any graph encoding channel
+    checkEncodingSchemes(encoding, errors);
   }
 
   // Validate layout type if specified
@@ -1147,7 +1173,8 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
 
   const encoding = spec.encoding as Record<string, unknown>;
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-  const availableColumns = [...dataColumns].join(', ');
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
 
   // Required channels
   for (const channel of ['source', 'target', 'value'] as const) {
@@ -1157,7 +1184,7 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
         message: `Spec error: sankey encoding requires "${channel}" channel`,
         path: `encoding.${channel}`,
         code: 'MISSING_FIELD',
-        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
+        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${columnList[0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
       });
       continue;
     }
@@ -1177,10 +1204,13 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
         message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(ch.field as string, columnList)}`,
       });
     }
   }
+
+  // Unknown scale.scheme names on any sankey encoding channel
+  checkEncodingSchemes(encoding, errors);
 
   // Validate darkMode if provided
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
@@ -1260,7 +1290,8 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
 
     const encoding = spec.encoding as Record<string, unknown>;
     const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-    const availableColumns = [...dataColumns].join(', ');
+    const columnList = [...dataColumns];
+    const availableColumns = columnList.join(', ');
 
     // Required channels
     for (const channel of ['state', 'value'] as const) {
@@ -1270,7 +1301,7 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
           message: `Spec error: tilemap encoding requires "${channel}" channel`,
           path: `encoding.${channel}`,
           code: 'MISSING_FIELD',
-          suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
+          suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${columnList[0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
         });
         continue;
       }
@@ -1290,10 +1321,16 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
           message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist in data. Available columns: ${availableColumns}`,
           path: `encoding.${channel}.field`,
           code: 'DATA_FIELD_MISSING',
-          suggestion: `Use one of the available data columns: ${availableColumns}`,
+          suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(ch.field as string, columnList)}`,
         });
       }
     }
+  }
+
+  // Unknown scale.scheme names on any tilemap encoding channel (encoding may
+  // be present in both record-map and array-data modes)
+  if (spec.encoding && typeof spec.encoding === 'object') {
+    checkEncodingSchemes(spec.encoding as Record<string, unknown>, errors);
   }
 
   // Validate darkMode if provided
@@ -1593,7 +1630,8 @@ function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationEr
 
   const encoding = spec.encoding as Record<string, unknown>;
   const dataColumns = new Set(Object.keys(firstRow as Record<string, unknown>));
-  const availableColumns = [...dataColumns].join(', ');
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
 
   for (const channel of ['label', 'value'] as const) {
     const ch = encoding[channel] as Record<string, unknown> | undefined;
@@ -1602,7 +1640,7 @@ function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationEr
         message: `Spec error: barlist encoding requires "${channel}" channel`,
         path: `encoding.${channel}`,
         code: 'MISSING_FIELD',
-        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${[...dataColumns][0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
+        suggestion: `Add encoding.${channel} with a field from your data (${availableColumns}). Example: ${channel}: { field: "${columnList[0] ?? 'myField'}", type: "${channel === 'value' ? 'quantitative' : 'nominal'}" }`,
       });
       continue;
     }
@@ -1622,7 +1660,7 @@ function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationEr
         message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(ch.field as string, columnList)}`,
       });
     }
   }
@@ -1637,10 +1675,13 @@ function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationEr
         message: `Spec error: encoding.${channel}.field "${field}" does not exist in data. Available columns: ${availableColumns}`,
         path: `encoding.${channel}.field`,
         code: 'DATA_FIELD_MISSING',
-        suggestion: `Use one of the available data columns: ${availableColumns}`,
+        suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(field, columnList)}`,
       });
     }
   }
+
+  // Unknown scale.scheme names on any barlist encoding channel
+  checkEncodingSchemes(encoding, errors);
 
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
     errors.push({

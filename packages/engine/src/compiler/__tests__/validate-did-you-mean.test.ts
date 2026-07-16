@@ -66,6 +66,90 @@ describe('did-you-mean field suggestions', () => {
     expect(suggestion).toContain('Did you mean "quarter"?');
   });
 
+  it('suggests the nearest column for a misspelled sankey encoding field', () => {
+    const result = validateSpec({
+      type: 'sankey',
+      data: [{ source: 'A', target: 'B', value: 10 }],
+      encoding: {
+        source: { field: 'sorce', type: 'nominal' }, // typo of "source"
+        target: { field: 'target', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative' },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const suggestion = suggestionFor(result, 'encoding.source.field');
+    expect(suggestion).toContain('Did you mean "source"?');
+    expect(suggestion).toContain('target');
+  });
+
+  it('suggests the nearest column for a misspelled tilemap encoding field', () => {
+    const result = validateSpec({
+      type: 'tilemap',
+      data: [{ state: 'CA', value: 12000 }],
+      encoding: {
+        state: { field: 'state', type: 'nominal' },
+        value: { field: 'vlaue', type: 'quantitative' }, // typo of "value"
+      },
+    });
+    expect(result.valid).toBe(false);
+    const suggestion = suggestionFor(result, 'encoding.value.field');
+    expect(suggestion).toContain('Did you mean "value"?');
+  });
+
+  it('suggests the nearest column for a misspelled barlist encoding field', () => {
+    const result = validateSpec({
+      type: 'barlist',
+      data: [{ label: 'A', value: 42 }],
+      encoding: {
+        label: { field: 'lable', type: 'nominal' }, // typo of "label"
+        value: { field: 'value', type: 'quantitative' },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const suggestion = suggestionFor(result, 'encoding.label.field');
+    expect(suggestion).toContain('Did you mean "label"?');
+  });
+
+  it('suggests the nearest column for a misspelled optional barlist channel field', () => {
+    const result = validateSpec({
+      type: 'barlist',
+      data: [{ label: 'A', value: 42, group: 'x' }],
+      encoding: {
+        label: { field: 'label', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative' },
+        color: { field: 'gruop', type: 'nominal' }, // typo of "group"
+      },
+    });
+    expect(result.valid).toBe(false);
+    const suggestion = suggestionFor(result, 'encoding.color.field');
+    expect(suggestion).toContain('Did you mean "group"?');
+  });
+
+  it('suggests the nearest node field for a misspelled graph encoding field', () => {
+    const result = validateSpec({
+      type: 'graph',
+      nodes: [{ id: 'a', category: 'x' }],
+      edges: [],
+      encoding: {
+        nodeColor: { field: 'catgory', type: 'nominal' }, // typo of "category"
+      },
+    });
+    expect(result.valid).toBe(false);
+    const suggestion = suggestionFor(result, 'encoding.nodeColor.field');
+    expect(suggestion).toContain('Did you mean "category"?');
+  });
+
+  it('suggests the nearest node id for a misspelled graph edge endpoint', () => {
+    const result = validateSpec({
+      type: 'graph',
+      nodes: [{ id: 'alpha' }, { id: 'beta' }],
+      edges: [{ source: 'alpha', target: 'betta' }], // typo of "beta"
+    });
+    expect(result.valid).toBe(false);
+    const suggestion = suggestionFor(result, 'edges[0].target');
+    expect(suggestion).toContain('Did you mean "beta"?');
+  });
+
   it('does not match on a short unrelated field where the edit distance exceeds the threshold', () => {
     const shortData = [
       { a: 1, b: 2 },
