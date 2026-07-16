@@ -214,6 +214,23 @@ describe('scale.scheme on map specs', () => {
     expect(result.errors.filter((e) => e.path === 'encoding.color.scale.scheme')).toHaveLength(0);
   });
 
+  it('rejects any scheme on a categorical map color channel as dead config', () => {
+    const result = validateSpec({
+      type: 'map',
+      geo: { features: topo },
+      data: [{ id: '01', region: 'south' }],
+      encoding: {
+        key: { field: 'id' },
+        color: { field: 'region', type: 'nominal', scale: { scheme: 'green' } },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    expect(error?.code).toBe('INVALID_VALUE');
+    expect(error?.message).toContain('has no effect');
+    expect(error?.suggestion).toContain('scale.range');
+  });
+
   it('rejects an unsupported scheme on the points layer color channel', () => {
     const result = validateSpec({
       type: 'map',

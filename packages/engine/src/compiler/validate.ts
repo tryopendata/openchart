@@ -164,6 +164,8 @@ const MAP_PALETTE_NAMES = Object.keys(SEQUENTIAL_PALETTES).join(', ');
  * Map color channels resolve scale.scheme against SEQUENTIAL_PALETTES with a
  * silent fallback to blue — a typo'd scheme would render the default palette
  * with no signal. Reject names outside the map's supported set here instead.
+ * Categorical channels never read schemes at all (colors come from
+ * scale.domain/scale.range), so any scheme there is dead config.
  */
 function checkMapSchemeName(
   channelObj: Record<string, unknown>,
@@ -171,7 +173,20 @@ function checkMapSchemeName(
   errors: ValidationError[],
 ): void {
   const scale = channelObj.scale as Record<string, unknown> | undefined;
-  if (scale && typeof scale.scheme === 'string' && !(scale.scheme in SEQUENTIAL_PALETTES)) {
+  if (!scale || typeof scale.scheme !== 'string') return;
+
+  if (channelObj.type === 'nominal' || channelObj.type === 'ordinal') {
+    errors.push({
+      message: `Spec error: ${channelPath}.scale.scheme has no effect — categorical map colors come from scale.range and scale.domain`,
+      path: `${channelPath}.scale.scheme`,
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Remove scale.scheme. To customize categorical map colors, provide explicit colors via scale.range (with scale.domain for category order).',
+    });
+    return;
+  }
+
+  if (!(scale.scheme in SEQUENTIAL_PALETTES)) {
     errors.push({
       message: `Spec error: ${channelPath}.scale.scheme "${scale.scheme}" is not a supported map palette`,
       path: `${channelPath}.scale.scheme`,
