@@ -73,21 +73,28 @@ export const elementRef = {
   annotation: (index: number, id?: string, path?: string): ElementRef => ({
     type: 'annotation',
     index,
-    id,
-    path,
+    ...(id !== undefined ? { id } : {}),
+    ...(path !== undefined ? { path } : {}),
   }),
-  chrome: (key: ChromeKey, path?: string): ElementRef => ({ type: 'chrome', key, path }),
+  chrome: (key: ChromeKey, path?: string): ElementRef => ({
+    type: 'chrome',
+    key,
+    ...(path !== undefined ? { path } : {}),
+  }),
   seriesLabel: (series: string, path?: string): ElementRef => ({
     type: 'series-label',
     series,
-    path,
+    ...(path !== undefined ? { path } : {}),
   }),
-  legend: (path?: string): ElementRef => ({ type: 'legend', path }),
+  legend: (path?: string): ElementRef => ({
+    type: 'legend',
+    ...(path !== undefined ? { path } : {}),
+  }),
   legendEntry: (series: string, index: number, path?: string): ElementRef => ({
     type: 'legend-entry',
     series,
     index,
-    path,
+    ...(path !== undefined ? { path } : {}),
   }),
 } as const;
 

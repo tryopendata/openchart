@@ -557,6 +557,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
   "xInvert": {
     "bottomData": 50,
     "bottomPixel": 577,
+    "scaleType": "linear",
     "topData": 0,
     "topPixel": 36.942,
   },
@@ -1633,12 +1634,14 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
   "xInvert": {
     "bottomData": 1609459200000,
     "bottomPixel": 651.76115,
+    "scaleType": "time",
     "topData": 1577836800000,
     "topPixel": 47,
   },
   "yInvert": {
     "bottomData": 40,
     "bottomPixel": 105.2,
+    "scaleType": "linear",
     "topData": 8,
     "topPixel": 410.59999999999997,
   },
@@ -2390,6 +2393,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
   "yInvert": {
     "bottomData": 70,
     "bottomPixel": 60.9,
+    "scaleType": "linear",
     "topData": 0,
     "topPixel": 297.2,
   },

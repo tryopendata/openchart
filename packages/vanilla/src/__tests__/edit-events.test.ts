@@ -2,6 +2,7 @@ import type { ChartSpec, ElementEdit } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
+import { encodePointerToken } from '../interactions/selection';
 import { createChart } from '../mount';
 
 // ---------------------------------------------------------------------------
@@ -1024,19 +1025,17 @@ describe('edit events', () => {
       }
 
       annotation.dispatchEvent(createMouseEvent('click', 100, 100));
+      expect(onSelect).toHaveBeenCalled();
 
-      if (onSelect.mock.calls.length > 0) {
-        container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+      const svg = container.querySelector('svg')!;
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
 
-        const deleteCall = onEdit.mock.calls.find(
-          (call: [ElementEdit]) => call[0].type === 'delete',
-        );
-        if (deleteCall) {
-          const edit: ElementEdit = deleteCall[0];
-          if (edit.type === 'delete') {
-            expect(edit.element.path).toBe('/annotations/0');
-          }
-        }
+      const deleteCall = onEdit.mock.calls.find((call: [ElementEdit]) => call[0].type === 'delete');
+      expect(deleteCall).toBeDefined();
+      const edit: ElementEdit = deleteCall![0];
+      expect(edit.type).toBe('delete');
+      if (edit.type === 'delete') {
+        expect(edit.element.path).toBe('/annotations/0');
       }
 
       chart.destroy();
@@ -1053,12 +1052,12 @@ describe('edit events', () => {
       }
 
       annotation.dispatchEvent(createMouseEvent('click', 100, 100));
+      expect(onSelect).toHaveBeenCalled();
 
-      if (onSelect.mock.calls.length > 0) {
-        const ref = onSelect.mock.calls[0][0];
-        if (ref.type === 'annotation') {
-          expect(ref.path).toBe('/annotations/0');
-        }
+      const ref = onSelect.mock.calls[0][0];
+      expect(ref.type).toBe('annotation');
+      if (ref.type === 'annotation') {
+        expect(ref.path).toBe('/annotations/0');
       }
 
       chart.destroy();
@@ -1077,13 +1076,12 @@ describe('edit events', () => {
       }
 
       titleEl.dispatchEvent(createMouseEvent('click', 100, 100));
+      expect(onSelect).toHaveBeenCalled();
 
-      if (onSelect.mock.calls.length > 0) {
-        const ref = onSelect.mock.calls[0][0];
-        expect(ref.type).toBe('chrome');
-        if (ref.type === 'chrome') {
-          expect(ref.path).toBe('/chrome/title');
-        }
+      const ref = onSelect.mock.calls[0][0];
+      expect(ref.type).toBe('chrome');
+      if (ref.type === 'chrome') {
+        expect(ref.path).toBe('/chrome/title');
       }
 
       chart.destroy();
@@ -1100,13 +1098,12 @@ describe('edit events', () => {
       }
 
       legendG.dispatchEvent(createMouseEvent('click', 200, 50));
+      expect(onSelect).toHaveBeenCalled();
 
-      if (onSelect.mock.calls.length > 0) {
-        const ref = onSelect.mock.calls[0][0];
-        expect(ref.type).toBe('legend');
-        if (ref.type === 'legend') {
-          expect(ref.path).toBe('/legend');
-        }
+      const ref = onSelect.mock.calls[0][0];
+      expect(ref.type).toBe('legend');
+      if (ref.type === 'legend') {
+        expect(ref.path).toBe('/legend');
       }
 
       chart.destroy();
@@ -1141,51 +1138,11 @@ describe('edit events', () => {
   // 9. RFC 6901 token escaping
   // =========================================================================
   describe('RFC 6901 token escaping', () => {
-    it('series name with / and ~ characters produces correct encoding in element ref path', () => {
-      const onSelect = vi.fn();
-      const specialSpec: ChartSpec = {
-        mark: 'line',
-        data: [
-          { date: '2020-01-01', value: 10, country: 'US/UK' },
-          { date: '2021-01-01', value: 20, country: 'US/UK' },
-          { date: '2020-01-01', value: 15, country: 'A~B' },
-          { date: '2021-01-01', value: 25, country: 'A~B' },
-        ],
-        encoding: {
-          x: { field: 'date', type: 'temporal' },
-          y: { field: 'value', type: 'quantitative' },
-          color: { field: 'country', type: 'nominal' },
-        },
-        labels: { show: true },
-      };
-      const chart = createChart(container, specialSpec, { onEdit: vi.fn(), onSelect });
-
-      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
-      for (const label of seriesLabels) {
-        const series = label.getAttribute('data-series');
-        if (series === 'US/UK') {
-          label.dispatchEvent(createMouseEvent('click', 100, 100));
-          if (onSelect.mock.calls.length > 0) {
-            const ref = onSelect.mock.calls[0][0];
-            if (ref.type === 'series-label') {
-              expect(ref.path).toBe('/labels/offsets/US~1UK');
-            }
-          }
-          break;
-        }
-        if (series === 'A~B') {
-          label.dispatchEvent(createMouseEvent('click', 100, 100));
-          if (onSelect.mock.calls.length > 0) {
-            const ref = onSelect.mock.calls[0][0];
-            if (ref.type === 'series-label') {
-              expect(ref.path).toBe('/labels/offsets/A~0B');
-            }
-          }
-          break;
-        }
-      }
-
-      chart.destroy();
+    it('encodePointerToken escapes ~ and / per RFC 6901', () => {
+      expect(encodePointerToken('US/UK')).toBe('US~1UK');
+      expect(encodePointerToken('A~B')).toBe('A~0B');
+      expect(encodePointerToken('a~b/c')).toBe('a~0b~1c');
+      expect(encodePointerToken('plain')).toBe('plain');
     });
   });
 
@@ -1504,15 +1461,14 @@ describe('edit events', () => {
       const anchorCall = onEdit.mock.calls.find(
         (call: [ElementEdit]) => call[0].type === 'annotation-anchor',
       );
-      if (anchorCall) {
-        const edit: ElementEdit = anchorCall[0];
-        expect(edit.type).toBe('annotation-anchor');
-        if (edit.type === 'annotation-anchor') {
-          expect(edit.annotation).toBeDefined();
-          expect(edit.element.type).toBe('annotation');
-          expect(edit.x).toBeDefined();
-          expect(edit.y).toBeDefined();
-        }
+      expect(anchorCall).toBeDefined();
+      const edit: ElementEdit = anchorCall![0];
+      expect(edit.type).toBe('annotation-anchor');
+      if (edit.type === 'annotation-anchor') {
+        expect(edit.annotation).toBeDefined();
+        expect(edit.element.type).toBe('annotation');
+        expect(edit.x).toBeDefined();
+        expect(edit.y).toBeDefined();
       }
 
       chart.destroy();

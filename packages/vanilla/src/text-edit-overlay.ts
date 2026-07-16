@@ -283,6 +283,10 @@ export function createTextEditOverlayAtPosition(config: TextEditOverlayAtPositio
 
   const computedStyle = window.getComputedStyle(svg);
   const fontFamily = computedStyle.getPropertyValue('--oc-font-family').trim() || 'inherit';
+  const textColor =
+    computedStyle.getPropertyValue('--oc-text-color').trim() || computedStyle.color || '#333';
+  const surfaceColor =
+    computedStyle.getPropertyValue('--oc-surface-color').trim() || 'rgba(255, 255, 255, 0.95)';
   const fontSize = 13 * scale.scaleY;
 
   const textarea = document.createElement('textarea');
@@ -304,14 +308,14 @@ export function createTextEditOverlayAtPosition(config: TextEditOverlayAtPositio
     fontFamily,
     fontSize: `${fontSize}px`,
     fontWeight: '400',
-    color: '#333',
+    color: textColor,
     textAlign: 'left',
     lineHeight: '1.3',
     padding: '2px 4px',
     margin: '0',
     border: '1px solid rgba(79, 70, 229, 0.4)',
     borderRadius: '3px',
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: surfaceColor,
     outline: 'none',
     resize: 'none',
     overflow: 'hidden',
@@ -329,7 +333,6 @@ export function createTextEditOverlayAtPosition(config: TextEditOverlayAtPositio
     destroyed = true;
 
     textarea.removeEventListener('keydown', handleKeyDown);
-    textarea.removeEventListener('blur', handleBlur);
     document.removeEventListener('mousedown', handleClickOutside);
 
     if (containerWasStatic) {
@@ -368,10 +371,6 @@ export function createTextEditOverlayAtPosition(config: TextEditOverlayAtPositio
     }
   };
 
-  const handleBlur = () => {
-    commit();
-  };
-
   textarea.addEventListener('keydown', handleKeyDown);
 
   const handleClickOutside = (e: MouseEvent) => {
@@ -383,7 +382,6 @@ export function createTextEditOverlayAtPosition(config: TextEditOverlayAtPositio
   requestAnimationFrame(() => {
     if (!destroyed) {
       document.addEventListener('mousedown', handleClickOutside);
-      textarea.addEventListener('blur', handleBlur);
     }
   });
 

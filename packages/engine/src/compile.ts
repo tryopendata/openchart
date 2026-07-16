@@ -230,7 +230,8 @@ function resolveScaleInvert(resolved: ResolvedScale | undefined): ScaleInvert | 
   const bottomData = bottomVal instanceof Date ? +bottomVal : Number(bottomVal);
   if (!Number.isFinite(topData) || !Number.isFinite(bottomData)) return undefined;
 
-  return { topPixel: topPx, bottomPixel: bottomPx, topData, bottomData };
+  const scaleType = type as ScaleInvert['scaleType'];
+  return { topPixel: topPx, bottomPixel: bottomPx, topData, bottomData, scaleType };
 }
 
 /**

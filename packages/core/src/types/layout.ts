@@ -1144,6 +1144,8 @@ export interface ScaleInvert {
   bottomPixel: number;
   topData: number;
   bottomData: number;
+  /** Scale type so the vanilla layer applies the correct inverse transform. */
+  scaleType?: 'linear' | 'log' | 'pow' | 'sqrt' | 'symlog' | 'time';
   /** For band/point scales: ordered domain values and their pixel centers. */
   domain?: (string | number)[];
   positions?: number[];

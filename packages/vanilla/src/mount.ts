@@ -719,7 +719,6 @@ export function createChart<TData extends DataRow = DataRow>(
 
         const dataX = invertScale(currentLayout.xInvert, svgX);
         const dataY = invertScale(currentLayout.yInvert, svgY);
-        if (dataX === undefined || dataY === undefined) return;
 
         isTextEditingActive = true;
         const overlay = createTextEditOverlayAtPosition({

@@ -124,5 +124,64 @@ describe('invertScale', () => {
       );
       expect(result).toBe(2021);
     });
+
+    it('returns topData for empty domain/positions arrays', () => {
+      const result = invertScale(
+        {
+          topPixel: 0,
+          bottomPixel: 300,
+          topData: 42,
+          bottomData: 0,
+          domain: [],
+          positions: [],
+        },
+        150,
+      );
+      expect(result).toBe(21);
+    });
+  });
+
+  describe('non-linear continuous scales', () => {
+    it('log scale: midpoint pixel produces geometric mean, not arithmetic', () => {
+      const result = invertScale(
+        { topPixel: 0, bottomPixel: 400, topData: 1, bottomData: 1000, scaleType: 'log' },
+        200,
+      );
+      expect(result).toBeCloseTo(Math.sqrt(1000), 5);
+    });
+
+    it('log scale: endpoints produce exact values', () => {
+      const top = invertScale(
+        { topPixel: 0, bottomPixel: 400, topData: 1, bottomData: 1000, scaleType: 'log' },
+        0,
+      );
+      expect(top).toBeCloseTo(1, 10);
+      const bottom = invertScale(
+        { topPixel: 0, bottomPixel: 400, topData: 1, bottomData: 1000, scaleType: 'log' },
+        400,
+      );
+      expect(bottom).toBeCloseTo(1000, 10);
+    });
+
+    it('sqrt scale: midpoint pixel produces correct inverse', () => {
+      const result = invertScale(
+        { topPixel: 0, bottomPixel: 400, topData: 0, bottomData: 100, scaleType: 'sqrt' },
+        200,
+      );
+      expect(result).toBeCloseTo(25, 5);
+    });
+
+    it('symlog scale: endpoints produce exact values', () => {
+      const top = invertScale(
+        { topPixel: 0, bottomPixel: 400, topData: 0, bottomData: 1000, scaleType: 'symlog' },
+        0,
+      );
+      expect(top).toBeCloseTo(0, 10);
+      const bottom = invertScale(
+        { topPixel: 0, bottomPixel: 400, topData: 0, bottomData: 1000, scaleType: 'symlog' },
+        400,
+      );
+      expect(bottom).toBeCloseTo(1000, 5);
+    });
   });
 });

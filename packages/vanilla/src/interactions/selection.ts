@@ -42,7 +42,7 @@ export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement |
 /**
  * Build an ElementRef from a DOM element's data attributes.
  */
-function encodePointerToken(token: string): string {
+export function encodePointerToken(token: string): string {
   return token.replace(/~/g, '~0').replace(/\//g, '~1');
 }
 
