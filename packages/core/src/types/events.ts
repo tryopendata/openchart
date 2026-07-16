@@ -36,22 +36,58 @@ export type ChromeKey = 'title' | 'subtitle' | 'source' | 'byline' | 'footer';
  * and `index` (always available, position in the spec's annotations array).
  */
 export type ElementRef =
-  | { type: 'annotation'; index: number; id?: string }
-  | { type: 'chrome'; key: ChromeKey }
-  | { type: 'series-label'; series: string }
-  | { type: 'legend' }
-  | { type: 'legend-entry'; series: string; index: number };
+  | {
+      type: 'annotation';
+      index: number;
+      id?: string;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'chrome';
+      key: ChromeKey;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'series-label';
+      series: string;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'legend';
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'legend-entry';
+      series: string;
+      index: number;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    };
 
 /** Helper constructors for ergonomic ElementRef creation. */
 export const elementRef = {
-  annotation: (index: number, id?: string): ElementRef => ({ type: 'annotation', index, id }),
-  chrome: (key: ChromeKey): ElementRef => ({ type: 'chrome', key }),
-  seriesLabel: (series: string): ElementRef => ({ type: 'series-label', series }),
-  legend: (): ElementRef => ({ type: 'legend' }),
-  legendEntry: (series: string, index: number): ElementRef => ({
+  annotation: (index: number, id?: string, path?: string): ElementRef => ({
+    type: 'annotation',
+    index,
+    id,
+    path,
+  }),
+  chrome: (key: ChromeKey, path?: string): ElementRef => ({ type: 'chrome', key, path }),
+  seriesLabel: (series: string, path?: string): ElementRef => ({
+    type: 'series-label',
+    series,
+    path,
+  }),
+  legend: (path?: string): ElementRef => ({ type: 'legend', path }),
+  legendEntry: (series: string, index: number, path?: string): ElementRef => ({
     type: 'legend-entry',
     series,
     index,
+    path,
   }),
 } as const;
 
@@ -114,6 +150,7 @@ export type ElementEdit =
    * the authored spec. `hidden: true` means the series was just hidden.
    */
   | { type: 'legend-toggle'; series: string; hidden: boolean }
+  | { type: 'add'; annotation: TextAnnotation }
   | { type: 'delete'; element: ElementRef }
   | { type: 'text-edit'; element: ElementRef; oldText: string; newText: string };
 

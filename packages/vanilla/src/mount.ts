@@ -18,6 +18,7 @@ import type {
   ElementRef,
   GraphSpec,
   LayerSpec,
+  TextAnnotation,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { cssTokenDefault, isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
@@ -43,6 +44,7 @@ import {
   findElementByRef,
   getEditableElements,
   getElementText,
+  invertScale,
   isTextEditable,
   refsEqual,
   renderSelectionOverlay,
@@ -63,7 +65,7 @@ import { createMeasureText, resolveFontFamily, scheduleFontReload } from './meas
 import { observeResize } from './resize-observer';
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
-import { createTextEditOverlay } from './text-edit-overlay';
+import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, type GeometrySnapshot, runTransition } from './transition';
@@ -696,6 +698,46 @@ export function createChart<TData extends DataRow = DataRow>(
           selectElement(ref);
         }
         enterTextEditing();
+        return;
+      }
+
+      // Double-click on empty canvas: create a new annotation
+      if (!ref && options?.onEdit && currentLayout?.xInvert && currentLayout?.yInvert) {
+        const svgEl = svg as SVGSVGElement;
+        const viewBox = svgEl.viewBox?.baseVal;
+        const svgRect = svgEl.getBoundingClientRect();
+        if (!viewBox || !svgRect.width || !svgRect.height) return;
+
+        const vbScaleX = viewBox.width / svgRect.width;
+        const vbScaleY = viewBox.height / svgRect.height;
+        const svgX = (mouseEvent.clientX - svgRect.left) * vbScaleX;
+        const svgY = (mouseEvent.clientY - svgRect.top) * vbScaleY;
+
+        const area = currentLayout.area;
+        if (svgX < area.x || svgX > area.x + area.width) return;
+        if (svgY < area.y || svgY > area.y + area.height) return;
+
+        const dataX = invertScale(currentLayout.xInvert, svgX);
+        const dataY = invertScale(currentLayout.yInvert, svgY);
+        if (dataX === undefined || dataY === undefined) return;
+
+        isTextEditingActive = true;
+        const overlay = createTextEditOverlayAtPosition({
+          container,
+          svg: svgEl,
+          position: { x: svgX, y: svgY },
+          onCommit: (text: string) => {
+            isTextEditingActive = false;
+            textEditCleanup = null;
+            const annotation: TextAnnotation = { type: 'text', x: dataX, y: dataY, text };
+            options.onEdit!({ type: 'add', annotation });
+          },
+          onCancel: () => {
+            isTextEditingActive = false;
+            textEditCleanup = null;
+          },
+        });
+        textEditCleanup = overlay.destroy;
       }
     };
 

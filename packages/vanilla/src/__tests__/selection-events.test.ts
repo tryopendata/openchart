@@ -2,7 +2,7 @@ import type { ChartSpec, ElementEdit, ElementRef } from '@opendata-ai/openchart-
 import { elementRef } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
-import { barSpec, lineSpec } from '../__test-fixtures__/specs';
+import { barSpec, lineSpec, scatterSpec } from '../__test-fixtures__/specs';
 import { createChart } from '../mount';
 
 // ---------------------------------------------------------------------------
@@ -864,6 +864,199 @@ describe('selection events', () => {
       chart.destroy();
 
       expect(chart.getSelectedElement()).toBeNull();
+    });
+  });
+
+  // =========================================================================
+  // 11. Annotation creation via double-click on empty canvas
+  // =========================================================================
+  describe('annotation creation', () => {
+    const creationSpec: ChartSpec = {
+      ...scatterSpec,
+      chrome: { title: 'Scatter Plot' },
+    };
+
+    function mockSvgRect(svg: SVGElement): void {
+      const viewBox = (svg as SVGSVGElement).viewBox?.baseVal;
+      const width = viewBox?.width || 600;
+      const height = viewBox?.height || 400;
+      Object.defineProperty(svg, 'getBoundingClientRect', {
+        value: () => ({
+          width,
+          height,
+          top: 0,
+          left: 0,
+          right: width,
+          bottom: height,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }),
+        configurable: true,
+      });
+    }
+
+    it('double-click on empty canvas opens a text overlay and fires onEdit add on commit', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, creationSpec, { onEdit });
+      const svg = getSvg(container);
+      mockSvgRect(svg);
+
+      expect(chart.layout.xInvert).toBeDefined();
+      expect(chart.layout.yInvert).toBeDefined();
+
+      const area = chart.layout.area;
+      const clickX = area.x + area.width / 2;
+      const clickY = area.y + area.height / 2;
+      svg.dispatchEvent(
+        new MouseEvent('dblclick', { bubbles: true, clientX: clickX, clientY: clickY }),
+      );
+
+      const textarea = container.querySelector('textarea');
+      expect(textarea).not.toBeNull();
+      expect(chart.isEditing).toBe(true);
+
+      textarea!.value = 'New annotation';
+      textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      const edit: ElementEdit = onEdit.mock.calls[0][0];
+      expect(edit.type).toBe('add');
+      if (edit.type === 'add') {
+        expect(edit.annotation.type).toBe('text');
+        expect(edit.annotation.text).toBe('New annotation');
+        expect(typeof edit.annotation.x).toBe('number');
+        expect(typeof edit.annotation.y).toBe('number');
+      }
+
+      chart.destroy();
+    });
+
+    it('cancel via Escape fires nothing', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, creationSpec, { onEdit });
+      const svg = getSvg(container);
+      mockSvgRect(svg);
+
+      const area = chart.layout.area;
+      const clickX = area.x + area.width / 2;
+      const clickY = area.y + area.height / 2;
+      svg.dispatchEvent(
+        new MouseEvent('dblclick', { bubbles: true, clientX: clickX, clientY: clickY }),
+      );
+
+      const textarea = container.querySelector('textarea');
+      expect(textarea).not.toBeNull();
+
+      textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(onEdit).not.toHaveBeenCalled();
+      expect(container.querySelector('textarea')).toBeNull();
+      expect(chart.isEditing).toBe(false);
+
+      chart.destroy();
+    });
+
+    it('commit with empty text fires nothing', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, creationSpec, { onEdit });
+      const svg = getSvg(container);
+      mockSvgRect(svg);
+
+      const area = chart.layout.area;
+      svg.dispatchEvent(
+        new MouseEvent('dblclick', {
+          bubbles: true,
+          clientX: area.x + area.width / 2,
+          clientY: area.y + area.height / 2,
+        }),
+      );
+
+      const textarea = container.querySelector('textarea');
+      expect(textarea).not.toBeNull();
+
+      textarea!.value = '';
+      textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onEdit).not.toHaveBeenCalled();
+
+      chart.destroy();
+    });
+
+    it('double-click on existing element triggers text edit, not creation', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, selectionSpec, { onEdit });
+      const svg = getSvg(container);
+      mockSvgRect(svg);
+
+      const titleEl = container.querySelector('[data-chrome-key="title"]') as SVGElement | null;
+      if (!titleEl) {
+        chart.destroy();
+        return;
+      }
+
+      simulateDblClick(titleEl);
+
+      const textarea = container.querySelector('textarea');
+      expect(textarea).not.toBeNull();
+      expect(textarea?.value).toBe('GDP Growth');
+
+      chart.destroy();
+    });
+
+    it('no creation gesture when onEdit is not provided', () => {
+      const chart = createChart(container, creationSpec, { onSelect: vi.fn() });
+      const svg = getSvg(container);
+      mockSvgRect(svg);
+
+      const area = chart.layout.area;
+      svg.dispatchEvent(
+        new MouseEvent('dblclick', {
+          bubbles: true,
+          clientX: area.x + area.width / 2,
+          clientY: area.y + area.height / 2,
+        }),
+      );
+
+      expect(container.querySelector('textarea')).toBeNull();
+
+      chart.destroy();
+    });
+
+    it('creation gesture on bar charts snaps to band-scale values', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, barSpec, { onEdit });
+      const svg = getSvg(container);
+      mockSvgRect(svg);
+
+      expect(chart.layout.xInvert).toBeDefined();
+      expect(chart.layout.yInvert).toBeDefined();
+
+      const area = chart.layout.area;
+      svg.dispatchEvent(
+        new MouseEvent('dblclick', {
+          bubbles: true,
+          clientX: area.x + area.width / 2,
+          clientY: area.y + area.height / 2,
+        }),
+      );
+
+      const textarea = container.querySelector('textarea');
+      expect(textarea).not.toBeNull();
+
+      textarea!.value = 'Bar annotation';
+      textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      const edit: ElementEdit = onEdit.mock.calls[0][0];
+      expect(edit.type).toBe('add');
+      if (edit.type === 'add') {
+        expect(edit.annotation.type).toBe('text');
+        expect(typeof edit.annotation.x).not.toBe('undefined');
+        expect(typeof edit.annotation.y).not.toBe('undefined');
+      }
+
+      chart.destroy();
     });
   });
 });

@@ -91,7 +91,11 @@ export function wireAnnotationDrag(
           onAnnotationEdit?.(textAnnotation, newOffset);
           onEdit?.({
             type: 'annotation',
-            element: elementRef.annotation(index, textAnnotation.id),
+            element: elementRef.annotation(
+              index,
+              textAnnotation.id,
+              `/annotations/${index}/offset`,
+            ),
             annotation: textAnnotation,
             offset: newOffset,
           });
@@ -231,7 +235,11 @@ export function wireConnectorEndpointDrag(
             const origEndDy = existingOffset?.dy ?? 0;
             onEdit({
               type: 'annotation-connector',
-              element: elementRef.annotation(index, textAnnotation.id),
+              element: elementRef.annotation(
+                index,
+                textAnnotation.id,
+                `/annotations/${index}/connectorOffset/${ep.name}`,
+              ),
               annotation: textAnnotation,
               endpoint: ep.name,
               offset: { dx: origEndDx + dx, dy: origEndDy + dy },
@@ -328,14 +336,22 @@ export function wireAnnotationLabelDrag(
             if (isRange) {
               onEdit({
                 type: 'range-label',
-                element: elementRef.annotation(index, specAnnotation.id),
+                element: elementRef.annotation(
+                  index,
+                  specAnnotation.id,
+                  `/annotations/${index}/labelOffset`,
+                ),
                 annotation: specAnnotation as RangeAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
               });
             } else {
               onEdit({
                 type: 'refline-label',
-                element: elementRef.annotation(index, specAnnotation.id),
+                element: elementRef.annotation(
+                  index,
+                  specAnnotation.id,
+                  `/annotations/${index}/labelOffset`,
+                ),
                 annotation: specAnnotation as RefLineAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
               });
@@ -597,7 +613,7 @@ export function wireAnchorDrag(
           const newY = invertScale(layout.yInvert!, anchorY + dy);
           onEdit({
             type: 'annotation-anchor',
-            element: elementRef.annotation(index, textAnnotation.id),
+            element: elementRef.annotation(index, textAnnotation.id, `/annotations/${index}`),
             annotation: textAnnotation,
             x: newX,
             y: newY,

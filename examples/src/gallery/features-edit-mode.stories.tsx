@@ -574,6 +574,13 @@ function EditModeStudio() {
           });
           pushLog('onEdit', `text "${oneLine(edit.oldText)}" → "${oneLine(edit.newText)}"`);
           break;
+        case 'add':
+          setState((prev) => ({
+            ...prev,
+            annotations: [...(prev.annotations ?? []), edit.annotation],
+          }));
+          pushLog('onEdit', `add annotation "${oneLine(edit.annotation.text)}"`);
+          break;
         default:
           pushLog('onEdit', edit.type);
           break;
@@ -639,8 +646,8 @@ function EditModeStudio() {
           <p className="ocem-hint">
             Click any title, label, or annotation to select it. Drag an annotation label to
             reposition, its connector endpoints to reshape, or its anchor dot to move the data
-            point. Double-click text to rewrite it. Press <kbd className="ocem-kbd">Esc</kbd> to
-            deselect.
+            point. Double-click text to rewrite it. Double-click empty space to add a new
+            annotation. Press <kbd className="ocem-kbd">Esc</kbd> to deselect.
           </p>
         </div>
 

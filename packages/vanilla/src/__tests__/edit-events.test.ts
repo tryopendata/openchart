@@ -171,6 +171,8 @@ describe('edit events', () => {
         // Original offset (10, -20) + drag delta (50, 30) = (60, 10)
         expect(edit.offset.dx).toBe(60);
         expect(edit.offset.dy).toBe(10);
+        // RFC 6901 path to the offset property
+        expect(edit.element.path).toBe('/annotations/0/offset');
       }
 
       chart.destroy();
@@ -407,6 +409,7 @@ describe('edit events', () => {
         // Original labelOffset (5, 3) + drag delta (40, 20) = (45, 23)
         expect(edit.labelOffset.dx).toBe(45);
         expect(edit.labelOffset.dy).toBe(23);
+        expect(edit.element.path).toBe('/annotations/0/labelOffset');
       }
 
       chart.destroy();
@@ -450,6 +453,7 @@ describe('edit events', () => {
         // Original labelOffset (2, -4) + drag delta (30, 15) = (32, 11)
         expect(edit.labelOffset.dx).toBe(32);
         expect(edit.labelOffset.dy).toBe(11);
+        expect(edit.element.path).toBe('/annotations/0/labelOffset');
       }
 
       chart.destroy();
@@ -689,6 +693,7 @@ describe('edit events', () => {
         // No existing connectorOffset, so offset = delta (30, 15)
         expect(edit.offset.dx).toBe(30);
         expect(edit.offset.dy).toBe(15);
+        expect(edit.element.path).toBe('/annotations/0/connectorOffset/from');
       }
 
       chart.destroy();
@@ -768,6 +773,7 @@ describe('edit events', () => {
       expect(edit.type).toBe('annotation-connector');
       if (edit.type === 'annotation-connector') {
         expect(edit.endpoint).toBe('to');
+        expect(edit.element.path).toBe('/annotations/0/connectorOffset/to');
       }
 
       chart.destroy();
@@ -1003,7 +1009,188 @@ describe('edit events', () => {
   });
 
   // =========================================================================
-  // 8. wireSeriesLabelDrag
+  // 8. Spec-pointer paths on edit events (RFC 6901)
+  // =========================================================================
+  describe('spec-pointer paths (RFC 6901)', () => {
+    it('delete edit carries path from buildElementRef', () => {
+      const onEdit = vi.fn();
+      const onSelect = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onEdit, onSelect });
+
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      annotation.dispatchEvent(createMouseEvent('click', 100, 100));
+
+      if (onSelect.mock.calls.length > 0) {
+        container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+
+        const deleteCall = onEdit.mock.calls.find(
+          (call: [ElementEdit]) => call[0].type === 'delete',
+        );
+        if (deleteCall) {
+          const edit: ElementEdit = deleteCall[0];
+          if (edit.type === 'delete') {
+            expect(edit.element.path).toBe('/annotations/0');
+          }
+        }
+      }
+
+      chart.destroy();
+    });
+
+    it('select annotation carries path from buildElementRef', () => {
+      const onSelect = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onEdit: vi.fn(), onSelect });
+
+      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
+      if (!annotation) {
+        chart.destroy();
+        return;
+      }
+
+      annotation.dispatchEvent(createMouseEvent('click', 100, 100));
+
+      if (onSelect.mock.calls.length > 0) {
+        const ref = onSelect.mock.calls[0][0];
+        if (ref.type === 'annotation') {
+          expect(ref.path).toBe('/annotations/0');
+        }
+      }
+
+      chart.destroy();
+    });
+
+    it('buildElementRef produces /chrome/<key> path for chrome elements', () => {
+      const onSelect = vi.fn();
+      const chart = createChart(container, fullEditSpec, { onEdit: vi.fn(), onSelect });
+
+      const titleEl = container.querySelector(
+        '.oc-chrome text[data-chrome-key="title"]',
+      ) as SVGTextElement | null;
+      if (!titleEl) {
+        chart.destroy();
+        return;
+      }
+
+      titleEl.dispatchEvent(createMouseEvent('click', 100, 100));
+
+      if (onSelect.mock.calls.length > 0) {
+        const ref = onSelect.mock.calls[0][0];
+        expect(ref.type).toBe('chrome');
+        if (ref.type === 'chrome') {
+          expect(ref.path).toBe('/chrome/title');
+        }
+      }
+
+      chart.destroy();
+    });
+
+    it('buildElementRef produces /legend path for legend clicks', () => {
+      const onSelect = vi.fn();
+      const chart = createChart(container, fullEditSpec, { onEdit: vi.fn(), onSelect });
+
+      const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
+      if (!legendG) {
+        chart.destroy();
+        return;
+      }
+
+      legendG.dispatchEvent(createMouseEvent('click', 200, 50));
+
+      if (onSelect.mock.calls.length > 0) {
+        const ref = onSelect.mock.calls[0][0];
+        expect(ref.type).toBe('legend');
+        if (ref.type === 'legend') {
+          expect(ref.path).toBe('/legend');
+        }
+      }
+
+      chart.destroy();
+    });
+
+    it('curved connector drag includes connectorOffset path', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, curvedAnnotatedSpec, { onEdit });
+
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement;
+      const toHandle = annotationG?.querySelector(
+        '.oc-connector-handle[data-endpoint="to"]',
+      ) as SVGCircleElement;
+      if (!toHandle) {
+        chart.destroy();
+        return;
+      }
+
+      simulateDrag(toHandle, 100, 100, 130, 115);
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      const edit: ElementEdit = onEdit.mock.calls[0][0];
+      if (edit.type === 'annotation-connector') {
+        expect(edit.element.path).toBe('/annotations/0/connectorOffset/to');
+      }
+
+      chart.destroy();
+    });
+  });
+
+  // =========================================================================
+  // 9. RFC 6901 token escaping
+  // =========================================================================
+  describe('RFC 6901 token escaping', () => {
+    it('series name with / and ~ characters produces correct encoding in element ref path', () => {
+      const onSelect = vi.fn();
+      const specialSpec: ChartSpec = {
+        mark: 'line',
+        data: [
+          { date: '2020-01-01', value: 10, country: 'US/UK' },
+          { date: '2021-01-01', value: 20, country: 'US/UK' },
+          { date: '2020-01-01', value: 15, country: 'A~B' },
+          { date: '2021-01-01', value: 25, country: 'A~B' },
+        ],
+        encoding: {
+          x: { field: 'date', type: 'temporal' },
+          y: { field: 'value', type: 'quantitative' },
+          color: { field: 'country', type: 'nominal' },
+        },
+        labels: { show: true },
+      };
+      const chart = createChart(container, specialSpec, { onEdit: vi.fn(), onSelect });
+
+      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
+      for (const label of seriesLabels) {
+        const series = label.getAttribute('data-series');
+        if (series === 'US/UK') {
+          label.dispatchEvent(createMouseEvent('click', 100, 100));
+          if (onSelect.mock.calls.length > 0) {
+            const ref = onSelect.mock.calls[0][0];
+            if (ref.type === 'series-label') {
+              expect(ref.path).toBe('/labels/offsets/US~1UK');
+            }
+          }
+          break;
+        }
+        if (series === 'A~B') {
+          label.dispatchEvent(createMouseEvent('click', 100, 100));
+          if (onSelect.mock.calls.length > 0) {
+            const ref = onSelect.mock.calls[0][0];
+            if (ref.type === 'series-label') {
+              expect(ref.path).toBe('/labels/offsets/A~0B');
+            }
+          }
+          break;
+        }
+      }
+
+      chart.destroy();
+    });
+  });
+
+  // =========================================================================
+  // 10. wireSeriesLabelDrag
   // =========================================================================
   describe('wireSeriesLabelDrag', () => {
     it('series labels get cursor:grab when onEdit is provided', () => {
@@ -1078,7 +1265,8 @@ describe('edit events', () => {
       const edit: ElementEdit = onEdit.mock.calls[0][0];
       expect(edit.type).toBe('annotation');
       if (edit.type === 'annotation') {
-        expect(edit.element).toEqual({ type: 'annotation', index: 0, id: undefined });
+        expect(edit.element).toMatchObject({ type: 'annotation', index: 0 });
+        expect(edit.element.path).toBe('/annotations/0/offset');
       }
 
       chart.destroy();
@@ -1181,7 +1369,8 @@ describe('edit events', () => {
       const edit: ElementEdit = onEdit.mock.calls[0][0];
       expect(edit.type).toBe('annotation-connector');
       if (edit.type === 'annotation-connector') {
-        expect(edit.element).toEqual({ type: 'annotation', index: 0, id: 'conn-id' });
+        expect(edit.element).toMatchObject({ type: 'annotation', index: 0, id: 'conn-id' });
+        expect(edit.element.path).toBe('/annotations/0/connectorOffset/from');
       }
 
       chart.destroy();
