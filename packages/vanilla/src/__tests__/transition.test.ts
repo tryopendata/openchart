@@ -606,10 +606,21 @@ describe('ghost elements', () => {
 // Legend-toggle mid-transition
 // ---------------------------------------------------------------------------
 
+/**
+ * Disable the entrance phase so update() can actually transition. With
+ * `animation: true`, createChart() arms an entrance-cleanup timer (a real
+ * ~1.2s setTimeout) and any update() inside that window fails canTransition
+ * gate 6 (entranceInFlight) -- the createChart-based tests below would
+ * silently exercise only the instant-swap path.
+ */
+function noEnter(spec: ChartSpec): ChartSpec {
+  return { ...spec, animation: { enter: false } };
+}
+
 describe('legend toggle mid-transition', () => {
   it('render() during transition cancels transition and stops attribute writes', () => {
-    const specA = columnSpec(DATA_A);
-    const specB = columnSpec(DATA_B);
+    const specA = noEnter(columnSpec(DATA_A));
+    const specB = noEnter(columnSpec(DATA_B));
 
     const container = createContainer();
     const chart = createChart(container, specA);
@@ -1370,16 +1381,17 @@ const DATA_D = [
 
 describe('interruption retargeting', () => {
   it('A -> B -> interrupt at ~50% -> C -> complete -> equals fresh render of C', () => {
-    const specA = columnSpec(DATA_A);
-    const specB = columnSpec(DATA_B);
-    const specC = columnSpec(DATA_D);
+    const specA = noEnter(columnSpec(DATA_A));
+    const specB = noEnter(columnSpec(DATA_B));
+    const specC = noEnter(columnSpec(DATA_D));
 
     // Use createChart so update() handles snapshot plumbing
     const container = createContainer();
     const chart = createChart(container, specA);
 
-    // Update A -> B, start transition
+    // Update A -> B, start transition (must actually run, not instant-swap)
     chart.update(specB);
+    expect(rafCallbacks.size).toBeGreaterThan(0);
 
     // Pump to ~50% of the transition (start at t=0, then advance)
     pumpRaf(0);
@@ -1496,8 +1508,8 @@ describe('reduced motion', () => {
 
 describe('React StrictMode double-mount', () => {
   it('destroy cancels rAF loop; fresh mount does not inherit stale state', () => {
-    const specA = columnSpec(DATA_A);
-    const specB = columnSpec(DATA_B);
+    const specA = noEnter(columnSpec(DATA_A));
+    const specB = noEnter(columnSpec(DATA_B));
 
     const container = createContainer();
 
