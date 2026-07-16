@@ -799,4 +799,54 @@ describe('callouts are anchored in the data, not in pixels', () => {
     expect(all).toHaveLength(1);
     expect(all[0].label!.text).toBe('Real');
   });
+
+  test('a dropped annotation does not shift which of its neighbours counts as pinned', () => {
+    // The resolved array is a FILTERED view of the spec array: dropping spec 0
+    // shifts every later annotation down one slot. Anything that reaches back to
+    // the authored spec (collision resolution's "does it carry an offset?" check)
+    // must key on the stamped `specIndex`, not on resolved position -- indexed by
+    // position, the pinned annotation reads the dropped spec's (offset-less) slot,
+    // loses its pin, and gets displaced off its authored spot.
+    const bogus: Ann = { type: 'text', x: 'NotAMonth', y: 30, text: 'Bogus' };
+    const pinned: Ann = {
+      type: 'text',
+      x: 'Mar',
+      y: 30,
+      text: 'Pinned block here',
+      anchor: 'top',
+      offset: { dy: -25 },
+    };
+    const movable: Ann = {
+      type: 'text',
+      x: 'Mar',
+      y: 30,
+      text: 'Other block here',
+      anchor: 'top',
+    };
+
+    const resolved = annotationsFor([bogus, pinned, movable]);
+
+    // The bogus one is dropped; the survivors keep their spec identities.
+    expect(resolved).toHaveLength(2);
+    expect(resolved.map((a) => a.specIndex)).toEqual([1, 2]);
+
+    const [pinnedResolved, movableResolved] = resolved;
+
+    // Pinning held despite the collision: same spot as when compiled alone.
+    const pinnedSolo = first([pinned]);
+    expect(pinnedResolved.label!.y - pinnedResolved.dot!.y).toBeCloseTo(
+      pinnedSolo.label!.y - pinnedSolo.dot!.y,
+      0,
+    );
+
+    // And the movable one actually moved -- without this half, the test passes
+    // on a pair that never collided in the first place.
+    const movableSolo = first([movable]);
+    expect(movableResolved.label!.y - movableResolved.dot!.y).not.toBeCloseTo(
+      movableSolo.label!.y - movableSolo.dot!.y,
+      1,
+    );
+
+    expect(overlaps(pinnedResolved.bounds!, movableResolved.bounds!)).toBe(false);
+  });
 });
