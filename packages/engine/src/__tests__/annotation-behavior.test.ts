@@ -283,6 +283,64 @@ describe('a callout lands where the anchor says it should', () => {
   });
 });
 
+// --- auto-placement commits to the side it chose ---------------------------
+
+describe('an auto-placed callout on the right edge anchors its text to the left', () => {
+  // A point at the far right edge forces the scored search to place the block on
+  // its LEFT, which it signals by returning `textAnchor: 'end'`. The anchor must
+  // actually be STAMPED on the label (and its subtitle): with a `start` anchor the
+  // same origin makes the text extend right, over the data point. This is the
+  // mutation the suite used to miss -- deleting the anchor assignment in
+  // `moveAnnotationBy` kept every test green, because the only test that looked at
+  // the anchor compared it against bounds derived from the same (wrong) anchor.
+  test('the search picks the left side and the anchor stamp reaches the whole block', () => {
+    const data = Array.from({ length: 21 }, (_, i) => ({
+      x: `2024-01-${String(i + 1).padStart(2, '0')}`,
+      y: 40 + 2 * i,
+    }));
+    const layout: ChartLayout = compileChart(
+      {
+        mark: 'line',
+        data,
+        encoding: {
+          x: { field: 'x', type: 'temporal' },
+          y: { field: 'y', type: 'quantitative' },
+        },
+        annotations: [
+          {
+            type: 'text',
+            x: data[20].x,
+            y: data[20].y,
+            text: 'Peak of the series',
+            subtitle: 'highest reading of the month',
+          },
+        ],
+      } as ChartSpec,
+      { width: 800, height: 460 },
+    );
+
+    const a = layout.annotations![0];
+    const label = a.label!;
+    const bounds = label.bounds!;
+    const dot = a.dot!;
+
+    // The search really chose the left side. If a future engine change makes it
+    // pick another candidate, fail loudly here rather than silently stop guarding.
+    expect(label.style.textAnchor).toBe('end');
+
+    // An end-anchored box extends LEFT of its origin.
+    expect(Math.abs(bounds.x + bounds.width - label.x)).toBeLessThanOrEqual(1);
+
+    // The whole block sits clear of the point, on its left.
+    expect(bounds.x + bounds.width).toBeLessThan(dot.x);
+
+    // The anchor stamp reaches the subtitle too -- `moveAnnotationBy` applies it
+    // to both lines, and an unstamped subtitle would jut right from a shared origin.
+    expect(a.subtitle!.style.textAnchor).toBe('end');
+    expect(a.subtitle!.x).toBeCloseTo(label.x, 0);
+  });
+});
+
 // --- the leader connects the block to the point --------------------------
 
 describe('the leader actually connects the words to the data', () => {
