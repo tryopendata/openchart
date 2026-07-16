@@ -253,3 +253,137 @@ export function createTextEditOverlay(config: TextEditOverlayConfig): { destroy:
 
   return { destroy };
 }
+
+// ---------------------------------------------------------------------------
+// Position-based overlay (for creating new annotations at a click position)
+// ---------------------------------------------------------------------------
+
+export interface TextEditOverlayAtPositionConfig {
+  container: HTMLElement;
+  svg: SVGSVGElement;
+  position: { x: number; y: number };
+  onCommit: (text: string) => void;
+  onCancel: () => void;
+}
+
+export function createTextEditOverlayAtPosition(config: TextEditOverlayAtPositionConfig): {
+  destroy: () => void;
+} {
+  const { container, svg, position, onCommit, onCancel } = config;
+
+  let destroyed = false;
+
+  const scale = getScale(svg);
+  const svgRect = svg.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  const padding = 4;
+  const left = position.x * scale.scaleX + (svgRect.left - containerRect.left) - padding;
+  const top = position.y * scale.scaleY + (svgRect.top - containerRect.top) - padding;
+
+  const computedStyle = window.getComputedStyle(svg);
+  const fontFamily = computedStyle.getPropertyValue('--oc-font-family').trim() || 'inherit';
+  const textColor =
+    computedStyle.getPropertyValue('--oc-text-color').trim() || computedStyle.color || '#333';
+  const surfaceColor =
+    computedStyle.getPropertyValue('--oc-surface-color').trim() || 'rgba(255, 255, 255, 0.95)';
+  const fontSize = 13 * scale.scaleY;
+
+  const textarea = document.createElement('textarea');
+  textarea.value = '';
+  textarea.placeholder = 'Type annotation text...';
+
+  const containerPosition = window.getComputedStyle(container).position;
+  const containerWasStatic = containerPosition === 'static';
+  if (containerWasStatic) {
+    container.style.position = 'relative';
+  }
+
+  Object.assign(textarea.style, {
+    position: 'absolute',
+    top: `${Math.max(0, top)}px`,
+    left: `${Math.max(0, left)}px`,
+    width: '160px',
+    minHeight: '24px',
+    fontFamily,
+    fontSize: `${fontSize}px`,
+    fontWeight: '400',
+    color: textColor,
+    textAlign: 'left',
+    lineHeight: '1.3',
+    padding: '2px 4px',
+    margin: '0',
+    border: '1px solid rgba(79, 70, 229, 0.4)',
+    borderRadius: '3px',
+    background: surfaceColor,
+    outline: 'none',
+    resize: 'none',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    zIndex: '10000',
+    WebkitAppearance: 'none',
+    appearance: 'none',
+  } as Record<string, string>);
+
+  container.appendChild(textarea);
+  textarea.focus();
+
+  function destroy(): void {
+    if (destroyed) return;
+    destroyed = true;
+
+    textarea.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('mousedown', handleClickOutside);
+
+    if (containerWasStatic) {
+      container.style.position = '';
+    }
+
+    if (textarea.parentNode) {
+      textarea.parentNode.removeChild(textarea);
+    }
+  }
+
+  function commit(): void {
+    if (destroyed) return;
+    const text = textarea.value.trim();
+    destroy();
+    if (text) {
+      onCommit(text);
+    } else {
+      onCancel();
+    }
+  }
+
+  function cancel(): void {
+    if (destroyed) return;
+    destroy();
+    onCancel();
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      commit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancel();
+    }
+  };
+
+  textarea.addEventListener('keydown', handleKeyDown);
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (!textarea.contains(e.target as Node)) {
+      commit();
+    }
+  };
+
+  requestAnimationFrame(() => {
+    if (!destroyed) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+  });
+
+  return { destroy };
+}

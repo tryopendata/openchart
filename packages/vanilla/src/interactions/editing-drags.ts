@@ -1,15 +1,18 @@
-import type {
-  Annotation,
-  AnnotationOffset,
-  ChartSpec,
-  ChromeKey,
-  ElementEdit,
-  GraphSpec,
-  RangeAnnotation,
-  RefLineAnnotation,
-  TextAnnotation,
+import {
+  type Annotation,
+  type AnnotationOffset,
+  type ChartLayout,
+  type ChartSpec,
+  type ChromeKey,
+  type ElementEdit,
+  elementRef,
+  type GraphSpec,
+  type RangeAnnotation,
+  type RefLineAnnotation,
+  type TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { createDragHandler } from './drag-handler';
+import { invertScale } from './invert';
 
 /**
  * Wire drag-to-reposition on text annotation labels.
@@ -86,7 +89,16 @@ export function wireAnnotationDrag(
             dy: origDy + dy,
           };
           onAnnotationEdit?.(textAnnotation, newOffset);
-          onEdit?.({ type: 'annotation', annotation: textAnnotation, offset: newOffset });
+          onEdit?.({
+            type: 'annotation',
+            element: elementRef.annotation(
+              index,
+              textAnnotation.id,
+              `/annotations/${index}/offset`,
+            ),
+            annotation: textAnnotation,
+            offset: newOffset,
+          });
         }
       },
       setDragging,
@@ -223,6 +235,11 @@ export function wireConnectorEndpointDrag(
             const origEndDy = existingOffset?.dy ?? 0;
             onEdit({
               type: 'annotation-connector',
+              element: elementRef.annotation(
+                index,
+                textAnnotation.id,
+                `/annotations/${index}/connectorOffset/${ep.name}`,
+              ),
               annotation: textAnnotation,
               endpoint: ep.name,
               offset: { dx: origEndDx + dx, dy: origEndDy + dy },
@@ -319,12 +336,22 @@ export function wireAnnotationLabelDrag(
             if (isRange) {
               onEdit({
                 type: 'range-label',
+                element: elementRef.annotation(
+                  index,
+                  specAnnotation.id,
+                  `/annotations/${index}/labelOffset`,
+                ),
                 annotation: specAnnotation as RangeAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
               });
             } else {
               onEdit({
                 type: 'refline-label',
+                element: elementRef.annotation(
+                  index,
+                  specAnnotation.id,
+                  `/annotations/${index}/labelOffset`,
+                ),
                 annotation: specAnnotation as RefLineAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
               });
@@ -505,6 +532,113 @@ export function wireSeriesLabelDrag(
     });
 
     cleanups.push(cleanup);
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+/**
+ * Wire drag on annotation anchor handles (the data-point dot).
+ * Dragging the anchor repositions the annotation in data space, emitting
+ * new x/y values via onEdit. Returns a cleanup function.
+ */
+export function wireAnchorDrag(
+  svg: SVGElement,
+  specAnnotations: Annotation[],
+  layout: ChartLayout,
+  onEdit: ((edit: ElementEdit) => void) | undefined,
+  setDragging: (d: boolean) => void,
+): () => void {
+  if (!onEdit || !layout.xInvert || !layout.yInvert) return () => {};
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const cleanups: Array<() => void> = [];
+  const annotationGroups = svg.querySelectorAll('.oc-annotation-text');
+
+  for (const el of annotationGroups) {
+    const annotationG = el as SVGGElement;
+    const indexStr = annotationG.getAttribute('data-annotation-index');
+    if (indexStr === null) continue;
+
+    const index = Number(indexStr);
+    const specAnnotation = specAnnotations[index];
+    if (!specAnnotation || specAnnotation.type !== 'text') continue;
+
+    const textAnnotation = specAnnotation as TextAnnotation;
+
+    const resolved = layout.annotations.find((a) => a.specIndex === index);
+    if (!resolved?.dot) continue;
+
+    const anchorX = resolved.dot.x;
+    const anchorY = resolved.dot.y;
+
+    const handleEl = document.createElementNS(SVG_NS, 'circle') as SVGCircleElement;
+    handleEl.setAttribute('class', 'oc-anchor-handle');
+    handleEl.setAttribute('cx', String(anchorX));
+    handleEl.setAttribute('cy', String(anchorY));
+    handleEl.setAttribute('r', '4');
+    handleEl.setAttribute('opacity', '0');
+    handleEl.setAttribute('fill', 'currentColor');
+    handleEl.setAttribute('stroke', 'currentColor');
+    handleEl.style.cursor = 'grab';
+    annotationG.appendChild(handleEl);
+
+    const stopProp = (e: Event) => {
+      e.stopPropagation();
+    };
+    handleEl.addEventListener('mousedown', stopProp);
+    handleEl.addEventListener('touchstart', stopProp);
+    cleanups.push(() => {
+      handleEl.removeEventListener('mousedown', stopProp);
+      handleEl.removeEventListener('touchstart', stopProp);
+    });
+
+    const cleanup = createDragHandler({
+      element: handleEl,
+      svg: svg as unknown as SVGSVGElement,
+      onMove: (dx, dy) => {
+        handleEl.setAttribute('cx', String(anchorX + dx));
+        handleEl.setAttribute('cy', String(anchorY + dy));
+      },
+      onEnd: (dx, dy, moved) => {
+        handleEl.setAttribute('cx', String(anchorX));
+        handleEl.setAttribute('cy', String(anchorY));
+
+        if (moved) {
+          const newX = invertScale(layout.xInvert!, anchorX + dx);
+          const newY = invertScale(layout.yInvert!, anchorY + dy);
+          onEdit({
+            type: 'annotation-anchor',
+            element: elementRef.annotation(index, textAnnotation.id, `/annotations/${index}`),
+            annotation: textAnnotation,
+            x: newX,
+            y: newY,
+          });
+        }
+      },
+      setDragging,
+    });
+
+    cleanups.push(cleanup);
+
+    const showHandle = () => {
+      handleEl.setAttribute('opacity', '0.6');
+    };
+    const hideHandle = () => {
+      handleEl.setAttribute('opacity', '0');
+    };
+
+    annotationG.addEventListener('mouseenter', showHandle);
+    annotationG.addEventListener('mouseleave', hideHandle);
+    cleanups.push(() => {
+      annotationG.removeEventListener('mouseenter', showHandle);
+      annotationG.removeEventListener('mouseleave', hideHandle);
+      handleEl.remove();
+    });
   }
 
   return () => {

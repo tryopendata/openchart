@@ -73,6 +73,10 @@ export const Chart = defineComponent({
       type: [Array, null] as unknown as PropType<string[] | null>,
       default: undefined,
     },
+    editable: {
+      type: Boolean as PropType<boolean>,
+      default: undefined,
+    },
   },
   emits: {
     'mark-click': (_event: MarkEvent) => true,
@@ -152,6 +156,7 @@ export const Chart = defineComponent({
                 emit('text-edit', element, oldText, newText),
             }
           : {}),
+        ...(props.editable != null ? { editable: props.editable } : {}),
         ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
         responsive: true,
       };
@@ -227,11 +232,12 @@ export const Chart = defineComponent({
       },
     );
 
-    // Recreate chart when theme or darkMode change
+    // Recreate chart when theme, darkMode, or editable change
     watch(
       [
         () => props.theme,
         () => props.darkMode,
+        () => props.editable,
         () => contextTheme?.value,
         () => contextDarkMode?.value,
       ],

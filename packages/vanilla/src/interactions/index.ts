@@ -3,6 +3,7 @@ export { wireVoronoiTooltipEvents } from './crosshair';
 export type { DragConfig } from './drag-handler';
 export { createDragHandler } from './drag-handler';
 export {
+  wireAnchorDrag,
   wireAnnotationDrag,
   wireAnnotationLabelDrag,
   wireChromeDrag,
@@ -10,6 +11,7 @@ export {
   wireLegendDrag,
   wireSeriesLabelDrag,
 } from './editing-drags';
+export { invertScale } from './invert';
 export { wireKeyboardNav } from './keyboard-nav';
 export { wireLegendInteraction } from './legend-interaction';
 export {

@@ -38,6 +38,7 @@ let {
   ondeselect,
   ontextedit,
   ondatapointclick,
+  editable,
   selectedElement: selectedElementProp,
   highlight,
   class: className,
@@ -57,6 +58,7 @@ let {
   ondeselect?: (element: ElementRef) => void;
   ontextedit?: (element: ElementRef, oldText: string, newText: string) => void;
   ondatapointclick?: (data: Record<string, unknown>) => void;
+  editable?: boolean;
   selectedElement?: ElementRef;
   highlight?: string[] | null;
   class?: string;
@@ -107,6 +109,7 @@ let prevSpec = '';
 $effect(() => {
   const resolvedTheme = theme ?? ctxTheme?.();
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
+  const resolvedEditable = editable;
   // Read spec without tracking - spec changes handled in Effect 2
   const currentSpec = untrack(() => spec);
 
@@ -124,6 +127,7 @@ $effect(() => {
     darkMode: resolvedDarkMode,
     responsive: true,
     ...stableHandlers,
+    ...(resolvedEditable != null ? { editable: resolvedEditable } : {}),
     ...(hasAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
     ...(hasEdit ? { onEdit: stableOnEdit } : {}),
     ...(hasSelect ? { onSelect: stableOnSelect } : {}),

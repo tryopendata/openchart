@@ -18,6 +18,7 @@ import type {
   ElementRef,
   GraphSpec,
   LayerSpec,
+  TextAnnotation,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { cssTokenDefault, isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
@@ -43,9 +44,11 @@ import {
   findElementByRef,
   getEditableElements,
   getElementText,
+  invertScale,
   isTextEditable,
   refsEqual,
   renderSelectionOverlay,
+  wireAnchorDrag,
   wireAnnotationDrag,
   wireAnnotationLabelDrag,
   wireChartEvents,
@@ -62,7 +65,7 @@ import { createMeasureText, resolveFontFamily, scheduleFontReload } from './meas
 import { observeResize } from './resize-observer';
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
-import { createTextEditOverlay } from './text-edit-overlay';
+import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, type GeometrySnapshot, runTransition } from './transition';
@@ -695,6 +698,45 @@ export function createChart<TData extends DataRow = DataRow>(
           selectElement(ref);
         }
         enterTextEditing();
+        return;
+      }
+
+      // Double-click on empty canvas: create a new annotation
+      if (!ref && options?.onEdit && currentLayout?.xInvert && currentLayout?.yInvert) {
+        const svgEl = svg as SVGSVGElement;
+        const viewBox = svgEl.viewBox?.baseVal;
+        const svgRect = svgEl.getBoundingClientRect();
+        if (!viewBox || !svgRect.width || !svgRect.height) return;
+
+        const vbScaleX = viewBox.width / svgRect.width;
+        const vbScaleY = viewBox.height / svgRect.height;
+        const svgX = (mouseEvent.clientX - svgRect.left) * vbScaleX;
+        const svgY = (mouseEvent.clientY - svgRect.top) * vbScaleY;
+
+        const area = currentLayout.area;
+        if (svgX < area.x || svgX > area.x + area.width) return;
+        if (svgY < area.y || svgY > area.y + area.height) return;
+
+        const dataX = invertScale(currentLayout.xInvert, svgX);
+        const dataY = invertScale(currentLayout.yInvert, svgY);
+
+        isTextEditingActive = true;
+        const overlay = createTextEditOverlayAtPosition({
+          container,
+          svg: svgEl,
+          position: { x: svgX, y: svgY },
+          onCommit: (text: string) => {
+            isTextEditingActive = false;
+            textEditCleanup = null;
+            const annotation: TextAnnotation = { type: 'text', x: dataX, y: dataY, text };
+            options.onEdit!({ type: 'add', annotation });
+          },
+          onCancel: () => {
+            isTextEditingActive = false;
+            textEditCleanup = null;
+          },
+        });
+        textEditCleanup = overlay.destroy;
       }
     };
 
@@ -887,7 +929,7 @@ export function createChart<TData extends DataRow = DataRow>(
     if (
       editSuppressed &&
       !editSuppressWarned &&
-      (hasEditingCallbacks(options) || options?.onAnnotationEdit)
+      (options?.editable || hasEditingCallbacks(options) || options?.onAnnotationEdit)
     ) {
       editSuppressWarned = true;
       console.warn(
@@ -933,7 +975,10 @@ export function createChart<TData extends DataRow = DataRow>(
         : [];
 
     // Wire annotation drag editing
-    if (!editSuppressed && (options?.onAnnotationEdit || options?.onEdit)) {
+    if (
+      !editSuppressed &&
+      (options?.editable ?? Boolean(options?.onAnnotationEdit || options?.onEdit))
+    ) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
@@ -943,21 +988,28 @@ export function createChart<TData extends DataRow = DataRow>(
       );
     }
 
-    // Wire all edit drag handlers when onEdit is provided
-    if (!editSuppressed && options?.onEdit) {
+    // Wire all edit drag handlers when onEdit is provided (or editable is true)
+    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
       const editCleanups: Array<() => void> = [];
+      const onEditFn = options?.onEdit ?? (() => {});
 
       editCleanups.push(
-        wireConnectorEndpointDrag(svgElement, dragAnnotations, options.onEdit, setDragging),
+        wireConnectorEndpointDrag(svgElement, dragAnnotations, onEditFn, setDragging),
       );
       editCleanups.push(
-        wireAnnotationLabelDrag(svgElement, dragAnnotations, options.onEdit, setDragging),
+        wireAnnotationLabelDrag(svgElement, dragAnnotations, onEditFn, setDragging),
       );
+
+      if (currentLayout.xInvert && currentLayout.yInvert) {
+        editCleanups.push(
+          wireAnchorDrag(svgElement, dragAnnotations, currentLayout, onEditFn, setDragging),
+        );
+      }
 
       const editSpec = currentSpec as ChartSpec | GraphSpec;
-      editCleanups.push(wireChromeDrag(svgElement, editSpec, options.onEdit, setDragging));
-      editCleanups.push(wireLegendDrag(svgElement, editSpec, options.onEdit, setDragging));
-      editCleanups.push(wireSeriesLabelDrag(svgElement, editSpec, options.onEdit, setDragging));
+      editCleanups.push(wireChromeDrag(svgElement, editSpec, onEditFn, setDragging));
+      editCleanups.push(wireLegendDrag(svgElement, editSpec, onEditFn, setDragging));
+      editCleanups.push(wireSeriesLabelDrag(svgElement, editSpec, onEditFn, setDragging));
 
       cleanupEditDrags = () => {
         for (const cleanup of editCleanups) {
@@ -967,7 +1019,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire selection and keyboard edit events when editing callbacks are provided
-    if (!editSuppressed && hasEditingCallbacks(options)) {
+    if (!editSuppressed && (options?.editable ?? hasEditingCallbacks(options))) {
       makeEditable(svgElement);
       cleanupSelection = wireSelectionEvents();
       cleanupKeyboardEdit = wireKeyboardEditEvents();

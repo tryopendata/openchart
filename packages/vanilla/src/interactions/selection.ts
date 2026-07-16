@@ -42,6 +42,10 @@ export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement |
 /**
  * Build an ElementRef from a DOM element's data attributes.
  */
+export function encodePointerToken(token: string): string {
+  return token.replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
 export function buildElementRef(
   element: Element,
   _specAnnotations: Annotation[],
@@ -50,19 +54,20 @@ export function buildElementRef(
   if (annotationEl) {
     const index = Number(annotationEl.getAttribute('data-annotation-index'));
     const id = annotationEl.getAttribute('data-annotation-id') ?? undefined;
-    return elementRef.annotation(index, id);
+    return elementRef.annotation(index, id, `/annotations/${index}`);
   }
 
   const chromeEl = element.closest('[data-chrome-key]');
   if (chromeEl) {
     const key = chromeEl.getAttribute('data-chrome-key') as ChromeKey;
-    if (key) return elementRef.chrome(key);
+    if (key) return elementRef.chrome(key, `/chrome/${key}`);
   }
 
   const seriesLabelEl = element.closest('.oc-mark-label[data-series]');
   if (seriesLabelEl) {
     const series = seriesLabelEl.getAttribute('data-series');
-    if (series) return elementRef.seriesLabel(series);
+    if (series)
+      return elementRef.seriesLabel(series, `/labels/offsets/${encodePointerToken(series)}`);
   }
 
   const legendEntryEl = element.closest('[data-legend-index]');
@@ -76,7 +81,8 @@ export function buildElementRef(
   // resolves to no ref rather than reporting the *color* legend's ref, which is
   // what a bare `.oc-legend` match would do.
   const legendEl = element.closest('.oc-legend');
-  if (legendEl && !legendEl.classList.contains('oc-legend--size')) return elementRef.legend();
+  if (legendEl && !legendEl.classList.contains('oc-legend--size'))
+    return elementRef.legend('/legend');
 
   return null;
 }

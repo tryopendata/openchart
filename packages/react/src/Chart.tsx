@@ -99,6 +99,7 @@ function ChartInner(
     onDeselect,
     onTextEdit,
     onReveal,
+    editable,
     selectedElement: selectedElementProp,
     highlight,
     className,
@@ -252,6 +253,7 @@ function ChartInner(
       ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
       ...(handlersRef.current.onTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
       ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
+      ...(editable != null ? { editable } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
       responsive: true,
     };
@@ -268,6 +270,7 @@ function ChartInner(
   }, [
     theme,
     resolvedDarkMode,
+    editable,
     stableOnAnnotationClick,
     stableOnDataPointClick,
     stableOnEdit,

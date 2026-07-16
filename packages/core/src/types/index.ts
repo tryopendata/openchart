@@ -95,6 +95,7 @@ export type {
   SankeyLayout,
   SankeyLinkMark,
   SankeyNodeMark,
+  ScaleInvert,
   SizeLegendCircle,
   SizeLegendLayout,
   SortState,

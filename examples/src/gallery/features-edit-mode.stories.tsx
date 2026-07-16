@@ -485,7 +485,7 @@ function EditModeStudio() {
           // Also flows through onAnnotationEdit above; persisted there.
           pushLog(
             'onEdit',
-            `annotation "${oneLine(edit.annotation.text)}" → ${fmtOffset(edit.offset)}`,
+            `annotation[${'index' in edit.element ? edit.element.index : '?'}] "${oneLine(edit.annotation.text)}" → ${fmtOffset(edit.offset)}`,
           );
           break;
         case 'annotation-connector':
@@ -501,7 +501,22 @@ function EditModeStudio() {
               return a;
             }),
           }));
-          pushLog('onEdit', `connector ${edit.endpoint} → ${fmtOffset(edit.offset)}`);
+          pushLog(
+            'onEdit',
+            `connector[${'index' in edit.element ? edit.element.index : '?'}] ${edit.endpoint} → ${fmtOffset(edit.offset)}`,
+          );
+          break;
+        case 'annotation-anchor':
+          {
+            const anchorIdx = edit.element.type === 'annotation' ? edit.element.index : -1;
+            setState((prev) => ({
+              ...prev,
+              annotations: prev.annotations?.map((a, i) =>
+                a.type === 'text' && i === anchorIdx ? { ...a, x: edit.x, y: edit.y } : a,
+              ),
+            }));
+            pushLog('onEdit', `anchor → x: ${edit.x}, y: ${String(edit.y).slice(0, 6)}`);
+          }
           break;
         case 'range-label':
           setState((prev) => ({
@@ -512,7 +527,10 @@ function EditModeStudio() {
                 : a,
             ),
           }));
-          pushLog('onEdit', `range label → ${fmtOffset(edit.labelOffset)}`);
+          pushLog(
+            'onEdit',
+            `range label[${'index' in edit.element ? edit.element.index : '?'}] → ${fmtOffset(edit.labelOffset)}`,
+          );
           break;
         case 'refline-label':
           setState((prev) => ({
@@ -523,7 +541,10 @@ function EditModeStudio() {
                 : a,
             ),
           }));
-          pushLog('onEdit', `refline label → ${fmtOffset(edit.labelOffset)}`);
+          pushLog(
+            'onEdit',
+            `refline label[${'index' in edit.element ? edit.element.index : '?'}] → ${fmtOffset(edit.labelOffset)}`,
+          );
           break;
         case 'chrome':
           setState((prev) => ({
@@ -552,6 +573,13 @@ function EditModeStudio() {
             return { ...prev, annotations, chrome };
           });
           pushLog('onEdit', `text "${oneLine(edit.oldText)}" → "${oneLine(edit.newText)}"`);
+          break;
+        case 'add':
+          setState((prev) => ({
+            ...prev,
+            annotations: [...(prev.annotations ?? []), edit.annotation],
+          }));
+          pushLog('onEdit', `add annotation "${oneLine(edit.annotation.text)}"`);
           break;
         default:
           pushLog('onEdit', edit.type);
@@ -616,9 +644,10 @@ function EditModeStudio() {
             />
           </div>
           <p className="ocem-hint">
-            Click any title, label, or annotation to select it. Drag an annotation or its connector
-            to reposition. Double-click text to rewrite it. Press{' '}
-            <kbd className="ocem-kbd">Esc</kbd> to deselect.
+            Click any title, label, or annotation to select it. Drag an annotation label to
+            reposition, its connector endpoints to reshape, or its anchor dot to move the data
+            point. Double-click text to rewrite it. Double-click empty space to add a new
+            annotation. Press <kbd className="ocem-kbd">Esc</kbd> to deselect.
           </p>
         </div>
 
@@ -659,6 +688,149 @@ function EditModeStudio() {
 }
 
 // ---------------------------------------------------------------------------
+// Editable toggle demo
+// ---------------------------------------------------------------------------
+
+const TOGGLE_CSS = `
+.ocem-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gx-space-4);
+}
+.ocem-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--gx-space-4);
+  flex-wrap: wrap;
+}
+.ocem-toggle-btn {
+  appearance: none;
+  border: 1px solid var(--gx-border-strong);
+  background: var(--gx-surface);
+  color: var(--gx-text-muted);
+  font-family: var(--gx-font-body);
+  font-size: var(--gx-type-caption);
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: var(--gx-radius-control);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.ocem-toggle-btn:hover {
+  border-color: var(--gx-accent);
+  color: var(--gx-accent-text);
+  background: var(--gx-accent-soft);
+}
+.ocem-toggle-btn[data-active="true"] {
+  border-color: var(--gx-accent);
+  color: var(--gx-accent-text);
+  background: var(--gx-accent-soft);
+  font-weight: 600;
+}
+.ocem-toggle-status {
+  font-size: var(--gx-type-caption);
+  color: var(--gx-text-faint);
+  font-family: var(--gx-font-mono);
+}
+.ocem-toggle-log {
+  font-family: var(--gx-font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--gx-text-muted);
+  max-height: 120px;
+  overflow-y: auto;
+  padding: var(--gx-space-3) var(--gx-space-4);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-control);
+  background: var(--gx-surface-raised);
+}
+.ocem-toggle-log-empty {
+  color: var(--gx-text-faint);
+}
+`;
+
+function EditableToggleDemo() {
+  const [editable, setEditable] = useState(false);
+  const [eventLog, setEventLog] = useState<Array<{ text: string; ts: number }>>([]);
+
+  const spec: ChartSpec = {
+    mark: 'line',
+    data: [...segmentRevenue.data],
+    encoding: {
+      x: { field: 'quarter', type: 'ordinal', axis: { tickCount: 6 } },
+      y: {
+        field: 'revenue',
+        type: 'quantitative',
+        axis: { title: 'Revenue ($B)', format: '$.0f' },
+        scale: { zero: true },
+      },
+      color: { field: 'segment', type: 'nominal' },
+    },
+    legend: { position: 'top' },
+    annotations: [
+      {
+        type: 'text',
+        x: '2024-Q4',
+        y: 71.42,
+        text: 'Holiday peak',
+        fontSize: 11,
+        anchor: 'left',
+        connector: true,
+        offset: { dx: -90, dy: -40 },
+      },
+    ],
+    chrome: {
+      title: 'Editable Toggle Demo',
+      subtitle: 'Toggle editable to enable/disable editing',
+    },
+  };
+
+  const handleSelect = useCallback((ref: ElementRef) => {
+    setEventLog((prev) =>
+      [{ text: `onSelect: ${describeRef(ref)}`, ts: Date.now() }, ...prev].slice(0, 20),
+    );
+  }, []);
+
+  const handleEdit = useCallback((edit: ElementEdit) => {
+    setEventLog((prev) => [{ text: `onEdit: ${edit.type}`, ts: Date.now() }, ...prev].slice(0, 20));
+  }, []);
+
+  return (
+    <div className="ocem-toggle-wrap">
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS constant, no user input */}
+      <style dangerouslySetInnerHTML={{ __html: TOGGLE_CSS }} />
+      <div className="ocem-toggle-bar">
+        <button
+          type="button"
+          className="ocem-toggle-btn"
+          data-active={String(editable)}
+          onClick={() => setEditable((v) => !v)}
+        >
+          editable: {String(editable)}
+        </button>
+        <span className="ocem-toggle-status">
+          {editable ? 'Drag, select, and edit are active' : 'Edit interactions are suppressed'}
+        </span>
+      </div>
+      <div className="story-chart" style={{ height: 400 }}>
+        <Chart spec={spec} editable={editable} onSelect={handleSelect} onEdit={handleEdit} />
+      </div>
+      <div className="ocem-toggle-log">
+        {eventLog.length === 0 ? (
+          <span className="ocem-toggle-log-empty">
+            {editable
+              ? 'Try selecting or dragging an element...'
+              : 'Enable editable to interact with the chart.'}
+          </span>
+        ) : (
+          eventLog.map((e) => <div key={e.ts + e.text}>{e.text}</div>)
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -686,6 +858,13 @@ export const EditMode = () => (
       lede="One live chart, one controlled inspector. Select an element, drag an annotation, or double-click text to edit — the spec on the right updates in real time and every callback fires in the console below it."
     >
       <EditModeStudio />
+    </Section>
+    <Section
+      id="editable-toggle"
+      title="The editable prop"
+      lede="Decouple edit interactions from callback presence. Toggle editable to enable or disable drag, delete, and text editing independently."
+    >
+      <EditableToggleDemo />
     </Section>
   </GalleryPage>
 );

@@ -36,22 +36,65 @@ export type ChromeKey = 'title' | 'subtitle' | 'source' | 'byline' | 'footer';
  * and `index` (always available, position in the spec's annotations array).
  */
 export type ElementRef =
-  | { type: 'annotation'; index: number; id?: string }
-  | { type: 'chrome'; key: ChromeKey }
-  | { type: 'series-label'; series: string }
-  | { type: 'legend' }
-  | { type: 'legend-entry'; series: string; index: number };
+  | {
+      type: 'annotation';
+      index: number;
+      id?: string;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'chrome';
+      key: ChromeKey;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'series-label';
+      series: string;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'legend';
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    }
+  | {
+      type: 'legend-entry';
+      series: string;
+      index: number;
+      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      path?: string;
+    };
 
 /** Helper constructors for ergonomic ElementRef creation. */
 export const elementRef = {
-  annotation: (index: number, id?: string): ElementRef => ({ type: 'annotation', index, id }),
-  chrome: (key: ChromeKey): ElementRef => ({ type: 'chrome', key }),
-  seriesLabel: (series: string): ElementRef => ({ type: 'series-label', series }),
-  legend: (): ElementRef => ({ type: 'legend' }),
-  legendEntry: (series: string, index: number): ElementRef => ({
+  annotation: (index: number, id?: string, path?: string): ElementRef => ({
+    type: 'annotation',
+    index,
+    ...(id !== undefined ? { id } : {}),
+    ...(path !== undefined ? { path } : {}),
+  }),
+  chrome: (key: ChromeKey, path?: string): ElementRef => ({
+    type: 'chrome',
+    key,
+    ...(path !== undefined ? { path } : {}),
+  }),
+  seriesLabel: (series: string, path?: string): ElementRef => ({
+    type: 'series-label',
+    series,
+    ...(path !== undefined ? { path } : {}),
+  }),
+  legend: (path?: string): ElementRef => ({
+    type: 'legend',
+    ...(path !== undefined ? { path } : {}),
+  }),
+  legendEntry: (series: string, index: number, path?: string): ElementRef => ({
     type: 'legend-entry',
     series,
     index,
+    ...(path !== undefined ? { path } : {}),
   }),
 } as const;
 
@@ -71,19 +114,50 @@ export const elementRef = {
  * - To persist a drag edit back into your spec: `{ ...edit.annotation, offset: edit.offset }`
  */
 export type ElementEdit =
-  | { type: 'annotation'; annotation: TextAnnotation; offset: AnnotationOffset }
+  | {
+      type: 'annotation';
+      element: ElementRef;
+      annotation: TextAnnotation;
+      offset: AnnotationOffset;
+    }
   | {
       type: 'annotation-connector';
+      element: ElementRef;
       annotation: TextAnnotation;
       endpoint: 'from' | 'to';
       offset: AnnotationOffset;
     }
-  | { type: 'range-label'; annotation: RangeAnnotation; labelOffset: AnnotationOffset }
-  | { type: 'refline-label'; annotation: RefLineAnnotation; labelOffset: AnnotationOffset }
+  | {
+      type: 'range-label';
+      element: ElementRef;
+      annotation: RangeAnnotation;
+      labelOffset: AnnotationOffset;
+    }
+  | {
+      type: 'refline-label';
+      element: ElementRef;
+      annotation: RefLineAnnotation;
+      labelOffset: AnnotationOffset;
+    }
+  | {
+      type: 'annotation-anchor';
+      element: ElementRef;
+      annotation: TextAnnotation;
+      x: string | number;
+      y: string | number;
+    }
   | { type: 'chrome'; key: ChromeKey; text: string; offset: AnnotationOffset }
   | { type: 'series-label'; series: string; offset: AnnotationOffset }
   | { type: 'legend'; offset: AnnotationOffset }
+  /**
+   * Transient legend visibility toggle. Reports the same runtime show/hide
+   * a reader triggers; not persisted by openchart. To author default-hidden
+   * series, set `spec.hiddenSeries` directly. Hosts building spec
+   * persistence should generally not write legend-toggle edits back into
+   * the authored spec. `hidden: true` means the series was just hidden.
+   */
   | { type: 'legend-toggle'; series: string; hidden: boolean }
+  | { type: 'add'; annotation: TextAnnotation }
   | { type: 'delete'; element: ElementRef }
   | { type: 'text-edit'; element: ElementRef; oldText: string; newText: string };
 
@@ -119,6 +193,14 @@ export interface MarkEvent {
  * or ChartProps (React component) to receive interaction callbacks.
  */
 export interface ChartEventHandlers {
+  /**
+   * Explicitly enable or disable edit interactions (drag, select, keyboard
+   * delete/edit). When true, the interaction layer is wired even without
+   * onEdit. When false, all edit interactions are suppressed even when
+   * onEdit is provided. When omitted, each interaction block uses its
+   * existing callback-presence gate.
+   */
+  editable?: boolean;
   /** Called when a data mark is clicked. */
   onMarkClick?: (event: MarkEvent) => void;
   /** Called when the mouse enters a data mark. */
