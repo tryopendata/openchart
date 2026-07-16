@@ -441,7 +441,7 @@ Scrollytelling steps are just spec patches: hold a base spec, patch `data` / `en
 
 **Scroll jitter is safe.** Calling `update()` while a transition is mid-flight retargets from the current interpolated position (mid-morph line/area paths freeze and crossfade). However fast the steps arrive, the chart settles on the last spec with no orphaned ghost elements.
 
-**Disable the entrance phase for scroll-driven charts.** With `animation: true`, an `update()` that lands while the entrance animation is still playing (roughly the first second after mount) snaps instead of tweening. Use:
+**Disable the entrance phase for scroll-driven charts.** With `animation: true`, an `update()` that lands while the entrance animation is still playing snaps instead of tweening. The window is the full entrance sequence — duration plus per-mark stagger plus buffer, roughly the first 1–3 seconds after mount depending on mark count. Use:
 
 ```ts
 const baseSpec = {

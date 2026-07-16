@@ -16,6 +16,7 @@ import {
   MARK_TYPES,
   type MarkType,
   resolveSchemeName,
+  SEQUENTIAL_PALETTES,
   SUPPORTED_SCHEME_NAMES,
   type VizSpec,
 } from '@opendata-ai/openchart-core';
@@ -111,9 +112,9 @@ function didYouMean(field: string, columns: string[]): string {
  * Push an INVALID_VALUE error when a channel carries an unrecognized
  * scale.scheme name. Known names (including VL aliases) resolve via the core
  * palette registry: on the chart compile path they are expanded to scale.range
- * by the pre-validation sugar pass, and non-chart spec families skip that
- * expansion, so `resolveSchemeName` failing means the name is unknown on
- * every path.
+ * by the pre-validation sugar pass, and the graph path reads scale.range at
+ * compile time, so `resolveSchemeName` failing means the name is unknown on
+ * both paths that consume schemes this way.
  */
 function checkSchemeName(
   channelObj: Record<string, unknown>,
@@ -134,11 +135,64 @@ function checkSchemeName(
 /**
  * Run the unknown-scheme check across every object-valued channel of an
  * encoding block. Tooltip arrays are skipped (array entries carry no scale).
+ * Only for spec families whose compile path consumes schemes/ranges (charts
+ * via sugar expansion, graphs via scale.range) — families that never read
+ * scale.scheme get checkSchemeUnused instead.
  */
 function checkEncodingSchemes(encoding: Record<string, unknown>, errors: ValidationError[]): void {
   for (const [channel, ch] of Object.entries(encoding)) {
     if (!ch || typeof ch !== 'object' || Array.isArray(ch)) continue;
     checkSchemeName(ch as Record<string, unknown>, `encoding.${channel}`, errors);
+  }
+}
+
+/**
+ * Push an INVALID_VALUE error when any channel of an encoding block carries a
+ * scale.scheme on a spec family whose compile path never reads it. Even a
+ * known scheme name is dead config there — silently accepting it would leave
+ * the author believing they chose the colors.
+ */
+function checkSchemeUnused(
+  encoding: Record<string, unknown>,
+  errors: ValidationError[],
+  familyNote: string,
+  suggestion: string,
+): void {
+  for (const [channel, ch] of Object.entries(encoding)) {
+    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) continue;
+    const scale = (ch as Record<string, unknown>).scale as Record<string, unknown> | undefined;
+    if (scale && typeof scale.scheme === 'string') {
+      errors.push({
+        message: `Spec error: encoding.${channel}.scale.scheme has no effect — ${familyNote}`,
+        path: `encoding.${channel}.scale.scheme`,
+        code: 'INVALID_VALUE',
+        suggestion,
+      });
+    }
+  }
+}
+
+/** Palette names the map compile path actually supports (sequential only). */
+const MAP_PALETTE_NAMES = Object.keys(SEQUENTIAL_PALETTES).join(', ');
+
+/**
+ * Map color channels resolve scale.scheme against SEQUENTIAL_PALETTES with a
+ * silent fallback to blue — a typo'd scheme would render the default palette
+ * with no signal. Reject names outside the map's supported set here instead.
+ */
+function checkMapSchemeName(
+  channelObj: Record<string, unknown>,
+  channelPath: string,
+  errors: ValidationError[],
+): void {
+  const scale = channelObj.scale as Record<string, unknown> | undefined;
+  if (scale && typeof scale.scheme === 'string' && !(scale.scheme in SEQUENTIAL_PALETTES)) {
+    errors.push({
+      message: `Spec error: ${channelPath}.scale.scheme "${scale.scheme}" is not a supported map palette`,
+      path: `${channelPath}.scale.scheme`,
+      code: 'INVALID_VALUE',
+      suggestion: `Maps support the sequential palettes: ${MAP_PALETTE_NAMES}. The default is "blue".`,
+    });
   }
 }
 
@@ -1209,8 +1263,13 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
     }
   }
 
-  // Unknown scale.scheme names on any sankey encoding channel
-  checkEncodingSchemes(encoding, errors);
+  // Sankey never reads scale.scheme: node colors cycle theme.colors.categorical
+  checkSchemeUnused(
+    encoding,
+    errors,
+    'sankey node colors cycle the theme categorical palette',
+    'Remove scale.scheme. To customize sankey colors, set theme.colors.categorical.',
+  );
 
   // Validate darkMode if provided
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
@@ -1327,10 +1386,15 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
     }
   }
 
-  // Unknown scale.scheme names on any tilemap encoding channel (encoding may
-  // be present in both record-map and array-data modes)
+  // Tilemap never reads scale.scheme: fills come from the top-level palette
+  // prop (encoding may be present in both record-map and array-data modes)
   if (spec.encoding && typeof spec.encoding === 'object') {
-    checkEncodingSchemes(spec.encoding as Record<string, unknown>, errors);
+    checkSchemeUnused(
+      spec.encoding as Record<string, unknown>,
+      errors,
+      'tilemap fills come from the top-level palette property',
+      `Remove scale.scheme and set the top-level palette property instead, e.g. palette: "green". Supported: ${MAP_PALETTE_NAMES}.`,
+    );
   }
 
   // Validate darkMode if provided
@@ -1381,6 +1445,19 @@ function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[
         'Add an encoding object, e.g. encoding: { key: { field: "id", type: "nominal" }, color: { field: "value", type: "quantitative" } }',
     });
     return;
+  }
+
+  // Map color channels resolve scale.scheme against the sequential palettes
+  // with a silent blue fallback; reject unsupported names here instead.
+  const mapEncoding = spec.encoding as Record<string, unknown>;
+  if (mapEncoding.color && typeof mapEncoding.color === 'object') {
+    checkMapSchemeName(mapEncoding.color as Record<string, unknown>, 'encoding.color', errors);
+  }
+  if (spec.points && typeof spec.points === 'object') {
+    const pointsLayer = spec.points as Record<string, unknown>;
+    if (pointsLayer.color && typeof pointsLayer.color === 'object') {
+      checkMapSchemeName(pointsLayer.color as Record<string, unknown>, 'points.color', errors);
+    }
   }
 
   // Validate geo.focus if present
@@ -1680,8 +1757,13 @@ function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationEr
     }
   }
 
-  // Unknown scale.scheme names on any barlist encoding channel
-  checkEncodingSchemes(encoding, errors);
+  // Barlist never reads scale.scheme: bars cycle the built-in barlist palette
+  checkSchemeUnused(
+    encoding,
+    errors,
+    'bar list colors cycle the built-in barlist palette',
+    'Remove scale.scheme. Bar list colors are not configurable via encoding; they cycle the built-in palette.',
+  );
 
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
     errors.push({

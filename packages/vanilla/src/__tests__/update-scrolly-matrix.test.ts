@@ -76,6 +76,10 @@ beforeEach(() => {
 afterEach(() => {
   document.body.innerHTML = '';
   vi.restoreAllMocks();
+  // restoreAllMocks does NOT undo vi.stubGlobal; without this the
+  // reduced-motion matchMedia stub leaks into later tests and masks
+  // the entrance-window gate behind the reduced-motion gate.
+  vi.unstubAllGlobals();
 });
 
 // ---------------------------------------------------------------------------

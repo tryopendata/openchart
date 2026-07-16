@@ -625,8 +625,9 @@ describe('legend toggle mid-transition', () => {
     const container = createContainer();
     const chart = createChart(container, specA);
 
-    // Update to trigger transition
+    // Update to trigger transition (must actually run, not instant-swap)
     chart.update(specB);
+    expect(rafCallbacks.size).toBeGreaterThan(0);
 
     // Pump one frame
     pumpRaf(0);
@@ -635,10 +636,11 @@ describe('legend toggle mid-transition', () => {
     // by calling render() internally, which cancels transitionHandle
     chart.resize();
 
-    // After resize, pumping more frames should have no effect
-    // (the transition was cancelled)
+    // The cancel must have unregistered the transition's rAF loop, and
+    // pumping more frames must leave geometry at the rebuilt final state
+    expect(rafCallbacks.size).toBe(0);
     pumpRaf(100);
-    // No crash = success (the transition's rAF was cancelled)
+    expect(rafCallbacks.size).toBe(0);
 
     chart.destroy();
   });
@@ -1516,6 +1518,7 @@ describe('React StrictMode double-mount', () => {
     // First mount
     const chart1 = createChart(container, specA);
     chart1.update(specB);
+    expect(rafCallbacks.size).toBeGreaterThan(0); // transition actually started
     pumpRaf(0); // start transition
 
     // Destroy mid-transition (simulates StrictMode unmount)
