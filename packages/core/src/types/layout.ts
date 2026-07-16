@@ -1134,6 +1134,22 @@ export interface YouDrawItYInvert {
 }
 
 /**
+ * Scale inversion anchors serialized from the engine so the vanilla layer
+ * can convert pixel positions to data-space values without holding d3
+ * scale objects. Generalizes the YouDrawItYInvert pattern to both axes.
+ */
+export interface ScaleInvert {
+  /** For continuous scales: two reference pixel-to-data anchor points. */
+  topPixel: number;
+  bottomPixel: number;
+  topData: number;
+  bottomData: number;
+  /** For band/point scales: ordered domain values and their pixel centers. */
+  domain?: (string | number)[];
+  positions?: number[];
+}
+
+/**
  * Resolved geometry and config for the "you draw it" interactive format
  * (`youDrawIt`). The vanilla adapter uses this to render the hatched drawing
  * region, capture pointer input, and mask/reveal the real line. Present only
@@ -1266,6 +1282,10 @@ export interface ChartLayout {
   crosshair: boolean;
   /** Real text measurement function from the adapter (for accurate SVG text wrapping). */
   measureText?: MeasureTextFn;
+  /** Scale inversion anchors for the x axis. Used by anchor drag to convert pixel to data-space. */
+  xInvert?: ScaleInvert;
+  /** Scale inversion anchors for the y axis. Used by anchor drag to convert pixel to data-space. */
+  yInvert?: ScaleInvert;
   /** Faceted (small-multiples) layout. When present, renderers iterate panels instead of using top-level marks/axes. */
   facet?: FacetLayout;
 }

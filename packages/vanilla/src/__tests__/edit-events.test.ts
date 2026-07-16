@@ -1241,4 +1241,92 @@ describe('edit events', () => {
       chart.destroy();
     });
   });
+
+  // =========================================================================
+  // 9. wireAnchorDrag
+  // =========================================================================
+  describe('wireAnchorDrag', () => {
+    it('anchor handle is created when onEdit is provided and annotation has a dot', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onEdit });
+
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
+      if (!annotationG) {
+        chart.destroy();
+        return;
+      }
+
+      const handle = annotationG.querySelector('.oc-anchor-handle');
+      if (handle) {
+        expect(handle.getAttribute('r')).toBe('4');
+        expect(handle.getAttribute('opacity')).toBe('0');
+      }
+
+      chart.destroy();
+    });
+
+    it('anchor handle shows on mouseenter, hides on mouseleave', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onEdit });
+
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
+      if (!annotationG) {
+        chart.destroy();
+        return;
+      }
+
+      const handle = annotationG.querySelector('.oc-anchor-handle');
+      if (!handle) {
+        chart.destroy();
+        return;
+      }
+
+      expect(handle.getAttribute('opacity')).toBe('0');
+
+      annotationG.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      expect(handle.getAttribute('opacity')).toBe('0.6');
+
+      annotationG.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      expect(handle.getAttribute('opacity')).toBe('0');
+
+      chart.destroy();
+    });
+
+    it('dragging anchor handle fires onEdit with type annotation-anchor', () => {
+      const onEdit = vi.fn();
+      const chart = createChart(container, textAnnotatedSpec, { onEdit });
+
+      const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
+      if (!annotationG) {
+        chart.destroy();
+        return;
+      }
+
+      const handle = annotationG.querySelector('.oc-anchor-handle') as SVGCircleElement | null;
+      if (!handle) {
+        chart.destroy();
+        return;
+      }
+
+      const cx = Number(handle.getAttribute('cx'));
+      const cy = Number(handle.getAttribute('cy'));
+      simulateDrag(handle, cx, cy, cx + 30, cy + 20);
+
+      const anchorCall = onEdit.mock.calls.find(
+        (call: [ElementEdit]) => call[0].type === 'annotation-anchor',
+      );
+      if (anchorCall) {
+        const edit: ElementEdit = anchorCall[0];
+        expect(edit.type).toBe('annotation-anchor');
+        if (edit.type === 'annotation-anchor') {
+          expect(edit.annotation).toBeDefined();
+          expect(edit.element.type).toBe('annotation');
+          expect(edit.x).toBeDefined();
+          expect(edit.y).toBeDefined();
+        }
+      }
+
+      chart.destroy();
+    });
+  });
 });

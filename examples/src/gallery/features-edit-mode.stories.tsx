@@ -506,6 +506,18 @@ function EditModeStudio() {
             `connector[${'index' in edit.element ? edit.element.index : '?'}] ${edit.endpoint} → ${fmtOffset(edit.offset)}`,
           );
           break;
+        case 'annotation-anchor':
+          {
+            const anchorIdx = edit.element.type === 'annotation' ? edit.element.index : -1;
+            setState((prev) => ({
+              ...prev,
+              annotations: prev.annotations?.map((a, i) =>
+                a.type === 'text' && i === anchorIdx ? { ...a, x: edit.x, y: edit.y } : a,
+              ),
+            }));
+            pushLog('onEdit', `anchor → x: ${edit.x}, y: ${String(edit.y).slice(0, 6)}`);
+          }
+          break;
         case 'range-label':
           setState((prev) => ({
             ...prev,
@@ -625,9 +637,10 @@ function EditModeStudio() {
             />
           </div>
           <p className="ocem-hint">
-            Click any title, label, or annotation to select it. Drag an annotation or its connector
-            to reposition. Double-click text to rewrite it. Press{' '}
-            <kbd className="ocem-kbd">Esc</kbd> to deselect.
+            Click any title, label, or annotation to select it. Drag an annotation label to
+            reposition, its connector endpoints to reshape, or its anchor dot to move the data
+            point. Double-click text to rewrite it. Press <kbd className="ocem-kbd">Esc</kbd> to
+            deselect.
           </p>
         </div>
 

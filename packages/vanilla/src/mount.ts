@@ -46,6 +46,7 @@ import {
   isTextEditable,
   refsEqual,
   renderSelectionOverlay,
+  wireAnchorDrag,
   wireAnnotationDrag,
   wireAnnotationLabelDrag,
   wireChartEvents,
@@ -957,6 +958,12 @@ export function createChart<TData extends DataRow = DataRow>(
       editCleanups.push(
         wireAnnotationLabelDrag(svgElement, dragAnnotations, onEditFn, setDragging),
       );
+
+      if (currentLayout.xInvert && currentLayout.yInvert) {
+        editCleanups.push(
+          wireAnchorDrag(svgElement, dragAnnotations, currentLayout, onEditFn, setDragging),
+        );
+      }
 
       const editSpec = currentSpec as ChartSpec | GraphSpec;
       editCleanups.push(wireChromeDrag(svgElement, editSpec, onEditFn, setDragging));

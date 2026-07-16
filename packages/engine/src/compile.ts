@@ -28,6 +28,7 @@ import type {
   ResolvedAnimation,
   ResolvedAnnotation,
   ResolvedTheme,
+  ScaleInvert,
   TableLayout,
 } from '@opendata-ai/openchart-core';
 import {
@@ -84,7 +85,7 @@ import { computeDimensions } from './layout/dimensions';
 import { computeFacetGrid, facetMinHeight, MIN_PANEL_HEIGHT } from './layout/facet';
 import { computeGridlines } from './layout/gridlines';
 import { createMeasureFn, resolveLayoutPlan } from './layout/plan';
-import { computeScales } from './layout/scales';
+import { computeScales, type ResolvedScale } from './layout/scales';
 import { placeLegend } from './legend/compute';
 import { placeSizeLegend } from './legend/size';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
@@ -185,6 +186,51 @@ function applySparklineDefaults(
   }
 
   return { ...spec, markDef: newMarkDef };
+}
+
+/**
+ * Extract scale inversion anchors from a resolved scale so the vanilla layer
+ * can convert pixel positions back to data-space values without holding the
+ * d3 scale object. Generalizes the YouDrawItYInvert precedent to any axis.
+ */
+function resolveScaleInvert(resolved: ResolvedScale | undefined): ScaleInvert | undefined {
+  if (!resolved) return undefined;
+  const { scale, type } = resolved;
+
+  // Band / point scales: snap to nearest domain value
+  if (type === 'band' || type === 'point') {
+    const domain = (scale as { domain(): string[] }).domain() as (string | number)[];
+    const positions = domain.map((v) => {
+      const pos = (scale as (v: string | number) => number | undefined)(v) ?? 0;
+      return type === 'band' ? pos + (scale as { bandwidth(): number }).bandwidth() / 2 : pos;
+    });
+    const range = (scale as { range(): number[] }).range();
+    return {
+      topPixel: range[0],
+      bottomPixel: range[range.length - 1],
+      topData: 0,
+      bottomData: 0,
+      domain,
+      positions,
+    };
+  }
+
+  // Continuous scales (linear, time, log, pow, sqrt, symlog)
+  const invert = (scale as { invert?: (px: number) => unknown }).invert;
+  if (typeof invert !== 'function') return undefined;
+
+  const range = (scale as { range(): number[] }).range();
+  const topPx = range[0];
+  const bottomPx = range[range.length - 1];
+  const topVal = invert.call(scale, topPx);
+  const bottomVal = invert.call(scale, bottomPx);
+
+  // For time scales, convert Date to epoch ms
+  const topData = topVal instanceof Date ? +topVal : Number(topVal);
+  const bottomData = bottomVal instanceof Date ? +bottomVal : Number(bottomVal);
+  if (!Number.isFinite(topData) || !Number.isFinite(bottomData)) return undefined;
+
+  return { topPixel: topPx, bottomPixel: bottomPx, topData, bottomData };
 }
 
 /**
@@ -857,6 +903,10 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
 
   const chrome = footnotes ? { ...dims.chrome, footnotes } : dims.chrome;
 
+  // Scale inversion anchors for edit-mode anchor drag (pixel -> data-space)
+  const xInvert = resolveScaleInvert(scales.x);
+  const yInvert = resolveScaleInvert(scales.y);
+
   return {
     area: chartArea,
     chrome,
@@ -890,6 +940,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     display: chartSpec.display,
     crosshair,
     measureText: options.measureText,
+    ...(xInvert ? { xInvert } : {}),
+    ...(yInvert ? { yInvert } : {}),
   };
 }
 

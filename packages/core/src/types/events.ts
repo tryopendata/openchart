@@ -96,6 +96,13 @@ export type ElementEdit =
       annotation: RefLineAnnotation;
       labelOffset: AnnotationOffset;
     }
+  | {
+      type: 'annotation-anchor';
+      element: ElementRef;
+      annotation: TextAnnotation;
+      x: string | number;
+      y: string | number;
+    }
   | { type: 'chrome'; key: ChromeKey; text: string; offset: AnnotationOffset }
   | { type: 'series-label'; series: string; offset: AnnotationOffset }
   | { type: 'legend'; offset: AnnotationOffset }
