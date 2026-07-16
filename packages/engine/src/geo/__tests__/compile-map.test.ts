@@ -296,6 +296,55 @@ describe('compileMap', () => {
     expect(layout.continuousLegend).toBeNull();
   });
 
+  it('categorical legend defaults to top and sits above the map area', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', category: 'west' },
+          { fips: '48', category: 'south' },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'category', type: 'nominal' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const legend = layout.categoricalLegend!;
+    expect(legend.position).toBe('top');
+    // The map area shifts down to make room for a top legend; the legend row
+    // must land above it, not inside it (the old bottom-anchored legend
+    // overlapped the map because the two disagreed about the layout).
+    expect(legend.bounds.y + legend.bounds.height).toBeLessThanOrEqual(layout.area.y);
+  });
+
+  it('honors position: bottom for categorical legend', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', category: 'west' },
+          { fips: '48', category: 'south' },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'category', type: 'nominal' },
+        },
+        legend: { position: 'bottom' },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const legend = layout.categoricalLegend!;
+    expect(legend.position).toBe('bottom');
+    // Bottom legend starts at or below the map area's bottom edge.
+    expect(legend.bounds.y).toBeGreaterThanOrEqual(layout.area.y + layout.area.height);
+  });
+
   it('assigns neutral fill to features without data', () => {
     const layout = compileMap(
       {

@@ -360,6 +360,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       fullArea,
       mapAreaHeight,
       legendReserveGap,
+      legendPosition,
       showLegend,
       droppedFeatures,
     });
@@ -1010,6 +1011,7 @@ interface CategoricalOptions {
   fullArea: { x: number; y: number; width: number; height: number };
   mapAreaHeight: number;
   legendReserveGap: number;
+  legendPosition: 'top' | 'bottom';
   showLegend: boolean;
   droppedFeatures: string[];
 }
@@ -1031,6 +1033,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     fullArea,
     mapAreaHeight,
     legendReserveGap,
+    legendPosition,
     showLegend,
     droppedFeatures,
   } = opts;
@@ -1142,8 +1145,15 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
       shape: 'square' as const,
     }));
 
+    // Honor legend.position like the continuous path does. The map drawing
+    // area (mapAreaY in compileMap) already shifts down for top legends, so
+    // the legend row here must agree with it — a bottom-anchored legend with
+    // a top-shifted map is how legends used to land on top of Alaska.
     const legendX = fullArea.x;
-    const legendY = fullArea.y + mapAreaHeight + legendReserveGap;
+    const legendY =
+      legendPosition === 'bottom'
+        ? fullArea.y + mapAreaHeight + legendReserveGap
+        : fullArea.y + legendReserveGap;
     const legendWidth = fullArea.width;
     const swatchSize = 10;
     const swatchGap = 6;
@@ -1151,7 +1161,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
 
     legend = {
       type: 'categorical',
-      position: 'bottom',
+      position: legendPosition,
       bounds: { x: legendX, y: legendY, width: legendWidth, height: swatchSize + 6 },
       labelStyle,
       entries,
