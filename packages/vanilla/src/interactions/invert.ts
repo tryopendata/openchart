@@ -38,10 +38,10 @@ export function invertScale(invert: ScaleInvert, pixel: number): string | number
     return sqrtVal * Math.abs(sqrtVal);
   }
   if (scaleType === 'pow') {
-    const powTop = Math.sign(topData) * Math.pow(Math.abs(topData), 0.5);
-    const powBottom = Math.sign(bottomData) * Math.pow(Math.abs(bottomData), 0.5);
+    const powTop = Math.sign(topData) * Math.abs(topData) ** 0.5;
+    const powBottom = Math.sign(bottomData) * Math.abs(bottomData) ** 0.5;
     const powVal = powTop + t * (powBottom - powTop);
-    return Math.sign(powVal) * Math.pow(Math.abs(powVal), 2);
+    return Math.sign(powVal) * Math.abs(powVal) ** 2;
   }
   if (scaleType === 'symlog') {
     const symlog = (x: number) => Math.sign(x) * Math.log1p(Math.abs(x));
