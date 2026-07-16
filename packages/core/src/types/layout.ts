@@ -610,6 +610,8 @@ export interface ResolvedLabel {
     to: Point;
     /** Actual data point the connector is calling out. Renderer uses this for the endpoint marker. */
     endpoint?: Point;
+    /** Author's from-end nudge, re-applied on every geometry rebuild (mirrors `endpoint` for `to`). */
+    fromOffset?: { dx: number; dy: number };
     /** Connector line color. */
     stroke: string;
     /** Connector style: straight line, curved arrow, or vertical drop-line through the data point. */

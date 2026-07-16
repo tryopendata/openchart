@@ -283,6 +283,64 @@ describe('a callout lands where the anchor says it should', () => {
   });
 });
 
+// --- auto-placement commits to the side it chose ---------------------------
+
+describe('an auto-placed callout on the right edge anchors its text to the left', () => {
+  // A point at the far right edge forces the scored search to place the block on
+  // its LEFT, which it signals by returning `textAnchor: 'end'`. The anchor must
+  // actually be STAMPED on the label (and its subtitle): with a `start` anchor the
+  // same origin makes the text extend right, over the data point. This is the
+  // mutation the suite used to miss -- deleting the anchor assignment in
+  // `moveAnnotationBy` kept every test green, because the only test that looked at
+  // the anchor compared it against bounds derived from the same (wrong) anchor.
+  test('the search picks the left side and the anchor stamp reaches the whole block', () => {
+    const data = Array.from({ length: 21 }, (_, i) => ({
+      x: `2024-01-${String(i + 1).padStart(2, '0')}`,
+      y: 40 + 2 * i,
+    }));
+    const layout: ChartLayout = compileChart(
+      {
+        mark: 'line',
+        data,
+        encoding: {
+          x: { field: 'x', type: 'temporal' },
+          y: { field: 'y', type: 'quantitative' },
+        },
+        annotations: [
+          {
+            type: 'text',
+            x: data[20].x,
+            y: data[20].y,
+            text: 'Peak of the series',
+            subtitle: 'highest reading of the month',
+          },
+        ],
+      } as ChartSpec,
+      { width: 800, height: 460 },
+    );
+
+    const a = layout.annotations![0];
+    const label = a.label!;
+    const bounds = label.bounds!;
+    const dot = a.dot!;
+
+    // The search really chose the left side. If a future engine change makes it
+    // pick another candidate, fail loudly here rather than silently stop guarding.
+    expect(label.style.textAnchor).toBe('end');
+
+    // An end-anchored box extends LEFT of its origin.
+    expect(Math.abs(bounds.x + bounds.width - label.x)).toBeLessThanOrEqual(1);
+
+    // The whole block sits clear of the point, on its left.
+    expect(bounds.x + bounds.width).toBeLessThan(dot.x);
+
+    // The anchor stamp reaches the subtitle too -- `moveAnnotationBy` applies it
+    // to both lines, and an unstamped subtitle would jut right from a shared origin.
+    expect(a.subtitle!.style.textAnchor).toBe('end');
+    expect(a.subtitle!.x).toBeCloseTo(label.x, 0);
+  });
+});
+
 // --- the leader connects the block to the point --------------------------
 
 describe('the leader actually connects the words to the data', () => {
@@ -360,6 +418,29 @@ describe('the leader actually connects the words to the data', () => {
 
     // Guard the guard: a sweep that suppresses everything asserts nothing.
     expect(asserted).toBeGreaterThan(30);
+  });
+
+  test("the author's connectorOffset.from survives auto-placement", () => {
+    // `connectorOffset.to` is baked into `connector.endpoint`, so it survives every
+    // later geometry rebuild for free. `from` used to be applied once at resolve and
+    // then thrown away by `refreshConnector` -- so on an auto-placed annotation
+    // (which ALWAYS moves in Pass 2) the author's nudge did exactly nothing, and an
+    // edit-mode drag of the from handle was a silent no-op after re-render.
+    const control = first([{ type: 'text', x: 'Mar', y: 30, text: 'Peak' }]);
+    const nudged = first([
+      {
+        type: 'text',
+        x: 'Mar',
+        y: 30,
+        text: 'Peak',
+        connectorOffset: { from: { dx: 15, dy: 9 } },
+      },
+    ]);
+
+    const from = nudged.label!.connector!.from;
+    const controlFrom = control.label!.connector!.from;
+    expect(from.x - controlFrom.x).toBeCloseTo(15, 5);
+    expect(from.y - controlFrom.y).toBeCloseTo(9, 5);
   });
 
   test('a drop-line hangs straight down from the words to the point', () => {
@@ -717,5 +798,55 @@ describe('callouts are anchored in the data, not in pixels', () => {
 
     expect(all).toHaveLength(1);
     expect(all[0].label!.text).toBe('Real');
+  });
+
+  test('a dropped annotation does not shift which of its neighbours counts as pinned', () => {
+    // The resolved array is a FILTERED view of the spec array: dropping spec 0
+    // shifts every later annotation down one slot. Anything that reaches back to
+    // the authored spec (collision resolution's "does it carry an offset?" check)
+    // must key on the stamped `specIndex`, not on resolved position -- indexed by
+    // position, the pinned annotation reads the dropped spec's (offset-less) slot,
+    // loses its pin, and gets displaced off its authored spot.
+    const bogus: Ann = { type: 'text', x: 'NotAMonth', y: 30, text: 'Bogus' };
+    const pinned: Ann = {
+      type: 'text',
+      x: 'Mar',
+      y: 30,
+      text: 'Pinned block here',
+      anchor: 'top',
+      offset: { dy: -25 },
+    };
+    const movable: Ann = {
+      type: 'text',
+      x: 'Mar',
+      y: 30,
+      text: 'Other block here',
+      anchor: 'top',
+    };
+
+    const resolved = annotationsFor([bogus, pinned, movable]);
+
+    // The bogus one is dropped; the survivors keep their spec identities.
+    expect(resolved).toHaveLength(2);
+    expect(resolved.map((a) => a.specIndex)).toEqual([1, 2]);
+
+    const [pinnedResolved, movableResolved] = resolved;
+
+    // Pinning held despite the collision: same spot as when compiled alone.
+    const pinnedSolo = first([pinned]);
+    expect(pinnedResolved.label!.y - pinnedResolved.dot!.y).toBeCloseTo(
+      pinnedSolo.label!.y - pinnedSolo.dot!.y,
+      0,
+    );
+
+    // And the movable one actually moved -- without this half, the test passes
+    // on a pair that never collided in the first place.
+    const movableSolo = first([movable]);
+    expect(movableResolved.label!.y - movableResolved.dot!.y).not.toBeCloseTo(
+      movableSolo.label!.y - movableSolo.dot!.y,
+      1,
+    );
+
+    expect(overlaps(pinnedResolved.bounds!, movableResolved.bounds!)).toBe(false);
   });
 });
