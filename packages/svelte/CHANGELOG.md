@@ -1,5 +1,35 @@
 # Changelog
 
+## [8.0.0-rc.6](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.5...core-v8.0.0-rc.6) (2026-07-16)
+
+
+### Features
+
+* add points focus mode to fit the camera to point clusters ([b24f073](https://github.com/tryopendata/openchart/commit/b24f073))
+* add point/symbol layer to GeoMap ([f83a82f](https://github.com/tryopendata/openchart/commit/f83a82f))
+* geo/choropleth map visualization (type: 'map') ([9e48aad](https://github.com/tryopendata/openchart/commit/9e48aad))
+
+
+### Bug Fixes
+
+* categorical legend honors legend.position and no longer overlaps the map ([4a67a20](https://github.com/tryopendata/openchart/commit/4a67a20))
+* map entrance animation flash on focus-zoomed maps ([2b983c8](https://github.com/tryopendata/openchart/commit/2b983c8))
+* SVG export failure and x-axis title overlap at large font sizes ([690ff18](https://github.com/tryopendata/openchart/commit/690ff18))
+* allow pre-release versions in release script ([2dda73a](https://github.com/tryopendata/openchart/commit/2dda73a))
+* v8 ([3e8bdd9](https://github.com/tryopendata/openchart/commit/3e8bdd9))
+* facet gridlines, x-axis labels, panel height growth, line chart zero:false, map bulk animation, examples typecheck ([e9267ad](https://github.com/tryopendata/openchart/commit/e9267ad))
+* map legend collision, entrance animation, focus dim, mercator fitting ([20a9f81](https://github.com/tryopendata/openchart/commit/20a9f81))
+* address remaining code review findings for map infra ([cf15da1](https://github.com/tryopendata/openchart/commit/cf15da1))
+* address code review findings for geo/choropleth ([3915d93](https://github.com/tryopendata/openchart/commit/3915d93))
+* map layout, legend, animation, camera, focus, and story integration ([66dc26b](https://github.com/tryopendata/openchart/commit/66dc26b))
+* map container overflow, county demo data join, tooltip channel, validation ([5e1df21](https://github.com/tryopendata/openchart/commit/5e1df21))
+* address code review findings for geo/choropleth ([e102747](https://github.com/tryopendata/openchart/commit/e102747))
+
+
+### Refactoring
+
+* CSS infrastructure overhaul (cascade layers, token codegen, sourcemaps) ([227cec3](https://github.com/tryopendata/openchart/commit/227cec3))
+
 ## [8.0.0-rc.5](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.4...core-v8.0.0-rc.5) (2026-07-15)
 
 
