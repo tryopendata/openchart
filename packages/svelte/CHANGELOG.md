@@ -1,5 +1,27 @@
 # Changelog
 
+## [8.0.0-rc.7](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.6...core-v8.0.0-rc.7) (2026-07-16)
+
+
+### Features
+
+* extend did-you-mean suggestions and scheme warnings to sankey/tilemap/barlist/graph validators ([3923cbe](https://github.com/tryopendata/openchart/commit/3923cbe))
+* add points focus mode to fit the camera to point clusters ([b24f073](https://github.com/tryopendata/openchart/commit/b24f073))
+* add point/symbol layer to GeoMap ([f83a82f](https://github.com/tryopendata/openchart/commit/f83a82f))
+
+
+### Bug Fixes
+
+* points-based focus zoom produces correct zoom level ([36836bf](https://github.com/tryopendata/openchart/commit/36836bf))
+* categorical map color rejects scale.scheme as dead config ([8db1d7f](https://github.com/tryopendata/openchart/commit/8db1d7f))
+* graph scale.scheme is dead config too; correct docs ([82d724b](https://github.com/tryopendata/openchart/commit/82d724b))
+* family-accurate scale.scheme validation; harden transition test guards ([c8bf396](https://github.com/tryopendata/openchart/commit/c8bf396))
+* connectorOffset.from survives geometry moves ([2108cf4](https://github.com/tryopendata/openchart/commit/2108cf4))
+* categorical legend honors legend.position and no longer overlaps the map ([4a67a20](https://github.com/tryopendata/openchart/commit/4a67a20))
+* map entrance animation flash on focus-zoomed maps ([2b983c8](https://github.com/tryopendata/openchart/commit/2b983c8))
+* SVG export failure and x-axis title overlap at large font sizes ([690ff18](https://github.com/tryopendata/openchart/commit/690ff18))
+* allow pre-release versions in release script ([2dda73a](https://github.com/tryopendata/openchart/commit/2dda73a))
+
 ## [8.0.0-rc.6](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.5...core-v8.0.0-rc.6) (2026-07-16)
 
 
