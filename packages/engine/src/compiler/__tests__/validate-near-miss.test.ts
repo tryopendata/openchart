@@ -87,3 +87,83 @@ describe('near-miss validation messages', () => {
     expect(result.errors.filter((e) => e.path === 'encoding.color.scale.scheme')).toHaveLength(0);
   });
 });
+
+describe('unknown scheme names on non-chart specs', () => {
+  it('rejects an unknown scheme on a sankey color channel', () => {
+    const result = validateSpec({
+      type: 'sankey',
+      data: [{ source: 'A', target: 'B', value: 10 }],
+      encoding: {
+        source: { field: 'source', type: 'nominal' },
+        target: { field: 'target', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative' },
+        color: { field: 'source', type: 'nominal', scale: { scheme: 'viridis' } },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    expect(error?.code).toBe('INVALID_VALUE');
+    expect(error?.message).toContain('"viridis" is not a supported scheme name');
+    expect(error?.suggestion).toContain('scale.range');
+  });
+
+  it('accepts a known scheme on a sankey color channel (non-chart paths skip sugar expansion)', () => {
+    const result = validateSpec({
+      type: 'sankey',
+      data: [{ source: 'A', target: 'B', value: 10 }],
+      encoding: {
+        source: { field: 'source', type: 'nominal' },
+        target: { field: 'target', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative' },
+        color: { field: 'source', type: 'nominal', scale: { scheme: 'blues' } },
+      },
+    });
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects an unknown scheme on a tilemap value channel', () => {
+    const result = validateSpec({
+      type: 'tilemap',
+      data: [{ state: 'CA', value: 12000 }],
+      encoding: {
+        state: { field: 'state', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative', scale: { scheme: 'viridis' } },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const error = result.errors.find((e) => e.path === 'encoding.value.scale.scheme');
+    expect(error?.code).toBe('INVALID_VALUE');
+    expect(error?.message).toContain('"viridis" is not a supported scheme name');
+  });
+
+  it('rejects an unknown scheme on a barlist color channel', () => {
+    const result = validateSpec({
+      type: 'barlist',
+      data: [{ label: 'A', value: 42, group: 'x' }],
+      encoding: {
+        label: { field: 'label', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative' },
+        color: { field: 'group', type: 'nominal', scale: { scheme: 'viridis' } },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    expect(error?.code).toBe('INVALID_VALUE');
+    expect(error?.message).toContain('"viridis" is not a supported scheme name');
+  });
+
+  it('rejects an unknown scheme on a graph nodeColor channel', () => {
+    const result = validateSpec({
+      type: 'graph',
+      nodes: [{ id: 'a', category: 'x' }],
+      edges: [],
+      encoding: {
+        nodeColor: { field: 'category', type: 'nominal', scale: { scheme: 'viridis' } },
+      },
+    });
+    expect(result.valid).toBe(false);
+    const error = result.errors.find((e) => e.path === 'encoding.nodeColor.scale.scheme');
+    expect(error?.code).toBe('INVALID_VALUE');
+    expect(error?.message).toContain('"viridis" is not a supported scheme name');
+  });
+});

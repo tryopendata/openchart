@@ -17235,6 +17235,10 @@
           "type": "boolean",
           "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
         },
+        "points": {
+          "$ref": "#/definitions/MapPointsLayer",
+          "description": "Optional point/symbol layer rendered above choropleth features."
+        },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
           "description": "Animation configuration for entrance animations."
@@ -17276,7 +17280,7 @@
               "type": "null"
             }
           ],
-          "description": "Focus on specific feature(s). null clears focus from a prior story step."
+          "description": "Focus the camera. A feature id (or array) fits those features; `{ features, padding }` adds breathing room; `{ points: true, padding }` fits the points layer's cluster instead of any feature (use when points occupy a small part of a large feature, so fitting the feature would leave the cluster small and off-center); `{ points: { field, value }, padding }` fits only the matching point subset, so a story can pan between sub-clusters. null clears focus from a prior story step."
         }
       },
       "required": [
@@ -17342,20 +17346,62 @@
             "features"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "points": {
+              "$ref": "#/definitions/MapPointsFocus"
+            },
+            "padding": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "points"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "MapPointsFocus": {
+      "anyOf": [
+        {
+          "type": "boolean",
+          "const": true
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "field",
+            "value"
+          ],
+          "additionalProperties": false
         }
       ],
-      "description": "Focus target for map camera: feature id(s) to zoom/pan to."
+      "description": "Fit the point layer's cluster. `true` fits every point; `{ field, value }` fits only the points whose data row has `row[field] === value` (e.g. only the campuses rated \"F\"), which lets a story pan between sub-clusters."
     },
     "MapEncoding": {
       "type": "object",
       "properties": {
         "key": {
           "$ref": "#/definitions/EncodingChannel",
-          "description": "Join key field in the data (required). Maps data rows to geo features via geo.idField."
+          "description": "Join key field in the data. Required for choropleth; optional in basemap-only mode (points layer with empty data)."
         },
         "color": {
           "$ref": "#/definitions/EncodingChannel",
-          "description": "Color encoding (required, quantitative or nominal). Drives fill color of features."
+          "description": "Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode)."
         },
         "tooltip": {
           "anyOf": [
@@ -17372,12 +17418,65 @@
           "description": "Tooltip encoding (optional)."
         }
       },
-      "required": [
-        "key",
-        "color"
-      ],
       "additionalProperties": false,
       "description": "Encoding channels specific to map visualizations."
+    },
+    "MapPointsLayer": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DataRow"
+          },
+          "description": "Tabular data for the points. Independent of the choropleth data join."
+        },
+        "longitude": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Field holding longitude (x coordinate)."
+        },
+        "latitude": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Field holding latitude (y coordinate)."
+        },
+        "size": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). No size legend is rendered in v1; explain the scale in chrome.subtitle if needed."
+        },
+        "color": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Optional color encoding (nominal or quantitative). Independent scale from choropleth."
+        },
+        "tooltip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EncodingChannel"
+              }
+            }
+          ],
+          "description": "Tooltip channel(s), same shape as MapEncoding.tooltip."
+        },
+        "key": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Stable id for event callbacks. Data-update transitions for points are not yet supported."
+        },
+        "opacity": {
+          "type": "number",
+          "description": "Fill opacity for point circles. Default 0.65. Range 0-1."
+        }
+      },
+      "required": [
+        "data",
+        "longitude",
+        "latitude"
+      ],
+      "additionalProperties": false,
+      "description": "Point/symbol layer rendered above choropleth features."
     },
     "BarListSpec": {
       "type": "object",
