@@ -669,23 +669,23 @@ behavior:
 ## 16. `scale.scheme` is validated on every spec family
 
 **What changed:** Spec validation now rejects `scale.scheme` where it never
-had an effect. Sankey, tilemap, and bar list specs error on any
+had an effect. Sankey, tilemap, bar list, and graph specs error on any
 `scale.scheme` value (those families never read it: sankey cycles
 `theme.colors.categorical`, tilemap uses the top-level `palette` property,
-bar list cycles its built-in palette). Map and graph specs error on scheme
-names their compile paths do not support (maps accept the sequential
-palettes `blue`, `green`, `orange`, `purple`, `teal`; a typo used to
-silently fall back to blue).
+bar list cycles its built-in palette, graph reads only `scale.range` and
+`scale.domain`). Map specs error on scheme names the map compile path does
+not support (maps accept the sequential palettes `blue`, `green`, `orange`,
+`purple`, `teal`; a typo used to silently fall back to blue).
 
-**Who's affected:** Specs that set `scale.scheme` on a sankey, tilemap, or
-bar list encoding channel (it was dead config — colors were never affected),
-or a map/graph spec with a misspelled scheme name (it was silently rendering
-the default palette).
+**Who's affected:** Specs that set `scale.scheme` on a sankey, tilemap, bar
+list, or graph encoding channel (it was dead config — colors were never
+affected), or a map spec with a misspelled scheme name (it was silently
+rendering the default palette).
 
 **Fix:** Remove the dead `scale.scheme`, or move the intent to the mechanism
 that family actually uses (`theme.colors.categorical` for sankey, `palette`
-for tilemap, a supported sequential name for map). The validation error
-names the right mechanism for each family.
+for tilemap, `scale.range` for graph, a supported sequential name for map).
+The validation error names the right mechanism for each family.
 
 ---
 

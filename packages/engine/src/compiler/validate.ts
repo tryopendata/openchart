@@ -110,11 +110,10 @@ function didYouMean(field: string, columns: string[]): string {
 
 /**
  * Push an INVALID_VALUE error when a channel carries an unrecognized
- * scale.scheme name. Known names (including VL aliases) resolve via the core
- * palette registry: on the chart compile path they are expanded to scale.range
- * by the pre-validation sugar pass, and the graph path reads scale.range at
- * compile time, so `resolveSchemeName` failing means the name is unknown on
- * both paths that consume schemes this way.
+ * scale.scheme name. Chart specs are the only family that consumes schemes
+ * this way: known names (including VL aliases) resolve via the core palette
+ * registry and are expanded to scale.range by the pre-validation sugar pass,
+ * so `resolveSchemeName` failing means the name is unknown.
  */
 function checkSchemeName(
   channelObj: Record<string, unknown>,
@@ -129,20 +128,6 @@ function checkSchemeName(
       code: 'INVALID_VALUE',
       suggestion: `Use one of the supported scheme names: ${[...SUPPORTED_SCHEME_NAMES].join(', ')}. Or provide explicit colors via scale.range.`,
     });
-  }
-}
-
-/**
- * Run the unknown-scheme check across every object-valued channel of an
- * encoding block. Tooltip arrays are skipped (array entries carry no scale).
- * Only for spec families whose compile path consumes schemes/ranges (charts
- * via sugar expansion, graphs via scale.range) — families that never read
- * scale.scheme get checkSchemeUnused instead.
- */
-function checkEncodingSchemes(encoding: Record<string, unknown>, errors: ValidationError[]): void {
-  for (const [channel, ch] of Object.entries(encoding)) {
-    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) continue;
-    checkSchemeName(ch as Record<string, unknown>, `encoding.${channel}`, errors);
   }
 }
 
@@ -1154,8 +1139,13 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
       }
     }
 
-    // Unknown scale.scheme names on any graph encoding channel
-    checkEncodingSchemes(encoding, errors);
+    // Graph never reads scale.scheme: colors come from scale.range/scale.domain
+    checkSchemeUnused(
+      encoding,
+      errors,
+      'graph colors come from scale.range and scale.domain',
+      'Remove scale.scheme. To customize graph colors, provide explicit colors via scale.range.',
+    );
   }
 
   // Validate layout type if specified

@@ -143,20 +143,24 @@ describe('scale.scheme on non-chart specs', () => {
     expect(error?.message).toContain('has no effect');
   });
 
-  it('rejects an unknown scheme on a graph nodeColor channel (graph honors scale.range)', () => {
-    const result = validateSpec({
-      type: 'graph',
-      nodes: [{ id: 'a', category: 'x' }],
-      edges: [],
-      encoding: {
-        nodeColor: { field: 'category', type: 'nominal', scale: { scheme: 'viridis' } },
-      },
-    });
-    expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.nodeColor.scale.scheme');
-    expect(error?.code).toBe('INVALID_VALUE');
-    expect(error?.message).toContain('"viridis" is not a supported scheme name');
-    expect(error?.suggestion).toContain('scale.range');
+  it('rejects any scheme on a graph nodeColor channel as dead config', () => {
+    // Graph never reads scale.scheme (encoding.ts consumes only
+    // scale.range/scale.domain), so even a known name must not pass.
+    for (const scheme of ['viridis', 'blues']) {
+      const result = validateSpec({
+        type: 'graph',
+        nodes: [{ id: 'a', category: 'x' }],
+        edges: [],
+        encoding: {
+          nodeColor: { field: 'category', type: 'nominal', scale: { scheme } },
+        },
+      });
+      expect(result.valid).toBe(false);
+      const error = result.errors.find((e) => e.path === 'encoding.nodeColor.scale.scheme');
+      expect(error?.code).toBe('INVALID_VALUE');
+      expect(error?.message).toContain('has no effect');
+      expect(error?.suggestion).toContain('scale.range');
+    }
   });
 });
 
