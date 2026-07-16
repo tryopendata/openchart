@@ -1217,13 +1217,20 @@ function resolveFocus(
     let maxX = -Infinity;
     let maxY = -Infinity;
     for (const p of matched) {
-      minX = Math.min(minX, p.cx - p.r);
-      minY = Math.min(minY, p.cy - p.r);
-      maxX = Math.max(maxX, p.cx + p.r);
-      maxY = Math.max(maxY, p.cy + p.r);
+      // Use center points only, not cx ± r: the camera counter-scales point
+      // radii to constant screen size, so the base radius doesn't occupy
+      // projected space after the transform. Including it inflates the
+      // bounding box and produces a much shallower zoom than expected.
+      minX = Math.min(minX, p.cx);
+      minY = Math.min(minY, p.cy);
+      maxX = Math.max(maxX, p.cx);
+      maxY = Math.max(maxY, p.cy);
     }
+    // Guard against degenerate bounding box (single point or coincident points)
+    const w = Math.max(maxX - minX, 1);
+    const h = Math.max(maxY - minY, 1);
     return {
-      target: { x: minX, y: minY, width: maxX - minX, height: maxY - minY, padding },
+      target: { x: minX, y: minY, width: w, height: h, padding },
       // No feature ids: focus-dim is a feature concept, so a points focus
       // dims no features (there are no "other" features to mute).
       ids: [],

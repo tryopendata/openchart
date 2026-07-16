@@ -2,6 +2,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { createMap } from '../map-mount';
 
+function mockReducedMotion() {
+  return vi.spyOn(window, 'matchMedia').mockImplementation(
+    (q) =>
+      ({
+        matches: q.includes('reduced-motion'),
+        media: '',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }) as MediaQueryList,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
@@ -403,6 +419,217 @@ describe('createMap', () => {
         expect(currentR).toBeLessThan(baseR);
       }
 
+      instance.destroy();
+    });
+
+    it('geo.focus with points: true applies camera zoom on first render', () => {
+      const focusPointsSpec = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
+        animation: false,
+      };
+      const instance = createMap(container, focusPointsSpec, { responsive: false });
+
+      const cameraGroup = container.querySelector('[data-oc-map-camera]');
+      expect(cameraGroup).not.toBeNull();
+
+      const transform = cameraGroup!.getAttribute('transform');
+      expect(transform).not.toBeNull();
+      const scaleMatch = transform!.match(/scale\(([\d.]+)\)/);
+      expect(scaleMatch).not.toBeNull();
+      expect(Number(scaleMatch![1])).toBeGreaterThan(1);
+
+      instance.destroy();
+    });
+
+    it('geo.focus with points: true applies camera zoom even with entrance animation', () => {
+      const focusPointsSpec = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
+        animation: true,
+      };
+      const instance = createMap(container, focusPointsSpec, { responsive: false });
+
+      const cameraGroup = container.querySelector('[data-oc-map-camera]');
+      expect(cameraGroup).not.toBeNull();
+
+      const transform = cameraGroup!.getAttribute('transform');
+      expect(transform).not.toBeNull();
+      const scaleMatch = transform!.match(/scale\(([\d.]+)\)/);
+      expect(scaleMatch).not.toBeNull();
+      expect(Number(scaleMatch![1])).toBeGreaterThan(1);
+
+      instance.destroy();
+    });
+
+    it('resize() preserves points focus camera', () => {
+      const focusPointsSpec = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
+        animation: false,
+      };
+      const instance = createMap(container, focusPointsSpec, { responsive: false });
+
+      // First render should have camera applied
+      const cameraGroup1 = container.querySelector('[data-oc-map-camera]');
+      expect(cameraGroup1!.getAttribute('transform')).not.toBeNull();
+
+      // Simulate a resize
+      instance.resize();
+
+      // Camera should still be applied after resize
+      const cameraGroup2 = container.querySelector('[data-oc-map-camera]');
+      expect(cameraGroup2).not.toBeNull();
+      const transform = cameraGroup2!.getAttribute('transform');
+      expect(transform).not.toBeNull();
+      const scaleMatch = transform!.match(/scale\(([\d.]+)\)/);
+      expect(scaleMatch).not.toBeNull();
+      expect(Number(scaleMatch![1])).toBeGreaterThan(1);
+
+      instance.destroy();
+    });
+
+    it('geo.focus with points filter applies camera zoom on first render', () => {
+      const focusPointsSpec = {
+        ...pointSpec,
+        geo: {
+          ...pointSpec.geo,
+          focus: { points: { field: 'name', value: 'NYC' }, padding: 12 },
+        },
+        animation: false,
+      };
+      const instance = createMap(container, focusPointsSpec, { responsive: false });
+
+      const cameraGroup = container.querySelector('[data-oc-map-camera]');
+      expect(cameraGroup).not.toBeNull();
+
+      const transform = cameraGroup!.getAttribute('transform');
+      expect(transform).not.toBeNull();
+      const scaleMatch = transform!.match(/scale\(([\d.]+)\)/);
+      expect(scaleMatch).not.toBeNull();
+      expect(Number(scaleMatch![1])).toBeGreaterThan(1);
+
+      instance.destroy();
+    });
+
+    it('update() with changed points focus drives camera (tween)', () => {
+      const spec1 = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
+        animation: false,
+      };
+      const instance = createMap(container, spec1, { responsive: false });
+
+      const transform1 = container.querySelector('[data-oc-map-camera]')!.getAttribute('transform');
+      expect(transform1).not.toBeNull();
+
+      // Mock reduced-motion AFTER createMap so it only affects update()'s
+      // driveCamera() call, making the tween snap instantly.
+      const spy = mockReducedMotion();
+
+      const spec2 = {
+        ...pointSpec,
+        geo: {
+          ...pointSpec.geo,
+          focus: { points: { field: 'name', value: 'NYC' }, padding: 12 },
+        },
+        animation: false,
+      };
+      instance.update(spec2);
+
+      // Re-query after update (render creates a new SVG)
+      const transform2 = container.querySelector('[data-oc-map-camera]')!.getAttribute('transform');
+      expect(transform2).not.toBeNull();
+      expect(transform2).not.toBe(transform1);
+
+      spy.mockRestore();
+      instance.destroy();
+    });
+
+    it('update() null -> features -> points -> null preserves camera at each step', () => {
+      // Reproduces the scrollytelling sequence: full view -> zoom to counties ->
+      // zoom to points cluster -> back to full view
+      const spy = mockReducedMotion();
+
+      // Step 0: no focus
+      const specStep0 = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: null },
+        animation: false,
+      };
+      const instance = createMap(container, specStep0, { responsive: false });
+      const cg0 = container.querySelector('[data-oc-map-camera]')!;
+      expect(cg0.getAttribute('transform')).toBeNull();
+
+      // Step 1: feature focus
+      const specStep1 = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: { features: ['48'], padding: 0 } },
+        animation: false,
+      };
+      instance.update(specStep1);
+      const cg1 = container.querySelector('[data-oc-map-camera]')!;
+      const t1 = cg1.getAttribute('transform');
+      expect(t1).not.toBeNull();
+      const scale1 = Number(t1!.match(/scale\(([\d.]+)\)/)![1]);
+      expect(scale1).toBeGreaterThan(1);
+
+      // Step 2: points focus (the transition that breaks in production)
+      const specStep2 = {
+        ...pointSpec,
+        geo: {
+          ...pointSpec.geo,
+          focus: { points: { field: 'name', value: 'NYC' }, padding: 0 },
+        },
+        animation: false,
+      };
+      instance.update(specStep2);
+      const cg2 = container.querySelector('[data-oc-map-camera]')!;
+      const t2 = cg2.getAttribute('transform');
+      expect(t2).not.toBeNull();
+      const scale2 = Number(t2!.match(/scale\(([\d.]+)\)/)![1]);
+      expect(scale2).toBeGreaterThan(1);
+
+      // Step 3: back to null
+      const specStep3 = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: null },
+        animation: false,
+      };
+      instance.update(specStep3);
+      const cg3 = container.querySelector('[data-oc-map-camera]')!;
+      expect(cg3.getAttribute('transform')).toBeNull();
+
+      spy.mockRestore();
+      instance.destroy();
+    });
+
+    it('update() from points focus to null resets camera', () => {
+      const spec1 = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
+        animation: false,
+      };
+      const instance = createMap(container, spec1, { responsive: false });
+
+      expect(
+        container.querySelector('[data-oc-map-camera]')!.getAttribute('transform'),
+      ).not.toBeNull();
+
+      const spy = mockReducedMotion();
+
+      const spec2 = {
+        ...pointSpec,
+        geo: { ...pointSpec.geo, focus: null },
+        animation: false,
+      };
+      instance.update(spec2);
+
+      // Re-query after update
+      const transform = container.querySelector('[data-oc-map-camera]')!.getAttribute('transform');
+      expect(transform).toBeNull();
+
+      spy.mockRestore();
       instance.destroy();
     });
   });

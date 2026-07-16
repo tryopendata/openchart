@@ -591,11 +591,17 @@ export function createMap(
 
   function resize(): void {
     if (destroyed) return;
-
     // If animation is running, queue the resize for after it completes
     if (animationCleanup) {
       pendingResize = true;
       return;
+    }
+
+    // Cancel any running camera tween: the resize recomputes the camera for the
+    // new dimensions, and a stale tween would overwrite it on the next frame.
+    if (cameraTween) {
+      cameraTween.cancel();
+      cameraTween = null;
     }
 
     currentLayout = compile();

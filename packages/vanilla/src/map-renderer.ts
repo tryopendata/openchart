@@ -373,7 +373,8 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   // handles *declarative* focus (layout.focus from the spec) only. Imperative
   // focus set via zoomTo()/panTo() never re-renders, so it dims through
   // applyMapCamera + applyFocusDim on the live SVG instead.
-  const focusIdSet = layout.focus ? new Set(layout.focus.ids.map(String)) : undefined;
+  const focusIdSet =
+    layout.focus && layout.focus.ids.length > 0 ? new Set(layout.focus.ids.map(String)) : undefined;
 
   // Render features first (so borders overlay them)
   renderFeatures(
