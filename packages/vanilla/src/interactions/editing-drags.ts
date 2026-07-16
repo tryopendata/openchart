@@ -1,13 +1,14 @@
-import type {
-  Annotation,
-  AnnotationOffset,
-  ChartSpec,
-  ChromeKey,
-  ElementEdit,
-  GraphSpec,
-  RangeAnnotation,
-  RefLineAnnotation,
-  TextAnnotation,
+import {
+  type Annotation,
+  type AnnotationOffset,
+  type ChartSpec,
+  type ChromeKey,
+  type ElementEdit,
+  elementRef,
+  type GraphSpec,
+  type RangeAnnotation,
+  type RefLineAnnotation,
+  type TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { createDragHandler } from './drag-handler';
 
@@ -86,7 +87,12 @@ export function wireAnnotationDrag(
             dy: origDy + dy,
           };
           onAnnotationEdit?.(textAnnotation, newOffset);
-          onEdit?.({ type: 'annotation', annotation: textAnnotation, offset: newOffset });
+          onEdit?.({
+            type: 'annotation',
+            element: elementRef.annotation(index, textAnnotation.id),
+            annotation: textAnnotation,
+            offset: newOffset,
+          });
         }
       },
       setDragging,
@@ -223,6 +229,7 @@ export function wireConnectorEndpointDrag(
             const origEndDy = existingOffset?.dy ?? 0;
             onEdit({
               type: 'annotation-connector',
+              element: elementRef.annotation(index, textAnnotation.id),
               annotation: textAnnotation,
               endpoint: ep.name,
               offset: { dx: origEndDx + dx, dy: origEndDy + dy },
@@ -319,12 +326,14 @@ export function wireAnnotationLabelDrag(
             if (isRange) {
               onEdit({
                 type: 'range-label',
+                element: elementRef.annotation(index, specAnnotation.id),
                 annotation: specAnnotation as RangeAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
               });
             } else {
               onEdit({
                 type: 'refline-label',
+                element: elementRef.annotation(index, specAnnotation.id),
                 annotation: specAnnotation as RefLineAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
               });

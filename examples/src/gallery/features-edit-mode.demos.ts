@@ -13,5 +13,8 @@ export const page: PageEntry = {
   group: 'Features',
   slug: 'features--edit-mode',
   export: 'Edit Mode',
-  demos: [{ id: 'editor', title: 'The editor' }],
+  demos: [
+    { id: 'editor', title: 'The editor' },
+    { id: 'editable-toggle', title: 'The editable prop' },
+  ],
 };

@@ -611,6 +611,10 @@ function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec 
     ...leaves[0],
     data: allData,
     chrome: layerSpec.chrome ?? leaves[0].chrome,
+    // Annotations come from the parent LayerSpec when present, otherwise
+    // the first flattened leaf's. Later leaves' annotations are silently
+    // dropped. The dual-axis path (compileLayerIndependent) explicitly
+    // clears the secondary axis spec's annotations.
     annotations: layerSpec.annotations ?? leaves[0].annotations,
     labels: layerSpec.labels ?? leaves[0].labels,
     legend: layerSpec.legend ?? leaves[0].legend,

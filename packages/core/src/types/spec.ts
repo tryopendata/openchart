@@ -1789,7 +1789,12 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   darkMode?: DarkMode;
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
-  /** Series names to hide from rendering. Hidden series remain in the legend but are visually dimmed. */
+  /**
+   * Series names to hide from rendering by default. This is the authored
+   * persistence target for legend visibility. Runtime legend toggles
+   * (legend-toggle edit events) layer on top of this via ephemeral runtime
+   * sets but never modify it.
+   */
   hiddenSeries?: string[];
   /** Per-series visual overrides, keyed by series name (the color field value). */
   seriesStyles?: Record<string, SeriesStyle>;
@@ -2109,7 +2114,16 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   height?: number;
   /** Accepted for Vega-Lite compatibility and ignored (with a compile warning). */
   $schema?: string;
-  /** Annotations on the layered view. */
+  /**
+   * Annotations for the layered chart. When present, these are the
+   * annotations rendered and available for editing. When absent, falls back
+   * to the first leaf layer's annotations. Annotations on second and later
+   * leaf layers are not rendered.
+   *
+   * For edit persistence: the `data-annotation-index` stamped on each
+   * rendered annotation maps to this array (or the first leaf's if this is
+   * unset). Place annotations here for reliable index-based edit matching.
+   */
   annotations?: Annotation[];
   /** Label display configuration. `false` disables all labels, `true` uses defaults. */
   labels?: LabelSpec;
@@ -2125,7 +2139,12 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   watermark?: boolean;
   /** Resolution strategy for shared scales/axes/legends. */
   resolve?: ResolveConfig;
-  /** Hidden series names. */
+  /**
+   * Series names to hide from rendering by default. This is the authored
+   * persistence target for legend visibility. Runtime legend toggles
+   * (legend-toggle edit events) layer on top of this via ephemeral runtime
+   * sets but never modify it.
+   */
   hiddenSeries?: string[];
   /** Endpoint labels column, inherited by child layers that don't set their own. */
   endpointLabels?: boolean | EndpointLabelsConfig;

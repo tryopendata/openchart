@@ -887,7 +887,7 @@ export function createChart<TData extends DataRow = DataRow>(
     if (
       editSuppressed &&
       !editSuppressWarned &&
-      (hasEditingCallbacks(options) || options?.onAnnotationEdit)
+      (options?.editable || hasEditingCallbacks(options) || options?.onAnnotationEdit)
     ) {
       editSuppressWarned = true;
       console.warn(
@@ -933,7 +933,10 @@ export function createChart<TData extends DataRow = DataRow>(
         : [];
 
     // Wire annotation drag editing
-    if (!editSuppressed && (options?.onAnnotationEdit || options?.onEdit)) {
+    if (
+      !editSuppressed &&
+      (options?.editable ?? Boolean(options?.onAnnotationEdit || options?.onEdit))
+    ) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
@@ -943,21 +946,22 @@ export function createChart<TData extends DataRow = DataRow>(
       );
     }
 
-    // Wire all edit drag handlers when onEdit is provided
-    if (!editSuppressed && options?.onEdit) {
+    // Wire all edit drag handlers when onEdit is provided (or editable is true)
+    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
       const editCleanups: Array<() => void> = [];
+      const onEditFn = options?.onEdit ?? (() => {});
 
       editCleanups.push(
-        wireConnectorEndpointDrag(svgElement, dragAnnotations, options.onEdit, setDragging),
+        wireConnectorEndpointDrag(svgElement, dragAnnotations, onEditFn, setDragging),
       );
       editCleanups.push(
-        wireAnnotationLabelDrag(svgElement, dragAnnotations, options.onEdit, setDragging),
+        wireAnnotationLabelDrag(svgElement, dragAnnotations, onEditFn, setDragging),
       );
 
       const editSpec = currentSpec as ChartSpec | GraphSpec;
-      editCleanups.push(wireChromeDrag(svgElement, editSpec, options.onEdit, setDragging));
-      editCleanups.push(wireLegendDrag(svgElement, editSpec, options.onEdit, setDragging));
-      editCleanups.push(wireSeriesLabelDrag(svgElement, editSpec, options.onEdit, setDragging));
+      editCleanups.push(wireChromeDrag(svgElement, editSpec, onEditFn, setDragging));
+      editCleanups.push(wireLegendDrag(svgElement, editSpec, onEditFn, setDragging));
+      editCleanups.push(wireSeriesLabelDrag(svgElement, editSpec, onEditFn, setDragging));
 
       cleanupEditDrags = () => {
         for (const cleanup of editCleanups) {
@@ -967,7 +971,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire selection and keyboard edit events when editing callbacks are provided
-    if (!editSuppressed && hasEditingCallbacks(options)) {
+    if (!editSuppressed && (options?.editable ?? hasEditingCallbacks(options))) {
       makeEditable(svgElement);
       cleanupSelection = wireSelectionEvents();
       cleanupKeyboardEdit = wireKeyboardEditEvents();
