@@ -19,6 +19,12 @@ export function captureFeatureFills(svg: SVGElement | null): Map<string, string>
     const fill = p.getAttribute('fill');
     if (key && fill) fills.set(key, fill);
   }
+  const points = svg.querySelectorAll('.oc-map-point[data-point-key]');
+  for (const p of points) {
+    const key = `pt:${p.getAttribute('data-point-key')}`;
+    const fill = p.getAttribute('fill');
+    if (fill) fills.set(key, fill);
+  }
   return fills;
 }
 
@@ -27,17 +33,27 @@ export function runMapFillTransition(
   prevFills: Map<string, string>,
   opts: { duration: number },
 ): { cancel: () => void } {
-  const paths = svg.querySelectorAll('.oc-map-feature[data-key]');
   const tweens: Array<{ el: Element; from: string; to: string; interp: (t: number) => string }> =
     [];
 
-  for (const p of paths) {
+  const features = svg.querySelectorAll('.oc-map-feature[data-key]');
+  for (const p of features) {
     const key = p.getAttribute('data-key');
     const to = p.getAttribute('fill');
     const from = key ? prevFills.get(key) : null;
     if (from && to && from !== to) {
       tweens.push({ el: p, from, to, interp: interpolateRgb(from, to) });
-      // Synchronous from-state: set previous fill before first rAF
+      p.setAttribute('fill', from);
+    }
+  }
+
+  const points = svg.querySelectorAll('.oc-map-point[data-point-key]');
+  for (const p of points) {
+    const key = `pt:${p.getAttribute('data-point-key')}`;
+    const to = p.getAttribute('fill');
+    const from = prevFills.get(key);
+    if (from && to && from !== to) {
+      tweens.push({ el: p, from, to, interp: interpolateRgb(from, to) });
       p.setAttribute('fill', from);
     }
   }
