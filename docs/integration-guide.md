@@ -419,6 +419,39 @@ function filterData(
 }
 ```
 
+### Driving charts from scroll
+
+Scrollytelling steps are just spec patches: hold a base spec, patch `data` / `encoding` / `annotations` per step, and call `update()` (or pass the new spec prop in React/Vue/Svelte). When the new spec is structurally compatible with the old one, `update()` runs a smooth transition instead of an instant swap.
+
+**Transitions smoothly** (marks, axis ticks, and gridlines move as one system):
+
+- Data-only changes (same keys, new values)
+- Y-domain changes (values that force a rescale)
+- Series or category add/remove — entering marks fade in, exiting marks fade out as ghosts
+- Highlight changes (`encoding.color.highlight`) — strokes fade to the muted color
+- Annotation add (fades in) and move (slides to the new position)
+
+**Snaps instead** (instant swap, no transition):
+
+- Mark type or encoding field/type changes — structurally different specs tear down and rebuild; there is no spec-to-spec crossfade
+- Removed annotations — they disappear immediately (no exit fade)
+- Container dimension changes, `display: "sparkline"`, or more than 500 marks
+- `prefers-reduced-motion` — every step snaps to its final state; no configuration needed
+- Updates during the entrance animation window (see below)
+
+**Scroll jitter is safe.** Calling `update()` while a transition is mid-flight retargets from the current interpolated position (mid-morph line/area paths freeze and crossfade). However fast the steps arrive, the chart settles on the last spec with no orphaned ghost elements.
+
+**Disable the entrance phase for scroll-driven charts.** With `animation: true`, an `update()` that lands while the entrance animation is still playing (roughly the first second after mount) snaps instead of tweening. Use:
+
+```ts
+const baseSpec = {
+  mark: "line" as const,
+  data,
+  encoding,
+  animation: { enter: false }, // update/exit transitions stay enabled
+};
+```
+
 ### Performance tips
 
 The `<Chart>` component compares specs via `JSON.stringify`. If the serialized form hasn't changed, it skips the update. But avoiding unnecessary object allocations is still good practice for complex component trees.
