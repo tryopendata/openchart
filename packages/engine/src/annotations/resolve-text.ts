@@ -351,6 +351,12 @@ export function resolveTextAnnotation(
           from,
           to,
           endpoint,
+          fromOffset: annotation.connectorOffset?.from
+            ? {
+                dx: annotation.connectorOffset.from.dx ?? 0,
+                dy: annotation.connectorOffset.from.dy ?? 0,
+              }
+            : undefined,
           stroke: connectorStroke,
           style: connectorStyle,
           arrow: connectorArrow,

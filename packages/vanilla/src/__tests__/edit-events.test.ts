@@ -694,6 +694,54 @@ describe('edit events', () => {
       chart.destroy();
     });
 
+    it('a "from" handle drag takes EFFECT: writing the fired offset back to the spec moves the connector', () => {
+      // The roundtrip the other handle tests skip: host receives the edit, writes
+      // `connectorOffset.from` into the spec, calls update() -- and the connector
+      // origin must actually move by the dragged delta. Auto-placed on purpose:
+      // Pass 2 moves every auto annotation, which is exactly the path that used to
+      // drop the offset on the floor.
+      const onEdit = vi.fn();
+      const autoAnnotatedSpec: ChartSpec = {
+        ...barSpec,
+        annotations: [{ type: 'text', x: 10, y: 'A', text: 'Peak', connector: true }],
+      };
+      const chart = createChart(container, autoAnnotatedSpec, { onEdit });
+
+      const before = chart.layout.annotations?.[0]?.label?.connector?.from;
+      expect(before).toBeTruthy();
+      const beforeX = before!.x;
+      const beforeY = before!.y;
+
+      const fromHandle = container.querySelector(
+        '.oc-connector-handle[data-endpoint="from"]',
+      ) as SVGCircleElement | null;
+      expect(fromHandle).toBeTruthy();
+
+      simulateDrag(fromHandle!, 100, 100, 130, 118);
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      const edit: ElementEdit = onEdit.mock.calls[0][0];
+      expect(edit.type).toBe('annotation-connector');
+      if (edit.type !== 'annotation-connector') return;
+      expect(edit.endpoint).toBe('from');
+
+      // Host writes the edit back to the spec and re-renders.
+      chart.update({
+        ...autoAnnotatedSpec,
+        annotations: [
+          { ...autoAnnotatedSpec.annotations![0], connectorOffset: { from: edit.offset } },
+        ],
+      } as ChartSpec);
+
+      const after = chart.layout.annotations?.[0]?.label?.connector?.from;
+      expect(after).toBeTruthy();
+      // Moved by the dragged delta (30, 18), within half a pixel.
+      expect(after!.x - beforeX).toBeCloseTo(30, 0);
+      expect(after!.y - beforeY).toBeCloseTo(18, 0);
+
+      chart.destroy();
+    });
+
     it('dragging the "to" handle fires onEdit with endpoint "to"', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });

@@ -362,6 +362,29 @@ describe('the leader actually connects the words to the data', () => {
     expect(asserted).toBeGreaterThan(30);
   });
 
+  test("the author's connectorOffset.from survives auto-placement", () => {
+    // `connectorOffset.to` is baked into `connector.endpoint`, so it survives every
+    // later geometry rebuild for free. `from` used to be applied once at resolve and
+    // then thrown away by `refreshConnector` -- so on an auto-placed annotation
+    // (which ALWAYS moves in Pass 2) the author's nudge did exactly nothing, and an
+    // edit-mode drag of the from handle was a silent no-op after re-render.
+    const control = first([{ type: 'text', x: 'Mar', y: 30, text: 'Peak' }]);
+    const nudged = first([
+      {
+        type: 'text',
+        x: 'Mar',
+        y: 30,
+        text: 'Peak',
+        connectorOffset: { from: { dx: 15, dy: 9 } },
+      },
+    ]);
+
+    const from = nudged.label!.connector!.from;
+    const controlFrom = control.label!.connector!.from;
+    expect(from.x - controlFrom.x).toBeCloseTo(15, 5);
+    expect(from.y - controlFrom.y).toBeCloseTo(9, 5);
+  });
+
   test('a drop-line hangs straight down from the words to the point', () => {
     const a = first([{ type: 'text', x: 'Mar', y: 30, text: 'Peak', connector: 'drop-line' }]);
     const c = a.label!.connector!;

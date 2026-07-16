@@ -349,7 +349,13 @@ export function refreshConnector(
   const exit = connectorExit(bounds, endpoint.x, endpoint.y);
   if (!exit) return undefined;
 
-  const from = { x: exit.x, y: exit.y };
+  // Re-apply the author's from-end nudge BEFORE the pullback, so the pullback
+  // direction is measured from the real origin -- exactly as
+  // `resolveTextAnnotation` does on first resolve.
+  const from = {
+    x: exit.x + (connector.fromOffset?.dx ?? 0),
+    y: exit.y + (connector.fromOffset?.dy ?? 0),
+  };
 
   const gap = connectorPullbackGap(markerRadius, connector.arrow);
   const cdx = endpoint.x - from.x;
