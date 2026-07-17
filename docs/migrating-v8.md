@@ -73,11 +73,17 @@ area, `x` on horizontal bar) to keep the v7 grouped/overlap behavior. Or add
 `'parliament'` AND the encoding uses `y` instead of `theta`.
 
 **Runtime behavior:** The engine rewrites `y` to `theta` automatically and
-logs: `[openchart] encoding.y on arc marks is deprecated in v8; use
-encoding.theta for the value channel.`
+logs a warning naming the mark, e.g.: `[openchart] encoding.y on waffle marks
+is deprecated in v8; use encoding.theta for the value channel.` If both `y`
+and `theta` are set to different channels, `theta` wins and the engine warns
+that `y` was dropped.
 
-**TypeScript behavior:** `ArcEncoding` no longer has a `y` property. Build
-fails if you reference it.
+**TypeScript behavior:** Differs by mark. `ArcEncoding` now requires `theta`,
+so an arc spec that only sets `encoding.y` fails the build until you add
+`theta` (`y` itself still type-checks on arc as a deprecated alias).
+`WaffleEncoding` and `ParliamentEncoding` keep `theta` optional, so a
+`y`-only spec still compiles for those marks; there the rename is enforced
+only by the runtime warning.
 
 **Search for:** Specs where `mark` is `'arc'`, `'waffle'`, or `'parliament'`
 and `encoding.y` exists.
@@ -255,27 +261,30 @@ Build still works but linters may flag it.
 
 ---
 
-## 7. Replace `ChartType` / `CHART_TYPES` imports
+## 7. Replace `ChartType` / `CHART_TYPES` / `CHART_ENCODING_RULES` imports
 
-**What changed:** The `ChartType` type alias and `CHART_TYPES` constant were
-removed from `@opendata-ai/openchart-core`. They were deprecated aliases for
-`MarkType` and `MARK_TYPES`.
+**What changed:** The `ChartType` type alias and the `CHART_TYPES` and
+`CHART_ENCODING_RULES` constants were removed from the public exports of
+`@opendata-ai/openchart-core`. They were deprecated aliases for `MarkType`,
+`MARK_TYPES`, and `MARK_ENCODING_RULES`.
 
-**No runtime warning.** These are TypeScript-only exports. If you import them,
+**No runtime warning.** These are import-time removals. If you import them,
 the build fails immediately.
 
 **Search for:** These exact import names in your TypeScript/JavaScript files:
 - `ChartType` imported from `@opendata-ai/openchart-core`
 - `CHART_TYPES` imported from `@opendata-ai/openchart-core`
+- `CHART_ENCODING_RULES` imported from `@opendata-ai/openchart-core`
 
-**Fix:** Rename to `MarkType` and `MARK_TYPES`. The values are identical.
+**Fix:** Rename to `MarkType`, `MARK_TYPES`, and `MARK_ENCODING_RULES`. The
+values are identical.
 
 ```ts
 // Before
-import { ChartType, CHART_TYPES } from '@opendata-ai/openchart-core';
+import { ChartType, CHART_TYPES, CHART_ENCODING_RULES } from '@opendata-ai/openchart-core';
 
 // After
-import { MarkType, MARK_TYPES } from '@opendata-ai/openchart-core';
+import { MarkType, MARK_TYPES, MARK_ENCODING_RULES } from '@opendata-ai/openchart-core';
 ```
 
 ---
@@ -370,7 +379,7 @@ verifying the new swatch looks correct.
 
 **What changed:** Text annotations (`{ type: 'text' }`) were redesigned around
 the NYT/Datawrapper callout language: left-aligned blocks, one endpoint marker,
-two connector voices, inline bold. Six sub-changes, all visual. The spec surface
+two connector voices, inline bold. Seven sub-changes, all visual. The spec surface
 is unchanged apart from `**bold**` now being meaningful inside `text` and
 `subtitle`.
 
@@ -381,7 +390,7 @@ all diff.
 
 **Search for:** `"type": "text"` inside an `annotations` array.
 
-### 11a. Multi-line text is left-aligned, not centered
+### 12a. Multi-line text is left-aligned, not centered
 
 Multi-line annotation *text* used to force `text-anchor: middle`, so every line
 was centered against its neighbours. Now the lines are left-aligned and ragged
@@ -405,7 +414,7 @@ unchanged for `top`/`bottom`, and shifts by half a block width only for
   "anchor": "top" }
 ```
 
-### 11b. A default annotation now draws a leader and a marker
+### 12b. A default annotation now draws a leader and a marker
 
 Three linked changes:
 
@@ -440,7 +449,7 @@ leader suppressed by the 8px minimum.
 { "type": "text", "x": "2023-Q2", "y": 120, "text": "Peak" }
 ```
 
-### 11c. Dot marker defaults changed
+### 12c. Dot marker defaults changed
 
 `AnnotationDot` defaults: `radius` 5 → 4, `strokeWidth` 2 → 1.5. The default
 `stroke` is now the connector's resolved stroke instead of the theme text color,
@@ -452,7 +461,7 @@ so the marker and the leader read as one system.
 { "dot": { "radius": 5, "strokeWidth": 2, "stroke": "#333333" } }
 ```
 
-### 11d. Typography: 13px, theme font, bold lede
+### 12d. Typography: 13px, theme font, bold lede
 
 - Default annotation font size is 13px (was 12px).
 - Annotation text uses `theme.fonts.family` instead of a hardcoded
@@ -470,14 +479,16 @@ explicitly to opt out of the bold lede.
   "fontWeight": 400 }
 ```
 
-### 11e. Connector and arrowhead redesign
+### 12e. Connector and arrowhead redesign
 
 Pure rendering changes, no spec change:
 
 - Curve connectors are a single quadratic arc (was a cubic S-curve).
 - Arrowheads are a stroked open V (was a filled triangle). In the DOM they're a
   `<polyline>`, not a `<polygon>` — update any selector that reaches into the
-  connector SVG.
+  connector SVG. The endpoint marker classes were also renamed: v7's
+  `oc-annotation-endpoint-dot` and `oc-annotation-endpoint-ring` no longer
+  exist; the marker element now carries the single class `oc-annotation-dot`.
 - Connectors leave the text block via a ray cast from the block center toward
   the data point, with a 6px standoff. Curves no longer always exit the right
   edge.
@@ -492,7 +503,7 @@ explicit values to keep the old geometry.
 computeArrowheadPoints(tipX, tipY, tangentX, tangentY, 8, 4);
 ```
 
-### 11f. `**bold**` spans now parse in `text` and `subtitle`
+### 12f. `**bold**` spans now parse in `text` and `subtitle`
 
 `**bold**` marks an inline bold span. It parses in both `text` and `subtitle`.
 Matched pairs previously rendered verbatim as literal asterisks.
@@ -511,7 +522,7 @@ asterisks.
 { "type": "text", "x": "2022-06", "y": 8.5, "text": "Inflation peaked at **8.5%**" }
 ```
 
-### 11g. A non-zero `offset` now pins a callout: collision avoidance leaves it alone
+### 12g. A non-zero `offset` now pins a callout: collision avoidance leaves it alone
 
 A text annotation with a non-zero `offset` is treated as hand-placed. It lands exactly
 where you put it, and the automatic passes (obstacle avoidance, annotation-vs-annotation
@@ -692,16 +703,16 @@ The validation error names the right mechanism for each family.
 ## Verification
 
 After applying the changes above, run a build and check the console output.
-Every remaining deprecated usage (sections 2-5) logs a `[openchart]` warning
-at compile time with the exact fix. Two items have no runtime warning:
+Every remaining deprecated usage (sections 2-4 and 6) logs a `[openchart]`
+warning at compile time with the exact fix. Items with no runtime warning:
 
 - **Stack default (section 1):** silent behavior change. Audit multi-series
   bar/area specs manually.
-- **ChartType/CHART_TYPES (section 6):** TypeScript build fails immediately
-  if you still import them.
-- **Visual-only changes (sections 8-11):** nothing to compile against. Check
+- **ChartType/CHART_TYPES/CHART_ENCODING_RULES (section 7):** TypeScript
+  build fails immediately if you still import them.
+- **Visual-only changes (sections 11-12):** nothing to compile against. Check
   them by looking at the charts. If you keep screenshot baselines, expect the
-  annotation redesign (section 11) to diff every chart that carries a text
+  annotation redesign (section 12) to diff every chart that carries a text
   annotation.
 - **CSS layers (section 14):** if you use Tailwind v3 or any un-layered
   global reset, test table pagination buttons and search inputs first.
