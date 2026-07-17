@@ -347,11 +347,80 @@ const spec = {
 <Sankey spec={spec} />
 ```
 
-Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'right'` | `'center'`), `linkStyle` (`'gradient'` | `'source'` | `'target'` | `'neutral'`), `valueFormat` for number formatting.
+Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'right'` | `'center'`), `linkStyle` (`'gradient'` | `'source'` | `'target'` | `'neutral'`), `encoding.value.format` for number formatting (top-level `valueFormat` is deprecated in v8).
 
 For the full field reference, see [SankeySpec in spec-reference.md](spec-reference.md#sankeyspec).
 
 **Live examples**: [Energy flow](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#energy-flow) | [Budget allocation](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#budget-allocation) | [User journey](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#user-journey)
+
+---
+
+## Map (choropleth)
+
+Geographic data on real geometries: US states, counties, world countries, or any TopoJSON source. Data rows join to features by id, and a color encoding fills each feature. An optional points layer overlays lat/lon symbols on top.
+
+Maps use a separate component and spec type (`MapSpec`) from standard charts.
+
+```tsx
+// React
+import { GeoMap } from "@opendata-ai/openchart-react";
+import us from "us-atlas/states-albers-10m.json";
+
+const spec = {
+  type: "map",
+  geo: { features: us, projection: "identity" },
+  data: [
+    { id: "06", rate: 5.3 },
+    { id: "48", rate: 4.3 },
+    // ...one row per state, keyed by FIPS id
+  ],
+  encoding: {
+    key: { field: "id", type: "nominal" },
+    color: { field: "rate", type: "quantitative" },
+  },
+  chrome: { title: "Unemployment by state" },
+};
+
+<GeoMap spec={spec} />
+```
+
+`geo.features` takes a TopoJSON topology (from `us-atlas`, `world-atlas`, or your own source). `encoding.key` names the data field that joins rows to feature ids. A quantitative `color` bins values into quantile classes from a sequential scheme (`blue` by default; set `encoding.color.scale.scheme` to `green`, `orange`, `purple`, or `teal`); a nominal `color` assigns categorical fills via `scale.range`.
+
+Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. Vanilla uses `createMap(container, spec)`.
+
+For the full field reference, see [MapSpec in spec-reference.md](spec-reference.md#mapspec).
+
+**Live examples**: [US choropleth](https://tryopendata.github.io/openchart/?story=maps--maps#us-state-unemployment) | [World projections](https://tryopendata.github.io/openchart/?story=maps--maps#world-equal-earth) | [Zoom to feature](https://tryopendata.github.io/openchart/?story=maps--maps#zoom-to-feature) | [Point layer](https://tryopendata.github.io/openchart/?story=maps--maps#point-layer)
+
+---
+
+## Tilemap
+
+US state tile grid map: every state is an equal-size square in a fixed 12x8 grid. Because each state gets the same visual weight, small states stay readable, at the cost of true geography. Good for one-value-per-state datasets where Rhode Island matters as much as Texas.
+
+Tilemaps use a separate component and spec type (`TileMapSpec`) from standard charts.
+
+```tsx
+// React
+import { TileMap } from "@opendata-ai/openchart-react";
+
+const spec = {
+  type: "tilemap",
+  data: { CA: 5.3, TX: 4.3, NY: 4.5, FL: 3.1 /* ...state code -> value */ },
+  palette: "blue",
+  chrome: { title: "Unemployment by state" },
+};
+
+<TileMap spec={spec} />
+```
+
+`data` is either a record mapping state postal codes to values (shown above) or tabular rows plus an `encoding` with `state` and `value` channels. Numeric values produce a sequential color scale with a gradient legend; string values (or a `colors` map) switch to categorical mode with swatches. States missing from the data render as empty tiles rather than gaps.
+
+`palette` picks the sequential scale: `'blue'` (default), `'green'`, `'orange'`, `'purple'`, or `'teal'`. Note that `scale.scheme` on tilemap encoding channels fails validation; the top-level `palette` property is the mechanism tilemaps use. Format numbers with `encoding.value.format` (a d3-format string). Vanilla uses `createTileMap(container, spec)`.
+
+For the full field reference, see [TileMapSpec in spec-reference.md](spec-reference.md#tilemapspec).
+
+**Live examples**: [Quantitative](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#quantitative) | [Categorical](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#categorical) | [Palette variants](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#palettes) | [Partial data](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#partial-data)
 
 ---
 
@@ -580,6 +649,56 @@ const spec = {
 **When to use layers vs. multi-series:** If your data has multiple series of the same mark type (e.g., US vs UK lines), use a single chart with a `color` encoding. Use layers when you need different mark types or independent datasets on the same axes.
 
 See [LayerSpec](spec-reference.md#layerspec) for the full field reference.
+
+---
+
+## Faceting (small multiples)
+
+Repeat one chart as a grid of panels, one panel per category. Better than a crowded multi-series chart when the series overlap too much to read, or when the point is comparing shapes across groups.
+
+```ts
+const spec = {
+  mark: "line",
+  data: gdpData, // rows carry a country field
+  encoding: {
+    x: { field: "date", type: "temporal" },
+    y: { field: "gdp", type: "quantitative" },
+    facet: { field: "country", type: "nominal", columns: 3 },
+  },
+  chrome: { title: "GDP growth by country" },
+};
+```
+
+Three facet channels, all taking the same `{ field, type, sort }` shape:
+
+- `encoding.facet` -- wrap grid. Panels flow left-to-right and wrap; `columns` controls the grid width (auto-computed when omitted). Both scales are shared by default.
+- `encoding.row` -- vertically stacked panels, one per value. Shares the x-axis by default; each panel gets its own y-axis. Good for directional comparisons like "same value axis, different categories per panel".
+- `encoding.column` -- side-by-side panels in a single row. Shares the y-axis by default; each panel gets its own x-axis.
+
+The channels are mutually exclusive: `row` + `column` together is rejected (no cross-product faceting yet), as is combining either with `facet`.
+
+Override the shared/independent defaults with the top-level `resolve` field:
+
+```ts
+const spec = {
+  mark: "line",
+  data: gdpData,
+  encoding: {
+    x: { field: "date", type: "temporal" },
+    y: { field: "gdp", type: "quantitative" },
+    facet: { field: "country", type: "nominal" },
+  },
+  resolve: { scale: { y: "independent" } }, // each panel fits its own y-domain
+};
+```
+
+Shared scales keep panels directly comparable; independent scales let each panel fill its frame so the shape reads, not the level. When a scale is shared, redundant tick labels are stripped: y-axis labels render only on the leftmost column, and row-faceted panels show x-axis labels only on the bottom panel.
+
+Each panel compiles as a regular chart with a header showing the facet value. Panels have a 200px minimum width (columns degrade responsively below that) and the figure grows taller when panels would fall under 100px.
+
+See [Faceting in spec-reference.md](spec-reference.md#faceting) for the full field reference.
+
+**Live examples**: [Shared scales](https://tryopendata.github.io/openchart/?story=features--data-and-encoding#facet-shared) | [Independent scales](https://tryopendata.github.io/openchart/?story=features--data-and-encoding#facet-independent) | [Row faceting](https://tryopendata.github.io/openchart/?story=features--data-and-encoding#row-facet)
 
 ---
 

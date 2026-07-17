@@ -11,6 +11,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
   - [Mark properties](#mark-properties) (fill, gradient, point, interpolate, opacity)
 - [LayerSpec](#layerspec) (overlay multiple chart types)
 - [Encoding](#encoding) (x, y, color, size, detail channels)
+- [Faceting](#faceting) (facet, row, column channels; resolve)
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
 - [Chrome](#chrome) (title, subtitle, source, byline, footer)
@@ -21,6 +22,8 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [Event handlers](#event-handlers) (chart and table interaction callbacks)
 - [GraphSpec](#graphspec) (network/relationship visualizations)
 - [SankeySpec](#sankeyspec) (flow diagrams)
+- [MapSpec](#mapspec) (choropleth and symbol maps)
+- [TileMapSpec](#tilemapspec) (US state tile grid maps)
 - [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
 - [Validation](#validation) (validateSpec, error codes)
 
@@ -29,7 +32,15 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 The top-level type is a discriminated union on the `type` field:
 
 ```ts
-type VizSpec = ChartSpec | LayerSpec | TableSpec | GraphSpec | SankeySpec;
+type VizSpec =
+  | ChartSpec
+  | LayerSpec
+  | TableSpec
+  | GraphSpec
+  | SankeySpec
+  | TileMapSpec
+  | MapSpec
+  | BarListSpec;
 ```
 
 Use `type` to select which spec shape you're building:
@@ -38,8 +49,11 @@ Use `type` to select which spec shape you're building:
 - `table` produces a `TableSpec`
 - `graph` produces a `GraphSpec`
 - `sankey` produces a `SankeySpec`
+- `tilemap` produces a `TileMapSpec`
+- `map` produces a `MapSpec`
+- `barlist` produces a `BarListSpec`
 
-Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`.
+Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`, `isTileMapSpec(spec)`, `isMapSpec(spec)`, `isBarListSpec(spec)`.
 
 ---
 
@@ -205,6 +219,9 @@ interface Encoding {
   color?: EncodingChannel;
   size?: EncodingChannel;
   detail?: EncodingChannel;
+  facet?: FacetChannel;   // small multiples -- see Faceting
+  row?: FacetChannel;     // vertical facet stack -- see Faceting
+  column?: FacetChannel;  // horizontal facet row -- see Faceting
 }
 ```
 
@@ -299,6 +316,71 @@ The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. 
 **size channel**: Mark size. Creates bubble charts when applied to scatter. Maps a quantitative field to the mark radius or area.
 
 **detail channel**: Grouping without visual encoding. Splits data into groups (like color does) but doesn't assign different colors. Useful when you want separate lines per group but all the same color.
+
+---
+
+## Faceting
+
+Small multiples: partition data into a grid of panels, one panel per unique value of a categorical field. Each panel compiles as a regular chart with a header showing its facet value. Source: `core/src/types/spec.ts` (`FacetChannel`), `engine/src/compile.ts` (`compileFaceted`).
+
+Three encoding channels drive faceting. They are mutually exclusive: `row` and `column` together fail validation (cross-product faceting is not yet supported), as does combining either with `facet`.
+
+| Channel           | Layout                             | Default scale sharing                       |
+| ----------------- | ---------------------------------- | ------------------------------------------- |
+| `encoding.facet`  | Wrap grid (`columns` wide)         | x and y both shared                         |
+| `encoding.row`    | Vertical stack, one column         | x shared, y independent per panel           |
+| `encoding.column` | Single row of side-by-side panels  | y shared, x independent per panel           |
+
+### FacetChannel
+
+Unlike positional channels, a facet channel carries no scale or axis config -- it produces a grid, not a visual encoding.
+
+| Field     | Type                                    | Default       | Description                                                                                        |
+| --------- | --------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------- |
+| `field`   | `string`                                | (required)    | Data field to partition by. Each unique value produces one panel. Must exist in the data.          |
+| `type`    | `'nominal' \| 'ordinal'`                | (required)    | Must be categorical. Other field types fail validation.                                            |
+| `columns` | `number`                                | auto          | Wrap grid width (`facet` channel only; `row` forces 1 column, `column` uses one panel per value). Must be a positive integer. Auto picks `min(ceil(sqrt(n)), what fits at the 200px panel minimum)`. |
+| `sort`    | `'ascending' \| 'descending' \| null`   | `'ascending'` | Panel order. `null` keeps data order (first appearance).                                           |
+
+### resolve
+
+The top-level `resolve` field on the chart spec overrides the per-direction scale defaults. Only meaningful on faceted specs.
+
+```ts
+interface ResolveConfig {
+  scale?: Partial<Record<'x' | 'y' | 'color' | 'size', 'shared' | 'independent'>>;
+  axis?: Partial<Record<'x' | 'y', 'shared' | 'independent'>>;
+  legend?: Partial<Record<'color' | 'size', 'shared' | 'independent'>>;
+}
+```
+
+The facet compile path currently honors `resolve.scale.x` and `resolve.scale.y`; the other keys exist on the type (Vega-Lite aligned) but are not yet consumed.
+
+Shared scales compute one domain from the full dataset so panels are directly comparable. Independent scales fit each panel's own domain so each panel fills its frame. When a scale is shared, redundant tick labels are stripped: y-axis labels render only on the leftmost column, and row-faceted panels show x-axis labels only on the bottom panel.
+
+### Layout behavior
+
+- Panels have a 200px minimum width. The grid drops columns responsively until panels fit, down to a single column.
+- Panels have a 100px minimum height. If the grid would fall below it, the figure grows taller (once) to fit.
+- Chrome, legend, and annotations are figure-level. Annotations resolve into every panel and thin per panel; demoted labels pool into one figure-level footnote list.
+
+### Facet example
+
+```ts
+const spec: ChartSpec = {
+  mark: "line",
+  data: gdpGrowthRows, // rows carry a country field
+  encoding: {
+    x: { field: "date", type: "temporal" },
+    y: { field: "gdp", type: "quantitative" },
+    facet: { field: "country", type: "nominal", columns: 3 },
+  },
+  resolve: { scale: { y: "independent" } },
+  chrome: { title: "GDP growth by country" },
+};
+```
+
+Note: Vega-Lite's top-level `facet` operator (`{ facet, spec }`) is not supported. Faceting is always expressed through the encoding channels above.
 
 ---
 
@@ -1024,6 +1106,188 @@ const spec: SankeySpec = {
     title: "US Energy Flow",
     subtitle: "From primary sources to end-use sectors, quadrillion BTU",
     source: "U.S. Energy Information Administration",
+  },
+};
+```
+
+---
+
+## MapSpec
+
+Input for choropleth and symbol map visualizations. Source: `core/src/types/spec.ts`.
+
+Maps render TopoJSON geometries as SVG, join tabular data rows to features by id, and fill features by a color encoding. An optional points layer overlays lat/lon symbols above the features. Uses a separate component: `<GeoMap>` (React/Vue/Svelte) or `createMap` (vanilla).
+
+| Field         | Type              | Default     | Description                                                                          |
+| ------------- | ----------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `type`        | `'map'`           | (required)  | Discriminant. Always `'map'`.                                                        |
+| `geo`         | `MapGeo`          | (required)  | TopoJSON features, join key field, projection, and camera focus. See below.          |
+| `data`        | `DataRow[]`       | (required)  | Tabular data to join to geo features. Can be `[]` for a basemap-only map (e.g. under a points layer). |
+| `encoding`    | `MapEncoding`     | (required)  | Maps data fields to the join key and fill color. See below.                          |
+| `points`      | `MapPointsLayer`  | `undefined` | Point/symbol layer rendered above the features. See below.                           |
+| `chrome`      | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                            |
+| `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
+| `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
+| `darkMode`    | `DarkMode`        | `'off'`     | Dark mode behavior.                                                                  |
+| `watermark`   | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                        |
+| `animation`   | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                    |
+| `valueFormat` | `string`          | `undefined` | Deprecated: use `encoding.color.format` instead. d3-format string for color values in tooltips and the legend (e.g. `".1f"`). `encoding.color.format` wins when both are set. |
+
+### MapGeo
+
+| Field        | Type               | Default       | Description                                                                            |
+| ------------ | ------------------ | ------------- | -------------------------------------------------------------------------------------- |
+| `features`   | TopoJSON topology  | (required)    | The geometry source. Import from `us-atlas`, `world-atlas`, or your own TopoJSON file. Must be a `Topology`, not a GeoJSON FeatureCollection. |
+| `idField`    | `string`           | `'id'`        | Field in the TopoJSON feature properties used as the join key.                         |
+| `projection` | `MapProjection`    | `'albersUsa'` | `'albersUsa'`, `'mercator'`, `'equalEarth'`, or `'identity'`. Use `'identity'` for pre-projected files like `states-albers-10m.json` (coordinates already in pixel space). |
+| `focus`      | `MapFocus \| null` | `undefined`   | Camera focus. See [Focus](#focus). `null` clears focus from a prior story step.        |
+
+### MapEncoding
+
+| Channel   | Type                                   | Required | Description                                                                                     |
+| --------- | -------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `key`     | `EncodingChannel`                      | for choropleth | Data field that joins rows to feature ids. Optional in basemap-only mode (empty data plus a points layer). |
+| `color`   | `EncodingChannel`                      | for choropleth | Feature fill. Quantitative or nominal (see below). Optional when a points layer is present. |
+| `tooltip` | `EncodingChannel \| EncodingChannel[]` | no       | Tooltip field(s) shown on feature hover.                                                        |
+
+**Quantitative color** bins values with a quantile scale into one class per stop of a sequential scheme. `scale.scheme` picks the scheme: `'blue'` (default), `'green'`, `'orange'`, `'purple'`, or `'teal'`. Maps accept only these sequential names -- diverging names and Vega-Lite aliases fail validation here.
+
+**Nominal color** assigns categorical fills. Colors come from `scale.range` (with `scale.domain` for category order), falling back to the theme categorical palette. `scale.scheme` on a categorical map channel fails validation; use `scale.range` instead.
+
+Features with no matching data row render in a neutral fill.
+
+### MapPointsLayer
+
+Symbol overlay projected through the same geo projection as the features. Independent of the choropleth data join.
+
+| Field       | Type                                   | Default     | Description                                                                       |
+| ----------- | -------------------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| `data`      | `DataRow[]`                            | (required)  | Tabular point data.                                                               |
+| `longitude` | `EncodingChannel`                      | (required)  | Field holding longitude (x coordinate).                                           |
+| `latitude`  | `EncodingChannel`                      | (required)  | Field holding latitude (y coordinate).                                            |
+| `size`      | `EncodingChannel`                      | `undefined` | Quantitative radius encoding. Area-proportional (r proportional to sqrt of value), default radius range 3-20px. No size legend is rendered; explain the scale in `chrome.subtitle` if needed. |
+| `color`     | `EncodingChannel`                      | `undefined` | Nominal (categorical swatches) or quantitative (sequential scheme, same `scale.scheme` names as choropleth). Independent scale from the choropleth color. |
+| `tooltip`   | `EncodingChannel \| EncodingChannel[]` | `undefined` | Tooltip field(s) for point hover.                                                 |
+| `key`       | `EncodingChannel`                      | `undefined` | Stable id for event callbacks. Data-update transitions for points are not yet supported. |
+| `opacity`   | `number`                               | `0.65`      | Fill opacity for point circles (0-1).                                             |
+
+### Focus
+
+`geo.focus` zooms and pans the camera. Features outside the focus set are dimmed. Changing focus via `.update()` (or a scrollytelling story step) animates the camera between states.
+
+| Form                                | Behavior                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `'06'` or `6` (a feature id)        | Fit the camera to that feature.                                                       |
+| `['36', '34', '09']`                | Fit the union of those features.                                                      |
+| `{ features, padding? }`            | Same, with extra breathing room in pixels.                                            |
+| `{ points: true, padding? }`        | Fit the points layer's cluster instead of any feature. Use when points occupy a small part of a large feature. |
+| `{ points: { field, value } }`      | Fit only the points where `row[field] === value`, so a story can pan between sub-clusters. |
+| `null`                              | Clear focus (back to the full map).                                                   |
+
+### Map legends
+
+A quantitative choropleth gets a class legend above the map by default; `legend: { position: 'bottom' }` moves it below. A points-layer color legend renders below the map by default; `legend: { position: 'top-left' }` floats it inside the map area's top-left corner on its own backdrop (useful when vertical space is tight). Other `LegendPosition` values fall back to the default. `legend: { show: false }` hides legends.
+
+### Map events and updates
+
+`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `MapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition); the points layer re-renders without transitions.
+
+### Map example
+
+```ts
+import { GeoMap } from "@opendata-ai/openchart-react";
+import us from "us-atlas/states-albers-10m.json";
+
+const spec: MapSpec = {
+  type: "map",
+  geo: { features: us, projection: "identity" },
+  data: [
+    { id: "06", rate: 5.3 },
+    { id: "48", rate: 4.3 },
+    // ...one row per state, keyed by FIPS id
+  ],
+  encoding: {
+    key: { field: "id", type: "nominal" },
+    color: { field: "rate", type: "quantitative", format: ".1f" },
+  },
+  chrome: {
+    title: "Where the Job Market Is Tightest",
+    subtitle: "State unemployment rate, seasonally adjusted, %",
+    source: "Bureau of Labor Statistics",
+  },
+  animation: true,
+};
+```
+
+---
+
+## TileMapSpec
+
+Input for US state tile grid maps. Source: `core/src/types/spec.ts`.
+
+Every state renders as an equal-size square in a fixed 12x8 grid, so small states get the same visual weight as large ones. Uses a separate component: `<TileMap>` (React/Vue/Svelte) or `createTileMap` (vanilla).
+
+| Field         | Type                                                  | Default     | Description                                                                     |
+| ------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| `type`        | `'tilemap'`                                           | (required)  | Discriminant. Always `'tilemap'`.                                               |
+| `data`        | `Record<string, number \| string \| null> \| DataRow[]` | (required)  | Either a record mapping state postal codes to values (`{ CA: 5.3, TX: 4.3 }`), or tabular rows (requires `encoding`). Numeric values produce quantitative mode; string values produce categorical mode. |
+| `encoding`    | `TileMapEncoding`                                     | auto        | Required when data is `DataRow[]`. Auto-generated when data is a record map.    |
+| `palette`     | `'blue' \| 'green' \| 'orange' \| 'purple' \| 'teal'` | `'blue'`    | Sequential color palette. Quantitative mode only.                               |
+| `colors`      | `Record<string, string>`                              | `undefined` | Category-to-color mapping for categorical tilemaps. When provided, forces categorical mode. |
+| `chrome`      | `Chrome`                                              | `undefined` | Editorial text (title, subtitle, source, byline, footer).                       |
+| `legend`      | `LegendConfig`                                        | `undefined` | Legend display configuration. `show: false` hides it.                           |
+| `theme`       | `ThemeConfig`                                         | `undefined` | Theme overrides.                                                                |
+| `darkMode`    | `DarkMode`                                            | `'off'`     | Dark mode behavior.                                                             |
+| `watermark`   | `boolean`                                             | `true`      | Whether to show the tryOpenData.ai watermark.                                   |
+| `animation`   | `AnimationSpec`                                       | `undefined` | Entrance animation configuration.                                               |
+| `valueFormat` | `string`                                              | `undefined` | Deprecated: use `encoding.value.format` instead. d3-format string for tile values, legend labels, and tooltips. |
+
+### TileMapEncoding
+
+| Channel   | Type                                   | Required | Description                                                                                 |
+| --------- | -------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `state`   | `EncodingChannel`                      | yes      | State code field (nominal). Maps to US state postal abbreviations.                          |
+| `value`   | `EncodingChannel`                      | yes      | Value field. Quantitative values map to the sequential palette; strings switch to categorical mode. |
+| `color`   | `EncodingChannel`                      | no       | Nominal color channel. When present, enables categorical coloring.                          |
+| `tooltip` | `EncodingChannel \| EncodingChannel[]` | no       | Tooltip encoding.                                                                           |
+
+### Tilemap behavior
+
+- **Quantitative mode** renders a gradient legend bar with min/max labels below the grid. **Categorical mode** (string values, a `color` channel, or a `colors` map) renders swatch rows instead.
+- States missing from the data render as empty tiles, keeping their place on the grid.
+- **Number formatting:** set `encoding.value.format` (d3-format string, e.g. `".1f"`, `"$,.0f"`, `"~s"`). It applies to tile values, legend labels, and tooltips, and wins over the deprecated top-level `valueFormat`. With record-map data and no explicit encoding, `valueFormat` still applies (with a deprecation warning).
+- **`scale.scheme` fails validation on tilemap encoding channels.** The tilemap compile path never reads it; the top-level `palette` property is the mechanism tilemaps use for color.
+
+### Tilemap example
+
+```ts
+import { TileMap } from "@opendata-ai/openchart-react";
+
+const spec: TileMapSpec = {
+  type: "tilemap",
+  data: { CA: 5.3, TX: 4.3, NY: 4.5, FL: 3.1 /* ...state code -> value */ },
+  palette: "blue",
+  chrome: {
+    title: "Where the Job Market Is Tightest",
+    subtitle: "State unemployment rate, seasonally adjusted, %",
+    source: "Bureau of Labor Statistics",
+  },
+  animation: true,
+};
+```
+
+With tabular data, add the encoding explicitly:
+
+```ts
+const spec: TileMapSpec = {
+  type: "tilemap",
+  data: [
+    { code: "CA", rate: 5.3 },
+    { code: "TX", rate: 4.3 },
+  ],
+  encoding: {
+    state: { field: "code", type: "nominal" },
+    value: { field: "rate", type: "quantitative", format: ".1f" },
   },
 };
 ```
