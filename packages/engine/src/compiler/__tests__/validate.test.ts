@@ -626,4 +626,106 @@ describe('validateSpec', () => {
       expect(result.errors.find((e) => e.code === 'DATA_FIELD_MISSING')).toBeUndefined();
     });
   });
+
+  describe('row/column facet validation', () => {
+    it('validates row channel field and type', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'country', type: 'nominal' },
+          row: { field: 'nonexistent', type: 'nominal' },
+        },
+      });
+      expect(result.errors.some((e) => e.path === 'encoding.row.field')).toBe(true);
+    });
+
+    it('rejects row with invalid type', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'country', type: 'nominal' },
+          row: { field: 'country', type: 'quantitative' as 'nominal' },
+        },
+      });
+      expect(result.errors.some((e) => e.path === 'encoding.row.type')).toBe(true);
+    });
+
+    it('rejects row + facet together', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'country', type: 'nominal' },
+          row: { field: 'country', type: 'nominal' },
+          facet: { field: 'country', type: 'nominal' },
+        },
+      });
+      expect(result.errors.some((e) => e.message.includes('encoding.row and encoding.facet'))).toBe(
+        true,
+      );
+    });
+
+    it('rejects row + column together', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'country', type: 'nominal' },
+          row: { field: 'country', type: 'nominal' },
+          column: { field: 'date', type: 'ordinal' },
+        },
+      });
+      expect(
+        result.errors.some((e) => e.message.includes('encoding.row and encoding.column')),
+      ).toBe(true);
+    });
+
+    it('accepts valid row channel', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'country', type: 'nominal' },
+          row: { field: 'country', type: 'nominal' },
+        },
+      });
+      expect(result.errors.filter((e) => e.path?.startsWith('encoding.row'))).toHaveLength(0);
+    });
+
+    it('rejects column + facet together', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'value', type: 'quantitative' },
+          y: { field: 'country', type: 'nominal' },
+          column: { field: 'country', type: 'nominal' },
+          facet: { field: 'country', type: 'nominal' },
+        },
+      });
+      expect(
+        result.errors.some((e) => e.message.includes('encoding.column and encoding.facet')),
+      ).toBe(true);
+    });
+
+    it('accepts valid column channel', () => {
+      const result = validateSpec({
+        mark: 'bar',
+        data: validLineData,
+        encoding: {
+          x: { field: 'country', type: 'nominal' },
+          y: { field: 'value', type: 'quantitative' },
+          column: { field: 'country', type: 'nominal' },
+        },
+      });
+      expect(result.errors.filter((e) => e.path?.startsWith('encoding.column'))).toHaveLength(0);
+    });
+  });
 });

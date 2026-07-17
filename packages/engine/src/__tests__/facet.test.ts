@@ -167,6 +167,7 @@ describe('compileChart with facet', () => {
   it('uses shared scales by default', () => {
     const layout = compileChart(facetSpec, { width: 600, height: 400 });
     expect(layout.facet!.sharedScales).toBe(true);
+    expect(layout.facet!.direction).toBe('wrap');
   });
 
   it('supports independent y scales via resolve', () => {
@@ -211,5 +212,148 @@ describe('compileChart with facet', () => {
     };
     const layout = compileChart(spec, { width: 600, height: 400 });
     expect(layout.facet).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Row faceting
+// ---------------------------------------------------------------------------
+
+const rowSpec = {
+  mark: 'bar' as const,
+  data: facetData,
+  encoding: {
+    x: { field: 'value', type: 'quantitative' as const },
+    y: { field: 'country', type: 'nominal' as const },
+    row: { field: 'year', type: 'nominal' as const },
+  },
+};
+
+describe('compileChart with row faceting', () => {
+  it('produces facet layout with direction row', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 400 });
+    expect(layout.facet).toBeDefined();
+    expect(layout.facet!.direction).toBe('row');
+    expect(layout.facet!.columns).toBe(1);
+  });
+
+  it('creates one panel per unique row value', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 400 });
+    expect(layout.facet!.panels).toHaveLength(2);
+  });
+
+  it('defaults x to shared, y to independent', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 400 });
+    expect(layout.facet!.sharedScales).toBe(false);
+  });
+
+  it('strips x-axis from non-bottom panels', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 600 });
+    const panels = layout.facet!.panels;
+    expect(panels[0].axes.x?.ticks ?? []).toHaveLength(0);
+    const bottomPanel = panels[panels.length - 1];
+    expect(bottomPanel.axes.x?.ticks.length).toBeGreaterThan(0);
+  });
+
+  it('keeps y-axis on all panels', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 600 });
+    for (const panel of layout.facet!.panels) {
+      expect(panel.axes.y).toBeDefined();
+    }
+  });
+
+  it('left-aligns headers', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 400 });
+    for (const panel of layout.facet!.panels) {
+      expect(panel.header.textAnchor).toBe('start');
+      expect(panel.header.x).toBe(panel.area.x);
+    }
+  });
+
+  it('allows overriding y to shared via resolve', () => {
+    const spec = {
+      ...rowSpec,
+      resolve: { scale: { y: 'shared' as const } },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.facet!.sharedScales).toBe(true);
+  });
+
+  it('each panel has marks', () => {
+    const layout = compileChart(rowSpec, { width: 600, height: 600 });
+    for (const panel of layout.facet!.panels) {
+      expect(panel.marks.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Column faceting
+// ---------------------------------------------------------------------------
+
+const colSpec = {
+  mark: 'bar' as const,
+  data: facetData,
+  encoding: {
+    x: { field: 'country', type: 'nominal' as const },
+    y: { field: 'value', type: 'quantitative' as const },
+    column: { field: 'year', type: 'nominal' as const },
+  },
+};
+
+describe('compileChart with column faceting', () => {
+  it('produces facet layout with direction column', () => {
+    const layout = compileChart(colSpec, { width: 800, height: 400 });
+    expect(layout.facet).toBeDefined();
+    expect(layout.facet!.direction).toBe('column');
+    expect(layout.facet!.columns).toBe(2);
+  });
+
+  it('defaults y to shared, x to independent', () => {
+    const layout = compileChart(colSpec, { width: 800, height: 400 });
+    expect(layout.facet!.sharedScales).toBe(false);
+    // Verify the directional resolve: y-axis ticks should be stripped from
+    // non-leftmost panels (shared y), x-axis ticks should appear on all panels
+    // (independent x).
+    const panels = layout.facet!.panels;
+    if (panels.length > 1) {
+      const rightPanel = panels[1];
+      expect(rightPanel.axes.y?.ticks ?? []).toHaveLength(0);
+    }
+    const leftPanel = panels[0];
+    expect(leftPanel.axes.y?.ticks?.length).toBeGreaterThan(0);
+  });
+
+  it('strips y-axis from non-leftmost panels', () => {
+    const layout = compileChart(colSpec, { width: 800, height: 400 });
+    const panels = layout.facet!.panels;
+    expect(panels[0].axes.y?.ticks?.length).toBeGreaterThan(0);
+    if (panels.length > 1) {
+      expect(panels[1].axes.y?.ticks ?? []).toHaveLength(0);
+    }
+  });
+
+  it('allows overriding x to shared via resolve', () => {
+    const spec = {
+      ...colSpec,
+      resolve: { scale: { x: 'shared' as const } },
+    };
+    const layout = compileChart(spec, { width: 800, height: 400 });
+    expect(layout.facet!.sharedScales).toBe(true);
+  });
+
+  it('centers headers (not left-aligned)', () => {
+    const layout = compileChart(colSpec, { width: 800, height: 400 });
+    for (const panel of layout.facet!.panels) {
+      expect(panel.header.textAnchor).toBeUndefined();
+    }
+  });
+
+  it('creates panels in a single row', () => {
+    const layout = compileChart(colSpec, { width: 800, height: 400 });
+    for (const panel of layout.facet!.panels) {
+      expect(panel.header.text).toBeTruthy();
+    }
+    expect(layout.facet!.panels).toHaveLength(2);
   });
 });

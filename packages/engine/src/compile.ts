@@ -28,6 +28,7 @@ import type {
   ResolvedAnimation,
   ResolvedAnnotation,
   ResolvedTheme,
+  ResolveMode,
   ScaleInvert,
   TableLayout,
 } from '@opendata-ai/openchart-core';
@@ -617,14 +618,38 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   }
 
   // ---------------------------------------------------------------------------
-  // Faceted compilation: when encoding.facet is present, take the faceted path
+  // Faceted compilation: desugar row/column into facet, then take faceted path
   // ---------------------------------------------------------------------------
+  let facetDirection: 'row' | 'column' | 'wrap' = 'wrap';
+  const rowChannel = renderSpec.encoding.row;
+  const colChannel = renderSpec.encoding.column;
+  if (rowChannel?.field || colChannel?.field) {
+    const channel = (rowChannel?.field ? rowChannel : colChannel)!;
+    facetDirection = rowChannel?.field ? 'row' : 'column';
+    const desugared = { ...renderSpec.encoding } as Record<string, unknown>;
+    delete desugared.row;
+    delete desugared.column;
+    desugared.facet = {
+      field: channel.field,
+      type: channel.type,
+      sort: channel.sort,
+      ...(facetDirection === 'row' ? { columns: 1 } : {}),
+    };
+    renderSpec = { ...renderSpec, encoding: desugared as typeof renderSpec.encoding };
+    const chartDesugared = { ...chartSpec.encoding } as Record<string, unknown>;
+    delete chartDesugared.row;
+    delete chartDesugared.column;
+    chartDesugared.facet = desugared.facet;
+    chartSpec = { ...chartSpec, encoding: chartDesugared as typeof chartSpec.encoding };
+  }
+
   const facetChannel = renderSpec.encoding.facet;
   if (facetChannel?.field) {
     return compileFaceted(
       chartSpec,
       renderSpec,
       facetChannel,
+      facetDirection,
       options,
       theme,
       strategy,
@@ -954,6 +979,7 @@ function compileFaceted(
   chartSpec: NormalizedChartSpec,
   renderSpec: NormalizedChartSpec,
   facetChannel: FacetChannel,
+  facetDirection: 'row' | 'column' | 'wrap',
   options: CompileOptions,
   theme: ResolvedTheme,
   strategy: LayoutStrategy,
@@ -1026,7 +1052,8 @@ function compileFaceted(
   const bottomReservation = plan.xAxisExtent;
 
   // Compute facet grid geometry
-  const grid = computeFacetGrid(facetValues, facetChannel.columns, chartArea, {
+  const effectiveColumns = facetDirection === 'column' ? facetValues.length : facetChannel.columns;
+  const grid = computeFacetGrid(facetValues, effectiveColumns, chartArea, {
     left: leftReservation,
     bottom: bottomReservation,
   });
@@ -1048,10 +1075,15 @@ function compileFaceted(
     }
   }
 
-  // Resolve scale for determining if we use 'independent' or 'shared'
+  // Resolve scale: defaults depend on facet direction.
+  // row: x shared (comparable values), y independent (different categories)
+  // column: y shared (comparable values), x independent (different categories)
+  // wrap: both shared (original facet behavior)
   const resolveConfig = chartSpec.resolve;
-  const yResolve = resolveConfig?.scale?.y ?? 'shared';
-  const xResolve = resolveConfig?.scale?.x ?? 'shared';
+  const xDefault: ResolveMode = facetDirection === 'column' ? 'independent' : 'shared';
+  const yDefault: ResolveMode = facetDirection === 'row' ? 'independent' : 'shared';
+  const yResolve = resolveConfig?.scale?.y ?? yDefault;
+  const xResolve = resolveConfig?.scale?.x ?? xDefault;
 
   // Compute shared scale domains from the full dataset (when shared)
   const fullScales = computeScales(panelSpec, chartArea, renderSpec.data);
@@ -1132,10 +1164,21 @@ function compileFaceted(
     }
 
     // Strip y-axis tick labels from non-leftmost panels (gridlines stay).
-    // X-axis labels show on every panel for readability.
     if (yResolve === 'shared' && !isLeftCol && panelAxes.y) {
       panelAxes.y = {
         ...panelAxes.y,
+        ticks: [],
+        label: undefined,
+        domainLine: false,
+        tickMarks: false,
+      };
+    }
+
+    // Strip x-axis tick labels from non-bottom panels for row faceting.
+    const isBottomRow = gridPanel.row === grid.rows - 1;
+    if (xResolve === 'shared' && facetDirection === 'row' && !isBottomRow && panelAxes.x) {
+      panelAxes.x = {
+        ...panelAxes.x,
         ticks: [],
         label: undefined,
         domainLine: false,
@@ -1226,10 +1269,11 @@ function compileFaceted(
       annotations: panelAnnotations,
       header: {
         text: gridPanel.key,
-        x: gridPanel.headerPos.x,
+        x: facetDirection === 'row' ? gridPanel.area.x : gridPanel.headerPos.x,
         y: gridPanel.headerPos.y,
         fontSize: theme.fonts.sizes.body,
         fontWeight: theme.fonts.weights.medium,
+        ...(facetDirection === 'row' ? { textAnchor: 'start' as const } : {}),
       },
     });
   }
@@ -1325,6 +1369,7 @@ function compileFaceted(
       facetField: facetChannel.field,
       columns: grid.columns,
       sharedScales: yResolve === 'shared' && xResolve === 'shared',
+      direction: facetDirection,
     },
   };
 }

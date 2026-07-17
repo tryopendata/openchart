@@ -719,6 +719,20 @@ export interface Encoding<TData extends DataRow = DataRow> {
    * per-panel axes.
    */
   facet?: FacetChannel<TData>;
+  /**
+   * Row facet channel: partitions data into vertically-stacked panels.
+   * Each unique value of the row field produces one panel, arranged in a
+   * single column. Shares the x-axis scale by default; y-axis is independent.
+   * Mutually exclusive with `facet` and `column`.
+   */
+  row?: FacetChannel<TData>;
+  /**
+   * Column facet channel: partitions data into side-by-side panels.
+   * Each unique value of the column field produces one panel, arranged in a
+   * single row. Shares the y-axis scale by default; x-axis is independent.
+   * Mutually exclusive with `facet` and `row`.
+   */
+  column?: FacetChannel<TData>;
 }
 
 // ---------------------------------------------------------------------------

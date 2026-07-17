@@ -4554,6 +4554,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -5063,12 +5071,13 @@
       "type": "string",
       "enum": [
         "top",
+        "top-left",
         "right",
         "bottom",
         "bottom-right",
         "inline"
       ],
-      "description": "Legend position at a given breakpoint."
+      "description": "Legend position at a given breakpoint. `'top-left'` is a map-only overlay position: the legend floats inside the map area's top-left corner (with its own backdrop) instead of reserving a block of figure height. Charts treat it as the default position."
     },
     "AnnotationOffset": {
       "type": "object",
@@ -7219,6 +7228,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -7330,6 +7347,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -7441,6 +7466,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -7552,6 +7585,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -7663,6 +7704,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -7774,6 +7823,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -7885,6 +7942,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "additionalProperties": false,
@@ -7992,6 +8057,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8100,6 +8173,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8210,6 +8291,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8320,6 +8409,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8431,6 +8528,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8542,6 +8647,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "additionalProperties": false,
@@ -8639,6 +8752,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8747,6 +8868,14 @@
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
       "required": [
@@ -8891,7 +9020,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Series names to hide from rendering. Hidden series remain in the legend but are visually dimmed."
+          "description": "Series names to hide from rendering by default. This is the authored persistence target for legend visibility. Runtime legend toggles (legend-toggle edit events) layer on top of this via ephemeral runtime sets but never modify it."
         },
         "seriesStyles": {
           "type": "object",

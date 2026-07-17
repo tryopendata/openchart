@@ -840,6 +840,58 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
+  // Validate row/column facet channels
+  for (const channel of ['row', 'column'] as const) {
+    const ch = (encoding as Record<string, unknown>)[channel];
+    if (ch && typeof ch === 'object') {
+      const facetCh = ch as Record<string, unknown>;
+      if (!facetCh.field || typeof facetCh.field !== 'string') {
+        errors.push({
+          message: `Spec error: encoding.${channel}.field is required and must be a non-empty string`,
+          path: `encoding.${channel}.field`,
+          code: 'MISSING_FIELD',
+          suggestion: `Add a field property to encoding.${channel} (e.g. { field: "category", type: "nominal" })`,
+        });
+      } else if (
+        !dataColumns.has(facetCh.field as string) &&
+        !transformFields.has(facetCh.field as string)
+      ) {
+        errors.push({
+          message: `Spec error: encoding.${channel}.field "${facetCh.field}" does not exist in data. Available columns: ${availableColumns}`,
+          path: `encoding.${channel}.field`,
+          code: 'DATA_FIELD_MISSING',
+          suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(facetCh.field as string, columnList)}`,
+        });
+      }
+      if (!facetCh.type || (facetCh.type !== 'nominal' && facetCh.type !== 'ordinal')) {
+        errors.push({
+          message: `Spec error: encoding.${channel}.type must be "nominal" or "ordinal"${facetCh.type ? `, got "${facetCh.type}"` : ''}`,
+          path: `encoding.${channel}.type`,
+          code: facetCh.type ? 'INVALID_VALUE' : 'MISSING_FIELD',
+          suggestion: `Set encoding.${channel}.type to "nominal" or "ordinal"`,
+        });
+      }
+      if (encoding.facet && typeof encoding.facet === 'object') {
+        errors.push({
+          message: `Spec error: encoding.${channel} and encoding.facet cannot be used together`,
+          path: `encoding.${channel}`,
+          code: 'INVALID_VALUE',
+          suggestion: `Use either encoding.${channel} or encoding.facet, not both`,
+        });
+      }
+      const otherChannel = channel === 'row' ? 'column' : 'row';
+      if ((encoding as Record<string, unknown>)[otherChannel]) {
+        errors.push({
+          message:
+            'Spec error: encoding.row and encoding.column cannot be used together (cross-product faceting is not yet supported)',
+          path: `encoding.${channel}`,
+          code: 'INVALID_VALUE',
+          suggestion: 'Use encoding.facet with columns for grid layout, or use only row or column',
+        });
+      }
+    }
+  }
+
   // Validate darkMode if provided
   if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
     errors.push({

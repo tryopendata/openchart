@@ -449,7 +449,16 @@ function expandChannelSugar(
 // ---------------------------------------------------------------------------
 
 /** Channels whose fields group the count aggregate (mirrors VL's implicit groupby). */
-const COUNT_GROUP_CHANNELS = ['x', 'y', 'color', 'detail', 'strokeDash', 'facet'] as const;
+const COUNT_GROUP_CHANNELS = [
+  'x',
+  'y',
+  'color',
+  'detail',
+  'strokeDash',
+  'facet',
+  'row',
+  'column',
+] as const;
 
 /**
  * Desugar `{ aggregate: 'count' }` (no field) on x/y into an explicit

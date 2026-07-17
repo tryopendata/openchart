@@ -353,6 +353,38 @@ const facetIndependentSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 7c. Row faceting — vertical stack, shared x-scale
+// ---------------------------------------------------------------------------
+
+const rowFacetData = [
+  { period: '2011-12', state: 'Oregon', rate: 6.4, party: 'Blue' },
+  { period: '2011-12', state: 'Washington', rate: 5.2, party: 'Blue' },
+  { period: '2011-12', state: 'Vermont', rate: 4.8, party: 'Blue' },
+  { period: '2011-12', state: 'Colorado', rate: 4.1, party: 'Blue' },
+  { period: '2024-25', state: 'Idaho', rate: 8.1, party: 'Red' },
+  { period: '2024-25', state: 'Wyoming', rate: 7.3, party: 'Red' },
+  { period: '2024-25', state: 'Alaska', rate: 6.9, party: 'Red' },
+  { period: '2024-25', state: 'Utah', rate: 5.8, party: 'Red' },
+];
+
+const rowFacetSpec: ChartSpec = {
+  mark: { type: 'bar', orient: 'horizontal' },
+  data: rowFacetData,
+  encoding: {
+    x: { field: 'rate', type: 'quantitative', axis: { title: 'Exemption rate (%)' } },
+    y: { field: 'state', type: 'nominal', sort: null },
+    color: { field: 'party', type: 'nominal', scale: { range: ['#4373b8', '#d1495b'] } },
+    row: { field: 'period', type: 'ordinal', sort: null },
+  },
+  chrome: {
+    title: 'Top Exemption States Flipped Parties',
+    subtitle:
+      'Row faceting stacks panels vertically with a shared x-axis so bar lengths are directly comparable.',
+    source: 'Illustrative data',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // 8. Formatters — number and date format on channels and axes
 // ---------------------------------------------------------------------------
 
@@ -503,7 +535,7 @@ export const DataAndEncoding = () => (
     <Section
       id="faceting"
       title="Faceting"
-      lede="A facet channel splits one chart into a grid of small multiples. Scales are shared by default; opt into independent per-panel scales with resolve."
+      lede="Facet, row, and column channels split one chart into small multiples. Row stacks vertically, column arranges side by side, and facet wraps into a grid. Scales are shared by default; opt into independent per-panel scales with resolve."
     >
       <Demo
         id="facet-shared"
@@ -518,6 +550,13 @@ export const DataAndEncoding = () => (
         description="resolve.scale.y = 'independent' gives each panel its own y-domain, trading cross-panel comparison for within-panel detail."
         spec={facetIndependentSpec}
         height={440}
+      />
+      <Demo
+        id="row-facet"
+        title="Row faceting"
+        description="encoding.row stacks panels vertically in a single column. The x-axis is shared so bar lengths are comparable; y-axes are independent (different categories per panel)."
+        spec={rowFacetSpec}
+        height={500}
       />
     </Section>
 

@@ -330,7 +330,7 @@ function renderFacetedPanels(
     setAttrs(headerText, {
       x: panel.header.x,
       y: panel.header.y,
-      'text-anchor': 'middle',
+      'text-anchor': panel.header.textAnchor ?? 'middle',
       'font-family': layout.theme.fonts.family,
       'font-size': panel.header.fontSize,
       'font-weight': panel.header.fontWeight,

@@ -1200,7 +1200,14 @@ export interface FacetPanelLayout {
   /** Per-panel annotations. */
   annotations: ResolvedAnnotation[];
   /** Panel header label (facet value) positioned above the panel. */
-  header: { text: string; x: number; y: number; fontSize: number; fontWeight: number };
+  header: {
+    text: string;
+    x: number;
+    y: number;
+    fontSize: number;
+    fontWeight: number;
+    textAnchor?: 'start' | 'middle' | 'end';
+  };
 }
 
 /** Layout for a faceted (small-multiples) chart. */
@@ -1213,6 +1220,8 @@ export interface FacetLayout {
   columns: number;
   /** Whether scales are shared across panels. */
   sharedScales: boolean;
+  /** How panels are arranged: 'row' (vertical stack), 'column' (horizontal), 'wrap' (grid). */
+  direction: 'row' | 'column' | 'wrap';
 }
 
 /**
