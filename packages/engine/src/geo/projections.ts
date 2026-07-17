@@ -12,8 +12,18 @@ export function createProjection(
   width: number,
   height: number,
   geojson: GeoPermissibleObjects,
+  inset = 0,
 ): GeoProjection | GeoIdentityTransform {
   if (type === 'identity') {
+    if (inset > 0) {
+      return geoIdentity().fitExtent(
+        [
+          [inset, inset],
+          [width - inset, height - inset],
+        ],
+        geojson,
+      );
+    }
     return geoIdentity().fitSize([width, height], geojson);
   }
 
@@ -21,7 +31,17 @@ export function createProjection(
     type === 'albersUsa' ? geoAlbersUsa() : type === 'equalEarth' ? geoEqualEarth() : geoMercator();
 
   const fitGeometry = type === 'mercator' ? excludePolarFeatures(geojson) : geojson;
-  projection.fitSize([width, height], fitGeometry);
+  if (inset > 0) {
+    projection.fitExtent(
+      [
+        [inset, inset],
+        [width - inset, height - inset],
+      ],
+      fitGeometry,
+    );
+  } else {
+    projection.fitSize([width, height], fitGeometry);
+  }
   return projection;
 }
 

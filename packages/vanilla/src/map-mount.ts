@@ -523,14 +523,19 @@ export function createMap(
       container.dataset.ocFontsState = 'ready';
     }
 
-    // On first render, snap to declarative focus if present
-    if (isFirstRender && currentLayout.focus) {
-      const target = currentLayout.focus.target;
-      currentFocusIds = [...currentLayout.focus.ids];
-      const cam = cameraForTarget(currentLayout, target);
-      currentCamera = cam;
-      if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
-      if (!isAnimating) applyFocusDim(currentFocusIds);
+    // On first render, initialize the camera so subsequent tweens start
+    // from the correct position (not the {0,0,1} default).
+    if (isFirstRender) {
+      if (currentLayout.focus) {
+        const target = currentLayout.focus.target;
+        currentFocusIds = [...currentLayout.focus.ids];
+        const cam = cameraForTarget(currentLayout, target);
+        currentCamera = cam;
+        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        if (!isAnimating) applyFocusDim(currentFocusIds);
+      } else {
+        currentCamera = cameraForTarget(currentLayout, null);
+      }
     }
     isFirstRender = false;
   }

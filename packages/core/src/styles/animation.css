@@ -156,7 +156,12 @@
     & .oc-map-point {
       animation: oc-enter-map-point calc(var(--oc-animation-duration) * 0.4)
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(var(--oc-animation-duration) * 0.8 + var(--oc-mark-index, 0) * 60ms);
+      animation-delay: calc(
+        var(--oc-animation-duration) *
+        0.8 +
+        var(--oc-mark-index, 0) *
+        var(--oc-point-stagger, 60ms)
+      );
     }
 
     /* Sankey nodes: fade in with stagger by column depth (left-to-right) */
