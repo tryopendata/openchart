@@ -1,5 +1,31 @@
 # Changelog
 
+## [8.0.0-rc.10](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.9...core-v8.0.0-rc.10) (2026-07-17)
+
+
+### Features
+
+* add row and column encoding channels for directional faceting ([3a405ae](https://github.com/tryopendata/openchart/commit/3a405ae))
+* 'top-left' overlay position for point legends ([757f34c](https://github.com/tryopendata/openchart/commit/757f34c))
+* annotation creation gesture + spec-pointer paths (req-5, req-6) ([c54c7b1](https://github.com/tryopendata/openchart/commit/c54c7b1))
+* annotation anchor data-space drag (req-4) ([1a380b3](https://github.com/tryopendata/openchart/commit/1a380b3))
+* Phase A - ElementRef on payloads, editable prop, docs ([ea33a21](https://github.com/tryopendata/openchart/commit/ea33a21))
+* animate point fill transitions on spec update ([4f56679](https://github.com/tryopendata/openchart/commit/4f56679))
+* extend did-you-mean suggestions and scheme warnings to sankey/tilemap/barlist/graph validators ([3923cbe](https://github.com/tryopendata/openchart/commit/3923cbe))
+* add points focus mode to fit the camera to point clusters ([b24f073](https://github.com/tryopendata/openchart/commit/b24f073))
+
+
+### Bug Fixes
+
+* point stagger var, projection inset, first-render camera init ([e19d4b9](https://github.com/tryopendata/openchart/commit/e19d4b9))
+* address code review findings ([860a672](https://github.com/tryopendata/openchart/commit/860a672))
+* points-based focus zoom produces correct zoom level ([36836bf](https://github.com/tryopendata/openchart/commit/36836bf))
+* categorical map color rejects scale.scheme as dead config ([8db1d7f](https://github.com/tryopendata/openchart/commit/8db1d7f))
+* graph scale.scheme is dead config too; correct docs ([82d724b](https://github.com/tryopendata/openchart/commit/82d724b))
+* family-accurate scale.scheme validation; harden transition test guards ([c8bf396](https://github.com/tryopendata/openchart/commit/c8bf396))
+* connectorOffset.from survives geometry moves ([2108cf4](https://github.com/tryopendata/openchart/commit/2108cf4))
+* categorical legend honors legend.position and no longer overlaps the map ([4a67a20](https://github.com/tryopendata/openchart/commit/4a67a20))
+
 ## [8.0.0-rc.9](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.8...core-v8.0.0-rc.9) (2026-07-17)
 
 
