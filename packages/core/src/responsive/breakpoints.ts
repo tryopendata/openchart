@@ -59,8 +59,13 @@ export function getHeightClass(height: number): HeightClass {
 /** Label display mode at a given breakpoint. */
 export type LabelMode = 'all' | 'important' | 'none';
 
-/** Legend position at a given breakpoint. */
-export type LegendPosition = 'top' | 'right' | 'bottom' | 'bottom-right' | 'inline';
+/**
+ * Legend position at a given breakpoint. `'top-left'` is a map-only overlay
+ * position: the legend floats inside the map area's top-left corner (with its
+ * own backdrop) instead of reserving a block of figure height. Charts treat
+ * it as the default position.
+ */
+export type LegendPosition = 'top' | 'top-left' | 'right' | 'bottom' | 'bottom-right' | 'inline';
 
 /** Annotation position strategy. */
 export type AnnotationPosition = 'inline' | 'tooltip-only';

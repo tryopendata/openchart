@@ -388,7 +388,14 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
   // Render borders on top of features
   renderBorders(cameraGroup, borders);
 
-  // Render point marks inside camera group (above borders)
+  // Render point marks inside camera group (above borders).
+  // Stamp a per-point stagger so the total spread stays bounded regardless of
+  // point count (the CSS hardcoded 60ms per point which explodes past ~15 pts).
+  if (animate && animation?.enter && layout.pointMarks.length > 1) {
+    const pointStaggerBudget = animation.enter.duration * 0.5;
+    const perPoint = pointStaggerBudget / (layout.pointMarks.length - 1);
+    svg.style.setProperty('--oc-point-stagger', `${perPoint}ms`);
+  }
   renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined);
 
   mapGroup.appendChild(cameraGroup);
@@ -435,13 +442,22 @@ export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): S
       }
     }
 
-    // Center the background rect vertically around the swatch content
+    // Center the background rect vertically around the swatch content.
+    // Overlay continuous legends ('top-left') float over map geography, so
+    // their backdrop must cover the full bounds (tick labels hang below the
+    // bar) instead of just the swatch row. Categorical rows keep the
+    // swatch-centered backdrop in both positions.
+    const isOverlayContinuous =
+      ptLegend.position === 'top-left' && !('entries' in ptLegend && ptLegend.entries);
     const contentCenterY = ptLegend.bounds.y + swatchSize / 2;
-    const bgHeight = swatchSize + padY * 2;
+    const bgHeight = isOverlayContinuous
+      ? ptLegend.bounds.height + padY * 2
+      : swatchSize + padY * 2;
+    const bgY = isOverlayContinuous ? ptLegend.bounds.y - padY : contentCenterY - bgHeight / 2;
     const bg = createSVGElement('rect');
     setAttrs(bg, {
       x: ptLegend.bounds.x - padX,
-      y: contentCenterY - bgHeight / 2,
+      y: bgY,
       width: contentWidth + padX * 2,
       height: bgHeight,
       rx: 4,

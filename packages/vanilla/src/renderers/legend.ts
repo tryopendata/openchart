@@ -187,7 +187,8 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   g.setAttribute('role', 'list');
   g.setAttribute('aria-label', 'Chart legend');
 
-  const isHorizontal = legend.position === 'top' || legend.position === 'bottom';
+  const isHorizontal =
+    legend.position === 'top' || legend.position === 'top-left' || legend.position === 'bottom';
   const positions = 'entryPositions' in legend ? legend.entryPositions : undefined;
   let offsetX = legend.bounds.x;
   let offsetY = legend.bounds.y;

@@ -1000,5 +1000,129 @@ describe('compileMap', () => {
         expect(Number.isFinite(pm.cy)).toBe(true);
       }
     });
+
+    it('encoding.color legend: null suppresses the choropleth legend reserve (basemap-only)', () => {
+      const base = {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [] as Array<Record<string, unknown>>,
+        points: {
+          data: [{ lat: 34, lon: -118, name: 'LA', v: 10 }],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          color: { field: 'v', type: 'quantitative' },
+          key: { field: 'name', type: 'nominal' },
+        },
+        theme: { spacing: { padding: 0 } },
+      };
+      const withLegendNull = compileMap(
+        {
+          ...base,
+          encoding: {
+            key: { field: 'id', type: 'nominal' },
+            color: { field: 'id', type: 'nominal', legend: null },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+      const withoutLegendNull = compileMap(
+        {
+          ...base,
+          encoding: {
+            key: { field: 'id', type: 'nominal' },
+            color: { field: 'id', type: 'nominal' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      // legend: null frees the phantom choropleth swatch row, so the map
+      // area is taller than the spec that reserves it.
+      expect(withLegendNull.categoricalLegend).toBeNull();
+      expect(withLegendNull.area.height).toBeGreaterThan(withoutLegendNull.area.height);
+    });
+
+    it("legend position 'top-left' overlays the point legend inside the map area", () => {
+      const spec = {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [] as Array<Record<string, unknown>>,
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: { field: 'id', type: 'nominal', legend: null },
+        },
+        points: {
+          data: [
+            { lat: 34, lon: -118, name: 'LA', v: 10 },
+            { lat: 40.7, lon: -74, name: 'NYC', v: 90 },
+          ],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          color: { field: 'v', type: 'quantitative' },
+          key: { field: 'name', type: 'nominal' },
+        },
+        theme: { spacing: { padding: 0 } },
+        watermark: false,
+      };
+      const overlay = compileMap(
+        { ...spec, legend: { show: true, position: 'top-left' } },
+        DEFAULT_OPTIONS,
+      );
+      const bottom = compileMap({ ...spec, legend: { show: true } }, DEFAULT_OPTIONS);
+
+      // Overlay reserves no figure height: map area fills the full frame.
+      expect(overlay.area.height).toBeGreaterThan(bottom.area.height);
+      expect(overlay.area.height).toBe(DEFAULT_OPTIONS.height);
+
+      // Legend floats inside the map area's top-left corner, inset from the
+      // edges, and is marked as an overlay for the renderer's backdrop.
+      const legend = overlay.pointContinuousLegend!;
+      expect(legend.position).toBe('top-left');
+      expect(legend.bounds.x).toBeGreaterThan(overlay.area.x);
+      expect(legend.bounds.y).toBeGreaterThan(overlay.area.y);
+      expect(legend.bounds.y + legend.bounds.height).toBeLessThan(
+        overlay.area.y + overlay.area.height,
+      );
+
+      // Default (no position) keeps the bottom-row placement.
+      expect(bottom.pointContinuousLegend!.position).toBe('bottom');
+      expect(bottom.pointContinuousLegend!.bounds.y).toBeGreaterThan(
+        overlay.pointContinuousLegend!.bounds.y,
+      );
+    });
+
+    it("legend position 'top-left' overlays a categorical point legend too", () => {
+      const layout = compileMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [],
+          encoding: {
+            key: { field: 'id', type: 'nominal' },
+            color: { field: 'id', type: 'nominal', legend: null },
+          },
+          points: {
+            data: [
+              { lat: 34, lon: -118, name: 'LA', cat: 'x' },
+              { lat: 40.7, lon: -74, name: 'NYC', cat: 'y' },
+            ],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            color: { field: 'cat', type: 'nominal' },
+            key: { field: 'name', type: 'nominal' },
+          },
+          legend: { show: true, position: 'top-left' },
+          theme: { spacing: { padding: 0 } },
+          watermark: false,
+        },
+        DEFAULT_OPTIONS,
+      );
+
+      expect(layout.area.height).toBe(DEFAULT_OPTIONS.height);
+      const legend = layout.pointCategoricalLegend!;
+      expect(legend.position).toBe('top-left');
+      expect(legend.bounds.x).toBeGreaterThan(layout.area.x);
+      expect(legend.bounds.y).toBeGreaterThan(layout.area.y);
+    });
   });
 });

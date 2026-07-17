@@ -388,9 +388,10 @@ export function computeLegendContent(
     lineHeight: 1.3,
   };
 
-  // Resolve position: spec-level override wins, then responsive strategy
-  const resolvedPosition =
-    spec.legend?.position ?? (strategy.legendPosition === 'right' ? 'right' : 'top');
+  // Resolve position: spec-level override wins, then responsive strategy.
+  // 'top-left' is a map-only overlay position; charts fold it into 'top'.
+  const specPosition = spec.legend?.position === 'top-left' ? 'top' : spec.legend?.position;
+  const resolvedPosition = specPosition ?? (strategy.legendPosition === 'right' ? 'right' : 'top');
 
   // No entries = empty legend with no space
   if (entries.length === 0) {

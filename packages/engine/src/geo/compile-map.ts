@@ -47,6 +47,13 @@ import { joinDataToFeatures } from './join';
 import { createProjection } from './projections';
 import type { NormalizedMapSpec } from './types';
 
+/**
+ * Inset from the map area's edges for overlay ('top-left') point legends.
+ * The renderer's backdrop extends 10px left of the legend x, so the visible
+ * gap to the frame edge is OVERLAY_LEGEND_INSET - 10.
+ */
+const OVERLAY_LEGEND_INSET = 18;
+
 function validateGeoFeatures(geo: NormalizedMapSpec['geo']): Topology {
   if (!geo.features) {
     throw new Error(
@@ -165,14 +172,21 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // 8. Legend height reserve
   const showLegend = mapSpec.legend?.show !== false;
   const colorEncoding = mapSpec.encoding.color;
+  // Channel-level `legend: null` suppresses the choropleth legend (the VL
+  // idiom) — without this, basemap-only maps (empty data + points layer)
+  // reserved a phantom swatch row that letterboxed the map.
+  const showChoroplethLegend = showLegend && colorEncoding?.legend !== null;
   const isQuantitative = colorEncoding?.type === 'quantitative';
   const legendPosition = mapSpec.legend?.position === 'bottom' ? 'bottom' : 'top';
+  // 'top-left' floats the point legend inside the map area (own backdrop, no
+  // height reserve) so the geography keeps the full frame.
+  const pointLegendOverlay = mapSpec.legend?.position === 'top-left';
 
   // Compute legend block height. For quantitative maps, use the continuous
   // legend infrastructure; for categorical, estimate a single swatch row.
   let legendBlockHeight = 0;
   let continuousContent: ReturnType<typeof computeContinuousLegendContentForChannel> = null;
-  if (showLegend && colorEncoding && isQuantitative) {
+  if (showChoroplethLegend && colorEncoding && isQuantitative) {
     const colorValues: number[] = [];
     for (const row of mapSpec.data) {
       const v = row[colorEncoding.field];
@@ -197,13 +211,14 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       legendBlockHeight = continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
     }
-  } else if (showLegend && colorEncoding) {
+  } else if (showChoroplethLegend && colorEncoding) {
     const labelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
     legendBlockHeight = Math.max(10, labelHeight) + 6;
   }
 
-  // Reserve height for point color legend if applicable
-  if (showLegend && mapSpec.points?.color) {
+  // Reserve height for point color legend if applicable (overlay legends
+  // float inside the map area and reserve nothing)
+  if (showLegend && !pointLegendOverlay && mapSpec.points?.color) {
     if (mapSpec.points.color.type === 'quantitative') {
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       legendBlockHeight += CONTINUOUS_BAR_HEIGHT + CONTINUOUS_LABEL_GAP + labelRowHeight + 8;
@@ -221,8 +236,21 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   }
 
   // 9. Projection + path generator
+  // When points are present, inset the projection by the max point radius so
+  // circles at the geographic edges don't get clipped by the viewBox.
   const projectionType = mapSpec.geo.projection;
-  const projection = createProjection(projectionType, fullArea.width, mapAreaHeight, geoCollection);
+  let pointInset = 0;
+  if (mapSpec.points) {
+    const sizeRange = mapSpec.points.size?.scale?.range as readonly [number, number] | undefined;
+    pointInset = sizeRange ? sizeRange[1] : SIZE_SCALE_DEFAULTS.mapPoint.range[1];
+  }
+  const projection = createProjection(
+    projectionType,
+    fullArea.width,
+    mapAreaHeight,
+    geoCollection,
+    pointInset,
+  );
   const pathGen = geoPath(projection);
 
   // 10. Check winding order (skip for identity: geoArea uses spherical math
@@ -307,7 +335,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
 
     // Build the continuous legend. Maps place it directly (not via placeLegend,
     // which does cartesian-specific positioning above the chart area).
-    if (showLegend && continuousContent) {
+    if (showChoroplethLegend && continuousContent) {
       const labelStyle: TextStyle = {
         fontFamily: theme.fonts.family,
         fontSize: theme.fonts.sizes.small,
@@ -361,7 +389,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
       mapAreaHeight,
       legendReserveGap,
       legendPosition,
-      showLegend,
+      showLegend: showChoroplethLegend,
       droppedFeatures,
     });
     featureMarks = result.marks;
@@ -548,28 +576,34 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
         shape: 'circle' as const,
       }));
 
-      // Position below the map. Only offset by choropleth legend height when
-      // the choropleth legend is also at the bottom (not 'top').
+      // Default: position below the map, offset by choropleth legend height
+      // when that legend is also at the bottom (not 'top'). Overlay
+      // ('top-left'): float inside the map area's top-left corner — the
+      // renderer's backdrop keeps it readable over geography, and the inset
+      // clears the frame edge (plus the backdrop's own 10px x-padding).
       const bottomChoroplethHeight =
         legendPosition === 'bottom'
           ? (continuousLegend?.bounds.height ?? categoricalLegend?.bounds.height ?? 0)
           : 0;
       const choroplethLegendGap = bottomChoroplethHeight > 0 ? 8 : 0;
-      const legendX = fullArea.x;
-      const legendY =
-        fullArea.y +
-        mapAreaHeight +
-        legendReserveGap +
-        bottomChoroplethHeight +
-        choroplethLegendGap;
-      const legendWidth = fullArea.width;
+      const legendX = pointLegendOverlay ? fullArea.x + OVERLAY_LEGEND_INSET : fullArea.x;
+      const legendY = pointLegendOverlay
+        ? fullArea.y + OVERLAY_LEGEND_INSET
+        : fullArea.y +
+          mapAreaHeight +
+          legendReserveGap +
+          bottomChoroplethHeight +
+          choroplethLegendGap;
+      const legendWidth = pointLegendOverlay
+        ? fullArea.width - OVERLAY_LEGEND_INSET * 2
+        : fullArea.width;
       const swatchSize = 10;
       const swatchGap = 6;
       const entryGap = 16;
 
       pointCategoricalLegend = {
         type: 'categorical',
-        position: 'bottom',
+        position: pointLegendOverlay ? 'top-left' : 'bottom',
         bounds: { x: legendX, y: legendY, width: legendWidth, height: swatchSize + 6 },
         labelStyle,
         entries,
@@ -614,9 +648,10 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
             ? (continuousLegend?.bounds.height ?? categoricalLegend?.bounds.height ?? 0)
             : 0;
         const choroplethLegendGap = bottomChoroplethH > 0 ? 8 : 0;
-        const legendX = fullArea.x;
-        const legendY =
-          fullArea.y + mapAreaHeight + legendReserveGap + bottomChoroplethH + choroplethLegendGap;
+        const legendX = pointLegendOverlay ? fullArea.x + OVERLAY_LEGEND_INSET : fullArea.x;
+        const legendY = pointLegendOverlay
+          ? fullArea.y + OVERLAY_LEGEND_INSET
+          : fullArea.y + mapAreaHeight + legendReserveGap + bottomChoroplethH + choroplethLegendGap;
         const ptLabelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
         const ptLegendHeight =
           ptContinuousContent.barHeight + CONTINUOUS_LABEL_GAP + ptLabelRowHeight;
@@ -635,7 +670,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
         pointContinuousLegend = {
           type: 'continuous' as const,
           mode: ptContinuousContent.mode,
-          position: 'bottom',
+          position: pointLegendOverlay ? ('top-left' as const) : ('bottom' as const),
           bounds,
           labelStyle,
           bar,

@@ -747,8 +747,9 @@ export interface BaseLegendLayout {
    * read them silently pick whichever comes first.
    */
   channel?: LegendChannel;
-  /** Where the legend is positioned relative to the chart area. */
-  position: 'top' | 'right' | 'bottom' | 'bottom-right' | 'inline';
+  /** Where the legend is positioned relative to the chart area. `'top-left'`
+   *  is a map-only overlay position (floats inside the map area). */
+  position: 'top' | 'top-left' | 'right' | 'bottom' | 'bottom-right' | 'inline';
   /** Bounding box for the legend (pixel coordinates). */
   bounds: Rect;
   /** Entry label style. */
