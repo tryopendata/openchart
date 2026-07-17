@@ -285,6 +285,19 @@ describe('compileChart with row faceting', () => {
       expect(panel.marks.length).toBeGreaterThan(0);
     }
   });
+
+  it('does not double-reserve the y-axis gutter for horizontal bars', () => {
+    const singleSpec = {
+      mark: rowSpec.mark,
+      data: rowSpec.data,
+      encoding: { x: rowSpec.encoding.x, y: rowSpec.encoding.y },
+    };
+    const single = compileChart(singleSpec, { width: 600, height: 400 });
+    const layout = compileChart(rowSpec, { width: 600, height: 400 });
+    for (const panel of layout.facet!.panels) {
+      expect(panel.area.x).toBeCloseTo(single.area.x, 1);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

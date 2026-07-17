@@ -1046,15 +1046,16 @@ function compileFaceted(
     dims.effectiveAxisGap,
   );
 
-  // Estimate y-axis gutter width (used as left reservation for outer axes)
-  const leftReservation = plan.leftGutter;
   // Estimate x-axis extent (used as bottom reservation for outer axes)
   const bottomReservation = plan.xAxisExtent;
 
-  // Compute facet grid geometry
+  // Compute facet grid geometry. The y-axis gutter needs no left reservation
+  // here: chartArea's left margin already includes plan.leftGutter (applied by
+  // computeDimensions), so leftmost-panel tick labels render into that margin
+  // just like the single-chart path.
   const effectiveColumns = facetDirection === 'column' ? facetValues.length : facetChannel.columns;
   const grid = computeFacetGrid(facetValues, effectiveColumns, chartArea, {
-    left: leftReservation,
+    left: 0,
     bottom: bottomReservation,
   });
 
