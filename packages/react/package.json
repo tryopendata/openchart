@@ -28,8 +28,7 @@
     "./styles.css": "./dist/styles.css"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "sideEffects": [
     "./dist/styles.css"

@@ -29,8 +29,7 @@
     "./styles.css": "./dist/styles.css"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "svelte": "./dist/index.js",
   "sideEffects": [

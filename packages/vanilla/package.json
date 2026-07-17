@@ -37,8 +37,7 @@
     "./simulation-worker": "./dist/simulation-worker.js"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "sideEffects": [
     "./dist/styles.css"

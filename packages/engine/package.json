@@ -27,8 +27,7 @@
     }
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "sideEffects": [
     "./src/charts/builtin.ts",
