@@ -301,7 +301,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   const droppedFeatures: string[] = [];
 
   // 13. Build color scale + feature marks
-  const formatter = buildD3Formatter(mapSpec.valueFormat) ?? formatNumber;
+  const formatter =
+    buildD3Formatter(mapSpec.encoding?.color?.format ?? mapSpec.valueFormat) ?? formatNumber;
   const neutralFill = isDarkMode ? '#2a2a2a' : '#e8e8e8';
   const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 

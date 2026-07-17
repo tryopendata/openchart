@@ -210,6 +210,44 @@ describe('compileMap', () => {
     expect(layout.categoricalLegend).toBeNull();
   });
 
+  it('encoding.color.format takes precedence over deprecated valueFormat', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [{ fips: '06', value: 1500 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative', format: '$,.0f' },
+        },
+        valueFormat: '.2f',
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const ca = layout.tooltipDescriptors.get('06');
+    expect(ca!.fields.map((f) => f.value)).toContain('$1,500');
+  });
+
+  it('deprecated valueFormat still formats tooltips when no encoding format is set', () => {
+    const layout = compileMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [{ fips: '06', value: 1500 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+        valueFormat: '$,.0f',
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const ca = layout.tooltipDescriptors.get('06');
+    expect(ca!.fields.map((f) => f.value)).toContain('$1,500');
+  });
+
   it('continuous legend has 5 bins by default', () => {
     const layout = compileMap(
       {
