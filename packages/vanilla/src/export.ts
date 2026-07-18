@@ -43,7 +43,7 @@ interface FontFaceData {
  * Extract dimensions from an SVG element, trying width/height attributes
  * first, then falling back to viewBox.
  */
-function getSVGDimensions(svg: SVGElement): { width: number; height: number } {
+export function getSVGDimensions(svg: SVGElement): { width: number; height: number } {
   const w = parseFloat(svg.getAttribute('width') || '');
   const h = parseFloat(svg.getAttribute('height') || '');
   if (w && h) return { width: w, height: h };
@@ -67,7 +67,7 @@ function getSVGDimensions(svg: SVGElement): { width: number; height: number } {
  * dimensions. This causes clipping at non-1x DPI scaling. Injecting explicit
  * width/height into the root <svg> tag fixes the intrinsic size.
  */
-function ensureSVGDimensions(svgString: string, width: number, height: number): string {
+export function ensureSVGDimensions(svgString: string, width: number, height: number): string {
   // If the <svg> already has a width attribute, leave it alone
   if (/^<svg[^>]*\swidth\s*=/.test(svgString)) return svgString;
   // Inject width and height right after <svg
@@ -232,7 +232,7 @@ function injectFontsIntoSVG(svgElement: SVGElement, fonts: FontFaceData[]): void
  * If font fetching fails for any font, that font is silently skipped
  * and the export proceeds with system font fallback for that face.
  */
-async function embedFonts(svgElement: SVGElement): Promise<void> {
+export async function embedFonts(svgElement: SVGElement): Promise<void> {
   const usedFonts = collectUsedFonts(svgElement);
   if (usedFonts.size === 0) return;
 
@@ -248,11 +248,15 @@ async function embedFonts(svgElement: SVGElement): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Read the chart's background color from its first rect element.
+ * Read the chart's background color from its first rect element. Falls back to
+ * white when the chart has no opaque background (e.g. a transparent theme),
+ * which matters for formats that can't carry alpha (JPEG, GIF).
  */
-function getSVGBackgroundColor(svgElement: SVGElement): string {
+export function getSVGBackgroundColor(svgElement: SVGElement): string {
   const firstRect = svgElement.querySelector('rect');
-  return firstRect?.getAttribute('fill') || '#ffffff';
+  const fill = firstRect?.getAttribute('fill');
+  if (!fill || fill === 'none' || fill === 'transparent') return '#ffffff';
+  return fill;
 }
 
 // ---------------------------------------------------------------------------
@@ -302,27 +306,30 @@ export async function exportSVGWithFonts(
 // ---------------------------------------------------------------------------
 
 /**
- * Render an SVG element to a PNG Blob via a canvas.
+ * Draw a serialized SVG string onto a canvas at DPI scaling.
  *
- * Embeds fonts by default so the exported image matches on-screen rendering.
- * Set `embedFonts: false` to skip font embedding for faster exports.
+ * Shared by PNG/JPG export and per-frame GIF rendering: loads the SVG string
+ * as an Image via an object URL, draws it into a `width*dpi × height*dpi`
+ * canvas, and hands the canvas back once painted. The caller decides how to
+ * read the result (toBlob for PNG/JPG, getImageData for GIF frames).
  *
- * @param svgElement - The rendered SVG element.
- * @param options - Optional DPI scaling and font embedding.
- * @returns A Promise resolving to the PNG Blob.
+ * An optional `prepare` hook runs before drawing the image, used by JPG export
+ * to fill an opaque background so transparency doesn't render as black.
+ *
+ * @param svgString - Serialized SVG markup (should already carry width/height).
+ * @param width - Logical width in CSS pixels.
+ * @param height - Logical height in CSS pixels.
+ * @param dpi - Device pixel ratio scaling factor.
+ * @param prepare - Optional pre-draw hook receiving the scaled 2D context.
+ * @returns A Promise resolving to the painted canvas.
  */
-export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptions): Promise<Blob> {
-  const dpi = options?.dpi ?? 2;
-  const shouldEmbed = options?.embedFonts ?? true;
-  const { width, height } = getSVGDimensions(svgElement);
-  const clone = svgElement.cloneNode(true) as SVGElement;
-
-  if (shouldEmbed) {
-    await embedFonts(clone);
-  }
-
-  const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
-
+export function rasterizeSVGToCanvas(
+  svgString: string,
+  width: number,
+  height: number,
+  dpi: number,
+  prepare?: (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void,
+): Promise<HTMLCanvasElement> {
   if (!width || !height) {
     throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
   }
@@ -336,24 +343,18 @@ export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptio
     throw new Error('Canvas 2D context not available');
   }
 
+  prepare?.(ctx, canvas);
   ctx.scale(dpi, dpi);
 
   const img = new Image();
   const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
 
-  return new Promise<Blob>((resolve, reject) => {
+  return new Promise<HTMLCanvasElement>((resolve, reject) => {
     img.onload = () => {
       ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-
-      canvas.toBlob((result) => {
-        if (result) {
-          resolve(result);
-        } else {
-          reject(new Error('Canvas toBlob returned null'));
-        }
-      }, 'image/png');
+      resolve(canvas);
     };
 
     img.onerror = () => {
@@ -366,6 +367,50 @@ export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptio
     };
 
     img.src = url;
+  });
+}
+
+/**
+ * Serialize an SVG element (optionally embedding fonts) into a canvas-ready
+ * string with explicit width/height. Shared by the raster exporters.
+ */
+async function prepareRasterSVG(
+  svgElement: SVGElement,
+  shouldEmbed: boolean,
+): Promise<{ svgString: string; width: number; height: number }> {
+  const { width, height } = getSVGDimensions(svgElement);
+  const clone = svgElement.cloneNode(true) as SVGElement;
+  if (shouldEmbed) {
+    await embedFonts(clone);
+  }
+  const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
+  return { svgString, width, height };
+}
+
+/**
+ * Render an SVG element to a PNG Blob via a canvas.
+ *
+ * Embeds fonts by default so the exported image matches on-screen rendering.
+ * Set `embedFonts: false` to skip font embedding for faster exports.
+ *
+ * @param svgElement - The rendered SVG element.
+ * @param options - Optional DPI scaling and font embedding.
+ * @returns A Promise resolving to the PNG Blob.
+ */
+export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptions): Promise<Blob> {
+  const dpi = options?.dpi ?? 2;
+  const shouldEmbed = options?.embedFonts ?? true;
+  const { svgString, width, height } = await prepareRasterSVG(svgElement, shouldEmbed);
+  const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (result) {
+        resolve(result);
+      } else {
+        reject(new Error('Canvas toBlob returned null'));
+      }
+    }, 'image/png');
   });
 }
 
@@ -384,66 +429,28 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
   const dpi = options?.dpi ?? 2;
   const quality = options?.quality ?? 0.92;
   const shouldEmbed = options?.embedFonts ?? true;
-  const { width, height } = getSVGDimensions(svgElement);
   const backgroundColor = getSVGBackgroundColor(svgElement);
-  const clone = svgElement.cloneNode(true) as SVGElement;
+  const { svgString, width, height } = await prepareRasterSVG(svgElement, shouldEmbed);
 
-  if (shouldEmbed) {
-    await embedFonts(clone);
-  }
-
-  const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
-
-  if (!width || !height) {
-    throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = width * dpi;
-  canvas.height = height * dpi;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Canvas 2D context not available');
-  }
-
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.scale(dpi, dpi);
-
-  const img = new Image();
-  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
+  // Fill an opaque background before drawing so transparency doesn't render
+  // as black in the JPEG. Runs before ctx.scale, so use the raw canvas size.
+  const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, (ctx, cv) => {
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  });
 
   return new Promise<Blob>((resolve, reject) => {
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(url);
-
-      canvas.toBlob(
-        (result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(new Error('Canvas toBlob returned null'));
-          }
-        },
-        'image/jpeg',
-        quality,
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(
-        new Error(
-          `Failed to load SVG as image (width=${width}, height=${height}, svgLength=${svgString.length})`,
-        ),
-      );
-    };
-
-    img.src = url;
+    canvas.toBlob(
+      (result) => {
+        if (result) {
+          resolve(result);
+        } else {
+          reject(new Error('Canvas toBlob returned null'));
+        }
+      },
+      'image/jpeg',
+      quality,
+    );
   });
 }
 

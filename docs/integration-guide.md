@@ -1066,6 +1066,62 @@ const csvString = table.export("csv");
 
 Table CSV export respects the current sort and search state but exports all rows (ignores pagination), so you get the full filtered dataset.
 
+### Animated GIF export
+
+GIF export captures a chart's entrance animation as a looping (or play-once) image. It's the format to reach for when you need an animated chart to autoplay inline somewhere that blocks iframes, video players, and animated SVG, like a Substack or newsletter article.
+
+The setup is a little more involved than the other formats, so read this before wiring it up.
+
+**Install the optional encoder.** GIF encoding uses [`gifenc`](https://github.com/mattdesl/gifenc), which is an *optional* peer dependency, it is not bundled with openchart and not pulled in unless you export GIFs. Install it yourself:
+
+```bash
+npm install gifenc
+```
+
+Calling `chart.export("gif")` without it throws a clear error telling you to install it. The encoder loads lazily (dynamic import), so it never weighs down your main bundle, only the code path that actually exports a GIF pays for it.
+
+**How it works (and why the chart doesn't need to be mid-animation).** OpenChart's entrance animations are pure CSS, and CSS animation state lives in computed style, which doesn't survive SVG serialization. So GIF export does *not* screen-record the live animation. Instead it reproduces the entrance deterministically from the chart's final, settled render: it computes each mark's `clip-path`/`opacity` at every frame in JS, stamps them inline, rasterizes, and encodes. The upshot for you: just call `export("gif")` on a normally-rendered chart. No offscreen mounting, no forcing the animation to replay.
+
+```ts
+const chart = createChart(container, spec);
+
+// Async, returns a Blob. Reproduces the entrance animation, then holds the
+// final frame (play-once is the default).
+const gifBlob = await chart.export("gif");
+
+// Loop forever instead of holding the last frame:
+const looping = await chart.export("gif", { loop: true });
+```
+
+**Options** (`GIFExportOptions`):
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `loop` | `false` | `false` plays once and holds the final frame; `true` loops forever; a positive number sets an explicit loop count. Note `0` maps to gifenc's loop-forever (same as `true`), so use `false`, not `0`, for play-once. |
+| `fps` | `25` | Frames per second captured. |
+| `dpi` | `2` | Resolution scaling, same as PNG. `2` keeps text crisp. |
+| `durationMs` | animation total | Override the capture window length. |
+| `backgroundColor` | chart background (or white) | Opaque fill. GIF can't carry partial alpha, so a transparent chart would composite onto black without this. |
+| `embedFonts` | `true` | Embed fonts so text matches on-screen. |
+
+**Scope and caveats:**
+
+- It reproduces the entrance for the common marks (bar, column, line, area, point/scatter, arc, and fades). Other animated mark types (map fills, tilemap tiles, table rows) fall back to a plain opacity fade rather than their bespoke motion.
+- Stacked bars animate each segment as a full-height clip rather than the on-screen chained per-segment sweep. The result reads as a bar reveal but isn't a frame-exact match of the stacked sequencing.
+- Only the `smooth` easing curve is sample-accurate. A chart configured with a different `ease` still exports with smooth motion.
+- The motion is a faithful JS re-creation of the CSS entrance (same durations, stagger), not a pixel-for-pixel screen capture.
+- GIF is a 256-color format. Solid fills and text hold up well at `dpi: 2`; heavy gradients will band. File size grows with duration, dimensions, and fps.
+- A chart with no entrance animation configured produces a single-frame (effectively static) GIF.
+- Some browsers restart a play-once GIF from the first frame when it scrolls out of view and back. For a scroll-past article this is a non-issue.
+
+You can also import `exportGIF` directly from the subpath if you're not going through a chart instance:
+
+```ts
+import { exportGIF } from "@opendata-ai/openchart-vanilla/gif";
+
+const gifBlob = await exportGIF(svgElement, resolvedAnimation, { loop: false });
+```
+
 ### Download helper
 
 The library doesn't include download utilities, but wiring one up is straightforward:
@@ -1094,6 +1150,9 @@ downloadBlob(pngBlob, "chart.png");
 
 const csvString = chart.export("csv");
 downloadString(csvString, "data.csv", "text/csv");
+
+const gifBlob = await chart.export("gif", { loop: false }); // needs `gifenc` installed
+downloadBlob(gifBlob, "chart.gif");
 ```
 
 ### Framework export

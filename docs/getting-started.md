@@ -615,7 +615,7 @@ chart.destroy();
 | ---------------- | ------------------------------------------ |
 | `update(spec)`   | Re-compile and re-render with a new spec   |
 | `resize()`       | Re-compile at current container dimensions |
-| `export(format)` | Export as `'svg'`, `'png'`, or `'csv'`     |
+| `export(format)` | Export as `'svg'`, `'png'`, `'jpg'`, `'gif'` (animated, needs the optional `gifenc` peer), or `'csv'` |
 | `destroy()`      | Remove DOM elements, disconnect observers  |
 
 Responsive mode (enabled by default) uses a `ResizeObserver` on the container, so charts resize automatically when the container changes size.

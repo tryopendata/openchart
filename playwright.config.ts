@@ -72,6 +72,17 @@ export default defineConfig({
         deviceScaleFactor: 1,
       },
     },
+    // GIF export correctness: real-browser check that exportGIF produces a
+    // multi-frame animated GIF (happy-dom can't rasterize, so this can't be a
+    // unit test).
+    {
+      name: 'gif',
+      testDir: './e2e/gif',
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+      },
+    },
     // Mobile Chromium: catches narrow-viewport layout bugs (label collisions,
     // degenerate ticks) that the desktop project never sees.
     {
