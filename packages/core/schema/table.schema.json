@@ -392,6 +392,10 @@
         "color": {
           "type": "string",
           "description": "Text color (CSS color string)."
+        },
+        "maxLines": {
+          "type": "number",
+          "description": "Maximum number of lines this chrome text may wrap to. Additional lines are dropped and the last kept line is truncated with an ellipsis. Bounds the chrome's contribution to layout height at any container width. Applies whether the font size comes from the theme default or an explicit override. Caps height only, not horizontal overflow of a single unbreakable word."
         }
       },
       "additionalProperties": false,
