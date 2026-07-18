@@ -38,6 +38,7 @@ import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
+import { resolveChromeLayout } from '../layout/shared';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
 import type { NormalizedSankeySpec } from './types';
@@ -277,18 +278,34 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     watermark,
   );
 
-  // 4. Compute drawing area (total space minus chrome)
+  // 4. Compute drawing area. In 'grow' mode the plot keeps the full height
+  // budget (chrome is not subtracted) and the returned SVG height grows by the
+  // chrome height. In the default 'subtract' mode both are unchanged.
   const padding = theme.spacing.padding;
+  // Read chromeLayout from the raw spec: normalizeSankeySpec does not carry it
+  // through, and SankeySpec has no chromeLayout field, so the option default is
+  // the primary control (a user-authored spec.chromeLayout still wins here).
+  const chromeLayout = resolveChromeLayout(
+    spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
+    options,
+  );
+  const grownHeight =
+    chromeLayout === 'grow'
+      ? options.height + chrome.topHeight + chrome.bottomHeight
+      : options.height;
   const fullArea: Rect = {
     x: padding,
     y: padding + chrome.topHeight,
     width: options.width - padding * 2,
-    height: options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
+    height:
+      chromeLayout === 'grow'
+        ? options.height - padding * 2
+        : options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
   };
 
   // Guard against negative dimensions
   if (fullArea.width <= 0 || fullArea.height <= 0) {
-    return emptyLayout(fullArea, chrome, theme, options, watermark);
+    return emptyLayout(fullArea, chrome, theme, { ...options, height: grownHeight }, watermark);
   }
 
   // 5. Extract encoding fields
@@ -336,7 +353,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   };
 
   if (area.height <= 0) {
-    return emptyLayout(area, chrome, theme, options, watermark);
+    return emptyLayout(area, chrome, theme, { ...options, height: grownHeight }, watermark);
   }
 
   // 6. Run d3-sankey layout (may re-run once if labels overflow)
@@ -518,7 +535,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     theme,
     dimensions: {
       width: options.width,
-      height: options.height,
+      height: grownHeight,
     },
     animation: resolvedAnimation,
     watermark,

@@ -238,6 +238,39 @@ describe('compileTileMap', () => {
     });
   });
 
+  describe('chromeLayout', () => {
+    const chromeSpec = {
+      ...basicSpec,
+      chrome: {
+        title:
+          'A long tilemap headline that wraps to several lines on a narrow container and adds real chrome height above the grid',
+        subtitle: 'A supporting subtitle that also occupies chrome vertical space here',
+      },
+    };
+    // Narrow container so the tile grid is width-constrained: growing the plot
+    // area alone would not lengthen the SVG, which is exactly the case the grow
+    // floor must handle.
+    const narrowOptions = { width: 340, height: 500 };
+
+    it('grows the SVG by at least the chrome height even when the grid is width-bound', () => {
+      const subtract = compileTileMap({ ...chromeSpec, chromeLayout: 'subtract' }, narrowOptions);
+      const grow = compileTileMap({ ...chromeSpec, chromeLayout: 'grow' }, narrowOptions);
+
+      const chromeHeight = subtract.chrome.topHeight + subtract.chrome.bottomHeight;
+      expect(chromeHeight).toBeGreaterThan(0);
+      // The grow floor guarantees the SVG lengthens by the full chrome height,
+      // not the ~0px a width-constrained grid would otherwise contribute.
+      expect(grow.height).toBeGreaterThanOrEqual(narrowOptions.height + chromeHeight);
+      expect(grow.height).toBeGreaterThan(subtract.height);
+    });
+
+    it('defaults to subtract (no growth) when chromeLayout is omitted', () => {
+      const omitted = compileTileMap(chromeSpec, narrowOptions);
+      const explicit = compileTileMap({ ...chromeSpec, chromeLayout: 'subtract' }, narrowOptions);
+      expect(omitted.height).toBe(explicit.height);
+    });
+  });
+
   describe('tooltip descriptors', () => {
     it('contains entries for all tiles', () => {
       const result = compileTileMap(basicSpec, defaultOptions);

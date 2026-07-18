@@ -700,6 +700,44 @@ The validation error names the right mechanism for each family.
 
 ---
 
+## 17. New chrome layout controls (additive, opt-in)
+
+**What changed:** Two additive chrome features landed in v8: the top-level
+`chromeLayout` property and the `maxLines` chrome text style field. Both are
+opt-in and default to the historical behavior.
+
+**No migration action required.** Existing specs render exactly as before. Reach
+for these only when you want the new behavior.
+
+- `chromeLayout: 'grow'` on a chart spec keeps the plot at its full height
+  budget and grows the rendered SVG taller by the measured chrome height, so a
+  wrapping title never compresses the plot. Use it for fixed-height article or
+  blog charts on narrow viewports. The default `'subtract'` shrinks the plot to
+  fit chrome inside a fixed container height. Also honored by bar list, sankey,
+  map, and tilemap specs.
+- `maxLines` on a chrome text style (`chrome.title.style.maxLines`, etc.) caps
+  how many lines the text wraps to, dropping extra lines and truncating the last
+  kept line with an ellipsis. Use it to bound a runaway title wrap.
+
+**v1 limitations:**
+
+- `chromeLayout: 'grow'` is a no-op for faceted (small-multiples) specs and
+  falls back to `'subtract'`.
+- `maxLines` bounds chrome height, not horizontal overflow. A single unbreakable
+  word wider than the available width still overflows visually.
+- In `'grow'` mode the responsive strategy (whether chrome goes compact or
+  labels get suppressed) is still derived from the plot budget height, not the
+  final grown SVG height, so a very small budget can still trigger compact
+  behavior.
+- In `'subtract'` mode, chrome that exceeds ~40% of a fixed container height is
+  demoted automatically. This demotion follows the same full -> compact -> hidden
+  progression as the min-dimension guardrail, so the outcome depends on the
+  incoming chrome mode: a title over the cap on an already-compact layout drops
+  chrome to hidden rather than compacting it further. Use `chromeLayout: 'grow'`
+  or `maxLines` to keep chrome visible on narrow, title-heavy charts.
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.

@@ -651,6 +651,191 @@ describe('computeDimensions', () => {
     expect(dims.effectiveAxisGap).toBe(lightTheme.fonts.sizes.axisTick + INLINE_TICK_OVERHANG_PAD);
   });
 
+  // A chrome block that eats too much of a fixed-height plot budget trips the
+  // guardrail even when the chart area still clears the min-dimension floor.
+  // 300x360 is tall enough that a no-chrome layout would leave ~274x238 of
+  // plot (well above the 60x40 min), so the width/height triggers don't fire.
+  // The long title/subtitle push pre-strip chrome past 40% of the 360 budget,
+  // which is what actually flips full -> compact here.
+  const plotEatingChrome = {
+    title: {
+      text: 'A fairly long chart title that wraps across several lines in a narrow container to consume vertical chrome space',
+    },
+    subtitle: {
+      text: 'A supporting subtitle line that also wraps and adds even more chrome height in a narrow layout',
+    },
+  };
+
+  it('trips the guardrail when chrome exceeds the plot-share cap (subtract mode)', () => {
+    const spec: NormalizedChartSpec = { ...baseSpec, chrome: plotEatingChrome };
+    const dims = computeDimensions(spec, { width: 300, height: 360 }, emptyLegend, lightTheme);
+
+    // Chrome ate too much of the fixed-height budget: compact chrome drops the
+    // subtitle and the strip flag is set for the tick-regeneration gate.
+    expect(dims.chrome.subtitle).toBeUndefined();
+    expect(dims.chromeStripped).toBe(true);
+  });
+
+  it('trips the guardrail at a normal height class, not just short containers', () => {
+    // 380px height is a `normal` height class (> 350), so the responsive
+    // strategy leaves chromeMode `full` on its own. The subtitle drop here comes
+    // from the plot-share guardrail (chrome > 40% of the budget), proving the new
+    // trigger is not merely piggybacking on the short-height compact path.
+    const spec: NormalizedChartSpec = { ...baseSpec, chrome: plotEatingChrome };
+    const dims = computeDimensions(spec, { width: 300, height: 380 }, emptyLegend, lightTheme);
+
+    expect(dims.chromeStripped).toBe(true);
+    expect(dims.chrome.subtitle).toBeUndefined();
+  });
+
+  it('leaves normal chrome intact in subtract mode (guardrail does not over-fire)', () => {
+    // A short, single-line title well under 40% of the budget must NOT trip the
+    // guardrail: the default path stays byte-identical for the common case.
+    const spec: NormalizedChartSpec = {
+      ...baseSpec,
+      chrome: { title: { text: 'Short title' } },
+    };
+    const dims = computeDimensions(spec, { width: 600, height: 400 }, emptyLegend, lightTheme);
+
+    expect(dims.chromeStripped).toBeFalsy();
+    expect(dims.chrome.title).toBeDefined();
+  });
+
+  it('does not trip the plot-share guardrail in grow mode', () => {
+    // Same spec, but grow mode gives the plot its full height budget, so the
+    // plot-share check is gated off and chrome is preserved intact.
+    const spec: NormalizedChartSpec = {
+      ...baseSpec,
+      chrome: plotEatingChrome,
+      chromeLayout: 'grow',
+    };
+    const dims = computeDimensions(spec, { width: 300, height: 360 }, emptyLegend, lightTheme);
+
+    expect(dims.chrome.subtitle).toBeDefined();
+    expect(dims.chromeStripped).toBeFalsy();
+  });
+
+  it('grows the output SVG height in grow mode through the full compileChart pipeline', () => {
+    // End-to-end guard: computeDimensions unit tests inject chromeLayout onto a
+    // NormalizedChartSpec, which the real normalize step does not produce. This
+    // test drives the actual pipeline (normalize -> layout -> output) so a
+    // dropped chromeLayout field or an ungrown output dimension is caught.
+    const spec = {
+      mark: 'bar' as const,
+      data: [
+        { r: 'A', p: 16 },
+        { r: 'B', p: 41 },
+        { r: 'C', p: 73 },
+        { r: 'D', p: 84 },
+        { r: 'F', p: 90 },
+      ],
+      encoding: {
+        x: { field: 'r', type: 'nominal' as const },
+        y: { field: 'p', type: 'quantitative' as const },
+      },
+      chrome: {
+        title:
+          'A long headline that wraps to several lines on a narrow phone viewport and would otherwise compress the plot',
+        subtitle: 'A supporting subtitle line that also wraps in the narrow layout here',
+      },
+    };
+    const opts = { width: 340, height: 500 };
+
+    const subtract = compileChart(spec, opts);
+    const growSpec = compileChart({ ...spec, chromeLayout: 'grow' as const }, opts);
+    const growOption = compileChart(spec, { ...opts, chromeLayout: 'grow' as const });
+
+    // Default and explicit subtract leave the SVG at the requested height.
+    expect(subtract.dimensions.height).toBe(500);
+    // Spec-level grow grows the SVG past the budget by the chrome height.
+    expect(growSpec.dimensions.height).toBeGreaterThan(subtract.dimensions.height);
+    // Option-level grow reaches the same height (both surfaces work).
+    expect(growOption.dimensions.height).toBe(growSpec.dimensions.height);
+  });
+
+  it('regenerates y-ticks against the post-strip plot when the guardrail fires (compileChart)', () => {
+    // A long title exceeds 40% of the 400px budget in a narrow container, so
+    // the guardrail strips chrome and the plot grows. The plan pinned y-ticks
+    // against the pre-strip (shorter) plot; dims.chromeStripped tells compile
+    // to drop them so computeAxes regenerates against the final chartArea.
+    const spec = {
+      mark: 'line' as const,
+      data: [
+        { date: '2020-01-01', value: 10 },
+        { date: '2020-06-01', value: 55 },
+        { date: '2021-01-01', value: 40 },
+        { date: '2021-06-01', value: 90 },
+        { date: '2022-01-01', value: 25 },
+      ],
+      encoding: {
+        x: { field: 'date', type: 'temporal' as const },
+        y: { field: 'value', type: 'quantitative' as const },
+      },
+      chrome: {
+        title:
+          'A very long chart title that will wrap across several lines in a narrow container and eat well over forty percent of the plot budget forcing the guardrail',
+        subtitle:
+          'A supporting subtitle that also occupies chrome vertical space in the narrow layout',
+      },
+    };
+    const layout = compileChart(spec, { width: 320, height: 400 });
+
+    // Guardrail fired: compact chrome dropped the subtitle.
+    expect(layout.chrome.subtitle).toBeUndefined();
+    // Y-ticks were regenerated for the final (taller) plot rather than frozen
+    // at a degenerate min/max pair. A ~100px plot warrants several gridlines.
+    expect(layout.axes.y?.ticks.length).toBeGreaterThanOrEqual(3);
+    expect(layout.axes.y?.gridlines.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('carries maxLines to the compiled title and bounds reserved chrome height (compileChart)', () => {
+    // Integration guard: chrome.title.style.maxLines must survive normalize ->
+    // layout and land on the resolved element the renderer reads, and the
+    // reserved chrome height must reflect the cap (fewer reserved lines -> a
+    // taller plot than the same title uncapped).
+    const longTitle =
+      'A very long headline that would wrap to many lines on a narrow phone viewport indeed for sure now here we go';
+    const opts = { width: 320, height: 500 };
+    const capped = compileChart(
+      {
+        mark: 'bar' as const,
+        data: [
+          { r: 'A', p: 16 },
+          { r: 'B', p: 41 },
+          { r: 'C', p: 73 },
+        ],
+        encoding: {
+          x: { field: 'r', type: 'nominal' as const },
+          y: { field: 'p', type: 'quantitative' as const },
+        },
+        chrome: { title: { text: longTitle, style: { maxLines: 2 } } },
+      },
+      opts,
+    );
+    const uncapped = compileChart(
+      {
+        mark: 'bar' as const,
+        data: [
+          { r: 'A', p: 16 },
+          { r: 'B', p: 41 },
+          { r: 'C', p: 73 },
+        ],
+        encoding: {
+          x: { field: 'r', type: 'nominal' as const },
+          y: { field: 'p', type: 'quantitative' as const },
+        },
+        chrome: { title: { text: longTitle } },
+      },
+      opts,
+    );
+
+    // The cap reaches the resolved element the renderer truncates against.
+    expect(capped.chrome.title?.maxLines).toBe(2);
+    // Bounding the title to 2 lines reserves less top space, so the plot is
+    // taller than the same title left to wrap freely.
+    expect(capped.area.height).toBeGreaterThan(uncapped.area.height);
+  });
+
   it('tightens legend gap on narrow viewports', () => {
     const wideDims = computeDimensions(
       baseSpec,
@@ -914,5 +1099,56 @@ describe('bottom legend placement (defect-3 regression)', () => {
       const halfGlyph = Math.ceil(layout.theme.fonts.sizes.body / 2);
       expect(title!.x - halfGlyph).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('computeDimensions chromeLayout: grow', () => {
+  const chromeSpec: NormalizedChartSpec = {
+    ...baseSpec,
+    chrome: {
+      title: { text: 'Test Chart' },
+      subtitle: { text: 'A subtitle that adds chrome height' },
+    },
+  };
+  const size = { width: 600, height: 400 } as const;
+
+  it('grows the plot area and SVG by the chrome height vs subtract', () => {
+    const subtractDims = computeDimensions(
+      { ...chromeSpec, chromeLayout: 'subtract' },
+      size,
+      emptyLegend,
+      lightTheme,
+    );
+    const growDims = computeDimensions(
+      { ...chromeSpec, chromeLayout: 'grow' },
+      size,
+      emptyLegend,
+      lightTheme,
+    );
+
+    const chromeHeight = subtractDims.chrome.topHeight + subtractDims.chrome.bottomHeight;
+    expect(chromeHeight).toBeGreaterThan(0);
+
+    // Plot grows by the chrome height (never asserts chartArea === height).
+    expect(growDims.chartArea.height).toBeGreaterThan(subtractDims.chartArea.height);
+    expect(growDims.chartArea.height).toBeCloseTo(subtractDims.chartArea.height + chromeHeight, 0);
+
+    // The final SVG total grows by the chrome height; subtract stays at height.
+    expect(subtractDims.total.height).toBe(size.height);
+    expect(growDims.total.height).toBeCloseTo(size.height + chromeHeight, 0);
+  });
+
+  it('defaults to subtract when chromeLayout is omitted', () => {
+    const defaultDims = computeDimensions(chromeSpec, size, emptyLegend, lightTheme);
+    const subtractDims = computeDimensions(
+      { ...chromeSpec, chromeLayout: 'subtract' },
+      size,
+      emptyLegend,
+      lightTheme,
+    );
+
+    expect(defaultDims.chartArea.height).toBe(subtractDims.chartArea.height);
+    expect(defaultDims.total.height).toBe(subtractDims.total.height);
+    expect(defaultDims.total.height).toBe(size.height);
   });
 });

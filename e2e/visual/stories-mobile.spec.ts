@@ -26,6 +26,11 @@ const stories = [
   // Auto-height container (bare .story-chart): the only visual coverage for
   // the auto-height growth contract — 400px viz budget + chrome overheads.
   { name: 'mr-auto-height-chrome-growth', slug: 'testing--mobile-regression--auto-height-chrome-growth' },
+  // chromeLayout: 'grow' — fixed 500px plot budget, SVG grows by chrome height
+  // so a 4-line title doesn't compress the plot.
+  { name: 'mr-chrome-layout-grow', slug: 'testing--mobile-regression--chrome-layout-grow' },
+  // maxLines — the same runaway title capped at 2 lines with an ellipsis.
+  { name: 'mr-chrome-max-lines', slug: 'testing--mobile-regression--chrome-max-lines' },
   { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
   { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
   { name: 'stacked-column', slug: 'testing--fixtures--energy-mix' },

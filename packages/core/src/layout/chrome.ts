@@ -93,18 +93,20 @@ function estimateLineCount(
   style: TextStyle,
   maxWidth: number,
   measureText?: MeasureTextFn,
+  maxLines?: number,
 ): number {
   if (maxWidth <= 0) return 1;
 
   // Split on explicit newlines first, then estimate wrapping per segment
   const segments = text.split('\n');
   if (segments.length > 1) {
-    return segments.reduce((total, segment) => {
+    const count = segments.reduce((total, segment) => {
       return (
         total +
         (segment.length === 0 ? 1 : estimateLineCount(segment, style, maxWidth, measureText))
       );
     }, 0);
+    return maxLines != null ? Math.min(count, maxLines) : count;
   }
 
   // Use real text measurement when available, fall back to heuristic
@@ -127,7 +129,7 @@ function estimateLineCount(
       }
     }
 
-    return lines;
+    return maxLines != null ? Math.min(lines, maxLines) : lines;
   }
 
   const charWidth = estimateCharWidth(style.fontSize, style.fontWeight);
@@ -149,7 +151,7 @@ function estimateLineCount(
     }
   }
 
-  return lines;
+  return maxLines != null ? Math.min(lines, maxLines) : lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,12 +241,14 @@ export function computeChrome(
       width,
       eyebrowNorm.style,
     );
-    const lineCount = estimateLineCount(eyebrowNorm.text, style, maxWidth, measureText);
+    const maxLines = eyebrowNorm.style?.maxLines;
+    const lineCount = estimateLineCount(eyebrowNorm.text, style, maxWidth, measureText, maxLines);
     const element: ResolvedChromeElement = {
       text: eyebrowNorm.text,
       x: pad + (eyebrowNorm.offset?.dx ?? 0),
       y: topY + (eyebrowNorm.offset?.dy ?? 0),
       maxWidth,
+      ...(maxLines != null ? { maxLines } : {}),
       style,
     };
     topElements.eyebrow = element;
@@ -261,12 +265,14 @@ export function computeChrome(
       width,
       titleNorm.style,
     );
-    const lineCount = estimateLineCount(titleNorm.text, style, maxWidth, measureText);
+    const maxLines = titleNorm.style?.maxLines;
+    const lineCount = estimateLineCount(titleNorm.text, style, maxWidth, measureText, maxLines);
     const element: ResolvedChromeElement = {
       text: titleNorm.text,
       x: pad + (titleNorm.offset?.dx ?? 0),
       y: topY + (titleNorm.offset?.dy ?? 0),
       maxWidth,
+      ...(maxLines != null ? { maxLines } : {}),
       style,
     };
     topElements.title = element;
@@ -283,12 +289,14 @@ export function computeChrome(
       width,
       subtitleNorm.style,
     );
-    const lineCount = estimateLineCount(subtitleNorm.text, style, maxWidth, measureText);
+    const maxLines = subtitleNorm.style?.maxLines;
+    const lineCount = estimateLineCount(subtitleNorm.text, style, maxWidth, measureText, maxLines);
     const element: ResolvedChromeElement = {
       text: subtitleNorm.text,
       x: pad + (subtitleNorm.offset?.dx ?? 0),
       y: topY + (subtitleNorm.offset?.dy ?? 0),
       maxWidth,
+      ...(maxLines != null ? { maxLines } : {}),
       style,
     };
     topElements.subtitle = element;
@@ -381,7 +389,14 @@ export function computeChrome(
         width,
         item.norm.style,
       );
-      const lineCount = estimateLineCount(item.norm.text, style, bottomMaxWidth, measureText);
+      const maxLines = item.norm.style?.maxLines;
+      const lineCount = estimateLineCount(
+        item.norm.text,
+        style,
+        bottomMaxWidth,
+        measureText,
+        maxLines,
+      );
       const height = estimateTextHeight(style.fontSize, lineCount, style.lineHeight);
 
       // y positions will be computed relative to the bottom of the
@@ -391,6 +406,7 @@ export function computeChrome(
         x: pad + (item.norm.offset?.dx ?? 0),
         y: bottomHeight + (item.norm.offset?.dy ?? 0), // offset from where bottom chrome starts
         maxWidth: bottomMaxWidth,
+        ...(maxLines != null ? { maxLines } : {}),
         style,
       };
 

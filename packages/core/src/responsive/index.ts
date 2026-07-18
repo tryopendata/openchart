@@ -46,6 +46,7 @@ export {
   TOP_PAD_EXTRA_NARROW,
   TOP_PAD_NARROW_MAX,
   truncateRotatedLabel,
+  truncateToWidth,
   X_AXIS_BAND_HEIGHT,
   X_AXIS_ROTATED_EXTENT_CAP,
   X_AXIS_TITLE_BAND,

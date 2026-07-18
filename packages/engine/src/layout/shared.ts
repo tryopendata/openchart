@@ -1,3 +1,5 @@
+import type { CompileOptions } from '@opendata-ai/openchart-core';
+
 import type { NormalizedChrome } from '../compiler/types';
 
 /** Convert NormalizedChrome back to a Chrome-compatible shape for computeChrome. */
@@ -42,3 +44,27 @@ export function bottomMargin(bottomHeight: number, padding: number, xAxisHeight:
  * topmost tick has clearance from chrome.
  */
 export const INLINE_TICK_OVERHANG_PAD = 6;
+
+/**
+ * Resolve the effective chrome-layout mode for a spec.
+ *
+ * `'subtract'` (default): chrome occupies part of the height budget, shrinking
+ * the plot. `'grow'`: the plot keeps the full height budget and the final SVG
+ * grows by the chrome height.
+ *
+ * Spec-level `chromeLayout` wins over the compile-option default. Faceted specs
+ * never grow in v1: faceting already grows the SVG for short panels, and
+ * composing both growth mechanisms is out of scope, so faceted specs are pinned
+ * to `'subtract'`.
+ */
+export function resolveChromeLayout(
+  spec: { chromeLayout?: 'subtract' | 'grow'; encoding?: unknown } | undefined,
+  options: Pick<CompileOptions, 'chromeLayout'> | undefined,
+): 'subtract' | 'grow' {
+  const encoding = spec?.encoding as
+    | { facet?: unknown; row?: unknown; column?: unknown }
+    | undefined;
+  const isFaceted = !!(encoding?.facet || encoding?.row || encoding?.column);
+  if (isFaceted) return 'subtract';
+  return spec?.chromeLayout ?? options?.chromeLayout ?? 'subtract';
+}

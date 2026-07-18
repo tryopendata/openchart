@@ -67,6 +67,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `data`        | `DataRow[]`    | (required)  | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty.               |
 | `encoding`    | `Encoding`     | (required)  | Maps data fields to visual channels. See [Encoding](#encoding).                               |
 | `chrome`      | `Chrome`       | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome).               |
+| `chromeLayout`| `'subtract' \| 'grow'` | `'subtract'` | How chrome text interacts with the container height budget. See [Chrome layout](#chrome-layout). |
 | `annotations` | `Annotation[]` | `undefined` | Text callouts, highlighted ranges, reference lines. See [Annotations](#annotations).          |
 | `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](#labels).                                           |
 | `responsive`  | `boolean`      | `true`      | Whether the chart adapts to container width via ResizeObserver.                               |
@@ -429,6 +430,7 @@ interface ChromeTextStyle {
   fontWeight?: number; // 400 = normal, 600 = semibold, 700 = bold
   fontFamily?: string; // CSS font family
   color?: string; // CSS color string
+  maxLines?: number; // Cap on wrapped line count
 }
 ```
 
@@ -443,6 +445,41 @@ chrome: {
 ```
 
 Only the style properties you provide are overridden. Omitted properties use the theme defaults.
+
+### maxLines
+
+Caps how many lines the text wraps to. Extra lines are dropped and the last kept line is truncated with an ellipsis. This bounds the chrome element's contribution to layout height at any container width, which is useful when a long title would otherwise wrap to many lines on a narrow viewport. It applies whether the font size comes from a theme default or an explicit `fontSize` override.
+
+```ts
+chrome: {
+  title: { text: 'A long headline that would wrap on a phone', style: { maxLines: 2 } },
+}
+```
+
+`maxLines` caps height only. A single unbreakable word wider than the available width still overflows horizontally, same as without it.
+
+### Chrome layout
+
+The top-level `chromeLayout` property controls how chrome text height interacts with the container height budget.
+
+| Value        | Behavior                                                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `'subtract'` | Default. The container height is fixed and chrome text (title, subtitle, source) is subtracted from it, shrinking the plot. Historical behavior. |
+| `'grow'`     | The container height is treated as the plot budget. The rendered SVG grows taller by the measured chrome height, so the plot keeps its full budget (minus axis and padding overhead) no matter how many lines the title wraps to. |
+
+Reach for `'grow'` on fixed-height article or blog charts where a long title on a narrow phone must not compress the plot.
+
+```ts
+{
+  type: 'line',
+  data: [...],
+  encoding: {...},
+  chromeLayout: 'grow',
+  chrome: { title: 'A long headline that may wrap to several lines on a phone' },
+}
+```
+
+`chromeLayout: 'grow'` is a no-op for faceted (small-multiples) specs in this version and falls back to `'subtract'`. It is also honored by bar list, sankey, map, and tilemap specs via the spec or compile option.
 
 ---
 

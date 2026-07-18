@@ -144,6 +144,43 @@ describe('computeChrome', () => {
     expect(narrow.subtitle!.y).toBeGreaterThan(wide.subtitle!.y);
   });
 
+  it('caps reserved height when title has a maxLines bound', () => {
+    const longTitle =
+      'Global Economic Recovery Trends Show Surprising Resilience Across Major Markets';
+
+    // Unbounded: at narrow width the title wraps to many lines.
+    const unbounded = computeChrome({ title: longTitle }, theme, 300);
+    // Bounded to 2 lines.
+    const bounded = computeChrome(
+      { title: { text: longTitle, style: { maxLines: 2 } } },
+      theme,
+      300,
+    );
+
+    // The 2-line cap must reserve strictly less top height than the unbounded
+    // (many-line) title at the same width.
+    expect(bounded.topHeight).toBeLessThan(unbounded.topHeight);
+
+    // And it should match the height reserved for a naturally-2-line title.
+    const twoLineRef = computeChrome({ title: 'Line one\nLine two' }, theme, 300);
+    expect(bounded.topHeight).toBeCloseTo(twoLineRef.topHeight, 5);
+  });
+
+  it('does not truncate when maxLines exceeds the natural line count', () => {
+    const longTitle =
+      'Global Economic Recovery Trends Show Surprising Resilience Across Major Markets';
+
+    const unbounded = computeChrome({ title: longTitle }, theme, 300);
+    const generous = computeChrome(
+      { title: { text: longTitle, style: { maxLines: 20 } } },
+      theme,
+      300,
+    );
+
+    // maxLines larger than the natural wrap count leaves the height unchanged.
+    expect(generous.topHeight).toBe(unbounded.topHeight);
+  });
+
   it('reserves extra height when subtitle contains newline characters', () => {
     const chrome: Chrome = { title: 'Title', subtitle: 'Line one\nLine two' };
     const withNewline = computeChrome(chrome, theme, 600);

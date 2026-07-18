@@ -47,7 +47,13 @@ import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
 import { buildContinuousTicks, scaleSupportsTickCount, targetTickCount } from './axes/ticks';
 import { computeScales, estimateBandStep, estimateBandwidth } from './scales';
-import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
+import {
+  bottomMargin,
+  chromeToInput,
+  INLINE_TICK_OVERHANG_PAD,
+  resolveChromeLayout,
+  scalePadding,
+} from './shared';
 
 // ---------------------------------------------------------------------------
 // MeasureFn -- simplified width-only text measurement
@@ -457,7 +463,14 @@ export function resolveLayoutPlan(
     topMargin += effectiveTopAxisGap;
 
     const bMargin = bottomMargin(chrome.bottomHeight, padding, xAxisExtent);
-    const chartHeight = Math.max(0, height - topMargin - bMargin);
+    // chromeLayout 'grow': size the plan's chart height against the same grown
+    // budget the final layout uses (dimensions.ts effectiveHeight), so legend /
+    // annotation / tick planning matches the plot the renderer draws. In the
+    // default 'subtract' mode effectiveHeight === height (no-op).
+    const chromeLayout = resolveChromeLayout(renderSpec, options);
+    const effectiveHeight =
+      chromeLayout === 'grow' ? height + chrome.topHeight + chrome.bottomHeight : height;
+    const chartHeight = Math.max(0, effectiveHeight - topMargin - bMargin);
 
     // Provisional area
     const rightMargin = hPad + (isRadial ? hPad : axisMargin);

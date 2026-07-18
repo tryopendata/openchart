@@ -401,3 +401,70 @@ export const AutoHeightChromeGrowth = () => (
     <Chart spec={autoHeightChromeGrowthSpec} />
   </div>
 );
+
+// chromeLayout: 'grow'. Same long 4-line title on a phone, but a fixed 500px
+// container. In the default 'subtract' mode the wrapped title eats the plot;
+// in 'grow' mode the 500px is the PLOT budget and the SVG grows taller by the
+// chrome height, so the plot area keeps its full height regardless of how many
+// lines the title wraps to. Screenshot lives in stories-mobile.spec.ts.
+const chromeGrowSpec: ChartSpec = {
+  mark: { type: 'bar', cornerRadius: 3 },
+  data: [
+    { rating: 'A', pct: 16.1 },
+    { rating: 'B', pct: 41.5 },
+    { rating: 'C', pct: 73.5 },
+    { rating: 'D', pct: 84.0 },
+    { rating: 'F', pct: 90.7 },
+  ],
+  encoding: {
+    x: { field: 'rating', type: 'nominal', axis: { title: undefined } },
+    y: {
+      field: 'pct',
+      type: 'quantitative',
+      axis: { title: 'Avg % economically disadvantaged', grid: true },
+      scale: { domain: [0, 100], nice: false },
+    },
+    color: { field: 'rating', type: 'nominal', legend: null },
+  },
+  legend: { show: false },
+  labels: { density: 'all', format: '.1f', suffix: '%' },
+  chromeLayout: 'grow',
+  chrome: {
+    title:
+      'Inside Austin ISD, campus accountability ratings track student poverty with near-mechanical precision',
+    subtitle:
+      'Average % economically disadvantaged by campus accountability rating, 2024-25 school year',
+    source: 'Source: TEA Accountability Summary, campus-level data',
+  },
+};
+
+export const ChromeLayoutGrow = () => (
+  <div className="story-chart story-h-500">
+    <Chart spec={chromeGrowSpec} />
+  </div>
+);
+
+// maxLines: 2 on the title. The same runaway title is capped at two lines with
+// an ellipsis so chrome height stays bounded at any width. The plot keeps a
+// predictable size without needing 'grow'. Screenshot in stories-mobile.spec.ts.
+const chromeMaxLinesSpec: ChartSpec = {
+  ...chromeGrowSpec,
+  chromeLayout: 'subtract',
+  chrome: {
+    title: {
+      text: 'Inside Austin ISD, campus accountability ratings track student poverty with near-mechanical precision',
+      style: { maxLines: 2 },
+    },
+    subtitle: {
+      text: 'Average % economically disadvantaged by campus accountability rating, 2024-25 school year',
+      style: { maxLines: 1 },
+    },
+    source: 'Source: TEA Accountability Summary, campus-level data',
+  },
+};
+
+export const ChromeMaxLines = () => (
+  <div className="story-chart story-h-500">
+    <Chart spec={chromeMaxLinesSpec} />
+  </div>
+);

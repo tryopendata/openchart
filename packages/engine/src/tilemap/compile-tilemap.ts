@@ -48,6 +48,7 @@ import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
+import { resolveChromeLayout } from '../layout/shared';
 import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
 import type { NormalizedTileMapSpec } from './types';
 
@@ -63,6 +64,23 @@ const LEGEND_ENTRY_GAP = 16;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * In chromeLayout 'grow' mode, ensure the content-driven SVG height grows by at
+ * least the full chrome height. The tile grid is width-constrained, so growing
+ * the plot area alone may not lengthen the SVG; without this floor a grow-mode
+ * tilemap on a narrow container would render identically to subtract mode. In
+ * 'subtract' mode the content height is returned unchanged.
+ */
+function growContentHeight(
+  contentHeight: number,
+  chromeLayout: 'subtract' | 'grow',
+  budgetHeight: number,
+  chrome: { topHeight: number; bottomHeight: number },
+): number {
+  if (chromeLayout !== 'grow') return contentHeight;
+  return Math.max(contentHeight, budgetHeight + chrome.topHeight + chrome.bottomHeight);
 }
 
 // ---------------------------------------------------------------------------
@@ -144,11 +162,25 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     getBreakpoint(options.width) === 'compact'
       ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
       : theme.spacing.padding;
+  // In 'grow' mode the plot keeps the full height budget (chrome is not
+  // subtracted). The returned SVG height is already content-driven (contentHeight
+  // sums chrome.bottomHeight + tile content + padding below), so it grows
+  // naturally when the plot area is taller. Default 'subtract' mode is unchanged.
+  // Read chromeLayout from the raw spec: normalizeTileMapSpec does not carry it
+  // through, and TileMapSpec has no chromeLayout field, so the option default is
+  // the primary control (a user-authored spec.chromeLayout still wins here).
+  const chromeLayout = resolveChromeLayout(
+    spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
+    options,
+  );
   const fullArea = {
     x: padding,
     y: padding + chrome.topHeight,
     width: options.width - padding * 2,
-    height: options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
+    height:
+      chromeLayout === 'grow'
+        ? options.height - padding * 2
+        : options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
   };
 
   // Guard against negative dimensions
@@ -161,9 +193,27 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     tilemapSpec.encoding.color !== undefined || tilemapSpec.colors !== undefined;
 
   if (isCategorical) {
-    return compileCategorical(tilemapSpec, options, theme, chrome, fullArea, isDarkMode, watermark);
+    return compileCategorical(
+      tilemapSpec,
+      options,
+      theme,
+      chrome,
+      fullArea,
+      isDarkMode,
+      watermark,
+      chromeLayout,
+    );
   }
-  return compileQuantitative(tilemapSpec, options, theme, chrome, fullArea, isDarkMode, watermark);
+  return compileQuantitative(
+    tilemapSpec,
+    options,
+    theme,
+    chrome,
+    fullArea,
+    isDarkMode,
+    watermark,
+    chromeLayout,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +228,7 @@ function compileQuantitative(
   fullArea: { x: number; y: number; width: number; height: number },
   isDarkMode: boolean | undefined,
   watermark: boolean,
+  chromeLayout: 'subtract' | 'grow',
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const valueField = tilemapSpec.encoding.value.field;
@@ -301,13 +352,17 @@ function compileQuantitative(
   // fullArea.x is the (possibly compact-reduced) padding chosen in compileTileMap;
   // reuse it so contentHeight matches the drawing area exactly.
   const padding = fullArea.x;
-  const contentHeight =
+  const contentHeight = growContentHeight(
     tileGridOffsetY +
-    tilePositions.gridHeight +
-    legendGap +
-    legendTotalHeight +
-    chrome.bottomHeight +
-    padding;
+      tilePositions.gridHeight +
+      legendGap +
+      legendTotalHeight +
+      chrome.bottomHeight +
+      padding,
+    chromeLayout,
+    options.height,
+    chrome,
+  );
 
   return {
     area: fullArea,
@@ -340,6 +395,7 @@ function compileCategorical(
   fullArea: { x: number; y: number; width: number; height: number },
   isDarkMode: boolean | undefined,
   watermark: boolean,
+  chromeLayout: 'subtract' | 'grow',
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const colorField = tilemapSpec.encoding.color?.field ?? tilemapSpec.encoding.value.field;
@@ -495,13 +551,17 @@ function compileCategorical(
   // fullArea.x is the (possibly compact-reduced) padding chosen in compileTileMap;
   // reuse it so contentHeight matches the drawing area exactly.
   const padding = fullArea.x;
-  const contentHeight =
+  const contentHeight = growContentHeight(
     tileGridOffsetY +
-    tilePositions.gridHeight +
-    legendGap +
-    legendTotalHeight +
-    chrome.bottomHeight +
-    padding;
+      tilePositions.gridHeight +
+      legendGap +
+      legendTotalHeight +
+      chrome.bottomHeight +
+      padding,
+    chromeLayout,
+    options.height,
+    chrome,
+  );
 
   return {
     area: fullArea,

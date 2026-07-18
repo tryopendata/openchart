@@ -454,5 +454,20 @@ describe('compileSankey', () => {
       expect(result.dimensions.width).toBe(600);
       expect(result.dimensions.height).toBe(800);
     });
+
+    it('chromeLayout: grow returns a taller SVG than subtract for the same spec', () => {
+      const chromeSpec = {
+        ...basicSpec,
+        chrome: { title: 'Flows', subtitle: 'Chrome adds height' },
+      };
+      const subtract = compileSankey({ ...chromeSpec, chromeLayout: 'subtract' }, defaultOptions);
+      const grow = compileSankey({ ...chromeSpec, chromeLayout: 'grow' }, defaultOptions);
+
+      expect(subtract.dimensions.height).toBe(defaultOptions.height);
+      expect(grow.dimensions.height).toBeGreaterThan(subtract.dimensions.height);
+      // Default (omitted) stays subtract.
+      const omitted = compileSankey(chromeSpec, defaultOptions);
+      expect(omitted.dimensions.height).toBe(subtract.dimensions.height);
+    });
   });
 });

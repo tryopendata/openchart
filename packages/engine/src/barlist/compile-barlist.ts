@@ -32,6 +32,7 @@ import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
+import { resolveChromeLayout } from '../layout/shared';
 import type { NormalizedBarListSpec } from './types';
 
 // ---------------------------------------------------------------------------
@@ -105,17 +106,33 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     watermark,
   );
 
-  // Compute drawing area
+  // Compute drawing area. In 'grow' mode the plot keeps the full height budget
+  // (chrome is not subtracted) and the returned SVG height grows by the chrome
+  // height. In the default 'subtract' mode both are unchanged.
   const padding = theme.spacing.padding;
+  // Read chromeLayout from the raw spec: normalizeBarListSpec does not carry it
+  // through, and BarListSpec has no chromeLayout field, so the option default is
+  // the primary control (a user-authored spec.chromeLayout still wins here).
+  const chromeLayout = resolveChromeLayout(
+    spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
+    options,
+  );
+  const grownHeight =
+    chromeLayout === 'grow'
+      ? options.height + chrome.topHeight + chrome.bottomHeight
+      : options.height;
   const fullArea = {
     x: padding,
     y: padding + chrome.topHeight,
     width: options.width - padding * 2,
-    height: options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
+    height:
+      chromeLayout === 'grow'
+        ? options.height - padding * 2
+        : options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
   };
 
   if (fullArea.width <= 0 || fullArea.height <= 0) {
-    return emptyLayout(chrome, theme, options, watermark);
+    return emptyLayout(chrome, theme, { ...options, height: grownHeight }, watermark);
   }
 
   // Extract data
@@ -351,7 +368,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     a11y,
     theme,
     width: options.width,
-    height: options.height,
+    height: grownHeight,
     animation: resolvedAnimation,
     watermark,
     measureText,

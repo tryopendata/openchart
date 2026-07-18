@@ -800,6 +800,14 @@ export interface ChromeTextStyle {
   fontFamily?: string;
   /** Text color (CSS color string). */
   color?: string;
+  /**
+   * Maximum number of lines this chrome text may wrap to. Additional lines are
+   * dropped and the last kept line is truncated with an ellipsis. Bounds the
+   * chrome's contribution to layout height at any container width. Applies
+   * whether the font size comes from the theme default or an explicit override.
+   * Caps height only, not horizontal overflow of a single unbreakable word.
+   */
+  maxLines?: number;
 }
 
 /** A chrome text element with optional style overrides. */
@@ -1740,6 +1748,20 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   transform?: Transform[];
   /** Editorial chrome (title, subtitle, source, etc.). */
   chrome?: Chrome;
+  /**
+   * How chrome height interacts with the container height budget.
+   *
+   * - `'subtract'` (default): the container height is fixed and chrome text
+   *   (title/subtitle/source) is subtracted from it, shrinking the plot. This
+   *   is the historical behavior.
+   * - `'grow'`: the container height is treated as the *plot* budget, and the
+   *   rendered SVG grows taller by the measured chrome height. The plot keeps
+   *   its full budget (minus axis/padding overhead) regardless of how many
+   *   lines the title wraps to.
+   *
+   * `'grow'` is a no-op for faceted specs in this version.
+   */
+  chromeLayout?: 'subtract' | 'grow';
   /**
    * Top-level title sugar (Vega-Lite aligned). Expanded into `chrome.title`
    * (and `chrome.subtitle` for the object form). `chrome.title` wins when

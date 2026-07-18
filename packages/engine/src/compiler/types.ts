@@ -106,6 +106,13 @@ export interface NormalizedChartSpec {
   data: DataRow[];
   encoding: Encoding;
   chrome: NormalizedChrome;
+  /**
+   * How chrome height interacts with the height budget. `'grow'` treats the
+   * container height as the plot budget and grows the SVG by the chrome height;
+   * `'subtract'` (default) shrinks the plot to fit chrome. Carried through from
+   * the spec so the layout pipeline can honor it.
+   */
+  chromeLayout?: 'subtract' | 'grow';
   /** Optional KPI metric cells, passed through unchanged. */
   metrics?: import('@opendata-ai/openchart-core').Metric[];
   /**

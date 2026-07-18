@@ -38,6 +38,7 @@ import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { resolveChromeLayout } from '../layout/shared';
 import {
   CONTINUOUS_BAR_HEIGHT,
   CONTINUOUS_LABEL_GAP,
@@ -150,11 +151,25 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
     getBreakpoint(options.width) === 'compact'
       ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
       : theme.spacing.padding;
+  // In 'grow' mode the plot keeps the full height budget (chrome is not
+  // subtracted). The returned SVG height is already content-driven (it sums
+  // chrome.bottomHeight + content + padding below), so it grows naturally when
+  // the plot area is taller. In the default 'subtract' mode this is unchanged.
+  // Read chromeLayout from the raw spec: normalizeMapSpec does not carry it
+  // through, and MapSpec has no chromeLayout field, so the option default is the
+  // primary control (a user-authored spec.chromeLayout still wins here).
+  const chromeLayout = resolveChromeLayout(
+    spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
+    options,
+  );
   const fullArea = {
     x: padding,
     y: padding + chrome.topHeight,
     width: options.width - padding * 2,
-    height: options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
+    height:
+      chromeLayout === 'grow'
+        ? options.height - padding * 2
+        : options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
   };
 
   if (fullArea.width <= 0 || fullArea.height <= 0) {

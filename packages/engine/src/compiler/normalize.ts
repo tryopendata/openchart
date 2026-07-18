@@ -398,6 +398,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     data: spec.data,
     encoding,
     chrome: normalizeChrome(spec.chrome),
+    chromeLayout: spec.chromeLayout,
     metrics: spec.metrics,
     seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
     youDrawIt: normalizeYouDrawIt(spec),

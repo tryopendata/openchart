@@ -197,4 +197,18 @@ describe('compileBarList', () => {
     const layout = compileBarList(makeSpec(), BASE_OPTIONS);
     expect(layout.rows[0].aria.label).toContain('Alpha');
   });
+
+  it('chromeLayout: grow returns a taller SVG than subtract for the same spec', () => {
+    const chromeSpec = makeSpec({
+      chrome: { title: 'Bar list', subtitle: 'Chrome adds height' },
+    });
+    const subtract = compileBarList({ ...chromeSpec, chromeLayout: 'subtract' }, BASE_OPTIONS);
+    const grow = compileBarList({ ...chromeSpec, chromeLayout: 'grow' }, BASE_OPTIONS);
+
+    expect(subtract.height).toBe(BASE_OPTIONS.height);
+    expect(grow.height).toBeGreaterThan(subtract.height);
+    // Default (omitted) stays subtract.
+    const omitted = compileBarList(chromeSpec, BASE_OPTIONS);
+    expect(omitted.height).toBe(subtract.height);
+  });
 });

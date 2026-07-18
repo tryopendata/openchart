@@ -54,7 +54,13 @@ import { legendGap, TOP_LEGEND_GAP_ABOVE } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { computeMetricBar, type MetricFontSizes, metricBarHeight } from './metrics';
 import type { LayoutPlan } from './plan';
-import { bottomMargin, chromeToInput, INLINE_TICK_OVERHANG_PAD, scalePadding } from './shared';
+import {
+  bottomMargin,
+  chromeToInput,
+  INLINE_TICK_OVERHANG_PAD,
+  resolveChromeLayout,
+  scalePadding,
+} from './shared';
 
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
@@ -107,11 +113,21 @@ export interface LayoutDimensions {
    * instead of flush against `chartArea.y` (where inline y-tick labels draw).
    */
   effectiveAxisGap: number;
+  /**
+   * True when the chrome-strip guardrail fired and chrome was reduced from what
+   * the layout plan assumed. Signals that plan-precomputed y-ticks were sized
+   * against the pre-strip (shorter) plot and must be regenerated against the
+   * final chartArea.
+   */
+  chromeStripped?: boolean;
 }
 
 /** Minimum chart area dimensions before guardrails kick in. */
 const MIN_CHART_WIDTH = 60;
 const MIN_CHART_HEIGHT = 40;
+
+/** Chrome may not exceed this fraction of a fixed-height plot budget. */
+const PLOT_SHARE_MAX = 0.4;
 
 /** Input row height for the series-search band (matches the DOM input's CSS height). */
 const SERIES_SEARCH_INPUT_HEIGHT = 32;
@@ -244,12 +260,22 @@ export function computeDimensions(
       bottomLegendReservation,
     );
 
+  // chromeLayout 'grow': the plot keeps the full height budget and the SVG
+  // grows by the chrome height. effectiveHeight is the height the plot-area
+  // math derives from; the chrome.topHeight/bottomHeight terms baked into
+  // margins.top/bottom then cancel against this growth, so the plot keeps the
+  // non-chrome budget (padding/axis/etc). In the default 'subtract' mode
+  // effectiveHeight === height, keeping that path byte-identical.
+  const chromeLayout = resolveChromeLayout(spec, options);
+  const effectiveHeight =
+    chromeLayout === 'grow' ? height + chrome.topHeight + chrome.bottomHeight : height;
+
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
   // safety padding plus chrome (if user-explicit). Skip axis space, label
   // reservations, annotation reservations, and legend reservations unless the
   // user opted in to those individually.
   if (isSparkline) {
-    const total: Rect = { x: 0, y: 0, width, height };
+    const total: Rect = { x: 0, y: 0, width, height: effectiveHeight };
     const sparkPad = getSparklinePad(spec);
 
     // Axis space only when user explicitly set encoding.x/y.axis.
@@ -279,7 +305,7 @@ export function computeDimensions(
       x: margins.left,
       y: margins.top,
       width: Math.max(0, width - margins.left - margins.right),
-      height: Math.max(0, height - margins.top - margins.bottom),
+      height: Math.max(0, effectiveHeight - margins.top - margins.bottom),
     };
 
     return {
@@ -294,7 +320,7 @@ export function computeDimensions(
   }
 
   // Start with the total rect
-  const total: Rect = { x: 0, y: 0, width, height };
+  const total: Rect = { x: 0, y: 0, width, height: effectiveHeight };
 
   // Axisless charts (arc, waffle, calendar) don't have axes, so skip axis space
   const isRadial = isAxislessMark(spec.markType);
@@ -714,13 +740,18 @@ export function computeDimensions(
     x: margins.left,
     y: margins.top,
     width: Math.max(0, width - margins.left - margins.right),
-    height: Math.max(0, height - margins.top - margins.bottom),
+    height: Math.max(0, effectiveHeight - margins.top - margins.bottom),
   };
 
   // Guardrail: if chart area is too small, progressively strip chrome
   const minDims = getMinChartDims(spec.display);
+  // Chrome that eats too much of a fixed-height plot budget also trips the
+  // guardrail. Use the raw height budget (not effectiveHeight) as the
+  // denominator: in subtract mode they're equal, and this branch is gated off
+  // in grow mode where the plot keeps its full budget regardless.
+  const chromeEatsPlot = chromeLayout !== 'grow' && chrome.topHeight > height * PLOT_SHARE_MAX;
   if (
-    (chartArea.width < minDims.width || chartArea.height < minDims.height) &&
+    (chartArea.width < minDims.width || chartArea.height < minDims.height || chromeEatsPlot) &&
     chromeMode !== 'hidden'
   ) {
     // Try compact first, then hidden
@@ -761,7 +792,7 @@ export function computeDimensions(
         x: margins.left,
         y: margins.top,
         width: Math.max(0, width - margins.left - margins.right),
-        height: Math.max(0, height - margins.top - margins.bottom),
+        height: Math.max(0, effectiveHeight - margins.top - margins.bottom),
       };
 
       // Same chrome-anchored positioning as the primary path; see comment
@@ -789,7 +820,7 @@ export function computeDimensions(
         chartArea = {
           ...chartArea,
           y: margins.top,
-          height: Math.max(0, height - margins.top - margins.bottom),
+          height: Math.max(0, effectiveHeight - margins.top - margins.bottom),
         };
       }
       return {
@@ -808,6 +839,7 @@ export function computeDimensions(
           : undefined,
         xAxisHeight,
         effectiveAxisGap: fallbackEffectiveAxisGap,
+        chromeStripped: true,
       };
     }
   }
@@ -834,7 +866,7 @@ export function computeDimensions(
     chartArea = {
       ...chartArea,
       y: margins.top,
-      height: Math.max(0, height - margins.top - margins.bottom),
+      height: Math.max(0, effectiveHeight - margins.top - margins.bottom),
     };
   }
   return {

@@ -1163,4 +1163,41 @@ describe('compileMap', () => {
       expect(legend.bounds.y).toBeGreaterThan(layout.area.y);
     });
   });
+
+  describe('chromeLayout', () => {
+    const chromeMapSpec = {
+      type: 'map' as const,
+      geo: { features: MINI_TOPO, projection: 'mercator' as const },
+      data: [
+        { fips: '06', value: 10 },
+        { fips: '48', value: 20 },
+        { fips: '36', value: 30 },
+      ],
+      encoding: {
+        key: { field: 'fips', type: 'nominal' as const },
+        color: { field: 'value', type: 'quantitative' as const },
+      },
+      chrome: {
+        title:
+          'A long map headline that wraps to several lines on a narrow container and adds real chrome height above the map',
+        subtitle: 'A supporting subtitle that also occupies chrome vertical space here',
+      },
+    };
+    const narrowOptions = { width: 340, height: 500 };
+
+    it('grows the SVG by the chrome height in grow mode', () => {
+      const subtract = compileMap({ ...chromeMapSpec, chromeLayout: 'subtract' }, narrowOptions);
+      const grow = compileMap({ ...chromeMapSpec, chromeLayout: 'grow' }, narrowOptions);
+
+      const chromeHeight = subtract.chrome.topHeight + subtract.chrome.bottomHeight;
+      expect(chromeHeight).toBeGreaterThan(0);
+      expect(grow.height).toBe(subtract.height + chromeHeight);
+    });
+
+    it('defaults to subtract (no growth) when chromeLayout is omitted', () => {
+      const omitted = compileMap(chromeMapSpec, narrowOptions);
+      const explicit = compileMap({ ...chromeMapSpec, chromeLayout: 'subtract' }, narrowOptions);
+      expect(omitted.height).toBe(explicit.height);
+    });
+  });
 });

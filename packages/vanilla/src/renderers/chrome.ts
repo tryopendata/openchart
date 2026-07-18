@@ -12,6 +12,7 @@ import {
   FOOTNOTE_LINE_HEIGHT,
   footnoteBandHeight as footnoteBandHeightFor,
   textAscent,
+  truncateToWidth,
   wrapText,
 } from '@opendata-ai/openchart-core';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
@@ -63,8 +64,34 @@ export function renderChromeElement(
     measureText,
   );
 
-  if (lines.length === 1) {
+  // Cap wrapped output to maxLines, truncating the last kept line with an
+  // ellipsis so it fits maxWidth. Only when the natural wrap exceeds the cap.
+  let truncated = false;
+  if (element.maxLines != null && lines.length > element.maxLines) {
+    truncated = true;
+    lines.length = element.maxLines;
+    const lastIndex = element.maxLines - 1;
+    const measure = measureText
+      ? (text: string, fontSize: number, fontWeight?: number) =>
+          measureText(text, fontSize, fontWeight).width
+      : undefined;
+    // Content was dropped, so the last kept line always gets an ellipsis.
+    // Append it first, then shrink to fit maxWidth if the combined string
+    // overflows.
+    const withEllipsis = `${lines[lastIndex]}…`;
+    lines[lastIndex] = truncateToWidth(
+      withEllipsis,
+      element.maxWidth,
+      element.style.fontSize,
+      element.style.fontWeight,
+      measure,
+    );
+  }
+
+  if (lines.length === 1 && !truncated) {
     text.textContent = renderedText;
+  } else if (lines.length === 1) {
+    text.textContent = lines[0];
   } else {
     const lineHeight = element.style.fontSize * (element.style.lineHeight ?? 1.3);
     for (let i = 0; i < lines.length; i++) {

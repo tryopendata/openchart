@@ -88,6 +88,12 @@ export interface ResolvedChromeElement {
   y: number;
   /** Maximum width for line wrapping. */
   maxWidth: number;
+  /**
+   * Maximum wrapped lines. When set, the renderer caps the wrapped output to
+   * this many lines and truncates the last kept line with an ellipsis. The
+   * layout height reserved for this element already reflects the cap.
+   */
+  maxLines?: number;
   /** Computed text style. */
   style: TextStyle;
 }
@@ -1960,6 +1966,14 @@ export interface CompileOptions {
   width: number;
   /** Total available height in pixels. */
   height: number;
+  /**
+   * How chrome height interacts with the height budget. Mirrors the spec-level
+   * `chromeLayout`; the engine reads whichever is set (spec wins).
+   *
+   * - `'subtract'` (default): `height` is the fixed total; chrome shrinks the plot.
+   * - `'grow'`: `height` is the plot budget; the SVG grows by the chrome height.
+   */
+  chromeLayout?: 'subtract' | 'grow';
   /** Theme overrides. */
   theme?: import('./spec').ThemeConfig;
   /**

@@ -762,7 +762,11 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
         skipY,
         markType: chartSpec.markType,
         totalWidth: options.width,
-        precomputedYTicks: plan.yTickValues.length > 0 ? plan.yTickValues : undefined,
+        // If the guardrail stripped chrome, the plan's y-ticks were sized
+        // against the pre-strip (shorter) plot. Drop them so computeAxes
+        // regenerates against the final (taller) chartArea.
+        precomputedYTicks:
+          !dims.chromeStripped && plan.yTickValues.length > 0 ? plan.yTickValues : undefined,
       });
 
   // Intentional post-hoc mutation: axes must resolve before we know the x-axis extent.
@@ -959,7 +963,10 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     theme,
     dimensions: {
       width: options.width,
-      height: options.height,
+      // In chromeLayout 'grow' mode, computeDimensions grows total.height by the
+      // chrome height so the plot keeps its full budget. In the default
+      // 'subtract' mode total.height === options.height, so this is a no-op.
+      height: dims.total.height,
     },
     animation: resolvedAnimation,
     watermark,

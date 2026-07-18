@@ -264,11 +264,45 @@ export function maxRotatedLabelWidth(tickAngle: number, tickFontSize: number): n
 }
 
 /**
- * Truncate a rotated tick label with an ellipsis so it fits inside the capped
- * reservation. Returns the label unchanged when it already fits.
+ * Truncate a label with an ellipsis so it fits inside an explicit pixel budget.
+ * Returns the label unchanged when it already fits.
  *
  * Binary-search on character count against the real measure function, so it
  * respects proportional fonts rather than assuming a fixed character width.
+ */
+export function truncateToWidth(
+  label: string,
+  budget: number,
+  fontSize: number,
+  fontWeight: number,
+  measure: (text: string, fontSize: number, fontWeight?: number) => number = estimateTextWidth,
+): string {
+  if (!Number.isFinite(budget)) return label;
+  if (measure(label, fontSize, fontWeight) <= budget) return label;
+
+  const ELLIPSIS = '…';
+  // Nothing sensible fits: keep a single character + ellipsis rather than
+  // returning an empty label.
+  let lo = 0;
+  let hi = label.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const candidate = label.slice(0, mid) + ELLIPSIS;
+    if (measure(candidate, fontSize, fontWeight) <= budget) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return lo > 0 ? label.slice(0, lo).trimEnd() + ELLIPSIS : ELLIPSIS;
+}
+
+/**
+ * Truncate a rotated tick label with an ellipsis so it fits inside the capped
+ * reservation. Returns the label unchanged when it already fits.
+ *
+ * Delegates to `truncateToWidth` with the budget derived from the rotation
+ * geometry, so the binary-search stays in one place.
  */
 export function truncateRotatedLabel(
   label: string,
@@ -278,22 +312,5 @@ export function truncateRotatedLabel(
   measure: (text: string, fontSize: number, fontWeight?: number) => number = estimateTextWidth,
 ): string {
   const budget = maxRotatedLabelWidth(tickAngle, tickFontSize);
-  if (!Number.isFinite(budget)) return label;
-  if (measure(label, tickFontSize, tickFontWeight) <= budget) return label;
-
-  const ELLIPSIS = '…';
-  // Nothing sensible fits: keep a single character + ellipsis rather than
-  // returning an empty tick.
-  let lo = 0;
-  let hi = label.length;
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2);
-    const candidate = label.slice(0, mid) + ELLIPSIS;
-    if (measure(candidate, tickFontSize, tickFontWeight) <= budget) {
-      lo = mid;
-    } else {
-      hi = mid - 1;
-    }
-  }
-  return lo > 0 ? label.slice(0, lo).trimEnd() + ELLIPSIS : ELLIPSIS;
+  return truncateToWidth(label, budget, tickFontSize, tickFontWeight, measure);
 }

@@ -194,6 +194,9 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - `computeChrome()` in `packages/core/src/layout/chrome.ts` reserves vertical space and computes element positions.
 - `dimensions.ts` (engine) calls `computeChrome` and subtracts top/bottom reservations from the available area to get `chartArea`.
 - The renderer (`vanilla/src/renderers/chrome.ts`) is small (~96 lines) — it just maps `ResolvedChrome` to SVG `<text>` elements with the right CSS classes.
+- `chromeLayout` (`'subtract' | 'grow'`, top-level spec prop) and `ChromeTextStyle.maxLines` are the chrome-layout spec surface in `packages/core/src/types/spec.ts`.
+- `resolveChromeLayout` in `packages/engine/src/layout/shared.ts` picks subtract vs grow (spec wins over compile option; faceted specs pin to `'subtract'`).
+- `truncateToWidth` in `packages/core/src/responsive/metrics.ts` is the exported ellipsis helper that caps text to a pixel budget (backs both `maxLines` and rotated-tick truncation).
 
 ## Theme system
 
