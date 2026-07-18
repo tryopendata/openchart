@@ -33,6 +33,10 @@
       "types": "./dist/story/index.d.ts",
       "import": "./dist/story/index.js"
     },
+    "./gif": {
+      "types": "./dist/export-gif.d.ts",
+      "import": "./dist/export-gif.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./simulation-worker": "./dist/simulation-worker.js"
   },
@@ -64,9 +68,13 @@
     "d3-quadtree": "^3.0.1"
   },
   "peerDependencies": {
+    "gifenc": ">=1.0.0",
     "happy-dom": ">=14.0.0"
   },
   "peerDependenciesMeta": {
+    "gifenc": {
+      "optional": true
+    },
     "happy-dom": {
       "optional": true
     }
@@ -74,6 +82,7 @@
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
     "@types/d3-interpolate": "^3.0.4",
-    "@types/d3-quadtree": "^3.0.6"
+    "@types/d3-quadtree": "^3.0.6",
+    "gifenc": "^1.0.3"
   }
 }

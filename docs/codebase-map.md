@@ -75,8 +75,10 @@
 | SVG DOM helpers (`createSVGElement`, `setAttrs`, `applyTextStyle`) | `packages/vanilla/src/renderers/svg-dom.ts` (note: `computeXAxisExtent` was removed; use `layout.chrome.bottomAnchorY` instead) |
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
-| Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts` |
+| Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts`. `computeAnimationDuration(svg)` is the shared total-entrance-time calc (used by cleanup timing and GIF capture). |
 | Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition.ts` |
+| Export (SVG/PNG/JPG/CSV) | `packages/vanilla/src/export.ts` → `exportSVG`, `exportPNG`, `exportJPG`, `exportCSV`, plus `rasterizeSVGToCanvas`/`getSVGDimensions`/`embedFonts` helpers reused by GIF export. Wired into `chart.export(format)` in `mount.ts`. |
+| Animated GIF export | `packages/vanilla/src/export-gif.ts` → `exportGIF()`. Deterministic entrance re-creation (not CSS scrubbing — computed-style animation doesn't serialize), encoded via the optional `gifenc` peer dep. Subpath: `@opendata-ai/openchart-vanilla/gif`; dynamic-imported by the `'gif'` case in `mount.ts` so `gifenc` stays out of the core bundle. |
 | Mark key serialization / dedup | `packages/engine/src/compiler/keys.ts` |
 | Tooltip rendering | `packages/vanilla/src/tooltip.ts` |
 | Series search combobox (`seriesSearch`) | `packages/vanilla/src/series-search.ts`; CSS `packages/core/src/styles/series-search.css` |
@@ -194,6 +196,9 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - `computeChrome()` in `packages/core/src/layout/chrome.ts` reserves vertical space and computes element positions.
 - `dimensions.ts` (engine) calls `computeChrome` and subtracts top/bottom reservations from the available area to get `chartArea`.
 - The renderer (`vanilla/src/renderers/chrome.ts`) is small (~96 lines) — it just maps `ResolvedChrome` to SVG `<text>` elements with the right CSS classes.
+- `chromeLayout` (`'subtract' | 'grow'`, top-level spec prop) and `ChromeTextStyle.maxLines` are the chrome-layout spec surface in `packages/core/src/types/spec.ts`.
+- `resolveChromeLayout` in `packages/engine/src/layout/shared.ts` picks subtract vs grow (spec wins over compile option; faceted specs pin to `'subtract'`).
+- `truncateToWidth` in `packages/core/src/responsive/metrics.ts` is the exported ellipsis helper that caps text to a pixel budget (backs both `maxLines` and rotated-tick truncation).
 
 ## Theme system
 

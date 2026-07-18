@@ -38,6 +38,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import type { GIFExportOptions } from './export-gif';
 import {
   buildElementRef,
   createScreenReaderTable,
@@ -109,10 +110,11 @@ export interface ChartInstance {
   export(format: 'svg-with-fonts', options?: SVGExportOptions): Promise<string>;
   export(format: 'png', options?: ExportOptions): Promise<Blob>;
   export(format: 'jpg', options?: ExportOptions): Promise<Blob>;
+  export(format: 'gif', options?: GIFExportOptions): Promise<Blob>;
   export(format: 'csv'): string;
   export(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'csv',
-    options?: ExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif' | 'csv',
+    options?: ExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
@@ -1254,24 +1256,34 @@ export function createChart<TData extends DataRow = DataRow>(
   function doExport(format: 'svg-with-fonts', exportOptions?: SVGExportOptions): Promise<string>;
   function doExport(format: 'png', exportOptions?: ExportOptions): Promise<Blob>;
   function doExport(format: 'jpg', exportOptions?: ExportOptions): Promise<Blob>;
+  function doExport(format: 'gif', exportOptions?: GIFExportOptions): Promise<Blob>;
   function doExport(format: 'csv'): string;
   function doExport(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'csv',
-    exportOptions?: ExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif' | 'csv',
+    exportOptions?: ExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) {
       throw new Error('Chart is not rendered yet');
     }
+    const svg = svgElement;
 
     switch (format) {
       case 'svg':
-        return exportSVG(svgElement);
+        return exportSVG(svg);
       case 'svg-with-fonts':
-        return exportSVGWithFonts(svgElement, exportOptions);
+        return exportSVGWithFonts(svg, exportOptions as SVGExportOptions | undefined);
       case 'png':
-        return exportPNG(svgElement, exportOptions);
+        return exportPNG(svg, exportOptions as ExportOptions | undefined);
       case 'jpg':
-        return exportJPG(svgElement, exportOptions);
+        return exportJPG(svg, exportOptions as ExportOptions | undefined);
+      case 'gif': {
+        // Dynamic import keeps the GIF encoder (optional `gifenc` peer) out of
+        // the core bundle — only consumers who export GIFs load this chunk.
+        const gifBlob: Promise<Blob> = import('./export-gif').then(({ exportGIF }) =>
+          exportGIF(svg, currentLayout.animation, exportOptions as GIFExportOptions | undefined),
+        );
+        return gifBlob;
+      }
       case 'csv':
         return exportCSV(
           'data' in currentSpec && Array.isArray(currentSpec.data) ? currentSpec.data : [],

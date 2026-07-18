@@ -17,6 +17,29 @@ export function cancelAnimations(svg: SVGElement | null): void {
 }
 
 /**
+ * Compute the total entrance-animation time for a rendered SVG, in ms.
+ *
+ * Reads the timing from the CSS custom properties the renderer stamps
+ * (`--oc-animation-duration`, `--oc-animation-stagger`, `--oc-annotation-delay`)
+ * and counts animated elements to derive the last element's stagger delay.
+ * Formula: `totalStagger + duration + annotationDelay + 500ms buffer`.
+ *
+ * Shared by `setupAnimationCleanup` (to time the oc-animate removal) and by GIF
+ * export (to size the capture window), so the two never drift.
+ */
+export function computeAnimationDuration(svg: SVGElement): number {
+  const style = svg.style;
+  const duration = parseFloat(style.getPropertyValue('--oc-animation-duration')) || 600;
+  const stagger = parseFloat(style.getPropertyValue('--oc-animation-stagger')) || 0;
+  const annotationDelay = parseFloat(style.getPropertyValue('--oc-annotation-delay')) || 200;
+
+  const animatedElements = svg.querySelectorAll('[data-animation-index]').length;
+  const totalStagger = stagger * Math.max(0, animatedElements - 1);
+
+  return totalStagger + duration + annotationDelay + 500;
+}
+
+/**
  * Set up animation cleanup that removes oc-animate after all animations complete.
  *
  * Uses the computed total animation time (duration + stagger * elementCount + annotation delay)
@@ -24,18 +47,7 @@ export function cancelAnimations(svg: SVGElement | null): void {
  * element to finish would prematurely kill staggered animations still in progress.
  */
 export function setupAnimationCleanup(svg: SVGElement, onComplete?: () => void): () => void {
-  // Read the animation timing from the CSS custom properties set by the renderer
-  const style = svg.style;
-  const duration = parseFloat(style.getPropertyValue('--oc-animation-duration')) || 600;
-  const stagger = parseFloat(style.getPropertyValue('--oc-animation-stagger')) || 0;
-  const annotationDelay = parseFloat(style.getPropertyValue('--oc-annotation-delay')) || 200;
-
-  // Count animated elements to compute total stagger span
-  const animatedElements = svg.querySelectorAll('[data-animation-index]').length;
-  const totalStagger = stagger * Math.max(0, animatedElements - 1);
-
-  // Total time: last element's stagger delay + its duration + annotation delay + buffer
-  const totalTime = totalStagger + duration + annotationDelay + 500;
+  const totalTime = computeAnimationDuration(svg);
 
   const timer = setTimeout(() => {
     svg.classList.remove('oc-animate');
