@@ -1,5 +1,28 @@
 # Changelog
 
+## [8.0.0-rc.12](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.11...core-v8.0.0-rc.12) (2026-07-18)
+
+
+### Features
+
+* grow layout, maxLines cap, and plot-share guardrail ([fdae7da](https://github.com/tryopendata/openchart/commit/fdae7da))
+* add animated GIF export ([4c16eda](https://github.com/tryopendata/openchart/commit/4c16eda))
+* add row and column encoding channels for directional faceting ([3a405ae](https://github.com/tryopendata/openchart/commit/3a405ae))
+* 'top-left' overlay position for point legends ([757f34c](https://github.com/tryopendata/openchart/commit/757f34c))
+* annotation creation gesture + spec-pointer paths (req-5, req-6) ([c54c7b1](https://github.com/tryopendata/openchart/commit/c54c7b1))
+* annotation anchor data-space drag (req-4) ([1a380b3](https://github.com/tryopendata/openchart/commit/1a380b3))
+* Phase A - ElementRef on payloads, editable prop, docs ([ea33a21](https://github.com/tryopendata/openchart/commit/ea33a21))
+* animate point fill transitions on spec update ([4f56679](https://github.com/tryopendata/openchart/commit/4f56679))
+
+
+### Bug Fixes
+
+* encoding.color.format takes precedence over deprecated valueFormat ([98bd6d6](https://github.com/tryopendata/openchart/commit/98bd6d6))
+* single owner for the y-axis gutter, ending the doubled left margin ([9ff3b26](https://github.com/tryopendata/openchart/commit/9ff3b26))
+* point stagger var, projection inset, first-render camera init ([e19d4b9](https://github.com/tryopendata/openchart/commit/e19d4b9))
+* address code review findings ([860a672](https://github.com/tryopendata/openchart/commit/860a672))
+* points-based focus zoom produces correct zoom level ([36836bf](https://github.com/tryopendata/openchart/commit/36836bf))
+
 ## [8.0.0-rc.11](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.10...core-v8.0.0-rc.11) (2026-07-17)
 
 
