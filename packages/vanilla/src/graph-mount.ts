@@ -157,6 +157,10 @@ export interface GraphInstance {
   getHighlight(): string[] | null;
   /** Headless snapshot of the legend (node categories + edge categories). */
   getLegend(): GraphLegendData;
+  /** Set the active category filter declaratively (replaces legend toggle state). */
+  setActiveCategories(values: string[]): void;
+  /** Current active category values (empty = all active, no filter). */
+  getActiveCategories(): string[];
   resize(): void;
   destroy(): void;
 }
@@ -1523,6 +1527,20 @@ export function createGraph(
    * the highlight state: this replaces any programmatic highlight. Empty active
    * set = all categories shown (no dimming).
    */
+  function setActiveCategories(values: string[]): void {
+    if (destroyed) return;
+    activeCategories = new Set(values);
+    highlightSet = categoryHighlightSet();
+    highlightDimOpacity = null;
+    syncLegendActiveState();
+    refreshFocus();
+    emitHighlightChange();
+  }
+
+  function getActiveCategories(): string[] {
+    return [...activeCategories];
+  }
+
   function toggleLegendCategory(value: string): void {
     if (activeCategories.has(value)) activeCategories.delete(value);
     else activeCategories.add(value);
@@ -1943,6 +1961,8 @@ export function createGraph(
       clearHighlight() {},
       getHighlight: () => null,
       getLegend: () => ({ field: null, nodes: [], edges: [] }),
+      setActiveCategories() {},
+      getActiveCategories: () => [],
       resize() {},
       destroy() {},
     };
@@ -1972,6 +1992,8 @@ export function createGraph(
     clearHighlight,
     getHighlight,
     getLegend,
+    setActiveCategories,
+    getActiveCategories,
     resize: doResize,
     destroy,
   };

@@ -264,6 +264,26 @@ export function resolveNodeVisuals(
     opacityScale = scaleLinear().domain(domain).range(range);
   }
 
+  // Build label priority scale. Maps a quantitative field to [0, 1] so
+  // higher values are shown first. Falls back to degree-based priority.
+  let labelPriorityScale: ((v: number) => number) | undefined;
+  if (encoding.nodeLabelPriority?.field) {
+    const field = encoding.nodeLabelPriority.field;
+    const scaleConfig = encoding.nodeLabelPriority.scale;
+    const values = nodes.map((n) => Number(n[field])).filter((v) => Number.isFinite(v));
+    const lpMin = min(values) ?? 0;
+    const lpMax = max(values) ?? 1;
+    const domain =
+      scaleConfig?.domain && scaleConfig.domain.length === 2
+        ? (scaleConfig.domain as [number, number])
+        : [lpMin, lpMax];
+    const range =
+      scaleConfig?.range && scaleConfig.range.length >= 2
+        ? [Number(scaleConfig.range[0]), Number(scaleConfig.range[1])]
+        : [0, 1];
+    labelPriorityScale = scaleLinear().domain(domain).range(range);
+  }
+
   return nodes.map((node) => {
     // Radius
     let radius = DEFAULT_NODE_RADIUS;
@@ -298,9 +318,15 @@ export function resolveNodeVisuals(
       label = node.id;
     }
 
-    // Label priority: degree / maxDegree (0 to 1)
-    const degree = degrees.get(node.id) ?? 0;
-    const labelPriority = maxDegree > 0 ? degree / maxDegree : 0;
+    // Label priority: field-driven when nodeLabelPriority is set, else degree-based.
+    let labelPriority: number;
+    if (labelPriorityScale && encoding.nodeLabelPriority?.field) {
+      const val = Number(node[encoding.nodeLabelPriority.field]);
+      labelPriority = Number.isFinite(val) ? labelPriorityScale(val) : 0;
+    } else {
+      const degree = degrees.get(node.id) ?? 0;
+      labelPriority = maxDegree > 0 ? degree / maxDegree : 0;
+    }
 
     // Data: spread all original node fields
     const { id: _id, ...rest } = node;

@@ -222,6 +222,14 @@ export function getLegend(): GraphLegendData | null {
   return instance?.getLegend() ?? null;
 }
 
+export function setActiveCategories(values: string[]): void {
+  instance?.setActiveCategories(values);
+}
+
+export function getActiveCategories(): string[] {
+  return instance?.getActiveCategories() ?? [];
+}
+
 export function updateVisuals(nextSpec: GraphSpec): void {
   instance?.updateVisuals(nextSpec);
 }

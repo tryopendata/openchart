@@ -165,6 +165,99 @@ describe('interactive legend (single highlight slot)', () => {
   });
 });
 
+describe('setActiveCategories / getActiveCategories', () => {
+  it('sets the category filter and getHighlight reflects it', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.setActiveCategories(['x']);
+    expect(graph.getHighlight()?.sort()).toEqual(['a', 'b']);
+    graph.destroy();
+  });
+
+  it('getActiveCategories reflects the set', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.setActiveCategories(['x']);
+    expect(graph.getActiveCategories()).toEqual(['x']);
+    graph.destroy();
+  });
+
+  it('setActiveCategories([]) clears the filter', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.setActiveCategories(['x']);
+    graph.setActiveCategories([]);
+    expect(graph.getHighlight()).toBeNull();
+    expect(graph.getActiveCategories()).toEqual([]);
+    graph.destroy();
+  });
+
+  it('fires onHighlightChange but NOT onLegendToggle', () => {
+    container = makeContainer();
+    const onHighlightChange = vi.fn();
+    const onLegendToggle = vi.fn();
+    const graph = createGraph(container, catSpec, { onHighlightChange, onLegendToggle });
+    graph.setActiveCategories(['y']);
+    expect(onHighlightChange).toHaveBeenCalledWith(expect.arrayContaining(['c', 'd']));
+    expect(onLegendToggle).not.toHaveBeenCalled();
+    graph.destroy();
+  });
+
+  it('highlight() after setActiveCategories resets categories (last writer wins)', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.setActiveCategories(['x']);
+    graph.highlight({ nodeIds: ['c'] });
+    expect(graph.getActiveCategories()).toEqual([]);
+    expect(graph.getHighlight()).toEqual(['c']);
+    graph.destroy();
+  });
+
+  it('setActiveCategories after highlight() replaces the explicit highlight', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.highlight({ nodeIds: ['a'] });
+    graph.setActiveCategories(['y']);
+    expect(graph.getHighlight()?.sort()).toEqual(['c', 'd']);
+    graph.destroy();
+  });
+
+  it('getLegend() active flags match the set categories', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.setActiveCategories(['x']);
+    const legend = graph.getLegend();
+    const xEntry = legend.nodes.find((n) => n.label === 'x');
+    const yEntry = legend.nodes.find((n) => n.label === 'y');
+    expect(xEntry?.active).toBe(true);
+    expect(yEntry?.active).toBe(false);
+    graph.destroy();
+  });
+
+  it('never recompiles the graph', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    const spy = vi.spyOn(engine, 'compileGraph');
+    graph.setActiveCategories(['x']);
+    graph.setActiveCategories([]);
+    expect(spy).not.toHaveBeenCalled();
+    graph.destroy();
+  });
+
+  it('non-existent category values round-trip but match no nodes', () => {
+    container = makeContainer();
+    const graph = createGraph(container, catSpec);
+    graph.setActiveCategories(['nonexistent']);
+    expect(graph.getActiveCategories()).toEqual(['nonexistent']);
+    // No nodes match, but activeCategories is non-empty so highlightSet is
+    // a non-null empty Set. composeStandingFocus treats size-0 highlight as
+    // hasHighlight=false, so nothing dims.
+    const legend = graph.getLegend();
+    expect(legend.nodes.every((n) => !n.active)).toBe(true);
+    graph.destroy();
+  });
+});
+
 describe('initialHighlight', () => {
   it('applies nodeColor.highlight on mount', () => {
     container = makeContainer();

@@ -49,6 +49,10 @@ export interface UseGraphReturn {
   getHighlight: () => string[] | null;
   /** Headless snapshot of the legend. */
   getLegend: () => GraphLegendData | null;
+  /** Set the active category filter declaratively (replaces legend toggle state). */
+  setActiveCategories: (values: string[]) => void;
+  /** Current active category values (empty = all active, no filter). */
+  getActiveCategories: () => string[];
 }
 
 /** Handle exposed by Graph component via forwardRef. */
@@ -67,6 +71,8 @@ export interface GraphHandle {
   clearHighlight: () => void;
   getHighlight: () => string[] | null;
   getLegend: () => GraphLegendData | null;
+  setActiveCategories: (values: string[]) => void;
+  getActiveCategories: () => string[];
   /** Re-compile encoding/legend/chrome without restarting the simulation. */
   updateVisuals: (spec: GraphSpec) => void;
   /** The underlying GraphInstance from the vanilla adapter. */
@@ -150,6 +156,14 @@ export function useGraph(): UseGraphReturn {
     return ref.current?.getLegend() ?? null;
   }, []);
 
+  const setActiveCategories = useCallback((values: string[]) => {
+    ref.current?.setActiveCategories(values);
+  }, []);
+
+  const getActiveCategories = useCallback((): string[] => {
+    return ref.current?.getActiveCategories() ?? [];
+  }, []);
+
   return {
     ref,
     search,
@@ -166,5 +180,7 @@ export function useGraph(): UseGraphReturn {
     clearHighlight,
     getHighlight,
     getLegend,
+    setActiveCategories,
+    getActiveCategories,
   };
 }

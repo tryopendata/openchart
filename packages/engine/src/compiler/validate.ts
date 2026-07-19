@@ -1191,7 +1191,13 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
       }
     }
 
-    const nodeChannels = ['nodeColor', 'nodeSize', 'nodeOpacity', 'nodeLabel'] as const;
+    const nodeChannels = [
+      'nodeColor',
+      'nodeSize',
+      'nodeOpacity',
+      'nodeLabel',
+      'nodeLabelPriority',
+    ] as const;
     for (const channel of nodeChannels) {
       const ch = encoding[channel] as Record<string, unknown> | undefined;
       if (

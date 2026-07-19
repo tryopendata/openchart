@@ -141,6 +141,74 @@ describe('resolveNodeVisuals', () => {
       const hub = nodes.find((n) => n.id === 'a')!;
       expect(hub.labelPriority).toBe(1.0);
     });
+
+    it('uses field value when nodeLabelPriority is set', () => {
+      const encoding: GraphEncoding = {
+        nodeLabelPriority: { field: 'value', type: 'quantitative' },
+      };
+
+      const nodes = resolveNodeVisuals(basicNodes, encoding, basicEdges, theme);
+
+      const nodeA = nodes.find((n) => n.id === 'a')!; // value: 10 (min)
+      const nodeC = nodes.find((n) => n.id === 'c')!; // value: 100 (max)
+      expect(nodeA.labelPriority).toBeCloseTo(0, 1);
+      expect(nodeC.labelPriority).toBeCloseTo(1, 1);
+    });
+
+    it('falls back to degree-based priority when nodeLabelPriority omitted', () => {
+      const hubEdges: GraphEdge[] = [
+        { source: 'a', target: 'b' },
+        { source: 'a', target: 'c' },
+      ];
+
+      const withChannel = resolveNodeVisuals(basicNodes, {}, hubEdges, theme);
+      const hub = withChannel.find((n) => n.id === 'a')!;
+      expect(hub.labelPriority).toBe(1.0);
+    });
+
+    it('alwaysShowLabel overrides nodeLabelPriority to Infinity', () => {
+      const encoding: GraphEncoding = {
+        nodeLabelPriority: { field: 'value', type: 'quantitative' },
+      };
+      const overrides = { a: { alwaysShowLabel: true } };
+
+      const nodes = resolveNodeVisuals(basicNodes, encoding, basicEdges, theme, overrides);
+
+      const nodeA = nodes.find((n) => n.id === 'a')!;
+      expect(nodeA.labelPriority).toBe(Infinity);
+    });
+
+    it('respects scale.range override on nodeLabelPriority', () => {
+      const encoding: GraphEncoding = {
+        nodeLabelPriority: {
+          field: 'value',
+          type: 'quantitative',
+          scale: { range: [0.5, 1] },
+        },
+      };
+
+      const nodes = resolveNodeVisuals(basicNodes, encoding, basicEdges, theme);
+
+      const nodeA = nodes.find((n) => n.id === 'a')!; // value: 10 (min)
+      const nodeC = nodes.find((n) => n.id === 'c')!; // value: 100 (max)
+      expect(nodeA.labelPriority).toBeCloseTo(0.5, 1);
+      expect(nodeC.labelPriority).toBeCloseTo(1, 1);
+    });
+
+    it('non-numeric field values get priority 0', () => {
+      const nodesWithString: GraphNode[] = [
+        { id: 'a', importance: 'high' },
+        { id: 'b', importance: 50 },
+      ];
+      const encoding: GraphEncoding = {
+        nodeLabelPriority: { field: 'importance', type: 'quantitative' },
+      };
+
+      const nodes = resolveNodeVisuals(nodesWithString, encoding, [], theme);
+
+      const nodeA = nodes.find((n) => n.id === 'a')!;
+      expect(nodeA.labelPriority).toBe(0);
+    });
   });
 
   describe('label resolution', () => {

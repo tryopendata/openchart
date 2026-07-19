@@ -790,6 +790,13 @@ export interface GraphEncoding {
   edgeStyle?: GraphEncodingChannel;
   /** Label field for nodes. */
   nodeLabel?: GraphEncodingChannel;
+  /**
+   * Label priority mapping for nodes. Maps a quantitative field to a 0-1
+   * priority range; higher values are shown first as the user zooms in.
+   * Omit to use the default degree-based priority.
+   * `nodeOverrides[id].alwaysShowLabel` still wins as the hard override.
+   */
+  nodeLabelPriority?: GraphEncodingChannel;
 }
 
 /** Layout algorithm for graph visualization. */

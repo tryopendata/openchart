@@ -215,6 +215,12 @@ export const Graph = defineComponent({
       getLegend() {
         return instance?.getLegend() ?? null;
       },
+      setActiveCategories(values: string[]) {
+        instance?.setActiveCategories(values);
+      },
+      getActiveCategories(): string[] {
+        return instance?.getActiveCategories() ?? [];
+      },
       updateVisuals(spec: GraphSpec) {
         instance?.updateVisuals(spec);
       },

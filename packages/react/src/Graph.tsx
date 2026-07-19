@@ -261,6 +261,12 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       getLegend() {
         return graphRef.current?.getLegend() ?? null;
       },
+      setActiveCategories(values: string[]) {
+        graphRef.current?.setActiveCategories(values);
+      },
+      getActiveCategories() {
+        return graphRef.current?.getActiveCategories() ?? [];
+      },
       updateVisuals(spec: GraphSpec) {
         graphRef.current?.updateVisuals(spec);
       },

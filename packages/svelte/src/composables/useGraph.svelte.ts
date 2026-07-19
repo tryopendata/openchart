@@ -94,6 +94,10 @@ export interface UseGraphReturn {
   getHighlight: () => string[] | null;
   /** Headless snapshot of the legend. */
   getLegend: () => GraphLegendData | null;
+  /** Set the active category filter declaratively (replaces legend toggle state). */
+  setActiveCategories: (values: string[]) => void;
+  /** Current active category values (empty = all active, no filter). */
+  getActiveCategories: () => string[];
 }
 
 export function useGraph(
@@ -184,6 +188,12 @@ export function useGraph(
     },
     getLegend(): GraphLegendData | null {
       return instance?.getLegend() ?? null;
+    },
+    setActiveCategories(values: string[]) {
+      instance?.setActiveCategories(values);
+    },
+    getActiveCategories(): string[] {
+      return instance?.getActiveCategories() ?? [];
     },
   };
 }

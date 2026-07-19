@@ -16938,6 +16938,10 @@
         "nodeLabel": {
           "$ref": "#/definitions/GraphEncodingChannel",
           "description": "Label field for nodes."
+        },
+        "nodeLabelPriority": {
+          "$ref": "#/definitions/GraphEncodingChannel",
+          "description": "Label priority mapping for nodes. Maps a quantitative field to a 0-1 priority range; higher values are shown first as the user zooms in. Omit to use the default degree-based priority. `nodeOverrides[id].alwaysShowLabel` still wins as the hard override."
         }
       },
       "additionalProperties": false,
