@@ -27,7 +27,7 @@ import {
   createCameraFollow,
 } from './graph/camera';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
-import { ENTRANCE_STAGGER_MAX_NODES } from './graph/entrance';
+import { ENTRANCE_STAGGER_MAX_NODES, entranceOffsets, entranceOrder } from './graph/entrance';
 import {
   composeStandingFocus,
   type FocusSnapshot,
@@ -278,6 +278,10 @@ export function createGraph(
   let entranceProgress = 1;
   let entranceActive = false;
   let entranceStagger = false;
+  // Pop choreography inputs (staggered entrances only): centroid-radial stagger
+  // rank and per-node convergence drift vectors, built once at entrance start.
+  let entranceOrderMap: Map<string, number> | null = null;
+  let entranceOffsetMap: Map<string, { x: number; y: number }> | null = null;
   let entranceFitInFlight = false;
   let entranceReveal: GraphAnimation | null = null;
   // Mount-level opt-out (Phase 9): when set, the FIRST entrance takes the instant
@@ -489,6 +493,7 @@ export function createGraph(
     }
 
     container.appendChild(wrapper);
+    syncChromeInset();
 
     // Canvas uses the full container height; chrome overlays on top
     const canvasHeight = Math.max(height, 200);
@@ -553,6 +558,28 @@ export function createGraph(
   /** Re-render the legend to reflect the current active-category state. */
   function syncLegendActiveState(): void {
     if (legendController) legendController.update(legendViewData());
+    syncChromeInset();
+  }
+
+  /**
+   * Keep the chrome block out of the legend's column: the title/subtitle wrap
+   * before they reach the legend box instead of running underneath it. No-op
+   * when there's no legend (or it has no measurable width, e.g. in happy-dom).
+   */
+  function syncChromeInset(): void {
+    if (!chromeEl) return;
+    const legendW = legendEl?.offsetWidth ?? 0;
+    chromeEl.style.right = legendW > 0 ? `${legendW + 24}px` : '';
+  }
+
+  /**
+   * Height of the chrome overlay band (title + subtitle) the camera fit should
+   * reserve, so nodes never settle underneath the text. 0 when chrome is empty
+   * or unmeasurable (happy-dom).
+   */
+  function chromeInsetTop(): number {
+    if (!chromeEl || chromeEl.style.display === 'none') return 0;
+    return chromeEl.offsetHeight;
   }
 
   // ---------------------------------------------------------------------------
@@ -723,6 +750,7 @@ export function createGraph(
     const warmed = (compilation.simulationConfig.warmupTicks ?? 0) > 0;
     const { transform } = ZoomTransform.fitBounds(positionedNodes, cw, ch, undefined, {
       spread: !warmed,
+      insetTop: chromeInsetTop(),
     });
     return transform;
   }
@@ -753,7 +781,7 @@ export function createGraph(
 
     // Start pulled back so the reveal has somewhere to fly in from.
     const { width: cw, height: ch } = getCanvasDimensions();
-    const pulledBack = fit.zoomAt(fit.k * 0.92, cw / 2, ch / 2);
+    const pulledBack = fit.zoomAt(fit.k * 0.85, cw / 2, ch / 2);
     interactionManager.setTransform(pulledBack);
     cameraChangePending = true;
 
@@ -762,6 +790,15 @@ export function createGraph(
     // Stagger only when the spec asks for it AND the graph is small enough that
     // per-node start times still batch. Above the cap: a single global fade.
     entranceStagger = enter.stagger && positionedNodes.length <= ENTRANCE_STAGGER_MAX_NODES;
+    // Pop choreography inputs, computed once against the warmed (near-final)
+    // positions: centroid-radial stagger order + per-node convergence drift.
+    if (entranceStagger) {
+      entranceOrderMap = entranceOrder(positionedNodes);
+      entranceOffsetMap = entranceOffsets(positionedNodes);
+    } else {
+      entranceOrderMap = null;
+      entranceOffsetMap = null;
+    }
 
     // Optional camera flight from the pulled-back framing to the true fit.
     if (enter.cameraFit) {
@@ -1048,7 +1085,12 @@ export function createGraph(
       dimOpacity: highlightDimOpacity ?? compilation.interaction.dimOpacity,
       entrance:
         entranceActive && entranceProgress < 1
-          ? { t: entranceProgress, stagger: entranceStagger }
+          ? {
+              t: entranceProgress,
+              stagger: entranceStagger,
+              order: entranceOrderMap ?? undefined,
+              offsets: entranceOffsetMap ?? undefined,
+            }
           : undefined,
       enterAlpha: enterAlphaMap ?? undefined,
       exiting: exitingGhosts ?? undefined,
@@ -1372,6 +1414,9 @@ export function createGraph(
       cw,
       ch,
       opts?.padding,
+      {
+        insetTop: chromeInsetTop(),
+      },
     );
     flyCamera(fitTransform, opts);
   }
@@ -1494,6 +1539,9 @@ export function createGraph(
     const { width, height } = getContainerDimensions();
     const canvasHeight = Math.max(height, 200);
     renderer.resize(width, canvasHeight);
+    // A width change can rewrap the title or move the legend; re-derive the
+    // chrome/legend separation before any fit below measures the chrome band.
+    syncChromeInset();
 
     // Mid-entrance: the in-flight camera fit targets the OLD viewport, so cancel
     // just that flight and snap to the new-viewport fit. The reveal tween (node

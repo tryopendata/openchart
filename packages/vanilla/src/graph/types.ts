@@ -70,12 +70,18 @@ export interface GraphRenderState {
   dimOpacity: number;
   /**
    * Entrance reveal state. Present only while the entrance choreography runs.
-   * `t` is a mount-level 0→1 progress; the renderer ramps node alpha/scale, lags
+   * `t` is a mount-level 0→1 progress; the renderer pops node scale/alpha, lags
    * edges 30%, and fades labels by it. When `stagger` is true the renderer applies
-   * a per-node staggered reveal (quantized for batching); when false a single
-   * global fade. Absent or `t >= 1` → render as settled.
+   * a per-node staggered pop (quantized for batching) using `order` (stagger rank,
+   * centroid-radial) and `offsets` (convergence drift vectors); when false a
+   * single global fade. Absent or `t >= 1` → render as settled.
    */
-  entrance?: { t: number; stagger: boolean };
+  entrance?: {
+    t: number;
+    stagger: boolean;
+    order?: Map<string, number>;
+    offsets?: Map<string, { x: number; y: number }>;
+  };
   /**
    * Per-node enter-fade alphas for a data update (node id → 0..1), present only
    * while newly-added nodes are fading in. Quantized to a few buckets (mirroring

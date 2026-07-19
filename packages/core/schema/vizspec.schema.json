@@ -17133,7 +17133,7 @@
               "type": "boolean"
             }
           ],
-          "description": "Node/edge reveal on first render. Default `{ duration: 600, ease: 'smooth', stagger: true }`."
+          "description": "Node/edge reveal on first render. Default `{ duration: 500, ease: 'smooth', stagger: true }`."
         },
         "update": {
           "anyOf": [

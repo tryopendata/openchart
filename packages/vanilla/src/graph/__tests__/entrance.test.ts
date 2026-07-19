@@ -4,7 +4,16 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ENTRANCE_STAGGER_MAX_NODES, nodeEnterProgress } from '../entrance';
+import {
+  driftFactor,
+  ENTRANCE_DRIFT_PX,
+  ENTRANCE_STAGGER_MAX_NODES,
+  entranceOffsets,
+  entranceOrder,
+  nodeEnterProgress,
+  popAlpha,
+  popScale,
+} from '../entrance';
 
 describe('nodeEnterProgress', () => {
   it('clamps global progress to [0, 1]', () => {
@@ -54,5 +63,93 @@ describe('nodeEnterProgress', () => {
 describe('ENTRANCE_STAGGER_MAX_NODES', () => {
   it('is the documented 3000 threshold', () => {
     expect(ENTRANCE_STAGGER_MAX_NODES).toBe(3000);
+  });
+});
+
+describe('entranceOrder', () => {
+  it('ranks nodes by distance from the centroid, ascending', () => {
+    // Centroid of these four is (0, 0); 'near' is closest, 'far' farthest.
+    const nodes = [
+      { id: 'far', x: 100, y: 0 },
+      { id: 'near', x: 2, y: 0 },
+      { id: 'mid', x: -30, y: 0 },
+      { id: 'balance', x: -72, y: 0 },
+    ];
+    const order = entranceOrder(nodes);
+    expect(order.get('near')).toBe(0);
+    expect(order.get('mid')).toBe(1);
+    expect(order.get('balance')).toBe(2);
+    expect(order.get('far')).toBe(3);
+  });
+
+  it('returns an empty map for zero nodes', () => {
+    expect(entranceOrder([]).size).toBe(0);
+  });
+});
+
+describe('entranceOffsets', () => {
+  it('points away from the centroid with magnitude ENTRANCE_DRIFT_PX', () => {
+    const nodes = [
+      { id: 'a', x: 10, y: 0 },
+      { id: 'b', x: -10, y: 0 },
+    ];
+    const offsets = entranceOffsets(nodes);
+    expect(offsets.get('a')).toEqual({ x: ENTRANCE_DRIFT_PX, y: 0 });
+    expect(offsets.get('b')).toEqual({ x: -ENTRANCE_DRIFT_PX, y: 0 });
+  });
+
+  it('honors a custom distance', () => {
+    const offsets = entranceOffsets(
+      [
+        { id: 'a', x: 5, y: 0 },
+        { id: 'b', x: -5, y: 0 },
+      ],
+      4,
+    );
+    expect(offsets.get('a')).toEqual({ x: 4, y: 0 });
+  });
+
+  it('falls back to straight-up for a node sitting on the centroid', () => {
+    // A single node IS the centroid — zero-length direction vector.
+    const offsets = entranceOffsets([{ id: 'solo', x: 42, y: 42 }]);
+    expect(offsets.get('solo')).toEqual({ x: 0, y: -ENTRANCE_DRIFT_PX });
+  });
+
+  it('returns an empty map for zero nodes', () => {
+    expect(entranceOffsets([]).size).toBe(0);
+  });
+});
+
+describe('popScale', () => {
+  it('is 0 at t≤0 and 1 at t≥1', () => {
+    expect(popScale(0)).toBe(0);
+    expect(popScale(-1)).toBe(0);
+    expect(popScale(1)).toBe(1);
+    expect(popScale(2)).toBe(1);
+  });
+
+  it('overshoots past 1 mid-curve (the pop)', () => {
+    const peak = Math.max(...Array.from({ length: 99 }, (_, i) => popScale((i + 1) / 100)));
+    expect(peak).toBeGreaterThan(1.05);
+    expect(peak).toBeLessThan(1.15);
+  });
+});
+
+describe('popAlpha', () => {
+  it('reaches full opacity by 60% of the window', () => {
+    expect(popAlpha(0)).toBe(0);
+    expect(popAlpha(0.3)).toBeCloseTo(0.5, 5);
+    expect(popAlpha(0.6)).toBe(1);
+    expect(popAlpha(1)).toBe(1);
+  });
+});
+
+describe('driftFactor', () => {
+  it('eases quadratically from 1 (full offset) to 0 (at rest)', () => {
+    expect(driftFactor(0)).toBe(1);
+    expect(driftFactor(0.5)).toBeCloseTo(0.25, 5);
+    expect(driftFactor(1)).toBe(0);
+    expect(driftFactor(-1)).toBe(1);
+    expect(driftFactor(2)).toBe(0);
   });
 });

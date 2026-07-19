@@ -13,7 +13,7 @@
  */
 
 import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH } from '@opendata-ai/openchart-core';
-import { nodeEnterProgress } from './entrance';
+import { driftFactor, nodeEnterProgress, popAlpha, popScale } from './entrance';
 import type { FocusSnapshot } from './focus-transition';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 
@@ -85,26 +85,49 @@ function lerp(a: number, b: number, t: number): number {
 /**
  * Per-frame entrance reveal helper, built from the mount's `entrance` state.
  *
- * Node alpha and radius both ramp `0.6 + 0.4·nodeT`, where `nodeT` is the global
- * progress (single global fade) or a per-node staggered+quantized progress. Edges
- * lag 30% behind the global progress; labels fade with the raw global progress.
- * The `total` is fixed at build time so the stagger window is stable per frame.
+ * Staggered (≤ ENTRANCE_STAGGER_MAX_NODES): each node POPS — scale runs 0→~1.1→1
+ * (back-out overshoot), alpha 0→1 over the first 60% of its window, and the node
+ * converges from a small centroid-outward drift offset to its final position.
+ * `nodeT` is a per-node staggered+quantized progress ordered by `entrance.order`
+ * (centroid-radial rank), so the reveal ripples outward from the center.
+ *
+ * Unstaggered (large graphs): the legacy single global fade — alpha and scale
+ * both ramp `0.6 + 0.4·g`, no drift.
+ *
+ * Edges lag 30% behind the global progress; labels fade with the raw global
+ * progress. `total` is fixed at build time so the stagger window is stable.
  */
 interface EntranceReveal {
-  nodeRamp(node: PositionedNode): number;
+  nodeAlpha(node: PositionedNode): number;
+  nodeScale(node: PositionedNode): number;
+  /** Drift offset for a node id at the current frame (graph-space px). */
+  shift(id: string): { x: number; y: number };
   edgeAlpha: number;
   labelAlpha: number;
 }
 
+const ZERO_SHIFT = { x: 0, y: 0 };
+
 function makeEntranceReveal(
-  entrance: { t: number; stagger: boolean },
+  entrance: GraphRenderState['entrance'] & { t: number },
   total: number,
 ): EntranceReveal {
   const g = entrance.t;
-  const ramp = (nodeT: number) => 0.6 + 0.4 * nodeT;
+  const { stagger, order, offsets } = entrance;
+  const rankOf = (node: PositionedNode) => order?.get(node.id) ?? node.index;
+  const nodeT = (node: PositionedNode) => (stagger ? nodeEnterProgress(g, rankOf(node), total) : g);
   const edgeAlpha = Math.max(0, (g - 0.3) / 0.7); // lag 30%
+  const globalRamp = 0.6 + 0.4 * g;
   return {
-    nodeRamp: (node) => ramp(entrance.stagger ? nodeEnterProgress(g, node.index, total) : g),
+    nodeAlpha: (node) => (stagger ? popAlpha(nodeT(node)) : globalRamp),
+    nodeScale: (node) => (stagger ? popScale(nodeT(node)) : globalRamp),
+    shift: (id) => {
+      if (!stagger || !offsets || !order) return ZERO_SHIFT;
+      const off = offsets.get(id);
+      if (!off) return ZERO_SHIFT;
+      const f = driftFactor(nodeEnterProgress(g, order.get(id) ?? 0, total));
+      return f > 0 ? { x: off.x * f, y: off.y * f } : ZERO_SHIFT;
+    },
     edgeAlpha,
     labelAlpha: g,
   };
@@ -661,14 +684,21 @@ export class GraphCanvasRenderer {
     };
     const searchAlpha = (node: PositionedNode): number =>
       searchMatches !== null && !searchMatches.has(node.id) ? SEARCH_NON_MATCH_ALPHA : 1;
-    // Entrance ramp (0.6 + 0.4·nodeT) applies to BOTH alpha and radius. Quantized
-    // per-node (via nodeEnterProgress), so it keeps the fill/stroke batching keys
-    // bounded during the reveal.
-    const entranceRamp = (node: PositionedNode): number => (entrance ? entrance.nodeRamp(node) : 1);
+    // Entrance pop: alpha and scale run separate curves (alpha 0→1, scale
+    // 0→overshoot→1). Both derive from the same quantized per-node progress, so
+    // the fill/stroke batching keys stay bounded during the reveal.
+    const entranceAlpha = (node: PositionedNode): number =>
+      entrance ? entrance.nodeAlpha(node) : 1;
+    const entranceScale = (node: PositionedNode): number =>
+      entrance ? entrance.nodeScale(node) : 1;
+    // Convergence drift: nodes pop in slightly outside their final spot and
+    // slide home. Zero when the entrance is settled or unstaggered.
+    const entranceShift = (node: PositionedNode): { x: number; y: number } =>
+      entrance ? entrance.shift(node.id) : ZERO_SHIFT;
     // Data-update enter fade: newly-added nodes ramp 0→1 (already bucket-quantized
     // by the mount), preserving fill/stroke batching keys.
     const effectiveAlpha = (node: PositionedNode): number =>
-      focusAlpha(node) * searchAlpha(node) * entranceRamp(node) * enterAlphaFor(node.id);
+      focusAlpha(node) * searchAlpha(node) * entranceAlpha(node) * enterAlphaFor(node.id);
 
     // Separate special nodes (hovered/selected, or mid radius-tween) from bulk.
     const bulkNodes: PositionedNode[] = [];
@@ -687,11 +717,13 @@ export class GraphCanvasRenderer {
     }
 
     // Helper: effective radius clamped to minimum screen size, then scaled by
-    // the entrance ramp (same 0.6 + 0.4·nodeT curve as the alpha ramp).
-    const r = (node: PositionedNode) => Math.max(node.radius, minRadius) * entranceRamp(node);
+    // the entrance pop curve.
+    const r = (node: PositionedNode) => Math.max(node.radius, minRadius) * entranceScale(node);
 
     // --- Glow pass (dark mode only, before fills) ---
-    if (showGlow) {
+    // Skipped mid-entrance: the glow draws at final positions and would visibly
+    // detach from nodes still on their convergence drift.
+    if (showGlow && !entrance) {
       this.drawGlowBatched(ctx, bulkNodes, searchMatches, minRadius);
     }
 
@@ -714,8 +746,10 @@ export class GraphCanvasRenderer {
       ctx.beginPath();
       for (const node of group) {
         const nr = r(node);
-        ctx.moveTo(node.x + nr, node.y);
-        ctx.arc(node.x, node.y, nr, 0, TWO_PI);
+        if (nr <= 0) continue;
+        const s = entranceShift(node);
+        ctx.moveTo(node.x + s.x + nr, node.y + s.y);
+        ctx.arc(node.x + s.x, node.y + s.y, nr, 0, TWO_PI);
       }
       ctx.fill();
     }
@@ -743,8 +777,10 @@ export class GraphCanvasRenderer {
       ctx.beginPath();
       for (const node of group) {
         const nr = r(node);
-        ctx.moveTo(node.x + nr, node.y);
-        ctx.arc(node.x, node.y, nr, 0, TWO_PI);
+        if (nr <= 0) continue;
+        const s = entranceShift(node);
+        ctx.moveTo(node.x + s.x + nr, node.y + s.y);
+        ctx.arc(node.x + s.x, node.y + s.y, nr, 0, TWO_PI);
       }
       ctx.stroke();
     }

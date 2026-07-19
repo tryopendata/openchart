@@ -2137,7 +2137,7 @@ export interface NodeOverride {
  * already exists on load and choreography reduces the chaos.
  */
 export interface GraphAnimationConfig {
-  /** Node/edge reveal on first render. Default `{ duration: 600, ease: 'smooth', stagger: true }`. */
+  /** Node/edge reveal on first render. Default `{ duration: 500, ease: 'smooth', stagger: true }`. */
   enter?: AnimationPhaseConfig | boolean;
   /** Data-update enter-fade for newly added marks. Default `{ duration: 300, ease: 'smooth' }`. */
   update?: AnimationPhaseConfig | boolean;

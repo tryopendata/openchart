@@ -321,14 +321,14 @@ describe('createGraph entrance', () => {
     pumpRaf(0);
 
     const pulledBack = graph.getCamera();
-    // The entrance starts at 0.92× the fit zoom — strictly less than the final.
+    // The entrance starts at 0.85× the fit zoom — strictly less than the final.
     // Drive far past the reveal (duration 600) + the fit flight (+100) to settle.
     for (let t = 50; t <= 1400; t += 50) pumpRaf(t);
     const settled = graph.getCamera();
 
-    // Pulled-back zoom is ~0.92 of the settled fit zoom.
+    // Pulled-back zoom is ~0.85 of the settled fit zoom.
     expect(pulledBack.k).toBeLessThan(settled.k);
-    expect(pulledBack.k).toBeCloseTo(settled.k * 0.92, 5);
+    expect(pulledBack.k).toBeCloseTo(settled.k * 0.85, 5);
 
     graph.destroy();
   });
@@ -350,7 +350,7 @@ describe('createGraph entrance', () => {
     expect(later.x).toBeCloseTo(initial.x, 6);
     expect(later.y).toBeCloseTo(initial.y, 6);
     // The instant fit is a real fit (finite, positive zoom), not the pulled-back
-    // framing — i.e. reduced motion skipped the 0.92 pullback.
+    // framing — i.e. reduced motion skipped the 0.85 pullback.
     expect(initial.k).toBeGreaterThan(0);
 
     graph.destroy();
@@ -445,7 +445,7 @@ describe('createGraph entrance', () => {
     graph.destroy();
   });
 
-  it('suppressEntrance: first camera is the instant fit (no 0.92 pullback, no reveal tween)', async () => {
+  it('suppressEntrance: first camera is the instant fit (no 0.85 pullback, no reveal tween)', async () => {
     container = makeContainer();
     // Same warmed spec that DOES animate an entrance without suppressEntrance —
     // the only difference here is the mount option.
@@ -462,7 +462,7 @@ describe('createGraph entrance', () => {
     expect(later.k).toBeCloseTo(initial.k, 6);
     expect(later.x).toBeCloseTo(initial.x, 6);
     expect(later.y).toBeCloseTo(initial.y, 6);
-    // A real fit (finite, positive zoom), not the pulled-back 0.92 framing.
+    // A real fit (finite, positive zoom), not the pulled-back 0.85 framing.
     expect(initial.k).toBeGreaterThan(0);
 
     graph.destroy();

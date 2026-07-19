@@ -61,11 +61,16 @@ export class ZoomTransform {
     canvasW: number,
     canvasH: number,
     padding: number = 40,
-    opts?: { spread?: boolean },
+    opts?: { spread?: boolean; insetTop?: number },
   ): { transform: ZoomTransform; contentHeight: number } {
     if (nodes.length === 0) {
       return { transform: ZoomTransform.identity(), contentHeight: canvasH };
     }
+
+    // Reserved band at the top of the canvas (the HTML chrome overlay). The fit
+    // centers within the remaining area so nodes don't sit under the title.
+    // Clamped so a degenerate measurement can't consume the whole viewport.
+    const insetTop = Math.min(Math.max(0, opts?.insetTop ?? 0), canvasH * 0.4);
 
     let minX = Infinity;
     let minY = Infinity;
@@ -114,18 +119,18 @@ export class ZoomTransform {
     }
 
     const availW = canvasW - padding * 2;
-    const availH = canvasH - padding * 2;
+    const availH = canvasH - insetTop - padding * 2;
     // Cap at 1 so the graph never renders larger than its natural size
     const k = Math.min(1, availW / graphW, availH / graphH);
 
-    // Center both axes so the graph sits in the middle of the viewport
+    // Center horizontally; center vertically within the area below the inset.
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     const tx = canvasW / 2 - cx * k;
-    const ty = canvasH / 2 - cy * k;
+    const ty = insetTop + (canvasH - insetTop) / 2 - cy * k;
 
-    // Content height = scaled graph extent + top and bottom padding
-    const contentHeight = graphH * k + padding * 2;
+    // Content height = scaled graph extent + top and bottom padding + inset
+    const contentHeight = graphH * k + padding * 2 + insetTop;
 
     return {
       transform: new ZoomTransform(tx, ty, k),

@@ -24,7 +24,7 @@ describe('resolveGraphAnimation', () => {
   it('returns full defaults when omitted (default-ON)', () => {
     const r = resolveGraphAnimation(undefined);
     expect(r).toBeDefined();
-    expect(r?.enter).toEqual({ duration: 600, ease: 'smooth', stagger: true, cameraFit: true });
+    expect(r?.enter).toEqual({ duration: 500, ease: 'smooth', stagger: true, cameraFit: true });
     expect(r?.update).toEqual({ duration: 300, ease: 'smooth' });
     expect(r?.exit).toEqual({ duration: 300, ease: 'smooth' });
     expect(r?.camera).toEqual({ duration: 'auto', ease: 'smooth' });
@@ -36,7 +36,7 @@ describe('resolveGraphAnimation', () => {
   });
 
   it('returns full defaults for true', () => {
-    expect(resolveGraphAnimation(true)?.enter?.duration).toBe(600);
+    expect(resolveGraphAnimation(true)?.enter?.duration).toBe(500);
   });
 
   it('disables just the named phase when set false', () => {
@@ -270,7 +270,7 @@ describe('layout presets + seed + highlight', () => {
 
   it('resolves animation (default-ON) and interaction on the compilation', () => {
     const r = compileGraph(base, compileOptions);
-    expect(r.animation?.enter?.duration).toBe(600);
+    expect(r.animation?.enter?.duration).toBe(500);
     expect(r.interaction.hoverMode).toBe('neighbors');
   });
 

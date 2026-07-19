@@ -36,7 +36,7 @@ export interface ResolvedGraphAnimation {
 }
 
 const ENTER_DEFAULT = {
-  duration: 600,
+  duration: 500,
   ease: 'smooth' as AnimationEase,
   stagger: true,
   cameraFit: true,
