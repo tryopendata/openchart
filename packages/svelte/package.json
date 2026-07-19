@@ -1,6 +1,6 @@
 {
   "name": "@opendata-ai/openchart-svelte",
-  "version": "8.0.0-rc.13",
+  "version": "8.0.0-rc.14",
   "description": "Svelte components for openchart: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",

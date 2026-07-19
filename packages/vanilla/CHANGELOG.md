@@ -1,5 +1,28 @@
 # Changelog
 
+## [8.0.0-rc.14](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.13...core-v8.0.0-rc.14) (2026-07-19)
+
+
+### Features
+
+* host-legend API + nodeLabelPriority encoding channel ([839e1dd](https://github.com/tryopendata/openchart/commit/839e1dd))
+* organic entrance pop + chrome collision fix ([2024728](https://github.com/tryopendata/openchart/commit/2024728))
+* wrappers, docs, examples for the motion + API surface (Phase 9) ([7d6dff6](https://github.com/tryopendata/openchart/commit/7d6dff6))
+* physics feel — springy drag + cursor repulsion (Phase 8) ([8d017e8](https://github.com/tryopendata/openchart/commit/8d017e8))
+* unified update() + data transitions (Phase 7) ([06c0932](https://github.com/tryopendata/openchart/commit/06c0932))
+* entrance choreography + seeded layout (Phase 6) ([36a5684](https://github.com/tryopendata/openchart/commit/36a5684))
+* focus tweening, highlight API, interactive legend, tooltip/theme fixes ([0642d78](https://github.com/tryopendata/openchart/commit/0642d78))
+* animated camera flights via interpolateZoom ([cd93dc4](https://github.com/tryopendata/openchart/commit/cd93dc4))
+* Phase 3 — vanilla motion foundations ([7915a23](https://github.com/tryopendata/openchart/commit/7915a23))
+* Phase 2 — engine resolution for motion/api fields ([f93a73c](https://github.com/tryopendata/openchart/commit/f93a73c))
+* Phase 1 — motion/API spec types + schema ([bf55c29](https://github.com/tryopendata/openchart/commit/bf55c29))
+* add animated GIF export ([4c16eda](https://github.com/tryopendata/openchart/commit/4c16eda))
+
+
+### Bug Fixes
+
+* close plan-review gaps before the RC cut ([4bd12d7](https://github.com/tryopendata/openchart/commit/4bd12d7))
+
 ## [8.0.0-rc.13](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.12...core-v8.0.0-rc.13) (2026-07-19)
 
 
