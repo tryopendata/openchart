@@ -21,5 +21,11 @@ export const page: PageEntry = {
     { id: 'search', title: 'Search (built-in node search)' },
     { id: 'scale', title: 'Scale: 1k / 5k / 10k / 20k nodes (click to load)' },
     { id: 'interactive', title: 'Interactive (click & hover)' },
+    { id: 'choreography', title: 'Entrance & camera choreography' },
+    { id: 'legend', title: 'Interactive legend' },
+    { id: 'highlight', title: 'Highlight API' },
+    { id: 'seeded', title: 'Seeded layout (deterministic)' },
+    { id: 'update', title: 'Update transitions (add / remove nodes)' },
+    { id: 'cursor-repulsion', title: 'Cursor repulsion' },
   ],
 };

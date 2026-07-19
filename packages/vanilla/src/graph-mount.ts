@@ -119,6 +119,8 @@ export interface GraphMountOptions {
   fitOnLoad?: boolean;
   /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
   onCameraChange?: (camera: { x: number; y: number; k: number }) => void;
+  /** Skip the entrance reveal/flight on mount (spec unchanged; used by wrappers when recreating for a theme/darkMode-only change so the entrance doesn't replay). Warmup still runs. */
+  suppressEntrance?: boolean;
 }
 
 export interface GraphInstance {
@@ -266,6 +268,11 @@ export function createGraph(
   let entranceStagger = false;
   let entranceFitInFlight = false;
   let entranceReveal: GraphAnimation | null = null;
+  // Mount-level opt-out (Phase 9): when set, the FIRST entrance takes the instant
+  // -fit branch (no 0.92 pullback, no reveal tween, no camera flight) even under
+  // normal motion. Wrappers set this when recreating for a theme/darkMode-only
+  // change so the entrance doesn't replay. Warmup still runs. One-shot.
+  let suppressEntranceOnce = options?.suppressEntrance ?? false;
 
   // Data-update transition state (Phase 7). `enterAlphaMap` fades newly-added
   // nodes in over update.duration (null when no enter-fade is live). `exiting`
@@ -714,8 +721,12 @@ export function createGraph(
     if (!interactionManager) return;
     const fit = computeInitialFit();
     const enter = compilation.animation?.enter ?? null;
+    // One-shot mount-level suppression (theme/darkMode remount): take the same
+    // instant-fit branch as reduced motion so the entrance doesn't replay.
+    const suppressed = suppressEntranceOnce;
+    suppressEntranceOnce = false;
 
-    if (!enter || prefersReducedMotion()) {
+    if (suppressed || !enter || prefersReducedMotion()) {
       interactionManager.setTransform(fit);
       entranceActive = false;
       entranceProgress = 1;

@@ -13,6 +13,7 @@ import {
   createGraph,
   type GraphInstance,
   type GraphMountOptions,
+  type GraphTooltipFormatter,
 } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -27,12 +28,25 @@ import {
 } from 'vue';
 import { VizDarkModeKey, VizThemeKey } from './context';
 
+/** Tooltip prop: `false` off, `true` default, or an object with a formatter. */
+export type GraphTooltipProp = boolean | { formatter?: GraphTooltipFormatter };
+/** Legend prop: `false` off, `true` default, or an object toggling interactivity/counts. */
+export type GraphLegendProp = boolean | { interactive?: boolean; counts?: boolean };
+
 export interface GraphProps {
   spec: GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
+  tooltip?: GraphTooltipProp;
+  legend?: GraphLegendProp;
+  fitOnLoad?: boolean;
   class?: string;
   style?: string | CSSProperties;
+}
+
+/** True when the tooltip is on (only the on/off decision gates recreation). */
+function tooltipOn(tooltip: GraphTooltipProp | undefined): boolean {
+  return tooltip !== false;
 }
 
 export const Graph = defineComponent({
@@ -50,6 +64,18 @@ export const Graph = defineComponent({
       type: String as PropType<DarkMode>,
       default: undefined,
     },
+    tooltip: {
+      type: [Boolean, Object] as PropType<GraphTooltipProp>,
+      default: undefined,
+    },
+    legend: {
+      type: [Boolean, Object] as PropType<GraphLegendProp>,
+      default: undefined,
+    },
+    fitOnLoad: {
+      type: Boolean,
+      default: undefined,
+    },
     class: {
       type: String,
       default: undefined,
@@ -62,12 +88,20 @@ export const Graph = defineComponent({
   emits: {
     'node-click': (_node: Record<string, unknown>) => true,
     'node-double-click': (_node: Record<string, unknown>) => true,
+    'node-hover': (_node: Record<string, unknown> | null) => true,
+    'edge-hover': (_edge: Record<string, unknown> | null) => true,
     'selection-change': (_nodeIds: string[]) => true,
+    'legend-hover': (_entry: { field: string; value: string } | null) => true,
+    'legend-toggle': (_activeValues: string[]) => true,
+    'highlight-change': (_nodeIds: string[] | null) => true,
+    'camera-change': (_camera: { x: number; y: number; k: number }) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: GraphInstance | null = null;
     let prevSpec = '';
+    // First mount plays the entrance; theme/darkMode-only recreations suppress it.
+    let mountedOnce = false;
 
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
@@ -81,21 +115,47 @@ export const Graph = defineComponent({
       return props.darkMode ?? contextDarkMode?.value;
     }
 
+    // Stable tooltip formatter wrapper. Vue props are reactive, so reading
+    // `props.tooltip` at CALL time always sees the latest formatter — no stale
+    // closure, no recreation when the formatter changes. When the tooltip is on
+    // we always hand the vanilla layer this wrapper (falling back to defaults),
+    // so a formatter can be added or swapped per-render without a remount.
+    const stableTooltipFormatter: GraphTooltipFormatter = (item, defaults) => {
+      const t = props.tooltip;
+      const fn = t && typeof t === 'object' ? t.formatter : undefined;
+      return fn ? fn(item, defaults) : defaults;
+    };
+
     function mountGraph() {
       const container = containerRef.value;
       if (!container) return;
 
+      const tooltipOption: GraphMountOptions['tooltip'] = tooltipOn(props.tooltip)
+        ? { formatter: stableTooltipFormatter }
+        : false;
+
       const options: GraphMountOptions = {
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
-        onNodeClick: (node: Record<string, unknown>) => emit('node-click', node),
-        onNodeDoubleClick: (node: Record<string, unknown>) => emit('node-double-click', node),
-        onSelectionChange: (nodeIds: string[]) => emit('selection-change', nodeIds),
+        tooltip: tooltipOption,
+        legend: props.legend,
+        fitOnLoad: props.fitOnLoad,
+        onNodeClick: (node) => emit('node-click', node),
+        onNodeDoubleClick: (node) => emit('node-double-click', node),
+        onNodeHover: (node) => emit('node-hover', node),
+        onEdgeHover: (edge) => emit('edge-hover', edge),
+        onSelectionChange: (nodeIds) => emit('selection-change', nodeIds),
+        onLegendHover: (entry) => emit('legend-hover', entry),
+        onLegendToggle: (activeValues) => emit('legend-toggle', activeValues),
+        onHighlightChange: (nodeIds) => emit('highlight-change', nodeIds),
+        onCameraChange: (camera) => emit('camera-change', camera),
         responsive: true,
+        suppressEntrance: mountedOnce,
       };
 
       instance = createGraph(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
+      mountedOnce = true;
     }
 
     function destroyGraph() {
@@ -104,7 +164,8 @@ export const Graph = defineComponent({
       prevSpec = '';
     }
 
-    // Expose imperative methods for useGraph() composable
+    // Expose imperative methods for useGraph() composable. Every method forwards
+    // opts to the underlying instance so consumers get the full vanilla API.
     expose({
       search(query: string) {
         instance?.search(query);
@@ -112,17 +173,50 @@ export const Graph = defineComponent({
       clearSearch() {
         instance?.clearSearch();
       },
-      zoomToFit() {
-        instance?.zoomToFit();
+      getSearchMatches(): string[] {
+        return instance?.getSearchMatches() ?? [];
       },
-      zoomToNode(nodeId: string) {
-        instance?.zoomToNode(nodeId);
+      zoomToFit(opts?: Parameters<GraphInstance['zoomToFit']>[0]) {
+        instance?.zoomToFit(opts);
       },
-      selectNode(nodeId: string) {
-        instance?.selectNode(nodeId);
+      zoomToNode(nodeId: string, opts?: Parameters<GraphInstance['zoomToNode']>[1]) {
+        instance?.zoomToNode(nodeId, opts);
+      },
+      flyTo(
+        target: Parameters<GraphInstance['flyTo']>[0],
+        opts?: Parameters<GraphInstance['flyTo']>[1],
+      ) {
+        instance?.flyTo(target, opts);
+      },
+      centerAt(x: number, y: number, opts?: Parameters<GraphInstance['centerAt']>[2]) {
+        instance?.centerAt(x, y, opts);
+      },
+      getCamera() {
+        return instance?.getCamera() ?? { x: 0, y: 0, k: 1 };
+      },
+      selectNode(nodeId: string, opts?: Parameters<GraphInstance['selectNode']>[1]) {
+        instance?.selectNode(nodeId, opts);
       },
       getSelectedNodes(): string[] {
         return instance?.getSelectedNodes() ?? [];
+      },
+      highlight(
+        target: Parameters<GraphInstance['highlight']>[0],
+        opts?: Parameters<GraphInstance['highlight']>[1],
+      ) {
+        instance?.highlight(target, opts);
+      },
+      clearHighlight() {
+        instance?.clearHighlight();
+      },
+      getHighlight() {
+        return instance?.getHighlight() ?? null;
+      },
+      getLegend() {
+        return instance?.getLegend() ?? null;
+      },
+      updateVisuals(spec: GraphSpec) {
+        instance?.updateVisuals(spec);
       },
       get instance() {
         return instance;
@@ -149,7 +243,9 @@ export const Graph = defineComponent({
       },
     );
 
-    // Recreate graph when theme or darkMode change
+    // Recreate graph when theme or darkMode change (spec unchanged). mountedOnce
+    // is already true here, so mountGraph passes suppressEntrance: true and the
+    // entrance does not replay.
     watch(
       [
         () => props.theme,

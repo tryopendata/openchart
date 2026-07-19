@@ -127,4 +127,60 @@ describe('<Graph />', () => {
     const canvas = container.querySelector('canvas');
     expect(canvas).not.toBeNull();
   });
+
+  it('exposes the full imperative API and forwards calls without throwing', async () => {
+    const result = await renderGraph({ spec: basicSpec });
+    // Svelte 5 exposes component exports on the returned component instance.
+    const api = result.component as unknown as Record<string, (...args: unknown[]) => unknown>;
+
+    for (const name of [
+      'search',
+      'clearSearch',
+      'getSearchMatches',
+      'zoomToFit',
+      'zoomToNode',
+      'flyTo',
+      'centerAt',
+      'getCamera',
+      'selectNode',
+      'getSelectedNodes',
+      'highlight',
+      'clearHighlight',
+      'getHighlight',
+      'getLegend',
+      'updateVisuals',
+    ]) {
+      expect(typeof api[name]).toBe('function');
+    }
+
+    // Readback methods return sensible defaults from the live instance.
+    expect(api.getSelectedNodes()).toEqual([]);
+    expect(api.getSearchMatches()).toEqual([]);
+    expect(api.getHighlight()).toBeNull();
+    const cam = api.getCamera() as { k: number };
+    expect(cam.k).toBeGreaterThan(0);
+
+    // Opt-forwarding methods don't throw.
+    expect(() => api.zoomToFit({ duration: 0 })).not.toThrow();
+    expect(() => api.zoomToNode('a', { scale: 2 })).not.toThrow();
+    expect(() => api.flyTo({ x: 0, y: 0, k: 1 }, { duration: 0 })).not.toThrow();
+    expect(() => api.centerAt(0, 0, { duration: 0 })).not.toThrow();
+    expect(() => api.highlight({ nodeIds: ['a'] })).not.toThrow();
+    expect(() => api.clearHighlight()).not.toThrow();
+  });
+
+  it('renders with new option props (tooltip formatter, legend object, events)', async () => {
+    const { container } = await renderGraph({
+      spec: basicSpec,
+      tooltip: { formatter: () => 'custom' },
+      legend: { interactive: false, counts: false },
+      fitOnLoad: true,
+      onlegendhover: () => {},
+      onhighlightchange: () => {},
+      oncamerachange: () => {},
+    });
+
+    const canvas = container.querySelector('canvas');
+    expect(canvas).not.toBeNull();
+  });
 });

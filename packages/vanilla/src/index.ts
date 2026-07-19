@@ -23,9 +23,17 @@ export { createBarList } from './barlist-mount';
 export type { JPGExportOptions, PNGExportOptions, SVGExportOptions } from './export';
 // Export utilities
 export { exportCSV, exportJPG, exportPNG, exportSVG, exportSVGWithFonts } from './export';
+export type { CameraFlightOptions } from './graph/camera';
 // Graph simulation worker
 export { createSimulationWorker } from './graph/simulation-worker-url';
-export type { GraphInstance, GraphMountOptions } from './graph-mount';
+export type {
+  GraphHighlightTarget,
+  GraphInstance,
+  GraphLegendData,
+  GraphMountOptions,
+  GraphTooltipFormatter,
+  GraphTooltipItem,
+} from './graph-mount';
 // Graph mount API
 export { createGraph } from './graph-mount';
 export type { Camera, MapCameraOptions } from './map-camera';

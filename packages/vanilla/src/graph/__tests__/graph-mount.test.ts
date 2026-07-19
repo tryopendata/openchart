@@ -399,6 +399,29 @@ describe('createGraph entrance', () => {
 
     graph.destroy();
   });
+
+  it('suppressEntrance: first camera is the instant fit (no 0.92 pullback, no reveal tween)', async () => {
+    container = makeContainer();
+    // Same warmed spec that DOES animate an entrance without suppressEntrance —
+    // the only difference here is the mount option.
+    const graph = createGraph(container, warmedSpec, { suppressEntrance: true });
+
+    await Promise.resolve();
+    pumpRaf(0);
+
+    const initial = graph.getCamera();
+    // No reveal tween or fit flight was scheduled: pumping further doesn't move it.
+    for (let t = 50; t <= 1400; t += 50) pumpRaf(t);
+    const later = graph.getCamera();
+
+    expect(later.k).toBeCloseTo(initial.k, 6);
+    expect(later.x).toBeCloseTo(initial.x, 6);
+    expect(later.y).toBeCloseTo(initial.y, 6);
+    // A real fit (finite, positive zoom), not the pulled-back 0.92 framing.
+    expect(initial.k).toBeGreaterThan(0);
+
+    graph.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------

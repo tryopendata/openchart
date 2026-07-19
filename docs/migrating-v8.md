@@ -738,6 +738,120 @@ for these only when you want the new behavior.
 
 ---
 
+## 18. Graph animation, interaction, and API changes
+
+v8 gives the graph a motion system (entrance choreography, camera flight, focus
+crossfade, update transitions, physics feel) plus a larger imperative API. Most
+of it is additive, but a handful of defaults changed. Each item below is a
+before/after with the opt-out.
+
+**Animation is default-ON for graphs.** Charts stay opt-IN; graphs are opt-OUT.
+This is a deliberate divergence: a graph already moves on load (the force sim
+settles), so choreography is the natural default rather than something you switch
+on. Charts render static until you add `animation`.
+
+```js
+// v8: a graph animates its entrance with no config.
+{ type: 'graph', nodes, edges }
+
+// Opt out — instant fit, no reveal/flight (warmup still runs):
+{ type: 'graph', nodes, edges, animation: false }
+```
+
+Under `prefers-reduced-motion` the entrance is already an instant fit regardless
+of this flag.
+
+**Graph channel `sort` defaults to `'ascending'`.** This affects graph encoding
+channels ONLY (`nodeColor.sort`, `edgeColor.sort`, etc.), not charts. Category
+domains (legend order, highlight grouping) are now sorted lexically by default so
+the output is deterministic across runs. Charts are unchanged.
+
+```js
+// v8: nodeColor categories come out sorted ascending.
+encoding: { nodeColor: { field: 'group' } }
+
+// Restore prior/insertion order:
+encoding: { nodeColor: { field: 'group', sort: null } }
+```
+
+An explicit `scale.domain` still wins over `sort`.
+
+**The legend is interactive by default.** Legend rows are now buttons that toggle
+category emphasis (dimming the rest through the focus model). If you render your
+own legend, or you don't want click-to-toggle:
+
+```js
+// Non-interactive swatches (still shows counts):
+legend: { interactive: false }
+
+// If you render your own legend UI, turn the built-in off entirely:
+legend: false
+```
+
+**`zoomToFit` and `zoomToNode` now animate.** They used to snap. They fly by
+default (eased camera flight). To snap, pass a zero duration:
+
+```js
+graph.zoomToFit();               // v8: animated fit
+graph.zoomToFit({ duration: 0 }); // snap, like before
+graph.zoomToNode('id', { duration: 0 });
+```
+
+**`update()` is unified and its behavior changed.** One `update(spec)` call now
+diffs prev vs next internally and picks the right path (position-preserving for a
+visual-only change, local reheat for a structural one). The behavior deltas to
+know about:
+
+- **The camera no longer resets on update.** Prior versions re-fit on every
+  update; now the camera holds where the user left it. Call `zoomToFit()`
+  yourself if you want a re-fit after a structural change.
+- **Selection persists for surviving ids.** A node that exists in both prev and
+  next keeps its selected state across the update; removed ids drop out.
+- **Event ordering is guaranteed.** Within an update, structural reconciliation
+  completes before any hover/selection/highlight callback fires, so a
+  consumer-side tooltip or panel never reads a half-updated node set. This
+  removes the race guard hosts used to write by hand.
+- **Theme/darkMode-only changes remount, not update.** In the framework wrappers,
+  changing `theme` or `darkMode` recreates the instance (the theme is baked at
+  mount). The wrappers pass `suppressEntrance: true` on that remount so the
+  entrance does NOT replay for an unchanged spec. Real spec changes still go
+  through `update()`, which has its own entrance handling. If you drive the
+  vanilla `createGraph` directly and recreate for a theme change, pass
+  `suppressEntrance: true` yourself.
+
+### What this actually deletes for a custom graph UI
+
+If you shipped your own graph interaction layer on an older version, here is what
+this release genuinely lets you remove — stated honestly, no overselling:
+
+- **The dimming-recompile loop.** Emphasizing a neighborhood used to mean
+  recompiling the spec with per-node opacity overrides on every hover. Replace it
+  with `highlight(target)` (eased crossfade, no recompile) and `clearHighlight()`.
+- **Manual text color.** Node/edge label color was often hand-set to survive dark
+  mode. The theme now resolves label color against a transparent background
+  correctly, so drop the override.
+- **The tooltip race guard.** The event-ordering guarantee above removes the
+  hand-written "is this node still current?" check around tooltip rendering.
+- **The "no smooth camera" gap.** `flyTo`, `centerAt`, `getCamera`, and animated
+  `zoomToFit`/`zoomToNode` cover programmatic camera moves. You no longer need to
+  tween the transform yourself.
+- **The radius override.** Custom radius scaling can move onto the encoding:
+  `nodeSize: { scale: { type: 'linear' }, range: [minR, maxR] }` instead of a
+  post-compile mutation.
+
+What legitimately REMAINS on `nodeOverrides` (this is fine, not a gap):
+
+- **Seed-node styling** — the styling applied to the seed/root node of a graph.
+- **The `alwaysShowLabel` importance threshold** — there is no label-visibility
+  encoding channel, so pinning "always label this node" stays an override.
+
+One escape hatch to know: `highlight({ category })` dims everything outside the
+category, and it can't exempt the seed node. If you need the seed (or any fixed
+node) to stay lit alongside a category, use the `{ nodeIds }` form and include
+the seed id yourself.
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.

@@ -460,6 +460,253 @@ function InteractiveGraph() {
 }
 
 // ---------------------------------------------------------------------------
+// 8. Entrance & camera choreography — replayable reveal
+// ---------------------------------------------------------------------------
+
+/**
+ * The entrance is default-ON: the camera starts pulled back and flies to the
+ * fit while nodes stagger in. Remounting the <Graph> replays it; a key bump is
+ * the simplest way to force a fresh mount.
+ */
+const choreographySpec: GraphSpec = {
+  ...generateRandomGraph(48, 1.6, 4),
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 7 },
+  animation: { enter: { duration: 900, stagger: true }, camera: { duration: 900 } },
+  chrome: {
+    title: 'Nodes Stagger In as the Camera Flies to Fit',
+    subtitle: 'Entrance choreography is on by default — press replay to watch it again',
+    source: ILLUSTRATIVE,
+  },
+};
+
+function ChoreographyGraph() {
+  const [runId, setRunId] = useState(0);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 460 }}>
+        {/* key bump forces a fresh mount, replaying the entrance from scratch */}
+        <Graph key={runId} spec={choreographySpec} />
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)' }}>
+        <button type="button" className="oc-spec-copy" onClick={() => setRunId((n) => n + 1)}>
+          Replay entrance
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 9. Interactive legend — click a category to isolate it
+// ---------------------------------------------------------------------------
+
+const legendSpec: GraphSpec = {
+  ...generateRandomGraph(70, 1.5, 5),
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 11 },
+  legend: { interactive: true, counts: true },
+  chrome: {
+    title: 'Click a Legend Category to Isolate It',
+    subtitle: 'The built-in legend is interactive by default; toggles dim the rest',
+    source: ILLUSTRATIVE,
+  },
+};
+
+function LegendGraph() {
+  const [active, setActive] = useState<string[]>([]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 460 }}>
+        <Graph
+          spec={legendSpec}
+          onLegendToggle={(values) => setActive(values)}
+          onLegendHover={() => {}}
+        />
+      </div>
+      <div
+        style={{
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
+          fontFamily:
+            'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        }}
+      >
+        active categories: {active.length ? active.join(', ') : '(all)'}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 10. Highlight API — programmatic emphasis via useGraph()
+// ---------------------------------------------------------------------------
+
+const highlightSpec: GraphSpec = {
+  ...generateRandomGraph(60, 1.6, 4),
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 3 },
+  chrome: {
+    title: 'Emphasize a Set Without Recompiling',
+    subtitle: 'highlight() eases a focus crossfade; clearHighlight() releases it',
+    source: ILLUSTRATIVE,
+  },
+};
+
+function HighlightGraph() {
+  const { ref, highlight, clearHighlight } = useGraph();
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 460 }}>
+        <Graph ref={ref} spec={highlightSpec} />
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => highlight({ category: { field: 'community', value: 'Community 1' } })}
+        >
+          Highlight Community 1
+        </button>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => highlight({ neighborsOf: 'n0', includeSelf: true })}
+        >
+          Highlight neighbors of n0
+        </button>
+        <button type="button" className="oc-spec-copy" onClick={() => clearHighlight()}>
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 11. Seeded layout — deterministic, reproducible positions
+// ---------------------------------------------------------------------------
+
+/** Same spec + same seed ⇒ identical settled layout, across reshapes. */
+const seededSpec: GraphSpec = {
+  ...generateRandomGraph(40, 1.5, 3),
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 42 },
+  animation: false,
+  chrome: {
+    title: 'A Seed Makes the Layout Reproducible',
+    subtitle: 'layout.seed pins start positions — both panels settle identically',
+    source: ILLUSTRATIVE,
+  },
+};
+
+function SeededGraph() {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: 'var(--gx-space-3)',
+      }}
+    >
+      {/* Two independent mounts of the same seeded spec settle to the same shape. */}
+      <div style={{ height: 360 }}>
+        <Graph spec={seededSpec} />
+      </div>
+      <div style={{ height: 360 }}>
+        <Graph spec={seededSpec} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 12. Update transitions — add / remove nodes without a reset
+// ---------------------------------------------------------------------------
+
+/** Small evolving network; buttons mutate the node/edge set and update() tweens. */
+function UpdateGraph() {
+  const [count, setCount] = useState(6);
+
+  // Build a ring of `count` nodes with an extra hub in the middle.
+  const spec: GraphSpec = {
+    type: 'graph',
+    nodes: [
+      { id: 'hub', label: 'Hub', community: 'core' },
+      ...Array.from({ length: count }, (_, i) => ({
+        id: `r${i}`,
+        label: `Node ${i + 1}`,
+        community: 'ring',
+      })),
+    ],
+    edges: [
+      ...Array.from({ length: count }, (_, i) => ({ source: 'hub', target: `r${i}` })),
+      ...Array.from({ length: count }, (_, i) => ({
+        source: `r${i}`,
+        target: `r${(i + 1) % count}`,
+      })),
+    ],
+    encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+    layout: { type: 'force', seed: 5 },
+    chrome: {
+      title: 'Add and Remove Nodes; the Layout Tweens',
+      subtitle: 'update() diffs the spec — survivors keep their spots, enterers fade in',
+      source: ILLUSTRATIVE,
+    },
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 460 }}>
+        <Graph spec={spec} />
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', alignItems: 'center' }}>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => setCount((n) => Math.min(n + 2, 16))}
+        >
+          Add nodes
+        </button>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => setCount((n) => Math.max(n - 2, 3))}
+        >
+          Remove nodes
+        </button>
+        <span style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
+          {count + 1} nodes
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 13. Cursor repulsion — nodes drift away from the pointer
+// ---------------------------------------------------------------------------
+
+const cursorSpec: GraphSpec = {
+  ...generateRandomGraph(50, 1.4, 3),
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 9 },
+  interaction: { cursorRepulsion: { radius: 90, strength: 1 }, springyDrag: true },
+  chrome: {
+    title: 'Nodes Drift Away From the Cursor',
+    subtitle: 'Opt-in cursorRepulsion + springyDrag; move the pointer over the graph',
+    source: ILLUSTRATIVE,
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -547,6 +794,64 @@ export const Graphs = () => (
       >
         <InteractiveGraph />
       </Demo>
+    </Section>
+
+    <Section
+      id="motion-and-api"
+      title="Motion & API"
+      lede="Graphs animate on load and expose a full imperative API: fly the camera, emphasize a set, and evolve the data without a reset. Motion is on by default and respects prefers-reduced-motion."
+    >
+      <Demo
+        id="choreography"
+        title="Entrance & camera choreography"
+        description="The camera starts pulled back and flies to fit while nodes stagger in. Press replay to remount and watch it again."
+        specForPanel={choreographySpec}
+        height={560}
+      >
+        <ChoreographyGraph />
+      </Demo>
+      <Demo
+        id="legend"
+        title="Interactive legend"
+        description="The built-in legend is interactive by default: click a category to isolate it. onLegendToggle reports the active set."
+        specForPanel={legendSpec}
+        height={560}
+      >
+        <LegendGraph />
+      </Demo>
+      <Demo
+        id="highlight"
+        title="Highlight API"
+        description="highlight() eases a focus crossfade over a category or a node's neighborhood — no recompile. clearHighlight() releases it."
+        specForPanel={highlightSpec}
+        height={560}
+      >
+        <HighlightGraph />
+      </Demo>
+      <Demo
+        id="seeded"
+        title="Seeded layout (deterministic)"
+        description="layout.seed pins start positions so the same spec settles to the same shape every time. Both panels here render identically."
+        specForPanel={seededSpec}
+        height={400}
+      >
+        <SeededGraph />
+      </Demo>
+      <Demo
+        id="update"
+        title="Update transitions (add / remove nodes)"
+        description="update() diffs the spec: surviving nodes keep their positions, new nodes fade in, removed nodes ghost out — no camera reset."
+        height={560}
+      >
+        <UpdateGraph />
+      </Demo>
+      <Demo
+        id="cursor-repulsion"
+        title="Cursor repulsion"
+        description="Opt-in cursorRepulsion pushes nodes away from the pointer; springyDrag adds weight to node drags. Move the pointer over the graph."
+        spec={cursorSpec}
+        height={480}
+      />
     </Section>
   </GalleryPage>
 );
