@@ -9,11 +9,14 @@
 
 import type {
   A11yMetadata,
+  LegendEntry,
   LegendLayout,
   ResolvedChrome,
   ResolvedTheme,
   TooltipContent,
 } from '@opendata-ai/openchart-core';
+import type { ResolvedGraphAnimation } from './animation';
+import type { ResolvedGraphInteraction } from './interaction';
 
 /** A compiled graph node with resolved visual properties (no x/y position). */
 export interface CompiledGraphNode {
@@ -33,6 +36,8 @@ export interface CompiledGraphNode {
   labelPriority: number;
   /** Community/cluster assignment from the clustering field. */
   community: string | undefined;
+  /** Opacity from the nodeOpacity encoding (default 1). Renderer multiplies into fill/stroke alpha. */
+  opacity: number;
   /** Original node data (all fields from the spec node). */
   data: Record<string, unknown>;
 }
@@ -73,6 +78,14 @@ export interface SimulationConfig {
   linkStrength?: number;
   /** Whether to apply center force (default true). */
   centerForce?: boolean;
+  /** Deterministic layout seed (hashes into initial node positions). */
+  seed?: number;
+  /** Headless settle ticks run before first paint. 0/undefined disables warmup. */
+  warmupTicks?: number;
+  /** Wall-clock budget (ms) that caps warmup at scale. Default 250. */
+  warmupBudgetMs?: number;
+  /** Initial alpha for the simulation (update reheat / entrance). Default d3's 1. */
+  initialAlpha?: number;
 }
 
 /**
@@ -103,4 +116,14 @@ export interface GraphCompilation {
   simulationConfig: SimulationConfig;
   /** Whether to show the brand watermark. */
   watermark: boolean;
+  /** Resolved motion config, or undefined when `animation: false`. */
+  animation?: ResolvedGraphAnimation;
+  /** Resolved interaction config (always present, defaulted). */
+  interaction: ResolvedGraphInteraction;
+  /** The nodeColor field backing the legend/category emphasis, or null. */
+  legendField: string | null;
+  /** Categories to emphasize on load, captured from nodeColor.highlight. */
+  initialHighlight?: { field: string; values: string[] };
+  /** Edge legend entries (nominal edgeColor with >1 category), or undefined. */
+  edgeLegend?: LegendEntry[];
 }

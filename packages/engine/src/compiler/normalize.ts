@@ -17,6 +17,7 @@ import type {
   DataRow,
   Encoding,
   FieldType,
+  GraphLayoutConfig,
   GraphSpec,
   LabelSpec,
   LayerSpec,
@@ -479,18 +480,13 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
 }
 
 function normalizeGraphSpec(spec: GraphSpec): NormalizedGraphSpec {
-  // Default layout with chargeStrength and linkDistance
-  const defaultLayout = {
-    type: 'force' as const,
-    chargeStrength: -300,
-    linkDistance: 30,
+  // Only default the layout `type`. chargeStrength/linkDistance are left unset
+  // when the user omits them so the energy/settle presets in compileGraph can
+  // supply the real defaults (a hardcoded chargeStrength here would mask them).
+  const layout: GraphLayoutConfig = {
+    type: 'force',
+    ...spec.layout,
   };
-  const layout = spec.layout
-    ? {
-        ...defaultLayout,
-        ...spec.layout,
-      }
-    : defaultLayout;
 
   return {
     type: 'graph',
@@ -504,6 +500,9 @@ function normalizeGraphSpec(spec: GraphSpec): NormalizedGraphSpec {
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
+    animation: spec.animation,
+    interaction: spec.interaction,
+    legend: spec.legend,
   };
 }
 

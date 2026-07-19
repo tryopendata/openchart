@@ -104,6 +104,49 @@ function computeDegrees(nodes: GraphNode[], edges: GraphEdge[]): Map<string, num
   return degrees;
 }
 
+/** Sort spec for a categorical encoding channel. */
+type CategoricalSort = 'ascending' | 'descending' | null | string[] | undefined;
+
+/**
+ * Resolve the ordered domain for a categorical encoding channel.
+ *
+ * Graph channels default to `'ascending'` (VL-aligned, deterministic). An
+ * explicit `scale.domain` always wins; otherwise `sort` orders the unique
+ * values: `'ascending'`/`'descending'` sort lexically, `string[]` pins an
+ * explicit order (values not in the list append in first-seen order), and
+ * `null` keeps first-seen (data) order.
+ */
+export function resolveCategoricalDomain(
+  values: string[],
+  sort: CategoricalSort,
+  scaleDomain?: unknown[],
+): string[] {
+  if (Array.isArray(scaleDomain) && scaleDomain.length > 0) {
+    return scaleDomain.map((v) => String(v));
+  }
+
+  const seen: string[] = [];
+  const set = new Set<string>();
+  for (const v of values) {
+    if (!set.has(v)) {
+      set.add(v);
+      seen.push(v);
+    }
+  }
+
+  if (sort === null) return seen;
+
+  if (Array.isArray(sort)) {
+    const pinned = sort.filter((v) => set.has(v));
+    const pinnedSet = new Set(pinned);
+    const rest = seen.filter((v) => !pinnedSet.has(v));
+    return [...pinned, ...rest];
+  }
+
+  const sorted = [...seen].sort((a, b) => a.localeCompare(b));
+  return sort === 'descending' ? sorted.reverse() : sorted;
+}
+
 // ---------------------------------------------------------------------------
 // Node visual resolution
 // ---------------------------------------------------------------------------
@@ -125,16 +168,29 @@ export function resolveNodeVisuals(
   const degrees = computeDegrees(nodes, edges);
   const maxDegree = Math.max(1, ...degrees.values());
 
-  // Build node size scale
+  // Build node size scale. Defaults to scaleSqrt (area-perceptual) over
+  // [3, 12]px; scale.type 'linear' switches to a linear radius ramp, and
+  // scale.domain/scale.range override the extents.
   let sizeScale: ((v: number) => number) | undefined;
   if (encoding.nodeSize?.field) {
     const field = encoding.nodeSize.field;
+    const scaleConfig = encoding.nodeSize.scale;
     const values = nodes.map((n) => Number(n[field])).filter((v) => Number.isFinite(v));
 
     const sizeMin = min(values) ?? 0;
     const sizeMax = max(values) ?? 1;
 
-    sizeScale = scaleSqrt().domain([sizeMin, sizeMax]).range([MIN_NODE_RADIUS, MAX_NODE_RADIUS]);
+    const domain =
+      scaleConfig?.domain && scaleConfig.domain.length === 2
+        ? (scaleConfig.domain as [number, number])
+        : [sizeMin, sizeMax];
+    const range =
+      scaleConfig?.range && scaleConfig.range.length >= 2
+        ? [Number(scaleConfig.range[0]), Number(scaleConfig.range[1])]
+        : [MIN_NODE_RADIUS, MAX_NODE_RADIUS];
+
+    const ctor = scaleConfig?.type === 'linear' ? scaleLinear : scaleSqrt;
+    sizeScale = ctor().domain(domain).range(range);
   }
 
   // Build node color scale
@@ -169,11 +225,12 @@ export function resolveNodeVisuals(
         return Number.isFinite(val) ? colorScale(val) : theme.colors.categorical[0];
       };
     } else {
-      // nominal/ordinal
-      const domain =
-        scaleConfig?.domain && Array.isArray(scaleConfig.domain)
-          ? (scaleConfig.domain as string[])
-          : [...new Set(nodes.map((n) => String(n[field] ?? '')))];
+      // nominal/ordinal: sort-resolved domain so legend + highlight agree
+      const domain = resolveCategoricalDomain(
+        nodes.map((n) => String(n[field] ?? '')),
+        encoding.nodeColor.sort,
+        scaleConfig?.domain,
+      );
       const range =
         scaleConfig?.range && scaleConfig.range.length > 0
           ? (scaleConfig.range as string[])
@@ -187,6 +244,26 @@ export function resolveNodeVisuals(
 
   const defaultColor = theme.colors.categorical[0];
 
+  // Build node opacity scale (VL opacity channel). Quantitative fields map
+  // linearly to [0.25, 1]; scale.range overrides.
+  let opacityScale: ((v: number) => number) | undefined;
+  if (encoding.nodeOpacity?.field) {
+    const field = encoding.nodeOpacity.field;
+    const scaleConfig = encoding.nodeOpacity.scale;
+    const values = nodes.map((n) => Number(n[field])).filter((v) => Number.isFinite(v));
+    const opMin = min(values) ?? 0;
+    const opMax = max(values) ?? 1;
+    const domain =
+      scaleConfig?.domain && scaleConfig.domain.length === 2
+        ? (scaleConfig.domain as [number, number])
+        : [opMin, opMax];
+    const range =
+      scaleConfig?.range && scaleConfig.range.length >= 2
+        ? [Number(scaleConfig.range[0]), Number(scaleConfig.range[1])]
+        : [0.25, 1];
+    opacityScale = scaleLinear().domain(domain).range(range);
+  }
+
   return nodes.map((node) => {
     // Radius
     let radius = DEFAULT_NODE_RADIUS;
@@ -194,6 +271,15 @@ export function resolveNodeVisuals(
       const val = Number(node[encoding.nodeSize.field]);
       if (Number.isFinite(val)) {
         radius = sizeScale(val);
+      }
+    }
+
+    // Opacity
+    let opacity = 1;
+    if (opacityScale && encoding.nodeOpacity?.field) {
+      const val = Number(node[encoding.nodeOpacity.field]);
+      if (Number.isFinite(val)) {
+        opacity = opacityScale(val);
       }
     }
 
@@ -237,6 +323,7 @@ export function resolveNodeVisuals(
       label,
       labelPriority: finalLabelPriority,
       community: undefined,
+      opacity,
       data,
     };
   });
@@ -300,10 +387,11 @@ export function resolveEdgeVisuals(
         return Number.isFinite(val) ? colorScale(val) : hexWithOpacity(theme.colors.axis, 0.4);
       };
     } else {
-      const domain =
-        scaleConfig?.domain && Array.isArray(scaleConfig.domain)
-          ? (scaleConfig.domain as string[])
-          : [...new Set(edges.map((e) => String(e[field] ?? '')))];
+      const domain = resolveCategoricalDomain(
+        edges.map((e) => String(e[field] ?? '')),
+        encoding.edgeColor.sort,
+        scaleConfig?.domain,
+      );
       const range =
         scaleConfig?.range && scaleConfig.range.length > 0
           ? (scaleConfig.range as string[])

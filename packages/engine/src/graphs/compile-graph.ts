@@ -15,6 +15,7 @@
 
 import type {
   CompileOptions,
+  GraphEncoding,
   LegendEntry,
   LegendLayout,
   ResolvedTheme,
@@ -31,9 +32,16 @@ import {
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedGraphSpec } from '../compiler/types';
+import { resolveGraphAnimation } from './animation';
 import { applyCommunityColors, assignCommunities, buildCommunityColorMap } from './community';
-import { resolveEdgeVisuals, resolveNodeVisuals } from './encoding';
-import type { CompiledGraphNode, GraphCompilation, SimulationConfig } from './types';
+import { resolveCategoricalDomain, resolveEdgeVisuals, resolveNodeVisuals } from './encoding';
+import { resolveGraphInteraction } from './interaction';
+import type {
+  CompiledGraphEdge,
+  CompiledGraphNode,
+  GraphCompilation,
+  SimulationConfig,
+} from './types';
 
 const graphNumberFormatter = defaultNumberFormatter({ allIntegers: false, surface: 'chart' });
 
@@ -44,6 +52,24 @@ const graphNumberFormatter = defaultNumberFormatter({ allIntegers: false, surfac
 const SWATCH_SIZE = 12;
 const SWATCH_GAP = 6;
 const ENTRY_GAP = 16;
+
+/** Repulsion preset → chargeStrength + velocityDecay. Raw layout fields win. */
+const ENERGY_PRESETS = {
+  gentle: { chargeStrength: -150, velocityDecay: 0.5 },
+  balanced: { chargeStrength: -300, velocityDecay: 0.4 },
+  energetic: { chargeStrength: -600, velocityDecay: 0.3 },
+} as const;
+
+/** Settle-speed preset → alphaDecay. */
+const SETTLE_PRESETS = {
+  quick: 0.05,
+  balanced: 0.0228,
+  thorough: 0.01,
+} as const;
+
+/** Warmup defaults: `true` → 100 ticks, 250ms budget. */
+const DEFAULT_WARMUP_TICKS = 100;
+const DEFAULT_WARMUP_BUDGET_MS = 250;
 
 // ---------------------------------------------------------------------------
 // Legend builder
@@ -62,6 +88,7 @@ function buildGraphLegend(
   hasCommunities: boolean,
   theme: ResolvedTheme,
   nodeColorField?: string,
+  legendOrder?: string[],
 ): LegendLayout {
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -74,35 +101,48 @@ function buildGraphLegend(
   let entries: LegendEntry[];
 
   if (hasCommunities && communityColorMap.size > 0) {
-    // One entry per community
+    // One entry per community, with node counts
+    const counts = new Map<string, number>();
+    for (const node of nodes) {
+      if (node.community != null) {
+        counts.set(node.community, (counts.get(node.community) ?? 0) + 1);
+      }
+    }
     entries = [...communityColorMap.entries()].map(([label, color]) => ({
       label,
       color,
       shape: 'circle' as const,
       active: true,
+      count: counts.get(label) ?? 0,
     }));
   } else if (nodeColorField) {
     // Build legend from nodeColor encoding: group by the color field value
     // so each legend entry shows the categorical value (e.g. "Dataset", "bls")
-    // rather than an arbitrary node label.
+    // rather than an arbitrary node label. Order follows the sort-resolved
+    // domain so the legend agrees with fill assignment and highlight sets.
     const categoryColors = new Map<string, string>();
+    const categoryCounts = new Map<string, number>();
     for (const node of nodes) {
       const category = String(node.data[nodeColorField] ?? node.label ?? node.id);
       if (!categoryColors.has(category)) {
         categoryColors.set(category, node.fill);
       }
+      categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
     }
 
     // Only show legend if there are multiple categories
     entries =
       categoryColors.size <= 1
         ? []
-        : [...categoryColors.entries()].map(([label, color]) => ({
-            label,
-            color,
-            shape: 'circle' as const,
-            active: true,
-          }));
+        : (legendOrder ?? [...categoryColors.keys()])
+            .filter((label) => categoryColors.has(label))
+            .map((label) => ({
+              label,
+              color: categoryColors.get(label) as string,
+              shape: 'circle' as const,
+              active: true,
+              count: categoryCounts.get(label) ?? 0,
+            }));
   } else {
     // No communities and no color encoding: every node shares one fill, so a
     // legend would just list every node label against identical swatches.
@@ -119,6 +159,47 @@ function buildGraphLegend(
     entryGap: ENTRY_GAP,
     swatchChipFill: theme.colors.annotationFill,
   };
+}
+
+/**
+ * Build edge legend entries for a nominal edgeColor encoding with >1 category.
+ *
+ * Returns undefined when there's no nominal edgeColor field or only one
+ * category. Entries are ordered by the sort-resolved domain and carry counts;
+ * the renderer draws them as non-interactive line swatches (this release only
+ * node rows are interactive).
+ */
+function buildEdgeLegend(
+  edges: CompiledGraphEdge[],
+  encoding: GraphEncoding,
+): LegendEntry[] | undefined {
+  const field = encoding.edgeColor?.field;
+  if (!field || (encoding.edgeColor?.type ?? 'nominal') === 'quantitative') return undefined;
+
+  const categoryColors = new Map<string, string>();
+  const categoryCounts = new Map<string, number>();
+  for (const edge of edges) {
+    const category = String(edge.data[field] ?? '');
+    if (!categoryColors.has(category)) categoryColors.set(category, edge.stroke);
+    categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
+  }
+  if (categoryColors.size <= 1) return undefined;
+
+  const order = resolveCategoricalDomain(
+    edges.map((e) => String(e.data[field] ?? '')),
+    encoding.edgeColor?.sort,
+    encoding.edgeColor?.scale?.domain,
+  );
+
+  return order
+    .filter((label) => categoryColors.has(label))
+    .map((label) => ({
+      label,
+      color: categoryColors.get(label) as string,
+      shape: 'line' as const,
+      active: true,
+      count: categoryCounts.get(label) ?? 0,
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +246,30 @@ function buildGraphTooltips(nodes: CompiledGraphNode[]): Map<string, TooltipCont
   return descriptors;
 }
 
+/**
+ * Build a tooltip for a single edge, on demand.
+ *
+ * Construction is LAZY (called for the one hovered edge), not an eager O(E)
+ * descriptor map — edges outnumber nodes 5–10× and an eager map on every
+ * compile (including updateVisuals) would be pure bloat. Shows source → target
+ * and all non-structural data fields.
+ */
+export function buildEdgeTooltip(edge: CompiledGraphEdge): TooltipContent {
+  const fields: TooltipField[] = [];
+  for (const [key, value] of Object.entries(edge.data)) {
+    if (key === 'source' || key === 'target') continue;
+    if (value == null) continue;
+    fields.push({
+      label: key,
+      value: typeof value === 'number' ? graphNumberFormatter(value) : String(value),
+    });
+  }
+  return {
+    title: `${edge.source} → ${edge.target}`,
+    fields,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -203,6 +308,19 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   }
 
   const graphSpec = normalized as NormalizedGraphSpec;
+
+  // Warn (don't error) when `sort` is set on a quantitative color channel —
+  // ordering a continuous domain is a no-op and usually a spec mistake.
+  for (const [name, ch] of [
+    ['nodeColor', graphSpec.encoding.nodeColor],
+    ['edgeColor', graphSpec.encoding.edgeColor],
+  ] as const) {
+    if (ch?.sort != null && ch.type === 'quantitative') {
+      options.onWarn?.(
+        `encoding.${name}.sort is ignored for a quantitative field (sort only orders categorical domains).`,
+      );
+    }
+  }
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
   const rawWatermark = (spec as Record<string, unknown>).watermark;
@@ -246,13 +364,39 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
 
   // 7. Build legend (use nodeColor encoding colors when present, community otherwise)
   const useCommunitiesForLegend = hasCommunities && !hasNodeColorEncoding;
+  const nodeColorField = graphSpec.encoding.nodeColor?.field;
+  // Sort-resolved category order so legend + highlight sets agree.
+  const legendOrder = nodeColorField
+    ? resolveCategoricalDomain(
+        compiledNodes.map((n) => String(n.data[nodeColorField] ?? n.label ?? n.id)),
+        graphSpec.encoding.nodeColor?.sort,
+        graphSpec.encoding.nodeColor?.scale?.domain,
+      )
+    : undefined;
   const legend = buildGraphLegend(
     compiledNodes,
     communityColorMap,
     useCommunitiesForLegend,
     theme,
-    graphSpec.encoding.nodeColor?.field,
+    nodeColorField,
+    legendOrder,
   );
+  const edgeLegend = buildEdgeLegend(compiledEdges, graphSpec.encoding);
+
+  // Legend field: the category source. nodeColor field, else the clustering
+  // field (community legend), else null.
+  const legendField =
+    nodeColorField ?? (useCommunitiesForLegend ? (clusteringField ?? null) : null);
+
+  // Capture nodeColor.highlight → initial emphasis set (against the resolved domain).
+  let initialHighlight: { field: string; values: string[] } | undefined;
+  if (nodeColorField && graphSpec.encoding.nodeColor?.highlight != null) {
+    const raw = graphSpec.encoding.nodeColor.highlight;
+    const requested = Array.isArray(raw) ? raw : [raw];
+    const available = new Set(legendOrder ?? []);
+    const values = requested.filter((v) => available.has(v));
+    if (values.length > 0) initialHighlight = { field: nodeColorField, values };
+  }
 
   // 8. Build tooltips
   const tooltipDescriptors = buildGraphTooltips(compiledNodes);
@@ -272,23 +416,49 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     keyboardNavigable: compiledNodes.length > 0,
   };
 
-  // 10. Build simulation config
+  // 10. Build simulation config. Energy/settle presets provide defaults; raw
+  // layout fields (chargeStrength, and the non-spec alphaDecay/velocityDecay)
+  // always win over a preset.
   const collisionPadding = graphSpec.layout.collisionPadding ?? 2;
   const maxRadius =
     compiledNodes.length > 0
       ? Math.max(...compiledNodes.map((n) => n.radius))
       : DEFAULT_COLLISION_PADDING;
+
+  const energyPreset = graphSpec.layout.energy
+    ? ENERGY_PRESETS[graphSpec.layout.energy]
+    : ENERGY_PRESETS.balanced;
+  const settlePreset = graphSpec.layout.settle
+    ? SETTLE_PRESETS[graphSpec.layout.settle]
+    : SETTLE_PRESETS.balanced;
+
+  // Warmup: true → defaults, number → explicit tick count, false/undefined → 0.
+  const warmupRaw = graphSpec.layout.warmup;
+  const warmupTicks =
+    warmupRaw === true
+      ? DEFAULT_WARMUP_TICKS
+      : typeof warmupRaw === 'number'
+        ? Math.max(0, Math.floor(warmupRaw))
+        : 0;
+
   const simulationConfig: SimulationConfig = {
-    chargeStrength: graphSpec.layout.chargeStrength ?? -300,
+    chargeStrength: graphSpec.layout.chargeStrength ?? energyPreset.chargeStrength,
     linkDistance: graphSpec.layout.linkDistance ?? 30,
     clustering: clusteringField ? { field: clusteringField, strength: 0.5 } : null,
-    alphaDecay: 0.0228,
-    velocityDecay: 0.4,
+    alphaDecay: settlePreset,
+    velocityDecay: energyPreset.velocityDecay,
     collisionRadius: maxRadius + collisionPadding,
     collisionPadding,
     linkStrength: graphSpec.layout.linkStrength,
     centerForce: graphSpec.layout.centerForce,
+    seed: graphSpec.layout.seed,
+    warmupTicks,
+    warmupBudgetMs: DEFAULT_WARMUP_BUDGET_MS,
   };
+
+  // Resolve motion + interaction (default-ON animation, defaulted interaction).
+  const animation = resolveGraphAnimation(graphSpec.animation);
+  const interaction = resolveGraphInteraction(graphSpec.interaction);
 
   // 11. Build chrome
   const chrome = computeChrome(
@@ -322,6 +492,11 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     },
     simulationConfig,
     watermark,
+    animation,
+    interaction,
+    legendField,
+    initialHighlight,
+    edgeLegend,
   };
 }
 

@@ -1172,18 +1172,34 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
-  // Validate encoding fields exist on at least the first node/edge
+  // Validate encoding fields against the FULL union of keys across ALL
+  // nodes/edges. Sparse fields (present only on edges[3]) must not hard-fail;
+  // first-row sampling would just move the cliff and make failures
+  // data-order-dependent. Object.keys over 50k rows is cheap.
   if (spec.encoding && typeof spec.encoding === 'object') {
     const encoding = spec.encoding as Record<string, unknown>;
-    const firstNode = nodes[0] as Record<string, unknown>;
-    const firstEdge = edges.length > 0 ? (edges[0] as Record<string, unknown>) : null;
-    const nodeFields = firstNode ? new Set(Object.keys(firstNode)) : new Set<string>();
-    const edgeFields = firstEdge ? new Set(Object.keys(firstEdge)) : new Set<string>();
+    const nodeFields = new Set<string>();
+    for (const node of nodes) {
+      if (node && typeof node === 'object') {
+        for (const key of Object.keys(node as Record<string, unknown>)) nodeFields.add(key);
+      }
+    }
+    const edgeFields = new Set<string>();
+    for (const edge of edges) {
+      if (edge && typeof edge === 'object') {
+        for (const key of Object.keys(edge as Record<string, unknown>)) edgeFields.add(key);
+      }
+    }
 
-    const nodeChannels = ['nodeColor', 'nodeSize', 'nodeLabel'] as const;
+    const nodeChannels = ['nodeColor', 'nodeSize', 'nodeOpacity', 'nodeLabel'] as const;
     for (const channel of nodeChannels) {
       const ch = encoding[channel] as Record<string, unknown> | undefined;
-      if (ch?.field && typeof ch.field === 'string' && !nodeFields.has(ch.field)) {
+      if (
+        ch?.field &&
+        typeof ch.field === 'string' &&
+        nodes.length > 0 &&
+        !nodeFields.has(ch.field)
+      ) {
         errors.push({
           message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist on nodes. Available fields: ${[...nodeFields].join(', ')}`,
           path: `encoding.${channel}.field`,
@@ -1193,10 +1209,15 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
       }
     }
 
-    const edgeChannels = ['edgeColor', 'edgeWidth'] as const;
+    const edgeChannels = ['edgeColor', 'edgeWidth', 'edgeStyle'] as const;
     for (const channel of edgeChannels) {
       const ch = encoding[channel] as Record<string, unknown> | undefined;
-      if (ch?.field && typeof ch.field === 'string' && firstEdge && !edgeFields.has(ch.field)) {
+      if (
+        ch?.field &&
+        typeof ch.field === 'string' &&
+        edges.length > 0 &&
+        !edgeFields.has(ch.field)
+      ) {
         errors.push({
           message: `Spec error: encoding.${channel}.field "${ch.field}" does not exist on edges. Available fields: ${[...edgeFields].join(', ')}`,
           path: `encoding.${channel}.field`,

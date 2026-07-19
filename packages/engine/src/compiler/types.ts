@@ -18,7 +18,9 @@ import type {
   Display,
   Encoding,
   FieldType,
+  GraphAnimationSpec,
   GraphEncoding,
+  GraphInteractionConfig,
   GraphLayoutConfig,
   GraphSpec,
   LabelConfig,
@@ -192,6 +194,9 @@ export interface NormalizedGraphSpec {
   theme: ThemeConfig;
   darkMode: DarkMode;
   watermark: boolean;
+  animation?: GraphAnimationSpec;
+  interaction?: GraphInteractionConfig;
+  legend?: boolean | { interactive?: boolean; counts?: boolean };
 }
 
 /** Discriminated union of all normalized spec types. */

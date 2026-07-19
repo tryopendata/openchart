@@ -275,7 +275,10 @@ describe('normalizeSpec', () => {
 
       const result = normalizeSpec(spec) as NormalizedGraphSpec;
       expect(result.encoding).toEqual({});
-      expect(result.layout).toEqual({ type: 'force', chargeStrength: -300, linkDistance: 30 });
+      // Only `type` is defaulted at normalize time; chargeStrength/linkDistance
+      // now come from the energy preset in compileGraph (default 'balanced' =
+      // -300), so normalize no longer injects them.
+      expect(result.layout).toEqual({ type: 'force' });
       expect(result.annotations).toEqual([]);
       expect(result.darkMode).toBe('off');
     });
