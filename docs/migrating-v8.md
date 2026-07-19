@@ -761,6 +761,22 @@ on. Charts render static until you add `animation`.
 Under `prefers-reduced-motion` the entrance is already an instant fit regardless
 of this flag.
 
+**Graphs warm up off-screen before first paint.** The simulation now runs up to
+100 ticks (capped at a 250ms budget) before the first rendered frame, so the
+graph appears mostly settled instead of exploding outward from its initial
+placement. Warmup is layout behavior, not animation: it runs even with
+`animation: false` and under `prefers-reduced-motion` (it reduces motion — the
+opt-outs skip the reveal/flight, not the settle). At thousands of nodes the ms
+budget truncates warmup, so some visible settling remains at scale.
+
+```js
+// v7 behavior — first paint shows the raw initial ticks:
+layout: { warmup: false }
+
+// Or a custom tick count (still capped by the 250ms budget):
+layout: { warmup: 40 }
+```
+
 **Graph channel `sort` defaults to `'ascending'`.** This affects graph encoding
 channels ONLY (`nodeColor.sort`, `edgeColor.sort`, etc.), not charts. Category
 domains (legend order, highlight grouping) are now sorted lexically by default so
@@ -787,6 +803,11 @@ legend: { interactive: false }
 // If you render your own legend UI, turn the built-in off entirely:
 legend: false
 ```
+
+When you do render your own, `getLegend()` returns the resolved legend data
+(field, per-category label/color/count/active state, plus edge-legend entries),
+and `highlight({ category: { field, value } })` drives the same emphasis the
+built-in rows use — no recompilation, no `nodeOverrides` rewriting.
 
 **`zoomToFit` and `zoomToNode` now animate.** They used to snap. They fly by
 default (eased camera flight). To snap, pass a zero duration:
