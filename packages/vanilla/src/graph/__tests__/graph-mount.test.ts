@@ -1,6 +1,8 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGraph } from '../../graph-mount';
+import { SimulationManager } from '../simulation';
+import { SpatialIndex } from '../spatial-index';
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -395,6 +397,231 @@ describe('createGraph entrance', () => {
     // The camera actually moved for the smaller viewport.
     expect(afterResize).not.toEqual(beforeResize);
 
+    graph.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 8 — physics-feel gates (springy drag + cursor repulsion)
+//
+// happy-dom has no Worker, so the mount drives the SYNC SimulationManager. We
+// spy on its setPointer/pinNode/unpinNode to observe exactly what the mount
+// emits under each gate, and dispatch canvas mouse events to trigger the flow.
+// ---------------------------------------------------------------------------
+
+describe('createGraph physics-feel gates', () => {
+  let setPointerSpy: ReturnType<typeof vi.spyOn>;
+  let pinSpy: ReturnType<typeof vi.spyOn>;
+  let unpinSpy: ReturnType<typeof vi.spyOn>;
+  let nowValue: number;
+  let restoreGetContext: (() => void) | null = null;
+
+  function stubCanvas2D(): void {
+    const noop = () => {};
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get: (_t, prop) =>
+        prop === 'measureText' ? () => ({ width: 0 }) : prop === 'setLineDash' ? noop : noop,
+      set: () => true,
+    });
+    const proto = HTMLCanvasElement.prototype as unknown as { getContext: (id: string) => unknown };
+    const original = proto.getContext;
+    proto.getContext = () => ctx;
+    restoreGetContext = () => {
+      proto.getContext = original;
+    };
+  }
+
+  function stubMatchMedia(reduced: boolean): void {
+    const impl = (query: string) => ({
+      matches: query.includes('reduce') ? reduced : false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent() {
+        return false;
+      },
+    });
+    vi.stubGlobal('matchMedia', impl);
+    window.matchMedia = globalThis.matchMedia;
+  }
+
+  /** A canvas mousemove at screen (cx, cy). */
+  function moveMouse(canvas: Element, cx: number, cy: number): void {
+    canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: cx, clientY: cy, bubbles: true }));
+  }
+
+  /** A specific number of nodes in a loose chain (keeps compile cheap). */
+  function bigSpec(n: number, interaction: GraphSpec['interaction']): GraphSpec {
+    const nodes = Array.from({ length: n }, (_, i) => ({ id: `n${i}`, label: `N${i}` }));
+    const edges = Array.from({ length: n - 1 }, (_, i) => ({
+      source: `n${i}`,
+      target: `n${i + 1}`,
+    }));
+    // warmupTicks 0 keeps these large-graph tests fast; positions don't matter
+    // for the gate assertions (we spy on the emitted physics calls).
+    return { type: 'graph', nodes, edges, interaction, layout: { warmup: false } };
+  }
+
+  beforeEach(() => {
+    nowValue = 0;
+    stubCanvas2D();
+    stubMatchMedia(false);
+    vi.stubGlobal('performance', { now: () => nowValue });
+    setPointerSpy = vi.spyOn(SimulationManager.prototype, 'setPointer');
+    pinSpy = vi.spyOn(SimulationManager.prototype, 'pinNode');
+    unpinSpy = vi.spyOn(SimulationManager.prototype, 'unpinNode');
+  });
+
+  afterEach(() => {
+    restoreGetContext?.();
+    restoreGetContext = null;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('default graph: no pointer feed emitted on mousemove', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(4, undefined));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    nowValue = 100;
+    moveMouse(canvas, 400, 300);
+    moveMouse(canvas, 410, 310);
+
+    // Cursor repulsion off by default → the mount never feeds pointer positions.
+    expect(setPointerSpy).not.toHaveBeenCalled();
+    graph.destroy();
+  });
+
+  it('cursorRepulsion on + small graph: mousemove feeds the pointer (throttled)', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(4, { cursorRepulsion: true }));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    // First move at t=100 posts; a move within the ~33ms window is throttled.
+    nowValue = 100;
+    moveMouse(canvas, 400, 300);
+    nowValue = 110;
+    moveMouse(canvas, 405, 305);
+    // A move past the throttle window posts again.
+    nowValue = 200;
+    moveMouse(canvas, 420, 320);
+
+    const activeCalls = setPointerSpy.mock.calls.filter((c) => c[2] === true);
+    expect(activeCalls.length).toBe(2);
+    graph.destroy();
+  });
+
+  it('cursorRepulsion on but reduced motion: no pointer feed', async () => {
+    stubMatchMedia(true);
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(4, { cursorRepulsion: true }));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    nowValue = 100;
+    moveMouse(canvas, 400, 300);
+    nowValue = 200;
+    moveMouse(canvas, 420, 320);
+
+    // Ambient pointer-driven motion is exactly what reduced-motion suppresses.
+    expect(setPointerSpy).not.toHaveBeenCalled();
+    graph.destroy();
+  });
+
+  it('cursorRepulsion on but graph > 2000 nodes: no pointer feed', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(2001, { cursorRepulsion: true }));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    nowValue = 100;
+    moveMouse(canvas, 400, 300);
+    nowValue = 200;
+    moveMouse(canvas, 420, 320);
+
+    expect(setPointerSpy).not.toHaveBeenCalled();
+    graph.destroy();
+  });
+
+  it('mouseleave deactivates the pointer feed when cursor repulsion is on', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(4, { cursorRepulsion: true }));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    nowValue = 100;
+    moveMouse(canvas, 400, 300);
+    canvas.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+    const deactivate = setPointerSpy.mock.calls.filter((c) => c[2] === false);
+    expect(deactivate.length).toBe(1);
+    graph.destroy();
+  });
+
+  /**
+   * Drive one full node drag (down → move → up). Hit-testing is made
+   * deterministic by forcing SpatialIndex.findNearest to return a stub node, so
+   * the drag reliably commits regardless of happy-dom's zero-size canvas rect.
+   */
+  function dragSomeNode(canvas: Element): void {
+    const hit = vi
+      .spyOn(SpatialIndex.prototype, 'findNearest')
+      .mockReturnValue({ id: 'n0', x: 0, y: 0, index: 0, radius: 5 } as never);
+    canvas.dispatchEvent(
+      new MouseEvent('mousedown', { clientX: 400, clientY: 300, bubbles: true }),
+    );
+    // First move commits the drag (onNodeDragStart → pinNode).
+    canvas.dispatchEvent(
+      new MouseEvent('mousemove', { clientX: 410, clientY: 310, bubbles: true }),
+    );
+    canvas.dispatchEvent(new MouseEvent('mouseup', { clientX: 410, clientY: 310, bubbles: true }));
+    hit.mockRestore();
+  }
+
+  it('springyDrag on + small graph: drag pins with alphaTarget 0.3, releases with 0', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(6, { springyDrag: true }));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    dragSomeNode(canvas);
+
+    // Springy: pin carries alphaTarget 0.3, unpin carries 0.
+    expect(pinSpy.mock.calls[0][3]).toBe(0.3);
+    expect(unpinSpy.mock.calls[0][1]).toBe(0);
+    graph.destroy();
+  });
+
+  it('springyDrag off (default): drag pins with NO alphaTarget (legacy)', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(6, undefined));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    dragSomeNode(canvas);
+
+    // Legacy: the springy arg is absent (undefined) on both pin and unpin.
+    expect(pinSpy.mock.calls[0][3]).toBeUndefined();
+    expect(unpinSpy.mock.calls[0][1]).toBeUndefined();
+    graph.destroy();
+  });
+
+  it('springyDrag on but graph > 5000 nodes: drag stays legacy (no alphaTarget)', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, bigSpec(5001, { springyDrag: true }));
+    await Promise.resolve();
+    const canvas = container.querySelector('.oc-graph-canvas')!;
+
+    dragSomeNode(canvas);
+
+    // Above the gate, springy is off → legacy pin/unpin (no alphaTarget field).
+    expect(pinSpy.mock.calls[0][3]).toBeUndefined();
+    expect(unpinSpy.mock.calls[0][1]).toBeUndefined();
     graph.destroy();
   });
 });

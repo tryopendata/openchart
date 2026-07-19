@@ -62,14 +62,17 @@ interface SimConfig {
   warmupTicks?: number;
   warmupBudgetMs?: number;
   initialAlpha?: number;
+  /** Cursor-repulsion radius/strength; null disables the toy force. */
+  cursorRepulsion?: { radius: number; strength: number } | null;
 }
 
 type InMessage =
   | { type: 'init'; nodes: SimNode[]; edges: SimEdge[]; config: SimConfig }
   | { type: 'reheat'; alpha?: number }
-  | { type: 'pin'; nodeId: string; x: number; y: number }
-  | { type: 'unpin'; nodeId: string }
+  | { type: 'pin'; nodeId: string; x: number; y: number; alphaTarget?: number }
+  | { type: 'unpin'; nodeId: string; alphaTarget?: number }
   | { type: 'drag'; nodeId: string; x: number; y: number }
+  | { type: 'pointer'; x: number; y: number; active: boolean }
   | { type: 'stop' };
 
 type OutMessage =
@@ -135,12 +138,65 @@ function forceCluster(nodes: InternalNode[], strength: number) {
 }
 
 // ---------------------------------------------------------------------------
+// Cursor-repulsion force
+// ---------------------------------------------------------------------------
+
+/** Live pointer position + radius/strength, mutated by 'pointer' messages. */
+interface PointerState {
+  x: number;
+  y: number;
+  active: boolean;
+  radius: number;
+  strength: number;
+}
+
+/**
+ * Pushes nodes within `radius` of the pointer away from it, scaled by `strength`
+ * and falling off linearly to zero at the radius edge. Nodes outside the radius
+ * are untouched. Inert while the pointer is inactive.
+ *
+ * NOTE: Duplicated in simulation.ts (sync fallback path). This file can't import
+ * from workspace packages since it's built as a standalone IIFE. Keep in sync.
+ */
+function forceCursor(nodes: InternalNode[], pointer: PointerState) {
+  return (alpha: number) => {
+    if (!pointer.active || pointer.radius <= 0) return;
+    const r2 = pointer.radius * pointer.radius;
+    const k = pointer.strength * alpha;
+    for (const node of nodes) {
+      const dx = (node.x ?? 0) - pointer.x;
+      const dy = (node.y ?? 0) - pointer.y;
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 >= r2) continue;
+      const dist = Math.sqrt(dist2) || 1e-6;
+      // Linear falloff: full push at the pointer, zero at the radius edge.
+      const falloff = (pointer.radius - dist) / pointer.radius;
+      const push = (k * falloff) / dist;
+      node.vx = (node.vx ?? 0) + dx * push;
+      node.vy = (node.vy ?? 0) + dy * push;
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Worker entry point
 // ---------------------------------------------------------------------------
 
 const ctx = self;
 let simulation: Simulation<InternalNode, undefined> | null = null;
 let nodeMap: Map<string, InternalNode> = new Map();
+/** Pointer state for the cursor force; radius=0 keeps it inert until configured. */
+const pointer: PointerState = { x: 0, y: 0, active: false, radius: 0, strength: 0 };
+/** Separately tracked alpha-target intents so drag and cursor don't stomp each
+ * other. The higher intent wins; releasing one falls back to the other. */
+let dragAlphaTarget = 0;
+let cursorAlphaTarget = 0;
+
+/** Apply the max of the tracked alpha-target intents to the live simulation. */
+function syncAlphaTarget(): void {
+  if (!simulation) return;
+  simulation.alphaTarget(Math.max(dragAlphaTarget, cursorAlphaTarget));
+}
 
 /** Monotonic-ish clock for the warmup budget; falls back to Date.now in bare workers. */
 function now(): number {
@@ -216,6 +272,17 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
           simulation.force('cluster', clusterFn as unknown as ReturnType<typeof forceCenter>);
         }
 
+        // Cursor-repulsion force is always registered but stays inert until a
+        // 'pointer' message activates it (pointer.active + radius > 0). Reset
+        // pointer/alpha-target intent so a re-init doesn't inherit stale state.
+        pointer.active = false;
+        pointer.radius = config.cursorRepulsion?.radius ?? 0;
+        pointer.strength = config.cursorRepulsion?.strength ?? 0;
+        dragAlphaTarget = 0;
+        cursorAlphaTarget = 0;
+        const cursorFn = forceCursor(internalNodes, pointer);
+        simulation.force('cursor', cursorFn as unknown as ReturnType<typeof forceCenter>);
+
         // Initial alpha (entrance / reheat impulse) applied before warmup.
         if (config.initialAlpha != null) {
           simulation.alpha(config.initialAlpha);
@@ -275,6 +342,13 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
           node.fx = msg.x;
           node.fy = msg.y;
         }
+        // Springy drag: keep the sim warm so neighbors follow the pinned node.
+        // Legacy path (no alphaTarget field) leaves alpha untouched, as before.
+        if (msg.alphaTarget != null && simulation) {
+          dragAlphaTarget = msg.alphaTarget;
+          syncAlphaTarget();
+          simulation.restart();
+        }
         break;
       }
 
@@ -284,11 +358,34 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
           node.fx = null;
           node.fy = null;
         }
-        // Gentle reheat so the released node settles into equilibrium
-        // without destabilizing the whole graph. 0.1 is enough for
-        // local settling without triggering large-scale reorganization.
-        if (simulation && simulation.alpha() < 0.1) {
+        if (msg.alphaTarget != null) {
+          // Springy release: cool the sim back toward the requested target
+          // (typically 0). Don't run the legacy reheat — the alpha-target path
+          // owns re-settling.
+          dragAlphaTarget = msg.alphaTarget;
+          syncAlphaTarget();
+        } else if (simulation && simulation.alpha() < 0.1) {
+          // LEGACY path: gentle reheat so the released node settles into
+          // equilibrium without destabilizing the whole graph. Byte-identical
+          // to the pre-springy behavior.
           simulation.alpha(0.1).restart();
+        }
+        break;
+      }
+
+      case 'pointer': {
+        // No cursor force configured (radius 0) → a true no-op; don't warm the
+        // sim or the toy-force alpha would keep a settled graph ticking.
+        if (pointer.radius <= 0) break;
+        pointer.x = msg.x;
+        pointer.y = msg.y;
+        pointer.active = msg.active;
+        // Keep the graph subtly alive under an active cursor; clear our intent
+        // when inactive. Drag intent is tracked separately so neither stomps.
+        cursorAlphaTarget = msg.active ? 0.03 : 0;
+        if (simulation) {
+          syncAlphaTarget();
+          if (msg.active) simulation.restart();
         }
         break;
       }

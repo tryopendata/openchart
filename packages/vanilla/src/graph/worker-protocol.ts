@@ -43,6 +43,8 @@ export interface WorkerSimulationConfig {
   warmupBudgetMs?: number;
   /** Initial alpha applied before warmup/first paint. Default d3's 1. */
   initialAlpha?: number;
+  /** Cursor-repulsion radius/strength; null disables the toy force. */
+  cursorRepulsion?: { radius: number; strength: number } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,9 +59,16 @@ export type WorkerInMessage =
       config: WorkerSimulationConfig;
     }
   | { type: 'reheat'; alpha?: number }
-  | { type: 'pin'; nodeId: string; x: number; y: number }
-  | { type: 'unpin'; nodeId: string }
+  // `alphaTarget` is an OPTIONAL springy-drag field. A stale cached worker
+  // (which has no code path reading it) ignores the unknown field and runs the
+  // exact legacy pin/unpin behavior — graceful degradation for free.
+  | { type: 'pin'; nodeId: string; x: number; y: number; alphaTarget?: number }
+  | { type: 'unpin'; nodeId: string; alphaTarget?: number }
   | { type: 'drag'; nodeId: string; x: number; y: number }
+  // Cursor-repulsion pointer feed. A brand-new message type: a stale worker
+  // drops it (no case, no default) → the toy force is simply absent, which is
+  // acceptable for an ambient effect.
+  | { type: 'pointer'; x: number; y: number; active: boolean }
   | { type: 'stop' };
 
 // ---------------------------------------------------------------------------

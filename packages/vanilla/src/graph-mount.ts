@@ -168,6 +168,17 @@ function resolveDarkMode(mode?: DarkMode): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Physics-feel gates (Phase 8)
+// ---------------------------------------------------------------------------
+
+/** Springy drag disables above this node count (warm-sim cost at scale). */
+const SPRINGY_DRAG_MAX_NODES = 5000;
+/** Cursor-repulsion disables above this node count (mirrors the glow gate). */
+const CURSOR_FORCE_MAX_NODES = 2000;
+/** Cursor pointer-feed throttle (~30Hz) so we don't post on every mousemove. */
+const CURSOR_POINTER_THROTTLE_MS = 33;
+
+// ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
 
@@ -223,6 +234,8 @@ export function createGraph(
   const scheduler = new AnimationScheduler(() => scheduleRender());
   let gestureTimeout: ReturnType<typeof setTimeout> | null = null;
   let lastEdgeHitTime = 0;
+  // Cursor-repulsion pointer-feed throttle timestamp (Phase 8).
+  let lastPointerFeedTime = 0;
   // Camera flight state.
   let activeFlight: GraphAnimation | null = null;
   let cameraChangePending = false;
@@ -524,6 +537,33 @@ export function createGraph(
   }
 
   // ---------------------------------------------------------------------------
+  // Physics-feel gates (Phase 8)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Springy drag on: config opts in AND the graph is small enough that holding
+   * the sim warm during a drag is cheap. Off/above threshold → legacy pin/unpin.
+   */
+  function springyDragEnabled(): boolean {
+    return (
+      compilation.interaction.springyDrag && compilation.nodes.length <= SPRINGY_DRAG_MAX_NODES
+    );
+  }
+
+  /**
+   * Cursor repulsion on: config opts in, the graph is small enough (mirrors the
+   * glow gate), and reduced motion is off (ambient pointer-driven motion is
+   * exactly what reduced-motion suppresses).
+   */
+  function cursorForceEnabled(): boolean {
+    return (
+      compilation.interaction.cursorRepulsion !== null &&
+      compilation.nodes.length <= CURSOR_FORCE_MAX_NODES &&
+      !prefersReducedMotion()
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Simulation and animation
   // ---------------------------------------------------------------------------
 
@@ -583,6 +623,9 @@ export function createGraph(
       warmupTicks: opts?.skipWarmup ? 0 : config.warmupTicks,
       warmupBudgetMs: config.warmupBudgetMs,
       initialAlpha: opts?.initialAlpha ?? config.initialAlpha,
+      // Cursor force radius/strength (null when disabled or gated off by node
+      // count). The mount only feeds pointer positions when the same gate holds.
+      cursorRepulsion: cursorForceEnabled() ? compilation.interaction.cursorRepulsion : null,
     });
 
     let initialSettleDone = false;
@@ -1183,15 +1226,31 @@ export function createGraph(
         const node = positionedNodes.find((n) => n.id === nodeId);
         const x = node?.x ?? 0;
         const y = node?.y ?? 0;
-        simulation?.pinNode(nodeId, x, y);
+        // Springy: hold the sim warm (alphaTarget 0.3) so neighbors follow. Off
+        // → legacy pin with no alphaTarget field (byte-identical message).
+        simulation?.pinNode(nodeId, x, y, springyDragEnabled() ? 0.3 : undefined);
         canvas?.classList.add('oc-graph-canvas--dragging');
       },
       onNodeDrag(nodeId, x, y) {
         simulation?.dragNode(nodeId, x, y);
       },
       onNodeDragEnd(nodeId) {
-        simulation?.unpinNode(nodeId);
+        // Springy: cool the sim back down (alphaTarget 0). Off → legacy unpin
+        // with no alphaTarget field (preserves the legacy reheat behavior).
+        simulation?.unpinNode(nodeId, springyDragEnabled() ? 0 : undefined);
         canvas?.classList.remove('oc-graph-canvas--dragging');
+      },
+      onPointerMove(graphX, graphY) {
+        if (!cursorForceEnabled()) return;
+        // Throttle the pointer feed to ~30Hz so we don't post on every mousemove.
+        const now = performance.now();
+        if (now - lastPointerFeedTime < CURSOR_POINTER_THROTTLE_MS) return;
+        lastPointerFeedTime = now;
+        simulation?.setPointer(graphX, graphY, true);
+      },
+      onPointerLeave() {
+        if (!cursorForceEnabled()) return;
+        simulation?.setPointer(0, 0, false);
       },
       onDoubleClick(nodeId) {
         options?.onNodeDoubleClick?.(nodeDataById(nodeId));

@@ -99,6 +99,40 @@ function forceCluster(nodes: SyncNode[], strength: number) {
 }
 
 // ---------------------------------------------------------------------------
+// Cursor-repulsion force (duplicated in simulation-worker.ts for the Web Worker
+// path. Worker can't import from workspace packages, so both copies stay in sync.)
+// ---------------------------------------------------------------------------
+
+/** Live pointer position + radius/strength, mutated by setPointer(). */
+interface PointerState {
+  x: number;
+  y: number;
+  active: boolean;
+  radius: number;
+  strength: number;
+}
+
+function forceCursor(nodes: SyncNode[], pointer: PointerState) {
+  return (alpha: number) => {
+    if (!pointer.active || pointer.radius <= 0) return;
+    const r2 = pointer.radius * pointer.radius;
+    const k = pointer.strength * alpha;
+    for (const node of nodes) {
+      const dx = (node.x ?? 0) - pointer.x;
+      const dy = (node.y ?? 0) - pointer.y;
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 >= r2) continue;
+      const dist = Math.sqrt(dist2) || 1e-6;
+      // Linear falloff: full push at the pointer, zero at the radius edge.
+      const falloff = (pointer.radius - dist) / pointer.radius;
+      const push = (k * falloff) / dist;
+      node.vx = (node.vx ?? 0) + dx * push;
+      node.vy = (node.vy ?? 0) + dy * push;
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // SimulationManager
 // ---------------------------------------------------------------------------
 
@@ -130,6 +164,13 @@ export class SimulationManager {
   private initNodes: SimNode[] = [];
   private initEdges: SimEdge[] = [];
   private initConfig: WorkerSimulationConfig | null = null;
+
+  // Cursor-repulsion pointer state (sync path). radius=0 keeps the force inert.
+  private pointer: PointerState = { x: 0, y: 0, active: false, radius: 0, strength: 0 };
+  // Separately tracked alpha-target intents so drag and cursor don't stomp each
+  // other. The higher intent wins; releasing one falls back to the other.
+  private dragAlphaTarget = 0;
+  private cursorAlphaTarget = 0;
 
   private constructor() {}
 
@@ -181,38 +222,107 @@ export class SimulationManager {
     }
   }
 
-  /** Pin a node to fixed x/y coordinates. */
-  pinNode(id: string, x: number, y: number): void {
+  /**
+   * Pin a node to fixed x/y coordinates.
+   *
+   * When `alphaTarget` is provided (springy drag), the sim is held warm so the
+   * pinned node's neighbors follow springily. Omitting it posts a byte-identical
+   * legacy message and leaves alpha untouched.
+   */
+  pinNode(id: string, x: number, y: number, alphaTarget?: number): void {
     if (this.destroyed) return;
 
     if (this.worker) {
-      this.worker.postMessage({ type: 'pin', nodeId: id, x, y });
+      // Only include alphaTarget when springy, so the legacy message stays
+      // byte-identical (and a stale worker sees exactly the old shape).
+      this.worker.postMessage(
+        alphaTarget != null
+          ? { type: 'pin', nodeId: id, x, y, alphaTarget }
+          : { type: 'pin', nodeId: id, x, y },
+      );
     } else {
       const node = this.syncNodeMap.get(id);
       if (node) {
         node.fx = x;
         node.fy = y;
       }
+      if (alphaTarget != null && this.syncSim) {
+        this.dragAlphaTarget = alphaTarget;
+        this.syncAlphaTarget();
+        this.syncSim.restart();
+        this.runSyncTicks();
+      }
     }
   }
 
-  /** Unpin a node and reheat so forces settle it into equilibrium. */
-  unpinNode(id: string): void {
+  /**
+   * Unpin a node and reheat so forces settle it into equilibrium.
+   *
+   * When `alphaTarget` is provided (springy release), the sim cools back toward
+   * that target instead of the legacy gentle reheat. Omitting it preserves the
+   * exact legacy reheat behavior (and posts a byte-identical message).
+   */
+  unpinNode(id: string, alphaTarget?: number): void {
     if (this.destroyed) return;
 
     if (this.worker) {
-      this.worker.postMessage({ type: 'unpin', nodeId: id });
+      this.worker.postMessage(
+        alphaTarget != null
+          ? { type: 'unpin', nodeId: id, alphaTarget }
+          : { type: 'unpin', nodeId: id },
+      );
     } else {
       const node = this.syncNodeMap.get(id);
       if (node) {
         node.fx = null;
         node.fy = null;
       }
-      if (this.syncSim && this.syncSim.alpha() < 0.1) {
+      if (alphaTarget != null) {
+        // Springy release: cool toward the requested target (typically 0). Keep
+        // the tick loop running so the sim actually eases down to the target;
+        // the alpha-target path owns re-settling (no legacy reheat).
+        this.dragAlphaTarget = alphaTarget;
+        this.syncAlphaTarget();
+        this.runSyncTicks();
+      } else if (this.syncSim && this.syncSim.alpha() < 0.1) {
+        // LEGACY path: gentle reheat, byte-identical to pre-springy behavior.
         this.syncSim.alpha(0.1).restart();
         this.runSyncTicks();
       }
     }
+  }
+
+  /**
+   * Feed the cursor-repulsion force a pointer position. `active: false` clears
+   * the force. No-op when the graph has no cursor force configured (radius 0).
+   */
+  setPointer(x: number, y: number, active: boolean): void {
+    if (this.destroyed) return;
+
+    if (this.worker) {
+      this.worker.postMessage({ type: 'pointer', x, y, active });
+    } else {
+      // No cursor force configured (radius 0) → a true no-op; don't warm the sim
+      // or the toy-force alpha would keep an otherwise-settled graph ticking.
+      if (this.pointer.radius <= 0) return;
+      this.pointer.x = x;
+      this.pointer.y = y;
+      this.pointer.active = active;
+      this.cursorAlphaTarget = active ? 0.03 : 0;
+      if (this.syncSim) {
+        this.syncAlphaTarget();
+        if (active) {
+          this.syncSim.restart();
+          this.runSyncTicks();
+        }
+      }
+    }
+  }
+
+  /** Apply the max of the tracked alpha-target intents to the sync sim. */
+  private syncAlphaTarget(): void {
+    if (!this.syncSim) return;
+    this.syncSim.alphaTarget(Math.max(this.dragAlphaTarget, this.cursorAlphaTarget));
   }
 
   /** Drag a node (pins it and reheats slightly). */
@@ -392,6 +502,17 @@ export class SimulationManager {
       // d3 calls force functions with (alpha) on each tick
       this.syncSim.force('cluster', clusterFn as unknown as ReturnType<typeof forceCenter>);
     }
+
+    // Cursor-repulsion force: always registered but inert until setPointer()
+    // activates it (pointer.active + radius > 0). Reset intent so a re-init
+    // (worker->sync fallback) doesn't inherit stale state.
+    this.pointer.active = false;
+    this.pointer.radius = config.cursorRepulsion?.radius ?? 0;
+    this.pointer.strength = config.cursorRepulsion?.strength ?? 0;
+    this.dragAlphaTarget = 0;
+    this.cursorAlphaTarget = 0;
+    const cursorFn = forceCursor(this.syncNodes, this.pointer);
+    this.syncSim.force('cursor', cursorFn as unknown as ReturnType<typeof forceCenter>);
 
     // Initial alpha (entrance / reheat impulse) applied before warmup.
     if (config.initialAlpha != null) {

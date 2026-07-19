@@ -33,6 +33,10 @@ export interface InteractionCallbacks {
   onNodeDrag(nodeId: string, x: number, y: number): void;
   onNodeDragEnd(nodeId: string): void;
   onDoubleClick(nodeId: string): void;
+  /** Pointer moved over the canvas (graph-space coords). Used by cursor repulsion. */
+  onPointerMove?(graphX: number, graphY: number): void;
+  /** Pointer left the canvas. Used to deactivate cursor repulsion. */
+  onPointerLeave?(): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,6 +191,13 @@ export class GraphInteractionManager {
   private onMouseMove(e: MouseEvent): void {
     const { x, y } = this.canvasXY(e);
 
+    // Feed the pointer position (graph-space) to cursor repulsion, if wired.
+    // Fires on every move; the mount owns throttling and the node-count gate.
+    if (this.callbacks.onPointerMove) {
+      const gp = this.transform.screenToGraph(x, y);
+      this.callbacks.onPointerMove(gp.x, gp.y);
+    }
+
     if (this.dragState) {
       const graph = this.transform.screenToGraph(x, y);
       if (!this.dragState.started) {
@@ -261,6 +272,8 @@ export class GraphInteractionManager {
   private onMouseLeave(_e: MouseEvent): void {
     this.callbacks.onHoverChange(null);
     this.canvas.style.cursor = 'default';
+    // Deactivate cursor repulsion when the pointer leaves the canvas.
+    this.callbacks.onPointerLeave?.();
 
     // Cancel any in-progress pan
     if (this.panState) {
