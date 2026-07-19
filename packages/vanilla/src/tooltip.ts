@@ -20,9 +20,17 @@ export interface TooltipShowOptions {
   placement?: Placement;
 }
 
+/**
+ * Content accepted by {@link TooltipManager.show}. A structured
+ * {@link TooltipContent} is rendered by the manager; `{ text }` is inserted as
+ * plain text (escaped via textContent); `{ element }` is a caller-owned node
+ * trusted verbatim (the host owns sanitization).
+ */
+export type TooltipInput = TooltipContent | { text: string } | { element: HTMLElement };
+
 export interface TooltipManager {
   /** Show the tooltip with content at a given position. */
-  show(content: TooltipContent, x: number, y: number, opts?: TooltipShowOptions): void;
+  show(content: TooltipInput, x: number, y: number, opts?: TooltipShowOptions): void;
   /** Hide the tooltip. */
   hide(): void;
   /** Remove the tooltip element and clean up event listeners. */
@@ -72,7 +80,23 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
   };
   document.addEventListener('keydown', handleDocumentKeydown);
 
-  function show(content: TooltipContent, x: number, y: number, opts?: TooltipShowOptions): void {
+  function show(input: TooltipInput, x: number, y: number, opts?: TooltipShowOptions): void {
+    // Custom-element form: trusted verbatim (host owns sanitization).
+    if ('element' in input) {
+      lastContentKey = '';
+      tooltip.replaceChildren(input.element);
+      position(x, y, opts);
+      return;
+    }
+    // Plain-text form: escaped via textContent, never innerHTML.
+    if ('text' in input) {
+      lastContentKey = '';
+      tooltip.textContent = input.text;
+      position(x, y, opts);
+      return;
+    }
+
+    const content = input;
     // Fast content identity check: title + field count + first/last field values
     const contentKey = `${content.title}|${content.fields.length}|${content.fields[0]?.value}|${content.fields[content.fields.length - 1]?.value}`;
 
@@ -116,6 +140,11 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
       tooltip.innerHTML = html;
     }
 
+    position(x, y, opts);
+  }
+
+  /** Show and position the tooltip at a container-relative coordinate. */
+  function position(x: number, y: number, opts?: TooltipShowOptions): void {
     tooltip.style.display = 'block';
 
     // Position with viewport-aware edge avoidance via @floating-ui/dom.

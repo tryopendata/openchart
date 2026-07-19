@@ -335,3 +335,47 @@ describe('tooltip content escaping', () => {
     manager.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Custom formatter inputs (Phase 5d): { text } is escaped, { element } is trusted
+// ---------------------------------------------------------------------------
+
+describe('createTooltipManager custom inputs', () => {
+  it('{ text } is inserted via textContent (script tags inert)', () => {
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+    manager.show({ text: '<script>alert(1)</script>' }, 10, 10);
+
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    // No <script> node created; the markup is literal text.
+    expect(tooltip.querySelector('script')).toBeNull();
+    expect(tooltip.textContent).toBe('<script>alert(1)</script>');
+    expect(tooltip.style.display).toBe('block');
+  });
+
+  it('{ element } is trusted verbatim (host-owned node)', () => {
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+    const el = document.createElement('div');
+    el.className = 'custom-card';
+    el.textContent = 'hi';
+    manager.show({ element: el }, 10, 10);
+
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(tooltip.querySelector('.custom-card')).toBe(el);
+  });
+
+  it('re-showing structured content after an element input still renders', () => {
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+    const el = document.createElement('span');
+    el.className = 'ghost-el';
+    manager.show({ element: el }, 0, 0);
+    manager.show({ title: 'T', fields: [{ label: 'L', value: 'V' }] }, 0, 0);
+
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(tooltip.querySelector('.oc-tooltip-title')?.textContent).toBe('T');
+    // The previously-injected custom element is gone.
+    expect(tooltip.querySelector('.ghost-el')).toBeNull();
+  });
+});

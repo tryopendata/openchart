@@ -10,6 +10,8 @@ import type { GraphRenderState, PositionedEdge, PositionedNode } from '../types'
 interface DrawCall {
   method: string;
   args: unknown[];
+  /** globalAlpha in effect at fill/stroke time. */
+  alpha?: number;
 }
 
 function createRecordingCanvas(): {
@@ -51,7 +53,13 @@ function createRecordingCanvas(): {
 
   for (const method of trackedMethods) {
     fakeCtx[method] = (...args: unknown[]) => {
-      calls.push({ method, args });
+      // Snapshot the alpha in effect when a stroke/fill lands, so crossfade
+      // tests can assert per-batch blended alpha (globalAlpha is mutable).
+      if (method === 'fill' || method === 'stroke') {
+        calls.push({ method, args, alpha: fakeCtx.globalAlpha as number });
+      } else {
+        calls.push({ method, args });
+      }
     };
   }
 
@@ -163,8 +171,10 @@ function makeState(overrides?: Partial<GraphRenderState>): GraphRenderState {
     theme: makeTheme(),
     searchMatches: null,
     isGesturing: false,
+    watermark: false,
+    dimOpacity: 0.15,
     ...overrides,
-  };
+  } as GraphRenderState;
 }
 
 // ---------------------------------------------------------------------------
@@ -709,5 +719,155 @@ describe('selected nodes', () => {
 
     // Should see lineWidth=2 for the selection ring
     expect(lineWidths).toContain(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: focus crossfade + node dim tiers (Phase 5a)
+// ---------------------------------------------------------------------------
+
+import type { FocusSnapshot } from '../focus-transition';
+
+function snapshot(over: Partial<FocusSnapshot> = {}): FocusSnapshot {
+  return {
+    hasActive: false,
+    connected: new Set(),
+    searchMatches: null,
+    selected: new Set(),
+    ...over,
+  };
+}
+
+describe('focus crossfade', () => {
+  // Two edges: one connected under the hovered node, one not.
+  const nodes = [
+    makeNode({ id: 'a', x: 0, y: 0 }),
+    makeNode({ id: 'b', x: 10, y: 10 }),
+    makeNode({ id: 'c', x: 50, y: 50 }),
+  ];
+  const edges = [
+    makeEdge('a', 'b', { sourceX: 0, sourceY: 0, targetX: 10, targetY: 10 }),
+    makeEdge('b', 'c', { sourceX: 10, sourceY: 10, targetX: 50, targetY: 50 }),
+  ];
+  const restingFocus = snapshot();
+  const hoverFocus = snapshot({ hasActive: true, connected: new Set(['a', 'b']) });
+
+  function edgeStrokeAlphas(calls: DrawCall[]): number[] {
+    return calls.filter((c) => c.method === 'stroke' && c.alpha !== undefined).map((c) => c.alpha!);
+  }
+
+  it('mid-transition edge alphas fall strictly between resting and connected tiers', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(200, 200);
+    renderer.render(
+      makeState({
+        nodes,
+        edges,
+        // Crossfade from resting (all default 0.35) → hover (a-b connected 1.0,
+        // b-c dimmed 0.05). At t=0.5 the connected edge blends to 0.675, the
+        // dimmed edge to 0.2.
+        focus: { t: 0.5, prev: restingFocus, next: hoverFocus },
+      }),
+    );
+    const alphas = edgeStrokeAlphas(calls);
+    // connected a-b: lerp(0.35, 1.0, 0.5) = 0.675
+    expect(alphas.some((a) => Math.abs(a - 0.675) < 1e-6)).toBe(true);
+    // dimmed b-c: lerp(0.35, 0.05, 0.5) = 0.2
+    expect(alphas.some((a) => Math.abs(a - 0.2) < 1e-6)).toBe(true);
+    // Nothing is left at a pure tier value mid-flight.
+    expect(alphas).not.toContain(0.35);
+  });
+
+  it('settled focus (t=1) uses the fast 3-bucket path at exact tier alphas', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(200, 200);
+    renderer.render(
+      makeState({ nodes, edges, focus: { t: 1, prev: hoverFocus, next: hoverFocus } }),
+    );
+    const alphas = edgeStrokeAlphas(calls);
+    // connected a-b at 1.0, dimmed b-c at dimOpacity/3 = 0.05.
+    expect(alphas).toContain(1);
+    expect(alphas.some((a) => Math.abs(a - 0.05) < 1e-6)).toBe(true);
+  });
+
+  it('dims bulk (non-neighbor) node fills under an active focus', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(200, 200);
+    renderer.render(
+      makeState({ nodes, edges, focus: { t: 1, prev: hoverFocus, next: hoverFocus } }),
+    );
+    // Node c is not connected → its fill batch draws at dimOpacity (0.15).
+    const fillAlphas = calls
+      .filter((c) => c.method === 'fill' && c.alpha !== undefined)
+      .map((c) => c.alpha!);
+    expect(fillAlphas.some((a) => Math.abs(a - 0.15) < 1e-6)).toBe(true);
+  });
+
+  it('honors a custom dimOpacity for both node and edge dim tiers', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(200, 200);
+    renderer.render(
+      makeState({
+        nodes,
+        edges,
+        dimOpacity: 0.3,
+        focus: { t: 1, prev: hoverFocus, next: hoverFocus },
+      }),
+    );
+    const edgeAlphas = edgeStrokeAlphas(calls);
+    // edge dim tier = dimOpacity/3 = 0.1
+    expect(edgeAlphas.some((a) => Math.abs(a - 0.1) < 1e-6)).toBe(true);
+    const fillAlphas = calls
+      .filter((c) => c.method === 'fill' && c.alpha !== undefined)
+      .map((c) => c.alpha!);
+    // node dim tier = dimOpacity = 0.3
+    expect(fillAlphas.some((a) => Math.abs(a - 0.3) < 1e-6)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: label halo keyed on theme.isDark (Phase 5e)
+// ---------------------------------------------------------------------------
+
+describe('label halo on transparent background', () => {
+  function haloColor(isDark: boolean): string {
+    const strokeStyles: string[] = [];
+    const { canvas } = createRecordingCanvas();
+    // Intercept strokeStyle assignments around strokeText.
+    const ctx = canvas.getContext('2d') as unknown as Record<string, unknown>;
+    let lastStroke = '';
+    Object.defineProperty(ctx, 'strokeStyle', {
+      get: () => lastStroke,
+      set: (v: string) => {
+        lastStroke = v;
+      },
+      configurable: true,
+    });
+    ctx.strokeText = () => strokeStyles.push(lastStroke);
+
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(200, 200);
+    const theme = makeTheme(isDark);
+    theme.colors.background = 'transparent';
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', label: 'A', labelPriority: 1 })],
+        theme,
+        transform: { x: 0, y: 0, k: 2 },
+      }),
+    );
+    return strokeStyles[0] ?? '';
+  }
+
+  it('dark mode → dark halo behind light text', () => {
+    expect(haloColor(true)).toBe('rgba(0, 0, 0, 0.7)');
+  });
+
+  it('light mode → light halo behind dark text', () => {
+    expect(haloColor(false)).toBe('rgba(255, 255, 255, 0.85)');
   });
 });

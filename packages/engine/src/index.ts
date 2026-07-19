@@ -23,6 +23,9 @@ export {
   compileTileMap,
 } from './compile';
 
+// Lazy edge-tooltip builder (graph edge hover content on demand).
+export { buildEdgeTooltip } from './graphs/compile-graph';
+
 // ---------------------------------------------------------------------------
 // Animation resolution
 // ---------------------------------------------------------------------------

@@ -7,19 +7,32 @@
  * simulation ticks. Returns a GraphInstance with update/search/zoom/destroy.
  */
 
-import type { CompileOptions, DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type {
+  CompileOptions,
+  DarkMode,
+  GraphSpec,
+  ThemeConfig,
+  TooltipContent,
+} from '@opendata-ai/openchart-core';
 import type {
   CompiledGraphEdge,
   CompiledGraphNode,
   GraphCompilation,
 } from '@opendata-ai/openchart-engine';
-import { compileGraph } from '@opendata-ai/openchart-engine';
+import { buildEdgeTooltip, compileGraph } from '@opendata-ai/openchart-engine';
 import { type CameraFlightOptions, clampK, createCameraFlight } from './graph/camera';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
+import {
+  composeStandingFocus,
+  type FocusSnapshot,
+  FocusTransition,
+  layerHoverFocus,
+} from './graph/focus-transition';
 import { GraphInteractionManager } from './graph/interaction';
 import { attachGraphKeyboardNav } from './graph/keyboard';
-import { prefersReducedMotion } from './graph/motion';
-import { AnimationScheduler } from './graph/scheduler';
+import { createGraphLegend, type GraphLegendController } from './graph/legend';
+import { createTween, prefersReducedMotion, resolveEase } from './graph/motion';
+import { AnimationScheduler, type GraphAnimation } from './graph/scheduler';
 import { GraphSearchManager } from './graph/search';
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
@@ -33,21 +46,69 @@ import { createTooltipManager, type TooltipManager } from './tooltip';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * A programmatic highlight target. Resolved once at call time into a node id set
+ * and rendered through the focus model (eased crossfade). See {@link GraphInstance.highlight}.
+ */
+export type GraphHighlightTarget =
+  | { nodeIds: string[] }
+  | { category: { field: string; value: string | string[] } }
+  | { neighborsOf: string; includeSelf?: boolean };
+
+/** A hovered node or edge, passed to a tooltip formatter. */
+export interface GraphTooltipItem {
+  kind: 'node' | 'edge';
+  /** The raw datum (node record, or edge record with source/target). */
+  data: Record<string, unknown>;
+}
+
+/**
+ * Custom tooltip content builder. Receives the hovered item and the library's
+ * default {@link TooltipContent}, returns replacement content.
+ *
+ * Safety contract:
+ * - A returned `TooltipContent` or `string` is escaped by the library (strings
+ *   are inserted via `textContent`, never `innerHTML`).
+ * - A returned `HTMLElement` is trusted verbatim — the host owns sanitization.
+ * - `null` suppresses the tooltip for that item.
+ */
+export type GraphTooltipFormatter = (
+  item: GraphTooltipItem,
+  defaults: TooltipContent,
+) => TooltipContent | string | HTMLElement | null;
+
+/** Built-in legend data (headless mirror of the rendered legend). */
+export interface GraphLegendData {
+  field: string | null;
+  nodes: Array<{ label: string; color: string; count?: number; active: boolean }>;
+  edges: Array<{ label: string; color: string; count?: number }>;
+}
+
 export interface GraphMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   responsive?: boolean;
   /** Show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
-  /** Show the built-in tooltip on node/edge hover. Defaults to true. */
-  tooltip?: boolean;
-  /** Show the built-in legend. Defaults to true. */
-  legend?: boolean;
+  /** Show the built-in tooltip; pass an object for a custom formatter. Defaults to true. */
+  tooltip?: boolean | { formatter?: GraphTooltipFormatter };
+  /**
+   * Built-in legend. `true` (default) renders an interactive legend with counts.
+   * `false` renders none (set this if you render your own legend). An object
+   * toggles interactivity/counts.
+   */
+  legend?: boolean | { interactive?: boolean; counts?: boolean };
   onNodeClick?: (node: Record<string, unknown>) => void;
   onNodeDoubleClick?: (node: Record<string, unknown>) => void;
   onNodeHover?: (node: Record<string, unknown> | null) => void;
   onEdgeHover?: (edge: Record<string, unknown> | null) => void;
   onSelectionChange?: (nodeIds: string[]) => void;
+  /** Fired when the user hovers a legend entry (null on leave). */
+  onLegendHover?: (entry: { field: string; value: string } | null) => void;
+  /** Fired when legend toggle state changes; `activeValues` is the active category set (empty = all). */
+  onLegendToggle?: (activeValues: string[]) => void;
+  /** Fired whenever the highlight set changes (programmatic or legend), null when cleared. */
+  onHighlightChange?: (nodeIds: string[] | null) => void;
   /**
    * Fit the graph to the viewport on the first tick. Default true. Set false to
    * restore a saved camera (e.g. getCamera() + flyTo) without the initial fit.
@@ -78,6 +139,14 @@ export interface GraphInstance {
   getSelectedNodes(): string[];
   /** Node ids currently matching the active search query. */
   getSearchMatches(): string[];
+  /** Emphasize a set of nodes; eased via the focus model. Resets legend toggles. */
+  highlight(target: GraphHighlightTarget, opts?: { dimOpacity?: number }): void;
+  /** Clear any programmatic highlight (and legend toggles). */
+  clearHighlight(): void;
+  /** The currently highlighted node ids, or null when nothing is highlighted. */
+  getHighlight(): string[] | null;
+  /** Headless snapshot of the legend (node categories + edge categories). */
+  getLegend(): GraphLegendData;
   resize(): void;
   destroy(): void;
 }
@@ -121,6 +190,7 @@ export function createGraph(
   let canvas: HTMLCanvasElement | null = null;
   let chromeEl: HTMLElement | null = null;
   let legendEl: HTMLElement | null = null;
+  let legendController: GraphLegendController | null = null;
 
   // Subsystems
   let renderer: GraphCanvasRenderer | null = null;
@@ -151,8 +221,24 @@ export function createGraph(
   let gestureTimeout: ReturnType<typeof setTimeout> | null = null;
   let lastEdgeHitTime = 0;
   // Camera flight state.
-  let activeFlight: import('./graph/scheduler').GraphAnimation | null = null;
+  let activeFlight: GraphAnimation | null = null;
   let cameraChangePending = false;
+
+  // Focus / highlight state (Phase 5). One highlight slot with two writers:
+  // programmatic highlight() and legend toggles. `highlightSet` is the resolved
+  // node id set (null = nothing highlighted); `activeCategories` holds legend
+  // toggle state (empty = all active, no dimming). Whichever wrote last wins.
+  let highlightSet: Set<string> | null = null;
+  let highlightDimOpacity: number | null = null;
+  let activeCategories = new Set<string>();
+  // Node id → its legend-field category value, for category-based highlight.
+  let nodeCategory = new Map<string, string>();
+  // The live focus crossfade, driving eased dimming. Rebuilt on first render.
+  let focusTransition: FocusTransition | null = null;
+  // Scheduler animation that keeps frames dirty while the focus crossfade runs.
+  let focusAnim: GraphAnimation | null = null;
+  // Hovered-node radius tween (1 → 1.15), null when settled at 1.
+  let hoverRadiusTween: { nodeId: string; scale: number } | null = null;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -195,6 +281,17 @@ export function createGraph(
   function buildDataMaps(): void {
     nodeDataMap = new Map(compilation.nodes.map((n) => [n.id, n.data ?? {}]));
     edgeDataMap = new Map(compilation.edges.map((e) => [`${e.source}->${e.target}`, e.data ?? {}]));
+
+    // Node → legend-field category value, for category hover/highlight. Empty
+    // when the graph has no categorical color field.
+    nodeCategory = new Map();
+    const field = compilation.legendField;
+    if (field) {
+      for (const n of compilation.nodes) {
+        const v = n.data?.[field];
+        if (v != null) nodeCategory.set(n.id, String(v));
+      }
+    }
   }
 
   function buildAdjacencyMap(edges: CompiledGraphEdge[]): Map<string, Set<string>> {
@@ -366,24 +463,42 @@ export function createGraph(
     }
   }
 
+  /** Resolve legend interactive/counts flags from the legend option. */
+  function legendConfig(): { interactive: boolean; counts: boolean } {
+    const l = options?.legend;
+    if (l && typeof l === 'object') {
+      return { interactive: l.interactive ?? true, counts: l.counts ?? true };
+    }
+    return { interactive: true, counts: true };
+  }
+
+  /** Build the legend view data from the compilation + current toggle state. */
+  function legendViewData(): { nodes: GraphLegendData['nodes']; edges: GraphLegendData['edges'] } {
+    return { nodes: getLegend().nodes, edges: getLegend().edges };
+  }
+
+  /** Create or refresh the interactive legend from current state. */
   function renderLegend(): void {
     if (!legendEl) return;
-
-    const entries = 'entries' in compilation.legend ? compilation.legend.entries : [];
-    if (entries.length === 0) {
-      legendEl.style.display = 'none';
-      return;
+    const cfg = legendConfig();
+    if (!legendController) {
+      legendController = createGraphLegend(legendEl, legendViewData(), {
+        interactive: cfg.interactive,
+        counts: cfg.counts,
+        onToggle: (value) => toggleLegendCategory(value),
+        onHover: (value) => {
+          const field = compilation.legendField;
+          options?.onLegendHover?.(value !== null && field ? { field, value } : null);
+        },
+      });
+    } else {
+      legendController.update(legendViewData());
     }
+  }
 
-    legendEl.style.display = '';
-    let html = '';
-    for (const entry of entries) {
-      html += '<div class="oc-graph-legend-item">';
-      html += `<span class="oc-graph-legend-swatch" style="background:${escapeHtml(entry.color)}"></span>`;
-      html += `<span>${escapeHtml(entry.label)}</span>`;
-      html += '</div>';
-    }
-    legendEl.innerHTML = html;
+  /** Re-render the legend to reflect the current active-category state. */
+  function syncLegendActiveState(): void {
+    if (legendController) legendController.update(legendViewData());
   }
 
   // ---------------------------------------------------------------------------
@@ -483,9 +598,233 @@ export function createGraph(
     animFrameId = requestAnimationFrame(renderFrame);
   }
 
+  // -------------------------------------------------------------------------
+  // Focus model (Phase 5): highlight ∩ search + hover neighborhood, eased.
+  // -------------------------------------------------------------------------
+
+  /** Neighborhood of the hovered node under the resolved hover mode. */
+  function hoverConnectedSet(nodeId: string | null): Set<string> | null {
+    if (nodeId === null) return null;
+    if (compilation.interaction.hoverMode === 'category') {
+      const cat = nodeCategory.get(nodeId);
+      const set = new Set<string>([nodeId]);
+      if (cat !== undefined) {
+        for (const [id, c] of nodeCategory) if (c === cat) set.add(id);
+      }
+      return set;
+    }
+    // 'neighbors' (default): the node plus its adjacency.
+    const set = new Set<string>([nodeId]);
+    const neighbors = adjacencyMap.get(nodeId);
+    if (neighbors) for (const nid of neighbors) set.add(nid);
+    return set;
+  }
+
+  /** The standing (non-hover) focus from highlight + search + selection. */
+  function standingSnapshot(): FocusSnapshot {
+    return composeStandingFocus(
+      highlightSet,
+      searchManager.getMatches(),
+      selectedNodeIds,
+      adjacencyMap,
+    );
+  }
+
+  /** The full target snapshot = standing state with the hover layer on top. */
+  function targetSnapshot(): FocusSnapshot {
+    return layerHoverFocus(standingSnapshot(), hoveredNodeId, hoverConnectedSet(hoveredNodeId));
+  }
+
+  /**
+   * Point the focus crossfade at the current target and arm a scheduler
+   * animation that keeps frames dirty until it settles. Snaps instantly under
+   * reduced motion or when hover animation is disabled.
+   */
+  function armFocus(now: number): void {
+    const target = targetSnapshot();
+    const hoverCfg = compilation.animation?.hover ?? null;
+    const duration = hoverCfg && !prefersReducedMotion() ? hoverCfg.duration : 0;
+    const ease = resolveEase(hoverCfg?.ease ?? 'smooth');
+
+    if (!focusTransition) {
+      focusTransition = new FocusTransition(target, duration, ease, now);
+      return;
+    }
+    focusTransition.retarget(target, now);
+
+    // Keep the crossfade running via a scheduler animation until settled.
+    if (focusAnim) scheduler.remove(focusAnim);
+    focusAnim = {
+      tick: (t: number): boolean => {
+        const running = focusTransition !== null && !focusTransition.isSettled(t);
+        if (!running) focusAnim = null;
+        return running;
+      },
+      finish: (): void => {
+        focusAnim = null;
+      },
+      cancel: (): void => {
+        focusAnim = null;
+      },
+    };
+    scheduler.add(focusAnim);
+  }
+
+  /** Recompute the highlight set and re-arm the focus crossfade. */
+  function refreshFocus(): void {
+    armFocus(performance.now());
+    needsRender = true;
+    scheduleRender();
+  }
+
+  /** Resolve a highlight target into a concrete node id set. */
+  function resolveHighlightTarget(target: GraphHighlightTarget): Set<string> {
+    if ('nodeIds' in target) return new Set(target.nodeIds);
+    if ('neighborsOf' in target) {
+      const set = new Set<string>();
+      if (target.includeSelf !== false) set.add(target.neighborsOf);
+      const neighbors = adjacencyMap.get(target.neighborsOf);
+      if (neighbors) for (const nid of neighbors) set.add(nid);
+      return set;
+    }
+    // Category form: match nodes whose `field` value is in `value`.
+    const values = new Set(
+      Array.isArray(target.category.value) ? target.category.value : [target.category.value],
+    );
+    const field = target.category.field;
+    const set = new Set<string>();
+    for (const n of compilation.nodes) {
+      const v = n.data?.[field];
+      if (v != null && values.has(String(v))) set.add(n.id);
+    }
+    return set;
+  }
+
+  /** Node ids for the active legend categories (empty categories = no filter). */
+  function categoryHighlightSet(): Set<string> | null {
+    if (activeCategories.size === 0) return null;
+    const set = new Set<string>();
+    for (const [id, cat] of nodeCategory) if (activeCategories.has(cat)) set.add(id);
+    return set;
+  }
+
+  /** Fire onHighlightChange with the current highlight set. */
+  function emitHighlightChange(): void {
+    options?.onHighlightChange?.(highlightSet ? [...highlightSet] : null);
+  }
+
+  /** Apply the resolved initialHighlight from the compilation, if any. */
+  function applyInitialHighlight(): void {
+    const init = compilation.initialHighlight;
+    if (!init) return;
+    activeCategories = new Set(init.values);
+    highlightSet = categoryHighlightSet();
+    highlightDimOpacity = null;
+  }
+
+  /** Start (or cancel) the hovered node's 1 → 1.15 radius tween. */
+  function startHoverRadiusTween(nodeId: string | null): void {
+    const hoverCfg = compilation.animation?.hover ?? null;
+    // No hover animation, reduced motion, or hover-off → snap (no tween).
+    if (nodeId === null || !hoverCfg || prefersReducedMotion()) {
+      hoverRadiusTween = nodeId ? { nodeId, scale: 1.15 } : null;
+      return;
+    }
+    hoverRadiusTween = { nodeId, scale: 1 };
+    const ease = resolveEase(hoverCfg.ease);
+    const tween = createTween({
+      duration: hoverCfg.duration,
+      ease,
+      apply: (t) => {
+        // Guard against a newer hover having replaced the target mid-tween.
+        if (hoverRadiusTween?.nodeId === nodeId) hoverRadiusTween.scale = 1 + 0.15 * t;
+        needsRender = true;
+      },
+      onDone: () => {
+        if (hoverRadiusTween?.nodeId === nodeId) hoverRadiusTween.scale = 1.15;
+      },
+    });
+    scheduler.add(tween);
+  }
+
+  /** Resolve tooltip content for a node, applying a custom formatter if set. */
+  function showNodeTooltip(nodeId: string): void {
+    if (!tooltipManager || !interactionManager) return;
+    const defaults = compilation.tooltipDescriptors.get(nodeId);
+    if (!defaults) return;
+    const node = positionedNodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    const screen = interactionManager.getTransform().graphToScreen(node.x, node.y);
+
+    const formatter = tooltipFormatter();
+    if (!formatter) {
+      tooltipManager.show(defaults, screen.x, screen.y);
+      return;
+    }
+    const result = formatter({ kind: 'node', data: nodeDataById(nodeId) }, defaults);
+    applyFormatterResult(result, screen.x, screen.y);
+  }
+
+  /** Resolve tooltip content for an edge (lazy default), applying a formatter. */
+  function showEdgeTooltip(
+    edgeId: string,
+    data: Record<string, unknown>,
+    screenX: number,
+    screenY: number,
+  ): void {
+    if (!tooltipManager) return;
+    const edge = compilation.edges.find((e) => `${e.source}->${e.target}` === edgeId);
+    const defaults = edge ? buildEdgeTooltip(edge) : { title: edgeId, fields: [] };
+
+    const formatter = tooltipFormatter();
+    if (!formatter) {
+      tooltipManager.show(defaults, screenX, screenY);
+      return;
+    }
+    const result = formatter({ kind: 'edge', data }, defaults);
+    applyFormatterResult(result, screenX, screenY);
+  }
+
+  /** The configured tooltip formatter, or null when tooltips are plain. */
+  function tooltipFormatter(): GraphTooltipFormatter | null {
+    const t = options?.tooltip;
+    return t && typeof t === 'object' ? (t.formatter ?? null) : null;
+  }
+
+  /** Route a formatter's return value to the tooltip manager (or hide on null). */
+  function applyFormatterResult(
+    result: TooltipContent | string | HTMLElement | null,
+    x: number,
+    y: number,
+  ): void {
+    if (!tooltipManager) return;
+    if (result === null) {
+      tooltipManager.hide();
+    } else if (typeof result === 'string') {
+      tooltipManager.show({ text: result }, x, y);
+    } else if (result instanceof HTMLElement) {
+      tooltipManager.show({ element: result }, x, y);
+    } else {
+      tooltipManager.show(result, x, y);
+    }
+  }
+
   /** Build the immutable per-frame render state from current mount state. */
-  function buildRenderState(): GraphRenderState {
+  function buildRenderState(now: number): GraphRenderState {
     const transform = interactionManager!.getTransform();
+
+    // Ensure a focus transition exists (first render), pointed at current state.
+    if (!focusTransition) armFocus(now);
+    const ft = focusTransition as FocusTransition;
+    const t = ft.progress(now);
+    const focus = t < 1 ? { t, prev: ft.prev, next: ft.next } : undefined;
+    // When settled we still pass the resting snapshot as `next` for the fast path.
+    const settledNext = ft.next;
+
+    const hoverRadiusScale = hoverRadiusTween
+      ? new Map([[hoverRadiusTween.nodeId, hoverRadiusTween.scale]])
+      : undefined;
+
     return {
       nodes: positionedNodes,
       edges: positionedEdges,
@@ -498,6 +837,9 @@ export function createGraph(
       searchMatches: searchManager.getMatches(),
       isGesturing,
       watermark: compilation.watermark,
+      focus: focus ?? { t: 1, prev: settledNext, next: settledNext },
+      hoverRadiusScale,
+      dimOpacity: highlightDimOpacity ?? compilation.interaction.dimOpacity,
     };
   }
 
@@ -511,7 +853,7 @@ export function createGraph(
 
     if (needsRender) {
       needsRender = false;
-      renderer.render(buildRenderState());
+      renderer.render(buildRenderState(now));
     }
 
     // Re-arm only while animations are active; otherwise the loop goes idle.
@@ -616,39 +958,39 @@ export function createGraph(
         scheduleRender();
       },
       onHoverChange(nodeId) {
+        // Skip redundant work (and a duplicate onNodeHover fire) when the hovered
+        // node id is unchanged.
+        if (nodeId === hoveredNodeId) return;
         hoveredNodeId = nodeId;
+        // Re-arm the focus crossfade so the hover neighborhood eases in/out.
+        armFocus(performance.now());
+        startHoverRadiusTween(nodeId);
         needsRender = true;
         scheduleRender();
 
-        // Fire onNodeHover callback
-        if (nodeId) {
-          options?.onNodeHover?.(nodeDataById(nodeId));
-        } else {
-          options?.onNodeHover?.(null);
+        // Race-safe ordering: clear any edge hover and fire onEdgeHover(null)
+        // BEFORE onNodeHover(node), so an edge session never interleaves inside
+        // a node hover session.
+        if (nodeId && hoveredEdgeId) {
+          hoveredEdgeId = null;
+          options?.onEdgeHover?.(null);
+          tooltipManager?.hide();
         }
+
+        // Fire onNodeHover callback
+        options?.onNodeHover?.(nodeId ? nodeDataById(nodeId) : null);
 
         // Show or hide tooltip
         if (nodeId && tooltipManager) {
-          // Clear edge hover when hovering a node
-          if (hoveredEdgeId) {
-            hoveredEdgeId = null;
-            options?.onEdgeHover?.(null);
-          }
-          const content = compilation.tooltipDescriptors.get(nodeId);
-          if (content) {
-            const node = positionedNodes.find((n) => n.id === nodeId);
-            if (node && interactionManager) {
-              const screen = interactionManager.getTransform().graphToScreen(node.x, node.y);
-              tooltipManager.show(content, screen.x, screen.y);
-            }
-          }
+          showNodeTooltip(nodeId);
         } else if (!nodeId) {
-          // Tooltip hiding handled in onBackgroundHover (edge may show tooltip)
-          // If no edge hover happens, tooltip stays hidden
+          // Tooltip hiding handled in onBackgroundHover (edge may show tooltip).
           tooltipManager?.hide();
         }
       },
       onBackgroundHover(graphX, graphY, screenX, screenY) {
+        // A live node hover owns the tooltip; don't let edge hit-testing steal it.
+        if (hoveredNodeId) return;
         // Throttle edge hit testing to avoid O(n) scan on every mousemove
         const now = performance.now();
         if (now - lastEdgeHitTime < 32) {
@@ -677,20 +1019,7 @@ export function createGraph(
           if (edgeId) {
             const data = edgeDataById(edgeId);
             options?.onEdgeHover?.(data);
-
-            // Show edge tooltip
-            if (tooltipManager && data) {
-              const fields = Object.entries(data)
-                .filter(([key]) => key !== 'source' && key !== 'target')
-                .filter(([, value]) => value != null)
-                .map(([key, value]) => ({
-                  label: key,
-                  value: typeof value === 'number' ? value.toLocaleString() : String(value),
-                }));
-
-              const [source, target] = edgeId.split('->');
-              tooltipManager.show({ title: `${source} → ${target}`, fields }, screenX, screenY);
-            }
+            if (tooltipManager && data) showEdgeTooltip(edgeId, data, screenX, screenY);
           } else {
             options?.onEdgeHover?.(null);
             tooltipManager?.hide();
@@ -699,6 +1028,7 @@ export function createGraph(
       },
       onSelectionChange(nodeIds) {
         selectedNodeIds = new Set(nodeIds);
+        armFocus(performance.now());
         needsRender = true;
         scheduleRender();
         options?.onSelectionChange?.(nodeIds);
@@ -846,6 +1176,69 @@ export function createGraph(
     return [...(searchManager.getMatches() ?? [])];
   }
 
+  // -------------------------------------------------------------------------
+  // Highlight API (single slot, two writers: highlight() and legend toggles)
+  // -------------------------------------------------------------------------
+
+  function highlight(target: GraphHighlightTarget, opts?: { dimOpacity?: number }): void {
+    // Programmatic highlight resets legend toggle state (last writer wins).
+    activeCategories = new Set();
+    highlightSet = resolveHighlightTarget(target);
+    highlightDimOpacity = opts?.dimOpacity ?? null;
+    syncLegendActiveState();
+    refreshFocus();
+    emitHighlightChange();
+  }
+
+  function clearHighlight(): void {
+    activeCategories = new Set();
+    highlightSet = null;
+    highlightDimOpacity = null;
+    syncLegendActiveState();
+    refreshFocus();
+    emitHighlightChange();
+  }
+
+  function getHighlight(): string[] | null {
+    return highlightSet ? [...highlightSet] : null;
+  }
+
+  function getLegend(): GraphLegendData {
+    const nodeEntries = 'entries' in compilation.legend ? compilation.legend.entries : [];
+    return {
+      field: compilation.legendField,
+      nodes: nodeEntries
+        .filter((e) => !e.overflow)
+        .map((e) => ({
+          label: e.label,
+          color: e.color,
+          count: e.count,
+          active: activeCategories.size === 0 || activeCategories.has(e.label),
+        })),
+      edges: (compilation.edgeLegend ?? []).map((e) => ({
+        label: e.label,
+        color: e.color,
+        count: e.count,
+      })),
+    };
+  }
+
+  /**
+   * Toggle a legend category (built-in legend + headless). Legend toggles ARE
+   * the highlight state: this replaces any programmatic highlight. Empty active
+   * set = all categories shown (no dimming).
+   */
+  function toggleLegendCategory(value: string): void {
+    if (activeCategories.has(value)) activeCategories.delete(value);
+    else activeCategories.add(value);
+    highlightSet = categoryHighlightSet();
+    highlightDimOpacity = null;
+    syncLegendActiveState();
+    refreshFocus();
+    options?.onLegendToggle?.([...activeCategories]);
+    emitHighlightChange();
+  }
+
   function doResize(): void {
     if (destroyed || !canvas || !renderer || !wrapper) return;
     const { width, height } = getContainerDimensions();
@@ -880,6 +1273,15 @@ export function createGraph(
     hoveredEdgeId = null;
     selectedNodeIds = new Set();
     searchManager.clearSearch();
+
+    // A full update() clears highlight, then re-applies the spec's initialHighlight.
+    activeCategories = new Set();
+    highlightSet = null;
+    highlightDimOpacity = null;
+    applyInitialHighlight();
+    syncLegendActiveState();
+    // A fresh focus transition for the new graph (no crossfade from stale state).
+    focusTransition = null;
   }
 
   function updateVisuals(newSpec: GraphSpec): void {
@@ -919,9 +1321,16 @@ export function createGraph(
     // Rebuild spatial index with updated visuals
     spatialIndex.rebuild(positionedNodes);
 
+    // Highlight persists across updateVisuals: re-resolve category-derived sets
+    // against the newly compiled nodes (a category may map to different ids).
+    if (activeCategories.size > 0) {
+      highlightSet = categoryHighlightSet();
+    }
+
     // Update DOM chrome/legend
     renderChrome();
     renderLegend();
+    syncLegendActiveState();
 
     // Re-render canvas without restarting simulation
     needsRender = true;
@@ -965,6 +1374,9 @@ export function createGraph(
       disconnectResize = null;
     }
 
+    legendController?.destroy();
+    legendController = null;
+
     if (wrapper?.parentNode) {
       wrapper.parentNode.removeChild(wrapper);
     }
@@ -985,6 +1397,7 @@ export function createGraph(
     compilation = compile();
     adjacencyMap = buildAdjacencyMap(compilation.edges);
     buildDataMaps();
+    applyInitialHighlight();
     createDOM();
     initSimulation();
     initInteraction();
@@ -1004,6 +1417,10 @@ export function createGraph(
       selectNode() {},
       getSelectedNodes: () => [],
       getSearchMatches: () => [],
+      highlight() {},
+      clearHighlight() {},
+      getHighlight: () => null,
+      getLegend: () => ({ field: null, nodes: [], edges: [] }),
       resize() {},
       destroy() {},
     };
@@ -1029,6 +1446,10 @@ export function createGraph(
     selectNode,
     getSelectedNodes,
     getSearchMatches,
+    highlight,
+    clearHighlight,
+    getHighlight,
+    getLegend,
     resize: doResize,
     destroy,
   };

@@ -9,6 +9,7 @@
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import type { CompiledGraphEdge, CompiledGraphNode } from '@opendata-ai/openchart-engine';
+import type { FocusSnapshot } from './focus-transition';
 
 /** A compiled node with simulation-assigned x/y position. */
 export interface PositionedNode extends CompiledGraphNode {
@@ -44,4 +45,25 @@ export interface GraphRenderState {
   isGesturing: boolean;
   /** Whether the tryOpenData.ai watermark is enabled. */
   watermark: boolean;
+  /**
+   * Active focus crossfade. When present and `t < 1`, the renderer blends edge
+   * and node alphas between `prev` and the current (`hoveredNodeId`-derived)
+   * focus state. Absent or `t >= 1` → the fast 3-bucket steady-state path.
+   */
+  focus?: {
+    /** Eased 0..1 progress from `prev` toward the current focus state. */
+    t: number;
+    /** The focus snapshot being faded away from. */
+    prev: FocusSnapshot;
+    /** The focus snapshot being faded toward. */
+    next: FocusSnapshot;
+  };
+  /**
+   * Per-node hover radius scale (1 → 1.15), keyed by node id. Present only while
+   * a hovered node's radius tween is mid-flight; routes those nodes through the
+   * special-draw path. Absent → no per-node scaling.
+   */
+  hoverRadiusScale?: Map<string, number>;
+  /** The node dim opacity tier (interaction.dimOpacity; default 0.15). */
+  dimOpacity: number;
 }

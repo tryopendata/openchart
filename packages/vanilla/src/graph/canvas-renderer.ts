@@ -13,6 +13,7 @@
  */
 
 import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH } from '@opendata-ai/openchart-core';
+import type { FocusSnapshot } from './focus-transition';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 
 // ---------------------------------------------------------------------------
@@ -23,8 +24,87 @@ const LABEL_FONT_MIN = 8;
 const LABEL_FONT_MAX = 12;
 const EDGE_ALPHA_DEFAULT = 0.35;
 const EDGE_ALPHA_CONNECTED = 1.0;
-const EDGE_ALPHA_DIMMED = 0.05;
 const SEARCH_NON_MATCH_ALPHA = 0.15;
+/** Default node dim tier — the ratio the edge dim tier derives against. */
+const DEFAULT_DIM_OPACITY = 0.15;
+/** Above this visible-edge count a focus crossfade snaps (no per-frame blend). */
+const CROSSFADE_MAX_EDGES = 20000;
+
+/**
+ * The three emphasis tiers an edge/node can fall into for a given focus state.
+ * `default` is the resting alpha (nothing emphasized); `connected` is fully lit;
+ * `dimmed` is de-emphasized while something else is in focus.
+ */
+type FocusTier = 'default' | 'connected' | 'dimmed';
+
+/** Classify an edge under a focus snapshot into its emphasis tier. */
+function edgeTier(edge: PositionedEdge, focus: FocusSnapshot): FocusTier {
+  if (!focus.hasActive) return 'default';
+  return focus.connected.has(edge.source) && focus.connected.has(edge.target)
+    ? 'connected'
+    : 'dimmed';
+}
+
+/** Classify a node under a focus snapshot into its emphasis tier. */
+function nodeTier(node: PositionedNode, focus: FocusSnapshot): FocusTier {
+  if (!focus.hasActive) return 'default';
+  return focus.connected.has(node.id) ? 'connected' : 'dimmed';
+}
+
+/**
+ * Resolve a tier to its edge alpha. The dimmed tier derives from the node dim
+ * knob (`dimOpacity / 3`), preserving the deliberate 0.15-node / 0.05-edge ratio
+ * that keeps dense hairballs quiet during hover.
+ */
+function edgeTierAlpha(tier: FocusTier, dimOpacity: number): number {
+  switch (tier) {
+    case 'connected':
+      return EDGE_ALPHA_CONNECTED;
+    case 'dimmed':
+      return dimOpacity / 3;
+    default:
+      return EDGE_ALPHA_DEFAULT;
+  }
+}
+
+/** Resolve a tier to its node alpha. The dimmed tier is the raw dim knob. */
+function nodeTierAlpha(tier: FocusTier, dimOpacity: number): number {
+  switch (tier) {
+    case 'dimmed':
+      return dimOpacity;
+    default:
+      return 1;
+  }
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+/**
+ * Derive a focus snapshot from hovered/selected nodes when the mount doesn't
+ * supply an explicit crossfade. Preserves the legacy "hover/select dims the
+ * rest" behavior for callers (and tests) that pass raw render state.
+ */
+function deriveFocus(
+  hoveredNodeId: string | null,
+  selectedNodeIds: Set<string>,
+  adjacencyMap: Map<string, Set<string>>,
+): FocusSnapshot {
+  const hasActive = hoveredNodeId !== null || selectedNodeIds.size > 0;
+  const connected = new Set<string>();
+  if (hasActive) {
+    const active = new Set<string>();
+    if (hoveredNodeId) active.add(hoveredNodeId);
+    for (const id of selectedNodeIds) active.add(id);
+    for (const id of active) {
+      connected.add(id);
+      const neighbors = adjacencyMap.get(id);
+      if (neighbors) for (const nid of neighbors) connected.add(nid);
+    }
+  }
+  return { hasActive, connected, searchMatches: null, selected: selectedNodeIds };
+}
 const GLOW_NODE_THRESHOLD = 2000;
 const GLOW_RADIUS_MULTIPLIER = 1.3;
 const GLOW_ALPHA = 0.15;
@@ -147,21 +227,16 @@ export class GraphCanvasRenderer {
       searchMatches,
       isGesturing,
     } = state;
+    const dimOpacity = state.dimOpacity ?? DEFAULT_DIM_OPACITY;
 
-    const hasActiveNode = hoveredNodeId !== null || selectedNodeIds.size > 0;
-    const activeNodeIds = new Set<string>();
-    if (hoveredNodeId) activeNodeIds.add(hoveredNodeId);
-    for (const id of selectedNodeIds) activeNodeIds.add(id);
-
-    // Collect all nodes connected to any active node
-    const connectedNodeIds = new Set<string>();
-    for (const id of activeNodeIds) {
-      connectedNodeIds.add(id);
-      const neighbors = adjacencyMap.get(id);
-      if (neighbors) {
-        for (const nid of neighbors) connectedNodeIds.add(nid);
-      }
-    }
+    // Resolve the current (next) focus snapshot. When the mount supplies a
+    // crossfade in `state.focus`, use its endpoints; otherwise derive a snapshot
+    // from hovered/selected nodes (backward-compatible, no crossfade).
+    const nextFocus: FocusSnapshot =
+      state.focus?.next ?? deriveFocus(hoveredNodeId, selectedNodeIds, adjacencyMap);
+    // A crossfade is live only when focus is present, mid-flight, and (cheaply)
+    // the graph isn't gesturing (during gestures we snap for perf).
+    const crossfade = state.focus && state.focus.t < 1 && !isGesturing ? state.focus : null;
 
     // Viewport culling
     const rect = visibleRect(cssWidth, cssHeight, transform);
@@ -188,15 +263,29 @@ export class GraphCanvasRenderer {
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.k, transform.k);
 
-    // -- Draw edges (batched by style key) --
-    this.drawEdgesBatched(
-      ctx,
-      visibleEdges,
-      hasActiveNode,
-      connectedNodeIds,
-      isGesturing ? null : searchMatches,
-      hoveredEdgeId,
-    );
+    // -- Draw edges (batched) -- crossfade path only mid-transition, else the
+    // fast 3-bucket steady-state path. Degrade to snap for huge edge sets.
+    if (crossfade && visibleEdges.length <= CROSSFADE_MAX_EDGES) {
+      this.drawEdgesCrossfade(
+        ctx,
+        visibleEdges,
+        crossfade.prev,
+        crossfade.next,
+        crossfade.t,
+        dimOpacity,
+        isGesturing ? null : searchMatches,
+        hoveredEdgeId,
+      );
+    } else {
+      this.drawEdgesBatched(
+        ctx,
+        visibleEdges,
+        nextFocus,
+        dimOpacity,
+        isGesturing ? null : searchMatches,
+        hoveredEdgeId,
+      );
+    }
 
     // -- Draw nodes (batched by fill color) --
     this.drawNodesBatched(
@@ -208,6 +297,10 @@ export class GraphCanvasRenderer {
       showGlow,
       theme,
       minRadius,
+      nextFocus,
+      dimOpacity,
+      crossfade,
+      state.hoverRadiusScale,
     );
 
     // -- Draw labels (skipped during gestures) --
@@ -265,15 +358,17 @@ export class GraphCanvasRenderer {
   private drawEdgesBatched(
     ctx: CanvasRenderingContext2D,
     edges: PositionedEdge[],
-    hasActiveNode: boolean,
-    connectedNodeIds: Set<string>,
+    focus: FocusSnapshot,
+    dimOpacity: number,
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
   ): void {
-    // Classify edges by alpha level, then batch by visual style within each level
-    const dimmedEdges: PositionedEdge[] = [];
-    const defaultEdges: PositionedEdge[] = [];
-    const connectedEdges: PositionedEdge[] = [];
+    // Settled fast path: classify each edge into one of 3 tiers, batch within.
+    const buckets: Record<FocusTier, PositionedEdge[]> = {
+      dimmed: [],
+      default: [],
+      connected: [],
+    };
     let hoveredEdge: PositionedEdge | null = null;
 
     for (const edge of edges) {
@@ -282,39 +377,92 @@ export class GraphCanvasRenderer {
         hoveredEdge = edge;
         continue; // Draw hovered edge last, on top
       }
-
-      const isConnected =
-        hasActiveNode && connectedNodeIds.has(edge.source) && connectedNodeIds.has(edge.target);
-      const isDimmed = hasActiveNode && !isConnected;
-
-      if (isConnected) {
-        connectedEdges.push(edge);
-      } else if (isDimmed) {
-        dimmedEdges.push(edge);
-      } else {
-        defaultEdges.push(edge);
-      }
+      buckets[edgeTier(edge, focus)].push(edge);
     }
 
     // Draw dimmed first, then default, then connected (on top)
-    this.drawEdgeGroupBatched(ctx, dimmedEdges, EDGE_ALPHA_DIMMED, searchMatches);
-    this.drawEdgeGroupBatched(ctx, defaultEdges, EDGE_ALPHA_DEFAULT, searchMatches);
-    this.drawEdgeGroupBatched(ctx, connectedEdges, EDGE_ALPHA_CONNECTED, searchMatches);
+    this.drawEdgeGroupBatched(
+      ctx,
+      buckets.dimmed,
+      edgeTierAlpha('dimmed', dimOpacity),
+      searchMatches,
+    );
+    this.drawEdgeGroupBatched(ctx, buckets.default, EDGE_ALPHA_DEFAULT, searchMatches);
+    this.drawEdgeGroupBatched(ctx, buckets.connected, EDGE_ALPHA_CONNECTED, searchMatches);
 
-    // Draw hovered edge on top with highlight
-    if (hoveredEdge) {
-      const dash = DASH_PATTERNS[hoveredEdge.style] ?? DASH_PATTERNS.solid;
-      ctx.setLineDash(dash);
-      ctx.strokeStyle = hoveredEdge.stroke;
-      ctx.lineWidth = hoveredEdge.strokeWidth * 2;
-      ctx.globalAlpha = EDGE_ALPHA_CONNECTED;
-      ctx.beginPath();
-      ctx.moveTo(hoveredEdge.sourceX, hoveredEdge.sourceY);
-      ctx.lineTo(hoveredEdge.targetX, hoveredEdge.targetY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
+    this.drawHoveredEdge(ctx, hoveredEdge);
+  }
+
+  /**
+   * Crossfade edges between a prev and next focus state. Each edge is classified
+   * under BOTH snapshots → at most 9 (prevTier × nextTier) buckets, each drawn
+   * batched at `lerp(edgeTierAlpha[prev], edgeTierAlpha[next], t)`. Preserves the
+   * per-group style batching within each bucket.
+   */
+  private drawEdgesCrossfade(
+    ctx: CanvasRenderingContext2D,
+    edges: PositionedEdge[],
+    prev: FocusSnapshot,
+    next: FocusSnapshot,
+    t: number,
+    dimOpacity: number,
+    searchMatches: Set<string> | null,
+    hoveredEdgeId: string | null,
+  ): void {
+    // Bucket by (prevTier, nextTier). Key encodes both tiers.
+    const buckets = new Map<string, PositionedEdge[]>();
+    let hoveredEdge: PositionedEdge | null = null;
+
+    for (const edge of edges) {
+      const edgeId = `${edge.source}->${edge.target}`;
+      if (edgeId === hoveredEdgeId) {
+        hoveredEdge = edge;
+        continue;
+      }
+      const key = `${edgeTier(edge, prev)}|${edgeTier(edge, next)}`;
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        bucket = [];
+        buckets.set(key, bucket);
+      }
+      bucket.push(edge);
     }
+
+    // Draw dim→dim first (lowest alpha) up to connected→connected, so brighter
+    // buckets paint over dimmer ones. Sort by blended alpha ascending.
+    const ordered = [...buckets.entries()]
+      .map(([key, bucket]) => {
+        const [prevTier, nextTier] = key.split('|') as [FocusTier, FocusTier];
+        const alpha = lerp(
+          edgeTierAlpha(prevTier, dimOpacity),
+          edgeTierAlpha(nextTier, dimOpacity),
+          t,
+        );
+        return { alpha, bucket };
+      })
+      .sort((a, b) => a.alpha - b.alpha);
+
+    for (const { alpha, bucket } of ordered) {
+      this.drawEdgeGroupBatched(ctx, bucket, alpha, searchMatches);
+    }
+
+    this.drawHoveredEdge(ctx, hoveredEdge);
+  }
+
+  /** Draw the hovered edge on top with a thickened highlight stroke. */
+  private drawHoveredEdge(ctx: CanvasRenderingContext2D, hoveredEdge: PositionedEdge | null): void {
+    if (!hoveredEdge) return;
+    const dash = DASH_PATTERNS[hoveredEdge.style] ?? DASH_PATTERNS.solid;
+    ctx.setLineDash(dash);
+    ctx.strokeStyle = hoveredEdge.stroke;
+    ctx.lineWidth = hoveredEdge.strokeWidth * 2;
+    ctx.globalAlpha = EDGE_ALPHA_CONNECTED;
+    ctx.beginPath();
+    ctx.moveTo(hoveredEdge.sourceX, hoveredEdge.sourceY);
+    ctx.lineTo(hoveredEdge.targetX, hoveredEdge.targetY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
   }
 
   /**
@@ -409,14 +557,39 @@ export class GraphCanvasRenderer {
     showGlow: boolean,
     theme: GraphRenderState['theme'],
     minRadius: number,
+    nextFocus: FocusSnapshot,
+    dimOpacity: number,
+    crossfade: { t: number; prev: FocusSnapshot; next: FocusSnapshot } | null,
+    hoverRadiusScale: Map<string, number> | undefined,
   ): void {
-    // Separate special nodes (hovered/selected) from bulk nodes.
-    // Special nodes need individual treatment; bulk nodes get batched by color.
+    // Effective per-node alpha = focus dim × search dim. Focus dim crossfades
+    // between prev/next tiers when a transition is live; otherwise it's the
+    // settled next-tier alpha. Batching is preserved by grouping nodes that
+    // share (fill, quantized-alpha) — at most 2 focus tiers × 2 search tiers.
+    const focusAlpha = (node: PositionedNode): number => {
+      if (crossfade) {
+        return lerp(
+          nodeTierAlpha(nodeTier(node, crossfade.prev), dimOpacity),
+          nodeTierAlpha(nodeTier(node, crossfade.next), dimOpacity),
+          crossfade.t,
+        );
+      }
+      return nodeTierAlpha(nodeTier(node, nextFocus), dimOpacity);
+    };
+    const searchAlpha = (node: PositionedNode): number =>
+      searchMatches !== null && !searchMatches.has(node.id) ? SEARCH_NON_MATCH_ALPHA : 1;
+    const effectiveAlpha = (node: PositionedNode): number => focusAlpha(node) * searchAlpha(node);
+
+    // Separate special nodes (hovered/selected, or mid radius-tween) from bulk.
     const bulkNodes: PositionedNode[] = [];
     const specialNodes: PositionedNode[] = [];
 
     for (const node of nodes) {
-      if (node.id === hoveredNodeId || selectedNodeIds.has(node.id)) {
+      if (
+        node.id === hoveredNodeId ||
+        selectedNodeIds.has(node.id) ||
+        (hoverRadiusScale?.has(node.id) ?? false)
+      ) {
         specialNodes.push(node);
       } else {
         bulkNodes.push(node);
@@ -431,123 +604,58 @@ export class GraphCanvasRenderer {
       this.drawGlowBatched(ctx, bulkNodes, searchMatches, minRadius);
     }
 
-    // --- Bulk fill pass: batch by fill color ---
-    const fillGroups = new Map<string, PositionedNode[]>();
+    // --- Bulk fill pass: batch by (fill color, quantized alpha) ---
+    const fillGroups = new Map<string, { fill: string; alpha: number; nodes: PositionedNode[] }>();
     for (const node of bulkNodes) {
-      let group = fillGroups.get(node.fill);
+      const alpha = effectiveAlpha(node);
+      const key = `${node.fill}|${alpha.toFixed(3)}`;
+      let group = fillGroups.get(key);
       if (!group) {
-        group = [];
-        fillGroups.set(node.fill, group);
+        group = { fill: node.fill, alpha, nodes: [] };
+        fillGroups.set(key, group);
       }
-      group.push(node);
+      group.nodes.push(node);
     }
 
-    if (!searchMatches) {
-      // Fast path: no search dimming
-      ctx.globalAlpha = 1;
-      for (const [fill, group] of fillGroups) {
-        ctx.fillStyle = fill;
-        ctx.beginPath();
-        for (const node of group) {
-          const nr = r(node);
-          ctx.moveTo(node.x + nr, node.y);
-          ctx.arc(node.x, node.y, nr, 0, TWO_PI);
-        }
-        ctx.fill();
+    for (const { fill, alpha, nodes: group } of fillGroups.values()) {
+      ctx.fillStyle = fill;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      for (const node of group) {
+        const nr = r(node);
+        ctx.moveTo(node.x + nr, node.y);
+        ctx.arc(node.x, node.y, nr, 0, TWO_PI);
       }
-    } else {
-      // Search active: split each color group into matched/dimmed batches
-      for (const [fill, group] of fillGroups) {
-        ctx.fillStyle = fill;
-
-        // Matched nodes
-        ctx.globalAlpha = 1;
-        ctx.beginPath();
-        let hasMatched = false;
-        const dimmedNodes: PositionedNode[] = [];
-
-        for (const node of group) {
-          if (searchMatches.has(node.id)) {
-            const nr = r(node);
-            ctx.moveTo(node.x + nr, node.y);
-            ctx.arc(node.x, node.y, nr, 0, TWO_PI);
-            hasMatched = true;
-          } else {
-            dimmedNodes.push(node);
-          }
-        }
-        if (hasMatched) ctx.fill();
-
-        // Dimmed nodes
-        if (dimmedNodes.length > 0) {
-          ctx.globalAlpha = SEARCH_NON_MATCH_ALPHA;
-          ctx.beginPath();
-          for (const node of dimmedNodes) {
-            const nr = r(node);
-            ctx.moveTo(node.x + nr, node.y);
-            ctx.arc(node.x, node.y, nr, 0, TWO_PI);
-          }
-          ctx.fill();
-        }
-      }
+      ctx.fill();
     }
 
-    // --- Bulk stroke pass: batch by stroke color ---
-    const strokeGroups = new Map<string, PositionedNode[]>();
+    // --- Bulk stroke pass: batch by (stroke color+width, quantized alpha) ---
+    const strokeGroups = new Map<
+      string,
+      { stroke: string; width: number; alpha: number; nodes: PositionedNode[] }
+    >();
     for (const node of bulkNodes) {
-      const key = `${node.stroke}|${node.strokeWidth}`;
+      const alpha = effectiveAlpha(node);
+      const key = `${node.stroke}|${node.strokeWidth}|${alpha.toFixed(3)}`;
       let group = strokeGroups.get(key);
       if (!group) {
-        group = [];
+        group = { stroke: node.stroke, width: node.strokeWidth, alpha, nodes: [] };
         strokeGroups.set(key, group);
       }
-      group.push(node);
+      group.nodes.push(node);
     }
 
-    for (const [key, group] of strokeGroups) {
-      const [stroke, widthStr] = key.split('|');
+    for (const { stroke, width, alpha, nodes: group } of strokeGroups.values()) {
       ctx.strokeStyle = stroke;
-      ctx.lineWidth = parseFloat(widthStr);
-
-      if (!searchMatches) {
-        ctx.globalAlpha = 1;
-        ctx.beginPath();
-        for (const node of group) {
-          const nr = r(node);
-          ctx.moveTo(node.x + nr, node.y);
-          ctx.arc(node.x, node.y, nr, 0, TWO_PI);
-        }
-        ctx.stroke();
-      } else {
-        // Split matched/dimmed for strokes too
-        ctx.globalAlpha = 1;
-        ctx.beginPath();
-        let hasMatched = false;
-        const dimmedNodes: PositionedNode[] = [];
-
-        for (const node of group) {
-          if (searchMatches.has(node.id)) {
-            const nr = r(node);
-            ctx.moveTo(node.x + nr, node.y);
-            ctx.arc(node.x, node.y, nr, 0, TWO_PI);
-            hasMatched = true;
-          } else {
-            dimmedNodes.push(node);
-          }
-        }
-        if (hasMatched) ctx.stroke();
-
-        if (dimmedNodes.length > 0) {
-          ctx.globalAlpha = SEARCH_NON_MATCH_ALPHA;
-          ctx.beginPath();
-          for (const node of dimmedNodes) {
-            const nr = r(node);
-            ctx.moveTo(node.x + nr, node.y);
-            ctx.arc(node.x, node.y, nr, 0, TWO_PI);
-          }
-          ctx.stroke();
-        }
+      ctx.lineWidth = width;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      for (const node of group) {
+        const nr = r(node);
+        ctx.moveTo(node.x + nr, node.y);
+        ctx.arc(node.x, node.y, nr, 0, TWO_PI);
       }
+      ctx.stroke();
     }
 
     // --- Special nodes (hovered/selected) drawn individually ---
@@ -556,7 +664,11 @@ export class GraphCanvasRenderer {
       const isSelected = selectedNodeIds.has(node.id);
       const dimmed = searchMatches !== null && !searchMatches.has(node.id);
       const baseRadius = Math.max(node.radius, minRadius);
-      const radius = isHovered ? baseRadius * 1.15 : baseRadius;
+      // Hover radius tween: scale routes through here until it returns to 1.
+      const hoverScale = hoverRadiusScale?.get(node.id) ?? (isHovered ? 1.15 : 1);
+      const radius = baseRadius * hoverScale;
+      // brighten() switches at the scale midpoint (>1.075 of the 1→1.15 range).
+      const brightened = isHovered && hoverScale >= 1.075;
 
       ctx.globalAlpha = dimmed ? SEARCH_NON_MATCH_ALPHA : 1;
 
@@ -573,7 +685,7 @@ export class GraphCanvasRenderer {
       // Fill
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius, 0, TWO_PI);
-      ctx.fillStyle = isHovered ? brighten(node.fill) : node.fill;
+      ctx.fillStyle = brightened ? brighten(node.fill) : node.fill;
       ctx.fill();
 
       // Stroke
@@ -668,11 +780,10 @@ export class GraphCanvasRenderer {
       if (theme.colors.background !== 'transparent') {
         ctx.strokeStyle = theme.colors.background;
       } else {
-        // Transparent bg: infer page background from text luminance.
-        // Light text = dark page, dark text = light page.
-        ctx.strokeStyle = isLightColor(theme.colors.text)
-          ? 'rgba(0, 0, 0, 0.7)'
-          : 'rgba(255, 255, 255, 0.85)';
+        // Transparent bg inherits its mode from the theme's darkMode flag, not
+        // from text luminance. Dark mode = dark page = dark halo behind light
+        // text; light mode = light page = light halo.
+        ctx.strokeStyle = theme.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.85)';
       }
       ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
@@ -723,25 +834,4 @@ function brighten(color: string): string {
   }
 
   return color;
-}
-
-/**
- * Returns true if a color is perceptually light (luminance > 0.5).
- * Used to pick a contrasting halo color for labels on transparent backgrounds.
- */
-function isLightColor(color: string): boolean {
-  const hex = color.replace('#', '');
-  const full =
-    hex.length === 3
-      ? hex
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : hex;
-  if (full.length !== 6) return false;
-  const r = parseInt(full.slice(0, 2), 16) / 255;
-  const g = parseInt(full.slice(2, 4), 16) / 255;
-  const b = parseInt(full.slice(4, 6), 16) / 255;
-  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b) > 0.5;
 }
