@@ -46,17 +46,9 @@ export const ENTRANCE_STAGGER_MAX_NODES = 3000;
 /** How far (px, graph space) a node starts from its final spot during the pop. */
 export const ENTRANCE_DRIFT_PX = 16;
 
-/**
- * Stagger rank for each node: distance from the layout centroid, ascending, so
- * the reveal ripples outward from the center of the graph. Index-order stagger
- * reads as arbitrary shimmer; centroid-radial order reads as structure. Warmup
- * means positions are near-final when this runs, so the ranking is stable.
- */
-export function entranceOrder(
-  nodes: Array<{ id: string; x: number; y: number }>,
-): Map<string, number> {
-  const rank = new Map<string, number>();
-  if (nodes.length === 0) return rank;
+type XYNode = { id: string; x: number; y: number };
+
+function centroid(nodes: XYNode[]): { cx: number; cy: number } {
   let cx = 0;
   let cy = 0;
   for (const n of nodes) {
@@ -65,6 +57,19 @@ export function entranceOrder(
   }
   cx /= nodes.length;
   cy /= nodes.length;
+  return { cx, cy };
+}
+
+/**
+ * Stagger rank for each node: distance from the layout centroid, ascending, so
+ * the reveal ripples outward from the center of the graph. Index-order stagger
+ * reads as arbitrary shimmer; centroid-radial order reads as structure. Warmup
+ * means positions are near-final when this runs, so the ranking is stable.
+ */
+export function entranceOrder(nodes: XYNode[]): Map<string, number> {
+  const rank = new Map<string, number>();
+  if (nodes.length === 0) return rank;
+  const { cx, cy } = centroid(nodes);
   const sorted = [...nodes].sort((a, b) => {
     const da = (a.x - cx) * (a.x - cx) + (a.y - cy) * (a.y - cy);
     const db = (b.x - cx) * (b.x - cx) + (b.y - cy) * (b.y - cy);
@@ -77,23 +82,16 @@ export function entranceOrder(
 /**
  * Per-node drift offset: a unit vector pointing away from the layout centroid,
  * scaled to ENTRANCE_DRIFT_PX. Nodes pop in slightly outside their final spot
- * and converge inward — the whole graph reads as breathing in. Deterministic
- * (pure function of positions), zero-safe at the centroid.
+ * and converge inward. Deterministic (pure function of positions), zero-safe
+ * at the centroid.
  */
 export function entranceOffsets(
-  nodes: Array<{ id: string; x: number; y: number }>,
+  nodes: XYNode[],
   dist: number = ENTRANCE_DRIFT_PX,
 ): Map<string, { x: number; y: number }> {
   const offsets = new Map<string, { x: number; y: number }>();
   if (nodes.length === 0) return offsets;
-  let cx = 0;
-  let cy = 0;
-  for (const n of nodes) {
-    cx += n.x;
-    cy += n.y;
-  }
-  cx /= nodes.length;
-  cy /= nodes.length;
+  const { cx, cy } = centroid(nodes);
   for (const n of nodes) {
     const dx = n.x - cx;
     const dy = n.y - cy;

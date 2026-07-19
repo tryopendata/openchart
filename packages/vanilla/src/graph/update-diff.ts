@@ -116,10 +116,21 @@ export function diffGraphUpdate(
   const exitingNodes = prevNodes.filter((n) => !nextIds.has(n.id));
   const nextEdgeKeys = new Set(next.edges.map((e) => `${e.source} ${e.target}`));
   const exitingEdges = prevEdges.filter((e) => !nextEdgeKeys.has(`${e.source} ${e.target}`));
-  const prevEdgeKeys = new Set(prevEdges.map((e) => `${e.source} ${e.target}`));
+  const prevEdgeCounts = new Map<string, number>();
+  for (const e of prevEdges) {
+    const k = `${e.source} ${e.target}`;
+    prevEdgeCounts.set(k, (prevEdgeCounts.get(k) ?? 0) + 1);
+  }
   let enteringEdgeCount = 0;
+  const remainingPrev = new Map(prevEdgeCounts);
   for (const e of next.edges) {
-    if (!prevEdgeKeys.has(`${e.source} ${e.target}`)) enteringEdgeCount++;
+    const k = `${e.source} ${e.target}`;
+    const c = remainingPrev.get(k);
+    if (c && c > 0) {
+      remainingPrev.set(k, c - 1);
+    } else {
+      enteringEdgeCount++;
+    }
   }
 
   // Visual-only: identical node AND edge id sets AND equal simulationConfig.

@@ -796,13 +796,16 @@ export class GraphCanvasRenderer {
       const radius = baseRadius * hoverScale;
       // brighten() switches at the scale midpoint (>1.075 of the 1→1.15 range).
       const brightened = isHovered && hoverScale >= 1.075;
+      const s = entranceShift(node);
+      const nx = node.x + s.x;
+      const ny = node.y + s.y;
 
       ctx.globalAlpha = dimmed ? SEARCH_NON_MATCH_ALPHA : 1;
 
       // Glow for special nodes
       if (showGlow && !dimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius * GLOW_RADIUS_MULTIPLIER, 0, TWO_PI);
+        ctx.arc(nx, ny, radius * GLOW_RADIUS_MULTIPLIER, 0, TWO_PI);
         ctx.fillStyle = node.fill;
         ctx.globalAlpha = GLOW_ALPHA;
         ctx.fill();
@@ -811,7 +814,7 @@ export class GraphCanvasRenderer {
 
       // Fill
       ctx.beginPath();
-      ctx.arc(node.x, node.y, radius, 0, TWO_PI);
+      ctx.arc(nx, ny, radius, 0, TWO_PI);
       ctx.fillStyle = brightened ? brighten(node.fill) : node.fill;
       ctx.fill();
 
@@ -823,7 +826,7 @@ export class GraphCanvasRenderer {
       // Selection ring
       if (isSelected) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 3, 0, TWO_PI);
+        ctx.arc(nx, ny, radius + 3, 0, TWO_PI);
         ctx.strokeStyle = theme.colors.categorical[0] ?? '#3b82f6';
         ctx.lineWidth = 2;
         ctx.stroke();

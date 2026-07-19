@@ -89,10 +89,14 @@ export class ZoomTransform {
     let graphH = maxY - minY;
 
     if (graphW === 0 && graphH === 0) {
-      // All nodes at the same point; just center
+      // All nodes at the same point; center within the area below the inset
       return {
-        transform: new ZoomTransform(canvasW / 2 - minX, canvasH / 2 - minY, 1),
-        contentHeight: padding * 2,
+        transform: new ZoomTransform(
+          canvasW / 2 - minX,
+          insetTop + (canvasH - insetTop) / 2 - minY,
+          1,
+        ),
+        contentHeight: padding * 2 + insetTop,
       };
     }
 
