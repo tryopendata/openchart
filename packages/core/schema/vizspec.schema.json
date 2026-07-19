@@ -16831,6 +16831,34 @@
           "$ref": "#/definitions/DarkMode",
           "description": "Dark mode behavior."
         },
+        "animation": {
+          "$ref": "#/definitions/GraphAnimationSpec",
+          "description": "Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt out of choreography (layout warmup still applies)."
+        },
+        "interaction": {
+          "$ref": "#/definitions/GraphInteractionConfig",
+          "description": "Interaction behavior (hover mode, select-fly, opt-in physics)."
+        },
+        "legend": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "interactive": {
+                  "type": "boolean"
+                },
+                "counts": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Built-in legend. Interactive by default. Set `false` if you render your own legend, so the built-in filter UI doesn't compete with it."
+        },
         "watermark": {
           "type": "boolean",
           "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
@@ -16889,7 +16917,11 @@
         },
         "nodeSize": {
           "$ref": "#/definitions/GraphEncodingChannel",
-          "description": "Size mapping for nodes."
+          "description": "Size mapping for nodes. `scale.type` defaults to `'sqrt'` (area-perceptual, today's behavior); set `scale.type: 'linear'` for a linear radius ramp. `scale.range` sets the pixel radius extent (default `[3, 12]`)."
+        },
+        "nodeOpacity": {
+          "$ref": "#/definitions/GraphEncodingChannel",
+          "description": "Opacity mapping for nodes (VL opacity channel). Quantitative fields map linearly to `[0.25, 1]`; `scale.range` overrides.\n\nNOTE: there is deliberately no `edgeOpacity` channel — edge alpha is owned by the interaction alpha-tier machinery (hover dimming, search)."
         },
         "edgeColor": {
           "$ref": "#/definitions/GraphEncodingChannel",
@@ -16925,6 +16957,42 @@
         "scale": {
           "$ref": "#/definitions/ScaleConfig",
           "description": "Scale configuration. Auto-derived from data if omitted."
+        },
+        "sort": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "ascending"
+            },
+            {
+              "type": "string",
+              "const": "descending"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Category ordering for the color domain and legend. Graph channels default `'ascending'` (VL-aligned, deterministic); `string[]` pins an explicit order; `null` keeps data order.\n\nNOTE: chart encoding channels keep data-order — this graph default is a deliberate divergence this release (see docs/migrating-v8.md)."
+        },
+        "highlight": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Category values to emphasize on load; the rest dim. Mirrors the chart `encoding.color.highlight` value list. Distinct from the `highlight()` runtime verb and `interaction.hover.mode`."
         }
       },
       "required": [
@@ -16978,6 +17046,35 @@
         "centerForce": {
           "type": "boolean",
           "description": "Whether to apply center force (default true)."
+        },
+        "seed": {
+          "type": "number",
+          "description": "Deterministic layout seed. Same spec + seed ⇒ identical settled layout within a given execution path (worker vs sync parity is not guaranteed)."
+        },
+        "energy": {
+          "type": "string",
+          "enum": [
+            "gentle",
+            "balanced",
+            "energetic"
+          ],
+          "description": "Repulsion preset (plain-language, no d3 jargon): `gentle`/`balanced`/`energetic` → chargeStrength −150/−300/−600 and velocityDecay 0.5/0.4/0.3. A raw `chargeStrength` wins over the preset."
+        },
+        "settle": {
+          "type": "string",
+          "enum": [
+            "quick",
+            "balanced",
+            "thorough"
+          ],
+          "description": "Settle-speed preset: `quick`/`balanced`/`thorough` → alphaDecay 0.05/0.0228/0.01. Higher = faster cool-down, less final refinement."
+        },
+        "warmup": {
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "Headless settle ticks run before the first paint. `true` → 100 ticks under a 250ms budget; a number sets an explicit tick count; `false` disables.\n\nLives in `layout`, NOT `animation`, on purpose: warmup *reduces* motion, so it must survive `animation: false` (opt-out consumers get less settling chaos, not more)."
         }
       },
       "required": [
@@ -17012,6 +17109,157 @@
       },
       "additionalProperties": false,
       "description": "Per-node visual overrides, keyed by node id."
+    },
+    "GraphAnimationSpec": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/GraphAnimationConfig"
+        }
+      ],
+      "description": "Graph motion spec.\n- omitted → full defaults (default-ON)\n- `false` → no choreography (warmup still applies)\n- object → per-phase control\n\n`prefers-reduced-motion` is always respected regardless of this value."
+    },
+    "GraphAnimationConfig": {
+      "type": "object",
+      "properties": {
+        "enter": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AnimationPhaseConfig"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Node/edge reveal on first render. Default `{ duration: 600, ease: 'smooth', stagger: true }`."
+        },
+        "update": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AnimationPhaseConfig"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Data-update enter-fade for newly added marks. Default `{ duration: 300, ease: 'smooth' }`."
+        },
+        "exit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AnimationPhaseConfig"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Ghost fade-out for removed marks. Default `{ duration: 300, ease: 'smooth' }`."
+        },
+        "camera": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "duration": {
+                  "type": "number"
+                },
+                "ease": {
+                  "$ref": "#/definitions/AnimationEase"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Camera flight easing. Default duration `'auto'` (derived from the zoom distance)."
+        },
+        "hover": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "duration": {
+                  "type": "number"
+                },
+                "ease": {
+                  "$ref": "#/definitions/AnimationEase"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Hover emphasis crossfade. Default `{ duration: 150, ease: 'smooth' }`."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per-phase and per-behavior motion config for a graph.\n\nDEFAULT-ON semantics (deliberately different from charts, which are opt-in): omit `animation` → the resolver returns full defaults; `animation: false` → no choreography (but `layout.warmup` still applies); a per-phase `false` disables just that phase. Graphs are default-on because physics motion already exists on load and choreography reduces the chaos."
+    },
+    "GraphInteractionConfig": {
+      "type": "object",
+      "properties": {
+        "hover": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "neighbors",
+                "category",
+                "node",
+                "none"
+              ]
+            },
+            "dimOpacity": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Hover emphasis behavior. `neighbors` (default) lights the hovered node and its adjacency; `category` lights same-category nodes; `node` lights only the hovered node; `none` disables. `dimOpacity` (default 0.15) is the node dim tier. Named `mode` (not `highlight`) to avoid colliding with the three other meanings of \"highlight\" (the encoding value list, the `highlight()` verb)."
+        },
+        "select": {
+          "type": "object",
+          "properties": {
+            "flyTo": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Selecting a node flies the camera to it. Default `false`."
+        },
+        "cursorRepulsion": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "radius": {
+                  "type": "number"
+                },
+                "strength": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Opt-in cursor repulsion (nodes drift away from the pointer). Disabled under `prefers-reduced-motion` and above the node-count gate."
+        },
+        "springyDrag": {
+          "type": "boolean",
+          "description": "Opt-in springy node drag (user-initiated; no reduced-motion gate)."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Interaction behavior for a graph (hover mode, select-fly, opt-in physics)."
     },
     "SankeySpec": {
       "type": "object",

@@ -450,8 +450,14 @@ export function wireLegendDrag(
   const cleanups: Array<() => void> = [];
 
   const legendConfig = 'legend' in spec ? spec.legend : undefined;
-  const origLegendDx = legendConfig?.offset?.dx ?? 0;
-  const origLegendDy = legendConfig?.offset?.dy ?? 0;
+  // Only the chart LegendConfig object carries a draggable `offset`; the graph
+  // legend union (boolean | { interactive; counts }) does not.
+  const legendOffset =
+    legendConfig && typeof legendConfig === 'object' && 'offset' in legendConfig
+      ? legendConfig.offset
+      : undefined;
+  const origLegendDx = legendOffset?.dx ?? 0;
+  const origLegendDy = legendOffset?.dy ?? 0;
 
   legendG.style.cursor = 'grab';
 

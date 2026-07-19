@@ -735,6 +735,8 @@ export interface LegendEntry {
   active?: boolean;
   /** True for overflow indicator entries ("+N more"). Not interactive. */
   overflow?: boolean;
+  /** Node/edge count for this category (graph legends). Additive; undefined elsewhere. */
+  count?: number;
 }
 
 /** The encoding channel a legend keys. */

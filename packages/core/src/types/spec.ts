@@ -747,14 +747,41 @@ export interface GraphEncodingChannel {
   type?: FieldType;
   /** Scale configuration. Auto-derived from data if omitted. */
   scale?: ScaleConfig;
+  /**
+   * Category ordering for the color domain and legend. Graph channels default
+   * `'ascending'` (VL-aligned, deterministic); `string[]` pins an explicit
+   * order; `null` keeps data order.
+   *
+   * NOTE: chart encoding channels keep data-order — this graph default is a
+   * deliberate divergence this release (see docs/migrating-v8.md).
+   */
+  sort?: 'ascending' | 'descending' | null | string[];
+  /**
+   * Category values to emphasize on load; the rest dim. Mirrors the chart
+   * `encoding.color.highlight` value list. Distinct from the `highlight()`
+   * runtime verb and `interaction.hover.mode`.
+   */
+  highlight?: string | string[];
 }
 
 /** Graph-specific encoding mapping visual properties to node/edge data fields. */
 export interface GraphEncoding {
   /** Color mapping for nodes. */
   nodeColor?: GraphEncodingChannel;
-  /** Size mapping for nodes. */
+  /**
+   * Size mapping for nodes. `scale.type` defaults to `'sqrt'` (area-perceptual,
+   * today's behavior); set `scale.type: 'linear'` for a linear radius ramp.
+   * `scale.range` sets the pixel radius extent (default `[3, 12]`).
+   */
   nodeSize?: GraphEncodingChannel;
+  /**
+   * Opacity mapping for nodes (VL opacity channel). Quantitative fields map
+   * linearly to `[0.25, 1]`; `scale.range` overrides.
+   *
+   * NOTE: there is deliberately no `edgeOpacity` channel — edge alpha is owned
+   * by the interaction alpha-tier machinery (hover dimming, search).
+   */
+  nodeOpacity?: GraphEncodingChannel;
   /** Color mapping for edges. */
   edgeColor?: GraphEncodingChannel;
   /** Width mapping for edges. */
@@ -784,6 +811,31 @@ export interface GraphLayoutConfig {
   linkStrength?: number;
   /** Whether to apply center force (default true). */
   centerForce?: boolean;
+  /**
+   * Deterministic layout seed. Same spec + seed ⇒ identical settled layout
+   * within a given execution path (worker vs sync parity is not guaranteed).
+   */
+  seed?: number;
+  /**
+   * Repulsion preset (plain-language, no d3 jargon):
+   * `gentle`/`balanced`/`energetic` → chargeStrength −150/−300/−600 and
+   * velocityDecay 0.5/0.4/0.3. A raw `chargeStrength` wins over the preset.
+   */
+  energy?: 'gentle' | 'balanced' | 'energetic';
+  /**
+   * Settle-speed preset: `quick`/`balanced`/`thorough` → alphaDecay
+   * 0.05/0.0228/0.01. Higher = faster cool-down, less final refinement.
+   */
+  settle?: 'quick' | 'balanced' | 'thorough';
+  /**
+   * Headless settle ticks run before the first paint. `true` → 100 ticks under
+   * a 250ms budget; a number sets an explicit tick count; `false` disables.
+   *
+   * Lives in `layout`, NOT `animation`, on purpose: warmup *reduces* motion, so
+   * it must survive `animation: false` (opt-out consumers get less settling
+   * chaos, not more).
+   */
+  warmup?: boolean | number;
 }
 
 // ---------------------------------------------------------------------------
@@ -2071,6 +2123,63 @@ export interface NodeOverride {
   alwaysShowLabel?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Graph animation + interaction
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-phase and per-behavior motion config for a graph.
+ *
+ * DEFAULT-ON semantics (deliberately different from charts, which are opt-in):
+ * omit `animation` → the resolver returns full defaults; `animation: false` →
+ * no choreography (but `layout.warmup` still applies); a per-phase `false`
+ * disables just that phase. Graphs are default-on because physics motion
+ * already exists on load and choreography reduces the chaos.
+ */
+export interface GraphAnimationConfig {
+  /** Node/edge reveal on first render. Default `{ duration: 600, ease: 'smooth', stagger: true }`. */
+  enter?: AnimationPhaseConfig | boolean;
+  /** Data-update enter-fade for newly added marks. Default `{ duration: 300, ease: 'smooth' }`. */
+  update?: AnimationPhaseConfig | boolean;
+  /** Ghost fade-out for removed marks. Default `{ duration: 300, ease: 'smooth' }`. */
+  exit?: AnimationPhaseConfig | boolean;
+  /** Camera flight easing. Default duration `'auto'` (derived from the zoom distance). */
+  camera?: { duration?: number; ease?: AnimationEase } | boolean;
+  /** Hover emphasis crossfade. Default `{ duration: 150, ease: 'smooth' }`. */
+  hover?: { duration?: number; ease?: AnimationEase } | boolean;
+}
+
+/**
+ * Graph motion spec.
+ * - omitted → full defaults (default-ON)
+ * - `false` → no choreography (warmup still applies)
+ * - object → per-phase control
+ *
+ * `prefers-reduced-motion` is always respected regardless of this value.
+ */
+export type GraphAnimationSpec = boolean | GraphAnimationConfig;
+
+/** Interaction behavior for a graph (hover mode, select-fly, opt-in physics). */
+export interface GraphInteractionConfig {
+  /**
+   * Hover emphasis behavior. `neighbors` (default) lights the hovered node and
+   * its adjacency; `category` lights same-category nodes; `node` lights only the
+   * hovered node; `none` disables. `dimOpacity` (default 0.15) is the node dim
+   * tier. Named `mode` (not `highlight`) to avoid colliding with the three other
+   * meanings of "highlight" (the encoding value list, the `highlight()` verb).
+   */
+  hover?: { mode?: 'neighbors' | 'category' | 'node' | 'none'; dimOpacity?: number };
+  /** Selecting a node flies the camera to it. Default `false`. */
+  select?: { flyTo?: boolean };
+  /**
+   * Opt-in cursor repulsion (nodes drift away from the pointer). Disabled under
+   * `prefers-reduced-motion` and above the node-count gate.
+   */
+  cursorRepulsion?: boolean | { radius?: number; strength?: number };
+  /** Opt-in springy node drag (user-initiated; no reduced-motion gate). */
+  springyDrag?: boolean;
+}
+
 export interface GraphSpec {
   /** Discriminant: always "graph". */
   type: 'graph';
@@ -2092,6 +2201,18 @@ export interface GraphSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. */
   darkMode?: DarkMode;
+  /**
+   * Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt
+   * out of choreography (layout warmup still applies).
+   */
+  animation?: GraphAnimationSpec;
+  /** Interaction behavior (hover mode, select-fly, opt-in physics). */
+  interaction?: GraphInteractionConfig;
+  /**
+   * Built-in legend. Interactive by default. Set `false` if you render your own
+   * legend, so the built-in filter UI doesn't compete with it.
+   */
+  legend?: boolean | { interactive?: boolean; counts?: boolean };
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
 }

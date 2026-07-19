@@ -151,6 +151,48 @@ describe('vizspec.schema.json', () => {
   it('rejects a spec that is neither a chart nor any known type', () => {
     expect(validateViz({ nonsense: true })).toBe(false);
   });
+
+  it('accepts a graph spec exercising every Phase-1 motion/api field', () => {
+    const spec = {
+      type: 'graph',
+      nodes: [
+        { id: 'a', group: 'x', weight: 3 },
+        { id: 'b', group: 'y', weight: 1 },
+      ],
+      edges: [{ source: 'a', target: 'b', kind: 'ref' }],
+      encoding: {
+        nodeColor: { field: 'group', type: 'nominal', sort: 'ascending', highlight: ['x'] },
+        nodeSize: {
+          field: 'weight',
+          type: 'quantitative',
+          scale: { type: 'linear', range: [3, 14] },
+        },
+        nodeOpacity: { field: 'weight', type: 'quantitative' },
+        edgeColor: { field: 'kind', type: 'nominal', sort: ['ref'] },
+        edgeStyle: { field: 'kind', type: 'nominal' },
+      },
+      layout: { type: 'force', seed: 7, energy: 'energetic', settle: 'thorough', warmup: 100 },
+      animation: { enter: { duration: 600 }, camera: { ease: 'smooth' }, hover: false },
+      interaction: {
+        hover: { mode: 'category', dimOpacity: 0.2 },
+        select: { flyTo: true },
+        cursorRepulsion: { radius: 80, strength: 30 },
+        springyDrag: true,
+      },
+      legend: { interactive: true, counts: true },
+    };
+    expect(validateViz(spec), JSON.stringify(validateViz.errors)).toBe(true);
+  });
+
+  it('rejects an unknown energy preset on a graph layout', () => {
+    const spec = {
+      type: 'graph',
+      nodes: [{ id: 'a' }],
+      edges: [],
+      layout: { type: 'force', energy: 'nuclear' },
+    };
+    expect(validateViz(spec)).toBe(false);
+  });
 });
 
 describe('table.schema.json', () => {
