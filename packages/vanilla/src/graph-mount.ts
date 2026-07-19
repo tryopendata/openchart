@@ -14,10 +14,11 @@ import type {
   GraphCompilation,
 } from '@opendata-ai/openchart-engine';
 import { compileGraph } from '@opendata-ai/openchart-engine';
-
+import { type CameraFlightOptions, clampK, createCameraFlight } from './graph/camera';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
 import { GraphInteractionManager } from './graph/interaction';
 import { attachGraphKeyboardNav } from './graph/keyboard';
+import { prefersReducedMotion } from './graph/motion';
 import { AnimationScheduler } from './graph/scheduler';
 import { GraphSearchManager } from './graph/search';
 import { SimulationManager } from './graph/simulation';
@@ -47,6 +48,13 @@ export interface GraphMountOptions {
   onNodeHover?: (node: Record<string, unknown> | null) => void;
   onEdgeHover?: (edge: Record<string, unknown> | null) => void;
   onSelectionChange?: (nodeIds: string[]) => void;
+  /**
+   * Fit the graph to the viewport on the first tick. Default true. Set false to
+   * restore a saved camera (e.g. getCamera() + flyTo) without the initial fit.
+   */
+  fitOnLoad?: boolean;
+  /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
+  onCameraChange?: (camera: { x: number; y: number; k: number }) => void;
 }
 
 export interface GraphInstance {
@@ -55,10 +63,21 @@ export interface GraphInstance {
   updateVisuals(spec: GraphSpec): void;
   search(query: string): void;
   clearSearch(): void;
-  zoomToFit(): void;
-  zoomToNode(nodeId: string): void;
-  selectNode(nodeId: string): void;
+  /** Fit all nodes into the viewport. Animated by default; `{ duration: 0 }` snaps. */
+  zoomToFit(opts?: CameraFlightOptions & { padding?: number }): void;
+  /** Fly to a node and zoom in (default scale 2). Tracks the node while it settles. */
+  zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?: number }): void;
+  /** Fly the camera to a graph-space target. */
+  flyTo(target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions): void;
+  /** Center the camera on a graph-space point (keeps current zoom). */
+  centerAt(x: number, y: number, opts?: CameraFlightOptions): void;
+  /** Current camera (graph-space center-ish transform components). */
+  getCamera(): { x: number; y: number; k: number };
+  /** Select a node; `{ fly: true }` also flies to it (default follows interaction.select.flyTo). */
+  selectNode(nodeId: string, opts?: { fly?: boolean } & CameraFlightOptions): void;
   getSelectedNodes(): string[];
+  /** Node ids currently matching the active search query. */
+  getSearchMatches(): string[];
   resize(): void;
   destroy(): void;
 }
@@ -131,6 +150,9 @@ export function createGraph(
   const scheduler = new AnimationScheduler(() => scheduleRender());
   let gestureTimeout: ReturnType<typeof setTimeout> | null = null;
   let lastEdgeHitTime = 0;
+  // Camera flight state.
+  let activeFlight: import('./graph/scheduler').GraphAnimation | null = null;
+  let cameraChangePending = false;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -422,11 +444,19 @@ export function createGraph(
       // Fit the viewport once on the first tick so the graph is visible and
       // centered immediately. After that, let the user interact freely while
       // the simulation continues settling in the background.
-      if (!initialFitDone && positionedNodes.length > 0 && interactionManager) {
+      if (
+        !initialFitDone &&
+        positionedNodes.length > 0 &&
+        interactionManager &&
+        options?.fitOnLoad !== false
+      ) {
         initialFitDone = true;
         const { width: cw, height: ch } = getCanvasDimensions();
         const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
         interactionManager.setTransform(fitTransform);
+      } else if (!initialFitDone && options?.fitOnLoad === false) {
+        // Skip the fit but mark it done so a saved camera (getCamera/flyTo) sticks.
+        initialFitDone = true;
       }
 
       needsRender = true;
@@ -486,6 +516,82 @@ export function createGraph(
 
     // Re-arm only while animations are active; otherwise the loop goes idle.
     if (scheduler.active) scheduleRender();
+
+    // Emit a coalesced camera-change after the frame renders (at most once/frame).
+    if (cameraChangePending) {
+      cameraChangePending = false;
+      const t = interactionManager.getTransform();
+      options?.onCameraChange?.({ x: t.x, y: t.y, k: t.k });
+    }
+  }
+
+  /**
+   * Fly the camera to a target transform (or a provider that tracks a moving
+   * target). Cancels any prior flight. Snaps instead of flying when animation is
+   * disabled, reduced motion is active, or duration is 0.
+   */
+  function flyCamera(
+    to: ZoomTransform | (() => ZoomTransform),
+    opts?: CameraFlightOptions,
+    onDone?: () => void,
+  ): void {
+    if (destroyed || !interactionManager) return;
+
+    // Cancel any in-flight camera animation.
+    if (activeFlight) {
+      scheduler.remove(activeFlight);
+      activeFlight = null;
+    }
+
+    const cameraCfg = compilation.animation?.camera ?? null;
+    const resolveTarget = () => (typeof to === 'function' ? to() : to);
+    const snap = cameraCfg === null || prefersReducedMotion() || opts?.duration === 0;
+
+    if (snap) {
+      interactionManager.setTransform(resolveTarget());
+      cameraChangePending = true;
+      needsRender = true;
+      scheduleRender();
+      onDone?.();
+      return;
+    }
+
+    const { width, height } = getCanvasDimensions();
+    const duration = opts?.duration ?? cameraCfg?.duration ?? 'auto';
+    const ease = opts?.ease ?? cameraCfg?.ease ?? 'smooth';
+    // Large graphs skip labels/glow while flying; the final frame is full quality.
+    const heavy = positionedNodes.length > 1000;
+
+    const flight = createCameraFlight({
+      from: interactionManager.getTransform(),
+      to,
+      viewport: { width, height },
+      apply: (t) => {
+        interactionManager!.setTransform(t);
+        isGesturing = heavy;
+        cameraChangePending = true;
+        needsRender = true;
+      },
+      onDone: () => {
+        activeFlight = null;
+        isGesturing = false;
+        needsRender = true;
+        scheduleRender();
+        onDone?.();
+      },
+      opts: { duration, ease },
+    });
+    activeFlight = flight;
+    scheduler.add(flight);
+  }
+
+  /** Cancel any active camera flight (called by user-initiated pan/zoom). */
+  function cancelFlight(): void {
+    if (activeFlight) {
+      scheduler.remove(activeFlight);
+      activeFlight = null;
+      isGesturing = false;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -501,6 +607,10 @@ export function createGraph(
 
     interactionManager = new GraphInteractionManager(canvas, spatialIndex, {
       onTransformChange(_transform) {
+        // User-initiated pan/zoom cancels any camera flight. Programmatic
+        // setTransform does NOT call this callback, so there's no feedback loop;
+        // node-drag correctly doesn't reach here either.
+        cancelFlight();
         markGesture();
         needsRender = true;
         scheduleRender();
@@ -645,9 +755,7 @@ export function createGraph(
         const factor = direction === 'in' ? 1.2 : 0.8;
         const newK = t.k * factor;
         const newTransform = t.zoomAt(newK, cw / 2, ch / 2);
-        interactionManager.setTransform(newTransform);
-        needsRender = true;
-        scheduleRender();
+        flyCamera(newTransform, { duration: 200 });
       },
       onFitAll() {
         zoomToFit();
@@ -676,41 +784,66 @@ export function createGraph(
     scheduleRender();
   }
 
-  function zoomToFit(): void {
+  function zoomToFit(opts?: CameraFlightOptions & { padding?: number }): void {
     if (destroyed || !interactionManager || positionedNodes.length === 0) return;
     const { width: cw, height: ch } = getCanvasDimensions();
-    const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
-    interactionManager.setTransform(fitTransform);
-    needsRender = true;
-    scheduleRender();
+    const { transform: fitTransform } = ZoomTransform.fitBounds(
+      positionedNodes,
+      cw,
+      ch,
+      opts?.padding,
+    );
+    flyCamera(fitTransform, opts);
   }
 
-  function zoomToNode(nodeId: string): void {
+  function zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?: number }): void {
     if (destroyed || !interactionManager || !canvas) return;
     const node = positionedNodes.find((n) => n.id === nodeId);
     if (!node) return;
 
     const { width: cw, height: ch } = getCanvasDimensions();
-    // Zoom to 2x and center on node
-    const k = 2;
-    const tx = cw / 2 - node.x * k;
-    const ty = ch / 2 - node.y * k;
-    const newTransform = new ZoomTransform(tx, ty, k);
-    interactionManager.setTransform(newTransform);
-    needsRender = true;
-    scheduleRender();
+    const k = clampK(opts?.scale ?? 2);
+    // Provider form: re-read the node's live position each frame so the camera
+    // tracks it while the simulation is still settling.
+    const provider = (): ZoomTransform => {
+      const live = positionedNodes.find((n) => n.id === nodeId) ?? node;
+      return new ZoomTransform(cw / 2 - live.x * k, ch / 2 - live.y * k, k);
+    };
+    flyCamera(provider, opts);
   }
 
-  function selectNode(nodeId: string): void {
+  function flyTo(target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions): void {
+    if (destroyed || !interactionManager) return;
+    const { width: cw, height: ch } = getCanvasDimensions();
+    const k = clampK(target.k ?? interactionManager.getTransform().k);
+    flyCamera(new ZoomTransform(cw / 2 - target.x * k, ch / 2 - target.y * k, k), opts);
+  }
+
+  function centerAt(x: number, y: number, opts?: CameraFlightOptions): void {
+    flyTo({ x, y }, opts);
+  }
+
+  function getCamera(): { x: number; y: number; k: number } {
+    const t = interactionManager?.getTransform() ?? ZoomTransform.identity();
+    return { x: t.x, y: t.y, k: t.k };
+  }
+
+  function selectNode(nodeId: string, opts?: { fly?: boolean } & CameraFlightOptions): void {
     if (destroyed) return;
     selectedNodeIds = new Set([nodeId]);
     needsRender = true;
     scheduleRender();
     options?.onSelectionChange?.([nodeId]);
+    const shouldFly = opts?.fly ?? compilation.interaction.selectFlyTo;
+    if (shouldFly) zoomToNode(nodeId, opts);
   }
 
   function getSelectedNodes(): string[] {
     return [...selectedNodeIds];
+  }
+
+  function getSearchMatches(): string[] {
+    return [...(searchManager.getMatches() ?? [])];
   }
 
   function doResize(): void {
@@ -799,6 +932,7 @@ export function createGraph(
     // Cancel animations BEFORE tearing down the sim/DOM, so no in-flight tick
     // writes to removed state.
     scheduler.cancelAll();
+    activeFlight = null;
     if (animFrameId !== null) {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
@@ -864,8 +998,12 @@ export function createGraph(
       clearSearch() {},
       zoomToFit() {},
       zoomToNode() {},
+      flyTo() {},
+      centerAt() {},
+      getCamera: () => ({ x: 0, y: 0, k: 1 }),
       selectNode() {},
       getSelectedNodes: () => [],
+      getSearchMatches: () => [],
       resize() {},
       destroy() {},
     };
@@ -885,8 +1023,12 @@ export function createGraph(
     clearSearch,
     zoomToFit,
     zoomToNode,
+    flyTo,
+    centerAt,
+    getCamera,
     selectNode,
     getSelectedNodes,
+    getSearchMatches,
     resize: doResize,
     destroy,
   };
