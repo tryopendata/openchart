@@ -248,6 +248,17 @@ describe('layout presets + seed + highlight', () => {
     expect(r.simulationConfig.warmupBudgetMs).toBe(250);
   });
 
+  it('warmup defaults ON when omitted (100 ticks)', () => {
+    const r = compileGraph(base, compileOptions);
+    expect(r.simulationConfig.warmupTicks).toBe(100);
+    expect(r.simulationConfig.warmupBudgetMs).toBe(250);
+  });
+
+  it('warmup: false disables warmup', () => {
+    const r = compileGraph({ ...base, layout: { type: 'force', warmup: false } }, compileOptions);
+    expect(r.simulationConfig.warmupTicks).toBe(0);
+  });
+
   it('captures nodeColor.highlight into initialHighlight against the resolved domain', () => {
     const r = compileGraph(
       { ...base, encoding: { nodeColor: { field: 'g', type: 'nominal', highlight: ['X'] } } },

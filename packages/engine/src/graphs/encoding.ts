@@ -410,10 +410,14 @@ export function resolveEdgeVisuals(
   let styleFn: ((edge: GraphEdge) => 'solid' | 'dashed' | 'dotted') | undefined;
   if (encoding.edgeStyle?.field) {
     const field = encoding.edgeStyle.field;
-    const uniqueValues = [...new Set(edges.map((e) => String(e[field] ?? '')))];
+    const domain = resolveCategoricalDomain(
+      edges.map((e) => String(e[field] ?? '')),
+      encoding.edgeStyle.sort,
+      encoding.edgeStyle.scale?.domain,
+    );
     const styleMap = new Map<string, 'solid' | 'dashed' | 'dotted'>();
-    for (let i = 0; i < uniqueValues.length; i++) {
-      styleMap.set(uniqueValues[i], EDGE_STYLES[i % EDGE_STYLES.length]);
+    for (let i = 0; i < domain.length; i++) {
+      styleMap.set(domain[i], EDGE_STYLES[i % EDGE_STYLES.length]);
     }
     styleFn = (edge: GraphEdge) => styleMap.get(String(edge[field] ?? '')) ?? 'solid';
   }

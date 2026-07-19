@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   clampK,
   createCameraFlight,
+  createCameraFollow,
   resolveDuration,
   transformToView,
   type Viewport,
@@ -140,6 +141,46 @@ describe('createCameraFlight', () => {
     flight.tick(100);
     const last = applied.at(-1) as ZoomTransform;
     expect(last.x).toBeCloseTo(-200, 1);
+  });
+
+  it('follow keeps tracking the provider after the flight completes', () => {
+    // Post-flight follow: the flight converges at t=1 but the tracked node is
+    // still settling; the follow snaps to the provider until the sim quiets.
+    let targetX = -200;
+    let alpha = 0.5;
+    const applied: ZoomTransform[] = [];
+    const follow = createCameraFollow({
+      target: () => new ZoomTransform(targetX, 0, 1),
+      apply: (t) => applied.push(t),
+      isActive: () => alpha >= 0.05,
+    });
+
+    expect(follow.tick(0)).toBe(true);
+    expect((applied.at(-1) as ZoomTransform).x).toBe(-200);
+
+    // The node drifts; the follow tracks it.
+    targetX = -250;
+    expect(follow.tick(16)).toBe(true);
+    expect((applied.at(-1) as ZoomTransform).x).toBe(-250);
+
+    // Sim settles: the follow ends without applying another frame.
+    alpha = 0.01;
+    const frames = applied.length;
+    expect(follow.tick(32)).toBe(false);
+    expect(applied.length).toBe(frames);
+  });
+
+  it('follow cancel stops immediately', () => {
+    const applied: ZoomTransform[] = [];
+    const follow = createCameraFollow({
+      target: () => new ZoomTransform(0, 0, 1),
+      apply: (t) => applied.push(t),
+      isActive: () => true,
+    });
+    expect(follow.tick(0)).toBe(true);
+    follow.cancel();
+    expect(follow.tick(16)).toBe(false);
+    expect(applied.length).toBe(1);
   });
 
   it('degenerate from≈to still ticks and completes', () => {

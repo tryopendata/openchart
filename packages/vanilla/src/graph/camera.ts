@@ -154,6 +154,43 @@ export function createCameraFlight(inputs: CameraFlightInputs): GraphAnimation {
   };
 }
 
+/** Inputs to {@link createCameraFollow}. */
+export interface CameraFollowInputs {
+  /** Provider returning the current target transform each frame. */
+  target: () => ZoomTransform;
+  /** Applies the followed transform to the scene each frame. */
+  apply: (t: ZoomTransform) => void;
+  /** True while the tracked target may still move (e.g. sim alpha ≥ threshold). */
+  isActive: () => boolean;
+}
+
+/**
+ * Post-flight follow for provider-form flights: the flight converges at t=1
+ * while the tracked node may still be settling, so this cheap animation snaps
+ * the camera to the provider each frame until `isActive()` reports the sim has
+ * settled. User input or a new flight cancels it via the scheduler.
+ */
+export function createCameraFollow(inputs: CameraFollowInputs): GraphAnimation {
+  let finished = false;
+  return {
+    tick(): boolean {
+      if (finished) return false;
+      if (!inputs.isActive()) {
+        finished = true;
+        return false;
+      }
+      inputs.apply(inputs.target());
+      return true;
+    },
+    finish(): void {
+      finished = true;
+    },
+    cancel(): void {
+      finished = true;
+    },
+  };
+}
+
 /**
  * Resolve a flight duration. `'auto'` (or undefined) derives from d3's
  * interpolateZoom.duration (a perceptual distance), scaled and clamped. An

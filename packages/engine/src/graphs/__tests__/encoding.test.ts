@@ -372,6 +372,35 @@ describe('resolveEdgeVisuals', () => {
       expect(fourthEdge.style).toBe('solid');
     });
 
+    it('assigns styles in ascending label order regardless of data order', () => {
+      const styledEdges: GraphEdge[] = [
+        { source: 'a', target: 'b', kind: 'zeta' },
+        { source: 'b', target: 'c', kind: 'alpha' },
+        { source: 'a', target: 'c', kind: 'mid' },
+      ];
+      const edges = resolveEdgeVisuals(styledEdges, { edgeStyle: { field: 'kind' } }, theme);
+
+      // Sorted domain [alpha, mid, zeta] → solid, dashed, dotted.
+      expect(edges.find((e) => e.data.kind === 'alpha')!.style).toBe('solid');
+      expect(edges.find((e) => e.data.kind === 'mid')!.style).toBe('dashed');
+      expect(edges.find((e) => e.data.kind === 'zeta')!.style).toBe('dotted');
+    });
+
+    it('sort: null keeps first-seen data order for style assignment', () => {
+      const styledEdges: GraphEdge[] = [
+        { source: 'a', target: 'b', kind: 'zeta' },
+        { source: 'b', target: 'c', kind: 'alpha' },
+      ];
+      const edges = resolveEdgeVisuals(
+        styledEdges,
+        { edgeStyle: { field: 'kind', sort: null } },
+        theme,
+      );
+
+      expect(edges.find((e) => e.data.kind === 'zeta')!.style).toBe('solid');
+      expect(edges.find((e) => e.data.kind === 'alpha')!.style).toBe('dashed');
+    });
+
     it('defaults to solid when no edgeStyle encoding', () => {
       const edges = resolveEdgeVisuals(basicEdges, {}, theme);
 

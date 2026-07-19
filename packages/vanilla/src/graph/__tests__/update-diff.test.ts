@@ -118,6 +118,69 @@ describe('diffGraphUpdate visual-only detection', () => {
     );
     expect(diff.visualOnly).toBe(false);
   });
+
+  it('duplicate-edge multiplicity change → visualOnly FALSE (multiset compare)', () => {
+    const prevN = [node('a', 0, 0), node('b', 10, 10), node('c', 20, 20), node('d', 30, 30)];
+    const diff = diffGraphUpdate(
+      prevN,
+      [edge('a', 'b'), edge('a', 'b'), edge('c', 'd')],
+      next(
+        [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }],
+        [
+          { source: 'a', target: 'b' },
+          { source: 'c', target: 'd' },
+          { source: 'c', target: 'd' },
+        ],
+      ),
+      baseConfig,
+      0,
+    );
+    expect(diff.visualOnly).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// entering edge count
+// ---------------------------------------------------------------------------
+
+describe('diffGraphUpdate enteringEdgeCount', () => {
+  it('counts an edge added between two SURVIVORS (not just edges touching enterers)', () => {
+    const prevN = [node('a', 0, 0), node('b', 10, 10), node('c', 20, 20)];
+    const diff = diffGraphUpdate(
+      prevN,
+      [edge('a', 'b')],
+      next(
+        [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+        [
+          { source: 'a', target: 'b' },
+          { source: 'b', target: 'c' }, // new edge between survivors
+        ],
+      ),
+      baseConfig,
+      0,
+    );
+    expect(diff.enteringIds).toEqual([]);
+    expect(diff.enteringEdgeCount).toBe(1);
+  });
+
+  it('counts edges touching an entering node too', () => {
+    const prevN = [node('a', 0, 0), node('b', 10, 10)];
+    const diff = diffGraphUpdate(
+      prevN,
+      [edge('a', 'b')],
+      next(
+        [{ id: 'a' }, { id: 'b' }, { id: 'z' }],
+        [
+          { source: 'a', target: 'b' },
+          { source: 'a', target: 'z' },
+        ],
+      ),
+      baseConfig,
+      0,
+    );
+    expect(diff.enteringIds).toEqual(['z']);
+    expect(diff.enteringEdgeCount).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

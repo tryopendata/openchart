@@ -20,7 +20,12 @@ import type {
   GraphCompilation,
 } from '@opendata-ai/openchart-engine';
 import { buildEdgeTooltip, compileGraph } from '@opendata-ai/openchart-engine';
-import { type CameraFlightOptions, clampK, createCameraFlight } from './graph/camera';
+import {
+  type CameraFlightOptions,
+  clampK,
+  createCameraFlight,
+  createCameraFollow,
+} from './graph/camera';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
 import { ENTRANCE_STAGGER_MAX_NODES } from './graph/entrance';
 import {
@@ -180,6 +185,9 @@ const CURSOR_FORCE_MAX_NODES = 2000;
 /** Cursor pointer-feed throttle (~30Hz) so we don't post on every mousemove. */
 const CURSOR_POINTER_THROTTLE_MS = 33;
 
+/** Post-flight camera follow stops once the sim alpha settles below this. */
+const FOLLOW_SETTLE_ALPHA = 0.05;
+
 // ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
@@ -240,6 +248,10 @@ export function createGraph(
   let lastPointerFeedTime = 0;
   // Camera flight state.
   let activeFlight: GraphAnimation | null = null;
+  // Post-flight follow for provider-form flights (tracks a still-settling node).
+  let activeFollow: GraphAnimation | null = null;
+  // Latest simulation alpha, fed by onTick; the follow stops below the threshold.
+  let lastAlpha = 1;
   let cameraChangePending = false;
 
   // Focus / highlight state (Phase 5). One highlight slot with two writers:
@@ -635,13 +647,18 @@ export function createGraph(
       cursorRepulsion: cursorForceEnabled() ? compilation.interaction.cursorRepulsion : null,
     });
 
+    // A fresh sim starts hot; don't let a settled previous sim's alpha linger
+    // (it would end a post-flight camera follow before the first tick lands).
+    lastAlpha = opts?.initialAlpha ?? 1;
+
     let initialSettleDone = false;
     // Update sims keep the current camera and don't run the entrance reveal, so
     // pre-mark the fit as done — the first update tick just streams positions.
     let initialFitDone = opts?.skipEntrance ?? false;
 
-    simulation.onTick((positions, _alpha) => {
+    simulation.onTick((positions, alpha) => {
       if (destroyed) return;
+      lastAlpha = alpha;
 
       // Build position lookup
       const posMap = new Map<string, { x: number; y: number }>();
@@ -728,6 +745,7 @@ export function createGraph(
 
     if (suppressed || !enter || prefersReducedMotion()) {
       interactionManager.setTransform(fit);
+      cameraChangePending = true;
       entranceActive = false;
       entranceProgress = 1;
       return;
@@ -737,6 +755,7 @@ export function createGraph(
     const { width: cw, height: ch } = getCanvasDimensions();
     const pulledBack = fit.zoomAt(fit.k * 0.92, cw / 2, ch / 2);
     interactionManager.setTransform(pulledBack);
+    cameraChangePending = true;
 
     entranceActive = true;
     entranceProgress = 0;
@@ -1072,11 +1091,8 @@ export function createGraph(
   ): void {
     if (destroyed || !interactionManager) return;
 
-    // Cancel any in-flight camera animation.
-    if (activeFlight) {
-      scheduler.remove(activeFlight);
-      activeFlight = null;
-    }
+    // Cancel any in-flight camera animation (and a lingering post-flight follow).
+    cancelFlight();
 
     const cameraCfg = compilation.animation?.camera ?? null;
     const resolveTarget = () => (typeof to === 'function' ? to() : to);
@@ -1111,6 +1127,9 @@ export function createGraph(
         activeFlight = null;
         isGesturing = false;
         needsRender = true;
+        // Provider-form flights converge at t=1 while the tracked node may
+        // still be settling — keep following it until the sim quiets down.
+        if (typeof to === 'function') startFollow(to);
         scheduleRender();
         onDone?.();
       },
@@ -1120,12 +1139,31 @@ export function createGraph(
     scheduler.add(flight);
   }
 
-  /** Cancel any active camera flight (called by user-initiated pan/zoom). */
+  /** Snap the camera to a provider each frame until the sim settles. */
+  function startFollow(target: () => ZoomTransform): void {
+    const follow = createCameraFollow({
+      target,
+      apply: (t) => {
+        interactionManager!.setTransform(t);
+        cameraChangePending = true;
+        needsRender = true;
+      },
+      isActive: () => !destroyed && lastAlpha >= FOLLOW_SETTLE_ALPHA,
+    });
+    activeFollow = follow;
+    scheduler.add(follow);
+  }
+
+  /** Cancel any active camera flight/follow (called by user-initiated pan/zoom). */
   function cancelFlight(): void {
     if (activeFlight) {
       scheduler.remove(activeFlight);
       activeFlight = null;
       isGesturing = false;
+    }
+    if (activeFollow) {
+      scheduler.remove(activeFollow);
+      activeFollow = null;
     }
   }
 
@@ -1147,6 +1185,9 @@ export function createGraph(
         // node-drag correctly doesn't reach here either.
         cancelFlight();
         markGesture();
+        // User pan/zoom is a camera change too — zoom UIs and camera
+        // persistence rely on the coalesced onCameraChange, not polling.
+        cameraChangePending = true;
         needsRender = true;
         scheduleRender();
       },
@@ -1461,6 +1502,7 @@ export function createGraph(
       cancelFlight();
       entranceFitInFlight = false;
       interactionManager.setTransform(computeInitialFit());
+      cameraChangePending = true;
     }
 
     needsRender = true;
@@ -1594,10 +1636,10 @@ export function createGraph(
       Math.max(prevNodeCount, nextNodeCount),
     );
     const prevEdgeCount =
-      compilation.edges.length - enteringEdgeCount(diff) + diff.exitingEdges.length;
+      compilation.edges.length - diff.enteringEdgeCount + diff.exitingEdges.length;
     const nextEdgeCount = compilation.edges.length;
     const edgeRatio = ratio(
-      enteringEdgeCount(diff) + diff.exitingEdges.length,
+      diff.enteringEdgeCount + diff.exitingEdges.length,
       Math.max(prevEdgeCount, nextEdgeCount),
     );
     const changeRatio = Math.max(nodeRatio, edgeRatio);
@@ -1637,17 +1679,6 @@ export function createGraph(
 
     needsRender = true;
     scheduleRender();
-  }
-
-  /** Count of edges in the new compilation touching an entering node. */
-  function enteringEdgeCount(diff: ReturnType<typeof diffGraphUpdate>): number {
-    if (diff.enteringIds.length === 0) return 0;
-    const entering = new Set(diff.enteringIds);
-    let count = 0;
-    for (const e of compilation.edges) {
-      if (entering.has(e.source) || entering.has(e.target)) count++;
-    }
-    return count;
   }
 
   /** Safe ratio (0 when the denominator is 0). */
@@ -1776,6 +1807,7 @@ export function createGraph(
     // writes to removed state.
     scheduler.cancelAll();
     activeFlight = null;
+    activeFollow = null;
     // Reset entrance state so a remount (React StrictMode) starts clean.
     entranceReveal = null;
     entranceActive = false;

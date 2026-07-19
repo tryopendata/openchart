@@ -356,6 +356,51 @@ describe('createGraph entrance', () => {
     graph.destroy();
   });
 
+  it('user wheel zoom fires the coalesced onCameraChange', async () => {
+    container = makeContainer();
+    const onCameraChange = vi.fn();
+    const graph = createGraph(container, warmedSpec, { onCameraChange });
+    await Promise.resolve();
+    pumpRaf(0);
+    for (let t = 50; t <= 1400; t += 50) pumpRaf(t);
+    onCameraChange.mockClear();
+
+    const canvas = container.querySelector('canvas')!;
+    canvas.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: -100, clientX: 400, clientY: 300, bubbles: true }),
+    );
+    pumpRaf(1450);
+
+    expect(onCameraChange).toHaveBeenCalled();
+    const cam = onCameraChange.mock.calls.at(-1)?.[0] as { x: number; y: number; k: number };
+    expect(cam.k).toBeGreaterThan(0);
+    graph.destroy();
+  });
+
+  it('zoomToNode keeps following the settling node after the flight completes', async () => {
+    container = makeContainer();
+    const onCameraChange = vi.fn();
+    const graph = createGraph(container, warmedSpec, { onCameraChange });
+    await Promise.resolve();
+    // Only a few frames: the sim must still be hot (alpha ≥ 0.05) when the
+    // flight lands, otherwise there's nothing left to follow.
+    pumpRaf(0);
+    pumpRaf(50);
+    pumpRaf(100);
+
+    graph.zoomToNode('b', { duration: 100 });
+    pumpRaf(150); // locks the flight start time
+    pumpRaf(250); // flight completes (duration 100)
+    onCameraChange.mockClear();
+
+    // The sim is still settling, so the post-flight follow keeps snapping the
+    // camera to the node — observable as per-frame camera events.
+    pumpRaf(300);
+    pumpRaf(350);
+    expect(onCameraChange).toHaveBeenCalled();
+    graph.destroy();
+  });
+
   it('resize mid-entrance keeps the reveal but re-fits to the new viewport', async () => {
     // A container whose rect can be shrunk mid-test.
     let rect = { width: 800, height: 600 };

@@ -49,6 +49,11 @@ export interface GraphUpdateDiff {
   exitingNodes: PositionedNode[];
   /** Prev-positioned edges removed in `next` (ghosts). */
   exitingEdges: PositionedEdge[];
+  /**
+   * Count of edges present in `next` but not in prev — including edges added
+   * between two surviving nodes, which "touches an entering node" would miss.
+   */
+  enteringEdgeCount: number;
 }
 
 /** ±8px deterministic jitter from an id+seed hash (two independent streams). */
@@ -111,6 +116,11 @@ export function diffGraphUpdate(
   const exitingNodes = prevNodes.filter((n) => !nextIds.has(n.id));
   const nextEdgeKeys = new Set(next.edges.map((e) => `${e.source} ${e.target}`));
   const exitingEdges = prevEdges.filter((e) => !nextEdgeKeys.has(`${e.source} ${e.target}`));
+  const prevEdgeKeys = new Set(prevEdges.map((e) => `${e.source} ${e.target}`));
+  let enteringEdgeCount = 0;
+  for (const e of next.edges) {
+    if (!prevEdgeKeys.has(`${e.source} ${e.target}`)) enteringEdgeCount++;
+  }
 
   // Visual-only: identical node AND edge id sets AND equal simulationConfig.
   const sameNodes = prevIds.size === nextIds.size && enteringIds.length === 0;
@@ -148,6 +158,7 @@ export function diffGraphUpdate(
     spawnPositions,
     exitingNodes,
     exitingEdges,
+    enteringEdgeCount,
   };
 }
 
@@ -187,16 +198,27 @@ function firstSurvivingNeighborPos(
   return null;
 }
 
-/** Order-insensitive equality of two edge sets by (source,target) key. */
+/**
+ * Order-insensitive multiset equality of two edge lists by (source,target) key.
+ * Counts matter: prev [A→B, A→B, C→D] vs next [A→B, C→D, C→D] is a structural
+ * change, not visual-only.
+ */
 function edgeSetsEqual(
   prev: Array<{ source: string; target: string }>,
   next: Array<{ source: string; target: string }>,
 ): boolean {
   if (prev.length !== next.length) return false;
   const key = (e: { source: string; target: string }) => `${e.source}->${e.target}`;
-  const prevKeys = new Set(prev.map(key));
+  const counts = new Map<string, number>();
+  for (const e of prev) {
+    const k = key(e);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
   for (const e of next) {
-    if (!prevKeys.has(key(e))) return false;
+    const k = key(e);
+    const c = counts.get(k);
+    if (!c) return false;
+    counts.set(k, c - 1);
   }
   return true;
 }

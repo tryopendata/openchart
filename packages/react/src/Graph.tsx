@@ -131,9 +131,13 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<GraphInstance | null>(null);
   const specRef = useRef<string>('');
-  // First run of the mount effect plays the entrance; subsequent runs (theme/
-  // darkMode/structural-tooltip/legend change — all spec-unchanged) suppress it.
-  const mountedOnceRef = useRef(false);
+  // Deps of the previous mount-effect run. A recreation with CHANGED deps
+  // (theme/darkMode/structural-tooltip/legend — all spec-unchanged) suppresses
+  // the entrance; identical deps mean a StrictMode dev replay of the same
+  // mount, which must still play the entrance. A survives-cleanup boolean ref
+  // can't tell those apart — it would suppress the entrance in every
+  // StrictMode app.
+  const prevMountDepsRef = useRef<unknown[] | null>(null);
 
   // Store event handlers AND function-valued options in refs so they don't
   // trigger graph recreation. Inline functions create new references every
@@ -287,6 +291,14 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       ? { formatter: stableTooltipFormatter }
       : false;
 
+    // Suppress the entrance only when a PREVIOUS mount existed and a dep
+    // actually changed (theme/darkMode/structural option — spec unchanged).
+    // Identical deps = StrictMode's dev remount of the same graph: play it.
+    const mountDeps: unknown[] = [theme, resolvedDarkMode, tooltipOn, legendKey, fitOnLoad];
+    const prevDeps = prevMountDepsRef.current;
+    const suppressEntrance =
+      prevDeps !== null && mountDeps.some((d, i) => !Object.is(d, prevDeps[i]));
+
     const options: GraphMountOptions = {
       theme,
       darkMode: resolvedDarkMode,
@@ -303,14 +315,12 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       onHighlightChange: stableOnHighlightChange,
       onCameraChange: stableOnCameraChange,
       responsive: true,
-      // First mount plays the entrance; theme/darkMode-only recreations suppress
-      // it so the reveal doesn't replay on an unchanged spec.
-      suppressEntrance: mountedOnceRef.current,
+      suppressEntrance,
     };
 
     graphRef.current = createGraph(container, spec, options);
     specRef.current = JSON.stringify(spec);
-    mountedOnceRef.current = true;
+    prevMountDepsRef.current = mountDeps;
 
     return () => {
       graphRef.current?.destroy();

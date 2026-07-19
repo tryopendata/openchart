@@ -9,7 +9,7 @@
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
-import { createRef } from 'react';
+import { createRef, StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // A stub GraphInstance whose methods we can assert against.
@@ -73,6 +73,19 @@ describe('<Graph /> suppressEntrance', () => {
 
     const secondOpts = createGraphMock.mock.calls[1][2] as { suppressEntrance?: boolean };
     expect(secondOpts.suppressEntrance).toBe(true);
+  });
+
+  it('StrictMode dev remount still plays the entrance (identical deps, no suppression)', async () => {
+    render(
+      <StrictMode>
+        <Graph spec={spec} />
+      </StrictMode>,
+    );
+    // StrictMode runs mount → cleanup → mount; the REAL (second) mount must not
+    // be mistaken for a theme-style recreation.
+    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(2));
+    const lastOpts = createGraphMock.mock.calls.at(-1)?.[2] as { suppressEntrance?: boolean };
+    expect(lastOpts.suppressEntrance).toBe(false);
   });
 
   it('tooltip formatter change does NOT recreate the graph (rides the trampoline)', async () => {

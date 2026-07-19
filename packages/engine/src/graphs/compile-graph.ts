@@ -417,8 +417,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   };
 
   // 10. Build simulation config. Energy/settle presets provide defaults; raw
-  // layout fields (chargeStrength, and the non-spec alphaDecay/velocityDecay)
-  // always win over a preset.
+  // layout fields (chargeStrength) always win over a preset.
   const collisionPadding = graphSpec.layout.collisionPadding ?? 2;
   const maxRadius =
     compiledNodes.length > 0
@@ -432,14 +431,16 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     ? SETTLE_PRESETS[graphSpec.layout.settle]
     : SETTLE_PRESETS.balanced;
 
-  // Warmup: true → defaults, number → explicit tick count, false/undefined → 0.
+  // Warmup defaults ON: undefined/true → default ticks, number → explicit tick
+  // count, false → 0. It lives in layout (not animation) so `animation: false`
+  // still gets the off-screen settle instead of the explosive first frames.
   const warmupRaw = graphSpec.layout.warmup;
   const warmupTicks =
-    warmupRaw === true
-      ? DEFAULT_WARMUP_TICKS
+    warmupRaw === false
+      ? 0
       : typeof warmupRaw === 'number'
         ? Math.max(0, Math.floor(warmupRaw))
-        : 0;
+        : DEFAULT_WARMUP_TICKS;
 
   const simulationConfig: SimulationConfig = {
     chargeStrength: graphSpec.layout.chargeStrength ?? energyPreset.chargeStrength,
