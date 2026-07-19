@@ -18,6 +18,7 @@ import { compileGraph } from '@opendata-ai/openchart-engine';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
 import { GraphInteractionManager } from './graph/interaction';
 import { attachGraphKeyboardNav } from './graph/keyboard';
+import { AnimationScheduler } from './graph/scheduler';
 import { GraphSearchManager } from './graph/search';
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
@@ -124,6 +125,10 @@ export function createGraph(
   let animFrameId: number | null = null;
   let needsRender = false;
   let isGesturing = false;
+  // Continuous-animation scheduler. Arms the first frame via scheduleRender on
+  // the idle→active transition; the render loop ticks it each frame and re-arms
+  // only while it stays active, so the base loop stays strictly dirty-flag.
+  const scheduler = new AnimationScheduler(() => scheduleRender());
   let gestureTimeout: ReturnType<typeof setTimeout> | null = null;
   let lastEdgeHitTime = 0;
 
@@ -448,30 +453,39 @@ export function createGraph(
     animFrameId = requestAnimationFrame(renderFrame);
   }
 
-  function renderFrame(): void {
+  /** Build the immutable per-frame render state from current mount state. */
+  function buildRenderState(): GraphRenderState {
+    const transform = interactionManager!.getTransform();
+    return {
+      nodes: positionedNodes,
+      edges: positionedEdges,
+      transform: { x: transform.x, y: transform.y, k: transform.k },
+      hoveredNodeId,
+      hoveredEdgeId,
+      selectedNodeIds,
+      adjacencyMap,
+      theme: compilation.theme,
+      searchMatches: searchManager.getMatches(),
+      isGesturing,
+      watermark: compilation.watermark,
+    };
+  }
+
+  function renderFrame(now: number): void {
     animFrameId = null;
     if (destroyed || !renderer || !interactionManager) return;
 
+    // Tick animations first; a running animation dirties the frame. Animations
+    // mutate mount state only — they never render or arm rAF themselves.
+    if (scheduler.tick(now)) needsRender = true;
+
     if (needsRender) {
       needsRender = false;
-
-      const transform = interactionManager.getTransform();
-      const state: GraphRenderState = {
-        nodes: positionedNodes,
-        edges: positionedEdges,
-        transform: { x: transform.x, y: transform.y, k: transform.k },
-        hoveredNodeId,
-        hoveredEdgeId,
-        selectedNodeIds,
-        adjacencyMap,
-        theme: compilation.theme,
-        searchMatches: searchManager.getMatches(),
-        isGesturing,
-        watermark: compilation.watermark,
-      };
-
-      renderer.render(state);
+      renderer.render(buildRenderState());
     }
+
+    // Re-arm only while animations are active; otherwise the loop goes idle.
+    if (scheduler.active) scheduleRender();
   }
 
   // ---------------------------------------------------------------------------
@@ -782,6 +796,9 @@ export function createGraph(
   }
 
   function teardownSubsystems(): void {
+    // Cancel animations BEFORE tearing down the sim/DOM, so no in-flight tick
+    // writes to removed state.
+    scheduler.cancelAll();
     if (animFrameId !== null) {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
