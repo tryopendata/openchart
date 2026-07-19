@@ -180,6 +180,41 @@ describe('GraphInteractionManager', () => {
       expect(callbacks.selectionChanges.length).toBe(2);
       expect(callbacks.selectionChanges[1]).toEqual([]);
     });
+
+    it('setSelection replaces the internal set WITHOUT firing onSelectionChange', () => {
+      // Select a node (fires once).
+      canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: 400, clientY: 300 }));
+      canvas.dispatchEvent(new MouseEvent('mouseup', { clientX: 400, clientY: 300 }));
+      expect(callbacks.selectionChanges.length).toBe(1);
+
+      // Prune the selection — no callback fires (the mount owns downstream sync).
+      manager.setSelection([]);
+      expect(callbacks.selectionChanges.length).toBe(1);
+    });
+
+    it('a shift-click after setSelection prune does not resurrect the pruned id', () => {
+      // Shift-click 'center' → selected {center}.
+      canvas.dispatchEvent(
+        new MouseEvent('mousedown', { clientX: 400, clientY: 300, shiftKey: true }),
+      );
+      canvas.dispatchEvent(
+        new MouseEvent('mouseup', { clientX: 400, clientY: 300, shiftKey: true }),
+      );
+      expect(callbacks.selectionChanges.at(-1)).toEqual(['center']);
+
+      // The mount prunes the selection (e.g. 'center' was deleted on update).
+      manager.setSelection([]);
+
+      // A later shift-click on 'left' must NOT bring 'center' back through the
+      // internal set — it would if setSelection hadn't replaced it.
+      canvas.dispatchEvent(
+        new MouseEvent('mousedown', { clientX: 100, clientY: 300, shiftKey: true }),
+      );
+      canvas.dispatchEvent(
+        new MouseEvent('mouseup', { clientX: 100, clientY: 300, shiftKey: true }),
+      );
+      expect(callbacks.selectionChanges.at(-1)).toEqual(['left']);
+    });
   });
 
   describe('transform', () => {

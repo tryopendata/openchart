@@ -85,4 +85,21 @@ describe('GraphSearchManager', () => {
     // node "alpha-5" has no label but id matches
     expect(matches.has('alpha-5')).toBe(true);
   });
+
+  it('stores the active query so a data update can re-run it', () => {
+    const search = new GraphSearchManager();
+    expect(search.getQuery()).toBeNull();
+
+    search.search('ali', nodes);
+    expect(search.getQuery()).toBe('ali');
+
+    // Re-running the stored query against a new node set updates the matches.
+    const newNodes = [{ id: 'node-9', label: 'Alicia' }];
+    const rerun = search.search(search.getQuery()!, newNodes);
+    expect(rerun.has('node-9')).toBe(true);
+
+    // Clearing drops the stored query too.
+    search.clearSearch();
+    expect(search.getQuery()).toBeNull();
+  });
 });

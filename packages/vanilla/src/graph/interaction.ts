@@ -123,6 +123,16 @@ export class GraphInteractionManager {
     return this.transform;
   }
 
+  /**
+   * Replace the internal selection set. Used by the mount to prune deleted ids
+   * after a data update so a later shift-click can't resurrect them through
+   * `onSelectionChange`. Does NOT fire `onSelectionChange` — the caller owns any
+   * downstream sync (the mount already holds the pruned set).
+   */
+  setSelection(ids: string[]): void {
+    this.selectedIds = new Set(ids);
+  }
+
   destroy(): void {
     this.canvas.removeEventListener('wheel', this.boundWheel);
     this.canvas.removeEventListener('mousedown', this.boundMouseDown);

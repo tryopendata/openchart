@@ -76,4 +76,23 @@ export interface GraphRenderState {
    * global fade. Absent or `t >= 1` → render as settled.
    */
   entrance?: { t: number; stagger: boolean };
+  /**
+   * Per-node enter-fade alphas for a data update (node id → 0..1), present only
+   * while newly-added nodes are fading in. Quantized to a few buckets (mirroring
+   * the entrance quantization) so canvas fill-batching survives. A node absent
+   * from the map renders at full alpha. Multiplied into node/label alpha and
+   * (for connected edges) edge alpha.
+   */
+  enterAlpha?: Map<string, number>;
+  /**
+   * Exit ghosts for a data update: nodes/edges removed by the update, drawn
+   * FIRST/UNDER the live marks and NOT hit-tested, fading out over exit.duration.
+   * Absent once the exit fade completes.
+   */
+  exiting?: {
+    nodes: PositionedNode[];
+    edges: PositionedEdge[];
+    /** Global 0..1 fade for the ghosts (1 = fully visible, 0 = gone). */
+    alpha: number;
+  };
 }

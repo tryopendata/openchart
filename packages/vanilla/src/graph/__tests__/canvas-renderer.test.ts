@@ -958,3 +958,94 @@ describe('GraphCanvasRenderer entrance', () => {
     expect(strokes[0].alpha).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Data-update transitions (Phase 7): enter fade + exit ghosts
+// ---------------------------------------------------------------------------
+
+describe('GraphCanvasRenderer update transitions', () => {
+  it('enterAlpha dims a newly-added node (multiplied into its fill alpha)', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0 })],
+        enterAlpha: new Map([['a', 0.25]]),
+      }),
+    );
+
+    const fills = calls.filter((c) => c.method === 'fill' && c.alpha !== undefined);
+    const faded = fills.find((c) => Math.abs((c.alpha ?? 1) - 0.25) < 1e-6);
+    expect(faded).toBeDefined();
+  });
+
+  it('a node absent from enterAlpha renders at full alpha', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0 }), makeNode({ id: 'b', index: 1, x: 50 })],
+        // Only 'a' is fading; 'b' is a survivor → full alpha.
+        enterAlpha: new Map([['a', 0.5]]),
+      }),
+    );
+
+    const fills = calls.filter((c) => c.method === 'fill' && c.alpha !== undefined);
+    expect(fills.some((c) => Math.abs((c.alpha ?? 0) - 1) < 1e-6)).toBe(true);
+    expect(fills.some((c) => Math.abs((c.alpha ?? 0) - 0.5) < 1e-6)).toBe(true);
+  });
+
+  it('exit ghosts are drawn UNDER the live marks at the ghost fade alpha', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    const ghostNode = makeNode({ id: 'gone', index: 0, x: 10, y: 10 });
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0, x: 20, y: 20 })],
+        exiting: { nodes: [ghostNode], edges: [], alpha: 0.4 },
+      }),
+    );
+
+    // A ghost fill lands at the ghost alpha (0.4).
+    const fills = calls.filter((c) => c.method === 'fill' && c.alpha !== undefined);
+    const ghostFill = fills.find((c) => Math.abs((c.alpha ?? 1) - 0.4) < 1e-6);
+    expect(ghostFill).toBeDefined();
+
+    // Ghosts paint UNDER live marks: the first fill (index-wise) is the ghost.
+    const firstFillIdx = calls.findIndex((c) => c.method === 'fill');
+    const liveFillIdx = calls.findIndex(
+      (c) => c.method === 'fill' && Math.abs((c.alpha ?? 0) - 1) < 1e-6,
+    );
+    expect(firstFillIdx).toBeLessThan(liveFillIdx);
+    expect(calls[firstFillIdx].alpha).toBeCloseTo(0.4, 6);
+  });
+
+  it('exit ghost edges are stroked at the faded default edge alpha', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    const gn1 = makeNode({ id: 'x', index: 0, x: 0, y: 0 });
+    const gn2 = makeNode({ id: 'y', index: 1, x: 100, y: 100 });
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0, x: 20, y: 20 })],
+        exiting: {
+          nodes: [gn1, gn2],
+          edges: [makeEdge('x', 'y')],
+          alpha: 0.5,
+        },
+      }),
+    );
+
+    // Ghost edge stroke = EDGE_ALPHA_DEFAULT (0.35) × ghost alpha (0.5) = 0.175.
+    const strokes = calls.filter((c) => c.method === 'stroke' && c.alpha !== undefined);
+    expect(strokes.some((c) => Math.abs((c.alpha ?? 0) - 0.175) < 1e-6)).toBe(true);
+  });
+});

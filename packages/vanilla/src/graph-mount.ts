@@ -39,6 +39,7 @@ import { seedNodePositions } from './graph/seed';
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './graph/types';
+import { diffGraphUpdate } from './graph/update-diff';
 import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
 import { observeResize } from './resize-observer';
@@ -252,6 +253,14 @@ export function createGraph(
   let entranceStagger = false;
   let entranceFitInFlight = false;
   let entranceReveal: GraphAnimation | null = null;
+
+  // Data-update transition state (Phase 7). `enterAlphaMap` fades newly-added
+  // nodes in over update.duration (null when no enter-fade is live). `exiting`
+  // holds ghost marks (removed nodes/edges) fading out over exit.duration; both
+  // are read by buildRenderState and drawn by the canvas renderer.
+  let enterAlphaMap: Map<string, number> | null = null;
+  let exitingGhosts: { nodes: PositionedNode[]; edges: PositionedEdge[]; alpha: number } | null =
+    null;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -518,15 +527,45 @@ export function createGraph(
   // Simulation and animation
   // ---------------------------------------------------------------------------
 
-  function initSimulation(): void {
+  /**
+   * Create the simulation for the current compilation.
+   *
+   * On the initial mount (no `opts`), every node is seeded deterministically and
+   * a fresh warmup runs. On a data update, `opts` supplies pre-known positions
+   * (survivors keep their prior x/y; enterers get spawn positions), suppresses
+   * the center force (it snaps every node by the full centroid error on tick 1,
+   * the global-jump artifact this phase eliminates), and overrides the initial
+   * alpha to the local-reheat impulse. Update sims skip warmup — survivors are
+   * already settled, so a headless warmup would just churn them.
+   */
+  function initSimulation(opts?: {
+    positions?: Map<string, { x: number; y: number }>;
+    suppressCenter?: boolean;
+    initialAlpha?: number;
+    skipWarmup?: boolean;
+    skipEntrance?: boolean;
+  }): void {
     const simNodes = toSimNodes(compilation.nodes);
     const simEdges = toSimEdges(compilation.edges);
     const config = compilation.simulationConfig;
 
-    // Seed deterministic initial positions BEFORE the simulation starts, so the
-    // settled layout is reproducible for a given (spec, seed). `seed ?? 0` keeps
-    // the default path seeded too (still deterministic, just a fixed seed).
-    seedNodePositions(simNodes, config.seed ?? 0);
+    if (opts?.positions) {
+      // Update path: place each node at its known (survivor or spawn) position.
+      // Any node without a supplied position (shouldn't happen) falls back to the
+      // seeded disc so it isn't stuck at the origin.
+      seedNodePositions(simNodes, config.seed ?? 0);
+      for (const n of simNodes) {
+        const p = opts.positions.get(n.id);
+        if (p) {
+          n.x = p.x;
+          n.y = p.y;
+        }
+      }
+    } else {
+      // Initial mount: seed deterministic positions BEFORE the simulation starts,
+      // so the settled layout is reproducible for a given (spec, seed).
+      seedNodePositions(simNodes, config.seed ?? 0);
+    }
 
     simulation = SimulationManager.create(simNodes, simEdges, {
       chargeStrength: config.chargeStrength,
@@ -537,14 +576,19 @@ export function createGraph(
       collisionRadius: config.collisionRadius,
       collisionPadding: config.collisionPadding,
       linkStrength: config.linkStrength,
-      centerForce: config.centerForce,
-      warmupTicks: config.warmupTicks,
+      // Update sims suppress the (non-alpha-scaled) center force to avoid a
+      // global jump on tick 1; the alpha-scaled forceX/forceY gravity still
+      // holds the layout centered.
+      centerForce: opts?.suppressCenter ? false : config.centerForce,
+      warmupTicks: opts?.skipWarmup ? 0 : config.warmupTicks,
       warmupBudgetMs: config.warmupBudgetMs,
-      initialAlpha: config.initialAlpha,
+      initialAlpha: opts?.initialAlpha ?? config.initialAlpha,
     });
 
     let initialSettleDone = false;
-    let initialFitDone = false;
+    // Update sims keep the current camera and don't run the entrance reveal, so
+    // pre-mark the fit as done — the first update tick just streams positions.
+    let initialFitDone = opts?.skipEntrance ?? false;
 
     simulation.onTick((positions, _alpha) => {
       if (destroyed) return;
@@ -933,6 +977,8 @@ export function createGraph(
         entranceActive && entranceProgress < 1
           ? { t: entranceProgress, stagger: entranceStagger }
           : undefined,
+      enterAlpha: enterAlphaMap ?? undefined,
+      exiting: exitingGhosts ?? undefined,
     };
   }
 
@@ -1351,102 +1397,308 @@ export function createGraph(
     scheduleRender();
   }
 
+  /**
+   * Unified data update.
+   *
+   * 1. Finish in-flight animations, then compile the new spec.
+   * 2. Diff prev↔next. A `visualOnly` change (identical node AND edge id sets AND
+   *    equal simulationConfig) takes the position-preserving refresh — no sim
+   *    restart. Anything else (added/removed marks, or a physics change) is a
+   *    structural update.
+   * 3. Structural update: tear down the SIM ONLY (interaction manager, camera
+   *    transform, and surviving selection are kept). Survivors keep their prior
+   *    x/y; enterers get spawn positions. A new sim is created with the center
+   *    force suppressed and a low reheat alpha, so survivors barely move and
+   *    enterers locally settle. Enter fades and exit ghosts animate the delta.
+   */
   function update(newSpec: GraphSpec): void {
     if (destroyed) return;
     currentSpec = newSpec;
 
-    // Finish any in-flight animations (e.g. an entrance reveal) before teardown
-    // so they snap to their final state and fire onDone, rather than being hard
-    // cancelled mid-flight. teardownSubsystems() then cancels whatever remains.
+    // Finish any in-flight animations (e.g. an entrance reveal or a prior
+    // update's enter/exit fade) so they snap to their final state and fire
+    // onDone rather than being hard-cancelled mid-flight.
     scheduler.finishAll();
     entranceActive = false;
     entranceProgress = 1;
     entranceFitInFlight = false;
     entranceReveal = null;
+    // Clear any lingering update-transition state (finishAll ran their onDone).
+    enterAlphaMap = null;
+    exitingGhosts = null;
 
-    // Tear down old simulation + interaction
-    teardownSubsystems();
+    // Capture prev state BEFORE recompiling.
+    const prevNodes = positionedNodes;
+    const prevEdges = positionedEdges;
+    const prevConfig = compilation.simulationConfig;
 
-    // Recompile
+    // Recompile with the new spec.
     compilation = compile();
+
+    const diff = diffGraphUpdate(
+      prevNodes,
+      prevEdges,
+      compilation,
+      prevConfig,
+      prevConfig.seed ?? 0,
+    );
+
+    if (diff.visualOnly) {
+      runVisualOnlyUpdate();
+      return;
+    }
+
+    runStructuralUpdate(diff);
+  }
+
+  /**
+   * Position-preserving visual refresh: recompile changed encoding/chrome/legend
+   * and transfer existing node positions. No simulation restart. (Assumes the
+   * new `compilation` is already set and node/edge id sets are unchanged.)
+   */
+  function runVisualOnlyUpdate(): void {
     adjacencyMap = buildAdjacencyMap(compilation.edges);
     buildDataMaps();
 
-    // Update DOM chrome/legend
-    renderChrome();
-    renderLegend();
-
-    // Reinit
-    initSimulation();
-    initInteraction();
-
-    // Reset state
-    hoveredNodeId = null;
-    hoveredEdgeId = null;
-    selectedNodeIds = new Set();
-    searchManager.clearSearch();
-
-    // A full update() clears highlight, then re-applies the spec's initialHighlight.
-    activeCategories = new Set();
-    highlightSet = null;
-    highlightDimOpacity = null;
-    applyInitialHighlight();
-    syncLegendActiveState();
-    // A fresh focus transition for the new graph (no crossfade from stale state).
-    focusTransition = null;
-  }
-
-  function updateVisuals(newSpec: GraphSpec): void {
-    if (destroyed) return;
-    currentSpec = newSpec;
-
-    // Build a position lookup from current positioned nodes
+    // Build a position lookup from the current positioned nodes.
     const posMap = new Map<string, { x: number; y: number }>();
     for (const node of positionedNodes) {
       posMap.set(node.id, { x: node.x, y: node.y });
     }
 
-    // Recompile with new spec (encoding, chrome, nodeOverrides, etc.)
-    compilation = compile();
-    adjacencyMap = buildAdjacencyMap(compilation.edges);
-    buildDataMaps();
-
-    // Transfer positions to new compiled nodes
+    // Transfer positions to the newly compiled nodes.
     positionedNodes = compilation.nodes.map((node, index) => {
       const pos = posMap.get(node.id) ?? { x: 0, y: 0 };
       return { ...node, x: pos.x, y: pos.y, index };
     });
 
-    // Rebuild positioned edges from existing positions
     positionedEdges = compilation.edges.map((edge) => {
       const src = posMap.get(edge.source) ?? { x: 0, y: 0 };
       const tgt = posMap.get(edge.target) ?? { x: 0, y: 0 };
-      return {
-        ...edge,
-        sourceX: src.x,
-        sourceY: src.y,
-        targetX: tgt.x,
-        targetY: tgt.y,
-      };
+      return { ...edge, sourceX: src.x, sourceY: src.y, targetX: tgt.x, targetY: tgt.y };
     });
 
-    // Rebuild spatial index with updated visuals
     spatialIndex.rebuild(positionedNodes);
 
-    // Highlight persists across updateVisuals: re-resolve category-derived sets
-    // against the newly compiled nodes (a category may map to different ids).
+    // Highlight persists: re-resolve category-derived sets against new nodes.
     if (activeCategories.size > 0) {
       highlightSet = categoryHighlightSet();
     }
 
-    // Update DOM chrome/legend
+    // Search survives: re-run the stored query against the new nodes.
+    reRunSearch();
+
     renderChrome();
     renderLegend();
     syncLegendActiveState();
 
-    // Re-render canvas without restarting simulation
     needsRender = true;
     scheduleRender();
+  }
+
+  /**
+   * Structural update: nodes/edges added/removed or physics changed. Tears down
+   * only the simulation, recreates it with survivor/spawn positions and a local
+   * reheat, and animates the enter/exit delta.
+   */
+  function runStructuralUpdate(diff: ReturnType<typeof diffGraphUpdate>): void {
+    // Tear down the SIM ONLY. Interaction manager, camera transform, and
+    // selection all survive (the plan's key divergence from the old full update).
+    teardownSimOnly();
+
+    adjacencyMap = buildAdjacencyMap(compilation.edges);
+    buildDataMaps();
+
+    // Known positions for the new sim: survivors keep prior x/y, enterers spawn.
+    const positions = new Map<string, { x: number; y: number }>();
+    for (const [id, p] of diff.survivingPositions) positions.set(id, p);
+    for (const [id, p] of diff.spawnPositions) positions.set(id, p);
+
+    // changeRatio = max(node churn, edge churn). Node churn is
+    // (|entering| + |exiting nodes|) / max(prevNodeCount, nextNodeCount); the
+    // edge analog uses the same shape. Low alpha IS the local reheat.
+    const prevNodeCount = diff.survivingPositions.size + diff.exitingNodes.length;
+    const nextNodeCount = diff.survivingPositions.size + diff.enteringIds.length;
+    const nodeRatio = ratio(
+      diff.enteringIds.length + diff.exitingNodes.length,
+      Math.max(prevNodeCount, nextNodeCount),
+    );
+    const prevEdgeCount =
+      compilation.edges.length - enteringEdgeCount(diff) + diff.exitingEdges.length;
+    const nextEdgeCount = compilation.edges.length;
+    const edgeRatio = ratio(
+      enteringEdgeCount(diff) + diff.exitingEdges.length,
+      Math.max(prevEdgeCount, nextEdgeCount),
+    );
+    const changeRatio = Math.max(nodeRatio, edgeRatio);
+    const initialAlpha = Math.min(1, 0.3 + 0.7 * changeRatio);
+
+    // Seed positioned nodes/edges immediately so the first frame (before the sim
+    // streams its first tick) draws survivors at their prior spots and enterers
+    // at their spawn spots — no flash at the origin.
+    positionedNodes = compilation.nodes.map((node, index) => {
+      const pos = positions.get(node.id) ?? { x: 0, y: 0 };
+      return { ...node, x: pos.x, y: pos.y, index };
+    });
+    positionedEdges = compilation.edges.map((edge) => {
+      const src = positions.get(edge.source) ?? { x: 0, y: 0 };
+      const tgt = positions.get(edge.target) ?? { x: 0, y: 0 };
+      return { ...edge, sourceX: src.x, sourceY: src.y, targetX: tgt.x, targetY: tgt.y };
+    });
+    spatialIndex.rebuild(positionedNodes);
+
+    initSimulation({
+      positions,
+      suppressCenter: true,
+      initialAlpha,
+      skipWarmup: true,
+      skipEntrance: true,
+    });
+
+    // Update DOM chrome/legend for the new graph.
+    renderChrome();
+    renderLegend();
+
+    // Reconcile interaction/highlight/search state against the new node set.
+    reconcileStateAfterUpdate();
+
+    // Wire the enter-fade and exit-ghost transitions.
+    startUpdateTransitions(diff);
+
+    needsRender = true;
+    scheduleRender();
+  }
+
+  /** Count of edges in the new compilation touching an entering node. */
+  function enteringEdgeCount(diff: ReturnType<typeof diffGraphUpdate>): number {
+    if (diff.enteringIds.length === 0) return 0;
+    const entering = new Set(diff.enteringIds);
+    let count = 0;
+    for (const e of compilation.edges) {
+      if (entering.has(e.source) || entering.has(e.target)) count++;
+    }
+    return count;
+  }
+
+  /** Safe ratio (0 when the denominator is 0). */
+  function ratio(numerator: number, denominator: number): number {
+    return denominator > 0 ? numerator / denominator : 0;
+  }
+
+  /**
+   * Prune stale interaction state after a structural update: drop hovered
+   * node/edge ids that no longer exist, intersect the selection with the new
+   * node set (pushing the pruned set into the interaction manager so a later
+   * shift-click can't resurrect deleted ids), re-resolve highlight, and re-run
+   * any active search.
+   */
+  function reconcileStateAfterUpdate(): void {
+    const nextIds = new Set(compilation.nodes.map((n) => n.id));
+
+    // Hovered node: clear if gone.
+    if (hoveredNodeId && !nextIds.has(hoveredNodeId)) hoveredNodeId = null;
+    // Hovered edge: clear if either endpoint is gone.
+    if (hoveredEdgeId) {
+      const [src, tgt] = hoveredEdgeId.split('->');
+      if (!nextIds.has(src) || !nextIds.has(tgt)) hoveredEdgeId = null;
+    }
+
+    // Selection: intersect with survivors, then push into the interaction manager.
+    const survivingSelection = [...selectedNodeIds].filter((id) => nextIds.has(id));
+    selectedNodeIds = new Set(survivingSelection);
+    interactionManager?.setSelection(survivingSelection);
+
+    // Highlight persists: re-resolve category-derived sets against new nodes.
+    if (activeCategories.size > 0) {
+      highlightSet = categoryHighlightSet();
+    } else if (highlightSet) {
+      // Explicit-id highlight: prune ids that no longer exist.
+      highlightSet = new Set([...highlightSet].filter((id) => nextIds.has(id)));
+      if (highlightSet.size === 0) highlightSet = null;
+    }
+    syncLegendActiveState();
+
+    // Search survives: re-run the stored query against the new nodes.
+    reRunSearch();
+
+    // Re-arm the focus crossfade against the reconciled state (a fresh transition
+    // so it doesn't blend from stale prev/next snapshots).
+    focusTransition = null;
+    armFocus(performance.now());
+  }
+
+  /** Re-run the active search query (if any) against the current positioned nodes. */
+  function reRunSearch(): void {
+    const q = searchManager.getQuery();
+    if (q !== null) searchManager.search(q, positionedNodes);
+  }
+
+  /**
+   * Start the enter-fade (new nodes 0→1 over update.duration, quantized for
+   * batching) and the exit-ghost fade (removed marks 1→0 over exit.duration).
+   * Snaps instantly under reduced motion or when the phase is disabled.
+   */
+  function startUpdateTransitions(diff: ReturnType<typeof diffGraphUpdate>): void {
+    const updateCfg = compilation.animation?.update ?? null;
+    const exitCfg = compilation.animation?.exit ?? null;
+    const reduced = prefersReducedMotion();
+
+    // -- Enter fade --
+    if (diff.enteringIds.length > 0 && updateCfg && !reduced) {
+      const entering = diff.enteringIds;
+      enterAlphaMap = new Map(entering.map((id) => [id, 0]));
+      const ease = resolveEase(updateCfg.ease);
+      const tween = createTween({
+        duration: updateCfg.duration,
+        ease,
+        apply: (t) => {
+          // Quantize to 8 buckets so per-node alpha keeps fill-batching bounded.
+          const q = Math.round(t * 8) / 8;
+          if (enterAlphaMap) for (const id of entering) enterAlphaMap.set(id, q);
+          needsRender = true;
+        },
+        onDone: () => {
+          enterAlphaMap = null;
+          needsRender = true;
+        },
+      });
+      scheduler.add(tween);
+    }
+
+    // -- Exit ghosts --
+    if ((diff.exitingNodes.length > 0 || diff.exitingEdges.length > 0) && exitCfg && !reduced) {
+      exitingGhosts = { nodes: diff.exitingNodes, edges: diff.exitingEdges, alpha: 1 };
+      const ease = resolveEase(exitCfg.ease);
+      const tween = createTween({
+        duration: exitCfg.duration,
+        ease,
+        apply: (t) => {
+          if (exitingGhosts) exitingGhosts.alpha = 1 - t;
+          needsRender = true;
+        },
+        onDone: () => {
+          exitingGhosts = null;
+          needsRender = true;
+        },
+      });
+      scheduler.add(tween);
+    }
+  }
+
+  /**
+   * @deprecated Use {@link GraphInstance.update} instead. `update` now handles
+   * both visual-only and structural changes (diffed automatically) and preserves
+   * node positions when nothing structural changed. Kept as an alias for backward
+   * compatibility.
+   */
+  function updateVisuals(newSpec: GraphSpec): void {
+    update(newSpec);
+  }
+
+  /** Tear down ONLY the simulation, keeping interaction/transform/selection. */
+  function teardownSimOnly(): void {
+    simulation?.destroy();
+    simulation = null;
   }
 
   function teardownSubsystems(): void {
@@ -1459,6 +1711,9 @@ export function createGraph(
     entranceActive = false;
     entranceProgress = 1;
     entranceFitInFlight = false;
+    // Reset update-transition state too (cancelAll already stopped the tweens).
+    enterAlphaMap = null;
+    exitingGhosts = null;
     if (animFrameId !== null) {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;

@@ -273,6 +273,11 @@ export class GraphCanvasRenderer {
         ? makeEntranceReveal(state.entrance, nodes.length)
         : null;
 
+    // Data-update enter fade (Phase 7): per-node alpha for newly-added nodes,
+    // multiplied into node/edge/label alpha. Absent id → full alpha (1).
+    const enterAlpha = state.enterAlpha ?? null;
+    const enterAlphaFor = (id: string): number => enterAlpha?.get(id) ?? 1;
+
     // Viewport culling
     const rect = visibleRect(cssWidth, cssHeight, transform);
     const visibleNodes = nodes.filter((n) => nodeInView(n, rect));
@@ -298,6 +303,13 @@ export class GraphCanvasRenderer {
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.k, transform.k);
 
+    // -- Draw exit ghosts FIRST/UNDER the live marks (Phase 7) --
+    // Removed nodes/edges fade out beneath the live graph. Not hit-tested (the
+    // mount never rebuilds the spatial index with them), just painted.
+    if (state.exiting && state.exiting.alpha > 0) {
+      this.drawGhosts(ctx, state.exiting, rect);
+    }
+
     // -- Draw edges (batched) -- crossfade path only mid-transition, else the
     // fast 3-bucket steady-state path. Degrade to snap for huge edge sets.
     if (crossfade && visibleEdges.length <= CROSSFADE_MAX_EDGES) {
@@ -311,6 +323,7 @@ export class GraphCanvasRenderer {
         isGesturing ? null : searchMatches,
         hoveredEdgeId,
         entrance,
+        enterAlphaFor,
       );
     } else {
       this.drawEdgesBatched(
@@ -321,6 +334,7 @@ export class GraphCanvasRenderer {
         isGesturing ? null : searchMatches,
         hoveredEdgeId,
         entrance,
+        enterAlphaFor,
       );
     }
 
@@ -339,6 +353,7 @@ export class GraphCanvasRenderer {
       crossfade,
       state.hoverRadiusScale,
       entrance,
+      enterAlphaFor,
     );
 
     // -- Draw labels (skipped during gestures) --
@@ -353,6 +368,7 @@ export class GraphCanvasRenderer {
         transform.k,
         theme,
         entrance,
+        enterAlphaFor,
       );
     }
 
@@ -402,6 +418,7 @@ export class GraphCanvasRenderer {
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
     entrance: EntranceReveal | null,
+    enterAlphaFor: (id: string) => number,
   ): void {
     // Settled fast path: classify each edge into one of 3 tiers, batch within.
     const buckets: Record<FocusTier, PositionedEdge[]> = {
@@ -429,9 +446,22 @@ export class GraphCanvasRenderer {
       buckets.dimmed,
       edgeTierAlpha('dimmed', dimOpacity) * ea,
       searchMatches,
+      enterAlphaFor,
     );
-    this.drawEdgeGroupBatched(ctx, buckets.default, EDGE_ALPHA_DEFAULT * ea, searchMatches);
-    this.drawEdgeGroupBatched(ctx, buckets.connected, EDGE_ALPHA_CONNECTED * ea, searchMatches);
+    this.drawEdgeGroupBatched(
+      ctx,
+      buckets.default,
+      EDGE_ALPHA_DEFAULT * ea,
+      searchMatches,
+      enterAlphaFor,
+    );
+    this.drawEdgeGroupBatched(
+      ctx,
+      buckets.connected,
+      EDGE_ALPHA_CONNECTED * ea,
+      searchMatches,
+      enterAlphaFor,
+    );
 
     this.drawHoveredEdge(ctx, hoveredEdge);
   }
@@ -452,6 +482,7 @@ export class GraphCanvasRenderer {
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
     entrance: EntranceReveal | null,
+    enterAlphaFor: (id: string) => number,
   ): void {
     const ea = entrance ? entrance.edgeAlpha : 1;
     // Bucket by (prevTier, nextTier). Key encodes both tiers.
@@ -485,7 +516,7 @@ export class GraphCanvasRenderer {
       .sort((a, b) => a.alpha - b.alpha);
 
     for (const { alpha, bucket } of ordered) {
-      this.drawEdgeGroupBatched(ctx, bucket, alpha, searchMatches);
+      this.drawEdgeGroupBatched(ctx, bucket, alpha, searchMatches, enterAlphaFor);
     }
 
     this.drawHoveredEdge(ctx, hoveredEdge);
@@ -517,31 +548,39 @@ export class GraphCanvasRenderer {
     edges: PositionedEdge[],
     alpha: number,
     searchMatches: Set<string> | null,
+    enterAlphaFor: (id: string) => number,
   ): void {
     if (edges.length === 0) return;
 
-    // Group by visual key: stroke + strokeWidth + style
-    const groups = new Map<string, PositionedEdge[]>();
+    // Group by visual key: stroke + strokeWidth + style + quantized edge-enter
+    // alpha. An edge touching a newly-added node fades with the min of its
+    // endpoints' enter alpha (8-bucket quantized so batching stays bounded). When
+    // no enter fade is active every edge quantizes to 1 → a single batch (no
+    // overhead in the common case).
+    const groups = new Map<string, { edges: PositionedEdge[]; enter: number }>();
     for (const edge of edges) {
-      const key = `${edge.stroke}|${edge.strokeWidth}|${edge.style}`;
+      const rawEnter = Math.min(enterAlphaFor(edge.source), enterAlphaFor(edge.target));
+      const enter = Math.round(rawEnter * 8) / 8;
+      const key = `${edge.stroke}|${edge.strokeWidth}|${edge.style}|${enter}`;
       let group = groups.get(key);
       if (!group) {
-        group = [];
+        group = { edges: [], enter };
         groups.set(key, group);
       }
-      group.push(edge);
+      group.edges.push(edge);
     }
 
-    for (const [, group] of groups) {
+    for (const [, { edges: group, enter }] of groups) {
       const sample = group[0];
       const dash = DASH_PATTERNS[sample.style] ?? DASH_PATTERNS.solid;
       ctx.setLineDash(dash);
       ctx.strokeStyle = sample.stroke;
       ctx.lineWidth = sample.strokeWidth;
+      const groupAlpha = alpha * enter;
 
       if (!searchMatches) {
         // Fast path: single batched path for all edges in this group
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = groupAlpha;
         ctx.beginPath();
         for (const edge of group) {
           ctx.moveTo(edge.sourceX, edge.sourceY);
@@ -550,7 +589,7 @@ export class GraphCanvasRenderer {
         ctx.stroke();
       } else {
         // Search active: split into matched and non-matched batches
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = groupAlpha;
         ctx.beginPath();
         let hasMatched = false;
 
@@ -571,7 +610,7 @@ export class GraphCanvasRenderer {
 
         // Draw non-matching edges dimmed
         if (nonMatchPath.length > 0) {
-          ctx.globalAlpha = SEARCH_NON_MATCH_ALPHA * alpha;
+          ctx.globalAlpha = SEARCH_NON_MATCH_ALPHA * groupAlpha;
           ctx.beginPath();
           for (const edge of nonMatchPath) {
             ctx.moveTo(edge.sourceX, edge.sourceY);
@@ -604,6 +643,7 @@ export class GraphCanvasRenderer {
     crossfade: { t: number; prev: FocusSnapshot; next: FocusSnapshot } | null,
     hoverRadiusScale: Map<string, number> | undefined,
     entrance: EntranceReveal | null,
+    enterAlphaFor: (id: string) => number,
   ): void {
     // Effective per-node alpha = focus dim × search dim. Focus dim crossfades
     // between prev/next tiers when a transition is live; otherwise it's the
@@ -625,8 +665,10 @@ export class GraphCanvasRenderer {
     // per-node (via nodeEnterProgress), so it keeps the fill/stroke batching keys
     // bounded during the reveal.
     const entranceRamp = (node: PositionedNode): number => (entrance ? entrance.nodeRamp(node) : 1);
+    // Data-update enter fade: newly-added nodes ramp 0→1 (already bucket-quantized
+    // by the mount), preserving fill/stroke batching keys.
     const effectiveAlpha = (node: PositionedNode): number =>
-      focusAlpha(node) * searchAlpha(node) * entranceRamp(node);
+      focusAlpha(node) * searchAlpha(node) * entranceRamp(node) * enterAlphaFor(node.id);
 
     // Separate special nodes (hovered/selected, or mid radius-tween) from bulk.
     const bulkNodes: PositionedNode[] = [];
@@ -801,6 +843,7 @@ export class GraphCanvasRenderer {
     zoom: number,
     theme: GraphRenderState['theme'],
     entrance: EntranceReveal | null,
+    enterAlphaFor: (id: string) => number,
   ): void {
     // Labels fade in with the raw entrance progress (× on top of dim alpha).
     const la = entrance ? entrance.labelAlpha : 1;
@@ -823,7 +866,7 @@ export class GraphCanvasRenderer {
       // LOD: skip labels below threshold unless forced
       if (!forced && node.labelPriority < threshold) continue;
 
-      ctx.globalAlpha = (dimmed ? SEARCH_NON_MATCH_ALPHA : 1) * la;
+      ctx.globalAlpha = (dimmed ? SEARCH_NON_MATCH_ALPHA : 1) * la * enterAlphaFor(node.id);
 
       const labelY = node.y + node.radius + 3;
 
@@ -844,6 +887,70 @@ export class GraphCanvasRenderer {
 
       ctx.fillStyle = theme.colors.text;
       ctx.fillText(node.label, node.x, labelY);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  // -------------------------------------------------------------------------
+  // Exit ghosts (Phase 7)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Draw exit ghosts (removed nodes/edges) UNDER the live marks at a global fade
+   * alpha. Neutral rendering: no focus dim, no search dim, no selection ring —
+   * they're on their way out. Batched by (stroke/style) for edges and (fill) for
+   * nodes, culled to the visible rect.
+   */
+  private drawGhosts(
+    ctx: CanvasRenderingContext2D,
+    exiting: NonNullable<GraphRenderState['exiting']>,
+    rect: { minX: number; minY: number; maxX: number; maxY: number },
+  ): void {
+    const alpha = exiting.alpha;
+
+    // Ghost edges: batch by (stroke, strokeWidth, style).
+    const edgeGroups = new Map<string, PositionedEdge[]>();
+    for (const edge of exiting.edges) {
+      if (!edgeInView(edge, rect)) continue;
+      const key = `${edge.stroke}|${edge.strokeWidth}|${edge.style}`;
+      const group = edgeGroups.get(key);
+      if (group) group.push(edge);
+      else edgeGroups.set(key, [edge]);
+    }
+    for (const [, group] of edgeGroups) {
+      const sample = group[0];
+      const dash = DASH_PATTERNS[sample.style] ?? DASH_PATTERNS.solid;
+      ctx.setLineDash(dash);
+      ctx.strokeStyle = sample.stroke;
+      ctx.lineWidth = sample.strokeWidth;
+      ctx.globalAlpha = EDGE_ALPHA_DEFAULT * alpha;
+      ctx.beginPath();
+      for (const edge of group) {
+        ctx.moveTo(edge.sourceX, edge.sourceY);
+        ctx.lineTo(edge.targetX, edge.targetY);
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Ghost nodes: batch by fill color.
+    const nodeGroups = new Map<string, PositionedNode[]>();
+    for (const node of exiting.nodes) {
+      if (!nodeInView(node, rect)) continue;
+      const group = nodeGroups.get(node.fill);
+      if (group) group.push(node);
+      else nodeGroups.set(node.fill, [node]);
+    }
+    for (const [fill, group] of nodeGroups) {
+      ctx.fillStyle = fill;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      for (const node of group) {
+        ctx.moveTo(node.x + node.radius, node.y);
+        ctx.arc(node.x, node.y, node.radius, 0, TWO_PI);
+      }
+      ctx.fill();
     }
 
     ctx.globalAlpha = 1;

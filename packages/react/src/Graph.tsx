@@ -203,43 +203,20 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     stableOnSelectionChange,
   ]);
 
-  // Update graph when spec changes.
-  // If only encoding/chrome/nodeOverrides changed (same node/edge IDs), use
-  // updateVisuals() to avoid restarting the simulation.
+  // Update the graph when the spec changes. `update()` diffs prev↔next itself:
+  // a visual-only change (same node/edge ids + same physics) preserves positions
+  // without restarting the sim; anything structural reheats with a local impulse.
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
 
     const specString = JSON.stringify(spec);
     if (specString === specRef.current) return;
-
-    // Check if this is a visual-only change (same node/edge IDs)
-    const prevSpec = specRef.current;
     specRef.current = specString;
 
-    if (prevSpec) {
-      try {
-        const prev = JSON.parse(prevSpec) as GraphSpec;
-        const sameNodes =
-          prev.nodes.length === spec.nodes.length &&
-          prev.nodes.every((n, i) => n.id === spec.nodes[i].id);
-        const sameEdges =
-          prev.edges.length === spec.edges.length &&
-          prev.edges.every(
-            (e, i) => e.source === spec.edges[i].source && e.target === spec.edges[i].target,
-          );
-
-        const sameLayout = prev.layout?.clustering?.field === spec.layout?.clustering?.field;
-
-        if (sameNodes && sameEdges && sameLayout) {
-          graph.updateVisuals(spec);
-          return;
-        }
-      } catch {
-        // Parse failed, fall through to full update
-      }
-    }
-
+    // `update` diffs internally: same node/edge ids + same physics take the
+    // position-preserving path, anything structural reheats. No wrapper-side
+    // heuristic needed (the old JSON-diff silently ignored physics changes).
     graph.update(spec);
   }, [spec]);
 

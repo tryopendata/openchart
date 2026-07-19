@@ -8,6 +8,8 @@
 
 export class GraphSearchManager {
   private matchedIds: Set<string> | null = null;
+  /** The last active (non-empty) query, so a data update can re-run it. */
+  private query: string | null = null;
 
   /**
    * Search for nodes matching the query string.
@@ -18,8 +20,11 @@ export class GraphSearchManager {
 
     if (q === '') {
       this.matchedIds = null;
+      this.query = null;
       return new Set();
     }
+
+    this.query = query;
 
     const matches = new Set<string>();
     for (const node of nodes) {
@@ -40,11 +45,17 @@ export class GraphSearchManager {
    */
   clearSearch(): Set<string> | null {
     this.matchedIds = null;
+    this.query = null;
     return null;
   }
 
   /** Get the current set of matched ids, or null if no search is active. */
   getMatches(): Set<string> | null {
     return this.matchedIds;
+  }
+
+  /** The last active query string, or null when no search is active. */
+  getQuery(): string | null {
+    return this.query;
   }
 }
