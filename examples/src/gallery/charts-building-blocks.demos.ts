@@ -19,6 +19,7 @@ export const page: PageEntry = {
     { id: 'tick-mark', title: 'Distribution strip' },
     { id: 'layered', title: 'Combo chart (shared scales)' },
     { id: 'dual-axis', title: 'Dual axis (independent scales)' },
+    { id: 'dual-axis-temporal', title: 'Dual axis on a shared time axis' },
     { id: 'spans', title: 'Ranges (x2 / y2)' },
     { id: 'interactive', title: 'Toggle a layer live' },
   ],

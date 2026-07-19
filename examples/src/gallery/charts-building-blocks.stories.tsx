@@ -241,7 +241,79 @@ const dualAxisSpec: LayerSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 6. Spans — x2/y2 range encoding
+// 6. Dual axis on a temporal x — the two series share ONE time axis
+// ---------------------------------------------------------------------------
+
+// A combo where the x is temporal and the two series cover different spans: the
+// established metric runs all year, the newer one only starts in July. The
+// engine unions the x-domain across both layers, so July's later start lands on
+// the right half of a shared Jan–Dec axis instead of stretching to fill the
+// plot. (Regression coverage for compileLayerIndependent's shared x-domain; a
+// per-layer x-domain would draw both series full-width, overlapping and
+// mislabeled.)
+const revenue2024 = [
+  { month: '2024-01-01', mrr: 120, nps: null },
+  { month: '2024-02-01', mrr: 132, nps: null },
+  { month: '2024-03-01', mrr: 141, nps: null },
+  { month: '2024-04-01', mrr: 158, nps: null },
+  { month: '2024-05-01', mrr: 171, nps: null },
+  { month: '2024-06-01', mrr: 180, nps: null },
+  { month: '2024-07-01', mrr: 205, nps: 32 },
+  { month: '2024-08-01', mrr: 224, nps: 41 },
+  { month: '2024-09-01', mrr: 249, nps: 45 },
+  { month: '2024-10-01', mrr: 268, nps: 52 },
+  { month: '2024-11-01', mrr: 291, nps: 58 },
+  { month: '2024-12-01', mrr: 322, nps: 61 },
+];
+
+const temporalDualAxisSpec: LayerSpec = {
+  animation: true,
+  chrome: {
+    title: 'New Metric Joins Mid-Year on a Shared Timeline',
+    subtitle: 'Recurring revenue runs all of 2024; the NPS survey only starts in July',
+    byline: 'Chart: OpenChart',
+  },
+  resolve: { scale: { y: 'independent' } },
+  layer: [
+    {
+      mark: { type: 'line', stroke: BLUE, strokeWidth: 2.5, point: true, interpolate: 'monotone' },
+      data: revenue2024.map((d) => ({ month: d.month, mrr: d.mrr })),
+      encoding: {
+        x: { field: 'month', type: 'temporal' },
+        y: {
+          field: 'mrr',
+          type: 'quantitative',
+          axis: { title: 'MRR ($K)', labelColor: BLUE },
+        },
+      },
+      labels: { density: 'none' },
+    },
+    {
+      // Only the July-onward rows: this series starts halfway across the axis.
+      mark: {
+        type: 'line',
+        stroke: ORANGE,
+        strokeWidth: 2.5,
+        point: true,
+        interpolate: 'monotone',
+      },
+      data: revenue2024.filter((d) => d.nps !== null).map((d) => ({ month: d.month, nps: d.nps })),
+      encoding: {
+        x: { field: 'month', type: 'temporal' },
+        y: {
+          field: 'nps',
+          type: 'quantitative',
+          axis: { title: 'NPS', labelColor: ORANGE },
+          scale: { domain: [0, 80] },
+        },
+      },
+      labels: { density: 'none' },
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// 7. Spans — x2/y2 range encoding
 // ---------------------------------------------------------------------------
 
 const tempRange = nycTemperatureRange.data.map((d) => ({ ...d, band: 'Daily range' }));
@@ -404,6 +476,13 @@ export const BuildingBlocks = () => (
         title="Dual axis (independent scales)"
         description="resolve.scale.y = 'independent' gives each layer its own y-axis, so dollars and headcount coexist. Axis labels are colored to match their series."
         spec={dualAxisSpec}
+        height={460}
+      />
+      <Demo
+        id="dual-axis-temporal"
+        title="Dual axis on a shared time axis"
+        description="When x is temporal and the two series cover different spans, the engine unions the x-domain so both render against one Jan–Dec axis. The NPS line starts in July and lands on the right half — not stretched full-width — so it stays aligned with the revenue line's mid-year point."
+        spec={temporalDualAxisSpec}
         height={460}
       />
     </Section>

@@ -966,4 +966,60 @@ describe('compileLayer', () => {
       expect(Math.abs(rule.y2 - axisY(100))).toBeLessThan(1.5);
     }
   });
+
+  it('shares one temporal x-domain across dual-axis layers with disjoint ranges', () => {
+    // Regression guard: compileLayerIndependent unions the x-domain so both
+    // layers render against ONE shared x-scale (see feat 70cf379). If a layer's
+    // x-domain were derived only from its own rows, two series covering different
+    // date ranges would each stretch to the full plot width and draw on top of
+    // each other, with an x-axis labelled from only one layer — visually broken.
+    //
+    // Here layer A spans Jan–Feb and layer B spans Mar–Apr. On a shared domain
+    // (Jan–Apr) A must sit in the LEFT half and B in the RIGHT half, strictly
+    // separated. This is exactly the case a "skip x-union for continuous scales"
+    // change breaks, so it must stay covered.
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'line' as const,
+          data: [
+            { d: '2024-01-01', a: 10 },
+            { d: '2024-02-01', a: 20 },
+          ],
+          encoding: {
+            x: { field: 'd', type: 'temporal' as const },
+            y: { field: 'a', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { d: '2024-03-01', b: 5 },
+            { d: '2024-04-01', b: 8 },
+          ],
+          encoding: {
+            x: { field: 'd', type: 'temporal' as const },
+            y: { field: 'b', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const lines = layout.marks.filter((m) => m.type === 'line') as unknown as {
+      points: { x: number }[];
+    }[];
+    expect(lines).toHaveLength(2);
+
+    const areaMidX = layout.area.x + layout.area.width / 2;
+    const layerAXs = lines[0].points.map((p) => p.x);
+    const layerBXs = lines[1].points.map((p) => p.x);
+
+    // Shared domain ⇒ Jan–Feb (layer A) sits left of centre, Mar–Apr (layer B)
+    // sits right of centre, and the two ranges don't overlap.
+    expect(Math.max(...layerAXs)).toBeLessThan(areaMidX);
+    expect(Math.min(...layerBXs)).toBeGreaterThan(areaMidX);
+    expect(Math.max(...layerAXs)).toBeLessThan(Math.min(...layerBXs));
+  });
 });
