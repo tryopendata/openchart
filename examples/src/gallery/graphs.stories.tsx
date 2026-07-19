@@ -1,9 +1,9 @@
 /**
  * Graphs — force-directed network gallery page.
  *
- * Seven demos across three sections (Basics, Encoding & chrome, Scale &
- * interaction). Graphs render on a canvas via a web worker, so the large scale
- * demos are gated behind an explicit click: their spec is generated and the
+ * Fourteen demos across four sections (Basics, Encoding & chrome, Scale &
+ * interaction, Motion & API). Graphs render on a canvas via a web worker, so
+ * the large scale demos are gated behind an explicit click: their spec is generated and the
  * <Graph> mounted only when the user asks, never on scroll or lazy-mount, so
  * offscreen 10k/20k-node simulations can't tank page performance.
  *
@@ -499,7 +499,78 @@ function ChoreographyGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// 9. Interactive legend — click a category to isolate it
+// 9. Camera API — programmatic pan/zoom flights + live camera readout
+// ---------------------------------------------------------------------------
+
+const cameraSpec: GraphSpec = {
+  ...generateRandomGraph(60, 1.5, 4),
+  encoding: {
+    nodeColor: { field: 'community', type: 'nominal' },
+    nodeLabel: { field: 'label' },
+  },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 13 },
+  chrome: {
+    title: 'Drive the Camera From Code',
+    subtitle:
+      'zoomToNode, flyTo, and centerAt animate the viewport — gestures feed the same camera',
+    source: ILLUSTRATIVE,
+  },
+};
+
+function CameraGraph() {
+  const { ref, zoomToNode, flyTo, centerAt, zoomToFit } = useGraph();
+  const [camera, setCamera] = useState({ x: 0, y: 0, k: 1 });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 460 }}>
+        <Graph ref={ref} spec={cameraSpec} onCameraChange={setCamera} />
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--gx-space-2)',
+          flexWrap: 'wrap',
+        }}
+      >
+        <button type="button" className="oc-spec-copy" onClick={() => zoomToNode('n0')}>
+          Fly to Ava
+        </button>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => zoomToNode('n7', { scale: 3 })}
+        >
+          Fly to Leo ×3
+        </button>
+        <button type="button" className="oc-spec-copy" onClick={() => flyTo({ x: 0, y: 0, k: 2 })}>
+          Punch in ×2
+        </button>
+        <button type="button" className="oc-spec-copy" onClick={() => centerAt(0, 0)}>
+          Recenter
+        </button>
+        <button type="button" className="oc-spec-copy" onClick={() => zoomToFit()}>
+          Zoom to fit
+        </button>
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: 'var(--gx-type-caption)',
+            color: 'var(--gx-text-muted)',
+            fontFamily:
+              'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+          }}
+        >
+          x {camera.x.toFixed(0)} y {camera.y.toFixed(0)} k {camera.k.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 10. Interactive legend — click a category to isolate it
 // ---------------------------------------------------------------------------
 
 const legendSpec: GraphSpec = {
@@ -545,7 +616,7 @@ function LegendGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// 10. Highlight API — programmatic emphasis via useGraph()
+// 11. Highlight API — programmatic emphasis via useGraph()
 // ---------------------------------------------------------------------------
 
 const highlightSpec: GraphSpec = {
@@ -591,7 +662,7 @@ function HighlightGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// 11. Seeded layout — deterministic, reproducible positions
+// 12. Seeded layout — deterministic, reproducible positions
 // ---------------------------------------------------------------------------
 
 /** Same spec + same seed ⇒ identical settled layout, across reshapes. */
@@ -628,7 +699,7 @@ function SeededGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Update transitions — add / remove nodes without a reset
+// 13. Update transitions — add / remove nodes without a reset
 // ---------------------------------------------------------------------------
 
 /** Small evolving network; buttons mutate the node/edge set and update() tweens. */
@@ -691,7 +762,7 @@ function UpdateGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// 13. Cursor repulsion — nodes drift away from the pointer
+// 14. Cursor repulsion — nodes drift away from the pointer
 // ---------------------------------------------------------------------------
 
 const cursorSpec: GraphSpec = {
@@ -809,6 +880,15 @@ export const Graphs = () => (
         height={560}
       >
         <ChoreographyGraph />
+      </Demo>
+      <Demo
+        id="camera"
+        title="Camera API (pan & zoom)"
+        description="zoomToNode, flyTo, and centerAt animate the viewport from code; drag and scroll-zoom drive the same camera, and onCameraChange feeds the live readout below."
+        specForPanel={cameraSpec}
+        height={560}
+      >
+        <CameraGraph />
       </Demo>
       <Demo
         id="legend"
