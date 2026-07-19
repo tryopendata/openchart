@@ -37,6 +37,12 @@ export interface WorkerSimulationConfig {
   collisionPadding?: number;
   linkStrength?: number;
   centerForce?: boolean;
+  /** Headless settle ticks run before the first painted frame. 0/undefined disables warmup. */
+  warmupTicks?: number;
+  /** Wall-clock budget (ms) that caps warmup at scale. Default 250. */
+  warmupBudgetMs?: number;
+  /** Initial alpha applied before warmup/first paint. Default d3's 1. */
+  initialAlpha?: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,8 @@ import type { FocusSnapshot } from './focus-transition';
 export interface PositionedNode extends CompiledGraphNode {
   x: number;
   y: number;
+  /** Stable construction order, used to stagger the entrance reveal. */
+  index: number;
 }
 
 /** A compiled edge with resolved source/target screen positions. */
@@ -66,4 +68,12 @@ export interface GraphRenderState {
   hoverRadiusScale?: Map<string, number>;
   /** The node dim opacity tier (interaction.dimOpacity; default 0.15). */
   dimOpacity: number;
+  /**
+   * Entrance reveal state. Present only while the entrance choreography runs.
+   * `t` is a mount-level 0→1 progress; the renderer ramps node alpha/scale, lags
+   * edges 30%, and fades labels by it. When `stagger` is true the renderer applies
+   * a per-node staggered reveal (quantized for batching); when false a single
+   * global fade. Absent or `t >= 1` → render as settled.
+   */
+  entrance?: { t: number; stagger: boolean };
 }

@@ -61,6 +61,7 @@ export class ZoomTransform {
     canvasW: number,
     canvasH: number,
     padding: number = 40,
+    opts?: { spread?: boolean },
   ): { transform: ZoomTransform; contentHeight: number } {
     if (nodes.length === 0) {
       return { transform: ZoomTransform.identity(), contentHeight: canvasH };
@@ -95,7 +96,12 @@ export class ZoomTransform {
     // node count: larger graphs expand more as charge forces push nodes
     // apart over subsequent ticks. The sqrt scaling mirrors how d3-force
     // charge repulsion grows with node count.
-    if (nodes.length > 50) {
+    //
+    // Warmup (Phase 6) settles the layout headlessly before the first fit, so
+    // the bounds are already near-final; inflating them then fits at roughly
+    // half the correct zoom at 10k nodes. Callers pass `spread: false` after a
+    // warmup ran to skip the inflation. Default true = the original behavior.
+    if (opts?.spread !== false && nodes.length > 50) {
       const spread = 1 + Math.sqrt(nodes.length) / 120;
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;

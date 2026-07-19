@@ -59,6 +59,9 @@ interface SimConfig {
   collisionPadding?: number;
   linkStrength?: number;
   centerForce?: boolean;
+  warmupTicks?: number;
+  warmupBudgetMs?: number;
+  initialAlpha?: number;
 }
 
 type InMessage =
@@ -139,6 +142,11 @@ const ctx = self;
 let simulation: Simulation<InternalNode, undefined> | null = null;
 let nodeMap: Map<string, InternalNode> = new Map();
 
+/** Monotonic-ish clock for the warmup budget; falls back to Date.now in bare workers. */
+function now(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
 function post(msg: OutMessage): void {
   ctx.postMessage(msg);
 }
@@ -192,7 +200,9 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
           .force('gravityX', forceX<InternalNode>(0).strength(0.05))
           .force('gravityY', forceY<InternalNode>(0).strength(0.05))
           .alphaDecay(config.alphaDecay)
-          .velocityDecay(config.velocityDecay);
+          .velocityDecay(config.velocityDecay)
+          // Build stopped so warmup can run headlessly before the first paint.
+          .stop();
 
         // Center force (default true)
         if (config.centerForce !== false) {
@@ -206,6 +216,28 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
           simulation.force('cluster', clusterFn as unknown as ReturnType<typeof forceCenter>);
         }
 
+        // Initial alpha (entrance / reheat impulse) applied before warmup.
+        if (config.initialAlpha != null) {
+          simulation.alpha(config.initialAlpha);
+        }
+
+        // Headless warmup: settle a bounded number of ticks off-screen so the
+        // first painted frame isn't an explosive initial layout. Bounded by BOTH
+        // a tick count AND a wall-clock budget (default 250ms) so it never blocks
+        // the worker unbounded at 10k+ nodes. When the budget truncates warmup to
+        // ~20 ticks at scale, that's accepted — warmup kills explosive first
+        // frames, not all settling. Duplicated in simulation.ts (sync path).
+        const warmupTicks = config.warmupTicks ?? 0;
+        if (warmupTicks > 0) {
+          const budgetMs = config.warmupBudgetMs ?? 250;
+          const start = now();
+          for (let i = 0; i < warmupTicks; i++) {
+            simulation.tick();
+            if (simulation.alpha() < simulation.alphaMin()) break;
+            if (now() - start >= budgetMs) break;
+          }
+        }
+
         simulation.on('tick', () => {
           post({
             type: 'positions',
@@ -217,6 +249,16 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
         simulation.on('end', () => {
           post({ type: 'settled' });
         });
+
+        // Post the warmed first positions, then release the simulation to run
+        // (it was built stopped for warmup). restart() re-arms d3's internal
+        // timer so subsequent ticks stream normally.
+        post({
+          type: 'positions',
+          nodes: packPositions(internalNodes),
+          alpha: simulation.alpha(),
+        });
+        simulation.restart();
 
         break;
       }

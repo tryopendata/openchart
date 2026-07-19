@@ -26,8 +26,30 @@ import type { SimEdge, SimNode, WorkerOutMessage, WorkerSimulationConfig } from 
 // Constants
 // ---------------------------------------------------------------------------
 
-const SYNC_MAX_TICKS = 300;
 const SYNC_TICKS_PER_BATCH = 15;
+/** Absolute ceiling on the derived sync tick cap (guards tiny alphaDecay). */
+const SYNC_MAX_TICKS_CEIL = 800;
+/** d3's default alphaMin — the alpha at which forceSimulation stops. */
+const DEFAULT_ALPHA_MIN = 0.001;
+/** Default warmup budget (ms) mirroring the engine's DEFAULT_WARMUP_BUDGET_MS. */
+const DEFAULT_WARMUP_BUDGET_MS = 250;
+
+/**
+ * Ticks d3 needs to reach `alphaMin` from alpha=1 for a given `alphaDecay`,
+ * ceilinged. d3 stops when `alpha < alphaMin`, where `alpha *= (1 - alphaDecay)`
+ * each tick, so `alpha(n) = (1 - alphaDecay)^n`. Solving `(1 - d)^n = alphaMin`
+ * gives `n = log(alphaMin) / log(1 - d)`. This aligns the sync cap with the
+ * worker path (which runs to `alpha < alphaMin`) instead of a fixed 300, so a
+ * `settle: 'thorough'` graph (alphaDecay 0.01, ~690 ticks) settles fully on both.
+ *
+ * Determinism is scoped PER EXECUTION PATH: same spec + seed ⇒ identical settled
+ * layout within a given path. Worker-vs-sync parity is not guaranteed as-is.
+ */
+export function ticksToAlphaMin(alphaDecay: number, alphaMin = DEFAULT_ALPHA_MIN): number {
+  if (!(alphaDecay > 0) || alphaDecay >= 1) return SYNC_MAX_TICKS_CEIL;
+  const n = Math.ceil(Math.log(alphaMin) / Math.log(1 - alphaDecay));
+  return Math.min(SYNC_MAX_TICKS_CEIL, Math.max(1, n));
+}
 
 // ---------------------------------------------------------------------------
 // Internal node shape for sync simulation
@@ -93,6 +115,16 @@ export class SimulationManager {
   private settledCb: SettledCallback | null = null;
   private destroyed = false;
   private syncRafId: number | null = null;
+  /** Derived per-graph cap on sync ticks, from alphaDecay via ticksToAlphaMin. */
+  private syncMaxTicks = SYNC_MAX_TICKS_CEIL;
+  /** True until the sync warmup loop has completed (nothing renders before then). */
+  private syncWarmupPending = false;
+  /** Remaining warmup ticks and the ms budget, consumed by the pre-reveal loop. */
+  private syncWarmupTicks = 0;
+  private syncWarmupBudgetMs = DEFAULT_WARMUP_BUDGET_MS;
+  /** Injectable clock for the warmup ms budget (deterministic in tests). */
+  private now: () => number =
+    typeof performance !== 'undefined' ? () => performance.now() : () => Date.now();
 
   // Stored for worker->sync fallback
   private initNodes: SimNode[] = [];
@@ -104,13 +136,17 @@ export class SimulationManager {
   /**
    * Create a SimulationManager. Uses Web Worker for large graphs,
    * synchronous fallback for small graphs or when Worker unavailable.
+   *
+   * `opts.now` injects a clock for the warmup ms budget (tests pass a fake one).
    */
   static create(
     nodes: SimNode[],
     edges: SimEdge[],
     config: WorkerSimulationConfig,
+    opts?: { now?: () => number },
   ): SimulationManager {
     const mgr = new SimulationManager();
+    if (opts?.now) mgr.now = opts.now;
 
     const useWorker = typeof Worker !== 'undefined';
 
@@ -357,6 +393,23 @@ export class SimulationManager {
       this.syncSim.force('cluster', clusterFn as unknown as ReturnType<typeof forceCenter>);
     }
 
+    // Initial alpha (entrance / reheat impulse) applied before warmup.
+    if (config.initialAlpha != null) {
+      this.syncSim.alpha(config.initialAlpha);
+    }
+
+    // Derive the tick cap from alphaDecay so the sync path settles as far as the
+    // worker (which runs to alpha < alphaMin) rather than a fixed 300.
+    this.syncMaxTicks = ticksToAlphaMin(config.alphaDecay);
+
+    // Warmup: settle a bounded number of ticks BEFORE the first reveal so the
+    // entrance doesn't start from an explosive layout. The sync path is on the
+    // main thread, so warmup is chunked across rAF frames (a single 100-tick
+    // batch at 10k nodes is a 1s+ freeze). Nothing renders until warmup finishes.
+    this.syncWarmupTicks = config.warmupTicks ?? 0;
+    this.syncWarmupBudgetMs = config.warmupBudgetMs ?? DEFAULT_WARMUP_BUDGET_MS;
+    this.syncWarmupPending = this.syncWarmupTicks > 0;
+
     // Defer initial delivery: callbacks aren't wired yet at create() time
     this.runSyncTicks(true);
   }
@@ -382,16 +435,48 @@ export class SimulationManager {
     }
 
     const sim = this.syncSim;
+    const maxTicks = this.syncMaxTicks;
     let tickCount = 0;
+
+    // Pre-reveal warmup: chunk the headless settle across rAF frames, bounded by
+    // BOTH the remaining tick count AND the ms budget. Nothing is delivered to
+    // the tick callback until this completes, so the entrance never starts from
+    // an explosive layout and the main thread never freezes. Duplicated in the
+    // worker (simulation-worker.ts) as a synchronous loop (it's off-thread).
+    const runWarmup = () => {
+      if (this.destroyed || !this.syncSim) return;
+      this.syncRafId = null;
+
+      const start = this.now();
+      while (this.syncWarmupTicks > 0) {
+        for (let i = 0; i < SYNC_TICKS_PER_BATCH && this.syncWarmupTicks > 0; i++) {
+          sim.tick();
+          this.syncWarmupTicks--;
+          if (sim.alpha() < DEFAULT_ALPHA_MIN) {
+            this.syncWarmupTicks = 0;
+            break;
+          }
+        }
+        // Budget check between chunks: bail (accept a truncated warmup) at scale.
+        if (this.syncWarmupTicks > 0 && this.now() - start >= this.syncWarmupBudgetMs) {
+          this.syncWarmupTicks = 0;
+          break;
+        }
+      }
+
+      this.syncWarmupPending = false;
+      // Warmup done → proceed to the normal reveal/settle loop.
+      runBatch();
+    };
 
     const runBatch = () => {
       if (this.destroyed || !this.syncSim) return;
       this.syncRafId = null;
 
-      for (let i = 0; i < SYNC_TICKS_PER_BATCH && tickCount < SYNC_MAX_TICKS; i++, tickCount++) {
+      for (let i = 0; i < SYNC_TICKS_PER_BATCH && tickCount < maxTicks; i++, tickCount++) {
         sim.tick();
-        if (sim.alpha() < 0.001) {
-          tickCount = SYNC_MAX_TICKS;
+        if (sim.alpha() < DEFAULT_ALPHA_MIN) {
+          tickCount = maxTicks;
           break;
         }
       }
@@ -402,7 +487,7 @@ export class SimulationManager {
         y: n.y ?? 0,
       }));
       const alpha = sim.alpha();
-      const settled = alpha < 0.001 || tickCount >= SYNC_MAX_TICKS;
+      const settled = alpha < DEFAULT_ALPHA_MIN || tickCount >= maxTicks;
 
       this.tickCb?.(positions, alpha);
 
@@ -413,10 +498,12 @@ export class SimulationManager {
       }
     };
 
+    const start = this.syncWarmupPending ? runWarmup : runBatch;
+
     if (deferred) {
-      queueMicrotask(runBatch);
+      queueMicrotask(start);
     } else {
-      runBatch();
+      start();
     }
   }
 }

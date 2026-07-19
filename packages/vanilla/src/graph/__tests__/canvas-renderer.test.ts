@@ -128,6 +128,7 @@ function makeNode(overrides: Partial<PositionedNode> & { id: string }): Position
   return {
     x: 0,
     y: 0,
+    index: 0,
     radius: 5,
     fill: '#3b82f6',
     stroke: '#2563eb',
@@ -869,5 +870,91 @@ describe('label halo on transparent background', () => {
 
   it('light mode → light halo behind dark text', () => {
     expect(haloColor(false)).toBe('rgba(255, 255, 255, 0.85)');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Entrance reveal ramp
+// ---------------------------------------------------------------------------
+
+describe('GraphCanvasRenderer entrance', () => {
+  it('mid-entrance node fills use a ramped alpha (0.6 + 0.4·t), below 1', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0 })],
+        // Global fade (no stagger): nodeT = t = 0.5 → alpha 0.6 + 0.4·0.5 = 0.8.
+        entrance: { t: 0.5, stagger: false },
+      }),
+    );
+
+    const fills = calls.filter((c) => c.method === 'fill' && c.alpha !== undefined);
+    expect(fills.length).toBeGreaterThan(0);
+    const nodeFill = fills.find((c) => (c.alpha ?? 1) < 1);
+    expect(nodeFill).toBeDefined();
+    expect(nodeFill!.alpha).toBeCloseTo(0.8, 5);
+  });
+
+  it('settled (t≥1) renders at full alpha — entrance is a no-op', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0 })],
+        entrance: { t: 1, stagger: false },
+      }),
+    );
+
+    const fills = calls.filter((c) => c.method === 'fill' && c.alpha !== undefined);
+    // No ramped (sub-1) node fill: the entrance path is skipped at t≥1.
+    expect(fills.every((c) => (c.alpha ?? 1) >= 1 - 1e-9)).toBe(true);
+  });
+
+  it('edges lag 30% behind the reveal (edge alpha 0 until t>0.3)', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0 }), makeNode({ id: 'b', index: 1, x: 100 })],
+        edges: [makeEdge('a', 'b')],
+        // At t=0.2 (< 0.3 lag), the edge alpha scales to 0 → invisible stroke.
+        entrance: { t: 0.2, stagger: false },
+      }),
+    );
+
+    // Edges are stroked before nodes; the edge stroke lands at alpha 0 (fully
+    // lagged), while node strokes ramp to 0.68 (0.6 + 0.4·0.2). So the very
+    // first stroke recorded is the edge, and it must be transparent.
+    const strokes = calls.filter((c) => c.method === 'stroke' && c.alpha !== undefined);
+    expect(strokes.length).toBeGreaterThan(0);
+    expect(strokes[0].alpha).toBe(0);
+    // At least one stroke (the edge) is fully lagged to 0.
+    expect(strokes.some((c) => c.alpha === 0)).toBe(true);
+  });
+
+  it('past the 30% lag, edges fade in (edge alpha > 0)', () => {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(400, 400);
+
+    renderer.render(
+      makeState({
+        nodes: [makeNode({ id: 'a', index: 0 }), makeNode({ id: 'b', index: 1, x: 100 })],
+        edges: [makeEdge('a', 'b')],
+        // t=0.65 → edgeAlpha = (0.65-0.3)/0.7 = 0.5, scaling the 0.35 default edge
+        // alpha to 0.175. The first stroke (edge) is now visible.
+        entrance: { t: 0.65, stagger: false },
+      }),
+    );
+
+    const strokes = calls.filter((c) => c.method === 'stroke' && c.alpha !== undefined);
+    expect(strokes[0].alpha).toBeGreaterThan(0);
   });
 });

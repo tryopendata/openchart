@@ -13,6 +13,7 @@
  */
 
 import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH } from '@opendata-ai/openchart-core';
+import { nodeEnterProgress } from './entrance';
 import type { FocusSnapshot } from './focus-transition';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 
@@ -79,6 +80,34 @@ function nodeTierAlpha(tier: FocusTier, dimOpacity: number): number {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+/**
+ * Per-frame entrance reveal helper, built from the mount's `entrance` state.
+ *
+ * Node alpha and radius both ramp `0.6 + 0.4·nodeT`, where `nodeT` is the global
+ * progress (single global fade) or a per-node staggered+quantized progress. Edges
+ * lag 30% behind the global progress; labels fade with the raw global progress.
+ * The `total` is fixed at build time so the stagger window is stable per frame.
+ */
+interface EntranceReveal {
+  nodeRamp(node: PositionedNode): number;
+  edgeAlpha: number;
+  labelAlpha: number;
+}
+
+function makeEntranceReveal(
+  entrance: { t: number; stagger: boolean },
+  total: number,
+): EntranceReveal {
+  const g = entrance.t;
+  const ramp = (nodeT: number) => 0.6 + 0.4 * nodeT;
+  const edgeAlpha = Math.max(0, (g - 0.3) / 0.7); // lag 30%
+  return {
+    nodeRamp: (node) => ramp(entrance.stagger ? nodeEnterProgress(g, node.index, total) : g),
+    edgeAlpha,
+    labelAlpha: g,
+  };
 }
 
 /**
@@ -238,6 +267,12 @@ export class GraphCanvasRenderer {
     // the graph isn't gesturing (during gestures we snap for perf).
     const crossfade = state.focus && state.focus.t < 1 && !isGesturing ? state.focus : null;
 
+    // Entrance reveal (Phase 6): present only while the mount is mid-entrance.
+    const entrance =
+      state.entrance && state.entrance.t < 1
+        ? makeEntranceReveal(state.entrance, nodes.length)
+        : null;
+
     // Viewport culling
     const rect = visibleRect(cssWidth, cssHeight, transform);
     const visibleNodes = nodes.filter((n) => nodeInView(n, rect));
@@ -275,6 +310,7 @@ export class GraphCanvasRenderer {
         dimOpacity,
         isGesturing ? null : searchMatches,
         hoveredEdgeId,
+        entrance,
       );
     } else {
       this.drawEdgesBatched(
@@ -284,6 +320,7 @@ export class GraphCanvasRenderer {
         dimOpacity,
         isGesturing ? null : searchMatches,
         hoveredEdgeId,
+        entrance,
       );
     }
 
@@ -301,6 +338,7 @@ export class GraphCanvasRenderer {
       dimOpacity,
       crossfade,
       state.hoverRadiusScale,
+      entrance,
     );
 
     // -- Draw labels (skipped during gestures) --
@@ -314,6 +352,7 @@ export class GraphCanvasRenderer {
         searchMatches,
         transform.k,
         theme,
+        entrance,
       );
     }
 
@@ -362,6 +401,7 @@ export class GraphCanvasRenderer {
     dimOpacity: number,
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
+    entrance: EntranceReveal | null,
   ): void {
     // Settled fast path: classify each edge into one of 3 tiers, batch within.
     const buckets: Record<FocusTier, PositionedEdge[]> = {
@@ -380,15 +420,18 @@ export class GraphCanvasRenderer {
       buckets[edgeTier(edge, focus)].push(edge);
     }
 
+    // Entrance: edges lag 30% behind the reveal, so scale every tier's alpha.
+    const ea = entrance ? entrance.edgeAlpha : 1;
+
     // Draw dimmed first, then default, then connected (on top)
     this.drawEdgeGroupBatched(
       ctx,
       buckets.dimmed,
-      edgeTierAlpha('dimmed', dimOpacity),
+      edgeTierAlpha('dimmed', dimOpacity) * ea,
       searchMatches,
     );
-    this.drawEdgeGroupBatched(ctx, buckets.default, EDGE_ALPHA_DEFAULT, searchMatches);
-    this.drawEdgeGroupBatched(ctx, buckets.connected, EDGE_ALPHA_CONNECTED, searchMatches);
+    this.drawEdgeGroupBatched(ctx, buckets.default, EDGE_ALPHA_DEFAULT * ea, searchMatches);
+    this.drawEdgeGroupBatched(ctx, buckets.connected, EDGE_ALPHA_CONNECTED * ea, searchMatches);
 
     this.drawHoveredEdge(ctx, hoveredEdge);
   }
@@ -408,7 +451,9 @@ export class GraphCanvasRenderer {
     dimOpacity: number,
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
+    entrance: EntranceReveal | null,
   ): void {
+    const ea = entrance ? entrance.edgeAlpha : 1;
     // Bucket by (prevTier, nextTier). Key encodes both tiers.
     const buckets = new Map<string, PositionedEdge[]>();
     let hoveredEdge: PositionedEdge | null = null;
@@ -433,11 +478,8 @@ export class GraphCanvasRenderer {
     const ordered = [...buckets.entries()]
       .map(([key, bucket]) => {
         const [prevTier, nextTier] = key.split('|') as [FocusTier, FocusTier];
-        const alpha = lerp(
-          edgeTierAlpha(prevTier, dimOpacity),
-          edgeTierAlpha(nextTier, dimOpacity),
-          t,
-        );
+        const alpha =
+          lerp(edgeTierAlpha(prevTier, dimOpacity), edgeTierAlpha(nextTier, dimOpacity), t) * ea;
         return { alpha, bucket };
       })
       .sort((a, b) => a.alpha - b.alpha);
@@ -561,6 +603,7 @@ export class GraphCanvasRenderer {
     dimOpacity: number,
     crossfade: { t: number; prev: FocusSnapshot; next: FocusSnapshot } | null,
     hoverRadiusScale: Map<string, number> | undefined,
+    entrance: EntranceReveal | null,
   ): void {
     // Effective per-node alpha = focus dim × search dim. Focus dim crossfades
     // between prev/next tiers when a transition is live; otherwise it's the
@@ -578,7 +621,12 @@ export class GraphCanvasRenderer {
     };
     const searchAlpha = (node: PositionedNode): number =>
       searchMatches !== null && !searchMatches.has(node.id) ? SEARCH_NON_MATCH_ALPHA : 1;
-    const effectiveAlpha = (node: PositionedNode): number => focusAlpha(node) * searchAlpha(node);
+    // Entrance ramp (0.6 + 0.4·nodeT) applies to BOTH alpha and radius. Quantized
+    // per-node (via nodeEnterProgress), so it keeps the fill/stroke batching keys
+    // bounded during the reveal.
+    const entranceRamp = (node: PositionedNode): number => (entrance ? entrance.nodeRamp(node) : 1);
+    const effectiveAlpha = (node: PositionedNode): number =>
+      focusAlpha(node) * searchAlpha(node) * entranceRamp(node);
 
     // Separate special nodes (hovered/selected, or mid radius-tween) from bulk.
     const bulkNodes: PositionedNode[] = [];
@@ -596,8 +644,9 @@ export class GraphCanvasRenderer {
       }
     }
 
-    // Helper: effective radius clamped to minimum screen size
-    const r = (node: PositionedNode) => Math.max(node.radius, minRadius);
+    // Helper: effective radius clamped to minimum screen size, then scaled by
+    // the entrance ramp (same 0.6 + 0.4·nodeT curve as the alpha ramp).
+    const r = (node: PositionedNode) => Math.max(node.radius, minRadius) * entranceRamp(node);
 
     // --- Glow pass (dark mode only, before fills) ---
     if (showGlow) {
@@ -751,7 +800,10 @@ export class GraphCanvasRenderer {
     searchMatches: Set<string> | null,
     zoom: number,
     theme: GraphRenderState['theme'],
+    entrance: EntranceReveal | null,
   ): void {
+    // Labels fade in with the raw entrance progress (× on top of dim alpha).
+    const la = entrance ? entrance.labelAlpha : 1;
     // Font size inversely scaled by zoom, clamped to readable range
     const rawSize = 10 / zoom;
     const fontSize = Math.max(LABEL_FONT_MIN, Math.min(LABEL_FONT_MAX, rawSize));
@@ -771,7 +823,7 @@ export class GraphCanvasRenderer {
       // LOD: skip labels below threshold unless forced
       if (!forced && node.labelPriority < threshold) continue;
 
-      ctx.globalAlpha = dimmed ? SEARCH_NON_MATCH_ALPHA : 1;
+      ctx.globalAlpha = (dimmed ? SEARCH_NON_MATCH_ALPHA : 1) * la;
 
       const labelY = node.y + node.radius + 3;
 

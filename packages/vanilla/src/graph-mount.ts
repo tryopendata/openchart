@@ -22,6 +22,7 @@ import type {
 import { buildEdgeTooltip, compileGraph } from '@opendata-ai/openchart-engine';
 import { type CameraFlightOptions, clampK, createCameraFlight } from './graph/camera';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
+import { ENTRANCE_STAGGER_MAX_NODES } from './graph/entrance';
 import {
   composeStandingFocus,
   type FocusSnapshot,
@@ -34,6 +35,7 @@ import { createGraphLegend, type GraphLegendController } from './graph/legend';
 import { createTween, prefersReducedMotion, resolveEase } from './graph/motion';
 import { AnimationScheduler, type GraphAnimation } from './graph/scheduler';
 import { GraphSearchManager } from './graph/search';
+import { seedNodePositions } from './graph/seed';
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './graph/types';
@@ -239,6 +241,17 @@ export function createGraph(
   let focusAnim: GraphAnimation | null = null;
   // Hovered-node radius tween (1 → 1.15), null when settled at 1.
   let hoverRadiusTween: { nodeId: string; scale: number } | null = null;
+
+  // Entrance choreography state (Phase 6). `entranceProgress` is a mount-level
+  // 0→1 value read by buildRenderState; < 1 means the reveal is mid-flight.
+  // `entranceActive` gates the render-state `entrance` field. `entranceFitInFlight`
+  // tracks the entrance camera flight so a resize can cancel just it (keeping the
+  // reveal). `entranceReveal` is the scheduler tween driving `entranceProgress`.
+  let entranceProgress = 1;
+  let entranceActive = false;
+  let entranceStagger = false;
+  let entranceFitInFlight = false;
+  let entranceReveal: GraphAnimation | null = null;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -510,6 +523,11 @@ export function createGraph(
     const simEdges = toSimEdges(compilation.edges);
     const config = compilation.simulationConfig;
 
+    // Seed deterministic initial positions BEFORE the simulation starts, so the
+    // settled layout is reproducible for a given (spec, seed). `seed ?? 0` keeps
+    // the default path seeded too (still deterministic, just a fixed seed).
+    seedNodePositions(simNodes, config.seed ?? 0);
+
     simulation = SimulationManager.create(simNodes, simEdges, {
       chargeStrength: config.chargeStrength,
       linkDistance: config.linkDistance,
@@ -520,6 +538,9 @@ export function createGraph(
       collisionPadding: config.collisionPadding,
       linkStrength: config.linkStrength,
       centerForce: config.centerForce,
+      warmupTicks: config.warmupTicks,
+      warmupBudgetMs: config.warmupBudgetMs,
+      initialAlpha: config.initialAlpha,
     });
 
     let initialSettleDone = false;
@@ -535,9 +556,9 @@ export function createGraph(
       }
 
       // Build positioned nodes
-      positionedNodes = compilation.nodes.map((node) => {
+      positionedNodes = compilation.nodes.map((node, index) => {
         const pos = posMap.get(node.id) ?? { x: 0, y: 0 };
-        return { ...node, x: pos.x, y: pos.y };
+        return { ...node, x: pos.x, y: pos.y, index };
       });
 
       // Build positioned edges
@@ -556,9 +577,9 @@ export function createGraph(
       // Rebuild spatial index
       spatialIndex.rebuild(positionedNodes);
 
-      // Fit the viewport once on the first tick so the graph is visible and
-      // centered immediately. After that, let the user interact freely while
-      // the simulation continues settling in the background.
+      // Fit + entrance choreography on the FIRST post-warmup tick (the sim only
+      // starts streaming ticks once warmup, if any, has completed). After that,
+      // let the user interact freely while the simulation keeps settling.
       if (
         !initialFitDone &&
         positionedNodes.length > 0 &&
@@ -566,9 +587,7 @@ export function createGraph(
         options?.fitOnLoad !== false
       ) {
         initialFitDone = true;
-        const { width: cw, height: ch } = getCanvasDimensions();
-        const { transform: fitTransform } = ZoomTransform.fitBounds(positionedNodes, cw, ch);
-        interactionManager.setTransform(fitTransform);
+        startEntrance();
       } else if (!initialFitDone && options?.fitOnLoad === false) {
         // Skip the fit but mark it done so a saved camera (getCamera/flyTo) sticks.
         initialFitDone = true;
@@ -582,6 +601,76 @@ export function createGraph(
       if (initialSettleDone) return;
       initialSettleDone = true;
     });
+  }
+
+  /**
+   * Compute the initial fit transform. Bypasses fitBounds' spread inflation when
+   * warmup ran (warmed bounds are near-final; inflating them fits too small).
+   */
+  function computeInitialFit(): ZoomTransform {
+    const { width: cw, height: ch } = getCanvasDimensions();
+    const warmed = (compilation.simulationConfig.warmupTicks ?? 0) > 0;
+    const { transform } = ZoomTransform.fitBounds(positionedNodes, cw, ch, undefined, {
+      spread: !warmed,
+    });
+    return transform;
+  }
+
+  /**
+   * Fit + run the entrance reveal on the first post-warmup tick. Under an enabled
+   * `enter` phase and normal motion, the camera starts pulled back to 0.92× the
+   * fit and (optionally) flies in while a mount-level `entranceProgress` tween
+   * ramps node/edge/label reveal. Under reduced motion or `animation: false`,
+   * it's an instant fit (warmup still ran — it reduces motion, it isn't motion).
+   */
+  function startEntrance(): void {
+    if (!interactionManager) return;
+    const fit = computeInitialFit();
+    const enter = compilation.animation?.enter ?? null;
+
+    if (!enter || prefersReducedMotion()) {
+      interactionManager.setTransform(fit);
+      entranceActive = false;
+      entranceProgress = 1;
+      return;
+    }
+
+    // Start pulled back so the reveal has somewhere to fly in from.
+    const { width: cw, height: ch } = getCanvasDimensions();
+    const pulledBack = fit.zoomAt(fit.k * 0.92, cw / 2, ch / 2);
+    interactionManager.setTransform(pulledBack);
+
+    entranceActive = true;
+    entranceProgress = 0;
+    // Stagger only when the spec asks for it AND the graph is small enough that
+    // per-node start times still batch. Above the cap: a single global fade.
+    entranceStagger = enter.stagger && positionedNodes.length <= ENTRANCE_STAGGER_MAX_NODES;
+
+    // Optional camera flight from the pulled-back framing to the true fit.
+    if (enter.cameraFit) {
+      entranceFitInFlight = true;
+      flyCamera(fit, { duration: enter.duration + 100 }, () => {
+        entranceFitInFlight = false;
+      });
+    }
+
+    // Reveal tween drives entranceProgress 0→1; ends the entrance on completion.
+    const ease = resolveEase(enter.ease);
+    entranceReveal = createTween({
+      duration: enter.duration,
+      ease,
+      apply: (t) => {
+        entranceProgress = t;
+        needsRender = true;
+      },
+      onDone: () => {
+        entranceProgress = 1;
+        entranceActive = false;
+        entranceReveal = null;
+        needsRender = true;
+      },
+    });
+    scheduler.add(entranceReveal);
   }
 
   function getCanvasDimensions(): { width: number; height: number } {
@@ -840,6 +929,10 @@ export function createGraph(
       focus: focus ?? { t: 1, prev: settledNext, next: settledNext },
       hoverRadiusScale,
       dimOpacity: highlightDimOpacity ?? compilation.interaction.dimOpacity,
+      entrance:
+        entranceActive && entranceProgress < 1
+          ? { t: entranceProgress, stagger: entranceStagger }
+          : undefined,
     };
   }
 
@@ -1244,6 +1337,16 @@ export function createGraph(
     const { width, height } = getContainerDimensions();
     const canvasHeight = Math.max(height, 200);
     renderer.resize(width, canvasHeight);
+
+    // Mid-entrance: the in-flight camera fit targets the OLD viewport, so cancel
+    // just that flight and snap to the new-viewport fit. The reveal tween (node
+    // alpha/scale ramp) is orthogonal to the camera and keeps running.
+    if (entranceFitInFlight && interactionManager) {
+      cancelFlight();
+      entranceFitInFlight = false;
+      interactionManager.setTransform(computeInitialFit());
+    }
+
     needsRender = true;
     scheduleRender();
   }
@@ -1251,6 +1354,15 @@ export function createGraph(
   function update(newSpec: GraphSpec): void {
     if (destroyed) return;
     currentSpec = newSpec;
+
+    // Finish any in-flight animations (e.g. an entrance reveal) before teardown
+    // so they snap to their final state and fire onDone, rather than being hard
+    // cancelled mid-flight. teardownSubsystems() then cancels whatever remains.
+    scheduler.finishAll();
+    entranceActive = false;
+    entranceProgress = 1;
+    entranceFitInFlight = false;
+    entranceReveal = null;
 
     // Tear down old simulation + interaction
     teardownSubsystems();
@@ -1300,9 +1412,9 @@ export function createGraph(
     buildDataMaps();
 
     // Transfer positions to new compiled nodes
-    positionedNodes = compilation.nodes.map((node) => {
+    positionedNodes = compilation.nodes.map((node, index) => {
       const pos = posMap.get(node.id) ?? { x: 0, y: 0 };
-      return { ...node, x: pos.x, y: pos.y };
+      return { ...node, x: pos.x, y: pos.y, index };
     });
 
     // Rebuild positioned edges from existing positions
@@ -1342,6 +1454,11 @@ export function createGraph(
     // writes to removed state.
     scheduler.cancelAll();
     activeFlight = null;
+    // Reset entrance state so a remount (React StrictMode) starts clean.
+    entranceReveal = null;
+    entranceActive = false;
+    entranceProgress = 1;
+    entranceFitInFlight = false;
     if (animFrameId !== null) {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;

@@ -11,6 +11,7 @@ function makeNode(id: string, x: number, y: number, radius = 5): PositionedNode 
     id,
     x,
     y,
+    index: 0,
     radius,
     fill: '#3b82f6',
     stroke: '#2563eb',
@@ -185,6 +186,20 @@ describe('ZoomTransform', () => {
       // k = min(1, 720/400, 520/200) = 1 (capped)
       // contentHeight = 200 * 1 + 80 = 280
       expect(contentHeight).toBeCloseTo(280);
+    });
+
+    it('spread:false yields a tighter (larger-zoom) fit than spread:true', () => {
+      // 100 nodes spanning a wide box so the k cap doesn't hide the difference.
+      const nodes = Array.from({ length: 100 }, (_, i) =>
+        makeNode(`n${i}`, (i % 10) * 400, Math.floor(i / 10) * 400, 3),
+      );
+      const spread = ZoomTransform.fitBounds(nodes, 800, 600, 40, { spread: true });
+      const tight = ZoomTransform.fitBounds(nodes, 800, 600, 40, { spread: false });
+      // Bypassing the inflation packs the same bounds into more zoom.
+      expect(tight.transform.k).toBeGreaterThan(spread.transform.k);
+      // Default (no opts) matches the inflated behavior.
+      const dflt = ZoomTransform.fitBounds(nodes, 800, 600, 40);
+      expect(dflt.transform.k).toBeCloseTo(spread.transform.k, 10);
     });
   });
 

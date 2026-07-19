@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SimulationManager } from '../simulation';
+import { seedNodePositions } from '../seed';
+import { SimulationManager, ticksToAlphaMin } from '../simulation';
 import type { SimEdge, SimNode, WorkerSimulationConfig } from '../worker-protocol';
 
 // ---------------------------------------------------------------------------
@@ -229,5 +230,118 @@ describe('SimulationManager (sync fallback)', () => {
 
     // No callbacks should fire after destroy
     expect(callCount).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ticksToAlphaMin: derived sync cap aligned with d3's stopping predicate
+// ---------------------------------------------------------------------------
+
+describe('ticksToAlphaMin', () => {
+  it('matches d3’s default ~300 ticks for the default alphaDecay', () => {
+    // d3: ⌈log(alphaMin) / log(1 - alphaDecay)⌉; default decay 0.0228 → ~300.
+    expect(ticksToAlphaMin(0.0228)).toBe(300);
+  });
+
+  it('grows for a thorough (small alphaDecay) settle', () => {
+    // settle: 'thorough' uses alphaDecay 0.01 → ~688 ticks (vs the old fixed 300).
+    const n = ticksToAlphaMin(0.01);
+    expect(n).toBeGreaterThan(600);
+    expect(n).toBeLessThanOrEqual(800);
+  });
+
+  it('ceilings at 800 for tiny decay and guards degenerate inputs', () => {
+    expect(ticksToAlphaMin(0.0001)).toBe(800);
+    expect(ticksToAlphaMin(0)).toBe(800);
+    expect(ticksToAlphaMin(1)).toBe(800);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Warmup: pre-reveal headless settle, bounded by tick count AND ms budget
+// ---------------------------------------------------------------------------
+
+function makeGrid(n: number): { nodes: SimNode[]; edges: SimEdge[] } {
+  const nodes: SimNode[] = Array.from({ length: n }, (_, i) => ({ id: `g${i}`, radius: 5 }));
+  const edges: SimEdge[] = [];
+  for (let i = 1; i < n; i++) edges.push({ source: `g${i - 1}`, target: `g${i}` });
+  return { nodes, edges };
+}
+
+describe('SimulationManager warmup (sync fallback)', () => {
+  it('first delivered tick has alpha < 1 and a non-phyllotaxis spread', async () => {
+    const { nodes, edges } = makeGrid(24);
+    // Seed like the mount does so the spread isn't d3's phyllotaxis spiral.
+    seedNodePositions(nodes, 0);
+
+    const mgr = SimulationManager.create(nodes, edges, defaultConfig({ warmupTicks: 40 }));
+
+    let first: { positions: Array<{ id: string; x: number; y: number }>; alpha: number } | null =
+      null;
+    mgr.onTick((positions, alpha) => {
+      if (!first) first = { positions, alpha };
+    });
+
+    // Flush the deferred warmup + first reveal microtask.
+    await Promise.resolve();
+
+    expect(first).not.toBeNull();
+    // Warmup consumed alpha before the first paint → strictly below the start.
+    expect(first!.alpha).toBeLessThan(1);
+    // Positions are distinct (spread), not collapsed to a point.
+    const xs = new Set(first!.positions.map((p) => Math.round(p.x)));
+    expect(xs.size).toBeGreaterThan(1);
+
+    mgr.destroy();
+  });
+
+  it('respects the ms budget using an injected clock (no real time)', async () => {
+    const { nodes, edges } = makeGrid(30);
+    seedNodePositions(nodes, 0);
+
+    // Fake clock: jumps past the 250ms budget on the SECOND read, so warmup bails
+    // after the first chunk of ticks regardless of the requested 10000 ticks.
+    let calls = 0;
+    const fakeNow = () => {
+      calls++;
+      return calls === 1 ? 0 : 10_000; // first read = start, next = well past budget
+    };
+
+    const mgr = SimulationManager.create(
+      nodes,
+      edges,
+      defaultConfig({ warmupTicks: 10_000, warmupBudgetMs: 250 }),
+      { now: fakeNow },
+    );
+
+    let firstAlpha: number | null = null;
+    mgr.onTick((_positions, alpha) => {
+      if (firstAlpha === null) firstAlpha = alpha;
+    });
+
+    await Promise.resolve();
+
+    expect(firstAlpha).not.toBeNull();
+    // Budget truncated warmup: alpha is nowhere near settled (10k ticks would be).
+    // A handful of ticks barely dents alpha from 1.
+    expect(firstAlpha!).toBeGreaterThan(0.5);
+    // The clock was consulted (budget path exercised), not real time.
+    expect(calls).toBeGreaterThanOrEqual(2);
+
+    mgr.destroy();
+  });
+
+  it('warmupTicks=0 disables warmup (first tick is the normal batch)', async () => {
+    const { nodes, edges } = makeGrid(10);
+    const mgr = SimulationManager.create(nodes, edges, defaultConfig({ warmupTicks: 0 }));
+
+    let delivered = false;
+    mgr.onTick(() => {
+      delivered = true;
+    });
+    await Promise.resolve();
+    expect(delivered).toBe(true);
+
+    mgr.destroy();
   });
 });
