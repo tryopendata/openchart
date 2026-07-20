@@ -1,5 +1,26 @@
 # Changelog
 
+## [8.0.0-rc.18](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.17...core-v8.0.0-rc.18) (2026-07-20)
+
+
+### Features
+
+* scatter entrance timing and deepen the pull-in ([5f2e0f9](https://github.com/tryopendata/openchart/commit/5f2e0f9))
+* host-legend API + nodeLabelPriority encoding channel ([839e1dd](https://github.com/tryopendata/openchart/commit/839e1dd))
+* organic entrance pop + chrome collision fix ([2024728](https://github.com/tryopendata/openchart/commit/2024728))
+* wrappers, docs, examples for the motion + API surface (Phase 9) ([7d6dff6](https://github.com/tryopendata/openchart/commit/7d6dff6))
+* physics feel — springy drag + cursor repulsion (Phase 8) ([8d017e8](https://github.com/tryopendata/openchart/commit/8d017e8))
+* unified update() + data transitions (Phase 7) ([06c0932](https://github.com/tryopendata/openchart/commit/06c0932))
+* entrance choreography + seeded layout (Phase 6) ([36a5684](https://github.com/tryopendata/openchart/commit/36a5684))
+
+
+### Bug Fixes
+
+* dual-axis lines no longer break where layers' x-values interleave ([809e231](https://github.com/tryopendata/openchart/commit/809e231))
+* embed color profile in raster exports to fix washed-out colors ([9fed20b](https://github.com/tryopendata/openchart/commit/9fed20b))
+* review fixes for entrance shift, zoom inset, and edge diff ([c44241b](https://github.com/tryopendata/openchart/commit/c44241b))
+* close plan-review gaps before the RC cut ([4bd12d7](https://github.com/tryopendata/openchart/commit/4bd12d7))
+
 ## [8.0.0-rc.17](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.16...core-v8.0.0-rc.17) (2026-07-20)
 
 
