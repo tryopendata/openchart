@@ -61,19 +61,35 @@ function centroid(nodes: XYNode[]): { cx: number; cy: number } {
 }
 
 /**
- * Stagger rank for each node: distance from the layout centroid, ascending, so
- * the reveal ripples outward from the center of the graph. Index-order stagger
- * reads as arbitrary shimmer; centroid-radial order reads as structure. Warmup
- * means positions are near-final when this runs, so the ranking is stable.
+ * Deterministic hash of a node id to a well-distributed 32-bit unsigned int
+ * (FNV-1a). Used to scatter entrance timing: same id → same slot every render,
+ * so the reveal stays stable and testable without a spatial or index bias.
+ */
+function hashId(id: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Stagger rank for each node: a deterministic hash-shuffle of the node ids, so
+ * each node reveals at an independent, scattered time rather than in a uniform
+ * center-outward ripple. The scatter reads as many independent elements popping
+ * in; a spatial (centroid-radial) or index order reads as one coordinated sweep.
+ * Hashing the id keeps the order stable per render (pure function of ids), so it
+ * survives re-renders and stays testable.
  */
 export function entranceOrder(nodes: XYNode[]): Map<string, number> {
   const rank = new Map<string, number>();
   if (nodes.length === 0) return rank;
-  const { cx, cy } = centroid(nodes);
   const sorted = [...nodes].sort((a, b) => {
-    const da = (a.x - cx) * (a.x - cx) + (a.y - cy) * (a.y - cy);
-    const db = (b.x - cx) * (b.x - cx) + (b.y - cy) * (b.y - cy);
-    return da - db;
+    const ha = hashId(a.id);
+    const hb = hashId(b.id);
+    // Tie-break on id so equal hashes (rare) still give a total, stable order.
+    return ha - hb || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   });
   for (let i = 0; i < sorted.length; i++) rank.set(sorted[i].id, i);
   return rank;

@@ -282,7 +282,7 @@ export function createGraph(
   let entranceProgress = 1;
   let entranceActive = false;
   let entranceStagger = false;
-  // Pop choreography inputs (staggered entrances only): centroid-radial stagger
+  // Pop choreography inputs (staggered entrances only): hash-scattered stagger
   // rank and per-node convergence drift vectors, built once at entrance start.
   let entranceOrderMap: Map<string, number> | null = null;
   let entranceOffsetMap: Map<string, { x: number; y: number }> | null = null;
@@ -774,7 +774,6 @@ export function createGraph(
     // instant-fit branch as reduced motion so the entrance doesn't replay.
     const suppressed = suppressEntranceOnce;
     suppressEntranceOnce = false;
-
     if (suppressed || !enter || prefersReducedMotion()) {
       interactionManager.setTransform(fit);
       cameraChangePending = true;
@@ -783,9 +782,10 @@ export function createGraph(
       return;
     }
 
-    // Start pulled back so the reveal has somewhere to fly in from.
+    // Start pulled back so the reveal has somewhere to fly in from. 0.7 gives a
+    // clearly readable pull-in on load (0.85 was too subtle to register as motion).
     const { width: cw, height: ch } = getCanvasDimensions();
-    const pulledBack = fit.zoomAt(fit.k * 0.85, cw / 2, ch / 2);
+    const pulledBack = fit.zoomAt(fit.k * 0.7, cw / 2, ch / 2);
     interactionManager.setTransform(pulledBack);
     cameraChangePending = true;
 
@@ -795,7 +795,7 @@ export function createGraph(
     // per-node start times still batch. Above the cap: a single global fade.
     entranceStagger = enter.stagger && positionedNodes.length <= ENTRANCE_STAGGER_MAX_NODES;
     // Pop choreography inputs, computed once against the warmed (near-final)
-    // positions: centroid-radial stagger order + per-node convergence drift.
+    // positions: hash-scattered stagger order + per-node convergence drift.
     if (entranceStagger) {
       entranceOrderMap = entranceOrder(positionedNodes);
       entranceOffsetMap = entranceOffsets(positionedNodes);

@@ -89,7 +89,7 @@ function lerp(a: number, b: number, t: number): number {
  * (back-out overshoot), alpha 0→1 over the first 60% of its window, and the node
  * converges from a small centroid-outward drift offset to its final position.
  * `nodeT` is a per-node staggered+quantized progress ordered by `entrance.order`
- * (centroid-radial rank), so the reveal ripples outward from the center.
+ * (hash-scattered rank), so nodes reveal at independent, scattered times.
  *
  * Unstaggered (large graphs): the legacy single global fade — alpha and scale
  * both ramp `0.6 + 0.4·g`, no drift.

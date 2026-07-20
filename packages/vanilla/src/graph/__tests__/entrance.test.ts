@@ -67,19 +67,33 @@ describe('ENTRANCE_STAGGER_MAX_NODES', () => {
 });
 
 describe('entranceOrder', () => {
-  it('ranks nodes by distance from the centroid, ascending', () => {
-    // Centroid of these four is (0, 0); 'near' is closest, 'far' farthest.
-    const nodes = [
-      { id: 'far', x: 100, y: 0 },
-      { id: 'near', x: 2, y: 0 },
-      { id: 'mid', x: -30, y: 0 },
-      { id: 'balance', x: -72, y: 0 },
-    ];
+  const nodes = [
+    { id: 'far', x: 100, y: 0 },
+    { id: 'near', x: 2, y: 0 },
+    { id: 'mid', x: -30, y: 0 },
+    { id: 'balance', x: -72, y: 0 },
+  ];
+
+  it('assigns a total ordering: ranks are a permutation of 0..n-1', () => {
     const order = entranceOrder(nodes);
-    expect(order.get('near')).toBe(0);
-    expect(order.get('mid')).toBe(1);
-    expect(order.get('balance')).toBe(2);
-    expect(order.get('far')).toBe(3);
+    const ranks = [...order.values()].sort((a, b) => a - b);
+    expect(ranks).toEqual([0, 1, 2, 3]);
+  });
+
+  it('is deterministic: same ids yield identical ranks across calls', () => {
+    const a = entranceOrder(nodes);
+    const b = entranceOrder([...nodes].reverse());
+    for (const n of nodes) expect(a.get(n.id)).toBe(b.get(n.id));
+  });
+
+  it('scatters rather than following centroid distance (independent timing)', () => {
+    // The spatial order by |distance from centroid (0,0)| is
+    // near < mid < balance < far. The hash-shuffle must NOT reproduce it,
+    // otherwise the reveal is a coordinated radial sweep, not a scatter.
+    const order = entranceOrder(nodes);
+    const spatial = ['near', 'mid', 'balance', 'far'];
+    const shuffled = [...order.entries()].sort((a, b) => a[1] - b[1]).map(([id]) => id);
+    expect(shuffled).not.toEqual(spatial);
   });
 
   it('returns an empty map for zero nodes', () => {
