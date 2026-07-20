@@ -225,12 +225,10 @@ function compileLayerIndependent(
 
   const xField0 = leaf0.encoding?.x?.field;
   const xField1 = leaf1.encoding?.x?.field;
-  const unionXValues = new Set<unknown>();
-  if (xField0) for (const row of leaf0.data) unionXValues.add(row[xField0]);
-  if (xField1) for (const row of leaf1.data) unionXValues.add(row[xField1]);
 
-  let leaf0WithUnionX = ensureXDomainCoverage(leaf0, xField0, unionXValues);
-  let leaf1WithUnionX = ensureXDomainCoverage(leaf1, xField1, unionXValues);
+  const union = withUnionXDomain(leaf0, leaf1);
+  let leaf0WithUnionX = union.leaf0;
+  let leaf1WithUnionX = union.leaf1;
 
   const aligned = alignYDomains(leaf0WithUnionX, leaf1WithUnionX);
   if (aligned) {
@@ -414,28 +412,111 @@ function compileLayerIndependent(
   };
 }
 
-function ensureXDomainCoverage(
-  leaf: ChartSpec,
-  xField: string | undefined,
-  allXValues: Set<unknown>,
-): ChartSpec {
-  if (!xField || allXValues.size === 0) return leaf;
-
-  const existingXValues = new Set<unknown>();
-  for (const row of leaf.data) existingXValues.add(row[xField]);
-
-  const missingRows: DataRow[] = [];
-  for (const xVal of allXValues) {
-    if (!existingXValues.has(xVal)) {
-      missingRows.push({ [xField]: xVal });
-    }
-  }
-
-  if (missingRows.length === 0) return leaf;
-
+/** Merge an x-scale `domain` onto a leaf's x-encoding, preserving other scale config. */
+function withXDomain(leaf: ChartSpec, domain: number[] | string[]): ChartSpec {
+  if (!leaf.encoding?.x) return leaf;
   return {
     ...leaf,
-    data: [...leaf.data, ...missingRows],
+    encoding: {
+      ...leaf.encoding,
+      x: {
+        ...leaf.encoding.x,
+        scale: {
+          ...leaf.encoding.x.scale,
+          domain,
+        },
+      },
+    },
+  } as ChartSpec;
+}
+
+/**
+ * Make both dual-axis layers render against ONE shared x-scale by pinning an
+ * explicit union x-domain on each, rather than injecting placeholder data rows.
+ *
+ * Injecting rows (the old approach) put x-only rows with no y-field into each
+ * leaf's data. In line/area compute those become null-y points, which are
+ * treated as line breaks -- so two series with interleaved x-values drew as
+ * disconnected segments. Pinning the domain achieves the shared axis without
+ * ever touching the mark data.
+ *
+ * Kept separate from computeSharedDomains, which only unions *quantitative*
+ * channels and folds zero in (correct for a magnitude y-axis, wrong for an x
+ * position axis that must also cover temporal/ordinal and must not fold zero).
+ *
+ * An author-pinned `scale.domain` on a leaf's x wins for that leaf; the union
+ * is still applied to the other leaf. Note that pinning a domain suppresses
+ * d3's `.nice()`, so x-axis endpoints become the exact union min/max -- the
+ * same behaviour the shared-scale path already has.
+ */
+function withUnionXDomain(
+  leaf0: ChartSpec,
+  leaf1: ChartSpec,
+): { leaf0: ChartSpec; leaf1: ChartSpec } {
+  const xEnc0 = leaf0.encoding?.x;
+  const xEnc1 = leaf1.encoding?.x;
+  const xField0 = xEnc0?.field;
+  const xField1 = xEnc1?.field;
+  if (!xField0 || !xField1) return { leaf0, leaf1 };
+
+  // The x-type guard upstream already ensures both encodings agree; take either.
+  const xType = xEnc0?.type ?? xEnc1?.type;
+
+  const pinned0 = xEnc0?.scale?.domain !== undefined;
+  const pinned1 = xEnc1?.scale?.domain !== undefined;
+  if (pinned0 && pinned1) return { leaf0, leaf1 };
+
+  const values0 = leaf0.data.map((row) => row[xField0]);
+  const values1 = leaf1.data.map((row) => row[xField1]);
+  const allValues = [...values0, ...values1].filter((v) => v != null);
+  if (allValues.length === 0) return { leaf0, leaf1 };
+
+  let domain: number[] | string[] | undefined;
+
+  if (xType === 'temporal') {
+    let minMs = Number.POSITIVE_INFINITY;
+    let maxMs = Number.NEGATIVE_INFINITY;
+    for (const v of allValues) {
+      const ms = (v instanceof Date ? v : new Date(String(v))).getTime();
+      if (Number.isNaN(ms)) continue;
+      if (ms < minMs) minMs = ms;
+      if (ms > maxMs) maxMs = ms;
+    }
+    if (minMs <= maxMs) {
+      domain = [new Date(minMs).toISOString(), new Date(maxMs).toISOString()];
+    }
+  } else if (xType === 'quantitative') {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (const v of allValues) {
+      const n = typeof v === 'number' ? v : Number(v);
+      if (!Number.isFinite(n)) continue;
+      if (n < min) min = n;
+      if (n > max) max = n;
+    }
+    if (min <= max) domain = [min, max];
+  } else {
+    // Discrete x (nominal/ordinal): ordered union of category labels. leaf0's
+    // categories in data order, then leaf1's not-yet-seen values appended. Pinned
+    // to BOTH leaves so each band/point scale enumerates the full set -- the bar
+    // remap in the caller reads band centres for every category from the axis ticks.
+    const seen = new Set<string>();
+    const categories: string[] = [];
+    for (const v of allValues) {
+      const s = String(v);
+      if (!seen.has(s)) {
+        seen.add(s);
+        categories.push(s);
+      }
+    }
+    if (categories.length > 0) domain = categories;
+  }
+
+  if (domain === undefined) return { leaf0, leaf1 };
+
+  return {
+    leaf0: pinned0 ? leaf0 : withXDomain(leaf0, domain),
+    leaf1: pinned1 ? leaf1 : withXDomain(leaf1, domain),
   };
 }
 

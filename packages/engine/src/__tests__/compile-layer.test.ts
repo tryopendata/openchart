@@ -1022,4 +1022,112 @@ describe('compileLayer', () => {
     expect(Math.min(...layerBXs)).toBeGreaterThan(areaMidX);
     expect(Math.max(...layerAXs)).toBeLessThan(Math.min(...layerBXs));
   });
+
+  it('keeps dual-axis lines continuous when the two layers have interleaved x-values', () => {
+    // Regression guard for the "line drawn with gaps" bug. The shared x-domain
+    // used to be achieved by injecting the OTHER layer's x-values as placeholder
+    // rows with no y-field. Those became null-y points, which line compute treats
+    // as line breaks — so two temporal series with interleaved dates each drew as
+    // disconnected segments. The fix pins an explicit union domain instead of
+    // touching mark data, so each series stays a single unbroken path.
+    //
+    // Layer A: Jan, Mar, May. Layer B: Feb, Apr, Jun. Sorted together the dates
+    // interleave, which is exactly the arrangement that produced mid-line breaks.
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'line' as const,
+          data: [
+            { d: '2024-01-01', a: 10 },
+            { d: '2024-03-01', a: 20 },
+            { d: '2024-05-01', a: 15 },
+          ],
+          encoding: {
+            x: { field: 'd', type: 'temporal' as const },
+            y: { field: 'a', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { d: '2024-02-01', b: 5 },
+            { d: '2024-04-01', b: 8 },
+            { d: '2024-06-01', b: 6 },
+          ],
+          encoding: {
+            x: { field: 'd', type: 'temporal' as const },
+            y: { field: 'b', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const lines = layout.marks.filter((m) => m.type === 'line') as unknown as {
+      path: string;
+      points: { x: number }[];
+      data: unknown[];
+    }[];
+    expect(lines).toHaveLength(2);
+
+    for (const line of lines) {
+      // Exactly one `M` command ⇒ one unbroken subpath (no injected null breaks).
+      expect((line.path.match(/M/g) ?? []).length).toBe(1);
+      // No placeholder rows leaked into the mark: 3 real points per series.
+      expect(line.points).toHaveLength(3);
+      expect(line.data).toHaveLength(3);
+    }
+  });
+
+  it('remaps a dual-axis line onto all bar band centres across a category union', () => {
+    // The bar+line dual-axis path reads band centres for every category from the
+    // bar layer's axis ticks. With the union pinned as an explicit discrete
+    // domain on both leaves, the band scale must still enumerate categories from
+    // BOTH layers so the line's points remap onto real centres.
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { yr: '2024', bars: 100 },
+            { yr: '2025', bars: 120 },
+          ],
+          encoding: {
+            x: { field: 'yr', type: 'ordinal' as const },
+            y: { field: 'bars', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { yr: '2025', ln: 3 },
+            { yr: '2026', ln: 5 },
+          ],
+          encoding: {
+            x: { field: 'yr', type: 'ordinal' as const },
+            y: { field: 'ln', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+
+    // The x-axis enumerates the ordered union of both layers' categories.
+    const tickLabels = (layout.axes.x?.ticks ?? []).map((t) => String(t.label));
+    expect(tickLabels).toEqual(['2024', '2025', '2026']);
+
+    const line = layout.marks.find((m) => m.type === 'line') as unknown as {
+      points: { x: number }[];
+    };
+    expect(line).toBeDefined();
+    // Every line point remapped to a finite band centre inside the plot area.
+    for (const p of line.points) {
+      expect(Number.isFinite(p.x)).toBe(true);
+      expect(p.x).toBeGreaterThanOrEqual(layout.area.x);
+      expect(p.x).toBeLessThanOrEqual(layout.area.x + layout.area.width);
+    }
+  });
 });
