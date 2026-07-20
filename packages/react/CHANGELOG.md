@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.0.0-rc.16](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.15...core-v8.0.0-rc.16) (2026-07-20)
+
+
+### Bug Fixes
+
+* embed color profile in raster exports to fix washed-out colors ([9fed20b](https://github.com/tryopendata/openchart/commit/9fed20b))
+
 ## [8.0.0-rc.15](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.14...core-v8.0.0-rc.15) (2026-07-19)
 
 
