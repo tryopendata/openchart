@@ -379,7 +379,13 @@ export async function exportGIF(
     const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, fillBackground);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D context not available');
-    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // GIF is sRGB-only and can't carry a color profile. The export canvas may be
+    // display-p3 (so PNG/JPG embed a profile), so read back in sRGB explicitly —
+    // gifenc's quantizer assumes sRGB bytes, and feeding it P3-encoded data would
+    // shift/desaturate the GIF. The browser converts P3→sRGB on readback.
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height, {
+      colorSpace: 'srgb',
+    });
     const index = applyPalette(data, globalPalette);
     // `repeat` is only meaningful on the first frame (it writes the loop
     // extension); passing it later is ignored by gifenc.
@@ -422,5 +428,7 @@ async function seedPalette(
   const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, prepare);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context not available');
-  use(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+  // Read back in sRGB (the export canvas may be display-p3); the palette must be
+  // quantized from sRGB bytes to match gifenc's assumption. See writeFrame.
+  use(ctx.getImageData(0, 0, canvas.width, canvas.height, { colorSpace: 'srgb' }).data);
 }

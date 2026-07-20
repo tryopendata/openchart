@@ -306,6 +306,46 @@ export async function exportSVGWithFonts(
 // ---------------------------------------------------------------------------
 
 /**
+ * Cache the one-time probe for Display P3 canvas support. Rendering raster
+ * exports into a display-p3 canvas makes toBlob embed a wide-gamut color profile
+ * (verified: an sRGB PNG has no iCCP chunk; a display-p3 PNG does — and JPEG
+ * upgrades from an sRGB to a P3 profile), so the export matches the on-screen
+ * chart instead of reading as an untagged/sRGB image that looks washed out on
+ * P3 displays.
+ */
+let p3Supported: boolean | undefined;
+
+function supportsDisplayP3(): boolean {
+  if (p3Supported !== undefined) return p3Supported;
+  try {
+    const probe = document.createElement('canvas');
+    const ctx = probe.getContext('2d', { colorSpace: 'display-p3' }) as
+      | (CanvasRenderingContext2D & { getContextAttributes?: () => { colorSpace?: string } })
+      | null;
+    p3Supported = !!ctx && ctx.getContextAttributes?.().colorSpace === 'display-p3';
+  } catch {
+    p3Supported = false;
+  }
+  return p3Supported;
+}
+
+/**
+ * Create a 2D context in the widest color space the runtime supports. A
+ * display-p3 canvas is what makes toBlob embed the profile. Callers that read
+ * pixels back for a non-color-managed sink (GIF quantization) must NOT rely on
+ * this — they must read back in sRGB explicitly.
+ */
+function getExportContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = supportsDisplayP3()
+    ? canvas.getContext('2d', { colorSpace: 'display-p3' })
+    : canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas 2D context not available');
+  }
+  return ctx;
+}
+
+/**
  * Draw a serialized SVG string onto a canvas at DPI scaling.
  *
  * Shared by PNG/JPG export and per-frame GIF rendering: loads the SVG string
@@ -338,10 +378,7 @@ export function rasterizeSVGToCanvas(
   canvas.width = width * dpi;
   canvas.height = height * dpi;
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Canvas 2D context not available');
-  }
+  const ctx = getExportContext(canvas);
 
   prepare?.(ctx, canvas);
   ctx.scale(dpi, dpi);
