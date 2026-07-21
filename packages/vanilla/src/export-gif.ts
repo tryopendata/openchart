@@ -19,7 +19,7 @@
  * untouched. `gifenc` is an optional peer dependency, loaded dynamically.
  */
 
-import type { AnimationEase, ResolvedAnimation } from '@opendata-ai/openchart-core';
+import type { AnimationEase, ResolvedAnimation, ResolvedTheme } from '@opendata-ai/openchart-core';
 import {
   embedFonts,
   ensureSVGDimensions,
@@ -28,6 +28,8 @@ import {
   getSVGDimensions,
   rasterizeSVGToCanvas,
 } from './export';
+import { readCanvasSRGB } from './gif-encode';
+import { injectThemeStyleBlock } from './theme-style-block';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +60,11 @@ export interface GIFExportOptions {
    * color (or white if the chart is transparent).
    */
   backgroundColor?: string;
+  /**
+   * Resolved theme to inline as a `<style>` block so class-based fills (metric
+   * cells, brand watermark dot, legend text) survive serialization. Omit to skip.
+   */
+  theme?: ResolvedTheme;
 }
 
 /** Which visual property an element's entrance keyframe animates. */
@@ -325,6 +332,9 @@ export async function exportGIF(
   // Build one font-embedded clone that represents the FINAL frame; every frame
   // derives from it, so fonts are embedded exactly once.
   const clone = svgElement.cloneNode(true) as SVGElement;
+  // Inline the theme style block so class-based chrome fills survive the detach
+  // from the page stylesheet (metrics, brand dot, legend). No-op when undefined.
+  injectThemeStyleBlock(clone, options?.theme);
   if (shouldEmbed) {
     await embedFonts(clone);
   }
@@ -377,16 +387,7 @@ export async function exportGIF(
     }
     const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
     const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, fillBackground);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas 2D context not available');
-    // GIF is sRGB-only and can't carry a color profile. The export canvas may be
-    // display-p3 (so PNG/JPG embed a profile), so read back in sRGB explicitly —
-    // gifenc's quantizer assumes sRGB bytes, and feeding it P3-encoded data would
-    // shift/desaturate the GIF. The browser converts P3→sRGB on readback.
-    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height, {
-      colorSpace: 'srgb',
-    });
-    const index = applyPalette(data, globalPalette);
+    const index = applyPalette(readCanvasSRGB(canvas), globalPalette);
     // `repeat` is only meaningful on the first frame (it writes the loop
     // extension); passing it later is ignored by gifenc.
     gif.writeFrame(index, canvas.width, canvas.height, {
@@ -426,9 +427,5 @@ async function seedPalette(
   for (const t of targets) clearFrameState(t);
   const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
   const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, prepare);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D context not available');
-  // Read back in sRGB (the export canvas may be display-p3); the palette must be
-  // quantized from sRGB bytes to match gifenc's assumption. See writeFrame.
-  use(ctx.getImageData(0, 0, canvas.width, canvas.height, { colorSpace: 'srgb' }).data);
+  use(readCanvasSRGB(canvas));
 }

@@ -69,7 +69,12 @@ import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import { canTransition, type GeometrySnapshot, runTransition } from './transition';
+import {
+  canTransition,
+  type GeometrySnapshot,
+  runTransition,
+  type TransitionHandle,
+} from './transition';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 // ---------------------------------------------------------------------------
@@ -103,6 +108,13 @@ export interface ExportOptions extends JPGExportOptions {
 export interface ChartInstance {
   /** Re-compile and re-render with a new spec. */
   update(spec: ChartSpec | LayerSpec | GraphSpec, options?: UpdateOptions): void;
+  /**
+   * Re-render with a new spec and start a MANUAL update transition the caller
+   * drives via `handle.step(elapsedMs)`, with no rAF clock. Returns the handle,
+   * or null when no transition applies (the render already swapped instantly).
+   * For headless frame capture (e.g. GIF export of a spec-swap stepper).
+   */
+  beginManualUpdate(spec: ChartSpec | LayerSpec | GraphSpec): TransitionHandle | null;
   /** Re-compile at current container dimensions. */
   resize(): void;
   /** Export the chart. */
@@ -268,7 +280,7 @@ export function createChart<TData extends DataRow = DataRow>(
   let lastRenderedSvgHeight: number | null = null;
 
   // Data-update transition state
-  let transitionHandle: import('./transition').TransitionHandle | null = null;
+  let transitionHandle: TransitionHandle | null = null;
   let transitionSnapshot: GeometrySnapshot | null = null;
 
   // Set when webfonts have loaded and a recompile is owed to reflect final font
@@ -1137,7 +1149,26 @@ export function createChart<TData extends DataRow = DataRow>(
   // ---------------------------------------------------------------------------
 
   function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
-    if (destroyed) return;
+    doUpdate(newSpec, updateOpts, false);
+  }
+
+  /**
+   * Re-render with a new spec and start a MANUAL transition the caller drives via
+   * `handle.step(elapsedMs)`. Returns the handle, or null when no transition
+   * applies (unchanged shape, first render, etc. — the render already swapped
+   * instantly). Used by headless frame capture (GIF export of a spec-swap
+   * stepper) to sample the update tween deterministically. No rAF runs.
+   */
+  function beginManualUpdate(newSpec: ChartSpec | LayerSpec | GraphSpec): TransitionHandle | null {
+    return doUpdate(newSpec as ChartSpec | GraphSpec, undefined, true);
+  }
+
+  function doUpdate(
+    newSpec: ChartSpec | GraphSpec,
+    updateOpts: UpdateOptions | undefined,
+    manual: boolean,
+  ): TransitionHandle | null {
+    if (destroyed) return null;
 
     // Capture pre-update state for transition gating
     const prevSpec = currentSpec;
@@ -1191,20 +1222,27 @@ export function createChart<TData extends DataRow = DataRow>(
       const snapshot = transitionSnapshot;
       transitionSnapshot = null;
 
-      transitionHandle = runTransition({
+      const handle = runTransition({
         svg: svgElement as SVGSVGElement,
         prevLayout,
         nextLayout: currentLayout,
         animation: currentLayout.animation!,
         fromSnapshot: snapshot ?? undefined,
+        manual,
         onComplete: () => {
           transitionHandle = null;
         },
       });
-    } else {
-      // No transition started; clear any stale snapshot
-      transitionSnapshot = null;
+      // A manual transition is caller-owned: the caller steps it and finalizes
+      // via `cancel()`, and `onComplete` never fires in manual mode. Don't track
+      // it on the instance field, or it would be left pointing at a cancelled
+      // handle. The auto (rAF) path keeps tracking so retargeting can snapshot it.
+      if (!manual) transitionHandle = handle;
+      return handle;
     }
+    // No transition started; clear any stale snapshot
+    transitionSnapshot = null;
+    return null;
   }
 
   function resize(): void {
@@ -1266,21 +1304,28 @@ export function createChart<TData extends DataRow = DataRow>(
       throw new Error('Chart is not rendered yet');
     }
     const svg = svgElement;
+    // The resolved theme, defaulted into the export options, so class-based
+    // chrome fills (metrics, brand dot, legend) survive serialization away from
+    // the page stylesheet. An explicit options.theme still wins.
+    const theme = 'theme' in currentLayout ? currentLayout.theme : undefined;
+    const withTheme = <T extends { theme?: unknown }>(o: T | undefined): T =>
+      ({ theme, ...(o ?? {}) }) as T;
 
     switch (format) {
       case 'svg':
         return exportSVG(svg);
       case 'svg-with-fonts':
-        return exportSVGWithFonts(svg, exportOptions as SVGExportOptions | undefined);
+        return exportSVGWithFonts(svg, withTheme(exportOptions as SVGExportOptions | undefined));
       case 'png':
-        return exportPNG(svg, exportOptions as ExportOptions | undefined);
+        return exportPNG(svg, withTheme(exportOptions as ExportOptions | undefined));
       case 'jpg':
-        return exportJPG(svg, exportOptions as ExportOptions | undefined);
+        return exportJPG(svg, withTheme(exportOptions as ExportOptions | undefined));
       case 'gif': {
         // Dynamic import keeps the GIF encoder (optional `gifenc` peer) out of
         // the core bundle — only consumers who export GIFs load this chunk.
+        const gifOptions = withTheme(exportOptions as GIFExportOptions | undefined);
         const gifBlob: Promise<Blob> = import('./export-gif').then(({ exportGIF }) =>
-          exportGIF(svg, currentLayout.animation, exportOptions as GIFExportOptions | undefined),
+          exportGIF(svg, currentLayout.animation, gifOptions),
         );
         return gifBlob;
       }
@@ -1413,6 +1458,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
   return {
     update,
+    beginManualUpdate,
     resize,
     export: doExport,
     destroy,

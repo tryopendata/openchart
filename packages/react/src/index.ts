@@ -21,12 +21,14 @@ export * from '@opendata-ai/openchart-core';
 export type {
   JPGExportOptions,
   PNGExportOptions,
+  SpecSequenceOptions,
   SVGExportOptions,
 } from '@opendata-ai/openchart-vanilla';
 export {
   exportCSV,
   exportJPG,
   exportPNG,
+  exportSpecSequence,
   exportSVG,
   exportSVGWithFonts,
 } from '@opendata-ai/openchart-vanilla';

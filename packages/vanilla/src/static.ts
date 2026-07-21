@@ -10,16 +10,12 @@ import type {
   ThemeConfig,
   TileMapSpec,
 } from '@opendata-ai/openchart-core';
-import {
-  adaptForLightLineStroke,
-  cssTokenDefault,
-  isLayerSpec,
-  isTileMapSpec,
-} from '@opendata-ai/openchart-core';
+import { isLayerSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
 import { compileChart, compileLayer, compileTileMap } from '@opendata-ai/openchart-engine';
 import { SVG_NS } from './renderers/svg-dom';
 import { resetSvgIdCounter } from './svg-ids';
 import { renderChartSVG } from './svg-renderer';
+import { buildThemeStyleBlock } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
 
 const esmRequire = createRequire(import.meta.url);
@@ -54,75 +50,6 @@ export interface StaticRenderOptions {
 function resolveStaticDarkMode(mode?: DarkMode): boolean {
   if (mode === 'force') return true;
   return false;
-}
-
-function buildThemeStyleBlock(theme: ResolvedTheme): string {
-  const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
-  const bg =
-    theme.colors.background === 'transparent'
-      ? theme.isDark
-        ? cssTokenDefault('--oc-bg', 'dark')
-        : cssTokenDefault('--oc-bg', 'light')
-      : theme.colors.background;
-
-  const props = [
-    `--oc-font-family: ${theme.fonts.family}`,
-    `--oc-font-mono: ${theme.fonts.mono}`,
-    `--oc-title-size: ${theme.chrome.title.fontSize}px`,
-    `--oc-title-weight: ${theme.chrome.title.fontWeight}`,
-    `--oc-title-tracking: ${cssTokenDefault('--oc-title-tracking', 'light')}`,
-    `--oc-subtitle-size: ${theme.chrome.subtitle.fontSize}px`,
-    `--oc-subtitle-weight: ${theme.chrome.subtitle.fontWeight}`,
-    `--oc-source-size: ${theme.chrome.source.fontSize}px`,
-    `--oc-source-weight: ${theme.chrome.source.fontWeight}`,
-    `--oc-body-size: ${theme.fonts.sizes.body}px`,
-    `--oc-eyebrow-size: ${theme.chrome.eyebrow.fontSize}px`,
-    `--oc-eyebrow-weight: ${theme.chrome.eyebrow.fontWeight}`,
-    `--oc-eyebrow-tracking: ${cssTokenDefault('--oc-eyebrow-tracking', 'light')}`,
-    `--oc-bg: ${bg}`,
-    `--oc-text: ${theme.colors.text}`,
-    `--oc-text-muted: ${theme.colors.axis}`,
-    `--oc-text-faint: ${theme.isDark ? cssTokenDefault('--oc-text-faint', 'dark') : cssTokenDefault('--oc-text-faint', 'light')}`,
-    `--oc-gridline: ${theme.colors.gridline}`,
-    `--oc-axis: ${theme.colors.axis}`,
-    `--oc-border-radius: ${theme.borderRadius}px`,
-    `--oc-accent: ${accent}`,
-    `--oc-accent-strong: ${adaptForLightLineStroke(accent)}`,
-    `--oc-positive: ${theme.colors.positive}`,
-    `--oc-negative: ${theme.colors.negative}`,
-    `--oc-legend-text: ${theme.isDark ? cssTokenDefault('--oc-legend-text', 'dark') : cssTokenDefault('--oc-legend-text', 'light')}`,
-    `--oc-space-2: ${theme.spacing.chromeGap * 2}px`,
-    `--oc-space-4: ${theme.spacing.padding}px`,
-  ];
-
-  const rules = [
-    `svg.oc-chart { ${props.join('; ')}; }`,
-    `.oc-chrome { font-family: var(--oc-font-family); }`,
-    `.oc-eyebrow { font-size: var(--oc-eyebrow-size); font-weight: var(--oc-eyebrow-weight); letter-spacing: var(--oc-eyebrow-tracking); text-transform: uppercase; fill: var(--oc-accent); }`,
-    `.oc-title { font-size: var(--oc-title-size); font-weight: var(--oc-title-weight); letter-spacing: var(--oc-title-tracking); fill: var(--oc-text); }`,
-    `.oc-subtitle { font-size: var(--oc-subtitle-size); font-weight: var(--oc-subtitle-weight); fill: var(--oc-text-muted); }`,
-    `.oc-source, .oc-byline, .oc-footer { font-size: var(--oc-source-size); font-weight: var(--oc-source-weight); fill: var(--oc-text-muted); }`,
-    `.oc-brand { font-size: 11px; font-weight: 510; letter-spacing: 0.02em; fill: var(--oc-text-faint); }`,
-    `.oc-brand-dot { fill: var(--oc-accent); }`,
-    `.oc-eyebrow-dot { fill: var(--oc-accent); }`,
-    `.oc-metrics { font-family: var(--oc-font-family); }`,
-    `.oc-metric-label { font-size: 10px; font-weight: 510; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--oc-text-muted); }`,
-    `.oc-metric-value { font-size: 22px; font-weight: 510; letter-spacing: -0.01em; fill: var(--oc-text); font-variant-numeric: tabular-nums; }`,
-    `.oc-metric-delta-up { fill: var(--oc-positive); font-size: 12px; font-weight: 510; }`,
-    `.oc-metric-delta-down { fill: var(--oc-negative); font-size: 12px; font-weight: 510; }`,
-    `.oc-axis-tick-inline { font-size: 11px; font-weight: 400; fill: var(--oc-text-muted); }`,
-    `.oc-endpoint-labels { font-family: var(--oc-font-family); }`,
-    `.oc-endpoint-label { fill: var(--oc-endpoint-label-color, var(--oc-text)); }`,
-    `.oc-endpoint-value { fill: var(--oc-endpoint-value-color, var(--oc-text-muted)); }`,
-    `.oc-endpoint-leader { stroke: var(--oc-endpoint-leader-color, currentColor); }`,
-    `.oc-annotation-subtitle { fill: var(--oc-annotation-subtitle-color, var(--oc-text-muted)); }`,
-    `.oc-metric-secondary { fill: var(--oc-positive); font-size: 12px; font-weight: 400; }`,
-    `.oc-legend { font-family: var(--oc-font-family); font-size: var(--oc-body-size); }`,
-    `.oc-legend-entry { cursor: default; }`,
-    `.oc-legend text { fill: var(--oc-legend-text); }`,
-  ];
-
-  return rules.join('\n');
 }
 
 function stripInteractiveElements(svg: Element): void {

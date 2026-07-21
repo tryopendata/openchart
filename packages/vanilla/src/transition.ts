@@ -108,6 +108,17 @@ export interface TransitionHandle {
   readonly running: boolean;
   /** Capture current interpolated geometry for all in-flight tweens. */
   snapshot(): GeometrySnapshot;
+  /**
+   * Apply the transition's DOM state at an explicit elapsed time (ms), without
+   * the rAF clock. Only meaningful when the transition was started with
+   * `manual: true` (which suppresses the internal rAF loop). Used by headless
+   * frame capture (GIF export) to sample the tween deterministically at each
+   * frame's timestamp. Returns true while the transition is still in progress
+   * (elapsed < total), false once it has reached its end.
+   */
+  step(elapsedMs: number): boolean;
+  /** The transition's total duration in ms (update/exit, whichever is longer). */
+  readonly totalMs: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -893,8 +904,15 @@ export function runTransition(args: {
   onComplete: () => void;
   /** Snapshot from a cancelled in-flight transition for retargeting. */
   fromSnapshot?: GeometrySnapshot;
+  /**
+   * Suppress the internal rAF loop; the caller drives the transition via
+   * `handle.step(elapsedMs)`. Used by headless frame capture. `onComplete` is
+   * NOT called automatically in manual mode — the caller finalizes by stepping
+   * to `totalMs` (which snaps to final) or calling `cancel()`.
+   */
+  manual?: boolean;
 }): TransitionHandle {
-  const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot } = args;
+  const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot, manual } = args;
   const update = animation.update!;
   const exit = animation.exit ?? { ...EXIT_DEFAULTS };
 
@@ -915,6 +933,10 @@ export function runTransition(args: {
       snapshot() {
         return new Map();
       },
+      step() {
+        return false;
+      },
+      totalMs: 0,
     };
   }
 
@@ -1173,7 +1195,11 @@ export function runTransition(args: {
     return snap;
   }
 
-  rafId = requestAnimationFrame(tick);
+  // In manual mode the caller drives the transition via `step()`; skip the rAF
+  // clock entirely. Otherwise start the normal real-time animation.
+  if (!manual) {
+    rafId = requestAnimationFrame(tick);
+  }
 
   return {
     cancel(): void {
@@ -1196,6 +1222,26 @@ export function runTransition(args: {
     snapshot(): GeometrySnapshot {
       return captureSnapshot();
     },
+    step(elapsedMs: number): boolean {
+      // Apply the same per-tween state the rAF `tick` computes, at an explicit
+      // time. No requestAnimationFrame — the caller (headless capture) rasterizes
+      // between steps. Mirrors tick()'s body minus the rAF scheduling.
+      lastElapsed = elapsedMs;
+      for (const tw of tweens) {
+        applyTweenState(tw, elapsedMs, update, exit, enterDelay, enterDuration);
+      }
+      applySecondaryOpacity(secondaryEls, elapsedMs, enterDelay, enterDuration);
+      if (elapsedMs >= totalMs) {
+        // Snap to exact final geometry (paths, ghosts removed) so the last frame
+        // is pixel-correct, but do NOT flip `running` — the caller decides when
+        // to finalize the manual run via `cancel()`.
+        snapToFinal();
+        removeGhosts();
+        return false;
+      }
+      return true;
+    },
+    totalMs,
   };
 }
 

@@ -8,6 +8,9 @@
  * - CSV: converts a data array to comma-separated text
  */
 
+import type { ResolvedTheme } from '@opendata-ai/openchart-core';
+import { injectThemeStyleBlock } from './theme-style-block';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -15,6 +18,13 @@
 export interface SVGExportOptions {
   /** Embed fonts as base64 data URIs in the SVG. Defaults to true. */
   embedFonts?: boolean;
+  /**
+   * Resolved theme to inline as a `<style>` block, so class-based fills (metric
+   * cells, brand watermark dot, legend text, endpoint labels) survive
+   * serialization away from the page stylesheet. Omit to skip — a chart whose
+   * chrome is all inline-filled exports fine without it.
+   */
+  theme?: ResolvedTheme;
 }
 
 export interface PNGExportOptions extends SVGExportOptions {
@@ -295,6 +305,7 @@ export async function exportSVGWithFonts(
 ): Promise<string> {
   const clone = svgElement.cloneNode(true) as SVGElement;
   const shouldEmbed = options?.embedFonts ?? true;
+  injectThemeStyleBlock(clone, options?.theme);
   if (shouldEmbed) {
     await embedFonts(clone);
   }
@@ -414,9 +425,13 @@ export function rasterizeSVGToCanvas(
 async function prepareRasterSVG(
   svgElement: SVGElement,
   shouldEmbed: boolean,
+  theme?: ResolvedTheme,
 ): Promise<{ svgString: string; width: number; height: number }> {
   const { width, height } = getSVGDimensions(svgElement);
   const clone = svgElement.cloneNode(true) as SVGElement;
+  // Inline the theme style block so class-based fills survive the detach from
+  // the page stylesheet. No-op when theme is undefined.
+  injectThemeStyleBlock(clone, theme);
   if (shouldEmbed) {
     await embedFonts(clone);
   }
@@ -437,7 +452,11 @@ async function prepareRasterSVG(
 export async function exportPNG(svgElement: SVGElement, options?: PNGExportOptions): Promise<Blob> {
   const dpi = options?.dpi ?? 2;
   const shouldEmbed = options?.embedFonts ?? true;
-  const { svgString, width, height } = await prepareRasterSVG(svgElement, shouldEmbed);
+  const { svgString, width, height } = await prepareRasterSVG(
+    svgElement,
+    shouldEmbed,
+    options?.theme,
+  );
   const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi);
 
   return new Promise<Blob>((resolve, reject) => {
@@ -467,7 +486,11 @@ export async function exportJPG(svgElement: SVGElement, options?: JPGExportOptio
   const quality = options?.quality ?? 0.92;
   const shouldEmbed = options?.embedFonts ?? true;
   const backgroundColor = getSVGBackgroundColor(svgElement);
-  const { svgString, width, height } = await prepareRasterSVG(svgElement, shouldEmbed);
+  const { svgString, width, height } = await prepareRasterSVG(
+    svgElement,
+    shouldEmbed,
+    options?.theme,
+  );
 
   // Fill an opaque background before drawing so transparency doesn't render
   // as black in the JPEG. Runs before ctx.scale, so use the raw canvas size.
