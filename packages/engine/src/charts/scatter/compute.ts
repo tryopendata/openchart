@@ -15,6 +15,7 @@ import type {
   MarkAria,
   PointMark,
   Rect,
+  ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
@@ -85,6 +86,7 @@ export function computeScatterMarks(
   scales: ResolvedScales,
   _chartArea: Rect,
   _strategy: LayoutStrategy,
+  theme?: ResolvedTheme,
 ): PointMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -127,6 +129,14 @@ export function computeScatterMarks(
   // set per-layer color/size and all points collapse to the default blue.
   const constFill = spec.markDef.fill;
   const constSize = spec.markDef.size;
+
+  // Default point separator stroke. The classic white halo reads as a bright
+  // grid of rings on a dark canvas, so match the stroke to the resolved theme
+  // background when it's opaque enough to sit behind the dots (dark mode ->
+  // dark stroke). A transparent background (light mode) keeps the white halo,
+  // which is what gives dots separation on a light ground.
+  const bg = theme?.colors?.background;
+  const defaultStroke = bg && bg !== 'transparent' ? bg : '#ffffff';
 
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
   const keyField = keyEnc?.field;
@@ -179,7 +189,7 @@ export function computeScatterMarks(
       cy,
       r: radius,
       fill: color,
-      stroke: spec.markDef.stroke ?? '#ffffff',
+      stroke: spec.markDef.stroke ?? defaultStroke,
       strokeWidth: spec.markDef.strokeWidth ?? 1,
       fillOpacity: spec.markDef.opacity ?? 0.7,
       data: row as Record<string, unknown>,

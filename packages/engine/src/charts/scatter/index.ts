@@ -20,7 +20,7 @@ import { computeTrendLine } from './trendline';
  * for bubbles and a trend line overlay.
  */
 export const scatterRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
-  const pointMarks = computeScatterMarks(spec, scales, chartArea, strategy);
+  const pointMarks = computeScatterMarks(spec, scales, chartArea, strategy, theme);
   const marks: Mark[] = [...pointMarks];
 
   // Regression trend line renders by default but is opt-out via

@@ -1,4 +1,4 @@
-import type { LayoutStrategy, PointMark, Rect } from '@opendata-ai/openchart-core';
+import type { LayoutStrategy, PointMark, Rect, ResolvedTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -477,6 +477,39 @@ describe('computeScatterMarks', () => {
       const fills = new Set(marks.map((m) => m.fill));
       expect(fills.size).toBe(2);
       expect(fills.has('#c1462f')).toBe(false);
+    });
+
+    it('defaults the point stroke to the theme background on a dark canvas', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const theme = { colors: { background: '#09090b' } } as ResolvedTheme;
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
+      expect(marks.every((m) => m.stroke === '#09090b')).toBe(true);
+    });
+
+    it('keeps the white stroke when the theme background is transparent (light canvas)', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const theme = { colors: { background: 'transparent' } } as ResolvedTheme;
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
+      expect(marks.every((m) => m.stroke === '#ffffff')).toBe(true);
+    });
+
+    it('lets an explicit mark.stroke override the theme default', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point', stroke: '#123456' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const theme = { colors: { background: '#09090b' } } as ResolvedTheme;
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
+      expect(marks.every((m) => m.stroke === '#123456')).toBe(true);
     });
   });
 });
