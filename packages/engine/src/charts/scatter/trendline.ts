@@ -11,6 +11,8 @@ import type { LineMark, MarkAria, PointMark } from '@opendata-ai/openchart-core'
 // Constants
 // ---------------------------------------------------------------------------
 
+// Fallback used only when no theme color is passed. Themed callers should pass
+// the resolved text color so the line reads on both light and dark grounds.
 const TRENDLINE_COLOR = '#666666';
 const TRENDLINE_STROKE_WIDTH = 1.5;
 const TRENDLINE_DASH = '6 4';
@@ -60,7 +62,11 @@ function linearRegression(
  * Returns a single LineMark spanning the x-range of the data points,
  * rendered as a dashed line. Returns null if regression can't be computed.
  */
-export function computeTrendLine(marks: PointMark[]): LineMark | null {
+export function computeTrendLine(
+  marks: PointMark[],
+  stroke: string = TRENDLINE_COLOR,
+  strokeWidth: number = TRENDLINE_STROKE_WIDTH,
+): LineMark | null {
   if (marks.length < 2) return null;
 
   const points = marks.map((m) => ({ x: m.cx, y: m.cy }));
@@ -91,8 +97,8 @@ export function computeTrendLine(marks: PointMark[]): LineMark | null {
       { x: minX, y: y1 },
       { x: maxX, y: y2 },
     ],
-    stroke: TRENDLINE_COLOR,
-    strokeWidth: TRENDLINE_STROKE_WIDTH,
+    stroke,
+    strokeWidth,
     strokeDasharray: TRENDLINE_DASH,
     data: [],
     aria,

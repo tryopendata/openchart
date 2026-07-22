@@ -39,7 +39,9 @@
   },
   "overrides": {
     "strip-ansi": "6.0.1",
-    "string-width": "4.2.3"
+    "string-width": "4.2.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
@@ -52,8 +54,8 @@
     "husky": "^9.1.7",
     "lightningcss-cli": "^1.32.0",
     "lightningcss-cli-darwin-arm64": "^1.32.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "ts-json-schema-generator": "^2.9.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.2",

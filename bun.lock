@@ -15,8 +15,8 @@
         "husky": "^9.1.7",
         "lightningcss-cli": "^1.32.0",
         "lightningcss-cli-darwin-arm64": "^1.32.0",
-        "react": "^19.2.4",
-        "react-dom": "^19.2.4",
+        "react": "19.2.8",
+        "react-dom": "19.2.8",
         "ts-json-schema-generator": "^2.9.0",
         "tsup": "^8.5.1",
         "typescript": "^6.0.2",
@@ -44,7 +44,7 @@
     },
     "packages/core": {
       "name": "@opendata-ai/openchart-core",
-      "version": "8.0.0-rc.11",
+      "version": "8.0.0-rc.18",
       "dependencies": {
         "d3-color": "^3.1.0",
         "d3-format": "^3.1.0",
@@ -60,7 +60,7 @@
     },
     "packages/engine": {
       "name": "@opendata-ai/openchart-engine",
-      "version": "8.0.0-rc.11",
+      "version": "8.0.0-rc.18",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "d3-array": "^3.2.0",
@@ -88,7 +88,7 @@
     },
     "packages/react": {
       "name": "@opendata-ai/openchart-react",
-      "version": "8.0.0-rc.11",
+      "version": "8.0.0-rc.18",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -107,7 +107,7 @@
     },
     "packages/svelte": {
       "name": "@opendata-ai/openchart-svelte",
-      "version": "8.0.0-rc.11",
+      "version": "8.0.0-rc.18",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -126,7 +126,7 @@
     },
     "packages/vanilla": {
       "name": "@opendata-ai/openchart-vanilla",
-      "version": "8.0.0-rc.11",
+      "version": "8.0.0-rc.18",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
         "@opendata-ai/openchart-core": "workspace:*",
@@ -152,7 +152,7 @@
     },
     "packages/vue": {
       "name": "@opendata-ai/openchart-vue",
-      "version": "8.0.0-rc.11",
+      "version": "8.0.0-rc.18",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -168,6 +168,8 @@
     },
   },
   "overrides": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "string-width": "4.2.3",
     "strip-ansi": "6.0.1",
   },
@@ -1256,9 +1258,9 @@
 
     "queue-microtask": ["queue-microtask@1.2.3", "", {}, "sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A=="],
 
-    "react": ["react@19.2.4", "", {}, "sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ=="],
+    "react": ["react@19.2.8", "", {}, "sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw=="],
 
-    "react-dom": ["react-dom@19.2.4", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.4" } }, "sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ=="],
+    "react-dom": ["react-dom@19.2.8", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.8" } }, "sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ=="],
 
     "react-hotkeys-hook": ["react-hotkeys-hook@4.6.2", "", { "peerDependencies": { "react": ">=16.8.1", "react-dom": ">=16.8.1" } }, "sha512-FmP+ZriY3EG59Ug/lxNfrObCnW9xQShgk7Nb83+CkpfkcCpfS95ydv+E9JuXA5cp8KtskU7LGlIARpkc92X22Q=="],
 

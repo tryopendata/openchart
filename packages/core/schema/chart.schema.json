@@ -152,8 +152,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -421,8 +428,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -690,8 +704,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -959,8 +980,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -1228,8 +1256,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -1497,8 +1532,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -1766,8 +1808,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -2035,8 +2084,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -2304,8 +2360,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -2573,8 +2636,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -2842,8 +2912,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -3111,8 +3188,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -3380,8 +3464,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -3649,8 +3740,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -3918,8 +4016,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -4187,8 +4292,15 @@
                           "description": "Clip marks to the chart area."
                         },
                         "trendline": {
-                          "type": "boolean",
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals."
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "dx": {
                           "type": "number",
@@ -4454,6 +4566,29 @@
       ],
       "additionalProperties": false,
       "description": "Radial gradient definition. Coordinates are in [0,1] normalized space relative to the mark's bounding box."
+    },
+    "TrendlineConfig": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "enum": [
+            "above",
+            "below"
+          ],
+          "description": "Stacking order relative to the point marks. `'below'` (default) draws the line behind the dots; `'above'` draws it on top so it stays visible over a dense cloud."
+        },
+        "stroke": {
+          "type": "string",
+          "description": "Stroke color. Defaults to the theme's high-contrast text color so the line reads on both light and dark grounds. Set an explicit CSS color to override."
+        },
+        "strokeWidth": {
+          "type": "number",
+          "description": "Stroke width in pixels. Defaults to 1.5. Over a dense cloud with `layer: 'above'`, a heavier line (e.g. 2.5) stays legible where the thin default disappears into the dots."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Configuration for the scatter regression trend line. Passed as the object form of `MarkDef.trendline`."
     },
     "ArcEncoding<DataRow>": {
       "type": "object",

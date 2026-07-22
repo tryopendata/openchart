@@ -141,6 +141,30 @@ export function getRepresentativeColor(fill: string | GradientDef): string {
 // ---------------------------------------------------------------------------
 
 /**
+ * Configuration for the scatter regression trend line. Passed as the object
+ * form of `MarkDef.trendline`.
+ */
+export interface TrendlineConfig {
+  /**
+   * Stacking order relative to the point marks. `'below'` (default) draws the
+   * line behind the dots; `'above'` draws it on top so it stays visible over a
+   * dense cloud.
+   */
+  layer?: 'above' | 'below';
+  /**
+   * Stroke color. Defaults to the theme's high-contrast text color so the line
+   * reads on both light and dark grounds. Set an explicit CSS color to override.
+   */
+  stroke?: string;
+  /**
+   * Stroke width in pixels. Defaults to 1.5. Over a dense cloud with `layer:
+   * 'above'`, a heavier line (e.g. 2.5) stays legible where the thin default
+   * disappears into the dots.
+   */
+  strokeWidth?: number;
+}
+
+/**
  * Mark definition object with visual properties.
  *
  * When `mark` is a string, it's shorthand for `{ type: markString }`.
@@ -217,8 +241,13 @@ export interface MarkDef {
    * suppress it when the chart already carries its own reference line (e.g. a
    * manual x=y diagonal in a separate layer), which would otherwise produce
    * two competing diagonals.
+   *
+   * Pass an object to control stacking order: the line renders `below` the
+   * points by default, but a dense scatter (thousands of overlapping dots)
+   * fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the
+   * reference line over the cloud.
    */
-  trendline?: boolean;
+  trendline?: boolean | TrendlineConfig;
   /**
    * Horizontal pixel offset from the data anchor. Only meaningful when `type`
    * is `'text'`. Use it to lift a label clear of the mark it annotates instead

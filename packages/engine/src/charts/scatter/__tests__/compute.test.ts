@@ -404,6 +404,81 @@ describe('computeScatterMarks', () => {
       expect(uniqueXs.size).toBe(3);
     });
   });
+
+  describe('mark-level constants (no encoding field)', () => {
+    const baseData = [
+      { x: 10, y: 20 },
+      { x: 30, y: 40 },
+    ];
+    const baseEncoding = {
+      x: { field: 'x', type: 'quantitative' as const },
+      y: { field: 'y', type: 'quantitative' as const },
+    };
+    const baseSpec = {
+      markType: 'point' as const,
+      data: baseData,
+      encoding: baseEncoding,
+      chrome: {},
+      annotations: [],
+      responsive: true,
+      theme: {},
+      darkMode: 'off' as const,
+      labels: { density: 'auto' as const, format: '' },
+    };
+
+    it('applies a constant mark.fill to every point when no color field is set', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point', fill: '#c1462f' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+      expect(marks).toHaveLength(2);
+      expect(marks.every((m) => m.fill === '#c1462f')).toBe(true);
+    });
+
+    it('applies a constant mark.size as the point radius', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point', size: 12 },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+      expect(marks.every((m) => m.r === 12)).toBe(true);
+    });
+
+    it('applies a constant mark.opacity and mark.stroke', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point', opacity: 0.15, stroke: 'none' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+      expect(marks.every((m) => m.fillOpacity === 0.15)).toBe(true);
+      expect(marks.every((m) => m.stroke === 'none')).toBe(true);
+    });
+
+    it('lets an encoding color field win over a constant mark.fill', () => {
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        data: [
+          { x: 10, y: 20, grp: 'a' },
+          { x: 30, y: 40, grp: 'b' },
+        ],
+        encoding: {
+          ...baseEncoding,
+          color: { field: 'grp', type: 'nominal' },
+        },
+        markDef: { type: 'point', fill: '#c1462f' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+      // Two categories -> two distinct scale colors, neither forced to the constant.
+      const fills = new Set(marks.map((m) => m.fill));
+      expect(fills.size).toBe(2);
+      expect(fills.has('#c1462f')).toBe(false);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -484,5 +559,46 @@ describe('trendline opt-out', () => {
 
     expect(marks.some((m) => m.type === 'line')).toBe(false);
     expect(marks.every((m) => m.type === 'point')).toBe(true);
+  });
+
+  it('draws the trend line behind the points by default', () => {
+    const spec = makeBasicScatterSpec();
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = scatterRenderer(spec, scales, chartArea, fullStrategy, undefined as never);
+
+    // First mark renders first, i.e. underneath everything drawn after it.
+    expect(marks[0].type).toBe('line');
+  });
+
+  it('draws the trend line on top when trendline.layer is "above"', () => {
+    const base = makeBasicScatterSpec();
+    const spec: NormalizedChartSpec = {
+      ...base,
+      markDef: { type: 'point', trendline: { layer: 'above' } },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = scatterRenderer(spec, scales, chartArea, fullStrategy, undefined as never);
+
+    // Line still present, but now last so it paints over the point cloud.
+    expect(marks.some((m) => m.type === 'line')).toBe(true);
+    expect(marks[marks.length - 1].type).toBe('line');
+  });
+
+  it('applies the trendline config stroke and strokeWidth to the line mark', () => {
+    const base = makeBasicScatterSpec();
+    const spec: NormalizedChartSpec = {
+      ...base,
+      markDef: {
+        type: 'point',
+        trendline: { layer: 'above', stroke: '#ff00ff', strokeWidth: 3 },
+      },
+    };
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = scatterRenderer(spec, scales, chartArea, fullStrategy, undefined as never);
+
+    const line = marks.find((m) => m.type === 'line');
+    expect(line).toBeDefined();
+    expect((line as { stroke: string }).stroke).toBe('#ff00ff');
+    expect((line as { strokeWidth: number }).strokeWidth).toBe(3);
   });
 });

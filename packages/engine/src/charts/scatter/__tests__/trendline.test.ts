@@ -108,18 +108,34 @@ describe('computeTrendLine', () => {
       expect(result.strokeDasharray).toBe('6 4');
     });
 
-    it('has a subdued stroke color', () => {
+    it('falls back to a subdued stroke color when none is passed', () => {
       const points = [makePoint(100, 200), makePoint(300, 100)];
       const result = computeTrendLine(points)!;
 
       expect(result.stroke).toBe('#666666');
     });
 
-    it('has a thin stroke width', () => {
+    it('uses the passed stroke color so it can read on the current theme ground', () => {
+      // The renderer passes theme.colors.text so the line stays visible on
+      // both light and dark backgrounds (the old hardcoded gray vanished on black).
+      const points = [makePoint(100, 200), makePoint(300, 100)];
+      const result = computeTrendLine(points, '#cccccc')!;
+
+      expect(result.stroke).toBe('#cccccc');
+    });
+
+    it('has a thin stroke width by default', () => {
       const points = [makePoint(100, 200), makePoint(300, 100)];
       const result = computeTrendLine(points)!;
 
       expect(result.strokeWidth).toBe(1.5);
+    });
+
+    it('uses the passed stroke width so a dense-cloud line can be made heavier', () => {
+      const points = [makePoint(100, 200), makePoint(300, 100)];
+      const result = computeTrendLine(points, '#fff', 2.5)!;
+
+      expect(result.strokeWidth).toBe(2.5);
     });
 
     it('has an aria label describing the trend', () => {

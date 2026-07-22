@@ -120,6 +120,14 @@ export function computeScatterMarks(
   const resolvedSize = buildSizeScale(sizeEnc, spec.data, SIZE_SCALE_DEFAULTS.point);
   const sizeScale = resolvedSize?.scale;
 
+  // Mark-level constants (VL-aligned "Default fill/size/opacity"). These apply
+  // only when the matching encoding channel isn't a data field: a constant
+  // `mark.fill` colors every point, `mark.size` sets a constant radius. Without
+  // this, layered scatters (a dim background layer + a highlighted layer) can't
+  // set per-layer color/size and all points collapse to the default blue.
+  const constFill = spec.markDef.fill;
+  const constSize = spec.markDef.size;
+
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
   const keyField = keyEnc?.field;
   const marks: PointMark[] = [];
@@ -140,11 +148,14 @@ export function computeScatterMarks(
       color = Number.isFinite(val)
         ? getSequentialColor(scales, val)
         : getColor(scales, '__default__');
-    } else {
+    } else if (colorField) {
       color = getColor(scales, category ?? '__default__');
+    } else {
+      // No color field: honor a constant mark.fill, else the default series color.
+      color = constFill ?? getColor(scales, '__default__');
     }
 
-    let radius = DEFAULT_POINT_RADIUS;
+    let radius = constSize != null ? constSize : DEFAULT_POINT_RADIUS;
     if (sizeScale && sizeField) {
       const sizeVal = Number(row[sizeField]);
       if (Number.isFinite(sizeVal)) {
@@ -168,9 +179,9 @@ export function computeScatterMarks(
       cy,
       r: radius,
       fill: color,
-      stroke: '#ffffff',
-      strokeWidth: 1,
-      fillOpacity: 0.7,
+      stroke: spec.markDef.stroke ?? '#ffffff',
+      strokeWidth: spec.markDef.strokeWidth ?? 1,
+      fillOpacity: spec.markDef.opacity ?? 0.7,
       data: row as Record<string, unknown>,
       aria,
     });
