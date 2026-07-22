@@ -1,5 +1,24 @@
 # Changelog
 
+## [8.0.0-rc.19](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.18...core-v8.0.0-rc.19) (2026-07-22)
+
+
+### Features
+
+* scatter trendline stacking/styling and mark-level color/size constants ([84767fb](https://github.com/tryopendata/openchart/commit/84767fb))
+* headless GIF export of inter-step update tween ([95a1326](https://github.com/tryopendata/openchart/commit/95a1326))
+* scatter entrance timing and deepen the pull-in ([5f2e0f9](https://github.com/tryopendata/openchart/commit/5f2e0f9))
+* host-legend API + nodeLabelPriority encoding channel ([839e1dd](https://github.com/tryopendata/openchart/commit/839e1dd))
+* organic entrance pop + chrome collision fix ([2024728](https://github.com/tryopendata/openchart/commit/2024728))
+
+
+### Bug Fixes
+
+* dual-axis lines no longer break where layers' x-values interleave ([809e231](https://github.com/tryopendata/openchart/commit/809e231))
+* embed color profile in raster exports to fix washed-out colors ([9fed20b](https://github.com/tryopendata/openchart/commit/9fed20b))
+* review fixes for entrance shift, zoom inset, and edge diff ([c44241b](https://github.com/tryopendata/openchart/commit/c44241b))
+* close plan-review gaps before the RC cut ([4bd12d7](https://github.com/tryopendata/openchart/commit/4bd12d7))
+
 ## [8.0.0-rc.18](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.17...core-v8.0.0-rc.18) (2026-07-20)
 
 
