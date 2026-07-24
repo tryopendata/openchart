@@ -1,5 +1,36 @@
 # Changelog
 
+## [8.0.0-rc.21](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.20...core-v8.0.0-rc.21) (2026-07-24)
+
+
+### Features
+
+* promote dense scatters to canvas automatically ([12dfe87](https://github.com/tryopendata/openchart/commit/12dfe87))
+* canvas-mode exports and a screen-reader table cap ([d7ff0c1](https://github.com/tryopendata/openchart/commit/d7ff0c1))
+* canvas update transitions on the shared transition clock ([a988286](https://github.com/tryopendata/openchart/commit/a988286))
+* canvas entrance animation with a canvas-aware completion clock ([baed972](https://github.com/tryopendata/openchart/commit/baed972))
+* canvas mark layer for high-cardinality scatter (opt-in) ([8b336e0](https://github.com/tryopendata/openchart/commit/8b336e0))
+* configurable data-update transition cap via animation.update.maxMarks ([06d537f](https://github.com/tryopendata/openchart/commit/06d537f))
+* scatter trendline stacking/styling and mark-level color/size constants ([84767fb](https://github.com/tryopendata/openchart/commit/84767fb))
+* headless GIF export of inter-step update tween ([95a1326](https://github.com/tryopendata/openchart/commit/95a1326))
+* scatter entrance timing and deepen the pull-in ([5f2e0f9](https://github.com/tryopendata/openchart/commit/5f2e0f9))
+* host-legend API + nodeLabelPriority encoding channel ([839e1dd](https://github.com/tryopendata/openchart/commit/839e1dd))
+* organic entrance pop + chrome collision fix ([2024728](https://github.com/tryopendata/openchart/commit/2024728))
+
+
+### Bug Fixes
+
+* composite canvas scatter points individually ([5cb5384](https://github.com/tryopendata/openchart/commit/5cb5384))
+* address code review findings on the canvas mark layer ([529ebb8](https://github.com/tryopendata/openchart/commit/529ebb8))
+* dual-axis lines no longer break where layers' x-values interleave ([809e231](https://github.com/tryopendata/openchart/commit/809e231))
+* embed color profile in raster exports to fix washed-out colors ([9fed20b](https://github.com/tryopendata/openchart/commit/9fed20b))
+* review fixes for entrance shift, zoom inset, and edge diff ([c44241b](https://github.com/tryopendata/openchart/commit/c44241b))
+
+
+### Refactoring
+
+* extract shared motion + spatial index out of graph/ ([c470c14](https://github.com/tryopendata/openchart/commit/c470c14))
+
 ## [8.0.0-rc.20](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.19...core-v8.0.0-rc.20) (2026-07-24)
 
 
