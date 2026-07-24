@@ -20,10 +20,26 @@ import type { CanvasGridline, CanvasRect, ScatterCanvasState, ScatterPointsSoA }
  * an SVG-mode render instead (a later stage), so the flattening is screen-only.
  */
 export function flattenFill(fill: string | GradientDef): string {
-  if (typeof fill === 'string') return fill;
   // 'transparent', not 'none': canvas silently ignores invalid fillStyle
   // assignments, so 'none' would leave the previous fill color in effect.
+  if (typeof fill === 'string') return fill.toLowerCase() === 'none' ? 'transparent' : fill;
   return fill.stops[0]?.color ?? 'transparent';
+}
+
+/**
+ * Normalize a stroke color for canvas painting.
+ *
+ * SVG accepts `stroke="none"` as "draw no stroke"; canvas does not. Assigning
+ * an invalid string to `strokeStyle` is silently IGNORED, so a 'none' that
+ * reaches the stroke pass strokes every point with whatever color was set
+ * last. The renderer skips points whose stroke is the empty string, so '' is
+ * the canvas spelling of "no stroke" — and unlike 'transparent' (which is
+ * normalized here too), it skips the per-point `stroke()` call entirely.
+ */
+export function normalizeStroke(stroke: string | undefined): string {
+  if (!stroke) return '';
+  const lower = stroke.toLowerCase();
+  return lower === 'none' || lower === 'transparent' ? '' : stroke;
 }
 
 /** Collect gridlines from one axis into canvas-space records. */
@@ -101,7 +117,7 @@ export function buildPointsSoA(layout: ChartLayout): ScatterPointsSoA {
     soa.r[j] = mark.r;
     soa.fill[j] = flattenFill(mark.fill);
     soa.fillOpacity[j] = mark.fillOpacity ?? 1;
-    soa.stroke[j] = mark.stroke ?? '';
+    soa.stroke[j] = normalizeStroke(mark.stroke);
     soa.strokeWidth[j] = mark.strokeWidth ?? 0;
     soa.keys[j] = mark.key;
     soa.markIds[j] = markId;
