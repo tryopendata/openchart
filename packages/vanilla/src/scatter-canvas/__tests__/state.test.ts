@@ -1,7 +1,7 @@
 import type { ChartSpec, GradientDef } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
-import { buildScatterCanvasState, computeClipRect, flattenFill } from '../state';
+import { buildScatterCanvasState, computeClipRect, flattenFill, normalizeStroke } from '../state';
 
 function scatterSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   return {
@@ -38,6 +38,32 @@ describe('flattenFill', () => {
 
   it('falls back to transparent (a valid canvas color) for an empty gradient', () => {
     expect(flattenFill({ gradient: 'linear', stops: [] } as GradientDef)).toBe('transparent');
+  });
+
+  it("maps the SVG-ism 'none' to transparent (invalid canvas fillStyle)", () => {
+    expect(flattenFill('none')).toBe('transparent');
+    expect(flattenFill('NONE')).toBe('transparent');
+  });
+});
+
+describe('normalizeStroke', () => {
+  it('passes real colors through unchanged', () => {
+    expect(normalizeStroke('#ffffff')).toBe('#ffffff');
+    expect(normalizeStroke('rgba(0,0,0,0.5)')).toBe('rgba(0,0,0,0.5)');
+  });
+
+  it("maps 'none' and 'transparent' to '' (the renderer's skip sentinel)", () => {
+    // 'none' is an invalid canvas strokeStyle: the assignment is silently
+    // ignored and every point strokes with the stale color. '' makes the
+    // stroke pass skip the point entirely.
+    expect(normalizeStroke('none')).toBe('');
+    expect(normalizeStroke('None')).toBe('');
+    expect(normalizeStroke('transparent')).toBe('');
+  });
+
+  it("maps undefined and '' to ''", () => {
+    expect(normalizeStroke(undefined)).toBe('');
+    expect(normalizeStroke('')).toBe('');
   });
 });
 
@@ -167,5 +193,22 @@ describe('computeClipRect', () => {
     const rect = computeClipRect(tiny);
     expect(rect.y).toBe(layout.area.y - 2);
     expect(rect.height).toBe(layout.area.height + 4);
+  });
+});
+
+describe('buildScatterCanvasState stroke normalization', () => {
+  it("packs mark.stroke 'none' as '' so the stroke pass skips it", () => {
+    const layout = compileChart(scatterSpec({ mark: { type: 'point', stroke: 'none' } }), {
+      width: 600,
+      height: 400,
+    });
+    // Sanity: the compiled marks really carry the SVG-ism through.
+    const points = layout.marks.filter((m) => m.type === 'point');
+    expect(points.every((m) => m.stroke === 'none')).toBe(true);
+
+    const state = buildScatterCanvasState(layout);
+    for (let i = 0; i < state.marks.n; i++) {
+      expect(state.marks.stroke[i]).toBe('');
+    }
   });
 });
