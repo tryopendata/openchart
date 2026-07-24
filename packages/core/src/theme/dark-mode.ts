@@ -6,7 +6,7 @@
  */
 
 import { hsl, rgb } from 'd3-color';
-import { contrastRatio } from '../colors/contrast';
+import { contrastRatio, isOpaqueColor } from '../colors/contrast';
 import { ACHROMATIC_RAMP } from '../colors/palettes';
 import type { ResolvedTheme } from '../types/theme';
 import { DEFAULT_THEME } from './defaults';
@@ -108,9 +108,10 @@ function _luminanceFromHex(color: string): number {
 export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   const pairs = theme._tokenPairs;
   const inputBg = theme.colors.background;
-  // "transparent" preserves the background token but must still adopt dark
-  // text/gridline/axis colors — the container is dark, not the chart canvas.
-  const isTransparent = inputBg === 'transparent';
+  // A non-opaque background ('transparent', 'none', alpha-zero rgba) preserves
+  // the background token but must still adopt dark text/gridline/axis colors —
+  // the container is dark, not the chart canvas.
+  const isTransparent = !isOpaqueColor(inputBg);
   const alreadyDark = isTransparent || _luminanceFromHex(inputBg) < 0.2;
 
   // Preserve user-supplied background (including transparent) but always

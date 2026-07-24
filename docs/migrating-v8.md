@@ -907,6 +907,32 @@ escape hatch here. Charts rendering points on canvas get a much higher default
 
 ---
 
+## 20. Scatter point stroke follows the theme background
+
+Scatter and bubble points used to draw a white separator stroke unconditionally.
+The white halo is what gives overlapping dots separation on a light ground, but
+on a dark canvas it reads as a bright grid of rings. The default stroke now
+matches the resolved theme background when that background is an opaque color:
+
+```
+before:  stroke = mark.stroke ?? '#ffffff'
+after:   stroke = mark.stroke ?? (opaque theme background ? background : '#ffffff')
+```
+
+**What changes:** scatter charts on themes with an opaque dark background get
+dark separator strokes instead of white ones. The default theme background is
+`'transparent'`, so charts without a custom theme are unaffected, as is any
+theme whose background does not parse to an opaque color (`'none'`, alpha
+`rgba()`).
+
+**If you want the white halo back** on a dark theme, set it explicitly:
+
+```js
+{ mark: { type: 'point', stroke: '#ffffff' } }
+```
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
@@ -928,3 +954,6 @@ warning at compile time with the exact fix. Items with no runtime warning:
   global reset, test table pagination buttons and search inputs first.
 - **Line chart zero (section 15):** silent behavior change. Audit line chart
   specs manually; y-axis domains will be tighter.
+- **Scatter stroke default (section 20):** silent visual change, and only on
+  themes with an opaque dark background. Set `mark.stroke` explicitly to opt
+  out.

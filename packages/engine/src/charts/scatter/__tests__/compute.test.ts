@@ -501,6 +501,23 @@ describe('computeScatterMarks', () => {
       expect(marks.every((m) => m.stroke === '#ffffff')).toBe(true);
     });
 
+    it('keeps the white stroke for any non-opaque background, not just the literal "transparent"', () => {
+      // 'none' and alpha-zero rgba are truthy but paint nothing. Passing them
+      // through as the stroke would be invisible in SVG and worse on canvas,
+      // where an invalid strokeStyle is silently ignored and the previous
+      // color keeps painting.
+      const spec: NormalizedChartSpec = {
+        ...baseSpec,
+        markDef: { type: 'point' },
+      };
+      const scales = computeScales(spec, chartArea, spec.data);
+      for (const background of ['none', 'rgba(0, 0, 0, 0)', 'rgba(9, 9, 11, 0.5)']) {
+        const theme = { colors: { background } } as ResolvedTheme;
+        const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
+        expect(marks.every((m) => m.stroke === '#ffffff')).toBe(true);
+      }
+    });
+
     it('lets an explicit mark.stroke override the theme default', () => {
       const spec: NormalizedChartSpec = {
         ...baseSpec,

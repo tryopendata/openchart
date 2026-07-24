@@ -17,6 +17,7 @@ import type {
   Rect,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
+import { isOpaqueColor } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
@@ -133,10 +134,13 @@ export function computeScatterMarks(
   // Default point separator stroke. The classic white halo reads as a bright
   // grid of rings on a dark canvas, so match the stroke to the resolved theme
   // background when it's opaque enough to sit behind the dots (dark mode ->
-  // dark stroke). A transparent background (light mode) keeps the white halo,
-  // which is what gives dots separation on a light ground.
+  // dark stroke). A non-opaque background ('transparent', 'none', alpha-zero
+  // rgba) keeps the white halo: it has no color of its own to match, and
+  // passing a value like 'none' through as a stroke is worse than cosmetic --
+  // canvas silently ignores invalid strokeStyle assignments and keeps painting
+  // with whatever color was set last.
   const bg = theme?.colors?.background;
-  const defaultStroke = bg && bg !== 'transparent' ? bg : '#ffffff';
+  const defaultStroke = bg && isOpaqueColor(bg) ? bg : '#ffffff';
 
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
   const keyField = keyEnc?.field;

@@ -10,6 +10,7 @@
  * enabling darkMode.
  */
 
+import { isOpaqueColor } from '../colors/contrast';
 import type { ChromeThemeOverride, ThemeConfig } from '../types/spec';
 import type { ChromeDefaults, ResolvedTheme, Theme, TokenValue } from '../types/theme';
 import { DEFAULT_THEME } from './defaults';
@@ -192,9 +193,10 @@ function relativeLuminance(hex: string): number {
 
 /** Returns true if the hex color is perceptually dark (luminance < 0.2). */
 function isDarkBackground(hex: string): boolean {
-  // Transparent has no intrinsic luminance — don't treat it as dark so
-  // light-mode chrome text defaults don't get inverted.
-  if (hex === 'transparent') return false;
+  // A non-opaque background ('transparent', 'none', alpha-zero rgba) has no
+  // intrinsic luminance — don't treat it as dark so light-mode chrome text
+  // defaults don't get inverted.
+  if (!isOpaqueColor(hex)) return false;
   return relativeLuminance(hex) < 0.2;
 }
 
