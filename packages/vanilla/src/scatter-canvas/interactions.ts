@@ -42,20 +42,38 @@ export function wireCanvasInteractions({
   const state = layer.state;
 
   /**
+   * Cached element boxes.
+   *
+   * `getBoundingClientRect()` forces layout, and reading two of them on every
+   * `pointermove` is exactly the per-event cost this layer exists to avoid.
+   * Neither box moves on its own: a container resize tears the layer down and
+   * `render()` rebuilds it, so within one layer's life the only thing that
+   * shifts these is the viewport scrolling underneath them. Invalidate on
+   * scroll (capture phase, so ancestor scroll containers count) and on resize,
+   * then re-measure lazily on the next event that needs a box.
+   */
+  let svgRect: DOMRect | null = null;
+  let canvasRect: DOMRect | null = null;
+  const invalidateRects = (): void => {
+    svgRect = null;
+    canvasRect = null;
+  };
+
+  /**
    * Container-relative coordinates. `tooltip-events.ts` measures against the SVG
    * box and the tooltip manager positions inside the same container, so the
    * canvas must use the same origin — not its own rect, which can differ if the
    * SVG scales with the container.
    */
   function toLocal(e: PointerEvent): { x: number; y: number } {
-    const rect = svg.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (!svgRect) svgRect = svg.getBoundingClientRect();
+    return { x: e.clientX - svgRect.left, y: e.clientY - svgRect.top };
   }
 
   /** Layout-space coordinates for hit testing (the canvas is 1:1 with layout). */
   function toCanvas(e: PointerEvent): { x: number; y: number } {
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (!canvasRect) canvasRect = canvas.getBoundingClientRect();
+    return { x: e.clientX - canvasRect.left, y: e.clientY - canvasRect.top };
   }
 
   function tolerance(e: PointerEvent): number {
@@ -125,10 +143,16 @@ export function wireCanvasInteractions({
   canvas.addEventListener('pointermove', handlePointerMove);
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointerleave', handlePointerLeave);
+  // Capture phase: a scroll in any ancestor moves our boxes, and scroll events
+  // from those do not bubble.
+  window.addEventListener('scroll', invalidateRects, true);
+  window.addEventListener('resize', invalidateRects);
 
   return () => {
     canvas.removeEventListener('pointermove', handlePointerMove);
     canvas.removeEventListener('pointerdown', handlePointerDown);
     canvas.removeEventListener('pointerleave', handlePointerLeave);
+    window.removeEventListener('scroll', invalidateRects, true);
+    window.removeEventListener('resize', invalidateRects);
   };
 }

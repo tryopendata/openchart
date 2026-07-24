@@ -1463,6 +1463,12 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupVoronoiEvents = null;
     cleanupCanvasEvents?.();
     cleanupCanvasEvents = null;
+    // Cancel before destroying the layer, matching render()/resize(). The
+    // layer's own destroy() stops the scheduler, so this is not a live timer;
+    // what it drops is this closure's reference to the layer state, whose
+    // typed arrays scale with the point count.
+    canvasEntrance?.cancel();
+    canvasEntrance = null;
     canvasLayer?.destroy();
     canvasLayer = null;
     cleanupKeyboardNav?.();

@@ -118,7 +118,12 @@ function rasterizeMarks(layout: ChartLayout): string | null {
   const canvas = document.createElement('canvas');
 
   const state = buildScatterCanvasState(layout);
-  state.background = 'transparent';
+  // Marks only: the SVG underneath already carries a vector background and
+  // vector gridlines, and painting them again here would double them up.
+  // Blank rather than 'transparent' -- the renderer skips the background on a
+  // falsy value, so this holds for any theme, including one whose background
+  // resolves to 'none' or an alpha-zero rgba() that is truthy but invisible.
+  state.background = '';
   state.gridlines = [];
 
   const renderer = new ScatterCanvasRenderer(canvas, RASTER_DPR);
