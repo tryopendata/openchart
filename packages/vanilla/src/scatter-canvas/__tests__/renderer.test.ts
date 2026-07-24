@@ -90,8 +90,30 @@ describe('ScatterCanvasRenderer DPR handling', () => {
   });
 });
 
-describe('ScatterCanvasRenderer batching', () => {
-  it('draws N same-fill points in a single fill() call', () => {
+/**
+ * `fillStyle` values assigned for point fills, i.e. everything after the
+ * full-bleed background write that `render()` performs first.
+ */
+function pointFillStyles(s: CanvasStub): unknown[] {
+  const all = s.sets.filter((set) => set.prop === 'fillStyle').map((set) => set.value);
+  // Assert rather than blind-slice: if the background write ever stops being
+  // first, dropping [0] would silently swallow a real point fill and the
+  // color-elision assertions would start passing for the wrong reason.
+  expect(all[0], 'expected the full-bleed background fill first').toBe('#ffffff');
+  return all.slice(1);
+}
+
+describe('ScatterCanvasRenderer per-point compositing', () => {
+  /**
+   * The renderer deliberately does NOT merge points into shared paths.
+   *
+   * Merging unions overlapping circles inside one path, so a single `fill()` at
+   * `globalAlpha` fades the whole cluster once instead of letting each dot
+   * composite -- dense translucent scatters rendered washed out. These tests
+   * pin the call shape; `e2e/invariants/canvas-alpha-parity.spec.ts` pins the
+   * resulting pixels, which is the part a recording stub cannot see.
+   */
+  it('issues one fill() per point rather than one per color bucket', () => {
     stub = stubCanvas2D();
     const renderer = new ScatterCanvasRenderer(document.createElement('canvas'));
     renderer.resize(400, 300);
@@ -103,11 +125,15 @@ describe('ScatterCanvasRenderer batching', () => {
     }));
     renderer.render(makeState({ marks: soa(points) }));
 
-    expect(stub.callsTo('fill')).toHaveLength(1);
+    // 50 points => 50 fills and 50 arcs. A single fill() here would mean the
+    // path batching regressed and translucent overlaps stopped accumulating.
+    expect(stub.callsTo('fill')).toHaveLength(50);
     expect(stub.callsTo('arc')).toHaveLength(50);
+    // 50 point paths + the one `render()` opens for the clip rect.
+    expect(stub.callsTo('beginPath')).toHaveLength(51);
   });
 
-  it('splits fill buckets by color', () => {
+  it('skips redundant fillStyle writes across a same-color run', () => {
     stub = stubCanvas2D();
     const renderer = new ScatterCanvasRenderer(document.createElement('canvas'));
     renderer.resize(400, 300);
@@ -120,10 +146,34 @@ describe('ScatterCanvasRenderer batching', () => {
         ]),
       }),
     );
-    expect(stub.callsTo('fill')).toHaveLength(2);
+
+    // Every point still gets its own fill()...
+    expect(stub.callsTo('fill')).toHaveLength(3);
+    // ...but the three colors here alternate, so all three assignments stand.
+    // Drop the leading background write (makeState paints '#ffffff' full-bleed).
+    expect(pointFillStyles(stub)).toEqual(['#ff0000', '#00ff00', '#ff0000']);
   });
 
-  it('batches strokes by (stroke, width) and skips zero-width strokes', () => {
+  it('collapses fillStyle writes when consecutive points share a color', () => {
+    stub = stubCanvas2D();
+    const renderer = new ScatterCanvasRenderer(document.createElement('canvas'));
+    renderer.resize(400, 300);
+    renderer.render(
+      makeState({
+        marks: soa([
+          { x: 50, y: 100, r: 3, fill: '#ff0000' },
+          { x: 60, y: 100, r: 3, fill: '#ff0000' },
+          { x: 70, y: 100, r: 3, fill: '#00ff00' },
+        ]),
+      }),
+    );
+
+    expect(stub.callsTo('fill')).toHaveLength(3);
+    // The second red point reuses the style already set by the first.
+    expect(pointFillStyles(stub)).toEqual(['#ff0000', '#00ff00']);
+  });
+
+  it('strokes each point individually and skips zero-width strokes', () => {
     stub = stubCanvas2D();
     const renderer = new ScatterCanvasRenderer(document.createElement('canvas'));
     renderer.resize(400, 300);
@@ -137,8 +187,13 @@ describe('ScatterCanvasRenderer batching', () => {
         ]),
       }),
     );
-    // Two stroke buckets; no gridlines, so every stroke() is a point stroke.
-    expect(stub.callsTo('stroke')).toHaveLength(2);
+
+    // Three stroked points => three stroke() calls; the zero-width one is
+    // skipped entirely. No gridlines here, so every stroke() is a point stroke.
+    expect(stub.callsTo('stroke')).toHaveLength(3);
+    // lineWidth changes only where the width actually changes (1 -> 2).
+    const widths = stub.sets.filter((s) => s.prop === 'lineWidth').map((s) => s.value);
+    expect(widths).toEqual([1, 2]);
   });
 
   it('culls points outside the clip rect', () => {

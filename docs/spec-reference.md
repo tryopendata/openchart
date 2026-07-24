@@ -795,11 +795,11 @@ Everything below is a deliberate trade, not a limitation to work around:
 - **Gradient fills flatten to their first stop on screen.** Exports render the
   true gradient, because they materialize a full SVG (see below).
 - **Overlapping dots can show a stroke over a neighbour's fill.** The canvas
-  paints every fill and then every stroke, two batched draw calls rather than
-  two per point, which is what keeps thousands of dots cheap. SVG paints each
-  dot's fill and stroke together. Sparse clouds are indistinguishable; tight
-  clusters show it. Lowering `mark.opacity` for dense scatters — worth doing
-  regardless, to keep overplotting readable — makes it disappear.
+  paints all fills in one pass and all strokes in a second, so a later dot's
+  stroke can sit over an earlier dot's fill. SVG paints each dot's fill and
+  stroke together. Sparse clouds are indistinguishable; tight clusters show it.
+  Lowering `mark.opacity` for dense scatters — worth doing regardless, to keep
+  overplotting readable — makes it disappear.
 - **Per-mark keyboard focus and edit-mode point selection are unavailable.**
   There are no per-point elements to focus. Annotation, chrome and legend
   editing still work, and the screen-reader data table is unaffected.
