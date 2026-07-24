@@ -366,9 +366,12 @@ describe('canTransition gate', () => {
   });
 
   it('gate 8: canvas mode gets its own, far higher default cap', () => {
-    const scatter = (n: number, yShift: number, render?: 'canvas'): ChartSpec => ({
+    const scatter = (n: number, yShift: number, render: 'canvas' | 'svg'): ChartSpec => ({
       animation: true,
-      mark: render ? { type: 'point', render } : 'point',
+      // `render` is always explicit here: at 4,341 points the auto threshold
+      // would promote to canvas on its own, and this test is specifically
+      // about the two caps differing.
+      mark: { type: 'point', render },
       data: Array.from({ length: n }, (_, i) => ({
         id: `p${i}`,
         x: i,
@@ -382,15 +385,15 @@ describe('canTransition gate', () => {
     });
 
     // 4,341 points: far past the SVG cap of 500, well under the canvas 20,000.
-    const svgA = compile(scatter(4341, 0));
-    const svgB = compile(scatter(4341, 33));
+    const svgA = compile(scatter(4341, 0, 'svg'));
+    const svgB = compile(scatter(4341, 33, 'svg'));
     expect(svgB.markRenderMode).toBeUndefined();
     expect(
       canTransition({
         prevLayout: svgA,
         nextLayout: svgB,
-        prevSpec: scatter(4341, 0),
-        nextSpec: scatter(4341, 33),
+        prevSpec: scatter(4341, 0, 'svg'),
+        nextSpec: scatter(4341, 33, 'svg'),
         isFirstRender: false,
         entranceInFlight: false,
       }),

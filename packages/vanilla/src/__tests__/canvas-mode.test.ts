@@ -43,6 +43,12 @@ function scatterSpec(n: number, render?: 'canvas' | 'svg'): ChartSpec {
   };
 }
 
+// These suites compile and mount charts with thousands of points, so individual
+// tests legitimately run past a second. Vitest's 5s default sits close enough to
+// that to flake when the rest of the suite is saturating the machine -- and a
+// timeout here would read as a canvas bug rather than a busy runner.
+vi.setConfig({ testTimeout: 20_000 });
+
 describe('canvas mark mode DOM contract', () => {
   it('renders a canvas and suppresses the SVG point/background/gridline output', () => {
     const container = createContainer();
@@ -243,16 +249,31 @@ describe('SVG mode is unchanged (regression guard)', () => {
     chartB.destroy();
   });
 
-  it('stays on SVG for a high point count while the auto threshold is gated off', () => {
-    // A later stage flips AUTO_ENABLED; until then auto must never promote.
+  it('stays on SVG below the auto threshold', () => {
+    // The regression that matters most: auto promotion must not reach down and
+    // change how an ordinary small scatter renders.
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(1500), { width: 600, height: 400 });
+    const chart = createChart(container, scatterSpec(500), { width: 600, height: 400 });
 
     expect(container.querySelector('canvas.oc-mark-canvas')).toBeNull();
     expect(
       (container.querySelector('svg') as SVGElement).querySelectorAll('circle.oc-mark-point')
         .length,
     ).toBeGreaterThan(0);
+
+    chart.destroy();
+  });
+
+  it('promotes to canvas above the auto threshold with no render field set', () => {
+    // The blog-morph configuration: `mark: 'point'`, nothing else asked for.
+    const container = createContainer();
+    const chart = createChart(container, scatterSpec(1500), { width: 600, height: 400 });
+
+    expect(container.querySelector('canvas.oc-mark-canvas')).not.toBeNull();
+    expect(
+      (container.querySelector('svg') as SVGElement).querySelectorAll('circle.oc-mark-point')
+        .length,
+    ).toBe(0);
 
     chart.destroy();
   });

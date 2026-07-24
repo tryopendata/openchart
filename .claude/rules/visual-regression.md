@@ -22,6 +22,14 @@ Don't rely on it for:
 
 Before each screenshot the harness disables animations via an injected stylesheet and hides the Ladle dev overlays, then waits for fonts to settle, so timing and layout are deterministic.
 
+## Canvas mark mode stories
+
+The injected stylesheet kills CSS animations. It cannot touch the JS scheduler that drives the canvas entrance, so any baseline-captured story rendering points on canvas must set `animation: false` in its spec, or the screenshot lands mid-entrance at a nondeterministic alpha.
+
+Do NOT reach for `emulateMedia({ reducedMotion: 'reduce' })` instead: `reduced-motion.css` carries rules that would shift the existing baselines.
+
+Interactive-only canvas stories (the year-toggle morph demo) are deliberately left out of the baseline set for the same reason.
+
 ## Platform-locked baselines
 
 Baseline PNGs are committed per-platform (`-chromium-darwin.png`, `-chromium-linux.png`, etc.). Font rendering and antialiasing differ across operating systems, so a baseline captured on macOS won't match pixel-for-pixel on Linux. If you're on a platform without committed baselines, run `bun run test:visual:update` to generate your own — they'll land alongside the existing ones rather than replacing them.

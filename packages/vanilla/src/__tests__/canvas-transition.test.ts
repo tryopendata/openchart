@@ -143,6 +143,12 @@ function mountCanvas(spec: ChartSpec) {
   return { container, chart };
 }
 
+// These suites compile and mount charts with thousands of points, so individual
+// tests legitimately run past a second. Vitest's 5s default sits close enough to
+// that to flake when the rest of the suite is saturating the machine -- and a
+// timeout here would read as a canvas bug rather than a busy runner.
+vi.setConfig({ testTimeout: 20_000 });
+
 describe('canvas keyed morph', () => {
   it('runs a transition for a 4,341-point keyed update', () => {
     const { chart } = mountCanvas(scatter(IDS_2019, 0, { render: 'canvas' }));

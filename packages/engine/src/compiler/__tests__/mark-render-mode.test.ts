@@ -140,12 +140,12 @@ describe('resolveMarkRenderMode', () => {
   // AUTO_ENABLED is false in this release, so the auto path always answers svg.
   // A later stage flips it to true, at which point these two expectations
   // become 'canvas' above the threshold and stay 'svg' at or below it.
-  it('answers svg for auto above the threshold while AUTO_ENABLED is off', () => {
+  it('promotes auto to canvas above the threshold', () => {
     expect(
       resolveMarkRenderMode(
         args({ markDef: { type: 'point', render: 'auto' }, pointCount: AUTO_CANVAS_THRESHOLD + 1 }),
       ),
-    ).toBe('svg');
+    ).toBe('canvas');
   });
 
   it('answers svg for auto at or below the threshold', () => {
@@ -167,7 +167,18 @@ describe('resolveMarkRenderMode', () => {
   });
 
   it('treats an undefined mark def exactly like auto', () => {
-    expect(resolveMarkRenderMode(args({ markDef: undefined }))).toBe('svg');
+    // A bare string mark (`mark: 'point'`) leaves markDef undefined, and must
+    // resolve identically to an explicit `render: 'auto'` on both sides of the
+    // threshold -- otherwise the shorthand quietly opts out of the feature.
+    const explicit = { type: 'point', render: 'auto' } as MarkDef;
+    for (const pointCount of [AUTO_CANVAS_THRESHOLD, AUTO_CANVAS_THRESHOLD + 1]) {
+      expect(resolveMarkRenderMode(args({ markDef: undefined, pointCount }))).toBe(
+        resolveMarkRenderMode(args({ markDef: explicit, pointCount })),
+      );
+    }
+    expect(
+      resolveMarkRenderMode(args({ markDef: undefined, pointCount: AUTO_CANVAS_THRESHOLD + 1 })),
+    ).toBe('canvas');
   });
 });
 

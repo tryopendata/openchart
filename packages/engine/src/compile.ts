@@ -42,6 +42,7 @@ import {
   getHeightClass,
   getLayoutStrategy,
   isAxislessMark,
+  MAX_SR_TABLE_ROWS,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from './annotations/compute';
@@ -974,6 +975,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     a11y: {
       altText,
       dataTableFallback,
+      ...(chartSpec.data.length > MAX_SR_TABLE_ROWS ? { totalRows: chartSpec.data.length } : {}),
       role: 'img',
       keyboardNavigable: marks.length > 0,
       ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
@@ -1380,6 +1382,7 @@ function compileFaceted(
     a11y: {
       altText,
       dataTableFallback,
+      ...(chartSpec.data.length > MAX_SR_TABLE_ROWS ? { totalRows: chartSpec.data.length } : {}),
       role: 'img',
       keyboardNavigable: allMarks.length > 0,
       ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),

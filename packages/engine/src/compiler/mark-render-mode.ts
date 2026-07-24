@@ -15,14 +15,14 @@ import type { Display, MarkDef } from '@opendata-ai/openchart-core';
 export const AUTO_CANVAS_THRESHOLD = 1000;
 
 /**
- * Kill switch for the `'auto'` path, deliberately off for this release.
+ * Kill switch for the `'auto'` path.
  *
- * Explicit `render: 'canvas'` works today; automatic promotion above
- * AUTO_CANVAS_THRESHOLD stays dark until the canvas layer covers entrance
- * animations, update transitions, and exports. Flip this to `true` to enable
- * it -- no other line in this file changes.
+ * Held off while the canvas layer was still growing entrance animations,
+ * update transitions and exports, so each of those could land and be verified
+ * without silently changing how every existing high-cardinality scatter
+ * renders. All three now ship, so auto promotion is live.
  */
-const AUTO_ENABLED = false;
+const AUTO_ENABLED = true;
 
 /** Inputs to mark render mode resolution. */
 export interface MarkRenderModeArgs {
@@ -49,8 +49,7 @@ export interface MarkRenderModeArgs {
  *    SVG, pushing one warning onto `warnings` only when the author explicitly
  *    asked for canvas.
  * 3. Explicit `'canvas'` wins at any point count.
- * 4. `'auto'` (or absent) promotes to canvas above AUTO_CANVAS_THRESHOLD --
- *    currently gated off by AUTO_ENABLED.
+ * 4. `'auto'` (or absent) promotes to canvas above AUTO_CANVAS_THRESHOLD.
  *
  * `warnings` follows the engine's usual collector convention: the caller emits
  * them once per compile through `emitSpecWarnings(warnings, options.onWarn)`.
@@ -76,7 +75,7 @@ export function resolveMarkRenderMode(
 
   if (requested === 'canvas') return 'canvas';
 
-  // Rule 4 -- the auto path. Gated off for this release; see AUTO_ENABLED.
+  // Rule 4 -- the auto path. See AUTO_ENABLED.
   if (!AUTO_ENABLED) return 'svg';
   return pointCount > AUTO_CANVAS_THRESHOLD ? 'canvas' : 'svg';
 }

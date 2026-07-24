@@ -276,6 +276,25 @@ describe('compileChart', () => {
     expect(layout.a11y.hidden).toBeUndefined();
   });
 
+  it('caps the a11y table and reports totalRows when data exceeds the cap', () => {
+    const spec = {
+      mark: 'point' as const,
+      data: Array.from({ length: 1500 }, (_, i) => ({ x: i, y: i * 2 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' as const },
+        y: { field: 'y', type: 'quantitative' as const },
+      },
+    };
+    const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(layout.a11y.dataTableFallback.length - 1).toBe(1000);
+    expect(layout.a11y.totalRows).toBe(1500);
+  });
+
+  it('omits totalRows when the a11y table was not truncated', () => {
+    const layout = compileChart(lineSpec, { width: 600, height: 400 });
+    expect(layout.a11y.totalRows).toBeUndefined();
+  });
+
   it('a11y.description replaces the auto-generated alt text', () => {
     const spec = { ...lineSpec, a11y: { description: 'GDP growth for US and UK, 2020 to 2021.' } };
     const layout = compileChart(spec, { width: 600, height: 400 });

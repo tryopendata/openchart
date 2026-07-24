@@ -83,6 +83,17 @@ export default defineConfig({
         deviceScaleFactor: 1,
       },
     },
+    // Canvas scatter frame pacing: the canvas mark layer's reason to exist is
+    // that a high-cardinality update stays smooth, and only a real compositor
+    // can say whether it does.
+    {
+      name: 'perf',
+      testDir: './e2e/perf',
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+      },
+    },
     // Mobile Chromium: catches narrow-viewport layout bugs (label collisions,
     // degenerate ticks) that the desktop project never sees.
     {

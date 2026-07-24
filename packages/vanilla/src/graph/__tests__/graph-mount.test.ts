@@ -679,6 +679,8 @@ describe('createGraph physics-feel gates', () => {
     graph.destroy();
   });
 
+  // Building 5,001 nodes takes ~1s on its own; the 5s default leaves too little
+  // headroom once the rest of the suite is competing for the machine.
   it('springyDrag on but graph > 5000 nodes: drag stays legacy (no alphaTarget)', async () => {
     container = makeContainer();
     const graph = createGraph(container, bigSpec(5001, { springyDrag: true }));
@@ -691,5 +693,5 @@ describe('createGraph physics-feel gates', () => {
     expect(pinSpy.mock.calls[0][3]).toBeUndefined();
     expect(unpinSpy.mock.calls[0][1]).toBeUndefined();
     graph.destroy();
-  });
+  }, 20_000);
 });

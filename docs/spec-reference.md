@@ -119,6 +119,7 @@ The `type` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
 | `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
+| `render`       | `'auto' \| 'svg' \| 'canvas'` | `'auto'` | point | Rendering surface for point marks. `'auto'` promotes to canvas above 1,000 compiled points. See [Canvas mark mode](#canvas-mark-mode). |
 | `style`        | `'dumbbell' \| 'arrow' \| 'bar'` | `'dumbbell'` | range   | Range mark visual: dot-connector-dot, line with arrowhead at the end, or a plain floating bar. |
 | `colorByDirection` | `boolean`           | `false`     | range          | Color range marks by direction of change: increases use the theme `positive` color, decreases `negative`. A field-based `color` encoding takes precedence. |
 | `units`        | `number`                | `100`       | waffle         | Total cells in the grid. Categories normalize to this via largest-remainder rounding. |
@@ -710,10 +711,19 @@ Everything in `AnimationPhaseConfig`, plus:
 
 | Field      | Type     | Default | Description                                                        |
 | ---------- | -------- | ------- | ------------------------------------------------------------------ |
-| `maxMarks` | `number` | `500`   | Largest mark count that still tweens. Above it, updates swap instantly. |
+| `maxMarks` | `number` | `500` (SVG) / `20000` (canvas) | Largest mark count that still tweens. Above it, updates swap instantly. |
 
 `maxMarks` is update-only: enter and exit animate via CSS, which does not have
 the same per-frame cost.
+
+The default depends on the rendering surface. SVG mode writes attributes on one
+DOM element per mark, so its cap is deliberately low. [Canvas mark
+mode](#canvas-mark-mode) writes into typed arrays and issues one batched fill per
+color bucket, so its default is 20,000. An explicit `maxMarks` overrides both.
+
+The count checked is `max(previous, next)`, not the new layout alone. Exit ghosts
+render on the destination surface, so a 4,000-point chart updating down to 400
+still has ~3,600 departing marks to animate.
 
 ### Data-update transitions
 
@@ -741,6 +751,75 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
 - Chart is a sparkline
 
 **Legend-hidden series:** When series are hidden via legend toggle, they are removed from the data. On the next `.update()` call, those series re-enter with enter animations as new marks.
+
+## Canvas mark mode
+
+Scatter charts with thousands of points cost more in DOM elements than they do
+in pixels. `mark.render` moves point marks onto a `<canvas>` layered under the
+chart SVG, which keeps a 50,000-point scatter interactive and lets a
+high-cardinality keyed morph actually tween instead of snapping.
+
+```ts
+{
+  mark: { type: 'point', render: 'canvas' },
+  data: campuses,          // 4,341 rows
+  encoding: {
+    x: { field: 'lowIncomePct', type: 'quantitative' },
+    y: { field: 'readingProficiency', type: 'quantitative' },
+    key: { field: 'campusId' },
+  },
+}
+```
+
+| Value      | Behavior |
+| ---------- | -------- |
+| `'auto'`   | Default. Canvas above 1,000 compiled points, SVG at or below. |
+| `'canvas'` | Canvas at any point count. |
+| `'svg'`    | Never canvas. |
+
+`render` applies to point marks only. On any other mark type, and on faceted,
+layered or sparkline charts, it falls back to SVG; an explicit `'canvas'` there
+warns once per compile.
+
+### What canvas mode changes
+
+The canvas paints the figure background, the gridlines and the dots. The SVG
+keeps axes, tick labels, the trendline, annotations, legend and chrome, and
+still carries the chart's `role` and `aria-label`.
+
+Everything below is a deliberate trade, not a limitation to work around:
+
+- **The trendline draws above the dots**, even with `trendline.layer: 'below'`.
+  The canvas is a single layer under the whole SVG, so anything the SVG draws
+  lands on top.
+- **Gradient fills flatten to their first stop on screen.** Exports render the
+  true gradient, because they materialize a full SVG (see below).
+- **Overlapping dots can show a stroke over a neighbour's fill.** The canvas
+  paints every fill and then every stroke, two batched draw calls rather than
+  two per point, which is what keeps thousands of dots cheap. SVG paints each
+  dot's fill and stroke together. Sparse clouds are indistinguishable; tight
+  clusters show it. Lowering `mark.opacity` for dense scatters — worth doing
+  regardless, to keep overplotting readable — makes it disappear.
+- **Per-mark keyboard focus and edit-mode point selection are unavailable.**
+  There are no per-point elements to focus. Annotation, chrome and legend
+  editing still work, and the screen-reader data table is unaffected.
+- **The screen-reader table caps at 1,000 rows** with a caption naming the true
+  total. Full data remains available via CSV export.
+
+Tooltips, `onMarkClick`, `onMarkHover` and hover highlighting all work: pointer
+events fall through to the canvas and hit-test against a spatial index.
+
+### Exports
+
+Exports are full-fidelity regardless of what is on screen. Canvas-mode charts
+re-render to a complete SVG at export time, so gradients, gridlines and the
+background all come back as vector.
+
+| Format | Behavior |
+| ------ | -------- |
+| `svg`, `svg-with-fonts` | Vector at or below 5,000 points -- byte-identical to exporting the SVG-mode twin. Above that, vector everything with the dot cloud inlined as one raster `<image>`, so gridlines and text stay crisp without shipping 50,000 `<circle>` elements. |
+| `png`, `jpg`, `gif` | Always full vector before rasterizing, so output is pixel-identical to SVG mode. |
+| `csv` | Unchanged. |
 
 ### encoding.key channel
 
