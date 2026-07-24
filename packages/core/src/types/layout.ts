@@ -1314,6 +1314,16 @@ export interface ChartLayout {
   yInvert?: ScaleInvert;
   /** Faceted (small-multiples) layout. When present, renderers iterate panels instead of using top-level marks/axes. */
   facet?: FacetLayout;
+  /**
+   * Resolved rendering backend for point marks. Absent means `'svg'`.
+   *
+   * ADVISORY metadata only: it tells the mount and export layers that a canvas
+   * mark layer is worth creating for this layout. The SVG renderer keys solely
+   * on its own `canvasMarks` render option and never reads this field, so a
+   * server-side or export render of a canvas-mode layout still produces
+   * full-fidelity SVG.
+   */
+  markRenderMode?: 'svg' | 'canvas';
 }
 
 // ---------------------------------------------------------------------------
@@ -2040,6 +2050,13 @@ export interface CompileOptions {
    * different area than the one the axes are rendered in.
    */
   frozenChartArea?: Rect;
+  /**
+   * Marks this compile as one leaf (or the primary spec) of a multi-leaf layer.
+   * Set by compileLayer; callers should not set it. Only consumer today is the
+   * canvas mark-layer resolution, which refuses canvas mode for layered charts
+   * because the layer layout concatenates marks from several compiles.
+   */
+  layered?: boolean;
 }
 
 /** Extended compile options for table visualizations. */

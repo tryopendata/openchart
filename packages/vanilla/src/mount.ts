@@ -64,6 +64,8 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { wireCanvasInteractions } from './scatter-canvas/interactions';
+import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-canvas/layer';
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
@@ -249,6 +251,12 @@ export function createChart<TData extends DataRow = DataRow>(
   let disconnectResize: (() => void) | null = null;
   let cleanupTooltipEvents: (() => void) | null = null;
   let cleanupVoronoiEvents: (() => void) | null = null;
+  // Canvas mark layer, present only while currentLayout.markRenderMode is
+  // 'canvas'. render() is a full teardown/rebuild, so StrictMode double-mounts
+  // and resizes need no canvas-specific handling beyond destroying it here.
+  let canvasLayer: ScatterCanvasLayer | null = null;
+  let cleanupCanvasEvents: (() => void) | null = null;
+  let warnedCanvasEditMode = false;
   let cleanupKeyboardNav: (() => void) | null = null;
   let cleanupLegend: (() => void) | null = null;
   let cleanupChartEvents: (() => void) | null = null;
@@ -871,6 +879,10 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupTooltipEvents = null;
     cleanupVoronoiEvents?.();
     cleanupVoronoiEvents = null;
+    cleanupCanvasEvents?.();
+    cleanupCanvasEvents = null;
+    canvasLayer?.destroy();
+    canvasLayer = null;
     cleanupKeyboardNav?.();
     cleanupKeyboardNav = null;
     cleanupLegend?.();
@@ -908,11 +920,49 @@ export function createChart<TData extends DataRow = DataRow>(
     lastRenderedSvgHeight = currentLayout.dimensions.height;
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
+
+    // Canvas mark mode: the canvas is created BEFORE the SVG so DOM order puts
+    // it underneath (both are positioned, so DOM order decides paint order).
+    const canvasMode = currentLayout.markRenderMode === 'canvas';
+    if (canvasMode) {
+      canvasLayer = createScatterCanvasLayer(container, currentLayout);
+      canvasLayer.repaint();
+
+      // Point marks are pixels on a canvas, not selectable elements, so
+      // per-mark edit selection is unavailable. Annotation, chrome, and legend
+      // editing still work -- those stay in the SVG. Warned once per mount.
+      if (
+        !warnedCanvasEditMode &&
+        (options?.editable || hasEditingCallbacks(options) || options?.onAnnotationEdit)
+      ) {
+        warnedCanvasEditMode = true;
+        console.warn(
+          'openchart: canvas mark mode does not support per-mark edit selection. ' +
+            'Annotation, chrome, and legend editing still work. ' +
+            "Set mark.render to 'svg' if you need to select individual points.",
+        );
+      }
+    }
+
     svgElement = renderChartSVG(currentLayout, container, {
       animate: shouldAnimate,
       crosshair,
+      canvasMarks: canvasMode,
     });
     tooltipManager = createTooltipManager(container);
+
+    // Canvas hit-testing replaces per-element listeners for point marks.
+    // wireTooltipEvents below still runs and is simply inert for points --
+    // canvas mode emits no [data-mark-id] circles for it to bind to.
+    if (canvasMode && canvasLayer) {
+      cleanupCanvasEvents = wireCanvasInteractions({
+        layer: canvasLayer,
+        svg: svgElement,
+        tooltipDescriptors: currentLayout.tooltipDescriptors,
+        tooltipManager,
+        options,
+      });
+    }
 
     // Wire tooltip events on mark elements
     cleanupTooltipEvents = wireTooltipEvents(
@@ -1360,6 +1410,10 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupTooltipEvents = null;
     cleanupVoronoiEvents?.();
     cleanupVoronoiEvents = null;
+    cleanupCanvasEvents?.();
+    cleanupCanvasEvents = null;
+    canvasLayer?.destroy();
+    canvasLayer = null;
     cleanupKeyboardNav?.();
     cleanupKeyboardNav = null;
     cleanupLegend?.();
