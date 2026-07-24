@@ -36,8 +36,8 @@ describe('flattenFill', () => {
     expect(flattenFill(gradient)).toBe('#111111');
   });
 
-  it('falls back to none for an empty gradient', () => {
-    expect(flattenFill({ gradient: 'linear', stops: [] } as GradientDef)).toBe('none');
+  it('falls back to transparent (a valid canvas color) for an empty gradient', () => {
+    expect(flattenFill({ gradient: 'linear', stops: [] } as GradientDef)).toBe('transparent');
   });
 });
 

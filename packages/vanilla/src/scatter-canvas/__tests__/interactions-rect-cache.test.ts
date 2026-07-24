@@ -119,6 +119,23 @@ describe('pointer rect caching', () => {
     expect(canvasRectCalls).toBeGreaterThan(1);
   });
 
+  it('re-measures on pointerenter, so a scroll-less layout shift cannot strand the cache', () => {
+    move(layer.canvas, 100, 100);
+    expect(layer.state.hoverIndex).toBe(0);
+    expect(canvasRectCalls).toBe(1);
+
+    // The chart moves 50px without any scroll or resize event (content above
+    // it expanded). The pointer re-entering the canvas must trigger a fresh
+    // measurement so the next move hit-tests against the new box.
+    layer.state.hoverIndex = -1;
+    scrollY = 50;
+    layer.canvas.dispatchEvent(new Event('pointerenter'));
+
+    move(layer.canvas, 100, 50);
+    expect(layer.state.hoverIndex).toBe(0);
+    expect(canvasRectCalls).toBe(2);
+  });
+
   it('stops listening for scroll once cleaned up', () => {
     move(layer.canvas, 100, 100);
     const before = canvasRectCalls;

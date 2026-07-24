@@ -21,7 +21,9 @@ import type { CanvasGridline, CanvasRect, ScatterCanvasState, ScatterPointsSoA }
  */
 export function flattenFill(fill: string | GradientDef): string {
   if (typeof fill === 'string') return fill;
-  return fill.stops[0]?.color ?? 'none';
+  // 'transparent', not 'none': canvas silently ignores invalid fillStyle
+  // assignments, so 'none' would leave the previous fill color in effect.
+  return fill.stops[0]?.color ?? 'transparent';
 }
 
 /** Collect gridlines from one axis into canvas-space records. */

@@ -47,10 +47,13 @@ export function wireCanvasInteractions({
    * `getBoundingClientRect()` forces layout, and reading two of them on every
    * `pointermove` is exactly the per-event cost this layer exists to avoid.
    * Neither box moves on its own: a container resize tears the layer down and
-   * `render()` rebuilds it, so within one layer's life the only thing that
-   * shifts these is the viewport scrolling underneath them. Invalidate on
-   * scroll (capture phase, so ancestor scroll containers count) and on resize,
-   * then re-measure lazily on the next event that needs a box.
+   * `render()` rebuilds it, so within one layer's life the boxes shift only
+   * when the page moves underneath them. Invalidate on scroll (capture phase,
+   * so ancestor scroll containers count), on resize, and on `pointerenter` —
+   * a layout shift with no scroll and no resize (content above the chart
+   * expanding, a font loading) still moves the boxes, and starting each hover
+   * session with a fresh measurement bounds that staleness to mid-hover
+   * shifts. Re-measure lazily on the next event that needs a box.
    */
   let svgRect: DOMRect | null = null;
   let canvasRect: DOMRect | null = null;
@@ -143,6 +146,7 @@ export function wireCanvasInteractions({
   canvas.addEventListener('pointermove', handlePointerMove);
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointerleave', handlePointerLeave);
+  canvas.addEventListener('pointerenter', invalidateRects);
   // Capture phase: a scroll in any ancestor moves our boxes, and scroll events
   // from those do not bubble.
   window.addEventListener('scroll', invalidateRects, true);
@@ -152,6 +156,7 @@ export function wireCanvasInteractions({
     canvas.removeEventListener('pointermove', handlePointerMove);
     canvas.removeEventListener('pointerdown', handlePointerDown);
     canvas.removeEventListener('pointerleave', handlePointerLeave);
+    canvas.removeEventListener('pointerenter', invalidateRects);
     window.removeEventListener('scroll', invalidateRects, true);
     window.removeEventListener('resize', invalidateRects);
   };
