@@ -709,12 +709,15 @@ function CanvasMorphScatter() {
  * Small enough that auto leaves it on SVG, so `render: 'canvas'` is explicit.
  * This is the visual-parity check: same layout, same colors, same geometry.
  *
- * Two differences are expected and permanent, both consequences of batching:
- * the trendline always draws above the dots, and where dots overlap, a stroke
- * can land on a neighbour's fill. Canvas paints every fill and then every
- * stroke (two draw calls total, which is what keeps thousands of points
- * cheap), whereas SVG paints each dot's fill and stroke together. Sparse
+ * Two differences are expected and permanent: the trendline always draws above
+ * the dots, and where dots overlap, a stroke can land on a neighbour's fill.
+ * The latter is a paint-order effect -- canvas fills every dot, then strokes
+ * every dot, whereas SVG paints each dot's fill and stroke together. Sparse
  * clouds are indistinguishable; tight clusters show it.
+ *
+ * Translucent overlaps do NOT differ: each dot composites individually on
+ * canvas exactly as it does in SVG. That parity is pinned by
+ * `e2e/invariants/canvas-alpha-parity.spec.ts`.
  *
  * `animation: false` because a baseline screenshot cannot freeze the canvas
  * entrance.
@@ -1092,7 +1095,7 @@ export const ScatterAndDistribution = () => (
       <Demo
         id="canvas-svg-parity"
         title="Canvas vs SVG, same data"
-        description="An explicit render: 'canvas' on a 200-point cloud that auto would have left on SVG. Same layout, same geometry. Two differences come from batching, which is what keeps thousands of points cheap: the trendline always draws above the dots, and canvas paints every fill before every stroke, so overlapping dots can show a stroke over a neighbour's fill. Sparse clouds look identical; tight clusters show it."
+        description="An explicit render: 'canvas' on a 200-point cloud that auto would have left on SVG. Same layout, same geometry. Two differences remain: the trendline always draws above the dots, and canvas fills every dot before stroking any, so overlapping dots can show a stroke over a neighbour's fill. Sparse clouds look identical; tight clusters show it."
         specForPanel={canvasParitySpec}
         height={420}
       >
