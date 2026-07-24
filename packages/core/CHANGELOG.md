@@ -1,5 +1,27 @@
 # Changelog
 
+## [8.0.0-rc.20](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.19...core-v8.0.0-rc.20) (2026-07-24)
+
+
+### Features
+
+* promote dense scatters to canvas automatically ([12dfe87](https://github.com/tryopendata/openchart/commit/12dfe87))
+* canvas-mode exports and a screen-reader table cap ([d7ff0c1](https://github.com/tryopendata/openchart/commit/d7ff0c1))
+* canvas update transitions on the shared transition clock ([a988286](https://github.com/tryopendata/openchart/commit/a988286))
+* canvas entrance animation with a canvas-aware completion clock ([baed972](https://github.com/tryopendata/openchart/commit/baed972))
+* canvas mark layer for high-cardinality scatter (opt-in) ([8b336e0](https://github.com/tryopendata/openchart/commit/8b336e0))
+* configurable data-update transition cap via animation.update.maxMarks ([06d537f](https://github.com/tryopendata/openchart/commit/06d537f))
+
+
+### Bug Fixes
+
+* address code review findings on the canvas mark layer ([529ebb8](https://github.com/tryopendata/openchart/commit/529ebb8))
+
+
+### Refactoring
+
+* extract shared motion + spatial index out of graph/ ([c470c14](https://github.com/tryopendata/openchart/commit/c470c14))
+
 ## [8.0.0-rc.19](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.18...core-v8.0.0-rc.19) (2026-07-22)
 
 
