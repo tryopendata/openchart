@@ -315,7 +315,7 @@ The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. 
 
 **color channel**: Series differentiation. Assigns colors from the categorical palette. Required for pie/donut (defines slices). Optional for all others (creates multi-series with legend).
 
-**size channel**: Mark size. Creates bubble charts when applied to scatter. Maps a quantitative field to the mark radius or area.
+**size channel**: Mark size. Creates bubble charts when applied to scatter. Maps a quantitative field to the dot **radius in pixels**, area-proportionally (sqrt curve); the default range is [3, 30] and `scale.range` overrides it in radius px. A constant lives at `mark.size`, also a radius (default 5, typical 2-12). Note this differs from Vega-Lite, where point `size` is an **area** in px² — a VL size of 110 is `mark.size: 6` here (r = √(area/π)); validation rejects radii above 50 with the conversion.
 
 **detail channel**: Grouping without visual encoding. Splits data into groups (like color does) but doesn't assign different colors. Useful when you want separate lines per group but all the same color.
 

@@ -456,6 +456,71 @@ function validateMarkRenderMode(spec: Record<string, unknown>, errors: Validatio
 }
 
 // ---------------------------------------------------------------------------
+// Point size validation
+// ---------------------------------------------------------------------------
+
+/**
+ * Ceiling above which a point size is, in practice, always an imported
+ * Vega-Lite *area* value rather than an intentional radius. VL defines point
+ * `size` as symbol area in px^2 (size: 110 is a ~12px-wide dot); openchart's
+ * `mark.size` and `encoding.size` ranges are a radius in px (default 5), so
+ * VL-habit values render as chart-swallowing discs. Radii up to the ceiling
+ * stay legal: a 50px bubble is enormous but plausible as a deliberate choice.
+ */
+const MAX_PLAUSIBLE_POINT_RADIUS = 50;
+
+function pointSizeError(path: string, value: number): ValidationError {
+  const radius = Math.max(1, Math.round(Math.sqrt(value / Math.PI)));
+  return {
+    message: `Spec error: ${path} is a radius in pixels, and ${value} would draw a ${Math.round(value * 2)}px-wide circle. This usually means the value was written in Vega-Lite's units, where point size is an area in px^2.`,
+    path,
+    code: 'INVALID_VALUE',
+    suggestion: `Point sizes are radii in px (default 5, typical 2-12). For the dot a Vega-Lite size of ${value} draws, use ${radius} (r = sqrt(area / pi)).`,
+  };
+}
+
+/**
+ * Guard against Vega-Lite size semantics on point marks -- the same
+ * near-miss-VL treatment as `data.url` and string `calculate` expressions:
+ * a form that would silently do the wrong thing fails loud with the recipe.
+ */
+function validatePointSize(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const markType =
+    typeof spec.mark === 'string' ? spec.mark : (spec.mark as Record<string, unknown>)?.type;
+  if (markType !== 'point') return;
+
+  if (spec.mark && typeof spec.mark === 'object') {
+    const size = (spec.mark as Record<string, unknown>).size;
+    if (typeof size === 'number' && size > MAX_PLAUSIBLE_POINT_RADIUS) {
+      errors.push(pointSizeError('mark.size', size));
+    }
+  }
+
+  const sizeEnc =
+    spec.encoding && typeof spec.encoding === 'object'
+      ? ((spec.encoding as Record<string, unknown>).size as Record<string, unknown> | undefined)
+      : undefined;
+  if (!sizeEnc || typeof sizeEnc !== 'object') return;
+
+  if (typeof sizeEnc.value === 'number' && sizeEnc.value > MAX_PLAUSIBLE_POINT_RADIUS) {
+    errors.push(pointSizeError('encoding.size.value', sizeEnc.value));
+  }
+
+  const range =
+    sizeEnc.scale && typeof sizeEnc.scale === 'object'
+      ? (sizeEnc.scale as Record<string, unknown>).range
+      : undefined;
+  if (Array.isArray(range)) {
+    const worst = range.find(
+      (entry) => typeof entry === 'number' && entry > MAX_PLAUSIBLE_POINT_RADIUS,
+    );
+    if (typeof worst === 'number') {
+      errors.push(pointSizeError('encoding.size.scale.range', worst));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Chart validation
 // ---------------------------------------------------------------------------
 
@@ -612,6 +677,10 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   // (canvas on a bar chart, say) is only advisory and warns at compile time,
   // but a value outside the union is a typo and fails loud.
   validateMarkRenderMode(spec, errors);
+
+  // Point sizes that only make sense as Vega-Lite areas fail loud with the
+  // radius conversion, before they render as chart-swallowing discs.
+  validatePointSize(spec, errors);
 
   // Near-miss: VL's string expression form of calculate. A restricted string
   // grammar is deliberately not supported (decision: structured form only);

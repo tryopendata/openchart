@@ -219,7 +219,15 @@ export interface MarkDef {
   endAngle?: number;
   /** Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness. */
   cornerRadius?: number | 'pill';
-  /** Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band. */
+  /**
+   * Bar/column marks: fixed bar thickness in pixels. When set, bars are this
+   * height (horizontal) or width (vertical), centered within the band.
+   *
+   * Point marks: the dot RADIUS in pixels (default 5, typical 2-12). This is
+   * NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of
+   * 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation
+   * rejects values above 50 with the conversion.
+   */
   size?: number;
   /** Whether the mark is filled (vs stroked only). */
   filled?: boolean;
@@ -701,9 +709,13 @@ export interface Encoding<TData extends DataRow = DataRow> {
    */
   color?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**
-   * Size channel. Used by point/bubble charts to scale dot area by a quantitative field.
-   * Accepts a conditional definition to vary size based on data predicates,
-   * or a bare `{ value }` constant (VL aligned; expanded to `mark.size`).
+   * Size channel. Used by point/bubble charts to scale dots by a quantitative
+   * field, area-proportionally (sqrt curve). The units are dot RADII in px:
+   * `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }`
+   * constant expands to `mark.size`, also a radius. This differs from
+   * Vega-Lite, where point size is an area in px^2 -- VL-scale values
+   * (60-900) are rejected by validation with the conversion.
+   * Accepts a conditional definition to vary size based on data predicates.
    */
   size?: EncodingChannel<TData> | ConditionalValueDef<TData> | ValueDef;
   /**

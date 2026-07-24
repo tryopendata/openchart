@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Breaking Changes
 
+- **validate!:** point-mark sizes above 50 now fail validation. Openchart point sizes are radii in px (`mark.size` default 5; `encoding.size` range default [3, 30]), but Vega-Lite defines point `size` as an area in px², so VL-habit values (60-900) rendered as chart-swallowing discs and were, in practice, always a units mistake. The error carries the conversion (r = sqrt(area/pi), e.g. VL 110 → `size: 6`) on `mark.size`, `encoding.size.value`, and `encoding.size.scale.range`. Intentional radii up to 50 stay valid; `MarkDef.size` and the `size` channel docs now state the units per mark type.
+
 - **bar/area!:** multi-series bar and area charts now default to stacked (`stack: 'zero'`) when a `color` encoding is present, matching Vega-Lite. Pass `stack: null` on the value channel to keep the old grouped (bar) or overlap (area) behavior. See [migration guide](docs/migrating-v8.md#1-multi-series-bararea-charts-default-to-stacked).
 - **arc!:** `encoding.theta` is now the canonical value channel for arc, waffle, and parliament marks. `encoding.y` still works at runtime (sugar rewrites it to theta with a deprecation warning) but is removed from the TypeScript type.
 - **encoding!:** dead channels `shape`, `radius`, `href`, and `order` removed from the `Encoding` interface and `MARK_ENCODING_RULES`. They were never implemented. Runtime strips them with a warning for backward compat.
