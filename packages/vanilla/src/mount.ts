@@ -38,6 +38,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import { materializeCanvasModeSVG } from './export-canvas';
 import type { GIFExportOptions } from './export-gif';
 import {
   buildElementRef,
@@ -1393,7 +1394,17 @@ export function createChart<TData extends DataRow = DataRow>(
     if (!svgElement) {
       throw new Error('Chart is not rendered yet');
     }
-    const svg = svgElement;
+    // In canvas mode the on-screen SVG has no dots, no gridlines and no
+    // background -- the canvas owns those. Serializing it would export an
+    // empty chart, so every format works off a materialized SVG that has the
+    // missing half folded back in. Raster formats force the vector path: they
+    // are becoming pixels anyway, and it buys parity with SVG mode for free.
+    const svg =
+      canvasLayer && currentLayout.markRenderMode === 'canvas'
+        ? materializeCanvasModeSVG(currentLayout, {
+            forceVector: format === 'png' || format === 'jpg' || format === 'gif',
+          })
+        : svgElement;
     // The resolved theme, defaulted into the export options, so class-based
     // chrome fills (metrics, brand dot, legend) survive serialization away from
     // the page stylesheet. An explicit options.theme still wins.

@@ -361,7 +361,11 @@ export async function exportGIF(
   // GIF can't carry partial alpha, so fill an opaque background before drawing
   // each frame (else a transparent chart composites onto black). Runs before
   // ctx.scale, so paint the raw device-pixel canvas size.
-  const bgColor = options?.backgroundColor ?? getSVGBackgroundColor(svgElement);
+  // The theme background is the fallback: canvas mark mode suppresses the SVG
+  // background rect, so there's nothing in the markup to read it from.
+  const bgColor =
+    options?.backgroundColor ??
+    getSVGBackgroundColor(svgElement, options?.theme?.colors.background);
   const fillBackground = (ctx: CanvasRenderingContext2D, cv: HTMLCanvasElement): void => {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, cv.width, cv.height);

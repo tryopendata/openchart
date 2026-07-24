@@ -23,6 +23,7 @@ export { createBarList } from './barlist-mount';
 export type { JPGExportOptions, PNGExportOptions, SVGExportOptions } from './export';
 // Export utilities
 export { exportCSV, exportJPG, exportPNG, exportSVG, exportSVGWithFonts } from './export';
+export { materializeCanvasModeSVG, VECTOR_EXPORT_MAX_POINTS } from './export-canvas';
 // Multi-spec ("keyframe") GIF export for spec-swap steppers. Loads the optional
 // `gifenc` peer lazily, so importing this symbol does not pull gifenc into the bundle.
 export type { SpecSequenceOptions } from './export-sequence';

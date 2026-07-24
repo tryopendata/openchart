@@ -55,19 +55,28 @@ export class ScatterCanvasRenderer {
   private cssWidth = 0;
   private cssHeight = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  /**
+   * A DPR to use instead of the display's. Set only for offscreen export
+   * rasters, where the output resolution is a deliberate choice and must not
+   * follow whatever monitor the browser happens to be on.
+   */
+  private readonly pinnedDpr: number | undefined;
+
+  constructor(canvas: HTMLCanvasElement, pinnedDpr?: number) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.dpr = currentDpr();
+    this.pinnedDpr = pinnedDpr;
+    this.dpr = pinnedDpr ?? currentDpr();
   }
 
   /**
    * Resize the backing store. DPR is re-read here, not frozen in the
    * constructor: dragging a window between a Retina and a non-Retina display
    * changes `devicePixelRatio` mid-life, and resize is exactly when we find out.
+   * A pinned DPR opts out -- an export raster has no display to follow.
    */
   resize(width: number, height: number): void {
-    this.dpr = currentDpr();
+    this.dpr = this.pinnedDpr ?? currentDpr();
     this.cssWidth = width;
     this.cssHeight = height;
     this.canvas.width = Math.round(width * this.dpr);

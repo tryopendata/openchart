@@ -176,6 +176,7 @@ export {
   generateAltText,
   generateAriaLabels,
   generateDataTable,
+  MAX_SR_TABLE_ROWS,
 } from './accessibility/index';
 
 // ---------------------------------------------------------------------------

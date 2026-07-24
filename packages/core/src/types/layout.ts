@@ -1008,6 +1008,12 @@ export interface A11yMetadata {
   altText: string;
   /** Tabular data fallback for screen readers. Each inner array is a row. */
   dataTableFallback: unknown[][];
+  /**
+   * True row count of the underlying data. Only set when `dataTableFallback`
+   * was truncated, so its presence is the signal that rows are missing and the
+   * caption should name the total.
+   */
+  totalRows?: number;
   /** ARIA role for the visualization root element. */
   role: string;
   /** Whether the visualization is keyboard-navigable. */

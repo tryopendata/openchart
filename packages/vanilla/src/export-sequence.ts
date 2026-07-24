@@ -17,7 +17,13 @@
  * `gifenc` is an optional peer dependency, loaded dynamically.
  */
 
-import type { ChartSpec, LayerSpec, ResolvedTheme, ThemeConfig } from '@opendata-ai/openchart-core';
+import type {
+  AnimationSpec,
+  ChartSpec,
+  LayerSpec,
+  ResolvedTheme,
+  ThemeConfig,
+} from '@opendata-ai/openchart-core';
 import {
   embedFonts,
   ensureSVGDimensions,
@@ -65,6 +71,24 @@ export interface SpecSequenceOptions {
 }
 
 /**
+ * Force `enter:false` (each spec must render settled) while KEEPING the author's
+ * own update config when they wrote one as an object. Replacing it wholesale
+ * would drop fields like `update.maxMarks`, so a spec that deliberately raised
+ * the tween cap above 500 marks would silently swap instead of tween on export.
+ */
+export function settleAnimation(spec: ChartSpec | LayerSpec): ChartSpec | LayerSpec {
+  const authored = (spec as { animation?: AnimationSpec }).animation;
+  const update =
+    typeof authored === 'object' && typeof authored.update === 'object'
+      ? { ...authored.update }
+      : true;
+  return {
+    ...(spec as unknown as Record<string, unknown>),
+    animation: { enter: false, update },
+  } as unknown as ChartSpec | LayerSpec;
+}
+
+/**
  * Mount one live chart offscreen (used as the persistent host we step through
  * every spec). Entrance is disabled so the first spec renders settled; update
  * transitions are enabled so `beginManualUpdate` can tween between specs.
@@ -87,11 +111,8 @@ function mountOffscreen(
 
   // enter:false → first spec settled immediately; update:true → tween on
   // beginManualUpdate. responsive:false → no ResizeObserver on a detached node.
-  const settledSpec = {
-    ...(spec as unknown as Record<string, unknown>),
-    animation: { enter: false, update: true },
-  };
-  const instance = createChart(container, settledSpec as ChartSpec | LayerSpec, {
+  const settledSpec = settleAnimation(spec);
+  const instance = createChart(container, settledSpec, {
     darkMode,
     theme: themeConfig,
     responsive: false,
@@ -159,14 +180,17 @@ export async function exportSpecSequence(
   try {
     const w = getSVGDimensions(svg).width || width;
     const h = getSVGDimensions(svg).height || height;
-    const bgColor = options.backgroundColor ?? getSVGBackgroundColor(svg);
-    const fillBackground = (ctx: CanvasRenderingContext2D, cv: HTMLCanvasElement): void => {
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, cv.width, cv.height);
-    };
     const theme = (): ResolvedTheme | undefined => {
       const layout = instance.layout;
       return layout && 'theme' in layout ? (layout.theme as ResolvedTheme) : undefined;
+    };
+    // The theme background is the fallback: canvas mark mode suppresses the SVG
+    // background rect, so there's nothing in the markup to read it from.
+    const bgColor =
+      options.backgroundColor ?? getSVGBackgroundColor(svg, theme()?.colors.background);
+    const fillBackground = (ctx: CanvasRenderingContext2D, cv: HTMLCanvasElement): void => {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, cv.width, cv.height);
     };
 
     // `beginManualUpdate`/`render` REPLACES the live <svg> node each spec, so the
@@ -196,10 +220,7 @@ export async function exportSpecSequence(
     for (let i = 1; i < specs.length; i++) {
       // Re-apply the same settle/animation wrapper the offscreen mount used, so
       // update transitions stay enabled for each step.
-      const nextSpec = {
-        ...(specs[i] as unknown as Record<string, unknown>),
-        animation: { enter: false, update: true },
-      } as ChartSpec | LayerSpec;
+      const nextSpec = settleAnimation(specs[i]);
       const handle = instance.beginManualUpdate(nextSpec);
       // render() replaced the <svg>; re-inject theme/fonts into the new one.
       live = await prepareLiveSvg();

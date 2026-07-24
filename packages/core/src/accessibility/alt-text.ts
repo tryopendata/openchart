@@ -122,10 +122,21 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
 // ---------------------------------------------------------------------------
 
 /**
+ * Maximum number of data rows in the screen-reader table. A 50k-point scatter
+ * would otherwise put 50k hidden rows in the DOM.
+ */
+export const MAX_SR_TABLE_ROWS = 1000;
+
+/**
  * Generate a tabular data fallback for screen readers.
  *
  * Returns a 2D array where the first row is headers and subsequent
  * rows are data values. Only includes fields referenced in the encoding.
+ *
+ * Data rows are capped at MAX_SR_TABLE_ROWS (the header row does not count
+ * against the cap). SCOPE: this caps the chart compile path only. Graph,
+ * sankey, tilemap and map build their `dataTableFallback` independently and
+ * stay uncapped.
  *
  * @param spec - The chart spec.
  * @param data - The data array.
@@ -149,7 +160,9 @@ export function generateDataTable(spec: ChartSpec, data: DataRow[]): unknown[][]
   const headers = uniqueFields;
 
   // Data rows
-  const rows = data.map((row) => uniqueFields.map((field) => row[field] ?? ''));
+  const rows = data
+    .slice(0, MAX_SR_TABLE_ROWS)
+    .map((row) => uniqueFields.map((field) => row[field] ?? ''));
 
   return [headers, ...rows];
 }

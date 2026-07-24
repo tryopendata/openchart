@@ -6,12 +6,22 @@
  * dimension parsing, CSV formatting, and raster export interfaces.
  */
 
+import type { ChartSpec } from '@opendata-ai/openchart-core';
 import type { CompileOptions } from '@opendata-ai/openchart-engine';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
-import { exportCSV, exportJPG, exportPNG, exportSVG, exportSVGWithFonts } from '../export';
+import {
+  exportCSV,
+  exportJPG,
+  exportPNG,
+  exportSVG,
+  exportSVGWithFonts,
+  getSVGBackgroundColor,
+} from '../export';
+import { createChart } from '../mount';
+import { type CanvasStub, stubCanvas2D } from '../scatter-canvas/__tests__/canvas-stub';
 import { renderChartSVG } from '../svg-renderer';
 
 // ---------------------------------------------------------------------------
@@ -237,5 +247,59 @@ describe('exportJPG', () => {
     const result = exportJPG(svg, { quality: 0.5, dpi: 1, embedFonts: false });
     expect(result).toBeInstanceOf(Promise);
     result.catch(() => {});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getSVGBackgroundColor
+// ---------------------------------------------------------------------------
+
+/** A dark scatter spec, optionally opting into canvas mark mode. */
+function scatterSpec(render?: 'canvas'): ChartSpec {
+  return {
+    mark: render ? { type: 'point', render } : 'point',
+    data: Array.from({ length: 20 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+    theme: { colors: { background: '#101418' } },
+  };
+}
+
+describe('getSVGBackgroundColor', () => {
+  it('reads the background rect fill in SVG mode, ignoring the fallback', () => {
+    const container = createContainer();
+    const chart = createChart(container, scatterSpec(), { width: 600, height: 400 });
+    const svg = container.querySelector('svg') as SVGElement;
+    expect(svg.querySelector('rect')?.getAttribute('fill')).toBe('#101418');
+    expect(getSVGBackgroundColor(svg)).toBe('#101418');
+    expect(getSVGBackgroundColor(svg, '#123456')).toBe('#101418');
+    chart.destroy();
+  });
+
+  it('falls back to white when no fallback is given and the chart has no bg rect', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGElement;
+    expect(getSVGBackgroundColor(svg)).toBe('#ffffff');
+  });
+
+  it("uses the theme's dark background for a canvas-mode chart, not white", () => {
+    // happy-dom has no canvas 2D context, so the canvas layer needs a stub.
+    const stub: CanvasStub = stubCanvas2D();
+    try {
+      const container = createContainer();
+      const chart = createChart(container, scatterSpec('canvas'), { width: 600, height: 400 });
+      const svg = container.querySelector('svg') as SVGElement;
+      // Canvas mode suppresses the background rect: nothing to read a fill from.
+      expect(svg.querySelector('rect[fill]')).toBeNull();
+
+      const layout = chart.layout as { theme: { colors: { background: string } } };
+      expect(layout.theme.colors.background).toBe('#101418');
+      expect(getSVGBackgroundColor(svg, layout.theme.colors.background)).toBe('#101418');
+
+      chart.destroy();
+    } finally {
+      stub.restore();
+    }
   });
 });
