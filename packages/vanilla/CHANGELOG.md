@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.0.0-rc.23](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.22...core-v8.0.0-rc.23) (2026-07-24)
+
+
+### Bug Fixes
+
+* normalize 'none'/'transparent' strokes for canvas marks ([7ea40f3](https://github.com/tryopendata/openchart/commit/7ea40f3))
+
 ## [8.0.0-rc.22](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.21...core-v8.0.0-rc.22) (2026-07-24)
 
 
