@@ -10,6 +10,7 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
+import { computeAnimationDuration } from '../animation';
 import { createChart } from '../mount';
 import { type CanvasStub, stubCanvas2D } from '../scatter-canvas/__tests__/canvas-stub';
 
@@ -141,6 +142,69 @@ describe('canvas mark mode DOM contract', () => {
     expect(container.querySelectorAll('canvas.oc-mark-canvas').length).toBe(1);
 
     chart.destroy();
+  });
+});
+
+describe('canvas entrance completion clock', () => {
+  // The DOM-counting estimate in computeAnimationDuration sees no point
+  // elements in canvas mode, so without an explicit override the cleanup timer
+  // fires roughly a second into a ~2.2s entrance. Everything downstream of
+  // that timer then misbehaves: cleanupAnimations is nulled, a deferred resize
+  // replays into a teardown, and update() slips past the entrance-in-flight
+  // gate while the canvas tween is still writing alpha.
+  //
+  // A t=0 probe passes trivially and would miss all of it, so probe MID-WINDOW.
+  it('keeps the entrance in flight well past the DOM-derived estimate', () => {
+    vi.useFakeTimers();
+    try {
+      const container = createContainer();
+      const chart = createChart(
+        container,
+        { ...scatterSpec(4000, 'canvas'), animation: true },
+        {
+          width: 600,
+          height: 400,
+        },
+      );
+
+      const svg = container.querySelector('svg') as SVGElement;
+      // The naive estimate is what the timer WOULD have used.
+      const naive = computeAnimationDuration(svg);
+
+      // 1.5s in: past the naive estimate, still inside the real entrance.
+      vi.advanceTimersByTime(1500);
+      expect(naive).toBeLessThan(1500);
+      // Still animating => oc-animate not yet removed.
+      expect(svg.classList.contains('oc-animate')).toBe(true);
+
+      chart.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does eventually clear the entrance', () => {
+    vi.useFakeTimers();
+    try {
+      const container = createContainer();
+      const chart = createChart(
+        container,
+        { ...scatterSpec(4000, 'canvas'), animation: true },
+        {
+          width: 600,
+          height: 400,
+        },
+      );
+      const svg = container.querySelector('svg') as SVGElement;
+
+      // Past the clamped stagger budget (2s) + fade + annotation delay + buffer.
+      vi.advanceTimersByTime(5000);
+      expect(svg.classList.contains('oc-animate')).toBe(false);
+
+      chart.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -28,7 +28,7 @@ import {
   facetMinHeight,
   legendGap,
 } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, setupAnimationCleanup } from './animation';
+import { cancelAnimations, computeAnimationDuration, setupAnimationCleanup } from './animation';
 import {
   exportCSV,
   exportJPG,
@@ -64,6 +64,7 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import type { EntranceHandle } from './scatter-canvas/entrance';
 import { wireCanvasInteractions } from './scatter-canvas/interactions';
 import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-canvas/layer';
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
@@ -256,6 +257,7 @@ export function createChart<TData extends DataRow = DataRow>(
   // and resizes need no canvas-specific handling beyond destroying it here.
   let canvasLayer: ScatterCanvasLayer | null = null;
   let cleanupCanvasEvents: (() => void) | null = null;
+  let canvasEntrance: EntranceHandle | null = null;
   let warnedCanvasEditMode = false;
   let cleanupKeyboardNav: (() => void) | null = null;
   let cleanupLegend: (() => void) | null = null;
@@ -872,6 +874,8 @@ export function createChart<TData extends DataRow = DataRow>(
       cleanupAnimations();
       cleanupAnimations = null;
     }
+    canvasEntrance?.cancel();
+    canvasEntrance = null;
     cancelAnimations(svgElement);
 
     // Clean up previous render
@@ -1167,13 +1171,34 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Set up animation cleanup on first render only
     if (shouldAnimate && svgElement) {
-      cleanupAnimations = setupAnimationCleanup(svgElement, () => {
-        cleanupAnimations = null;
-        if (pendingResize) {
-          pendingResize = false;
-          resize();
+      // Canvas mode animates points on the canvas scheduler, not via CSS, so
+      // the cleanup timer must be told how long that actually takes. The
+      // DOM-counting estimate sees no point elements and would fire early.
+      let entranceTotalMs: number | undefined;
+      if (canvasMode && canvasLayer && currentLayout.animation?.enter) {
+        canvasEntrance = canvasLayer.playEntrance(currentLayout.animation.enter);
+        if (canvasEntrance) {
+          // Take the longer of the two clocks: the SVG side still animates
+          // axes, chrome, and annotations on its own schedule.
+          entranceTotalMs = Math.max(
+            computeAnimationDuration(svgElement),
+            canvasEntrance.totalMs + (currentLayout.animation.annotationDelay ?? 0) + 500,
+          );
         }
-      });
+      }
+
+      cleanupAnimations = setupAnimationCleanup(
+        svgElement,
+        () => {
+          cleanupAnimations = null;
+          canvasEntrance = null;
+          if (pendingResize) {
+            pendingResize = false;
+            resize();
+          }
+        },
+        entranceTotalMs,
+      );
     }
     // Bump the render generation so tests (and consumers) can observe every
     // full recompile, including the post-font-load one.
@@ -1298,6 +1323,18 @@ export function createChart<TData extends DataRow = DataRow>(
   function resize(): void {
     if (destroyed) return;
     if (cleanupAnimations) {
+      // Canvas mode cancels the entrance and re-renders immediately instead of
+      // deferring. The SVG is fluid (`.oc-chart { width: 100% }`) while the
+      // canvas is sized in fixed layout pixels, so deferring would leave the
+      // two layers visibly out of register for the rest of the entrance.
+      if (canvasEntrance) {
+        cleanupAnimations();
+        cleanupAnimations = null;
+        canvasEntrance.cancel();
+        canvasEntrance = null;
+        render();
+        return;
+      }
       pendingResize = true;
       return;
     }

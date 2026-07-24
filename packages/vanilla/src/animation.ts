@@ -46,8 +46,19 @@ export function computeAnimationDuration(svg: SVGElement): number {
  * rather than animationend events, because animationend fires per-element and the first
  * element to finish would prematurely kill staggered animations still in progress.
  */
-export function setupAnimationCleanup(svg: SVGElement, onComplete?: () => void): () => void {
-  const totalTime = computeAnimationDuration(svg);
+export function setupAnimationCleanup(
+  svg: SVGElement,
+  onComplete?: () => void,
+  totalMs?: number,
+): () => void {
+  // `totalMs` overrides the DOM-derived estimate. Canvas mark mode needs it:
+  // computeAnimationDuration counts [data-animation-index] ELEMENTS, and canvas
+  // mode emits no point elements at all, so the estimate collapses to roughly
+  // one element's worth of time. The timer would then fire mid-entrance,
+  // nulling cleanupAnimations, replaying a deferred resize into a teardown, and
+  // letting update() past the entrance-in-flight gate while the canvas tween is
+  // still writing alpha.
+  const totalTime = totalMs ?? computeAnimationDuration(svg);
 
   const timer = setTimeout(() => {
     svg.classList.remove('oc-animate');

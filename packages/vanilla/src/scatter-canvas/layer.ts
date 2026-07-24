@@ -13,9 +13,10 @@
  * synchronously — the two loops never run at once.
  */
 
-import type { ChartLayout } from '@opendata-ai/openchart-core';
+import type { ChartLayout, ResolvedAnimationPhase } from '@opendata-ai/openchart-core';
 import { AnimationScheduler } from '../motion/scheduler';
 import { SpatialIndex } from '../spatial-index';
+import { type EntranceHandle, playCanvasEntrance } from './entrance';
 import { ScatterCanvasRenderer } from './renderer';
 import { buildScatterCanvasState } from './state';
 import type { ScatterCanvasState } from './types';
@@ -44,6 +45,14 @@ export interface ScatterCanvasLayer {
   hitTest(x: number, y: number, maxDist: number): ScatterHit | null;
   /** Rebuild the spatial index from the current state. Never call per frame. */
   rebuildIndex(): void;
+  /**
+   * Fade the points in, replicating the CSS point entrance. Returns null when
+   * there is nothing to animate (no points, or reduced motion), having already
+   * settled the final state. The handle's `totalMs` must be used to size the
+   * mount's animation-cleanup timer -- canvas mode emits no animated elements
+   * for the DOM-counting estimate to find.
+   */
+  playEntrance(enter: ResolvedAnimationPhase, onDone?: () => void): EntranceHandle | null;
   /** Suspend/resume pointer interactions (used while a transition runs). */
   setInteractionSuspended(suspended: boolean): void;
   /** True while interactions are suspended. */
@@ -139,6 +148,16 @@ export function createScatterCanvasLayer(
       return index.findNearest(x, y, maxDist);
     },
     rebuildIndex,
+    playEntrance(enter, onDone) {
+      return playCanvasEntrance({
+        state,
+        enter,
+        addAnimation: (a) => scheduler.add(a),
+        removeAnimation: (a) => scheduler.remove(a),
+        requestPaint: scheduleRepaint,
+        onDone,
+      });
+    },
     setInteractionSuspended(suspended: boolean) {
       interactionSuspended = suspended;
     },
