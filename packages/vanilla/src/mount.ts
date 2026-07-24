@@ -1304,6 +1304,9 @@ export function createChart<TData extends DataRow = DataRow>(
         animation: currentLayout.animation!,
         fromSnapshot: snapshot ?? undefined,
         manual,
+        // render() above already rebuilt the layer for the NEXT layout, so this
+        // is the destination-mode layer the tween writes into.
+        canvas: canvasLayer ?? undefined,
         onComplete: () => {
           transitionHandle = null;
         },

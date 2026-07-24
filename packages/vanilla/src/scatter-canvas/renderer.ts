@@ -236,6 +236,8 @@ export class ScatterCanvasRenderer {
       const r = marks.r[i];
       if (r <= 0) continue;
       if (!inRect(marks.x[i], marks.y[i], r, clip)) continue;
+      // `enterAlpha` only. `fillOpacity` is deliberately excluded to match the
+      // SVG renderer, where `fill-opacity` never touches the stroke.
       const alpha = enterAlpha ? enterAlpha[i] : 1;
       if (alpha <= 0) continue;
       const key = `${stroke}|${width}|${alpha.toFixed(3)}`;
