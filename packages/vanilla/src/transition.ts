@@ -46,6 +46,7 @@ import {
 import { interpolateRgb } from 'd3-interpolate';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
 import { rectPathWithCorners, renderSingleMark } from './renderers/marks';
+import { flattenFill } from './scatter-canvas/state';
 
 /**
  * Stable identity for an annotation across layout snapshots.
@@ -145,6 +146,17 @@ const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point']);
 export const DEFAULT_UPDATE_MAX_MARKS = 500;
 
 /**
+ * Default cap when the destination layout renders its points on canvas.
+ *
+ * Two orders of magnitude above the SVG cap because the cost model is
+ * different: a canvas frame writes into typed arrays and issues one batched
+ * fill per color bucket, where the SVG path writes attributes on one DOM
+ * element per mark. The cap that keeps low-end devices honest for DOM writes
+ * would veto exactly the high-cardinality morphs canvas mode exists to serve.
+ */
+export const CANVAS_DEFAULT_UPDATE_MAX_MARKS = 20_000;
+
+/**
  * Spec-shape half of the transition gate (mark type + encoding identity),
  * usable before either spec has been compiled. Exported so callers that
  * need to predict transition eligibility ahead of a compile (e.g. the
@@ -222,8 +234,20 @@ export function canTransition(args: {
   // 8. Mark count within the update cap. Per-frame SVG attribute writes on
   //    thousands of elements drop frames on low-end devices, so past the cap
   //    the caller falls through to an instant swap.
-  const maxMarks = nextLayout.animation.update.maxMarks ?? DEFAULT_UPDATE_MAX_MARKS;
-  if (nextLayout.marks.length > maxMarks) return false;
+  //
+  //    The cap comes from the DESTINATION mode, and so do exit ghosts -- they
+  //    are rendered into the next layout's surface. That makes the count that
+  //    matters `max(prev, next)`, not `next` alone: a 4,341-point canvas chart
+  //    updating down to 400 SVG points looks cheap by `next`, but the update
+  //    would mint ~3,941 SVG ghost circles, which is precisely the jank this
+  //    cap exists to prevent. (svg -> canvas needs no such guard: the canvas
+  //    cap applies and the exits paint on canvas.)
+  const cap =
+    nextLayout.animation.update.maxMarks ??
+    (nextLayout.markRenderMode === 'canvas'
+      ? CANVAS_DEFAULT_UPDATE_MAX_MARKS
+      : DEFAULT_UPDATE_MAX_MARKS);
+  if (Math.max(prevLayout.marks.length, nextLayout.marks.length) > cap) return false;
 
   // 9. Something visible actually changed (zero-delta check)
   if (!hasVisibleChange(prevLayout, nextLayout)) return false;
@@ -516,6 +540,100 @@ interface AnnotationTween {
   toOpacity?: number;
 }
 
+/**
+ * The slice of `ScatterCanvasLayer` a transition needs.
+ *
+ * Declared structurally here rather than imported from `./scatter-canvas/layer`
+ * so the dependency runs one way: the layer knows nothing about transitions,
+ * and transitions know nothing about how the layer is built.
+ */
+export interface CanvasLayerLike {
+  state: {
+    marks: {
+      n: number;
+      x: Float32Array;
+      y: Float32Array;
+      r: Float32Array;
+      keys: (string | undefined)[];
+    };
+    gridlines: { orient: 'x' | 'y'; position: number; alpha: number }[];
+    enterAlpha: Float32Array | null;
+    exiting: {
+      x: Float32Array;
+      y: Float32Array;
+      r: Float32Array;
+      fill: string[];
+      alpha: number;
+    } | null;
+  };
+  repaint(): void;
+  rebuildIndex(): void;
+  setInteractionSuspended(suspended: boolean): void;
+}
+
+/**
+ * Gridline enter/update/exit for a canvas mark layer.
+ *
+ * Same value-keyed matching as the SVG path (`computeGridlineDeltas`), writing
+ * interpolated position and alpha into `layer.state.gridlines` instead of onto
+ * `<line>` elements. Tick LABELS keep their SVG tween and share this clock, so
+ * a label and its gridline never separate.
+ */
+interface CanvasGridlinesTween {
+  tweenType: 'canvasGridlines';
+  kind: 'update';
+  layer: CanvasLayerLike;
+  /** Index into `layer.state.gridlines`, one entry per gridline it drives. */
+  index: Uint32Array;
+  fromPos: Float32Array;
+  toPos: Float32Array;
+  fromAlpha: Float32Array;
+  toAlpha: Float32Array;
+  /** Never set; present so the shared opacity step can read the union. */
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+/**
+ * Point enter/update/exit for a canvas mark layer.
+ *
+ * One tween record covers EVERY point, not one per point: at 4k+ marks the
+ * per-tween array walk and the per-point closure allocation are the frame
+ * budget. Geometry is packed into parallel typed arrays and lerped inline, and
+ * the results are written straight into the layer's SoA -- no DOM, no objects,
+ * no allocation per frame.
+ */
+interface CanvasPointsTween {
+  tweenType: 'canvasPoints';
+  /**
+   * Always `'update'`: enters and exits are folded into this single record and
+   * timed internally against their own phase clocks. `kind` still has to be a
+   * union member so the shared `applyTweenState` prologue can read it.
+   */
+  kind: 'update';
+  layer: CanvasLayerLike;
+  /** Index into the layer's SoA per SURVIVING point. */
+  soaIndex: Uint32Array;
+  fromCx: Float32Array;
+  fromCy: Float32Array;
+  fromR: Float32Array;
+  toCx: Float32Array;
+  toCy: Float32Array;
+  toR: Float32Array;
+  /** Key per surviving point, parallel to `soaIndex`, for `snapshot()`. */
+  soaKeys: string[];
+  /** Index into the layer's SoA per ENTERING point (fades in, does not move). */
+  enterSoaIndex: Uint32Array;
+  /** Exit ghost geometry, painted from the PREV layout under the live points. */
+  exitCx: Float32Array;
+  exitCy: Float32Array;
+  exitR: Float32Array;
+  exitFill: string[];
+  /** Never set; present so the shared opacity step can read the union. */
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
 type Tween =
   | RectTween
   | LineTween
@@ -527,7 +645,9 @@ type Tween =
   | AxisTickTween
   | GridlineTween
   | ColorTween
-  | AnnotationTween;
+  | AnnotationTween
+  | CanvasPointsTween
+  | CanvasGridlinesTween;
 
 // ---------------------------------------------------------------------------
 // Geometry helpers (rect)
@@ -920,8 +1040,15 @@ export function runTransition(args: {
    * to `totalMs` (which snaps to final) or calling `cancel()`.
    */
   manual?: boolean;
+  /**
+   * The canvas mark layer, when the NEXT layout renders points on canvas. Point
+   * geometry is then tweened into `canvas.state` instead of onto SVG circles,
+   * and this one rAF loop paints it — the layer's own scheduler stays idle for
+   * the duration (entrance blocks transitions; hover is suspended).
+   */
+  canvas?: CanvasLayerLike;
 }): TransitionHandle {
-  const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot, manual } = args;
+  const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot, manual, canvas } = args;
   const update = animation.update!;
   const exit = animation.exit ?? { ...EXIT_DEFAULTS };
 
@@ -1020,15 +1147,22 @@ export function runTransition(args: {
     );
   }
   if (hasPoints) {
-    buildPointTweens(
-      prevLayout,
-      nextLayout,
-      marksContainer,
-      tweens,
-      ghosts,
-      ghostGradientMap,
-      fromSnapshot,
-    );
+    // Either/or, never both: in canvas mode the SVG carries no point circles
+    // for the DOM builder to find, and every point (including exit ghosts)
+    // lives on the layer.
+    if (canvas) {
+      buildCanvasPointsTween(prevLayout, nextLayout, canvas, tweens, fromSnapshot);
+    } else {
+      buildPointTweens(
+        prevLayout,
+        nextLayout,
+        marksContainer,
+        tweens,
+        ghosts,
+        ghostGradientMap,
+        fromSnapshot,
+      );
+    }
   }
   if (hasRules) {
     buildRuleTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
@@ -1040,8 +1174,13 @@ export function runTransition(args: {
     buildTextMarkTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
   }
 
-  // Axis tick/gridline transitions
+  // Axis tick/gridline transitions. In canvas mode the SVG axes carry tick
+  // labels but no gridlines (the layer paints those), so both run: the SVG pass
+  // finds zero `.oc-gridline` elements and only tweens labels.
   buildAxisTweens(svg, prevLayout, nextLayout, tweens, ghosts);
+  if (canvas) {
+    buildCanvasGridlinesTween(prevLayout, nextLayout, canvas, tweens);
+  }
 
   // Mark fill/stroke (a highlight mute recolors marks that never move)
   buildColorTweens(prevLayout, nextLayout, marksContainer, tweens);
@@ -1060,6 +1199,15 @@ export function runTransition(args: {
   for (const tw of tweens) {
     applyTweenState(tw, 0, update, exit, enterDelay, enterDuration);
   }
+  // ...and paint them. The state writes above only rewind the layer's data; the
+  // bitmap still shows the final state until something repaints. Relying on
+  // rAF-runs-before-paint is an accident of ordering, and manual mode has no
+  // paint at all between beginManualUpdate() and the first step().
+  canvas?.repaint();
+  // Hit-testing is off while marks are in motion: the spatial index still
+  // describes the destination layout, and rebuilding it per frame at 4k points
+  // is exactly the cost the canvas layer exists to avoid.
+  canvas?.setInteractionSuspended(true);
   // Set secondary elements to invisible at start
   for (const el of secondaryEls) {
     el.style.opacity = '0';
@@ -1090,11 +1238,22 @@ export function runTransition(args: {
     // Crossfade secondary elements: delayed 40%, over 60% of update duration
     applySecondaryOpacity(secondaryEls, elapsed, enterDelay, enterDuration);
 
+    // One paint per frame, after every tween has written its state.
+    canvas?.repaint();
+
     if (tGlobal >= 1) {
       finish();
     } else {
       rafId = requestAnimationFrame(tick);
     }
+  }
+
+  /** Settle the canvas layer: repaint the final state, re-index, re-arm hover. */
+  function settleCanvas(): void {
+    if (!canvas) return;
+    canvas.repaint();
+    canvas.rebuildIndex();
+    canvas.setInteractionSuspended(false);
   }
 
   function finish(): void {
@@ -1104,6 +1263,7 @@ export function runTransition(args: {
 
     snapToFinal();
     removeGhosts();
+    settleCanvas();
     // Restore secondary element opacities to their rendered values
     for (let i = 0; i < secondaryEls.length; i++) {
       secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
@@ -1143,6 +1303,23 @@ export function runTransition(args: {
 
     for (const tw of tweens) {
       if (tw.kind !== 'update') continue;
+
+      // Canvas points snapshot per-point from the packed arrays. The emitted
+      // entries are plain `{type:'point'}` -- identical to what the SVG path
+      // emits -- so an interrupted transition retargets correctly even across
+      // an svg <-> canvas mode flip.
+      if (tw.tweenType === 'canvasPoints') {
+        for (let s = 0; s < tw.soaIndex.length; s++) {
+          snap.set(tw.soaKeys[s], {
+            type: 'point',
+            cx: tw.fromCx[s] + (tw.toCx[s] - tw.fromCx[s]) * easedUpdate,
+            cy: tw.fromCy[s] + (tw.toCy[s] - tw.fromCy[s]) * easedUpdate,
+            r: tw.fromR[s] + (tw.toR[s] - tw.fromR[s]) * easedUpdate,
+          });
+        }
+        continue;
+      }
+
       const key = getKeyForTween(tw);
       if (!key) continue;
 
@@ -1220,6 +1397,7 @@ export function runTransition(args: {
       }
       snapToFinal();
       removeGhosts();
+      settleCanvas();
       // Restore secondary element opacities on cancel
       for (let i = 0; i < secondaryEls.length; i++) {
         secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
@@ -1246,8 +1424,12 @@ export function runTransition(args: {
         // to finalize the manual run via `cancel()`.
         snapToFinal();
         removeGhosts();
+        settleCanvas();
         return false;
       }
+      // Manual mode rasterizes between steps with no rAF in between, so the
+      // paint has to happen here or the captured frame is a stale bitmap.
+      canvas?.repaint();
       return true;
     },
     totalMs,
@@ -1299,6 +1481,8 @@ function applySecondaryOpacity(
 
 /** Get the data-key for a tween's element (used for snapshot keying). */
 function getKeyForTween(tw: Tween): string | null {
+  // Canvas points are keyed per-point inside the record, not per-element.
+  if (tw.tweenType === 'canvasPoints' || tw.tweenType === 'canvasGridlines') return null;
   if ('ghost' in tw && tw.ghost) return null; // ghosts don't carry keys
   return tw.el.getAttribute('data-key');
 }
@@ -1319,6 +1503,17 @@ function applyTweenState(
   enterDelay: number,
   enterDuration: number,
 ): void {
+  // Canvas points carry all three phases in one record and have no element for
+  // the shared geometry/opacity steps below to write to, so they short-circuit.
+  if (tw.tweenType === 'canvasPoints') {
+    applyCanvasPointsState(tw, elapsed, update, exit, enterDelay, enterDuration);
+    return;
+  }
+  if (tw.tweenType === 'canvasGridlines') {
+    applyCanvasGridlinesState(tw, elapsed, update, enterDelay, enterDuration);
+    return;
+  }
+
   let tLocal: number;
 
   if (tw.kind === 'exit') {
@@ -1432,6 +1627,16 @@ function applyTweenState(
 }
 
 function snapTweenToFinal(tw: Tween): void {
+  // No element; the shared opacity/suppressed-point steps below would throw.
+  if (tw.tweenType === 'canvasPoints') {
+    snapCanvasPointsToFinal(tw);
+    return;
+  }
+  if (tw.tweenType === 'canvasGridlines') {
+    snapCanvasGridlinesToFinal(tw);
+    return;
+  }
+
   switch (tw.tweenType) {
     case 'rect':
       applyGeomToElement(tw.el, tw.to, tw.mark);
@@ -2147,6 +2352,340 @@ function buildPointTweens(
 }
 
 // ---------------------------------------------------------------------------
+// Canvas point tween building
+// ---------------------------------------------------------------------------
+
+/**
+ * Canvas counterpart of `buildPointTweens`: the same keyed diff, minus the DOM.
+ *
+ * Where the SVG builder does a `querySelector` per key and emits one tween per
+ * mark, this resolves keys against the layer's SoA (already built from the NEXT
+ * layout by `render()`) and emits exactly one packed tween.
+ */
+function buildCanvasPointsTween(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  layer: CanvasLayerLike,
+  tweens: Tween[],
+  fromSnapshot?: GeometrySnapshot,
+): void {
+  const prevPoints = prevLayout.marks.filter((m): m is PointMark => m.type === 'point');
+  const nextPoints = nextLayout.marks.filter((m): m is PointMark => m.type === 'point');
+
+  const prevByKey = new Map<string, PointMark>();
+  for (const m of prevPoints) {
+    if (m.key) prevByKey.set(m.key, m);
+  }
+
+  // The layer's SoA is the authority on where a point lives on the canvas.
+  // `nextPoints` is only used to confirm the layer and the layout agree.
+  const soa = layer.state.marks;
+  const survivors: number[] = [];
+  const enters: number[] = [];
+  for (let i = 0; i < soa.n; i++) {
+    const key = soa.keys[i];
+    if (key !== undefined && prevByKey.has(key)) survivors.push(i);
+    else enters.push(i);
+  }
+
+  const exits: PointMark[] = [];
+  const nextKeys = new Set<string>();
+  for (const m of nextPoints) {
+    if (m.key) nextKeys.add(m.key);
+  }
+  for (const [key, prev] of prevByKey) {
+    if (!nextKeys.has(key)) exits.push(prev);
+  }
+
+  const sn = survivors.length;
+  const soaIndex = new Uint32Array(sn);
+  const fromCx = new Float32Array(sn);
+  const fromCy = new Float32Array(sn);
+  const fromR = new Float32Array(sn);
+  const toCx = new Float32Array(sn);
+  const toCy = new Float32Array(sn);
+  const toR = new Float32Array(sn);
+  const soaKeys: string[] = new Array(sn);
+
+  for (let s = 0; s < sn; s++) {
+    const i = survivors[s];
+    // `survivors` holds exactly the indices whose key is present in prevByKey,
+    // so both lookups are total.
+    const key = soa.keys[i] as string;
+    const prev = prevByKey.get(key) as PointMark;
+
+    // Retarget from an interrupted transition's frozen geometry when present.
+    // The snapshot is mode-agnostic (`{type:'point'}`), so a canvas transition
+    // interrupted by an SVG-mode update retargets correctly and vice versa.
+    let px = prev.cx;
+    let py = prev.cy;
+    let pr = prev.r;
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'point') {
+      px = snap.cx;
+      py = snap.cy;
+      if (snap.r !== undefined) pr = snap.r;
+    }
+
+    soaIndex[s] = i;
+    soaKeys[s] = key;
+    fromCx[s] = px;
+    fromCy[s] = py;
+    fromR[s] = pr;
+    // The SoA already holds the destination geometry -- render() built it from
+    // nextLayout before the transition started.
+    toCx[s] = soa.x[i];
+    toCy[s] = soa.y[i];
+    toR[s] = soa.r[i];
+  }
+
+  const enterSoaIndex = Uint32Array.from(enters);
+  if (enters.length > 0) {
+    // Entering points fade via `enterAlpha`, the whole-mark channel the
+    // entrance animation uses, NOT `fillOpacity`: on canvas as in SVG,
+    // fill-opacity must not drag the stroke down with it. Seed the array at
+    // full alpha so every surviving point stays opaque; the tween only ever
+    // writes the entering indices.
+    const alpha = new Float32Array(soa.n).fill(1);
+    for (const i of enters) alpha[i] = 0;
+    layer.state.enterAlpha = alpha;
+  }
+
+  const exitCx = new Float32Array(exits.length);
+  const exitCy = new Float32Array(exits.length);
+  const exitR = new Float32Array(exits.length);
+  const exitFill: string[] = new Array(exits.length);
+  for (let x = 0; x < exits.length; x++) {
+    const m = exits[x];
+    exitCx[x] = m.cx;
+    exitCy[x] = m.cy;
+    exitR[x] = m.r;
+    exitFill[x] = flattenFill(m.fill);
+  }
+
+  tweens.push({
+    tweenType: 'canvasPoints',
+    kind: 'update',
+    layer,
+    soaIndex,
+    fromCx,
+    fromCy,
+    fromR,
+    toCx,
+    toCy,
+    toR,
+    soaKeys,
+    enterSoaIndex,
+    exitCx,
+    exitCy,
+    exitR,
+    exitFill,
+  });
+}
+
+/**
+ * Write one frame of a canvas point tween into the layer's SoA.
+ *
+ * Enters and exits run on their own clocks here rather than through the shared
+ * `kind` prologue, because a single record carries all three phases.
+ */
+function applyCanvasPointsState(
+  tw: CanvasPointsTween,
+  elapsed: number,
+  update: { duration: number },
+  exit: { duration: number },
+  enterDelay: number,
+  enterDuration: number,
+): void {
+  const soa = tw.layer.state.marks;
+  const easedUpdate = cubicOut(Math.min(elapsed / update.duration, 1));
+
+  for (let s = 0; s < tw.soaIndex.length; s++) {
+    const i = tw.soaIndex[s];
+    soa.x[i] = tw.fromCx[s] + (tw.toCx[s] - tw.fromCx[s]) * easedUpdate;
+    soa.y[i] = tw.fromCy[s] + (tw.toCy[s] - tw.fromCy[s]) * easedUpdate;
+    soa.r[i] = tw.fromR[s] + (tw.toR[s] - tw.fromR[s]) * easedUpdate;
+  }
+
+  // Enters fade in, delayed 40% of the update duration -- same phase math the
+  // SVG point path uses, so both modes read as one motion.
+  const alpha = tw.layer.state.enterAlpha;
+  if (alpha && tw.enterSoaIndex.length > 0) {
+    const tEnter = elapsed < enterDelay ? 0 : Math.min((elapsed - enterDelay) / enterDuration, 1);
+    const easedEnter = cubicOut(tEnter);
+    for (let e = 0; e < tw.enterSoaIndex.length; e++) {
+      alpha[tw.enterSoaIndex[e]] = easedEnter;
+    }
+  }
+
+  // Exit ghosts hold their prev position and fade out on the exit clock.
+  if (tw.exitCx.length > 0) {
+    const easedExit = cubicOut(Math.min(elapsed / exit.duration, 1));
+    tw.layer.state.exiting = {
+      x: tw.exitCx,
+      y: tw.exitCy,
+      r: tw.exitR,
+      fill: tw.exitFill,
+      alpha: 1 - easedExit,
+    };
+  }
+}
+
+/**
+ * The axes that contribute canvas gridlines, in the order `buildScatterCanvasState`
+ * walks them. `layer.state.gridlines` is a flat array, so the tween can only index
+ * into it by replaying that exact traversal -- keep the two in lockstep.
+ */
+function canvasGridlineAxes(
+  layout: ChartLayout,
+): { axis: AxisLayout | undefined; orient: 'x' | 'y' }[] {
+  return [
+    { axis: layout.axes.y, orient: 'y' as const },
+    { axis: layout.axes.y2, orient: 'y' as const },
+    { axis: layout.axes.x, orient: 'x' as const },
+  ];
+}
+
+/** True when this axis renders gridlines at all (mirrors `collectGridlines`). */
+function axisEmitsGridlines(axis: AxisLayout | undefined, orient: 'x' | 'y'): axis is AxisLayout {
+  if (!axis) return false;
+  return !(orient === 'y' && axis.orient === 'right');
+}
+
+/**
+ * Build the canvas gridline tween.
+ *
+ * The layer's `gridlines` array is already at the NEXT layout's positions, so
+ * this only has to compute where each one came FROM. Survivors rewind to their
+ * prev position at full alpha; new gridlines hold position and fade in on the
+ * enter clock. Exits are dropped rather than ghosted: the next layout's array
+ * has no slot for them, and a gridline fading out under 4k points is not worth
+ * a parallel ghost array.
+ */
+function buildCanvasGridlinesTween(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  layer: CanvasLayerLike,
+  tweens: Tween[],
+): void {
+  const live = layer.state.gridlines;
+  const index: number[] = [];
+  const fromPos: number[] = [];
+  const toPos: number[] = [];
+  const fromAlpha: number[] = [];
+  const toAlpha: number[] = [];
+
+  const prevAxes = canvasGridlineAxes(prevLayout);
+  const nextAxes = canvasGridlineAxes(nextLayout);
+
+  let cursor = 0;
+  for (let a = 0; a < nextAxes.length; a++) {
+    const nextAxis = nextAxes[a].axis;
+    const orient = nextAxes[a].orient;
+    if (!axisEmitsGridlines(nextAxis, orient)) continue;
+
+    const prevAxis = prevAxes[a].axis;
+    const deltas = axisEmitsGridlines(prevAxis, orient)
+      ? computeGridlineDeltas(prevAxis, nextAxis)
+      : null;
+
+    // Position -> tick value for THIS axis, so each flat-array slot can be
+    // resolved back to the key the deltas are keyed by.
+    const valueAtPosition = new Map<number, string>();
+    for (const tick of nextAxis.ticks) {
+      valueAtPosition.set(tick.position, serializeKeyValue(tick.value));
+    }
+
+    for (const gridline of nextAxis.gridlines) {
+      const slot = cursor++;
+      // Defensive: the layer was built from this same layout, so the arrays
+      // must be the same length. Bail rather than write past the end.
+      if (slot >= live.length) break;
+
+      const key = valueAtPosition.get(gridline.position);
+      const prevPos = key !== undefined ? deltas?.prevGridByValue.get(key) : undefined;
+
+      index.push(slot);
+      toPos.push(gridline.position);
+      toAlpha.push(live[slot].alpha);
+      if (prevPos !== undefined) {
+        // Survivor: slide, no fade.
+        fromPos.push(prevPos);
+        fromAlpha.push(live[slot].alpha);
+      } else {
+        // Enter: hold position, fade in.
+        fromPos.push(gridline.position);
+        fromAlpha.push(0);
+      }
+    }
+  }
+
+  if (index.length === 0) return;
+
+  tweens.push({
+    tweenType: 'canvasGridlines',
+    kind: 'update',
+    layer,
+    index: Uint32Array.from(index),
+    fromPos: Float32Array.from(fromPos),
+    toPos: Float32Array.from(toPos),
+    fromAlpha: Float32Array.from(fromAlpha),
+    toAlpha: Float32Array.from(toAlpha),
+  });
+}
+
+/** Write one frame of a canvas gridline tween into the layer state. */
+function applyCanvasGridlinesState(
+  tw: CanvasGridlinesTween,
+  elapsed: number,
+  update: { duration: number },
+  enterDelay: number,
+  enterDuration: number,
+): void {
+  const live = tw.layer.state.gridlines;
+  const easedUpdate = cubicOut(Math.min(elapsed / update.duration, 1));
+  // Enters share the point tween's delayed-fade clock so the whole update
+  // reads as one motion.
+  const tEnter = elapsed < enterDelay ? 0 : Math.min((elapsed - enterDelay) / enterDuration, 1);
+  const easedEnter = cubicOut(tEnter);
+
+  for (let i = 0; i < tw.index.length; i++) {
+    const g = live[tw.index[i]];
+    g.position = tw.fromPos[i] + (tw.toPos[i] - tw.fromPos[i]) * easedUpdate;
+    const from = tw.fromAlpha[i];
+    const to = tw.toAlpha[i];
+    g.alpha = from === to ? to : from + (to - from) * easedEnter;
+  }
+}
+
+/** Snap a canvas gridline tween to its exact destination. */
+function snapCanvasGridlinesToFinal(tw: CanvasGridlinesTween): void {
+  const live = tw.layer.state.gridlines;
+  for (let i = 0; i < tw.index.length; i++) {
+    const g = live[tw.index[i]];
+    g.position = tw.toPos[i];
+    g.alpha = tw.toAlpha[i];
+  }
+}
+
+/** Snap a canvas point tween to its exact destination and drop the ghosts. */
+function snapCanvasPointsToFinal(tw: CanvasPointsTween): void {
+  const soa = tw.layer.state.marks;
+  for (let s = 0; s < tw.soaIndex.length; s++) {
+    const i = tw.soaIndex[s];
+    soa.x[i] = tw.toCx[s];
+    soa.y[i] = tw.toCy[s];
+    soa.r[i] = tw.toR[s];
+  }
+  tw.layer.state.exiting = null;
+  // Null rather than fill(1): the renderer skips the alpha multiply entirely
+  // when this is null, and every point is at full alpha once the fade lands.
+  // Safe to clobber unconditionally -- gate 6 bars a transition while an
+  // entrance is in flight, so nothing else owns this array.
+  tw.layer.state.enterAlpha = null;
+}
+
+// ---------------------------------------------------------------------------
 // Rule tween building
 // ---------------------------------------------------------------------------
 
@@ -2652,6 +3191,38 @@ function buildAxisTweens(
   buildSingleAxisTweens(svg, prevLayout.axes.y, nextLayout.axes.y, 'y', nextLayout, tweens, ghosts);
 }
 
+/**
+ * Match an axis's gridlines between two layouts, keyed by TICK VALUE.
+ *
+ * Gridlines carry no key of their own, so identity is borrowed from the tick
+ * that shares their position -- a value-keyed match, which is why a rescale
+ * that keeps no tick values (900 -> 20) reads as a full fade-out/fade-in rather
+ * than a slide, and why one that keeps them all slides even when every position
+ * moved.
+ *
+ * The `g.position === tick.position` join is an exact float compare, which is
+ * only safe because both arrays come out of the same scale call in the same
+ * layout pass. Anything that recomputes gridline positions independently --
+ * even via an algebraically identical expression -- would silently match
+ * nothing and degrade every gridline to a fade.
+ *
+ * Pure so the canvas path can consume the same deltas without a DOM.
+ */
+function computeGridlineDeltas(
+  prevAxis: AxisLayout,
+  nextAxis: AxisLayout,
+): { prevGridByValue: Map<string, number>; nextGridByValue: Map<string, number> } {
+  const byValue = (axis: AxisLayout): Map<string, number> => {
+    const map = new Map<string, number>();
+    for (const tick of axis.ticks) {
+      const matching = axis.gridlines.find((g) => g.position === tick.position);
+      if (matching) map.set(serializeKeyValue(tick.value), matching.position);
+    }
+    return map;
+  };
+  return { prevGridByValue: byValue(prevAxis), nextGridByValue: byValue(nextAxis) };
+}
+
 function buildSingleAxisTweens(
   svg: SVGSVGElement,
   prevAxis: AxisLayout | undefined,
@@ -2771,32 +3342,9 @@ function buildSingleAxisTweens(
   }
 
   // Gridlines
-  const prevGridMap = new Map<string, number>();
-  for (const gridline of prevAxis.gridlines) {
-    // Gridlines share positions with their axis ticks
-    prevGridMap.set(String(gridline.position), gridline.position);
-  }
-  // Build a value->position map for gridlines by matching tick values
-  const prevGridByValue = new Map<string, number>();
-  for (const tick of prevAxis.ticks) {
-    const key = serializeKeyValue(tick.value);
-    // Find matching gridline at same position
-    const matchingGridline = prevAxis.gridlines.find((g) => g.position === tick.position);
-    if (matchingGridline) {
-      prevGridByValue.set(key, matchingGridline.position);
-    }
-  }
-  const nextGridByValue = new Map<string, number>();
-  for (const tick of nextAxis.ticks) {
-    const key = serializeKeyValue(tick.value);
-    const matchingGridline = nextAxis.gridlines.find((g) => g.position === tick.position);
-    if (matchingGridline) {
-      nextGridByValue.set(key, matchingGridline.position);
-    }
-  }
+  const { prevGridByValue, nextGridByValue } = computeGridlineDeltas(prevAxis, nextAxis);
 
   const gridlines = axisGroup.querySelectorAll('.oc-gridline[data-tick-key]');
-  const matchedGridKeys = new Set<string>();
 
   for (const glEl of gridlines) {
     const key = glEl.getAttribute('data-tick-key');
@@ -2806,7 +3354,6 @@ function buildSingleAxisTweens(
     const prevPos = prevGridByValue.get(key);
 
     if (prevPos !== undefined && nextPos !== undefined) {
-      matchedGridKeys.add(key);
       tweens.push({
         tweenType: 'gridline',
         kind: 'update',
@@ -2816,7 +3363,6 @@ function buildSingleAxisTweens(
         toPos: nextPos,
       });
     } else if (prevPos === undefined && nextPos !== undefined) {
-      matchedGridKeys.add(key);
       tweens.push({
         tweenType: 'gridline',
         kind: 'enter',

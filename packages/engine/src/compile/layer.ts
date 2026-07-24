@@ -49,12 +49,17 @@ export function compileLayer(
     return compileChart(singleSpec, options);
   }
 
+  // Past this point every compile is one piece of a multi-leaf layer, not a
+  // standalone chart. Flagged so per-chart resolutions that only make sense for
+  // a whole figure (the canvas mark layer) opt out.
+  const layerOptions: CompileOptions = { ...options, layered: true };
+
   if (spec.resolve?.scale?.y === 'independent') {
-    return compileLayerIndependent(leaves, spec, options, compileChart);
+    return compileLayerIndependent(leaves, spec, layerOptions, compileChart);
   }
 
   const primarySpec = buildPrimarySpec(leaves, spec);
-  const primaryLayout = compileChart(primarySpec, options);
+  const primaryLayout = compileChart(primarySpec, layerOptions);
 
   const allMarks: Mark[] = [];
   const seenLabels = new Set<string>();
@@ -73,7 +78,7 @@ export function compileLayer(
   // Leaf specs lack the layer-level chrome/legend, so left alone they compute
   // a different chart area than the primary and their marks drift off the
   // axes. Freeze the primary's area (and inherit its theme) for every leaf.
-  const leafOptions: CompileOptions = { ...options, frozenChartArea: primaryLayout.area };
+  const leafOptions: CompileOptions = { ...layerOptions, frozenChartArea: primaryLayout.area };
 
   // Shared scales means shared *domains*, not just a shared plot rect. Each leaf
   // otherwise re-fits its own domain from its own rows, so a layer holding fewer

@@ -476,12 +476,20 @@ function getMarkSeries(mark: Mark): string | undefined {
  * so tall labels above near-full-height bars are not clipped by the chart-area
  * clip path that constrains the marks themselves.
  */
-export function renderMarks(parent: SVGElement, layout: ChartLayout): SVGElement | undefined {
+export function renderMarks(
+  parent: SVGElement,
+  layout: ChartLayout,
+  opts?: { skipPoints?: boolean },
+): SVGElement | undefined {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-marks');
 
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
+    // Canvas mark mode paints point marks on the canvas layer instead. The
+    // point renderer stays registered: SVG mode, exit ghosts, and full-fidelity
+    // exports all still go through it.
+    if (opts?.skipPoints && mark.type === 'point') continue;
     const renderer = markRenderers[mark.type];
     if (!renderer) continue;
 

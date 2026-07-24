@@ -42,6 +42,7 @@ import {
   getHeightClass,
   getLayoutStrategy,
   isAxislessMark,
+  MAX_SR_TABLE_ROWS,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from './annotations/compute';
@@ -71,6 +72,7 @@ import { resolveYouDrawIt } from './compile/you-draw-it';
 import { collectContrastWarnings } from './compiler/a11y-warnings';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec } from './compiler/index';
+import { resolveMarkRenderMode } from './compiler/mark-render-mode';
 import {
   buildSparklineAreaGradient,
   computeTrendFromData,
@@ -794,6 +796,23 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // filled marks in place; assignment is deterministic and theme-aware.
   applyFillPatterns(marks, chartSpec.markDef, theme);
 
+  // Rendering backend for the point marks. Advisory metadata: only stamped on
+  // the layout when it resolves to 'canvas', so an SVG-mode layout is byte
+  // identical to what this function produced before the field existed.
+  const markRenderModeWarnings: string[] = [];
+  const markRenderMode = resolveMarkRenderMode(
+    {
+      markDef: chartSpec.markDef,
+      markType: chartSpec.markType,
+      pointCount: marks.reduce((n, m) => (m.type === 'point' ? n + 1 : n), 0),
+      display: chartSpec.display,
+      faceted: false,
+      layered: options.layered ?? false,
+    },
+    markRenderModeWarnings,
+  );
+  emitSpecWarnings(markRenderModeWarnings, options.onWarn);
+
   // Resolve "you draw it" geometry (pixel fromX, x-sample positions, target
   // line color/key). Reads marks so it must run after they're computed.
   const xFieldForYdi =
@@ -956,6 +975,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     a11y: {
       altText,
       dataTableFallback,
+      ...(chartSpec.data.length > MAX_SR_TABLE_ROWS ? { totalRows: chartSpec.data.length } : {}),
       role: 'img',
       keyboardNavigable: marks.length > 0,
       ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
@@ -975,6 +995,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     measureText: options.measureText,
     ...(xInvert ? { xInvert } : {}),
     ...(yInvert ? { yInvert } : {}),
+    ...(markRenderMode === 'canvas' ? { markRenderMode } : {}),
   };
 }
 
@@ -1361,6 +1382,7 @@ function compileFaceted(
     a11y: {
       altText,
       dataTableFallback,
+      ...(chartSpec.data.length > MAX_SR_TABLE_ROWS ? { totalRows: chartSpec.data.length } : {}),
       role: 'img',
       keyboardNavigable: allMarks.length > 0,
       ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),

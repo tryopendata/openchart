@@ -28,7 +28,7 @@ import {
   facetMinHeight,
   legendGap,
 } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, setupAnimationCleanup } from './animation';
+import { cancelAnimations, computeAnimationDuration, setupAnimationCleanup } from './animation';
 import {
   exportCSV,
   exportJPG,
@@ -38,6 +38,7 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import { materializeCanvasModeSVG } from './export-canvas';
 import type { GIFExportOptions } from './export-gif';
 import {
   buildElementRef,
@@ -64,6 +65,9 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import type { EntranceHandle } from './scatter-canvas/entrance';
+import { wireCanvasInteractions } from './scatter-canvas/interactions';
+import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-canvas/layer';
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
@@ -249,6 +253,13 @@ export function createChart<TData extends DataRow = DataRow>(
   let disconnectResize: (() => void) | null = null;
   let cleanupTooltipEvents: (() => void) | null = null;
   let cleanupVoronoiEvents: (() => void) | null = null;
+  // Canvas mark layer, present only while currentLayout.markRenderMode is
+  // 'canvas'. render() is a full teardown/rebuild, so StrictMode double-mounts
+  // and resizes need no canvas-specific handling beyond destroying it here.
+  let canvasLayer: ScatterCanvasLayer | null = null;
+  let cleanupCanvasEvents: (() => void) | null = null;
+  let canvasEntrance: EntranceHandle | null = null;
+  let warnedCanvasEditMode = false;
   let cleanupKeyboardNav: (() => void) | null = null;
   let cleanupLegend: (() => void) | null = null;
   let cleanupChartEvents: (() => void) | null = null;
@@ -864,6 +875,8 @@ export function createChart<TData extends DataRow = DataRow>(
       cleanupAnimations();
       cleanupAnimations = null;
     }
+    canvasEntrance?.cancel();
+    canvasEntrance = null;
     cancelAnimations(svgElement);
 
     // Clean up previous render
@@ -871,6 +884,10 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupTooltipEvents = null;
     cleanupVoronoiEvents?.();
     cleanupVoronoiEvents = null;
+    cleanupCanvasEvents?.();
+    cleanupCanvasEvents = null;
+    canvasLayer?.destroy();
+    canvasLayer = null;
     cleanupKeyboardNav?.();
     cleanupKeyboardNav = null;
     cleanupLegend?.();
@@ -908,11 +925,49 @@ export function createChart<TData extends DataRow = DataRow>(
     lastRenderedSvgHeight = currentLayout.dimensions.height;
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
+
+    // Canvas mark mode: the canvas is created BEFORE the SVG so DOM order puts
+    // it underneath (both are positioned, so DOM order decides paint order).
+    const canvasMode = currentLayout.markRenderMode === 'canvas';
+    if (canvasMode) {
+      canvasLayer = createScatterCanvasLayer(container, currentLayout);
+      canvasLayer.repaint();
+
+      // Point marks are pixels on a canvas, not selectable elements, so
+      // per-mark edit selection is unavailable. Annotation, chrome, and legend
+      // editing still work -- those stay in the SVG. Warned once per mount.
+      if (
+        !warnedCanvasEditMode &&
+        (options?.editable || hasEditingCallbacks(options) || options?.onAnnotationEdit)
+      ) {
+        warnedCanvasEditMode = true;
+        console.warn(
+          'openchart: canvas mark mode does not support per-mark edit selection. ' +
+            'Annotation, chrome, and legend editing still work. ' +
+            "Set mark.render to 'svg' if you need to select individual points.",
+        );
+      }
+    }
+
     svgElement = renderChartSVG(currentLayout, container, {
       animate: shouldAnimate,
       crosshair,
+      canvasMarks: canvasMode,
     });
     tooltipManager = createTooltipManager(container);
+
+    // Canvas hit-testing replaces per-element listeners for point marks.
+    // wireTooltipEvents below still runs and is simply inert for points --
+    // canvas mode emits no [data-mark-id] circles for it to bind to.
+    if (canvasMode && canvasLayer) {
+      cleanupCanvasEvents = wireCanvasInteractions({
+        layer: canvasLayer,
+        svg: svgElement,
+        tooltipDescriptors: currentLayout.tooltipDescriptors,
+        tooltipManager,
+        options,
+      });
+    }
 
     // Wire tooltip events on mark elements
     cleanupTooltipEvents = wireTooltipEvents(
@@ -1117,13 +1172,34 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Set up animation cleanup on first render only
     if (shouldAnimate && svgElement) {
-      cleanupAnimations = setupAnimationCleanup(svgElement, () => {
-        cleanupAnimations = null;
-        if (pendingResize) {
-          pendingResize = false;
-          resize();
+      // Canvas mode animates points on the canvas scheduler, not via CSS, so
+      // the cleanup timer must be told how long that actually takes. The
+      // DOM-counting estimate sees no point elements and would fire early.
+      let entranceTotalMs: number | undefined;
+      if (canvasMode && canvasLayer && currentLayout.animation?.enter) {
+        canvasEntrance = canvasLayer.playEntrance(currentLayout.animation.enter);
+        if (canvasEntrance) {
+          // Take the longer of the two clocks: the SVG side still animates
+          // axes, chrome, and annotations on its own schedule.
+          entranceTotalMs = Math.max(
+            computeAnimationDuration(svgElement),
+            canvasEntrance.totalMs + (currentLayout.animation.annotationDelay ?? 0) + 500,
+          );
         }
-      });
+      }
+
+      cleanupAnimations = setupAnimationCleanup(
+        svgElement,
+        () => {
+          cleanupAnimations = null;
+          canvasEntrance = null;
+          if (pendingResize) {
+            pendingResize = false;
+            resize();
+          }
+        },
+        entranceTotalMs,
+      );
     }
     // Bump the render generation so tests (and consumers) can observe every
     // full recompile, including the post-font-load one.
@@ -1229,6 +1305,9 @@ export function createChart<TData extends DataRow = DataRow>(
         animation: currentLayout.animation!,
         fromSnapshot: snapshot ?? undefined,
         manual,
+        // render() above already rebuilt the layer for the NEXT layout, so this
+        // is the destination-mode layer the tween writes into.
+        canvas: canvasLayer ?? undefined,
         onComplete: () => {
           transitionHandle = null;
         },
@@ -1248,6 +1327,18 @@ export function createChart<TData extends DataRow = DataRow>(
   function resize(): void {
     if (destroyed) return;
     if (cleanupAnimations) {
+      // Canvas mode cancels the entrance and re-renders immediately instead of
+      // deferring. The SVG is fluid (`.oc-chart { width: 100% }`) while the
+      // canvas is sized in fixed layout pixels, so deferring would leave the
+      // two layers visibly out of register for the rest of the entrance.
+      if (canvasEntrance) {
+        cleanupAnimations();
+        cleanupAnimations = null;
+        canvasEntrance.cancel();
+        canvasEntrance = null;
+        render();
+        return;
+      }
       pendingResize = true;
       return;
     }
@@ -1303,7 +1394,17 @@ export function createChart<TData extends DataRow = DataRow>(
     if (!svgElement) {
       throw new Error('Chart is not rendered yet');
     }
-    const svg = svgElement;
+    // In canvas mode the on-screen SVG has no dots, no gridlines and no
+    // background -- the canvas owns those. Serializing it would export an
+    // empty chart, so every format works off a materialized SVG that has the
+    // missing half folded back in. Raster formats force the vector path: they
+    // are becoming pixels anyway, and it buys parity with SVG mode for free.
+    const svg =
+      canvasLayer && currentLayout.markRenderMode === 'canvas'
+        ? materializeCanvasModeSVG(currentLayout, {
+            forceVector: format === 'png' || format === 'jpg' || format === 'gif',
+          })
+        : svgElement;
     // The resolved theme, defaulted into the export options, so class-based
     // chrome fills (metrics, brand dot, legend) survive serialization away from
     // the page stylesheet. An explicit options.theme still wins.
@@ -1360,6 +1461,16 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupTooltipEvents = null;
     cleanupVoronoiEvents?.();
     cleanupVoronoiEvents = null;
+    cleanupCanvasEvents?.();
+    cleanupCanvasEvents = null;
+    // Cancel before destroying the layer, matching render()/resize(). The
+    // layer's own destroy() stops the scheduler, so this is not a live timer;
+    // what it drops is this closure's reference to the layer state, whose
+    // typed arrays scale with the point count.
+    canvasEntrance?.cancel();
+    canvasEntrance = null;
+    canvasLayer?.destroy();
+    canvasLayer = null;
     cleanupKeyboardNav?.();
     cleanupKeyboardNav = null;
     cleanupLegend?.();

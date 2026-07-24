@@ -138,4 +138,35 @@ describe('renderStaticSVG', () => {
     const svg = renderStaticSVG(lineSpec, { watermark: false });
     expect(svg).not.toContain('oc-brand-text');
   });
+
+  // renderChartSVG keys ONLY on its own `canvasMarks` option, never on
+  // layout.markRenderMode. Without that rule, promoting a layout to canvas
+  // mode would strip points, background, and gridlines from every SSR render
+  // -- there is no canvas element in the static path to paint them.
+  it('renders full SVG marks for a high point count regardless of render mode', () => {
+    const svg = renderStaticSVG({
+      mark: 'point',
+      data: Array.from({ length: 1500 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+    });
+    expect(svg).toContain('oc-mark-point');
+    expect(svg).toContain('oc-gridline');
+  });
+
+  it('renders full SVG marks even when the spec explicitly asks for canvas', () => {
+    const svg = renderStaticSVG({
+      mark: { type: 'point', render: 'canvas' },
+      data: Array.from({ length: 50 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+    });
+    expect(svg).toContain('oc-mark-point');
+    expect(svg).toContain('oc-gridline');
+    expect(svg).not.toContain('oc-mark-canvas');
+  });
 });

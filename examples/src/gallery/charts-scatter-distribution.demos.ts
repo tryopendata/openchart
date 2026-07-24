@@ -29,5 +29,7 @@ export const page: PageEntry = {
     { id: 'arrow-plot', title: 'Arrow plot' },
     { id: 'range-bar', title: 'Range bar' },
     { id: 'interactive', title: 'Interactive (hover to read out)' },
+    { id: 'high-cardinality-canvas', title: 'Keyed morph at 3,000 points' },
+    { id: 'canvas-svg-parity', title: 'Canvas vs SVG, same data' },
   ],
 };

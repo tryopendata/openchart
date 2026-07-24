@@ -596,6 +596,168 @@ const interactiveSpec: ChartSpec = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Canvas mark mode
+// ---------------------------------------------------------------------------
+
+/**
+ * Two synthetic campus cohorts sharing most of their ids, so a swap between
+ * them is a keyed morph: most dots travel, some leave, some arrive.
+ */
+function campusCohort(year: 2019 | 2025) {
+  const rand = mulberry32(year);
+  const count = year === 2019 ? 2900 : 3050;
+  const firstId = year === 2019 ? 0 : 150;
+  // The 2025 cohort tilts steeper: poverty predicts reading outcomes harder.
+  const slope = year === 2019 ? -0.45 : -0.62;
+  return Array.from({ length: count }, (_, i) => {
+    const lowIncome = rand() * 100;
+    const noise = (rand() - 0.5) * 34;
+    return {
+      id: `campus-${firstId + i}`,
+      lowIncome: Math.round(lowIncome * 10) / 10,
+      reading:
+        Math.round(Math.max(2, Math.min(98, 72 + slope * (lowIncome - 50) + noise)) * 10) / 10,
+    };
+  });
+}
+
+const COHORTS = { 2019: campusCohort(2019), 2025: campusCohort(2025) } as const;
+
+function canvasMorphSpec(year: 2019 | 2025): ChartSpec {
+  return {
+    // Small, semi-transparent dots. At ~2,900 points the default radius (5)
+    // and full opacity pack the cloud into a solid mass and the distribution
+    // stops being readable; overplotting is the point of this demo, so let
+    // density show through instead.
+    // The default white separator stroke is proportionally huge at r=2.5 and
+    // turns every dot into a ring, so drop it: at this density the dots are
+    // reading as a cloud, not as individually separable marks.
+    mark: { type: 'point', trendline: true, size: 2.5, opacity: 0.35, strokeWidth: 0 },
+    data: COHORTS[year],
+    animation: true,
+    encoding: {
+      x: {
+        field: 'lowIncome',
+        type: 'quantitative',
+        scale: { domain: [0, 100] },
+        axis: { title: 'Students from low-income households (%)' },
+      },
+      y: {
+        field: 'reading',
+        type: 'quantitative',
+        scale: { domain: [0, 100] },
+        axis: { title: 'Reading at grade level (%)' },
+      },
+      key: { field: 'id', type: 'nominal' },
+    },
+    chrome: {
+      title: 'Poverty Predicts Reading Scores, and the Link Is Tightening',
+      subtitle: `${year} campuses. Toggle the year to morph ~3,000 keyed dots and watch the trendline steepen.`,
+      source: 'Synthetic data for demonstration',
+      byline: 'Chart: OpenChart',
+    },
+  };
+}
+
+/**
+ * ~3,000 points with no `render` field set: the auto threshold promotes this to
+ * canvas on its own. Toggling the year runs a keyed morph, which the SVG cap
+ * (500 marks) would have refused outright.
+ *
+ * Interactive only -- deliberately NOT baseline-captured, since the entrance
+ * animation runs on a JS scheduler the screenshot harness cannot freeze.
+ */
+function CanvasMorphScatter() {
+  const [year, setYear] = useState<2019 | 2025>(2019);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 480 }}>
+        <Chart spec={canvasMorphSpec(year)} />
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', alignItems: 'center' }}>
+        {([2019, 2025] as const).map((y) => (
+          <button
+            key={y}
+            type="button"
+            onClick={() => setYear(y)}
+            style={{
+              padding: 'var(--gx-space-2) var(--gx-space-4)',
+              border: '1px solid var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
+              background: y === year ? 'var(--gx-surface-raised)' : 'transparent',
+              color: y === year ? 'var(--gx-text)' : 'var(--gx-text-muted)',
+              fontSize: 'var(--gx-type-caption)',
+              cursor: 'pointer',
+            }}
+          >
+            {y}
+          </button>
+        ))}
+        <span style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
+          {COHORTS[year].length.toLocaleString()} campuses on canvas
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The same 200-point cloud rendered both ways, side by side.
+ *
+ * Small enough that auto leaves it on SVG, so `render: 'canvas'` is explicit.
+ * This is the visual-parity check: same layout, same colors, same geometry.
+ *
+ * Two differences are expected and permanent, both consequences of batching:
+ * the trendline always draws above the dots, and where dots overlap, a stroke
+ * can land on a neighbour's fill. Canvas paints every fill and then every
+ * stroke (two draw calls total, which is what keeps thousands of points
+ * cheap), whereas SVG paints each dot's fill and stroke together. Sparse
+ * clouds are indistinguishable; tight clusters show it.
+ *
+ * `animation: false` because a baseline screenshot cannot freeze the canvas
+ * entrance.
+ */
+function parityScatterSpec(render: 'svg' | 'canvas'): ChartSpec {
+  const rand = mulberry32(7);
+  const data = Array.from({ length: 200 }, (_, i) => ({
+    id: `p${i}`,
+    x: Math.round(rand() * 1000) / 10,
+    y: Math.round(rand() * 1000) / 10,
+  }));
+  return {
+    mark: { type: 'point', render },
+    data,
+    animation: false,
+    encoding: {
+      x: { field: 'x', type: 'quantitative', scale: { domain: [0, 100] } },
+      y: { field: 'y', type: 'quantitative', scale: { domain: [0, 100] } },
+      key: { field: 'id', type: 'nominal' },
+    },
+    chrome: {
+      title: render === 'canvas' ? 'Canvas' : 'SVG',
+      subtitle: 'Same 200 points, same layout, different surface',
+    },
+  };
+}
+
+const svgParitySpec = parityScatterSpec('svg');
+const canvasParitySpec = parityScatterSpec('canvas');
+
+function CanvasParity() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--gx-space-4)' }}>
+      <div style={{ height: 360 }}>
+        <Chart spec={svgParitySpec} />
+      </div>
+      <div style={{ height: 360 }}>
+        <Chart spec={canvasParitySpec} />
+      </div>
+    </div>
+  );
+}
+
 function InteractiveScatter() {
   const [hovered, setHovered] = useState<{
     country: string;
@@ -910,6 +1072,31 @@ export const ScatterAndDistribution = () => (
     >
       <Demo id="interactive" specForPanel={interactiveSpec} height={540}>
         <InteractiveScatter />
+      </Demo>
+    </Section>
+
+    <Section
+      id="canvas"
+      title="High-cardinality (canvas)"
+      lede="Past ~1,000 points, scatter marks move to a canvas layered under the chart SVG. Tooltips, clicks and keyed update transitions all keep working; axes, trendline and annotations stay vector."
+    >
+      <Demo
+        id="high-cardinality-canvas"
+        title="Keyed morph at 3,000 points"
+        description="No render field set — the auto threshold promotes this to canvas on its own. Toggling the year morphs every dot to its new position, ghosts the campuses that closed, fades in the ones that opened, and steepens the trendline. On SVG this would have exceeded the 500-mark transition cap and swapped instantly."
+        specForPanel={canvasMorphSpec(2019)}
+        height={600}
+      >
+        <CanvasMorphScatter />
+      </Demo>
+      <Demo
+        id="canvas-svg-parity"
+        title="Canvas vs SVG, same data"
+        description="An explicit render: 'canvas' on a 200-point cloud that auto would have left on SVG. Same layout, same geometry. Two differences come from batching, which is what keeps thousands of points cheap: the trendline always draws above the dots, and canvas paints every fill before every stroke, so overlapping dots can show a stroke over a neighbour's fill. Sparse clouds look identical; tight clusters show it."
+        specForPanel={canvasParitySpec}
+        height={420}
+      >
+        <CanvasParity />
       </Demo>
     </Section>
   </GalleryPage>

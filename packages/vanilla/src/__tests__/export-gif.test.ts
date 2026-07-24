@@ -7,9 +7,10 @@
  * (loop→repeat mapping, easing sample interpolation) is unit-tested directly.
  */
 
+import type { ChartSpec, ResolvedTheme } from '@opendata-ai/openchart-core';
 import type { CompileOptions } from '@opendata-ai/openchart-engine';
 import { compileChart } from '@opendata-ai/openchart-engine';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec } from '../__test-fixtures__/specs';
 import type { AnimatedTarget } from '../export-gif';
@@ -22,7 +23,27 @@ import {
   isModuleNotFound,
   resolveRepeat,
 } from '../export-gif';
+import { createChart } from '../mount';
+import { stubCanvas2D } from '../scatter-canvas/__tests__/canvas-stub';
 import { renderChartSVG } from '../svg-renderer';
+
+// `gifenc` is an optional peer that isn't installed here, and happy-dom has no
+// canvas 2D context to read pixels back from. Stub both so the export pipeline
+// runs far enough to reach the frame-background painter.
+vi.mock('gifenc', () => ({
+  GIFEncoder: () => ({
+    writeFrame: () => {},
+    finish: () => {},
+    bytes: () => new Uint8Array(),
+  }),
+  quantize: () => [[0, 0, 0]],
+  applyPalette: () => new Uint8Array(),
+}));
+
+vi.mock('../gif-encode', () => ({
+  readCanvasSRGB: () => new Uint8ClampedArray(4),
+  paletteFromCanvas: () => [[0, 0, 0]],
+}));
 
 // Build a detached SVG element of a given class/shape for classify/interp tests.
 function svgEl(tag: string, className: string, orient?: string): SVGElement {
@@ -272,5 +293,121 @@ describe('exportGIF', () => {
     const result = exportGIF(svg, undefined, { embedFonts: false, fps: 10 });
     expect(result).toBeInstanceOf(Promise);
     result.catch(() => {});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Frame background color
+// ---------------------------------------------------------------------------
+
+/** A dark scatter spec, optionally opting into canvas mark mode. */
+function scatterSpec(render?: 'canvas'): ChartSpec {
+  return {
+    mark: render ? { type: 'point', render } : 'point',
+    data: Array.from({ length: 20 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+    theme: { colors: { background: DARK_BG } },
+  };
+}
+
+const DARK_BG = '#101418';
+
+let markerSeq = 0;
+
+/**
+ * Run exportGIF against a stubbed rasterizer and report every `fillStyle` the
+ * frame-background painter set. That's the color the GIF is flood-filled with,
+ * which is what these tests are actually about.
+ *
+ * The interface tests above kick off exports they never await, so the stub only
+ * records frames whose serialized markup carries THIS call's marker attribute.
+ */
+async function capturedFrameFills(
+  svg: SVGElement,
+  options: Parameters<typeof exportGIF>[2],
+): Promise<string[]> {
+  const marker = `oc-test-${markerSeq++}`;
+  svg.setAttribute('data-test-marker', marker);
+  const fills: string[] = [];
+  const exportModule = await import('../export');
+  const spy = vi
+    .spyOn(exportModule, 'rasterizeSVGToCanvas')
+    .mockImplementation(async (svgString, w, h, dpi, prepare) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w * dpi;
+      canvas.height = h * dpi;
+      const ctx = { fillStyle: '', fillRect: () => {} } as unknown as CanvasRenderingContext2D;
+      prepare?.(ctx, canvas);
+      if (svgString.includes(marker)) fills.push(ctx.fillStyle as string);
+      return canvas;
+    });
+  try {
+    await exportGIF(svg, undefined, { ...options, embedFonts: false, fps: 1, durationMs: 1 });
+  } finally {
+    spy.mockRestore();
+  }
+  return fills;
+}
+
+/** Mount a chart and hand back its live SVG plus resolved theme, as mount.ts does. */
+function mountForExport(spec: ChartSpec): {
+  svg: SVGElement;
+  theme: ResolvedTheme;
+  destroy: () => void;
+} {
+  const container = createContainer();
+  const chart = createChart(container, spec, { width: 600, height: 400 });
+  return {
+    svg: container.querySelector('svg') as SVGElement,
+    theme: (chart.layout as { theme: ResolvedTheme }).theme,
+    destroy: () => chart.destroy(),
+  };
+}
+
+describe('GIF frame background', () => {
+  it("uses the theme's dark background for a canvas-mode chart, not white", async () => {
+    // happy-dom has no canvas 2D context, so the canvas layer needs a stub.
+    const stub = stubCanvas2D();
+    try {
+      const { svg, theme, destroy } = mountForExport(scatterSpec('canvas'));
+      // Canvas mode suppresses the background rect: nothing to read a fill from.
+      expect(svg.querySelector('rect[fill]')).toBeNull();
+      expect(theme.colors.background).toBe(DARK_BG);
+
+      const fills = await capturedFrameFills(svg, { theme });
+      expect(fills.length).toBeGreaterThan(0);
+      for (const fill of fills) expect(fill).toBe(DARK_BG);
+
+      destroy();
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it('still reads the background rect in SVG mode, in preference to the theme', async () => {
+    const { svg, theme, destroy } = mountForExport(scatterSpec());
+    const rect = svg.querySelector('rect') as SVGElement;
+    expect(rect.getAttribute('fill')).toBe(DARK_BG);
+    // Repaint the rect so it no longer matches the theme: the rect must win,
+    // which is the pre-existing behavior the theme fallback must not disturb.
+    rect.setAttribute('fill', '#224466');
+
+    const fills = await capturedFrameFills(svg, { theme });
+    expect(fills.length).toBeGreaterThan(0);
+    for (const fill of fills) expect(fill).toBe('#224466');
+
+    destroy();
+  });
+
+  it('an explicit backgroundColor option still overrides both', async () => {
+    const { svg, theme, destroy } = mountForExport(scatterSpec());
+    const fills = await capturedFrameFills(svg, { theme, backgroundColor: '#ff00ff' });
+    expect(fills.length).toBeGreaterThan(0);
+    for (const fill of fills) expect(fill).toBe('#ff00ff');
+
+    destroy();
   });
 });

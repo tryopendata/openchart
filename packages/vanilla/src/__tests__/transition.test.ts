@@ -13,6 +13,7 @@ import { createContainer } from '../__test-fixtures__/dom';
 import { createChart } from '../mount';
 import { renderChartSVG } from '../svg-renderer';
 import {
+  CANVAS_DEFAULT_UPDATE_MAX_MARKS,
   canTransition,
   DEFAULT_UPDATE_MAX_MARKS,
   normalizePointArrays,
@@ -346,6 +347,100 @@ describe('canTransition gate', () => {
     }));
     const specA = columnSpec(DATA_A);
     expect(canTransition(passingGateArgs(specA, columnSpec(atCap)))).toBe(true);
+  });
+
+  it('gate 8: counts the PREV layout too, so a shrink past the cap is barred', () => {
+    // Exit ghosts are rendered into the destination surface, one element per
+    // departing mark. Judging by `next` alone reads 400 as cheap while the
+    // update would actually mint ~600 ghost circles.
+    const big = Array.from({ length: 1000 }, (_, i) => ({ category: `cat-${i}`, value: i }));
+    const small = Array.from({ length: 400 }, (_, i) => ({ category: `cat-${i}`, value: i }));
+    const specA = columnSpec(big);
+    const specB = columnSpec(small);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
+
+    // Same shrink, cap raised above the PREV count -> allowed.
+    expect(
+      canTransition(passingGateArgs(withMaxMarks(specA, 5000), withMaxMarks(specB, 5000))),
+    ).toBe(true);
+  });
+
+  it('gate 8: canvas mode gets its own, far higher default cap', () => {
+    const scatter = (n: number, yShift: number, render: 'canvas' | 'svg'): ChartSpec => ({
+      animation: true,
+      // `render` is always explicit here: at 4,341 points the auto threshold
+      // would promote to canvas on its own, and this test is specifically
+      // about the two caps differing.
+      mark: { type: 'point', render },
+      data: Array.from({ length: n }, (_, i) => ({
+        id: `p${i}`,
+        x: i,
+        y: (i * 7 + yShift) % 100,
+      })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+        key: { field: 'id', type: 'nominal' },
+      },
+    });
+
+    // 4,341 points: far past the SVG cap of 500, well under the canvas 20,000.
+    const svgA = compile(scatter(4341, 0, 'svg'));
+    const svgB = compile(scatter(4341, 33, 'svg'));
+    expect(svgB.markRenderMode).toBeUndefined();
+    expect(
+      canTransition({
+        prevLayout: svgA,
+        nextLayout: svgB,
+        prevSpec: scatter(4341, 0, 'svg'),
+        nextSpec: scatter(4341, 33, 'svg'),
+        isFirstRender: false,
+        entranceInFlight: false,
+      }),
+    ).toBe(false);
+
+    const canvasA = compile(scatter(4341, 0, 'canvas'));
+    const canvasB = compile(scatter(4341, 33, 'canvas'));
+    expect(canvasB.markRenderMode).toBe('canvas');
+    expect(
+      canTransition({
+        prevLayout: canvasA,
+        nextLayout: canvasB,
+        prevSpec: scatter(4341, 0, 'canvas'),
+        nextSpec: scatter(4341, 33, 'canvas'),
+        isFirstRender: false,
+        entranceInFlight: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('gate 8: CANVAS_DEFAULT_UPDATE_MAX_MARKS is the applied canvas default', () => {
+    const scatter = (n: number, yShift: number): ChartSpec => ({
+      mark: { type: 'point', render: 'canvas' },
+      data: Array.from({ length: n }, (_, i) => ({
+        id: `p${i}`,
+        x: i,
+        y: (i * 7 + yShift) % 100,
+      })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+        key: { field: 'id', type: 'nominal' },
+      },
+    });
+    const over = CANVAS_DEFAULT_UPDATE_MAX_MARKS + 1;
+    const specA = scatter(over, 0);
+    const specB = scatter(over, 33);
+    expect(
+      canTransition({
+        prevLayout: compile(specA),
+        nextLayout: compile(specB),
+        prevSpec: specA,
+        nextSpec: specB,
+        isFirstRender: false,
+        entranceInFlight: false,
+      }),
+    ).toBe(false);
   });
 
   it('gate 8: a raised cap produces real tweened motion, not just a passing gate', () => {

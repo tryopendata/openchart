@@ -252,6 +252,15 @@ export function createScreenReaderTable(
   table.setAttribute('role', 'table');
   table.setAttribute('aria-label', `Data table: ${layout.a11y.altText}`);
 
+  // totalRows is only set when the table was truncated, so its presence is the
+  // signal to tell the reader how many rows they are not getting.
+  const totalRows = layout.a11y.totalRows;
+  if (totalRows != null) {
+    const caption = document.createElement('caption');
+    caption.textContent = `Showing first ${(data.length - 1).toLocaleString()} of ${totalRows.toLocaleString()} rows; full data via CSV export`;
+    table.appendChild(caption);
+  }
+
   if (data.length > 0) {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');

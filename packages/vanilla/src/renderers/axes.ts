@@ -37,6 +37,7 @@ function renderAxis(
   axis: AxisLayout,
   orientation: 'x' | 'y',
   layout: ChartLayout,
+  opts?: { skipGridlines?: boolean },
 ): void {
   const g = createSVGElement('g');
   const isRight = orientation === 'y' && axis.orient === 'right';
@@ -222,7 +223,7 @@ function renderAxis(
 
   // Gridlines (positions are also absolute from the scales)
   // Skip gridlines for right-side y-axis (left y-axis gridlines are sufficient)
-  if (!isRight) {
+  if (!isRight && !opts?.skipGridlines) {
     // Build position -> tick value map for keying gridlines
     const posToTickKey = new Map<number, string>();
     for (const tick of axis.ticks) {
@@ -338,14 +339,25 @@ function renderAxis(
   parent.appendChild(g);
 }
 
-export function renderAxes(parent: SVGElement, layout: ChartLayout): void {
+/**
+ * Render the chart's axes.
+ *
+ * `opts.skipGridlines` suppresses the gridline pass for canvas mark mode,
+ * where the canvas layer paints gridlines beneath the marks instead. Ticks,
+ * tick labels, and axis titles still render as SVG either way.
+ */
+export function renderAxes(
+  parent: SVGElement,
+  layout: ChartLayout,
+  opts?: { skipGridlines?: boolean },
+): void {
   if (layout.axes.x) {
-    renderAxis(parent, layout.axes.x, 'x', layout);
+    renderAxis(parent, layout.axes.x, 'x', layout, opts);
   }
   if (layout.axes.y) {
-    renderAxis(parent, layout.axes.y, 'y', layout);
+    renderAxis(parent, layout.axes.y, 'y', layout, opts);
   }
   if (layout.axes.y2) {
-    renderAxis(parent, layout.axes.y2, 'y', layout);
+    renderAxis(parent, layout.axes.y2, 'y', layout, opts);
   }
 }

@@ -200,6 +200,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -475,6 +484,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -752,6 +770,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -1027,6 +1054,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -1304,6 +1340,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -1579,6 +1624,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -1856,6 +1910,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -2131,6 +2194,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -2408,6 +2480,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -2683,6 +2764,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -2960,6 +3050,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -3235,6 +3334,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -3512,6 +3620,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -3787,6 +3904,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -4064,6 +4190,15 @@
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
                         },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
+                        },
                         "style": {
                           "type": "string",
                           "enum": [
@@ -4339,6 +4474,15 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "render": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "svg",
+                            "canvas"
+                          ],
+                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",

@@ -44,7 +44,7 @@ export { registerMarkRenderer } from './renderers/marks';
 export function renderChartSVG(
   layout: ChartLayout,
   container: HTMLElement,
-  opts?: { animate?: boolean; crosshair?: boolean },
+  opts?: { animate?: boolean; crosshair?: boolean; canvasMarks?: boolean },
 ): SVGElement {
   const { width, height } = layout.dimensions;
   const animation = layout.animation;
@@ -124,7 +124,15 @@ export function renderChartSVG(
   // KPI cards, table cells, and inline contexts where the consumer owns
   // the background. Other display modes paint a fill so the chart is a
   // self-contained visual on any host surface.
-  if (layout.display !== 'sparkline') {
+  // Canvas mark mode paints the background full-bleed on the canvas layer
+  // beneath this SVG, so the SVG must not paint an opaque rect over it.
+  //
+  // AUTHORITY RULE: this renderer keys ONLY on opts.canvasMarks, never on
+  // layout.markRenderMode. Static/SSR rendering (static.ts under happy-dom,
+  // where no canvas exists) omits the option and therefore always emits a
+  // complete SVG -- background, gridlines, and point marks included.
+  const canvasMarks = opts?.canvasMarks === true;
+  if (layout.display !== 'sparkline' && !canvasMarks) {
     const bg = createSVGElement('rect');
     setAttrs(bg, {
       x: 0,
@@ -181,8 +189,10 @@ export function renderChartSVG(
       renderFacetedPanels(svg, layout, layout.facet.panels, defs);
     } else {
       // Standard (non-faceted) rendering
-      // Axes render outside clip (labels extend beyond chart area)
-      renderAxes(svg, layout);
+      // Axes render outside clip (labels extend beyond chart area).
+      // In canvas mark mode the canvas paints gridlines under the marks;
+      // ticks, tick labels, and axis titles stay SVG.
+      renderAxes(svg, layout, { skipGridlines: canvasMarks });
 
       // Marks are clipped to chart area so area fills don't cover chrome.
       // The clip and the camera transform must live on SEPARATE, nested groups:
@@ -199,7 +209,7 @@ export function renderChartSVG(
       const clippedGroup = createSVGElement('g');
       clippedGroup.setAttribute('data-oc-marks-group', 'true');
       clipGroup.appendChild(clippedGroup);
-      const markLabelsOverlay = renderMarks(clippedGroup, layout);
+      const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks });
 
       // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
       const hasLineOrAreaWithDataPoints = layout.marks.some(
@@ -296,6 +306,21 @@ export function renderChartSVG(
     }
   } finally {
     resetMarkRenderState();
+  }
+
+  if (canvasMarks) {
+    // Pointer events fall through the SVG to the canvas beneath, which owns
+    // quadtree hit-testing for point marks. Interactive chrome that still
+    // lives in the SVG (legend toggles, annotation and chrome edit handles)
+    // opts back in individually.
+    svg.style.pointerEvents = 'none';
+    for (const g of svg.querySelectorAll('.oc-legend, .oc-annotations, .oc-chrome, .oc-metrics')) {
+      (g as SVGElement & ElementCSSInlineStyle).style.pointerEvents = 'auto';
+    }
+    // The canvas is absolutely positioned, so it would paint over a statically
+    // positioned SVG regardless of DOM order. Positioning both makes DOM order
+    // decide, keeping the canvas underneath.
+    svg.style.position = 'relative';
   }
 
   container.appendChild(svg);

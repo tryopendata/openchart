@@ -873,6 +873,40 @@ the seed id yourself.
 
 ---
 
+## 19. Update-transition cap counts the larger of the two frames
+
+`animation.update` skips the tween and swaps instantly once a chart has more
+marks than the cap allows. That cap used to be tested against the *incoming*
+frame only. It now tests the larger of the outgoing and incoming frames:
+
+```
+before:  nextLayout.marks.length          > cap
+after:   max(prev.marks.length, next.marks.length) > cap
+```
+
+**Why:** marks that leave are animated out as ghost elements, and ghosts are
+drawn on the destination surface. A chart going from 600 marks down to 300
+reports 300 by the old rule and tweens, but it actually renders ~600 elements
+for the duration of the transition -- exactly the per-frame cost the cap exists
+to bound.
+
+**What changes:** a shrinking update that straddles the cap now swaps instantly
+instead of tweening. With the default cap of 500, that is an update whose larger
+frame exceeds 500 marks while its incoming frame does not. Growing updates and
+updates entirely under the cap are unaffected.
+
+**If you want the tween back**, raise the cap for that chart:
+
+```js
+{ animation: { update: { maxMarks: 2000 } } }
+```
+
+`maxMarks` is new in v8 (it was a hardcoded 500 before), and it is also the
+escape hatch here. Charts rendering points on canvas get a much higher default
+(20,000), since canvas does not pay the per-element cost this cap is about.
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
@@ -881,6 +915,9 @@ warning at compile time with the exact fix. Items with no runtime warning:
 
 - **Stack default (section 1):** silent behavior change. Audit multi-series
   bar/area specs manually.
+- **Update-transition cap (section 19):** silent behavior change, and only on
+  updates that shrink across the cap. If a chart stopped animating between two
+  data states, raise `animation.update.maxMarks`.
 - **ChartType/CHART_TYPES/CHART_ENCODING_RULES (section 7):** TypeScript
   build fails immediately if you still import them.
 - **Visual-only changes (sections 11-12):** nothing to compile against. Check

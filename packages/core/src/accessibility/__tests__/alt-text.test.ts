@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartSpec } from '../../types/spec';
-import { generateAltText, generateDataTable } from '../alt-text';
+import { generateAltText, generateDataTable, MAX_SR_TABLE_ROWS } from '../alt-text';
 
 const lineSpec: ChartSpec = {
   mark: 'line',
@@ -106,5 +106,52 @@ describe('generateDataTable', () => {
     };
     const table = generateDataTable(spec, spec.data);
     expect(table).toEqual([]);
+  });
+});
+
+describe('generateDataTable row cap', () => {
+  const scatterSpec = (rowCount: number): ChartSpec => ({
+    mark: 'point',
+    data: Array.from({ length: rowCount }, (_, i) => ({ x: i, y: i * 2 })),
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+  });
+
+  it('pins the cap at 1000', () => {
+    expect(MAX_SR_TABLE_ROWS).toBe(1000);
+  });
+
+  it('caps 1001 input rows at 1000 data rows', () => {
+    const spec = scatterSpec(1001);
+    const table = generateDataTable(spec, spec.data);
+    expect(table).toHaveLength(1001); // 1 header + 1000 data rows
+    expect(table.length - 1).toBe(1000);
+    expect(table[1000]).toEqual([999, 1998]);
+  });
+
+  it('keeps every row at exactly 1000 (boundary, not off by one)', () => {
+    const spec = scatterSpec(1000);
+    const table = generateDataTable(spec, spec.data);
+    expect(table.length - 1).toBe(1000);
+    expect(table[1000]).toEqual([999, 1998]);
+  });
+
+  it('leaves a small table untouched', () => {
+    const spec = scatterSpec(3);
+    const table = generateDataTable(spec, spec.data);
+    expect(table).toEqual([
+      ['x', 'y'],
+      [0, 0],
+      [1, 2],
+      [2, 4],
+    ]);
+  });
+
+  it('truncates a 50k-row scatter down to the cap', () => {
+    const spec = scatterSpec(50_000);
+    const table = generateDataTable(spec, spec.data);
+    expect(table.length - 1).toBe(1000);
   });
 });

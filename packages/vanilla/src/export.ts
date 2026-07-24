@@ -259,13 +259,17 @@ export async function embedFonts(svgElement: SVGElement): Promise<void> {
 
 /**
  * Read the chart's background color from its first rect element. Falls back to
- * white when the chart has no opaque background (e.g. a transparent theme),
+ * `fallback` (white when omitted) when the chart has no opaque background,
  * which matters for formats that can't carry alpha (JPEG, GIF).
+ *
+ * Pass the resolved theme's `colors.background` as `fallback` when the caller
+ * has one: canvas mark mode suppresses the SVG background rect (the canvas
+ * paints it), so without it a dark chart would flood-fill white.
  */
-export function getSVGBackgroundColor(svgElement: SVGElement): string {
+export function getSVGBackgroundColor(svgElement: SVGElement, fallback?: string): string {
   const firstRect = svgElement.querySelector('rect');
   const fill = firstRect?.getAttribute('fill');
-  if (!fill || fill === 'none' || fill === 'transparent') return '#ffffff';
+  if (!fill || fill === 'none' || fill === 'transparent') return fallback ?? '#ffffff';
   return fill;
 }
 

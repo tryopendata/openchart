@@ -23,6 +23,7 @@ export { createBarList } from './barlist-mount';
 export type { JPGExportOptions, PNGExportOptions, SVGExportOptions } from './export';
 // Export utilities
 export { exportCSV, exportJPG, exportPNG, exportSVG, exportSVGWithFonts } from './export';
+export { materializeCanvasModeSVG, VECTOR_EXPORT_MAX_POINTS } from './export-canvas';
 // Multi-spec ("keyframe") GIF export for spec-swap steppers. Loads the optional
 // `gifenc` peer lazily, so importing this symbol does not pull gifenc into the bundle.
 export type { SpecSequenceOptions } from './export-sequence';
@@ -85,7 +86,7 @@ export type { TooltipManager } from './tooltip';
 export { createTooltipManager } from './tooltip';
 // Data-update transitions: the default mark cap, so apps deciding whether to
 // raise animation.update.maxMarks can compare against it instead of hardcoding.
-export { DEFAULT_UPDATE_MAX_MARKS } from './transition';
+export { CANVAS_DEFAULT_UPDATE_MAX_MARKS, DEFAULT_UPDATE_MAX_MARKS } from './transition';
 export type { YouDrawItController, YouDrawItOptions } from './you-draw-it';
 // You draw it (interactive draw-then-reveal)
 export { createYouDrawIt } from './you-draw-it';
