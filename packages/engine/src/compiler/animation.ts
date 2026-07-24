@@ -21,6 +21,7 @@ import type {
   AnimationStagger,
   ResolvedAnimation,
   ResolvedAnimationPhase,
+  UpdatePhaseConfig,
 } from '@opendata-ai/openchart-core';
 
 /** Default values for entrance animation. */
@@ -76,6 +77,23 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
   const enter = resolvePhase(config.enter, ENTER_DEFAULTS);
   const update = resolvePhase(config.update, UPDATE_DEFAULTS);
   const exit = resolvePhase(config.exit, EXIT_DEFAULTS);
+
+  // maxMarks is update-only, so it is applied here rather than in the
+  // phase-agnostic resolvePhase. No default is baked in: the renderer supplies
+  // one so it can vary by render mode, and absence means "author didn't set it".
+  if (
+    update &&
+    config.update &&
+    typeof config.update === 'object' &&
+    !Array.isArray(config.update)
+  ) {
+    const cap = (config.update as UpdatePhaseConfig).maxMarks;
+    // Guard on >= 1, matching validate.ts: flooring a fractional cap like 0.5
+    // would yield 0, and `0 ?? DEFAULT` keeps 0, disabling all transitions.
+    if (typeof cap === 'number' && Number.isFinite(cap) && cap >= 1) {
+      update.maxMarks = Math.floor(cap);
+    }
+  }
 
   // Return undefined only when ALL phases resolve absent
   if (!enter && !update && !exit) return undefined;

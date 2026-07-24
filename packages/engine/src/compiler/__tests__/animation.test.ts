@@ -140,6 +140,83 @@ describe('resolveAnimation', () => {
       staggerOrder: 'index',
     });
   });
+
+  // -------------------------------------------------------------------------
+  // update.maxMarks
+  // -------------------------------------------------------------------------
+
+  it('passes update.maxMarks through to the resolved phase', () => {
+    const result = resolveAnimation({ update: { maxMarks: 5000 } });
+    expect(result!.update!.maxMarks).toBe(5000);
+  });
+
+  it('floors a fractional update.maxMarks', () => {
+    const result = resolveAnimation({ update: { maxMarks: 5000.7 } });
+    expect(result!.update!.maxMarks).toBe(5000);
+  });
+
+  it('leaves maxMarks absent for animation: true (renderer supplies the default)', () => {
+    expect(resolveAnimation(true)!.update!.maxMarks).toBeUndefined();
+  });
+
+  it('leaves maxMarks absent for update: true', () => {
+    expect(resolveAnimation({ update: true })!.update!.maxMarks).toBeUndefined();
+  });
+
+  it.each([
+    [0],
+    [-1],
+    [Number.NaN],
+    [Number.POSITIVE_INFINITY],
+  ])('ignores an out-of-range maxMarks (%p)', (value) => {
+    const result = resolveAnimation({ update: { maxMarks: value } });
+    expect(result!.update!.maxMarks).toBeUndefined();
+  });
+
+  it.each([[0.5], [0.99]])('ignores a fractional maxMarks below 1 (%p)', (value) => {
+    // Flooring these would yield 0, and `0 ?? DEFAULT` keeps 0 -- silently
+    // disabling every update transition on the chart.
+    const result = resolveAnimation({ update: { maxMarks: value } });
+    expect(result!.update!.maxMarks).toBeUndefined();
+  });
+
+  it('accepts maxMarks of exactly 1', () => {
+    expect(resolveAnimation({ update: { maxMarks: 1 } })!.update!.maxMarks).toBe(1);
+  });
+
+  it('ignores maxMarks read off an array-shaped update config', () => {
+    const result = resolveAnimation({
+      update: [1, 2, 3] as unknown as boolean,
+    });
+    expect(result!.update!.maxMarks).toBeUndefined();
+  });
+
+  it('ignores a non-numeric maxMarks', () => {
+    const result = resolveAnimation({
+      update: { maxMarks: '5000' as unknown as number },
+    });
+    expect(result!.update!.maxMarks).toBeUndefined();
+  });
+
+  it('does not leak maxMarks onto the enter or exit phases', () => {
+    const result = resolveAnimation({ update: { maxMarks: 5000 } });
+    expect(result!.enter).toEqual(ENTER_DEFAULTS);
+    expect(result!.exit).toEqual(EXIT_DEFAULTS);
+  });
+
+  it('keeps the other update fields at their defaults when only maxMarks is set', () => {
+    const result = resolveAnimation({ update: { maxMarks: 5000 } });
+    expect(result!.update).toEqual({ ...UPDATE_DEFAULTS, maxMarks: 5000 });
+  });
+
+  it('does not resurrect a disabled update phase', () => {
+    const result = resolveAnimation({
+      enter: true,
+      update: false,
+      exit: false,
+    });
+    expect(result!.update).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------

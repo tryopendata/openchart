@@ -692,7 +692,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 | Field             | Type                              | Default     | Description                                        |
 | ----------------- | --------------------------------- | ----------- | -------------------------------------------------- |
 | `enter`           | `AnimationPhaseConfig \| boolean` | `true`      | Entrance animation when chart first renders.       |
-| `update`          | `AnimationPhaseConfig \| boolean` | `true`      | Transition animation when data updates via `.update()`. |
+| `update`          | `UpdatePhaseConfig \| boolean`    | `true`      | Transition animation when data updates via `.update()`. |
 | `exit`            | `AnimationPhaseConfig \| boolean` | `true`      | Exit animation when marks are removed during updates. |
 | `annotationDelay` | `number`                          | `200`       | Delay in ms before annotations animate in after marks. |
 
@@ -703,6 +703,17 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 | `duration` | `number`                      | `500`      | Duration in ms.                              |
 | `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'`, `'snappy'`, `'linear'`. |
 | `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. |
+
+### UpdatePhaseConfig
+
+Everything in `AnimationPhaseConfig`, plus:
+
+| Field      | Type     | Default | Description                                                        |
+| ---------- | -------- | ------- | ------------------------------------------------------------------ |
+| `maxMarks` | `number` | `500`   | Largest mark count that still tweens. Above it, updates swap instantly. |
+
+`maxMarks` is update-only: enter and exit animate via CSS, which does not have
+the same per-frame cost.
 
 ### Data-update transitions
 
@@ -721,7 +732,10 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
 - Mark type changes between updates
 - Encoding fields change (x/y/color field names)
 - Dimensions change (container resized)
-- Mark count exceeds 500
+- Mark count exceeds `animation.update.maxMarks` (default 500). The cap exists
+  because per-frame SVG attribute writes on thousands of elements drop frames on
+  low-end devices. Raise it when the audience is desktop-heavy and you have
+  measured the frame budget: `animation: { update: { maxMarks: 5000 } }`.
 - `prefers-reduced-motion` is active
 - Entrance animation is still in flight
 - Chart is a sparkline

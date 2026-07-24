@@ -1953,6 +1953,36 @@ function validateLayerSpec(spec: Record<string, unknown>, errors: ValidationErro
   }
 }
 
+/**
+ * Validate the `animation` field for the spec types that carry `AnimationSpec`
+ * (everything except graph, which uses the narrower `GraphAnimationSpec`).
+ * Only checks values the renderer cannot recover from; unknown keys stay
+ * permissive (the generated JSON schema is the whitelist).
+ */
+function validateAnimation(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const animation = spec.animation;
+  if (!animation || typeof animation !== 'object' || Array.isArray(animation)) return;
+
+  const update = (animation as Record<string, unknown>).update;
+  if (!update || typeof update !== 'object' || Array.isArray(update)) return;
+
+  const maxMarks = (update as Record<string, unknown>).maxMarks;
+  if (maxMarks === undefined) return;
+
+  // Rejects anything below 1, not just anything <= 0: the resolver floors the
+  // value, so a fractional cap like 0.5 would become 0 and silently disable
+  // every update transition on the chart.
+  if (typeof maxMarks !== 'number' || !Number.isFinite(maxMarks) || maxMarks < 1) {
+    errors.push({
+      message: `Spec error: animation.update.maxMarks must be a number >= 1, got ${JSON.stringify(maxMarks)}`,
+      path: 'animation.update.maxMarks',
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Set animation.update.maxMarks to the largest mark count that should still tween, e.g. animation: { update: { maxMarks: 5000 } }. Omit it to use the default of 500.',
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -2106,6 +2136,14 @@ export function validateSpec(spec: unknown): ValidationResult {
     validateMapSpec(obj, errors);
   } else if (isBarList) {
     validateBarListSpec(obj, errors);
+  }
+
+  // animation is shared by every spec type except graph, so it validates
+  // outside the per-spec-type dispatch. Graph carries GraphAnimationSpec,
+  // which has no maxMarks -- flagging a bad value there would contradict the
+  // generated schema, which rejects the field on a graph outright.
+  if (!isGraph) {
+    validateAnimation(obj, errors);
   }
 
   if (errors.length > 0) {

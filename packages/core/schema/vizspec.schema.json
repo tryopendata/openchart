@@ -7089,7 +7089,7 @@
         "update": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AnimationPhaseConfig"
+              "$ref": "#/definitions/UpdatePhaseConfig"
             },
             {
               "type": "boolean"
@@ -7169,6 +7169,36 @@
       },
       "additionalProperties": false,
       "description": "Stagger configuration for sequential element reveal."
+    },
+    "UpdatePhaseConfig": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Duration in ms. Default: 500 for enter."
+        },
+        "ease": {
+          "$ref": "#/definitions/AnimationEase",
+          "description": "Easing preset. Default: 'smooth'."
+        },
+        "stagger": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AnimationStagger"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Stagger config. true = defaults, false = no stagger. Default: true for enter."
+        },
+        "maxMarks": {
+          "type": "number",
+          "description": "Maximum mark count that still runs a tweened data-update transition. Default: 500. Above the cap the chart swaps instantly instead, because per-frame SVG attribute writes on thousands of elements drop frames on low-end devices. Raise it deliberately when the audience is desktop-heavy and you have measured the frame budget."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Data-update phase config. Adds `maxMarks` on top of the shared phase options; the cap is meaningless for enter/exit, which animate via CSS."
     },
     "Display": {
       "type": "string",

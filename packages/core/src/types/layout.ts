@@ -1035,6 +1035,12 @@ export interface ResolvedAnimationPhase {
   staggerDelay: number;
   /** Stagger ordering. */
   staggerOrder: 'index' | 'value' | 'reverse';
+  /**
+   * Author-set cap on the mark count that still runs a tweened data-update
+   * transition (update phase only). Present only when explicitly set on the
+   * spec — the renderer supplies the default so it can vary by render mode.
+   */
+  maxMarks?: number;
 }
 
 /** Resolved animation config. A phase is present iff that phase is enabled. */

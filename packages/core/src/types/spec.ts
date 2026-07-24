@@ -1539,6 +1539,21 @@ export interface AnimationPhaseConfig {
 }
 
 /**
+ * Data-update phase config. Adds `maxMarks` on top of the shared phase
+ * options; the cap is meaningless for enter/exit, which animate via CSS.
+ */
+export interface UpdatePhaseConfig extends AnimationPhaseConfig {
+  /**
+   * Maximum mark count that still runs a tweened data-update transition.
+   * Default: 500. Above the cap the chart swaps instantly instead, because
+   * per-frame SVG attribute writes on thousands of elements drop frames on
+   * low-end devices. Raise it deliberately when the audience is desktop-heavy
+   * and you have measured the frame budget.
+   */
+  maxMarks?: number;
+}
+
+/**
  * Full animation config object. Structured as enter/update/exit phases
  * following Vega's encoding set model.
  */
@@ -1546,7 +1561,7 @@ export interface AnimationConfig {
   /** Entrance animation when chart first renders. */
   enter?: AnimationPhaseConfig | boolean;
   /** Transition animation when data updates. */
-  update?: AnimationPhaseConfig | boolean;
+  update?: UpdatePhaseConfig | boolean;
   /** Exit animation when marks are removed. */
   exit?: AnimationPhaseConfig | boolean;
   /** Delay before annotations animate in (ms after marks). Default: 200. */

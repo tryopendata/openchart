@@ -236,6 +236,7 @@ export type {
   TimeUnit,
   TimeUnitTransform,
   Transform,
+  UpdatePhaseConfig,
   ValueDef,
   VizSpec,
   WaffleEncoding,

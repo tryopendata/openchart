@@ -139,6 +139,12 @@ function cubicOut(t: number): number {
 const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point']);
 
 /**
+ * Default cap on the mark count that still runs a tweened data-update
+ * transition. Override per chart with `animation.update.maxMarks`.
+ */
+export const DEFAULT_UPDATE_MAX_MARKS = 500;
+
+/**
  * Spec-shape half of the transition gate (mark type + encoding identity),
  * usable before either spec has been compiled. Exported so callers that
  * need to predict transition eligibility ahead of a compile (e.g. the
@@ -213,8 +219,11 @@ export function canTransition(args: {
     return false;
   }
 
-  // 8. Mark count <= 500
-  if (nextLayout.marks.length > 500) return false;
+  // 8. Mark count within the update cap. Per-frame SVG attribute writes on
+  //    thousands of elements drop frames on low-end devices, so past the cap
+  //    the caller falls through to an instant swap.
+  const maxMarks = nextLayout.animation.update.maxMarks ?? DEFAULT_UPDATE_MAX_MARKS;
+  if (nextLayout.marks.length > maxMarks) return false;
 
   // 9. Something visible actually changed (zero-delta check)
   if (!hasVisibleChange(prevLayout, nextLayout)) return false;

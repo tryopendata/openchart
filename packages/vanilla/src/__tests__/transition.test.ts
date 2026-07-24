@@ -12,7 +12,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { createChart } from '../mount';
 import { renderChartSVG } from '../svg-renderer';
-import { canTransition, normalizePointArrays, runTransition } from '../transition';
+import {
+  canTransition,
+  DEFAULT_UPDATE_MAX_MARKS,
+  normalizePointArrays,
+  runTransition,
+} from '../transition';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -29,6 +34,11 @@ function columnSpec(data: Array<{ category: string; value: number }>): ChartSpec
       y: { field: 'value', type: 'quantitative' },
     },
   };
+}
+
+/** Override the data-update mark cap on a spec. */
+function withMaxMarks(spec: ChartSpec, maxMarks: number): ChartSpec {
+  return { ...spec, animation: { update: { maxMarks } } };
 }
 
 /** Build a stacked column chart spec with cornerRadius. */
@@ -295,6 +305,119 @@ describe('canTransition gate', () => {
     const specB = columnSpec(bigData);
     const args = passingGateArgs(specA, specB);
     expect(canTransition(args)).toBe(false);
+  });
+
+  it('gate 8: passes above 500 when animation.update.maxMarks raises the cap', () => {
+    const bigData = Array.from({ length: 501 }, (_, i) => ({
+      category: `cat-${i}`,
+      value: i,
+    }));
+    const specA = withMaxMarks(columnSpec(DATA_A), 5000);
+    const specB = withMaxMarks(columnSpec(bigData), 5000);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
+  });
+
+  it('gate 8: still fails when maxMarks is raised but not enough', () => {
+    const bigData = Array.from({ length: 501 }, (_, i) => ({
+      category: `cat-${i}`,
+      value: i,
+    }));
+    const specA = withMaxMarks(columnSpec(DATA_A), 100);
+    const specB = withMaxMarks(columnSpec(bigData), 100);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
+  });
+
+  it('gate 8: honors a maxMarks lowered below the default', () => {
+    const data = Array.from({ length: 401 }, (_, i) => ({
+      category: `cat-${i}`,
+      value: i,
+    }));
+    const specA = withMaxMarks(columnSpec(DATA_A), 400);
+    const specB = withMaxMarks(columnSpec(data), 400);
+    // 401 marks against a cap of 400 -> instant swap, even though the
+    // default cap of 500 would have allowed it.
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
+  });
+
+  it('gate 8: DEFAULT_UPDATE_MAX_MARKS is the applied default', () => {
+    const atCap = Array.from({ length: DEFAULT_UPDATE_MAX_MARKS }, (_, i) => ({
+      category: `cat-${i}`,
+      value: i,
+    }));
+    const specA = columnSpec(DATA_A);
+    expect(canTransition(passingGateArgs(specA, columnSpec(atCap)))).toBe(true);
+  });
+
+  it('gate 8: a raised cap produces real tweened motion, not just a passing gate', () => {
+    // End-to-end guard: 501 keyed scatter points with maxMarks raised must
+    // actually interpolate. A gate that returns true but tweens nothing would
+    // still leave the blog morph snapping.
+    const keyedScatter = (yShift: number): ChartSpec => ({
+      animation: { update: { maxMarks: 5000 } },
+      mark: 'point',
+      data: Array.from({ length: 501 }, (_, i) => ({
+        id: `p${i}`,
+        x: i,
+        y: (i * 7 + yShift) % 100,
+      })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+        key: { field: 'id', type: 'nominal' },
+      },
+    });
+
+    const specA = keyedScatter(0);
+    const specB = keyedScatter(33);
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    expect(layoutB.animation?.update?.maxMarks).toBe(5000);
+    expect(
+      canTransition({
+        prevLayout: layoutA,
+        nextLayout: layoutB,
+        prevSpec: specA,
+        nextSpec: specB,
+        isFirstRender: false,
+        entranceInFlight: false,
+      }),
+    ).toBe(true);
+
+    // Render from layoutB as mount.ts does, then transition from layoutA.
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    const sampled = svg.querySelector('circle.oc-mark-point[data-key]') as SVGCircleElement;
+    const key = sampled.getAttribute('data-key');
+    const finalCy = sampled.getAttribute('cy');
+    const startCy = (
+      layoutA.marks.find((m) => m.type === 'point' && m.key === key) as { cy: number }
+    ).cy;
+    // Guard the fixture: a point that does not move proves nothing.
+    expect(Number(finalCy)).not.toBeCloseTo(startCy, 1);
+
+    const handle = runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+    expect(handle).not.toBeNull();
+
+    // t=0 rewinds to the from-state...
+    pumpRaf(0);
+    expect(Number(sampled.getAttribute('cy'))).toBeCloseTo(startCy, 1);
+
+    // ...mid-flight sits strictly between from and to...
+    pumpRaf(250);
+    const midCy = Number(sampled.getAttribute('cy'));
+    expect(midCy).not.toBeCloseTo(startCy, 1);
+    expect(midCy).not.toBeCloseTo(Number(finalCy), 1);
+
+    // ...and it lands exactly on the rendered geometry.
+    pumpRaf(2000);
+    expect(sampled.getAttribute('cy')).toBe(finalCy);
   });
 
   it('gate 9: fails when geometry is identical (zero-delta)', () => {

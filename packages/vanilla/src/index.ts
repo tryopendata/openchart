@@ -83,6 +83,9 @@ export { createTileMap } from './tilemap-mount';
 export type { TooltipManager } from './tooltip';
 // Tooltip
 export { createTooltipManager } from './tooltip';
+// Data-update transitions: the default mark cap, so apps deciding whether to
+// raise animation.update.maxMarks can compare against it instead of hardcoding.
+export { DEFAULT_UPDATE_MAX_MARKS } from './transition';
 export type { YouDrawItController, YouDrawItOptions } from './you-draw-it';
 // You draw it (interactive draw-then-reveal)
 export { createYouDrawIt } from './you-draw-it';

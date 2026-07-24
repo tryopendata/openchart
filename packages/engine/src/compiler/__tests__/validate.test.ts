@@ -729,3 +729,68 @@ describe('validateSpec', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// animation.update.maxMarks
+// ---------------------------------------------------------------------------
+
+describe('animation.update.maxMarks validation', () => {
+  const specWith = (update: unknown) => ({
+    mark: 'line',
+    data: validLineData,
+    animation: { update },
+    encoding: {
+      x: { field: 'date', type: 'temporal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  });
+
+  const maxMarksErrors = (spec: unknown) =>
+    validateSpec(spec).errors.filter((e) => e.path === 'animation.update.maxMarks');
+
+  it('accepts a positive maxMarks', () => {
+    const result = validateSpec(specWith({ maxMarks: 5000 }));
+    expect(result.valid).toBe(true);
+  });
+
+  it.each([[0], [-1], [Number.NaN], ['5000'], [null]])('rejects maxMarks %p', (value) => {
+    const errors = maxMarksErrors(specWith({ maxMarks: value }));
+    expect(errors).toHaveLength(1);
+    expect(errors[0].code).toBe('INVALID_VALUE');
+    expect(errors[0].suggestion).toBeTruthy();
+  });
+
+  it.each([[0.5], [0.99]])('rejects a fractional maxMarks below 1 (%p)', (value) => {
+    // The resolver floors the cap, so 0.5 would become 0, and `0 ?? DEFAULT`
+    // keeps 0 -- disabling every update transition instead of raising the cap.
+    const errors = maxMarksErrors(specWith({ maxMarks: value }));
+    expect(errors).toHaveLength(1);
+    expect(errors[0].code).toBe('INVALID_VALUE');
+  });
+
+  it('accepts maxMarks of exactly 1', () => {
+    expect(maxMarksErrors(specWith({ maxMarks: 1 }))).toHaveLength(0);
+  });
+
+  it('does not flag maxMarks on a graph spec (GraphAnimationSpec has no such field)', () => {
+    // Graph carries GraphAnimationSpec, and the generated JSON schema rejects
+    // maxMarks there outright. Emitting a "must be >= 1" error would imply the
+    // field is otherwise legal on a graph, contradicting the schema.
+    const graph = {
+      type: 'graph',
+      data: { nodes: [{ id: 'a' }, { id: 'b' }], links: [{ source: 'a', target: 'b' }] },
+      animation: { update: { maxMarks: -5 } },
+    };
+    expect(maxMarksErrors(graph)).toHaveLength(0);
+  });
+
+  it('ignores an absent maxMarks', () => {
+    expect(maxMarksErrors(specWith({ duration: 800 }))).toHaveLength(0);
+  });
+
+  it('ignores shorthand animation forms', () => {
+    expect(maxMarksErrors({ ...specWith(true), animation: true })).toHaveLength(0);
+    expect(maxMarksErrors(specWith(true))).toHaveLength(0);
+    expect(maxMarksErrors(specWith(false))).toHaveLength(0);
+  });
+});
