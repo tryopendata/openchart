@@ -2011,3 +2011,108 @@ describe('mark color interpolation', () => {
     expect(fillPath.getAttribute('stroke')).toBe('none');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mark DOM index regressions (crash + bucketing)
+// ---------------------------------------------------------------------------
+
+describe('mark DOM index', () => {
+  // Mark keys are raw String(value), unescaped. Before the one-pass DOM index,
+  // every tween builder interpolated the key into querySelector('[data-key="..."]'),
+  // so a quote or backslash in a category value threw SyntaxError and killed
+  // the whole update.
+  it('tweens categories whose values contain quotes and backslashes', () => {
+    const data = (v1: number, v2: number) => [
+      { category: '12" pizza', value: v1 },
+      { category: 'C:\\temp', value: v2 },
+    ];
+    assertRoundTrip(columnSpec(data(100, 200)), columnSpec(data(180, 120)));
+  });
+
+  it('chart.update() with special-character categories does not throw', () => {
+    const data = (v1: number) => [
+      { category: 'say "hi"', value: v1 },
+      { category: 'back\\slash', value: 50 },
+    ];
+    const container = createContainer();
+    const chart = createChart(container, noEnter(columnSpec(data(100))));
+
+    expect(() => chart.update(noEnter(columnSpec(data(200))))).not.toThrow();
+    // The update ran as a transition, not an instant swap.
+    expect(rafCallbacks.size).toBeGreaterThan(0);
+    runToCompletion();
+
+    chart.destroy();
+  });
+
+  // The same key can legitimately appear on different mark types (a rule and
+  // its text label). The index is bucketed by mark class so each builder finds
+  // its own element; a flat key->element map would collapse them.
+  it('tweens a rule and a text mark sharing a key independently', () => {
+    const data = (v1: number, v2: number) => [
+      { category: 'Q1', value: v1 },
+      { category: 'Q2', value: v2 },
+    ];
+    const ruleSpec = (v1: number, v2: number): ChartSpec => ({
+      animation: true,
+      mark: 'rule',
+      data: data(v1, v2),
+      encoding: {
+        x: { field: 'category', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    });
+    const textSpec = (v1: number, v2: number): ChartSpec => ({
+      animation: true,
+      mark: 'text',
+      data: data(v1, v2),
+      encoding: {
+        x: { field: 'category', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+        text: { field: 'category', type: 'nominal' },
+      },
+    });
+
+    // Merge both chart types' marks into one layout so 'Q1' keys a rule AND a
+    // text element in the same SVG. runTransition does not consult the gate,
+    // so this exercises the same builder paths a real mixed layout would.
+    const merged = (v1: number, v2: number): ChartLayout => {
+      const rule = compile(ruleSpec(v1, v2));
+      const text = compile(textSpec(v1, v2));
+      return { ...rule, marks: [...rule.marks, ...text.marks] };
+    };
+
+    const layoutA = merged(100, 200);
+    const layoutB = merged(180, 120);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    // Precondition: the shared key really is stamped on both mark types.
+    expect(svg.querySelectorAll('[data-key="Q1"]').length).toBe(2);
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+    runToCompletion();
+
+    // Each element landed at ITS final geometry, not the other's.
+    const freshContainer = createContainer();
+    const fresh = renderChartSVG(layoutB, freshContainer) as SVGSVGElement;
+    for (const [sel, attrs] of [
+      ['.oc-mark-rule[data-key="Q1"]', ['x1', 'y1', 'x2', 'y2']],
+      ['text.oc-mark-text[data-key="Q1"]', ['x', 'y']],
+    ] as const) {
+      const el = svg.querySelector(sel);
+      const freshEl = fresh.querySelector(sel);
+      expect(el, sel).toBeTruthy();
+      expect(freshEl, sel).toBeTruthy();
+      for (const attr of attrs) {
+        expect(el?.getAttribute(attr), `${sel} ${attr}`).toBe(freshEl?.getAttribute(attr));
+      }
+    }
+  });
+});

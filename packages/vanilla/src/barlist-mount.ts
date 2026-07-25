@@ -238,6 +238,9 @@ export function createBarList(
 
     if (currentLayout.animation?.enter) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
+        // Null the handle BEFORE replaying, or the deferred resize hits the
+        // entrance-in-flight gate and re-defers forever (mount.ts pattern).
+        animationCleanup = null;
         if (pendingResize && !destroyed) {
           pendingResize = false;
           resize();

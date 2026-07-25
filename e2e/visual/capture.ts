@@ -48,6 +48,33 @@ export async function captureStory(page: Page, slug: string, screenshotName: str
   // Fonts stable.
   await page.evaluate(() => document.fonts?.ready);
 
+  // Canvas mark mode paints on a rAF tick the injected stylesheet cannot
+  // reach, and the SVG-child wait above passes while the canvas is still
+  // blank. If the story mounts a mark canvas, wait for its first real paint
+  // (the background lands in the same pass as gridlines and dots), then give
+  // the scheduler two frames to settle.
+  if ((await page.locator('canvas.oc-mark-canvas').count()) > 0) {
+    await page.waitForFunction(
+      () => {
+        const c = document.querySelector('canvas.oc-mark-canvas') as HTMLCanvasElement | null;
+        const ctx = c?.getContext('2d');
+        if (!c || !ctx || c.width === 0 || c.height === 0) return false;
+        // Sample the vertical centre: the canvas only paints the plot region,
+        // so the top rows (chrome zone) stay transparent forever.
+        const { data } = ctx.getImageData(0, Math.floor(c.height / 2), c.width, 1);
+        for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;
+        return false;
+      },
+      { timeout: 10_000 },
+    );
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(null))),
+        ),
+    );
+  }
+
   // One layout tick after fonts finish to settle text measurements.
   await page.waitForTimeout(100);
 

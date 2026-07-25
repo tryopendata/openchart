@@ -310,6 +310,29 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rect-heatmap',
     note: 'Two-way heatmap: band scales on BOTH axes (rect used to alias the column renderer, which needs a linear y, so it emitted zero marks and rendered blank). Cells tile with a hairline gutter and draw no gridlines.',
   },
+  // --- Canvas mark mode (static: the JS entrance cannot be frozen by CSS) ---
+  {
+    name: 'canvas-scatter-static',
+    slug: 'testing--fixtures--canvas-scatter-static',
+    note: '2,000-point scatter rendered by the canvas rasterizer. animation: false is mandatory: the injected stylesheet cannot stop the JS entrance scheduler.',
+  },
+  {
+    name: 'canvas-scatter-static-dark',
+    slug: 'testing--fixtures--canvas-scatter-static-dark',
+    note: 'Same cloud with darkMode: force — the canvas paints the theme background and dark-adapted gridlines itself.',
+  },
+  // --- Dual axis (layer + resolve.scale.y independent) ---
+  {
+    name: 'dual-axis-combo',
+    slug: 'testing--fixtures--dual-axis-combo',
+    note: 'Bars on the left scale, monotone line on the right (independent y). Colored axis tick labels per scale; negative bars below a zero line.',
+  },
+  // --- Scatter trendline overlay ---
+  {
+    name: 'scatter-trendline',
+    slug: 'testing--fixtures--scatter-trendline',
+    note: 'SVG scatter with the fitted regression overlay drawn above the dots.',
+  },
 ];
 
 for (const story of stories) {

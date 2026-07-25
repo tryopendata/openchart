@@ -165,10 +165,40 @@ describe('canvas entrance completion clock', () => {
   // replays into a teardown, and update() slips past the entrance-in-flight
   // gate while the canvas tween is still writing alpha.
   //
+  // The old version of these tests ran under fake timers with no rAF control,
+  // so the entrance never ticked and "still in flight" was indistinguishable
+  // from "clock never started". This harness drives BOTH clocks: a manual rAF
+  // pump for the scheduler and fake timers for the cleanup setTimeout.
+  function withEntranceClocks(
+    fn: (pump: (timestamp: number) => void, pendingFrames: () => number) => void,
+  ) {
+    vi.useFakeTimers();
+    const rafCallbacks = new Map<number, FrameRequestCallback>();
+    let nextRafId = 1;
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback): number => {
+      const id = nextRafId++;
+      rafCallbacks.set(id, cb);
+      return id;
+    });
+    vi.stubGlobal('cancelAnimationFrame', (id: number): void => {
+      rafCallbacks.delete(id);
+    });
+    const pump = (timestamp: number) => {
+      const cbs = Array.from(rafCallbacks.values());
+      rafCallbacks.clear();
+      for (const cb of cbs) cb(timestamp);
+    };
+    try {
+      fn(pump, () => rafCallbacks.size);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  }
+
   // A t=0 probe passes trivially and would miss all of it, so probe MID-WINDOW.
   it('keeps the entrance in flight well past the DOM-derived estimate', () => {
-    vi.useFakeTimers();
-    try {
+    withEntranceClocks((pump, pendingFrames) => {
       const container = createContainer();
       const chart = createChart(
         container,
@@ -185,20 +215,24 @@ describe('canvas entrance completion clock', () => {
       const naive = computeAnimationDuration(svg);
 
       // 1.5s in: past the naive estimate, still inside the real entrance.
-      vi.advanceTimersByTime(1500);
+      // Drive the scheduler frame-by-frame alongside the timer clock.
+      pump(0);
+      for (let t = 100; t <= 1500; t += 100) {
+        vi.advanceTimersByTime(100);
+        pump(t);
+      }
       expect(naive).toBeLessThan(1500);
-      // Still animating => oc-animate not yet removed.
+      // The entrance is genuinely mid-flight: the scheduler re-queued a frame...
+      expect(pendingFrames()).toBeGreaterThan(0);
+      // ...and oc-animate has not been torn down by the (naive) cleanup timer.
       expect(svg.classList.contains('oc-animate')).toBe(true);
 
       chart.destroy();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 
   it('does eventually clear the entrance', () => {
-    vi.useFakeTimers();
-    try {
+    withEntranceClocks((pump) => {
       const container = createContainer();
       const chart = createChart(
         container,
@@ -212,13 +246,15 @@ describe('canvas entrance completion clock', () => {
       const svg = container.querySelector('svg') as SVGElement;
 
       // Past the clamped stagger budget (2s) + fade + annotation delay + buffer.
-      vi.advanceTimersByTime(5000);
+      pump(0);
+      for (let t = 250; t <= 5000; t += 250) {
+        vi.advanceTimersByTime(250);
+        pump(t);
+      }
       expect(svg.classList.contains('oc-animate')).toBe(false);
 
       chart.destroy();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 });
 

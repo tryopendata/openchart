@@ -8,7 +8,7 @@
 
 import { AXIS_TITLE_GAP, estimateTextWidth, TICK_LABEL_OFFSET } from '@opendata-ai/openchart-core';
 import type { ChartSpec, CompileOptions } from '@opendata-ai/openchart-engine';
-import { compileChart } from '@opendata-ai/openchart-engine';
+import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import {
@@ -891,5 +891,77 @@ describe('left y-axis title spacing', () => {
     for (const s of sizes) {
       expect(measureClearance(s, PASS_RATES)).toBeGreaterThanOrEqual(MIN_CLEARANCE);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dual-axis (y2) mark rendering
+// ---------------------------------------------------------------------------
+
+describe('dual-axis mark rendering', () => {
+  // Every pre-existing dual-axis assertion stops at engine layout (axes.y2
+  // exists, title on the right). This one follows the pixels into the DOM: the
+  // y2-scaled line must be RENDERED at the right-hand scale's positions, not
+  // the left's.
+  it("renders a yScale: 'y2' line at the right-hand scale's pixel positions", () => {
+    const spec = {
+      resolve: { scale: { y: 'independent' as const } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2025', revenue: 10_000_000 },
+            { year: '2026', revenue: 15_000_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { year: '2025', enrollment: 30_000 },
+            { year: '2026', enrollment: 40_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'enrollment', type: 'quantitative' as const },
+          },
+        },
+      ],
+    };
+
+    const container = createContainer(600, 400);
+    const layout = compileLayer(spec, COMPILE_OPTS);
+    const svg = renderChartSVG(layout, container);
+
+    const lineMark = layout.marks.find(
+      (m): m is Extract<typeof m, { type: 'line' }> => m.type === 'line',
+    );
+    expect(lineMark).toBeDefined();
+    expect(lineMark!.yScale).toBe('y2');
+
+    // The rendered path starts at the layout's first point (the engine's y2
+    // pixel position), proving the renderer did not re-derive geometry.
+    const path = svg.querySelector('.oc-mark-line path') as SVGPathElement;
+    expect(path).toBeTruthy();
+    const d = path.getAttribute('d') ?? '';
+    const nums = d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+    const [renderedX, renderedY] = nums;
+    expect(renderedX).toBeCloseTo(lineMark!.points[0].x, 3);
+    expect(renderedY).toBeCloseTo(lineMark!.points[0].y, 3);
+
+    // And that position is the RIGHT scale's, not the left's: map the same
+    // data value (30,000) through the left y-axis via linear interpolation of
+    // its tick positions. On the revenue scale (domain to ~15M), 30k sits at
+    // the very bottom; on the enrollment scale it sits mid-chart.
+    const yTicks = layout.axes.y!.ticks;
+    const [t0, t1] = [yTicks[0], yTicks[yTicks.length - 1]];
+    const leftY =
+      (t0.position as number) +
+      ((30_000 - Number(t0.value)) / (Number(t1.value) - Number(t0.value))) *
+        ((t1.position as number) - (t0.position as number));
+    expect(Math.abs(renderedY - leftY)).toBeGreaterThan(20);
   });
 });
