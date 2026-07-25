@@ -41,19 +41,30 @@ describe('getLayoutStrategy', () => {
     expect(strategy.axisLabelDensity).toBe('reduced');
   });
 
-  it('full has all labels and legend on right', () => {
+  it('full has all labels and legend on top', () => {
     const strategy = getLayoutStrategy('full');
     expect(strategy.labelMode).toBe('all');
-    expect(strategy.legendPosition).toBe('right');
+    expect(strategy.legendPosition).toBe('top');
     expect(strategy.annotationPosition).toBe('inline');
     expect(strategy.axisLabelDensity).toBe('full');
+  });
+
+  it('puts the legend on top at every breakpoint', () => {
+    // The responsive strategy no longer varies legend position by width; a
+    // top legend reads as a key before the eye reaches the plot and keeps the
+    // plotting area full-width. `legend.position` overrides it per spec.
+    for (const breakpoint of ['compact', 'medium', 'full'] as const) {
+      expect(getLayoutStrategy(breakpoint).legendPosition).toBe('top');
+    }
   });
 
   it('different widths produce different strategies', () => {
     const compact = getLayoutStrategy(getBreakpoint(320));
     const full = getLayoutStrategy(getBreakpoint(800));
-    expect(compact.legendPosition).not.toBe(full.legendPosition);
+    // Legend position is deliberately uniform across breakpoints, so the
+    // width-sensitive fields are labels and axis density.
     expect(compact.labelMode).not.toBe(full.labelMode);
+    expect(compact.axisLabelDensity).not.toBe(full.axisLabelDensity);
   });
 
   it('includes chromeMode and legendMaxHeight at normal height', () => {
@@ -127,7 +138,7 @@ describe('getLayoutStrategy with height class', () => {
     const strategy = getLayoutStrategy('full', 'short');
     // Width strategy for 'full' sets these; short only touches chromeMode and legendMaxHeight
     expect(strategy.labelMode).toBe('all');
-    expect(strategy.legendPosition).toBe('right');
+    expect(strategy.legendPosition).toBe('top');
     expect(strategy.axisLabelDensity).toBe('full');
   });
 

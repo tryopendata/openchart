@@ -639,10 +639,18 @@ describe('legend rendering', () => {
     expect(entries.length).toBe(0);
   });
 
-  it('pie chart renders legend entries for each slice', () => {
+  it('pie chart omits the legend when slice labels name each slice', () => {
+    // Leader-line labels already identify every slice, so a legend would just
+    // restate them. See the arc redundancy rule in engine legend/compute.ts.
     const { svg } = renderSpec(pieSpec);
     const entries = svg.querySelectorAll('.oc-legend-entry');
-    // pieSpec has 3 slices
+    expect(entries.length).toBe(0);
+  });
+
+  it('pie chart renders legend entries when slice labels are off', () => {
+    // No slice labels means the legend is the only thing naming the slices.
+    const { svg } = renderSpec({ ...pieSpec, labels: { density: 'none' } } as ChartSpec);
+    const entries = svg.querySelectorAll('.oc-legend-entry');
     expect(entries.length).toBe(3);
   });
 });

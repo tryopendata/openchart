@@ -1152,3 +1152,41 @@ describe('computeDimensions chromeLayout: grow', () => {
     expect(defaultDims.total.height).toBe(size.height);
   });
 });
+
+describe('radial chart horizontal centering', () => {
+  const arcSpec = {
+    mark: 'arc' as const,
+    data: [
+      { category: 'A', value: 23 },
+      { category: 'B', value: 30 },
+      { category: 'C', value: 16 },
+    ],
+    encoding: {
+      color: { field: 'category', type: 'nominal' as const },
+      theta: { field: 'value', type: 'quantitative' as const },
+    },
+  };
+
+  it('centers the plot box in the figure', () => {
+    // Regression guard for the arc off-centering that the right-legend default
+    // caused: the gutter reserved for a right-hand legend skewed the plot box
+    // left, and the arc then centered correctly inside a box that was itself
+    // off-center (475 of a 1000px figure). Any future change that reserves
+    // asymmetric horizontal margins for a radial chart trips this.
+    const width = 1000;
+    const layout = compileChart(arcSpec, { width, height: 500 });
+    const { x, width: areaWidth } = layout.area;
+    const leftGap = x;
+    const rightGap = width - x - areaWidth;
+    expect(rightGap).toBeCloseTo(leftGap, 0);
+    expect(x + areaWidth / 2).toBeCloseTo(width / 2, 0);
+  });
+
+  it('centers the arc mark on the figure midline', () => {
+    const width = 1000;
+    const layout = compileChart(arcSpec, { width, height: 500 });
+    const arc = layout.marks.find((m) => m.type === 'arc');
+    expect(arc).toBeDefined();
+    expect((arc as { center: { x: number } }).center.x).toBeCloseTo(width / 2, 0);
+  });
+});

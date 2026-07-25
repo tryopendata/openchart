@@ -91,6 +91,11 @@ export function computePieLabels(
       width: textWidth,
       height: textHeight,
       priority: 'data',
+      // Index into the ORIGINAL marks array, not `targetMarks`. Density
+      // filtering drops slices and resolveCollisions re-sorts by priority, so
+      // the returned labels line up with neither. Callers assign by this index
+      // instead of zipping positionally.
+      index: marks.indexOf(mark),
       style: {
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: LABEL_FONT_SIZE,
@@ -117,16 +122,20 @@ export function computePieLabels(
       y: c.anchorY,
       style: c.style,
       visible: true,
+      ...(c.index !== undefined ? { index: c.index } : {}),
     }));
   } else {
     // Run collision detection
     resolved = resolveCollisions(candidates);
   }
 
-  // Add connector lines from centroid to label
-  for (let i = 0; i < resolved.length && i < targetMarks.length; i++) {
+  // Add connector lines from centroid to label. Resolve the mark through the
+  // carried index: after collision sorting, resolved[i] is not targetMarks[i],
+  // so zipping positionally drew connectors to the wrong slice.
+  for (let i = 0; i < resolved.length; i++) {
     const label = resolved[i];
-    const mark = targetMarks[i];
+    const mark = label.index !== undefined ? marks[label.index] : undefined;
+    if (!mark) continue;
 
     if (label.visible) {
       label.connector = {

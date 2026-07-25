@@ -147,7 +147,11 @@ describe('size legend', () => {
    * bubble chart, not by a unit test, which is why this one exists.
    */
   it('stacks below the color legend in a shared right column, not on top of it', () => {
-    const layout = compileChart(bubbles, OPTIONS);
+    // The color legend must be in the gutter for the two to share a column at
+    // all. It defaults to 'top' now, so this scenario is opt-in and has to be
+    // pinned explicitly -- without it the test passes for the wrong reason
+    // (nothing to collide with) and stops guarding the overlap bug.
+    const layout = compileChart({ ...bubbles, legend: { position: 'right' } }, OPTIONS);
     const size = layout.legends.find((l) => l.type === 'size');
     const color = layout.legends.find((l) => (l.channel ?? 'color') === 'color');
     expect(size).toBeDefined();
@@ -178,9 +182,16 @@ describe('size legend', () => {
    * the plot keeps the difference.
    */
   it('gives the plot back the width the second gutter column used to cost', () => {
-    const withBoth = compileChart(bubbles, OPTIONS);
+    // Both legends must be in the gutter for the shared-column saving to mean
+    // anything; the color legend defaults to 'top' now, so pin it right.
+    const rightLegend = { legend: { position: 'right' as const } };
+    const withBoth = compileChart({ ...bubbles, ...rightLegend }, OPTIONS);
     const colorOnly = compileChart(
-      { ...bubbles, encoding: { ...bubbles.encoding, size: undefined } } as ChartSpec,
+      {
+        ...bubbles,
+        ...rightLegend,
+        encoding: { ...bubbles.encoding, size: undefined },
+      } as ChartSpec,
       OPTIONS,
     );
 

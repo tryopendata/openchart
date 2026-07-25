@@ -64,6 +64,18 @@ const RIGHT_LEGEND_MAX_HEIGHT_RATIO = 0.4;
 /** Max number of rows for top-positioned legends before truncation. */
 const TOP_LEGEND_MAX_ROWS = 2;
 
+/**
+ * Slice count above which an arc chart keeps its legend even though the slices
+ * carry labels. Past this the leader-line labels start losing collisions and
+ * dropping silently, so the legend has to stay as the fallback identifier.
+ *
+ * Measured against `computePieLabels`: the first drop appears at 22 slices in
+ * the tightest container that renders a pie at all (300x220) and does not
+ * appear below 33 at 500px and up. 21 is therefore safe at every width, and it
+ * sits far past the point where a pie is readable anyway.
+ */
+const ARC_LABEL_CROWDING_LIMIT = 21;
+
 // ---------------------------------------------------------------------------
 // LegendContent -- pre-computed content before placement
 // ---------------------------------------------------------------------------
@@ -378,6 +390,41 @@ export function computeLegendContent(
         entries = [];
       }
     }
+  }
+
+  // Arc redundancy rule: pie/donut slices carry their own leader-line labels
+  // naming each category, so a categorical legend restates them one-for-one.
+  // Same principle as the bar rule above -- the difference is that an arc has
+  // no category axis, so the slice labels themselves play that role.
+  //
+  // Only when EVERY slice is labeled. 'endpoints' labels just the first and
+  // last, so dropping the legend there would leave the middle slices with no
+  // identifier anywhere; 'none' draws no labels at all. Both keep the legend.
+  //
+  // Deliberately not gated on `strategy.labelMode`: pie labels are computed in
+  // charts/pie/index.ts, which passes only `spec.labels.density` to
+  // computePieLabels and never consults the strategy. Reading labelMode here
+  // would make the legend disagree with what the pie renderer actually draws
+  // (on the compact breakpoint it would hide the legend while every slice
+  // label still rendered).
+  //
+  // `legend` set explicitly always wins, in either direction.
+  //
+  // Arc only. Waffle and parliament share the part-to-whole family but attach
+  // no per-mark labels, so their legend is the sole identifier. `'arc:donut'`
+  // is a renderer key, not a markType -- donuts reach here as `'arc'` too.
+  //
+  // Capped by slice count: past ARC_LABEL_CROWDING_LIMIT the leader-line labels
+  // start losing collisions and silently drop (a ~30-slice pie in a small
+  // container drops 2-3), which would strand those slices with no identifier.
+  // The legend is computed before marks, so the resolved `visible` flags aren't
+  // available here -- this is a conservative bound, not a measurement. Dense
+  // pies keep their legend, and they are the ones that need it.
+  const density = spec.labels.density;
+  const everySliceLabeled = density === 'all' || density === 'auto';
+  const uncrowded = seriesCount > 0 && seriesCount <= ARC_LABEL_CROWDING_LIMIT;
+  if (spec.markType === 'arc' && everySliceLabeled && uncrowded && !spec.userExplicit?.legend) {
+    entries = [];
   }
 
   const labelStyle: TextStyle = {

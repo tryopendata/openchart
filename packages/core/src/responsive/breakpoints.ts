@@ -121,7 +121,7 @@ function getWidthStrategy(breakpoint: Breakpoint): LayoutStrategy {
     case 'full':
       return {
         labelMode: 'all',
-        legendPosition: 'right',
+        legendPosition: 'top',
         annotationPosition: 'inline',
         axisLabelDensity: 'full',
         chromeMode: 'full',
@@ -164,7 +164,12 @@ function applyHeightConstraints(
  *
  * Compact: minimal chrome, no inline labels, legend on top, reduced axes.
  * Medium: moderate labels, legend on top, reduced axes.
- * Full: all labels, legend on right, full axes.
+ * Full: all labels, legend on top, full axes.
+ *
+ * Legend position is 'top' at every breakpoint: a top legend reads as a key to
+ * the chart before the eye reaches the plot, and it keeps the plotting area
+ * full-width instead of surrendering a right-hand column. `legend.position`
+ * still overrides it per spec.
  *
  * Height constraints further reduce chrome and legend when container is short.
  */

@@ -130,3 +130,42 @@ describe('computePieLabels positioning', () => {
     expect(labels[0].style.textAnchor).toBe('end');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Label-to-slice identity
+// ---------------------------------------------------------------------------
+
+describe('label/slice identity', () => {
+  it('carries a source index that points at the originating mark', () => {
+    // 'endpoints' keeps only the first and last slice. Without the carried
+    // index the caller zipped positionally and captioned the SECOND wedge with
+    // the LAST slice's name.
+    const labels = computePieLabels(marks, chartArea, 'endpoints');
+    expect(labels.length).toBe(2);
+    for (const label of labels) {
+      expect(label.index).toBeDefined();
+      const source = marks[label.index as number];
+      expect(source).toBeDefined();
+      // The label text is the category parsed off the source mark's aria label.
+      expect(source.aria.label.startsWith(label.text)).toBe(true);
+    }
+  });
+
+  it('indexes against the original marks array, not the filtered one', () => {
+    const labels = computePieLabels(marks, chartArea, 'endpoints');
+    const indices = labels.map((l) => l.index);
+    // First and last of the ORIGINAL array -- 1 (the filtered position) must
+    // not appear for the second label.
+    expect(indices).toContain(0);
+    expect(indices).toContain(marks.length - 1);
+  });
+
+  it('keeps every label matched to its own slice at full density', () => {
+    const labels = computePieLabels(marks, chartArea, 'all');
+    expect(labels.length).toBe(marks.length);
+    for (const label of labels) {
+      const source = marks[label.index as number];
+      expect(source.aria.label.startsWith(label.text)).toBe(true);
+    }
+  });
+});

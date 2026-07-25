@@ -171,14 +171,23 @@ describe('compileChart', () => {
     }
   });
 
-  it('legend position is "right" at full width', () => {
+  it('legend position is "top" at full width', () => {
     const layout = compileChart(lineSpec, { width: 800, height: 400 });
-    expect(layout.legend.position).toBe('right');
+    expect(layout.legend.position).toBe('top');
   });
 
   it('legend position is "top" at compact width', () => {
     const layout = compileChart(lineSpec, { width: 320, height: 400 });
     expect(layout.legend.position).toBe('top');
+  });
+
+  it('honors an explicit right legend at full width', () => {
+    // The responsive default is 'top' everywhere now; 'right' is opt-in.
+    const layout = compileChart(
+      { ...lineSpec, legend: { position: 'right' } },
+      { width: 800, height: 400 },
+    );
+    expect(layout.legend.position).toBe('right');
   });
 
   it('aligns the top legend left edge to the plot area, not the container edge', () => {
@@ -327,9 +336,11 @@ describe('compileChart', () => {
     const narrow = compileChart(lineSpec, { width: 320, height: 400 });
     const wide = compileChart(lineSpec, { width: 800, height: 400 });
 
-    // At 320px the legend should be on top, at 800px on the right
+    // Legend position is uniform ('top') across breakpoints now, so the
+    // width-sensitive difference shows up in the plot area instead.
     expect(narrow.legend.position).toBe('top');
-    expect(wide.legend.position).toBe('right');
+    expect(wide.legend.position).toBe('top');
+    expect(wide.area.width).toBeGreaterThan(narrow.area.width);
   });
 
   it('dark mode adapts the theme colors', () => {
