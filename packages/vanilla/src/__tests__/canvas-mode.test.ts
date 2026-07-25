@@ -26,10 +26,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** A scatter spec with `n` points, rendered on canvas or SVG. */
-function scatterSpec(n: number, render?: 'canvas' | 'svg'): ChartSpec {
+/** A scatter spec with `n` points; the backend comes from the mount `renderer` option. */
+function scatterSpec(n: number): ChartSpec {
   return {
-    mark: render ? { type: 'point', render } : 'point',
+    mark: 'point',
     data: Array.from({ length: n }, (_, i) => ({
       id: `p${i}`,
       x: i,
@@ -52,9 +52,10 @@ vi.setConfig({ testTimeout: 20_000 });
 describe('canvas mark mode DOM contract', () => {
   it('renders a canvas and suppresses the SVG point/background/gridline output', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
     const canvas = container.querySelector('canvas.oc-mark-canvas');
@@ -75,9 +76,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('puts the canvas before the SVG in DOM order and positions both', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
     const canvas = container.querySelector('canvas.oc-mark-canvas') as HTMLCanvasElement;
@@ -95,9 +97,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('lets pointer events through to the canvas while keeping chrome interactive', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
       chrome: { title: 'Canvas scatter' },
     });
 
@@ -113,9 +116,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('keeps the chart accessible: SVG retains role and label, canvas is hidden', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
     const svg = container.querySelector('svg') as SVGElement;
@@ -127,9 +131,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('removes the canvas on destroy', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
     expect(container.querySelector('canvas.oc-mark-canvas')).not.toBeNull();
 
@@ -139,12 +144,13 @@ describe('canvas mark mode DOM contract', () => {
 
   it('does not leak a second canvas across re-renders', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
-    chart.update(scatterSpec(25, 'canvas'));
+    chart.update(scatterSpec(25));
     expect(container.querySelectorAll('canvas.oc-mark-canvas').length).toBe(1);
 
     chart.destroy();
@@ -166,10 +172,11 @@ describe('canvas entrance completion clock', () => {
       const container = createContainer();
       const chart = createChart(
         container,
-        { ...scatterSpec(4000, 'canvas'), animation: true },
+        { ...scatterSpec(4000), animation: true },
         {
           width: 600,
           height: 400,
+          renderer: 'canvas',
         },
       );
 
@@ -195,10 +202,11 @@ describe('canvas entrance completion clock', () => {
       const container = createContainer();
       const chart = createChart(
         container,
-        { ...scatterSpec(4000, 'canvas'), animation: true },
+        { ...scatterSpec(4000), animation: true },
         {
           width: 600,
           height: 400,
+          renderer: 'canvas',
         },
       );
       const svg = container.querySelector('svg') as SVGElement;
@@ -215,7 +223,7 @@ describe('canvas entrance completion clock', () => {
 });
 
 describe('SVG mode is unchanged (regression guard)', () => {
-  it('emits no canvas and a full SVG when render is unset', () => {
+  it('emits no canvas and a full SVG when renderer is unset', () => {
     const container = createContainer();
     const chart = createChart(container, scatterSpec(20), { width: 600, height: 400 });
 
@@ -231,13 +239,17 @@ describe('SVG mode is unchanged (regression guard)', () => {
     chart.destroy();
   });
 
-  it('produces an identical DOM signature with render unset vs render:"svg"', () => {
+  it('produces an identical DOM signature with renderer unset vs renderer:"svg"', () => {
     const containerA = createContainer();
     const chartA = createChart(containerA, scatterSpec(20), { width: 600, height: 400 });
     const a = (containerA.querySelector('svg') as SVGElement).innerHTML;
 
     const containerB = createContainer();
-    const chartB = createChart(containerB, scatterSpec(20, 'svg'), { width: 600, height: 400 });
+    const chartB = createChart(containerB, scatterSpec(20), {
+      width: 600,
+      height: 400,
+      renderer: 'svg',
+    });
     const b = (containerB.querySelector('svg') as SVGElement).innerHTML;
 
     // Generated ids (clip paths, gradients) use a monotonic counter, so
@@ -264,7 +276,7 @@ describe('SVG mode is unchanged (regression guard)', () => {
     chart.destroy();
   });
 
-  it('promotes to canvas above the auto threshold with no render field set', () => {
+  it('promotes to canvas above the auto threshold with no renderer option set', () => {
     // The blog-morph configuration: `mark: 'point'`, nothing else asked for.
     const container = createContainer();
     const chart = createChart(container, scatterSpec(1500), { width: 600, height: 400 });

@@ -9,25 +9,15 @@
  * for `'auto'`.
  */
 
-import type { Display, MarkDef } from '@opendata-ai/openchart-core';
+import type { Display } from '@opendata-ai/openchart-core';
 
 /** Point count above which `'auto'` prefers canvas over SVG. */
 export const AUTO_CANVAS_THRESHOLD = 1000;
 
-/**
- * Kill switch for the `'auto'` path.
- *
- * Held off while the canvas layer was still growing entrance animations,
- * update transitions and exports, so each of those could land and be verified
- * without silently changing how every existing high-cardinality scatter
- * renders. All three now ship, so auto promotion is live.
- */
-const AUTO_ENABLED = true;
-
 /** Inputs to mark render mode resolution. */
 export interface MarkRenderModeArgs {
-  /** The chart's resolved mark def, or undefined for a bare string mark. */
-  markDef: MarkDef | undefined;
+  /** The host's requested backend (`CompileOptions.renderer`), or undefined for `'auto'`. */
+  requested: 'auto' | 'svg' | 'canvas' | undefined;
   /** The chart's mark type (`'point'` is the only canvas-capable one). */
   markType: string;
   /** Number of compiled point marks in the layout. */
@@ -58,8 +48,8 @@ export function resolveMarkRenderMode(
   args: MarkRenderModeArgs,
   warnings: string[] = [],
 ): 'svg' | 'canvas' {
-  const { markDef, markType, pointCount, display, faceted, layered } = args;
-  const requested = markDef?.render ?? 'auto';
+  const { markType, pointCount, display, faceted, layered } = args;
+  const requested = args.requested ?? 'auto';
 
   if (requested === 'svg') return 'svg';
 
@@ -67,7 +57,7 @@ export function resolveMarkRenderMode(
   if (refusal) {
     if (requested === 'canvas') {
       warnings.push(
-        `Chart warning: mark.render "canvas" is not supported ${refusal}; rendering marks as SVG instead.`,
+        `Chart warning: renderer "canvas" is not supported ${refusal}; rendering marks as SVG instead.`,
       );
     }
     return 'svg';
@@ -75,8 +65,7 @@ export function resolveMarkRenderMode(
 
   if (requested === 'canvas') return 'canvas';
 
-  // Rule 4 -- the auto path. See AUTO_ENABLED.
-  if (!AUTO_ENABLED) return 'svg';
+  // Rule 4 -- the auto path.
   return pointCount > AUTO_CANVAS_THRESHOLD ? 'canvas' : 'svg';
 }
 

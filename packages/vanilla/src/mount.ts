@@ -90,6 +90,13 @@ export interface MountOptions extends ChartEventHandlers {
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
   darkMode?: DarkMode;
+  /**
+   * Rendering backend for point marks (mirrors vega-embed's `renderer`
+   * option). `'auto'` (default) promotes dense scatters (>1,000 points) to a
+   * canvas mark layer; `'svg'`/`'canvas'` force a backend. Ignored with a
+   * console warning for non-point marks and faceted/layered/sparkline charts.
+   */
+  renderer?: 'auto' | 'svg' | 'canvas';
   /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** Enable responsive resizing. Defaults to true. */
@@ -357,6 +364,7 @@ export function createChart<TData extends DataRow = DataRow>(
       height,
       theme: options?.theme,
       darkMode,
+      renderer: options?.renderer,
       watermark: options?.watermark,
       measureText,
     };
@@ -944,7 +952,7 @@ export function createChart<TData extends DataRow = DataRow>(
         console.warn(
           'openchart: canvas mark mode does not support per-mark edit selection. ' +
             'Annotation, chrome, and legend editing still work. ' +
-            "Set mark.render to 'svg' if you need to select individual points.",
+            "Pass renderer: 'svg' to createChart() if you need to select individual points.",
         );
       }
     }

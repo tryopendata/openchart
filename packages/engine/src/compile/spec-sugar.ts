@@ -216,6 +216,25 @@ function stripIgnoredKeys(
 }
 
 /**
+ * `mark.render` was removed in v8: backend selection is host policy, passed as
+ * the `renderer` compile/mount option (mirroring vega-embed). Warned once and
+ * stripped so pre-v8 specs keep compiling.
+ */
+function stripRemovedMarkRender(
+  spec: Record<string, unknown>,
+  warnings: string[],
+): Record<string, unknown> {
+  const mark = spec.mark;
+  if (!mark || typeof mark !== 'object' || Array.isArray(mark)) return spec;
+  if (!('render' in mark)) return spec;
+  warnings.push(
+    '[openchart] mark.render was removed in v8. This field is stripped for backward compatibility. Pass { renderer } to createChart() or the compile options instead.',
+  );
+  const { render: _render, ...restMark } = mark as Record<string, unknown>;
+  return { ...spec, mark: restMark };
+}
+
+/**
  * Fixed-size specs (both `width` and `height` set) imply `responsive: false`
  * unless the user set `responsive` explicitly. The width/height override
  * itself is applied by compileChart/compileLayer on the compile options.
@@ -627,6 +646,7 @@ function expandChartSugar(
   out = expandTopLevelTitle(out);
   out = expandDescriptionSugar(out);
   out = stripIgnoredKeys(out, warnings);
+  out = stripRemovedMarkRender(out, warnings);
   out = applyFixedSizeDefault(out);
   out = expandAnnotationSugar(out, warnings);
   out = expandChannelSugar(out, warnings);

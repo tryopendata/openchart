@@ -366,12 +366,9 @@ describe('canTransition gate', () => {
   });
 
   it('gate 8: canvas mode gets its own, far higher default cap', () => {
-    const scatter = (n: number, yShift: number, render: 'canvas' | 'svg'): ChartSpec => ({
+    const scatter = (n: number, yShift: number): ChartSpec => ({
       animation: true,
-      // `render` is always explicit here: at 4,341 points the auto threshold
-      // would promote to canvas on its own, and this test is specifically
-      // about the two caps differing.
-      mark: { type: 'point', render },
+      mark: 'point',
       data: Array.from({ length: n }, (_, i) => ({
         id: `p${i}`,
         x: i,
@@ -383,31 +380,36 @@ describe('canTransition gate', () => {
         key: { field: 'id', type: 'nominal' },
       },
     });
+    // `renderer` is always explicit here: at 4,341 points the auto threshold
+    // would promote to canvas on its own, and this test is specifically
+    // about the two caps differing.
+    const compileAs = (spec: ChartSpec, renderer: 'canvas' | 'svg') =>
+      compileChart(spec, { width: 600, height: 400, renderer });
 
     // 4,341 points: far past the SVG cap of 500, well under the canvas 20,000.
-    const svgA = compile(scatter(4341, 0, 'svg'));
-    const svgB = compile(scatter(4341, 33, 'svg'));
+    const svgA = compileAs(scatter(4341, 0), 'svg');
+    const svgB = compileAs(scatter(4341, 33), 'svg');
     expect(svgB.markRenderMode).toBeUndefined();
     expect(
       canTransition({
         prevLayout: svgA,
         nextLayout: svgB,
-        prevSpec: scatter(4341, 0, 'svg'),
-        nextSpec: scatter(4341, 33, 'svg'),
+        prevSpec: scatter(4341, 0),
+        nextSpec: scatter(4341, 33),
         isFirstRender: false,
         entranceInFlight: false,
       }),
     ).toBe(false);
 
-    const canvasA = compile(scatter(4341, 0, 'canvas'));
-    const canvasB = compile(scatter(4341, 33, 'canvas'));
+    const canvasA = compileAs(scatter(4341, 0), 'canvas');
+    const canvasB = compileAs(scatter(4341, 33), 'canvas');
     expect(canvasB.markRenderMode).toBe('canvas');
     expect(
       canTransition({
         prevLayout: canvasA,
         nextLayout: canvasB,
-        prevSpec: scatter(4341, 0, 'canvas'),
-        nextSpec: scatter(4341, 33, 'canvas'),
+        prevSpec: scatter(4341, 0),
+        nextSpec: scatter(4341, 33),
         isFirstRender: false,
         entranceInFlight: false,
       }),
@@ -415,8 +417,9 @@ describe('canTransition gate', () => {
   });
 
   it('gate 8: CANVAS_DEFAULT_UPDATE_MAX_MARKS is the applied canvas default', () => {
+    // 20k+ points: 'auto' promotes to canvas, no explicit renderer needed.
     const scatter = (n: number, yShift: number): ChartSpec => ({
-      mark: { type: 'point', render: 'canvas' },
+      mark: 'point',
       data: Array.from({ length: n }, (_, i) => ({
         id: `p${i}`,
         x: i,

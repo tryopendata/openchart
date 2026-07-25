@@ -802,7 +802,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   const markRenderModeWarnings: string[] = [];
   const markRenderMode = resolveMarkRenderMode(
     {
-      markDef: chartSpec.markDef,
+      requested: options.renderer,
       markType: chartSpec.markType,
       pointCount: marks.reduce((n, m) => (m.type === 'point' ? n + 1 : n), 0),
       display: chartSpec.display,

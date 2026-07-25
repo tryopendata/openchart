@@ -2008,6 +2008,26 @@ export interface CompileOptions {
    * before calling compile. The engine always receives a resolved boolean.
    */
   darkMode?: boolean;
+  /**
+   * Rendering backend for point marks, mirroring vega-embed's `renderer`
+   * embed option: backend choice is host policy, not part of the spec.
+   * High-cardinality scatter plots draw thousands of SVG circles, which is
+   * what makes their entrance and update transitions stutter; a canvas layer
+   * draws the same dots in a handful of batched paint calls.
+   *
+   * - `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.
+   * - `'svg'`: always SVG, whatever the point count.
+   * - `'canvas'`: always canvas, whatever the point count.
+   *
+   * Canvas mode trades per-mark keyboard focus and edit-mode point selection
+   * (the screen-reader data table still carries every row), and draws the
+   * trendline above the dots even when `trendline.layer` is `'below'`.
+   * Tooltips, hover, and click callbacks work the same in both modes.
+   *
+   * Ignored with a console warning for non-point marks, and for faceted,
+   * layered, and sparkline charts.
+   */
+  renderer?: 'auto' | 'svg' | 'canvas';
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
   /**

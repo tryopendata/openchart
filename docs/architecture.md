@@ -188,7 +188,7 @@ Visual features are computed per-column based on the column config: heatmap buil
 
 The vanilla adapter renders charts by building a fresh SVG element from the `ChartLayout`. It doesn't diff or patch. On every update or resize, it tears down the old SVG and creates a new one.
 
-Scatter charts past a point-count threshold render their dots on a `<canvas>` instead (see [canvas mark mode](spec-reference.md#canvas-mark-mode)). The canvas is a sibling inserted *before* the SVG and painting the background, gridlines and marks; the SVG keeps axes, trendline, annotations and chrome. The engine only records the decision as `ChartLayout.markRenderMode` -- the renderer keys strictly on its own `canvasMarks` option, so any caller that omits it (SSR, exports) gets a complete SVG regardless of what the layout says.
+Scatter charts past a point-count threshold (or mounted with the `renderer: 'canvas'` option) render their dots on a `<canvas>` instead (see [canvas mark mode](spec-reference.md#canvas-mark-mode)). The canvas is a sibling inserted *before* the SVG and painting the background, gridlines and marks; the SVG keeps axes, trendline, annotations and chrome. The engine only records the decision as `ChartLayout.markRenderMode` -- the renderer keys strictly on its own `canvasMarks` option, so any caller that omits it (SSR, exports) gets a complete SVG regardless of what the layout says.
 
 For tables, it creates HTML elements (table, thead, tbody, etc.) with interactivity wired up: sort headers, search input, pagination controls, keyboard navigation.
 

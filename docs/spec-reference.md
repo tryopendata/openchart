@@ -119,7 +119,6 @@ The `type` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
 | `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
-| `render`       | `'auto' \| 'svg' \| 'canvas'` | `'auto'` | point | Rendering surface for point marks. `'auto'` promotes to canvas above 1,000 compiled points. See [Canvas mark mode](#canvas-mark-mode). |
 | `style`        | `'dumbbell' \| 'arrow' \| 'bar'` | `'dumbbell'` | range   | Range mark visual: dot-connector-dot, line with arrowhead at the end, or a plain floating bar. |
 | `colorByDirection` | `boolean`           | `false`     | range          | Color range marks by direction of change: increases use the theme `positive` color, decreases `negative`. A field-based `color` encoding takes precedence. |
 | `units`        | `number`                | `100`       | waffle         | Total cells in the grid. Categories normalize to this via largest-remainder rounding. |
@@ -755,20 +754,24 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
 ## Canvas mark mode
 
 Scatter charts with thousands of points cost more in DOM elements than they do
-in pixels. `mark.render` moves point marks onto a `<canvas>` layered under the
-chart SVG, which keeps a 50,000-point scatter interactive and lets a
-high-cardinality keyed morph actually tween instead of snapping.
+in pixels. The `renderer` mount option moves point marks onto a `<canvas>`
+layered under the chart SVG, which keeps a 50,000-point scatter interactive and
+lets a high-cardinality keyed morph actually tween instead of snapping.
+
+The renderer is not part of the spec. It is a host decision passed to
+`createChart()` (or the `renderer` prop on the React/Vue/Svelte `<Chart>`
+components), mirroring vega-embed's `{ renderer }` embed option:
 
 ```ts
-{
-  mark: { type: 'point', render: 'canvas' },
+createChart(el, {
+  mark: 'point',
   data: campuses,          // 4,341 rows
   encoding: {
     x: { field: 'lowIncomePct', type: 'quantitative' },
     y: { field: 'readingProficiency', type: 'quantitative' },
     key: { field: 'campusId' },
   },
-}
+}, { renderer: 'canvas' });
 ```
 
 | Value      | Behavior |
@@ -777,7 +780,7 @@ high-cardinality keyed morph actually tween instead of snapping.
 | `'canvas'` | Canvas at any point count. |
 | `'svg'`    | Never canvas. |
 
-`render` applies to point marks only. On any other mark type, and on faceted,
+`renderer` applies to point marks only. On any other mark type, and on faceted,
 layered or sparkline charts, it falls back to SVG; an explicit `'canvas'` there
 warns once per compile.
 

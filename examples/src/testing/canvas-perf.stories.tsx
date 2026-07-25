@@ -35,7 +35,7 @@ function scatterSpec(seed: number): ChartSpec {
     // Entrance off: it would still be running when the update fires, and gate 6
     // would veto the very transition this harness exists to measure.
     animation: { enter: false, update: true },
-    mark: { type: 'point', render: 'canvas' },
+    mark: 'point',
     data: Array.from({ length: POINT_COUNT }, (_, i) => ({
       id: `p${i}`,
       x: Math.round(rand() * 1000) / 10,
@@ -80,7 +80,7 @@ export const CanvasUpdatePerf = () => {
     if (!host) return;
 
     // Dimensions come from the host element, which is sized below.
-    const chart = createChart(host, scatterSpec(1));
+    const chart = createChart(host, scatterSpec(1), { renderer: 'canvas' });
     const sampler = sampleFrames();
 
     // One frame of settle before the update, so the initial render's cost does

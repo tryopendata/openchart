@@ -1,9 +1,10 @@
 # Migrating to OpenChart v8
 
-Instructions for migrating a consumer app from openchart v7 to v8. All changes
-are in the spec objects and TypeScript imports you pass to openchart. The mount
-APIs (`<Chart>`, `createChart()`, etc.) and their props are unchanged across
-all six packages (core, engine, vanilla, react, vue, svelte).
+Instructions for migrating a consumer app from openchart v7 to v8. Almost all
+changes are in the spec objects and TypeScript imports you pass to openchart.
+The exceptions are called out explicitly: the renderer choice moved from the
+spec to a mount option (section 22), and graph mount failures now throw
+(section 18).
 
 ## How to use this guide
 
@@ -933,10 +934,68 @@ theme whose background does not parse to an opaque color (`'none'`, alpha
 
 ---
 
+## 22. `mark.render` moved to the `renderer` mount option
+
+**What changed:** The rendering surface for point marks (SVG vs canvas) is no
+longer declared in the spec. `mark.render` is removed from `MarkDef`; the same
+three values now live on a `renderer` option at mount and compile time:
+
+- `createChart(el, spec, { renderer: 'canvas' })` (vanilla)
+- `<Chart spec={spec} renderer="canvas" />` (react, vue, svelte)
+- `compileChart(spec, { renderer: 'canvas' })` (engine)
+- `renderStaticSVG(spec, { renderer })` and `exportSpecSequence({ renderer })`
+  accept it too
+
+This mirrors vega-embed's `{ renderer }` embed option: in the Vega ecosystem
+the spec describes *what to show* and never carries a renderer field, because
+the rendering backend is the host's concern, not the data's.
+
+**Who's affected:** Any spec setting `mark.render`. This only ever applied to
+point marks.
+
+**Console warning:** yes. A spec carrying `mark.render` still compiles; the
+field is stripped with a `[openchart]` warning naming the replacement. The
+chart falls back to `'auto'` until you pass the option at mount.
+
+**Search for:** `render:` inside `mark` objects, or grep for `"render"` in
+stored JSON specs.
+
+**Fix:** delete the field from the spec and pass the value where you mount:
+
+```ts
+// Before (v7 / v8 RC)
+createChart(el, {
+  mark: { type: 'point', render: 'canvas' },
+  data,
+  encoding,
+});
+
+// After (v8)
+createChart(el, {
+  mark: 'point',
+  data,
+  encoding,
+}, { renderer: 'canvas' });
+```
+
+For stored JSON specs, a jq codemod:
+
+```bash
+jq 'if (.mark | type) == "object" then .mark |= del(.render) else . end' spec.json
+```
+
+**Behavior note:** the renderer is now fixed per chart instance. Calling
+`.update(spec)` can no longer flip a mounted chart between SVG and canvas by
+changing `mark.render`; the only per-update flip left is `'auto'` crossing the
+1,000-point threshold as data grows or shrinks. If you were flipping renderers
+per update deliberately, remount with a different `renderer` instead.
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
-Every remaining deprecated usage (sections 2-4 and 6) logs a `[openchart]`
+Every remaining deprecated usage (sections 2-4, 6 and 22) logs a `[openchart]`
 warning at compile time with the exact fix. Items with no runtime warning:
 
 - **Stack default (section 1):** silent behavior change. Audit multi-series

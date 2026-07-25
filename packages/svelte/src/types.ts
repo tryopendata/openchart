@@ -30,6 +30,8 @@ export interface ChartProps {
   spec: ChartSpec | LayerSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
+  /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
+  renderer?: 'auto' | 'svg' | 'canvas';
   onmarkclick?: (event: MarkEvent) => void;
   onmarkhover?: (event: MarkEvent) => void;
   onmarkleave?: () => void;

@@ -46,6 +46,11 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */
   darkMode?: DarkMode;
+  /**
+   * Rendering backend for point marks (mirrors vega-embed's `renderer`
+   * option). `'auto'` (default) promotes dense scatters to canvas.
+   */
+  renderer?: 'auto' | 'svg' | 'canvas';
   /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** The currently selected element (controlled). */
@@ -86,6 +91,7 @@ function ChartInner(
     spec,
     theme: themeProp,
     darkMode,
+    renderer,
     onDataPointClick,
     onMarkClick,
     onMarkHover,
@@ -237,6 +243,7 @@ function ChartInner(
     const options: MountOptions = {
       theme,
       darkMode: resolvedDarkMode,
+      renderer,
       onDataPointClick: stableOnDataPointClick,
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
@@ -270,6 +277,7 @@ function ChartInner(
   }, [
     theme,
     resolvedDarkMode,
+    renderer,
     editable,
     stableOnAnnotationClick,
     stableOnDataPointClick,
