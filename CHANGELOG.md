@@ -31,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Bug Fixes
 
+- **renderer:** faceted charts never resolved a rendering backend at all, so `renderer: 'canvas'` on a facet grid was ignored with no warning (every other refused shape reported it). The facet compile path now runs the same resolution and reports the refusal.
+- **renderer:** a chart dense enough to want the canvas layer but shaped so canvas is refused (faceted, layered, sparkline, non-point) now warns once instead of silently painting a DOM node per point. Fires above 5,000 point marks, well clear of the 1,000-point `'auto'` promotion threshold so ordinary facet/layer charts stay quiet. Hosts can reroute or silence it through `onWarn` like any other advisory warning.
 - **graph:** spec validation checks encoding fields against the union of keys across ALL nodes/edges instead of only the first row — a field present on some nodes/edges no longer hard-fails validation. `edgeStyle` is accepted as an edge channel, and `sort` on a quantitative field warns instead of erroring.
 - **graph:** node/edge tooltip race eliminated — hovering from an edge onto a node can no longer leave a stale edge tooltip; edge-hover state always clears before the node hover fires.
 - **legend:** rows missing the color field no longer manufacture a phantom `undefined` legend entry. In a layered spec every layer's rows flatten into the color-legend source, so a sibling layer (e.g. a diagonal reference-line) that doesn't carry the color field was seeding `String(undefined)` as a category — and with an explicit `scale.domain` it appended past the authored entries, breaking domain authority.

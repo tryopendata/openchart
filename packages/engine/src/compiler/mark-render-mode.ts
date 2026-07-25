@@ -5,14 +5,26 @@
  * High-cardinality scatter plots are the only case where the trade is worth
  * it, so canvas is refused for every other mark type and for the layout shapes
  * the canvas layer cannot express (facets, layers, sparklines). Refusals are
- * advisory: they warn only when the author explicitly asked for canvas, never
- * for `'auto'`.
+ * advisory: an explicit `'canvas'` request always warns, and an `'auto'`
+ * refusal warns only once the chart is dense enough for the SVG fallback to
+ * actually hurt (AUTO_CANVAS_REFUSAL_WARN_THRESHOLD).
  */
 
 import type { Display } from '@opendata-ai/openchart-core';
 
 /** Point count above which `'auto'` prefers canvas over SVG. */
 export const AUTO_CANVAS_THRESHOLD = 1000;
+
+/**
+ * Point count above which an `'auto'` refusal is worth telling the author about.
+ *
+ * Set well clear of AUTO_CANVAS_THRESHOLD on purpose. A chart that trips the
+ * threshold by a little renders fine as SVG, and warning there would fire on
+ * ordinary faceted and layered charts that have nothing wrong with them. This
+ * is the "you are painting enough DOM nodes to feel it" line, so the advice is
+ * actionable rather than noise.
+ */
+export const AUTO_CANVAS_REFUSAL_WARN_THRESHOLD = 5000;
 
 /** Inputs to mark render mode resolution. */
 export interface MarkRenderModeArgs {
@@ -36,8 +48,9 @@ export interface MarkRenderModeArgs {
  * Precedence:
  * 1. Explicit `'svg'` wins outright.
  * 2. Unsupported shape (non-point mark, facet, layer, sparkline) falls back to
- *    SVG, pushing one warning onto `warnings` only when the author explicitly
- *    asked for canvas.
+ *    SVG, pushing one warning onto `warnings` when the author explicitly asked
+ *    for canvas, or when `'auto'` wanted canvas for a chart dense enough that
+ *    the SVG fallback is a real cost.
  * 3. Explicit `'canvas'` wins at any point count.
  * 4. `'auto'` (or absent) promotes to canvas above AUTO_CANVAS_THRESHOLD.
  *
@@ -58,6 +71,13 @@ export function resolveMarkRenderMode(
     if (requested === 'canvas') {
       warnings.push(
         `Chart warning: renderer "canvas" is not supported ${refusal}; rendering marks as SVG instead.`,
+      );
+    } else if (pointCount > AUTO_CANVAS_REFUSAL_WARN_THRESHOLD) {
+      // The author asked for nothing and got the slow path. Without this the
+      // only symptom is a chart that feels heavy, with no hint that the shape
+      // (not the point count) is what kept it on SVG.
+      warnings.push(
+        `[openchart] Rendering ${pointCount} point marks as SVG: the canvas mark layer is not supported ${refusal}. Expect slow paint and interaction. Reduce the point count, or restructure so the dense marks compile as a single unlayered, unfaceted point chart.`,
       );
     }
     return 'svg';

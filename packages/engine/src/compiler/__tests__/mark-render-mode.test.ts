@@ -4,14 +4,19 @@
  * Pure function: it decides SVG vs canvas from the host's requested backend
  * (the `renderer` compile option), the mark type, the compiled point count,
  * and the chart shape (facet/layer/sparkline). Refusals collect a warning
- * string only when the host explicitly asked for canvas; the caller emits
- * them through emitSpecWarnings.
+ * string when the host explicitly asked for canvas, or when 'auto' wanted
+ * canvas for a chart dense enough that the SVG fallback is a real cost; the
+ * caller emits them through emitSpecWarnings.
  */
 
 import type { Display } from '@opendata-ai/openchart-core';
 import { describe, expect, it, vi } from 'vitest';
 import { compileChart } from '../../compile';
-import { AUTO_CANVAS_THRESHOLD, resolveMarkRenderMode } from '../mark-render-mode';
+import {
+  AUTO_CANVAS_REFUSAL_WARN_THRESHOLD,
+  AUTO_CANVAS_THRESHOLD,
+  resolveMarkRenderMode,
+} from '../mark-render-mode';
 
 /** Baseline args: a plain scatter with a huge point count. */
 function args(overrides: Partial<Parameters<typeof resolveMarkRenderMode>[0]> = {}) {
@@ -104,12 +109,73 @@ describe('resolveMarkRenderMode', () => {
     expect(warnings).toHaveLength(1);
   });
 
-  it('never warns on a refused shape when requested is auto or absent', () => {
+  it('stays quiet on a refused shape for auto or absent below the warn threshold', () => {
     const warnings: string[] = [];
-    resolveMarkRenderMode(args({ requested: 'auto', markType: 'bar' }), warnings);
-    resolveMarkRenderMode(args({ requested: undefined, markType: 'bar' }), warnings);
-    resolveMarkRenderMode(args({ requested: undefined, faceted: true }), warnings);
+    const quiet = { pointCount: AUTO_CANVAS_REFUSAL_WARN_THRESHOLD };
+    resolveMarkRenderMode(args({ ...quiet, requested: 'auto', markType: 'bar' }), warnings);
+    resolveMarkRenderMode(args({ ...quiet, requested: undefined, markType: 'bar' }), warnings);
+    resolveMarkRenderMode(args({ ...quiet, requested: undefined, faceted: true }), warnings);
     expect(warnings).toEqual([]);
+  });
+
+  it('warns on an auto refusal once the chart is dense enough to hurt', () => {
+    const warnings: string[] = [];
+    expect(
+      resolveMarkRenderMode(
+        args({
+          requested: 'auto',
+          layered: true,
+          pointCount: AUTO_CANVAS_REFUSAL_WARN_THRESHOLD + 1,
+        }),
+        warnings,
+      ),
+    ).toBe('svg');
+    expect(warnings).toHaveLength(1);
+    // Names the count, the shape that refused, and stays on the [openchart] prefix.
+    expect(warnings[0]).toContain(String(AUTO_CANVAS_REFUSAL_WARN_THRESHOLD + 1));
+    expect(warnings[0]).toContain('layered');
+    expect(warnings[0]).toContain('[openchart]');
+  });
+
+  it('treats an absent requested value like auto for the dense refusal warning', () => {
+    const warnings: string[] = [];
+    resolveMarkRenderMode(
+      args({
+        requested: undefined,
+        faceted: true,
+        pointCount: AUTO_CANVAS_REFUSAL_WARN_THRESHOLD + 1,
+      }),
+      warnings,
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('faceted');
+  });
+
+  it('does not warn about density when the shape supports canvas', () => {
+    // A plain dense scatter is promoted, not refused: nothing to report.
+    const warnings: string[] = [];
+    expect(
+      resolveMarkRenderMode(
+        args({ requested: 'auto', pointCount: AUTO_CANVAS_REFUSAL_WARN_THRESHOLD + 1 }),
+        warnings,
+      ),
+    ).toBe('canvas');
+    expect(warnings).toEqual([]);
+  });
+
+  it('warns once, not twice, when an explicit canvas request is also dense', () => {
+    const warnings: string[] = [];
+    resolveMarkRenderMode(
+      args({
+        requested: 'canvas',
+        layered: true,
+        pointCount: AUTO_CANVAS_REFUSAL_WARN_THRESHOLD + 1,
+      }),
+      warnings,
+    );
+    expect(warnings).toHaveLength(1);
+    // The explicit-request phrasing wins; it already tells the author what to do.
+    expect(warnings[0]).toContain('is not supported');
   });
 
   it('promotes auto to canvas above the threshold', () => {
@@ -240,6 +306,50 @@ describe('compileChart markRenderMode', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('warns through onWarn when a dense faceted chart silently falls back to svg', () => {
+    // The case the warning exists for: the author asked for nothing, the chart
+    // is far too dense for SVG, and the facet shape is what refused canvas.
+    const onWarn = vi.fn();
+    const dense = Array.from({ length: AUTO_CANVAS_REFUSAL_WARN_THRESHOLD + 200 }, (_, i) => ({
+      x: i % 500,
+      y: i,
+      g: i % 2 === 0 ? 'a' : 'b',
+    }));
+    compileChart(
+      {
+        mark: 'point',
+        data: dense,
+        encoding: { ...SCATTER_ENCODING, facet: { field: 'g', type: 'nominal' as const } },
+        width: 600,
+        height: 400,
+      },
+      { width: 600, height: 400, onWarn },
+    );
+    const denseWarnings = onWarn.mock.calls.filter((c) =>
+      String(c[0]).includes('point marks as SVG'),
+    );
+    expect(denseWarnings).toHaveLength(1);
+    expect(String(denseWarnings[0][0])).toContain('faceted');
+  });
+
+  it('stays silent for a small faceted chart with no renderer requested', () => {
+    const onWarn = vi.fn();
+    compileChart(
+      {
+        mark: 'point',
+        data: SCATTER_DATA.map((row, i) => ({ ...row, g: i % 2 === 0 ? 'a' : 'b' })),
+        encoding: { ...SCATTER_ENCODING, facet: { field: 'g', type: 'nominal' as const } },
+        width: 600,
+        height: 400,
+      },
+      { width: 600, height: 400, onWarn },
+    );
+    const denseWarnings = onWarn.mock.calls.filter((c) =>
+      String(c[0]).includes('point marks as SVG'),
+    );
+    expect(denseWarnings).toEqual([]);
   });
 
   it('warns on and strips the removed mark.render spec field', () => {
