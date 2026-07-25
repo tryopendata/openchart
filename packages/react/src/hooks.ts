@@ -28,6 +28,8 @@ export interface UseChartOptions {
   onDataPointClick?: MountOptions['onDataPointClick'];
   /** Enable responsive resizing. Defaults to true. */
   responsive?: boolean;
+  /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
+  renderer?: MountOptions['renderer'];
 }
 
 export interface UseChartReturn {
@@ -69,6 +71,7 @@ export function useChart(
       darkMode: options?.darkMode,
       onDataPointClick: options?.onDataPointClick,
       responsive: options?.responsive,
+      renderer: options?.renderer,
     };
 
     const chart = createChart(container, spec, mountOpts);
@@ -82,7 +85,13 @@ export function useChart(
       setLayout(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.theme, options?.darkMode, options?.onDataPointClick, options?.responsive]);
+  }, [
+    options?.theme,
+    options?.darkMode,
+    options?.onDataPointClick,
+    options?.responsive,
+    options?.renderer,
+  ]);
 
   // Update on spec change
   useEffect(() => {

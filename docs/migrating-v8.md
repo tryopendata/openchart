@@ -1055,7 +1055,7 @@ specs still use `type: 'map'`.
 | `MapSpec`, `MapSpecWithoutData`, `isMapSpec` | `GeoMapSpec`, `GeoMapSpecWithoutData`, `isGeoMapSpec` |
 | `MapGeo`, `MapEncoding`, `MapPointsLayer`, `MapProjection`, `MapFocus`, `MapPointsFocus` | `GeoMapGeo`, `GeoMapEncoding`, `GeoMapPointsLayer`, `GeoMapProjection`, `GeoMapFocus`, `GeoMapPointsFocus` |
 | `MapLayout`, `MapFeatureMark`, `MapPointMark`, `MapBorders`, `MapFocusLayout` | `GeoMapLayout`, `GeoMapFeatureMark`, `GeoMapPointMark`, `GeoMapBorders`, `GeoMapFocusLayout` |
-| `MapProps`, `MapHandle` (react/vue/svelte) | `GeoMapProps`, `GeoMapHandle` |
+| `MapProps` (react/vue/svelte), `MapHandle` (react only) | `GeoMapProps`, `GeoMapHandle` |
 | `compileMap` (engine) | `compileGeoMap` |
 
 **No console warning.** The old names fail at build time: TypeScript imports

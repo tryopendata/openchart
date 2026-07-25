@@ -2026,7 +2026,40 @@ describe('mark DOM index', () => {
       { category: '12" pizza', value: v1 },
       { category: 'C:\\temp', value: v2 },
     ];
-    assertRoundTrip(columnSpec(data(100, 200)), columnSpec(data(180, 120)));
+    const specA = columnSpec(data(100, 200));
+    const specB = columnSpec(data(180, 120));
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // From-states are applied synchronously before the first rAF. If the DOM
+    // index failed to look up the quoted/backslashed keys, no tween would be
+    // built and both rects would still sit at their already-rendered FINAL
+    // geometry here — the round-trip below would then pass vacuously.
+    const { svg: freshSvg } = compileAndRender(specB);
+    const fresh = extractRectGeometry(freshSvg);
+    const atStart = extractRectGeometry(svg);
+    expect([...atStart.keys()].sort()).toEqual([...fresh.keys()].sort());
+    for (const [key, geom] of atStart) {
+      expect(geom, `${key} must start at prev geometry, not final`).not.toEqual(fresh.get(key));
+    }
+
+    runToCompletion();
+    const atEnd = extractRectGeometry(svg);
+    for (const [key, geom] of atEnd) {
+      expect(geom, key).toEqual(fresh.get(key));
+    }
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
   });
 
   it('chart.update() with special-character categories does not throw', () => {
@@ -2097,19 +2130,34 @@ describe('mark DOM index', () => {
       animation: layoutB.animation!,
       onComplete: () => {},
     });
-    runToCompletion();
 
-    // Each element landed at ITS final geometry, not the other's.
     const freshContainer = createContainer();
     const fresh = renderChartSVG(layoutB, freshContainer) as SVGSVGElement;
-    for (const [sel, attrs] of [
+    const targets = [
       ['.oc-mark-rule[data-key="Q1"]', ['x1', 'y1', 'x2', 'y2']],
       ['text.oc-mark-text[data-key="Q1"]', ['x', 'y']],
-    ] as const) {
+    ] as const;
+
+    // From-states are applied synchronously, so BOTH elements must be back at
+    // their prev-layout position before the first frame. A flat (non-bucketed)
+    // key->element map hands one builder the other's element, leaving the
+    // second element untouched at its final position — caught here, invisible
+    // to the completion check below.
+    for (const [sel, attrs] of targets) {
       const el = svg.querySelector(sel);
       const freshEl = fresh.querySelector(sel);
       expect(el, sel).toBeTruthy();
       expect(freshEl, sel).toBeTruthy();
+      const moved = attrs.some((attr) => el?.getAttribute(attr) !== freshEl?.getAttribute(attr));
+      expect(moved, `${sel} must start at prev geometry, not final`).toBe(true);
+    }
+
+    runToCompletion();
+
+    // Each element landed at ITS final geometry, not the other's.
+    for (const [sel, attrs] of targets) {
+      const el = svg.querySelector(sel);
+      const freshEl = fresh.querySelector(sel);
       for (const attr of attrs) {
         expect(el?.getAttribute(attr), `${sel} ${attr}`).toBe(freshEl?.getAttribute(attr));
       }

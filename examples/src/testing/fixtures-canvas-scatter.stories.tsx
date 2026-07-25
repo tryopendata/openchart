@@ -29,7 +29,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function canvasScatterSpec(dark: boolean): ChartSpec {
+function canvasScatterSpec(): ChartSpec {
   const rand = mulberry32(7);
   return {
     animation: false,
@@ -49,18 +49,20 @@ function canvasScatterSpec(dark: boolean): ChartSpec {
       subtitle: 'Static baseline for the canvas mark rasterizer',
       source: 'Deterministic PRNG, seed 7',
     },
-    ...(dark ? { darkMode: 'force' as const } : {}),
   };
 }
 
 export const CanvasScatterStatic = () => (
   <div className="tfix-chart tfix-h-440">
-    <Chart spec={canvasScatterSpec(false)} renderer="canvas" />
+    <Chart spec={canvasScatterSpec()} renderer="canvas" />
   </div>
 );
 
 export const CanvasScatterStaticDark = () => (
-  <div className="tfix-chart tfix-h-440">
-    <Chart spec={canvasScatterSpec(true)} renderer="canvas" />
+  // Charts paint no background of their own; the host page supplies it. The
+  // dark surface here mirrors real dark-mode embedding so the baseline pins
+  // dark-adapted marks against the background they ship on.
+  <div className="tfix-chart tfix-h-440" style={{ background: '#09090b' }}>
+    <Chart spec={canvasScatterSpec()} renderer="canvas" darkMode="force" />
   </div>
 );

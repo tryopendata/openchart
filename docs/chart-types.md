@@ -388,7 +388,7 @@ const spec = {
 
 Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. Vanilla uses `createGeoMap(container, spec)`.
 
-For the full field reference, see [GeoMapSpec in spec-reference.md](spec-reference.md#mapspec).
+For the full field reference, see [GeoMapSpec in spec-reference.md](spec-reference.md#geomapspec).
 
 **Live examples**: [US choropleth](https://tryopendata.github.io/openchart/?story=maps--maps#us-state-unemployment) | [World projections](https://tryopendata.github.io/openchart/?story=maps--maps#world-equal-earth) | [Zoom to feature](https://tryopendata.github.io/openchart/?story=maps--maps#zoom-to-feature) | [Point layer](https://tryopendata.github.io/openchart/?story=maps--maps#point-layer)
 

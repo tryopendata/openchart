@@ -22,7 +22,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [Event handlers](#event-handlers) (chart and table interaction callbacks)
 - [GraphSpec](#graphspec) (network/relationship visualizations)
 - [SankeySpec](#sankeyspec) (flow diagrams)
-- [GeoMapSpec](#mapspec) (choropleth and symbol maps)
+- [GeoMapSpec](#geomapspec) (choropleth and symbol maps)
 - [TileMapSpec](#tilemapspec) (US state tile grid maps)
 - [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
 - [Validation](#validation) (validateSpec, error codes)
