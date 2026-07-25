@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.0.0-rc.26](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.25...core-v8.0.0-rc.26) (2026-07-25)
+
+
+### Bug Fixes
+
+* default the legend to top, and drop it on labeled pies ([92552a2](https://github.com/tryopendata/openchart/commit/92552a2))
+* warn when a dense chart silently falls back to SVG (#111) ([0ccdaed](https://github.com/tryopendata/openchart/commit/0ccdaed))
+
 ## [8.0.0-rc.24](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.23...core-v8.0.0-rc.24) (2026-07-24)
 
 
