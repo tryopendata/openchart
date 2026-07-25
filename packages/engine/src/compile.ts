@@ -1364,6 +1364,25 @@ function compileFaceted(
   // Assign animation indices across all panels
   assignAnimationIndices(allMarks, resolvedAnimation);
 
+  // Rendering backend, resolved against the pooled panel marks. The canvas
+  // layer cannot express a facet grid, so this always answers 'svg' and never
+  // stamps the layout; it runs purely so the refusal is reported -- an explicit
+  // renderer: 'canvas' gets told it was ignored, and a dense facet grid gets
+  // told why it is painting every point as a DOM node.
+  const facetRenderModeWarnings: string[] = [];
+  resolveMarkRenderMode(
+    {
+      requested: options.renderer,
+      markType: chartSpec.markType,
+      pointCount: allMarks.reduce((n, m) => (m.type === 'point' ? n + 1 : n), 0),
+      display: chartSpec.display,
+      faceted: true,
+      layered: options.layered ?? false,
+    },
+    facetRenderModeWarnings,
+  );
+  emitSpecWarnings(facetRenderModeWarnings, options.onWarn);
+
   // Figure-level axes are null (axes live in panels)
   // Figure-level marks are the union of all panel marks (for tooltip/keyboard nav)
   return {
