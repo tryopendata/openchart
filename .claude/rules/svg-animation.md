@@ -44,7 +44,7 @@ Bar orientation comes from the engine via `RectMark.orient` (`'horizontal' | 've
 
 ## Update/Exit Transitions
 
-Data-update transitions live in `packages/vanilla/src/transition.ts` and use a rAF loop, not CSS animations. This is a fundamentally different mechanism from the CSS-based entrance animations.
+Data-update transitions live in `packages/vanilla/src/transition/` (barrel: `transition.ts`) and use a rAF loop, not CSS animations. This is a fundamentally different mechanism from the CSS-based entrance animations.
 
 **rAF-not-CSS rationale.** Entrance animations are fire-and-forget: CSS keyframes handle them with zero JS per frame. Update transitions need to interpolate between two computed layouts (prev geometry -> next geometry), which requires reading layout data and writing SVG attributes per frame. CSS can't do that.
 

@@ -23,7 +23,7 @@
 | CSS dark overrides (`.oc-dark`) — **generated** | `packages/core/src/styles/dark.css` |
 | CSS token generator | `scripts/generate-css-tokens.mjs` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
-| Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition.ts`. |
+| Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition/`. |
 | Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
 | X-axis extent helper + constants | `packages/core/src/responsive/metrics.ts` (`computeXAxisExtentFromLabels`, `X_AXIS_BAND_HEIGHT`, `X_AXIS_TITLE_BAND`, `X_AXIS_TITLE_BAND_ROTATED`) |
 | Text wrapping | `packages/core/src/layout/text-wrap.ts` (`wrapText`) |
@@ -76,7 +76,7 @@
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
 | Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts`. `computeAnimationDuration(svg)` is the shared total-entrance-time calc (used by cleanup timing and GIF capture). |
-| Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition.ts` |
+| Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition/` (driver.ts, gate.ts, svg-tweens.ts, canvas-tweens.ts, chrome-tweens.ts, ...; `transition.ts` is the re-export barrel) |
 | Export (SVG/PNG/JPG/CSV) | `packages/vanilla/src/export.ts` → `exportSVG`, `exportPNG`, `exportJPG`, `exportCSV`, plus `rasterizeSVGToCanvas`/`getSVGDimensions`/`embedFonts` helpers reused by GIF export. Wired into `chart.export(format)` in `mount.ts`. |
 | Animated GIF export | `packages/vanilla/src/export-gif.ts` → `exportGIF()`. Deterministic entrance re-creation (not CSS scrubbing — computed-style animation doesn't serialize), encoded via the optional `gifenc` peer dep. Subpath: `@opendata-ai/openchart-vanilla/gif`; dynamic-imported by the `'gif'` case in `mount.ts` so `gifenc` stays out of the core bundle. |
 | Mark key serialization / dedup | `packages/engine/src/compiler/keys.ts` |
@@ -263,7 +263,7 @@ Shared scales means shared **domains**, not just a shared plot rect. `compileLay
 ## Animation system
 
 - **Entrance animations** are pure CSS. Keyframes in `packages/core/src/styles/keyframes.css`, rules in `animation.css`. The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.
-- **Update/exit transitions** use a rAF loop in `packages/vanilla/src/transition.ts`, not CSS. The driver matches marks by `data-key`, tweens geometry (rect position/size, line/area path morphs, point cx/cy/r, rule/tick endpoints, text x/y), and also transitions axis ticks and gridlines. Supports interruption retargeting via `snapshot()`.
+- **Update/exit transitions** use a rAF loop in `packages/vanilla/src/transition/`, not CSS. The driver matches marks by `data-key`, tweens geometry (rect position/size, line/area path morphs, point cx/cy/r, rule/tick endpoints, text x/y), and also transitions axis ticks and gridlines. Supports interruption retargeting via `snapshot()`.
 - The engine resolves `AnimationSpec` → `ResolvedAnimation` (`engine/src/compiler/animation.ts`).
 - Mark keys for matching are serialized in `packages/engine/src/compiler/keys.ts`.
 - Detailed gotchas (SVG ≠ HTML, mount lifecycle, stacked bar segment chaining, orientation): `.claude/rules/svg-animation.md` — **read before touching animation code.**
