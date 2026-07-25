@@ -7,7 +7,7 @@
  * Do not restyle: this content is a frozen contract.
  */
 
-import type { MapSpec } from '@opendata-ai/openchart-core';
+import type { GeoMapSpec } from '@opendata-ai/openchart-core';
 import { GeoMap } from '@opendata-ai/openchart-react';
 import usStatesTopo from 'us-atlas/states-albers-10m.json';
 import worldTopo from 'world-atlas/countries-110m.json';
@@ -98,7 +98,7 @@ const worldData = [
 // Specs
 // ---------------------------------------------------------------------------
 
-const usStatesSpec: MapSpec = {
+const usStatesSpec: GeoMapSpec = {
   type: 'map',
   geo: { features: usStatesTopo, projection: 'identity' },
   data: usData,
@@ -109,7 +109,7 @@ const usStatesSpec: MapSpec = {
   animation: false,
 };
 
-const worldEqualEarthSpec: MapSpec = {
+const worldEqualEarthSpec: GeoMapSpec = {
   type: 'map',
   geo: { features: worldTopo, projection: 'equalEarth' },
   data: worldData,

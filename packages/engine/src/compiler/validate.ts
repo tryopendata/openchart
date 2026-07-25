@@ -1566,7 +1566,7 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
 // Map validation
 // ---------------------------------------------------------------------------
 
-function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
   if (!spec.geo || typeof spec.geo !== 'object') {
     errors.push({
       message: 'Spec error: map spec requires a "geo" object with a TopoJSON "features" field',
@@ -2202,7 +2202,7 @@ export function validateSpec(spec: unknown): ValidationResult {
   } else if (isTileMap) {
     validateTileMapSpec(obj, errors);
   } else if (isMap) {
-    validateMapSpec(obj, errors);
+    validateGeoMapSpec(obj, errors);
   } else if (isBarList) {
     validateBarListSpec(obj, errors);
   }

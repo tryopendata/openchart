@@ -3,15 +3,15 @@
 
   Mounts a map instance on render, updates when spec changes,
   and cleans up on unmount. All heavy lifting is done by the vanilla
-  createMap() function.
+  createGeoMap() function.
 -->
 <script lang="ts">
-import type { DarkMode, MapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
-  createMap,
-  type MapInstance,
-  type MapMarkEvent,
-  type MapMountOptions,
+  createGeoMap,
+  type GeoMapInstance,
+  type GeoMapMarkEvent,
+  type GeoMapMountOptions,
 } from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
@@ -25,17 +25,17 @@ let {
   class: className,
   style,
 }: {
-  spec: MapSpec;
+  spec: GeoMapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
-  onmarkclick?: (event: MapMarkEvent) => void;
-  onmarkhover?: (event: MapMarkEvent | null) => void;
+  onmarkclick?: (event: GeoMapMarkEvent) => void;
+  onmarkhover?: (event: GeoMapMarkEvent | null) => void;
   class?: string;
   style?: string;
 } = $props();
 
 let containerEl: HTMLDivElement;
-let instance: MapInstance | null = null;
+let instance: GeoMapInstance | null = null;
 
 const ctxTheme = getVizTheme();
 const ctxDarkMode = getVizDarkMode();
@@ -57,7 +57,7 @@ $effect(() => {
 
   instance?.destroy();
 
-  const options: MapMountOptions = {
+  const options: GeoMapMountOptions = {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     onMarkClick: (feature) => untrack(() => onmarkclick)?.(feature),
@@ -65,7 +65,7 @@ $effect(() => {
     responsive: true,
   };
 
-  instance = createMap(containerEl, currentSpec, options);
+  instance = createGeoMap(containerEl, currentSpec, options);
   prevSpec = JSON.stringify(currentSpec);
 });
 

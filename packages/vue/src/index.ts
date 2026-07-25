@@ -35,8 +35,8 @@ export type {
   NormalizedBarListSpec,
   NormalizedChartSpec,
   NormalizedChrome,
+  NormalizedGeoMapSpec,
   NormalizedGraphSpec,
-  NormalizedMapSpec,
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
@@ -50,8 +50,8 @@ export {
   compile,
   compileBarList,
   compileChart,
+  compileGeoMap,
   compileGraph,
-  compileMap,
   compileSankey,
   compileTable,
   getChartRenderer,
@@ -81,10 +81,10 @@ export { useTableState } from './composables/useTableState';
 export { useVizDarkMode, useVizTheme, VizDarkModeKey, VizThemeKey } from './context';
 export type { DataTableProps } from './DataTable';
 export { DataTable } from './DataTable';
+export type { GeoMapProps } from './GeoMap';
+export { GeoMap } from './GeoMap';
 export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
-export type { MapProps } from './Map';
-export { GeoMap } from './Map';
 export type { SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeProvider';

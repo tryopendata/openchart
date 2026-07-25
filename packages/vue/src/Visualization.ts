@@ -8,8 +8,8 @@
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
 import {
   isBarListSpec,
+  isGeoMapSpec,
   isGraphSpec,
-  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -18,8 +18,8 @@ import { type CSSProperties, defineComponent, h, type PropType } from 'vue';
 import { BarList } from './BarList';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
+import { GeoMap } from './GeoMap';
 import { Graph } from './Graph';
-import { GeoMap } from './Map';
 import { Sankey } from './Sankey';
 import { TileMap } from './TileMap';
 
@@ -75,7 +75,7 @@ export const Visualization = defineComponent({
       if (isBarListSpec(spec)) {
         return h(BarList, { ...sharedProps, spec });
       }
-      if (isMapSpec(spec)) {
+      if (isGeoMapSpec(spec)) {
         return h(GeoMap, { ...sharedProps, spec });
       }
       return h(Chart, { ...sharedProps, spec });

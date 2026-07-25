@@ -8,8 +8,8 @@
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
 import {
   isBarListSpec,
+  isGeoMapSpec,
   isGraphSpec,
-  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -18,8 +18,8 @@ import type { CSSProperties } from 'react';
 import { BarList } from './BarList';
 import { Chart } from './Chart';
 import { DataTable } from './DataTable';
+import { GeoMap } from './GeoMap';
 import { Graph } from './Graph';
-import { GeoMap } from './Map';
 import { Sankey } from './Sankey';
 import { TileMap } from './TileMap';
 
@@ -74,7 +74,7 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
       <BarList spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );
   }
-  if (isMapSpec(spec)) {
+  if (isGeoMapSpec(spec)) {
     return (
       <GeoMap spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );

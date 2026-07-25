@@ -8,8 +8,8 @@
 import type { DarkMode, ThemeConfig, VizSpec } from '@opendata-ai/openchart-core';
 import {
   isBarListSpec,
+  isGeoMapSpec,
   isGraphSpec,
-  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -47,7 +47,7 @@ let {
   <TileMap {spec} {theme} {darkMode} class={className} {style} />
 {:else if isBarListSpec(spec)}
   <BarList {spec} {theme} {darkMode} class={className} {style} />
-{:else if isMapSpec(spec)}
+{:else if isGeoMapSpec(spec)}
   <GeoMap {spec} {theme} {darkMode} class={className} {style} />
 {:else}
   <Chart {spec} {theme} {darkMode} class={className} {style} />

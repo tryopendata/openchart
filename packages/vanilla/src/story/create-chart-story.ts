@@ -14,9 +14,9 @@
  * camera tween. It does not bridge the two clocks.
  */
 
-import type { DataRow, MapSpec } from '@opendata-ai/openchart-core';
-import { deepMergeSpec, isMapSpec } from '@opendata-ai/openchart-core';
-import { createMap, type MapInstance, type MapMountOptions } from '../map-mount';
+import type { DataRow, GeoMapSpec } from '@opendata-ai/openchart-core';
+import { deepMergeSpec, isGeoMapSpec } from '@opendata-ai/openchart-core';
+import { createGeoMap, type GeoMapInstance, type GeoMapMountOptions } from '../map-mount';
 import { type ChartInstance, createChart, type MountOptions } from '../mount';
 import { canTransitionSpecShape } from '../transition';
 import {
@@ -98,7 +98,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
   // Widen once here so the internal helpers don't have to thread `TData`
   // through a discriminated union that TS can't narrow across variants.
   const baseSpec = spec as StorySpec;
-  const isMap = isMapSpec(baseSpec as unknown as Record<string, unknown>);
+  const isMap = isGeoMapSpec(baseSpec as unknown as Record<string, unknown>);
 
   if (isMap && cameraMode === 'scrub') {
     console.warn(
@@ -130,19 +130,19 @@ export function createChartStory<TData extends DataRow = DataRow>(
   const initialSpec = resolveSpecAtStep(baseSpec, steps, 0);
 
   // Branch: map vs chart mount
-  let instance: ChartInstance | MapInstance;
+  let instance: ChartInstance | GeoMapInstance;
   if (isMap) {
-    // Not a spread: MapMountOptions callback signatures differ from MountOptions.
-    // When adding fields to MapMountOptions, check if they should transfer here.
-    const mapOpts: MapMountOptions = {
+    // Not a spread: GeoMapMountOptions callback signatures differ from MountOptions.
+    // When adding fields to GeoMapMountOptions, check if they should transfer here.
+    const mapOpts: GeoMapMountOptions = {
       theme: mountOptions?.theme,
       darkMode: mountOptions?.darkMode,
       watermark: mountOptions?.watermark,
       responsive: mountOptions?.responsive,
     };
-    instance = createMap(container, initialSpec as MapSpec, mapOpts);
+    instance = createGeoMap(container, initialSpec as GeoMapSpec, mapOpts);
   } else {
-    instance = createChart(container, initialSpec as Exclude<StorySpec, MapSpec>, mountOptions);
+    instance = createChart(container, initialSpec as Exclude<StorySpec, GeoMapSpec>, mountOptions);
   }
 
   // Chart camera infra (not used for maps)
@@ -283,7 +283,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
 
     if (isMap) {
       // Maps always apply directly: update handles fill + camera via geo.focus
-      (instance as MapInstance).update(nextSpec as MapSpec);
+      (instance as GeoMapInstance).update(nextSpec as GeoMapSpec);
       return;
     }
 
@@ -296,7 +296,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       canTransitionSpecShape(prevSpec, nextSpec);
 
     const applyUpdate = () =>
-      (instance as ChartInstance).update(nextSpec as Exclude<StorySpec, MapSpec>);
+      (instance as ChartInstance).update(nextSpec as Exclude<StorySpec, GeoMapSpec>);
 
     if (isFirst || willLikelyMorph || editModeRequested) {
       applyUpdate();

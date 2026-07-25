@@ -1,8 +1,8 @@
 import type {
   ChartSpec,
+  GeoMapSpec,
   GraphSpec,
   LayerSpec,
-  MapSpec,
   RangeAnnotation,
   RefLineAnnotation,
   SankeySpec,
@@ -10,7 +10,7 @@ import type {
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import type { NormalizedMapSpec } from '../../geo/types';
+import type { NormalizedGeoMapSpec } from '../../geo/types';
 import type { NormalizedSankeySpec } from '../../sankey/types';
 import { normalizeSpec } from '../normalize';
 import type { NormalizedChartSpec, NormalizedGraphSpec, NormalizedTableSpec } from '../types';
@@ -360,7 +360,7 @@ describe('normalizeSpec', () => {
   });
 
   describe('map spec normalization', () => {
-    const mapSpec: MapSpec = {
+    const mapSpec: GeoMapSpec = {
       type: 'map',
       geo: {
         features: {
@@ -377,25 +377,25 @@ describe('normalizeSpec', () => {
     };
 
     it('adds focus: null when not specified', () => {
-      const result = normalizeSpec(mapSpec) as NormalizedMapSpec;
+      const result = normalizeSpec(mapSpec) as NormalizedGeoMapSpec;
       expect(result.geo.focus).toBeNull();
     });
 
     it('preserves explicit focus value', () => {
-      const specWithFocus: MapSpec = {
+      const specWithFocus: GeoMapSpec = {
         ...mapSpec,
         geo: { ...mapSpec.geo, focus: '36' },
       };
-      const result = normalizeSpec(specWithFocus) as NormalizedMapSpec;
+      const result = normalizeSpec(specWithFocus) as NormalizedGeoMapSpec;
       expect(result.geo.focus).toBe('36');
     });
 
     it('preserves focus: null (explicit clear)', () => {
-      const specWithNull: MapSpec = {
+      const specWithNull: GeoMapSpec = {
         ...mapSpec,
         geo: { ...mapSpec.geo, focus: null },
       };
-      const result = normalizeSpec(specWithNull) as NormalizedMapSpec;
+      const result = normalizeSpec(specWithNull) as NormalizedGeoMapSpec;
       expect(result.geo.focus).toBeNull();
     });
   });

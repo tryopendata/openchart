@@ -992,6 +992,46 @@ per update deliberately, remount with a different `renderer` instead.
 
 ---
 
+## 23. Geo map API renamed to GeoMap
+
+**Who's affected:** only adopters of the v8 release candidates. The geo map
+API never shipped in a stable v7 release, so if you are coming from v7.x this
+section does not apply.
+
+**What changed:** every geo-map symbol now carries the `GeoMap` prefix,
+matching the `<GeoMap>` component the react/vue/svelte packages already
+exported. There are no deprecated aliases. The wire format is unchanged:
+specs still use `type: 'map'`.
+
+| RC name | v8 name |
+| ------- | ------- |
+| `createMap` | `createGeoMap` |
+| `MapInstance`, `MapMountOptions`, `MapMarkEvent`, `MapFeatureEvent`, `MapCameraOptions` | `GeoMapInstance`, `GeoMapMountOptions`, `GeoMapMarkEvent`, `GeoMapFeatureEvent`, `GeoMapCameraOptions` |
+| `MapSpec`, `MapSpecWithoutData`, `isMapSpec` | `GeoMapSpec`, `GeoMapSpecWithoutData`, `isGeoMapSpec` |
+| `MapGeo`, `MapEncoding`, `MapPointsLayer`, `MapProjection`, `MapFocus`, `MapPointsFocus` | `GeoMapGeo`, `GeoMapEncoding`, `GeoMapPointsLayer`, `GeoMapProjection`, `GeoMapFocus`, `GeoMapPointsFocus` |
+| `MapLayout`, `MapFeatureMark`, `MapPointMark`, `MapBorders`, `MapFocusLayout` | `GeoMapLayout`, `GeoMapFeatureMark`, `GeoMapPointMark`, `GeoMapBorders`, `GeoMapFocusLayout` |
+| `MapProps`, `MapHandle` (react/vue/svelte) | `GeoMapProps`, `GeoMapHandle` |
+| `compileMap` (engine) | `compileGeoMap` |
+
+**No console warning.** The old names fail at build time: TypeScript imports
+of the RC names no longer resolve.
+
+**Fix:** rename the imports. The names are unambiguous enough for a global
+find-and-replace; every occurrence of the RC name is the geo map API (the
+tile map API is a separate `TileMap*` family and is untouched).
+
+```ts
+// Before (v8 RC)
+import { createMap, type MapInstance } from '@opendata-ai/openchart-vanilla';
+import type { MapSpec } from '@opendata-ai/openchart-core';
+
+// After (v8)
+import { createGeoMap, type GeoMapInstance } from '@opendata-ai/openchart-vanilla';
+import type { GeoMapSpec } from '@opendata-ai/openchart-core';
+```
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.

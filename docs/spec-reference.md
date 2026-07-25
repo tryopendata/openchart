@@ -22,7 +22,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [Event handlers](#event-handlers) (chart and table interaction callbacks)
 - [GraphSpec](#graphspec) (network/relationship visualizations)
 - [SankeySpec](#sankeyspec) (flow diagrams)
-- [MapSpec](#mapspec) (choropleth and symbol maps)
+- [GeoMapSpec](#mapspec) (choropleth and symbol maps)
 - [TileMapSpec](#tilemapspec) (US state tile grid maps)
 - [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
 - [Validation](#validation) (validateSpec, error codes)
@@ -39,7 +39,7 @@ type VizSpec =
   | GraphSpec
   | SankeySpec
   | TileMapSpec
-  | MapSpec
+  | GeoMapSpec
   | BarListSpec;
 ```
 
@@ -50,10 +50,10 @@ Use `type` to select which spec shape you're building:
 - `graph` produces a `GraphSpec`
 - `sankey` produces a `SankeySpec`
 - `tilemap` produces a `TileMapSpec`
-- `map` produces a `MapSpec`
+- `map` produces a `GeoMapSpec`
 - `barlist` produces a `BarListSpec`
 
-Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`, `isTileMapSpec(spec)`, `isMapSpec(spec)`, `isBarListSpec(spec)`.
+Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`, `isTileMapSpec(spec)`, `isGeoMapSpec(spec)`, `isBarListSpec(spec)`.
 
 ---
 
@@ -1245,19 +1245,19 @@ const spec: SankeySpec = {
 
 ---
 
-## MapSpec
+## GeoMapSpec
 
 Input for choropleth and symbol map visualizations. Source: `core/src/types/spec.ts`.
 
-Maps render TopoJSON geometries as SVG, join tabular data rows to features by id, and fill features by a color encoding. An optional points layer overlays lat/lon symbols above the features. Uses a separate component: `<GeoMap>` (React/Vue/Svelte) or `createMap` (vanilla).
+Maps render TopoJSON geometries as SVG, join tabular data rows to features by id, and fill features by a color encoding. An optional points layer overlays lat/lon symbols above the features. Uses a separate component: `<GeoMap>` (React/Vue/Svelte) or `createGeoMap` (vanilla).
 
 | Field         | Type              | Default     | Description                                                                          |
 | ------------- | ----------------- | ----------- | ------------------------------------------------------------------------------------ |
 | `type`        | `'map'`           | (required)  | Discriminant. Always `'map'`.                                                        |
-| `geo`         | `MapGeo`          | (required)  | TopoJSON features, join key field, projection, and camera focus. See below.          |
+| `geo`         | `GeoMapGeo`          | (required)  | TopoJSON features, join key field, projection, and camera focus. See below.          |
 | `data`        | `DataRow[]`       | (required)  | Tabular data to join to geo features. Can be `[]` for a basemap-only map (e.g. under a points layer). |
-| `encoding`    | `MapEncoding`     | (required)  | Maps data fields to the join key and fill color. See below.                          |
-| `points`      | `MapPointsLayer`  | `undefined` | Point/symbol layer rendered above the features. See below.                           |
+| `encoding`    | `GeoMapEncoding`     | (required)  | Maps data fields to the join key and fill color. See below.                          |
+| `points`      | `GeoMapPointsLayer`  | `undefined` | Point/symbol layer rendered above the features. See below.                           |
 | `chrome`      | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                            |
 | `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
@@ -1266,16 +1266,16 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `animation`   | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                    |
 | `valueFormat` | `string`          | `undefined` | Deprecated: use `encoding.color.format` instead. d3-format string for color values in tooltips and the legend (e.g. `".1f"`). `encoding.color.format` wins when both are set. |
 
-### MapGeo
+### GeoMapGeo
 
 | Field        | Type               | Default       | Description                                                                            |
 | ------------ | ------------------ | ------------- | -------------------------------------------------------------------------------------- |
 | `features`   | TopoJSON topology  | (required)    | The geometry source. Import from `us-atlas`, `world-atlas`, or your own TopoJSON file. Must be a `Topology`, not a GeoJSON FeatureCollection. |
 | `idField`    | `string`           | `'id'`        | Field in the TopoJSON feature properties used as the join key.                         |
-| `projection` | `MapProjection`    | `'albersUsa'` | `'albersUsa'`, `'mercator'`, `'equalEarth'`, or `'identity'`. Use `'identity'` for pre-projected files like `states-albers-10m.json` (coordinates already in pixel space). |
-| `focus`      | `MapFocus \| null` | `undefined`   | Camera focus. See [Focus](#focus). `null` clears focus from a prior story step.        |
+| `projection` | `GeoMapProjection`    | `'albersUsa'` | `'albersUsa'`, `'mercator'`, `'equalEarth'`, or `'identity'`. Use `'identity'` for pre-projected files like `states-albers-10m.json` (coordinates already in pixel space). |
+| `focus`      | `GeoMapFocus \| null` | `undefined`   | Camera focus. See [Focus](#focus). `null` clears focus from a prior story step.        |
 
-### MapEncoding
+### GeoMapEncoding
 
 | Channel   | Type                                   | Required | Description                                                                                     |
 | --------- | -------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
@@ -1289,7 +1289,7 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 
 Features with no matching data row render in a neutral fill.
 
-### MapPointsLayer
+### GeoMapPointsLayer
 
 Symbol overlay projected through the same geo projection as the features. Independent of the choropleth data join.
 
@@ -1323,7 +1323,7 @@ A quantitative choropleth gets a class legend above the map by default; `legend:
 
 ### Map events and updates
 
-`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `MapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition); the points layer re-renders without transitions.
+`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `GeoMapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition); the points layer re-renders without transitions.
 
 ### Map example
 
@@ -1331,7 +1331,7 @@ A quantitative choropleth gets a class legend above the map by default; `legend:
 import { GeoMap } from "@opendata-ai/openchart-react";
 import us from "us-atlas/states-albers-10m.json";
 
-const spec: MapSpec = {
+const spec: GeoMapSpec = {
   type: "map",
   geo: { features: us, projection: "identity" },
   data: [

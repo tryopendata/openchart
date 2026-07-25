@@ -100,14 +100,14 @@
 | Mobile layout invariants (6 geometry rules incl. Rule 6 label presence; 4 Playwright projects, the chromium ones run in CI) | `e2e/invariants/mobile-invariants.spec.ts` |
 | Blog-theme mobile repro (bugs on labs.tryopendata.ai need `axisTick: 14`, not the 11px default; production mirror story) | `examples/src/charts/mobile-regression.stories.tsx` → `testing--mobile-regression--one-wide-x-label-large-ticks` (retitled `Testing / Mobile Regression`; file stays put, slugs are now `testing--mobile-regression--*`) |
 | Frozen e2e fixture copies (pinned visual/invariant stories, pixel-identical, `Testing / Fixtures`) + frozen stylesheet | `examples/src/testing/fixtures-*.stories.tsx` (+ `testing.css`, the `.tfix-` frozen namespace). Slugs are `testing--fixtures--*`. Includes `rotated-with-source`, moved here from `examples/src/charts/`. |
-| GeoMap spec types (`MapSpec`, `MapEncoding`, `MapPointsLayer`, `MapGeo`) | `packages/core/src/types/spec.ts` (search "MapSpec") |
-| GeoMap layout types (`MapLayout`, `MapFeatureMark`, `MapPointMark`, `MapBorders`) | `packages/core/src/types/layout.ts` (search "MapLayout") |
-| GeoMap compile (projection, data join, choropleth marks, point marks, legends, focus) | `packages/engine/src/geo/compile-map.ts` → `compileMap()`. Helpers: `buildBasemapMarks`, `buildQuantitativeMarks`, `buildCategoricalMarks`, `resolveFocus`. |
+| GeoMap spec types (`GeoMapSpec`, `GeoMapEncoding`, `GeoMapPointsLayer`, `GeoMapGeo`) | `packages/core/src/types/spec.ts` (search "GeoMapSpec") |
+| GeoMap layout types (`GeoMapLayout`, `GeoMapFeatureMark`, `GeoMapPointMark`, `GeoMapBorders`) | `packages/core/src/types/layout.ts` (search "GeoMapLayout") |
+| GeoMap compile (projection, data join, choropleth marks, point marks, legends, focus) | `packages/engine/src/geo/compile-geo-map.ts` → `compileGeoMap()`. Helpers: `buildBasemapMarks`, `buildQuantitativeMarks`, `buildCategoricalMarks`, `resolveFocus`. |
 | GeoMap data join (feature id matching) | `packages/engine/src/geo/join.ts` → `joinDataToFeatures()` |
 | GeoMap projections (albersUsa, mercator, equalEarth, identity) | `packages/engine/src/geo/projections.ts` → `createProjection()` |
 | GeoMap SVG renderer (features, borders, points, legends, chrome) | `packages/vanilla/src/map-renderer.ts` → `renderMapSVG()`. Point marks: `renderPointMarks()`. |
 | GeoMap camera (zoom/pan, counter-scaling, focus dim) | `packages/vanilla/src/map-camera.ts` → `applyMapCamera()`, `cameraForTarget()`, `focusTargetForFeatures()`. Points counter-scale `r` and `stroke-width` via `data-base-r`/`data-base-stroke-width` attributes. |
-| GeoMap mount (lifecycle, events, tooltips, resize, export) | `packages/vanilla/src/map-mount.ts` → `createMap()`. Event type: `MapMarkEvent` (discriminated by `kind: 'feature' \| 'point'`). |
+| GeoMap mount (lifecycle, events, tooltips, resize, export) | `packages/vanilla/src/map-mount.ts` → `createGeoMap()`. Event type: `GeoMapMarkEvent` (discriminated by `kind: 'feature' \| 'point'`). |
 | GeoMap fill transitions (data-update recolor) | `packages/vanilla/src/map-transition.ts` → `runMapFillTransition()`, `captureFeatureFills()`. Points do NOT have update transitions yet. |
 | GeoMap entrance animation keyframe (map points) | `packages/core/src/styles/keyframes.css` → `oc-enter-map-point`. CSS rule in `animation.css` under `.oc-map-point`. |
 | Map point size scale defaults | `packages/engine/src/compile/size-scale.ts` → `SIZE_SCALE_DEFAULTS.mapPoint` (range [3, 20], sqrt curve) |

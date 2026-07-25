@@ -27,13 +27,13 @@
           "$ref": "#/definitions/TileMapSpec"
         },
         {
-          "$ref": "#/definitions/MapSpec"
+          "$ref": "#/definitions/GeoMapSpec"
         },
         {
           "$ref": "#/definitions/BarListSpec"
         }
       ],
-      "description": "Top-level visualization spec: union discriminated by structural shape.\n\n- ChartSpec: has `mark` field (no `type`, no `layer`)\n- LayerSpec: has `layer` field\n- TableSpec: has `type: 'table'`\n- GraphSpec: has `type: 'graph'`\n- SankeySpec: has `type: 'sankey'`\n- TileMapSpec: has `type: 'tilemap'`\n- MapSpec: has `type: 'map'`\n- BarListSpec: has `type: 'barlist'`\n\nElection parliament (hemicycle) charts are `ChartSpec` with `mark: 'parliament'`, not a separate top-level type: seat data (party + seats) maps naturally onto encoding.color/y like arc and waffle, and riding the existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode for free instead of a second bespoke compile path (see `packages/engine/src/charts/parliament/`)."
+      "description": "Top-level visualization spec: union discriminated by structural shape.\n\n- ChartSpec: has `mark` field (no `type`, no `layer`)\n- LayerSpec: has `layer` field\n- TableSpec: has `type: 'table'`\n- GraphSpec: has `type: 'graph'`\n- SankeySpec: has `type: 'sankey'`\n- TileMapSpec: has `type: 'tilemap'`\n- GeoMapSpec: has `type: 'map'`\n- BarListSpec: has `type: 'barlist'`\n\nElection parliament (hemicycle) charts are `ChartSpec` with `mark: 'parliament'`, not a separate top-level type: seat data (party + seats) maps naturally onto encoding.color/y like arc and waffle, and riding the existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode for free instead of a second bespoke compile path (see `packages/engine/src/charts/parliament/`)."
     },
     "ChartSpec": {
       "anyOf": [
@@ -17982,7 +17982,7 @@
       ],
       "description": "Sequential color palette names available for tile maps."
     },
-    "MapSpec": {
+    "GeoMapSpec": {
       "type": "object",
       "properties": {
         "type": {
@@ -17991,7 +17991,7 @@
           "description": "Discriminant: always \"map\"."
         },
         "geo": {
-          "$ref": "#/definitions/MapGeo",
+          "$ref": "#/definitions/GeoMapGeo",
           "description": "Geo configuration: TopoJSON features, join key, and projection."
         },
         "data": {
@@ -18002,7 +18002,7 @@
           "description": "Tabular data to join to geo features."
         },
         "encoding": {
-          "$ref": "#/definitions/MapEncoding",
+          "$ref": "#/definitions/GeoMapEncoding",
           "description": "Encoding channels mapping data fields to visual properties."
         },
         "chrome": {
@@ -18026,7 +18026,7 @@
           "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
         },
         "points": {
-          "$ref": "#/definitions/MapPointsLayer",
+          "$ref": "#/definitions/GeoMapPointsLayer",
           "description": "Optional point/symbol layer rendered above choropleth features."
         },
         "animation": {
@@ -18047,7 +18047,7 @@
       ],
       "additionalProperties": false
     },
-    "MapGeo": {
+    "GeoMapGeo": {
       "type": "object",
       "properties": {
         "features": {
@@ -18058,13 +18058,13 @@
           "description": "Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'."
         },
         "projection": {
-          "$ref": "#/definitions/MapProjection",
+          "$ref": "#/definitions/GeoMapProjection",
           "description": "Map projection. Defaults to 'albersUsa'."
         },
         "focus": {
           "anyOf": [
             {
-              "$ref": "#/definitions/MapFocus"
+              "$ref": "#/definitions/GeoMapFocus"
             },
             {
               "type": "null"
@@ -18079,7 +18079,7 @@
       "additionalProperties": false,
       "description": "Geo configuration for map specs."
     },
-    "MapProjection": {
+    "GeoMapProjection": {
       "type": "string",
       "enum": [
         "albersUsa",
@@ -18089,7 +18089,7 @@
       ],
       "description": "Supported map projections."
     },
-    "MapFocus": {
+    "GeoMapFocus": {
       "anyOf": [
         {
           "type": "string"
@@ -18141,7 +18141,7 @@
           "type": "object",
           "properties": {
             "points": {
-              "$ref": "#/definitions/MapPointsFocus"
+              "$ref": "#/definitions/GeoMapPointsFocus"
             },
             "padding": {
               "type": "number"
@@ -18154,7 +18154,7 @@
         }
       ]
     },
-    "MapPointsFocus": {
+    "GeoMapPointsFocus": {
       "anyOf": [
         {
           "type": "boolean",
@@ -18182,7 +18182,7 @@
       ],
       "description": "Fit the point layer's cluster. `true` fits every point; `{ field, value }` fits only the points whose data row has `row[field] === value` (e.g. only the campuses rated \"F\"), which lets a story pan between sub-clusters."
     },
-    "MapEncoding": {
+    "GeoMapEncoding": {
       "type": "object",
       "properties": {
         "key": {
@@ -18211,7 +18211,7 @@
       "additionalProperties": false,
       "description": "Encoding channels specific to map visualizations."
     },
-    "MapPointsLayer": {
+    "GeoMapPointsLayer": {
       "type": "object",
       "properties": {
         "data": {
@@ -18249,7 +18249,7 @@
               }
             }
           ],
-          "description": "Tooltip channel(s), same shape as MapEncoding.tooltip."
+          "description": "Tooltip channel(s), same shape as GeoMapEncoding.tooltip."
         },
         "key": {
           "$ref": "#/definitions/EncodingChannel",

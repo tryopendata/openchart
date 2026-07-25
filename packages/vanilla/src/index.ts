@@ -41,10 +41,10 @@ export type {
 } from './graph-mount';
 // Graph mount API
 export { createGraph } from './graph-mount';
-export type { Camera, MapCameraOptions } from './map-camera';
-export type { MapInstance, MapMarkEvent, MapMountOptions } from './map-mount';
+export type { Camera, GeoMapCameraOptions } from './map-camera';
+export type { GeoMapInstance, GeoMapMarkEvent, GeoMapMountOptions } from './map-mount';
 // Map mount API
-export { createMap } from './map-mount';
+export { createGeoMap } from './map-mount';
 export type { ChartInstance, ExportOptions, MountOptions, UpdateOptions } from './mount';
 // Main mount API
 export { createChart } from './mount';

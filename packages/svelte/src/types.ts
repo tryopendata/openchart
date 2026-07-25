@@ -12,9 +12,9 @@ import type {
   ChartSpec,
   DarkMode,
   ElementEdit,
+  GeoMapSpec,
   GraphSpec,
   LayerSpec,
-  MapSpec,
   MarkEvent,
   SankeySpec,
   SortState,
@@ -82,18 +82,18 @@ export interface SankeyProps {
   style?: string;
 }
 
-export interface MapFeatureEvent {
+export interface GeoMapFeatureEvent {
   id: string | number;
   name?: string;
   data: Record<string, unknown> | null;
 }
 
-export interface MapProps {
-  spec: MapSpec;
+export interface GeoMapProps {
+  spec: GeoMapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
-  onmarkclick?: (event: MapFeatureEvent) => void;
-  onmarkhover?: (event: MapFeatureEvent) => void;
+  onmarkclick?: (event: GeoMapFeatureEvent) => void;
+  onmarkhover?: (event: GeoMapFeatureEvent) => void;
   class?: string;
   style?: string;
 }

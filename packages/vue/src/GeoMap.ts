@@ -3,15 +3,15 @@
  *
  * Mounts a map instance on render, updates when spec changes,
  * and cleans up on unmount. All heavy lifting is done by the vanilla
- * createMap() function.
+ * createGeoMap() function.
  */
 
-import type { DarkMode, MapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
-  createMap,
-  type MapInstance,
-  type MapMarkEvent,
-  type MapMountOptions,
+  createGeoMap,
+  type GeoMapInstance,
+  type GeoMapMarkEvent,
+  type GeoMapMountOptions,
 } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -26,8 +26,8 @@ import {
 } from 'vue';
 import { VizDarkModeKey, VizThemeKey } from './context';
 
-export interface MapProps {
-  spec: MapSpec;
+export interface GeoMapProps {
+  spec: GeoMapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   class?: string;
@@ -38,7 +38,7 @@ export const GeoMap = defineComponent({
   name: 'GeoMap',
   props: {
     spec: {
-      type: Object as PropType<MapSpec>,
+      type: Object as PropType<GeoMapSpec>,
       required: true,
     },
     theme: {
@@ -59,12 +59,12 @@ export const GeoMap = defineComponent({
     },
   },
   emits: {
-    'mark-click': (_event: MapMarkEvent) => true,
-    'mark-hover': (_event: MapMarkEvent | null) => true,
+    'mark-click': (_event: GeoMapMarkEvent) => true,
+    'mark-hover': (_event: GeoMapMarkEvent | null) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
-    let instance: MapInstance | null = null;
+    let instance: GeoMapInstance | null = null;
     let prevSpec = '';
 
     // Inject theme/darkMode from provider as fallbacks
@@ -83,7 +83,7 @@ export const GeoMap = defineComponent({
       const container = containerRef.value;
       if (!container) return;
 
-      const options: MapMountOptions = {
+      const options: GeoMapMountOptions = {
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
         onMarkClick: (feature) => emit('mark-click', feature),
@@ -91,7 +91,7 @@ export const GeoMap = defineComponent({
         responsive: true,
       };
 
-      instance = createMap(container, props.spec, options);
+      instance = createGeoMap(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
     }
 
