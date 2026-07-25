@@ -624,11 +624,19 @@ interface CanvasPointsTween {
   soaKeys: string[];
   /** Index into the layer's SoA per ENTERING point (fades in, does not move). */
   enterSoaIndex: Uint32Array;
-  /** Exit ghost geometry, painted from the PREV layout under the live points. */
-  exitCx: Float32Array;
-  exitCy: Float32Array;
-  exitR: Float32Array;
-  exitFill: string[];
+  /**
+   * Exit ghost state, painted from the PREV layout under the live points.
+   * Preallocated once; only `.alpha` is mutated per frame (the geometry arrays
+   * never change, and allocating a fresh record at 60fps is exactly the cost
+   * the typed-array design avoids). Null when nothing exits.
+   */
+  exitState: {
+    x: Float32Array;
+    y: Float32Array;
+    r: Float32Array;
+    fill: string[];
+    alpha: number;
+  } | null;
   /** Never set; present so the shared opacity step can read the union. */
   fromOpacity?: number;
   toOpacity?: number;
@@ -1022,6 +1030,57 @@ function applyFinalAreaPaths(el: SVGElement, mark: AreaMark): void {
 }
 
 // ---------------------------------------------------------------------------
+// Mark DOM index
+// ---------------------------------------------------------------------------
+
+/**
+ * One-pass index of `[data-key]` mark elements, built once per transition and
+ * shared by every tween builder plus `snapToFinal`. Replaces per-key
+ * `querySelector` calls, which were O(marks x DOM nodes) and threw a
+ * SyntaxError when a data value contained `"` or `\` (keys are raw String(v)
+ * from the engine, never escaped).
+ *
+ * The same key can legitimately appear on different mark types (a rule and its
+ * text label both keyed on the category), so class-qualified buckets mirror the
+ * class-qualified selectors they replace. Exit ghosts strip `data-key` before
+ * they are appended, so the index never sees them.
+ */
+interface MarkDomIndex {
+  /** First element in document order with this key (querySelector parity). */
+  any(key: string): SVGElement | null;
+  point(key: string): SVGElement | null; // circle.oc-mark-point
+  rule(key: string): SVGElement | null; // .oc-mark-rule
+  tick(key: string): SVGElement | null; // .oc-mark-tick
+  text(key: string): SVGElement | null; // .oc-mark-text
+}
+
+function buildMarkDomIndex(marksContainer: SVGElement): MarkDomIndex {
+  const anyM = new Map<string, SVGElement>();
+  const pointM = new Map<string, SVGElement>();
+  const ruleM = new Map<string, SVGElement>();
+  const tickM = new Map<string, SVGElement>();
+  const textM = new Map<string, SVGElement>();
+  for (const node of marksContainer.querySelectorAll('[data-key]')) {
+    const el = node as SVGElement;
+    const key = el.getAttribute('data-key');
+    if (!key) continue;
+    if (!anyM.has(key)) anyM.set(key, el);
+    const cl = el.classList;
+    if (el.tagName === 'circle' && cl.contains('oc-mark-point')) {
+      if (!pointM.has(key)) pointM.set(key, el);
+    } else if (cl.contains('oc-mark-rule')) {
+      if (!ruleM.has(key)) ruleM.set(key, el);
+    } else if (cl.contains('oc-mark-tick')) {
+      if (!tickM.has(key)) tickM.set(key, el);
+    } else if (cl.contains('oc-mark-text')) {
+      if (!textM.has(key)) textM.set(key, el);
+    }
+  }
+  const g = (m: Map<string, SVGElement>) => (key: string) => m.get(key) ?? null;
+  return { any: g(anyM), point: g(pointM), rule: g(ruleM), tick: g(tickM), text: g(textM) };
+}
+
+// ---------------------------------------------------------------------------
 // runTransition
 // ---------------------------------------------------------------------------
 
@@ -1076,6 +1135,10 @@ export function runTransition(args: {
     };
   }
 
+  // One DOM pass for every keyed mark element; valid for the whole transition
+  // (the transition owns the DOM until onComplete, and ghosts carry no data-key).
+  const dom = buildMarkDomIndex(marksContainer);
+
   // Build all tweens
   const tweens: Tween[] = [];
   const ghosts: SVGElement[] = [];
@@ -1126,6 +1189,7 @@ export function runTransition(args: {
       prevLayout,
       nextLayout,
       marksContainer,
+      dom,
       tweens,
       ghosts,
       ghostGradientMap,
@@ -1133,13 +1197,14 @@ export function runTransition(args: {
     );
   }
   if (hasLines) {
-    buildLineTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
+    buildLineTweens(prevLayout, nextLayout, marksContainer, dom, tweens, ghosts, fromSnapshot);
   }
   if (hasAreas) {
     buildAreaTweens(
       prevLayout,
       nextLayout,
       marksContainer,
+      dom,
       tweens,
       ghosts,
       ghostGradientMap,
@@ -1157,6 +1222,7 @@ export function runTransition(args: {
         prevLayout,
         nextLayout,
         marksContainer,
+        dom,
         tweens,
         ghosts,
         ghostGradientMap,
@@ -1165,13 +1231,13 @@ export function runTransition(args: {
     }
   }
   if (hasRules) {
-    buildRuleTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
+    buildRuleTweens(prevLayout, nextLayout, marksContainer, dom, tweens, ghosts, fromSnapshot);
   }
   if (hasTicks) {
-    buildTickTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
+    buildTickTweens(prevLayout, nextLayout, marksContainer, dom, tweens, ghosts, fromSnapshot);
   }
   if (hasTextMarks) {
-    buildTextMarkTweens(prevLayout, nextLayout, marksContainer, tweens, ghosts, fromSnapshot);
+    buildTextMarkTweens(prevLayout, nextLayout, marksContainer, dom, tweens, ghosts, fromSnapshot);
   }
 
   // Axis tick/gridline transitions. In canvas mode the SVG axes carry tick
@@ -1183,7 +1249,7 @@ export function runTransition(args: {
   }
 
   // Mark fill/stroke (a highlight mute recolors marks that never move)
-  buildColorTweens(prevLayout, nextLayout, marksContainer, tweens);
+  buildColorTweens(prevLayout, nextLayout, dom, tweens);
 
   // Annotations: keyed diff, so only NEW annotations fade in and surviving
   // ones hold steady instead of blinking.
@@ -1279,12 +1345,12 @@ export function runTransition(args: {
     // to ensure round-trip invariant
     for (const mark of nextLineMarks) {
       if (!mark.key) continue;
-      const el = marksContainer!.querySelector(`[data-key="${mark.key}"]`) as SVGElement | null;
+      const el = dom.any(mark.key);
       if (el) applyFinalLinePath(el, mark);
     }
     for (const mark of nextAreaMarks) {
       if (!mark.key) continue;
-      const el = marksContainer!.querySelector(`[data-key="${mark.key}"]`) as SVGElement | null;
+      const el = dom.any(mark.key);
       if (el) applyFinalAreaPaths(el, mark);
     }
   }
@@ -1732,6 +1798,7 @@ function buildRectTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   ghostGradientMap: Map<string, string>,
@@ -1753,7 +1820,7 @@ function buildRectTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
+    const el = dom.any(key);
     if (!el) continue;
 
     // Retarget: use snapshot geometry if available (interrupted transition)
@@ -1776,7 +1843,7 @@ function buildRectTweens(
   // Entered
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
+    const el = dom.any(key);
     if (!el) continue;
 
     let fromGeom: RectGeom;
@@ -1839,6 +1906,7 @@ function buildLineTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   fromSnapshot?: GeometrySnapshot,
@@ -1859,7 +1927,7 @@ function buildLineTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
+    const el = dom.any(key);
     if (!el) continue;
 
     // If interrupted mid-morph, freeze the current path and crossfade
@@ -1967,7 +2035,7 @@ function buildLineTweens(
   // Entering series (only in next)
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
+    const el = dom.any(key);
     if (!el) continue;
 
     tweens.push({
@@ -2019,6 +2087,7 @@ function buildAreaTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   ghostGradientMap: Map<string, string>,
@@ -2040,7 +2109,7 @@ function buildAreaTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
+    const el = dom.any(key);
     if (!el) continue;
 
     // If interrupted mid-morph, freeze and crossfade
@@ -2176,7 +2245,7 @@ function buildAreaTweens(
   // Entering series
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(`[data-key="${key}"]`) as SVGElement | null;
+    const el = dom.any(key);
     if (!el) continue;
 
     tweens.push({
@@ -2237,6 +2306,7 @@ function buildPointTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   ghostGradientMap: Map<string, string>,
@@ -2258,9 +2328,7 @@ function buildPointTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(
-      `circle.oc-mark-point[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.point(key);
     if (!el) continue;
 
     // Read the element's current opacity attribute (NOT style.opacity)
@@ -2299,9 +2367,7 @@ function buildPointTweens(
   // Entering points: fade in
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(
-      `circle.oc-mark-point[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.point(key);
     if (!el) continue;
 
     // Read rendered opacity for the final value
@@ -2462,6 +2528,9 @@ function buildCanvasPointsTween(
     exitR[x] = m.r;
     exitFill[x] = flattenFill(m.fill);
   }
+  // alpha: 1 matches the synchronous t=0 applyTweenState pass.
+  const exitState =
+    exits.length > 0 ? { x: exitCx, y: exitCy, r: exitR, fill: exitFill, alpha: 1 } : null;
 
   tweens.push({
     tweenType: 'canvasPoints',
@@ -2476,10 +2545,7 @@ function buildCanvasPointsTween(
     toR,
     soaKeys,
     enterSoaIndex,
-    exitCx,
-    exitCy,
-    exitR,
-    exitFill,
+    exitState,
   });
 }
 
@@ -2519,15 +2585,11 @@ function applyCanvasPointsState(
   }
 
   // Exit ghosts hold their prev position and fade out on the exit clock.
-  if (tw.exitCx.length > 0) {
+  // The record is preallocated; only alpha changes frame to frame.
+  if (tw.exitState) {
     const easedExit = cubicOut(Math.min(elapsed / exit.duration, 1));
-    tw.layer.state.exiting = {
-      x: tw.exitCx,
-      y: tw.exitCy,
-      r: tw.exitR,
-      fill: tw.exitFill,
-      alpha: 1 - easedExit,
-    };
+    tw.exitState.alpha = 1 - easedExit;
+    tw.layer.state.exiting = tw.exitState;
   }
 }
 
@@ -2693,6 +2755,7 @@ function buildRuleTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   fromSnapshot?: GeometrySnapshot,
@@ -2713,9 +2776,7 @@ function buildRuleTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(
-      `.oc-mark-rule[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.rule(key);
     if (!el) continue;
 
     let fromX1 = prev.x1;
@@ -2748,9 +2809,7 @@ function buildRuleTweens(
   // Entering
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(
-      `.oc-mark-rule[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.rule(key);
     if (!el) continue;
     tweens.push({
       tweenType: 'rule',
@@ -2807,6 +2866,7 @@ function buildTickTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   fromSnapshot?: GeometrySnapshot,
@@ -2835,9 +2895,7 @@ function buildTickTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(
-      `.oc-mark-tick[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.tick(key);
     if (!el) continue;
     let pEnd = tickEndpoints(prev);
     const nEnd = tickEndpoints(next);
@@ -2863,9 +2921,7 @@ function buildTickTweens(
   // Entering
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(
-      `.oc-mark-tick[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.tick(key);
     if (!el) continue;
     const nEnd = tickEndpoints(next);
     tweens.push({
@@ -2924,6 +2980,7 @@ function buildTextMarkTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
   ghosts: SVGElement[],
   fromSnapshot?: GeometrySnapshot,
@@ -2944,9 +3001,7 @@ function buildTextMarkTweens(
   for (const [key, next] of nextByKey) {
     const prev = prevByKey.get(key);
     if (!prev) continue;
-    const el = marksContainer.querySelector(
-      `.oc-mark-text[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.text(key);
     if (!el) continue;
 
     let fromX = prev.x;
@@ -2971,9 +3026,7 @@ function buildTextMarkTweens(
   // Entering
   for (const [key, next] of nextByKey) {
     if (prevByKey.has(key)) continue;
-    const el = marksContainer.querySelector(
-      `.oc-mark-text[data-key="${key}"]`,
-    ) as SVGElement | null;
+    const el = dom.text(key);
     if (!el) continue;
     tweens.push({
       tweenType: 'textMark',
@@ -3055,7 +3108,7 @@ function isInterpolableColor(v: unknown): v is string {
 function buildColorTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
-  marksContainer: SVGElement,
+  dom: MarkDomIndex,
   tweens: Tween[],
 ): void {
   type Colored = { key?: string; fill?: unknown; stroke?: unknown };
@@ -3069,7 +3122,7 @@ function buildColorTweens(
     const prev = prevByKey.get(next.key);
     if (!prev) continue;
 
-    const group = marksContainer.querySelector(`[data-key="${next.key}"]`) as SVGElement | null;
+    const group = dom.any(next.key);
     if (!group) continue;
 
     for (const attr of ['fill', 'stroke'] as const) {
