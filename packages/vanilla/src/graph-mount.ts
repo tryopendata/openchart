@@ -48,6 +48,7 @@ import { diffGraphUpdate } from './graph/update-diff';
 import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -163,19 +164,6 @@ export interface GraphInstance {
   getActiveCategories(): string[];
   resize(): void;
   destroy(): void;
-}
-
-// ---------------------------------------------------------------------------
-// Dark mode resolution
-// ---------------------------------------------------------------------------
-
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -1942,30 +1930,11 @@ export function createGraph(
     initSimulation();
     initInteraction();
   } catch (err) {
+    // Same failure semantics as createChart and createSankey: a spec that
+    // cannot compile or mount is a caller bug, and a throw is the only signal
+    // that reaches them. (A silent no-op instance used to be returned here.)
     console.error('[viz] Graph mount failed:', err);
-    // Return a no-op instance so callers don't crash
-    return {
-      update() {},
-      updateVisuals() {},
-      search() {},
-      clearSearch() {},
-      zoomToFit() {},
-      zoomToNode() {},
-      flyTo() {},
-      centerAt() {},
-      getCamera: () => ({ x: 0, y: 0, k: 1 }),
-      selectNode() {},
-      getSelectedNodes: () => [],
-      getSearchMatches: () => [],
-      highlight() {},
-      clearHighlight() {},
-      getHighlight: () => null,
-      getLegend: () => ({ field: null, nodes: [], edges: [] }),
-      setActiveCategories() {},
-      getActiveCategories: () => [],
-      resize() {},
-      destroy() {},
-    };
+    throw err;
   }
 
   // Responsive resize

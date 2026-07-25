@@ -872,6 +872,15 @@ category, and it can't exempt the seed node. If you need the seed (or any fixed
 node) to stay lit alongside a category, use the `{ nodeIds }` form and include
 the seed id yourself.
 
+**Mount failures now throw.** `createGraph()` used to catch compile/mount
+errors and return an inert no-op instance; a bad spec produced an empty
+container and a console line. It now logs and re-throws, matching
+`createChart()` and `createSankey()`. In React that means the error propagates
+out of the `<Graph>` mount effect to the nearest error boundary -- an app
+without one crashes where it previously rendered an inert container. Wrap
+`<Graph>` in an error boundary (or validate specs before mounting) if graph
+specs come from untrusted input.
+
 ---
 
 ## 19. Update-transition cap counts the larger of the two frames
@@ -931,6 +940,42 @@ theme whose background does not parse to an opaque color (`'none'`, alpha
 ```js
 { mark: { type: 'point', stroke: '#ffffff' } }
 ```
+
+---
+
+## 21. Point sizes above a 50px radius are rejected
+
+**What changed:** `validateSpec` now errors on point-mark sizes larger than 50.
+openchart point `size` is a **radius in pixels** (default 5, typical 2-12).
+Vega-Lite's `size` is an **area in px²** (typical 30-400). A VL-habit value
+like `size: 400` used to silently draw an 800px-wide disc that swallowed the
+chart; it now fails loud with the conversion recipe.
+
+**Who's affected:** point-mark specs setting any of:
+
+- `mark.size` > 50
+- `encoding.size.value` > 50
+- a number > 50 in `encoding.size.scale.range`
+
+Radii up to 50 stay legal -- a 50px bubble is enormous but plausible as a
+deliberate choice.
+
+**This is a hard validation error**, not a warning: the spec does not compile
+until fixed. The error message includes the converted value.
+
+**Fix:** if the value came from Vega-Lite, convert area to radius with
+`radius = sqrt(area / pi)`:
+
+```ts
+// Before (Vega-Lite habit: size as area, draws an 800px-wide disc)
+{ mark: { type: 'point', size: 400 } }
+
+// After (radius: the dot VL's size 400 actually draws)
+{ mark: { type: 'point', size: 11 } }
+```
+
+For a size scale, convert each end of the range the same way
+(`range: [30, 900]` in VL units becomes `range: [3, 17]`).
 
 ---
 

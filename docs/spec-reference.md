@@ -286,7 +286,7 @@ and validation rejects it there with the mechanism that family actually uses
 
 ## Encoding by chart type
 
-The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. Source: `core/src/types/encoding.ts`.
+The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. Source: `core/src/types/encoding.ts`.
 
 **Legend**: (req) = required, (opt) = optional, -- = not applicable
 

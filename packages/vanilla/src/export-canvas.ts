@@ -80,7 +80,12 @@ function materializeRasterMarkSVG(layout: ChartLayout): SVGElement {
   const dataUrl = rasterizeMarks(layout);
   // No raster available (no 2D context, no toDataURL): keep the vector circles
   // rather than shipping an empty plot. A large file beats a blank chart.
-  if (!dataUrl) return svg;
+  if (!dataUrl) {
+    console.warn(
+      '[viz] Canvas raster export unavailable in this environment; exporting all points as vector SVG (larger file).',
+    );
+    return svg;
+  }
 
   for (const circle of svg.querySelectorAll('circle.oc-mark-point')) {
     circle.remove();

@@ -34,6 +34,7 @@ import { renderMapSVG } from './map-renderer';
 import { captureFeatureFills, runMapFillTransition } from './map-transition';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import type { Camera } from './story/camera-math';
 import { interpolateCamera } from './story/camera-math';
 import type { Tween } from './story/tween';
@@ -123,15 +124,6 @@ function prefersReducedMotion(): boolean {
   } catch {
     return false;
   }
-}
-
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------

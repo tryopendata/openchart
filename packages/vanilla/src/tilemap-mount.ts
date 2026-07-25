@@ -26,6 +26,7 @@ import {
 } from './export';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
@@ -103,19 +104,6 @@ export interface TileMapInstance {
   destroy(): void;
   /** The current compiled layout. */
   readonly layout: TileMapLayout;
-}
-
-// ---------------------------------------------------------------------------
-// Dark mode resolution
-// ---------------------------------------------------------------------------
-
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------

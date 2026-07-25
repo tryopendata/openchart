@@ -45,6 +45,7 @@ import {
 } from '@opendata-ai/openchart-engine';
 import { interpolateRgb } from 'd3-interpolate';
 import { buildGradientDefs, resolveMarkFill } from './gradient-utils';
+import { cubicOut } from './motion/easing';
 import { rectPathWithCorners, renderSingleMark } from './renderers/marks';
 import { flattenFill } from './scatter-canvas/state';
 
@@ -120,16 +121,6 @@ export interface TransitionHandle {
   step(elapsedMs: number): boolean;
   /** The transition's total duration in ms (update/exit, whichever is longer). */
   readonly totalMs: number;
-}
-
-// ---------------------------------------------------------------------------
-// Easing
-// ---------------------------------------------------------------------------
-
-/** Cubic-out easing: objects decelerate naturally into place. */
-function cubicOut(t: number): number {
-  const f = 1 - t;
-  return 1 - f * f * f;
 }
 
 // ---------------------------------------------------------------------------

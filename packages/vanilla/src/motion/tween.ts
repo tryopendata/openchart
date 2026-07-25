@@ -9,27 +9,14 @@
  */
 
 import type { AnimationEase } from '@opendata-ai/openchart-core';
+import { cubicInOut, cubicOut } from './easing';
 import type { Animation } from './scheduler';
 
 // ---------------------------------------------------------------------------
-// Easings
+// Easings (shared definitions live in easing.ts; re-exported for callers)
 // ---------------------------------------------------------------------------
 
-/** Linear (identity) easing. Required for stacked/segmented handoffs. */
-export function linear(t: number): number {
-  return t;
-}
-
-/** Cubic-out: decelerates into place. Maps to `'snappy'`. */
-export function cubicOut(t: number): number {
-  const f = 1 - t;
-  return 1 - f * f * f;
-}
-
-/** Cubic-in-out: eases in and out. Maps to `'smooth'`. */
-export function cubicInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-}
+export { cubicInOut, cubicOut, linear } from './easing';
 
 /** Resolve a named ease preset to an easing function. */
 export function resolveEase(ease: AnimationEase): (t: number) => number {

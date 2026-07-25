@@ -65,6 +65,7 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import type { EntranceHandle } from './scatter-canvas/entrance';
 import { wireCanvasInteractions } from './scatter-canvas/interactions';
 import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-canvas/layer';
@@ -176,19 +177,6 @@ export interface ChartInstance {
  * block, and the metrics bar grow the figure on top of it.
  */
 const FALLBACK_HEIGHT = 400;
-
-// ---------------------------------------------------------------------------
-// Dark mode resolution
-// ---------------------------------------------------------------------------
-
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
-}
 
 // ---------------------------------------------------------------------------
 // Editable element helpers
