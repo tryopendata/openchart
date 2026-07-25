@@ -1,4 +1,4 @@
-import type { MapProjection } from '@opendata-ai/openchart-core';
+import type { GeoMapProjection } from '@opendata-ai/openchart-core';
 import type { GeoIdentityTransform, GeoPermissibleObjects, GeoProjection } from 'd3-geo';
 import { geoAlbersUsa, geoBounds, geoEqualEarth, geoIdentity, geoMercator } from 'd3-geo';
 
@@ -8,7 +8,7 @@ import { geoAlbersUsa, geoBounds, geoEqualEarth, geoIdentity, geoMercator } from
 const MERCATOR_FIT_MIN_LAT = -60;
 
 export function createProjection(
-  type: MapProjection,
+  type: GeoMapProjection,
   width: number,
   height: number,
   geojson: GeoPermissibleObjects,

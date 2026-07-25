@@ -3,17 +3,17 @@
  *
  * Mounts a map instance on render, updates when spec changes,
  * and cleans up on unmount. All heavy lifting is done by the vanilla
- * createMap() function.
+ * createGeoMap() function.
  *
  * Supports forwardRef for imperative control via the instance getter.
  */
 
-import type { DarkMode, MapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
-  createMap,
-  type MapInstance,
-  type MapMarkEvent,
-  type MapMountOptions,
+  createGeoMap,
+  type GeoMapInstance,
+  type GeoMapMarkEvent,
+  type GeoMapMountOptions,
 } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -25,29 +25,29 @@ import {
 } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
-export interface MapProps {
+export interface GeoMapProps {
   /** The map spec to render. */
-  spec: MapSpec;
+  spec: GeoMapSpec;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */
   darkMode?: DarkMode;
   /** Callback when a map feature is clicked. */
-  onMarkClick?: (feature: MapMarkEvent) => void;
+  onMarkClick?: (feature: GeoMapMarkEvent) => void;
   /** Callback when a map feature is hovered (null when hover ends). */
-  onMarkHover?: (feature: MapMarkEvent | null) => void;
+  onMarkHover?: (feature: GeoMapMarkEvent | null) => void;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
   style?: CSSProperties;
 }
 
-export interface MapHandle {
+export interface GeoMapHandle {
   /** The underlying map instance (null until mounted). */
-  readonly instance: MapInstance | null;
+  readonly instance: GeoMapInstance | null;
 }
 
-export const GeoMap = forwardRef<MapHandle, MapProps>(function GeoMap(
+export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
   { spec, theme: themeProp, darkMode, onMarkClick, onMarkHover, className, style },
   ref,
 ) {
@@ -56,12 +56,12 @@ export const GeoMap = forwardRef<MapHandle, MapProps>(function GeoMap(
   const theme = themeProp ?? contextTheme;
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
-  const instanceRef = useRef<MapInstance | null>(null);
+  const instanceRef = useRef<GeoMapInstance | null>(null);
   const specRef = useRef<string>('');
 
   const handlersRef = useRef<{
-    onMarkClick?: MapProps['onMarkClick'];
-    onMarkHover?: MapProps['onMarkHover'];
+    onMarkClick?: GeoMapProps['onMarkClick'];
+    onMarkHover?: GeoMapProps['onMarkHover'];
   }>({});
   handlersRef.current = {
     onMarkClick,
@@ -69,11 +69,11 @@ export const GeoMap = forwardRef<MapHandle, MapProps>(function GeoMap(
   };
 
   const stableOnMarkClick = useCallback(
-    (feature: MapMarkEvent) => handlersRef.current.onMarkClick?.(feature),
+    (feature: GeoMapMarkEvent) => handlersRef.current.onMarkClick?.(feature),
     [],
   );
   const stableOnMarkHover = useCallback(
-    (feature: MapMarkEvent | null) => handlersRef.current.onMarkHover?.(feature),
+    (feature: GeoMapMarkEvent | null) => handlersRef.current.onMarkHover?.(feature),
     [],
   );
 
@@ -92,7 +92,7 @@ export const GeoMap = forwardRef<MapHandle, MapProps>(function GeoMap(
     const container = containerRef.current;
     if (!container) return;
 
-    const options: MapMountOptions = {
+    const options: GeoMapMountOptions = {
       theme,
       darkMode: resolvedDarkMode,
       onMarkClick: stableOnMarkClick,
@@ -100,7 +100,7 @@ export const GeoMap = forwardRef<MapHandle, MapProps>(function GeoMap(
       responsive: true,
     };
 
-    instanceRef.current = createMap(container, spec, options);
+    instanceRef.current = createGeoMap(container, spec, options);
     specRef.current = JSON.stringify(spec);
 
     return () => {

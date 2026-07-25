@@ -1,13 +1,14 @@
 /**
  * Tests for the point-mark rendering backend resolver.
  *
- * Pure function: it decides SVG vs canvas from the mark def, the mark type,
- * the compiled point count, and the chart shape (facet/layer/sparkline).
- * Refusals collect a warning string only when the author explicitly asked for
- * canvas; the caller emits them through emitSpecWarnings.
+ * Pure function: it decides SVG vs canvas from the host's requested backend
+ * (the `renderer` compile option), the mark type, the compiled point count,
+ * and the chart shape (facet/layer/sparkline). Refusals collect a warning
+ * string only when the host explicitly asked for canvas; the caller emits
+ * them through emitSpecWarnings.
  */
 
-import type { Display, MarkDef } from '@opendata-ai/openchart-core';
+import type { Display } from '@opendata-ai/openchart-core';
 import { describe, expect, it, vi } from 'vitest';
 import { compileChart } from '../../compile';
 import { AUTO_CANVAS_THRESHOLD, resolveMarkRenderMode } from '../mark-render-mode';
@@ -15,7 +16,7 @@ import { AUTO_CANVAS_THRESHOLD, resolveMarkRenderMode } from '../mark-render-mod
 /** Baseline args: a plain scatter with a huge point count. */
 function args(overrides: Partial<Parameters<typeof resolveMarkRenderMode>[0]> = {}) {
   return {
-    markDef: { type: 'point' } as MarkDef,
+    requested: undefined,
     markType: 'point',
     pointCount: AUTO_CANVAS_THRESHOLD * 5,
     display: 'full' as Display,
@@ -28,72 +29,53 @@ function args(overrides: Partial<Parameters<typeof resolveMarkRenderMode>[0]> = 
 describe('resolveMarkRenderMode', () => {
   it('honors explicit svg even above the auto threshold', () => {
     const warnings: string[] = [];
-    expect(
-      resolveMarkRenderMode(args({ markDef: { type: 'point', render: 'svg' } }), warnings),
-    ).toBe('svg');
+    expect(resolveMarkRenderMode(args({ requested: 'svg' }), warnings)).toBe('svg');
     expect(warnings).toEqual([]);
   });
 
   it('honors explicit svg on a shape canvas would refuse anyway', () => {
     const warnings: string[] = [];
-    expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'bar', render: 'svg' }, markType: 'bar' }),
-        warnings,
-      ),
-    ).toBe('svg');
+    expect(resolveMarkRenderMode(args({ requested: 'svg', markType: 'bar' }), warnings)).toBe(
+      'svg',
+    );
     expect(warnings).toEqual([]);
   });
 
   it('honors explicit canvas at a low point count', () => {
     const warnings: string[] = [];
-    expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'point', render: 'canvas' }, pointCount: 3 }),
-        warnings,
-      ),
-    ).toBe('canvas');
+    expect(resolveMarkRenderMode(args({ requested: 'canvas', pointCount: 3 }), warnings)).toBe(
+      'canvas',
+    );
     expect(warnings).toEqual([]);
   });
 
   it('honors explicit canvas at zero points', () => {
-    expect(
-      resolveMarkRenderMode(args({ markDef: { type: 'point', render: 'canvas' }, pointCount: 0 })),
-    ).toBe('canvas');
+    expect(resolveMarkRenderMode(args({ requested: 'canvas', pointCount: 0 }))).toBe('canvas');
   });
 
   it('falls back to svg for a non-point mark and names the mark type', () => {
     const warnings: string[] = [];
-    expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'bar', render: 'canvas' }, markType: 'bar' }),
-        warnings,
-      ),
-    ).toBe('svg');
+    expect(resolveMarkRenderMode(args({ requested: 'canvas', markType: 'bar' }), warnings)).toBe(
+      'svg',
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('bar marks');
   });
 
   it('falls back to svg for a faceted chart and says so', () => {
     const warnings: string[] = [];
-    expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'point', render: 'canvas' }, faceted: true }),
-        warnings,
-      ),
-    ).toBe('svg');
+    expect(resolveMarkRenderMode(args({ requested: 'canvas', faceted: true }), warnings)).toBe(
+      'svg',
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('faceted');
   });
 
   it('falls back to svg for a layered chart and says so', () => {
     const warnings: string[] = [];
-    expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'point', render: 'canvas' }, layered: true }),
-        warnings,
-      ),
-    ).toBe('svg');
+    expect(resolveMarkRenderMode(args({ requested: 'canvas', layered: true }), warnings)).toBe(
+      'svg',
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('layered');
   });
@@ -101,10 +83,7 @@ describe('resolveMarkRenderMode', () => {
   it('falls back to svg for a sparkline and says so', () => {
     const warnings: string[] = [];
     expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'point', render: 'canvas' }, display: 'sparkline' }),
-        warnings,
-      ),
+      resolveMarkRenderMode(args({ requested: 'canvas', display: 'sparkline' }), warnings),
     ).toBe('svg');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('sparkline');
@@ -114,7 +93,7 @@ describe('resolveMarkRenderMode', () => {
     const warnings: string[] = [];
     resolveMarkRenderMode(
       args({
-        markDef: { type: 'bar', render: 'canvas' },
+        requested: 'canvas',
         markType: 'bar',
         faceted: true,
         layered: true,
@@ -125,59 +104,34 @@ describe('resolveMarkRenderMode', () => {
     expect(warnings).toHaveLength(1);
   });
 
-  it('never warns on a refused shape when render is auto or absent', () => {
+  it('never warns on a refused shape when requested is auto or absent', () => {
     const warnings: string[] = [];
-    resolveMarkRenderMode(
-      args({ markDef: { type: 'bar', render: 'auto' }, markType: 'bar' }),
-      warnings,
-    );
-    resolveMarkRenderMode(args({ markDef: { type: 'bar' }, markType: 'bar' }), warnings);
-    resolveMarkRenderMode(args({ markDef: undefined, markType: 'bar' }), warnings);
-    resolveMarkRenderMode(args({ markDef: { type: 'point' }, faceted: true }), warnings);
+    resolveMarkRenderMode(args({ requested: 'auto', markType: 'bar' }), warnings);
+    resolveMarkRenderMode(args({ requested: undefined, markType: 'bar' }), warnings);
+    resolveMarkRenderMode(args({ requested: undefined, faceted: true }), warnings);
     expect(warnings).toEqual([]);
   });
 
-  // AUTO_ENABLED is false in this release, so the auto path always answers svg.
-  // A later stage flips it to true, at which point these two expectations
-  // become 'canvas' above the threshold and stay 'svg' at or below it.
   it('promotes auto to canvas above the threshold', () => {
     expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'point', render: 'auto' }, pointCount: AUTO_CANVAS_THRESHOLD + 1 }),
-      ),
+      resolveMarkRenderMode(args({ requested: 'auto', pointCount: AUTO_CANVAS_THRESHOLD + 1 })),
     ).toBe('canvas');
   });
 
   it('answers svg for auto at or below the threshold', () => {
     expect(
-      resolveMarkRenderMode(
-        args({ markDef: { type: 'point', render: 'auto' }, pointCount: AUTO_CANVAS_THRESHOLD }),
-      ),
+      resolveMarkRenderMode(args({ requested: 'auto', pointCount: AUTO_CANVAS_THRESHOLD })),
     ).toBe('svg');
   });
 
-  it('treats an absent render field exactly like auto', () => {
-    const absent = resolveMarkRenderMode(
-      args({ markDef: { type: 'point' }, pointCount: AUTO_CANVAS_THRESHOLD + 1 }),
-    );
-    const auto = resolveMarkRenderMode(
-      args({ markDef: { type: 'point', render: 'auto' }, pointCount: AUTO_CANVAS_THRESHOLD + 1 }),
-    );
-    expect(absent).toBe(auto);
-  });
-
-  it('treats an undefined mark def exactly like auto', () => {
-    // A bare string mark (`mark: 'point'`) leaves markDef undefined, and must
-    // resolve identically to an explicit `render: 'auto'` on both sides of the
-    // threshold -- otherwise the shorthand quietly opts out of the feature.
-    const explicit = { type: 'point', render: 'auto' } as MarkDef;
+  it('treats an absent requested value exactly like auto', () => {
     for (const pointCount of [AUTO_CANVAS_THRESHOLD, AUTO_CANVAS_THRESHOLD + 1]) {
-      expect(resolveMarkRenderMode(args({ markDef: undefined, pointCount }))).toBe(
-        resolveMarkRenderMode(args({ markDef: explicit, pointCount })),
+      expect(resolveMarkRenderMode(args({ requested: undefined, pointCount }))).toBe(
+        resolveMarkRenderMode(args({ requested: 'auto', pointCount })),
       );
     }
     expect(
-      resolveMarkRenderMode(args({ markDef: undefined, pointCount: AUTO_CANVAS_THRESHOLD + 1 })),
+      resolveMarkRenderMode(args({ requested: undefined, pointCount: AUTO_CANVAS_THRESHOLD + 1 })),
     ).toBe('canvas');
   });
 });
@@ -203,26 +157,18 @@ describe('compileChart markRenderMode', () => {
     expect('markRenderMode' in layout).toBe(false);
   });
 
-  it('leaves markRenderMode absent for an explicit svg scatter', () => {
+  it('leaves markRenderMode absent for an explicit svg renderer', () => {
     const layout = compileChart(
-      {
-        mark: { type: 'point', render: 'svg' },
-        data: SCATTER_DATA,
-        encoding: SCATTER_ENCODING,
-      },
-      { width: 600, height: 400 },
+      { mark: 'point', data: SCATTER_DATA, encoding: SCATTER_ENCODING },
+      { width: 600, height: 400, renderer: 'svg' },
     );
     expect('markRenderMode' in layout).toBe(false);
   });
 
-  it('stamps canvas on the layout for an explicit canvas scatter', () => {
+  it('stamps canvas on the layout for an explicit canvas renderer', () => {
     const layout = compileChart(
-      {
-        mark: { type: 'point', render: 'canvas' },
-        data: SCATTER_DATA,
-        encoding: SCATTER_ENCODING,
-      },
-      { width: 600, height: 400 },
+      { mark: 'point', data: SCATTER_DATA, encoding: SCATTER_ENCODING },
+      { width: 600, height: 400, renderer: 'canvas' },
     );
     expect(layout.markRenderMode).toBe('canvas');
   });
@@ -232,7 +178,7 @@ describe('compileChart markRenderMode', () => {
     try {
       const layout = compileChart(
         {
-          mark: { type: 'bar', render: 'canvas' },
+          mark: 'bar',
           data: [
             { c: 'a', v: 1 },
             { c: 'b', v: 2 },
@@ -242,10 +188,10 @@ describe('compileChart markRenderMode', () => {
             y: { field: 'v', type: 'quantitative' as const },
           },
         },
-        { width: 600, height: 400 },
+        { width: 600, height: 400, renderer: 'canvas' },
       );
       expect('markRenderMode' in layout).toBe(false);
-      const renderWarnings = spy.mock.calls.filter((c) => String(c[0]).includes('mark.render'));
+      const renderWarnings = spy.mock.calls.filter((c) => String(c[0]).includes('renderer'));
       expect(renderWarnings).toHaveLength(1);
     } finally {
       spy.mockRestore();
@@ -258,14 +204,14 @@ describe('compileChart markRenderMode', () => {
     try {
       compileChart(
         {
-          mark: { type: 'point', render: 'canvas' },
+          mark: 'point',
           data: SCATTER_DATA,
           encoding: SCATTER_ENCODING,
           display: 'sparkline',
         },
-        { width: 600, height: 400, onWarn },
+        { width: 600, height: 400, onWarn, renderer: 'canvas' },
       );
-      const renderWarnings = onWarn.mock.calls.filter((c) => String(c[0]).includes('mark.render'));
+      const renderWarnings = onWarn.mock.calls.filter((c) => String(c[0]).includes('renderer'));
       expect(renderWarnings).toHaveLength(1);
       expect(spy).not.toHaveBeenCalled();
     } finally {
@@ -278,7 +224,7 @@ describe('compileChart markRenderMode', () => {
     try {
       const layout = compileChart(
         {
-          mark: { type: 'point', render: 'canvas' },
+          mark: 'point',
           data: SCATTER_DATA.map((row, i) => ({ ...row, g: i % 2 === 0 ? 'a' : 'b' })),
           encoding: {
             ...SCATTER_ENCODING,
@@ -287,12 +233,31 @@ describe('compileChart markRenderMode', () => {
           width: 600,
           height: 400,
         },
-        { width: 600, height: 400 },
+        { width: 600, height: 400, renderer: 'canvas' },
       );
       expect(layout.facet).toBeDefined();
       expect('markRenderMode' in layout).toBe(false);
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('warns on and strips the removed mark.render spec field', () => {
+    const onWarn = vi.fn();
+    const layout = compileChart(
+      {
+        // Pre-v8 spec shape: render lived on the mark def. Sugar strips it
+        // with a migration warning; it no longer selects the backend.
+        mark: { type: 'point', render: 'canvas' } as never,
+        data: SCATTER_DATA,
+        encoding: SCATTER_ENCODING,
+      },
+      { width: 600, height: 400, onWarn },
+    );
+    expect('markRenderMode' in layout).toBe(false);
+    const stripWarnings = onWarn.mock.calls.filter((c) =>
+      String(c[0]).includes('mark.render was removed'),
+    );
+    expect(stripWarnings).toHaveLength(1);
   });
 });

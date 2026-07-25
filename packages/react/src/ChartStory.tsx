@@ -13,9 +13,9 @@
 import type {
   ChartSpec,
   DataRow,
+  GeoMapSpec,
   GraphSpec,
   LayerSpec,
-  MapSpec,
 } from '@opendata-ai/openchart-core';
 import type { MountOptions } from '@opendata-ai/openchart-vanilla';
 import {
@@ -35,7 +35,7 @@ export interface ChartStoryHandle {
 
 export interface ChartStoryProps<TData extends DataRow = DataRow> {
   /** Base spec the story drives. */
-  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec | MapSpec;
+  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec | GeoMapSpec;
   /** Ordered step patches. `steps[i]` is applied cumulatively onto the base. */
   steps: ChartStoryOptions<TData>['steps'];
   /**

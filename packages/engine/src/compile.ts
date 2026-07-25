@@ -80,7 +80,7 @@ import {
   trendColor,
 } from './compiler/sparkline-defaults';
 import type { NormalizedChartSpec, NormalizedTableSpec } from './compiler/types';
-import { compileMap as compileMapImpl } from './geo/compile-map';
+import { compileGeoMap as compileGeoMapImpl } from './geo/compile-geo-map';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
 import { computeAxes } from './layout/axes';
@@ -285,7 +285,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     throw new Error('compileChart received a sankey spec. Use compileSankey instead.');
   }
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'map') {
-    throw new Error('compileChart received a map spec. Use compileMap instead.');
+    throw new Error('compileChart received a map spec. Use compileGeoMap instead.');
   }
 
   let chartSpec = normalized as NormalizedChartSpec;
@@ -802,7 +802,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   const markRenderModeWarnings: string[] = [];
   const markRenderMode = resolveMarkRenderMode(
     {
-      markDef: chartSpec.markDef,
+      requested: options.renderer,
       markType: chartSpec.markType,
       pointCount: marks.reduce((n, m) => (m.type === 'point' ? n + 1 : n), 0),
       display: chartSpec.display,
@@ -1536,22 +1536,22 @@ export function compileTileMap(
 // ---------------------------------------------------------------------------
 
 /**
- * Compile a map spec into a MapLayout.
+ * Compile a map spec into a GeoMapLayout.
  *
  * Takes a raw map spec, validates, normalizes, resolves theme and chrome,
  * projects geo features, joins data, builds feature marks with color fills,
- * and returns a MapLayout ready for rendering.
+ * and returns a GeoMapLayout ready for rendering.
  *
  * @param spec - Raw map spec (validated and normalized internally).
  * @param options - Compile options (width, height, theme, darkMode).
- * @returns MapLayout with computed positions and visual properties.
+ * @returns GeoMapLayout with computed positions and visual properties.
  * @throws Error if spec is invalid or not a map type.
  */
-export function compileMap(
+export function compileGeoMap(
   spec: unknown,
   options: CompileOptions,
-): import('@opendata-ai/openchart-core').MapLayout {
-  return compileMapImpl(spec, options);
+): import('@opendata-ai/openchart-core').GeoMapLayout {
+  return compileGeoMapImpl(spec, options);
 }
 
 // ---------------------------------------------------------------------------

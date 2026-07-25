@@ -366,12 +366,9 @@ describe('canTransition gate', () => {
   });
 
   it('gate 8: canvas mode gets its own, far higher default cap', () => {
-    const scatter = (n: number, yShift: number, render: 'canvas' | 'svg'): ChartSpec => ({
+    const scatter = (n: number, yShift: number): ChartSpec => ({
       animation: true,
-      // `render` is always explicit here: at 4,341 points the auto threshold
-      // would promote to canvas on its own, and this test is specifically
-      // about the two caps differing.
-      mark: { type: 'point', render },
+      mark: 'point',
       data: Array.from({ length: n }, (_, i) => ({
         id: `p${i}`,
         x: i,
@@ -383,31 +380,36 @@ describe('canTransition gate', () => {
         key: { field: 'id', type: 'nominal' },
       },
     });
+    // `renderer` is always explicit here: at 4,341 points the auto threshold
+    // would promote to canvas on its own, and this test is specifically
+    // about the two caps differing.
+    const compileAs = (spec: ChartSpec, renderer: 'canvas' | 'svg') =>
+      compileChart(spec, { width: 600, height: 400, renderer });
 
     // 4,341 points: far past the SVG cap of 500, well under the canvas 20,000.
-    const svgA = compile(scatter(4341, 0, 'svg'));
-    const svgB = compile(scatter(4341, 33, 'svg'));
+    const svgA = compileAs(scatter(4341, 0), 'svg');
+    const svgB = compileAs(scatter(4341, 33), 'svg');
     expect(svgB.markRenderMode).toBeUndefined();
     expect(
       canTransition({
         prevLayout: svgA,
         nextLayout: svgB,
-        prevSpec: scatter(4341, 0, 'svg'),
-        nextSpec: scatter(4341, 33, 'svg'),
+        prevSpec: scatter(4341, 0),
+        nextSpec: scatter(4341, 33),
         isFirstRender: false,
         entranceInFlight: false,
       }),
     ).toBe(false);
 
-    const canvasA = compile(scatter(4341, 0, 'canvas'));
-    const canvasB = compile(scatter(4341, 33, 'canvas'));
+    const canvasA = compileAs(scatter(4341, 0), 'canvas');
+    const canvasB = compileAs(scatter(4341, 33), 'canvas');
     expect(canvasB.markRenderMode).toBe('canvas');
     expect(
       canTransition({
         prevLayout: canvasA,
         nextLayout: canvasB,
-        prevSpec: scatter(4341, 0, 'canvas'),
-        nextSpec: scatter(4341, 33, 'canvas'),
+        prevSpec: scatter(4341, 0),
+        nextSpec: scatter(4341, 33),
         isFirstRender: false,
         entranceInFlight: false,
       }),
@@ -415,8 +417,9 @@ describe('canTransition gate', () => {
   });
 
   it('gate 8: CANVAS_DEFAULT_UPDATE_MAX_MARKS is the applied canvas default', () => {
+    // 20k+ points: 'auto' promotes to canvas, no explicit renderer needed.
     const scatter = (n: number, yShift: number): ChartSpec => ({
-      mark: { type: 'point', render: 'canvas' },
+      mark: 'point',
       data: Array.from({ length: n }, (_, i) => ({
         id: `p${i}`,
         x: i,
@@ -2006,5 +2009,158 @@ describe('mark color interpolation', () => {
     // ...and the fill path is still unstroked. Anything else is an outline
     // traced around the entire filled region.
     expect(fillPath.getAttribute('stroke')).toBe('none');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mark DOM index regressions (crash + bucketing)
+// ---------------------------------------------------------------------------
+
+describe('mark DOM index', () => {
+  // Mark keys are raw String(value), unescaped. Before the one-pass DOM index,
+  // every tween builder interpolated the key into querySelector('[data-key="..."]'),
+  // so a quote or backslash in a category value threw SyntaxError and killed
+  // the whole update.
+  it('tweens categories whose values contain quotes and backslashes', () => {
+    const data = (v1: number, v2: number) => [
+      { category: '12" pizza', value: v1 },
+      { category: 'C:\\temp', value: v2 },
+    ];
+    const specA = columnSpec(data(100, 200));
+    const specB = columnSpec(data(180, 120));
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // From-states are applied synchronously before the first rAF. If the DOM
+    // index failed to look up the quoted/backslashed keys, no tween would be
+    // built and both rects would still sit at their already-rendered FINAL
+    // geometry here — the round-trip below would then pass vacuously.
+    const { svg: freshSvg } = compileAndRender(specB);
+    const fresh = extractRectGeometry(freshSvg);
+    const atStart = extractRectGeometry(svg);
+    expect([...atStart.keys()].sort()).toEqual([...fresh.keys()].sort());
+    for (const [key, geom] of atStart) {
+      expect(geom, `${key} must start at prev geometry, not final`).not.toEqual(fresh.get(key));
+    }
+
+    runToCompletion();
+    const atEnd = extractRectGeometry(svg);
+    for (const [key, geom] of atEnd) {
+      expect(geom, key).toEqual(fresh.get(key));
+    }
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+  });
+
+  it('chart.update() with special-character categories does not throw', () => {
+    const data = (v1: number) => [
+      { category: 'say "hi"', value: v1 },
+      { category: 'back\\slash', value: 50 },
+    ];
+    const container = createContainer();
+    const chart = createChart(container, noEnter(columnSpec(data(100))));
+
+    expect(() => chart.update(noEnter(columnSpec(data(200))))).not.toThrow();
+    // The update ran as a transition, not an instant swap.
+    expect(rafCallbacks.size).toBeGreaterThan(0);
+    runToCompletion();
+
+    chart.destroy();
+  });
+
+  // The same key can legitimately appear on different mark types (a rule and
+  // its text label). The index is bucketed by mark class so each builder finds
+  // its own element; a flat key->element map would collapse them.
+  it('tweens a rule and a text mark sharing a key independently', () => {
+    const data = (v1: number, v2: number) => [
+      { category: 'Q1', value: v1 },
+      { category: 'Q2', value: v2 },
+    ];
+    const ruleSpec = (v1: number, v2: number): ChartSpec => ({
+      animation: true,
+      mark: 'rule',
+      data: data(v1, v2),
+      encoding: {
+        x: { field: 'category', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+    });
+    const textSpec = (v1: number, v2: number): ChartSpec => ({
+      animation: true,
+      mark: 'text',
+      data: data(v1, v2),
+      encoding: {
+        x: { field: 'category', type: 'nominal' },
+        y: { field: 'value', type: 'quantitative' },
+        text: { field: 'category', type: 'nominal' },
+      },
+    });
+
+    // Merge both chart types' marks into one layout so 'Q1' keys a rule AND a
+    // text element in the same SVG. runTransition does not consult the gate,
+    // so this exercises the same builder paths a real mixed layout would.
+    const merged = (v1: number, v2: number): ChartLayout => {
+      const rule = compile(ruleSpec(v1, v2));
+      const text = compile(textSpec(v1, v2));
+      return { ...rule, marks: [...rule.marks, ...text.marks] };
+    };
+
+    const layoutA = merged(100, 200);
+    const layoutB = merged(180, 120);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    // Precondition: the shared key really is stamped on both mark types.
+    expect(svg.querySelectorAll('[data-key="Q1"]').length).toBe(2);
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    const freshContainer = createContainer();
+    const fresh = renderChartSVG(layoutB, freshContainer) as SVGSVGElement;
+    const targets = [
+      ['.oc-mark-rule[data-key="Q1"]', ['x1', 'y1', 'x2', 'y2']],
+      ['text.oc-mark-text[data-key="Q1"]', ['x', 'y']],
+    ] as const;
+
+    // From-states are applied synchronously, so BOTH elements must be back at
+    // their prev-layout position before the first frame. A flat (non-bucketed)
+    // key->element map hands one builder the other's element, leaving the
+    // second element untouched at its final position — caught here, invisible
+    // to the completion check below.
+    for (const [sel, attrs] of targets) {
+      const el = svg.querySelector(sel);
+      const freshEl = fresh.querySelector(sel);
+      expect(el, sel).toBeTruthy();
+      expect(freshEl, sel).toBeTruthy();
+      const moved = attrs.some((attr) => el?.getAttribute(attr) !== freshEl?.getAttribute(attr));
+      expect(moved, `${sel} must start at prev geometry, not final`).toBe(true);
+    }
+
+    runToCompletion();
+
+    // Each element landed at ITS final geometry, not the other's.
+    for (const [sel, attrs] of targets) {
+      const el = svg.querySelector(sel);
+      const freshEl = fresh.querySelector(sel);
+      for (const attr of attrs) {
+        expect(el?.getAttribute(attr), `${sel} ${attr}`).toBe(freshEl?.getAttribute(attr));
+      }
+    }
   });
 });

@@ -44,3 +44,33 @@ test('exportGIF produces a multi-frame GIF whose frames differ', async ({ page }
   expect(result.frames).toBeGreaterThan(1);
   expect(result.earlyDiffersFromLast).toBe(true);
 });
+
+test('exportSpecSequence produces a multi-frame GIF via the real encode primitives', async ({
+  page,
+}) => {
+  // The unit suite mocks gif-encode wholesale; this is the only place
+  // readCanvasSRGB and paletteFromCanvas run against a real rasterizer.
+  await page.goto('/?mode=preview&story=testing--gif-export--sequence-correctness');
+
+  const resultEl = page.locator('#gif-sequence-result');
+  await resultEl.waitFor({ state: 'visible', timeout: 15_000 });
+
+  await expect
+    .poll(async () => (await resultEl.getAttribute('data-result')) ?? 'pending', {
+      timeout: 30_000,
+    })
+    .not.toBe('pending');
+
+  const raw = (await resultEl.getAttribute('data-result')) ?? '';
+  expect(raw, `export failed: ${raw}`).not.toContain('error');
+
+  const result = JSON.parse(raw) as {
+    byteLength: number;
+    frames: number;
+    earlyDiffersFromLast: boolean;
+  };
+  expect(result.byteLength).toBeGreaterThan(100);
+  // Two held keyframes plus tween frames between them.
+  expect(result.frames).toBeGreaterThan(2);
+  expect(result.earlyDiffersFromLast).toBe(true);
+});

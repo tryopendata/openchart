@@ -6,7 +6,7 @@
  * on the `[data-oc-map-camera]` group, never as a CSS transform.
  */
 
-import type { MapLayout } from '@opendata-ai/openchart-core';
+import type { GeoMapLayout } from '@opendata-ai/openchart-core';
 import type { Camera, CameraTarget } from './story/camera-math';
 import { cameraTransform, FULL_VIEW, fitTarget } from './story/camera-math';
 
@@ -15,7 +15,7 @@ export type { Camera } from './story/camera-math';
 /** Resting opacity for features outside the current focus set. */
 export const FOCUS_DIM_OPACITY = 0.25;
 
-export interface MapCameraOptions {
+export interface GeoMapCameraOptions {
   /** Transition duration in ms. 0 snaps instantly. Default 600. */
   duration?: number;
   /** Padding in map-local units around the target. Default 16. */
@@ -27,7 +27,7 @@ export interface MapCameraOptions {
  * Returns null if no matching features found.
  */
 export function focusTargetForFeatures(
-  layout: MapLayout,
+  layout: GeoMapLayout,
   ids: Array<string | number>,
   padding = 16,
 ): CameraTarget | null {
@@ -56,7 +56,7 @@ export function focusTargetForFeatures(
  * Compute the Camera for a target, fitting against mapSize.
  * Returns the full-view camera if no target provided.
  */
-export function cameraForTarget(layout: MapLayout, target?: CameraTarget | null): Camera {
+export function cameraForTarget(layout: GeoMapLayout, target?: CameraTarget | null): Camera {
   const vb = layout.mapSize;
   if (!target) return fitTarget(FULL_VIEW(vb), vb);
   const cam = fitTarget(target, vb);
@@ -67,7 +67,7 @@ export function cameraForTarget(layout: MapLayout, target?: CameraTarget | null)
  * Apply a camera transform to the map's camera group.
  * Toggles vector-effect="non-scaling-stroke" on features/borders while zoomed.
  */
-export function applyMapCamera(svg: SVGElement, camera: Camera, layout: MapLayout): void {
+export function applyMapCamera(svg: SVGElement, camera: Camera, layout: GeoMapLayout): void {
   const cameraGroup = svg.querySelector('[data-oc-map-camera]');
   if (!cameraGroup) return;
 

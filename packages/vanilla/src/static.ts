@@ -44,6 +44,8 @@ export interface StaticRenderOptions {
    * since there is no `matchMedia` to query. Use `'force'` for dark output.
    */
   darkMode?: DarkMode;
+  /** Rendering backend for point marks; see `MountOptions.renderer`. */
+  renderer?: 'auto' | 'svg' | 'canvas';
   watermark?: boolean;
 }
 
@@ -105,6 +107,7 @@ export function renderStaticSVG(
       height,
       theme: options?.theme,
       darkMode,
+      renderer: options?.renderer,
       watermark: options?.watermark,
     };
 

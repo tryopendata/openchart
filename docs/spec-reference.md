@@ -22,7 +22,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [Event handlers](#event-handlers) (chart and table interaction callbacks)
 - [GraphSpec](#graphspec) (network/relationship visualizations)
 - [SankeySpec](#sankeyspec) (flow diagrams)
-- [MapSpec](#mapspec) (choropleth and symbol maps)
+- [GeoMapSpec](#geomapspec) (choropleth and symbol maps)
 - [TileMapSpec](#tilemapspec) (US state tile grid maps)
 - [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
 - [Validation](#validation) (validateSpec, error codes)
@@ -39,7 +39,7 @@ type VizSpec =
   | GraphSpec
   | SankeySpec
   | TileMapSpec
-  | MapSpec
+  | GeoMapSpec
   | BarListSpec;
 ```
 
@@ -50,10 +50,10 @@ Use `type` to select which spec shape you're building:
 - `graph` produces a `GraphSpec`
 - `sankey` produces a `SankeySpec`
 - `tilemap` produces a `TileMapSpec`
-- `map` produces a `MapSpec`
+- `map` produces a `GeoMapSpec`
 - `barlist` produces a `BarListSpec`
 
-Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`, `isTileMapSpec(spec)`, `isMapSpec(spec)`, `isBarListSpec(spec)`.
+Type guards are available: `isChartSpec(spec)`, `isTableSpec(spec)`, `isGraphSpec(spec)`, `isSankeySpec(spec)`, `isTileMapSpec(spec)`, `isGeoMapSpec(spec)`, `isBarListSpec(spec)`.
 
 ---
 
@@ -119,7 +119,6 @@ The `type` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
 | `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
-| `render`       | `'auto' \| 'svg' \| 'canvas'` | `'auto'` | point | Rendering surface for point marks. `'auto'` promotes to canvas above 1,000 compiled points. See [Canvas mark mode](#canvas-mark-mode). |
 | `style`        | `'dumbbell' \| 'arrow' \| 'bar'` | `'dumbbell'` | range   | Range mark visual: dot-connector-dot, line with arrowhead at the end, or a plain floating bar. |
 | `colorByDirection` | `boolean`           | `false`     | range          | Color range marks by direction of change: increases use the theme `positive` color, decreases `negative`. A field-based `color` encoding takes precedence. |
 | `units`        | `number`                | `100`       | waffle         | Total cells in the grid. Categories normalize to this via largest-remainder rounding. |
@@ -287,7 +286,7 @@ and validation rejects it there with the mechanism that family actually uses
 
 ## Encoding by chart type
 
-The engine validates encoding channels at runtime using `CHART_ENCODING_RULES`. Source: `core/src/types/encoding.ts`.
+The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. Source: `core/src/types/encoding.ts`.
 
 **Legend**: (req) = required, (opt) = optional, -- = not applicable
 
@@ -755,20 +754,24 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
 ## Canvas mark mode
 
 Scatter charts with thousands of points cost more in DOM elements than they do
-in pixels. `mark.render` moves point marks onto a `<canvas>` layered under the
-chart SVG, which keeps a 50,000-point scatter interactive and lets a
-high-cardinality keyed morph actually tween instead of snapping.
+in pixels. The `renderer` mount option moves point marks onto a `<canvas>`
+layered under the chart SVG, which keeps a 50,000-point scatter interactive and
+lets a high-cardinality keyed morph actually tween instead of snapping.
+
+The renderer is not part of the spec. It is a host decision passed to
+`createChart()` (or the `renderer` prop on the React/Vue/Svelte `<Chart>`
+components), mirroring vega-embed's `{ renderer }` embed option:
 
 ```ts
-{
-  mark: { type: 'point', render: 'canvas' },
+createChart(el, {
+  mark: 'point',
   data: campuses,          // 4,341 rows
   encoding: {
     x: { field: 'lowIncomePct', type: 'quantitative' },
     y: { field: 'readingProficiency', type: 'quantitative' },
     key: { field: 'campusId' },
   },
-}
+}, { renderer: 'canvas' });
 ```
 
 | Value      | Behavior |
@@ -777,7 +780,7 @@ high-cardinality keyed morph actually tween instead of snapping.
 | `'canvas'` | Canvas at any point count. |
 | `'svg'`    | Never canvas. |
 
-`render` applies to point marks only. On any other mark type, and on faceted,
+`renderer` applies to point marks only. On any other mark type, and on faceted,
 layered or sparkline charts, it falls back to SVG; an explicit `'canvas'` there
 warns once per compile.
 
@@ -1242,19 +1245,19 @@ const spec: SankeySpec = {
 
 ---
 
-## MapSpec
+## GeoMapSpec
 
 Input for choropleth and symbol map visualizations. Source: `core/src/types/spec.ts`.
 
-Maps render TopoJSON geometries as SVG, join tabular data rows to features by id, and fill features by a color encoding. An optional points layer overlays lat/lon symbols above the features. Uses a separate component: `<GeoMap>` (React/Vue/Svelte) or `createMap` (vanilla).
+Maps render TopoJSON geometries as SVG, join tabular data rows to features by id, and fill features by a color encoding. An optional points layer overlays lat/lon symbols above the features. Uses a separate component: `<GeoMap>` (React/Vue/Svelte) or `createGeoMap` (vanilla).
 
 | Field         | Type              | Default     | Description                                                                          |
 | ------------- | ----------------- | ----------- | ------------------------------------------------------------------------------------ |
 | `type`        | `'map'`           | (required)  | Discriminant. Always `'map'`.                                                        |
-| `geo`         | `MapGeo`          | (required)  | TopoJSON features, join key field, projection, and camera focus. See below.          |
+| `geo`         | `GeoMapGeo`          | (required)  | TopoJSON features, join key field, projection, and camera focus. See below.          |
 | `data`        | `DataRow[]`       | (required)  | Tabular data to join to geo features. Can be `[]` for a basemap-only map (e.g. under a points layer). |
-| `encoding`    | `MapEncoding`     | (required)  | Maps data fields to the join key and fill color. See below.                          |
-| `points`      | `MapPointsLayer`  | `undefined` | Point/symbol layer rendered above the features. See below.                           |
+| `encoding`    | `GeoMapEncoding`     | (required)  | Maps data fields to the join key and fill color. See below.                          |
+| `points`      | `GeoMapPointsLayer`  | `undefined` | Point/symbol layer rendered above the features. See below.                           |
 | `chrome`      | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                            |
 | `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
@@ -1263,16 +1266,16 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `animation`   | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                    |
 | `valueFormat` | `string`          | `undefined` | Deprecated: use `encoding.color.format` instead. d3-format string for color values in tooltips and the legend (e.g. `".1f"`). `encoding.color.format` wins when both are set. |
 
-### MapGeo
+### GeoMapGeo
 
 | Field        | Type               | Default       | Description                                                                            |
 | ------------ | ------------------ | ------------- | -------------------------------------------------------------------------------------- |
 | `features`   | TopoJSON topology  | (required)    | The geometry source. Import from `us-atlas`, `world-atlas`, or your own TopoJSON file. Must be a `Topology`, not a GeoJSON FeatureCollection. |
 | `idField`    | `string`           | `'id'`        | Field in the TopoJSON feature properties used as the join key.                         |
-| `projection` | `MapProjection`    | `'albersUsa'` | `'albersUsa'`, `'mercator'`, `'equalEarth'`, or `'identity'`. Use `'identity'` for pre-projected files like `states-albers-10m.json` (coordinates already in pixel space). |
-| `focus`      | `MapFocus \| null` | `undefined`   | Camera focus. See [Focus](#focus). `null` clears focus from a prior story step.        |
+| `projection` | `GeoMapProjection`    | `'albersUsa'` | `'albersUsa'`, `'mercator'`, `'equalEarth'`, or `'identity'`. Use `'identity'` for pre-projected files like `states-albers-10m.json` (coordinates already in pixel space). |
+| `focus`      | `GeoMapFocus \| null` | `undefined`   | Camera focus. See [Focus](#focus). `null` clears focus from a prior story step.        |
 
-### MapEncoding
+### GeoMapEncoding
 
 | Channel   | Type                                   | Required | Description                                                                                     |
 | --------- | -------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
@@ -1286,7 +1289,7 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 
 Features with no matching data row render in a neutral fill.
 
-### MapPointsLayer
+### GeoMapPointsLayer
 
 Symbol overlay projected through the same geo projection as the features. Independent of the choropleth data join.
 
@@ -1320,7 +1323,7 @@ A quantitative choropleth gets a class legend above the map by default; `legend:
 
 ### Map events and updates
 
-`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `MapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition); the points layer re-renders without transitions.
+`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `GeoMapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition); the points layer re-renders without transitions.
 
 ### Map example
 
@@ -1328,7 +1331,7 @@ A quantitative choropleth gets a class legend above the map by default; `legend:
 import { GeoMap } from "@opendata-ai/openchart-react";
 import us from "us-atlas/states-albers-10m.json";
 
-const spec: MapSpec = {
+const spec: GeoMapSpec = {
   type: "map",
   geo: { features: us, projection: "identity" },
   data: [

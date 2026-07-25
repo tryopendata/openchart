@@ -65,6 +65,7 @@ import {
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import type { EntranceHandle } from './scatter-canvas/entrance';
 import { wireCanvasInteractions } from './scatter-canvas/interactions';
 import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-canvas/layer';
@@ -90,6 +91,13 @@ export interface MountOptions extends ChartEventHandlers {
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
   darkMode?: DarkMode;
+  /**
+   * Rendering backend for point marks (mirrors vega-embed's `renderer`
+   * option). `'auto'` (default) promotes dense scatters (>1,000 points) to a
+   * canvas mark layer; `'svg'`/`'canvas'` force a backend. Ignored with a
+   * console warning for non-point marks and faceted/layered/sparkline charts.
+   */
+  renderer?: 'auto' | 'svg' | 'canvas';
   /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** Enable responsive resizing. Defaults to true. */
@@ -169,19 +177,6 @@ export interface ChartInstance {
  * block, and the metrics bar grow the figure on top of it.
  */
 const FALLBACK_HEIGHT = 400;
-
-// ---------------------------------------------------------------------------
-// Dark mode resolution
-// ---------------------------------------------------------------------------
-
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
-}
 
 // ---------------------------------------------------------------------------
 // Editable element helpers
@@ -357,6 +352,7 @@ export function createChart<TData extends DataRow = DataRow>(
       height,
       theme: options?.theme,
       darkMode,
+      renderer: options?.renderer,
       watermark: options?.watermark,
       measureText,
     };
@@ -944,7 +940,7 @@ export function createChart<TData extends DataRow = DataRow>(
         console.warn(
           'openchart: canvas mark mode does not support per-mark edit selection. ' +
             'Annotation, chrome, and legend editing still work. ' +
-            "Set mark.render to 'svg' if you need to select individual points.",
+            "Pass renderer: 'svg' to createChart() if you need to select individual points.",
         );
       }
     }

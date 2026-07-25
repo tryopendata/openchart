@@ -27,6 +27,7 @@ let {
   spec,
   theme,
   darkMode,
+  renderer,
   onmarkclick,
   onmarkhover,
   onmarkleave,
@@ -47,6 +48,7 @@ let {
   spec: ChartSpec | LayerSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
+  renderer?: 'auto' | 'svg' | 'canvas';
   onmarkclick?: (event: MarkEvent) => void;
   onmarkhover?: (event: MarkEvent) => void;
   onmarkleave?: () => void;
@@ -109,6 +111,7 @@ let prevSpec = '';
 $effect(() => {
   const resolvedTheme = theme ?? ctxTheme?.();
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
+  const resolvedRenderer = renderer;
   const resolvedEditable = editable;
   // Read spec without tracking - spec changes handled in Effect 2
   const currentSpec = untrack(() => spec);
@@ -125,6 +128,7 @@ $effect(() => {
   const options: MountOptions = {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
+    renderer: resolvedRenderer,
     responsive: true,
     ...stableHandlers,
     ...(resolvedEditable != null ? { editable: resolvedEditable } : {}),

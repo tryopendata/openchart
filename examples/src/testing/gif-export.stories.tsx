@@ -122,3 +122,51 @@ export const GifCorrectness = () => {
     </div>
   );
 };
+
+/**
+ * exportSpecSequence correctness: exercises the REAL gif-encode primitives
+ * (readCanvasSRGB, paletteFromCanvas) in a browser. The unit suite mocks the
+ * whole encode layer, so palette quantization and sRGB readback only get
+ * genuine coverage here.
+ */
+export const SequenceCorrectness = () => {
+  const [result, setResult] = useState<string>('pending');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { exportSpecSequence } = await import('@opendata-ai/openchart-vanilla');
+        const doubled = spec.data.map((d) => ({ ...d, value: Number(d.value) * 2 }));
+        const blob = await exportSpecSequence([spec, { ...spec, data: doubled }], {
+          width: 480,
+          height: 320,
+          dpi: 1,
+          fps: 20,
+          dwellMs: 200,
+          loop: false,
+        });
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const analysis = analyzeGif(bytes);
+        if (!cancelled) {
+          setResult(JSON.stringify({ byteLength: bytes.length, ...analysis }));
+        }
+      } catch (err) {
+        if (!cancelled) setResult(`error: ${(err as Error).message}`);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div>
+      <pre id="gif-sequence-result" data-result={result}>
+        {result}
+      </pre>
+    </div>
+  );
+};

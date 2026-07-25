@@ -9,16 +9,16 @@
  * scope. Callers are expected to invoke these client-side.
  */
 
-export const clamp01 = (t: number): number => Math.min(1, Math.max(0, t));
+import { clamp01, cubicInOut, cubicOut, lerp, linear } from '../motion/easing';
 
-export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+export { clamp01, lerp };
 
 export type EasingFn = (t: number) => number;
 
 export const easingFns = {
-  linear: (t: number) => t,
-  easeOutCubic: (t: number) => 1 - (1 - t) ** 3,
-  easeInOutCubic: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+  linear,
+  easeOutCubic: cubicOut,
+  easeInOutCubic: cubicInOut,
   easeOutQuint: (t: number) => 1 - (1 - t) ** 5,
 } as const satisfies Record<string, EasingFn>;
 

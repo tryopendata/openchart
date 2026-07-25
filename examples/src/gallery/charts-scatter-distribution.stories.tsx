@@ -706,7 +706,7 @@ function CanvasMorphScatter() {
 /**
  * The same 200-point cloud rendered both ways, side by side.
  *
- * Small enough that auto leaves it on SVG, so `render: 'canvas'` is explicit.
+ * Small enough that auto leaves it on SVG, so `renderer="canvas"` is explicit.
  * This is the visual-parity check: same layout, same colors, same geometry.
  *
  * Two differences are expected and permanent: the trendline always draws above
@@ -722,7 +722,7 @@ function CanvasMorphScatter() {
  * `animation: false` because a baseline screenshot cannot freeze the canvas
  * entrance.
  */
-function parityScatterSpec(render: 'svg' | 'canvas'): ChartSpec {
+function parityScatterSpec(renderer: 'svg' | 'canvas'): ChartSpec {
   const rand = mulberry32(7);
   const data = Array.from({ length: 200 }, (_, i) => ({
     id: `p${i}`,
@@ -730,7 +730,7 @@ function parityScatterSpec(render: 'svg' | 'canvas'): ChartSpec {
     y: Math.round(rand() * 1000) / 10,
   }));
   return {
-    mark: { type: 'point', render },
+    mark: 'point',
     data,
     animation: false,
     encoding: {
@@ -739,7 +739,7 @@ function parityScatterSpec(render: 'svg' | 'canvas'): ChartSpec {
       key: { field: 'id', type: 'nominal' },
     },
     chrome: {
-      title: render === 'canvas' ? 'Canvas' : 'SVG',
+      title: renderer === 'canvas' ? 'Canvas' : 'SVG',
       subtitle: 'Same 200 points, same layout, different surface',
     },
   };
@@ -752,10 +752,10 @@ function CanvasParity() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--gx-space-4)' }}>
       <div style={{ height: 360 }}>
-        <Chart spec={svgParitySpec} />
+        <Chart spec={svgParitySpec} renderer="svg" />
       </div>
       <div style={{ height: 360 }}>
-        <Chart spec={canvasParitySpec} />
+        <Chart spec={canvasParitySpec} renderer="canvas" />
       </div>
     </div>
   );
@@ -1086,7 +1086,7 @@ export const ScatterAndDistribution = () => (
       <Demo
         id="high-cardinality-canvas"
         title="Keyed morph at 3,000 points"
-        description="No render field set — the auto threshold promotes this to canvas on its own. Toggling the year morphs every dot to its new position, ghosts the campuses that closed, fades in the ones that opened, and steepens the trendline. On SVG this would have exceeded the 500-mark transition cap and swapped instantly."
+        description="No renderer option set — the auto threshold promotes this to canvas on its own. Toggling the year morphs every dot to its new position, ghosts the campuses that closed, fades in the ones that opened, and steepens the trendline. On SVG this would have exceeded the 500-mark transition cap and swapped instantly."
         specForPanel={canvasMorphSpec(2019)}
         height={600}
       >
@@ -1095,7 +1095,7 @@ export const ScatterAndDistribution = () => (
       <Demo
         id="canvas-svg-parity"
         title="Canvas vs SVG, same data"
-        description="An explicit render: 'canvas' on a 200-point cloud that auto would have left on SVG. Same layout, same geometry. Two differences remain: the trendline always draws above the dots, and canvas fills every dot before stroking any, so overlapping dots can show a stroke over a neighbour's fill. Sparse clouds look identical; tight clusters show it."
+        description="An explicit renderer: 'canvas' on a 200-point cloud that auto would have left on SVG. Same layout, same geometry. Two differences remain: the trendline always draws above the dots, and canvas fills every dot before stroking any, so overlapping dots can show a stroke over a neighbour's fill. Sparse clouds look identical; tight clusters show it."
         specForPanel={canvasParitySpec}
         height={420}
       >

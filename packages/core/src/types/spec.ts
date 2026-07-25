@@ -289,25 +289,6 @@ export interface MarkDef {
    */
   fillPattern?: 'auto' | 'none';
   /**
-   * Rendering backend for point marks. High-cardinality scatter plots draw
-   * thousands of SVG circles, which is what makes their entrance and update
-   * transitions stutter; a canvas layer draws the same dots in a handful of
-   * batched paint calls.
-   *
-   * - `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.
-   * - `'svg'`: always SVG, whatever the point count.
-   * - `'canvas'`: always canvas, whatever the point count.
-   *
-   * Canvas mode trades per-mark keyboard focus and edit-mode point selection
-   * (the screen-reader data table still carries every row), and draws the
-   * trendline above the dots even when `trendline.layer` is `'below'`.
-   * Tooltips, hover, and click callbacks work the same in both modes.
-   *
-   * Ignored with a console warning for non-point marks, and for faceted,
-   * layered, and sparkline charts.
-   */
-  render?: 'auto' | 'svg' | 'canvas';
-  /**
    * Visual style for range marks. Only meaningful when `type` is `'range'`.
    * - 'dumbbell' (default): a dot at each end joined by a connector line.
    *   The start dot is muted, the end dot carries the accent color.
@@ -2544,7 +2525,7 @@ export interface TileMapSpec {
 // ---------------------------------------------------------------------------
 
 /** Supported map projections. */
-export type MapProjection = 'albersUsa' | 'mercator' | 'equalEarth' | 'identity';
+export type GeoMapProjection = 'albersUsa' | 'mercator' | 'equalEarth' | 'identity';
 
 /** Focus target for map camera: feature id(s) to zoom/pan to. */
 /**
@@ -2552,23 +2533,23 @@ export type MapProjection = 'albersUsa' | 'mercator' | 'equalEarth' | 'identity'
  * fits only the points whose data row has `row[field] === value` (e.g. only the
  * campuses rated "F"), which lets a story pan between sub-clusters.
  */
-export type MapPointsFocus = true | { field: string; value: string | number };
+export type GeoMapPointsFocus = true | { field: string; value: string | number };
 
-export type MapFocus =
+export type GeoMapFocus =
   | string
   | number
   | Array<string | number>
   | { features: string | number | Array<string | number>; padding?: number }
-  | { points: MapPointsFocus; padding?: number };
+  | { points: GeoMapPointsFocus; padding?: number };
 
 /** Geo configuration for map specs. */
-export interface MapGeo {
+export interface GeoMapGeo {
   /** TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source. */
   features: unknown;
   /** Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'. */
   idField?: string;
   /** Map projection. Defaults to 'albersUsa'. */
-  projection?: MapProjection;
+  projection?: GeoMapProjection;
   /**
    * Focus the camera. A feature id (or array) fits those features; `{ features, padding }`
    * adds breathing room; `{ points: true, padding }` fits the points layer's cluster
@@ -2577,11 +2558,11 @@ export interface MapGeo {
    * `{ points: { field, value }, padding }` fits only the matching point subset, so a
    * story can pan between sub-clusters. null clears focus from a prior story step.
    */
-  focus?: MapFocus | null;
+  focus?: GeoMapFocus | null;
 }
 
 /** Encoding channels specific to map visualizations. */
-export interface MapEncoding {
+export interface GeoMapEncoding {
   /** Join key field in the data. Required for choropleth; optional in basemap-only mode (points layer with empty data). */
   key?: EncodingChannel;
   /** Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode). */
@@ -2591,7 +2572,7 @@ export interface MapEncoding {
 }
 
 /** Point/symbol layer rendered above choropleth features. */
-export interface MapPointsLayer {
+export interface GeoMapPointsLayer {
   /** Tabular data for the points. Independent of the choropleth data join. */
   data: DataRow[];
   /** Field holding longitude (x coordinate). */
@@ -2602,7 +2583,7 @@ export interface MapPointsLayer {
   size?: EncodingChannel;
   /** Optional color encoding (nominal or quantitative). Independent scale from choropleth. */
   color?: EncodingChannel;
-  /** Tooltip channel(s), same shape as MapEncoding.tooltip. */
+  /** Tooltip channel(s), same shape as GeoMapEncoding.tooltip. */
   tooltip?: EncodingChannel | EncodingChannel[];
   /** Stable id for event callbacks. Data-update transitions for points are not yet supported. */
   key?: EncodingChannel;
@@ -2610,15 +2591,15 @@ export interface MapPointsLayer {
   opacity?: number;
 }
 
-export interface MapSpec {
+export interface GeoMapSpec {
   /** Discriminant: always "map". */
   type: 'map';
   /** Geo configuration: TopoJSON features, join key, and projection. */
-  geo: MapGeo;
+  geo: GeoMapGeo;
   /** Tabular data to join to geo features. */
   data: DataRow[];
   /** Encoding channels mapping data fields to visual properties. */
-  encoding: MapEncoding;
+  encoding: GeoMapEncoding;
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
   /** Legend display configuration. */
@@ -2630,7 +2611,7 @@ export interface MapSpec {
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
   /** Optional point/symbol layer rendered above choropleth features. */
-  points?: MapPointsLayer;
+  points?: GeoMapPointsLayer;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
   /**
@@ -2702,7 +2683,7 @@ export interface BarListEncoding {
  * - GraphSpec: has `type: 'graph'`
  * - SankeySpec: has `type: 'sankey'`
  * - TileMapSpec: has `type: 'tilemap'`
- * - MapSpec: has `type: 'map'`
+ * - GeoMapSpec: has `type: 'map'`
  * - BarListSpec: has `type: 'barlist'`
  *
  * Election parliament (hemicycle) charts are `ChartSpec` with `mark:
@@ -2719,7 +2700,7 @@ export type VizSpec =
   | GraphSpec
   | SankeySpec
   | TileMapSpec
-  | MapSpec
+  | GeoMapSpec
   | BarListSpec;
 
 /**
@@ -2736,8 +2717,8 @@ export type SankeySpecWithoutData = Omit<SankeySpec, 'data'>;
 /** TileMap spec without runtime data, for persistence/storage. */
 export type TileMapSpecWithoutData = Omit<TileMapSpec, 'data'>;
 /** Map spec without runtime data, for persistence/storage. */
-export type MapSpecWithoutData = Omit<MapSpec, 'data' | 'points'> & {
-  points?: Omit<MapPointsLayer, 'data'>;
+export type GeoMapSpecWithoutData = Omit<GeoMapSpec, 'data' | 'points'> & {
+  points?: Omit<GeoMapPointsLayer, 'data'>;
 };
 /** BarList spec without runtime data, for persistence/storage. */
 export type BarListSpecWithoutData = Omit<BarListSpec, 'data'>;
@@ -2748,7 +2729,7 @@ export type StoredVizSpec =
   | GraphSpecWithoutData
   | SankeySpecWithoutData
   | TileMapSpecWithoutData
-  | MapSpecWithoutData
+  | GeoMapSpecWithoutData
   | BarListSpecWithoutData;
 
 // ---------------------------------------------------------------------------
@@ -3110,8 +3091,8 @@ export function isBarListSpec(spec: VizSpec | Record<string, unknown>): spec is 
   return 'type' in spec && (spec as Record<string, unknown>).type === 'barlist';
 }
 
-/** Check if a spec is a MapSpec. */
-export function isMapSpec(spec: VizSpec | Record<string, unknown>): spec is MapSpec {
+/** Check if a spec is a GeoMapSpec. */
+export function isGeoMapSpec(spec: VizSpec | Record<string, unknown>): spec is GeoMapSpec {
   return 'type' in spec && (spec as Record<string, unknown>).type === 'map';
 }
 

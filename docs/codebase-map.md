@@ -23,7 +23,7 @@
 | CSS dark overrides (`.oc-dark`) — **generated** | `packages/core/src/styles/dark.css` |
 | CSS token generator | `scripts/generate-css-tokens.mjs` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
-| Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition.ts`. |
+| Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition/`. |
 | Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
 | X-axis extent helper + constants | `packages/core/src/responsive/metrics.ts` (`computeXAxisExtentFromLabels`, `X_AXIS_BAND_HEIGHT`, `X_AXIS_TITLE_BAND`, `X_AXIS_TITLE_BAND_ROTATED`) |
 | Text wrapping | `packages/core/src/layout/text-wrap.ts` (`wrapText`) |
@@ -76,7 +76,7 @@
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
 | Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts`. `computeAnimationDuration(svg)` is the shared total-entrance-time calc (used by cleanup timing and GIF capture). |
-| Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition.ts` |
+| Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition/` (driver.ts, gate.ts, svg-tweens.ts, canvas-tweens.ts, chrome-tweens.ts, ...; `transition.ts` is the re-export barrel) |
 | Export (SVG/PNG/JPG/CSV) | `packages/vanilla/src/export.ts` → `exportSVG`, `exportPNG`, `exportJPG`, `exportCSV`, plus `rasterizeSVGToCanvas`/`getSVGDimensions`/`embedFonts` helpers reused by GIF export. Wired into `chart.export(format)` in `mount.ts`. |
 | Animated GIF export | `packages/vanilla/src/export-gif.ts` → `exportGIF()`. Deterministic entrance re-creation (not CSS scrubbing — computed-style animation doesn't serialize), encoded via the optional `gifenc` peer dep. Subpath: `@opendata-ai/openchart-vanilla/gif`; dynamic-imported by the `'gif'` case in `mount.ts` so `gifenc` stays out of the core bundle. |
 | Mark key serialization / dedup | `packages/engine/src/compiler/keys.ts` |
@@ -100,14 +100,14 @@
 | Mobile layout invariants (6 geometry rules incl. Rule 6 label presence; 4 Playwright projects, the chromium ones run in CI) | `e2e/invariants/mobile-invariants.spec.ts` |
 | Blog-theme mobile repro (bugs on labs.tryopendata.ai need `axisTick: 14`, not the 11px default; production mirror story) | `examples/src/charts/mobile-regression.stories.tsx` → `testing--mobile-regression--one-wide-x-label-large-ticks` (retitled `Testing / Mobile Regression`; file stays put, slugs are now `testing--mobile-regression--*`) |
 | Frozen e2e fixture copies (pinned visual/invariant stories, pixel-identical, `Testing / Fixtures`) + frozen stylesheet | `examples/src/testing/fixtures-*.stories.tsx` (+ `testing.css`, the `.tfix-` frozen namespace). Slugs are `testing--fixtures--*`. Includes `rotated-with-source`, moved here from `examples/src/charts/`. |
-| GeoMap spec types (`MapSpec`, `MapEncoding`, `MapPointsLayer`, `MapGeo`) | `packages/core/src/types/spec.ts` (search "MapSpec") |
-| GeoMap layout types (`MapLayout`, `MapFeatureMark`, `MapPointMark`, `MapBorders`) | `packages/core/src/types/layout.ts` (search "MapLayout") |
-| GeoMap compile (projection, data join, choropleth marks, point marks, legends, focus) | `packages/engine/src/geo/compile-map.ts` → `compileMap()`. Helpers: `buildBasemapMarks`, `buildQuantitativeMarks`, `buildCategoricalMarks`, `resolveFocus`. |
+| GeoMap spec types (`GeoMapSpec`, `GeoMapEncoding`, `GeoMapPointsLayer`, `GeoMapGeo`) | `packages/core/src/types/spec.ts` (search "GeoMapSpec") |
+| GeoMap layout types (`GeoMapLayout`, `GeoMapFeatureMark`, `GeoMapPointMark`, `GeoMapBorders`) | `packages/core/src/types/layout.ts` (search "GeoMapLayout") |
+| GeoMap compile (projection, data join, choropleth marks, point marks, legends, focus) | `packages/engine/src/geo/compile-geo-map.ts` → `compileGeoMap()`. Helpers: `buildBasemapMarks`, `buildQuantitativeMarks`, `buildCategoricalMarks`, `resolveFocus`. |
 | GeoMap data join (feature id matching) | `packages/engine/src/geo/join.ts` → `joinDataToFeatures()` |
 | GeoMap projections (albersUsa, mercator, equalEarth, identity) | `packages/engine/src/geo/projections.ts` → `createProjection()` |
 | GeoMap SVG renderer (features, borders, points, legends, chrome) | `packages/vanilla/src/map-renderer.ts` → `renderMapSVG()`. Point marks: `renderPointMarks()`. |
 | GeoMap camera (zoom/pan, counter-scaling, focus dim) | `packages/vanilla/src/map-camera.ts` → `applyMapCamera()`, `cameraForTarget()`, `focusTargetForFeatures()`. Points counter-scale `r` and `stroke-width` via `data-base-r`/`data-base-stroke-width` attributes. |
-| GeoMap mount (lifecycle, events, tooltips, resize, export) | `packages/vanilla/src/map-mount.ts` → `createMap()`. Event type: `MapMarkEvent` (discriminated by `kind: 'feature' \| 'point'`). |
+| GeoMap mount (lifecycle, events, tooltips, resize, export) | `packages/vanilla/src/map-mount.ts` → `createGeoMap()`. Event type: `GeoMapMarkEvent` (discriminated by `kind: 'feature' \| 'point'`). |
 | GeoMap fill transitions (data-update recolor) | `packages/vanilla/src/map-transition.ts` → `runMapFillTransition()`, `captureFeatureFills()`. Points do NOT have update transitions yet. |
 | GeoMap entrance animation keyframe (map points) | `packages/core/src/styles/keyframes.css` → `oc-enter-map-point`. CSS rule in `animation.css` under `.oc-map-point`. |
 | Map point size scale defaults | `packages/engine/src/compile/size-scale.ts` → `SIZE_SCALE_DEFAULTS.mapPoint` (range [3, 20], sqrt curve) |
@@ -137,7 +137,7 @@
 | Canvas render state (struct-of-arrays) | `packages/vanilla/src/scatter-canvas/state.ts` → `buildScatterCanvasState()`, `flattenFill()`. `markIds` are built from the ORIGINAL `layout.marks` index (`point-${i}`) because a trendline is `unshift`ed onto the array and tooltip descriptors key off that index. Types in `scatter-canvas/types.ts`. |
 | Canvas entrance animation | `packages/vanilla/src/scatter-canvas/entrance.ts` → `playCanvasEntrance()`, `computeEntranceDuration()`, `clampStagger()`. Replicates the CSS point entrance (fade-only, 40% of duration, 2s total stagger budget). Its `totalMs` MUST be passed to `setupAnimationCleanup` -- the DOM-counting estimate sees no point elements in canvas mode. |
 | Canvas pointer interactions (tooltips, click/hover) | `packages/vanilla/src/scatter-canvas/interactions.ts` → `wireCanvasInteractions()`. Listeners on the canvas; the SVG is `pointer-events:none` with legend/annotations/chrome/metrics re-enabled. |
-| Mark render mode resolution (`auto`/`svg`/`canvas`) | `packages/engine/src/compiler/mark-render-mode.ts` → `resolveMarkRenderMode()`, `AUTO_CANVAS_THRESHOLD`. Sets `ChartLayout.markRenderMode` only when canvas. AUTHORITY RULE: `renderChartSVG` keys ONLY on its `opts.canvasMarks`, never on the layout flag, so SSR/exports always emit a complete SVG. |
+| Mark render mode resolution (`auto`/`svg`/`canvas`) | `packages/engine/src/compiler/mark-render-mode.ts` → `resolveMarkRenderMode()`, `AUTO_CANVAS_THRESHOLD`. The request comes from `CompileOptions.renderer` (a mount option, NOT a spec field — `mark.render` was removed in v8). Sets `ChartLayout.markRenderMode` only when canvas. AUTHORITY RULE: `renderChartSVG` keys ONLY on its `opts.canvasMarks`, never on the layout flag, so SSR/exports always emit a complete SVG. |
 | Canvas-mode exports (materialize the missing half) | `packages/vanilla/src/export-canvas.ts` → `materializeCanvasModeSVG()`, `VECTOR_EXPORT_MAX_POINTS`. Vector re-render at or below the cap (byte-identical to SVG mode); above it, vector everything with the dots inlined as one raster `<image>`. Raster formats force vector. |
 | Graph gallery stories | `examples/src/gallery/graphs.stories.tsx` + demo specs/data in `graphs.demos.ts`. |
 | Framework Graph wrappers (full instance API, `suppressEntrance` on theme remount) | `packages/{react,vue,svelte}/src/Graph.*` + `.../composables|hooks/useGraph.*`. Function-valued options (`tooltip.formatter`, event callbacks) ride a ref-trampoline (stable wrapper reading the latest handler), never the dep array — pinning a formatter would stale-close; recreating on it would remount. Theme/darkMode-only recreation passes `suppressEntrance: true` so the entrance doesn't replay. |
@@ -263,7 +263,7 @@ Shared scales means shared **domains**, not just a shared plot rect. `compileLay
 ## Animation system
 
 - **Entrance animations** are pure CSS. Keyframes in `packages/core/src/styles/keyframes.css`, rules in `animation.css`. The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.
-- **Update/exit transitions** use a rAF loop in `packages/vanilla/src/transition.ts`, not CSS. The driver matches marks by `data-key`, tweens geometry (rect position/size, line/area path morphs, point cx/cy/r, rule/tick endpoints, text x/y), and also transitions axis ticks and gridlines. Supports interruption retargeting via `snapshot()`.
+- **Update/exit transitions** use a rAF loop in `packages/vanilla/src/transition/`, not CSS. The driver matches marks by `data-key`, tweens geometry (rect position/size, line/area path morphs, point cx/cy/r, rule/tick endpoints, text x/y), and also transitions axis ticks and gridlines. Supports interruption retargeting via `snapshot()`.
 - The engine resolves `AnimationSpec` → `ResolvedAnimation` (`engine/src/compiler/animation.ts`).
 - Mark keys for matching are serialized in `packages/engine/src/compiler/keys.ts`.
 - Detailed gotchas (SVG ≠ HTML, mount lifecycle, stacked bar segment chaining, orientation): `.claude/rules/svg-animation.md` — **read before touching animation code.**

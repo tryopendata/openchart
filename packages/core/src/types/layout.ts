@@ -1770,7 +1770,7 @@ export interface TileMapLayout {
 }
 
 // ---------------------------------------------------------------------------
-// MapLayout (engine output for map visualizations)
+// GeoMapLayout (engine output for map visualizations)
 // ---------------------------------------------------------------------------
 
 /** A structured compile warning with a code and context. */
@@ -1781,13 +1781,13 @@ export interface CompileWarning {
 }
 
 /** Resolved focus target for map camera framing. */
-export interface MapFocusLayout {
+export interface GeoMapFocusLayout {
   target: { x: number; y: number; width: number; height: number; padding: number };
   ids: Array<string | number>;
 }
 
 /** A resolved map feature mark with computed SVG path and fill. */
-export interface MapFeatureMark {
+export interface GeoMapFeatureMark {
   type: 'map-feature';
   /** SVG path `d` attribute for this feature's shape. */
   path: string;
@@ -1814,7 +1814,7 @@ export interface MapFeatureMark {
 }
 
 /** A resolved map point mark with projected coordinates and visual properties. */
-export interface MapPointMark {
+export interface GeoMapPointMark {
   type: 'map-point';
   /** Projected center x in map-local coordinates. */
   cx: number;
@@ -1841,7 +1841,7 @@ export interface MapPointMark {
 }
 
 /** Border paths for the map (interior borders and coastline/outline). */
-export interface MapBorders {
+export interface GeoMapBorders {
   /** SVG path `d` for interior borders between features. */
   interiorPath: string;
   /** SVG path `d` for the outer boundary / coastline. */
@@ -1853,23 +1853,23 @@ export interface MapBorders {
 }
 
 /**
- * MapLayout: the complete engine output for map visualizations.
+ * GeoMapLayout: the complete engine output for map visualizations.
  *
  * Contains everything an adapter needs to render the map: dimensions,
  * chrome, feature paths, borders, legend, tooltip descriptors, and
  * accessibility metadata.
  */
-export interface MapLayout {
+export interface GeoMapLayout {
   /** The map drawing area (after chrome and legend are subtracted). */
   area: Rect;
   /** Resolved chrome text elements with positions and styles. */
   chrome: ResolvedChrome;
   /** Resolved feature marks with paths, fills, and joined data. */
-  features: MapFeatureMark[];
+  features: GeoMapFeatureMark[];
   /** Border paths (interior mesh and outline). */
-  borders: MapBorders;
+  borders: GeoMapBorders;
   /** Resolved point marks for the symbol layer (empty array if no points layer). */
-  pointMarks: MapPointMark[];
+  pointMarks: GeoMapPointMark[];
   /** Categorical legend for the point color channel (null if no point color). */
   pointCategoricalLegend: CategoricalLegendLayout | null;
   /** Continuous legend for the point color channel (null if no point color). */
@@ -1899,7 +1899,7 @@ export interface MapLayout {
   /** The (width, height) passed to the projection's fitSize -- camera fits against this, not the SVG viewBox. */
   mapSize: { width: number; height: number };
   /** Resolved focus target for camera framing (null if no focus). */
-  focus: MapFocusLayout | null;
+  focus: GeoMapFocusLayout | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -2008,6 +2008,26 @@ export interface CompileOptions {
    * before calling compile. The engine always receives a resolved boolean.
    */
   darkMode?: boolean;
+  /**
+   * Rendering backend for point marks, mirroring vega-embed's `renderer`
+   * embed option: backend choice is host policy, not part of the spec.
+   * High-cardinality scatter plots draw thousands of SVG circles, which is
+   * what makes their entrance and update transitions stutter; a canvas layer
+   * draws the same dots in a handful of batched paint calls.
+   *
+   * - `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.
+   * - `'svg'`: always SVG, whatever the point count.
+   * - `'canvas'`: always canvas, whatever the point count.
+   *
+   * Canvas mode trades per-mark keyboard focus and edit-mode point selection
+   * (the screen-reader data table still carries every row), and draws the
+   * trendline above the dots even when `trendline.layer` is `'below'`.
+   * Tooltips, hover, and click callbacks work the same in both modes.
+   *
+   * Ignored with a console warning for non-point marks, and for faceted,
+   * layered, and sparkline charts.
+   */
+  renderer?: 'auto' | 'svg' | 'canvas';
   /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
   /**

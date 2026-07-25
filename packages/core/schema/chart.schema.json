@@ -111,7 +111,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -199,15 +199,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -396,7 +387,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -484,15 +475,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -681,7 +663,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -769,15 +751,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -966,7 +939,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -1054,15 +1027,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -1251,7 +1215,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -1339,15 +1303,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -1536,7 +1491,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -1624,15 +1579,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -1821,7 +1767,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -1909,15 +1855,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -2106,7 +2043,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -2194,15 +2131,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -2391,7 +2319,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -2479,15 +2407,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -2676,7 +2595,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -2764,15 +2683,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -2961,7 +2871,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -3049,15 +2959,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -3246,7 +3147,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -3334,15 +3235,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -3531,7 +3423,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -3619,15 +3511,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -3816,7 +3699,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -3904,15 +3787,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -4101,7 +3975,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -4189,15 +4063,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -4386,7 +4251,7 @@
                         },
                         "size": {
                           "type": "number",
-                          "description": "Fixed bar thickness in pixels for bar/column marks. When set, bars are this height (horizontal) or width (vertical), centered within the band."
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
                         },
                         "filled": {
                           "type": "boolean",
@@ -4474,15 +4339,6 @@
                             "none"
                           ],
                           "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
-                        },
-                        "render": {
-                          "type": "string",
-                          "enum": [
-                            "auto",
-                            "svg",
-                            "canvas"
-                          ],
-                          "description": "Rendering backend for point marks. High-cardinality scatter plots draw thousands of SVG circles, which is what makes their entrance and update transitions stutter; a canvas layer draws the same dots in a handful of batched paint calls.\n\n- `'auto'` (default): canvas above 1,000 compiled point marks, SVG below.\n- `'svg'`: always SVG, whatever the point count.\n- `'canvas'`: always canvas, whatever the point count.\n\nCanvas mode trades per-mark keyboard focus and edit-mode point selection (the screen-reader data table still carries every row), and draws the trendline above the dots even when `trendline.layer` is `'below'`. Tooltips, hover, and click callbacks work the same in both modes.\n\nIgnored with a console warning for non-point marks, and for faceted, layered, and sparkline charts."
                         },
                         "style": {
                           "type": "string",
@@ -4768,7 +4624,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -7476,7 +7332,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -7595,7 +7451,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -7714,7 +7570,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -7833,7 +7689,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -7952,7 +7808,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8071,7 +7927,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8190,7 +8046,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8305,7 +8161,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8421,7 +8277,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8539,7 +8395,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8657,7 +8513,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8776,7 +8632,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -8895,7 +8751,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -9000,7 +8856,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
@@ -9116,7 +8972,7 @@
               "$ref": "#/definitions/ValueDef"
             }
           ],
-          "description": "Size channel. Used by point/bubble charts to scale dot area by a quantitative field. Accepts a conditional definition to vary size based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to `mark.size`)."
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
         },
         "detail": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",

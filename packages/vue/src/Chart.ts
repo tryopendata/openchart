@@ -38,6 +38,8 @@ export interface ChartProps {
   spec: ChartSpec | LayerSpec | GraphSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
+  /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
+  renderer?: 'auto' | 'svg' | 'canvas';
   class?: string;
   style?: string | CSSProperties;
 }
@@ -55,6 +57,10 @@ export const Chart = defineComponent({
     },
     darkMode: {
       type: String as PropType<DarkMode>,
+      default: undefined,
+    },
+    renderer: {
+      type: String as PropType<'auto' | 'svg' | 'canvas'>,
       default: undefined,
     },
     class: {
@@ -127,6 +133,7 @@ export const Chart = defineComponent({
       const options: MountOptions = {
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
+        renderer: props.renderer,
         onDataPointClick: (data: Record<string, unknown>) => emit('data-point-click', data),
         onMarkClick: (event: MarkEvent) => emit('mark-click', event),
         onMarkHover: (event: MarkEvent) => emit('mark-hover', event),
@@ -232,11 +239,12 @@ export const Chart = defineComponent({
       },
     );
 
-    // Recreate chart when theme, darkMode, or editable change
+    // Recreate chart when theme, darkMode, renderer, or editable change
     watch(
       [
         () => props.theme,
         () => props.darkMode,
+        () => props.renderer,
         () => props.editable,
         () => contextTheme?.value,
         () => contextDarkMode?.value,

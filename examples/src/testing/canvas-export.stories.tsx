@@ -42,7 +42,7 @@ function scatterSpec(n: number): ChartSpec {
   return {
     // No entrance: the export must capture a settled chart, not a mid-fade one.
     animation: false,
-    mark: { type: 'point', render: 'canvas' },
+    mark: 'point',
     data: Array.from({ length: n }, (_, i) => ({
       id: `p${i}`,
       x: Math.round(rand() * 1000) / 10,
@@ -83,8 +83,8 @@ export const CanvasExportCorrectness = () => {
     const largeHost = largeRef.current;
     if (!smallHost || !largeHost) return;
 
-    const small = createChart(smallHost, scatterSpec(SMALL_N));
-    const large = createChart(largeHost, scatterSpec(LARGE_N));
+    const small = createChart(smallHost, scatterSpec(SMALL_N), { renderer: 'canvas' });
+    const large = createChart(largeHost, scatterSpec(LARGE_N), { renderer: 'canvas' });
 
     try {
       setResult(

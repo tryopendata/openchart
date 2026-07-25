@@ -359,7 +359,7 @@ For the full field reference, see [SankeySpec in spec-reference.md](spec-referen
 
 Geographic data on real geometries: US states, counties, world countries, or any TopoJSON source. Data rows join to features by id, and a color encoding fills each feature. An optional points layer overlays lat/lon symbols on top.
 
-Maps use a separate component and spec type (`MapSpec`) from standard charts.
+Maps use a separate component and spec type (`GeoMapSpec`) from standard charts.
 
 ```tsx
 // React
@@ -386,9 +386,9 @@ const spec = {
 
 `geo.features` takes a TopoJSON topology (from `us-atlas`, `world-atlas`, or your own source). `encoding.key` names the data field that joins rows to feature ids. A quantitative `color` bins values into quantile classes from a sequential scheme (`blue` by default; set `encoding.color.scale.scheme` to `green`, `orange`, `purple`, or `teal`); a nominal `color` assigns categorical fills via `scale.range`.
 
-Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. Vanilla uses `createMap(container, spec)`.
+Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. Vanilla uses `createGeoMap(container, spec)`.
 
-For the full field reference, see [MapSpec in spec-reference.md](spec-reference.md#mapspec).
+For the full field reference, see [GeoMapSpec in spec-reference.md](spec-reference.md#geomapspec).
 
 **Live examples**: [US choropleth](https://tryopendata.github.io/openchart/?story=maps--maps#us-state-unemployment) | [World projections](https://tryopendata.github.io/openchart/?story=maps--maps#world-equal-earth) | [Zoom to feature](https://tryopendata.github.io/openchart/?story=maps--maps#zoom-to-feature) | [Point layer](https://tryopendata.github.io/openchart/?story=maps--maps#point-layer)
 

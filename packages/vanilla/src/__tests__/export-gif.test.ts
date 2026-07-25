@@ -300,10 +300,10 @@ describe('exportGIF', () => {
 // Frame background color
 // ---------------------------------------------------------------------------
 
-/** A dark scatter spec, optionally opting into canvas mark mode. */
-function scatterSpec(render?: 'canvas'): ChartSpec {
+/** A dark scatter spec; canvas mark mode is opted into at mount time. */
+function scatterSpec(): ChartSpec {
   return {
-    mark: render ? { type: 'point', render } : 'point',
+    mark: 'point',
     data: Array.from({ length: 20 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
     encoding: {
       x: { field: 'x', type: 'quantitative' },
@@ -353,13 +353,16 @@ async function capturedFrameFills(
 }
 
 /** Mount a chart and hand back its live SVG plus resolved theme, as mount.ts does. */
-function mountForExport(spec: ChartSpec): {
+function mountForExport(
+  spec: ChartSpec,
+  renderer?: 'canvas',
+): {
   svg: SVGElement;
   theme: ResolvedTheme;
   destroy: () => void;
 } {
   const container = createContainer();
-  const chart = createChart(container, spec, { width: 600, height: 400 });
+  const chart = createChart(container, spec, { width: 600, height: 400, renderer });
   return {
     svg: container.querySelector('svg') as SVGElement,
     theme: (chart.layout as { theme: ResolvedTheme }).theme,
@@ -372,7 +375,7 @@ describe('GIF frame background', () => {
     // happy-dom has no canvas 2D context, so the canvas layer needs a stub.
     const stub = stubCanvas2D();
     try {
-      const { svg, theme, destroy } = mountForExport(scatterSpec('canvas'));
+      const { svg, theme, destroy } = mountForExport(scatterSpec(), 'canvas');
       // Canvas mode suppresses the background rect: nothing to read a fill from.
       expect(svg.querySelector('rect[fill]')).toBeNull();
       expect(theme.colors.background).toBe(DARK_BG);

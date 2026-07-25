@@ -4,13 +4,13 @@ import type {
   CompileWarning,
   ContinuousLegendLayout,
   EncodingChannel,
+  GeoMapBorders,
+  GeoMapFeatureMark,
+  GeoMapFocus,
+  GeoMapFocusLayout,
+  GeoMapLayout,
+  GeoMapPointMark,
   LegendEntry,
-  MapBorders,
-  MapFeatureMark,
-  MapFocus,
-  MapFocusLayout,
-  MapLayout,
-  MapPointMark,
   ResolvedAnimation,
   ResolvedTheme,
   TextStyle,
@@ -46,7 +46,7 @@ import {
 } from '../legend/continuous';
 import { joinDataToFeatures } from './join';
 import { createProjection } from './projections';
-import type { NormalizedMapSpec } from './types';
+import type { NormalizedGeoMapSpec } from './types';
 
 /**
  * Inset from the map area's edges for overlay ('top-left') point legends.
@@ -55,7 +55,7 @@ import type { NormalizedMapSpec } from './types';
  */
 const OVERLAY_LEGEND_INSET = 18;
 
-function validateGeoFeatures(geo: NormalizedMapSpec['geo']): Topology {
+function validateGeoFeatures(geo: NormalizedGeoMapSpec['geo']): Topology {
   if (!geo.features) {
     throw new Error(
       'Map spec error: geo.features is required but missing.\n\n' +
@@ -95,7 +95,7 @@ function validateGeoFeatures(geo: NormalizedMapSpec['geo']): Topology {
   return topo as unknown as Topology;
 }
 
-export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
+export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLayout {
   // 1. Sugar expansion + validate + normalize
   const sugarWarnings: string[] = [];
   const expandedSpec =
@@ -107,11 +107,11 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
 
   if (!('type' in normalized) || normalized.type !== 'map') {
     throw new Error(
-      'compileMap received a non-map spec. Use compileChart, compileTileMap, compileSankey, or compileBarList instead.',
+      'compileGeoMap received a non-map spec. Use compileChart, compileTileMap, compileSankey, or compileBarList instead.',
     );
   }
 
-  const mapSpec = normalized as NormalizedMapSpec;
+  const mapSpec = normalized as NormalizedGeoMapSpec;
 
   // 2. Validate geo features
   const topology = validateGeoFeatures(mapSpec.geo);
@@ -155,8 +155,8 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   // subtracted). The returned SVG height is already content-driven (it sums
   // chrome.bottomHeight + content + padding below), so it grows naturally when
   // the plot area is taller. In the default 'subtract' mode this is unchanged.
-  // Read chromeLayout from the raw spec: normalizeMapSpec does not carry it
-  // through, and MapSpec has no chromeLayout field, so the option default is the
+  // Read chromeLayout from the raw spec: normalizeGeoMapSpec does not carry it
+  // through, and GeoMapSpec has no chromeLayout field, so the option default is the
   // primary control (a user-authored spec.chromeLayout still wins here).
   const chromeLayout = resolveChromeLayout(
     spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
@@ -321,7 +321,7 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
   const neutralFill = isDarkMode ? '#2a2a2a' : '#e8e8e8';
   const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
-  let featureMarks: MapFeatureMark[];
+  let featureMarks: GeoMapFeatureMark[];
   let continuousLegend: ContinuousLegendLayout | null = null;
   let categoricalLegend: CategoricalLegendLayout | null = null;
 
@@ -441,10 +441,10 @@ export function compileMap(spec: unknown, options: CompileOptions): MapLayout {
 
   const interiorStroke = isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
   const outlineStroke = isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
-  const borders: MapBorders = { interiorPath, outlinePath, interiorStroke, outlineStroke };
+  const borders: GeoMapBorders = { interiorPath, outlinePath, interiorStroke, outlineStroke };
 
   // 15b. Point marks (symbol layer above choropleth)
-  const pointMarks: MapPointMark[] = [];
+  const pointMarks: GeoMapPointMark[] = [];
   let pointCategoricalLegend: CategoricalLegendLayout | null = null;
   let pointContinuousLegend: ContinuousLegendLayout | null = null;
 
@@ -885,9 +885,9 @@ interface BasemapOptions {
   droppedFeatures: string[];
 }
 
-function buildBasemapMarks(opts: BasemapOptions): MapFeatureMark[] {
+function buildBasemapMarks(opts: BasemapOptions): GeoMapFeatureMark[] {
   const { geoFeatures, pathGen, neutralFill, neutralStroke, droppedFeatures } = opts;
-  const marks: MapFeatureMark[] = [];
+  const marks: GeoMapFeatureMark[] = [];
   let animIndex = 0;
 
   for (const feat of geoFeatures) {
@@ -950,7 +950,7 @@ interface QuantitativeOptions {
 }
 
 function buildQuantitativeMarks(opts: QuantitativeOptions): {
-  marks: MapFeatureMark[];
+  marks: GeoMapFeatureMark[];
 } {
   const {
     geoFeatures,
@@ -978,7 +978,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
   const paletteStops = [...(SEQUENTIAL_PALETTES[palette] ?? SEQUENTIAL_PALETTES.blue)];
   const colorScale = scaleQuantile<string>().domain(values).range(paletteStops);
 
-  const marks: MapFeatureMark[] = [];
+  const marks: GeoMapFeatureMark[] = [];
   let animIndex = 0;
 
   for (const feat of geoFeatures) {
@@ -1068,7 +1068,7 @@ interface CategoricalOptions {
 }
 
 function buildCategoricalMarks(opts: CategoricalOptions): {
-  marks: MapFeatureMark[];
+  marks: GeoMapFeatureMark[];
   legend: CategoricalLegendLayout | null;
 } {
   const {
@@ -1117,7 +1117,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     categoryColors.set(categories[i], colorSource[i % colorSource.length]);
   }
 
-  const marks: MapFeatureMark[] = [];
+  const marks: GeoMapFeatureMark[] = [];
   let animIndex = 0;
 
   for (const feat of geoFeatures) {
@@ -1197,7 +1197,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     }));
 
     // Honor legend.position like the continuous path does. The map drawing
-    // area (mapAreaY in compileMap) already shifts down for top legends, so
+    // area (mapAreaY in compileGeoMap) already shifts down for top legends, so
     // the legend row here must agree with it — a bottom-anchored legend with
     // a top-shifted map is how legends used to land on top of Alaska.
     const legendX = fullArea.x;
@@ -1231,11 +1231,11 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
 // ---------------------------------------------------------------------------
 
 function resolveFocus(
-  focus: MapFocus | null,
-  features: MapFeatureMark[],
-  pointMarks: MapPointMark[],
+  focus: GeoMapFocus | null,
+  features: GeoMapFeatureMark[],
+  pointMarks: GeoMapPointMark[],
   warnings: CompileWarning[],
-): MapFocusLayout | null {
+): GeoMapFocusLayout | null {
   if (focus === null || focus === undefined) return null;
 
   // Points form fits the union of the point layer's circle bounds (cx +/- r)
@@ -1354,7 +1354,7 @@ function emptyLayout(
   theme: ResolvedTheme,
   options: CompileOptions,
   watermark: boolean,
-): MapLayout {
+): GeoMapLayout {
   return {
     area: { x: 0, y: 0, width: 0, height: 0 },
     chrome,

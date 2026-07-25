@@ -1,9 +1,10 @@
 # Migrating to OpenChart v8
 
-Instructions for migrating a consumer app from openchart v7 to v8. All changes
-are in the spec objects and TypeScript imports you pass to openchart. The mount
-APIs (`<Chart>`, `createChart()`, etc.) and their props are unchanged across
-all six packages (core, engine, vanilla, react, vue, svelte).
+Instructions for migrating a consumer app from openchart v7 to v8. Almost all
+changes are in the spec objects and TypeScript imports you pass to openchart.
+The exceptions are called out explicitly: the renderer choice moved from the
+spec to a mount option (section 22), and graph mount failures now throw
+(section 18).
 
 ## How to use this guide
 
@@ -871,6 +872,15 @@ category, and it can't exempt the seed node. If you need the seed (or any fixed
 node) to stay lit alongside a category, use the `{ nodeIds }` form and include
 the seed id yourself.
 
+**Mount failures now throw.** `createGraph()` used to catch compile/mount
+errors and return an inert no-op instance; a bad spec produced an empty
+container and a console line. It now logs and re-throws, matching
+`createChart()` and `createSankey()`. In React that means the error propagates
+out of the `<Graph>` mount effect to the nearest error boundary -- an app
+without one crashes where it previously rendered an inert container. Wrap
+`<Graph>` in an error boundary (or validate specs before mounting) if graph
+specs come from untrusted input.
+
 ---
 
 ## 19. Update-transition cap counts the larger of the two frames
@@ -933,10 +943,144 @@ theme whose background does not parse to an opaque color (`'none'`, alpha
 
 ---
 
+## 21. Point sizes above a 50px radius are rejected
+
+**What changed:** `validateSpec` now errors on point-mark sizes larger than 50.
+openchart point `size` is a **radius in pixels** (default 5, typical 2-12).
+Vega-Lite's `size` is an **area in px²** (typical 30-400). A VL-habit value
+like `size: 400` used to silently draw an 800px-wide disc that swallowed the
+chart; it now fails loud with the conversion recipe.
+
+**Who's affected:** point-mark specs setting any of:
+
+- `mark.size` > 50
+- `encoding.size.value` > 50
+- a number > 50 in `encoding.size.scale.range`
+
+Radii up to 50 stay legal -- a 50px bubble is enormous but plausible as a
+deliberate choice.
+
+**This is a hard validation error**, not a warning: the spec does not compile
+until fixed. The error message includes the converted value.
+
+**Fix:** if the value came from Vega-Lite, convert area to radius with
+`radius = sqrt(area / pi)`:
+
+```ts
+// Before (Vega-Lite habit: size as area, draws an 800px-wide disc)
+{ mark: { type: 'point', size: 400 } }
+
+// After (radius: the dot VL's size 400 actually draws)
+{ mark: { type: 'point', size: 11 } }
+```
+
+For a size scale, convert each end of the range the same way
+(`range: [30, 900]` in VL units becomes `range: [3, 17]`).
+
+---
+
+## 22. `mark.render` moved to the `renderer` mount option
+
+**What changed:** The rendering surface for point marks (SVG vs canvas) is no
+longer declared in the spec. `mark.render` is removed from `MarkDef`; the same
+three values now live on a `renderer` option at mount and compile time:
+
+- `createChart(el, spec, { renderer: 'canvas' })` (vanilla)
+- `<Chart spec={spec} renderer="canvas" />` (react, vue, svelte)
+- `compileChart(spec, { renderer: 'canvas' })` (engine)
+- `renderStaticSVG(spec, { renderer })` and `exportSpecSequence({ renderer })`
+  accept it too
+
+This mirrors vega-embed's `{ renderer }` embed option: in the Vega ecosystem
+the spec describes *what to show* and never carries a renderer field, because
+the rendering backend is the host's concern, not the data's.
+
+**Who's affected:** Any spec setting `mark.render`. This only ever applied to
+point marks.
+
+**Console warning:** yes. A spec carrying `mark.render` still compiles; the
+field is stripped with a `[openchart]` warning naming the replacement. The
+chart falls back to `'auto'` until you pass the option at mount.
+
+**Search for:** `render:` inside `mark` objects, or grep for `"render"` in
+stored JSON specs.
+
+**Fix:** delete the field from the spec and pass the value where you mount:
+
+```ts
+// Before (v7 / v8 RC)
+createChart(el, {
+  mark: { type: 'point', render: 'canvas' },
+  data,
+  encoding,
+});
+
+// After (v8)
+createChart(el, {
+  mark: 'point',
+  data,
+  encoding,
+}, { renderer: 'canvas' });
+```
+
+For stored JSON specs, a jq codemod:
+
+```bash
+jq 'if (.mark | type) == "object" then .mark |= del(.render) else . end' spec.json
+```
+
+**Behavior note:** the renderer is now fixed per chart instance. Calling
+`.update(spec)` can no longer flip a mounted chart between SVG and canvas by
+changing `mark.render`; the only per-update flip left is `'auto'` crossing the
+1,000-point threshold as data grows or shrinks. If you were flipping renderers
+per update deliberately, remount with a different `renderer` instead.
+
+---
+
+## 23. Geo map API renamed to GeoMap
+
+**Who's affected:** only adopters of the v8 release candidates. The geo map
+API never shipped in a stable v7 release, so if you are coming from v7.x this
+section does not apply.
+
+**What changed:** every geo-map symbol now carries the `GeoMap` prefix,
+matching the `<GeoMap>` component the react/vue/svelte packages already
+exported. There are no deprecated aliases. The wire format is unchanged:
+specs still use `type: 'map'`.
+
+| RC name | v8 name |
+| ------- | ------- |
+| `createMap` | `createGeoMap` |
+| `MapInstance`, `MapMountOptions`, `MapMarkEvent`, `MapFeatureEvent`, `MapCameraOptions` | `GeoMapInstance`, `GeoMapMountOptions`, `GeoMapMarkEvent`, `GeoMapFeatureEvent`, `GeoMapCameraOptions` |
+| `MapSpec`, `MapSpecWithoutData`, `isMapSpec` | `GeoMapSpec`, `GeoMapSpecWithoutData`, `isGeoMapSpec` |
+| `MapGeo`, `MapEncoding`, `MapPointsLayer`, `MapProjection`, `MapFocus`, `MapPointsFocus` | `GeoMapGeo`, `GeoMapEncoding`, `GeoMapPointsLayer`, `GeoMapProjection`, `GeoMapFocus`, `GeoMapPointsFocus` |
+| `MapLayout`, `MapFeatureMark`, `MapPointMark`, `MapBorders`, `MapFocusLayout` | `GeoMapLayout`, `GeoMapFeatureMark`, `GeoMapPointMark`, `GeoMapBorders`, `GeoMapFocusLayout` |
+| `MapProps` (react/vue/svelte), `MapHandle` (react only) | `GeoMapProps`, `GeoMapHandle` |
+| `compileMap` (engine) | `compileGeoMap` |
+
+**No console warning.** The old names fail at build time: TypeScript imports
+of the RC names no longer resolve.
+
+**Fix:** rename the imports. The names are unambiguous enough for a global
+find-and-replace; every occurrence of the RC name is the geo map API (the
+tile map API is a separate `TileMap*` family and is untouched).
+
+```ts
+// Before (v8 RC)
+import { createMap, type MapInstance } from '@opendata-ai/openchart-vanilla';
+import type { MapSpec } from '@opendata-ai/openchart-core';
+
+// After (v8)
+import { createGeoMap, type GeoMapInstance } from '@opendata-ai/openchart-vanilla';
+import type { GeoMapSpec } from '@opendata-ai/openchart-core';
+```
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
-Every remaining deprecated usage (sections 2-4 and 6) logs a `[openchart]`
+Every remaining deprecated usage (sections 2-4, 6 and 22) logs a `[openchart]`
 warning at compile time with the exact fix. Items with no runtime warning:
 
 - **Stack default (section 1):** silent behavior change. Audit multi-series

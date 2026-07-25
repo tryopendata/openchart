@@ -1,9 +1,9 @@
 import type {
   ChartSpec,
   DataRow,
+  GeoMapSpec,
   GraphSpec,
   LayerSpec,
-  MapSpec,
 } from '@opendata-ai/openchart-core';
 import type { CameraTarget } from './camera-math';
 
@@ -12,7 +12,7 @@ export type StorySpec<TData extends DataRow = DataRow> =
   | ChartSpec<TData>
   | LayerSpec<TData>
   | GraphSpec
-  | MapSpec;
+  | GeoMapSpec;
 
 /** Deep-partial patch applied onto the accumulated spec at each step. */
 export type StorySpecPatch = Record<string, unknown>;

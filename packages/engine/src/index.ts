@@ -15,9 +15,9 @@
 export {
   compileBarList,
   compileChart,
+  compileGeoMap,
   compileGraph,
   compileLayer,
-  compileMap,
   compileSankey,
   compileTable,
   compileTileMap,
@@ -73,7 +73,7 @@ export type { NormalizedSankeySpec } from './sankey/types';
 
 export type { NormalizedBarListSpec } from './barlist/types';
 
-export type { NormalizedMapSpec } from './geo/types';
+export type { NormalizedGeoMapSpec } from './geo/types';
 
 export type { NormalizedTileMapSpec } from './tilemap/types';
 
@@ -165,11 +165,11 @@ export type {
   ChartSpec,
   CompileOptions,
   CompileTableOptions,
+  GeoMapLayout,
+  GeoMapSpec,
   GraphLayout,
   GraphSpec,
   LayerSpec,
-  MapLayout,
-  MapSpec,
   SankeyLayout,
   SankeySpec,
   TableLayout,

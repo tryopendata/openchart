@@ -19,8 +19,20 @@ export * from '@opendata-ai/openchart-core';
 // Vanilla: export utilities (SVG/PNG/JPG/CSV)
 // ---------------------------------------------------------------------------
 
-export type { JPGExportOptions, PNGExportOptions } from '@opendata-ai/openchart-vanilla';
-export { exportCSV, exportJPG, exportPNG, exportSVG } from '@opendata-ai/openchart-vanilla';
+export type {
+  JPGExportOptions,
+  PNGExportOptions,
+  SpecSequenceOptions,
+  SVGExportOptions,
+} from '@opendata-ai/openchart-vanilla';
+export {
+  exportCSV,
+  exportJPG,
+  exportPNG,
+  exportSpecSequence,
+  exportSVG,
+  exportSVGWithFonts,
+} from '@opendata-ai/openchart-vanilla';
 
 // ---------------------------------------------------------------------------
 // Engine: compile API and types not covered by core
@@ -35,11 +47,12 @@ export type {
   NormalizedBarListSpec,
   NormalizedChartSpec,
   NormalizedChrome,
+  NormalizedGeoMapSpec,
   NormalizedGraphSpec,
-  NormalizedMapSpec,
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
+  NormalizedTileMapSpec,
   SimulationConfig,
   ValidationError,
   ValidationErrorCode,
@@ -50,10 +63,11 @@ export {
   compile,
   compileBarList,
   compileChart,
+  compileGeoMap,
   compileGraph,
-  compileMap,
   compileSankey,
   compileTable,
+  compileTileMap,
   getChartRenderer,
   normalizeSpec,
   registerChartRenderer,
@@ -90,8 +104,8 @@ export type {
   BarListProps,
   ChartProps,
   DataTableProps,
+  GeoMapProps,
   GraphProps,
-  MapProps,
   SankeyProps,
   TileMapProps,
   VisualizationProps,

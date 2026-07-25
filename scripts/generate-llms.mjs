@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 /**
- * Generate `llms.txt` from the current spec surface.
+ * Generate `llms.txt` and `llms-full.txt` from the current spec surface.
  *
- * The hand-written narrative (intro, examples, prose) lives in this file. The
- * per-mark encoding grammar table is generated from the live
+ * llms.txt: the hand-written narrative (intro, examples, prose) lives in this
+ * file. The per-mark encoding grammar table is generated from the live
  * `MARK_ENCODING_RULES` / `MARK_DISPLAY_NAMES` exports in the BUILT
  * `@opendata-ai/openchart-core` package, so the required/optional channel
  * matrix can never drift from the engine's actual validation rules.
  *
+ * llms-full.txt: llms.txt followed by the canonical docs set concatenated
+ * verbatim, for agents that want the whole reference in one fetch.
+ *
  * Run `node scripts/generate-llms.mjs` (build core first: `bun run build`).
- * Pass `--check` to fail (exit 1) if the committed `llms.txt` differs from a
- * fresh generation. CI runs `--check`; when the spec changes, regenerate and
- * commit.
+ * Pass `--check` to fail (exit 1) if either committed file differs from a
+ * fresh generation. CI runs `--check`; when the spec or docs change,
+ * regenerate and commit.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -304,14 +307,44 @@ Vanilla ships a scrollytelling story API on a subpath: \`@opendata-ai/openchart-
 - Architecture: [docs/architecture.md](./docs/architecture.md)
 `;
 
+// ---------------------------------------------------------------------------
+// llms-full.txt: llms.txt + the canonical docs set, concatenated verbatim
+// ---------------------------------------------------------------------------
+
+const FULL_DOCS = [
+  'getting-started.md',
+  'spec-reference.md',
+  'chart-types.md',
+  'graphs.md',
+  'tables.md',
+  'theming-tokens.md',
+];
+
+const fullOutPath = join(repoRoot, 'llms-full.txt');
+const fullBody = [
+  body.trimEnd(),
+  ...FULL_DOCS.map((name) => {
+    const doc = readFileSync(join(repoRoot, 'docs', name), 'utf8');
+    return `\n\n---\n\n<!-- docs/${name} -->\n\n${doc.trimEnd()}`;
+  }),
+  '\n',
+].join('');
+
 if (process.argv.includes('--check')) {
   const current = existsSync(outPath) ? readFileSync(outPath, 'utf8') : '';
   if (current !== body) {
     console.error('llms.txt is out of date. Run: node scripts/generate-llms.mjs');
     process.exit(1);
   }
-  console.log('llms.txt is up to date.');
+  const currentFull = existsSync(fullOutPath) ? readFileSync(fullOutPath, 'utf8') : '';
+  if (currentFull !== fullBody) {
+    console.error('llms-full.txt is out of date. Run: node scripts/generate-llms.mjs');
+    process.exit(1);
+  }
+  console.log('llms.txt and llms-full.txt are up to date.');
 } else {
   writeFileSync(outPath, body);
   console.log(`Wrote llms.txt (${body.length} bytes)`);
+  writeFileSync(fullOutPath, fullBody);
+  console.log(`Wrote llms-full.txt (${fullBody.length} bytes)`);
 }

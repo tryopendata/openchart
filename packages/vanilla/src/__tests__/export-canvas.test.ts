@@ -41,9 +41,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function scatter(n: number, render?: 'canvas' | 'svg'): ChartSpec {
+function scatter(n: number): ChartSpec {
   return {
-    mark: render ? { type: 'point', render } : 'point',
+    mark: 'point',
     data: Array.from({ length: n }, (_, i) => ({ id: `p${i}`, x: i, y: (i * 7) % 100 })),
     encoding: {
       x: { field: 'x', type: 'quantitative' },
@@ -53,9 +53,9 @@ function scatter(n: number, render?: 'canvas' | 'svg'): ChartSpec {
   };
 }
 
-function mount(spec: ChartSpec) {
+function mount(spec: ChartSpec, renderer?: 'canvas' | 'svg') {
   const container = createContainer(600, 400);
-  return { container, chart: createChart(container, spec, { width: 600, height: 400 }) };
+  return { container, chart: createChart(container, spec, { width: 600, height: 400, renderer }) };
 }
 
 /** Generated ids use a monotonic counter, so normalize before comparing. */
@@ -69,7 +69,7 @@ vi.setConfig({ testTimeout: 20_000 });
 
 describe('vector export (at or below the point cap)', () => {
   it('re-materializes the dots, gridlines and background the canvas took over', () => {
-    const { container, chart } = mount(scatter(1000, 'canvas'));
+    const { container, chart } = mount(scatter(1000), 'canvas');
 
     // Precondition: the on-screen SVG really is missing all three.
     const live = container.querySelector('svg') as SVGElement;
@@ -88,11 +88,11 @@ describe('vector export (at or below the point cap)', () => {
   it('is byte-identical to exporting the SVG-mode twin', () => {
     // The governing property. If these ever diverge, one of the two paths is
     // rendering something the other is not.
-    const canvasChart = mount(scatter(1000, 'canvas'));
+    const canvasChart = mount(scatter(1000), 'canvas');
     const canvasOut = canvasChart.chart.export('svg');
     canvasChart.chart.destroy();
 
-    const svgChart = mount(scatter(1000, 'svg'));
+    const svgChart = mount(scatter(1000), 'svg');
     const svgOut = svgChart.chart.export('svg');
     svgChart.chart.destroy();
 
@@ -100,7 +100,7 @@ describe('vector export (at or below the point cap)', () => {
   });
 
   it('leaves SVG-mode export untouched', () => {
-    const { chart } = mount(scatter(50, 'svg'));
+    const { chart } = mount(scatter(50), 'svg');
     const out = chart.export('svg');
     expect(out).not.toContain('<image');
     expect((out.match(/class="[^"]*oc-mark-point/g) ?? []).length).toBe(50);
@@ -110,7 +110,7 @@ describe('vector export (at or below the point cap)', () => {
   it('does not disturb the live chart', () => {
     // Materialization renders into a detached host. The on-screen SVG must
     // still be the canvas-mode one afterwards.
-    const { container, chart } = mount(scatter(1000, 'canvas'));
+    const { container, chart } = mount(scatter(1000), 'canvas');
     chart.export('svg');
 
     const live = container.querySelector('svg') as SVGElement;
@@ -123,7 +123,7 @@ describe('vector export (at or below the point cap)', () => {
 
 describe('raster-mark export (above the point cap)', () => {
   it('inlines one image and emits no point circles', () => {
-    const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'));
+    const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1), 'canvas');
     const out = chart.export('svg');
 
     expect((out.match(/<image/g) ?? []).length).toBe(1);
@@ -133,7 +133,7 @@ describe('raster-mark export (above the point cap)', () => {
 
   it('keeps gridlines and the background vector', () => {
     // Only the dot cloud rasterizes. Axes, gridlines and text stay crisp.
-    const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'));
+    const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1), 'canvas');
     const out = chart.export('svg');
 
     expect(out).toContain('oc-gridline');
@@ -142,7 +142,7 @@ describe('raster-mark export (above the point cap)', () => {
   });
 
   it('puts the raster under the overlays, not on top of them', () => {
-    const layout = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'));
+    const layout = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1), 'canvas');
     const out = layout.chart.export('svg');
 
     // The image must be the first child of the marks group, so anything the
@@ -157,7 +157,7 @@ describe('raster-mark export (above the point cap)', () => {
   });
 
   it('marks the raster aria-hidden (the SR table carries the data)', () => {
-    const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'));
+    const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1), 'canvas');
     expect(chart.export('svg')).toMatch(/<image[^>]*aria-hidden="true"/);
     chart.destroy();
   });
@@ -169,7 +169,7 @@ describe('raster-mark export (above the point cap)', () => {
     const saved = proto.toDataURL;
     delete proto.toDataURL;
     try {
-      const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'));
+      const { chart } = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1), 'canvas');
       let out = '';
       expect(() => {
         out = chart.export('svg');
@@ -187,11 +187,11 @@ describe('raster-mark export (above the point cap)', () => {
 
 describe('the cap boundary', () => {
   it('takes the vector path AT the cap and the raster path one past it', () => {
-    const at = mount(scatter(VECTOR_EXPORT_MAX_POINTS, 'canvas'));
+    const at = mount(scatter(VECTOR_EXPORT_MAX_POINTS), 'canvas');
     expect(at.chart.export('svg')).not.toContain('<image');
     at.chart.destroy();
 
-    const over = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'));
+    const over = mount(scatter(VECTOR_EXPORT_MAX_POINTS + 1), 'canvas');
     expect(over.chart.export('svg')).toContain('<image');
     over.chart.destroy();
   });
@@ -203,9 +203,10 @@ describe('raster formats always take the vector path', () => {
   // SVG mode for free. Probing via materializeCanvasModeSVG rather than
   // chart.export('png'), which needs a real Image decode happy-dom lacks.
   it('materializes full vector even far above the cap', () => {
-    const layout = compileChart(scatter(VECTOR_EXPORT_MAX_POINTS + 500, 'canvas'), {
+    const layout = compileChart(scatter(VECTOR_EXPORT_MAX_POINTS + 500), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
     const svg = materializeCanvasModeSVG(layout, { forceVector: true });
     expect(svg.querySelector('image')).toBeNull();
@@ -219,7 +220,11 @@ describe('raster formats always take the vector path', () => {
 
 describe('forceVector', () => {
   const bigLayout = () =>
-    compileChart(scatter(VECTOR_EXPORT_MAX_POINTS + 1, 'canvas'), { width: 600, height: 400 });
+    compileChart(scatter(VECTOR_EXPORT_MAX_POINTS + 1), {
+      width: 600,
+      height: 400,
+      renderer: 'canvas',
+    });
 
   it('takes the vector path above the cap when asked', () => {
     // Raster formats use this: they rasterize the whole figure anyway, so the

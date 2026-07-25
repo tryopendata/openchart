@@ -17,11 +17,11 @@ import type {
   DataRow,
   Encoding,
   FieldType,
+  GeoMapSpec,
   GraphLayoutConfig,
   GraphSpec,
   LabelSpec,
   LayerSpec,
-  MapSpec,
   MarkDef,
   SankeySpec,
   TableSpec,
@@ -31,9 +31,9 @@ import type {
 import {
   isBarListSpec,
   isChartSpec,
+  isGeoMapSpec,
   isGraphSpec,
   isLayerSpec,
-  isMapSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -41,7 +41,7 @@ import {
   resolveMarkType,
 } from '@opendata-ai/openchart-core';
 import type { NormalizedBarListSpec } from '../barlist/types';
-import type { NormalizedMapSpec } from '../geo/types';
+import type { NormalizedGeoMapSpec } from '../geo/types';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import { STATE_CODE_SET } from '../tilemap/layout';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
@@ -577,7 +577,7 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
   };
 }
 
-function normalizeMapSpec(spec: MapSpec, _warnings: string[]): NormalizedMapSpec {
+function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedGeoMapSpec {
   return {
     type: 'map',
     geo: {
@@ -653,8 +653,8 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   if (isTileMapSpec(spec)) {
     return normalizeTileMapSpec(spec, warnings);
   }
-  if (isMapSpec(spec)) {
-    return normalizeMapSpec(spec, warnings);
+  if (isGeoMapSpec(spec)) {
+    return normalizeGeoMapSpec(spec, warnings);
   }
   if (isBarListSpec(spec)) {
     return normalizeBarListSpec(spec, warnings);

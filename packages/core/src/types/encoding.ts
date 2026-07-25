@@ -249,9 +249,6 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
   },
 };
 
-/** @deprecated Use MARK_ENCODING_RULES instead. */
-export const CHART_ENCODING_RULES = MARK_ENCODING_RULES;
-
 // ---------------------------------------------------------------------------
 // Graph encoding rules
 // ---------------------------------------------------------------------------

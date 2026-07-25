@@ -424,47 +424,6 @@ describe('validateSpec', () => {
     });
   });
 
-  describe('mark.render', () => {
-    const scatter = {
-      data: [
-        { x: 1, y: 2 },
-        { x: 2, y: 4 },
-      ],
-      encoding: {
-        x: { field: 'x', type: 'quantitative' },
-        y: { field: 'y', type: 'quantitative' },
-      },
-    };
-
-    it('rejects an unknown mark.render value', () => {
-      const result = validateSpec({ mark: { type: 'point', render: 'webgl' }, ...scatter });
-      expect(result.valid).toBe(false);
-      const errs = result.errors.filter((e) => e.path === 'mark.render');
-      expect(errs).toHaveLength(1);
-      expect(errs[0].code).toBe('INVALID_VALUE');
-      expect(errs[0].message).toContain('auto, svg, canvas');
-      expect(errs[0].suggestion).toContain('canvas');
-    });
-
-    it('rejects a non-string mark.render value', () => {
-      const result = validateSpec({ mark: { type: 'point', render: true }, ...scatter });
-      expect(result.valid).toBe(false);
-      expect(result.errors.filter((e) => e.path === 'mark.render')).toHaveLength(1);
-    });
-
-    it('accepts every valid mark.render value', () => {
-      for (const render of ['auto', 'svg', 'canvas']) {
-        const result = validateSpec({ mark: { type: 'point', render }, ...scatter });
-        expect(result.errors.filter((e) => e.path === 'mark.render')).toEqual([]);
-      }
-    });
-
-    it('accepts a spec with no mark.render at all', () => {
-      const result = validateSpec({ mark: 'point', ...scatter });
-      expect(result.errors.filter((e) => e.path === 'mark.render')).toEqual([]);
-    });
-  });
-
   describe('table specs', () => {
     it('accepts a valid table spec', () => {
       const result = validateSpec({

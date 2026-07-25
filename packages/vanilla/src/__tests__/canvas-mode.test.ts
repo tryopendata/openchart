@@ -26,10 +26,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** A scatter spec with `n` points, rendered on canvas or SVG. */
-function scatterSpec(n: number, render?: 'canvas' | 'svg'): ChartSpec {
+/** A scatter spec with `n` points; the backend comes from the mount `renderer` option. */
+function scatterSpec(n: number): ChartSpec {
   return {
-    mark: render ? { type: 'point', render } : 'point',
+    mark: 'point',
     data: Array.from({ length: n }, (_, i) => ({
       id: `p${i}`,
       x: i,
@@ -52,9 +52,10 @@ vi.setConfig({ testTimeout: 20_000 });
 describe('canvas mark mode DOM contract', () => {
   it('renders a canvas and suppresses the SVG point/background/gridline output', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
     const canvas = container.querySelector('canvas.oc-mark-canvas');
@@ -75,9 +76,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('puts the canvas before the SVG in DOM order and positions both', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
     const canvas = container.querySelector('canvas.oc-mark-canvas') as HTMLCanvasElement;
@@ -95,9 +97,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('lets pointer events through to the canvas while keeping chrome interactive', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
       chrome: { title: 'Canvas scatter' },
     });
 
@@ -113,9 +116,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('keeps the chart accessible: SVG retains role and label, canvas is hidden', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
     const svg = container.querySelector('svg') as SVGElement;
@@ -127,9 +131,10 @@ describe('canvas mark mode DOM contract', () => {
 
   it('removes the canvas on destroy', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
     expect(container.querySelector('canvas.oc-mark-canvas')).not.toBeNull();
 
@@ -139,12 +144,13 @@ describe('canvas mark mode DOM contract', () => {
 
   it('does not leak a second canvas across re-renders', () => {
     const container = createContainer();
-    const chart = createChart(container, scatterSpec(20, 'canvas'), {
+    const chart = createChart(container, scatterSpec(20), {
       width: 600,
       height: 400,
+      renderer: 'canvas',
     });
 
-    chart.update(scatterSpec(25, 'canvas'));
+    chart.update(scatterSpec(25));
     expect(container.querySelectorAll('canvas.oc-mark-canvas').length).toBe(1);
 
     chart.destroy();
@@ -159,17 +165,48 @@ describe('canvas entrance completion clock', () => {
   // replays into a teardown, and update() slips past the entrance-in-flight
   // gate while the canvas tween is still writing alpha.
   //
+  // The old version of these tests ran under fake timers with no rAF control,
+  // so the entrance never ticked and "still in flight" was indistinguishable
+  // from "clock never started". This harness drives BOTH clocks: a manual rAF
+  // pump for the scheduler and fake timers for the cleanup setTimeout.
+  function withEntranceClocks(
+    fn: (pump: (timestamp: number) => void, pendingFrames: () => number) => void,
+  ) {
+    vi.useFakeTimers();
+    const rafCallbacks = new Map<number, FrameRequestCallback>();
+    let nextRafId = 1;
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback): number => {
+      const id = nextRafId++;
+      rafCallbacks.set(id, cb);
+      return id;
+    });
+    vi.stubGlobal('cancelAnimationFrame', (id: number): void => {
+      rafCallbacks.delete(id);
+    });
+    const pump = (timestamp: number) => {
+      const cbs = Array.from(rafCallbacks.values());
+      rafCallbacks.clear();
+      for (const cb of cbs) cb(timestamp);
+    };
+    try {
+      fn(pump, () => rafCallbacks.size);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  }
+
   // A t=0 probe passes trivially and would miss all of it, so probe MID-WINDOW.
   it('keeps the entrance in flight well past the DOM-derived estimate', () => {
-    vi.useFakeTimers();
-    try {
+    withEntranceClocks((pump, pendingFrames) => {
       const container = createContainer();
       const chart = createChart(
         container,
-        { ...scatterSpec(4000, 'canvas'), animation: true },
+        { ...scatterSpec(4000), animation: true },
         {
           width: 600,
           height: 400,
+          renderer: 'canvas',
         },
       );
 
@@ -178,44 +215,51 @@ describe('canvas entrance completion clock', () => {
       const naive = computeAnimationDuration(svg);
 
       // 1.5s in: past the naive estimate, still inside the real entrance.
-      vi.advanceTimersByTime(1500);
+      // Drive the scheduler frame-by-frame alongside the timer clock.
+      pump(0);
+      for (let t = 100; t <= 1500; t += 100) {
+        vi.advanceTimersByTime(100);
+        pump(t);
+      }
       expect(naive).toBeLessThan(1500);
-      // Still animating => oc-animate not yet removed.
+      // The entrance is genuinely mid-flight: the scheduler re-queued a frame...
+      expect(pendingFrames()).toBeGreaterThan(0);
+      // ...and oc-animate has not been torn down by the (naive) cleanup timer.
       expect(svg.classList.contains('oc-animate')).toBe(true);
 
       chart.destroy();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 
   it('does eventually clear the entrance', () => {
-    vi.useFakeTimers();
-    try {
+    withEntranceClocks((pump) => {
       const container = createContainer();
       const chart = createChart(
         container,
-        { ...scatterSpec(4000, 'canvas'), animation: true },
+        { ...scatterSpec(4000), animation: true },
         {
           width: 600,
           height: 400,
+          renderer: 'canvas',
         },
       );
       const svg = container.querySelector('svg') as SVGElement;
 
       // Past the clamped stagger budget (2s) + fade + annotation delay + buffer.
-      vi.advanceTimersByTime(5000);
+      pump(0);
+      for (let t = 250; t <= 5000; t += 250) {
+        vi.advanceTimersByTime(250);
+        pump(t);
+      }
       expect(svg.classList.contains('oc-animate')).toBe(false);
 
       chart.destroy();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 });
 
 describe('SVG mode is unchanged (regression guard)', () => {
-  it('emits no canvas and a full SVG when render is unset', () => {
+  it('emits no canvas and a full SVG when renderer is unset', () => {
     const container = createContainer();
     const chart = createChart(container, scatterSpec(20), { width: 600, height: 400 });
 
@@ -231,13 +275,17 @@ describe('SVG mode is unchanged (regression guard)', () => {
     chart.destroy();
   });
 
-  it('produces an identical DOM signature with render unset vs render:"svg"', () => {
+  it('produces an identical DOM signature with renderer unset vs renderer:"svg"', () => {
     const containerA = createContainer();
     const chartA = createChart(containerA, scatterSpec(20), { width: 600, height: 400 });
     const a = (containerA.querySelector('svg') as SVGElement).innerHTML;
 
     const containerB = createContainer();
-    const chartB = createChart(containerB, scatterSpec(20, 'svg'), { width: 600, height: 400 });
+    const chartB = createChart(containerB, scatterSpec(20), {
+      width: 600,
+      height: 400,
+      renderer: 'svg',
+    });
     const b = (containerB.querySelector('svg') as SVGElement).innerHTML;
 
     // Generated ids (clip paths, gradients) use a monotonic counter, so
@@ -264,7 +312,7 @@ describe('SVG mode is unchanged (regression guard)', () => {
     chart.destroy();
   });
 
-  it('promotes to canvas above the auto threshold with no render field set', () => {
+  it('promotes to canvas above the auto threshold with no renderer option set', () => {
     // The blog-morph configuration: `mark: 'point'`, nothing else asked for.
     const container = createContainer();
     const chart = createChart(container, scatterSpec(1500), { width: 600, height: 400 });

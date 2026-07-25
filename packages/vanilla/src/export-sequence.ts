@@ -58,6 +58,11 @@ export interface SpecSequenceOptions {
   /** Dark mode for the rendered charts. Defaults to 'off' (light). */
   darkMode?: 'auto' | 'force' | 'off';
   /**
+   * Rendering backend for point marks; see `MountOptions.renderer`. Pass the
+   * SAME value your on-screen chart mounts with so the export matches.
+   */
+  renderer?: 'auto' | 'svg' | 'canvas';
+  /**
    * Theme overrides applied when rendering, exactly as a consumer's live wrapper
    * would apply them. Pass the SAME theme your on-screen chart uses (e.g. the
    * blog's `blogChartTheme(isDark)`), or the export won't match — its background,
@@ -99,6 +104,7 @@ function mountOffscreen(
   height: number,
   darkMode: 'auto' | 'force' | 'off',
   themeConfig: ThemeConfig | undefined,
+  renderer: 'auto' | 'svg' | 'canvas' | undefined,
 ): {
   instance: ReturnType<typeof createChart>;
   svg: SVGElement;
@@ -112,11 +118,19 @@ function mountOffscreen(
   // enter:false → first spec settled immediately; update:true → tween on
   // beginManualUpdate. responsive:false → no ResizeObserver on a detached node.
   const settledSpec = settleAnimation(spec);
-  const instance = createChart(container, settledSpec, {
-    darkMode,
-    theme: themeConfig,
-    responsive: false,
-  });
+  let instance: ReturnType<typeof createChart>;
+  try {
+    instance = createChart(container, settledSpec, {
+      darkMode,
+      theme: themeConfig,
+      renderer,
+      responsive: false,
+    });
+  } catch (err) {
+    // A spec that fails to compile must not leak the offscreen container.
+    container.remove();
+    throw err;
+  }
 
   const svg = container.querySelector('svg');
   if (!svg) {
@@ -175,6 +189,7 @@ export async function exportSpecSequence(
     height,
     darkMode,
     themeConfig,
+    options.renderer,
   );
 
   try {

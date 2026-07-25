@@ -132,3 +132,36 @@ describe('<Chart />', () => {
     expect(wrapper?.style.border).toBe('1px solid red');
   });
 });
+
+describe('<Chart /> renderer prop', () => {
+  afterEach(cleanup);
+
+  const scatterSpec: ChartSpec = {
+    animation: false,
+    mark: 'point',
+    data: Array.from({ length: 10 }, (_, i) => ({ id: `p${i}`, x: i, y: i * 2 })),
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+      key: { field: 'id', type: 'nominal' },
+    },
+  };
+
+  it('renderer="canvas" mounts the canvas mark layer instead of SVG circles', async () => {
+    const { container } = await renderChart({ spec: scatterSpec, renderer: 'canvas' });
+
+    expect(container.querySelector('canvas.oc-mark-canvas')).not.toBeNull();
+    expect(container.querySelector('circle.oc-mark-point')).toBeNull();
+  });
+
+  it('changing renderer recreates the chart on the new backend', async () => {
+    const { container, rerender } = await renderChart({ spec: scatterSpec, renderer: 'canvas' });
+    expect(container.querySelector('canvas.oc-mark-canvas')).not.toBeNull();
+
+    rerender(<Chart spec={scatterSpec} renderer="svg" />);
+    await waitFor(() => {
+      expect(container.querySelector('canvas.oc-mark-canvas')).toBeNull();
+      expect(container.querySelector('circle.oc-mark-point')).not.toBeNull();
+    });
+  });
+});

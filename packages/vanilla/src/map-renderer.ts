@@ -1,5 +1,5 @@
 /**
- * Map SVG renderer: converts a MapLayout into SVG DOM elements.
+ * Map SVG renderer: converts a GeoMapLayout into SVG DOM elements.
  *
  * Creates an <svg> with geo feature paths, border overlays, gradient or
  * categorical legend, and chrome. All styling via inline SVG attributes from
@@ -7,10 +7,10 @@
  */
 
 import type {
-  MapBorders,
-  MapFeatureMark,
-  MapLayout,
-  MapPointMark,
+  GeoMapBorders,
+  GeoMapFeatureMark,
+  GeoMapLayout,
+  GeoMapPointMark,
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
@@ -44,7 +44,7 @@ function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void 
 // Chrome rendering (delegates to the shared helper for text wrapping)
 // ---------------------------------------------------------------------------
 
-function renderChrome(parent: SVGElement, layout: MapLayout): void {
+function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-chrome');
 
@@ -92,7 +92,7 @@ function renderChrome(parent: SVGElement, layout: MapLayout): void {
 // Watermark rendering
 // ---------------------------------------------------------------------------
 
-function renderWatermark(parent: SVGElement, layout: MapLayout): void {
+function renderWatermark(parent: SVGElement, layout: GeoMapLayout): void {
   if (layout.width < 480) return;
 
   const { width, height, theme } = layout;
@@ -143,7 +143,7 @@ function renderWatermark(parent: SVGElement, layout: MapLayout): void {
 // Border rendering
 // ---------------------------------------------------------------------------
 
-function renderBorders(parent: SVGElement, borders: MapBorders): void {
+function renderBorders(parent: SVGElement, borders: GeoMapBorders): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-map-borders');
 
@@ -186,7 +186,7 @@ function renderBorders(parent: SVGElement, borders: MapBorders): void {
 
 function renderFeatures(
   parent: SVGElement,
-  features: MapFeatureMark[],
+  features: GeoMapFeatureMark[],
   animation?: ResolvedAnimation,
   staggerBudget = 0,
   focusIds?: Set<string>,
@@ -278,7 +278,7 @@ function renderFeatures(
 
 function renderPointMarks(
   parent: SVGElement,
-  points: MapPointMark[],
+  points: GeoMapPointMark[],
   animation?: ResolvedAnimation,
 ): void {
   if (points.length === 0) return;
@@ -320,9 +320,9 @@ function renderPointMarks(
 // ---------------------------------------------------------------------------
 
 /**
- * Render a MapLayout to an SVG element.
+ * Render a GeoMapLayout to an SVG element.
  */
-export function renderMapSVG(layout: MapLayout, opts?: { animate?: boolean }): SVGSVGElement {
+export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean }): SVGSVGElement {
   const { width, height, features, borders, a11y, watermark, animation } = layout;
   const animate = opts?.animate && !!animation?.enter;
 

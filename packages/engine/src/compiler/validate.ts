@@ -426,36 +426,6 @@ function validateCalendarSpec(spec: Record<string, unknown>, errors: ValidationE
 }
 
 // ---------------------------------------------------------------------------
-// Mark render mode validation
-// ---------------------------------------------------------------------------
-
-const VALID_RENDER_MODES = new Set(['auto', 'svg', 'canvas']);
-
-/**
- * `mark.render` picks the backend that paints point marks. Unsupported but
- * spelled-correctly combinations (canvas on a faceted chart) degrade to SVG
- * with a compile-time warning; a value outside the union is a typo with no
- * sensible fallback, so it errors here.
- */
-function validateMarkRenderMode(spec: Record<string, unknown>, errors: ValidationError[]): void {
-  const mark = spec.mark;
-  if (!mark || typeof mark !== 'object' || Array.isArray(mark)) return;
-
-  const render = (mark as Record<string, unknown>).render;
-  if (render === undefined) return;
-
-  if (typeof render !== 'string' || !VALID_RENDER_MODES.has(render)) {
-    errors.push({
-      message: `Spec error: mark.render ${JSON.stringify(render)} is not valid. Must be one of: auto, svg, canvas`,
-      path: 'mark.render',
-      code: 'INVALID_VALUE',
-      suggestion:
-        'Use mark: { type: "point", render: "auto" } (default), "canvas" to force the canvas mark layer, or "svg" to force one circle per point.',
-    });
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Point size validation
 // ---------------------------------------------------------------------------
 
@@ -672,11 +642,6 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
   if (markType === 'calendar') {
     validateCalendarSpec(spec, errors);
   }
-
-  // mark.render: rendering backend for point marks. An unsupported combination
-  // (canvas on a bar chart, say) is only advisory and warns at compile time,
-  // but a value outside the union is a typo and fails loud.
-  validateMarkRenderMode(spec, errors);
 
   // Point sizes that only make sense as Vega-Lite areas fail loud with the
   // radius conversion, before they render as chart-swallowing discs.
@@ -1601,7 +1566,7 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
 // Map validation
 // ---------------------------------------------------------------------------
 
-function validateMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
   if (!spec.geo || typeof spec.geo !== 'object') {
     errors.push({
       message: 'Spec error: map spec requires a "geo" object with a TopoJSON "features" field',
@@ -2237,7 +2202,7 @@ export function validateSpec(spec: unknown): ValidationResult {
   } else if (isTileMap) {
     validateTileMapSpec(obj, errors);
   } else if (isMap) {
-    validateMapSpec(obj, errors);
+    validateGeoMapSpec(obj, errors);
   } else if (isBarList) {
     validateBarListSpec(obj, errors);
   }

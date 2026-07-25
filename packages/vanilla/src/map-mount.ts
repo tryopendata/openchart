@@ -1,19 +1,19 @@
 /**
  * Map mount API: the main entry point for vanilla JS map usage.
  *
- * createMap() takes a container, MapSpec, and options, compiles the
+ * createGeoMap() takes a container, GeoMapSpec, and options, compiles the
  * map, renders it as SVG, sets up responsive resizing, tooltip interaction,
- * and returns a MapInstance with update/resize/export/destroy.
+ * and returns a GeoMapInstance with update/resize/export/destroy.
  */
 
 import type {
   CompileOptions,
   DarkMode,
-  MapLayout,
-  MapSpec,
+  GeoMapLayout,
+  GeoMapSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { compileMap } from '@opendata-ai/openchart-engine';
+import { compileGeoMap } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, setupAnimationCleanup } from './animation';
 import {
   exportJPG,
@@ -28,12 +28,13 @@ import {
   cameraForTarget,
   FOCUS_DIM_OPACITY,
   focusTargetForFeatures,
-  type MapCameraOptions,
+  type GeoMapCameraOptions,
 } from './map-camera';
 import { renderMapSVG } from './map-renderer';
 import { captureFeatureFills, runMapFillTransition } from './map-transition';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import type { Camera } from './story/camera-math';
 import { interpolateCamera } from './story/camera-math';
 import type { Tween } from './story/tween';
@@ -46,7 +47,7 @@ import { createTooltipManager, type TooltipManager } from './tooltip';
  * (which has empty ids) still re-fits when the fitted cluster moves; ids alone
  * would miss that. `null` focus -> null (no camera target).
  */
-function focusSignature(focus: MapLayout['focus']): string | null {
+function focusSignature(focus: GeoMapLayout['focus']): string | null {
   if (!focus) return null;
   const t = focus.target;
   const ids = focus.ids.map(String).sort().join(',');
@@ -57,14 +58,14 @@ function focusSignature(focus: MapLayout['focus']): string | null {
 // Types
 // ---------------------------------------------------------------------------
 
-export type MapMarkEvent = {
+export type GeoMapMarkEvent = {
   kind: 'feature' | 'point';
   id: string | number;
   name?: string;
   data: Record<string, unknown> | null;
 };
 
-export interface MapMountOptions {
+export interface GeoMapMountOptions {
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
@@ -76,14 +77,14 @@ export interface MapMountOptions {
   /** Show tooltips on hover. Defaults to true. */
   tooltip?: boolean;
   /** Callback when a feature or point is clicked. */
-  onMarkClick?: (event: MapMarkEvent) => void;
+  onMarkClick?: (event: GeoMapMarkEvent) => void;
   /** Callback when a feature or point is hovered (null on mouse leave). */
-  onMarkHover?: (event: MapMarkEvent | null) => void;
+  onMarkHover?: (event: GeoMapMarkEvent | null) => void;
 }
 
-export interface MapInstance {
+export interface GeoMapInstance {
   /** Re-compile and re-render with a new spec. */
-  update(spec: MapSpec): void;
+  update(spec: GeoMapSpec): void;
   /** Re-compile at current container dimensions. */
   resize(): void;
   /** Export the map. */
@@ -94,18 +95,18 @@ export interface MapInstance {
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
   /** The current compiled layout. */
-  readonly layout: MapLayout;
+  readonly layout: GeoMapLayout;
   /** Zoom to one or more features by ID. */
-  zoomTo(featureId: string | number | Array<string | number>, opts?: MapCameraOptions): void;
+  zoomTo(featureId: string | number | Array<string | number>, opts?: GeoMapCameraOptions): void;
   /** Pan to a feature keeping the current zoom level. */
-  panTo(featureId: string | number, opts?: MapCameraOptions): void;
+  panTo(featureId: string | number, opts?: GeoMapCameraOptions): void;
   /** Fit the camera to an arbitrary bounding box, or reset to full view if no target. */
   fitBounds(
     target?: { x: number; y: number; width: number; height: number; padding?: number },
-    opts?: MapCameraOptions,
+    opts?: GeoMapCameraOptions,
   ): void;
   /** Reset the camera to the full map view. */
-  resetView(opts?: MapCameraOptions): void;
+  resetView(opts?: GeoMapCameraOptions): void;
   /** Get a snapshot of the current camera state. */
   getCamera(): Camera;
   /** Set the camera to an exact state (no animation). */
@@ -125,15 +126,6 @@ function prefersReducedMotion(): boolean {
   }
 }
 
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
-}
-
 // ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
@@ -141,13 +133,13 @@ function resolveDarkMode(mode?: DarkMode): boolean {
 /**
  * Create a map instance from a spec and mount it into a container.
  */
-export function createMap(
+export function createGeoMap(
   container: HTMLElement,
-  spec: MapSpec,
-  options?: MapMountOptions,
-): MapInstance {
+  spec: GeoMapSpec,
+  options?: GeoMapMountOptions,
+): GeoMapInstance {
   let currentSpec = spec;
-  let currentLayout: MapLayout;
+  let currentLayout: GeoMapLayout;
   let destroyed = false;
 
   // DOM
@@ -213,7 +205,7 @@ export function createMap(
     return { width, height: Math.round(width * 0.625) };
   }
 
-  function compile(): MapLayout {
+  function compile(): GeoMapLayout {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
 
@@ -226,14 +218,14 @@ export function createMap(
       measureText,
     };
 
-    return compileMap(currentSpec, compileOpts);
+    return compileGeoMap(currentSpec, compileOpts);
   }
 
   // ---------------------------------------------------------------------------
   // Tooltip and interaction wiring
   // ---------------------------------------------------------------------------
 
-  function wireTooltipAndInteraction(svg: SVGSVGElement, layout: MapLayout): () => void {
+  function wireTooltipAndInteraction(svg: SVGSVGElement, layout: GeoMapLayout): () => void {
     const cleanups: Array<() => void> = [];
 
     const featureElements = svg.querySelectorAll('.oc-map-feature');
@@ -540,7 +532,7 @@ export function createMap(
     isFirstRender = false;
   }
 
-  function update(newSpec: MapSpec): void {
+  function update(newSpec: GeoMapSpec): void {
     currentSpec = newSpec;
     const nextFont = resolveEffectiveFont();
     if (nextFont !== fontFamily) {
@@ -739,10 +731,10 @@ export function createMap(
     resize,
     export: exportChart,
     destroy,
-    get layout(): MapLayout {
+    get layout(): GeoMapLayout {
       return currentLayout;
     },
-    zoomTo(featureId: string | number | Array<string | number>, opts?: MapCameraOptions): void {
+    zoomTo(featureId: string | number | Array<string | number>, opts?: GeoMapCameraOptions): void {
       const ids = Array.isArray(featureId) ? featureId : [featureId];
       const target = focusTargetForFeatures(currentLayout, ids, opts?.padding ?? 16);
       if (!target) {
@@ -755,7 +747,7 @@ export function createMap(
       applyFocusDim(ids);
       updateA11yLive(ids);
     },
-    panTo(featureId: string | number, opts?: MapCameraOptions): void {
+    panTo(featureId: string | number, opts?: GeoMapCameraOptions): void {
       const target = focusTargetForFeatures(currentLayout, [featureId], opts?.padding ?? 16);
       if (!target) {
         console.warn(`[openchart] panTo: no feature found for id: ${featureId}`);
@@ -771,14 +763,14 @@ export function createMap(
     },
     fitBounds(
       target?: { x: number; y: number; width: number; height: number; padding?: number },
-      opts?: MapCameraOptions,
+      opts?: GeoMapCameraOptions,
     ): void {
       currentFocusIds = null;
       const cam = cameraForTarget(currentLayout, target ?? null);
       driveCamera(cam, opts?.duration ?? storyMotion.camera);
       applyFocusDim(null);
     },
-    resetView(opts?: MapCameraOptions): void {
+    resetView(opts?: GeoMapCameraOptions): void {
       currentFocusIds = null;
       const cam = cameraForTarget(currentLayout, null);
       driveCamera(cam, opts?.duration ?? storyMotion.camera);

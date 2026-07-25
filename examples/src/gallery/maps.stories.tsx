@@ -6,8 +6,8 @@
  * readout panel.
  */
 
-import type { MapSpec } from '@opendata-ai/openchart-core';
-import type { MapHandle } from '@opendata-ai/openchart-react';
+import type { GeoMapSpec } from '@opendata-ai/openchart-core';
+import type { GeoMapHandle } from '@opendata-ai/openchart-react';
 import { ChartStory, GeoMap } from '@opendata-ai/openchart-react';
 import { useRef, useState } from 'react';
 import usCountiesTopo from 'us-atlas/counties-albers-10m.json';
@@ -21,7 +21,7 @@ import { usUnemployment, usUnemploymentPrior, worldGdp } from '../data';
 // 1. US state unemployment — pre-projected Albers
 // ---------------------------------------------------------------------------
 
-const usStateSpec: MapSpec = {
+const usStateSpec: GeoMapSpec = {
   type: 'map',
   geo: { features: usStatesTopo, projection: 'identity' },
   data: [...usUnemployment.data],
@@ -43,7 +43,7 @@ const usStateSpec: MapSpec = {
 // 2. US counties — pre-projected Albers (no data, topology only)
 // ---------------------------------------------------------------------------
 
-const usCountySpec: MapSpec = {
+const usCountySpec: GeoMapSpec = {
   type: 'map',
   geo: { features: usCountiesTopo, projection: 'identity' },
   data: [],
@@ -63,7 +63,7 @@ const usCountySpec: MapSpec = {
 // 3. World equal-earth — GDP per capita
 // ---------------------------------------------------------------------------
 
-const worldEqualEarthSpec: MapSpec = {
+const worldEqualEarthSpec: GeoMapSpec = {
   type: 'map',
   geo: { features: worldTopo, projection: 'equalEarth' },
   data: [...worldGdp.data],
@@ -85,7 +85,7 @@ const worldEqualEarthSpec: MapSpec = {
 // 4. World mercator — same data, different projection
 // ---------------------------------------------------------------------------
 
-const worldMercatorSpec: MapSpec = {
+const worldMercatorSpec: GeoMapSpec = {
   type: 'map',
   geo: { features: worldTopo, projection: 'mercator' },
   data: [...worldGdp.data],
@@ -107,7 +107,7 @@ const worldMercatorSpec: MapSpec = {
 // 5. Interactive choropleth — hover readout
 // ---------------------------------------------------------------------------
 
-const interactiveSpec: MapSpec = {
+const interactiveSpec: GeoMapSpec = {
   type: 'map',
   geo: { features: usStatesTopo, projection: 'identity' },
   data: [...usUnemployment.data],
@@ -203,7 +203,7 @@ function EntranceAnimationDemo() {
 
 function RecolorDemo() {
   const [usePrior, setUsePrior] = useState(false);
-  const spec: MapSpec = {
+  const spec: GeoMapSpec = {
     ...usStateSpec,
     data: usePrior ? [...usUnemploymentPrior] : [...usUnemployment.data],
     chrome: {
@@ -228,7 +228,7 @@ function RecolorDemo() {
 // ---------------------------------------------------------------------------
 
 function ZoomDemo() {
-  const mapRef = useRef<MapHandle>(null);
+  const mapRef = useRef<GeoMapHandle>(null);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 500 }}>
@@ -284,7 +284,7 @@ const NARRATIVE_CSS = `
 }
 `;
 
-const mapStoryBase: MapSpec = {
+const mapStoryBase: GeoMapSpec = {
   type: 'map',
   geo: { features: usStatesTopo, projection: 'identity' },
   data: [...usUnemployment.data],
@@ -372,7 +372,7 @@ function MapScrollyDemo() {
 // 10. Point layer — basemap with symbol overlay
 // ---------------------------------------------------------------------------
 
-const pointLayerSpec: MapSpec = {
+const pointLayerSpec: GeoMapSpec = {
   type: 'map',
   geo: {
     features: usStatesUnprojected,
@@ -518,7 +518,7 @@ export const Maps = () => (
       <Demo
         id="zoom-to-feature"
         title="Zoom to feature"
-        description="useRef<MapHandle> exposes the MapInstance with zoomTo, panTo, and resetView methods. Animation is disabled so the camera is the only motion."
+        description="useRef<GeoMapHandle> exposes the GeoMapInstance with zoomTo, panTo, and resetView methods. Animation is disabled so the camera is the only motion."
         specForPanel={usStateSpec}
         height={580}
       >

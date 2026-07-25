@@ -44,7 +44,7 @@ const HEIGHT = 320;
  * land on the same pixel. That makes the assertion a closed-form value rather
  * than a screenshot: correct output is `1 - (1 - 0.35)^6` over white.
  */
-function stackedSpec(render: 'svg' | 'canvas'): ChartSpec {
+function stackedSpec(): ChartSpec {
   return {
     // A settled chart, not a mid-fade one -- entrance alpha would poison the read.
     animation: false,
@@ -52,7 +52,6 @@ function stackedSpec(render: 'svg' | 'canvas'): ChartSpec {
     height: HEIGHT,
     mark: {
       type: 'point',
-      render,
       size: 14,
       opacity: OPACITY,
       fill: FILL,
@@ -74,7 +73,7 @@ function Chart({ render, id }: { render: 'svg' | 'canvas'; id: string }) {
 
   useEffect(() => {
     if (!ref.current) return;
-    const chart = createChart(ref.current, stackedSpec(render));
+    const chart = createChart(ref.current, stackedSpec(), { renderer: render });
     return () => chart.destroy();
   }, [render]);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileMap } from '../../compile';
+import { compileGeoMap } from '../../compile';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -51,9 +51,9 @@ const DEFAULT_OPTIONS = { width: 600, height: 400 };
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('compileMap', () => {
-  it('compiles a minimal MapSpec and produces features with paths', () => {
-    const layout = compileMap(
+describe('compileGeoMap', () => {
+  it('compiles a minimal GeoMapSpec and produces features with paths', () => {
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -82,7 +82,7 @@ describe('compileMap', () => {
   });
 
   it('produces unmatched data key warnings', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -101,7 +101,7 @@ describe('compileMap', () => {
   });
 
   it('produces unmatched features warning when features have no data', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -121,7 +121,7 @@ describe('compileMap', () => {
 
   it('throws self-documenting error when geo.features is missing', () => {
     expect(() =>
-      compileMap(
+      compileGeoMap(
         {
           type: 'map',
           geo: { features: null },
@@ -138,7 +138,7 @@ describe('compileMap', () => {
 
   it('throws when geo.features is not valid TopoJSON', () => {
     expect(() =>
-      compileMap(
+      compileGeoMap(
         {
           type: 'map',
           geo: { features: { type: 'FeatureCollection', features: [] } },
@@ -154,7 +154,7 @@ describe('compileMap', () => {
   });
 
   it('uses mercator projection and produces valid SVG paths', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -172,7 +172,7 @@ describe('compileMap', () => {
   });
 
   it('uses equalEarth projection', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'equalEarth' },
@@ -189,7 +189,7 @@ describe('compileMap', () => {
   });
 
   it('includes a continuous legend for quantitative encoding', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -211,7 +211,7 @@ describe('compileMap', () => {
   });
 
   it('encoding.color.format takes precedence over deprecated valueFormat', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -230,7 +230,7 @@ describe('compileMap', () => {
   });
 
   it('deprecated valueFormat still formats tooltips when no encoding format is set', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -249,7 +249,7 @@ describe('compileMap', () => {
   });
 
   it('continuous legend has 5 bins by default', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -272,7 +272,7 @@ describe('compileMap', () => {
   });
 
   it('continuous legend defaults to top position', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -292,7 +292,7 @@ describe('compileMap', () => {
   });
 
   it('honors position: bottom for continuous legend', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -313,7 +313,7 @@ describe('compileMap', () => {
   });
 
   it('builds categorical legend for nominal encoding', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -335,7 +335,7 @@ describe('compileMap', () => {
   });
 
   it('categorical legend defaults to top and sits above the map area', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -360,7 +360,7 @@ describe('compileMap', () => {
   });
 
   it('honors position: bottom for categorical legend', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -384,7 +384,7 @@ describe('compileMap', () => {
   });
 
   it('assigns neutral fill to features without data', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -406,7 +406,7 @@ describe('compileMap', () => {
 
   it('emits warnings via onWarn callback', () => {
     const warnings: string[] = [];
-    compileMap(
+    compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -456,7 +456,7 @@ describe('compileMap', () => {
       ],
     };
 
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: PRE_PROJECTED_TOPO, projection: 'identity' },
@@ -484,7 +484,7 @@ describe('compileMap', () => {
 
   it('identity projection emits no INVERTED_WINDING warning', () => {
     const warnings: string[] = [];
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'identity' },
@@ -502,7 +502,7 @@ describe('compileMap', () => {
   });
 
   it('every feature has finite bounds and centroid within mapSize', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -539,7 +539,7 @@ describe('compileMap', () => {
   });
 
   it('mapSize has positive width and height', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -560,7 +560,7 @@ describe('compileMap', () => {
   });
 
   it('resolves chrome (title, subtitle)', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -583,7 +583,7 @@ describe('compileMap', () => {
   // ---------------------------------------------------------------------------
 
   it('geo.focus as single string produces layout.focus with matching bounds', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator', focus: '36' },
@@ -608,7 +608,7 @@ describe('compileMap', () => {
   });
 
   it('geo.focus as array produces union bounds', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator', focus: ['36', '06'] },
@@ -630,7 +630,7 @@ describe('compileMap', () => {
   });
 
   it('geo.focus object form with custom padding', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: {
@@ -653,7 +653,7 @@ describe('compileMap', () => {
   });
 
   it('geo.focus: null produces layout.focus: null', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator', focus: null },
@@ -670,7 +670,7 @@ describe('compileMap', () => {
   });
 
   it('geo.focus { points: true } fits the point cluster, not any feature', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: {
@@ -715,7 +715,7 @@ describe('compileMap', () => {
       latitude: { field: 'lat', type: 'quantitative' as const },
       key: { field: 'name', type: 'nominal' as const },
     };
-    const all = compileMap(
+    const all = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator', focus: { points: true } },
@@ -725,7 +725,7 @@ describe('compileMap', () => {
       },
       DEFAULT_OPTIONS,
     );
-    const subset = compileMap(
+    const subset = compileGeoMap(
       {
         type: 'map',
         geo: {
@@ -746,7 +746,7 @@ describe('compileMap', () => {
   });
 
   it('geo.focus { points: { field, value } } with no match emits FOCUS_UNMATCHED', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: {
@@ -771,7 +771,7 @@ describe('compileMap', () => {
   });
 
   it('geo.focus { points: true } with no points emits FOCUS_UNMATCHED and no focus', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: {
@@ -793,7 +793,7 @@ describe('compileMap', () => {
   });
 
   it('unknown focus id emits FOCUS_UNMATCHED warning', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator', focus: '99' },
@@ -813,7 +813,7 @@ describe('compileMap', () => {
   });
 
   it('no focus specified produces layout.focus: null', () => {
-    const layout = compileMap(
+    const layout = compileGeoMap(
       {
         type: 'map',
         geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -835,7 +835,7 @@ describe('compileMap', () => {
 
   describe('point layer', () => {
     it('compiles points through projection', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -862,7 +862,7 @@ describe('compileMap', () => {
     });
 
     it('drops null-projecting points with warning', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'albersUsa' },
@@ -884,7 +884,7 @@ describe('compileMap', () => {
     });
 
     it('builds sqrt size scale for points', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -915,7 +915,7 @@ describe('compileMap', () => {
     });
 
     it('builds independent categorical color scale', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -943,7 +943,7 @@ describe('compileMap', () => {
     });
 
     it('basemap-only: neutral fill when no encoding.color', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -966,7 +966,7 @@ describe('compileMap', () => {
     });
 
     it('generates point tooltips with point: prefix', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -1001,7 +1001,7 @@ describe('compileMap', () => {
     });
 
     it('handles points alongside choropleth', () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -1053,7 +1053,7 @@ describe('compileMap', () => {
         },
         theme: { spacing: { padding: 0 } },
       };
-      const withLegendNull = compileMap(
+      const withLegendNull = compileGeoMap(
         {
           ...base,
           encoding: {
@@ -1063,7 +1063,7 @@ describe('compileMap', () => {
         },
         DEFAULT_OPTIONS,
       );
-      const withoutLegendNull = compileMap(
+      const withoutLegendNull = compileGeoMap(
         {
           ...base,
           encoding: {
@@ -1102,11 +1102,11 @@ describe('compileMap', () => {
         theme: { spacing: { padding: 0 } },
         watermark: false,
       };
-      const overlay = compileMap(
+      const overlay = compileGeoMap(
         { ...spec, legend: { show: true, position: 'top-left' } },
         DEFAULT_OPTIONS,
       );
-      const bottom = compileMap({ ...spec, legend: { show: true } }, DEFAULT_OPTIONS);
+      const bottom = compileGeoMap({ ...spec, legend: { show: true } }, DEFAULT_OPTIONS);
 
       // Overlay reserves no figure height: map area fills the full frame.
       expect(overlay.area.height).toBeGreaterThan(bottom.area.height);
@@ -1130,7 +1130,7 @@ describe('compileMap', () => {
     });
 
     it("legend position 'top-left' overlays a categorical point legend too", () => {
-      const layout = compileMap(
+      const layout = compileGeoMap(
         {
           type: 'map',
           geo: { features: MINI_TOPO, projection: 'mercator' },
@@ -1186,8 +1186,8 @@ describe('compileMap', () => {
     const narrowOptions = { width: 340, height: 500 };
 
     it('grows the SVG by the chrome height in grow mode', () => {
-      const subtract = compileMap({ ...chromeMapSpec, chromeLayout: 'subtract' }, narrowOptions);
-      const grow = compileMap({ ...chromeMapSpec, chromeLayout: 'grow' }, narrowOptions);
+      const subtract = compileGeoMap({ ...chromeMapSpec, chromeLayout: 'subtract' }, narrowOptions);
+      const grow = compileGeoMap({ ...chromeMapSpec, chromeLayout: 'grow' }, narrowOptions);
 
       const chromeHeight = subtract.chrome.topHeight + subtract.chrome.bottomHeight;
       expect(chromeHeight).toBeGreaterThan(0);
@@ -1195,8 +1195,8 @@ describe('compileMap', () => {
     });
 
     it('defaults to subtract (no growth) when chromeLayout is omitted', () => {
-      const omitted = compileMap(chromeMapSpec, narrowOptions);
-      const explicit = compileMap({ ...chromeMapSpec, chromeLayout: 'subtract' }, narrowOptions);
+      const omitted = compileGeoMap(chromeMapSpec, narrowOptions);
+      const explicit = compileGeoMap({ ...chromeMapSpec, chromeLayout: 'subtract' }, narrowOptions);
       expect(omitted.height).toBe(explicit.height);
     });
   });

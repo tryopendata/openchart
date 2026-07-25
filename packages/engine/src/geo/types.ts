@@ -1,20 +1,20 @@
 import type {
   AnimationSpec,
   DarkMode,
+  GeoMapEncoding,
+  GeoMapGeo,
+  GeoMapPointsLayer,
   LegendConfig,
-  MapEncoding,
-  MapGeo,
-  MapPointsLayer,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChrome } from '../compiler/types';
 
-export interface NormalizedMapSpec {
+export interface NormalizedGeoMapSpec {
   type: 'map';
-  geo: Required<MapGeo>;
+  geo: Required<GeoMapGeo>;
   data: Record<string, unknown>[];
-  encoding: MapEncoding;
+  encoding: GeoMapEncoding;
   chrome: NormalizedChrome;
   legend?: LegendConfig;
   theme: ThemeConfig;
@@ -22,5 +22,5 @@ export interface NormalizedMapSpec {
   watermark: boolean;
   animation?: AnimationSpec;
   valueFormat?: string;
-  points?: MapPointsLayer;
+  points?: GeoMapPointsLayer;
 }

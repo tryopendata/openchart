@@ -156,15 +156,18 @@ describe('renderStaticSVG', () => {
     expect(svg).toContain('oc-gridline');
   });
 
-  it('renders full SVG marks even when the spec explicitly asks for canvas', () => {
-    const svg = renderStaticSVG({
-      mark: { type: 'point', render: 'canvas' },
-      data: Array.from({ length: 50 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
-      encoding: {
-        x: { field: 'x', type: 'quantitative' },
-        y: { field: 'y', type: 'quantitative' },
+  it('renders full SVG marks even when the caller explicitly asks for canvas', () => {
+    const svg = renderStaticSVG(
+      {
+        mark: 'point',
+        data: Array.from({ length: 50 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
+        encoding: {
+          x: { field: 'x', type: 'quantitative' },
+          y: { field: 'y', type: 'quantitative' },
+        },
       },
-    });
+      { renderer: 'canvas' },
+    );
     expect(svg).toContain('oc-mark-point');
     expect(svg).toContain('oc-gridline');
     expect(svg).not.toContain('oc-mark-canvas');

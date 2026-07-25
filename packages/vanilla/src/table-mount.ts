@@ -22,6 +22,7 @@ import { getBreakpoint } from '@opendata-ai/openchart-core';
 import { compileTable } from '@opendata-ai/openchart-engine';
 import { setupTableAnimationCleanup } from './animation';
 import { observeResize } from './resize-observer';
+import { resolveDarkMode } from './resolve-dark-mode';
 import { attachKeyboardNav } from './table-keyboard';
 import { renderTable } from './table-renderer';
 
@@ -53,19 +54,6 @@ export interface TableInstance {
   getState(): TableState;
   setState(partial: Partial<TableState>): void;
   destroy(): void;
-}
-
-// ---------------------------------------------------------------------------
-// Dark mode resolution
-// ---------------------------------------------------------------------------
-
-function resolveDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  if (mode === 'off' || mode === undefined) return false;
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------

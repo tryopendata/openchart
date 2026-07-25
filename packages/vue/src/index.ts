@@ -19,8 +19,20 @@ export * from '@opendata-ai/openchart-core';
 // Vanilla: export utilities (SVG/PNG/JPG/CSV)
 // ---------------------------------------------------------------------------
 
-export type { JPGExportOptions, PNGExportOptions } from '@opendata-ai/openchart-vanilla';
-export { exportCSV, exportJPG, exportPNG, exportSVG } from '@opendata-ai/openchart-vanilla';
+export type {
+  JPGExportOptions,
+  PNGExportOptions,
+  SpecSequenceOptions,
+  SVGExportOptions,
+} from '@opendata-ai/openchart-vanilla';
+export {
+  exportCSV,
+  exportJPG,
+  exportPNG,
+  exportSpecSequence,
+  exportSVG,
+  exportSVGWithFonts,
+} from '@opendata-ai/openchart-vanilla';
 
 // ---------------------------------------------------------------------------
 // Engine: compile API and types not covered by core
@@ -35,11 +47,12 @@ export type {
   NormalizedBarListSpec,
   NormalizedChartSpec,
   NormalizedChrome,
+  NormalizedGeoMapSpec,
   NormalizedGraphSpec,
-  NormalizedMapSpec,
   NormalizedSankeySpec,
   NormalizedSpec,
   NormalizedTableSpec,
+  NormalizedTileMapSpec,
   SimulationConfig,
   ValidationError,
   ValidationErrorCode,
@@ -50,10 +63,11 @@ export {
   compile,
   compileBarList,
   compileChart,
+  compileGeoMap,
   compileGraph,
-  compileMap,
   compileSankey,
   compileTable,
+  compileTileMap,
   getChartRenderer,
   normalizeSpec,
   registerChartRenderer,
@@ -81,10 +95,10 @@ export { useTableState } from './composables/useTableState';
 export { useVizDarkMode, useVizTheme, VizDarkModeKey, VizThemeKey } from './context';
 export type { DataTableProps } from './DataTable';
 export { DataTable } from './DataTable';
+export type { GeoMapProps } from './GeoMap';
+export { GeoMap } from './GeoMap';
 export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
-export type { MapProps } from './Map';
-export { GeoMap } from './Map';
 export type { SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeProvider';

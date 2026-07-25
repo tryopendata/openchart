@@ -254,10 +254,10 @@ describe('exportJPG', () => {
 // getSVGBackgroundColor
 // ---------------------------------------------------------------------------
 
-/** A dark scatter spec, optionally opting into canvas mark mode. */
-function scatterSpec(render?: 'canvas'): ChartSpec {
+/** A dark scatter spec; canvas mark mode is opted into at mount time. */
+function scatterSpec(): ChartSpec {
   return {
-    mark: render ? { type: 'point', render } : 'point',
+    mark: 'point',
     data: Array.from({ length: 20 }, (_, i) => ({ x: i, y: (i * 7) % 100 })),
     encoding: {
       x: { field: 'x', type: 'quantitative' },
@@ -288,7 +288,11 @@ describe('getSVGBackgroundColor', () => {
     const stub: CanvasStub = stubCanvas2D();
     try {
       const container = createContainer();
-      const chart = createChart(container, scatterSpec('canvas'), { width: 600, height: 400 });
+      const chart = createChart(container, scatterSpec(), {
+        width: 600,
+        height: 400,
+        renderer: 'canvas',
+      });
       const svg = container.querySelector('svg') as SVGElement;
       // Canvas mode suppresses the background rect: nothing to read a fill from.
       expect(svg.querySelector('rect[fill]')).toBeNull();
