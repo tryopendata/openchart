@@ -1,5 +1,35 @@
 # Changelog
 
+## [8.0.0](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.26...core-v8.0.0) (2026-07-26)
+
+
+### Features
+
+* reject point-mark sizes above 50px radius ([ac89727](https://github.com/tryopendata/openchart/commit/ac89727))
+* promote dense scatters to canvas automatically ([12dfe87](https://github.com/tryopendata/openchart/commit/12dfe87))
+* canvas-mode exports and a screen-reader table cap ([d7ff0c1](https://github.com/tryopendata/openchart/commit/d7ff0c1))
+* canvas update transitions on the shared transition clock ([a988286](https://github.com/tryopendata/openchart/commit/a988286))
+* canvas entrance animation with a canvas-aware completion clock ([baed972](https://github.com/tryopendata/openchart/commit/baed972))
+* canvas mark layer for high-cardinality scatter (opt-in) ([8b336e0](https://github.com/tryopendata/openchart/commit/8b336e0))
+* configurable data-update transition cap via animation.update.maxMarks ([06d537f](https://github.com/tryopendata/openchart/commit/06d537f))
+
+
+### Bug Fixes
+
+* tween point radius and position on data update ([dc872d7](https://github.com/tryopendata/openchart/commit/dc872d7))
+* default the legend to top, and drop it on labeled pies ([92552a2](https://github.com/tryopendata/openchart/commit/92552a2))
+* warn when a dense chart silently falls back to SVG (#111) ([0ccdaed](https://github.com/tryopendata/openchart/commit/0ccdaed))
+* normalize 'none'/'transparent' strokes for canvas marks ([7ea40f3](https://github.com/tryopendata/openchart/commit/7ea40f3))
+* re-measure canvas pointer rects on pointerenter ([81f72df](https://github.com/tryopendata/openchart/commit/81f72df))
+* gate theme-derived colors on isOpaqueColor, not the literal 'transparent' ([f5536d3](https://github.com/tryopendata/openchart/commit/f5536d3))
+* composite canvas scatter points individually ([5cb5384](https://github.com/tryopendata/openchart/commit/5cb5384))
+* address code review findings on the canvas mark layer ([529ebb8](https://github.com/tryopendata/openchart/commit/529ebb8))
+
+
+### Refactoring
+
+* extract shared motion + spatial index out of graph/ ([c470c14](https://github.com/tryopendata/openchart/commit/c470c14))
+
 ## [8.0.0-rc.26](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.25...core-v8.0.0-rc.26) (2026-07-25)
 
 
