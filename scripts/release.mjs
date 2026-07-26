@@ -6,11 +6,18 @@
  * Bumps all 6 packages to the same version, commits, tags, and pushes.
  * Designed to run locally or in CI via workflow_dispatch.
  *
+ * Pass `--dry-run` to preview the bump and generated changelog without writing
+ * files, creating a commit, tagging, or pushing.
+ *
+ * Prerelease versions (anything with a `-`, e.g. 8.1.0-rc.1) publish under the
+ * npm `next` dist-tag; stable versions take `latest`. See .github/workflows/release.yml.
+ *
  * Usage:
  *   node scripts/release.mjs patch    # 6.13.1 -> 6.13.2
  *   node scripts/release.mjs minor    # 6.13.1 -> 6.14.0
  *   node scripts/release.mjs major    # 6.13.1 -> 7.0.0
  *   node scripts/release.mjs 6.15.0   # explicit version
+ *   node scripts/release.mjs minor --dry-run
  */
 
 import { execSync } from 'node:child_process';
@@ -46,17 +53,21 @@ function bumpVersion(current, bump) {
     default: {
       if (/^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/.test(bump)) return bump;
       console.error(`Invalid bump type: ${bump}`);
-      console.error('Usage: node scripts/release.mjs [patch|minor|major|x.y.z]');
+      console.error('Usage: node scripts/release.mjs [patch|minor|major|x.y.z] [--dry-run]');
       process.exit(1);
     }
   }
 }
 
-function updatePackageVersions(version) {
+function updatePackageVersions(version, dryRun) {
   for (const pkg of PACKAGES) {
     const pkgPath = resolve(ROOT, `packages/${pkg}/package.json`);
     const data = readJSON(pkgPath);
     data.version = version;
+    if (dryRun) {
+      console.log(`  would set packages/${pkg}/package.json version -> ${version}`);
+      continue;
+    }
     writeJSON(pkgPath, data);
   }
 }
@@ -143,9 +154,18 @@ function generateChangelog(currentVersion, newVersion) {
   return hasContent ? md : null;
 }
 
-function updateChangelogs(currentVersion, newVersion) {
+function updateChangelogs(currentVersion, newVersion, dryRun) {
   const entry = generateChangelog(currentVersion, newVersion);
-  if (!entry) return;
+  if (!entry) {
+    if (dryRun) console.log('  no conventional commits found - changelogs unchanged');
+    return;
+  }
+
+  if (dryRun) {
+    console.log(`  would prepend to ${PACKAGES.length} CHANGELOG.md files:\n`);
+    console.log(entry);
+    return;
+  }
 
   for (const pkg of PACKAGES) {
     const changelogPath = resolve(ROOT, `packages/${pkg}/CHANGELOG.md`);
@@ -169,7 +189,7 @@ function updateChangelogs(currentVersion, newVersion) {
 
 const bump = process.argv[2];
 if (!bump) {
-  console.error('Usage: node scripts/release.mjs [patch|minor|major|x.y.z]');
+  console.error('Usage: node scripts/release.mjs [patch|minor|major|x.y.z] [--dry-run]');
   process.exit(1);
 }
 
@@ -188,15 +208,28 @@ if (newVersion === currentVersion) {
   process.exit(1);
 }
 
-console.log(`Releasing: ${currentVersion} -> ${newVersion}`);
+const dryRun = process.argv.includes('--dry-run');
+
+console.log(`Releasing: ${currentVersion} -> ${newVersion}${dryRun ? ' (dry run)' : ''}`);
 
 // 1. Update package.json versions
-updatePackageVersions(newVersion);
-console.log(`Updated ${PACKAGES.length} package.json files`);
+updatePackageVersions(newVersion, dryRun);
+console.log(`${dryRun ? 'Previewed' : 'Updated'} ${PACKAGES.length} package.json files`);
 
 // 2. Update changelogs
-updateChangelogs(currentVersion, newVersion);
-console.log('Updated changelogs');
+updateChangelogs(currentVersion, newVersion, dryRun);
+console.log(`${dryRun ? 'Previewed' : 'Updated'} changelogs`);
+
+// A dry run stops here: nothing has been written, staged, or committed.
+if (dryRun) {
+  console.log(`\nDry run - no files written, no commit created.`);
+  console.log(`Would commit: release: openchart v${newVersion}`);
+  console.log(
+    `Would create tags: ${PACKAGES.map(p => `${p}-v${newVersion}`).join(', ')}, then push main`,
+  );
+  console.log(`\nDone! Dry run for openchart v${newVersion} (working tree untouched)`);
+  process.exit(0);
+}
 
 // 3. Stage and commit
 const files = PACKAGES.flatMap(pkg => [
@@ -207,21 +240,34 @@ run(`git add ${files.join(' ')}`);
 run(`git commit -m "release: openchart v${newVersion}"`);
 console.log('Created release commit');
 
-// 4. Push and create tags (unless --dry-run)
-if (process.argv.includes('--dry-run')) {
-  console.log('Dry run - skipping push and tag creation');
-  console.log(`Would push main and create tags: ${PACKAGES.map(p => `${p}-v${newVersion}`).join(', ')}`);
-} else {
-  run('git push origin main');
-  console.log('Pushed commit to origin');
-
-  // Create tags via GitHub API so they get verified signatures
-  const sha = run('git rev-parse HEAD');
-  for (const pkg of PACKAGES) {
-    const tag = `${pkg}-v${newVersion}`;
+// 4. Create tags, then push.
+//
+// Order matters: the push is what triggers the Release workflow, whose final
+// step runs `gh release create --verify-tag`. Tagging after the push lets the
+// workflow reach that step before the tags exist and fail *after* npm publish
+// already succeeded (this happened on v8.0.0).
+//
+// Tags are created via the GitHub API so they get verified signatures.
+const sha = run('git rev-parse HEAD');
+let created = 0;
+for (const pkg of PACKAGES) {
+  const tag = `${pkg}-v${newVersion}`;
+  try {
     run(`gh api repos/{owner}/{repo}/git/refs -f ref=refs/tags/${tag} -f sha=${sha}`);
+    created++;
+  } catch (err) {
+    // Re-running a partially-completed release must not fail on existing tags.
+    // execSync throws with stdout/stderr as Buffers, so String() them; err.message
+    // alone does not carry the API response body.
+    const out = String(err.stdout ?? '') + String(err.stderr ?? '');
+    if (!/already exists/i.test(out)) throw err;
+    console.log(`Tag ${tag} already exists, skipping`);
   }
-  console.log(`Created ${PACKAGES.length} verified tags via GitHub API`);
 }
+console.log(`Created ${created} verified tags via GitHub API (${PACKAGES.length} total)`);
+
+// Push last: this triggers the Release workflow, and every tag already exists.
+run('git push origin main');
+console.log('Pushed commit to origin - Release workflow will start');
 
 console.log(`\nDone! Released openchart v${newVersion}`);

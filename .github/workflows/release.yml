@@ -80,11 +80,20 @@ jobs:
       - name: Publish packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
+          # Semver puts prerelease identifiers after the first '-', and no stable
+          # version contains one. Prereleases must never take the `latest` tag.
+          case "$VERSION" in
+            *-*) NPM_TAG=next ;;
+            *)   NPM_TAG=latest ;;
+          esac
+          echo "Publishing $VERSION under dist-tag: $NPM_TAG"
+
           publish_pkg() {
             local dir=$1
             echo "Publishing $dir..."
-            output=$(npm publish --provenance --access public 2>&1) && echo "$output" && return 0
+            output=$(npm publish --provenance --access public --tag "$NPM_TAG" 2>&1) && echo "$output" && return 0
             if echo "$output" | grep -qi "previously published\|already exists\|cannot publish over"; then
               echo "Already published, skipping"
               return 0
@@ -109,7 +118,12 @@ jobs:
             NOTES="Release openchart v${VERSION}"
           fi
 
-          gh release create "core-v${VERSION}" \
-            --title "openchart v${VERSION}" \
-            --notes "$NOTES" \
-            --verify-tag
+          # Idempotent: a re-run after a partial failure should converge, not fail.
+          if gh release view "core-v${VERSION}" >/dev/null 2>&1; then
+            echo "Release core-v${VERSION} already exists, skipping"
+          else
+            gh release create "core-v${VERSION}" \
+              --title "openchart v${VERSION}" \
+              --notes "$NOTES" \
+              --verify-tag
+          fi

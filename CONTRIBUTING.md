@@ -296,15 +296,21 @@ See [CONVENTIONS.md](CONVENTIONS.md) for the full set of architectural decisions
 
 ## Releases
 
-Releases are automated via GitHub Actions. The process:
+Releases are cut with `scripts/release.mjs`. All 6 packages are always released together at the same version:
 
-1. **Update versions** in all four `packages/*/package.json` files to the new version number.
-2. **Update `CHANGELOG.md`** with the new version and date. Move items from `[Unreleased]` to the new version section.
-3. **Commit**: `git commit -m "release: v0.x.0"`
-4. **Tag**: `git tag v0.x.0`
-5. **Push**: `git push origin main --tags`
+```bash
+node scripts/release.mjs patch          # 8.0.1
+node scripts/release.mjs minor          # 8.1.0
+node scripts/release.mjs major          # 9.0.0
+node scripts/release.mjs 8.1.0-rc.1     # explicit version
+node scripts/release.mjs minor --dry-run  # preview, writes nothing
+```
 
-The publish workflow runs automatically on version tags. It builds, tests, rewrites `workspace:*` dependencies to the real version, and publishes all four packages to npm in dependency order.
+The script bumps every `packages/*/package.json`, generates changelogs from conventional commits, commits as `release: openchart vX.Y.Z`, creates per-package tags (`core-vX.Y.Z`, ...) via the GitHub API, and pushes.
+
+Don't edit `package.json` versions by hand and don't create release tags yourself. Pushing the `release:` commit triggers the Release workflow, which builds, tests, rewrites `workspace:*` dependencies to real versions, and publishes all six packages to npm. Prerelease versions (anything with a `-`) publish under the `next` dist-tag, so they never take `latest`.
+
+See [`.claude/rules/releasing.md`](.claude/rules/releasing.md) for the full process.
 
 The `NPM_TOKEN` secret is a granular npm token scoped to the `@opendata-ai` org. Granular tokens expire every 90 days, so the token needs periodic rotation in the repo's GitHub Actions secrets.
 

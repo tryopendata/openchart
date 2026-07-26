@@ -90,7 +90,7 @@ import type {
 
 // Store the spec shape without data
 const stored: ChartSpecWithoutData = {
-  type: 'line',
+  mark: 'line',
   encoding: {
     x: { field: 'date', type: 'temporal' },
     y: { field: 'value', type: 'quantitative' },

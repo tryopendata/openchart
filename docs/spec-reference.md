@@ -88,15 +88,15 @@ A plain object with string keys. Values can be numbers, strings, dates, nulls, a
 
 ### Mark properties
 
-The `type` field on ChartSpec accepts either a string (`'line'`) or an object with additional mark configuration. In LayerSpec children, this field is called `mark`.
+The `mark` field on ChartSpec accepts either a string (`'line'`) or an object with additional mark configuration. LayerSpec children are ChartSpecs, so they use `mark` too.
 
 ```ts
 // String shorthand
-{ type: 'area', data: [...], encoding: {...} }
+{ mark: 'area', data: [...], encoding: {...} }
 
 // Object form with mark properties
 {
-  type: { type: 'area', point: true, fill: { gradient: 'linear', ... } },
+  mark: { type: 'area', point: true, fill: { gradient: 'linear', ... } },
   data: [...],
   encoding: {...}
 }
@@ -471,7 +471,7 @@ Reach for `'grow'` on fixed-height article or blog charts where a long title on 
 
 ```ts
 {
-  type: 'line',
+  mark: 'line',
   data: [...],
   encoding: {...},
   chromeLayout: 'grow',
@@ -832,7 +832,7 @@ Explicit keys are useful for scatter plots where multiple points can share the s
 
 ```ts
 {
-  type: 'scatter',
+  mark: 'point',
   data: points,
   encoding: {
     x: { field: 'longitude', type: 'quantitative' },
