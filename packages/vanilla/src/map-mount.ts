@@ -31,7 +31,7 @@ import {
   type GeoMapCameraOptions,
 } from './map-camera';
 import { renderMapSVG } from './map-renderer';
-import { captureFeatureFills, runMapFillTransition } from './map-transition';
+import { captureMapSnapshot, runMapFillTransition } from './map-transition';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -540,9 +540,10 @@ export function createGeoMap(
       measureText = createMeasureText(fontFamily);
     }
 
-    // Capture fills optimistically; gate the tween on the *new* layout's animation config after compile
+    // Capture paint + point geometry optimistically; gate the tween on the
+    // *new* layout's animation config after compile
     const canAnimate = !animationCleanup && !prefersReducedMotion();
-    const prevFills = canAnimate ? captureFeatureFills(svgElement) : null;
+    const prevPaint = canAnimate ? captureMapSnapshot(svgElement) : null;
 
     // Remember previous focus to detect changes. The signature includes the
     // target rect, not just ids+padding, so a points-focus ({ points: true },
@@ -554,15 +555,15 @@ export function createGeoMap(
     currentLayout = compile();
     render();
 
-    // Run fill tween if the *new* layout enables update animation
+    // Run the update tween if the *new* layout enables update animation
     if (
       canAnimate &&
-      prevFills &&
-      prevFills.size > 0 &&
+      prevPaint &&
+      (prevPaint.fills.size > 0 || prevPaint.points.size > 0) &&
       svgElement &&
       currentLayout.animation?.update
     ) {
-      fillTransitionHandle = runMapFillTransition(svgElement, prevFills, {
+      fillTransitionHandle = runMapFillTransition(svgElement, prevPaint, {
         duration: currentLayout.animation.update.duration,
       });
     }

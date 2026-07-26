@@ -108,7 +108,7 @@
 | GeoMap SVG renderer (features, borders, points, legends, chrome) | `packages/vanilla/src/map-renderer.ts` → `renderMapSVG()`. Point marks: `renderPointMarks()`. |
 | GeoMap camera (zoom/pan, counter-scaling, focus dim) | `packages/vanilla/src/map-camera.ts` → `applyMapCamera()`, `cameraForTarget()`, `focusTargetForFeatures()`. Points counter-scale `r` and `stroke-width` via `data-base-r`/`data-base-stroke-width` attributes. |
 | GeoMap mount (lifecycle, events, tooltips, resize, export) | `packages/vanilla/src/map-mount.ts` → `createGeoMap()`. Event type: `GeoMapMarkEvent` (discriminated by `kind: 'feature' \| 'point'`). |
-| GeoMap fill transitions (data-update recolor) | `packages/vanilla/src/map-transition.ts` → `runMapFillTransition()`, `captureFeatureFills()`. Points do NOT have update transitions yet. |
+| GeoMap update transitions (data-update recolor + point geometry) | `packages/vanilla/src/map-transition.ts` → `runMapFillTransition()`, `captureMapSnapshot()`. Features tween fill only (no path morph); points tween fill, `r`, `cx`, `cy`, matched by `data-point-key`. `captureFeatureFills()` is a deprecated flat-map shim. |
 | GeoMap entrance animation keyframe (map points) | `packages/core/src/styles/keyframes.css` → `oc-enter-map-point`. CSS rule in `animation.css` under `.oc-map-point`. |
 | Map point size scale defaults | `packages/engine/src/compile/size-scale.ts` → `SIZE_SCALE_DEFAULTS.mapPoint` (range [3, 20], sqrt curve) |
 | GeoMap gallery stories | `examples/src/gallery/maps.stories.tsx`. Sections: US choropleth, World maps, Interaction, Entrance animation, Data-update recolor, Zoom to feature, Map scrollytelling, Point layer. |

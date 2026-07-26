@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { captureFeatureFills, runMapFillTransition } from '../map-transition';
+import { captureFeatureFills, captureMapSnapshot, runMapFillTransition } from '../map-transition';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -15,7 +15,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  */
 function buildMapSvg(
   features: Array<{ key?: string; fill?: string }>,
-  points: Array<{ key: string; fill?: string }> = [],
+  points: Array<{ key: string; fill?: string; r?: number; cx?: number; cy?: number }> = [],
 ): SVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
   for (const f of features) {
@@ -30,10 +30,17 @@ function buildMapSvg(
     circle.setAttribute('class', 'oc-map-point');
     circle.setAttribute('data-point-key', p.key);
     if (p.fill !== undefined) circle.setAttribute('fill', p.fill);
+    if (p.r !== undefined) circle.setAttribute('r', String(p.r));
+    if (p.cx !== undefined) circle.setAttribute('cx', String(p.cx));
+    if (p.cy !== undefined) circle.setAttribute('cy', String(p.cy));
     svg.appendChild(circle);
   }
   document.body.appendChild(svg);
   return svg;
+}
+
+function pointAt(svg: SVGElement, index: number): Element {
+  return svg.querySelectorAll('.oc-map-point')[index];
 }
 
 function featureAt(svg: SVGElement, index: number): Element {
@@ -325,5 +332,171 @@ describe('runMapFillTransition', () => {
 
     expect(featureAt(svg, 0).getAttribute('fill')).toBe('rgb(0, 0, 255)');
     expect(featureAt(svg, 1).getAttribute('fill')).toBe('rgb(0, 255, 0)');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// captureMapSnapshot / point geometry tweening
+// ---------------------------------------------------------------------------
+
+describe('captureMapSnapshot', () => {
+  it('returns empty maps for a null SVG', () => {
+    const snap = captureMapSnapshot(null);
+    expect(snap.fills.size).toBe(0);
+    expect(snap.points.size).toBe(0);
+  });
+
+  it('captures point geometry alongside fill', () => {
+    const svg = buildMapSvg(
+      [{ key: '06', fill: '#ff0000' }],
+      [{ key: 'sf', fill: '#0000ff', r: 12, cx: 40, cy: 60 }],
+    );
+
+    const snap = captureMapSnapshot(svg);
+
+    expect(snap.fills.get('06')).toBe('#ff0000');
+    expect(snap.points.get('sf')).toEqual({
+      fill: '#0000ff',
+      r: 12,
+      cx: 40,
+      cy: 60,
+    });
+  });
+
+  it('keeps point keys separate from feature keys', () => {
+    // A point and a feature that share an id must not collide: they live in
+    // separate maps rather than one namespaced map.
+    const svg = buildMapSvg([{ key: 'x', fill: '#ff0000' }], [{ key: 'x', fill: '#00ff00', r: 4 }]);
+
+    const snap = captureMapSnapshot(svg);
+
+    expect(snap.fills.get('x')).toBe('#ff0000');
+    expect(snap.points.get('x')?.fill).toBe('#00ff00');
+  });
+
+  it('records undefined for geometry attributes the renderer omitted', () => {
+    const svg = buildMapSvg([], [{ key: 'sf', fill: '#00ff00' }]);
+
+    expect(captureMapSnapshot(svg).points.get('sf')).toEqual({
+      fill: '#00ff00',
+      r: undefined,
+      cx: undefined,
+      cy: undefined,
+    });
+  });
+});
+
+describe('runMapFillTransition point geometry', () => {
+  it('tweens radius so a resized dot shrinks instead of snapping', () => {
+    const svg = buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 4 }]);
+    const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 20 }]));
+
+    runMapFillTransition(svg, prev, { duration: 100 });
+
+    // Synchronous from-state: the dot starts at its OLD radius even though the
+    // SVG was already rendered at the new one.
+    expect(pointAt(svg, 0).getAttribute('r')).toBe('20');
+
+    pumpRaf(0);
+    pumpRaf(50);
+    const mid = Number(pointAt(svg, 0).getAttribute('r'));
+    expect(mid).toBeGreaterThan(4);
+    expect(mid).toBeLessThan(20);
+
+    pumpRaf(100);
+    expect(Number(pointAt(svg, 0).getAttribute('r'))).toBe(4);
+  });
+
+  it('tweens cx/cy so a reprojected dot slides instead of jumping', () => {
+    const svg = buildMapSvg([], [{ key: 'sf', r: 5, cx: 100, cy: 200 }]);
+    const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 5, cx: 0, cy: 0 }]));
+
+    runMapFillTransition(svg, prev, { duration: 100 });
+    pumpRaf(0);
+    pumpRaf(50);
+
+    const cx = Number(pointAt(svg, 0).getAttribute('cx'));
+    const cy = Number(pointAt(svg, 0).getAttribute('cy'));
+    expect(cx).toBeGreaterThan(0);
+    expect(cx).toBeLessThan(100);
+    expect(cy).toBeGreaterThan(0);
+    expect(cy).toBeLessThan(200);
+
+    pumpRaf(100);
+    expect(Number(pointAt(svg, 0).getAttribute('cx'))).toBe(100);
+    expect(Number(pointAt(svg, 0).getAttribute('cy'))).toBe(200);
+  });
+
+  it('tweens fill and radius together on the same dot', () => {
+    // The reported bug: color eased while size snapped, which read as a reset.
+    const svg = buildMapSvg([], [{ key: 'sf', fill: '#808080', r: 3 }]);
+    const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', fill: '#ff0000', r: 15 }]));
+
+    runMapFillTransition(svg, prev, { duration: 100 });
+    pumpRaf(0);
+    pumpRaf(50);
+
+    const el = pointAt(svg, 0);
+    expect(Number(el.getAttribute('r'))).toBeGreaterThan(3);
+    expect(Number(el.getAttribute('r'))).toBeLessThan(15);
+    expect(el.getAttribute('fill')).toMatch(/^rgb\(/);
+
+    pumpRaf(100);
+    expect(Number(el.getAttribute('r'))).toBe(3);
+    expect(el.getAttribute('fill')).toBe('rgb(128, 128, 128)');
+  });
+
+  it('leaves a new point at its final geometry when it has no previous state', () => {
+    const svg = buildMapSvg([], [{ key: 'new', fill: '#00ff00', r: 8 }]);
+
+    runMapFillTransition(svg, captureMapSnapshot(null), { duration: 100 });
+
+    expect(pointAt(svg, 0).getAttribute('r')).toBe('8');
+    expect(rafCallbacks.size).toBe(0);
+  });
+
+  it('skips geometry that did not change', () => {
+    const svg = buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 5, cx: 10, cy: 10 }]);
+    const prev = captureMapSnapshot(
+      buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 5, cx: 10, cy: 10 }]),
+    );
+
+    runMapFillTransition(svg, prev, { duration: 100 });
+
+    // Nothing differs, so no tweens are scheduled at all.
+    expect(rafCallbacks.size).toBe(0);
+  });
+
+  it('snaps geometry to its final value when cancelled mid-flight', () => {
+    const svg = buildMapSvg([], [{ key: 'sf', r: 4, cx: 50 }]);
+    const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 20, cx: 0 }]));
+
+    const handle = runMapFillTransition(svg, prev, { duration: 100 });
+    pumpRaf(0);
+    pumpRaf(50);
+    handle.cancel();
+
+    expect(Number(pointAt(svg, 0).getAttribute('r'))).toBe(4);
+    expect(Number(pointAt(svg, 0).getAttribute('cx'))).toBe(50);
+  });
+
+  it('snaps geometry immediately for a zero-duration transition', () => {
+    const svg = buildMapSvg([], [{ key: 'sf', r: 4 }]);
+    const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 20 }]));
+
+    runMapFillTransition(svg, prev, { duration: 0 });
+
+    expect(Number(pointAt(svg, 0).getAttribute('r'))).toBe(4);
+    expect(rafCallbacks.size).toBe(0);
+  });
+
+  it('still accepts the legacy flat fill map', () => {
+    // Older callers pass Map<string,string> with pt:-prefixed point keys.
+    const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }], [{ key: 'sf', fill: '#00ff00' }]);
+
+    runMapFillTransition(svg, new Map([['pt:sf', '#ff0000']]), { duration: 100 });
+    runToCompletion();
+
+    expect(svg.querySelector('.oc-map-point')!.getAttribute('fill')).toBe('rgb(0, 255, 0)');
   });
 });

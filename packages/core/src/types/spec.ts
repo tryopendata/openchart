@@ -2585,7 +2585,8 @@ export interface GeoMapPointsLayer {
   color?: EncodingChannel;
   /** Tooltip channel(s), same shape as GeoMapEncoding.tooltip. */
   tooltip?: EncodingChannel | EncodingChannel[];
-  /** Stable id for event callbacks. Data-update transitions for points are not yet supported. */
+  /** Stable id for event callbacks, and the key used to match points across
+   * renders so fill, radius, and position tween on data update. */
   key?: EncodingChannel;
   /** Fill opacity for point circles. Default 0.65. Range 0-1. */
   opacity?: number;
