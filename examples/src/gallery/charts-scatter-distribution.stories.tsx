@@ -850,6 +850,151 @@ const beeswarmSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 13b. Stepping beeswarm — keyed data-update transitions on the dodge cloud
+// ---------------------------------------------------------------------------
+
+const STEPPER_YEARS = [2015, 2018, 2021, 2024] as const;
+type StepperYear = (typeof STEPPER_YEARS)[number];
+
+const US_STATES = [
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'FL',
+  'GA',
+  'HI',
+  'ID',
+  'IL',
+  'IN',
+  'IA',
+  'KS',
+  'KY',
+  'LA',
+  'ME',
+  'MD',
+  'MA',
+  'MI',
+  'MN',
+  'MS',
+  'MO',
+  'MT',
+  'NE',
+  'NV',
+  'NH',
+  'NJ',
+  'NM',
+  'NY',
+  'NC',
+  'ND',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VT',
+  'VA',
+  'WA',
+  'WV',
+  'WI',
+  'WY',
+];
+
+/**
+ * One coverage value per state per year, deterministic: each state gets a
+ * fixed base and a fixed downward drift, so stepping the year moves every
+ * dot a repeatable distance and the left tail visibly grows.
+ */
+function stepperData(year: StepperYear): Array<{ state: string; coverage: number }> {
+  const yearIdx = STEPPER_YEARS.indexOf(year);
+  const rand = mulberry32(11);
+  return US_STATES.map((state) => {
+    const base = 93.2 + rand() * 4.2;
+    const drift = 0.3 + rand() * 1.5;
+    return { state, coverage: Math.round((base - yearIdx * drift) * 10) / 10 };
+  });
+}
+
+/**
+ * `encoding.key` is what makes the step tween instead of shuffle: it pairs
+ * each state's dot across updates so the transition tweens matched dots.
+ * `animation: { enter: false }` keeps the entrance window from vetoing a
+ * step made right after mount, and the fixed x domain keeps the axis still
+ * so dot motion is the only change.
+ */
+function beeswarmStepperSpec(year: StepperYear): ChartSpec {
+  return {
+    animation: { enter: false },
+    mark: 'beeswarm',
+    data: stepperData(year),
+    encoding: {
+      x: {
+        field: 'coverage',
+        type: 'quantitative',
+        scale: { domain: [86, 99] },
+        axis: { title: 'Kindergarten MMR coverage (%)' },
+      },
+      key: { field: 'state', type: 'nominal' },
+      tooltip: [
+        { field: 'state', type: 'nominal', title: 'State' },
+        { field: 'coverage', type: 'quantitative', title: 'Coverage (%)' },
+      ],
+    },
+    chrome: {
+      title: 'The Left Tail Grows',
+      subtitle: `${year} school year. Step through the years and watch state-level MMR coverage drift left.`,
+      source: 'Synthetic data for demonstration',
+      byline: 'Chart: OpenChart',
+    },
+  };
+}
+
+/** Interactive only -- not baseline-captured (the step tween cannot be frozen). */
+function BeeswarmStepper() {
+  const [year, setYear] = useState<StepperYear>(2015);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 420 }}>
+        <Chart spec={beeswarmStepperSpec(year)} />
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', alignItems: 'center' }}>
+        {STEPPER_YEARS.map((y) => (
+          <button
+            key={y}
+            type="button"
+            onClick={() => setYear(y)}
+            style={{
+              padding: 'var(--gx-space-2) var(--gx-space-4)',
+              border: '1px solid var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
+              background: y === year ? 'var(--gx-surface-raised)' : 'transparent',
+              color: y === year ? 'var(--gx-text)' : 'var(--gx-text-muted)',
+              fontSize: 'var(--gx-type-caption)',
+              cursor: 'pointer',
+            }}
+          >
+            {y}
+          </button>
+        ))}
+        <span style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
+          50 states, keyed by state
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Calendar dataset: one year of daily temperature anomalies. Same seeded-PRNG
 // + triangle-wave approach as the pinned fixture, kept inline because it is a
 // generated series, not a curated table. Frozen at module load.
@@ -1016,6 +1161,15 @@ export const ScatterAndDistribution = () => (
         spec={beeswarmSpec}
         height={480}
       />
+      <Demo
+        id="beeswarm-stepper"
+        title="Stepping beeswarm (keyed update)"
+        description="encoding.key pairs each state's dot across updates, so stepping the year tweens matched dots to their new positions instead of redrawing the swarm. Without a key, the fallback lane|value identity changes whenever a value does, and dots shuffle rather than track their entity."
+        specForPanel={beeswarmStepperSpec(2015)}
+        height={520}
+      >
+        <BeeswarmStepper />
+      </Demo>
     </Section>
 
     <Section

@@ -46,6 +46,22 @@ function cameraTransform(container: HTMLElement): string | null {
  */
 const MUTED_STROKE = '#bfc3c8';
 
+/** Keyed beeswarm spec with `count` dots; `shift` perturbs the values. */
+function beeswarmStorySpec(count: number, shift: number): ChartSpec {
+  return {
+    animation: { enter: false },
+    mark: 'beeswarm',
+    data: Array.from({ length: count }, (_, i) => ({
+      entity: `e${i}`,
+      value: ((i * 37 + shift) % 500) / 5,
+    })),
+    encoding: {
+      x: { field: 'value', type: 'quantitative' },
+      key: { field: 'entity', type: 'nominal' },
+    },
+  };
+}
+
 /** Count line-mark strokes painted the muted gray (i.e. non-highlighted series). */
 function mutedStrokeCount(container: HTMLElement): number {
   const paths = container.querySelectorAll('.oc-mark-line path');
@@ -197,6 +213,56 @@ describe('createChartStory', () => {
     // crossfade path. It must still land on a valid rendered chart.
     story.goTo(1);
     expect(container.querySelector('svg')).not.toBeNull();
+
+    story.destroy();
+  });
+
+  it('a keyed beeswarm step under the mark cap takes the morph path, not the crossfade', () => {
+    const story = createChartStory(container, {
+      spec: beeswarmStorySpec(40, 0),
+      steps: [{}, { spec: { data: beeswarmStorySpec(40, 7).data } }],
+    });
+
+    story.goTo(0);
+    story.goTo(1);
+    // The crossfade fallback clones the SVG as an absolutely-positioned ghost;
+    // the morph path never adds a second svg element.
+    expect(container.querySelectorAll('svg').length).toBe(1);
+
+    story.destroy();
+  });
+
+  it('a beeswarm step over the mark cap falls back to the crossfade instead of snapping', () => {
+    const story = createChartStory(container, {
+      spec: beeswarmStorySpec(600, 0),
+      steps: [{}, { spec: { data: beeswarmStorySpec(600, 7).data } }],
+    });
+
+    story.goTo(0);
+    story.goTo(1);
+    // 600 dots > DEFAULT_UPDATE_MAX_MARKS: the runtime gate would veto the
+    // morph after render() already swapped, so the story layer must predict
+    // the veto and keep the crossfade ghost.
+    const svgs = container.querySelectorAll('svg');
+    expect(svgs.length).toBe(2);
+    expect(svgs[0].getAttribute('aria-hidden')).toBe('true');
+
+    story.destroy();
+  });
+
+  it('animation.update.maxMarks re-enables the morph path for a large beeswarm', () => {
+    const bigSpec = {
+      ...beeswarmStorySpec(600, 0),
+      animation: { enter: false, update: { maxMarks: 2000 } },
+    } as ChartSpec;
+    const story = createChartStory(container, {
+      spec: bigSpec,
+      steps: [{}, { spec: { data: beeswarmStorySpec(600, 7).data } }],
+    });
+
+    story.goTo(0);
+    story.goTo(1);
+    expect(container.querySelectorAll('svg').length).toBe(1);
 
     story.destroy();
   });

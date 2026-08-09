@@ -450,6 +450,78 @@ describe('line chart: scrolly step patterns through update()', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Beeswarm step patterns
+// ---------------------------------------------------------------------------
+
+function beeswarmSpec(values: Record<string, number>): ChartSpec {
+  return {
+    animation: SCROLLY_ANIMATION,
+    mark: 'beeswarm',
+    data: Object.entries(values).map(([state, coverage]) => ({ state, coverage })),
+    encoding: {
+      x: { field: 'coverage', type: 'quantitative' },
+      key: { field: 'state', type: 'nominal' },
+    },
+  };
+}
+
+const SWARM_A = { TX: 91, CA: 96, FL: 90.5, NY: 97, WA: 93, OR: 88 };
+const SWARM_B = { TX: 88, CA: 95.5, FL: 89, NY: 96.8, WA: 90, OR: 85 };
+const { OR: _swarmDropped, ...SWARM_EXIT } = SWARM_B;
+
+/** Point circle geometry keyed by data-key. */
+function pointGeometry(svg: SVGElement): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const c of svg.querySelectorAll('circle.oc-mark-point[data-key]')) {
+    result.set(
+      c.getAttribute('data-key') as string,
+      [c.getAttribute('cx'), c.getAttribute('cy'), c.getAttribute('r')].join(','),
+    );
+  }
+  return result;
+}
+
+describe('beeswarm: scrolly step patterns through update()', () => {
+  it('keyed data-only change tweens dots and lands on the fresh render', () => {
+    const { chart, svg } = mountChart(beeswarmSpec(SWARM_A));
+    const before = pointGeometry(svg());
+
+    chart.update(beeswarmSpec(SWARM_B));
+    // A transition must actually be scheduled -- not the instant-swap path.
+    expect(rafCallbacks.size).toBeGreaterThan(0);
+
+    pumpRaf(0);
+    pumpRaf(250);
+    const mid = pointGeometry(svg());
+    const final = pointGeometry(freshRender(beeswarmSpec(SWARM_B)));
+    expect(mid).not.toEqual(before);
+    expect(mid).not.toEqual(final);
+
+    pumpRaf(5000);
+    expectGeometryMatches(pointGeometry(svg()), final);
+    expect(ghosts(svg())).toBe(0);
+
+    chart.destroy();
+  });
+
+  it('dot exit ghosts the removed state, then cleans it up', () => {
+    const { chart, svg } = mountChart(beeswarmSpec(SWARM_A));
+
+    chart.update(beeswarmSpec(SWARM_EXIT)); // OR exits
+    expect(ghosts(svg())).toBeGreaterThan(0);
+
+    runToCompletion();
+    expect(ghosts(svg())).toBe(0);
+    expectGeometryMatches(
+      pointGeometry(svg()),
+      pointGeometry(freshRender(beeswarmSpec(SWARM_EXIT))),
+    );
+
+    chart.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Annotation steps
 // ---------------------------------------------------------------------------
 

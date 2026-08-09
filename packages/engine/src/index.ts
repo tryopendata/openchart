@@ -116,6 +116,7 @@ export {
   normalizeSpec,
   validateSpec,
 } from './compiler/index';
+export { AUTO_CANVAS_THRESHOLD } from './compiler/mark-render-mode';
 
 // ---------------------------------------------------------------------------
 // Chart renderer plugin API

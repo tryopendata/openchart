@@ -15,6 +15,7 @@ import { renderChartSVG } from '../svg-renderer';
 import {
   CANVAS_DEFAULT_UPDATE_MAX_MARKS,
   canTransition,
+  canTransitionSpecShape,
   DEFAULT_UPDATE_MAX_MARKS,
   normalizePointArrays,
   runTransition,
@@ -2162,5 +2163,182 @@ describe('mark DOM index', () => {
         expect(el?.getAttribute(attr), `${sel} ${attr}`).toBe(freshEl?.getAttribute(attr));
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Beeswarm transitions
+// ---------------------------------------------------------------------------
+
+/** Build a keyed beeswarm spec (entrance off so update() can transition). */
+function beeswarmStep(values: Record<string, number>): ChartSpec {
+  return {
+    animation: { enter: false },
+    mark: 'beeswarm',
+    data: Object.entries(values).map(([state, coverage]) => ({ state, coverage })),
+    encoding: {
+      x: { field: 'coverage', type: 'quantitative' },
+      key: { field: 'state', type: 'nominal' },
+    },
+  };
+}
+
+const SWARM_A = { TX: 91, CA: 96, FL: 90.5, NY: 97, WA: 93, OR: 88, ID: 86.5, UT: 89 };
+const SWARM_B = { TX: 88, CA: 95.5, FL: 89, NY: 96.8, WA: 90, OR: 85, ID: 84, UT: 87 };
+
+describe('beeswarm transitions', () => {
+  it('canTransitionSpecShape passes for beeswarm and rejects a changed key field', () => {
+    const specA = beeswarmStep(SWARM_A);
+    const specB = beeswarmStep(SWARM_B);
+    expect(canTransitionSpecShape(specA, specB)).toBe(true);
+
+    const rekeyed: ChartSpec = {
+      ...specB,
+      encoding: { ...specB.encoding, key: { field: 'other', type: 'nominal' } },
+    };
+    expect(canTransitionSpecShape(specA, rekeyed)).toBe(false);
+  });
+
+  it('canTransitionSpecShape rejects a changed facet/row/column field', () => {
+    const specA = beeswarmStep(SWARM_A);
+    const specB = beeswarmStep(SWARM_B);
+    for (const channel of ['facet', 'row', 'column'] as const) {
+      const refaceted: ChartSpec = {
+        ...specB,
+        encoding: { ...specB.encoding, [channel]: { field: 'state' } },
+      };
+      expect(canTransitionSpecShape(specA, refaceted), channel).toBe(false);
+    }
+  });
+
+  it('canTransition passes end to end for a keyed beeswarm update', () => {
+    expect(canTransition(passingGateArgs(beeswarmStep(SWARM_A), beeswarmStep(SWARM_B)))).toBe(true);
+  });
+
+  it('a matched dot tweens from prev to next position on the value axis', () => {
+    const specA = beeswarmStep(SWARM_A);
+    const specB = beeswarmStep(SWARM_B);
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    // Render from layoutB as mount.ts does, then transition from layoutA.
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    const sampled = svg.querySelector('circle.oc-mark-point[data-key="TX"]') as SVGCircleElement;
+    expect(sampled).toBeTruthy();
+    const finalCx = sampled.getAttribute('cx');
+    const startCx = (
+      layoutA.marks.find((m) => m.type === 'point' && m.key === 'TX') as { cx: number }
+    ).cx;
+    // Guard the fixture: a dot that does not move proves nothing.
+    expect(Number(finalCx)).not.toBeCloseTo(startCx, 1);
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // t=0 rewinds to the from-state...
+    pumpRaf(0);
+    expect(Number(sampled.getAttribute('cx'))).toBeCloseTo(startCx, 1);
+
+    // ...mid-flight sits strictly between from and to...
+    pumpRaf(250);
+    const midCx = Number(sampled.getAttribute('cx'));
+    expect(midCx).not.toBeCloseTo(startCx, 1);
+    expect(midCx).not.toBeCloseTo(Number(finalCx), 1);
+
+    // ...and it lands exactly on the rendered geometry.
+    pumpRaf(2000);
+    expect(sampled.getAttribute('cx')).toBe(finalCx);
+  });
+
+  it('a matched dot never gets style.opacity written during the tween', () => {
+    const specA = beeswarmStep(SWARM_A);
+    const specB = beeswarmStep(SWARM_B);
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    const sampled = svg.querySelector('circle.oc-mark-point[data-key="TX"]') as SVGCircleElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    pumpRaf(0);
+    expect(sampled.style.opacity).toBe('');
+    pumpRaf(250);
+    expect(sampled.style.opacity).toBe('');
+    pumpRaf(2000);
+    expect(sampled.style.opacity).toBe('');
+  });
+
+  it('an exiting dot becomes a compliant ghost that is removed on completion', () => {
+    const specA = beeswarmStep(SWARM_A);
+    const { OR: _dropped, ...remaining } = SWARM_B;
+    const specB = beeswarmStep(remaining);
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // Ghosts are added before the first rAF.
+    const ghosts = svg.querySelectorAll('circle.oc-ghost');
+    expect(ghosts.length).toBe(1);
+    const ghost = ghosts[0] as SVGCircleElement;
+    expect(ghost.getAttribute('aria-hidden')).toBe('true');
+    expect(ghost.getAttribute('pointer-events')).toBe('none');
+    expect(ghost.hasAttribute('data-key')).toBe(false);
+
+    pumpRaf(0);
+    pumpRaf(250);
+    expect(Number(ghost.style.opacity)).toBeLessThan(1);
+
+    pumpRaf(2000);
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+  });
+
+  it('an entering dot fades in from opacity 0', () => {
+    const specA = beeswarmStep(SWARM_A);
+    const specB = beeswarmStep({ ...SWARM_B, NM: 92 });
+    const layoutA = compile(specA);
+    const layoutB = compile(specB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    const entering = svg.querySelector('circle.oc-mark-point[data-key="NM"]') as SVGCircleElement;
+    expect(entering).toBeTruthy();
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // The synchronous from-state applies before the first rAF.
+    expect(entering.style.opacity).toBe('0');
+
+    runToCompletion();
+    expect(entering.style.opacity).not.toBe('0');
   });
 });

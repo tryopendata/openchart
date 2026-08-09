@@ -728,18 +728,24 @@ still has ~3,600 departing marks to animate.
 
 When `animation.update` is enabled and `.update(newSpec)` is called, the chart animates marks from their previous positions to the new layout instead of doing an instant swap. The engine matches marks across layouts using keys derived from data values.
 
-**Supported mark types:** bar, line, area, point (scatter/dot).
+**Supported mark types:** bar, line, area, point (scatter/dot), beeswarm.
 
 **What transitions:**
 - Rect marks (bars/columns): position + size tween
 - Line/area marks: point-matched path morphing with enter/exit interpolation
 - Point marks (scatter): cx/cy/r tween
+- Beeswarm dots: same cx/cy/r tween as scatter. Set `encoding.key` to a stable
+  entity field (state, country) so each dot tracks its entity across updates.
+  Without it the fallback identity is `lane|value`, which changes whenever the
+  value does — duplicate values re-pair by row order and dots shuffle within the
+  swarm instead of tracking. Keyed transitions are not supported on faceted
+  beeswarms (panel marks share un-namespaced keys, matching scatter).
 - Axis ticks and gridlines: position slide for updated, fade for enter/exit
 - Annotations, endpoint labels, mark labels: delayed crossfade (40% delay, 60% fade-in)
 
 **Fallback to instant swap** when any of these conditions is true:
 - Mark type changes between updates
-- Encoding fields change (x/y/color field names)
+- Encoding fields change (x/y/color/key/facet field names)
 - Dimensions change (container resized)
 - Mark count exceeds `animation.update.maxMarks` (default 500). The cap exists
   because per-frame SVG attribute writes on thousands of elements drop frames on

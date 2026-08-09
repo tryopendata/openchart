@@ -205,6 +205,42 @@ describe('beeswarm compile', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it('encoding.key keys are stable across layouts when values change', () => {
+    // The property data-update transitions depend on: with an explicit
+    // encoding.key, a dot's key must survive a value change so the transition
+    // pairs it as a move, not exit+enter. (The lane|value fallback key does
+    // not have this property; see plans/completed docs.)
+    const keyedSpec = (shift: number) => ({
+      mark: 'beeswarm' as const,
+      data: makeRows(60).map((row, i) => ({
+        ...row,
+        entity: `e${i}`,
+        income: (row.income as number) + shift,
+      })),
+      encoding: {
+        x: { field: 'income', type: 'quantitative' as const },
+        y: { field: 'region', type: 'nominal' as const },
+        key: { field: 'entity', type: 'nominal' as const },
+      },
+    });
+
+    const layoutA = compileChart(keyedSpec(0), OPTIONS);
+    const layoutB = compileChart(keyedSpec(17), OPTIONS);
+
+    const keyByEntity = (layout: ReturnType<typeof compileChart>) =>
+      new Map(pointMarks(layout).map((m) => [(m.data as { entity: string }).entity, m.key]));
+
+    const keysA = keyByEntity(layoutA);
+    const keysB = keyByEntity(layoutB);
+    expect(keysA.size).toBe(60);
+    expect(keysB.size).toBe(60);
+    for (const [entity, key] of keysA) {
+      // Same entity, same key, no dedupe-suffix drift.
+      expect(keysB.get(entity)).toBe(key);
+      expect(key).toBe(entity);
+    }
+  });
+
   it('produces tooltips and a11y coverage for every dot', () => {
     const layout = compileChart(groupedSpec(40), OPTIONS);
     const marks = pointMarks(layout);

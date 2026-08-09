@@ -7,7 +7,7 @@ import { keyAnnotations } from './keys';
 // ---------------------------------------------------------------------------
 
 /** Mark types that support data-update transitions. */
-export const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point']);
+export const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point', 'beeswarm']);
 
 /**
  * Default cap on the mark count that still runs a tweened data-update
@@ -57,7 +57,11 @@ export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): bo
     prevEnc.x?.type !== nextEnc.x?.type ||
     prevEnc.y?.field !== nextEnc.y?.field ||
     prevEnc.y?.type !== nextEnc.y?.type ||
-    prevEnc.color?.field !== nextEnc.color?.field
+    prevEnc.color?.field !== nextEnc.color?.field ||
+    prevEnc.key?.field !== nextEnc.key?.field ||
+    prevEnc.facet?.field !== nextEnc.facet?.field ||
+    prevEnc.row?.field !== nextEnc.row?.field ||
+    prevEnc.column?.field !== nextEnc.column?.field
   );
 }
 

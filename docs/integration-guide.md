@@ -430,12 +430,13 @@ Scrollytelling steps are just spec patches: hold a base spec, patch `data` / `en
 - Series or category add/remove — entering marks fade in, exiting marks fade out as ghosts
 - Highlight changes (`encoding.color.highlight`) — strokes fade to the muted color
 - Annotation add (fades in) and move (slides to the new position)
+- Beeswarm steps — set `encoding.key` to a stable entity field (state, country) so each dot tracks its entity as values change. Without a key, the fallback `lane|value` identity changes whenever a value does and dots shuffle within the swarm instead of tracking.
 
 **Snaps instead** (instant swap, no transition):
 
 - Mark type or encoding field/type changes — structurally different specs tear down and rebuild; there is no spec-to-spec crossfade
 - Removed annotations — they disappear immediately (no exit fade)
-- Container dimension changes, `display: "sparkline"`, or more than 500 marks
+- Container dimension changes, `display: "sparkline"`, or more than 500 marks — a >500-dot beeswarm or scatter needs `animation: { update: { maxMarks } }` to tween on `update()`; `createChartStory` steps over the cap fall back to a whole-chart crossfade instead of snapping
 - `prefers-reduced-motion` — every step snaps to its final state; no configuration needed
 - Updates during the entrance animation window (see below)
 

@@ -16,9 +16,14 @@
 
 import type { DataRow, GeoMapSpec } from '@opendata-ai/openchart-core';
 import { deepMergeSpec, isGeoMapSpec } from '@opendata-ai/openchart-core';
+import { AUTO_CANVAS_THRESHOLD } from '@opendata-ai/openchart-engine';
 import { createGeoMap, type GeoMapInstance, type GeoMapMountOptions } from '../map-mount';
 import { type ChartInstance, createChart, type MountOptions } from '../mount';
-import { canTransitionSpecShape } from '../transition';
+import {
+  CANVAS_DEFAULT_UPDATE_MAX_MARKS,
+  canTransitionSpecShape,
+  DEFAULT_UPDATE_MAX_MARKS,
+} from '../transition';
 import {
   type Camera,
   camerasClose,
@@ -75,6 +80,46 @@ function resolveSpecAtStep(base: StorySpec, steps: StoryStep[], index: number): 
     spec = deepMergeSpec(spec, stepToPatch(steps[i]!));
   }
   return spec;
+}
+
+/**
+ * Predict whether a morphing update would clear the runtime mark cap
+ * (`canTransition` check 8). The runtime veto fires after `render()` has
+ * already swapped, so a step that predicts "morph" but exceeds the cap lands
+ * as a hard snap; predicting it here keeps the crossfade fallback instead.
+ *
+ * Data rows ≈ marks only for point and beeswarm specs, so the estimate is
+ * scoped to those marks. Point marks auto-promote to canvas above
+ * AUTO_CANVAS_THRESHOLD (where the cap is CANVAS_DEFAULT_UPDATE_MAX_MARKS)
+ * unless the host forces `renderer: 'svg'`; beeswarm never renders on canvas.
+ */
+function morphWithinMarkCap(
+  prevSpec: StorySpec,
+  nextSpec: StorySpec,
+  renderer: 'auto' | 'svg' | 'canvas',
+): boolean {
+  const mark = (nextSpec as { mark?: string | { type?: string } }).mark;
+  const markType = typeof mark === 'string' ? mark : mark?.type;
+  if (markType !== 'point' && markType !== 'beeswarm') return true;
+
+  const rowCount = (s: StorySpec): number => {
+    const data = (s as { data?: unknown }).data;
+    return Array.isArray(data) ? data.length : 0;
+  };
+  const count = Math.max(rowCount(prevSpec), rowCount(nextSpec));
+
+  const animation = (nextSpec as { animation?: unknown }).animation;
+  const maxMarks =
+    typeof animation === 'object' && animation !== null
+      ? (animation as { update?: { maxMarks?: number } }).update?.maxMarks
+      : undefined;
+
+  const canvas =
+    markType === 'point' &&
+    renderer !== 'svg' &&
+    (renderer === 'canvas' || rowCount(nextSpec) > AUTO_CANVAS_THRESHOLD);
+  const cap = maxMarks ?? (canvas ? CANVAS_DEFAULT_UPDATE_MAX_MARKS : DEFAULT_UPDATE_MAX_MARKS);
+  return count <= cap;
 }
 
 /**
@@ -293,7 +338,8 @@ export function createChartStory<TData extends DataRow = DataRow>(
       !isFirst &&
       !editModeRequested &&
       prevSpec !== null &&
-      canTransitionSpecShape(prevSpec, nextSpec);
+      canTransitionSpecShape(prevSpec, nextSpec) &&
+      morphWithinMarkCap(prevSpec, nextSpec, mountOptions?.renderer ?? 'auto');
 
     const applyUpdate = () =>
       (instance as ChartInstance).update(nextSpec as Exclude<StorySpec, GeoMapSpec>);

@@ -23,6 +23,7 @@ export const page: PageEntry = {
     { id: 'dumbbell', title: 'Dumbbell (two-series recipe)' },
     { id: 'strip-plot', title: 'Tick / strip plot' },
     { id: 'beeswarm', title: 'Beeswarm' },
+    { id: 'beeswarm-stepper', title: 'Stepping beeswarm (keyed update)' },
     { id: 'calendar-heatmap', title: 'Calendar heatmap' },
     { id: 'rect-heatmap', title: 'Rect heatmap' },
     { id: 'range-dumbbell', title: 'Dumbbell (range mark)' },
