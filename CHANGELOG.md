@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- **graph!:** `highlight()` now layers over the sticky category filter instead of replacing it. In v8.0 the two shared one slot and the last writer won, so hovering a custom legend row threw away the filter the reader had just clicked. The effective emphasis is now the intersection of filter and highlight, except that a highlight disjoint from the filter previews on its own and a highlight matching no nodes is a no-op layer. Two consequences: `clearHighlight()` releases only the transient highlight and returns to the filtered view (clearing the filter is `setActiveCategories([])`), and `onHighlightChange` reports the effective set, so it can fire with an array where it previously fired `null`. Legend `active` flags now track the filter alone. See [migration guide](docs/migrating-v8.md#24-graph-highlight-layers-over-the-category-filter-81).
+
+### Features
+
+- **graph:** `seedNode` on `GraphSpec` — name the graph's seed/root node (`seedNode: 'id'`, or `{ id, style }`) and it gets a ring in the theme text color, a 2px stroke, and an always-on label, plus exemption from focus dimming (highlight, legend filter, hover, and selection; search still dims it). Only the seed is exempt; its neighbors dim normally, so a hub seed doesn't light half the graph. Radius stays with the `nodeSize` encoding unless `style.radius` is set. `style` layers under any `nodeOverrides` entry for the same id, and an id matching no node warns rather than throwing. Unrelated to `layout.seed`.
+- **graph:** `legend: false` set on the spec (rather than as a mount option) now actually suppresses the built-in legend. The field was typed and documented but only the mount option was read, so a spec-only host got two legends. The mount option still wins when both are set.
+- **graph:** `onWarn` mount option routes compiler advisories (unknown `seedNode` id, deprecations) somewhere other than `console.warn`. Each distinct message is emitted at most once per instance, so a standing warning doesn't repeat on every `update()`.
+
+## [8.0.0] - 2026-07-25
+
 ### Breaking Changes
 
 - **validate!:** point-mark sizes above 50 now fail validation. Openchart point sizes are radii in px (`mark.size` default 5; `encoding.size` range default [3, 30]), but Vega-Lite defines point `size` as an area in px², so VL-habit values (60-900) rendered as chart-swallowing discs and were, in practice, always a units mistake. The error carries the conversion (r = sqrt(area/pi), e.g. VL 110 → `size: 6`) on `mark.size`, `encoding.size.value`, and `encoding.size.scale.range`. Intentional radii up to 50 stay valid; `MarkDef.size` and the `size` channel docs now state the units per mark type.

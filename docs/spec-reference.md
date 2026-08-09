@@ -1138,6 +1138,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 | `encoding`       | `GraphEncoding`                  | `undefined` | Visual property mappings for nodes/edges.                                             |
 | `layout`         | `GraphLayoutConfig`              | `undefined` | Layout algorithm configuration.                                                       |
 | `nodeOverrides`  | `Record<string, NodeOverride>`   | `undefined` | Per-node visual overrides keyed by node id. See [NodeOverride](#nodeoverride).        |
+| `seedNode`       | `string \| { id, style? }`       | `undefined` | The graph's seed/root node: gets a ring and an always-on label, and stays lit when a category highlight or filter dims the rest. `style` is a `NodeOverride` that layers under any `nodeOverrides` entry for the same id. An unknown id warns and is ignored. Unrelated to `layout.seed`. |
 | `chrome`         | `Chrome`                         | `undefined` | Editorial text.                                                                       |
 | `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
 | `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
@@ -1152,10 +1153,12 @@ Each channel is a `GraphEncodingChannel` with `field`, optional `type`, and opti
 | ----------- | ------------------------------ | ---------------------------------------- |
 | `nodeColor` | nominal, ordinal, quantitative | Color mapping for nodes.                 |
 | `nodeSize`  | quantitative                   | Size mapping for nodes (3-12px radius).  |
+| `nodeOpacity` | quantitative                 | Fill opacity for nodes (0.25-1).         |
 | `edgeColor` | nominal, ordinal, quantitative | Color mapping for edges.                 |
 | `edgeWidth` | quantitative                   | Width mapping for edges (0.5-4px).       |
 | `edgeStyle` | nominal, ordinal               | Line style mapping (solid/dashed/dotted).|
 | `nodeLabel` | any                            | Label field for nodes.                   |
+| `nodeLabelPriority` | quantitative           | Which labels survive thinning (0-1). Defaults to node degree when unset; `nodeOverrides[id].alwaysShowLabel` still hard-pins above it. |
 
 When `nodeColor` encoding is set, it takes precedence over community-based coloring from `layout.clustering`. Community assignment still affects spatial grouping, but colors are driven by the encoding.
 

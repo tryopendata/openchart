@@ -861,16 +861,18 @@ this release genuinely lets you remove — stated honestly, no overselling:
   `nodeSize: { scale: { type: 'linear' }, range: [minR, maxR] }` instead of a
   post-compile mutation.
 
-What legitimately REMAINS on `nodeOverrides` (this is fine, not a gap):
+Two things that used to remain on `nodeOverrides` have since moved onto the spec
+and can come off it:
 
-- **Seed-node styling** — the styling applied to the seed/root node of a graph.
-- **The `alwaysShowLabel` importance threshold** — there is no label-visibility
-  encoding channel, so pinning "always label this node" stays an override.
+- **Seed-node styling** (8.1, see section 24) — use `seedNode: 'id'` (or
+  `{ id, style }`). It also stays lit under a category highlight, which the old
+  override could not do.
+- **The `alwaysShowLabel` importance threshold** (8.0) — use the
+  `nodeLabelPriority` encoding channel to label by importance instead of by
+  degree. `alwaysShowLabel` stays available for pinning one specific node.
 
-One escape hatch to know: `highlight({ category })` dims everything outside the
-category, and it can't exempt the seed node. If you need the seed (or any fixed
-node) to stay lit alongside a category, use the `{ nodeIds }` form and include
-the seed id yourself.
+`nodeOverrides` remains the right tool for genuinely one-off, host-computed
+styling that no channel expresses.
 
 **Mount failures now throw.** `createGraph()` used to catch compile/mount
 errors and return an inert no-op instance; a bad spec produced an empty
@@ -1074,6 +1076,65 @@ import type { MapSpec } from '@opendata-ai/openchart-core';
 import { createGeoMap, type GeoMapInstance } from '@opendata-ai/openchart-vanilla';
 import type { GeoMapSpec } from '@opendata-ai/openchart-core';
 ```
+
+---
+
+## 24. Graph `highlight()` layers over the category filter (8.1)
+
+Scope note: unlike the rest of this guide, this section is an 8.0 → 8.1 change.
+It applies only if you already adopted 8.0's graph highlight API. Coming from
+v7, or adopting the graph API fresh on 8.1, you get the layered behavior
+described here from the start and can skip to the last paragraph.
+
+In 8.0 the graph had one emphasis slot with two writers, and whichever wrote
+last won: calling `highlight()` cleared the sticky category filter set by
+`setActiveCategories()` or a legend toggle. That made a custom host legend
+unworkable, because hovering a row to preview a category threw away the filter
+the reader had just clicked.
+
+As of 8.1 the two are separate layers. `highlight()` is transient and composes
+over the sticky filter instead of replacing it; the effective emphasis is their
+intersection, except that a highlight disjoint from the filter previews on its
+own rather than lighting nothing.
+
+Two behavior changes to check if you drive the graph imperatively:
+
+**`clearHighlight()` no longer clears the category filter.** It releases only
+the transient highlight and returns to the filtered view. If you were calling it
+to reset everything, call `setActiveCategories([])` as well:
+
+```js
+// 8.0: cleared both
+graph.clearHighlight();
+
+// 8.1: clear both explicitly
+graph.clearHighlight();
+graph.setActiveCategories([]);
+```
+
+**`onHighlightChange` reports the effective set, so it can fire with an array
+where it used to fire `null`.** After `clearHighlight()` with a filter standing,
+the callback now emits that filter's node ids rather than `null`. `null` still
+means nothing is emphasized, but a non-null array no longer means *you*
+emphasized something — it may be the filter's doing. Code that treated any array
+as a programmatic highlight should ask which layer produced it:
+
+```js
+onHighlightChange: (ids) => {
+  const fromFilter = graph.getActiveCategories().length > 0;
+  // ids === null  -> nothing emphasized
+  // ids && fromFilter -> the standing category filter (possibly narrowed by a hover)
+  // ids && !fromFilter -> your highlight() call alone
+};
+```
+
+Legend `active` flags are unaffected by `highlight()` now — they track the
+filter alone.
+
+Also in 8.1, and purely additive: `seedNode` on `GraphSpec` — a ring, an
+always-on label, and exemption from focus dimming, replacing a hand-written
+`nodeOverrides` entry. See section 18's `nodeOverrides` note and
+[docs/graphs.md](graphs.md).
 
 ---
 

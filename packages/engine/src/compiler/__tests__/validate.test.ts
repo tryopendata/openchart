@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { compile } from '../index';
 import { validateSpec } from '../validate';
 
 // ---------------------------------------------------------------------------
@@ -526,6 +527,44 @@ describe('validateSpec', () => {
       expect(edgeError).toBeDefined();
       expect(edgeError!.code).toBe('MISSING_FIELD');
       expect(edgeError!.suggestion).toContain('edges');
+    });
+
+    it('rejects a seedNode that is neither a string nor an object', () => {
+      const result = validateSpec({
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        seedNode: 42,
+      });
+      expect(result.valid).toBe(false);
+      const seedError = result.errors.find((e) => e.path === 'seedNode');
+      expect(seedError).toBeDefined();
+      expect(seedError!.code).toBe('INVALID_TYPE');
+    });
+
+    it('rejects the seedNode object form without a non-empty string id', () => {
+      const result = validateSpec({
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        seedNode: { style: { radius: 10 } },
+      });
+      expect(result.valid).toBe(false);
+      const seedError = result.errors.find((e) => e.path === 'seedNode.id');
+      expect(seedError).toBeDefined();
+      expect(seedError!.code).toBe('MISSING_FIELD');
+    });
+
+    it('accepts a seedNode id that matches no node (it warns at normalize time, never throws)', () => {
+      const spec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        seedNode: 'ghost',
+      };
+      expect(validateSpec(spec).valid).toBe(true);
+      expect(() => compile(spec)).not.toThrow();
+      expect(compile(spec).warnings.some((w) => w.includes('seedNode "ghost"'))).toBe(true);
     });
   });
 

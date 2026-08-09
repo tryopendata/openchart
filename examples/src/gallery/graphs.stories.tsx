@@ -14,7 +14,7 @@
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { Graph, useGraph } from '@opendata-ai/openchart-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import { generateRandomGraph, generateScaleFreeGraph } from '../graphs/helpers';
 
@@ -616,6 +616,132 @@ function LegendGraph() {
 }
 
 // ---------------------------------------------------------------------------
+// 10b. Host-driven legend — the sidebar owns the UI, openchart owns the focus
+// ---------------------------------------------------------------------------
+
+/**
+ * `legend: false` turns the built-in legend off; `getLegend()` hands the same
+ * resolved model to a custom sidebar. Clicks set the sticky filter, hovers
+ * layer a transient highlight over it, and `seedNode` stays lit through both.
+ */
+const hostLegendSpec: GraphSpec = {
+  ...generateRandomGraph(70, 1.5, 4),
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, seed: 7 },
+  legend: false,
+  seedNode: 'n0',
+  chrome: {
+    title: 'Your Legend, Our Focus Model',
+    subtitle: 'Click to filter, hover to preview inside the filter; the seed node stays lit',
+    source: ILLUSTRATIVE,
+  },
+};
+
+function HostLegendGraph() {
+  const { ref, getLegend, setActiveCategories, getActiveCategories, highlight, clearHighlight } =
+    useGraph();
+  const [rows, setRows] = useState<Array<{ label: string; color: string; count?: number }>>([]);
+  const [active, setActive] = useState<string[]>([]);
+
+  // The legend model is only resolvable after the graph mounts, so poll frames
+  // until it resolves rather than guessing at one. A single rAF would leave the
+  // sidebar permanently empty if the graph wasn't mounted by that frame.
+  useEffect(() => {
+    let frame = 0;
+    let id = 0;
+    const read = () => {
+      const legend = getLegend();
+      if (legend) {
+        setRows(legend.nodes);
+        return;
+      }
+      if (++frame < 60) id = requestAnimationFrame(read);
+    };
+    id = requestAnimationFrame(read);
+    return () => cancelAnimationFrame(id);
+  }, [getLegend]);
+
+  const toggle = (label: string) => {
+    const current = getActiveCategories();
+    const next = current.includes(label) ? current.filter((v) => v !== label) : [...current, label];
+    setActiveCategories(next);
+    setActive(next);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-3)', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, height: 460 }}>
+          <Graph ref={ref} spec={hostLegendSpec} />
+        </div>
+        <div
+          style={{
+            width: 200,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--gx-space-1)',
+            padding: 'var(--gx-space-3)',
+            border: '1px solid var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface-raised)',
+          }}
+        >
+          {rows.map((row) => (
+            <button
+              key={row.label}
+              type="button"
+              onClick={() => toggle(row.label)}
+              onMouseEnter={() => highlight({ category: { field: 'community', value: row.label } })}
+              onMouseLeave={() => clearHighlight()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--gx-space-2)',
+                padding: 'var(--gx-space-1) var(--gx-space-2)',
+                border: 'none',
+                borderRadius: 'var(--gx-radius-control)',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 'var(--gx-type-caption)',
+                color: 'var(--gx-text)',
+                textAlign: 'left',
+                opacity: active.length === 0 || active.includes(row.label) ? 1 : 0.45,
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: row.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ flex: 1 }}>{row.label}</span>
+              <span style={{ color: 'var(--gx-text-muted)' }}>{row.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div
+        style={{
+          padding: 'var(--gx-space-3) var(--gx-space-4)',
+          border: '1px solid var(--gx-border)',
+          borderRadius: 'var(--gx-radius-control)',
+          background: 'var(--gx-surface-raised)',
+          fontSize: 'var(--gx-type-caption)',
+          color: 'var(--gx-text-muted)',
+          fontFamily:
+            'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        }}
+      >
+        filter: {active.length ? active.join(', ') : '(all)'} · seed: n0
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 11. Highlight API — programmatic emphasis via useGraph()
 // ---------------------------------------------------------------------------
 
@@ -625,7 +751,7 @@ const highlightSpec: GraphSpec = {
   layout: { type: 'force', clustering: { field: 'community' }, seed: 3 },
   chrome: {
     title: 'Emphasize a Set Without Recompiling',
-    subtitle: 'highlight() eases a focus crossfade; clearHighlight() releases it',
+    subtitle: 'highlight() eases a focus crossfade; clearHighlight() drops it',
     source: ILLUSTRATIVE,
   },
 };
@@ -900,9 +1026,18 @@ export const Graphs = () => (
         <LegendGraph />
       </Demo>
       <Demo
+        id="host-legend"
+        title="Host-driven legend + seed node"
+        description="legend: false hands the legend model to your own sidebar via getLegend(). Clicks set the sticky filter with setActiveCategories(); hovers layer a transient highlight() inside it, and releasing returns to the filtered view. seedNode: 'n0' stays lit through both while its neighbors dim."
+        specForPanel={hostLegendSpec}
+        height={560}
+      >
+        <HostLegendGraph />
+      </Demo>
+      <Demo
         id="highlight"
         title="Highlight API"
-        description="highlight() eases a focus crossfade over a category or a node's neighborhood — no recompile. clearHighlight() releases it."
+        description="highlight() eases a focus crossfade over a category or a node's neighborhood — no recompile. It layers over any standing category filter; clearHighlight() drops the transient layer and returns to that filter."
         specForPanel={highlightSpec}
         height={560}
       >

@@ -1182,6 +1182,47 @@ function validateGraphSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
+  // Validate seedNode shape. An id that doesn't resolve is NOT an error: it
+  // warns and no-ops in normalizeGraphSpec. Validation errors throw and
+  // createGraph re-throws, so in React an unknown id would hit an error
+  // boundary — and seedNode is typically a host config constant that a filtered
+  // or paginated node update can legitimately drop out of the node array, which
+  // would make an app crash on a data change. Edge source/target do error,
+  // because a dangling edge has no sensible rendering.
+  if (spec.seedNode !== undefined) {
+    if (typeof spec.seedNode === 'string') {
+      if (spec.seedNode === '') {
+        errors.push({
+          message: 'Spec error: "seedNode" must be a non-empty node id',
+          path: 'seedNode',
+          code: 'MISSING_FIELD',
+          suggestion: `Use one of the existing node ids, e.g. seedNode: "${[...nodeIds][0] ?? 'a'}"`,
+        });
+      }
+    } else if (
+      typeof spec.seedNode !== 'object' ||
+      spec.seedNode === null ||
+      Array.isArray(spec.seedNode)
+    ) {
+      errors.push({
+        message: `Spec error: "seedNode" must be a node id string or an object like { id, style }, got ${Array.isArray(spec.seedNode) ? 'array' : typeof spec.seedNode}`,
+        path: 'seedNode',
+        code: 'INVALID_TYPE',
+        suggestion: `Use the id shorthand (seedNode: "${[...nodeIds][0] ?? 'a'}") or the object form (seedNode: { id: "${[...nodeIds][0] ?? 'a'}", style: { radius: 14 } })`,
+      });
+    } else {
+      const seedId = (spec.seedNode as Record<string, unknown>).id;
+      if (typeof seedId !== 'string' || seedId === '') {
+        errors.push({
+          message: 'Spec error: "seedNode" must have a non-empty string "id" field',
+          path: 'seedNode.id',
+          code: 'MISSING_FIELD',
+          suggestion: `Add the seed node id, e.g. seedNode: { id: "${[...nodeIds][0] ?? 'a'}" }`,
+        });
+      }
+    }
+  }
+
   // Validate edges array exists
   if (!Array.isArray(spec.edges)) {
     errors.push({

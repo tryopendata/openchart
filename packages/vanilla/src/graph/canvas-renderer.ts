@@ -46,9 +46,29 @@ function edgeTier(edge: PositionedEdge, focus: FocusSnapshot): FocusTier {
     : 'dimmed';
 }
 
-/** Classify a node under a focus snapshot into its emphasis tier. */
-function nodeTier(node: PositionedNode, focus: FocusSnapshot): FocusTier {
+/**
+ * Classify a node under a focus snapshot into its emphasis tier.
+ *
+ * Ids in `exemptIds` (the graph's seed node) never dim: they classify as
+ * `connected` under any focus state — highlight, category filter, hover, or
+ * selection. (Search dimming is a separate alpha multiplier keyed off
+ * `searchMatches` and is deliberately not exempted: a seed that doesn't match
+ * the query shouldn't pretend to.) The exemption lives here rather than in the highlight set on
+ * purpose -- `composeStandingFocus` expands the core set to
+ * `core ∪ neighbors(core)`, and a seed is by construction a hub, so unioning it
+ * into the highlight would light most of the graph and defeat the category
+ * filter. `edgeTier` is deliberately NOT exempted: the seed stays lit while its
+ * edges dim with everything else, which is exactly "lit without lighting its
+ * neighborhood". Exempt nodes land in the existing connected-alpha bucket, so
+ * the node fill/stroke batching keys are unaffected.
+ */
+function nodeTier(
+  node: PositionedNode,
+  focus: FocusSnapshot,
+  exemptIds: Set<string> | undefined,
+): FocusTier {
   if (!focus.hasActive) return 'default';
+  if (exemptIds?.has(node.id)) return 'connected';
   return focus.connected.has(node.id) ? 'connected' : 'dimmed';
 }
 
@@ -373,6 +393,7 @@ export class GraphCanvasRenderer {
       minRadius,
       nextFocus,
       dimOpacity,
+      state.exemptIds,
       crossfade,
       state.hoverRadiusScale,
       entrance,
@@ -663,6 +684,7 @@ export class GraphCanvasRenderer {
     minRadius: number,
     nextFocus: FocusSnapshot,
     dimOpacity: number,
+    exemptIds: Set<string> | undefined,
     crossfade: { t: number; prev: FocusSnapshot; next: FocusSnapshot } | null,
     hoverRadiusScale: Map<string, number> | undefined,
     entrance: EntranceReveal | null,
@@ -675,12 +697,12 @@ export class GraphCanvasRenderer {
     const focusAlpha = (node: PositionedNode): number => {
       if (crossfade) {
         return lerp(
-          nodeTierAlpha(nodeTier(node, crossfade.prev), dimOpacity),
-          nodeTierAlpha(nodeTier(node, crossfade.next), dimOpacity),
+          nodeTierAlpha(nodeTier(node, crossfade.prev, exemptIds), dimOpacity),
+          nodeTierAlpha(nodeTier(node, crossfade.next, exemptIds), dimOpacity),
           crossfade.t,
         );
       }
-      return nodeTierAlpha(nodeTier(node, nextFocus), dimOpacity);
+      return nodeTierAlpha(nodeTier(node, nextFocus, exemptIds), dimOpacity);
     };
     const searchAlpha = (node: PositionedNode): number =>
       searchMatches !== null && !searchMatches.has(node.id) ? SEARCH_NON_MATCH_ALPHA : 1;

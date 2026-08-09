@@ -373,6 +373,99 @@ describe('compileGraph', () => {
     });
   });
 
+  describe('seedNode', () => {
+    it('gives the seed a ring and an always-on label', () => {
+      const result = compileGraph({ ...makeBasicGraphSpec(), seedNode: 'a' }, compileOptions);
+
+      const seed = result.nodes.find((n) => n.id === 'a')!;
+      expect(seed.stroke).toBe(result.theme.colors.text);
+      expect(seed.strokeWidth).toBe(2);
+      expect(seed.labelPriority).toBe(Number.POSITIVE_INFINITY);
+
+      const other = result.nodes.find((n) => n.id === 'b')!;
+      expect(other.strokeWidth).not.toBe(2);
+      expect(other.labelPriority).not.toBe(Number.POSITIVE_INFINITY);
+    });
+
+    it('does not force a radius, so nodeSize still wins', () => {
+      const withSeed = compileGraph({ ...makeEncodedGraphSpec(), seedNode: 'a' }, compileOptions);
+      const withoutSeed = compileGraph(makeEncodedGraphSpec(), compileOptions);
+
+      expect(withSeed.nodes.find((n) => n.id === 'a')!.radius).toBe(
+        withoutSeed.nodes.find((n) => n.id === 'a')!.radius,
+      );
+    });
+
+    it('applies seedNode.style over the seed defaults', () => {
+      const result = compileGraph(
+        { ...makeBasicGraphSpec(), seedNode: { id: 'a', style: { radius: 20, stroke: '#f00' } } },
+        compileOptions,
+      );
+
+      const seed = result.nodes.find((n) => n.id === 'a')!;
+      expect(seed.radius).toBe(20);
+      expect(seed.stroke).toBe('#f00');
+      // Untouched by style, so the seed default stands.
+      expect(seed.strokeWidth).toBe(2);
+    });
+
+    it('lets an explicit nodeOverrides entry beat seedNode.style', () => {
+      const result = compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          seedNode: { id: 'a', style: { stroke: '#f00', strokeWidth: 8 } },
+          nodeOverrides: { a: { stroke: '#0f0' } },
+        },
+        compileOptions,
+      );
+
+      const seed = result.nodes.find((n) => n.id === 'a')!;
+      expect(seed.stroke).toBe('#0f0');
+      // Not present on the override, so seedNode.style still applies.
+      expect(seed.strokeWidth).toBe(8);
+    });
+
+    it('does not let an explicit undefined in nodeOverrides clobber a seed default', () => {
+      const result = compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          seedNode: 'a',
+          nodeOverrides: { a: { alwaysShowLabel: undefined, stroke: undefined } },
+        },
+        compileOptions,
+      );
+
+      const seed = result.nodes.find((n) => n.id === 'a')!;
+      expect(seed.labelPriority).toBe(Number.POSITIVE_INFINITY);
+      expect(seed.stroke).toBe(result.theme.colors.text);
+    });
+
+    it('publishes seedNodeIds', () => {
+      expect(compileGraph(makeBasicGraphSpec(), compileOptions).seedNodeIds).toEqual([]);
+      expect(
+        compileGraph({ ...makeBasicGraphSpec(), seedNode: 'a' }, compileOptions).seedNodeIds,
+      ).toEqual(['a']);
+      expect(
+        compileGraph({ ...makeBasicGraphSpec(), seedNode: { id: 'c' } }, compileOptions)
+          .seedNodeIds,
+      ).toEqual(['c']);
+    });
+
+    it('warns and no-ops for an unknown seed id instead of throwing', () => {
+      const warnings: string[] = [];
+      const result = compileGraph(
+        { ...makeBasicGraphSpec(), seedNode: 'nope' },
+        {
+          ...compileOptions,
+          onWarn: (m: string) => warnings.push(m),
+        },
+      );
+
+      expect(result.seedNodeIds).toEqual([]);
+      expect(warnings.some((w) => w.includes('seedNode "nope"'))).toBe(true);
+    });
+  });
+
   describe('error handling', () => {
     it('throws for non-graph specs', () => {
       const chartSpec = {

@@ -43,6 +43,25 @@ export interface GraphRenderState {
   adjacencyMap: Map<string, Set<string>>;
   theme: ResolvedTheme;
   searchMatches: Set<string> | null;
+  /**
+   * Node ids that never dim under a highlight/filter -- currently just the
+   * graph's `seedNode`. Constant per compilation, which is why it lives here
+   * and not on `FocusSnapshot` (no change to focusSnapshotsEqual /
+   * emptyFocusSnapshot / deriveFocus).
+   *
+   * The seed is deliberately NOT unioned into the highlight set:
+   * `composeStandingFocus` expands the core set to `core ∪ neighbors(core)`,
+   * and a seed node is by construction a hub, so unioning it there would light
+   * most of the graph and silently defeat the category filter. Exempting at the
+   * dim-tier decision keeps the seed lit without lighting its neighborhood.
+   *
+   * Scope: every focus-driven dim -- highlight, category filter, hover, and
+   * selection. The seed is an always-visible anchor, not a per-interaction
+   * emphasis. Search dimming is the one exception: it runs through
+   * `searchMatches` as a separate alpha multiplier and is untouched, because a
+   * seed that doesn't match the query should not pretend to.
+   */
+  exemptIds?: Set<string>;
   /** True during active pan/zoom gestures. Renderer skips labels and glow. */
   isGesturing: boolean;
   /** Whether the tryOpenData.ai watermark is enabled. */

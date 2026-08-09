@@ -479,7 +479,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
   };
 }
 
-function normalizeGraphSpec(spec: GraphSpec): NormalizedGraphSpec {
+function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGraphSpec {
   // Only default the layout `type`. chargeStrength/linkDistance are left unset
   // when the user omits them so the energy/settle presets in compileGraph can
   // supply the real defaults (a hardcoded chargeStrength here would mask them).
@@ -488,6 +488,17 @@ function normalizeGraphSpec(spec: GraphSpec): NormalizedGraphSpec {
     ...spec.layout,
   };
 
+  // Collapse the string shorthand to the object form so downstream code has a
+  // single shape to read. An id that doesn't exist warns and is dropped here:
+  // validation errors throw, and `seedNode` is typically a host config constant
+  // that a filtered or paginated node update can legitimately drop out of the
+  // node array — throwing there would be an app crash on a data change.
+  let seedNode = typeof spec.seedNode === 'string' ? { id: spec.seedNode } : spec.seedNode;
+  if (seedNode && !spec.nodes.some((n) => n.id === seedNode?.id)) {
+    warnings.push(`seedNode "${seedNode.id}" does not match any node id; it will be ignored.`);
+    seedNode = undefined;
+  }
+
   return {
     type: 'graph',
     nodes: spec.nodes,
@@ -495,6 +506,7 @@ function normalizeGraphSpec(spec: GraphSpec): NormalizedGraphSpec {
     encoding: spec.encoding ?? {},
     layout,
     nodeOverrides: spec.nodeOverrides,
+    seedNode,
     chrome: normalizeChrome(spec.chrome),
     annotations: normalizeAnnotations(spec.annotations),
     theme: spec.theme ?? {},
@@ -645,7 +657,7 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
     return normalizeTableSpec(spec, warnings);
   }
   if (isGraphSpec(spec)) {
-    return normalizeGraphSpec(spec);
+    return normalizeGraphSpec(spec, warnings);
   }
   if (isSankeySpec(spec)) {
     return normalizeSankeySpec(spec, warnings);

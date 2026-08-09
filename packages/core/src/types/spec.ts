@@ -2262,6 +2262,23 @@ export interface GraphSpec {
   layout?: GraphLayoutConfig;
   /** Per-node visual overrides, keyed by node id. */
   nodeOverrides?: Record<string, NodeOverride>;
+  /**
+   * Node treated as the graph's seed/root: gets a distinct ring and an
+   * always-on label without needing a `nodeOverrides` entry, and stays lit when
+   * a category highlight or legend filter dims everything else.
+   *
+   * String shorthand is the node id; the object form adds styling that layers
+   * under any `nodeOverrides` entry for the same id (an explicit override
+   * always wins). The seed's radius is deliberately left to the `nodeSize`
+   * encoding — set `style.radius` to make it bigger.
+   *
+   * NOT related to `layout.seed`, which is the deterministic RNG seed for the
+   * force layout. This field names a node; `layout.seed` is a number.
+   *
+   * An id that isn't in `nodes` warns and is ignored (it does not throw), so a
+   * filtered or paginated node update can't crash the host.
+   */
+  seedNode?: string | { id: string; style?: NodeOverride };
   /** Editorial chrome. */
   chrome?: Chrome;
   /** Annotations. */

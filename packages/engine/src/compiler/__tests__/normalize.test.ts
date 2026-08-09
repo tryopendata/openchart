@@ -303,6 +303,42 @@ describe('normalizeSpec', () => {
       const result = normalizeSpec(spec) as NormalizedGraphSpec;
       expect(result.watermark).toBe(false);
     });
+
+    it('expands the seedNode string shorthand to the object form', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        seedNode: 'a',
+      };
+      const result = normalizeSpec(spec) as NormalizedGraphSpec;
+      expect(result.seedNode).toEqual({ id: 'a' });
+    });
+
+    it('preserves the seedNode object form', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        seedNode: { id: 'b', style: { radius: 18 } },
+      };
+      const result = normalizeSpec(spec) as NormalizedGraphSpec;
+      expect(result.seedNode).toEqual({ id: 'b', style: { radius: 18 } });
+    });
+
+    it('warns and drops a seedNode id that matches no node', () => {
+      const spec: GraphSpec = {
+        type: 'graph',
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        seedNode: 'zzz',
+      };
+      const warnings: string[] = [];
+      const result = normalizeSpec(spec, warnings) as NormalizedGraphSpec;
+      expect(result.seedNode).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('seedNode "zzz"');
+    });
   });
 
   describe('sankey spec normalization', () => {

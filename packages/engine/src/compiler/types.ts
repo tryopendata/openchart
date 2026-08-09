@@ -189,6 +189,8 @@ export interface NormalizedGraphSpec {
   encoding: GraphEncoding;
   layout: GraphLayoutConfig;
   nodeOverrides?: Record<string, NodeOverride>;
+  /** Seed node, always in object form (the string shorthand is expanded). */
+  seedNode?: { id: string; style?: NodeOverride };
   chrome: NormalizedChrome;
   annotations: Annotation[];
   theme: ThemeConfig;

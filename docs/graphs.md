@@ -97,10 +97,23 @@ const spec = {
 |-------------|------------------|-------------------------------|
 | `nodeColor` | Node fill color  | nominal, ordinal, quantitative |
 | `nodeSize`  | Node radius      | quantitative (3-12px range)    |
+| `nodeOpacity` | Node fill opacity | quantitative (0.25-1 range)  |
 | `nodeLabel` | Node label text  | any                            |
+| `nodeLabelPriority` | Which labels survive label thinning | quantitative (0-1 range) |
 | `edgeColor` | Edge stroke color| nominal, ordinal, quantitative |
 | `edgeWidth` | Edge stroke width| quantitative (0.5-4px range)   |
 | `edgeStyle` | Edge line style  | nominal, ordinal (solid/dashed/dotted) |
+
+Label priority defaults to node degree, so the best-connected nodes keep their labels as the view gets crowded. Point `nodeLabelPriority` at a field to label by importance instead:
+
+```ts
+encoding: {
+  nodeLabel: { field: "name" },
+  nodeLabelPriority: { field: "citations" },
+}
+```
+
+`nodeOverrides[id].alwaysShowLabel` still hard-pins an individual label above everything the channel produces.
 
 **Live example**: [Encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded)
 
@@ -141,6 +154,25 @@ nodeOverrides: {
 
 ---
 
+## Seed node
+
+A graph built around one entity — the dataset you searched for, the person at the center of a network — can name that node declaratively instead of hand-writing an override for it:
+
+```ts
+seedNode: "travis-county",
+
+// or with styling on top of the defaults:
+seedNode: { id: "travis-county", style: { radius: 14 } },
+```
+
+The seed gets a ring in the theme's text color, a 2px stroke, and an always-on label. Its radius is deliberately left to the `nodeSize` encoding so the seed doesn't contradict the data; set `style.radius` when you want it bigger regardless.
+
+The seed also stays lit whenever focus dims the rest of the graph — a category highlight, a legend filter, a hover, or a selection. It is an always-visible anchor rather than a per-interaction emphasis. Search is the exception: a seed that doesn't match the query dims with everything else. Only the seed itself is exempt — its neighbors dim like any other node, which is what keeps a hub seed from lighting up half the graph. An `id` that matches no node warns once and is ignored rather than throwing, so a filtered or paginated node update can't crash the host; route that warning somewhere other than the console with the `onWarn` mount option.
+
+`seedNode` names a node. It is unrelated to `layout.seed`, which is the deterministic RNG seed for the force simulation.
+
+---
+
 ## Interaction
 
 Graphs support several built-in interaction modes:
@@ -153,6 +185,36 @@ Graphs support several built-in interaction modes:
 - **Keyboard navigation**: Tab through nodes, Enter to select
 
 **Live examples**: [Search demo](https://tryopendata.github.io/openchart/?story=graphs--graphs#search) | [With chrome](https://tryopendata.github.io/openchart/?story=graphs--graphs#chrome)
+
+### Driving emphasis from your own UI
+
+Set `legend: false` and the graph instance still exposes everything the built-in legend uses, so a custom sidebar keeps its own counts, edge key, and mobile layout without giving up native focus rendering. The methods are on the vanilla `GraphInstance` and on `useGraph()` in all three framework wrappers.
+
+`getLegend()` returns the resolved categories with label, color, count, and active flag. `setActiveCategories(values)` sets the sticky filter (empty array means no filter), and `getActiveCategories()` reads it back. `highlight(target)` applies transient emphasis over a category, an explicit node id set, or a node's neighborhood; `clearHighlight()` releases it. None of these recompile the spec.
+
+The two emphasis layers compose rather than compete. `setActiveCategories` is sticky and survives until you change it; `highlight()` is transient and layers on top, so the natural pattern is click to filter, hover to preview:
+
+```tsx
+const { ref, getLegend, getActiveCategories, setActiveCategories, highlight, clearHighlight } =
+  useGraph();
+
+const toggle = (label: string) => {
+  const active = getActiveCategories();
+  setActiveCategories(
+    active.includes(label) ? active.filter((v) => v !== label) : [...active, label],
+  );
+};
+
+<LegendRow
+  onClick={() => toggle(row.label)}
+  onMouseEnter={() => highlight({ category: { field: "type", value: row.label } })}
+  onMouseLeave={() => clearHighlight()}
+/>;
+```
+
+When both are active the effective set is their intersection, except that hovering a row outside the filter previews that category on its own rather than lighting nothing. Releasing the hover returns to the filtered view. A `highlight()` target that matches no nodes at all is a no-op layer: the standing filter keeps dimming rather than the graph going fully lit. A category-form target is re-resolved on every `update()`, so it tracks data changes instead of freezing the ids it matched when you called it.
+
+Two consequences worth knowing. `clearHighlight()` clears only the transient layer — clearing the filter is `setActiveCategories([])`. And legend `active` flags track the filter alone, so a hover never makes rows flicker between states.
 
 ---
 

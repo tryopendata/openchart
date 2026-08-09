@@ -124,6 +124,12 @@ export interface GraphCompilation {
   legendField: string | null;
   /** Categories to emphasize on load, captured from nodeColor.highlight. */
   initialHighlight?: { field: string; values: string[] };
+  /**
+   * Ids exempt from highlight/filter dimming (currently just `spec.seedNode`).
+   * Empty when no seed is set. Array-shaped so a future `pinnedNodes` needs no
+   * type change.
+   */
+  seedNodeIds: string[];
   /** Edge legend entries (nominal edgeColor with >1 category), or undefined. */
   edgeLegend?: LegendEntry[];
 }

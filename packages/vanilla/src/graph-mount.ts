@@ -96,6 +96,13 @@ export interface GraphLegendData {
 export interface GraphMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
+  /**
+   * Sink for advisory spec warnings from the compiler (unknown `seedNode` id,
+   * deprecations, and so on). Defaults to `console.warn`. Each distinct message
+   * is emitted at most once per instance, so a warning that survives every
+   * recompile doesn't spam the console on `update()`.
+   */
+  onWarn?: (message: string) => void;
   responsive?: boolean;
   /** Show the tryOpenData.ai watermark. Defaults to true. */
   watermark?: boolean;
@@ -150,11 +157,19 @@ export interface GraphInstance {
   getSelectedNodes(): string[];
   /** Node ids currently matching the active search query. */
   getSearchMatches(): string[];
-  /** Emphasize a set of nodes; eased via the focus model. Resets legend toggles. */
+  /**
+   * Emphasize a set of nodes; eased via the focus model. Layers over the
+   * standing category filter (`setActiveCategories`) rather than replacing it:
+   * the effective set is the intersection, or the highlight alone when the two
+   * are disjoint. Legend toggle state is untouched.
+   */
   highlight(target: GraphHighlightTarget, opts?: { dimOpacity?: number }): void;
-  /** Clear any programmatic highlight (and legend toggles). */
+  /**
+   * Clear the transient highlight, returning to the standing category filter.
+   * Does NOT clear the filter — use `setActiveCategories([])` for that.
+   */
   clearHighlight(): void;
-  /** The currently highlighted node ids, or null when nothing is highlighted. */
+  /** The effective highlighted node ids, or null when nothing is highlighted. */
   getHighlight(): string[] | null;
   /** Headless snapshot of the legend (node categories + edge categories). */
   getLegend(): GraphLegendData;
@@ -246,13 +261,32 @@ export function createGraph(
   let lastAlpha = 1;
   let cameraChangePending = false;
 
-  // Focus / highlight state (Phase 5). One highlight slot with two writers:
-  // programmatic highlight() and legend toggles. `highlightSet` is the resolved
-  // node id set (null = nothing highlighted); `activeCategories` holds legend
-  // toggle state (empty = all active, no dimming). Whichever wrote last wins.
+  // Focus / highlight state (Phase 5). Two independent layers compose into one
+  // effective set:
+  //   - `activeCategories` is the STICKY category filter (empty = no filter),
+  //     written only by setActiveCategories / toggleLegendCategory /
+  //     applyInitialHighlight. Legend `active` flags track this and only this.
+  //   - `transientHighlight` is the TRANSIENT emphasis owned solely by
+  //     highlight() / clearHighlight(), along with `highlightDimOpacity`.
+  //     `transientTarget` keeps the unresolved target so a category-form
+  //     highlight can be re-resolved against new data on update().
+  // `highlightSet` is the cached composition of the two (null = nothing
+  // highlighted), assigned only by recomputeHighlight(). It is the cache
+  // standingSnapshot() reads, so armFocus stays allocation-free per frame.
   let highlightSet: Set<string> | null = null;
   let highlightDimOpacity: number | null = null;
+  // Ids exempt from highlight/filter dimming (the spec's `seedNode`). Kept OUT
+  // of `highlightSet` on purpose: composeStandingFocus expands the core set to
+  // `core ∪ neighbors(core)`, and a seed is by construction a hub, so unioning
+  // it would light most of the graph and defeat the category filter. Keeping it
+  // out also means getHighlight()/onHighlightChange never leak the seed id.
+  // Re-derived wherever `compilation` is reassigned.
+  let seedIds = new Set<string>();
   let activeCategories = new Set<string>();
+  let transientHighlight: Set<string> | null = null;
+  let transientTarget: GraphHighlightTarget | null = null;
+  // Compiler warnings already emitted by this instance (see warnOnce).
+  const seenWarnings = new Set<string>();
   // Node id → its legend-field category value, for category-based highlight.
   let nodeCategory = new Map<string, string>();
   // The live focus crossfade, driving eased dimming. Rebuilt on first render.
@@ -313,6 +347,18 @@ export function createGraph(
     };
   }
 
+  /**
+   * Compiler warning sink. `update()` recompiles, so a warning about a standing
+   * spec condition (an unknown `seedNode` id, say) would otherwise repeat on
+   * every data change. Emit each distinct message once per instance.
+   */
+  function warnOnce(message: string): void {
+    if (seenWarnings.has(message)) return;
+    seenWarnings.add(message);
+    if (options?.onWarn) options.onWarn(message);
+    else console.warn(message);
+  }
+
   function compile(): GraphCompilation {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
@@ -323,6 +369,7 @@ export function createGraph(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
+      onWarn: warnOnce,
     };
 
     return compileGraph(currentSpec, compileOpts);
@@ -477,7 +524,7 @@ export function createGraph(
     wrapper.appendChild(canvas);
 
     // Legend
-    if (options?.legend !== false) {
+    if (legendSetting() !== false) {
       legendEl = document.createElement('div');
       legendEl.className = 'oc-graph-legend';
       renderLegend();
@@ -514,9 +561,18 @@ export function createGraph(
     }
   }
 
-  /** Resolve legend interactive/counts flags from the legend option. */
+  /**
+   * The effective legend setting. `GraphSpec.legend` and the mount option say
+   * the same thing at two levels; the mount option wins when both are set, so a
+   * host can override a spec it doesn't own.
+   */
+  function legendSetting(): GraphMountOptions['legend'] {
+    return options?.legend ?? currentSpec.legend;
+  }
+
+  /** Resolve legend interactive/counts flags from the legend setting. */
   function legendConfig(): { interactive: boolean; counts: boolean } {
-    const l = options?.legend;
+    const l = legendSetting();
     if (l && typeof l === 'object') {
       return { interactive: l.interactive ?? true, counts: l.counts ?? true };
     }
@@ -943,6 +999,57 @@ export function createGraph(
     return set;
   }
 
+  /**
+   * Recompose the effective highlight from the sticky category filter and the
+   * transient highlight(). THE ONLY assigner of `highlightSet`.
+   *
+   * Composition rule: both present → their intersection, except when the
+   * intersection is empty, in which case the transient wins (a host legend
+   * hovering an out-of-filter row previews that category — the built-in legend
+   * only fires `onLegendHover`, so this path is host-driven). Exactly one
+   * present → that one. Neither → null. Same shape as the highlight ∩ search
+   * rule in composeStandingFocus.
+   *
+   * An EMPTY transient is not a transient: `resolveHighlightTarget` returns an
+   * empty set for `{ nodeIds: [] }` or a category matching zero nodes, and
+   * treating that as a layer would silently wipe the standing filter's dimming.
+   */
+  function recomputeHighlight(): void {
+    const filter = categoryHighlightSet();
+    const transient =
+      transientHighlight !== null && transientHighlight.size > 0 ? transientHighlight : null;
+    if (filter !== null && transient !== null) {
+      const inter = new Set<string>();
+      for (const id of transient) if (filter.has(id)) inter.add(id);
+      highlightSet = inter.size > 0 ? inter : transient;
+      return;
+    }
+    highlightSet = filter ?? transient;
+  }
+
+  /**
+   * Re-resolve the standing transient target against the current compilation
+   * and drop ids that no longer exist. Category-form targets track data changes
+   * this way; an unpruned id set would otherwise resurrect deleted nodes.
+   */
+  function refreshTransientHighlight(): void {
+    if (transientTarget === null) {
+      transientHighlight = null;
+      return;
+    }
+    const nextIds = new Set(compilation.nodes.map((n) => n.id));
+    const resolved = new Set(
+      [...resolveHighlightTarget(transientTarget)].filter((id) => nextIds.has(id)),
+    );
+    transientHighlight = resolved.size > 0 ? resolved : null;
+  }
+
+  /** The custom `dimOpacity` applies only while a transient highlight is up. */
+  function effectiveDimOpacity(): number {
+    const custom = transientHighlight !== null ? highlightDimOpacity : null;
+    return custom ?? compilation.interaction.dimOpacity;
+  }
+
   /** Fire onHighlightChange with the current highlight set. */
   function emitHighlightChange(): void {
     options?.onHighlightChange?.(highlightSet ? [...highlightSet] : null);
@@ -953,8 +1060,7 @@ export function createGraph(
     const init = compilation.initialHighlight;
     if (!init) return;
     activeCategories = new Set(init.values);
-    highlightSet = categoryHighlightSet();
-    highlightDimOpacity = null;
+    recomputeHighlight();
   }
 
   /** Start (or cancel) the hovered node's 1 → 1.15 radius tween. */
@@ -1070,11 +1176,12 @@ export function createGraph(
       adjacencyMap,
       theme: compilation.theme,
       searchMatches: searchManager.getMatches(),
+      exemptIds: seedIds,
       isGesturing,
       watermark: compilation.watermark,
       focus: focus ?? { t: 1, prev: settledNext, next: settledNext },
       hoverRadiusScale,
-      dimOpacity: highlightDimOpacity ?? compilation.interaction.dimOpacity,
+      dimOpacity: effectiveDimOpacity(),
       entrance:
         entranceActive && entranceProgress < 1
           ? {
@@ -1464,24 +1571,36 @@ export function createGraph(
   }
 
   // -------------------------------------------------------------------------
-  // Highlight API (single slot, two writers: highlight() and legend toggles)
+  // Highlight API (transient layer over the sticky category filter)
   // -------------------------------------------------------------------------
 
+  /**
+   * Emphasize a set of nodes on top of the standing category filter. Does not
+   * touch the filter; legend `active` flags are unaffected. A target that
+   * resolves to no nodes is a no-op layer: the standing filter keeps dimming.
+   * The target is retained and re-resolved on `update()`, so a category-form
+   * highlight tracks data changes.
+   */
   function highlight(target: GraphHighlightTarget, opts?: { dimOpacity?: number }): void {
-    // Programmatic highlight resets legend toggle state (last writer wins).
-    activeCategories = new Set();
-    highlightSet = resolveHighlightTarget(target);
+    if (destroyed) return;
+    transientTarget = target;
+    refreshTransientHighlight();
     highlightDimOpacity = opts?.dimOpacity ?? null;
-    syncLegendActiveState();
+    recomputeHighlight();
     refreshFocus();
     emitHighlightChange();
   }
 
+  /**
+   * Drop the transient highlight. The category filter stands — clearing that is
+   * `setActiveCategories([])`.
+   */
   function clearHighlight(): void {
-    activeCategories = new Set();
-    highlightSet = null;
+    if (destroyed) return;
+    transientTarget = null;
+    transientHighlight = null;
     highlightDimOpacity = null;
-    syncLegendActiveState();
+    recomputeHighlight();
     refreshFocus();
     emitHighlightChange();
   }
@@ -1511,15 +1630,14 @@ export function createGraph(
   }
 
   /**
-   * Toggle a legend category (built-in legend + headless). Legend toggles ARE
-   * the highlight state: this replaces any programmatic highlight. Empty active
-   * set = all categories shown (no dimming).
+   * Set the sticky category filter (built-in legend + headless). A transient
+   * highlight() layers over this rather than replacing it. Empty active set =
+   * all categories shown (no filter, no dimming).
    */
   function setActiveCategories(values: string[]): void {
     if (destroyed) return;
     activeCategories = new Set(values);
-    highlightSet = categoryHighlightSet();
-    highlightDimOpacity = null;
+    recomputeHighlight();
     syncLegendActiveState();
     refreshFocus();
     emitHighlightChange();
@@ -1532,8 +1650,7 @@ export function createGraph(
   function toggleLegendCategory(value: string): void {
     if (activeCategories.has(value)) activeCategories.delete(value);
     else activeCategories.add(value);
-    highlightSet = categoryHighlightSet();
-    highlightDimOpacity = null;
+    recomputeHighlight();
     syncLegendActiveState();
     refreshFocus();
     options?.onLegendToggle?.([...activeCategories]);
@@ -1600,6 +1717,7 @@ export function createGraph(
 
     // Recompile with the new spec.
     compilation = compile();
+    seedIds = new Set(compilation.seedNodeIds);
 
     const diff = diffGraphUpdate(
       prevNodes,
@@ -1646,10 +1764,11 @@ export function createGraph(
 
     spatialIndex.rebuild(positionedNodes);
 
-    // Highlight persists: re-resolve category-derived sets against new nodes.
-    if (activeCategories.size > 0) {
-      highlightSet = categoryHighlightSet();
-    }
+    // Highlight persists: re-resolve both layers against the new nodes. Node
+    // ids are identical on a visual-only update, but a category-form transient
+    // can still change membership if the underlying field values changed.
+    refreshTransientHighlight();
+    recomputeHighlight();
 
     // Search survives: re-run the stored query against the new nodes.
     reRunSearch();
@@ -1763,14 +1882,11 @@ export function createGraph(
     selectedNodeIds = new Set(survivingSelection);
     interactionManager?.setSelection(survivingSelection);
 
-    // Highlight persists: re-resolve category-derived sets against new nodes.
-    if (activeCategories.size > 0) {
-      highlightSet = categoryHighlightSet();
-    } else if (highlightSet) {
-      // Explicit-id highlight: prune ids that no longer exist.
-      highlightSet = new Set([...highlightSet].filter((id) => nextIds.has(id)));
-      if (highlightSet.size === 0) highlightSet = null;
-    }
+    // Highlight persists. Re-resolve the transient layer against the new nodes
+    // first (this both tracks category membership changes and drops deleted
+    // ids, which an unpruned set would resurrect), then recompose.
+    refreshTransientHighlight();
+    recomputeHighlight();
     syncLegendActiveState();
 
     // Search survives: re-run the stored query against the new nodes.
@@ -1923,6 +2039,7 @@ export function createGraph(
 
   try {
     compilation = compile();
+    seedIds = new Set(compilation.seedNodeIds);
     adjacencyMap = buildAdjacencyMap(compilation.edges);
     buildDataMaps();
     applyInitialHighlight();

@@ -65,11 +65,17 @@ export interface UseGraphReturn {
   selectNode: (nodeId: string, opts?: { fly?: boolean } & CameraFlightOptions) => void;
   /** Get the currently selected node ids. */
   getSelectedNodes: () => string[];
-  /** Emphasize a set of nodes; eased via the focus model. */
+  /**
+   * Emphasize a set of nodes; eased via the focus model. Layers over the
+   * standing category filter rather than replacing it.
+   */
   highlight: (target: GraphHighlightTarget, opts?: { dimOpacity?: number }) => void;
-  /** Clear any programmatic highlight (and legend toggles). */
+  /**
+   * Clear the transient highlight, returning to the standing category filter.
+   * Does NOT clear that filter — use `setActiveCategories([])`.
+   */
   clearHighlight: () => void;
-  /** The currently highlighted node ids, or null when nothing is highlighted. */
+  /** The effective highlighted node ids, or null when nothing is highlighted. */
   getHighlight: () => string[] | null;
   /** Headless snapshot of the legend. */
   getLegend: () => GraphLegendData | null;

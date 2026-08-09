@@ -23,6 +23,7 @@ export const page: PageEntry = {
     { id: 'interactive', title: 'Interactive (click & hover)' },
     { id: 'choreography', title: 'Entrance & camera choreography' },
     { id: 'legend', title: 'Interactive legend' },
+    { id: 'host-legend', title: 'Host-driven legend + seed node' },
     { id: 'highlight', title: 'Highlight API' },
     { id: 'seeded', title: 'Seeded layout (deterministic)' },
     { id: 'update', title: 'Update transitions (add / remove nodes)' },

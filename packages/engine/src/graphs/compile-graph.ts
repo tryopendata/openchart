@@ -18,6 +18,7 @@ import type {
   GraphEncoding,
   LegendEntry,
   LegendLayout,
+  NodeOverride,
   ResolvedTheme,
   TextStyle,
   TooltipContent,
@@ -44,6 +45,23 @@ import type {
 } from './types';
 
 const graphNumberFormatter = defaultNumberFormatter({ allIntegers: false, surface: 'chart' });
+
+/**
+ * Layer node overrides lowest-precedence first, skipping keys whose value is
+ * `undefined`. A bare spread can't be used: `resolveNodeVisuals` reads
+ * overrides with `??`, so a caller-supplied `{ alwaysShowLabel: undefined }`
+ * spread on top would erase the seed default rather than defer to it.
+ */
+function mergeOverrides(...layers: (NodeOverride | undefined)[]): NodeOverride {
+  const merged: Record<string, unknown> = {};
+  for (const layer of layers) {
+    if (!layer) continue;
+    for (const [key, value] of Object.entries(layer)) {
+      if (value !== undefined) merged[key] = value;
+    }
+  }
+  return merged as NodeOverride;
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -335,13 +353,30 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     theme = adaptTheme(theme);
   }
 
-  // 3. Resolve node visuals
+  // 3. Resolve node visuals. A `seedNode` contributes a synthetic override so
+  // the seed gets its ring + always-on label without a hand-written
+  // `nodeOverrides` entry. Precedence, lowest to highest: seed defaults,
+  // `seedNode.style`, then the user's own `nodeOverrides` entry.
+  const seedNodeIds = graphSpec.seedNode ? [graphSpec.seedNode.id] : [];
+  const nodeOverrides = graphSpec.seedNode
+    ? {
+        ...graphSpec.nodeOverrides,
+        [graphSpec.seedNode.id]: mergeOverrides(
+          // Radius is deliberately absent so the seed doesn't fight a nodeSize
+          // encoding; a host wanting a bigger seed sets seedNode.style.radius.
+          { stroke: theme.colors.text, strokeWidth: 2, alwaysShowLabel: true },
+          graphSpec.seedNode.style,
+          graphSpec.nodeOverrides?.[graphSpec.seedNode.id],
+        ),
+      }
+    : graphSpec.nodeOverrides;
+
   const compiledNodes = resolveNodeVisuals(
     graphSpec.nodes,
     graphSpec.encoding,
     graphSpec.edges,
     theme,
-    graphSpec.nodeOverrides,
+    nodeOverrides,
   );
 
   // 4. Assign communities (for force simulation grouping)
@@ -497,6 +532,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     interaction,
     legendField,
     initialHighlight,
+    seedNodeIds,
     edgeLegend,
   };
 }
