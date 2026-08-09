@@ -5073,7 +5073,7 @@
         },
         "padding": {
           "type": "number",
-          "description": "Padding for band/point scales."
+          "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
         },
         "paddingInner": {
           "type": "number",
@@ -18253,7 +18253,7 @@
         },
         "key": {
           "$ref": "#/definitions/EncodingChannel",
-          "description": "Stable id for event callbacks. Data-update transitions for points are not yet supported."
+          "description": "Stable id for event callbacks, and the key used to match points across renders so fill, radius, and position tween on data update."
         },
         "opacity": {
           "type": "number",

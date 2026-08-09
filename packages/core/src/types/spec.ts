@@ -453,7 +453,13 @@ export interface ScaleConfig {
   reverse?: boolean;
   /** Clamp output to the range. */
   clamp?: boolean;
-  /** Padding for band/point scales. */
+  /**
+   * Padding for band/point scales. Point-scale default (a categorical x/y on a
+   * line/area/point mark) is 0 for line and area marks (the trend runs flush
+   * to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't
+   * collide with the axis). `paddingOuter` is accepted as an alias here since
+   * point scales have no inner bands.
+   */
   padding?: number;
   /** Inner padding for band scales. */
   paddingInner?: number;

@@ -557,6 +557,7 @@ function buildPointScale(
   data: DataRow[],
   rangeStart: number,
   rangeEnd: number,
+  defaultPadding: number = 0.5,
 ): ResolvedScale {
   const values = channel.scale?.domain
     ? (channel.scale.domain as string[])
@@ -566,7 +567,7 @@ function buildPointScale(
   // bands, so paddingInner is meaningless). Accept `paddingOuter` as an alias so
   // a spec written for a band scale doesn't silently no-op when the mark is a
   // line; explicit `padding` wins if both are set.
-  const padding = channel.scale?.padding ?? channel.scale?.paddingOuter ?? 0.5;
+  const padding = channel.scale?.padding ?? channel.scale?.paddingOuter ?? defaultPadding;
   const scale = scalePoint().domain(values).range([rangeStart, rangeEnd]).padding(padding);
 
   if (channel.scale?.reverse) {
@@ -714,7 +715,7 @@ function buildPositionalScale(
       case 'point':
         return buildPointScale(channel, data, rangeStart, rangeEnd);
       case 'ordinal':
-        return buildBandScale(channel, data, rangeStart, rangeEnd);
+        return buildCategoricalScale(channel, data, rangeStart, rangeEnd, chartType, axis);
     }
   }
 
@@ -726,31 +727,56 @@ function buildPositionalScale(
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
     case 'ordinal':
-      // Bar and range charts use band scales for their categorical axis (both
-      // orientations). Beeswarm lanes are band scales too: each category gets
-      // a band whose center anchors one swarm, on whichever axis carries the
-      // nominal channel.
-      //
-      // `rect` is the only mark that needs a band on *both* axes: a heatmap cell
-      // is sized by the bandwidth of each axis, so it takes no `axis` guard. A
-      // point scale would give it zero width and height (and it did: `rect` cells
-      // rendered as invisible zero-area marks). It also tiles, so it takes the
-      // hairline gutter rather than the bar-sized gap.
-      if (chartType === 'rect') {
-        return buildBandScale(channel, data, rangeStart, rangeEnd, HEATMAP_BAND_PADDING);
-      }
-      if (
-        chartType === 'bar' ||
-        chartType === 'beeswarm' ||
-        chartType === 'range' ||
-        ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
-      ) {
-        return buildBandScale(channel, data, rangeStart, rangeEnd);
-      }
-      return buildPointScale(channel, data, rangeStart, rangeEnd);
+      return buildCategoricalScale(channel, data, rangeStart, rangeEnd, chartType, axis);
     default:
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
   }
+}
+
+/**
+ * Pick band vs. point for a categorical (nominal/ordinal) positional channel,
+ * based on mark type rather than the encoding's declared `type`. A spec that
+ * writes `type: "ordinal"` on a line/area chart's x-channel means "this axis is
+ * categorical," not "give this line chart bar-sized gaps" -- so this is shared
+ * between the explicit `scale.type: "ordinal"` override and plain type
+ * inference, rather than letting the override skip mark-awareness.
+ */
+function buildCategoricalScale(
+  channel: EncodingChannel,
+  data: DataRow[],
+  rangeStart: number,
+  rangeEnd: number,
+  chartType: string,
+  axis: 'x' | 'y',
+): ResolvedScale {
+  // Bar and range charts use band scales for their categorical axis (both
+  // orientations). Beeswarm lanes are band scales too: each category gets
+  // a band whose center anchors one swarm, on whichever axis carries the
+  // nominal channel.
+  //
+  // `rect` is the only mark that needs a band on *both* axes: a heatmap cell
+  // is sized by the bandwidth of each axis, so it takes no `axis` guard. A
+  // point scale would give it zero width and height (and it did: `rect` cells
+  // rendered as invisible zero-area marks). It also tiles, so it takes the
+  // hairline gutter rather than the bar-sized gap.
+  if (chartType === 'rect') {
+    return buildBandScale(channel, data, rangeStart, rangeEnd, HEATMAP_BAND_PADDING);
+  }
+  if (
+    chartType === 'bar' ||
+    chartType === 'beeswarm' ||
+    chartType === 'range' ||
+    ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
+  ) {
+    return buildBandScale(channel, data, rangeStart, rangeEnd);
+  }
+  // Line/area marks read as a continuous trend, like a time scale -- the first
+  // and last category should sit flush against the plot edges, not float with
+  // a scatter-style half-step margin. Other point-scale marks (plain point/
+  // circle scatters) keep the 0.5 default so individual observations don't
+  // collide with the axis.
+  const isTrendMark = chartType === 'line' || chartType === 'area';
+  return buildPointScale(channel, data, rangeStart, rangeEnd, isTrendMark ? 0 : 0.5);
 }
 
 // ---------------------------------------------------------------------------

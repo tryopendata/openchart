@@ -498,8 +498,11 @@ describe('computeAnnotations', () => {
 
     it('extendToEdges:false anchors a point-scale range at data point centers', () => {
       // With extendToEdges:false the band starts/ends exactly at the first/last
-      // data point centers instead of extending half a step to the plot edge,
-      // so the range is inset from the axis.
+      // data point centers instead of extending half a step to the plot edge.
+      // A line/area mark's point scale has no outer padding by default (the
+      // trend should run flush to the axis, not float with scatter-style
+      // margin), so here the first/last centers land exactly on the plot edges
+      // rather than inset from them.
       const domainValues = ['2006', '2008', '2010', '2012'];
       const ordinalSpec: NormalizedChartSpec = {
         markType: 'line',
@@ -526,9 +529,10 @@ describe('computeAnnotations', () => {
       // Left/right edges land at the point centers, not extended past them.
       expect(rect.x).toBeCloseTo(xScale('2006')!, 1);
       expect(rect.x + rect.width).toBeCloseTo(xScale('2012')!, 1);
-      // And the band is strictly inside the plot (inset from both edges).
-      expect(rect.x).toBeGreaterThan(chartArea.x);
-      expect(rect.x + rect.width).toBeLessThan(chartArea.x + chartArea.width);
+      // And those centers are themselves flush with the plot edges (zero outer
+      // padding on a line-mark point scale), not inset from them.
+      expect(rect.x).toBeCloseTo(chartArea.x, 1);
+      expect(rect.x + rect.width).toBeCloseTo(chartArea.x + chartArea.width, 1);
     });
 
     it('linear-scale range is unaffected by edge extension', () => {
