@@ -231,14 +231,16 @@ export function buildSingleAxisTweens(
 
   const isRotated = !!(nextAxis.tickAngle && Math.abs(nextAxis.tickAngle) > 10);
 
-  // Build tick value -> position maps from layouts (NOT from DOM)
+  // Build tick value -> position maps from layouts (NOT from DOM). Labels
+  // nudged inward off the container edge carry their own `labelPosition`;
+  // tween to that or the label snaps back over the edge mid-transition.
   const prevTickMap = new Map<string, number>();
   for (const tick of prevAxis.ticks) {
-    prevTickMap.set(serializeKeyValue(tick.value), tick.position);
+    prevTickMap.set(serializeKeyValue(tick.value), tick.labelPosition ?? tick.position);
   }
   const nextTickMap = new Map<string, number>();
   for (const tick of nextAxis.ticks) {
-    nextTickMap.set(serializeKeyValue(tick.value), tick.position);
+    nextTickMap.set(serializeKeyValue(tick.value), tick.labelPosition ?? tick.position);
   }
 
   // Position attribute: 'x' for x-axis tick labels, 'y' for y-axis tick labels

@@ -86,11 +86,6 @@ const stories: StoryCase[] = [
     name: 'rotated-with-source',
     slug: 'testing--fixtures--rotated-with-source',
     quantAxis: 'y',
-    // At 360px the rotated "Information Technology" tick label extends
-    // ~11px left of the container (Rule 1). Pre-existing engine bug in the
-    // compact band, exposed when the narrow project was added: the left
-    // gutter doesn't reserve the leading rotated label's horizontal overhang.
-    knownFailures: [{ project: 'invariants-chromium-mobile-narrow' }],
   },
   { name: 'chrome-all-elements', slug: 'testing--fixtures--chrome-all-elements', quantAxis: 'y' },
   {

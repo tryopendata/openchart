@@ -141,6 +141,14 @@ export interface AxisTick {
   fullLabel?: string;
   /** Secondary label text from axis.labelField. */
   subtitle?: string;
+  /**
+   * Pixel position the LABEL is drawn at, set only when it differs from
+   * `position` because the label was nudged inward to stay inside the
+   * container. Point/band x-scales run flush to the plot edges, so a label
+   * centered on the outermost tick can spill past the SVG. Gridlines, marks
+   * and transitions still key off `position`; only the text moves.
+   */
+  labelPosition?: number;
 }
 
 /** A single gridline with computed positions. */

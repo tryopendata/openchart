@@ -81,7 +81,7 @@ function renderAxis(
 
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         // Rotated labels: anchor at the rotation pivot point
-        const labelX = tick.position;
+        const labelX = tick.labelPosition ?? tick.position;
         const xLabelPad = axis.labelPadding ?? layout.theme.spacing.xAxisLabelPadding;
         const labelY = area.y + area.height + xLabelPad;
         setAttrs(label, {
@@ -99,7 +99,7 @@ function renderAxis(
         // express this directly, but WebKit positions hanging from different
         // font metrics than Blink, drifting labels on iOS Safari.)
         setAttrs(label, {
-          x: tick.position,
+          x: tick.labelPosition ?? tick.position,
           y: area.y + area.height + xLabelPad + textAscent(axis.tickLabelStyle.fontSize),
           'text-anchor': 'middle',
         });
