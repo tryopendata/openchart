@@ -61,7 +61,10 @@
 <style>
   @font-face {
     font-family: "Inter Gallery";
-    src: url("/fonts/InterVariable.woff2") format("woff2");
+    /* Relative (no leading slash): the deployed site lives under /openchart/,
+       where a root-absolute URL 404s. Ladle routes via query params, so the
+       page path is always the base and this resolves in dev and deploy. */
+    src: url("fonts/InterVariable.woff2") format("woff2");
     font-weight: 100 900;
     font-style: normal;
     font-display: swap;
