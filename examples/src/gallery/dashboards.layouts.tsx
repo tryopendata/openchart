@@ -333,11 +333,12 @@ export function SaasDashboard() {
           <TileTitle>Signups by channel</TileTitle>
           {/*
             180px is pinned on the chart's own mount container, NOT on the grid
-            track. Grid items stretch by default, so a track-level height would
-            hand the chart whatever the tallest row needs (here 320px+) and the
-            watermark would stay visible, defeating the demo. Pinning the inner
-            container keeps the chart cramped in both the two-column layout and
-            the one-column mobile collapse.
+            track. Grid stretch sizes auto-height items to the row, so an
+            unstyled container here would inherit the hero row's height
+            (320px+) and the watermark would stay visible, defeating the demo.
+            An explicit pixel height on the inner container is respected
+            regardless of stretch, in both the two-column layout and the
+            one-column mobile collapse.
           */}
           <div style={{ height: 180 }}>
             <Chart spec={saasSignupsSpec} />
