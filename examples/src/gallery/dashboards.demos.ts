@@ -20,5 +20,9 @@ export const page: PageEntry = {
     { id: 'crosshair-line', title: 'Financial line with crosshair' },
     { id: 'sector-returns', title: 'Sector returns (conditional color)' },
     { id: 'mini-dashboard', title: 'Mini-dashboard (2x2 grid)' },
+    { id: 'saas-overview', title: 'SaaS analytics overview' },
+    { id: 'ops-monitoring', title: 'Ops / monitoring' },
+    { id: 'markets-overview', title: 'Finance / markets' },
+    { id: 'marketing-funnel', title: 'Marketing funnel' },
   ],
 };
