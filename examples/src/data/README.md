@@ -18,6 +18,10 @@ export const gdpGrowth = {
   renders the citation.
 - `url` is optional and present only for cited real-world data.
 - `data` is a static snapshot. No runtime fetching, ever.
+- `data` is the common single-table shape, not a required field: modules that
+  back multiple tiles export named tables instead (`marketIndices.indices`,
+  `saasMetrics.mrr` / `.signups` / `.topPages` / `.accounts`). Same rules
+  apply to every table.
 
 ## Rules (from `plans/ladle-gallery/00-overview.md`)
 

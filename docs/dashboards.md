@@ -18,7 +18,7 @@ Give a tile an explicit height, either on the mount container or the parent grid
 </div>
 ```
 
-Watch out for CSS grid: `align-items` defaults to `stretch`, so a chart sitting in a grid track will fill the track's height even if you set `height: 180px` on its own container — you'll need `height` on the container as a hard value, not something the grid can override, if you're depending on that height to trigger the watermark auto-hide below.
+Watch out for CSS grid: `align-items` defaults to `stretch`, which sizes auto-height grid items to fill their row. A chart container with no height of its own (or `height: 100%`) inside a stretched grid item inherits whatever the tallest sibling needs, so a tile you meant to keep short can silently compile at 300px+. An explicit pixel height on the chart's own container is respected regardless of stretch — put the height there, not on the grid track, if you're depending on it to trigger the watermark auto-hide below.
 
 ## KPI cards: `display: 'sparkline'`
 
