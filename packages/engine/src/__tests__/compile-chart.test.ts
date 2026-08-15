@@ -638,6 +638,86 @@ describe('compileChart', () => {
     expect(layout.watermark).toBe(true);
   });
 
+  it('cramped height forces watermark off when not user-explicit', () => {
+    const layout = compileChart(lineSpec, { width: 600, height: 180 });
+    expect(layout.watermark).toBe(false);
+  });
+
+  it('cramped height respects explicit watermark: true', () => {
+    const layout = compileChart({ ...lineSpec, watermark: true }, { width: 600, height: 180 });
+    expect(layout.watermark).toBe(true);
+  });
+
+  it('cramped height respects explicit watermark: false', () => {
+    const layout = compileChart({ ...lineSpec, watermark: false }, { width: 600, height: 180 });
+    expect(layout.watermark).toBe(false);
+  });
+
+  it('watermark stays on at and above the cramped height boundary', () => {
+    expect(compileChart(lineSpec, { width: 600, height: 200 }).watermark).toBe(true);
+    expect(compileChart(lineSpec, { width: 600, height: 300 }).watermark).toBe(true);
+  });
+
+  it('cramped height respects a breakpoint override watermark: true', () => {
+    const layout = compileChart(
+      { ...lineSpec, overrides: { full: { watermark: true } } },
+      { width: 900, height: 180 },
+    );
+    expect(layout.watermark).toBe(true);
+  });
+
+  it('cramped height ignores the compile-option watermark fallback', () => {
+    const layout = compileChart(lineSpec, { width: 600, height: 180, watermark: true });
+    expect(layout.watermark).toBe(false);
+  });
+
+  it('explicit watermark: true at cramped height reserves the brand band', () => {
+    const withBrand = compileChart({ ...lineSpec, watermark: true }, { width: 600, height: 180 });
+    const withoutBrand = compileChart(
+      { ...lineSpec, watermark: false },
+      { width: 600, height: 180 },
+    );
+    // The hidden-chrome branch of computeChrome must reserve bottom space for
+    // the opted-in brand, shrinking the plot rather than painting over it.
+    expect(withBrand.area.height).toBeLessThan(withoutBrand.area.height);
+  });
+
+  it('guardrail fallback to hidden chrome still reserves the default brand band', () => {
+    // Heavy chrome at a small (but not cramped) fixed height trips the
+    // chromeEatsPlot/min-dims fallback to chromeMode 'hidden'. The default
+    // watermark is never suppressed at this height, so the hidden branch must
+    // reserve the brand band instead of letting the brand overlap the plot.
+    const heavyChrome = {
+      ...lineSpec,
+      chrome: {
+        title: 'A very long headline that wraps across multiple lines to eat the height budget',
+        subtitle:
+          'An equally long subtitle explaining methodology in enough detail to wrap as well',
+        source: 'Illustrative data',
+        byline: 'Chart: OpenChart',
+      },
+    };
+    const layout = compileChart(heavyChrome, { width: 320, height: 210 });
+    expect(layout.watermark).toBe(true);
+    // Prove the fallback went all the way to 'hidden' (compact would still
+    // render the title); otherwise this test would pass without exercising
+    // the hidden branch.
+    expect(layout.chrome.title).toBeUndefined();
+    const stripped = compileChart(
+      { ...heavyChrome, watermark: false },
+      { width: 320, height: 210 },
+    );
+    expect(layout.area.height).toBeLessThan(stripped.area.height);
+  });
+
+  it('sparkline at a normal height still forces watermark off', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const },
+      { width: 600, height: 400 },
+    );
+    expect(layout.watermark).toBe(false);
+  });
+
   it('sparkline mode forces crosshair off when not user-explicit', () => {
     const layout = compileChart(
       { ...lineSpec, display: 'sparkline' as const },

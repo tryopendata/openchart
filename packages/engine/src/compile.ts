@@ -549,6 +549,14 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     chartSpec = { ...chartSpec, watermark: false };
   }
 
+  // Watermark auto-hides in cramped containers (height < 200px): chromeMode is
+  // already 'hidden' there, so no bottom space is reserved and the brand would
+  // paint over the plot. Explicit user watermark at any level wins.
+  if (heightClass === 'cramped' && !chartSpec.userExplicit.watermark) {
+    watermark = false;
+    chartSpec = { ...chartSpec, watermark: false };
+  }
+
   // Resolve theme: merge spec-level theme with options-level overrides
   const mergedThemeConfig = options.theme
     ? { ...chartSpec.theme, ...options.theme }

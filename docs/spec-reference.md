@@ -73,7 +73,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `responsive`  | `boolean`      | `true`      | Whether the chart adapts to container width via ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
 | `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
-| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options; if neither is set, defaults to `true`. |
+| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
 | `a11y`        | `A11yConfig`   | `undefined` | Accessibility overrides: `description` (custom alt text, wins over top-level `description`) and `hidden` (hide from assistive technology). |
@@ -174,7 +174,7 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `responsive`   | `boolean`                    | `true`      | Whether the chart adapts to container width.                                                  |
 | `theme`        | `ThemeConfig`                | `undefined` | Theme overrides.                                                                              |
 | `darkMode`     | `DarkMode`                   | `'off'`     | Dark mode behavior.                                                                           |
-| `watermark`    | `boolean`                    | `true`      | Whether to show the watermark.                                                                |
+| `watermark`    | `boolean`                    | `true`      | Whether to show the watermark. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
 | `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
 | `animation`    | `AnimationSpec`              | `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
