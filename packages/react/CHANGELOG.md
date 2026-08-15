@@ -1,5 +1,22 @@
 # Changelog
 
+## [8.1.0](https://github.com/tryopendata/openchart/compare/core-v8.0.0...core-v8.1.0) (2026-08-15)
+
+
+### Features
+
+* four composed dashboard layouts and a dashboards guide ([67b4ff5](https://github.com/tryopendata/openchart/commit/67b4ff5))
+* layer highlight over the category filter, add a first-class seedNode ([39885c7](https://github.com/tryopendata/openchart/commit/39885c7))
+* tween beeswarm dots on data update ([0fc421e](https://github.com/tryopendata/openchart/commit/0fc421e))
+
+
+### Bug Fixes
+
+* clamp outer categorical x tick labels inside the container ([345c246](https://github.com/tryopendata/openchart/commit/345c246))
+* auto-hide the watermark in cramped containers ([16301e9](https://github.com/tryopendata/openchart/commit/16301e9))
+* run line/area categorical axes flush to the plot edges ([76458b5](https://github.com/tryopendata/openchart/commit/76458b5))
+* correct invalid spec examples and harden release tooling ([4f5d9e2](https://github.com/tryopendata/openchart/commit/4f5d9e2))
+
 ## [8.0.0](https://github.com/tryopendata/openchart/compare/core-v8.0.0-rc.26...core-v8.0.0) (2026-07-26)
 
 
