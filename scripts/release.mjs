@@ -247,8 +247,12 @@ console.log('Created release commit');
 // workflow reach that step before the tags exist and fail *after* npm publish
 // already succeeded (this happened on v8.0.0).
 //
-// Tags are created via the GitHub API so they get verified signatures.
+// Tags are created via the GitHub API so they get verified signatures. The
+// API can only tag objects GitHub already has, and the release commit is
+// local-only at this point, so stage it on a temporary ref first (pushing a
+// non-main branch triggers no workflows). Deleted after the main push below.
 const sha = run('git rev-parse HEAD');
+run('git push origin HEAD:refs/heads/release-staging');
 let created = 0;
 for (const pkg of PACKAGES) {
   const tag = `${pkg}-v${newVersion}`;
@@ -269,5 +273,6 @@ console.log(`Created ${created} verified tags via GitHub API (${PACKAGES.length}
 // Push last: this triggers the Release workflow, and every tag already exists.
 run('git push origin main');
 console.log('Pushed commit to origin - Release workflow will start');
+run('git push origin --delete release-staging');
 
 console.log(`\nDone! Released openchart v${newVersion}`);
