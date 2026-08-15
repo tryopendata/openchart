@@ -7,12 +7,36 @@ import { BRAND_FONT_SIZE, estimateTextHeight } from '../text-measure';
 const theme = resolveTheme();
 
 describe('computeChrome', () => {
-  it('returns zero heights when chrome is undefined', () => {
-    const result = computeChrome(undefined, theme, 600);
+  it('returns zero heights when chrome is undefined and watermark is off', () => {
+    const result = computeChrome(undefined, theme, 600, undefined, 'full', undefined, false);
     expect(result.topHeight).toBe(0);
     expect(result.bottomHeight).toBe(0);
     expect(result.title).toBeUndefined();
     expect(result.subtitle).toBeUndefined();
+  });
+
+  it('returns zero heights in hidden mode when watermark is false', () => {
+    const chrome: Chrome = { title: 'Title', source: 'Source' };
+    const result = computeChrome(chrome, theme, 600, undefined, 'hidden', undefined, false);
+    expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(0);
+  });
+
+  it('reserves a brand band in hidden mode when watermark is explicitly on', () => {
+    const chrome: Chrome = { title: 'Title', source: 'Source' };
+    const result = computeChrome(chrome, theme, 600, undefined, 'hidden', undefined, true);
+    const pad = theme.spacing.padding;
+    const expectedBottom =
+      theme.spacing.chartToFooter + estimateTextHeight(BRAND_FONT_SIZE, 1) + pad;
+    expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(expectedBottom);
+  });
+
+  it('returns zero heights in hidden mode when the chart is too narrow for the brand', () => {
+    const chrome: Chrome = { title: 'Title', source: 'Source' };
+    const result = computeChrome(chrome, theme, 100, undefined, 'hidden', undefined, true);
+    expect(result.topHeight).toBe(0);
+    expect(result.bottomHeight).toBe(0);
   });
 
   it('reserves brand height when chrome is empty but chart is wide enough', () => {

@@ -9616,7 +9616,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -10080,7 +10080,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -10544,7 +10544,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -11008,7 +11008,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -11472,7 +11472,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -11936,7 +11936,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -12400,7 +12400,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -12864,7 +12864,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -13328,7 +13328,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -13792,7 +13792,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -14256,7 +14256,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -14720,7 +14720,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -15184,7 +15184,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -15648,7 +15648,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -16112,7 +16112,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -16576,7 +16576,7 @@
             },
             "watermark": {
               "type": "boolean",
-              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+              "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
             },
             "hiddenSeries": {
               "type": "array",
@@ -18541,7 +18541,7 @@
         },
         "watermark": {
           "type": "boolean",
-          "description": "Whether to show the tryOpenData.ai watermark. Defaults to true."
+          "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
         },
         "hiddenSeries": {
           "type": "array",

@@ -1944,7 +1944,11 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /**
+   * Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides
+   * when the container is under 200px tall (the cramped height class) unless
+   * explicitly set.
+   */
   watermark?: boolean;
   /**
    * Series names to hide from rendering by default. This is the authored

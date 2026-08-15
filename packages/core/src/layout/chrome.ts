@@ -212,9 +212,25 @@ export function computeChrome(
   bottomLegendHeight: number = 0,
 ): ResolvedChrome {
   if (!chrome || chromeMode === 'hidden') {
-    // Brand watermark is also skipped at cramped sizes (height < 200px triggers
-    // hidden mode, and those containers are typically < BRAND_MIN_WIDTH), so
-    // bottomHeight: 0 is safe here.
+    // `watermark` is still true here in two cases: the user explicitly opted
+    // in at a cramped height (the compiler suppresses the default there), or
+    // the chromeEatsPlot/min-dims fallback hid chrome at a normal height where
+    // the default watermark was never suppressed. Reserve the brand band for
+    // both so the brand doesn't paint over the plot's bottom edge.
+    if (watermark && width >= BRAND_MIN_WIDTH) {
+      const hiddenPad = padding ?? theme.spacing.padding;
+      const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
+      return {
+        topHeight: 0,
+        bottomHeight: theme.spacing.chartToFooter + brandHeight + hiddenPad + bottomLegendHeight,
+      };
+    }
+    if (bottomLegendHeight > 0) {
+      // No brand band, but a bottom legend was reserved upstream. Surface the
+      // reservation through bottomHeight so margin math stays additive, same
+      // as the compact branch below.
+      return { topHeight: 0, bottomHeight: bottomLegendHeight };
+    }
     return { topHeight: 0, bottomHeight: 0 };
   }
 

@@ -367,6 +367,8 @@ createSankey(container, sankeySpec, { watermark: false });
 
 Spec-level `watermark` takes precedence over the mount option when both are set.
 
+Chart-family specs also auto-hide the watermark when the compiled container is under 200px tall — chrome is already hidden at that height, so the brand band would paint over the plot. Set `watermark` explicitly (top level or in an active breakpoint override) to opt back in; an explicit `watermark: true` in that cramped state reserves a compact brand band instead of overlapping the chart. This auto-hide is scoped to charts — sankey, tilemap, graph, geo-map, and table watermarks are unaffected and still need an explicit `watermark: false`.
+
 ---
 
 ## Spec mutation patterns
