@@ -333,6 +333,63 @@ function applyBandLabelStride(ticks: AxisTick[], stride: number): AxisTick[] {
   return ticks.filter((_, i) => (lastIdx - i) % stride === 0);
 }
 
+/**
+ * Horizontal slack left between a nudged label and the container edge. Label
+ * widths come from the host's canvas measurement, which drifts a fraction of a
+ * pixel from the rendered SVG advance width (the tick style asks for
+ * tabular-nums, canvas measures the proportional figures).
+ */
+const LABEL_EDGE_GUARD = 2;
+
+/**
+ * Nudge x tick labels inward so they stay inside the container.
+ *
+ * Point and band x-scales run flush to the plot edges, so the outermost tick
+ * sits ON the chart-area boundary and its centered label spills half its width
+ * into — and past — the margin. Shift the drawn label by exactly the overflow;
+ * `position` is untouched so gridlines, marks and transitions stay aligned to
+ * the data.
+ */
+function clampXTickLabels(
+  ticks: AxisTick[],
+  totalWidth: number,
+  tickAngle: number | undefined,
+  fontSize: number,
+  fontWeight: number,
+  measureText?: MeasureTextFn,
+): AxisTick[] {
+  const rotated = tickAngle !== undefined && Math.abs(tickAngle) > 10;
+  // Rotated labels are anchored at the pivot (end for negative angles, start
+  // for positive) so the text trails away from it; the box still pokes past
+  // the pivot by half the line height projected onto x.
+  const rad = rotated ? (Math.abs(tickAngle as number) * Math.PI) / 180 : 0;
+  const across = rotated ? (fontSize * 1.2 * Math.sin(rad)) / 2 : 0;
+
+  return ticks.map((tick) => {
+    const width = measureLabel(tick.label, fontSize, fontWeight, measureText);
+    let left: number;
+    let right: number;
+    if (rotated) {
+      const along = width * Math.cos(rad);
+      const trailsLeft = (tickAngle as number) < 0;
+      left = trailsLeft ? -(along + across) : -across;
+      right = trailsLeft ? across : along + across;
+    } else {
+      left = -width / 2;
+      right = width / 2;
+    }
+
+    let x = tick.position;
+    const overRight = x + right - (totalWidth - LABEL_EDGE_GUARD);
+    if (overRight > 0) x -= overRight;
+    // Left last: a label wider than the container keeps its start visible.
+    const overLeft = LABEL_EDGE_GUARD - (x + left);
+    if (overLeft > 0) x += overLeft;
+
+    return x === tick.position ? tick : { ...tick, labelPosition: x };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -690,6 +747,15 @@ export function computeAxes(
 
   if (result.x) {
     const isRotated = !!result.x.tickAngle && Math.abs(result.x.tickAngle) > 10;
+
+    result.x.ticks = clampXTickLabels(
+      result.x.ticks,
+      totalWidth,
+      result.x.tickAngle,
+      result.x.tickLabelStyle.fontSize,
+      result.x.tickLabelStyle.fontWeight,
+      measureText,
+    );
 
     // Single source of truth for the x-axis vertical extent (rotated or flat).
     // computeXAxisExtentFromLabels applies the correct rotated-extent math

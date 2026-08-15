@@ -1,5 +1,5 @@
 import type { AxisTick, Encoding, LayoutStrategy } from '@opendata-ai/openchart-core';
-import { maxRotatedLabelWidth, resolveTheme } from '@opendata-ai/openchart-core';
+import { estimateTextWidth, maxRotatedLabelWidth, resolveTheme } from '@opendata-ai/openchart-core';
 import { scaleLinear, scaleLog } from 'd3-scale';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -902,6 +902,63 @@ describe('axis config properties', () => {
     expect(axes.x!.labelPadding).toBeUndefined();
     expect(axes.x!.labelOverlap).toBeUndefined();
     expect(axes.x!.labelFlush).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Outer x tick labels stay inside the container
+// ---------------------------------------------------------------------------
+
+describe('x tick label edge clamping', () => {
+  // Point scales run flush to the plot edges, so the last tick sits ON the
+  // chart-area boundary; a centered label would spill past the SVG.
+  const flushSpec: NormalizedChartSpec = {
+    ...lineSpec,
+    data: [
+      { season: '2020-21', value: 100 },
+      { season: '2021-22', value: 140 },
+      { season: '2022-23', value: 120 },
+      { season: '2023-24', value: 160 },
+    ],
+    encoding: {
+      x: { field: 'season', type: 'ordinal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  };
+  const totalWidth = 320;
+  // Right margin of 4px: far narrower than half a "2023-24" label.
+  const narrowArea = { x: 30, y: 10, width: totalWidth - 34, height: 200 };
+  const dataContext = {
+    data: flushSpec.data,
+    encoding: flushSpec.encoding as Encoding,
+    markType: 'line' as const,
+    totalWidth,
+  };
+
+  const halfLabelWidth = (tick: AxisTick) =>
+    estimateTextWidth(tick.label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal) / 2;
+
+  it('nudges the last label inward so it stays inside the container', () => {
+    const scales = computeScales(flushSpec, narrowArea, flushSpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme, undefined, dataContext);
+
+    const last = axes.x!.ticks[axes.x!.ticks.length - 1];
+    // Flush: the tick itself still sits on the plot edge.
+    expect(last.position).toBeCloseTo(narrowArea.x + narrowArea.width, 5);
+    expect(last.labelPosition).toBeDefined();
+    expect(last.labelPosition!).toBeLessThan(last.position);
+    expect(last.labelPosition! + halfLabelWidth(last)).toBeLessThanOrEqual(totalWidth);
+  });
+
+  it('leaves labels that already fit alone', () => {
+    const scales = computeScales(flushSpec, narrowArea, flushSpec.data);
+    const axes = computeAxes(scales, narrowArea, fullStrategy, theme, undefined, dataContext);
+
+    const interior = axes.x!.ticks.slice(1, -1);
+    expect(interior.length).toBeGreaterThan(0);
+    for (const tick of interior) {
+      expect(tick.labelPosition).toBeUndefined();
+    }
   });
 });
 
