@@ -1,11 +1,17 @@
 /**
  * Dashboards — OpenChart in a product context: dense, composed, and small.
  *
- * Six demos across two sections. The first section shows the dashboard
+ * Ten demos across three sections. The first section shows the dashboard
  * building blocks in isolation (sparkline cards, KPI metric pills, a bar list,
  * a crosshair line, conditional-color sector bars). The second composes them
- * into a single mini-dashboard in a full-bleed 2x2 grid so you can see how the
- * pieces sit together at product density.
+ * into a single mini-dashboard in a 2x2 grid so you can see how the pieces sit
+ * together at product density. The third goes further: four full product
+ * dashboards (SaaS analytics, ops monitoring, markets, marketing funnel) that
+ * demonstrate the chrome-economy and one-watermark-per-dashboard conventions.
+ *
+ * The layout components, the shared surface tokens, and the sparkline card
+ * renderer live in `./dashboards.layouts.tsx` — a plain module, not a story
+ * file, so Ladle doesn't turn each of its exports into a story.
  *
  * Absorbs and replaces the old `sparkline` and `financial` story files. The
  * pinned `sparkline--markets-dashboard` and `sparkline--sizes` fixtures live in
@@ -22,6 +28,20 @@ import {
   programmingLanguages,
   sp500SectorReturns,
 } from '../data';
+import {
+  dashTokens,
+  funnelSankeySpec,
+  MarketingDashboard,
+  MarketsDashboard,
+  marketsCompareSpec,
+  OpsDashboard,
+  opsErrorSpec,
+  pctChange,
+  SaasDashboard,
+  SparklineCard,
+  saasMrrSpec,
+  sparklineSpec,
+} from './dashboards.layouts';
 import { vBarGradient } from './helpers';
 
 const ACCENT = '#0e7490';
@@ -30,47 +50,10 @@ const ACCENT = '#0e7490';
 // 1. Sparkline card grid — display: 'sparkline'
 // ---------------------------------------------------------------------------
 
-/** Minimal sparkline spec; trend color, endpoint dot, and area gradient all
- *  come from the engine's sparkline defaults. */
-function sparklineSpec(
-  mark: 'line' | 'area',
-  series: ReadonlyArray<{ t: number; value: number }>,
-): ChartSpec {
-  const base = {
-    data: [...series],
-    encoding: {
-      x: { field: 't', type: 'ordinal' as const },
-      y: { field: 'value', type: 'quantitative' as const },
-    },
-    display: 'sparkline' as const,
-  };
-  return mark === 'area' ? { mark: 'area', ...base } : { mark: 'line', ...base };
-}
-
-function pctChange(series: ReadonlyArray<{ value: number }>): { text: string; up: boolean } {
-  const first = series[0]?.value ?? 0;
-  const last = series[series.length - 1]?.value ?? 0;
-  const delta = first === 0 ? 0 : ((last - first) / first) * 100;
-  const up = delta >= 0;
-  return { text: `${up ? '+' : ''}${delta.toFixed(2)}%`, up };
-}
-
-/** Dashboard surface tokens derived from the resolved gallery mode. Kept in JS
- *  (inline styles) so these product cards stay self-contained and don't touch
- *  the shared gallery.css. */
-function dashTokens(dark: boolean) {
-  return {
-    surface: dark ? '#10151d' : '#ffffff',
-    border: dark ? '1px solid #232b38' : '1px solid #e2e8f0',
-    text: dark ? '#e2e8f0' : '#1e293b',
-    muted: dark ? '#94a3b8' : '#64748b',
-    faint: dark ? '#64748b' : '#94a3b8',
-    up: dark ? '#4ade80' : '#16a34a',
-    down: dark ? '#f87171' : '#dc2626',
-    mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-  };
-}
-
+// `dashTokens`, `pctChange`, `sparklineSpec`, and the single-card renderer
+// (`SparklineCard`) live in ./dashboards.layouts.tsx so the four composed
+// dashboards in the Layouts section can reuse them. The markup below is
+// unchanged; only the per-card body moved.
 function SparklineCards() {
   const t = dashTokens(useOcMode() === 'dark');
 
@@ -83,53 +66,9 @@ function SparklineCards() {
         color: t.text,
       }}
     >
-      {marketIndices.indices.map((idx) => {
-        const change = pctChange(idx.series);
-        const last = idx.series[idx.series.length - 1]?.value ?? 0;
-        return (
-          <div
-            key={idx.symbol}
-            style={{ padding: 16, border: t.border, borderRadius: 8, background: t.surface }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                justifyContent: 'space-between',
-                marginBottom: 4,
-              }}
-            >
-              <span style={{ fontSize: 12, fontWeight: 500, color: t.muted }}>{idx.name}</span>
-              <span style={{ fontFamily: t.mono, fontSize: 11, color: t.faint }}>{idx.symbol}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-              <span
-                style={{
-                  fontSize: 22,
-                  fontWeight: 600,
-                  letterSpacing: '-0.01em',
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {last.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              </span>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  fontVariantNumeric: 'tabular-nums',
-                  color: change.up ? t.up : t.down,
-                }}
-              >
-                {change.text}
-              </span>
-            </div>
-            <div style={{ height: 44 }}>
-              <Chart spec={sparklineSpec(idx.mark, idx.series)} />
-            </div>
-          </div>
-        );
-      })}
+      {marketIndices.indices.map((idx) => (
+        <SparklineCard key={idx.symbol} index={idx} />
+      ))}
     </div>
   );
 }
@@ -450,7 +389,7 @@ export default { title: 'Dashboards' };
 export const Dashboards = () => (
   <GalleryPage
     title="Dashboards"
-    lede="The same spec grammar, shrunk for product surfaces. Sparklines strip every bit of chrome to fit a KPI card, metric pills sit above a compact chart, bar lists rank at a glance, and a crosshair tracks the nearest point. The last demo composes them into one dense layout."
+    lede="The same spec grammar, shrunk for product surfaces. Sparklines strip every bit of chrome to fit a KPI card, metric pills sit above a compact chart, bar lists rank at a glance, and a crosshair tracks the nearest point. The last section assembles them into four complete dashboards — SaaS analytics, ops monitoring, markets, and a marketing funnel — each following the same chrome economy: one hero chart carries the title, source, and watermark, and every other tile stays quiet."
   >
     <Section
       id="building-blocks"
@@ -503,6 +442,45 @@ export const Dashboards = () => (
     >
       <Demo id="mini-dashboard" specForPanel={composedSectorSpec} height={640}>
         <ComposedDashboard />
+      </Demo>
+    </Section>
+
+    <Section
+      id="layouts"
+      title="Full layouts"
+      lede="Four complete product dashboards. Each follows the same two rules: one hero chart owns the takeaway title, the cited source, and the watermark, while supporting tiles carry a terse label or nothing at all. Every grid collapses to a single column under 640px."
+    >
+      <Demo
+        id="saas-overview"
+        title="SaaS analytics overview"
+        description="Stat cards, a hero MRR area chart, a signups tile, a bar list, and a compact table. The signups tile is the one to watch: its spec sets no watermark key at all, and its container is pinned to 180px, so the engine auto-hides the brand in that cramped height. The table sets watermark: false explicitly — tables resolve it outside the auto-hide."
+        specForPanel={saasMrrSpec}
+      >
+        <SaasDashboard />
+      </Demo>
+      <Demo
+        id="ops-monitoring"
+        title="Ops / monitoring"
+        description="A strip of four 44px sparkline cards over the hero incident timeline, with an SLO reference line at 1% and a text annotation on the spike. The status donut pins Healthy/Degraded/Down to green/amber/red so the color never shifts with the data."
+        specForPanel={opsErrorSpec}
+      >
+        <OpsDashboard />
+      </Demo>
+      <Demo
+        id="markets-overview"
+        title="Finance / markets"
+        description="The sparkline card renderer from the first demo, reused over four indices, above a crosshair index comparison and a diverging sector chart. Endpoint labels replace the legend on the hero so the tile spends no vertical space on chrome it doesn't need."
+        specForPanel={marketsCompareSpec}
+      >
+        <MarketsDashboard />
+      </Demo>
+      <Demo
+        id="marketing-funnel"
+        title="Marketing funnel"
+        description="A sankey hero traces the cohort from landing page to paying user; conversion trends and channel mix sit underneath. Sankeys resolve their watermark outside the chart auto-hide, so the hero keeps the brand deliberately and both supporting tiles opt out."
+        specForPanel={funnelSankeySpec}
+      >
+        <MarketingDashboard />
       </Demo>
     </Section>
   </GalleryPage>

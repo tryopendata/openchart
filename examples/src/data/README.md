@@ -60,3 +60,10 @@ export const gdpGrowth = {
 | `programming-languages.ts` | `programmingLanguages` | TIOBE Index |
 | `us-payrolls.ts` | `usPayrolls` | Bureau of Labor Statistics |
 | `department-budgets.ts` | `departmentBudgets` | Illustrative data |
+| `saas-metrics.ts` | `saasMetrics` | Illustrative data |
+| `ops-monitoring.ts` | `opsMonitoring` | Illustrative data |
+| `marketing-funnel.ts` | `marketingFunnel` | Illustrative data |
+
+This table lists notable modules, not the full pool — the barrel in `index.ts`
+has grown well past the 20-30 cap stated above, which is due for a pruning
+pass.
