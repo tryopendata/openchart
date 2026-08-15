@@ -212,3 +212,52 @@ describe('compileBarList', () => {
     expect(omitted.height).toBe(subtract.height);
   });
 });
+
+describe('label truncation', () => {
+  it('ellipsizes labels longer than the label column, keeping full text in aria', () => {
+    const longLabel = 'A very long error signature label that cannot possibly fit the column';
+    const spec = makeSpec({
+      data: [
+        { label: longLabel, count: 100 },
+        { label: 'Short', count: 50 },
+      ],
+    });
+    // 300px wide -> label column caps at 35% ≈ 105px, far below the label.
+    const layout = compileBarList(spec, { width: 300, height: 200 });
+    const truncated = layout.rows[0];
+    expect(truncated.label.text.endsWith('…')).toBe(true);
+    expect(truncated.label.text.length).toBeLessThan(longLabel.length);
+    expect(truncated.aria.label).toBe(`${longLabel}: 100`);
+    // Short labels pass through untouched.
+    expect(layout.rows[1].label.text).toBe('Short');
+  });
+
+  it('keeps the subtitle inside the label column, truncating or dropping it', () => {
+    const longLabel = 'A very long error signature label that cannot possibly fit the column';
+    const spec = makeSpec({
+      data: [
+        { label: longLabel, count: 100, note: 'a fairly long subtitle annotation' },
+        { label: 'Short', count: 50, note: 'ok' },
+      ],
+      encoding: {
+        label: { field: 'label', type: 'nominal' },
+        value: { field: 'count', type: 'quantitative' },
+        subtitle: { field: 'note', type: 'nominal' },
+      },
+    });
+    const layout = compileBarList(spec, { width: 300, height: 200 });
+
+    // Row 0: the truncated label fills the column, so the subtitle is either
+    // truncated into the remainder or dropped -- never rendered past the
+    // column edge into the bar track.
+    const row0 = layout.rows[0];
+    const labelColumnRight = layout.rows[1].track.x - 8; // track start - narrow gap
+    if (row0.subtitle) {
+      expect(row0.subtitle.x).toBeLessThanOrEqual(labelColumnRight);
+      expect(row0.subtitle.text.endsWith('…')).toBe(true);
+    }
+
+    // Row 1: short label + short subtitle pass through untouched.
+    expect(layout.rows[1].subtitle?.text).toBe('ok');
+  });
+});

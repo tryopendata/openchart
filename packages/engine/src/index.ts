@@ -49,6 +49,7 @@ export { dedupeKeys, serializeKeyValue } from './compiler/keys';
 // ---------------------------------------------------------------------------
 
 export { buildAreaPath, buildLinePath } from './charts/line/curves';
+export { buildArcPath } from './charts/pie/compute';
 
 // ---------------------------------------------------------------------------
 // Graph compilation types

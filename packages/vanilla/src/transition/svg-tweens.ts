@@ -1,4 +1,5 @@
 import type {
+  ArcMark,
   AreaMark,
   ChartLayout,
   GradientDef,
@@ -14,7 +15,7 @@ import { renderSingleMark } from '../renderers/marks';
 
 import type { MarkDomIndex } from './dom-index';
 import { geomFromMark, normalizePointArrays } from './interpolate';
-import type { GeometrySnapshot, RectGeom, Tween } from './types';
+import type { ArcGeom, GeometrySnapshot, RectGeom, Tween } from './types';
 
 // ---------------------------------------------------------------------------
 // Gradient ghost helper
@@ -535,6 +536,124 @@ export function buildAreaTweens(
       finalBottomPoints: prev.bottomPoints,
       interpolate: prev.interpolate,
       hasStroke: !!prev.stroke && !!prev.topPath,
+      ghost,
+      fromOpacity: 1,
+      toOpacity: 0,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Arc tween building (pie/donut slices)
+// ---------------------------------------------------------------------------
+
+/** Angle/radius geometry lifted off an arc mark for interpolation. */
+function arcGeomFromMark(m: ArcMark): ArcGeom {
+  return {
+    startAngle: m.startAngle,
+    endAngle: m.endAngle,
+    innerRadius: m.innerRadius,
+    outerRadius: m.outerRadius,
+  };
+}
+
+export function buildArcTweens(
+  prevLayout: ChartLayout,
+  nextLayout: ChartLayout,
+  marksContainer: SVGElement,
+  dom: MarkDomIndex,
+  tweens: Tween[],
+  ghosts: SVGElement[],
+  ghostGradientMap: Map<string, string>,
+  fromSnapshot?: GeometrySnapshot,
+): void {
+  const prevArcs = prevLayout.marks.filter((m): m is ArcMark => m.type === 'arc');
+  const nextArcs = nextLayout.marks.filter((m): m is ArcMark => m.type === 'arc');
+
+  const prevByKey = new Map<string, ArcMark>();
+  for (const m of prevArcs) {
+    if (m.key) prevByKey.set(m.key, m);
+  }
+  const nextByKey = new Map<string, ArcMark>();
+  for (const m of nextArcs) {
+    if (m.key) nextByKey.set(m.key, m);
+  }
+
+  // Updated: interpolate angles/radii; the path is rebuilt per frame.
+  for (const [key, next] of nextByKey) {
+    const prev = prevByKey.get(key);
+    if (!prev) continue;
+    const el = dom.any(key);
+    if (!el) continue;
+
+    let fromGeom = arcGeomFromMark(prev);
+    let fromCenter = prev.center;
+    const snap = fromSnapshot?.get(key);
+    if (snap && snap.type === 'arc') {
+      fromGeom = {
+        startAngle: snap.startAngle,
+        endAngle: snap.endAngle,
+        innerRadius: snap.innerRadius,
+        outerRadius: snap.outerRadius,
+      };
+      fromCenter = { x: snap.cx, y: snap.cy };
+    }
+
+    tweens.push({
+      tweenType: 'arc',
+      kind: 'update',
+      el,
+      from: fromGeom,
+      to: arcGeomFromMark(next),
+      fromCenter,
+      toCenter: next.center,
+      mark: next,
+    });
+  }
+
+  // Entered: grow from a zero-width sweep at the slice's own start angle.
+  for (const [key, next] of nextByKey) {
+    if (prevByKey.has(key)) continue;
+    const el = dom.any(key);
+    if (!el) continue;
+
+    tweens.push({
+      tweenType: 'arc',
+      kind: 'enter',
+      el,
+      from: { ...arcGeomFromMark(next), endAngle: next.startAngle },
+      to: arcGeomFromMark(next),
+      fromCenter: next.center,
+      toCenter: next.center,
+      mark: next,
+      fromOpacity: 0,
+      toOpacity: 1,
+    });
+  }
+
+  // Exited: ghost collapses its sweep to the midpoint angle and fades out.
+  for (const [key, prev] of prevByKey) {
+    if (nextByKey.has(key)) continue;
+    const ghostMark = resolveGhostGradientFill(prev, ghostGradientMap);
+    const ghost = renderSingleMark(ghostMark, 0);
+    if (!ghost) continue;
+    ghost.classList.add('oc-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('pointer-events', 'none');
+    ghost.removeAttribute('data-key');
+    marksContainer.appendChild(ghost);
+    ghosts.push(ghost);
+
+    const mid = (prev.startAngle + prev.endAngle) / 2;
+    tweens.push({
+      tweenType: 'arc',
+      kind: 'exit',
+      el: ghost,
+      from: arcGeomFromMark(prev),
+      to: { ...arcGeomFromMark(prev), startAngle: mid, endAngle: mid },
+      fromCenter: prev.center,
+      toCenter: prev.center,
+      mark: prev,
       ghost,
       fromOpacity: 1,
       toOpacity: 0,

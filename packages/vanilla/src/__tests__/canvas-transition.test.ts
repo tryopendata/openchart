@@ -66,7 +66,7 @@ function scatter(
   opts: { maxMarks?: number; trendline?: boolean } = {},
 ): ChartSpec {
   return {
-    // Entrance off: gate 6 blocks updates while one is in flight, and an
+    // Entrance off: gate 5 blocks updates while one is in flight, and an
     // entrance armed on mount would veto every transition under test. This is
     // also how the GIF/scrolly callers drive an update-only chart.
     //

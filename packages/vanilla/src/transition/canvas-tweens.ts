@@ -340,7 +340,7 @@ export function snapCanvasPointsToFinal(tw: CanvasPointsTween): void {
   tw.layer.state.exiting = null;
   // Null rather than fill(1): the renderer skips the alpha multiply entirely
   // when this is null, and every point is at full alpha once the fade lands.
-  // Safe to clobber unconditionally -- gate 6 bars a transition while an
+  // Safe to clobber unconditionally -- gate 5 bars a transition while an
   // entrance is in flight, so nothing else owns this array.
   tw.layer.state.enterAlpha = null;
 }

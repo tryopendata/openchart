@@ -221,6 +221,25 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   const barAreaWidth = fullArea.width - labelWidth - labelBarGap - barValueGap - valueWidth;
 
+  // Ellipsize `text` to fit `budget` px, given its untruncated `fullWidth`.
+  // The trim is seeded proportionally (plus a safety margin) so the loop costs
+  // a handful of measureText calls per row instead of one per character.
+  const ellipsize = (
+    text: string,
+    fullWidth: number,
+    budget: number,
+    fontSize: number,
+    fontWeight: number,
+  ): { text: string; width: number } => {
+    const seedLen = Math.min(text.length, Math.ceil((text.length * budget) / fullWidth) + 2);
+    let t = text.slice(0, seedLen);
+    while (t.length > 1 && measureText(`${t.trimEnd()}…`, fontSize, fontWeight).width > budget) {
+      t = t.slice(0, -1);
+    }
+    const out = `${t.trimEnd()}…`;
+    return { text: out, width: measureText(out, fontSize, fontWeight).width };
+  };
+
   const labelColor = theme.colors.text;
   const subtitleColor = options.darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)';
   const valueColor = options.darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)';
@@ -239,8 +258,21 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     const rowY = fullArea.y + i * rowHeight;
     const centerY = rowY + rowContentHeight / 2;
 
-    // Label (left-aligned)
+    // Label (left-aligned). Labels longer than the label column are
+    // ellipsized for display — without this they run underneath the bar
+    // track. The full text is preserved in the row's aria label.
     const labelX = fullArea.x;
+    let displayLabel = labelText;
+    let displayLabelW = perRowLabelWidths.get(i) ?? 0;
+    if (displayLabelW > labelWidth) {
+      ({ text: displayLabel, width: displayLabelW } = ellipsize(
+        labelText,
+        displayLabelW,
+        labelWidth,
+        LABEL_FONT_SIZE,
+        LABEL_FONT_WEIGHT,
+      ));
+    }
     const labelStyle: TextStyle = {
       fontFamily: theme.fonts.family,
       fontSize: LABEL_FONT_SIZE,
@@ -249,24 +281,46 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
       lineHeight: 1.4,
     };
 
-    // Subtitle (left-aligned, positioned after this row's measured label width + gap)
+    // Subtitle (left-aligned, positioned after this row's measured label width
+    // + gap). The subtitle must also fit inside the label column: when the
+    // (possibly truncated) label leaves too little room, the subtitle is
+    // ellipsized into the remainder, or dropped when not even one character
+    // plus an ellipsis fits.
     let subtitle: BarListRowMark['subtitle'];
     if (subtitleField && row[subtitleField] != null) {
-      const subtitleText = String(row[subtitleField]);
-      const subtitleX = labelX + (perRowLabelWidths.get(i) ?? 0) + 6;
-      subtitle = {
-        text: subtitleText,
-        x: subtitleX,
-        y: centerY,
-        style: {
-          fontFamily: theme.fonts.family,
-          fontSize: SUBTITLE_FONT_SIZE,
-          fontWeight: SUBTITLE_FONT_WEIGHT,
-          fill: subtitleColor,
-          lineHeight: 1.4,
-        },
-        visible: true,
-      };
+      let subtitleText = String(row[subtitleField]);
+      const subtitleBudget = labelWidth - displayLabelW - 6;
+      const subtitleW = measureText(subtitleText, SUBTITLE_FONT_SIZE, SUBTITLE_FONT_WEIGHT).width;
+      if (subtitleW > subtitleBudget) {
+        const minW = measureText('W…', SUBTITLE_FONT_SIZE, SUBTITLE_FONT_WEIGHT).width;
+        if (subtitleBudget < minW) {
+          subtitleText = '';
+        } else {
+          ({ text: subtitleText } = ellipsize(
+            subtitleText,
+            subtitleW,
+            subtitleBudget,
+            SUBTITLE_FONT_SIZE,
+            SUBTITLE_FONT_WEIGHT,
+          ));
+        }
+      }
+      if (subtitleText) {
+        const subtitleX = labelX + displayLabelW + 6;
+        subtitle = {
+          text: subtitleText,
+          x: subtitleX,
+          y: centerY,
+          style: {
+            fontFamily: theme.fonts.family,
+            fontSize: SUBTITLE_FONT_SIZE,
+            fontWeight: SUBTITLE_FONT_WEIGHT,
+            fill: subtitleColor,
+            lineHeight: 1.4,
+          },
+          visible: true,
+        };
+      }
     }
 
     // Track (muted background bar)
@@ -294,7 +348,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
       y: rowY,
       height: rowHeight,
       label: {
-        text: labelText,
+        text: displayLabel,
         x: labelX,
         y: centerY,
         style: labelStyle,

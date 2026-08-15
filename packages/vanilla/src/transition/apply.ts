@@ -1,3 +1,4 @@
+import { buildArcPath } from '@opendata-ai/openchart-engine';
 import { interpolateRgb } from 'd3-interpolate';
 import { cubicOut } from '../motion/easing';
 
@@ -14,7 +15,33 @@ import {
   interpolatePoints,
   lerpGeom,
 } from './interpolate';
-import type { Tween } from './types';
+import type { ArcGeom, ArcTween, Tween } from './types';
+
+// ---------------------------------------------------------------------------
+// Arc helpers (shared by the per-frame step and the final snap)
+// ---------------------------------------------------------------------------
+
+/** Lerp arc angle/radius geometry. */
+export function lerpArcGeom(from: ArcGeom, to: ArcGeom, t: number): ArcGeom {
+  return {
+    startAngle: from.startAngle + (to.startAngle - from.startAngle) * t,
+    endAngle: from.endAngle + (to.endAngle - from.endAngle) * t,
+    innerRadius: from.innerRadius + (to.innerRadius - from.innerRadius) * t,
+    outerRadius: from.outerRadius + (to.outerRadius - from.outerRadius) * t,
+  };
+}
+
+/** Write an interpolated arc state onto the mark group's path + transform. */
+function applyArcState(tw: ArcTween, eased: number): void {
+  const geom = lerpArcGeom(tw.from, tw.to, eased);
+  const pathEl = tw.el.tagName === 'path' ? tw.el : tw.el.querySelector('path');
+  pathEl?.setAttribute('d', buildArcPath(geom));
+  if (tw.fromCenter.x !== tw.toCenter.x || tw.fromCenter.y !== tw.toCenter.y) {
+    const cx = tw.fromCenter.x + (tw.toCenter.x - tw.fromCenter.x) * eased;
+    const cy = tw.fromCenter.y + (tw.toCenter.y - tw.fromCenter.y) * eased;
+    tw.el.setAttribute('transform', `translate(${cx},${cy})`);
+  }
+}
 
 /** Get the data-key for a tween's element (used for snapshot keying). */
 export function getKeyForTween(tw: Tween): string | null {
@@ -82,6 +109,10 @@ export function applyTweenState(
       const top = interpolatePoints(tw.fromTop, tw.toTop, eased);
       const bottom = interpolatePoints(tw.fromBottom, tw.toBottom, eased);
       applyAreaPaths(tw.el, top, bottom, tw.interpolate, tw.hasStroke);
+      break;
+    }
+    case 'arc': {
+      applyArcState(tw, eased);
       break;
     }
     case 'point': {
@@ -184,6 +215,14 @@ export function snapTweenToFinal(tw: Tween): void {
     case 'area':
       applyAreaPaths(tw.el, tw.toTop, tw.toBottom, tw.interpolate, tw.hasStroke);
       break;
+    case 'arc': {
+      // Snap to the engine's exact rendered path (not a rebuilt one) so the
+      // DOM round-trips to what render() produced. Ghosts are removed anyway.
+      const pathEl = tw.el.tagName === 'path' ? tw.el : tw.el.querySelector('path');
+      pathEl?.setAttribute('d', tw.mark.path);
+      tw.el.setAttribute('transform', `translate(${tw.toCenter.x},${tw.toCenter.y})`);
+      break;
+    }
     case 'point':
       tw.el.setAttribute('cx', String(tw.toCx));
       tw.el.setAttribute('cy', String(tw.toCy));

@@ -32,7 +32,7 @@ import { buildAreaPath, buildLinePath, EXIT_DEFAULTS } from '@opendata-ai/opench
 import { buildGradientDefs } from '../gradient-utils';
 import { cubicOut } from '../motion/easing';
 
-import { applyTweenState, getKeyForTween, snapTweenToFinal } from './apply';
+import { applyTweenState, getKeyForTween, lerpArcGeom, snapTweenToFinal } from './apply';
 import { buildCanvasGridlinesTween, buildCanvasPointsTween } from './canvas-tweens';
 import { buildAnnotationTweens, buildAxisTweens, buildColorTweens } from './chrome-tweens';
 import { buildMarkDomIndex } from './dom-index';
@@ -43,6 +43,7 @@ import {
   lerpGeom,
 } from './interpolate';
 import {
+  buildArcTweens,
   buildAreaTweens,
   buildLineTweens,
   buildPointTweens,
@@ -150,6 +151,9 @@ export function runTransition(args: {
   const hasAreas =
     prevLayout.marks.some((m) => m.type === 'area') ||
     nextLayout.marks.some((m) => m.type === 'area');
+  const hasArcs =
+    prevLayout.marks.some((m) => m.type === 'arc') ||
+    nextLayout.marks.some((m) => m.type === 'arc');
   const hasPoints =
     prevLayout.marks.some((m) => m.type === 'point') ||
     nextLayout.marks.some((m) => m.type === 'point');
@@ -180,6 +184,18 @@ export function runTransition(args: {
   }
   if (hasAreas) {
     buildAreaTweens(
+      prevLayout,
+      nextLayout,
+      marksContainer,
+      dom,
+      tweens,
+      ghosts,
+      ghostGradientMap,
+      fromSnapshot,
+    );
+  }
+  if (hasArcs) {
+    buildArcTweens(
       prevLayout,
       nextLayout,
       marksContainer,
@@ -419,6 +435,15 @@ export function runTransition(args: {
             topD = buildLinePath(top, tw.interpolate);
           }
           snap.set(key, { type: 'area', d, topD });
+          break;
+        }
+        case 'arc': {
+          snap.set(key, {
+            type: 'arc',
+            ...lerpArcGeom(tw.from, tw.to, easedUpdate),
+            cx: tw.fromCenter.x + (tw.toCenter.x - tw.fromCenter.x) * easedUpdate,
+            cy: tw.fromCenter.y + (tw.toCenter.y - tw.fromCenter.y) * easedUpdate,
+          });
           break;
         }
       }

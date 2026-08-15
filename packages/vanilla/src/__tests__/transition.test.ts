@@ -229,9 +229,9 @@ describe('canTransition gate', () => {
     const specA = columnSpec(DATA_A);
     const specB = columnSpec(DATA_B);
     const args = passingGateArgs(specA, specB);
-    // Override both specs to be arc (pie) charts which are not supported
-    args.prevSpec = { ...specA, mark: 'arc' };
-    args.nextSpec = { ...specB, mark: 'arc' };
+    // Override both specs to a mark type with no update-transition support
+    args.prevSpec = { ...specA, mark: 'waffle' };
+    args.nextSpec = { ...specB, mark: 'waffle' };
     expect(canTransition(args)).toBe(false);
   });
 
@@ -268,13 +268,13 @@ describe('canTransition gate', () => {
     expect(canTransition(args)).toBe(false);
   });
 
-  it('gate 5: fails for sparkline display', () => {
-    const specA = columnSpec(DATA_A);
+  it('no sparkline exclusion: sparkline display transitions like any other chart', () => {
+    const specA: ChartSpec = { ...columnSpec(DATA_A), display: 'sparkline' };
     const specB: ChartSpec = { ...columnSpec(DATA_B), display: 'sparkline' };
-    expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
+    expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
   });
 
-  it('gate 6: fails when entrance is in flight', () => {
+  it('gate 5: fails when entrance is in flight', () => {
     const specA = columnSpec(DATA_A);
     const specB = columnSpec(DATA_B);
     const args = passingGateArgs(specA, specB);
@@ -282,7 +282,7 @@ describe('canTransition gate', () => {
     expect(canTransition(args)).toBe(false);
   });
 
-  it('gate 7: fails when dimensions change', () => {
+  it('gate 6: fails when dimensions change', () => {
     const specA = columnSpec(DATA_A);
     const specB = columnSpec(DATA_B);
     expect(
@@ -297,7 +297,7 @@ describe('canTransition gate', () => {
     ).toBe(false);
   });
 
-  it('gate 8: fails when mark count exceeds 500', () => {
+  it('gate 7: fails when mark count exceeds 500', () => {
     // Build a spec with > 500 data points
     const bigData = Array.from({ length: 501 }, (_, i) => ({
       category: `cat-${i}`,
@@ -309,7 +309,7 @@ describe('canTransition gate', () => {
     expect(canTransition(args)).toBe(false);
   });
 
-  it('gate 8: passes above 500 when animation.update.maxMarks raises the cap', () => {
+  it('gate 7: passes above 500 when animation.update.maxMarks raises the cap', () => {
     const bigData = Array.from({ length: 501 }, (_, i) => ({
       category: `cat-${i}`,
       value: i,
@@ -319,7 +319,7 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
   });
 
-  it('gate 8: still fails when maxMarks is raised but not enough', () => {
+  it('gate 7: still fails when maxMarks is raised but not enough', () => {
     const bigData = Array.from({ length: 501 }, (_, i) => ({
       category: `cat-${i}`,
       value: i,
@@ -329,7 +329,7 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
   });
 
-  it('gate 8: honors a maxMarks lowered below the default', () => {
+  it('gate 7: honors a maxMarks lowered below the default', () => {
     const data = Array.from({ length: 401 }, (_, i) => ({
       category: `cat-${i}`,
       value: i,
@@ -341,7 +341,7 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(specA, specB))).toBe(false);
   });
 
-  it('gate 8: DEFAULT_UPDATE_MAX_MARKS is the applied default', () => {
+  it('gate 7: DEFAULT_UPDATE_MAX_MARKS is the applied default', () => {
     const atCap = Array.from({ length: DEFAULT_UPDATE_MAX_MARKS }, (_, i) => ({
       category: `cat-${i}`,
       value: i,
@@ -350,7 +350,7 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(specA, columnSpec(atCap)))).toBe(true);
   });
 
-  it('gate 8: counts the PREV layout too, so a shrink past the cap is barred', () => {
+  it('gate 7: counts the PREV layout too, so a shrink past the cap is barred', () => {
     // Exit ghosts are rendered into the destination surface, one element per
     // departing mark. Judging by `next` alone reads 400 as cheap while the
     // update would actually mint ~600 ghost circles.
@@ -366,7 +366,7 @@ describe('canTransition gate', () => {
     ).toBe(true);
   });
 
-  it('gate 8: canvas mode gets its own, far higher default cap', () => {
+  it('gate 7: canvas mode gets its own, far higher default cap', () => {
     const scatter = (n: number, yShift: number): ChartSpec => ({
       animation: true,
       mark: 'point',
@@ -417,7 +417,7 @@ describe('canTransition gate', () => {
     ).toBe(true);
   });
 
-  it('gate 8: CANVAS_DEFAULT_UPDATE_MAX_MARKS is the applied canvas default', () => {
+  it('gate 7: CANVAS_DEFAULT_UPDATE_MAX_MARKS is the applied canvas default', () => {
     // 20k+ points: 'auto' promotes to canvas, no explicit renderer needed.
     const scatter = (n: number, yShift: number): ChartSpec => ({
       mark: 'point',
@@ -447,7 +447,7 @@ describe('canTransition gate', () => {
     ).toBe(false);
   });
 
-  it('gate 8: a raised cap produces real tweened motion, not just a passing gate', () => {
+  it('gate 7: a raised cap produces real tweened motion, not just a passing gate', () => {
     // End-to-end guard: 501 keyed scatter points with maxMarks raised must
     // actually interpolate. A gate that returns true but tweens nothing would
     // still leave the blog morph snapping.
@@ -519,14 +519,14 @@ describe('canTransition gate', () => {
     expect(sampled.getAttribute('cy')).toBe(finalCy);
   });
 
-  it('gate 9: fails when geometry is identical (zero-delta)', () => {
+  it('gate 8: fails when geometry is identical (zero-delta)', () => {
     const specA = columnSpec(DATA_A);
     // Same data = same geometry
     expect(canTransition(passingGateArgs(specA, specA))).toBe(false);
   });
 
-  it('gate 9: passes when only an annotation was added', () => {
-    // Regression: gate 9 used to inspect layout.marks only. Annotations are not
+  it('gate 8: passes when only an annotation was added', () => {
+    // Regression: gate 8 used to inspect layout.marks only. Annotations are not
     // marks, so an annotate-only step reported "nothing changed", the whole
     // transition was skipped, and the annotation popped in on render()'s
     // instant swap -- with the fade code sitting unreachable further down.
@@ -538,7 +538,7 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(specA, specB))).toBe(true);
   });
 
-  it('gate 9: passes when only the highlight changed', () => {
+  it('gate 8: passes when only the highlight changed', () => {
     // Regression: a highlight mute recolors marks without moving them, so this
     // also read as a zero-delta and snapped.
     const base: ChartSpec = {
@@ -563,7 +563,7 @@ describe('canTransition gate', () => {
     expect(canTransition(passingGateArgs(base, highlighted))).toBe(true);
   });
 
-  it('gate 10: fails when prefers-reduced-motion is active', () => {
+  it('gate 9: fails when prefers-reduced-motion is active', () => {
     const original = window.matchMedia;
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)',
@@ -832,7 +832,7 @@ describe('ghost elements', () => {
  * Disable the entrance phase so update() can actually transition. With
  * `animation: true`, createChart() arms an entrance-cleanup timer (a real
  * ~1.2s setTimeout) and any update() inside that window fails canTransition
- * gate 6 (entranceInFlight) -- the createChart-based tests below would
+ * gate 5 (entranceInFlight) -- the createChart-based tests below would
  * silently exercise only the instant-swap path.
  */
 function noEnter(spec: ChartSpec): ChartSpec {
@@ -2340,5 +2340,275 @@ describe('beeswarm transitions', () => {
 
     runToCompletion();
     expect(entering.style.opacity).not.toBe('0');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Arc (pie/donut) transitions
+// ---------------------------------------------------------------------------
+
+const STATUS_A = [
+  { status: 'Healthy', services: 24 },
+  { status: 'Degraded', services: 4 },
+  { status: 'Down', services: 2 },
+];
+
+const STATUS_B = [
+  { status: 'Healthy', services: 20 },
+  { status: 'Degraded', services: 7 },
+  { status: 'Down', services: 3 },
+];
+
+/** Donut spec with animation enabled. */
+function donutSpec(data: Array<{ status: string; services: number }>): ChartSpec {
+  return {
+    animation: true,
+    mark: { type: 'arc', innerRadius: 55 },
+    data,
+    encoding: {
+      theta: { field: 'services', type: 'quantitative' },
+      color: { field: 'status', type: 'nominal' },
+    },
+    legend: { show: false },
+    labels: { density: 'none' },
+  };
+}
+
+describe('arc transitions', () => {
+  it('canTransition passes for a donut data update', () => {
+    expect(canTransition(passingGateArgs(donutSpec(STATUS_A), donutSpec(STATUS_B)))).toBe(true);
+  });
+
+  it('canTransitionSpecShape rejects a changed theta field', () => {
+    const specA = donutSpec(STATUS_A);
+    const specB: ChartSpec = {
+      ...donutSpec(STATUS_B),
+      encoding: {
+        theta: { field: 'other', type: 'quantitative' },
+        color: { field: 'status', type: 'nominal' },
+      },
+    };
+    expect(canTransitionSpecShape(specA, specB)).toBe(false);
+  });
+
+  it('a matched slice morphs its path and lands on the rendered geometry', () => {
+    const layoutA = compile(donutSpec(STATUS_A));
+    const layoutB = compile(donutSpec(STATUS_B));
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    const group = svg.querySelector('.oc-mark-arc[data-key="Healthy"]') as SVGElement;
+    expect(group).toBeTruthy();
+    const path = group.querySelector('path') as SVGPathElement;
+    const finalD = path.getAttribute('d');
+
+    // Guard the fixture: the slice's angles must actually change.
+    const arcA = layoutA.marks.find((m) => m.type === 'arc' && m.key === 'Healthy') as {
+      endAngle: number;
+    };
+    const arcB = layoutB.marks.find((m) => m.type === 'arc' && m.key === 'Healthy') as {
+      endAngle: number;
+    };
+    expect(arcA.endAngle).not.toBeCloseTo(arcB.endAngle, 3);
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // From-state applied synchronously: not the final path anymore.
+    const startD = path.getAttribute('d');
+    expect(startD).not.toBe(finalD);
+
+    // Mid-flight differs from both endpoints.
+    pumpRaf(0);
+    pumpRaf(250);
+    const midD = path.getAttribute('d');
+    expect(midD).not.toBe(startD);
+    expect(midD).not.toBe(finalD);
+
+    // Snap-to-final restores the engine's exact rendered path.
+    pumpRaf(2000);
+    expect(path.getAttribute('d')).toBe(finalD);
+  });
+
+  it('a removed slice gets a ghost that is cleaned up at completion', () => {
+    const withDown = donutSpec(STATUS_A);
+    const withoutDown = donutSpec(STATUS_A.filter((d) => d.status !== 'Down'));
+    const layoutA = compile(withDown);
+    const layoutB = compile(withoutDown);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    expect(svg.querySelector('.oc-mark-arc[data-key="Down"]')).toBeNull();
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    const ghost = svg.querySelector('.oc-ghost.oc-mark-arc') as SVGElement;
+    expect(ghost).toBeTruthy();
+    expect(ghost.getAttribute('data-key')).toBeNull();
+
+    runToCompletion();
+    expect(svg.querySelector('.oc-ghost.oc-mark-arc')).toBeNull();
+  });
+
+  it('an added slice fades in from a collapsed sweep', () => {
+    const without = donutSpec(STATUS_A.filter((d) => d.status !== 'Down'));
+    const withDown = donutSpec(STATUS_A);
+    const layoutA = compile(without);
+    const layoutB = compile(withDown);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+    const entering = svg.querySelector('.oc-mark-arc[data-key="Down"]') as SVGElement;
+    expect(entering).toBeTruthy();
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // Enter starts invisible, then lands visible on the exact rendered path.
+    expect(entering.style.opacity).toBe('0');
+    runToCompletion();
+    expect(entering.style.opacity).not.toBe('0');
+  });
+
+  it('snapshot captures intermediate arc geometry including the center', () => {
+    const layoutA = compile(donutSpec(STATUS_A));
+    const layoutB = compile(donutSpec(STATUS_B));
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    const handle = runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    pumpRaf(0);
+    pumpRaf(250);
+
+    const snap = handle.snapshot();
+    expect(snap.size).toBeGreaterThan(0);
+    for (const [, geom] of snap) {
+      expect(geom.type).toBe('arc');
+      if (geom.type === 'arc') {
+        expect(Number.isFinite(geom.cx)).toBe(true);
+        expect(Number.isFinite(geom.cy)).toBe(true);
+        expect(geom.endAngle).toBeGreaterThanOrEqual(geom.startAngle);
+      }
+    }
+
+    handle.cancel();
+  });
+
+  it('A -> B -> interrupt at ~50% -> C -> complete -> equals fresh render of C', () => {
+    const STATUS_C = [
+      { status: 'Healthy', services: 16 },
+      { status: 'Degraded', services: 10 },
+      { status: 'Down', services: 4 },
+    ];
+    const specA = noEnter(donutSpec(STATUS_A));
+    const specB = noEnter(donutSpec(STATUS_B));
+    const specC = noEnter(donutSpec(STATUS_C));
+
+    // Use createChart so update() handles snapshot plumbing
+    const container = createContainer();
+    const chart = createChart(container, specA);
+
+    chart.update(specB);
+    expect(rafCallbacks.size).toBeGreaterThan(0);
+
+    pumpRaf(0);
+    pumpRaf(250); // ~50% into the B transition
+
+    chart.update(specC);
+    pumpRaf(0);
+    pumpRaf(2000);
+
+    const svg = container.querySelector('svg') as SVGSVGElement;
+    const transitioned = extractPathD(svg, 'oc-mark-arc');
+
+    const { svg: freshSvg } = compileAndRender(specC);
+    const fresh = extractPathD(freshSvg, 'oc-mark-arc');
+
+    expect([...transitioned.keys()].sort()).toEqual([...fresh.keys()].sort());
+    for (const [key, tPath] of transitioned) {
+      expect(tPath).toBe(fresh.get(key));
+    }
+
+    // No ghost elements remain
+    expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);
+
+    chart.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sparkline transitions (exclusion removed from the gate)
+// ---------------------------------------------------------------------------
+
+describe('sparkline transitions', () => {
+  it('a sparkline line morphs its path and lands on the fresh render', () => {
+    const sparkA: ChartSpec = { ...lineSpec(LINE_DATA_A), display: 'sparkline' };
+    const sparkB: ChartSpec = { ...lineSpec(LINE_DATA_B), display: 'sparkline' };
+    assertLineAreaRoundTrip(sparkA, sparkB, 'oc-mark-line');
+  });
+
+  it('suppressed endpoint points do not flash during a sparkline update', () => {
+    const sparkA: ChartSpec = {
+      ...lineSpec(LINE_DATA_A),
+      display: 'sparkline',
+      mark: { type: 'line', point: true },
+    };
+    const sparkB: ChartSpec = { ...sparkA, data: LINE_DATA_B };
+
+    const layoutA = compile(sparkA);
+    const layoutB = compile(sparkB);
+
+    const container = createContainer();
+    const svg = renderChartSVG(layoutB, container) as SVGSVGElement;
+
+    // Simulate endpoint-marker suppression on the first point.
+    const points = svg.querySelectorAll('circle.oc-mark-point[data-key]');
+    if (points.length > 0) {
+      points[0].setAttribute('opacity', '0');
+    }
+
+    runTransition({
+      svg,
+      prevLayout: layoutA,
+      nextLayout: layoutB,
+      animation: layoutB.animation!,
+      onComplete: () => {},
+    });
+
+    // Mid-flight AND at completion the suppressed point stays invisible
+    // (never-tween-opacity-on-updates).
+    pumpRaf(0);
+    pumpRaf(250);
+    if (points.length > 0) {
+      expect(points[0].getAttribute('opacity')).toBe('0');
+    }
+    runToCompletion();
+    if (points.length > 0) {
+      expect(points[0].getAttribute('opacity')).toBe('0');
+    }
   });
 });

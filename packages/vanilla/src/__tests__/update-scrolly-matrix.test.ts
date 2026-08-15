@@ -17,7 +17,7 @@
  *
  * All specs here use `animation: { enter: false }`. With `animation: true`,
  * createChart() arms an entrance-cleanup timer (~1.2s real setTimeout) and
- * any update() inside that window fails canTransition gate 6
+ * any update() inside that window fails canTransition gate 5
  * (entranceInFlight) -- the chart snaps instead of tweening. The
  * entrance-in-flight test at the bottom pins that behavior down explicitly.
  *
@@ -615,7 +615,7 @@ describe('update() during the entrance animation window', () => {
   it('snaps instead of transitioning while the entrance cleanup timer is armed', () => {
     // Full `animation: true`: mount arms the entrance-cleanup timer, and an
     // update() inside that window (~duration + stagger + 700ms) fails
-    // canTransition gate 6. Scrolly drivers that want step 1 -> step 2 to
+    // canTransition gate 5. Scrolly drivers that want step 1 -> step 2 to
     // tween must disable the entrance phase ({ enter: false }) or tolerate
     // the first step snapping when the reader scrolls immediately.
     const spec = { ...columnSpec(COL_A), animation: true } as ChartSpec;

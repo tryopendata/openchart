@@ -1,4 +1,4 @@
-import type { Point, RectMark } from '@opendata-ai/openchart-core';
+import type { ArcMark, Point, RectMark } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -18,7 +18,18 @@ export type SnapshotGeometry =
   | { type: 'tick'; x1: number; y1: number; x2: number; y2: number }
   | { type: 'textMark'; x: number; y: number }
   | { type: 'line'; d: string }
-  | { type: 'area'; d: string; topD?: string };
+  | { type: 'area'; d: string; topD?: string }
+  | {
+      type: 'arc';
+      startAngle: number;
+      endAngle: number;
+      innerRadius: number;
+      outerRadius: number;
+      /** Pie center at capture time, so an interrupted transition whose
+       *  center shifted (e.g. legend rows changed) retargets translate too. */
+      cx: number;
+      cy: number;
+    };
 
 export interface TransitionHandle {
   cancel(): void;
@@ -89,6 +100,31 @@ export interface AreaTween {
   interpolate?: string;
   /** Whether to also write the topPath stroke element. */
   hasStroke: boolean;
+  ghost?: SVGElement;
+  fromOpacity?: number;
+  toOpacity?: number;
+}
+
+/** Angle/radius geometry for an arc slice, interpolated per frame and
+ *  rebuilt into an SVG path via the engine's `buildArcPath`. */
+export interface ArcGeom {
+  startAngle: number;
+  endAngle: number;
+  innerRadius: number;
+  outerRadius: number;
+}
+
+export interface ArcTween {
+  tweenType: 'arc';
+  kind: 'update' | 'enter' | 'exit';
+  /** The `<g class="oc-mark-arc">` group; the path child gets the tweened d. */
+  el: SVGElement;
+  from: ArcGeom;
+  to: ArcGeom;
+  /** Group translate, tweened when the pie center shifts between layouts. */
+  fromCenter: Point;
+  toCenter: Point;
+  mark: ArcMark;
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
@@ -334,6 +370,7 @@ export type Tween =
   | RectTween
   | LineTween
   | AreaTween
+  | ArcTween
   | PointTween
   | RuleTween
   | TickTween

@@ -6,8 +6,14 @@ import { keyAnnotations } from './keys';
 // canTransition gate
 // ---------------------------------------------------------------------------
 
-/** Mark types that support data-update transitions. */
-export const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point', 'beeswarm']);
+/**
+ * Mark types that support data-update transitions.
+ *
+ * Sparklines are NOT excluded: a live-updating sparkline is the canonical
+ * real-time tile, and the line/area path morph works at sparkline scale like
+ * anywhere else.
+ */
+export const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point', 'beeswarm', 'arc']);
 
 /**
  * Default cap on the mark count that still runs a tweened data-update
@@ -35,8 +41,8 @@ export const CANVAS_DEFAULT_UPDATE_MAX_MARKS = 20_000;
  * rather than re-deriving it and risking drift.
  *
  * This is gate checks 3-4 of `canTransition` in isolation; it does NOT
- * check layout-derived conditions (dimensions, mark count, geometry delta,
- * sparkline display) since those require a compiled `ChartLayout`.
+ * check layout-derived conditions (dimensions, mark count, geometry delta)
+ * since those require a compiled `ChartLayout`.
  */
 export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): boolean {
   const prev = prevSpec as Record<string, unknown>;
@@ -57,6 +63,8 @@ export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): bo
     prevEnc.x?.type !== nextEnc.x?.type ||
     prevEnc.y?.field !== nextEnc.y?.field ||
     prevEnc.y?.type !== nextEnc.y?.type ||
+    prevEnc.theta?.field !== nextEnc.theta?.field ||
+    prevEnc.theta?.type !== nextEnc.theta?.type ||
     prevEnc.color?.field !== nextEnc.color?.field ||
     prevEnc.key?.field !== nextEnc.key?.field ||
     prevEnc.facet?.field !== nextEnc.facet?.field ||
@@ -69,7 +77,7 @@ export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): bo
  * Determine whether a data-update transition should run instead of
  * a full tear-down + re-render.
  *
- * Ten gate checks must all pass. If any fails, the caller should fall
+ * Nine gate checks must all pass. If any fails, the caller should fall
  * through to the standard render path (instant swap).
  */
 export function canTransition(args: {
@@ -91,13 +99,10 @@ export function canTransition(args: {
   // 3-4. Mark type + encoding identity unchanged (spec-shape half of the gate)
   if (!canTransitionSpecShape(prevSpec, nextSpec)) return false;
 
-  // 5. Not sparkline
-  if (nextLayout.display === 'sparkline') return false;
-
-  // 6. Entrance animation not in flight
+  // 5. Entrance animation not in flight
   if (entranceInFlight) return false;
 
-  // 7. Layout dimensions unchanged
+  // 6. Layout dimensions unchanged
   if (
     prevLayout.dimensions.width !== nextLayout.dimensions.width ||
     prevLayout.dimensions.height !== nextLayout.dimensions.height
@@ -105,7 +110,7 @@ export function canTransition(args: {
     return false;
   }
 
-  // 8. Mark count within the update cap. Per-frame SVG attribute writes on
+  // 7. Mark count within the update cap. Per-frame SVG attribute writes on
   //    thousands of elements drop frames on low-end devices, so past the cap
   //    the caller falls through to an instant swap.
   //
@@ -123,10 +128,10 @@ export function canTransition(args: {
       : DEFAULT_UPDATE_MAX_MARKS);
   if (Math.max(prevLayout.marks.length, nextLayout.marks.length) > cap) return false;
 
-  // 9. Something visible actually changed (zero-delta check)
+  // 8. Something visible actually changed (zero-delta check)
   if (!hasVisibleChange(prevLayout, nextLayout)) return false;
 
-  // 10. prefers-reduced-motion not active
+  // 9. prefers-reduced-motion not active
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     try {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
@@ -141,7 +146,7 @@ export function canTransition(args: {
 /**
  * Check whether anything the transition can animate differs between layouts.
  *
- * Gate check 9. This is broader than geometry on purpose: a step that only
+ * Gate check 8. This is broader than geometry on purpose: a step that only
  * recolors (an `encoding.color.highlight` mute) or only adds an annotation
  * moves no mark by a single pixel. Testing geometry alone reported "nothing
  * changed" for those, vetoing the transition and leaving `render()`'s instant
@@ -211,6 +216,17 @@ export function hasGeometryChanged(prevLayout: ChartLayout, nextLayout: ChartLay
       }
     } else if (p.type === 'area' && n.type === 'area') {
       if (p.path !== n.path) return true;
+    } else if (p.type === 'arc' && n.type === 'arc') {
+      if (
+        p.startAngle !== n.startAngle ||
+        p.endAngle !== n.endAngle ||
+        p.innerRadius !== n.innerRadius ||
+        p.outerRadius !== n.outerRadius ||
+        p.center.x !== n.center.x ||
+        p.center.y !== n.center.y
+      ) {
+        return true;
+      }
     } else if (p.type === 'point' && n.type === 'point') {
       if (p.cx !== n.cx || p.cy !== n.cy || p.r !== n.r) return true;
     } else if (p.type === 'rule' && n.type === 'rule') {

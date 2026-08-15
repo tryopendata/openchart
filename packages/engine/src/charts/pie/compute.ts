@@ -32,6 +32,34 @@ import { resolveConditionalValue } from '../../transforms/conditional';
 /** Slices smaller than this fraction are grouped into "Other". */
 const SMALL_SLICE_THRESHOLD = 0.03;
 
+/** Pad angle between slices, applied by both the pie layout and the arc
+ *  generator. Shared with `buildArcPath` so data-update transitions rebuild
+ *  paths with the exact gap the renderer drew. */
+export const PIE_PAD_ANGLE = 0.01;
+
+/**
+ * Rebuild the SVG path for an arc from its resolved geometry. Used by the
+ * vanilla transition driver to interpolate arc marks per frame; must stay in
+ * lockstep with the `arcGenerator` below or the tween's final frame won't
+ * match the rendered mark.
+ */
+export function buildArcPath(geom: {
+  innerRadius: number;
+  outerRadius: number;
+  startAngle: number;
+  endAngle: number;
+}): string {
+  return (
+    d3Arc()({
+      innerRadius: geom.innerRadius,
+      outerRadius: geom.outerRadius,
+      startAngle: geom.startAngle,
+      endAngle: geom.endAngle,
+      padAngle: PIE_PAD_ANGLE,
+    }) ?? ''
+  );
+}
+
 /** Default color palette when no color scale is available. */
 const DEFAULT_PALETTE = [
   '#1b7fa3',
@@ -218,7 +246,7 @@ export function computePieMarks(
   const pieGenerator = d3Pie<SliceData>()
     .value((d) => d.value)
     .sort(null) // Already sorted
-    .padAngle(0.01)
+    .padAngle(PIE_PAD_ANGLE)
     .startAngle(startAngle)
     .endAngle(endAngle);
 
