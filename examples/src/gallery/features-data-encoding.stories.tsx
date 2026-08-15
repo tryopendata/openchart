@@ -542,14 +542,12 @@ export const DataAndEncoding = () => (
         title="Small multiples (shared scale)"
         description="A facet field plus columns lays the data out as a grid. A shared y-scale makes panels directly comparable."
         spec={facetSharedSpec}
-        height={440}
       />
       <Demo
         id="facet-independent"
         title="Independent scales"
         description="resolve.scale.y = 'independent' gives each panel its own y-domain, trading cross-panel comparison for within-panel detail."
         spec={facetIndependentSpec}
-        height={440}
       />
       <Demo
         id="row-facet"

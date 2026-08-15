@@ -401,7 +401,6 @@ export const Dashboards = () => (
         title="Sparkline card grid"
         description="display: 'sparkline' strips chrome, axes, and legend so a mini-chart fits in a card. Trend color, endpoint dot, and area gradient come from the engine's sparkline defaults."
         specForPanel={sparklineExampleSpec}
-        height={320}
       >
         <SparklineCards />
       </Demo>
@@ -440,7 +439,10 @@ export const Dashboards = () => (
       title="Composed dashboard"
       lede="The primitives assembled into one product layout: a 2x2 grid mixing KPI pills, a sparkline tile, and two compact charts. It reflows to a single column on narrow screens."
     >
-      <Demo id="mini-dashboard" specForPanel={composedSectorSpec} height={640}>
+      {/* No fixed height: the grid reflows to one column on narrow screens
+          and would clip inside a pinned wrapper. Tiles pin their own chart
+          heights, so auto-height is stable. Same for the card grid above. */}
+      <Demo id="mini-dashboard" specForPanel={composedSectorSpec}>
         <ComposedDashboard />
       </Demo>
     </Section>

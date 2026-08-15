@@ -92,6 +92,30 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Page canvas: the gallery root only paints its own box, so without an
+ * explicit html/body background the browser canvas stays white and shows
+ * through on iOS overscroll and at any exposed edge in dark mode.
+ * --gx-surface flips with [data-theme], so one rule covers both modes.
+ * ------------------------------------------------------------------------- */
+html,
+body {
+  background: var(--gx-surface);
+}
+
+/* ---------------------------------------------------------------------------
+ * Floating toolbar at phone widths: the GitHub pill is inline-styled
+ * `right: 280px` to clear the desktop TOC, which lands it on top of the
+ * left-anchored theme picker once the viewport is narrower than ~515px.
+ * !important is required to beat the inline style.
+ * ------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .oc-github-link {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat the component's inline right: 280px */
+    right: 12px !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * Story root: fill height, smooth theme cross-fade.
  * ------------------------------------------------------------------------- */
 .ladle-story-root {

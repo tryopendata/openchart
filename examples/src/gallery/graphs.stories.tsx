@@ -1048,7 +1048,6 @@ export const Graphs = () => (
         title="Seeded layout (deterministic)"
         description="layout.seed pins start positions so the same spec settles to the same shape every time. Both panels here render identically."
         specForPanel={seededSpec}
-        height={400}
       >
         <SeededGraph />
       </Demo>

@@ -32,6 +32,49 @@ const NARRATIVE_CSS = `
   margin: 0;
   max-width: 34rem;
 }
+
+/* Phone layout. ChartStory lays its section out as
+   \`minmax(0, 26rem) minmax(0, 1fr)\` with inline styles, so below ~26rem of
+   available width the narrative column eats everything and the graphic column
+   collapses to 0 — the chart disappears and the chart's absolutely positioned
+   .oc-sr-only data table sticks out past the viewport (horizontal scroll).
+   Restack to one column and let the graphic span both rows so its sticky
+   positioning still holds for the whole story: the chart pins to the top and
+   the steps scroll behind it. */
+@media (max-width: 860px) {
+  .ocs-narrative > section {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto 1fr;
+    gap: var(--gx-space-4, 1rem) !important;
+  }
+  .ocs-narrative > section > div:first-child {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .ocs-narrative > section > div:nth-child(2) {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    z-index: 1;
+    background: var(--gx-surface, #fff);
+    /* Pinned to the very top so the opaque backdrop covers the steps sliding
+       behind it; the top padding clears the floating theme toolbar. The
+       desktop pane is a full-height column, which would leave a phone screen
+       no room for the step the chart is illustrating. */
+    top: 0 !important;
+    padding: 2.75rem 0 var(--gx-space-3, 0.75rem);
+    height: auto !important;
+    max-height: 62vh !important;
+  }
+  /* Steps sit in the lower half the pinned chart leaves free. */
+  .ocs-narrative [data-oc-story-step] {
+    align-items: flex-end !important;
+    padding-bottom: 6vh;
+  }
+  .ocs-step p {
+    max-width: none;
+  }
+}
 `;
 
 const narrative = [
@@ -75,7 +118,7 @@ const narrative = [
 function ScrollyNarrativeDemo() {
   const mode = useOcMode();
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="ocs-narrative" style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS constant, no user input */}
       <style dangerouslySetInnerHTML={{ __html: NARRATIVE_CSS }} />
       <ChartStory

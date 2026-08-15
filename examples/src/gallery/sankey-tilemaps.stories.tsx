@@ -351,7 +351,6 @@ export const SankeyAndTileMaps = () => (
         id="palettes"
         title="Palette variants"
         description="The five built-in sequential palettes — blue, green, orange, purple, teal — on one dataset. Pick the one that fits your publication's accent."
-        height={720}
       >
         <PaletteGrid />
       </Demo>

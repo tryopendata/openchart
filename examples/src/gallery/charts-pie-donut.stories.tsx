@@ -496,12 +496,13 @@ export const PieAndDonut = () => (
         spec={manyCategoriesSpec}
         height={520}
       />
+      {/* No fixed height: the pair wraps to one column on narrow screens and
+          would clip inside a pinned wrapper. Each donut pins its own height. */}
       <Demo
         id="comparison-donuts"
         title="Side-by-side comparison donuts"
         description="Two donuts sharing one color assignment and a bottom legend read as a before/after pair. A fixed domain order keeps each source the same color across both."
         specForPanel={electricity2023Spec}
-        height={480}
       >
         <ComparisonDonuts />
       </Demo>

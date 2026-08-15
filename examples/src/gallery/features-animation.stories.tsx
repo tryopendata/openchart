@@ -588,6 +588,9 @@ export const Animation = () => (
       </Demo>
     </Section>
 
+    {/* Demos wrapping ReplayChart/ReplayPair carry no Demo height: the helper
+        pins the chart box and adds a Replay button below it, so a wrapper
+        pinned to the same number clips the button. */}
     <Section
       id="by-mark"
       title="By mark type"
@@ -598,7 +601,6 @@ export const Animation = () => (
         title="Line drawing"
         description="Paths sweep in left to right via a clip-path reveal; point markers fade in behind the sweep."
         specForPanel={lineDrawSpec}
-        height={440}
       >
         <ReplayChart spec={lineDrawSpec} height={440} />
       </Demo>
@@ -607,7 +609,6 @@ export const Animation = () => (
         title="Area reveal"
         description="The area draws under an opacity gradient that fades to transparent at the baseline."
         specForPanel={areaRevealSpec}
-        height={440}
       >
         <ReplayChart spec={areaRevealSpec} height={440} />
       </Demo>
@@ -624,7 +625,6 @@ export const Animation = () => (
         title="Stacked segment chaining"
         description="Segments in a stacked column chain their reveal so the whole bar rises as one fluid sweep. The segments ease linearly to keep constant velocity across the handoffs."
         specForPanel={stackedChainSpec}
-        height={460}
       >
         <ReplayChart spec={stackedChainSpec} height={460} />
       </Demo>
@@ -635,7 +635,7 @@ export const Animation = () => (
       title="Sequencing"
       lede="Choreograph the order in which layers arrive so the reader's eye lands on the data before the labels."
     >
-      <Demo id="annotation-delay" specForPanel={annotationDelaySpec} height={440}>
+      <Demo id="annotation-delay" specForPanel={annotationDelaySpec}>
         <ReplayChart spec={annotationDelaySpec} height={440} />
       </Demo>
     </Section>

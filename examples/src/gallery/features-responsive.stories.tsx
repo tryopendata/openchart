@@ -423,7 +423,6 @@ export const Responsive = () => (
         title="Extreme ratios"
         description="The same spec at an ultra-wide banner, a tall narrow column, and a tiny thumbnail. Chrome compacts or hides and axes thin out as the height class drops to short then cramped."
         specForPanel={ratioSpec}
-        height={640}
       >
         <ExtremeRatios />
       </Demo>
@@ -434,7 +433,9 @@ export const Responsive = () => (
       title="Faceting"
       lede="Small-multiple grids reflow with the container: the panel grid drops columns and stacks toward a single column as width runs out."
     >
-      <Demo id="facet-stacking" specForPanel={facetSpec} height={560}>
+      {/* No fixed height: ResizeFrame pins its own chart box and adds the
+          drag handle + readout below it, so a pinned wrapper clips them. */}
+      <Demo id="facet-stacking" specForPanel={facetSpec}>
         <ResizeFrame spec={facetSpec} min={260} max={900} initial={760} heightValue={480} />
       </Demo>
     </Section>

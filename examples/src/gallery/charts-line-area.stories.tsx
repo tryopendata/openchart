@@ -516,11 +516,12 @@ export const LineAndArea = () => (
         spec={stackedAreaSpec}
         height={460}
       />
+      {/* No fixed height: the 2x2 grid collapses to one column under ~640px
+          and would clip inside a pinned wrapper. Tiles pin their own heights. */}
       <Demo
         id="interpolation"
         title="Step and interpolation modes"
         description="mark.interpolate picks the curve between points: linear connects them straight, step holds each value, monotone and natural smooth without overshooting the data."
-        height={580}
       >
         <InterpolationModes />
       </Demo>
