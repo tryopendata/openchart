@@ -23,6 +23,7 @@ export const page: PageEntry = {
     { id: 'saas-overview', title: 'SaaS analytics overview' },
     { id: 'ops-monitoring', title: 'Ops / monitoring' },
     { id: 'markets-overview', title: 'Finance / markets' },
+    { id: 'incident-intelligence', title: 'Incident intelligence (AI on-call agent)' },
     { id: 'marketing-funnel', title: 'Marketing funnel' },
   ],
 };

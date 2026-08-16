@@ -1,13 +1,20 @@
 /**
  * Dashboards — OpenChart in a product context: dense, composed, and small.
  *
- * Ten demos across three sections. The first section shows the dashboard
+ * Eleven demos across three sections. The first section shows the dashboard
  * building blocks in isolation (sparkline cards, KPI metric pills, a bar list,
  * a crosshair line, conditional-color sector bars). The second composes them
  * into a single mini-dashboard in a 2x2 grid so you can see how the pieces sit
- * together at product density. The third goes further: four full product
- * dashboards (SaaS analytics, ops monitoring, markets, marketing funnel) that
- * demonstrate the chrome-economy and one-watermark-per-dashboard conventions.
+ * together at product density. The third goes further: five full product
+ * dashboards (SaaS analytics, ops monitoring, markets, incident intelligence,
+ * marketing funnel) that demonstrate the chrome-economy and
+ * one-watermark-per-dashboard conventions.
+ *
+ * Live simulation: sparkline cards, the composed Nasdaq tile, and the five
+ * full dashboards tick with simulated real-time data every ~5s (see the
+ * live-data section of ./dashboards.layouts.tsx). Each tick flows through the
+ * engine's data-update transitions, so new data animates in instead of
+ * snapping.
  *
  * The layout components, the shared surface tokens, and the sparkline card
  * renderer live in `./dashboards.layouts.tsx` — a plain module, not a story
@@ -20,6 +27,7 @@
 
 import type { BarListSpec, ChartSpec } from '@opendata-ai/openchart-core';
 import { BarList, Chart } from '@opendata-ai/openchart-react';
+import { useMemo } from 'react';
 import { Demo, GalleryPage, Section, useOcMode } from '../components';
 import {
   indexTotalReturns,
@@ -31,6 +39,8 @@ import {
 import {
   dashTokens,
   funnelSankeySpec,
+  IncidentDashboard,
+  incidentErrorSpec,
   MarketingDashboard,
   MarketsDashboard,
   marketsCompareSpec,
@@ -41,6 +51,8 @@ import {
   SparklineCard,
   saasMrrSpec,
   sparklineSpec,
+  useLiveSectorReturns,
+  useLiveSeries,
 } from './dashboards.layouts';
 import { vBarGradient } from './helpers';
 
@@ -51,7 +63,7 @@ const ACCENT = '#0e7490';
 // ---------------------------------------------------------------------------
 
 // `dashTokens`, `pctChange`, `sparklineSpec`, and the single-card renderer
-// (`SparklineCard`) live in ./dashboards.layouts.tsx so the four composed
+// (`SparklineCard`) live in ./dashboards.layouts.tsx so the composed
 // dashboards in the Layouts section can reuse them. The markup below is
 // unchanged; only the per-card body moved.
 function SparklineCards() {
@@ -66,8 +78,8 @@ function SparklineCards() {
         color: t.text,
       }}
     >
-      {marketIndices.indices.map((idx) => (
-        <SparklineCard key={idx.symbol} index={idx} />
+      {marketIndices.indices.map((idx, i) => (
+        <SparklineCard key={idx.symbol} index={idx} phaseMs={i * 400} />
       ))}
     </div>
   );
@@ -113,6 +125,7 @@ const kpiSpec: ChartSpec = {
 
 const moversSpec: BarListSpec = {
   type: 'barlist',
+  animation: true,
   data: [...programmingLanguages.data].slice(0, 8),
   encoding: {
     label: { field: 'language', type: 'nominal' as const },
@@ -253,12 +266,13 @@ function KpiTile() {
   );
 }
 
-/** A single sparkline tile for the composed grid. */
+/** A single sparkline tile for the composed grid. Live like the cards above. */
 function SparkTile() {
   const t = dashTokens(useOcMode() === 'dark');
   const idx = marketIndices.indices[1]; // Nasdaq
-  const change = pctChange(idx.series);
-  const last = idx.series[idx.series.length - 1]?.value ?? 0;
+  const series = useLiveSeries(idx.series, 600);
+  const change = pctChange(series);
+  const last = series[series.length - 1]?.value ?? 0;
   return (
     <div style={{ color: t.text }}>
       <div style={{ ...tileTitleStyle, color: t.muted }}>Nasdaq</div>
@@ -285,7 +299,7 @@ function SparkTile() {
         </span>
       </div>
       <div style={{ height: 56, marginTop: 12 }}>
-        <Chart spec={sparklineSpec('area', idx.series)} />
+        <Chart spec={sparklineSpec('area', series)} />
       </div>
     </div>
   );
@@ -294,6 +308,7 @@ function SparkTile() {
 /** Compact bar list for the composed grid. */
 const composedMoversSpec: BarListSpec = {
   type: 'barlist',
+  animation: true,
   data: [...programmingLanguages.data].slice(0, 5),
   encoding: {
     label: { field: 'language', type: 'nominal' as const },
@@ -308,6 +323,7 @@ const composedMoversSpec: BarListSpec = {
 
 /** Compact sector bars for the composed grid. */
 const composedSectorSpec: ChartSpec = {
+  animation: true,
   mark: 'bar',
   data: sectorReturns,
   encoding: {
@@ -343,17 +359,24 @@ const COMPOSED_GRID_CSS = `
 
 function ComposedDashboard() {
   const t = dashTokens(useOcMode() === 'dark');
+  const sectors = useLiveSectorReturns(1800);
+  // Memoized on the ticking rows so unrelated re-renders (e.g. a dark-mode
+  // toggle) don't hand the chart a fresh spec object with identical data.
+  const liveSectorSpec = useMemo<ChartSpec>(
+    () => ({ ...composedSectorSpec, data: sectors }),
+    [sectors],
+  );
   const panelStyle: React.CSSProperties = {
     padding: 16,
     border: t.border,
     borderRadius: 8,
     background: t.surface,
   };
-  // The 2x2 grid fills its Demo card. It is NOT wrapped in `.oc-bleed`: that
-  // breakout is for Showcase pieces where `.oc-bleed` wraps the whole Demo from
-  // OUTSIDE. Here the composition lives INSIDE a `.oc-demo` card (border +
-  // `overflow: hidden`), so a `.oc-bleed` child would break past the card's
-  // clip boundary and get its left edge cut off at wide widths.
+  // The 2x2 grid fills its Demo card. The `.oc-bleed` breakout wraps the whole
+  // Demo from OUTSIDE (see the story below, same as Showcase). A `.oc-bleed`
+  // wrapper HERE, inside the `.oc-demo` card (border + `overflow: hidden`),
+  // would break past the card's clip boundary and get its left edge cut off at
+  // wide widths.
   return (
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
@@ -367,7 +390,7 @@ function ComposedDashboard() {
         </div>
         <div style={panelStyle}>
           <div style={{ height: 300 }}>
-            <Chart spec={composedSectorSpec} />
+            <Chart spec={liveSectorSpec} />
           </div>
         </div>
         <div style={panelStyle}>
@@ -389,7 +412,7 @@ export default { title: 'Dashboards' };
 export const Dashboards = () => (
   <GalleryPage
     title="Dashboards"
-    lede="The same spec grammar, shrunk for product surfaces. Sparklines strip every bit of chrome to fit a KPI card, metric pills sit above a compact chart, bar lists rank at a glance, and a crosshair tracks the nearest point. The last section assembles them into four complete dashboards — SaaS analytics, ops monitoring, markets, and a marketing funnel — each following the same chrome economy: one hero chart carries the title, source, and watermark, and every other tile stays quiet."
+    lede="The same spec grammar, shrunk for product surfaces. Sparklines strip every bit of chrome to fit a KPI card, metric pills sit above a compact chart, bar lists rank at a glance, and a crosshair tracks the nearest point. The last section assembles them into five complete dashboards — SaaS analytics, ops monitoring, markets, incident intelligence, and a marketing funnel — each simulating a live data feed and following the same chrome economy: one hero chart carries the title, source, and watermark, and every other tile stays quiet."
   >
     <Section
       id="building-blocks"
@@ -399,7 +422,7 @@ export const Dashboards = () => (
       <Demo
         id="sparkline-cards"
         title="Sparkline card grid"
-        description="display: 'sparkline' strips chrome, axes, and legend so a mini-chart fits in a card. Trend color, endpoint dot, and area gradient come from the engine's sparkline defaults."
+        description="display: 'sparkline' strips chrome, axes, and legend so a mini-chart fits in a card. Trend color, endpoint dot, and area gradient come from the engine's sparkline defaults. Every card ticks with simulated live data every ~5s — the path morphs to the new window and the headline number and change follow."
         specForPanel={sparklineExampleSpec}
       >
         <SparklineCards />
@@ -441,49 +464,71 @@ export const Dashboards = () => (
     >
       {/* No fixed height: the grid reflows to one column on narrow screens
           and would clip inside a pinned wrapper. Tiles pin their own chart
-          heights, so auto-height is stable. Same for the card grid above. */}
-      <Demo id="mini-dashboard" specForPanel={composedSectorSpec}>
-        <ComposedDashboard />
-      </Demo>
+          heights, so auto-height is stable. Same for the card grid above.
+          The .oc-bleed wrapper (outside the Demo, like Showcase) lets the
+          dashboard spend the content column's breakout slack when it exists. */}
+      <div className="oc-bleed">
+        <Demo id="mini-dashboard" specForPanel={composedSectorSpec}>
+          <ComposedDashboard />
+        </Demo>
+      </div>
     </Section>
 
     <Section
       id="layouts"
       title="Full layouts"
-      lede="Four complete product dashboards. Each follows the same two rules: one hero chart owns the takeaway title, the cited source, and the watermark, while supporting tiles carry a terse label or nothing at all. Every grid collapses to a single column under 640px."
+      lede="Five complete product dashboards, each simulating a live data feed: sparklines advance, bars retarget, the donut re-slices, and stat cards update in sync, all on a ~5s clock. Each follows the same two rules: one hero chart owns the takeaway title, the cited source, and the watermark, while supporting tiles carry a terse label or nothing at all. Every grid collapses to a single column under 640px."
     >
-      <Demo
-        id="saas-overview"
-        title="SaaS analytics overview"
-        description="Stat cards, a hero MRR area chart, a signups tile, a bar list, and a compact table. The signups tile is the one to watch: its spec sets no watermark key at all, and its container is pinned to 180px, so the engine auto-hides the brand in that cramped height. The table sets watermark: false explicitly — tables resolve it outside the auto-hide."
-        specForPanel={saasMrrSpec}
-      >
-        <SaasDashboard />
-      </Demo>
-      <Demo
-        id="ops-monitoring"
-        title="Ops / monitoring"
-        description="A strip of four 44px sparkline cards over the hero incident timeline, with an SLO reference line at 1% and a text annotation on the spike. The status donut pins Healthy/Degraded/Down to green/amber/red so the color never shifts with the data."
-        specForPanel={opsErrorSpec}
-      >
-        <OpsDashboard />
-      </Demo>
-      <Demo
-        id="markets-overview"
-        title="Finance / markets"
-        description="The sparkline card renderer from the first demo, reused over four indices, above a crosshair index comparison and a diverging sector chart. Endpoint labels replace the legend on the hero so the tile spends no vertical space on chrome it doesn't need."
-        specForPanel={marketsCompareSpec}
-      >
-        <MarketsDashboard />
-      </Demo>
-      <Demo
-        id="marketing-funnel"
-        title="Marketing funnel"
-        description="A sankey hero traces the cohort from landing page to paying user; conversion trends and channel mix sit underneath. Sankeys resolve their watermark outside the chart auto-hide, so the hero keeps the brand deliberately and both supporting tiles opt out."
-        specForPanel={funnelSankeySpec}
-      >
-        <MarketingDashboard />
-      </Demo>
+      <div className="oc-bleed">
+        <Demo
+          id="saas-overview"
+          title="SaaS analytics overview"
+          description="Stat cards, a hero MRR area chart, a signups tile, a bar list, and a compact table. The hero and the signups tile tick every ~5s: a new month slides in, the area path morphs, and the MRR stat card updates in lockstep. The signups spec sets no watermark key at all — its 180px container puts it in the engine's cramped height class, so the brand auto-hides."
+          specForPanel={saasMrrSpec}
+        >
+          <SaasDashboard />
+        </Demo>
+      </div>
+      <div className="oc-bleed">
+        <Demo
+          id="ops-monitoring"
+          title="Ops / monitoring"
+          description="Four live sparkline cards over the hero incident timeline, which advances hourly on the same ~5s clock — the incident callout scrolls away with its data. The status donut animates services between Healthy/Degraded/Down with pinned colors, so a slice can grow, shrink, or vanish without the palette shifting."
+          specForPanel={opsErrorSpec}
+        >
+          <OpsDashboard />
+        </Demo>
+      </div>
+      <div className="oc-bleed">
+        <Demo
+          id="markets-overview"
+          title="Finance / markets"
+          description="The live sparkline card renderer from the first demo, reused over four indices, above a crosshair index comparison and a diverging sector chart — both simulating fresh data every ~5s. Endpoint labels replace the legend on the hero so the tile spends no vertical space on chrome it doesn't need."
+          specForPanel={marketsCompareSpec}
+        >
+          <MarketsDashboard />
+        </Demo>
+      </div>
+      <div className="oc-bleed">
+        <Demo
+          id="incident-intelligence"
+          title="Incident intelligence (AI on-call agent)"
+          description="The dashboard an error-ops team would build around an AI on-call agent. The hero correlates the live error feed with a deploy and a feature-flag ramp — the agent's revert lands 35 minutes after the spike, and the whole narrative scrolls off as new data arrives. Around it: investigation outcomes re-slicing live, the agent's time-to-root-cause trend against the on-call baseline, deduped error signatures, and a ledger of recent investigations with estimated user impact. The stat row derives from the same live state as the charts."
+          specForPanel={incidentErrorSpec}
+        >
+          <IncidentDashboard />
+        </Demo>
+      </div>
+      <div className="oc-bleed">
+        <Demo
+          id="marketing-funnel"
+          title="Marketing funnel"
+          description="A sankey hero traces the cohort from landing page to paying user; a live conversion trend and the channel mix sit underneath. Sankeys resolve their watermark outside the chart auto-hide, so the hero keeps the brand deliberately and both supporting tiles opt out."
+          specForPanel={funnelSankeySpec}
+        >
+          <MarketingDashboard />
+        </Demo>
+      </div>
     </Section>
   </GalleryPage>
 );

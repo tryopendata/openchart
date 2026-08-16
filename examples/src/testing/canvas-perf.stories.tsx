@@ -32,7 +32,7 @@ function mulberry32(seed: number): () => number {
 function scatterSpec(seed: number): ChartSpec {
   const rand = mulberry32(seed);
   return {
-    // Entrance off: it would still be running when the update fires, and gate 6
+    // Entrance off: it would still be running when the update fires, and gate 5
     // would veto the very transition this harness exists to measure.
     animation: { enter: false, update: true },
     mark: 'point',

@@ -87,6 +87,12 @@
   min-height: 100%;
   box-sizing: border-box;
   padding: var(--gx-space-8) var(--gx-space-5) var(--gx-space-10);
+  /* Named container so the TOC rail keys off the width the page ACTUALLY has,
+   * not the viewport. Inside Ladle the sidebar eats ~350px, so a viewport
+   * media query showed the rail at widths where the content column was
+   * already cramped. */
+  container-type: inline-size;
+  container-name: gallery-root;
 }
 
 .oc-gallery *,
@@ -111,7 +117,10 @@
  * body text is unaffected. When the viewport can't spare the full track the
  * grid shrinks it, the container query sees less slack, and the breakout
  * narrows to match instead of overshooting. */
-@media (min-width: 1200px) {
+/* The rail only appears once the page itself can afford it: 1040px of content
+ * column + 48px gap + 200px rail = 1288, rounded up for slack. Container
+ * query, not media query — see the note on .oc-gallery. */
+@container gallery-root (min-width: 1300px) {
   .oc-gallery-layout {
     grid-template-columns: minmax(0, 1280px) 200px;
     justify-content: center;
@@ -163,7 +172,7 @@
   display: none;
 }
 
-@media (min-width: 1200px) {
+@container gallery-root (min-width: 1300px) {
   .oc-toc {
     display: block;
     position: sticky;

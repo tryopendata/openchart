@@ -5,7 +5,9 @@
  *   resolved mode context), which crosses into the width-addon iframe so
  *   gallery-content CSS follows dark mode there (constraint C3).
  * - Renders the page title + lede.
- * - Builds a sticky right-rail TOC from its Section children (hidden < 1200px).
+ * - Builds a sticky right-rail TOC from its Section children (shown only when
+ *   the page container itself is >= 1300px wide, so it never crowds the
+ *   content inside Ladle's sidebar-narrowed frame).
  * - Content column max-width ~1040px, centered; a `.oc-bleed` wrapper is
  *   available for full-bleed showcase sections.
  */

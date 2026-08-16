@@ -24,6 +24,7 @@ export { federalBudget } from './federal-budget';
 export { usGdpGrowth } from './gdp-growth';
 export { gdpGrowthByCountry } from './gdp-growth-by-country';
 export { householdSpending } from './household-spending';
+export { incidentIntelligence } from './incident-intelligence';
 export { incomeDistribution } from './income-distribution';
 export { indexTotalReturns } from './index-total-returns';
 export { lifeExpectancyChange } from './life-expectancy-change';
