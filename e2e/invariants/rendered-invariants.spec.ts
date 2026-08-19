@@ -157,3 +157,92 @@ for (const { name, slug } of stories) {
     expect(violations, `Layout violations in ${name}: ${violations.join('; ')}`).toEqual([]);
   });
 }
+
+/**
+ * Nothing a chart renders may lay out beyond its own container box, unless
+ * something between it and the container clips it.
+ *
+ * The bug this guards: the screen-reader data table was a `<table>` carrying the
+ * visually-hidden recipe directly. `width`/`height` are MINIMUMS on a table box,
+ * so the table kept its intrinsic size (measured 119x2184px in production) while
+ * `clip-path` hid it — and because it is absolutely positioned, that size landed
+ * in the host page's nearest scroll container as ~1900px of dead scroll space.
+ *
+ * `getBoundingClientRect` reports the layout box and ignores both `clip-path`
+ * and `overflow`, which is what makes this detectable at all — and also why the
+ * rule has to skip anything under a clipping ancestor. Content inside a clipper
+ * is already contained; only the clipper's own box reaches the host page. That
+ * exemption is exactly what the fix relies on, and the pre-fix table does not
+ * qualify for it: it clipped its own children but nothing clipped the table.
+ *
+ * Scoped to HTML boxes — the sr table, overlays, controls, live regions. What
+ * the SVG paints is already covered by Rules 4 and 5 above, and on a narrow
+ * viewport a pie's arcs genuinely render outside .oc-root today (a separate,
+ * pre-existing bug this rule is not the place to litigate).
+ *
+ * happy-dom has no layout and cannot check any of it.
+ */
+for (const { name, slug } of stories) {
+  test(`chart box containment: ${name}`, async ({ page }) => {
+    await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
+    await page.waitForSelector('.oc-root');
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(100);
+
+    const violations = await page.evaluate(() => {
+      const violations: string[] = [];
+      const root = document.querySelector('.oc-root');
+      if (!root) return ['no .oc-root found'];
+      const rootRect = root.getBoundingClientRect();
+      const EPSILON = 2;
+
+      const describe = (el: Element) => {
+        const cls = typeof el.className === 'string' ? el.className : el.getAttribute('class');
+        return `${el.tagName.toLowerCase()}${cls ? `.${cls.trim().split(/\s+/).join('.')}` : ''}`;
+      };
+
+      /** Does an ancestor strictly between `el` and `.oc-root` clip it? */
+      const isClipped = (el: Element) => {
+        for (let p = el.parentElement; p && p !== root; p = p.parentElement) {
+          if (getComputedStyle(p).overflow !== 'visible') return true;
+        }
+        return false;
+      };
+
+      for (const el of root.querySelectorAll('*')) {
+        if (!(el instanceof HTMLElement)) continue;
+        const r = el.getBoundingClientRect();
+        // Zero-area boxes carry no layout: elements parked at display:none
+        // (the tooltip, the you-draw-it controls).
+        if (r.width === 0 && r.height === 0) continue;
+        if (isClipped(el)) continue;
+        if (
+          r.left < rootRect.left - EPSILON ||
+          r.right > rootRect.right + EPSILON ||
+          r.top < rootRect.top - EPSILON ||
+          r.bottom > rootRect.bottom + EPSILON
+        ) {
+          violations.push(
+            `${describe(el)} escapes .oc-root: ` +
+              `el=${JSON.stringify(r.toJSON())} root=${JSON.stringify(rootRect.toJSON())}`,
+          );
+        }
+      }
+
+      // The visually-hidden boxes are the ones that reach the host page, so
+      // pin their size directly rather than inferring it from the rule above.
+      for (const el of root.querySelectorAll('.oc-sr-only')) {
+        const r = el.getBoundingClientRect();
+        if (r.width > EPSILON || r.height > EPSILON) {
+          violations.push(
+            `${describe(el)} is not visually hidden: ${JSON.stringify(r.toJSON())}`,
+          );
+        }
+      }
+
+      return violations;
+    });
+
+    expect(violations, `Containment violations in ${name}: ${violations.join('; ')}`).toEqual([]);
+  });
+}

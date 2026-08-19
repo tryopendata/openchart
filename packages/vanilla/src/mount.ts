@@ -262,7 +262,7 @@ export function createChart<TData extends DataRow = DataRow>(
   let cleanupEditDrags: (() => void) | null = null;
   let cleanupSelection: (() => void) | null = null;
   let cleanupKeyboardEdit: (() => void) | null = null;
-  let srTable: HTMLTableElement | null = null;
+  let srTableWrapper: HTMLElement | null = null;
   let destroyed = false;
   let isDragging = false;
   let pendingRender = false;
@@ -910,9 +910,9 @@ export function createChart<TData extends DataRow = DataRow>(
     if (tooltipManager) {
       tooltipManager.destroy();
     }
-    if (srTable?.parentNode) {
-      srTable.parentNode.removeChild(srTable);
-      srTable = null;
+    if (srTableWrapper?.parentNode) {
+      srTableWrapper.parentNode.removeChild(srTableWrapper);
+      srTableWrapper = null;
     }
 
     currentLayout = compile();
@@ -1103,7 +1103,7 @@ export function createChart<TData extends DataRow = DataRow>(
     // Create hidden data table for screen readers (not when the author hid
     // the chart from assistive technology)
     if (!currentLayout.a11y.hidden) {
-      srTable = createScreenReaderTable(currentLayout, container);
+      srTableWrapper = createScreenReaderTable(currentLayout, container);
     }
 
     // Mount/refresh the series search overlay on its reserved band. Created
@@ -1508,9 +1508,9 @@ export function createChart<TData extends DataRow = DataRow>(
       svgElement.parentNode.removeChild(svgElement);
       svgElement = null;
     }
-    if (srTable?.parentNode) {
-      srTable.parentNode.removeChild(srTable);
-      srTable = null;
+    if (srTableWrapper?.parentNode) {
+      srTableWrapper.parentNode.removeChild(srTableWrapper);
+      srTableWrapper = null;
     }
     container.classList.remove('oc-dark');
     container.classList.remove('oc-root');

@@ -36,9 +36,10 @@ const NARRATIVE_CSS = `
 /* Phone layout. ChartStory lays its section out as
    \`minmax(0, 26rem) minmax(0, 1fr)\` with inline styles, so below ~26rem of
    available width the narrative column eats everything and the graphic column
-   collapses to 0 — the chart disappears and the chart's absolutely positioned
-   .oc-sr-only data table sticks out past the viewport (horizontal scroll).
-   Restack to one column and let the graphic span both rows so its sticky
+   collapses to 0, so the chart disappears. (This also used to push the
+   absolutely positioned .oc-sr-only data table past the viewport; that half is
+   fixed at the source now — the sr table is wrapped in a 1x1 div — but the
+   column collapse is real on its own.) Restack to one column and let the graphic span both rows so its sticky
    positioning still holds for the whole story: the chart pins to the top and
    the steps scroll behind it. */
 @media (max-width: 860px) {

@@ -9,6 +9,7 @@ import type {
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { elementRef } from '@opendata-ai/openchart-core';
+import { applySrOnlyStyles } from '../dom-helpers';
 
 /**
  * Find a DOM element inside the SVG that matches the given ElementRef.
@@ -230,25 +231,29 @@ export function renderSelectionOverlay(
 
 /**
  * Create a visually-hidden data table from the chart's a11y fallback data.
+ *
+ * The hiding lives on a wrapper div, NOT on the table. CSS treats `width` and
+ * `height` on a table box as MINIMUMS, so `width: 1px; height: 1px` leaves a
+ * table at its intrinsic size — up to MAX_SR_TABLE_ROWS rows of it. `clip-path`
+ * still hides it, so nothing looks wrong, but the box is absolutely positioned
+ * and its size lands in the host page's nearest scroll container as dead scroll
+ * space (this shipped: ~1900px of it under a chat thread). A div honours 1x1.
+ *
+ * Returns the wrapper. `display: block` on the table would also collapse it, but
+ * blockifying drops the implicit row/columnheader/cell roles off every tr/th/td.
  */
 export function createScreenReaderTable(
   layout: ChartLayout,
   container: HTMLElement,
-): HTMLTableElement | null {
+): HTMLElement | null {
   const data = layout.a11y.dataTableFallback;
   if (!data || data.length === 0) return null;
 
+  const wrapper = document.createElement('div');
+  wrapper.className = 'oc-sr-only';
+  applySrOnlyStyles(wrapper);
+
   const table = document.createElement('table');
-  table.className = 'oc-sr-only';
-  table.style.position = 'absolute';
-  table.style.width = '1px';
-  table.style.height = '1px';
-  table.style.padding = '0';
-  table.style.margin = '-1px';
-  table.style.overflow = 'hidden';
-  table.style.clipPath = 'inset(50%)';
-  table.style.whiteSpace = 'nowrap';
-  table.style.borderWidth = '0';
   table.setAttribute('role', 'table');
   table.setAttribute('aria-label', `Data table: ${layout.a11y.altText}`);
 
@@ -290,6 +295,7 @@ export function createScreenReaderTable(
     table.appendChild(tbody);
   }
 
-  container.appendChild(table);
-  return table;
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+  return wrapper;
 }
