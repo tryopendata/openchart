@@ -48,3 +48,46 @@ describe('createScreenReaderTable caption', () => {
     expect(table?.querySelector('caption')).toBeNull();
   });
 });
+
+describe('createScreenReaderTable hiding', () => {
+  /**
+   * The hiding must sit on a wrapper div, never on the table. width/height are
+   * minimums on a table box, so a 1x1 table stays full size and its absolutely
+   * positioned bulk inflates the host page's scroll container. No layout engine
+   * here to measure that, so assert the structure that prevents it.
+   */
+  it('hides via a wrapper div and leaves the table unsized', () => {
+    const container = document.createElement('div');
+    const wrapper = createScreenReaderTable(layoutWith({}), container);
+
+    expect(wrapper?.tagName).toBe('DIV');
+    expect(wrapper?.classList.contains('oc-sr-only')).toBe(true);
+    expect(wrapper?.style.position).toBe('absolute');
+    expect(wrapper?.style.width).toBe('1px');
+    expect(wrapper?.style.height).toBe('1px');
+    expect(container.firstElementChild).toBe(wrapper);
+
+    const table = wrapper?.querySelector('table');
+    expect(table).not.toBeNull();
+    expect(table?.classList.contains('oc-sr-only')).toBe(false);
+    expect(table?.style.width).toBe('');
+    expect(table?.style.height).toBe('');
+    expect(table?.style.position).toBe('');
+  });
+
+  it('keeps the table exposed to assistive technology', () => {
+    const container = document.createElement('div');
+    const table = createScreenReaderTable(layoutWith({}), container)?.querySelector('table');
+
+    expect(table?.getAttribute('role')).toBe('table');
+    expect(table?.getAttribute('aria-label')).toBe('Data table: Scatter chart');
+    expect(table?.querySelectorAll('th[scope="col"]')).toHaveLength(2);
+  });
+
+  it('never scrolls, so it cannot become a keyboard tab stop', () => {
+    const container = document.createElement('div');
+    const wrapper = createScreenReaderTable(layoutWith({}), container);
+
+    expect(wrapper?.style.overflow).toBe('clip');
+  });
+});

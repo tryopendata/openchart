@@ -56,13 +56,15 @@
    * Screen reader only utility
    * --------------------------------------------------------------------------- */
 
+  /* `overflow: clip`, not `hidden` — see applySrOnlyStyles in
+     packages/vanilla/src/dom-helpers.ts for why. Keep the two in sync. */
   .oc-sr-only {
     position: absolute;
     width: 1px;
     height: 1px;
     padding: 0;
     margin: -1px;
-    overflow: hidden;
+    overflow: clip;
     clip-path: inset(50%);
     white-space: nowrap;
     border-width: 0;
