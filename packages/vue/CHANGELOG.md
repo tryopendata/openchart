@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.2.1](https://github.com/tryopendata/openchart/compare/core-v8.2.0...core-v8.2.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* hide the screen-reader data table on a wrapper div ([fcbfc2b](https://github.com/tryopendata/openchart/commit/fcbfc2b))
+
 ## [8.2.0](https://github.com/tryopendata/openchart/compare/core-v8.1.1...core-v8.2.0) (2026-08-16)
 
 
