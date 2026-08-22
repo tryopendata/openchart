@@ -1,5 +1,4 @@
 import { buildArcPath } from '@opendata-ai/openchart-engine';
-import { interpolateRgb } from 'd3-interpolate';
 import { cubicOut } from '../motion/easing';
 
 import {
@@ -15,7 +14,7 @@ import {
   interpolatePoints,
   lerpGeom,
 } from './interpolate';
-import type { ArcGeom, ArcTween, Tween } from './types';
+import type { ArcGeom, ArcTween, RuleTween, TickTween, Tween } from './types';
 
 // ---------------------------------------------------------------------------
 // Arc helpers (shared by the per-frame step and the final snap)
@@ -59,6 +58,15 @@ export function resolveLineElement(el: SVGElement): SVGElement {
   return el.tagName === 'line' ? el : ((el.querySelector('line') as SVGElement) ?? el);
 }
 
+/**
+ * Resolve a rule/tick tween's `<line>` element, preferring the cached value
+ * stamped on the tween at construction time. Both the per-frame step and the
+ * final snap go through this so they can never resolve to different nodes.
+ */
+function resolveTweenLineElement(tw: RuleTween | TickTween): SVGElement {
+  return tw.lineEl ?? resolveLineElement(tw.el);
+}
+
 export function applyTweenState(
   tw: Tween,
   elapsed: number,
@@ -97,18 +105,26 @@ export function applyTweenState(
   switch (tw.tweenType) {
     case 'rect': {
       const geom = lerpGeom(tw.from, tw.to, eased);
-      applyGeomToElement(tw.el, geom, tw.mark);
+      applyGeomToElement(tw.el, geom, tw.mark, tw.shapeEl, tw.cornerScratch);
       break;
     }
     case 'line': {
-      const pts = interpolatePoints(tw.fromPts, tw.toPts, eased);
-      applyLinePath(tw.el, pts, tw.interpolate);
+      tw.ptsBuffer = interpolatePoints(tw.fromPts, tw.toPts, eased, tw.ptsBuffer);
+      applyLinePath(tw.el, tw.ptsBuffer, tw.interpolate, tw.pathEl);
       break;
     }
     case 'area': {
-      const top = interpolatePoints(tw.fromTop, tw.toTop, eased);
-      const bottom = interpolatePoints(tw.fromBottom, tw.toBottom, eased);
-      applyAreaPaths(tw.el, top, bottom, tw.interpolate, tw.hasStroke);
+      tw.topBuffer = interpolatePoints(tw.fromTop, tw.toTop, eased, tw.topBuffer);
+      tw.bottomBuffer = interpolatePoints(tw.fromBottom, tw.toBottom, eased, tw.bottomBuffer);
+      applyAreaPaths(
+        tw.el,
+        tw.topBuffer,
+        tw.bottomBuffer,
+        tw.interpolate,
+        tw.hasStroke,
+        tw.fillPathEl,
+        tw.topPathEl,
+      );
       break;
     }
     case 'arc': {
@@ -128,7 +144,7 @@ export function applyTweenState(
     }
     case 'rule':
     case 'tick': {
-      const lineEl = resolveLineElement(tw.el);
+      const lineEl = resolveTweenLineElement(tw);
       lineEl.setAttribute('x1', String(tw.fromX1 + (tw.toX1 - tw.fromX1) * eased));
       lineEl.setAttribute('y1', String(tw.fromY1 + (tw.toY1 - tw.fromY1) * eased));
       lineEl.setAttribute('x2', String(tw.fromX2 + (tw.toX2 - tw.fromX2) * eased));
@@ -169,7 +185,7 @@ export function applyTweenState(
       break;
     }
     case 'color': {
-      tw.el.setAttribute(tw.attr, interpolateRgb(tw.from, tw.to)(eased));
+      tw.el.setAttribute(tw.attr, tw.interpolator(eased));
       break;
     }
     case 'annotation': {
@@ -207,13 +223,21 @@ export function snapTweenToFinal(tw: Tween): void {
 
   switch (tw.tweenType) {
     case 'rect':
-      applyGeomToElement(tw.el, tw.to, tw.mark);
+      applyGeomToElement(tw.el, tw.to, tw.mark, tw.shapeEl, tw.cornerScratch);
       break;
     case 'line':
-      applyLinePath(tw.el, tw.toPts, tw.interpolate);
+      applyLinePath(tw.el, tw.toPts, tw.interpolate, tw.pathEl);
       break;
     case 'area':
-      applyAreaPaths(tw.el, tw.toTop, tw.toBottom, tw.interpolate, tw.hasStroke);
+      applyAreaPaths(
+        tw.el,
+        tw.toTop,
+        tw.toBottom,
+        tw.interpolate,
+        tw.hasStroke,
+        tw.fillPathEl,
+        tw.topPathEl,
+      );
       break;
     case 'arc': {
       // Snap to the engine's exact rendered path (not a rebuilt one) so the
@@ -232,7 +256,7 @@ export function snapTweenToFinal(tw: Tween): void {
       break;
     case 'rule':
     case 'tick': {
-      const lineEl = resolveLineElement(tw.el);
+      const lineEl = resolveTweenLineElement(tw);
       lineEl.setAttribute('x1', String(tw.toX1));
       lineEl.setAttribute('y1', String(tw.toY1));
       lineEl.setAttribute('x2', String(tw.toX2));

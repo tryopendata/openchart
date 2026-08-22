@@ -1,5 +1,6 @@
-import type { AxisLayout, ChartLayout } from '@opendata-ai/openchart-core';
+import type { AxisLayout, AxisTick, ChartLayout, Gridline } from '@opendata-ai/openchart-core';
 import { serializeKeyValue } from '@opendata-ai/openchart-engine';
+import { interpolateRgb } from 'd3-interpolate';
 
 import type { MarkDomIndex } from './dom-index';
 import { keyAnnotations } from './keys';
@@ -75,6 +76,7 @@ export function buildColorTweens(
         attr,
         from,
         to,
+        interpolator: interpolateRgb(from, to),
       });
     }
   }
@@ -204,9 +206,17 @@ export function computeGridlineDeltas(
   nextAxis: AxisLayout,
 ): { prevGridByValue: Map<string, number>; nextGridByValue: Map<string, number> } {
   const byValue = (axis: AxisLayout): Map<string, number> => {
+    // Build the position -> gridline lookup once per axis instead of calling
+    // `.find` inside the tick loop (O(ticks * gridlines) -> O(ticks + gridlines)).
+    // Guarded with `!has` so a duplicate position keeps the FIRST gridline at
+    // that position, matching `.find`'s semantics exactly.
+    const glByPosition = new Map<number, Gridline>();
+    for (const g of axis.gridlines) {
+      if (!glByPosition.has(g.position)) glByPosition.set(g.position, g);
+    }
     const map = new Map<string, number>();
     for (const tick of axis.ticks) {
-      const matching = axis.gridlines.find((g) => g.position === tick.position);
+      const matching = glByPosition.get(tick.position);
       if (matching) map.set(serializeKeyValue(tick.value), matching.position);
     }
     return map;
@@ -289,12 +299,25 @@ export function buildSingleAxisTweens(
   }
 
   // Exiting tick labels: create ghost elements
+  //
+  // `prevTickByKey` replaces a `.find` per exiting tick (which re-serializes
+  // every tick's value on every iteration) with one Map built up front. Guarded
+  // with `!has` so a duplicate serialized key keeps the FIRST tick, matching
+  // `.find`'s semantics -- unlike `prevTickMap`/`nextTickMap` above, which are
+  // built with plain `.set` (last-wins) for an unrelated purpose (position
+  // lookups) and must keep that behavior unchanged.
+  const prevTickByKey = new Map<string, AxisTick>();
+  for (const t of prevAxis.ticks) {
+    const k = serializeKeyValue(t.value);
+    if (!prevTickByKey.has(k)) prevTickByKey.set(k, t);
+  }
+
   for (const [key, prevPos] of prevTickMap) {
     if (nextTickMap.has(key)) continue;
     // Find the tick label in the rendered SVG by data-tick-key
     // It won't be there since the SVG was already re-rendered from nextLayout,
     // so we need to create a ghost text element
-    const prevTick = prevAxis.ticks.find((t) => serializeKeyValue(t.value) === key);
+    const prevTick = prevTickByKey.get(key);
     if (!prevTick) continue;
 
     const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'text');

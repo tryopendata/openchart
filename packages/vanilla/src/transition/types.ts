@@ -70,6 +70,16 @@ export interface RectTween {
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
+  /** Cached `el.querySelector('rect, path')`, resolved once at construction so
+   *  per-frame writes and the final snap never re-query the DOM. */
+  shapeEl?: SVGElement | null;
+  /**
+   * Reused scratch object for the partial-corner-radius path rebuild, holding
+   * a copy of `mark` whose x/y/width/height get overwritten each frame instead
+   * of spreading a fresh `{...mark, ...geom}` object every tick. Only set when
+   * the mark actually has partial corner rounding.
+   */
+  cornerScratch?: RectMark;
 }
 
 export interface LineTween {
@@ -84,6 +94,10 @@ export interface LineTween {
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
+  /** Cached `el.querySelector('path')`, resolved once at construction. */
+  pathEl?: SVGElement | null;
+  /** Reused per-frame interpolation buffer, sized to `fromPts`/`toPts` length. */
+  ptsBuffer?: Point[];
 }
 
 export interface AreaTween {
@@ -103,6 +117,12 @@ export interface AreaTween {
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
+  /** Cached `el.querySelectorAll('path')` results, resolved once at construction. */
+  fillPathEl?: SVGElement | null;
+  topPathEl?: SVGElement | null;
+  /** Reused per-frame interpolation buffers for top/bottom point arrays. */
+  topBuffer?: Point[];
+  bottomBuffer?: Point[];
 }
 
 /** Angle/radius geometry for an arc slice, interpolated per frame and
@@ -162,6 +182,8 @@ export interface RuleTween {
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
+  /** Cached `resolveLineElement(el)`, resolved once at construction. */
+  lineEl?: SVGElement;
 }
 
 export interface TickTween {
@@ -179,6 +201,8 @@ export interface TickTween {
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
+  /** Cached `resolveLineElement(el)`, resolved once at construction. */
+  lineEl?: SVGElement;
 }
 
 export interface TextMarkTween {
@@ -243,6 +267,11 @@ export interface ColorTween {
   attr: 'fill' | 'stroke';
   from: string;
   to: string;
+  /**
+   * `interpolateRgb(from, to)`, built once at construction so the per-frame
+   * step doesn't re-parse both colors every tick.
+   */
+  interpolator: (t: number) => string;
   /** Never set; present so the shared opacity step can read the union. */
   fromOpacity?: number;
   toOpacity?: number;
