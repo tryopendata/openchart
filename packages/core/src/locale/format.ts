@@ -9,6 +9,23 @@ import { format as d3Format } from 'd3-format';
 import { timeFormat, utcFormat } from 'd3-time-format';
 
 // ---------------------------------------------------------------------------
+// Cached d3-format instances
+// ---------------------------------------------------------------------------
+
+// Module-level caching assumes the d3-format/d3-time-format default locale;
+// consumer `formatDefaultLocale()` calls are unsupported (verified: no
+// callers of formatDefaultLocale exist in this codebase).
+const FORMAT_INTEGER = d3Format(',');
+const FORMAT_TINY = d3Format('.2~r');
+const FORMAT_DECIMAL = d3Format(',.2f');
+const FORMAT_ABBREV_MANTISSA = d3Format('.1~f');
+const FORMAT_PERCENT_FRACTION = d3Format('.1~%');
+const FORMAT_PERCENT_RAW = d3Format(',.1~f');
+const FORMAT_CURRENCY_INTEGER = d3Format('$,');
+const FORMAT_CURRENCY_DECIMAL = d3Format('$,.2f');
+const FORMAT_STEP_FRACTION = [d3Format('.0~f'), d3Format('.1~f'), d3Format('.2~f')] as const;
+
+// ---------------------------------------------------------------------------
 // Number formatting
 // ---------------------------------------------------------------------------
 
@@ -24,12 +41,12 @@ import { timeFormat, utcFormat } from 'd3-time-format';
 export function formatNumber(value: number, _locale?: string): string {
   if (!Number.isFinite(value)) return String(value);
   if (Number.isInteger(value)) {
-    return d3Format(',')(value);
+    return FORMAT_INTEGER(value);
   }
   if (Math.abs(value) < 0.005) {
-    return d3Format('.2~r')(value);
+    return FORMAT_TINY(value);
   }
-  return d3Format(',.2f')(value);
+  return FORMAT_DECIMAL(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -68,7 +85,7 @@ export function abbreviateNumber(value: number): string {
   for (let i = 0; i < UNIT_TABLE.length; i++) {
     const { threshold, suffix, divisor } = UNIT_TABLE[i];
     if (absValue >= threshold) {
-      const mantissa = d3Format('.1~f')(absValue / divisor);
+      const mantissa = FORMAT_ABBREV_MANTISSA(absValue / divisor);
       // Roll-up: if mantissa rounds to 1000, use the next unit up.
       // When i === 0 (T), there's no larger unit so we emit "1000T".
       if (mantissa === '1000' && i > 0) {
@@ -168,9 +185,9 @@ export type NumberFormatter = (value: number) => string;
 export function formatPercent(value: number, options?: { fraction?: boolean }): string {
   const fraction = options?.fraction ?? true;
   if (fraction) {
-    return d3Format('.1~%')(value);
+    return FORMAT_PERCENT_FRACTION(value);
   }
-  return `${d3Format(',.1~f')(value)}%`;
+  return `${FORMAT_PERCENT_RAW(value)}%`;
 }
 
 export function formatCurrency(value: number, options?: { compact?: boolean }): string {
@@ -185,9 +202,9 @@ export function formatCurrency(value: number, options?: { compact?: boolean }): 
     return `${sign}$${formatNumber(abs)}`;
   }
   if (Number.isInteger(value)) {
-    return sign + d3Format('$,')(abs);
+    return sign + FORMAT_CURRENCY_INTEGER(abs);
   }
-  return sign + d3Format('$,.2f')(abs);
+  return sign + FORMAT_CURRENCY_DECIMAL(abs);
 }
 
 // ---------------------------------------------------------------------------
@@ -335,10 +352,10 @@ export function buildCompactStepFormatter(step: number): NumberFormatter {
     const { suffix, divisor } = unitFor(abs);
     const p = fractionDigits(step / divisor);
     if (p > 2) {
-      return Number.isInteger(v) ? d3Format(',')(v) : d3Format(',.2f')(v);
+      return Number.isInteger(v) ? FORMAT_INTEGER(v) : FORMAT_DECIMAL(v);
     }
     const sign = v < 0 ? '-' : '';
-    return sign + d3Format(`.${p}~f`)(abs / divisor) + suffix;
+    return sign + FORMAT_STEP_FRACTION[p](abs / divisor) + suffix;
   };
 }
 
@@ -415,9 +432,32 @@ export function formatDate(
 
   const formatStr = (compact ? GRANULARITY_FORMATS_COMPACT : GRANULARITY_FORMATS)[gran];
   if (useUtc) {
-    return utcFormat(formatStr)(date);
+    return getUtcFormatter(formatStr)(date);
   }
-  return timeFormat(formatStr)(date);
+  return getTimeFormatter(formatStr)(date);
+}
+
+// Compiled d3-time-format formatters, keyed by format string. The key space
+// is bounded to the strings in GRANULARITY_FORMATS / GRANULARITY_FORMATS_COMPACT.
+const TIME_FORMAT_CACHE = new Map<string, ReturnType<typeof timeFormat>>();
+const UTC_FORMAT_CACHE = new Map<string, ReturnType<typeof utcFormat>>();
+
+function getTimeFormatter(formatStr: string): ReturnType<typeof timeFormat> {
+  let fmt = TIME_FORMAT_CACHE.get(formatStr);
+  if (!fmt) {
+    fmt = timeFormat(formatStr);
+    TIME_FORMAT_CACHE.set(formatStr, fmt);
+  }
+  return fmt;
+}
+
+function getUtcFormatter(formatStr: string): ReturnType<typeof utcFormat> {
+  let fmt = UTC_FORMAT_CACHE.get(formatStr);
+  if (!fmt) {
+    fmt = utcFormat(formatStr);
+    UTC_FORMAT_CACHE.set(formatStr, fmt);
+  }
+  return fmt;
 }
 
 /**
