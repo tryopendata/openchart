@@ -1,6 +1,5 @@
 import type {
   CompileOptions,
-  DataRow,
   Encoding,
   EncodingChannel,
   FieldFormatContext,
@@ -51,6 +50,7 @@ import { computeScales, estimateBandStep, estimateBandwidth } from './scales';
 import {
   bottomMargin,
   chromeToInput,
+  fieldIterable,
   INLINE_TICK_OVERHANG_PAD,
   resolveChromeLayout,
   scalePadding,
@@ -110,11 +110,6 @@ export function createMeasureFn(measureText?: MeasureTextFn): MeasureFn {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Lazily yield a field's raw values without materializing an intermediate array. */
-function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
-  for (const d of data) yield d[field];
-}
 
 function sampleLabelFromContext(
   maxAbsVal: number,
