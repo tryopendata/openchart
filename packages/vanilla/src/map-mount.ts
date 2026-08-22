@@ -228,13 +228,19 @@ export function createGeoMap(
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: GeoMapLayout): () => void {
     const cleanups: Array<() => void> = [];
 
+    const featuresById = new Map<string, (typeof layout.features)[number]>();
+    for (const f of layout.features) {
+      const key = String(f.id);
+      if (!featuresById.has(key)) featuresById.set(key, f);
+    }
+
     const featureElements = svg.querySelectorAll('.oc-map-feature');
     for (const el of featureElements) {
       const featureId = el.getAttribute('data-feature-id');
       if (!featureId) continue;
 
       const content = layout.tooltipDescriptors.get(featureId);
-      const feature = layout.features.find((f) => String(f.id) === featureId);
+      const feature = featuresById.get(featureId);
 
       const handleMouseEnter = (e: Event) => {
         const mouseEvent = e as MouseEvent;
