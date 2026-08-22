@@ -211,13 +211,35 @@ export function renderChartSVG(
       clipGroup.appendChild(clippedGroup);
       const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks });
 
+      // Single query+parse pass over point circles, reused below by both the
+      // voronoi-overlay pointer-events pass and the endpoint-label suppression
+      // pass, instead of each separately re-querying/re-parsing the subtree.
+      let pointCircles: SVGCircleElement[] | null = null;
+      let pointCircleCoords: { cx: number; cy: number }[] | null = null;
+      const getPointCircles = () => {
+        if (pointCircles === null) {
+          pointCircles = Array.from(
+            clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point'),
+          );
+        }
+        return pointCircles;
+      };
+      const getPointCircleCoords = () => {
+        if (pointCircleCoords === null) {
+          pointCircleCoords = getPointCircles().map((el) => ({
+            cx: Number(el.getAttribute('cx')),
+            cy: Number(el.getAttribute('cy')),
+          }));
+        }
+        return pointCircleCoords;
+      };
+
       // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
       const hasLineOrAreaWithDataPoints = layout.marks.some(
         (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
       );
       if (hasLineOrAreaWithDataPoints) {
-        const pointEls = clippedGroup.querySelectorAll('circle.oc-mark-point');
-        for (const el of pointEls) {
+        for (const el of getPointCircles()) {
           el.setAttribute('pointer-events', 'none');
         }
 
@@ -271,16 +293,16 @@ export function renderChartSVG(
       // Suppress decorative point marks under endpoint markers
       const epEntries = layout.endpointLabels?.entries ?? [];
       if (epEntries.length > 0) {
-        const pointEls = clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point');
+        const pointEls = getPointCircles();
+        const coords = getPointCircleCoords();
         for (const entry of epEntries) {
           if (!entry.marker) continue;
           const mx = entry.marker.dataX;
           const my = entry.marker.y;
-          for (const el of pointEls) {
-            const cx = Number(el.getAttribute('cx'));
-            const cy = Number(el.getAttribute('cy'));
+          for (let i = 0; i < pointEls.length; i++) {
+            const { cx, cy } = coords[i];
             if (Math.abs(cx - mx) < 0.5 && Math.abs(cy - my) < 0.5) {
-              el.setAttribute('opacity', '0');
+              pointEls[i].setAttribute('opacity', '0');
             }
           }
         }

@@ -227,6 +227,11 @@ export function createTileMap(
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: TileMapLayout): () => void {
     const cleanups: Array<() => void> = [];
 
+    const tilesByStateCode = new Map<string, (typeof layout.tiles)[number]>();
+    for (const t of layout.tiles) {
+      if (!tilesByStateCode.has(t.stateCode)) tilesByStateCode.set(t.stateCode, t);
+    }
+
     // Wire tooltip on tile elements
     const tileElements = svg.querySelectorAll('.oc-tilemap-tile');
     for (const el of tileElements) {
@@ -234,7 +239,7 @@ export function createTileMap(
       if (!stateCode) continue;
 
       const content = layout.tooltipDescriptors.get(stateCode);
-      const tile = layout.tiles.find((t) => t.stateCode === stateCode);
+      const tile = tilesByStateCode.get(stateCode);
 
       const handleMouseEnter = (e: Event) => {
         const mouseEvent = e as MouseEvent;

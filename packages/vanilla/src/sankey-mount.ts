@@ -170,6 +170,11 @@ export function createSankey(
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: SankeyLayout): () => void {
     const cleanups: Array<() => void> = [];
 
+    const nodesById = new Map<string, (typeof layout.nodes)[number]>();
+    for (const n of layout.nodes) {
+      if (!nodesById.has(n.nodeId)) nodesById.set(n.nodeId, n);
+    }
+
     // Wire tooltip on node elements
     const nodeElements = svg.querySelectorAll('.oc-sankey-node');
     for (const el of nodeElements) {
@@ -178,7 +183,7 @@ export function createSankey(
 
       const content = layout.tooltipDescriptors.get(markId);
       const nodeId = el.getAttribute('data-node-id');
-      const nodeData = nodeId ? (layout.nodes.find((n) => n.nodeId === nodeId)?.data ?? {}) : {};
+      const nodeData = nodeId ? (nodesById.get(nodeId)?.data ?? {}) : {};
 
       const handleMouseEnter = (e: Event) => {
         const mouseEvent = e as MouseEvent;

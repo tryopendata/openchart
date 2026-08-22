@@ -457,12 +457,17 @@ function getMarkSeries(mark: Mark): string | undefined {
   }
   // For arc marks, the category name is the first part of the aria label (before ':')
   if (mark.type === 'arc') {
-    return mark.aria.label?.split(':')[0]?.trim();
+    const label = mark.aria.label;
+    if (!label) return undefined;
+    const i = label.indexOf(':');
+    return (i === -1 ? label : label.slice(0, i)).trim();
   }
   // For rect/point, the aria label may be "category: value" or "category, group: value".
   // The series name is the category part (before the colon).
   if (mark.aria?.label) {
-    const beforeColon = mark.aria.label.split(':')[0]?.trim();
+    const label = mark.aria.label;
+    const i = label.indexOf(':');
+    const beforeColon = (i === -1 ? label : label.slice(0, i)).trim();
     if (beforeColon) return beforeColon;
   }
   return undefined;
