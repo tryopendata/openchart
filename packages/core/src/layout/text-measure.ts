@@ -275,23 +275,41 @@ const WEIGHT_ADJUSTMENT: Record<number, number> = {
   900: 1.12,
 };
 
-function resolveTable(fontWeight: number): {
+interface ResolvedTable {
   table: Record<string, number>;
   avg: number;
   scale: number;
-} {
-  if (fontWeight >= 650) {
-    return {
-      table: CHAR_WIDTHS_700,
-      avg: AVG_CHAR_WIDTH_700,
-      scale: WEIGHT_ADJUSTMENT[fontWeight] ?? 1.0,
-    };
-  }
-  return {
-    table: CHAR_WIDTHS_400,
-    avg: AVG_CHAR_WIDTH_400,
-    scale: WEIGHT_ADJUSTMENT[fontWeight] ?? 1.0,
-  };
+}
+
+// Precomputed per-weight results so resolveTable never allocates. Covers the
+// explicit WEIGHT_ADJUSTMENT entries plus a default (scale 1.0) fallback for
+// any other weight, bucketed the same way resolveTable's branch always was.
+const RESOLVED_TABLE_400_DEFAULT: ResolvedTable = {
+  table: CHAR_WIDTHS_400,
+  avg: AVG_CHAR_WIDTH_400,
+  scale: 1.0,
+};
+const RESOLVED_TABLE_700_DEFAULT: ResolvedTable = {
+  table: CHAR_WIDTHS_700,
+  avg: AVG_CHAR_WIDTH_700,
+  scale: 1.0,
+};
+
+const RESOLVED_TABLE_CACHE = new Map<number, ResolvedTable>();
+for (const [weightStr, scale] of Object.entries(WEIGHT_ADJUSTMENT)) {
+  const weight = Number(weightStr);
+  RESOLVED_TABLE_CACHE.set(
+    weight,
+    weight >= 650
+      ? { table: CHAR_WIDTHS_700, avg: AVG_CHAR_WIDTH_700, scale }
+      : { table: CHAR_WIDTHS_400, avg: AVG_CHAR_WIDTH_400, scale },
+  );
+}
+
+function resolveTable(fontWeight: number): ResolvedTable {
+  const cached = RESOLVED_TABLE_CACHE.get(fontWeight);
+  if (cached) return cached;
+  return fontWeight >= 650 ? RESOLVED_TABLE_700_DEFAULT : RESOLVED_TABLE_400_DEFAULT;
 }
 
 function charWidthRatio(ch: string, table: Record<string, number>, avg: number): number {
@@ -321,6 +339,20 @@ export function estimateCharWidth(fontSize: number, fontWeight = 400): number {
   return fontSize * avg * scale;
 }
 
+function measureLine(
+  line: string,
+  table: Record<string, number>,
+  avg: number,
+  scale: number,
+  fontSize: number,
+): number {
+  let sum = 0;
+  for (const ch of line) {
+    sum += charWidthRatio(ch, table, avg);
+  }
+  return sum * fontSize * scale;
+}
+
 /**
  * Estimate the rendered width of a text string.
  *
@@ -331,23 +363,15 @@ export function estimateCharWidth(fontSize: number, fontWeight = 400): number {
 export function estimateTextWidth(text: string, fontSize: number, fontWeight = 400): number {
   const { table, avg, scale } = resolveTable(fontWeight);
 
-  const measureLine = (line: string): number => {
-    let sum = 0;
-    for (const ch of line) {
-      sum += charWidthRatio(ch, table, avg);
-    }
-    return sum * fontSize * scale;
-  };
-
   if (text.includes('\n')) {
     let maxWidth = 0;
     for (const line of text.split('\n')) {
-      const w = measureLine(line);
+      const w = measureLine(line, table, avg, scale, fontSize);
       if (w > maxWidth) maxWidth = w;
     }
     return maxWidth;
   }
-  return measureLine(text);
+  return measureLine(text, table, avg, scale, fontSize);
 }
 
 /**
