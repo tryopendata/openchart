@@ -12,8 +12,23 @@ export function geomFromMark(m: RectMark): RectGeom {
   return { x: m.x, y: m.y, width: m.width, height: m.height };
 }
 
-export function applyGeomToElement(el: SVGElement, geom: RectGeom, mark: RectMark): void {
-  const shapeEl = el.querySelector('rect, path') as SVGElement | null;
+/**
+ * Resolve the rect/path child a rect mark's geometry is written to.
+ * Extracted so tween builders can cache the result once at construction
+ * instead of re-querying it every frame.
+ */
+export function resolveRectShapeElement(el: SVGElement): SVGElement | null {
+  return el.querySelector('rect, path') as SVGElement | null;
+}
+
+export function applyGeomToElement(
+  el: SVGElement,
+  geom: RectGeom,
+  mark: RectMark,
+  cachedShapeEl?: SVGElement | null,
+  scratch?: RectMark,
+): void {
+  const shapeEl = cachedShapeEl !== undefined ? cachedShapeEl : resolveRectShapeElement(el);
   if (!shapeEl) return;
 
   const sides = mark.cornerRadiusSides;
@@ -21,7 +36,16 @@ export function applyGeomToElement(el: SVGElement, geom: RectGeom, mark: RectMar
     !!sides && (!sides.tl || !sides.tr || !sides.br || !sides.bl) && !!mark.cornerRadius;
 
   if (partialCorners && shapeEl.tagName === 'path') {
-    const tempMark = { ...mark, ...geom };
+    let tempMark: RectMark;
+    if (scratch) {
+      scratch.x = geom.x;
+      scratch.y = geom.y;
+      scratch.width = geom.width;
+      scratch.height = geom.height;
+      tempMark = scratch;
+    } else {
+      tempMark = { ...mark, ...geom };
+    }
     shapeEl.setAttribute('d', rectPathWithCorners(tempMark, sides));
   } else {
     shapeEl.setAttribute('x', String(geom.x));
@@ -322,19 +346,49 @@ export function findRemovalPosition(
 // Line/area path application helpers
 // ---------------------------------------------------------------------------
 
-/** Interpolate a point array at parameter t. */
-export function interpolatePoints(fromPts: Point[], toPts: Point[], t: number): Point[] {
+/**
+ * Interpolate a point array at parameter t.
+ *
+ * Accepts an optional reusable `out` buffer: tween builders normalize
+ * `fromPts`/`toPts` to equal length once at construction, so that length is
+ * stable for the tween's lifetime and a preallocated buffer of the same
+ * length can be mutated in place every frame instead of allocating a fresh
+ * array (plus one object per point) 60 times a second. Callers that don't
+ * pass `out` (e.g. one-off snapshot captures) get the original fresh-array
+ * behavior.
+ */
+export function interpolatePoints(
+  fromPts: Point[],
+  toPts: Point[],
+  t: number,
+  out?: Point[],
+): Point[] {
   const len = Math.min(fromPts.length, toPts.length);
-  const result: Point[] = new Array(len);
+  const result: Point[] = out ?? new Array(len);
   for (let i = 0; i < len; i++) {
-    result[i] = lerpPoint(fromPts[i], toPts[i], t);
+    const from = fromPts[i];
+    const to = toPts[i];
+    const existing = result[i];
+    if (existing) {
+      existing.x = from.x + (to.x - from.x) * t;
+      existing.y = from.y + (to.y - from.y) * t;
+    } else {
+      result[i] = lerpPoint(from, to, t);
+    }
   }
+  if (result.length !== len) result.length = len;
   return result;
 }
 
 /** Apply an interpolated path to a line mark's path element. */
-export function applyLinePath(el: SVGElement, points: Point[], interpolate?: string): void {
-  const pathEl = el.querySelector('path') as SVGElement | null;
+export function applyLinePath(
+  el: SVGElement,
+  points: Point[],
+  interpolate?: string,
+  cachedPathEl?: SVGElement | null,
+): void {
+  const pathEl =
+    cachedPathEl !== undefined ? cachedPathEl : (el.querySelector('path') as SVGElement | null);
   if (!pathEl) return;
   pathEl.setAttribute('d', buildLinePath(points, interpolate));
 }
@@ -346,15 +400,24 @@ export function applyAreaPaths(
   bottomPoints: Point[],
   interpolate?: string,
   hasStroke?: boolean,
+  cachedFillPathEl?: SVGElement | null,
+  cachedTopPathEl?: SVGElement | null,
 ): void {
-  const paths = el.querySelectorAll('path');
-  // First path is the area fill
-  if (paths[0]) {
-    paths[0].setAttribute('d', buildAreaPath(topPoints, bottomPoints, interpolate));
+  const fillPathEl =
+    cachedFillPathEl !== undefined
+      ? cachedFillPathEl
+      : ((el.querySelectorAll('path')[0] as SVGElement | undefined) ?? null);
+  if (fillPathEl) {
+    fillPathEl.setAttribute('d', buildAreaPath(topPoints, bottomPoints, interpolate));
   }
-  // Second path (if present) is the top-line stroke
-  if (hasStroke && paths[1]) {
-    paths[1].setAttribute('d', buildLinePath(topPoints, interpolate));
+  if (hasStroke) {
+    const topPathEl =
+      cachedTopPathEl !== undefined
+        ? cachedTopPathEl
+        : ((el.querySelectorAll('path')[1] as SVGElement | undefined) ?? null);
+    if (topPathEl) {
+      topPathEl.setAttribute('d', buildLinePath(topPoints, interpolate));
+    }
   }
 }
 

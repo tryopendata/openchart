@@ -13,9 +13,39 @@ import type {
 import { resolveMarkFill } from '../gradient-utils';
 import { renderSingleMark } from '../renderers/marks';
 
+import { resolveLineElement } from './apply';
 import type { MarkDomIndex } from './dom-index';
-import { geomFromMark, normalizePointArrays } from './interpolate';
+import { geomFromMark, normalizePointArrays, resolveRectShapeElement } from './interpolate';
 import type { ArcGeom, GeometrySnapshot, RectGeom, Tween } from './types';
+
+/**
+ * Reused-scratch object for the partial-corner-radius rect path rebuild
+ * (`applyGeomToElement`). Only allocated for marks that actually have
+ * partial corner rounding, since the vast majority of rects don't.
+ */
+function buildCornerScratch(mark: RectMark): RectMark | undefined {
+  const sides = mark.cornerRadiusSides;
+  const partialCorners =
+    !!sides && (!sides.tl || !sides.tr || !sides.br || !sides.bl) && !!mark.cornerRadius;
+  return partialCorners ? { ...mark } : undefined;
+}
+
+/** Cache a line mark's `<path>` child once, instead of re-querying per frame. */
+function resolveLinePathEl(el: SVGElement): SVGElement | null {
+  return el.querySelector('path') as SVGElement | null;
+}
+
+/** Cache an area mark's fill/top-stroke `<path>` children once. */
+function resolveAreaPathEls(el: SVGElement): {
+  fillPathEl: SVGElement | null;
+  topPathEl: SVGElement | null;
+} {
+  const paths = el.querySelectorAll('path');
+  return {
+    fillPathEl: (paths[0] as SVGElement | undefined) ?? null,
+    topPathEl: (paths[1] as SVGElement | undefined) ?? null,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Gradient ghost helper
@@ -82,6 +112,8 @@ export function buildRectTweens(
       from: fromGeom,
       to: geomFromMark(next),
       mark: next,
+      shapeEl: resolveRectShapeElement(el),
+      cornerScratch: buildCornerScratch(next),
     });
   }
 
@@ -105,6 +137,8 @@ export function buildRectTweens(
       from: fromGeom,
       to: geomFromMark(next),
       mark: next,
+      shapeEl: resolveRectShapeElement(el),
+      cornerScratch: buildCornerScratch(next),
     });
   }
 
@@ -136,6 +170,8 @@ export function buildRectTweens(
       from: geomFromMark(prev),
       to: toGeom,
       mark: prev,
+      shapeEl: resolveRectShapeElement(ghost),
+      cornerScratch: buildCornerScratch(prev),
       ghost,
       fromOpacity: 1,
       toOpacity: 0,
@@ -200,6 +236,7 @@ export function buildLineTweens(
         ghost,
         fromOpacity: 1,
         toOpacity: 0,
+        pathEl: ghostPath,
       });
 
       // Fade in the new final path
@@ -213,6 +250,7 @@ export function buildLineTweens(
         interpolate: next.interpolate,
         fromOpacity: 0,
         toOpacity: 1,
+        pathEl: resolveLinePathEl(el),
       });
       continue;
     }
@@ -246,6 +284,7 @@ export function buildLineTweens(
           ghost,
           fromOpacity: 1,
           toOpacity: 0,
+          pathEl: resolveLinePathEl(ghost),
         });
       }
 
@@ -260,6 +299,7 @@ export function buildLineTweens(
         interpolate: next.interpolate,
         fromOpacity: 0,
         toOpacity: 1,
+        pathEl: resolveLinePathEl(el),
       });
     } else {
       // Normal morph with point matching
@@ -273,6 +313,7 @@ export function buildLineTweens(
         toPts,
         finalPoints: next.points,
         interpolate: next.interpolate,
+        pathEl: resolveLinePathEl(el),
       });
     }
   }
@@ -293,6 +334,7 @@ export function buildLineTweens(
       interpolate: next.interpolate,
       fromOpacity: 0,
       toOpacity: 1,
+      pathEl: resolveLinePathEl(el),
     });
   }
 
@@ -318,6 +360,7 @@ export function buildLineTweens(
       finalPoints: prev.points,
       interpolate: prev.interpolate,
       ghost,
+      pathEl: resolveLinePathEl(ghost),
       fromOpacity: 1,
       toOpacity: 0,
     });
@@ -386,8 +429,11 @@ export function buildAreaTweens(
         ghost,
         fromOpacity: 1,
         toOpacity: 0,
+        fillPathEl: (ghostPaths[0] as SVGElement | undefined) ?? null,
+        topPathEl: (ghostPaths[1] as SVGElement | undefined) ?? null,
       });
 
+      const enterPaths = resolveAreaPathEls(el);
       tweens.push({
         tweenType: 'area',
         kind: 'enter',
@@ -402,6 +448,8 @@ export function buildAreaTweens(
         hasStroke: !!next.stroke && !!next.topPath,
         fromOpacity: 0,
         toOpacity: 1,
+        fillPathEl: enterPaths.fillPathEl,
+        topPathEl: enterPaths.topPathEl,
       });
       continue;
     }
@@ -438,6 +486,7 @@ export function buildAreaTweens(
           ghost,
           fromOpacity: 1,
           toOpacity: 0,
+          ...resolveAreaPathEls(ghost),
         });
       }
 
@@ -455,6 +504,7 @@ export function buildAreaTweens(
         hasStroke: !!next.stroke && !!next.topPath,
         fromOpacity: 0,
         toOpacity: 1,
+        ...resolveAreaPathEls(el),
       });
     } else {
       // Morph
@@ -483,6 +533,7 @@ export function buildAreaTweens(
         finalBottomPoints: next.bottomPoints,
         interpolate: next.interpolate,
         hasStroke: !!next.stroke && !!next.topPath,
+        ...resolveAreaPathEls(el),
       });
     }
   }
@@ -507,6 +558,7 @@ export function buildAreaTweens(
       hasStroke: !!next.stroke && !!next.topPath,
       fromOpacity: 0,
       toOpacity: 1,
+      ...resolveAreaPathEls(el),
     });
   }
 
@@ -539,6 +591,7 @@ export function buildAreaTweens(
       ghost,
       fromOpacity: 1,
       toOpacity: 0,
+      ...resolveAreaPathEls(ghost),
     });
   }
 }
@@ -836,6 +889,7 @@ export function buildRuleTweens(
       toY1: next.y1,
       toX2: next.x2,
       toY2: next.y2,
+      lineEl: resolveLineElement(el),
     });
   }
 
@@ -858,6 +912,7 @@ export function buildRuleTweens(
       toY2: next.y2,
       fromOpacity: 0,
       toOpacity: 1,
+      lineEl: resolveLineElement(el),
     });
   }
 
@@ -887,6 +942,7 @@ export function buildRuleTweens(
       ghost,
       fromOpacity: 1,
       toOpacity: 0,
+      lineEl: resolveLineElement(ghost),
     });
   }
 }
@@ -948,6 +1004,7 @@ export function buildTickTweens(
       toY1: nEnd.y1,
       toX2: nEnd.x2,
       toY2: nEnd.y2,
+      lineEl: resolveLineElement(el),
     });
   }
 
@@ -971,6 +1028,7 @@ export function buildTickTweens(
       toY2: nEnd.y2,
       fromOpacity: 0,
       toOpacity: 1,
+      lineEl: resolveLineElement(el),
     });
   }
 
@@ -1001,6 +1059,7 @@ export function buildTickTweens(
       ghost,
       fromOpacity: 1,
       toOpacity: 0,
+      lineEl: resolveLineElement(ghost),
     });
   }
 }
