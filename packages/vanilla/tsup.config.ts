@@ -1,7 +1,6 @@
 import { defineConfig } from 'tsup';
 import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
-import { bunSymlinkResolver } from '../../scripts/bun-symlink-resolver';
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/static.ts', 'src/story/index.ts', 'src/export-gif.ts'],
@@ -15,8 +14,6 @@ export default defineConfig({
     'happy-dom',
     'gifenc',
   ],
-  noExternal: [/^d3-/],
-  esbuildPlugins: [bunSymlinkResolver(/^d3-/)],
   onSuccess: async () => {
     const src = resolve('node_modules/@opendata-ai/openchart-core/dist/styles.css');
     const dest = resolve('dist/styles.css');
