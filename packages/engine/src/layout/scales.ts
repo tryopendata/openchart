@@ -112,30 +112,65 @@ export interface ResolvedScales {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Extract all non-null values for a field from data. */
-function fieldValues(data: DataRow[], field: string): unknown[] {
-  return data.map((d) => d[field]).filter((v) => v != null);
+/** Lazily yield a field's raw values without materializing an intermediate array. */
+function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
+  for (const d of data) yield d[field];
 }
 
-/** Parse values to dates. */
-function parseDates(values: unknown[]): Date[] {
-  return values
-    .map((v) => (v instanceof Date ? v : new Date(String(v))))
-    .filter((d) => !Number.isNaN(d.getTime()));
+/**
+ * Extract and parse a field to numbers in a single pass (fused fieldValues +
+ * parseNumbers). Semantics preserved exactly:
+ *   - `v != null` filter first (drops null/undefined, keeps everything else
+ *     including empty string).
+ *   - Non-number values go through `Number(v)`, so `''` becomes `0` and is
+ *     KEPT (0 is finite). Do not "fix" this -- it's existing behavior.
+ *   - `Number.isFinite` filters out NaN/Infinity after coercion.
+ *   - Element order preserved (data order).
+ */
+function numericFieldValues(data: DataRow[], field: string): number[] {
+  const result: number[] = [];
+  for (const d of data) {
+    const v = d[field];
+    if (v == null) continue;
+    const n = typeof v === 'number' ? v : Number(v);
+    if (Number.isFinite(n)) result.push(n);
+  }
+  return result;
 }
 
-/** Parse values to numbers. */
-function parseNumbers(values: unknown[]): number[] {
-  return values
-    .map((v) => (typeof v === 'number' ? v : Number(v)))
-    .filter((n) => Number.isFinite(n));
+/**
+ * Extract and parse a field to dates in a single pass (fused fieldValues +
+ * parseDates). Semantics preserved exactly:
+ *   - `v != null` filter first.
+ *   - Non-Date values are parsed via `new Date(String(v))` -- NOT `new
+ *     Date(v)`. A numeric timestamp string-coerces first, so numeric
+ *     timestamps intentionally become Invalid Date and get filtered out.
+ *   - Invalid dates (`Number.isNaN(d.getTime())`) are dropped.
+ *   - Element order preserved (data order).
+ */
+function dateFieldValues(data: DataRow[], field: string): Date[] {
+  const result: Date[] = [];
+  for (const d of data) {
+    const v = d[field];
+    if (v == null) continue;
+    const date = v instanceof Date ? v : new Date(String(v));
+    if (!Number.isNaN(date.getTime())) result.push(date);
+  }
+  return result;
 }
 
-/** Get unique string values preserving order. */
-function uniqueStrings(values: unknown[]): string[] {
+/**
+ * Extract unique string values for a field in a single pass, preserving
+ * first-seen order (fused fieldValues + uniqueStrings). Semantics preserved
+ * exactly: `v != null` filter first, then `String(v)`, deduped in order of
+ * first occurrence.
+ */
+function uniqueFieldStrings(data: DataRow[], field: string): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
-  for (const v of values) {
+  for (const d of data) {
+    const v = d[field];
+    if (v == null) continue;
     const s = String(v);
     if (!seen.has(s)) {
       seen.add(s);
@@ -191,7 +226,7 @@ function buildTimeScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseDates(fieldValues(data, channel.field));
+  const values = dateFieldValues(data, channel.field);
   const domain = channel.scale?.domain
     ? [new Date(channel.scale.domain[0] as string), new Date(channel.scale.domain[1] as string)]
     : (extent(values) as [Date, Date]);
@@ -216,7 +251,7 @@ function buildUtcScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseDates(fieldValues(data, channel.field));
+  const values = dateFieldValues(data, channel.field);
   const domain = channel.scale?.domain
     ? [new Date(channel.scale.domain[0] as string), new Date(channel.scale.domain[1] as string)]
     : (extent(values) as [Date, Date]);
@@ -238,7 +273,7 @@ function buildLinearScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
 
   let domainMin: number;
   let domainMax: number;
@@ -284,7 +319,7 @@ function buildLogScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field)).filter((v) => v > 0);
+  const values = numericFieldValues(data, channel.field).filter((v) => v > 0);
   const domainMin = channel.scale?.domain
     ? (channel.scale.domain as [number, number])[0]
     : (min(values) ?? 1);
@@ -311,7 +346,7 @@ function buildPowScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
 
   let domainMin: number;
   let domainMax: number;
@@ -346,7 +381,7 @@ function buildSqrtScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
 
   let domainMin: number;
   let domainMax: number;
@@ -378,7 +413,7 @@ function buildSymlogScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
 
   let domainMin: number;
   let domainMax: number;
@@ -413,7 +448,7 @@ function buildQuantileScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
   const range = channel.scale?.range
     ? (channel.scale.range as number[])
     : evenRange(rangeStart, rangeEnd, 4);
@@ -429,7 +464,7 @@ function buildQuantizeScale(
   rangeStart: number,
   rangeEnd: number,
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
   const domainMin = channel.scale?.domain
     ? (channel.scale.domain as [number, number])[0]
     : (min(values) ?? 0);
@@ -533,7 +568,7 @@ function buildBandScale(
 ): ResolvedScale {
   const values = channel.scale?.domain
     ? (channel.scale.domain as string[])
-    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
+    : applyCategoricalSort(uniqueFieldStrings(data, channel.field), channel.sort);
 
   const padding = channel.scale?.padding ?? defaultPadding;
   const scale = scaleBand().domain(values).range([rangeStart, rangeEnd]).padding(padding);
@@ -561,7 +596,7 @@ function buildPointScale(
 ): ResolvedScale {
   const values = channel.scale?.domain
     ? (channel.scale.domain as string[])
-    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
+    : applyCategoricalSort(uniqueFieldStrings(data, channel.field), channel.sort);
 
   // Point scales have a single padding knob (outer padding only -- there are no
   // bands, so paddingInner is meaningless). Accept `paddingOuter` as an alias so
@@ -587,7 +622,7 @@ function buildOrdinalColorScale(
   const explicitDomain = channel.scale?.domain as string[] | undefined;
   const values = explicitDomain
     ? explicitDomain.map(String)
-    : applyCategoricalSort(uniqueStrings(fieldValues(data, channel.field)), channel.sort);
+    : applyCategoricalSort(uniqueFieldStrings(data, channel.field), channel.sort);
 
   // Use explicit range if provided, otherwise fall back to theme palette
   const explicitRange = channel.scale?.range as string[] | undefined;
@@ -603,7 +638,7 @@ function buildSequentialColorScale(
   data: DataRow[],
   palette: string[],
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
   const domainMin = min(values) ?? 0;
   const domainMax = max(values) ?? 1;
 
@@ -644,7 +679,7 @@ function buildBinnedColorScale(
   data: DataRow[],
   palette: string[],
 ): ResolvedScale {
-  const values = parseNumbers(fieldValues(data, channel.field));
+  const values = numericFieldValues(data, channel.field);
   const explicitRange = channel.scale?.range as string[] | undefined;
   const scaleType = channel.scale?.type as 'quantile' | 'quantize' | 'threshold';
 
@@ -874,7 +909,10 @@ export function computeScales(
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
-          const maxSum = Math.max(...sums.values(), 0);
+          let maxSum = 0;
+          for (const sum of sums.values()) {
+            if (sum > maxSum) maxSum = sum;
+          }
           const half = maxSum / 2;
           xChannel = {
             ...encoding.x,
@@ -894,7 +932,10 @@ export function computeScales(
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
-          const maxSum = Math.max(...sums.values(), 0);
+          let maxSum = 0;
+          for (const sum of sums.values()) {
+            if (sum > maxSum) maxSum = sum;
+          }
           // Create a synthetic row with the max stack sum so buildLinearScale sees it
           xData = [...data, { [xField]: maxSum } as DataRow];
         }
@@ -910,7 +951,7 @@ export function computeScales(
       'x',
     );
     if (result.x && encoding.x.type === 'quantitative' && encoding.x.field) {
-      result.x.formatContext = computeFieldFormatContext(data.map((r) => r[encoding.x!.field]));
+      result.x.formatContext = computeFieldFormatContext(fieldIterable(data, encoding.x!.field));
     }
   }
 
@@ -998,7 +1039,10 @@ export function computeScales(
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
-          const maxSum = Math.max(...sums.values(), 0);
+          let maxSum = 0;
+          for (const sum of sums.values()) {
+            if (sum > maxSum) maxSum = sum;
+          }
           const half = maxSum / 2;
           yChannel = {
             ...encoding.y,
@@ -1018,7 +1062,10 @@ export function computeScales(
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
-          const maxSum = Math.max(...sums.values(), 0);
+          let maxSum = 0;
+          for (const sum of sums.values()) {
+            if (sum > maxSum) maxSum = sum;
+          }
           // Create a synthetic row with the max stack sum so buildLinearScale sees it
           yData = [...data, { [yField]: maxSum } as DataRow];
         }
@@ -1035,7 +1082,7 @@ export function computeScales(
       'y',
     );
     if (result.y && encoding.y.type === 'quantitative' && encoding.y.field) {
-      result.y.formatContext = computeFieldFormatContext(data.map((r) => r[encoding.y!.field]));
+      result.y.formatContext = computeFieldFormatContext(fieldIterable(data, encoding.y!.field));
     }
   }
 

@@ -614,7 +614,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     colorEnc.scale?.domain == null
   ) {
     const colorField = colorEnc.field;
-    const stableDomain = Array.from(new Set(chartSpec.data.map((row) => String(row[colorField]))));
+    const stableDomainSet = new Set<string>();
+    for (const row of chartSpec.data) stableDomainSet.add(String(row[colorField]));
+    const stableDomain = Array.from(stableDomainSet);
     renderSpec = {
       ...renderSpec,
       encoding: {

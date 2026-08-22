@@ -13,6 +13,7 @@
 
 import type {
   CompileOptions,
+  DataRow,
   Encoding,
   LayoutStrategy,
   LegendLayout,
@@ -61,6 +62,11 @@ import {
   resolveChromeLayout,
   scalePadding,
 } from './shared';
+
+/** Lazily yield a field's raw values without materializing an intermediate array. */
+function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
+  for (const d of data) yield d[field];
+}
 
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
@@ -572,7 +578,7 @@ export function computeDimensions(
         if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
       }
 
-      const ctx = computeFieldFormatContext(spec.data.map((r) => r[yField]));
+      const ctx = computeFieldFormatContext(fieldIterable(spec.data, yField));
       let sampleLabel: string;
       if (yAxisFormat) {
         const fmt = resolveNumberFormatter(yAxisFormat, ctx);
@@ -620,7 +626,7 @@ export function computeDimensions(
         const v = Number(row[yFieldForTitle]);
         if (Number.isFinite(v) && Math.abs(v) > maxAbsValForTitle) maxAbsValForTitle = Math.abs(v);
       }
-      const ctxForTitle = computeFieldFormatContext(spec.data.map((r) => r[yFieldForTitle!]));
+      const ctxForTitle = computeFieldFormatContext(fieldIterable(spec.data, yFieldForTitle!));
       let sampleLabelForTitle: string;
       if (yAxisFormatForTitle) {
         const fmt = resolveNumberFormatter(yAxisFormatForTitle, ctxForTitle);

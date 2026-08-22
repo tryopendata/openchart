@@ -1,5 +1,6 @@
 import type {
   CompileOptions,
+  DataRow,
   Encoding,
   EncodingChannel,
   FieldFormatContext,
@@ -109,6 +110,11 @@ export function createMeasureFn(measureText?: MeasureTextFn): MeasureFn {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Lazily yield a field's raw values without materializing an intermediate array. */
+function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
+  for (const d of data) yield d[field];
+}
 
 function sampleLabelFromContext(
   maxAbsVal: number,
@@ -273,7 +279,7 @@ export function resolveLayoutPlan(
         const v = Number(row[yField]);
         if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
       }
-      const ctx = computeFieldFormatContext(renderSpec.data.map((r) => r[yField]));
+      const ctx = computeFieldFormatContext(fieldIterable(renderSpec.data, yField));
       const sampleLabel = sampleLabelFromContext(maxAbsVal, yAxisFormat, ctx);
       const negPrefix = renderSpec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
       const labelWidth = measure(
@@ -571,7 +577,7 @@ export function resolveLayoutPlan(
             const v = Number(row[yField]);
             if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
           }
-          const ctx = computeFieldFormatContext(renderSpec.data.map((r) => r[yField]));
+          const ctx = computeFieldFormatContext(fieldIterable(renderSpec.data, yField));
           const sample = sampleLabelFromContext(maxAbsVal, yAxisFormat, ctx);
           const neg = renderSpec.data.some((r) => Number(r[encoding.y!.field]) < 0) ? '-' : '';
           const maxLabelWidth = measure(

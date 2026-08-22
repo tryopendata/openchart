@@ -248,7 +248,8 @@ function normalizeHighlight(encoding: Encoding, data: DataRow[], warnings: strin
   // Warn on unknown values
   if (highlight.length > 0 && data.length > 0) {
     const colorField = color.field;
-    const knownValues = new Set(data.map((row) => String(row[colorField])));
+    const knownValues = new Set<string>();
+    for (const row of data) knownValues.add(String(row[colorField]));
     for (const v of highlight) {
       if (!knownValues.has(v)) {
         warnings.push(

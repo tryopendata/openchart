@@ -76,6 +76,11 @@ function cacheKey(ch: EncodingChannel): string {
   return fmt ? `${ch.field}::${ch.type}::${fmt}` : `${ch.field}::${ch.type}`;
 }
 
+/** Lazily yield a field's raw values without materializing an intermediate array. */
+function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
+  for (const d of data) yield d[field];
+}
+
 /** Build a per-channel formatter cache for tooltip display. */
 function buildFormatterCache(
   data: DataRow[],
@@ -94,7 +99,7 @@ function buildFormatterCache(
         key,
         resolveFieldFormatter({
           surfaceFormat: fmt,
-          values: data.map((r) => r[ch.field]),
+          values: fieldIterable(data, ch.field),
         }),
       );
     } else {
@@ -186,8 +191,31 @@ function buildFields(
   return fields;
 }
 
+/**
+ * Precompute the set of encoded field names for the scatter/bubble title
+ * fallback in `getTooltipTitle` (both axes quantitative). Row-invariant for
+ * a given encoding, so callers that invoke `getTooltipTitle` once per row
+ * build this once and pass it through instead of rebuilding it per row.
+ * Returns `undefined` when the fallback branch doesn't apply, matching the
+ * `getTooltipTitle` guard it feeds.
+ */
+function computeEncodedFieldsSet(encoding: Encoding): Set<string> | undefined {
+  if (!(encoding.x?.type === 'quantitative' && encoding.y?.type === 'quantitative')) {
+    return undefined;
+  }
+  const encodedFields = new Set<string>();
+  for (const ch of [encoding.x, encoding.y, encoding.color, encoding.size, encoding.detail]) {
+    if (ch && 'field' in ch) encodedFields.add(ch.field);
+  }
+  return encodedFields;
+}
+
 /** Determine the title for a tooltip based on encoding. */
-function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
+function getTooltipTitle(
+  row: DataRow,
+  encoding: Encoding,
+  encodedFields?: Set<string>,
+): string | undefined {
   // Detail channel provides an explicit label (e.g. district name in scatter)
   if (encoding.detail) {
     return String(row[encoding.detail.field] ?? '');
@@ -211,13 +239,10 @@ function getTooltipTitle(row: DataRow, encoding: Encoding): string | undefined {
   // For scatter/bubble (both axes quantitative), find a name-like string field
   // in the data row that isn't already used by an encoding channel
   if (encoding.x?.type === 'quantitative' && encoding.y?.type === 'quantitative') {
-    const encodedFields = new Set(
-      [encoding.x, encoding.y, encoding.color, encoding.size, encoding.detail]
-        .filter((ch): ch is EncodingChannel => !!ch && 'field' in ch)
-        .map((ch) => ch.field),
-    );
-    for (const [key, value] of Object.entries(row)) {
-      if (!encodedFields.has(key) && typeof value === 'string') {
+    const fields = encodedFields ?? computeEncodedFieldsSet(encoding)!;
+    for (const key of Object.keys(row)) {
+      const value = row[key];
+      if (!fields.has(key) && typeof value === 'string') {
         return value;
       }
     }
@@ -240,11 +265,12 @@ function tooltipsForLine(
   encoding: Encoding,
   formatters: Map<string, ChannelFormatter>,
   _markIndex: number,
+  encodedFields?: Set<string>,
 ): Array<[string, TooltipContent]> {
   if (mark.dataPoints) {
     for (const dp of mark.dataPoints) {
       dp.tooltip = {
-        title: getTooltipTitle(dp.datum, encoding),
+        title: getTooltipTitle(dp.datum, encoding, encodedFields),
         fields: buildFields(dp.datum, encoding, formatters, mark.stroke),
       };
     }
@@ -257,8 +283,9 @@ function tooltipsForPoint(
   encoding: Encoding,
   formatters: Map<string, ChannelFormatter>,
   markIndex: number,
+  encodedFields?: Set<string>,
 ): Array<[string, TooltipContent]> {
-  const title = getTooltipTitle(mark.data, encoding);
+  const title = getTooltipTitle(mark.data, encoding, encodedFields);
   const fields = buildFields(mark.data, encoding, formatters, getRepresentativeColor(mark.fill));
 
   return [[`point-${markIndex}`, { title, fields }]];
@@ -269,8 +296,9 @@ function tooltipsForRect(
   encoding: Encoding,
   formatters: Map<string, ChannelFormatter>,
   markIndex: number,
+  encodedFields?: Set<string>,
 ): Array<[string, TooltipContent]> {
-  const title = getTooltipTitle(mark.data, encoding);
+  const title = getTooltipTitle(mark.data, encoding, encodedFields);
   const fields = buildFields(mark.data, encoding, formatters, getRepresentativeColor(mark.fill));
 
   return [[`rect-${markIndex}`, { title, fields }]];
@@ -321,11 +349,12 @@ function tooltipsForArea(
   encoding: Encoding,
   formatters: Map<string, ChannelFormatter>,
   _markIndex: number,
+  encodedFields?: Set<string>,
 ): Array<[string, TooltipContent]> {
   if (mark.dataPoints) {
     for (const dp of mark.dataPoints) {
       dp.tooltip = {
-        title: getTooltipTitle(dp.datum, encoding),
+        title: getTooltipTitle(dp.datum, encoding, encodedFields),
         fields: buildFields(dp.datum, encoding, formatters, getRepresentativeColor(mark.fill)),
       };
     }
@@ -361,9 +390,10 @@ function computeRangeTooltips(
     .filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
   const fmtCache = buildFormatterCache(spec.data, allChannels);
   const startFmt = getFormatter(fmtCache, startCh);
+  const encodedFields = computeEncodedFieldsSet(encoding);
 
   const contentFor = (row: DataRow): TooltipContent => {
-    const title = getTooltipTitle(row, encoding);
+    const title = getTooltipTitle(row, encoding, encodedFields);
     if (encoding.tooltip) {
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
       return { title, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
@@ -668,6 +698,7 @@ export function computeTooltipDescriptors(
       : []),
   ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
   const formatters = buildFormatterCache(spec.data, allChannels);
+  const encodedFields = computeEncodedFieldsSet(encoding);
 
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i];
@@ -675,16 +706,16 @@ export function computeTooltipDescriptors(
 
     switch (mark.type) {
       case 'line':
-        entries = tooltipsForLine(mark, encoding, formatters, i);
+        entries = tooltipsForLine(mark, encoding, formatters, i, encodedFields);
         break;
       case 'area':
-        entries = tooltipsForArea(mark, encoding, formatters, i);
+        entries = tooltipsForArea(mark, encoding, formatters, i, encodedFields);
         break;
       case 'point':
-        entries = tooltipsForPoint(mark, encoding, formatters, i);
+        entries = tooltipsForPoint(mark, encoding, formatters, i, encodedFields);
         break;
       case 'rect':
-        entries = tooltipsForRect(mark, encoding, formatters, i);
+        entries = tooltipsForRect(mark, encoding, formatters, i, encodedFields);
         break;
       case 'arc':
         entries = tooltipsForArc(mark, encoding, formatters, i);
