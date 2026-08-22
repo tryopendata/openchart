@@ -1,6 +1,11 @@
-import type { CompileOptions } from '@opendata-ai/openchart-core';
+import type { CompileOptions, DataRow } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChrome } from '../compiler/types';
+
+/** Lazily yield a field's raw values without materializing an intermediate array. */
+export function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
+  for (const d of data) yield d[field];
+}
 
 /** Convert NormalizedChrome back to a Chrome-compatible shape for computeChrome. */
 export function chromeToInput(

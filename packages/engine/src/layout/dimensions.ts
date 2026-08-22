@@ -13,7 +13,6 @@
 
 import type {
   CompileOptions,
-  DataRow,
   Encoding,
   LayoutStrategy,
   LegendLayout,
@@ -58,15 +57,11 @@ import type { LayoutPlan } from './plan';
 import {
   bottomMargin,
   chromeToInput,
+  fieldIterable,
   INLINE_TICK_OVERHANG_PAD,
   resolveChromeLayout,
   scalePadding,
 } from './shared';
-
-/** Lazily yield a field's raw values without materializing an intermediate array. */
-function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
-  for (const d of data) yield d[field];
-}
 
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {

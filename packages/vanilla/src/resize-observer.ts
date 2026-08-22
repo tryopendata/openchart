@@ -20,7 +20,7 @@ export function observeResize(
   callback: (width: number, height: number) => void,
 ): () => void {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const lastDeliveredSize = new Map<Element, { width: number; height: number }>();
+  let lastDelivered: { width: number; height: number } | null = null;
 
   const observer = new ResizeObserver((entries) => {
     // Debounce to ~60fps
@@ -30,14 +30,13 @@ export function observeResize(
     timeoutId = setTimeout(() => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        const last = lastDeliveredSize.get(entry.target);
-        // Always deliver the first callback for a given target (the initial
-        // fire on insertion is load-bearing, see .claude/rules/svg-animation.md).
-        // Only dedupe subsequent deliveries whose size didn't actually change.
-        if (last && last.width === width && last.height === height) {
+        // Always deliver the first callback (the initial fire on insertion is
+        // load-bearing, see .claude/rules/svg-animation.md). Only dedupe
+        // subsequent deliveries whose size didn't actually change.
+        if (lastDelivered && lastDelivered.width === width && lastDelivered.height === height) {
           continue;
         }
-        lastDeliveredSize.set(entry.target, { width, height });
+        lastDelivered = { width, height };
         callback(width, height);
       }
       timeoutId = null;

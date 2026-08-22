@@ -30,6 +30,7 @@ import {
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { resolveFieldFormatter } from '../format/field-format';
+import { fieldIterable } from '../layout/shared';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,11 +75,6 @@ type ChannelFormatter = NumberFormatter | ((v: Date | string | number) => string
 function cacheKey(ch: EncodingChannel): string {
   const fmt = resolveFormat(ch);
   return fmt ? `${ch.field}::${ch.type}::${fmt}` : `${ch.field}::${ch.type}`;
-}
-
-/** Lazily yield a field's raw values without materializing an intermediate array. */
-function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
-  for (const d of data) yield d[field];
 }
 
 /** Build a per-channel formatter cache for tooltip display. */

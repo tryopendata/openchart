@@ -47,6 +47,7 @@ import {
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
+import { fieldIterable } from './shared';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,11 +112,6 @@ export interface ResolvedScales {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Lazily yield a field's raw values without materializing an intermediate array. */
-function* fieldIterable(data: DataRow[], field: string): Generator<unknown> {
-  for (const d of data) yield d[field];
-}
 
 /**
  * Extract and parse a field to numbers in a single pass (fused fieldValues +
