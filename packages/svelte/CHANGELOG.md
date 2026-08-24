@@ -1,5 +1,37 @@
 # Changelog
 
+## [8.2.2](https://github.com/tryopendata/openchart/compare/core-v8.2.1...core-v8.2.2) (2026-08-24)
+
+
+### Features
+
+* live-simulated dashboards, incident intelligence layout, container-query gallery ([df754ef](https://github.com/tryopendata/openchart/commit/df754ef))
+* arc data-update transitions, sparkline updates, barlist label truncation ([ac78ae8](https://github.com/tryopendata/openchart/commit/ac78ae8))
+
+
+### Bug Fixes
+
+* crosshair tooltip picks wrong field from explicit tooltip encoding ([0a6c7d4](https://github.com/tryopendata/openchart/commit/0a6c7d4))
+* hide the screen-reader data table on a wrapper div ([fcbfc2b](https://github.com/tryopendata/openchart/commit/fcbfc2b))
+* load the gallery webfont relative to the deploy base ([c34eca7](https://github.com/tryopendata/openchart/commit/c34eca7))
+* dark-mode page canvas and phone-width gallery layout ([fcf477d](https://github.com/tryopendata/openchart/commit/fcf477d))
+* stage the release commit on GitHub before API tagging ([a2431f4](https://github.com/tryopendata/openchart/commit/a2431f4))
+* clamp outer categorical x tick labels inside the container ([345c246](https://github.com/tryopendata/openchart/commit/345c246))
+
+
+### Performance
+
+* dedupe renders and hoist per-element scans ([ea5421d](https://github.com/tryopendata/openchart/commit/ea5421d))
+* eliminate per-frame allocations and DOM queries in transitions ([58e487c](https://github.com/tryopendata/openchart/commit/58e487c))
+* single-pass field extraction and fewer per-row allocations ([bd1877c](https://github.com/tryopendata/openchart/commit/bd1877c))
+* cache constant formatters and hoist text-measure allocations ([00b4e99](https://github.com/tryopendata/openchart/commit/00b4e99))
+* externalize d3 from package builds ([3df381f](https://github.com/tryopendata/openchart/commit/3df381f))
+
+
+### Refactoring
+
+* consolidate fieldIterable and simplify resize dedupe (review) ([e2abd18](https://github.com/tryopendata/openchart/commit/e2abd18))
+
 ## [8.2.1](https://github.com/tryopendata/openchart/compare/core-v8.2.0...core-v8.2.1) (2026-08-19)
 
 
