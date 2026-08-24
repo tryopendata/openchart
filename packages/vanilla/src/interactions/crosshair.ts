@@ -82,8 +82,14 @@ function buildSliceTooltip(
     const tip = point.tooltip;
     if (!tip) continue;
     if (isMulti) {
+      // Find the primary value field for this series. Skip fields that are
+      // series indicators (have color), match the tooltip title by label or
+      // value (the x-axis field), or match the series key by value (the
+      // color-encoding field in explicit tooltip channels).
       const yField =
-        tip.fields.find((f) => !f.color && f.label !== title) ??
+        tip.fields.find(
+          (f) => !f.color && f.label !== title && f.value !== title && f.value !== group.seriesKey,
+        ) ??
         tip.fields[tip.fields.length - 1] ??
         null;
       if (!yField) continue;
