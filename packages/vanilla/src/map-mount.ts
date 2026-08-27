@@ -385,6 +385,15 @@ export function createGeoMap(
 
   function resolveCamera(): Camera {
     if (currentFocusIds && currentFocusIds.length > 0) {
+      // Prefer the compiled focus target (carries the spec-declared padding)
+      // over recomputing with the default padding of 16.
+      const lf = currentLayout.focus;
+      if (lf && lf.ids.length === currentFocusIds.length) {
+        const lfSet = new Set(lf.ids.map(String));
+        if (currentFocusIds.every((id) => lfSet.has(String(id)))) {
+          return cameraForTarget(currentLayout, lf.target);
+        }
+      }
       const target = focusTargetForFeatures(currentLayout, currentFocusIds);
       return cameraForTarget(currentLayout, target);
     }
