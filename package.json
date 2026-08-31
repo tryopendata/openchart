@@ -47,7 +47,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@playwright/test": "^1.59.1",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@vitest/coverage-v8": "^4.0.18",
     "ajv": "^8.20.0",
