@@ -385,7 +385,7 @@ export function renderTable(
     brandLink.target = '_blank';
     brandLink.rel = 'noopener';
     brandLink.style.cssText = `font-size: ${BRAND_FONT_SIZE}px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
-    brandLink.textContent = 'tryOpenData.ai';
+    brandLink.textContent = 'OpenData';
     brand.appendChild(brandLink);
     footerRow.appendChild(brand);
   }

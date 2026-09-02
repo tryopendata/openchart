@@ -348,7 +348,7 @@ export function computeChrome(
 
   // Bottom elements: source, byline, footer, and an optional custom brand
   // (`chrome.brand`). When a custom brand is supplied it suppresses the default
-  // tryOpenData.ai watermark and renders right-anchored on the same baseline.
+  // OpenData watermark and renders right-anchored on the same baseline.
   const brandNorm = normalizeChromeText(chrome.brand);
   const showWatermark = watermark && !brandNorm;
   // Reserve space on the right for the brand watermark or custom brand so the

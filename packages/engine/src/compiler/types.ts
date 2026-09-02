@@ -137,7 +137,7 @@ export interface NormalizedChartSpec {
   autoThin: boolean;
   theme: ThemeConfig;
   darkMode: DarkMode;
-  /** Whether the tryOpenData.ai watermark is enabled. */
+  /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
   /** Series names to hide from rendering. */
   hiddenSeries: string[];

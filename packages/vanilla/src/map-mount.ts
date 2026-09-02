@@ -72,7 +72,7 @@ export interface GeoMapMountOptions {
   darkMode?: DarkMode;
   /** Enable responsive resizing. Defaults to true. */
   responsive?: boolean;
-  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
   tooltip?: boolean;

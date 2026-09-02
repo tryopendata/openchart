@@ -102,7 +102,7 @@ export interface MountOptions extends ChartEventHandlers {
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** Enable responsive resizing. Defaults to true. */
   responsive?: boolean;
-  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Initial selected element. */
   selectedElement?: ElementRef;

@@ -8,7 +8,6 @@ import type {
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
 import {
-  estimateTextWidth,
   FOOTNOTE_LINE_HEIGHT,
   footnoteBandHeight as footnoteBandHeightFor,
   textAscent,
@@ -201,22 +200,6 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.brand) {
     const brandY = bottomOffset + chrome.brand.y + bandHeight;
     renderChromeElement(g, { ...chrome.brand, y: brandY }, 'oc-brand', 'brand', measureText);
-    // Accent dot to the left of the brand text. text-anchor=end means
-    // brand.x is the right edge, so the dot sits 12px left of the measured
-    // text's leftmost glyph. Use estimateTextWidth (the same path the
-    // engine uses for label sizing) instead of a `length * 0.55em` fudge
-    // so wide glyphs (W, M) and narrow ones (i, l) land correctly.
-    const textWidth = estimateTextWidth(
-      chrome.brand.text,
-      chrome.brand.style.fontSize,
-      chrome.brand.style.fontWeight,
-    );
-    const dotX = chrome.brand.x - textWidth - 12;
-    const dotY = brandY + chrome.brand.style.fontSize / 2;
-    const dot = createSVGElement('circle');
-    dot.setAttribute('class', 'oc-brand-dot');
-    setAttrs(dot, { cx: dotX, cy: dotY, r: 3 });
-    g.appendChild(dot);
   }
 
   parent.appendChild(g);

@@ -64,7 +64,7 @@ export interface GraphRenderState {
   exemptIds?: Set<string>;
   /** True during active pan/zoom gestures. Renderer skips labels and glow. */
   isGesturing: boolean;
-  /** Whether the tryOpenData.ai watermark is enabled. */
+  /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
   /**
    * Active focus crossfade. When present and `t < 1`, the renderer blends edge

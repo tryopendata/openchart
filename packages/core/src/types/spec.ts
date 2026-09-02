@@ -952,7 +952,7 @@ export interface Chrome {
   /**
    * Right-anchored brand block on the footer row, paired with a small accent
    * dot to its left. Visually balances the source/byline left-anchored text.
-   * When set, suppresses the default `tryOpenData.ai` watermark for this chart.
+   * When set, suppresses the default `OpenData` watermark for this chart.
    */
   brand?: string | ChromeText;
 }
@@ -1945,7 +1945,7 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
   /**
-   * Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides
+   * Whether to show the OpenData watermark. Defaults to true; auto-hides
    * when the container is under 200px tall (the cramped height class) unless
    * explicitly set.
    */
@@ -2148,7 +2148,7 @@ export interface TableSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Enable client-side search/filter. */
   search?: boolean;
@@ -2303,7 +2303,7 @@ export interface GraphSpec {
    * legend, so the built-in filter UI doesn't compete with it.
    */
   legend?: boolean | { interactive?: boolean; counts?: boolean };
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
 }
 
@@ -2382,7 +2382,7 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Resolution strategy for shared scales/axes/legends. */
   resolve?: ResolveConfig;
@@ -2463,7 +2463,7 @@ export interface SankeySpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
@@ -2534,7 +2534,7 @@ export interface TileMapSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
@@ -2636,7 +2636,7 @@ export interface GeoMapSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Optional point/symbol layer rendered above choropleth features. */
   points?: GeoMapPointsLayer;
@@ -2675,7 +2675,7 @@ export interface BarListSpec {
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
   darkMode?: DarkMode;
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;

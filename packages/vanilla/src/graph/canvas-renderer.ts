@@ -446,7 +446,7 @@ export class GraphCanvasRenderer {
     ctx.globalAlpha = 0.55;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText('tryOpenData.ai', x, y);
+    ctx.fillText('OpenData', x, y);
     ctx.restore();
   }
 

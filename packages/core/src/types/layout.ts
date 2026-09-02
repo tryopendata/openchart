@@ -1314,7 +1314,7 @@ export interface ChartLayout {
   dimensions: { width: number; height: number };
   /** Resolved animation config. Present only when animation is enabled. */
   animation?: ResolvedAnimation;
-  /** Whether the tryOpenData.ai watermark is enabled. */
+  /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
   /** Display mode controlling chrome/axes/legend stripping. `'sparkline'` produces an edge-to-edge mini chart. */
   display: import('./spec').Display;
@@ -1514,7 +1514,7 @@ export interface TableLayout {
   theme: ResolvedTheme;
   /** Resolved animation config. Present only when animation is enabled. */
   animation?: ResolvedAnimation;
-  /** Whether the tryOpenData.ai watermark is enabled. */
+  /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
 }
 
@@ -1693,7 +1693,7 @@ export interface SankeyLayout {
   dimensions: { width: number; height: number };
   /** Resolved animation config. Present only when animation is enabled. */
   animation?: ResolvedAnimation;
-  /** Whether the tryOpenData.ai watermark is enabled. */
+  /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
   /** Real text measurement function from the adapter (for accurate SVG text wrapping). */
   measureText?: MeasureTextFn;
@@ -2036,7 +2036,7 @@ export interface CompileOptions {
    * layered, and sparkline charts.
    */
   renderer?: 'auto' | 'svg' | 'canvas';
-  /** Whether to show the tryOpenData.ai watermark. Defaults to true. */
+  /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /**
    * Enable development-time diagnostics (WCAG contrast warnings via

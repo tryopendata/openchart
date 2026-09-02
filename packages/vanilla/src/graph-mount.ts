@@ -104,7 +104,7 @@ export interface GraphMountOptions {
    */
   onWarn?: (message: string) => void;
   responsive?: boolean;
-  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Show the built-in tooltip; pass an object for a custom formatter. Defaults to true. */
   tooltip?: boolean | { formatter?: GraphTooltipFormatter };

@@ -40,7 +40,7 @@ export interface TableMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   responsive?: boolean;
-  /** Show the tryOpenData.ai watermark. Defaults to true. */
+  /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   onRowClick?: (row: Record<string, unknown>) => void;
   onStateChange?: (state: TableState) => void;

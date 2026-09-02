@@ -1,16 +1,16 @@
 /**
- * Brand rendering: the "tryOpenData.ai" watermark footer.
+ * Brand rendering: the "OpenData" watermark footer.
  */
 
 import type { ChartLayout } from '@opendata-ai/openchart-core';
-import { BRAND_FONT_SIZE, BRAND_MIN_WIDTH, textAscent } from '@opendata-ai/openchart-core';
+import { BRAND_MIN_WIDTH, textAscent } from '@opendata-ai/openchart-core';
 import { footnoteBandHeight } from './chrome';
 import { createSVGElement, setAttrs, XLINK_NS } from './svg-dom';
 
 const BRAND_URL = 'https://tryopendata.ai';
 
 /**
- * Render the "OpenData" brand as a footer-row element, right-aligned on the
+ * Render the brand watermark as a footer-row element, right-aligned on the
  * same baseline as the first bottom chrome text (source/byline/footer).
  * Uses the same font size as chrome source text so it blends in as a subtle
  * footer item rather than occupying independent visual space.
@@ -48,8 +48,6 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   a.setAttribute('rel', 'noopener');
   a.setAttribute('class', 'oc-chrome-ref');
 
-  // "try" in normal weight, "OpenData" in semibold, ".ai" in normal weight,
-  // rendered as a single right-aligned text element with three tspans.
   // chromeY is the top edge shared with source/byline chrome text; anchor the
   // shared alphabetic baseline from the largest tspan's ascent. (Hanging
   // baseline is avoided: WebKit positions it differently and never inherits
@@ -60,27 +58,14 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
     x: rightEdge,
     y: chromeY + textAscent(BRAND_LARGE),
     'font-family': layout.theme.fonts.family,
-    'font-size': BRAND_FONT_SIZE,
+    'font-size': BRAND_LARGE,
+    'font-weight': '600',
     'text-anchor': 'end',
     'fill-opacity': 0.55,
   });
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
 
-  const trySpan = createSVGElement('tspan');
-  trySpan.setAttribute('font-weight', '500');
-  trySpan.textContent = 'try';
-  text.appendChild(trySpan);
-
-  const openDataSpan = createSVGElement('tspan');
-  openDataSpan.setAttribute('font-weight', '600');
-  openDataSpan.setAttribute('font-size', String(BRAND_LARGE));
-  openDataSpan.textContent = 'OpenData';
-  text.appendChild(openDataSpan);
-
-  const aiSpan = createSVGElement('tspan');
-  aiSpan.setAttribute('font-weight', '500');
-  aiSpan.textContent = '.ai';
-  text.appendChild(aiSpan);
+  text.textContent = 'OpenData';
 
   a.appendChild(text);
   parent.appendChild(a);

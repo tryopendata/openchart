@@ -769,17 +769,12 @@ describe('targeted mark snapshots', () => {
 // ---------------------------------------------------------------------------
 
 describe('brand watermark', () => {
-  it('renders "tryOpenData.ai" as a single text element with three tspans', () => {
+  it('renders "OpenData" as a single text element', () => {
     const { svg } = renderSpec(lineSpec);
     const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink).not.toBeNull();
     const text = brandLink!.querySelector('text')!;
-    expect(text.textContent).toBe('tryOpenData.ai');
-    const tspans = text.querySelectorAll('tspan');
-    expect(tspans.length).toBe(3);
-    expect(tspans[0].textContent).toBe('try');
-    expect(tspans[1].textContent).toBe('OpenData');
-    expect(tspans[2].textContent).toBe('.ai');
+    expect(text.textContent).toBe('OpenData');
   });
 
   it('links to tryopendata.ai', () => {

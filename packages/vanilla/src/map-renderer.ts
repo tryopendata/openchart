@@ -120,21 +120,8 @@ function renderWatermark(parent: SVGElement, layout: GeoMapLayout): void {
   });
   (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
 
-  const trySpan = createSVGElement('tspan');
-  setAttrs(trySpan, { 'font-weight': 500 });
-  trySpan.textContent = 'try';
-
-  const openDataSpan = createSVGElement('tspan');
-  setAttrs(openDataSpan, { 'font-weight': 600, 'font-size': 16 });
-  openDataSpan.textContent = 'OpenData';
-
-  const aiSpan = createSVGElement('tspan');
-  setAttrs(aiSpan, { 'font-weight': 500 });
-  aiSpan.textContent = '.ai';
-
-  text.appendChild(trySpan);
-  text.appendChild(openDataSpan);
-  text.appendChild(aiSpan);
+  setAttrs(text, { 'font-weight': 600, 'font-size': 16 });
+  text.textContent = 'OpenData';
   a.appendChild(text);
   parent.appendChild(a);
 }

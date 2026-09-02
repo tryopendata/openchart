@@ -375,7 +375,7 @@ export function estimateTextWidth(text: string, fontSize: number, fontWeight = 4
 }
 
 /**
- * Width reserved for the "tryOpenData.ai" brand watermark in the bottom-right corner.
+ * Width reserved for the "OpenData" brand watermark in the bottom-right corner.
  */
 export const BRAND_RESERVE_WIDTH = 130;
 
