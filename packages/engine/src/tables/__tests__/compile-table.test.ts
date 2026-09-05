@@ -210,8 +210,8 @@ describe('compileTable', () => {
     const layout = compileTable({ ...baseSpec, animation: true }, baseOptions);
     expect(layout.animation).toBeDefined();
     expect(layout.animation!.enter).toBeDefined();
-    expect(layout.animation!.enter!.duration).toBe(500);
-    expect(layout.animation!.enter!.staggerDelay).toBe(80);
+    expect(layout.animation!.enter!.duration).toBe(450);
+    expect(layout.animation!.enter!.staggerDelay).toBe(30);
   });
 
   it('includes resolved animation with custom config', () => {

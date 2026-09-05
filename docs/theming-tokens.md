@@ -113,6 +113,70 @@ import { essay, wire } from '@opendata-ai/openchart-core';
 createChart(container, spec, { theme: wire });
 ```
 
+### categoricalFill and hairline
+
+`ThemeColors` carries two fields beyond `categorical`: `categoricalFill` (the
+quieter variant used for area-filling marks — bar, area, arc, waffle,
+calendar, rect) and `hairline` (the structural line color for axis lines and
+separators, distinct from `gridline`, which is lighter). If you set only
+`colors.categorical`, `categoricalFill` is copied from it so a custom palette
+never drifts between strokes and fills; set `categoricalFill` explicitly to
+control the two independently.
+
+```ts
+theme: {
+  colors: {
+    categorical: ['#1d5f8a', '#e3120b', '#7fb0d3'],
+    categoricalFill: ['#3b7097', '#ee493a', '#97c2e2'],
+    hairline: 'rgba(0,0,0,0.14)',
+  },
+}
+```
+
+A domain with more series than the palette carries (six by default) extends
+from a secondary six-slot ramp and emits a warning — six categorical series is
+already the point where a chart should bucket the tail, facet, or
+direct-label instead of adding a seventh hue.
+
+### The derived neutral ramp
+
+Every secondary gray in the system — `--oc-gray-100` through `-800`,
+`--oc-text-secondary`, `--oc-text-faint`, `--oc-border` — is computed by
+mixing the theme's `text` color toward its `background`, not read from a
+fixed zinc ladder. A warm or cool custom theme gets warm or cool grays for
+free instead of zinc showing up uninvited beside the palette. The ramp lives
+on `ResolvedTheme.colors.neutral` (`100`/`200`/`300`/`400`/`600`/`800`, plus
+`secondary` = `800`, `faint` = `300`, `border` = `100`) and is computed once
+in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from it. When the
+background is transparent (the default) the ramp falls back to the static
+token defaults, which is why the default theme and the generated `tokens.css`
+never disagree.
+
+### Radius ladder and hover tokens
+
+| Token | Default | Used for |
+|---|---|---|
+| `--oc-radius-sm` | 2px | mark corners (bars, calendar/waffle cells), legend swatches, focus rings |
+| `--oc-radius-md` | 6px | inputs, buttons, delta chips |
+| `--oc-radius-lg` | `var(--oc-border-radius)` (8px) | tooltip, listbox, panels, graph legend/search |
+| `--oc-radius-full` | 999px | pill-shaped chips |
+| `--oc-hover-dim` | 0.3 | opacity the rest of a series/legend drops to on hover |
+| `--oc-hover-duration` | 140ms | hover fade transition |
+| `--oc-map-hover-dim` | 0.75 | map-local override; dimming 3000 county paths at 0.3 reads as a blackout, so maps use a lighter dim and only on legend-bin hover, never on feature hover |
+| `--oc-positive-tint` / `--oc-negative-tint` | 10% color-mix toward `--oc-bg` | delta chip backgrounds |
+
+`--oc-border-radius` (8px) is the one users typically override; it drives
+containers and tooltips. Mark geometry uses the fixed `--oc-radius-sm`
+regardless, so a theme with `borderRadius: 0` still draws a 2px bar-end
+radius.
+
+`--oc-positive`/`--oc-negative` are generated to match
+`DEFAULT_THEME.colors.positive`/`.negative` exactly in both modes — a
+`token-theme-parity` test asserts this, along with the four weight tokens,
+`--oc-gridline`, `--oc-axis`, `--oc-border-radius`, `colors.neutral`, and
+`--oc-animation-stagger`, so the JS theme and the generated CSS tokens can't
+drift apart the way they did before this release.
+
 ### The editorial rule
 
 `ThemeConfig.rule` draws a short colored bar above the chrome block — the

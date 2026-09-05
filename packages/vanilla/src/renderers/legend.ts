@@ -176,6 +176,15 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
   const labelX = ox + legend.circles[0].cx + legend.circles[0].radius + 8;
   const leaderX = ox + legend.circles[0].cx + legend.circles[0].radius + 4;
 
+  if (legend.title && legend.titleY !== undefined) {
+    const title = createSVGElement('text');
+    title.setAttribute('class', 'oc-legend-title');
+    setAttrs(title, { x: ox, y: oy + legend.titleY, 'text-anchor': 'start' });
+    applyTextStyle(title, legend.titleStyle ?? legend.labelStyle);
+    title.textContent = legend.title;
+    g.appendChild(title);
+  }
+
   for (const circle of legend.circles) {
     const c = createSVGElement('circle');
     setAttrs(c, {

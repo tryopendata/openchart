@@ -29,6 +29,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
+  buildD3Formatter,
   computeChrome,
   defaultNumberFormatter,
   estimateTextWidth,
@@ -500,6 +501,12 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   };
   applyOtherLabels(nodes);
 
+  // Node values are a *column* the reader scans down, so they all take one
+  // precision. Formatting each independently drops trailing zeros per node and
+  // prints "Transport 28" beside "Industry 32.70" -- the same quantity written
+  // two ways, which reads as two different levels of precision in the data.
+  const nodeFmt = resolveNodeValueFormatter(nodes, resolvedValueFormat, flowFmt);
+
   // 6b. Reserve label gutters. Outside-left labels on the first column and
   //     outside-right labels on the last need room the layout does not know
   //     about, so measure the widest block on each side and re-run the layout
@@ -509,7 +516,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     const name = node.label ?? node.id;
     const nameWidth = estimateTextWidth(name, labelFontSize, labelFontWeight);
     const valueWidth = estimateTextWidth(
-      formatFlowValue(node.value ?? 0, flowFmt),
+      formatFlowValue(node.value ?? 0, nodeFmt),
       labelFontSize,
       valueFontWeight,
     );
@@ -618,7 +625,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     const fill = nodeColorMap.get(node.id) ?? theme.colors.categorical[0];
     const depth = node.depth ?? 0;
     const merged = otherMembers.get(node.id);
-    const valueText = formatFlowValue(node.value ?? 0, flowFmt);
+    const valueText = formatFlowValue(node.value ?? 0, nodeFmt);
 
     return {
       type: 'sankeyNode' as const,
@@ -703,7 +710,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   );
 
   // 13. Build tooltip descriptors
-  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, flowFmt);
+  const tooltipDescriptors = buildTooltipDescriptors(nodeMarks, linkMarks, flowFmt, nodeFmt);
 
   // 14. Build a11y metadata
   const a11y = {
@@ -819,6 +826,58 @@ function buildSankeyLegend(
 }
 
 // ---------------------------------------------------------------------------
+// Node value precision
+// ---------------------------------------------------------------------------
+
+/** Most decimal places a derived node format is allowed to show. */
+const MAX_UNIFORM_DECIMALS = 2;
+
+/**
+ * Decimal places a value actually carries, ignoring float dust.
+ *
+ * Node values are sums of link values, so 24.6 + 9.8 lands on
+ * 34.400000000000006. Rounding to the cap first collapses the dust; anything
+ * finer than the cap is not shown anyway.
+ */
+function decimalPlaces(value: number): number {
+  const rounded = Number(value.toFixed(MAX_UNIFORM_DECIMALS));
+  if (Number.isInteger(rounded)) return 0;
+  const text = String(rounded);
+  const dot = text.indexOf('.');
+  return dot === -1 ? 0 : text.length - dot - 1;
+}
+
+/**
+ * One fixed-decimal formatter for the whole node column, derived from the data.
+ *
+ * Falls back to the per-value formatter in the three cases where a fixed
+ * decimal count would be worse than the mixed one:
+ * - an explicit `encoding.value.format`, which is the author's call;
+ * - values at or above the abbreviation threshold, where the default switches
+ *   to "1.2k" and a fixed format would print "1,234,000.00";
+ * - values too small to survive the cap, which would all render as "0".
+ */
+function resolveNodeValueFormatter(
+  nodes: readonly ComputedNode[],
+  explicitFormat: string | undefined,
+  fallback: NumberFormatter,
+): NumberFormatter {
+  if (explicitFormat) return fallback;
+
+  const values = nodes.map((n) => n.value ?? 0).filter((v) => Number.isFinite(v));
+  if (values.length === 0) return fallback;
+  if (values.some((v) => Math.abs(v) >= 1000)) return fallback;
+  if (values.some((v) => v !== 0 && Math.abs(v) < 0.005)) return fallback;
+
+  let decimals = 0;
+  for (const v of values) {
+    decimals = Math.max(decimals, decimalPlaces(v));
+    if (decimals >= MAX_UNIFORM_DECIMALS) break;
+  }
+  return buildD3Formatter(`,.${decimals}f`) ?? fallback;
+}
+
+// ---------------------------------------------------------------------------
 // Tooltip builder
 // ---------------------------------------------------------------------------
 
@@ -833,6 +892,9 @@ function buildTooltipDescriptors(
   nodes: SankeyNodeMark[],
   links: SankeyLinkMark[],
   formatter?: NumberFormatter | null,
+  // Node totals share the column's precision, so a node's tooltip agrees with
+  // the number drawn next to it. Links keep the per-value formatter.
+  nodeFormatter?: NumberFormatter | null,
 ): Map<string, TooltipContent> {
   const descriptors = new Map<string, TooltipContent>();
 
@@ -840,7 +902,7 @@ function buildTooltipDescriptors(
     const fields: TooltipField[] = [
       {
         label: 'Total flow',
-        value: formatFlowValue(node.value, formatter),
+        value: formatFlowValue(node.value, nodeFormatter ?? formatter),
       },
     ];
     descriptors.set(`node-${node.nodeId}`, {

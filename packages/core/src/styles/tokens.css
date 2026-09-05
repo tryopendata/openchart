@@ -85,9 +85,9 @@
     );
 
     /* Animation timing defaults */
-    --oc-animation-duration: 500ms;
-    --oc-animation-stagger: 80ms;
-    --oc-annotation-delay: 200ms;
+    --oc-animation-duration: 450ms;
+    --oc-animation-stagger: 30ms;
+    --oc-annotation-delay: 150ms;
 
     /* Typography scale (editorial design system) */
     --oc-title-size: 26px;

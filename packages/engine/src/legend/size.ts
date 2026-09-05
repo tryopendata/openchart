@@ -32,6 +32,7 @@ import type {
   ResolvedTheme,
   SizeLegendCircle,
   SizeLegendLayout,
+  TextStyle,
 } from '@opendata-ai/openchart-core';
 import {
   abbreviateNumber,
@@ -53,6 +54,14 @@ const LABEL_GAP = 6;
 
 /** Padding below the baseline so the largest circle's stroke isn't clipped. */
 const BASELINE_PAD = 2;
+
+/**
+ * Gap between the title baseline and the top of the circle stack.
+ *
+ * The largest circle's label rides its top edge, so without this the title and
+ * the first value sit a couple of pixels apart and read as one smudged line.
+ */
+const TITLE_GAP = 6;
 
 /** How many circles to key. Three reads as a scale; two reads as a comparison. */
 const CIRCLE_COUNT = 3;
@@ -92,6 +101,10 @@ export interface SizeLegendContent {
   width: number;
   /** Total height of the legend block. */
   height: number;
+  /** Legend title, rendered above the circle stack. Absent when untitled. */
+  title?: string;
+  /** Title baseline y, relative to the block origin. Absent when untitled. */
+  titleY?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +222,21 @@ function toPrecision(value: number, digits: number): number {
   return Math.round(value / magnitude) * magnitude;
 }
 
+/**
+ * Text style for the size legend title. Same register as the continuous color
+ * legend's title -- small, medium weight, muted -- so the two keys read as one
+ * column when they stack.
+ */
+export function sizeLegendTitleStyle(theme: ResolvedTheme): TextStyle {
+  return {
+    fontFamily: theme.fonts.family,
+    fontSize: theme.fonts.sizes.small,
+    fontWeight: theme.fonts.weights.medium,
+    fill: theme.colors.neutral.secondary,
+    lineHeight: 1.3,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -296,8 +324,16 @@ export function computeSizeLegendContent(
 
   const fontSize = theme.fonts.sizes.small;
 
+  // Title above the stack: the circles key a magnitude, and a magnitude with no
+  // name is a number the reader has to guess the units of. Mirrors the
+  // continuous color legend's title row so the two keys stack as one column.
+  // `|| undefined` rather than `??`: an explicit empty title is a request for
+  // no title row, and an empty string would otherwise reserve one.
+  const title = (sizeEncoding?.title ?? sizeEncoding?.field) || undefined;
+  const titleRowHeight = title ? Math.ceil(fontSize * 1.3) + TITLE_GAP : 0;
+
   // Nested: every circle shares the baseline, so cy = baseline - r.
-  const baseline = maxRadius * 2;
+  const baseline = titleRowHeight + maxRadius * 2;
   const cx = maxRadius;
 
   // Labels ride each circle's top edge -- but only if the edges are far enough
@@ -336,10 +372,15 @@ export function computeSizeLegendContent(
   // the block is as tall as whichever finishes lower.
   const lastLabelBottom = (circles[circles.length - 1]?.labelY ?? 0) + fontSize * 0.5;
 
+  const circleBlockWidth = maxRadius * 2 + LABEL_GAP + widestLabel;
+  const titleWidth = title ? estimateTextWidth(title, fontSize, theme.fonts.weights.medium) : 0;
+
   return {
     circles,
-    width: maxRadius * 2 + LABEL_GAP + widestLabel,
+    width: Math.max(circleBlockWidth, titleWidth),
     height: Math.max(baseline, lastLabelBottom) + BASELINE_PAD,
+    title,
+    titleY: title ? fontSize : undefined,
   };
 }
 
@@ -403,5 +444,8 @@ export function placeSizeLegend(
       lineHeight: 1.3,
       fontVariant: 'tabular-nums',
     },
+    title: content.title,
+    titleStyle: content.title ? sizeLegendTitleStyle(theme) : undefined,
+    titleY: content.titleY,
   };
 }

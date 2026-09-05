@@ -20,7 +20,7 @@ import type { ScatterCanvasState } from './types';
  * `engine/src/compiler/animation.ts` -- duplicated rather than imported
  * because vanilla does not depend on the engine at runtime.
  */
-export const MAX_TOTAL_STAGGER_MS = 2000;
+export const MAX_TOTAL_STAGGER_MS = 300;
 
 /** Fraction of the enter duration a single point takes to fade in. */
 export const POINT_DURATION_FRACTION = 0.4;

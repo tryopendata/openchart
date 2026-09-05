@@ -17,13 +17,14 @@ import type {
   PointMark,
   Rect,
   RectMark,
+  ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, getSequentialColor, groupByField } from '../utils';
+import { getColor, getSequentialColor, groupByField, resolveKnockoutColor } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,6 +51,7 @@ export function computeDotMarks(
   scales: ResolvedScales,
   _chartArea: Rect,
   _strategy: LayoutStrategy,
+  theme?: ResolvedTheme,
 ): (PointMark | RectMark)[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -91,6 +93,7 @@ export function computeDotMarks(
       yScale,
       bandwidth,
       scales,
+      resolveKnockoutColor(theme),
     );
   } else {
     // Single series: lollipop stems from baseline
@@ -104,6 +107,7 @@ export function computeDotMarks(
       baseline,
       scales,
       isSequentialColor,
+      resolveKnockoutColor(theme),
     );
   }
 
@@ -136,6 +140,7 @@ function computeDumbbellMarks(
   yScale: ScaleBand<string>,
   bandwidth: number,
   scales: ResolvedScales,
+  dotKnockout: string,
 ): (PointMark | RectMark)[] {
   const marks: (PointMark | RectMark)[] = [];
   const categoryGroups = groupByField([...data], categoryField);
@@ -198,7 +203,7 @@ function computeDumbbellMarks(
         cy,
         r: DOT_RADIUS,
         fill: color,
-        stroke: '#ffffff',
+        stroke: dotKnockout,
         strokeWidth: 2,
         data: row as Record<string, unknown>,
         aria: dotAria,
@@ -224,6 +229,7 @@ function computeLollipopMarks(
   baseline: number,
   scales: ResolvedScales,
   isSequentialColor = false,
+  dotKnockout = '#ffffff',
 ): (PointMark | RectMark)[] {
   const marks: (PointMark | RectMark)[] = [];
 
@@ -274,7 +280,7 @@ function computeLollipopMarks(
       cy,
       r: DOT_RADIUS,
       fill: color,
-      stroke: '#ffffff',
+      stroke: dotKnockout,
       strokeWidth: 2,
       data: row as Record<string, unknown>,
       aria: dotAria,

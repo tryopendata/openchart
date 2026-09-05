@@ -62,8 +62,28 @@ export function valueEndCorners(
  * fall back to white the same way the scatter knockout stroke does.
  */
 export function stackSeamStroke(theme?: ResolvedTheme): string {
+  return resolveKnockoutColor(theme);
+}
+
+/**
+ * The canvas color a knockout ring / seam should be painted in.
+ *
+ * Every mark that separates itself from its neighbours by drawing a ring in
+ * the canvas color -- scatter dots, line point separators, dot-plot and
+ * beeswarm circles, pie slice seams, stacked segment seams, endpoint markers --
+ * goes through here, so a preset with its own opaque background (`terminal`)
+ * gets a ring that reads as space rather than a bright halo.
+ *
+ * A non-opaque background ('transparent', 'none') has no color of its own, so
+ * fall back to the mode's surface: near-black in dark mode, white in light.
+ */
+export function resolveKnockoutColor(theme?: {
+  colors?: { background?: string };
+  isDark?: boolean;
+}): string {
   const bg = theme?.colors?.background;
-  return bg && isOpaqueColor(bg) ? bg : '#ffffff';
+  if (bg && isOpaqueColor(bg)) return bg;
+  return theme?.isDark ? '#18181b' : '#ffffff';
 }
 
 /**

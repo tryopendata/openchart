@@ -33,7 +33,7 @@ describe('resolveAnimation', () => {
       enter: { ...ENTER_DEFAULTS },
       update: { ...UPDATE_DEFAULTS },
       exit: { ...EXIT_DEFAULTS },
-      annotationDelay: 200,
+      annotationDelay: 150,
     });
   });
 
@@ -43,7 +43,7 @@ describe('resolveAnimation', () => {
     expect(result!.enter).toEqual(ENTER_DEFAULTS);
     expect(result!.update).toEqual(UPDATE_DEFAULTS);
     expect(result!.exit).toEqual(EXIT_DEFAULTS);
-    expect(result!.annotationDelay).toBe(200);
+    expect(result!.annotationDelay).toBe(150);
   });
 
   it('resolves custom enter config', () => {
@@ -108,7 +108,7 @@ describe('resolveAnimation', () => {
 
   it('preserves default annotationDelay when not overridden', () => {
     const result = resolveAnimation({ enter: { duration: 1000 } });
-    expect(result!.annotationDelay).toBe(200);
+    expect(result!.annotationDelay).toBe(150);
   });
 
   it('enter phase uses ENTER_DEFAULTS for unspecified fields', () => {
@@ -116,7 +116,7 @@ describe('resolveAnimation', () => {
     expect(result!.enter).toEqual({
       duration: 1000,
       ease: 'smooth',
-      staggerDelay: 80,
+      staggerDelay: 30,
       staggerOrder: 'index',
     });
   });
@@ -124,7 +124,7 @@ describe('resolveAnimation', () => {
   it('update phase uses UPDATE_DEFAULTS (no stagger by default)', () => {
     const result = resolveAnimation(true);
     expect(result!.update).toEqual({
-      duration: 500,
+      duration: 450,
       ease: 'smooth',
       staggerDelay: 0,
       staggerOrder: 'index',
@@ -134,7 +134,7 @@ describe('resolveAnimation', () => {
   it('exit phase uses EXIT_DEFAULTS (shorter duration)', () => {
     const result = resolveAnimation(true);
     expect(result!.exit).toEqual({
-      duration: 300,
+      duration: 250,
       ease: 'smooth',
       staggerDelay: 0,
       staggerOrder: 'index',
@@ -233,22 +233,22 @@ describe('clampStaggerDelay', () => {
   });
 
   it('returns delay unchanged for small counts', () => {
-    // 30 * 10 = 300, well under 2000ms cap
+    // 30 * 10 = 300, right at the 300ms cap
     expect(clampStaggerDelay(30, 10)).toBe(30);
   });
 
   it('clamps delay for large counts', () => {
-    // 30 * 200 = 6000 > 2000, so clamp to 2000/200 = 10
-    expect(clampStaggerDelay(30, 200)).toBe(10);
+    // 30 * 200 = 6000 > 300, so clamp to 300/200 = 1.5
+    expect(clampStaggerDelay(30, 200)).toBe(1.5);
   });
 
-  it('clamps to cap total at 2000ms', () => {
-    // 50 * 100 = 5000 > 2000, so clamp to 2000/100 = 20
-    expect(clampStaggerDelay(50, 100)).toBe(20);
+  it('clamps to cap total at 300ms', () => {
+    // 50 * 100 = 5000 > 300, so clamp to 300/100 = 3
+    expect(clampStaggerDelay(50, 100)).toBe(3);
   });
 
   it('does not increase delay when already under the cap', () => {
-    // 5 * 50 = 250 < 2000, keeps at 5
+    // 5 * 50 = 250 < 300, keeps at 5
     expect(clampStaggerDelay(5, 50)).toBe(5);
   });
 });

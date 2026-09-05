@@ -433,6 +433,72 @@ describe('compileSankey', () => {
     });
   });
 
+  /**
+   * The node values are a column the reader scans down. Formatting each one
+   * independently drops trailing zeros per node, so an energy sankey printed
+   * "Transport 28" beside "Industry 32.70" -- the same quantity in two
+   * registers, which reads as two different precisions in the data.
+   */
+  describe('node value precision', () => {
+    const valuesFor = (
+      data: Array<Record<string, unknown>>,
+      extra: Record<string, unknown> = {},
+    ): string[] => {
+      const result = compileSankey({ ...basicSpec, ...extra, data } as typeof basicSpec, {
+        width: 900,
+        height: 500,
+      });
+      return result.nodes.map((n) => n.valueLabel?.text ?? '');
+    };
+
+    it('gives every node the same decimal count', () => {
+      // Node totals: A 24.6, B 9.8, C 34.4 -> mixed decimals before the fix.
+      const labels = valuesFor([
+        { from: 'A', to: 'C', amount: 24.6 },
+        { from: 'B', to: 'C', amount: 9.8 },
+        { from: 'C', to: 'D', amount: 28 },
+        { from: 'C', to: 'E', amount: 6.4 },
+      ]);
+      expect(labels).toContain('28.0');
+      expect(labels).toContain('24.6');
+      expect(labels).toContain('34.4');
+      expect(labels).not.toContain('28');
+    });
+
+    it('shows no decimals when the data is integer-only', () => {
+      const labels = valuesFor([
+        { from: 'A', to: 'C', amount: 10 },
+        { from: 'B', to: 'C', amount: 20 },
+        { from: 'C', to: 'D', amount: 30 },
+      ]);
+      expect(labels).toContain('10');
+      expect(labels).toContain('30');
+      for (const label of labels) {
+        expect(label).not.toContain('.');
+      }
+    });
+
+    it('leaves an explicit value format alone', () => {
+      const labels = valuesFor(
+        [
+          { from: 'A', to: 'C', amount: 24.6 },
+          { from: 'B', to: 'C', amount: 9.8 },
+          { from: 'C', to: 'D', amount: 28 },
+          { from: 'C', to: 'E', amount: 6.4 },
+        ],
+        {
+          encoding: {
+            source: { field: 'from', type: 'nominal' as const },
+            target: { field: 'to', type: 'nominal' as const },
+            value: { field: 'amount', type: 'quantitative' as const, format: '.0f' },
+          },
+        },
+      );
+      expect(labels).toContain('28');
+      expect(labels).toContain('25');
+    });
+  });
+
   describe('linkOpacity', () => {
     it('uses custom linkOpacity when specified', () => {
       const spec = { ...basicSpec, linkOpacity: 0.9 };

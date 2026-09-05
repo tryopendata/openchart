@@ -18,7 +18,7 @@ import type {
   Rect,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor, isOpaqueColor } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import { line } from 'd3-shape';
 
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
@@ -28,6 +28,7 @@ import {
   getColor,
   getSequentialColor,
   groupByField,
+  resolveKnockoutColor,
   resolveSeriesStroke,
   scaleValue,
   sortByField,
@@ -104,8 +105,7 @@ export function computeLineMarks(
   // Point separator stroke: the classic white halo reads as a bright ring grid
   // on a dark canvas, so match the resolved background when it is opaque
   // enough to sit behind the dots. Mirrors the scatter knockout stroke.
-  const bg = theme?.colors?.background;
-  const pointSeparator = bg && isOpaqueColor(bg) ? bg : '#ffffff';
+  const pointSeparator = resolveKnockoutColor(theme);
   const mutedMarks: (LineMark | PointMark)[] = [];
   const highlightedMarks: (LineMark | PointMark)[] = [];
   const highlight = spec.highlight ?? [];

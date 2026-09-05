@@ -119,7 +119,7 @@ const spec: BarListSpec = {
 };
 ```
 
-`TableSpec` tiles should set `compact: true` for reduced padding and font size, and keep row counts small enough that the tile doesn't grow a second scrollbar inside a dashboard card. Tables resolve `watermark` on their own (see [Watermark rules](#watermark-rules) above), so set it explicitly:
+`TableSpec` tiles should set `density: 'condensed'` for reduced padding and font size (40px rows instead of 48px), and keep row counts small enough that the tile doesn't grow a second scrollbar inside a dashboard card. `compact: true` still works as an alias but warns — prefer `density` directly. Tables resolve `watermark` on their own (see [Watermark rules](#watermark-rules) above), so set it explicitly:
 
 ```ts
 const spec: TableSpec = {
@@ -131,7 +131,7 @@ const spec: TableSpec = {
     { key: 'mrr', label: 'MRR', format: '$,.0f' },
     { key: 'trend', label: '6-Month Trend', sparkline: { type: 'line', valuesField: 'trend' } },
   ],
-  compact: true,
+  density: 'condensed',
   watermark: false,
 };
 ```

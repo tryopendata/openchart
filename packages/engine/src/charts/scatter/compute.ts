@@ -17,13 +17,12 @@ import type {
   Rect,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { isOpaqueColor } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, getSequentialColor } from '../utils';
+import { getColor, getSequentialColor, resolveKnockoutColor } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -146,8 +145,7 @@ export function computeScatterMarks(
   // passing a value like 'none' through as a stroke is worse than cosmetic --
   // canvas silently ignores invalid strokeStyle assignments and keeps painting
   // with whatever color was set last.
-  const bg = theme?.colors?.background;
-  const defaultStroke = bg && isOpaqueColor(bg) ? bg : '#ffffff';
+  const defaultStroke = resolveKnockoutColor(theme);
 
   // A knockout stroke at 1.5px separates touching dots, which lets the fill
   // run near-solid without overplotting turning into mush. Dense layers still

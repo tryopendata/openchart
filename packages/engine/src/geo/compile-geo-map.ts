@@ -28,7 +28,6 @@ import {
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
-  isOpaqueColor,
   resolveTheme,
   SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
@@ -36,6 +35,7 @@ import { geoArea, geoPath } from 'd3-geo';
 import { scaleQuantile } from 'd3-scale';
 import { feature as topoFeature, mesh as topoMesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
+import { resolveKnockoutColor } from '../charts/utils';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
@@ -48,7 +48,7 @@ import {
   classScaleForChannel,
   computeContinuousLegendContentForChannel,
 } from '../legend/continuous';
-import { computeSizeLegendContent } from '../legend/size';
+import { computeSizeLegendContent, sizeLegendTitleStyle } from '../legend/size';
 import { joinDataToFeatures } from './join';
 import { createProjection, resolveDefaultProjection } from './projections';
 import type { NormalizedGeoMapSpec } from './types';
@@ -635,11 +635,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         pointColorScale && pts.color ? pointColorScale(row[pts.color.field]) : defaultFill;
       const key = keyChannel ? String(row[keyChannel.field] ?? i) : String(i);
       // Knockout ring in the canvas color: overlapping bubbles stay countable.
-      const stroke = isOpaqueColor(theme.colors.background)
-        ? theme.colors.background
-        : isDarkMode
-          ? '#18181b'
-          : '#ffffff';
+      const stroke = resolveKnockoutColor(theme);
 
       pointMarks.push({
         type: 'map-point',
@@ -843,6 +839,9 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
             lineHeight: 1.2,
             fontVariant: 'tabular-nums',
           },
+          title: content.title,
+          titleStyle: content.title ? sizeLegendTitleStyle(theme) : undefined,
+          titleY: content.titleY,
         };
       }
     }

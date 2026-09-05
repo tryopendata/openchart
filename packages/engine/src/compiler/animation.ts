@@ -26,15 +26,15 @@ import type {
 
 /** Default values for entrance animation. */
 export const ENTER_DEFAULTS: ResolvedAnimationPhase = {
-  duration: 500,
+  duration: 450,
   ease: 'smooth',
-  staggerDelay: 80,
+  staggerDelay: 30,
   staggerOrder: 'index',
 };
 
 /** Default values for update (data transition) animation. */
 export const UPDATE_DEFAULTS: ResolvedAnimationPhase = {
-  duration: 500,
+  duration: 450,
   ease: 'smooth',
   staggerDelay: 0,
   staggerOrder: 'index',
@@ -42,17 +42,17 @@ export const UPDATE_DEFAULTS: ResolvedAnimationPhase = {
 
 /** Default values for exit animation. */
 export const EXIT_DEFAULTS: ResolvedAnimationPhase = {
-  duration: 300,
+  duration: 250,
   ease: 'smooth',
   staggerDelay: 0,
   staggerOrder: 'index',
 };
 
 /** Default annotation delay in ms after marks finish. */
-const DEFAULT_ANNOTATION_DELAY = 200;
+const DEFAULT_ANNOTATION_DELAY = 150;
 
-/** Maximum total stagger time in ms. Prevents 200-bar charts from taking 6s. */
-const MAX_TOTAL_STAGGER_MS = 2000;
+/** Maximum total stagger time in ms. Keeps the whole sweep inside one beat. */
+const MAX_TOTAL_STAGGER_MS = 300;
 
 /**
  * Resolve an AnimationSpec into a fully resolved config with all defaults filled.

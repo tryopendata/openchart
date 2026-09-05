@@ -39,7 +39,10 @@ export async function captureStory(page: Page, slug: string, screenshotName: str
       if (!root) return false;
       return (
         root.querySelector('text') !== null ||
-        root.querySelector('rect, path, circle, line') !== null
+        root.querySelector('rect, path, circle, line') !== null ||
+        // Tables render to the DOM, not to SVG: a fully rendered one has no
+        // <text> and no shapes, only cells.
+        root.querySelector('.oc-table-wrapper td') !== null
       );
     },
     { timeout: 10_000 },

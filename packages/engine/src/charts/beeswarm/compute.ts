@@ -18,13 +18,14 @@ import type {
   MarkAria,
   PointMark,
   Rect,
+  ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, getSequentialColor } from '../utils';
+import { getColor, getSequentialColor, resolveKnockoutColor } from '../utils';
 import { dodgeOffsets } from './dodge';
 
 // ---------------------------------------------------------------------------
@@ -57,6 +58,7 @@ export function computeBeeswarmMarks(
   scales: ResolvedScales,
   chartArea: Rect,
   _strategy: LayoutStrategy,
+  theme?: ResolvedTheme,
 ): PointMark[] {
   const encoding = spec.encoding as Encoding;
 
@@ -181,7 +183,7 @@ export function computeBeeswarmMarks(
       cy: isHorizontal ? cross : dot.position,
       r: dot.radius,
       fill: color,
-      stroke: '#ffffff',
+      stroke: resolveKnockoutColor(theme),
       strokeWidth: 1,
       data: dot.row,
       aria,

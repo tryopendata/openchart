@@ -333,6 +333,103 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--scatter-trendline',
     note: 'SVG scatter with the fitted regression overlay drawn above the dots.',
   },
+  // --- Design refresh (plan 25): surfaces phases 4-8 changed that had no
+  // baseline of their own. ---
+  {
+    name: 'simple-columns-flat',
+    slug: 'testing--fixtures-refresh--simple-columns-flat',
+    note: 'Zero-config bar fill: flat palette color with a 2px radius on the value end only. The pinned simple-columns fixture passes an explicit gradient, so nothing covered the default.',
+  },
+  {
+    name: 'donut-center-label',
+    slug: 'testing--fixtures-refresh--donut-center-label',
+    note: 'MarkDef.centerLabel: the opt-in donut center stat, value over caption.',
+  },
+  {
+    name: 'preset-broadsheet',
+    slug: 'testing--fixtures-refresh--preset-broadsheet',
+    note: 'The broadsheet preset: warm paper, red masthead rule above the eyebrow, house categorical palette.',
+  },
+  {
+    name: 'preset-terminal',
+    slug: 'testing--fixtures-refresh--preset-terminal',
+    note: 'The terminal preset: dark in both modes, accent-neutral series strategy, dense chrome.',
+  },
+  {
+    name: 'table-basic-regular',
+    slug: 'testing--fixtures-tables--basic-regular',
+    note: 'Default 48px density. A ZIP-shaped key stays left-aligned even though its values are numeric; the population column uses format: compact.',
+  },
+  {
+    name: 'table-delta-bars-condensed',
+    slug: 'testing--fixtures-tables--delta-bars-condensed',
+    note: 'Condensed 40px rows with delta chips (one inverted), an inline bar column, stripes, and the sticky totals footer.',
+  },
+  {
+    name: 'table-heatmap-dark',
+    slug: 'testing--fixtures-tables--heatmap-dark',
+    note: 'Heatmap cells in dark mode: cell ink is picked against the drawn fill, never pure black or white.',
+  },
+  {
+    name: 'table-sparklines-shared',
+    slug: 'testing--fixtures-tables--sparklines-shared',
+    note: 'Shared sparkline domain (the default): every row normalized against one extent so heights compare down the column.',
+  },
+  {
+    name: 'table-cards-mobile',
+    slug: 'testing--fixtures-tables--cards-mobile',
+    note: 'The cards-mode table at desktop width, where it renders as a normal table. The collapse itself is pinned by the mobile project.',
+  },
+  {
+    name: 'us-bubbles',
+    slug: 'testing--fixtures-maps--us-bubbles',
+    note: 'Symbol overlay on an albersUsa basemap: sqrt-area circles, knockout strokes, large drawn under small, nested size legend.',
+  },
+  {
+    name: 'world-diverging-quantize',
+    slug: 'testing--fixtures-maps--world-diverging-quantize',
+    note: 'Diverging classing over a domain that straddles zero: an odd class count centered on 0 with the middle break labelled. Maps read the ramp from scale.range, not scale.scheme, so the stops are explicit.',
+  },
+  {
+    name: 'tilemap-quantitative',
+    slug: 'testing--fixtures-tilemaps--quantitative',
+    note: 'Sequential tilemap: 2px tile radius, no tile stroke, label ink flipped against the effective (opacity-applied) fill, squared legend bar.',
+  },
+  {
+    name: 'tilemap-categorical-dark',
+    slug: 'testing--fixtures-tilemaps--categorical-dark',
+    note: 'Categorical tilemap in dark mode with a per-category color map.',
+  },
+  {
+    name: 'sankey-energy',
+    slug: 'testing--fixtures-sankey--energy',
+    note: 'Outside-left labels on the first column, outside-right on the last, values in a tabular tspan.',
+  },
+  {
+    name: 'sankey-energy-dark',
+    slug: 'testing--fixtures-sankey--energy-dark',
+    note: 'Same diagram in dark mode: link opacity 0.6.',
+  },
+  {
+    name: 'sankey-other-bucket',
+    slug: 'testing--fixtures-sankey--other-bucket',
+    note: 'other: 0.05 folds sub-threshold nodes per column into one neutral "Other" node without changing total flow.',
+  },
+  {
+    name: 'dashboard-kpi-tile',
+    slug: 'testing--fixtures-dashboards--kpi-tile',
+    note: 'Metric pill row (label 11/500, value 600, delta chips) over a compact area chart in a 360px tile.',
+  },
+  {
+    name: 'dashboard-kpi-tile-dark',
+    slug: 'testing--fixtures-dashboards--kpi-tile-dark',
+    note: 'Same tile with darkMode: force.',
+  },
+  {
+    name: 'dashboard-tiny-tile-140',
+    slug: 'testing--fixtures-dashboards--tiny-tile',
+    note: '140px-tall tile: chrome economy drops gridlines (under 150px) and axes (under 200px) so the trend keeps the frame.',
+  },
 ];
 
 for (const story of stories) {

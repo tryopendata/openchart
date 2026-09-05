@@ -357,3 +357,47 @@ describe('size legend', () => {
     }
   });
 });
+
+/**
+ * A key of bare numbers keys nothing. The reader can already see that one bubble
+ * is bigger than another; what they can't infer is what the area stands for, and
+ * `encoding.size.title` was inert before the title row existed.
+ */
+describe('size legend title', () => {
+  const withSize = (size: Record<string, unknown>): ChartSpec =>
+    ({
+      ...bubbles,
+      encoding: { ...bubbles.encoding, size },
+    }) as ChartSpec;
+
+  it('titles the block from size.title', () => {
+    const legend = sizeLegendOf(
+      withSize({ field: 'pop', type: 'quantitative', title: 'Metro population' }),
+    );
+    expect(legend?.title).toBe('Metro population');
+    expect(legend?.titleY).toBeGreaterThan(0);
+    expect(legend?.titleStyle?.fontWeight ?? 0).toBeGreaterThan(400);
+  });
+
+  it('falls back to the field name when no title is given', () => {
+    expect(sizeLegendOf(bubbles)?.title).toBe('pop');
+  });
+
+  it('reserves room above the circles rather than overlapping them', () => {
+    const legend = sizeLegendOf(bubbles);
+    const titleY = legend?.titleY ?? 0;
+    const circles = [...(legend?.circles ?? [])].sort((a, b) => a.cy - b.cy);
+    expect(circles.length).toBeGreaterThan(0);
+    // Every circle's top edge sits at or below the title baseline.
+    expect(circles[0].cy - circles[0].radius).toBeGreaterThanOrEqual(titleY);
+  });
+
+  it('grows the block height by the title row', () => {
+    // A bare `title: ''` is falsy, so the block renders with no title row --
+    // the only way to compare titled and untitled geometry on one spec.
+    const without = sizeLegendOf(withSize({ field: 'pop', type: 'quantitative', title: '' }));
+    const withTitle = sizeLegendOf(bubbles);
+    expect(without?.title).toBeUndefined();
+    expect(withTitle?.bounds.height ?? 0).toBeGreaterThan(without?.bounds.height ?? 0);
+  });
+});

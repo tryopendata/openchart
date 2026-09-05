@@ -11,9 +11,10 @@
  */
 
 import type { AreaMark, LineMark, Mark, PointMark } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor, isOpaqueColor } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ChartRenderer } from '../registry';
+import { resolveKnockoutColor } from '../utils';
 import { computeAreaMarks } from './area';
 import { computeLineMarks } from './compute';
 import { computeLineLabels } from './labels';
@@ -92,10 +93,9 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
   // the point-emission path in computeLineMarks. Emit the data-point dots here
   // so `mark.point` works on area charts the same way it does on lines.
   // Single-series areas already get their points from computeLineMarks above.
-  const bg = theme.colors.background;
   const points =
     hasColor && spec.markDef.point
-      ? pointsFromAreas(areas, spec.markDef.point, isOpaqueColor(bg) ? bg : '#ffffff')
+      ? pointsFromAreas(areas, spec.markDef.point, resolveKnockoutColor(theme))
       : [];
 
   // Areas go first (rendered behind lines), then lines, then points on top

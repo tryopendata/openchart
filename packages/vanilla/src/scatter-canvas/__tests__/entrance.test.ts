@@ -84,7 +84,13 @@ describe('stagger clamping', () => {
   });
 
   it('keeps the authored delay when the sweep fits the budget', () => {
-    expect(clampStagger(80, 10)).toBe(80);
+    // 20 * 10 = 200ms, inside the 300ms budget.
+    expect(clampStagger(20, 10)).toBe(20);
+  });
+
+  it('compresses an authored delay that overruns the budget', () => {
+    // 80 * 10 = 800ms, so the budget hands back 300/10 = 30.
+    expect(clampStagger(80, 10)).toBe(30);
   });
 
   it('compresses the delay so 4k marks still fit the budget', () => {
@@ -103,17 +109,18 @@ describe('stagger clamping', () => {
 describe('per-point alpha', () => {
   it("is 0 before a point's window opens and 1 after it closes", () => {
     const ease = (p: number) => p;
-    // Point 5 with 80ms stagger starts at 400ms, runs 200ms.
-    expect(entranceAlphaAt(399, 5, ENTER, 10, ease)).toBe(0);
-    expect(entranceAlphaAt(400, 5, ENTER, 10, ease)).toBe(0);
-    expect(entranceAlphaAt(500, 5, ENTER, 10, ease)).toBeCloseTo(0.5, 5);
-    expect(entranceAlphaAt(600, 5, ENTER, 10, ease)).toBe(1);
+    // 80ms authored, clamped to 30ms by the budget: point 5 starts at 150ms
+    // and runs 200ms (40% of the 500ms enter duration).
+    expect(entranceAlphaAt(149, 5, ENTER, 10, ease)).toBe(0);
+    expect(entranceAlphaAt(150, 5, ENTER, 10, ease)).toBe(0);
+    expect(entranceAlphaAt(250, 5, ENTER, 10, ease)).toBeCloseTo(0.5, 5);
+    expect(entranceAlphaAt(350, 5, ENTER, 10, ease)).toBe(1);
   });
 
   it('fades earlier points before later ones', () => {
     const ease = (p: number) => p;
-    const early = entranceAlphaAt(300, 0, ENTER, 10, ease);
-    const late = entranceAlphaAt(300, 5, ENTER, 10, ease);
+    const early = entranceAlphaAt(200, 0, ENTER, 10, ease);
+    const late = entranceAlphaAt(200, 5, ENTER, 10, ease);
     expect(early).toBeGreaterThan(late);
   });
 });

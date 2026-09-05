@@ -159,11 +159,17 @@ describe('canvas mark mode DOM contract', () => {
 
 describe('canvas entrance completion clock', () => {
   // The DOM-counting estimate in computeAnimationDuration sees no point
-  // elements in canvas mode, so without an explicit override the cleanup timer
-  // fires roughly a second into a ~2.2s entrance. Everything downstream of
-  // that timer then misbehaves: cleanupAnimations is nulled, a deferred resize
+  // elements in canvas mode, so the cleanup timer is driven by an explicit
+  // totalMs override instead. Everything downstream of that timer misbehaves
+  // when it fires early: cleanupAnimations is nulled, a deferred resize
   // replays into a teardown, and update() slips past the entrance-in-flight
   // gate while the canvas tween is still writing alpha.
+  //
+  // Since the stagger budget dropped to 300ms the canvas entrance
+  // (budget + one point's fade) finishes INSIDE the DOM-derived estimate, so
+  // the override is now defensive rather than corrective and the old
+  // "outlasts the naive estimate" probe no longer has a window to sit in.
+  // What still has to hold is that oc-animate survives the whole entrance.
   //
   // The old version of these tests ran under fake timers with no rAF control,
   // so the entrance never ticked and "still in flight" was indistinguishable
@@ -197,7 +203,7 @@ describe('canvas entrance completion clock', () => {
   }
 
   // A t=0 probe passes trivially and would miss all of it, so probe MID-WINDOW.
-  it('keeps the entrance in flight well past the DOM-derived estimate', () => {
+  it('keeps the entrance in flight for the whole canvas window', () => {
     withEntranceClocks((pump, pendingFrames) => {
       const container = createContainer();
       const chart = createChart(
@@ -211,17 +217,18 @@ describe('canvas entrance completion clock', () => {
       );
 
       const svg = container.querySelector('svg') as SVGElement;
-      // The naive estimate is what the timer WOULD have used.
+      // The naive estimate is what the timer WOULD have used. It now overruns
+      // the real entrance rather than undercutting it.
       const naive = computeAnimationDuration(svg);
 
-      // 1.5s in: past the naive estimate, still inside the real entrance.
-      // Drive the scheduler frame-by-frame alongside the timer clock.
+      // 300ms in: inside the 300ms stagger budget, so the sweep is still
+      // running. Drive the scheduler frame-by-frame alongside the timer clock.
       pump(0);
-      for (let t = 100; t <= 1500; t += 100) {
-        vi.advanceTimersByTime(100);
+      for (let t = 50; t <= 300; t += 50) {
+        vi.advanceTimersByTime(50);
         pump(t);
       }
-      expect(naive).toBeLessThan(1500);
+      expect(naive).toBeGreaterThan(300);
       // The entrance is genuinely mid-flight: the scheduler re-queued a frame...
       expect(pendingFrames()).toBeGreaterThan(0);
       // ...and oc-animate has not been torn down by the (naive) cleanup timer.
@@ -245,7 +252,7 @@ describe('canvas entrance completion clock', () => {
       );
       const svg = container.querySelector('svg') as SVGElement;
 
-      // Past the clamped stagger budget (2s) + fade + annotation delay + buffer.
+      // Past the clamped stagger budget (300ms) + fade + annotation delay + buffer.
       pump(0);
       for (let t = 250; t <= 5000; t += 250) {
         vi.advanceTimersByTime(250);

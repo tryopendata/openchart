@@ -246,3 +246,114 @@ for (const { name, slug } of stories) {
     expect(violations, `Containment violations in ${name}: ${violations.join('; ')}`).toEqual([]);
   });
 }
+
+/**
+ * Choropleth legend anatomy (design refresh, plan 25 / phase 5).
+ *
+ * A bare row of numbers is not a legend: the reader needs to know what is being
+ * classed, and a map with holes in its data needs to say so rather than leaving
+ * the neutral fill to be read as a low value. Both live inside the SVG, so a
+ * host page that ships only the chart still carries them.
+ */
+test('map legend anatomy: us-states-light', async ({ page }) => {
+  await page.goto(
+    `/?story=${encodeURIComponent('testing--fixtures-maps--us-states-light')}&mode=preview`,
+  );
+  await page.waitForSelector('svg.oc-map');
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(100);
+
+  const violations = await page.evaluate(() => {
+    const violations: string[] = [];
+    const svg = document.querySelector('svg.oc-map');
+    if (!svg) return ['no map svg found'];
+    const svgRect = svg.getBoundingClientRect();
+    const EPSILON = 1;
+
+    const title = svg.querySelector('.oc-legend-title');
+    if (!title || !(title.textContent ?? '').trim()) {
+      violations.push('continuous legend has no title');
+    }
+
+    // The "No data" swatch must be present exactly when some feature failed
+    // the join. Features that carry a value are stamped with their class index.
+    const features = [...svg.querySelectorAll('.oc-map-feature')];
+    const unjoined = features.filter((f) => !f.hasAttribute('data-bin-index')).length;
+    const noData = svg.querySelector('.oc-legend-nodata');
+    if (unjoined > 0 && !noData) {
+      violations.push(`${unjoined} feature(s) have no value but the legend has no "No data" swatch`);
+    }
+    if (unjoined === 0 && noData) {
+      violations.push('legend shows a "No data" swatch but every feature carries a value');
+    }
+
+    // Everything the legend draws stays inside the SVG box.
+    for (const el of svg.querySelectorAll('.oc-legend-title, .oc-legend-nodata')) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) continue;
+      if (
+        r.left < svgRect.left - EPSILON ||
+        r.right > svgRect.right + EPSILON ||
+        r.top < svgRect.top - EPSILON ||
+        r.bottom > svgRect.bottom + EPSILON
+      ) {
+        violations.push(
+          `${el.getAttribute('class')} escapes the map svg: ${JSON.stringify(r.toJSON())}`,
+        );
+      }
+    }
+
+    return violations;
+  });
+
+  expect(violations, violations.join('; ')).toEqual([]);
+});
+
+/**
+ * Sankey label containment (design refresh, plan 25 / phase 6).
+ *
+ * First-column labels are placed outside-left and last-column labels
+ * outside-right, so the layout has to reserve gutters for text it has not
+ * drawn yet. Get the reservation wrong and the outermost labels run off the
+ * edge — invisible in a unit test, and clipped in every embed.
+ */
+test('sankey labels stay inside the svg: sankey-energy', async ({ page }) => {
+  await page.goto(`/?story=${encodeURIComponent('testing--fixtures-sankey--energy')}&mode=preview`);
+  await page.waitForSelector('svg.oc-sankey');
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(100);
+
+  const violations = await page.evaluate(() => {
+    const violations: string[] = [];
+    const svg = document.querySelector('svg.oc-sankey');
+    if (!svg) return ['no svg.oc-sankey found'];
+    const svgRect = svg.getBoundingClientRect();
+    const EPSILON = 1;
+
+    const labels = [...svg.querySelectorAll('.oc-sankey-label')];
+    if (labels.length === 0) return ['sankey rendered no labels'];
+
+    for (const label of labels) {
+      const r = label.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) continue;
+      const text = (label.textContent ?? '').slice(0, 40);
+      if (r.left < svgRect.left - EPSILON) {
+        violations.push(
+          `label crosses the left edge by ${(svgRect.left - r.left).toFixed(1)}px: "${text}"`,
+        );
+      }
+      if (r.right > svgRect.right + EPSILON) {
+        violations.push(
+          `label crosses the right edge by ${(r.right - svgRect.right).toFixed(1)}px: "${text}"`,
+        );
+      }
+      if (r.top < svgRect.top - EPSILON || r.bottom > svgRect.bottom + EPSILON) {
+        violations.push(`label crosses a vertical edge: "${text}"`);
+      }
+    }
+
+    return violations;
+  });
+
+  expect(violations, violations.join('; ')).toEqual([]);
+});

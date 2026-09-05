@@ -103,7 +103,7 @@
 
     /* Data labels: fade after their parent mark */
     & .oc-mark-label {
-      animation: oc-enter-fade 300ms var(--oc-ease-smooth) both;
+      animation: oc-enter-fade 250ms var(--oc-ease-smooth) both;
       animation-delay: calc(
         var(--oc-animation-stagger) *
         var(--oc-mark-index, 0) +
@@ -114,8 +114,8 @@
 
     /* Annotations: fade in after marks finish */
     & .oc-annotation {
-      animation: oc-enter-fade 400ms var(--oc-ease-smooth) both;
-      animation-delay: calc(var(--oc-animation-duration) + var(--oc-annotation-delay, 200ms));
+      animation: oc-enter-fade 300ms var(--oc-ease-smooth) both;
+      animation-delay: calc(var(--oc-animation-duration) + var(--oc-annotation-delay, 150ms));
     }
 
     /* Tilemap tiles: fade in with jittered stagger for organic feel.

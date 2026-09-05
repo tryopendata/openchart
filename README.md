@@ -102,6 +102,10 @@ Release candidates publish under the `next` dist-tag, so a plain install always 
 | [Spec reference](docs/spec-reference.md) | Field-by-field type reference for ChartSpec, TableSpec, and GraphSpec |
 | [Tables](docs/tables.md) | Column config, sparklines, heatmap cells, sorting and pagination |
 | [Graphs](docs/graphs.md) | Force-directed network layout, node/link encoding, interaction |
+| [Maps](docs/maps.md) | Choropleth and symbol maps, projection inference, hover semantics |
+| [Sankey](docs/sankey.md) | Flow diagrams, "Other" bucketing, path hover |
+| [Dashboards](docs/dashboards.md) | Tile sizing, KPI cards, chrome economy, watermark rules for product UI |
+| [Design system](docs/design-system.md) | Palette, type, spacing, motion, and interaction language behind every default |
 | [Ranking and change](docs/ranking-and-change.md) | Patterns for showing movement, deltas, and rank shifts |
 | [Generating specs](docs/generating-specs.md) | Building specs programmatically and from LLM output |
 | [Integration guide](docs/integration-guide.md) | Events, controlled tables, export, responsive behavior, vanilla JS lifecycle |

@@ -313,3 +313,74 @@ for (const {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 }
+
+/**
+ * Rule 8 (design refresh, plan 25): the cards collapse.
+ *
+ * Below 400px the table drops its header row and lays each row out as a card,
+ * with the header text carried into every cell's `data-label` and rendered by
+ * `td::before`. Two things can go wrong and neither shows up in a chart rule:
+ * the grid can overflow the viewport horizontally (the whole point of cards is
+ * that it does not), and a cell can lose its `data-label`, which leaves an
+ * unlabelled value with no header anywhere on screen.
+ *
+ * Lives outside the `stories` loop because a table renders no `svg.oc-chart`,
+ * so the shared wait conditions never resolve for it.
+ */
+test('mobile invariants: table cards mode', async ({ page }) => {
+  await page.goto(
+    `/?story=${encodeURIComponent('testing--fixtures-tables--cards-mobile')}&mode=preview`,
+  );
+  await page.waitForSelector('.oc-table-wrapper table');
+
+  const viewport = page.viewportSize();
+  test.skip(
+    (viewport?.width ?? 0) >= 400,
+    'cards mode only engages under 400px; the desktop project renders a normal table',
+  );
+  await page.waitForSelector('.oc-table-wrapper.oc-table--cards');
+
+  const violations = await page.evaluate(() => {
+    const violations: string[] = [];
+    const wrapper = document.querySelector('.oc-table-wrapper');
+    if (!wrapper) return ['no .oc-table-wrapper found'];
+
+    // No horizontal overflow: neither the wrapper's own scroll box nor any
+    // cell may run past the document width.
+    const OVERFLOW_TOLERANCE = 1;
+    if (wrapper.scrollWidth > wrapper.clientWidth + OVERFLOW_TOLERANCE) {
+      violations.push(
+        `table wrapper scrolls horizontally: scrollWidth ${wrapper.scrollWidth} > clientWidth ${wrapper.clientWidth}`,
+      );
+    }
+    const docWidth = document.documentElement.clientWidth;
+    for (const cell of wrapper.querySelectorAll('td')) {
+      const r = cell.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) continue;
+      if (r.right > docWidth + OVERFLOW_TOLERANCE) {
+        violations.push(
+          `cell extends ${(r.right - docWidth).toFixed(1)}px past the viewport: "${(cell.textContent ?? '').slice(0, 40)}"`,
+        );
+      }
+    }
+
+    // Every visible cell carries its header text: the thead is hidden in cards
+    // mode, so `data-label` is the only label the reader gets.
+    for (const cell of wrapper.querySelectorAll('td')) {
+      const r = cell.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) continue;
+      // An explicitly empty label is legitimate (flag and logo columns carry
+      // no header); a MISSING attribute is the bug.
+      const label = cell.getAttribute('data-label');
+      if (label === null) {
+        violations.push(
+          `visible td has no data-label: "${(cell.textContent ?? '').slice(0, 40)}"`,
+        );
+      }
+    }
+
+    return violations;
+  });
+
+  expect(violations, violations.join('\n')).toEqual([]);
+});

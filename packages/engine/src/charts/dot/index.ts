@@ -20,8 +20,8 @@ import { computeDotLabels } from './labels';
  * Produces stem (RectMark) and dot (PointMark) pairs for each data point.
  * Value labels are attached to the dot marks.
  */
-export const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
-  const marks = computeDotMarks(spec, scales, chartArea, strategy);
+export const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+  const marks = computeDotMarks(spec, scales, chartArea, strategy, theme);
 
   // Extract just the point marks for label computation
   const pointMarks = marks.filter((m): m is PointMark => m.type === 'point');

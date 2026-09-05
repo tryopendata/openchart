@@ -29,9 +29,9 @@ export function cancelAnimations(svg: SVGElement | null): void {
  */
 export function computeAnimationDuration(svg: SVGElement): number {
   const style = svg.style;
-  const duration = parseFloat(style.getPropertyValue('--oc-animation-duration')) || 600;
+  const duration = parseFloat(style.getPropertyValue('--oc-animation-duration')) || 450;
   const stagger = parseFloat(style.getPropertyValue('--oc-animation-stagger')) || 0;
-  const annotationDelay = parseFloat(style.getPropertyValue('--oc-annotation-delay')) || 200;
+  const annotationDelay = parseFloat(style.getPropertyValue('--oc-annotation-delay')) || 150;
 
   const animatedElements = svg.querySelectorAll('[data-animation-index]').length;
   const totalStagger = stagger * Math.max(0, animatedElements - 1);

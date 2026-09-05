@@ -239,6 +239,30 @@ const spec = {
 
 ---
 
+## Visual language
+
+Node strokes are a knockout ring in the resolved canvas color, not a
+darkened fill — a darker rim reads as a second color per node, while a
+knockout ring reads as space between the node and whatever's behind it. An
+unencoded edge takes the midpoint color between its two endpoints'
+resolved fills, so a graph with no `edgeColor` still visually connects
+same-colored clusters. Resting edge opacity is 0.3 in light mode and 0.25
+in dark mode; dimmed nodes (from a legend filter, search, or hover
+neighborhood) drop to 0.3, edges to a fraction of that. Labels run on a
+budget rather than a hard threshold — `clamp(round(zoom * 30), 12, 80)`
+non-forced labels are placed greedily by priority with a rectangle
+declutter pass, while pinned, hovered, selected, and search-matched labels
+bypass the budget entirely and are the only ones drawn with a background
+halo. Camera flights (search results, `flyTo`, seed-node framing) run
+400-600ms, scaled by zoom distance so a short hop and a cross-graph jump
+both feel proportionate. The canvas background resolves from the theme
+(`resolveGraphSurface`) rather than a hardcoded dark hex, so a custom
+theme's background reaches the graph canvas the same way it reaches an SVG
+chart. See [Design system](design-system.md#hover-legend-tooltip-keyboard)
+for the hover/dim language this shares with charts, maps, and sankeys.
+
+---
+
 ## Scale testing
 
 The graph renderer has been tested with large networks. See the scale stories for performance characteristics:

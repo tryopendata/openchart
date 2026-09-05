@@ -34,6 +34,11 @@ const stories = [
   { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
   { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
   { name: 'stacked-column', slug: 'testing--fixtures--energy-mix' },
+  // Design refresh (plan 25). The cards collapse only happens under 400px, so
+  // this viewport is the only place it can be pinned; the KPI tile is here
+  // because a dashboard tile is read on a phone more often than on a desktop.
+  { name: 'table-cards', slug: 'testing--fixtures-tables--cards-mobile' },
+  { name: 'dashboard-kpi-tile', slug: 'testing--fixtures-dashboards--kpi-tile' },
 ];
 
 for (const story of stories) {

@@ -22,7 +22,6 @@ import {
   formatPercent,
   isConditionalDef,
   isGradientDef,
-  isOpaqueColor,
 } from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
@@ -31,6 +30,7 @@ import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { resolveConditionalValue } from '../../transforms/conditional';
+import { resolveKnockoutColor } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -183,8 +183,7 @@ export function computePieMarks(
   const palette = theme?.colors.categoricalFill ?? DEFAULT_PALETTE;
   // Slice separator: the canvas color, so the gap between slices reads as
   // background rather than as a drawn white ring on a dark chart.
-  const sliceBg = theme?.colors.background;
-  const sliceStroke = sliceBg && isOpaqueColor(sliceBg) ? sliceBg : '#ffffff';
+  const sliceStroke = resolveKnockoutColor(theme);
   const encoding = spec.encoding as Encoding;
   const startAngle = spec.markDef.startAngle ?? 0;
   const endAngle = spec.markDef.endAngle ?? Math.PI * 2;

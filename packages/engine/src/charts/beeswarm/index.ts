@@ -20,8 +20,8 @@ import { computeBeeswarmMarks } from './compute';
  *
  * Produces one dodged PointMark per observation.
  */
-export const beeswarmRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
-  return computeBeeswarmMarks(spec, scales, chartArea, strategy) as Mark[];
+export const beeswarmRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+  return computeBeeswarmMarks(spec, scales, chartArea, strategy, theme) as Mark[];
 };
 
 // ---------------------------------------------------------------------------

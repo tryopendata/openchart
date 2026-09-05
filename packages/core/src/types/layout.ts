@@ -985,6 +985,17 @@ export interface SizeLegendLayout extends BaseLegendLayout {
   circles: SizeLegendCircle[];
   /** Stroke color for the circle outlines. */
   stroke: string;
+  /**
+   * Legend title (the size channel's `title`, else its field name), rendered
+   * above the circle stack. A key of bare numbers keys nothing: the reader can
+   * see one bubble is bigger than another without help; what they can't infer
+   * is *what* the area stands for. Absent when the channel has no field.
+   */
+  title?: string;
+  /** Text style for the title. */
+  titleStyle?: TextStyle;
+  /** Title baseline y, relative to the legend bounds. */
+  titleY?: number;
 }
 
 /**
