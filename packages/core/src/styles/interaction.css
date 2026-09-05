@@ -68,4 +68,68 @@
   .oc-endpoint-label-entry {
     cursor: default;
   }
+
+  /* ---------------------------------------------------------------------------
+   * Map hover
+   *
+   * Feature hover is outline + raise, never dim-the-rest: toggling opacity on
+   * three thousand county paths every time the pointer crosses a border is a
+   * repaint storm, and the wave of fades reads as a flicker. Datawrapper and the
+   * FT outline too. `non-scaling-stroke` keeps the outline 1.5px through the
+   * camera's zoom transform, which otherwise scales stroke width with geometry.
+   * --------------------------------------------------------------------------- */
+
+  .oc-map-feature--hover {
+    stroke: var(--oc-text);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* Legend-bin hover IS where dim-the-rest belongs: pointing at one class is a
+   * deliberate "show me these" gesture, and the answer is the set of features in
+   * that class. Static rules per class index keep it to one attribute write on
+   * the group rather than a class toggle per feature. */
+  .oc-map-features[data-hover] .oc-map-feature {
+    transition: opacity var(--oc-hover-duration) ease-out;
+  }
+
+  .oc-map-features[data-hover="0"] .oc-map-feature:not([data-bin-index="0"]),
+  .oc-map-features[data-hover="1"] .oc-map-feature:not([data-bin-index="1"]),
+  .oc-map-features[data-hover="2"] .oc-map-feature:not([data-bin-index="2"]),
+  .oc-map-features[data-hover="3"] .oc-map-feature:not([data-bin-index="3"]),
+  .oc-map-features[data-hover="4"] .oc-map-feature:not([data-bin-index="4"]),
+  .oc-map-features[data-hover="5"] .oc-map-feature:not([data-bin-index="5"]),
+  .oc-map-features[data-hover="6"] .oc-map-feature:not([data-bin-index="6"]),
+  .oc-map-features[data-hover="7"] .oc-map-feature:not([data-bin-index="7"]),
+  .oc-map-features[data-hover="8"] .oc-map-feature:not([data-bin-index="8"]),
+  .oc-map-features[data-hover="9"] .oc-map-feature:not([data-bin-index="9"]),
+  .oc-map-features[data-hover="10"] .oc-map-feature:not([data-bin-index="10"]),
+  .oc-map-features[data-hover="11"] .oc-map-feature:not([data-bin-index="11"]) {
+    opacity: var(--oc-map-hover-dim);
+  }
+
+  .oc-legend-bin {
+    cursor: default;
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Tile hover
+   *
+   * A tile grid is 51 rects, not 3000 paths, and every tile is the same size --
+   * so here the full hover language applies: the hovered tile takes an outline
+   * and the rest drop back.
+   * --------------------------------------------------------------------------- */
+
+  .oc-tilemap-tiles.oc-hover-active .oc-tilemap-tile {
+    transition: opacity var(--oc-hover-duration) ease-out;
+  }
+
+  .oc-tilemap-tiles.oc-hover-active .oc-tilemap-tile:not(.oc-tilemap-tile--hover) {
+    opacity: var(--oc-hover-dim);
+  }
+
+  .oc-tilemap-tile--hover > rect {
+    stroke: var(--oc-text);
+    stroke-width: 1.5;
+  }
 }

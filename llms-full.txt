@@ -3789,6 +3789,11 @@ The data for sparklines is an array stored in the row: `{ trend: [15, 16, 17, 18
 | `type`       | `'line' \| 'bar' \| 'column'` | `'line'`                | Sparkline chart type |
 | `valuesField`| `string`                      | same column             | Field containing the array of values |
 | `color`      | `string`                      | first categorical color | Sparkline color |
+| `domain`     | `'shared' \| 'row' \| [min, max]` | `'shared'`          | Extent every row is normalized against |
+
+`domain: 'shared'` makes row heights comparable down the column, which is
+almost always what you want. Switch to `'row'` when the rows differ by orders
+of magnitude and the shape of each series matters more than the comparison.
 
 **Live examples**: [Stock sparklines](https://tryopendata.github.io/openchart/?story=tables--tables#sparkline-cells) | [Revenue columns](https://tryopendata.github.io/openchart/?story=tables--tables#sparkline-cells)
 
@@ -3824,6 +3829,23 @@ Display cell values as images (URLs).
 | `height`    | `number`  | `24`    | Image height in pixels |
 | `rounded`   | `boolean` | `false` | Circular crop |
 
+### Delta
+
+Render a change value as a signed, colored chip.
+
+```ts
+{
+  key: "ytdChange",
+  label: "YTD",
+  format: ".1f",
+  delta: true,
+}
+```
+
+The arrow carries the direction, so any sign in the formatted value is dropped.
+Positive is green, negative red; `delta: { invert: true }` flips the valence for
+metrics where down is good (churn, latency, cost). Zero renders a neutral chip.
+
 ### Category colors
 
 Color-code cells by categorical value.
@@ -3852,8 +3874,42 @@ All features are opt-in via top-level `TableSpec` properties.
 | Search | `search: true` | `false` | Shows a search/filter bar above the table |
 | Pagination | `pagination: { pageSize: 25 }` | `false` | Paginate rows. Use `true` for default page size or an object to set it explicitly. |
 | Sticky first column | `stickyFirstColumn: true` | `false` | Freeze the first column during horizontal scroll |
-| Compact mode | `compact: true` | `false` | Reduced padding and font sizes for dense data |
+| Density | `density: 'condensed'` | `'regular'` | Row height: condensed 40px, regular 48px, relaxed 56px |
+| Striping | `striped: true` | `false` | Zebra rows. Hairlines only by default |
+| Initial sort | `sort: { column, direction }` | first inline-bar column, desc | Sort applied before the user touches a header |
+| Total row | `totalRow: true` | `false` | Sticky footer summing every quantitative column |
+| Compact mode | `compact: true` | `false` | **Deprecated.** Alias for `density: 'condensed'`; warns |
 | Responsive | `responsive: true` | `true` | Table adapts to container width |
+
+### Density and responsive behavior
+
+`density` is the authoritative setting: when you set it, no container width
+overrides it. Left unset, the table condenses only under real content pressure
+— when the columns cannot each get 96px, or the container is under 560px — and
+below 400px it switches to cards mode, where each row becomes a two-column
+grid with the column label printed beside each value. Cards mode keeps full
+table semantics (explicit ARIA roles), so screen readers still announce rows
+and cells. `columns[].priority` controls what shows there: `1` leads the card
+on its own line, `2` is a label/value pair, `3` is hidden. The first column
+defaults to `1`, everything else to `2`.
+
+### Formatting
+
+`columns[].format` takes a d3-format string or one of the keywords `percent`,
+`currency`, `ordinal`, `compact`. Tables format at full precision by default;
+`compact` is how a column opts into the chart-surface abbreviation (1.2k,
+3.4M), which is worth it on a wide count column and wrong on money you expect
+readers to compare digit by digit.
+
+### Alignment
+
+Quantitative columns align right, everything else left. The type is inferred
+from the data unless you set `columns[].type` explicitly
+(`'quantitative' | 'nominal' | 'ordinal' | 'temporal'`). Keys that look like
+identifiers rather than quantities — `id`, `zip`, `postal`, `code`, `year`,
+`fips`, with or without a prefix — are treated as nominal and stay left, which
+is what you want for a zip code that happens to be a number. `columns[].align`
+still overrides everything.
 
 ### Full-featured example
 
@@ -3871,6 +3927,8 @@ const spec = {
   search: true,
   pagination: { pageSize: 20 },
   stickyFirstColumn: true,
+  density: "condensed",
+  totalRow: true,
 };
 ```
 

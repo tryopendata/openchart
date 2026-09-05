@@ -39,10 +39,12 @@ import {
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  isOpaqueColor,
   pickLabelColor,
   resolveTheme,
   SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
+import { interpolateRgb } from 'd3-interpolate';
 import { scaleLinear } from 'd3-scale';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
@@ -56,14 +58,52 @@ import type { NormalizedTileMapSpec } from './types';
 // Constants
 // ---------------------------------------------------------------------------
 
-const TILE_CORNER_RADIUS = 6;
-const TILE_STROKE_WIDTH = 1;
+/**
+ * Tiles are data cells, not buttons. 6px on a 40px tile is a chip; 2px reads as
+ * a square with the corner softened, which is what a heat grid wants.
+ */
+const TILE_CORNER_RADIUS = 2;
+
+/**
+ * Tiles with data carry no stroke: the grid gaps already separate them, and a
+ * per-tile hairline on top of the gap draws the grid twice. Empty tiles keep a
+ * 1px outline so "no data" reads as an empty box rather than a pale value.
+ */
+const TILE_STROKE_WIDTH = 0;
+const NO_DATA_STROKE_WIDTH = 1;
+/** Gap between the gradient bar and the detached "no data" swatch. */
+const NO_DATA_BAR_GAP = 12;
+
+/** Gap between the "no data" swatch and its label. */
+const NO_DATA_LABEL_GAP = 5;
+
 const LEGEND_SWATCH_SIZE = 10;
 const LEGEND_SWATCH_GAP = 6;
 const LEGEND_ENTRY_GAP = 16;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * The color a fill at `fillOpacity` actually paints as, over the theme's own
+ * canvas. Label contrast has to be judged against this, never against the
+ * undimmed fill.
+ */
+function blendOnSurface(
+  fill: string,
+  fillOpacity: number,
+  theme: ResolvedTheme,
+  isDarkMode: boolean,
+): string {
+  const bg = theme.colors.background;
+  const surface = isOpaqueColor(bg) ? bg : isDarkMode ? '#18181b' : '#ffffff';
+  if (fillOpacity >= 1) return fill;
+  try {
+    return interpolateRgb(surface, fill)(fillOpacity);
+  } catch {
+    return fill;
+  }
 }
 
 /**
@@ -251,11 +291,16 @@ function compileQuantitative(
 
   const paletteStops = [...(SEQUENTIAL_PALETTES[tilemapSpec.palette] ?? SEQUENTIAL_PALETTES.blue)];
   const baseColor = isDarkMode ? paletteStops[0] : paletteStops[paletteStops.length - 1];
-  const opacityRange: [number, number] = isDarkMode ? [0.15, 1] : [0.2, 1];
+  // Floor the low end high enough that the lightest tile is still a value and
+  // not an empty cell. Dark mode needs more of it: a 15%-alpha tile on near
+  // black is invisible where the same alpha on white is merely pale.
+  const opacityRange: [number, number] = isDarkMode ? [0.3, 1] : [0.25, 1];
   const opacityScale = scaleLinear<number>().domain([min, max]).range(opacityRange).clamp(true);
 
   const showLegend = tilemapSpec.legend?.show !== false;
-  const legendBarHeight = 6;
+  // 10px and square-cornered: a 6px pill reads as a UI control, a 10px bar with
+  // square ends reads as a color scale (the Datawrapper/FT map-key convention).
+  const legendBarHeight = 10;
   const legendLabelGap = 6;
   const legendTotalHeight = showLegend ? legendBarHeight + legendLabelGap + 14 : 0;
 
@@ -274,8 +319,9 @@ function compileQuantitative(
     surfaceFormat: tilemapSpec.encoding.value.format ?? tilemapSpec.valueFormat,
     values: Array.from(stateValueMap.values()),
   });
-  const neutralFill = isDarkMode ? '#1e2a30' : '#e0e0e0';
-  const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : '#d0d0d0';
+  // The theme's own neutrals, so a warm or cool theme gets matching empty cells.
+  const neutralFill = isDarkMode ? theme.colors.neutral[800] : theme.colors.neutral[100];
+  const neutralStroke = isDarkMode ? theme.colors.neutral[600] : theme.colors.neutral[300];
 
   const tiles: TileMapTileMark[] = [];
   for (const { state: stateCode } of US_STATE_TILES) {
@@ -286,11 +332,7 @@ function compileQuantitative(
     const value = hasData ? stateValueMap.get(stateCode)! : null;
     const opacity = hasData ? opacityScale(value!) : 0;
     const fill = hasData ? baseColor : neutralFill;
-    const stroke = hasData
-      ? isDarkMode
-        ? 'rgba(255,255,255,0.1)'
-        : 'rgba(0,0,0,0.1)'
-      : neutralStroke;
+    const stroke = hasData ? 'none' : neutralStroke;
     const formattedValue = hasData ? formatter(value!) : '–';
 
     tiles.push(
@@ -323,10 +365,21 @@ function compileQuantitative(
       return { offset: t, color: baseColor, opacity: o };
     });
 
+    // "No data" is its own class, keyed beside the ramp rather than at its low
+    // end -- and only when the grid actually has empty tiles.
+    const hasEmptyTiles = tiles.some((t) => !t.hasData);
+    const noDataLabel = 'No data';
+    const noDataLabelWidth = estimateTextWidth(noDataLabel, 11);
+    const noDataBlockWidth = hasEmptyTiles
+      ? NO_DATA_BAR_GAP + legendBarHeight + NO_DATA_LABEL_GAP + noDataLabelWidth
+      : 0;
+    const barWidth = Math.max(0, legendWidth - noDataBlockWidth);
+    const noDataX = legendX + barWidth + NO_DATA_BAR_GAP;
+
     gradientLegend = {
       type: 'gradient',
       position: 'bottom',
-      bounds: { x: legendX, y: legendY, width: legendWidth, height: legendBarHeight },
+      bounds: { x: legendX, y: legendY, width: barWidth, height: legendBarHeight },
       labelStyle: {
         fontFamily: theme.fonts.family,
         fontSize: 11,
@@ -337,6 +390,18 @@ function compileQuantitative(
       colorStops: gradientColorStops,
       minLabel: formatter(min),
       maxLabel: formatter(max),
+      noData:
+        hasEmptyTiles && barWidth > 0
+          ? {
+              x: noDataX,
+              y: legendY,
+              size: legendBarHeight,
+              fill: neutralFill,
+              label: noDataLabel,
+              labelX: noDataX + legendBarHeight + NO_DATA_LABEL_GAP,
+              labelY: legendY + legendBarHeight,
+            }
+          : undefined,
     };
   }
 
@@ -468,8 +533,9 @@ function compileCategorical(
     : 0;
   const legendTotalHeight = showLegend ? legendRowHeight * legendRows : 0;
 
-  const neutralFill = isDarkMode ? '#1e2a30' : '#e0e0e0';
-  const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : '#d0d0d0';
+  // The theme's own neutrals, so a warm or cool theme gets matching empty cells.
+  const neutralFill = isDarkMode ? theme.colors.neutral[800] : theme.colors.neutral[100];
+  const neutralStroke = isDarkMode ? theme.colors.neutral[600] : theme.colors.neutral[300];
 
   const tiles: TileMapTileMark[] = [];
   for (const { state: stateCode } of US_STATE_TILES) {
@@ -479,11 +545,7 @@ function compileCategorical(
     const hasData = stateCategoryMap.has(stateCode);
     const category = hasData ? stateCategoryMap.get(stateCode)! : null;
     const fill = hasData ? (categoryColors.get(category!) ?? neutralFill) : neutralFill;
-    const stroke = hasData
-      ? isDarkMode
-        ? 'rgba(255,255,255,0.1)'
-        : 'rgba(0,0,0,0.1)'
-      : neutralStroke;
+    const stroke = hasData ? 'none' : neutralStroke;
     const formattedValue = category ? formatCategoryLabel(category) : '–';
 
     tiles.push(
@@ -625,7 +687,12 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
   const tileCenterX = gridOffsetX + pos.x + tileSize / 2;
   const tileTopY = gridOffsetY + pos.y;
 
-  const textColor = hasData ? pickLabelColor(fill, isDarkMode) : '#ffffff';
+  // The ink has to be picked from what the tile actually LOOKS like, not from
+  // its base color: a deep blue drawn at 0.25 alpha on white is a pale blue, and
+  // flipping to white text on the base color put white on near-white for every
+  // low-value tile in the grid.
+  const effectiveColor = hasData ? blendOnSurface(fill, fillOpacity, theme, isDarkMode) : fill;
+  const textColor = hasData ? pickLabelColor(effectiveColor, isDarkMode) : theme.colors.axis;
   const isLightText = textColor === '#ffffff';
 
   // A two-line layout (code over value) only fits once tiles are large enough;
@@ -636,13 +703,15 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
   // rather than snapping between two fixed sizes. A 2-char string is ~1.2x the
   // font size wide; capping font at ~0.5x tile width keeps it inside the tile
   // with margin, then clamp to a legible [6.5, 11] range.
-  const codeFontSize = clamp(Math.round(tileSize * 0.5 * 10) / 10, 6.5, 11);
+  const codeFontSize = clamp(Math.round(tileSize * 0.5 * 10) / 10, 7, 12);
   const valueFontSize = clamp(Math.round(tileSize * 0.42 * 10) / 10, 6.5, 10);
 
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: codeFontSize,
-    fontWeight: 700,
+    // 600, not 700: at 8-12px a bold two-letter code on a colored tile turns
+    // into a blob. The tracking in the renderer does the separating instead.
+    fontWeight: theme.fonts.weights.semibold,
     fill: textColor,
     lineHeight: 1.2,
   };
@@ -650,9 +719,12 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
   const valueLabelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: valueFontSize,
-    fontWeight: 300,
-    fill: isLightText ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
+    // 300 is a hinting-dependent weight that renders as 400 on most stacks and
+    // as a ghost on the ones that have it. 450 is the honest secondary weight.
+    fontWeight: 450,
+    fill: isLightText ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.55)',
     lineHeight: 1.2,
+    fontVariant: 'tabular-nums',
   };
 
   // Code sits in the upper third when paired with a value, otherwise centered.
@@ -669,7 +741,7 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
     : { text: '', x: 0, y: 0, style: valueLabelStyle, visible: false };
 
   // Keep corners visibly rounded-rectangular, never near-circular on small tiles.
-  const cornerRadius = Math.min(TILE_CORNER_RADIUS, Math.round(tileSize * 0.22));
+  const cornerRadius = Math.min(TILE_CORNER_RADIUS, Math.round(tileSize * 0.1));
 
   const data: Record<string, unknown> = {
     state: stateCode,
@@ -689,7 +761,7 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
     fill,
     fillOpacity,
     stroke,
-    strokeWidth: TILE_STROKE_WIDTH,
+    strokeWidth: hasData ? TILE_STROKE_WIDTH : NO_DATA_STROKE_WIDTH,
     cornerRadius,
     value,
     formattedValue,

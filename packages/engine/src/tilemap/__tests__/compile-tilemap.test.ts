@@ -196,6 +196,58 @@ describe('compileTileMap', () => {
 
       expect(result.gradientLegend).toBeNull();
     });
+
+    it('keys "No data" beside the ramp only when tiles are empty', () => {
+      // fullSpec covers all 51 tiles, so nothing is missing and nothing is keyed.
+      const complete = compileTileMap(fullSpec, defaultOptions);
+      expect(complete.tiles.every((t) => t.hasData)).toBe(true);
+      expect(complete.gradientLegend!.noData).toBeUndefined();
+
+      const sparse = compileTileMap(basicSpec, defaultOptions);
+      const noData = sparse.gradientLegend!.noData;
+      expect(noData).toBeDefined();
+      expect(noData!.label).toBe('No data');
+      // The swatch sits right of the bar, not inside it.
+      expect(noData!.x).toBeGreaterThan(
+        sparse.gradientLegend!.bounds.x + sparse.gradientLegend!.bounds.width,
+      );
+      // And carries the same fill the empty tiles do.
+      const empty = sparse.tiles.find((t) => !t.hasData)!;
+      expect(noData!.fill).toBe(empty.fill);
+    });
+  });
+
+  describe('tile label ink', () => {
+    // The bug this guards: the luminance flip used to run on the BASE color, so
+    // a deep blue at 0.25 alpha (a near-white tile) got white text.
+    const twoTone = {
+      type: 'tilemap',
+      data: [
+        { state: 'CA', value: 1 },
+        { state: 'TX', value: 100 },
+      ],
+      encoding: {
+        state: { field: 'state', type: 'nominal' },
+        value: { field: 'value', type: 'quantitative' },
+      },
+    };
+
+    it('inks a low-opacity tile dark and a full-opacity tile light', () => {
+      const result = compileTileMap(twoTone, defaultOptions);
+      const low = result.tiles.find((t) => t.stateCode === 'CA')!;
+      const high = result.tiles.find((t) => t.stateCode === 'TX')!;
+
+      expect(low.fillOpacity).toBeLessThan(0.5);
+      expect(high.fillOpacity).toBe(1);
+      expect(low.label.style.fill).not.toBe('#ffffff');
+      expect(high.label.style.fill).toBe('#ffffff');
+    });
+
+    it('gives empty tiles axis-colored labels, not white on white', () => {
+      const result = compileTileMap(twoTone, defaultOptions);
+      const empty = result.tiles.find((t) => !t.hasData)!;
+      expect(empty.label.style.fill).toBe(result.theme.colors.axis);
+    });
   });
 
   describe('valueFormat', () => {

@@ -76,9 +76,38 @@
           "type": "boolean",
           "description": "Whether to stick the first column during horizontal scroll."
         },
+        "density": {
+          "$ref": "#/definitions/TableDensity",
+          "description": "Row density: `'condensed'` (40px rows), `'regular'` (48px, default), `'relaxed'` (56px). An explicit value always wins over the responsive auto-condense."
+        },
+        "striped": {
+          "type": "boolean",
+          "description": "Zebra striping on body rows. Defaults to false (hairlines only)."
+        },
+        "sort": {
+          "$ref": "#/definitions/SortState",
+          "description": "Initial sort. Falls back to the first inline-bar column, descending."
+        },
+        "totalRow": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Sticky footer summing every quantitative column over the filtered rows (the whole result set, not just the current page). `true` uses the label \"Total\"."
+        },
         "compact": {
           "type": "boolean",
-          "description": "Compact mode: reduced padding and font sizes."
+          "deprecated": "Use `density: 'condensed'`. Still honored, with a warning."
         },
         "responsive": {
           "type": "boolean",
@@ -132,7 +161,26 @@
         },
         "format": {
           "type": "string",
-          "description": "Number/date format string (d3-format or d3-time-format), or semantic keyword `'percent'` / `'currency'`. e.g. \",.0f\", \"%Y-%m-%d\", \"percent\". Tables always show full precision (no compact notation)."
+          "description": "Number/date format string (d3-format or d3-time-format), or a semantic keyword: `'percent'`, `'currency'`, `'ordinal'`, `'compact'`. e.g. \",.0f\", \"%Y-%m-%d\", \"percent\".\n\nTables show full precision by default; `'compact'` opts a column into the chart-surface abbreviation (1.2k, 3.4M)."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "quantitative",
+            "nominal",
+            "ordinal",
+            "temporal"
+          ],
+          "description": "Field type, Vega-Lite style. Drives alignment (quantitative right, everything else left) and which columns the total row sums. Inferred from the data when omitted."
+        },
+        "priority": {
+          "type": "number",
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "description": "Mobile priority for cards mode (below 400px): 1 renders first and spans the row, 2 renders as a label/value pair, 3 is hidden. Defaults to 2 (1 for the first column)."
         },
         "heatmap": {
           "$ref": "#/definitions/HeatmapColumnConfig",
@@ -154,6 +202,17 @@
           "type": "boolean",
           "description": "Flag: render the cell value as a country flag emoji or image."
         },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/DeltaColumnConfig"
+            }
+          ],
+          "description": "Delta: render the value as a signed, colored change chip (up 2.4%)."
+        },
         "categoryColors": {
           "$ref": "#/definitions/CategoryColorsConfig",
           "description": "Category colors: color-code the cell based on its categorical value."
@@ -167,7 +226,7 @@
         "key"
       ],
       "additionalProperties": false,
-      "description": "Configuration for a single table column.\n\nAt minimum, `key` identifies the data field. All other properties control display, sorting, formatting, and visual features.\n\nOnly one visual feature (heatmap, bar, sparkline, image, flag, categoryColors) should be active per column. If multiple are provided, the engine picks the first one in this precedence order: sparkline > bar > heatmap > image > flag > categoryColors."
+      "description": "Configuration for a single table column.\n\nAt minimum, `key` identifies the data field. All other properties control display, sorting, formatting, and visual features.\n\nOnly one visual feature (heatmap, bar, sparkline, delta, image, flag, categoryColors) should be active per column. If multiple are provided, the engine picks the first one in this precedence order: sparkline > bar > delta > heatmap > image > flag > categoryColors."
     },
     "HeatmapColumnConfig": {
       "type": "object",
@@ -237,6 +296,27 @@
         "color": {
           "type": "string",
           "description": "Sparkline color. Uses the first categorical palette color if omitted."
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "shared"
+            },
+            {
+              "type": "string",
+              "const": "row"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          ],
+          "description": "Value domain each row's sparkline is normalized against.\n\n- `'shared'` (default): one extent computed across every row, so row   heights are comparable down the column.\n- `'row'`: each row normalized against its own min/max, which maximises   shape at the cost of comparability (use for small-magnitude series).\n- `[min, max]`: an explicit extent."
         }
       },
       "additionalProperties": false,
@@ -260,6 +340,17 @@
       },
       "additionalProperties": false,
       "description": "Image cell configuration for a table column."
+    },
+    "DeltaColumnConfig": {
+      "type": "object",
+      "properties": {
+        "invert": {
+          "type": "boolean",
+          "description": "Flip the color valence: negative values read as positive. Use for metrics where down is good (churn, latency, cost)."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Delta (change) chip configuration for a table column."
     },
     "CategoryColorsConfig": {
       "type": "object",
@@ -762,6 +853,38 @@
         "off"
       ],
       "description": "Dark mode behavior.\n\n- `\"auto\"` - Checks the `prefers-color-scheme` media query to detect the   user's system-level preference. This does NOT detect class-based dark mode   toggles (e.g. `document.documentElement.classList.toggle('dark')`). If your   app uses class-based dark mode, use VizThemeProvider with `\"force\"` or   `\"off\"` instead of `\"auto\"` and toggle based on your app's state.\n- `\"force\"` - Always render in dark mode regardless of system preference.\n- `\"off\"` - Always render in light mode (default).\n\nAll components (Chart, Sankey, Graph) inherit darkMode from VizThemeProvider when no explicit prop is passed."
+    },
+    "TableDensity": {
+      "type": "string",
+      "enum": [
+        "condensed",
+        "regular",
+        "relaxed"
+      ],
+      "description": "Row density for tables. Maps to 40 / 48 / 56px row heights."
+    },
+    "SortState": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "string",
+          "description": "Column key being sorted."
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction."
+        }
+      },
+      "required": [
+        "column",
+        "direction"
+      ],
+      "additionalProperties": false,
+      "description": "Sort state for the table."
     },
     "AnimationSpec": {
       "anyOf": [

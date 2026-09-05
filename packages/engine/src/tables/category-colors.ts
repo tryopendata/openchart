@@ -67,7 +67,7 @@ export function computeCategoryColors(
       bg = adaptColorForDarkMode(bg, lightBg, darkBg);
     }
 
-    const textColor = accessibleTextColor(bg);
+    const textColor = accessibleTextColor(bg, theme);
     result.set(i, {
       backgroundColor: bg,
       color: textColor,

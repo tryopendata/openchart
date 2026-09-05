@@ -98,6 +98,64 @@ describe('createGeoMap', () => {
     instance.destroy();
   });
 
+  describe('hover', () => {
+    it('outlines and raises the hovered feature, then puts it back', () => {
+      const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+      const group = container.querySelector('.oc-map-features')!;
+      const first = group.firstElementChild as SVGElement;
+      const originalOrder = [...group.children];
+
+      first.dispatchEvent(new MouseEvent('mouseenter'));
+      expect(first.classList.contains('oc-map-feature--hover')).toBe(true);
+      // Raised to the end of the group: SVG has no z-index, so the outline can
+      // only paint over its neighbours from there.
+      expect(group.lastElementChild).toBe(first);
+      // No sibling dim on feature hover.
+      for (const el of group.children) {
+        expect(el.classList.contains('oc-map-feature--dim')).toBe(false);
+      }
+
+      first.dispatchEvent(new MouseEvent('mouseleave'));
+      expect(first.classList.contains('oc-map-feature--hover')).toBe(false);
+      expect([...group.children]).toEqual(originalOrder);
+
+      instance.destroy();
+    });
+
+    it('marks the features group with the hovered legend bin', () => {
+      const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+      const group = container.querySelector('.oc-map-features')!;
+      const bins = container.querySelectorAll('.oc-legend-bin[data-bin-index]');
+      expect(bins.length).toBeGreaterThan(0);
+
+      // Every feature that joined a value carries the class index it fell in,
+      // which is what the CSS dim rule matches against.
+      const withData = [...group.children].filter((el) => el.hasAttribute('data-bin-index'));
+      expect(withData.length).toBe(2);
+
+      const bin = bins[bins.length - 1];
+      bin.dispatchEvent(new MouseEvent('mouseenter'));
+      expect(group.getAttribute('data-hover')).toBe(bin.getAttribute('data-bin-index'));
+
+      bin.dispatchEvent(new MouseEvent('mouseleave'));
+      expect(group.hasAttribute('data-hover')).toBe(false);
+
+      instance.destroy();
+    });
+  });
+
+  it('renders a titled legend with a no-data swatch', () => {
+    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+
+    const legend = container.querySelector('.oc-legend--continuous')!;
+    expect(legend.querySelector('.oc-legend-title')?.textContent).toBe('value');
+    // The third state has no row in the data, so the key says so.
+    expect(legend.querySelector('.oc-legend-nodata')).not.toBeNull();
+    expect([...legend.querySelectorAll('text')].map((t) => t.textContent)).toContain('No data');
+
+    instance.destroy();
+  });
+
   it('update() re-renders with new data', () => {
     const instance = createGeoMap(container, basicMapSpec, { responsive: false });
 

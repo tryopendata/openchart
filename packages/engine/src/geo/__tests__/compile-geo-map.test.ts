@@ -248,7 +248,7 @@ describe('compileGeoMap', () => {
     expect(ca!.fields.map((f) => f.value)).toContain('$1,500');
   });
 
-  it('continuous legend has 5 bins by default', () => {
+  it('classes the default legend on round breaks', () => {
     const layout = compileGeoMap(
       {
         type: 'map',
@@ -268,7 +268,13 @@ describe('compileGeoMap', () => {
 
     expect(layout.continuousLegend).not.toBeNull();
     expect(layout.continuousLegend!.mode).toBe('binned');
-    expect(layout.continuousLegend!.bins.length).toBe(5);
+    // A [10, 50] domain asked for 5 classes lands on a step of 10, so the
+    // breaks are 20/30/40 and there are 4 classes. Round breaks win over an
+    // exact class count -- that is the point of the quantize default.
+    expect(layout.continuousLegend!.ticks.map((t) => t.value)).toEqual([20, 30, 40]);
+    expect(layout.continuousLegend!.bins.length).toBe(4);
+    // Titled, with the field name, so the numbers mean something.
+    expect(layout.continuousLegend!.title).toBe('value');
   });
 
   it('continuous legend defaults to top position', () => {
@@ -402,6 +408,129 @@ describe('compileGeoMap', () => {
     expect(matched).toBeDefined();
     expect(unmatched).toBeDefined();
     expect(unmatched!.fill).not.toBe(matched!.fill);
+  });
+
+  it('keys "No data" separately when a feature has no value, and not otherwise', () => {
+    const withHoles = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    expect(withHoles.continuousLegend!.noData).toBeDefined();
+    expect(withHoles.continuousLegend!.noData!.label).toBe('No data');
+    // The swatch carries the same neutral the unmatched features do.
+    const unmatched = withHoles.features.find((f) => f.id === '48');
+    expect(withHoles.continuousLegend!.noData!.fill).toBe(unmatched!.fill);
+
+    const complete = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          { fips: '48', value: 50 },
+          { fips: '36', value: 30 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    expect(complete.continuousLegend!.noData).toBeUndefined();
+  });
+
+  it('fills features from the same class scale the legend keys', () => {
+    const data = Array.from({ length: 3 }, (_, i) => ({
+      fips: ['06', '48', '36'][i],
+      value: [12, 47, 33][i],
+    }));
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data,
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const legendColors = layout.continuousLegend!.bins.map((b) => b.color);
+    for (const feature of layout.features) {
+      if (!feature.data) continue;
+      expect(legendColors).toContain(feature.fill);
+      // And the stamped class index points at that very swatch.
+      expect(legendColors[feature.binIndex!]).toBe(feature.fill);
+    }
+  });
+
+  it('infers the projection from the topology when the spec omits it', () => {
+    const warnings: string[] = [];
+    const usa = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO },
+        data: [{ fips: '06', value: 10 }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      { ...DEFAULT_OPTIONS, onWarn: (w: string) => warnings.push(w) },
+    );
+    // A continental-US span infers albersUsa, which drops nothing and warns
+    // about nothing.
+    expect(usa.features).toHaveLength(3);
+    expect(warnings.some((w) => w.includes('identity'))).toBe(false);
+  });
+
+  it('infers identity for a pre-projected topology and says so', () => {
+    const PRE_PROJECTED = {
+      type: 'Topology',
+      objects: {
+        regions: {
+          type: 'GeometryCollection',
+          geometries: [{ type: 'Polygon', id: 'A', properties: { name: 'A' }, arcs: [[0]] }],
+        },
+      },
+      arcs: [
+        [
+          [0, 0],
+          [400, 0],
+          [400, 300],
+          [0, 300],
+          [0, 0],
+        ],
+      ],
+    };
+    const warnings: string[] = [];
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: PRE_PROJECTED },
+        data: [{ id: 'A', value: 10 }],
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      { ...DEFAULT_OPTIONS, onWarn: (w: string) => warnings.push(w) },
+    );
+
+    expect(layout.features).toHaveLength(1);
+    expect(layout.warnings.some((w) => w.code === 'PROJECTION_INFERRED')).toBe(true);
+    expect(warnings.some((w) => w.includes('identity'))).toBe(true);
   });
 
   it('emits warnings via onWarn callback', () => {
@@ -959,9 +1088,12 @@ describe('compileGeoMap', () => {
         DEFAULT_OPTIONS,
       );
 
-      // Features should all have the neutral fill (#e8e8e8 in light mode)
+      // Features all take the theme's own lightest neutral, and no per-feature
+      // stroke (the border meshes draw every line).
+      const neutral = layout.theme.colors.neutral[100];
       for (const f of layout.features) {
-        expect(f.fill).toBe('#e8e8e8');
+        expect(f.fill).toBe(neutral);
+        expect(f.stroke).toBe('none');
       }
     });
 

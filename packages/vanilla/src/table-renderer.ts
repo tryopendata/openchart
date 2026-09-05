@@ -7,7 +7,7 @@
  */
 
 import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
-import { BRAND_FONT_SIZE } from '@opendata-ai/openchart-core';
+import { BRAND_FONT_SIZE, cssTokenDefault } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { applySrOnlyStyles } from './dom-helpers';
@@ -89,6 +89,7 @@ function renderThead(
   sort: TableLayout['sort'],
 ): HTMLTableSectionElement {
   const thead = document.createElement('thead');
+  thead.setAttribute('role', 'rowgroup');
   const tr = document.createElement('tr');
   tr.setAttribute('role', 'row');
 
@@ -134,6 +135,7 @@ function renderThead(
 
 function renderTbody(rows: TableRow[], columns: ResolvedColumn[]): HTMLTableSectionElement {
   const tbody = document.createElement('tbody');
+  tbody.setAttribute('role', 'rowgroup');
 
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r];
@@ -149,6 +151,10 @@ function renderTbody(rows: TableRow[], columns: ResolvedColumn[]): HTMLTableSect
       const td = renderCell(cell);
       td.setAttribute('role', 'gridcell');
       td.style.textAlign = columns[c].align;
+      // Cards mode (below 400px) hides the header and prints these instead;
+      // the CSS reads them through `content: attr(data-label)`.
+      td.setAttribute('data-label', columns[c].label);
+      td.setAttribute('data-priority', String(columns[c].priority));
       tr.appendChild(td);
     }
 
@@ -156,6 +162,40 @@ function renderTbody(rows: TableRow[], columns: ResolvedColumn[]): HTMLTableSect
   }
 
   return tbody;
+}
+
+// ---------------------------------------------------------------------------
+// Totals footer
+// ---------------------------------------------------------------------------
+
+function renderTfoot(
+  totalRow: NonNullable<TableLayout['totalRow']>,
+  columns: ResolvedColumn[],
+): HTMLTableSectionElement {
+  const tfoot = document.createElement('tfoot');
+  tfoot.className = 'oc-table-total';
+  tfoot.setAttribute('role', 'rowgroup');
+
+  const tr = document.createElement('tr');
+  tr.setAttribute('role', 'row');
+
+  for (let c = 0; c < columns.length; c++) {
+    const cell = totalRow.cells[c];
+    const td = cell ? renderCell(cell) : document.createElement('td');
+    td.setAttribute('role', 'gridcell');
+    td.style.textAlign = columns[c].align;
+    td.setAttribute('data-label', columns[c].label);
+    td.setAttribute('data-priority', String(columns[c].priority));
+    // The label rides in the first column; a blank cell there would leave the
+    // footer unreadable out of context.
+    if (c === 0 && !td.textContent) {
+      td.textContent = totalRow.label;
+    }
+    tr.appendChild(td);
+  }
+
+  tfoot.appendChild(tr);
+  return tfoot;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,12 +301,29 @@ export function renderTable(
   const { theme, chrome } = layout;
   if (theme) {
     const s = wrapper.style;
+    const n = theme.colors.neutral;
     s.setProperty('--oc-bg', theme.colors.background);
     s.setProperty('--oc-text', theme.colors.text);
-    s.setProperty('--oc-text-secondary', theme.colors.axis ?? theme.colors.text);
-    s.setProperty('--oc-text-muted', theme.colors.axis ?? theme.colors.text);
+    // Secondary grays come from the theme's own text/background mix, the same
+    // ramp charts stamp. Deriving them from colors.axis (the tick-label ink)
+    // used to pin every table gray to one value and shut token changes out.
+    s.setProperty('--oc-text-secondary', n.secondary);
+    s.setProperty('--oc-text-muted', n[600]);
+    s.setProperty('--oc-text-faint', n.faint);
+    s.setProperty('--oc-gray-100', n[100]);
+    s.setProperty('--oc-gray-200', n[200]);
+    s.setProperty('--oc-gray-300', n[300]);
+    s.setProperty('--oc-gray-400', n[400]);
     s.setProperty('--oc-gridline', theme.colors.gridline);
-    s.setProperty('--oc-border', theme.colors.gridline);
+    // The table hairline is a border, not a gridline. Only a theme that sets
+    // gridline explicitly gets to drive it; otherwise the derived ramp wins.
+    const defaultGridline = cssTokenDefault('--oc-gridline', theme.isDark ? 'dark' : 'light');
+    s.setProperty(
+      '--oc-border',
+      theme.colors.gridline === defaultGridline ? n.border : theme.colors.gridline,
+    );
+    s.setProperty('--oc-positive', theme.colors.positive);
+    s.setProperty('--oc-negative', theme.colors.negative);
     s.setProperty('--oc-font-family', theme.fonts.family);
     s.fontFamily = theme.fonts.family;
   }
@@ -296,8 +353,13 @@ export function renderTable(
   }
 
   // Apply class modifiers
-  if (layout.compact) {
+  wrapper.classList.add(`oc-table--${layout.density}`);
+  if (layout.density === 'condensed') {
+    // Deprecated alias, kept one release for stylesheets targeting it.
     wrapper.classList.add('oc-table--compact');
+  }
+  if (layout.striped) {
+    wrapper.classList.add('oc-table--striped');
   }
 
   // Header chrome
@@ -343,6 +405,11 @@ export function renderTable(
 
     // Tbody
     table.appendChild(renderTbody(layout.rows, layout.columns));
+
+    // Totals footer
+    if (layout.totalRow) {
+      table.appendChild(renderTfoot(layout.totalRow, layout.columns));
+    }
 
     scroll.appendChild(table);
     wrapper.appendChild(scroll);

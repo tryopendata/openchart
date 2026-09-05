@@ -27,6 +27,7 @@ import {
   defaultNumberFormatter,
   resolveNumberFormatter,
 } from '@opendata-ai/openchart-core';
+import { tickStep } from 'd3-array';
 import { scaleQuantile } from 'd3-scale';
 
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -53,8 +54,15 @@ function extent(values: number[]): [number, number] {
   return [min, max];
 }
 
-/** Height of the gradient bar / swatch row in pixels. */
+/** Height of the gradient bar in pixels. */
 export const CONTINUOUS_BAR_HEIGHT = 10;
+
+/**
+ * Height of a binned swatch row. Taller than the gradient bar: a class swatch
+ * is a color *sample* the reader compares against the map, and 10px of a
+ * pale low class next to a hairline is not a sample.
+ */
+export const CONTINUOUS_BINNED_BAR_HEIGHT = 12;
 
 /** Gap between the bar and the value label row. */
 export const CONTINUOUS_LABEL_GAP = 4;
@@ -68,6 +76,9 @@ export const DEFAULT_BIN_COUNT = 5;
 
 /** Scale types that produce a binned swatch legend. */
 const BINNED_SCALE_TYPES = new Set(['quantile', 'quantize', 'threshold']);
+
+/** Hard cap on classes, so a pathological domain/step pair can't spray swatches. */
+const MAX_BINS = 12;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,6 +98,27 @@ export interface ContinuousLegendContent {
   bins: ContinuousLegendBin[];
   /** Value labels with x relative to the bar's left edge. */
   ticks: ContinuousLegendTick[];
+  /** The class scale the swatches were drawn from (binned mode only). */
+  classScale?: ClassScale;
+}
+
+/**
+ * A binned color scale shared by the marks and the legend.
+ *
+ * There is exactly one of these per binned color channel: the map's feature
+ * fills and the legend's swatches both read it, so a swatch can never show a
+ * color no feature has (which is what two independently-built `scaleQuantile`s
+ * used to allow).
+ */
+export interface ClassScale {
+  /** Ascending class breaks. One fewer than `colors`. */
+  breaks: number[];
+  /** One color per class, low to high. */
+  colors: string[];
+  /** Class index for a value, or -1 when the value is not finite. */
+  binIndex(value: number): number;
+  /** Class color for a value; the first color when the value is not finite. */
+  color(value: number): string;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,8 +200,89 @@ function resolveBarWidth(availableWidth: number): number {
   return Math.max(0, Math.min(preferred, Math.floor(availableWidth)));
 }
 
+/** Trim binary-float noise off a computed break so labels read as round numbers. */
+function tidyBreak(value: number): number {
+  return Number(value.toPrecision(12));
+}
+
+/**
+ * Evenly spaced breaks on ROUND numbers (the quantize default).
+ *
+ * `tickStep` picks the 1/2/5-times-a-power-of-ten step an axis would use, so
+ * the class boundaries read as "20, 40, 60" rather than "17.4, 34.8, 52.2".
+ * The class count therefore floats by one either way -- a nice break is worth
+ * more to the reader than an exact class count.
+ *
+ * A diverging ramp over a domain that straddles zero is classed symmetrically
+ * instead: an odd number of classes with the middle one centered on 0, so the
+ * neutral color means "no change" rather than "somewhere near the middle".
+ */
+function niceQuantizeBreaks(
+  domainMin: number,
+  domainMax: number,
+  binCount: number,
+  diverging: boolean,
+): number[] {
+  if (!(domainMax > domainMin)) return [];
+
+  if (diverging && domainMin < 0 && domainMax > 0) {
+    const classes = binCount % 2 === 0 ? binCount + 1 : binCount;
+    const perSide = (classes - 1) / 2;
+    const magnitude = Math.max(Math.abs(domainMin), Math.abs(domainMax));
+    const step = tickStep(0, magnitude, perSide + 0.5) || magnitude / (perSide + 0.5);
+    if (!Number.isFinite(step) || step <= 0) return [];
+    const breaks: number[] = [];
+    for (let i = 0; i < perSide * 2; i++) {
+      breaks.push(tidyBreak((i - perSide + 0.5) * step));
+    }
+    return breaks;
+  }
+
+  let step = tickStep(domainMin, domainMax, binCount);
+  if (!Number.isFinite(step) || step <= 0) return [];
+
+  // `tickStep` optimizes for tick spacing, not class count: on one domain it
+  // hands back a step that yields four classes and on a slightly narrower one,
+  // eight. Walk up the nice ladder (1 -> 2 -> 5 -> 10) until the classing fits
+  // the count that was asked for, so a choropleth's key stays readable whatever
+  // the data does.
+  let breaks = quantizeBreaksForStep(domainMin, domainMax, step);
+  for (let guard = 0; guard < 10 && breaks.length + 1 > binCount; guard++) {
+    step = coarserNiceStep(step);
+    breaks = quantizeBreaksForStep(domainMin, domainMax, step);
+  }
+  return breaks;
+}
+
+/** Interior multiples of `step` strictly inside (min, max). */
+function quantizeBreaksForStep(domainMin: number, domainMax: number, step: number): number[] {
+  const epsilon = step * 1e-9;
+  const breaks: number[] = [];
+  for (
+    let b = Math.ceil(domainMin / step) * step;
+    b < domainMax - epsilon && breaks.length < MAX_BINS;
+    b += step
+  ) {
+    if (b > domainMin + epsilon) breaks.push(tidyBreak(b));
+  }
+  return breaks;
+}
+
+/** The next step up the 1 / 2 / 5 / 10 ladder. */
+function coarserNiceStep(step: number): number {
+  const power = Math.floor(Math.log10(step));
+  const mantissa = step / 10 ** power;
+  const next = mantissa < 1.5 ? 2 : mantissa < 3.5 ? 5 : 10;
+  return tidyBreak(next * 10 ** power);
+}
+
 /** Class break values for a binned color scale, mirroring the mark scale. */
-function resolveBinBreaks(channel: EncodingChannel, values: number[], binCount: number): number[] {
+function resolveBinBreaks(
+  channel: EncodingChannel,
+  values: number[],
+  binCount: number,
+  diverging: boolean,
+): number[] {
   const scaleType = channel.scale?.type;
   if (scaleType === 'threshold') {
     return (channel.scale?.domain as number[] | undefined) ?? [0.5];
@@ -180,16 +293,68 @@ function resolveBinBreaks(channel: EncodingChannel, values: number[], binCount: 
       .range(Array.from({ length: binCount }, (_, i) => i));
     return scale.quantiles();
   }
-  // quantize: evenly spaced breaks across the (possibly explicit) domain
+  // quantize (the default): evenly spaced, round breaks across the
+  // (possibly explicit) domain.
   const explicitDomain = channel.scale?.domain as [number, number] | undefined;
   const [valuesMin, valuesMax] = extent(values);
   const domainMin = explicitDomain?.[0] ?? valuesMin;
   const domainMax = explicitDomain?.[1] ?? valuesMax;
-  const breaks: number[] = [];
-  for (let i = 1; i < binCount; i++) {
-    breaks.push(domainMin + ((domainMax - domainMin) * i) / binCount);
+  return niceQuantizeBreaks(domainMin, domainMax, binCount, diverging);
+}
+
+/** Class count a channel asks for: explicit range or threshold domain, else the default. */
+function resolveBinCount(channel: EncodingChannel): number {
+  if (channel.scale?.type === 'threshold') {
+    return ((channel.scale?.domain as number[] | undefined) ?? [0.5]).length + 1;
   }
-  return breaks;
+  const explicitRange = channel.scale?.range as string[] | undefined;
+  return explicitRange?.length ?? DEFAULT_BIN_COUNT;
+}
+
+/**
+ * Build the class scale for a binned color channel.
+ *
+ * `colors` is the ramp to sample class colors from; `binCount` is the class
+ * count the channel asked for (the quantize path may return one class more or
+ * fewer to land on round breaks).
+ */
+export function buildClassScale(
+  values: number[],
+  channel: EncodingChannel,
+  colors: string[],
+  binCount: number = DEFAULT_BIN_COUNT,
+  options?: { diverging?: boolean },
+): ClassScale {
+  const breaks = resolveBinBreaks(channel, values, binCount, options?.diverging ?? false);
+  const classColors = sampleRampColors(colors, breaks.length + 1);
+  const binIndex = (value: number): number => {
+    if (!Number.isFinite(value)) return -1;
+    let i = 0;
+    while (i < breaks.length && value >= breaks[i]) i++;
+    return i;
+  };
+  return {
+    breaks,
+    colors: classColors,
+    binIndex,
+    color: (value: number) => classColors[Math.max(0, binIndex(value))] ?? classColors[0],
+  };
+}
+
+/**
+ * Build the class scale a channel resolves to against a theme: the ramp colors,
+ * class count and diverging detection all come from the channel + theme, so
+ * every caller (marks, legend) lands on the same scale from the same inputs.
+ */
+export function classScaleForChannel(
+  values: number[],
+  channel: EncodingChannel,
+  theme: ResolvedTheme,
+): ClassScale {
+  const colors = resolveRampColors(channel, theme);
+  return buildClassScale(values, channel, colors, resolveBinCount(channel), {
+    diverging: isDivergingRamp(colors, theme),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +382,7 @@ export function computeContinuousLegendContentForChannel(
   channel: EncodingChannel,
   theme: ResolvedTheme,
   availableWidth: number,
+  classScale?: ClassScale,
 ): ContinuousLegendContent | null {
   if (values.length === 0) return null;
 
@@ -229,21 +395,19 @@ export function computeContinuousLegendContentForChannel(
   const ctx = computeFieldFormatContext(values);
 
   if (scaleType && BINNED_SCALE_TYPES.has(scaleType)) {
-    const explicitRange = channel.scale?.range as string[] | undefined;
-    const binCount =
-      scaleType === 'threshold'
-        ? ((channel.scale?.domain as number[] | undefined) ?? [0.5]).length + 1
-        : (explicitRange?.length ?? DEFAULT_BIN_COUNT);
-    const breaks = resolveBinBreaks(channel, values, binCount);
-    const colors = sampleRampColors(rampColors, binCount);
-    const binWidth = barWidth / binCount;
+    // The marks' scale when the caller has one (maps build it first so the
+    // swatches and the fills can never diverge), otherwise an identical one
+    // built from the same channel + theme.
+    const scale = classScale ?? classScaleForChannel(values, channel, theme);
+    const colors = scale.colors;
+    const binWidth = barWidth / colors.length;
 
     const bins: ContinuousLegendBin[] = colors.map((color, i) => ({
       x: i * binWidth,
       width: binWidth,
       color,
     }));
-    const ticks: ContinuousLegendTick[] = breaks.map((value, i) => ({
+    const ticks: ContinuousLegendTick[] = scale.breaks.map((value, i) => ({
       value,
       label: formatLegendValue(value, formatStr, ctx),
       x: (i + 1) * binWidth,
@@ -253,10 +417,11 @@ export function computeContinuousLegendContentForChannel(
     return {
       mode: 'binned',
       barWidth,
-      barHeight: CONTINUOUS_BAR_HEIGHT,
+      barHeight: CONTINUOUS_BINNED_BAR_HEIGHT,
       colorStops: [],
       bins,
       ticks,
+      classScale: scale,
     };
   }
 

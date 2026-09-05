@@ -210,6 +210,9 @@ function renderTiles(
       'font-family': tile.label.style.fontFamily,
       'font-size': tile.label.style.fontSize,
       'font-weight': tile.label.style.fontWeight,
+      // A hair of tracking is what keeps a two-letter code legible at 8px now
+      // that it is set at 600 instead of 700.
+      'letter-spacing': '0.02em',
     });
     (codeLabel as SVGElement & ElementCSSInlineStyle).style.setProperty(
       'fill',
@@ -285,7 +288,8 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
 
   (defs as SVGElement).appendChild(grad);
 
-  // Gradient bar (pill-shaped)
+  // Gradient bar: square-cornered, so it reads as a color scale rather than a
+  // pill-shaped UI control.
   const barHeight = gradientLegend.bounds.height;
   const bar = createSVGElement('rect');
   setAttrs(bar, {
@@ -293,8 +297,8 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
     y: gradientLegend.bounds.y,
     width: gradientLegend.bounds.width,
     height: barHeight,
-    rx: barHeight / 2,
     fill: `url(#${gradientId})`,
+    'shape-rendering': 'crispEdges',
   });
   g.appendChild(bar);
 
@@ -331,6 +335,38 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
   );
   maxText.textContent = gradientLegend.maxLabel;
   g.appendChild(maxText);
+
+  // Detached "no data" swatch, keyed beside the ramp rather than at its low end.
+  if (gradientLegend.noData) {
+    const nd = gradientLegend.noData;
+    const swatch = createSVGElement('rect');
+    swatch.setAttribute('class', 'oc-legend-nodata');
+    setAttrs(swatch, {
+      x: nd.x,
+      y: nd.y,
+      width: nd.size,
+      height: nd.size,
+      fill: nd.fill,
+      'shape-rendering': 'crispEdges',
+    });
+    g.appendChild(swatch);
+
+    const ndLabel = createSVGElement('text');
+    setAttrs(ndLabel, {
+      x: nd.labelX,
+      y: nd.labelY,
+      'text-anchor': 'start',
+      'font-family': gradientLegend.labelStyle.fontFamily,
+      'font-size': gradientLegend.labelStyle.fontSize,
+      'font-weight': gradientLegend.labelStyle.fontWeight,
+    });
+    (ndLabel as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      'fill',
+      gradientLegend.labelStyle.fill,
+    );
+    ndLabel.textContent = nd.label;
+    g.appendChild(ndLabel);
+  }
 
   parent.appendChild(g);
 }

@@ -18,13 +18,23 @@ import type {
   TableSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { getBreakpoint } from '@opendata-ai/openchart-core';
+import { BREAKPOINT_COMPACT_MAX } from '@opendata-ai/openchart-core';
 import { compileTable } from '@opendata-ai/openchart-engine';
 import { setupTableAnimationCleanup } from './animation';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { attachKeyboardNav } from './table-keyboard';
 import { renderTable } from './table-renderer';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Width a text column needs before its values start wrapping. */
+const MIN_READABLE_COLUMN_WIDTH = 96;
+
+/** Below this width even a two-column table reads better condensed. */
+const AUTO_CONDENSE_MAX_WIDTH = 560;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,6 +121,9 @@ export function createTable(
   let cleanupAnimations: (() => void) | null = null;
   let isFirstRender = true;
   let destroyed = false;
+  // Whether the user has touched sorting. Once they have, a null sort means
+  // "explicitly unsorted" and must not fall back to the spec/bar-column default.
+  let sortTouched = false;
 
   // Internal state (used in uncontrolled mode)
   const internalState: TableState = {
@@ -148,7 +161,10 @@ export function createTable(
       options?.onStateChange?.(next);
     } else {
       // In uncontrolled mode, update internal state
-      if (partial.sort !== undefined) internalState.sort = partial.sort;
+      if (partial.sort !== undefined) {
+        internalState.sort = partial.sort;
+        sortTouched = true;
+      }
       if (partial.search !== undefined) internalState.search = partial.search;
       if (partial.page !== undefined) internalState.page = partial.page;
       options?.onStateChange?.({ ...internalState });
@@ -166,12 +182,20 @@ export function createTable(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
-      sort: state.sort ?? undefined,
+      // undefined = "no opinion, apply the spec default"; null = the user
+      // cycled sorting off and expects the original row order back.
+      sort: isControlled ? options?.externalState?.sort : resolveMountSort(),
       search: state.search || undefined,
       page: state.page,
     };
 
     return compileTable(currentSpec, compileOpts);
+  }
+
+  /** Uncontrolled sort: the state once touched, otherwise defer to the spec. */
+  function resolveMountSort(): SortState | null | undefined {
+    if (internalState.sort) return internalState.sort;
+    return sortTouched ? null : undefined;
   }
 
   function getContainerDimensions(): { width: number; height: number } {
@@ -194,21 +218,29 @@ export function createTable(
   }
 
   /**
-   * Apply responsive breakpoint class based on container width.
-   * Only auto-adds compact mode at small sizes. Never removes compact
-   * if the spec explicitly requests it (layout.compact === true).
+   * Apply responsive classes based on container width.
+   *
+   * Cards mode below 400px; auto-condense only under real content pressure
+   * (more columns than the width can give 96px each, or a narrow embed).
+   * `getBreakpoint` calls everything up to 700px "medium", so keying on it
+   * condensed every 600-720px editorial column that had room to breathe.
+   * An explicit `density` (or the deprecated `compact`) always wins.
    */
   function applyBreakpointClass(): void {
     if (!wrapperElement) return;
     const { width } = getContainerDimensions();
-    const bp = getBreakpoint(width);
 
-    if (bp === 'compact' || bp === 'medium') {
-      wrapperElement.classList.add('oc-table--compact');
-    } else if (!currentLayout?.compact) {
-      // Only remove compact if the spec didn't explicitly request it
-      wrapperElement.classList.remove('oc-table--compact');
-    }
+    wrapperElement.classList.toggle('oc-table--cards', width < BREAKPOINT_COMPACT_MAX);
+
+    if (currentSpec.density !== undefined || currentSpec.compact === true) return;
+
+    const columns = currentLayout?.columns.length ?? 0;
+    const condensed =
+      columns * MIN_READABLE_COLUMN_WIDTH > width || width < AUTO_CONDENSE_MAX_WIDTH;
+
+    wrapperElement.classList.toggle('oc-table--condensed', condensed);
+    wrapperElement.classList.toggle('oc-table--compact', condensed);
+    wrapperElement.classList.toggle('oc-table--regular', !condensed);
   }
 
   function render(): void {
@@ -460,7 +492,7 @@ export function createTable(
       height: 600,
       theme: options?.theme,
       darkMode,
-      sort: state.sort ?? undefined,
+      sort: isControlled ? options?.externalState?.sort : resolveMountSort(),
       search: state.search || undefined,
       // No page/pageSize: get all rows
     });

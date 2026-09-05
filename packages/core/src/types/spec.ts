@@ -10,6 +10,7 @@
 
 // Re-import for use in LegendConfig and overrides (avoids circular by importing from sibling)
 import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
+import type { SortState } from './layout';
 import type { ColumnConfig } from './table';
 import type { SeriesStrategy, TokenValue } from './theme';
 
@@ -2140,6 +2141,9 @@ export type ChartSpec<TData extends DataRow = DataRow> =
       encoding: ParliamentEncoding<TData>;
     });
 
+/** Row density for tables. Maps to 40 / 48 / 56px row heights. */
+export type TableDensity = 'condensed' | 'regular' | 'relaxed';
+
 /**
  * Table specification: input for data table visualizations.
  *
@@ -2169,7 +2173,25 @@ export interface TableSpec {
   pagination?: boolean | { pageSize: number };
   /** Whether to stick the first column during horizontal scroll. */
   stickyFirstColumn?: boolean;
-  /** Compact mode: reduced padding and font sizes. */
+  /**
+   * Row density: `'condensed'` (40px rows), `'regular'` (48px, default),
+   * `'relaxed'` (56px). An explicit value always wins over the responsive
+   * auto-condense.
+   */
+  density?: TableDensity;
+  /** Zebra striping on body rows. Defaults to false (hairlines only). */
+  striped?: boolean;
+  /** Initial sort. Falls back to the first inline-bar column, descending. */
+  sort?: SortState;
+  /**
+   * Sticky footer summing every quantitative column over the filtered rows
+   * (the whole result set, not just the current page). `true` uses the label
+   * "Total".
+   */
+  totalRow?: boolean | { label?: string };
+  /**
+   * @deprecated Use `density: 'condensed'`. Still honored, with a warning.
+   */
   compact?: boolean;
   /** Whether the table adapts to container width. Defaults to true. */
   responsive?: boolean;
@@ -2588,7 +2610,11 @@ export interface GeoMapGeo {
   features: unknown;
   /** Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'. */
   idField?: string;
-  /** Map projection. Defaults to 'albersUsa'. */
+  /**
+   * Map projection. Inferred from the topology when omitted: pre-projected
+   * coordinates get 'identity', a near-global longitude span gets the
+   * equal-area 'equalEarth', anything else gets 'albersUsa'.
+   */
   projection?: GeoMapProjection;
   /**
    * Focus the camera. A feature id (or array) fits those features; `{ features, padding }`

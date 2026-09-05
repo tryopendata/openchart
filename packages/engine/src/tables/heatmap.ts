@@ -9,7 +9,7 @@ import type { CellStyle, ColumnConfig, ResolvedTheme } from '@opendata-ai/opench
 import { adaptColorForDarkMode, contrastRatio } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleSequential } from 'd3-scale';
-import { accessibleTextColor } from './utils';
+import { accessibleTextColor, resolveTableSurface } from './utils';
 
 /**
  * Build an interpolator from an array of color stops.
@@ -123,13 +123,19 @@ export function computeHeatmapColors(
   const interpolator = interpolatorFromStops(stops);
   const scale = scaleSequential(interpolator).domain(domain).clamp(true);
 
+  // Soften every fill 20% toward the table surface. A ramp built for a chart
+  // mark is louder than a table needs: the cells sit edge to edge, so the
+  // full-strength stop reads as a block of color rather than an encoded value.
+  const surface = resolveTableSurface(theme);
+  const soften = (c: string): string => interpolateRgb(c, surface)(0.2);
+
   // Apply to each row. Skip cells at the domain minimum so the normal
   // row background (striping) shows through instead of painting an
   // opaque low-end color that clashes with the table chrome.
   for (const { index, value } of numericValues) {
     if (value <= domain[0]) continue;
-    const bg = scale(value);
-    const textColor = accessibleTextColor(bg);
+    const bg = soften(scale(value));
+    const textColor = accessibleTextColor(bg, theme);
 
     result.set(index, {
       backgroundColor: bg,

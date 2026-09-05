@@ -25,17 +25,21 @@
 
     & th,
     & td {
-      padding: 10px 16px;
+      /* 12 + 24 + 12 = 48px rows. Condensed and relaxed keep the same
+         line box and change only the padding, so the ladder is 40/48/56. */
+      padding: 12px 16px;
+      line-height: 24px;
       text-align: left;
       border-bottom: 1px solid var(--oc-border);
     }
 
     & th {
-      font-weight: 600;
+      font-weight: 500;
       font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--oc-text-secondary);
+      letter-spacing: 0.04em;
+      color: var(--oc-text-muted);
+      font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
 
@@ -46,8 +50,10 @@
       background: var(--oc-bg);
     }
 
+    /* A hairline, like every other rule in the table. The old 2px header rule
+       was the heaviest line on the page and drew the eye away from the data. */
     & thead th {
-      border-bottom-width: 2px;
+      border-bottom-width: 1px;
     }
 
     & td {
@@ -138,12 +144,12 @@
 
     &::before {
       border-bottom: 4.5px solid var(--oc-text-secondary);
-      opacity: 0.45;
+      opacity: 0.35;
     }
 
     &::after {
       border-top: 4.5px solid var(--oc-text-secondary);
-      opacity: 0.45;
+      opacity: 0.35;
     }
 
     &:hover::before,
@@ -277,11 +283,11 @@
 
   .oc-table-bar-fill {
     position: absolute;
-    top: 6px;
+    top: 8px;
     left: 0;
-    bottom: 6px;
+    bottom: 8px;
     border-radius: var(--oc-radius-sm);
-    opacity: 0.15;
+    opacity: 0.18;
     pointer-events: none;
   }
 
@@ -346,18 +352,188 @@
   }
 
   /* ---------------------------------------------------------------------------
-   * Compact mode
+   * Density
+   *
+   * regular 48px rows (base), condensed 40px, relaxed 56px. `.oc-table--compact`
+   * is the deprecated alias for condensed, kept one release.
    * --------------------------------------------------------------------------- */
 
+  .oc-table--condensed,
   .oc-table--compact {
     & th,
     & td {
-      padding: 4px 8px;
+      padding: 8px 12px;
+      line-height: 24px;
       font-size: 13px;
     }
 
     & th {
       font-size: 11px;
+    }
+
+    & .oc-table-bar-fill {
+      top: 5px;
+      bottom: 5px;
+    }
+  }
+
+  .oc-table--relaxed {
+    & th,
+    & td {
+      padding: 16px 20px;
+      line-height: 24px;
+    }
+
+    & .oc-table-bar-fill {
+      top: 12px;
+      bottom: 12px;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Striping
+   * --------------------------------------------------------------------------- */
+
+  .oc-table--striped tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--oc-text) 3%, transparent);
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Delta chips
+   * --------------------------------------------------------------------------- */
+
+  .oc-table-delta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--oc-radius-md);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 16px;
+  }
+
+  .oc-table-delta-arrow {
+    font-size: 0.8em;
+    line-height: 1;
+  }
+
+  .oc-table-delta--positive {
+    color: var(--oc-positive);
+    background: var(--oc-positive-tint);
+  }
+
+  .oc-table-delta--negative {
+    color: var(--oc-negative);
+    background: var(--oc-negative-tint);
+  }
+
+  .oc-table-delta--neutral {
+    color: var(--oc-text-muted);
+    background: color-mix(in srgb, var(--oc-text) 6%, transparent);
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Totals footer
+   * --------------------------------------------------------------------------- */
+
+  tfoot.oc-table-total {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: var(--oc-bg);
+
+    & td {
+      font-weight: 600;
+      border-bottom: none;
+      border-top: 1px solid var(--oc-border);
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Cards mode (below 400px)
+   *
+   * Rows become two-column grids with the header printed per cell. `display:
+   * grid` drops the implicit table roles, so the renderer stamps explicit ARIA
+   * roles on every element; `display: contents` is deliberately NOT used —
+   * it removes the row box the grid needs and breaks the semantics further.
+   * --------------------------------------------------------------------------- */
+
+  .oc-table--cards {
+    & .oc-table-scroll {
+      overflow-x: hidden;
+    }
+
+    & table {
+      table-layout: fixed;
+    }
+
+    & thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    & tbody tr,
+    & tfoot tr {
+      display: grid;
+      /* Two equal halves keep every label/value pair the same width; an
+         auto first column makes the third cell in a row narrower than the
+         second and the card reads ragged. */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2px 12px;
+      align-items: baseline;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--oc-border);
+    }
+
+    & td {
+      display: block;
+      width: auto;
+      max-width: 100%;
+      padding: 0;
+      border-bottom: none;
+      overflow-wrap: anywhere;
+      text-align: right;
+    }
+
+    & td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--oc-text-muted);
+      text-align: left;
+    }
+
+    /* A column with no header (flags, logos) prints no label either. */
+    & td[data-label=""]::before {
+      content: none;
+    }
+
+    /* Priority 1 leads the card on its own line, label suppressed. */
+    & td[data-priority="1"] {
+      grid-column: 1 / -1;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    & td[data-priority="1"]::before {
+      content: none;
+    }
+
+    & td[data-priority="3"] {
+      display: none;
+    }
+
+    & .oc-table-sparkline {
+      width: 100%;
     }
   }
 

@@ -29,6 +29,8 @@ import type {
   MarkType,
   NodeOverride,
   ScaleConfig,
+  SortState,
+  TableDensity,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import type { NormalizedBarListSpec } from '../barlist/types';
@@ -176,6 +178,11 @@ export interface NormalizedTableSpec {
   search: boolean;
   pagination: boolean | { pageSize: number };
   stickyFirstColumn: boolean;
+  density: TableDensity;
+  striped: boolean;
+  sort?: SortState;
+  totalRow?: { label: string };
+  /** Mirrors `density === 'condensed'` for back-compat. */
   compact: boolean;
   responsive: boolean;
   animation?: AnimationSpec;

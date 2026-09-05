@@ -153,6 +153,16 @@ export function buildD3Formatter(formatStr: string | undefined): ((v: number) =>
   // OpenChart extension: rank-axis ordinals ("1st", "2nd", "3rd").
   if (formatStr === 'ordinal') return formatOrdinal;
 
+  // OpenChart extension: 'compact' abbreviates (1.2k, 3.4M). Charts abbreviate
+  // by default; on a table, where full precision is the default, this is how a
+  // column opts in. Handled here so every resolution path picks it up.
+  if (formatStr === 'compact') {
+    return (v: number) => {
+      if (!Number.isFinite(v)) return String(v);
+      return Math.abs(v) >= 1000 ? abbreviateNumber(v) : formatNumber(v);
+    };
+  }
+
   try {
     const fmt = d3Format(formatStr);
     // Replace SI prefix "G" (giga) with "B" (billion) for financial readability
@@ -275,6 +285,16 @@ export function resolveNumberFormatter(
   if (!formatStr) return null;
 
   if (formatStr === 'ordinal') return formatOrdinal;
+
+  // OpenChart extension: 'compact' abbreviates (1.2k, 3.4M). Charts abbreviate
+  // by default; on a table, where full precision is the default, this is how a
+  // column opts in. Handled here so every resolution path picks it up.
+  if (formatStr === 'compact') {
+    return (v: number) => {
+      if (!Number.isFinite(v)) return String(v);
+      return Math.abs(v) >= 1000 ? abbreviateNumber(v) : formatNumber(v);
+    };
+  }
 
   if (formatStr === 'percent') {
     // Heuristic: if all values fit in [0,1] (maxAbs <= 1), treat them as

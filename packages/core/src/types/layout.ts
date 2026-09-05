@@ -839,6 +839,11 @@ export interface GradientLegendLayout extends BaseLegendLayout {
   minLabel: string;
   /** Formatted maximum value label. */
   maxLabel: string;
+  /**
+   * Detached "no data" swatch right of the bar, present only when something in
+   * the grid actually has no value.
+   */
+  noData?: ContinuousLegendNoData;
 }
 
 /** A positioned value label on a continuous/binned color legend. */
@@ -886,6 +891,33 @@ export interface ContinuousLegendLayout extends BaseLegendLayout {
   /** Value labels rendered below the bar. */
   ticks: ContinuousLegendTick[];
   /** Text baseline y for the value labels (pixel coordinates). */
+  labelY: number;
+  /** Legend title (field name plus units), rendered above the bar. Absent when untitled. */
+  title?: string;
+  /** Text style for the title. */
+  titleStyle?: TextStyle;
+  /** Text baseline y for the title (pixel coordinates). */
+  titleY?: number;
+  /**
+   * Detached "no data" swatch, sitting right of the bar. Present only when the
+   * data actually has holes -- a key for a category nothing is in is noise.
+   */
+  noData?: ContinuousLegendNoData;
+}
+
+/** The detached "no data" swatch on a continuous legend. */
+export interface ContinuousLegendNoData {
+  /** Swatch rect (pixel coordinates). */
+  x: number;
+  y: number;
+  size: number;
+  /** Swatch fill (the same neutral the unmatched features carry). */
+  fill: string;
+  /** Label text, e.g. "No data". */
+  label: string;
+  /** Label x (pixel coordinates); baseline y is the legend's `labelY`. */
+  labelX: number;
+  /** Label baseline y (pixel coordinates). */
   labelY: number;
 }
 
@@ -1380,8 +1412,12 @@ export interface ResolvedColumn {
   sortable: boolean;
   /** Text alignment. */
   align: 'left' | 'center' | 'right';
+  /** Resolved field type (explicit `column.type`, else inferred from the data). */
+  type: 'quantitative' | 'nominal' | 'ordinal' | 'temporal';
+  /** Mobile priority: 1 leads the card, 2 is a label/value pair, 3 is hidden. */
+  priority: 1 | 2 | 3;
   /** Column cell type (determines rendering strategy). */
-  cellType: 'text' | 'heatmap' | 'category' | 'bar' | 'sparkline' | 'image' | 'flag';
+  cellType: 'text' | 'heatmap' | 'category' | 'bar' | 'sparkline' | 'delta' | 'image' | 'flag';
 }
 
 /** Base properties for all table cell types. */
@@ -1449,6 +1485,17 @@ export interface SparklineTableCell extends TableCellBase {
   sparklineData: SparklineData | null;
 }
 
+/** Cell rendering a signed change chip. */
+export interface DeltaTableCell extends TableCellBase {
+  cellType: 'delta';
+  /** Signed numeric change. */
+  delta: number;
+  /** Direction of the change, independent of valence. */
+  direction: 'up' | 'down' | 'flat';
+  /** Valence after `delta.invert` is applied. Drives the chip color. */
+  tone: 'positive' | 'negative' | 'neutral';
+}
+
 /** Cell with an image. */
 export interface ImageTableCell extends TableCellBase {
   cellType: 'image';
@@ -1476,6 +1523,7 @@ export type TableCell =
   | CategoryTableCell
   | BarTableCell
   | SparklineTableCell
+  | DeltaTableCell
   | ImageTableCell
   | FlagTableCell;
 
@@ -1509,6 +1557,14 @@ export interface SortState {
   direction: 'asc' | 'desc';
 }
 
+/** Sticky footer row summing the quantitative columns over the filtered rows. */
+export interface TableTotalRow {
+  /** Label shown in the first column. */
+  label: string;
+  /** One cell per column, in column order. Non-summable columns are blank. */
+  cells: TableCell[];
+}
+
 /**
  * TableLayout: the complete engine output for table visualizations.
  *
@@ -1530,7 +1586,16 @@ export interface TableLayout {
   search: { enabled: boolean; placeholder: string; query: string };
   /** Whether the first column is sticky. */
   stickyFirstColumn: boolean;
-  /** Whether compact mode is active. */
+  /** Resolved row density. */
+  density: 'condensed' | 'regular' | 'relaxed';
+  /** Whether zebra striping is active. */
+  striped: boolean;
+  /** Totals footer, present only when `totalRow` is enabled. */
+  totalRow?: TableTotalRow;
+  /**
+   * Whether condensed density is active.
+   * @deprecated Read `density === 'condensed'` instead.
+   */
   compact: boolean;
   /** Accessibility metadata. */
   a11y: { caption: string; summary: string };
@@ -1843,6 +1908,12 @@ export interface GeoMapFeatureMark {
   bounds: { x: number; y: number; width: number; height: number };
   /** Centroid in map-local coordinates. */
   centroid: [number, number];
+  /**
+   * Class index on the legend's class scale (quantitative mode only, and only
+   * for features that joined a value). The renderer stamps it as
+   * `data-bin-index` so hovering a legend swatch can dim everything else.
+   */
+  binIndex?: number;
 }
 
 /** A resolved map point mark with projected coordinates and visual properties. */
@@ -1882,6 +1953,10 @@ export interface GeoMapBorders {
   interiorStroke: string;
   /** Stroke color for outer boundary. */
   outlineStroke: string;
+  /** Stroke width for interior borders (thinner and lighter than the outline). */
+  interiorWidth: number;
+  /** Stroke width for the outer boundary. */
+  outlineWidth: number;
 }
 
 /**
@@ -1906,6 +1981,11 @@ export interface GeoMapLayout {
   pointCategoricalLegend: CategoricalLegendLayout | null;
   /** Continuous legend for the point color channel (null if no point color). */
   pointContinuousLegend: ContinuousLegendLayout | null;
+  /**
+   * Nested-circle size key for the point layer's `size` channel (null when the
+   * layer has no size encoding). Drawn bottom-right over the map.
+   */
+  pointSizeLegend: SizeLegendLayout | null;
   /** Continuous color legend for quantitative mode (null if hidden or categorical). */
   continuousLegend: ContinuousLegendLayout | null;
   /** Categorical swatch legend for nominal mode (null if hidden or quantitative). */
@@ -2119,8 +2199,12 @@ export interface CompileOptions {
 
 /** Extended compile options for table visualizations. */
 export interface CompileTableOptions extends CompileOptions {
-  /** Current sort state to apply. */
-  sort?: SortState;
+  /**
+   * Current sort state to apply. `undefined` falls back to `spec.sort` and
+   * then to the default sort (first inline-bar column, descending); `null`
+   * means the user explicitly cleared the sort, so no default applies.
+   */
+  sort?: SortState | null;
   /** Search query to filter rows. */
   search?: string;
   /** Current page (0-indexed). */

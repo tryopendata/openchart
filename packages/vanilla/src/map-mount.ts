@@ -54,6 +54,37 @@ function focusSignature(focus: GeoMapLayout['focus']): string | null {
   return `${ids}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.width)},${Math.round(t.height)},${t.padding}`;
 }
 
+/**
+ * Where a raised feature came from, so leaving puts it back.
+ *
+ * SVG has no z-index: the only way to draw a hovered feature's outline over its
+ * neighbours is to move it to the end of the group. That destroys paint order,
+ * which the entrance animation and the border meshes both depend on, so the
+ * original next sibling is remembered and restored on leave.
+ */
+const featureOrigin = new WeakMap<Element, Element | null>();
+
+function raiseFeature(el: Element): void {
+  const parent = el.parentNode;
+  if (!parent || el === parent.lastChild) return;
+  if (!featureOrigin.has(el)) {
+    featureOrigin.set(el, el.nextSibling as Element | null);
+  }
+  parent.appendChild(el);
+}
+
+function restoreFeatureOrder(el: Element): void {
+  const parent = el.parentNode;
+  if (!parent || !featureOrigin.has(el)) return;
+  const next = featureOrigin.get(el) ?? null;
+  featureOrigin.delete(el);
+  if (next && next.parentNode === parent) {
+    parent.insertBefore(el, next);
+  } else if (!next) {
+    parent.appendChild(el);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -245,7 +276,8 @@ export function createGeoMap(
       const handleMouseEnter = (e: Event) => {
         const mouseEvent = e as MouseEvent;
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
-        (el as SVGElement & ElementCSSInlineStyle).style.setProperty('filter', 'brightness(1.1)');
+        raiseFeature(el);
+        el.classList.add('oc-map-feature--hover');
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
           const x = mouseEvent.clientX - svgRect.left;
@@ -274,7 +306,8 @@ export function createGeoMap(
 
       const handleMouseLeave = () => {
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('cursor');
-        (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('filter');
+        el.classList.remove('oc-map-feature--hover');
+        restoreFeatureOrder(el);
         tooltipManager?.hide();
         options?.onMarkHover?.(null);
       };
@@ -301,6 +334,27 @@ export function createGeoMap(
         el.removeEventListener('mouseleave', handleMouseLeave);
         el.removeEventListener('click', handleClick);
       });
+    }
+
+    // Legend-bin hover: the one place dim-the-rest earns its keep on a map.
+    // Hovering a swatch is a deliberate "show me this class" gesture, unlike a
+    // pointer crossing features, where dimming 3000 paths per move is a
+    // repaint storm and a visible pulse.
+    const featuresGroup = svg.querySelector('.oc-map-features');
+    if (featuresGroup) {
+      for (const bin of svg.querySelectorAll('.oc-legend-bin[data-bin-index]')) {
+        const index = bin.getAttribute('data-bin-index');
+        if (index === null) continue;
+        const enter = () => featuresGroup.setAttribute('data-hover', index);
+        const leave = () => featuresGroup.removeAttribute('data-hover');
+        bin.addEventListener('mouseenter', enter);
+        bin.addEventListener('mouseleave', leave);
+        cleanups.push(() => {
+          bin.removeEventListener('mouseenter', enter);
+          bin.removeEventListener('mouseleave', leave);
+          featuresGroup.removeAttribute('data-hover');
+        });
+      }
     }
 
     // Wire point interactions

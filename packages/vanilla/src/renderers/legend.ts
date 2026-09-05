@@ -81,7 +81,10 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     g.appendChild(bar);
   } else {
     // Binned: contiguous class swatches, square-cornered (Datawrapper-style).
-    for (const bin of legend.bins) {
+    // `crispEdges` keeps the seams between classes on whole pixels; at 12px
+    // tall an antialiased seam reads as a sixth, paler class.
+    for (let i = 0; i < legend.bins.length; i++) {
+      const bin = legend.bins[i];
       const rect = createSVGElement('rect');
       rect.setAttribute('class', 'oc-legend-bin');
       setAttrs(rect, {
@@ -90,9 +93,20 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
         width: bin.width,
         height: legend.bar.height,
         fill: bin.color,
+        'shape-rendering': 'crispEdges',
       });
+      rect.setAttribute('data-bin-index', String(i));
       g.appendChild(rect);
     }
+  }
+
+  if (legend.title && legend.titleY !== undefined) {
+    const title = createSVGElement('text');
+    title.setAttribute('class', 'oc-legend-title');
+    setAttrs(title, { x: legend.bar.x, y: legend.titleY, 'text-anchor': 'start' });
+    applyTextStyle(title, legend.titleStyle ?? legend.labelStyle);
+    title.textContent = legend.title;
+    g.appendChild(title);
   }
 
   for (const tick of legend.ticks) {
@@ -100,6 +114,30 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     setAttrs(label, { x: tick.x, y: legend.labelY, 'text-anchor': tick.anchor });
     applyTextStyle(label, legend.labelStyle);
     label.textContent = tick.label;
+    g.appendChild(label);
+  }
+
+  if (legend.noData) {
+    const swatch = createSVGElement('rect');
+    swatch.setAttribute('class', 'oc-legend-nodata');
+    setAttrs(swatch, {
+      x: legend.noData.x,
+      y: legend.noData.y,
+      width: legend.noData.size,
+      height: legend.noData.size,
+      fill: legend.noData.fill,
+      'shape-rendering': 'crispEdges',
+    });
+    g.appendChild(swatch);
+
+    const label = createSVGElement('text');
+    setAttrs(label, {
+      x: legend.noData.labelX,
+      y: legend.noData.labelY,
+      'text-anchor': 'start',
+    });
+    applyTextStyle(label, legend.labelStyle);
+    label.textContent = legend.noData.label;
     g.appendChild(label);
   }
 

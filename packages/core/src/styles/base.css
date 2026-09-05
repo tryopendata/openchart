@@ -45,7 +45,9 @@
   }
 
   .oc-map-feature {
-    transition: opacity 400ms ease;
+    transition:
+      opacity var(--oc-hover-duration) ease-out,
+      stroke-width 140ms ease-out;
   }
 
   .oc-barlist {

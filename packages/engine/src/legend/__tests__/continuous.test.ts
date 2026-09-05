@@ -6,7 +6,7 @@ import { applyColorScaleRange } from '../../compile/color-scale-range';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeScales } from '../../layout/scales';
 import { computeLegendContent, placeLegend } from '../compute';
-import { sampleRampColors } from '../continuous';
+import { buildClassScale, sampleRampColors } from '../continuous';
 
 const theme = resolveTheme({});
 const strategy = {
@@ -314,5 +314,50 @@ describe('sampleRampColors', () => {
     expect(sampled).toHaveLength(3);
     expect(sampled[0]).toBe('#a');
     expect(sampled[2]).toBe('#f');
+  });
+});
+
+describe('buildClassScale', () => {
+  const ramp = ['#100', '#200', '#300', '#400', '#500', '#600'];
+  const channel = { field: 'value', type: 'quantitative' as const };
+
+  it('puts quantize breaks on round numbers', () => {
+    const scale = buildClassScale([3, 17, 42, 88, 96], channel, ramp, 5);
+    for (const b of scale.breaks) {
+      expect(b % 10).toBe(0);
+    }
+    expect(scale.colors).toHaveLength(scale.breaks.length + 1);
+  });
+
+  it('classes a value into the swatch the legend would draw for it', () => {
+    const values = Array.from({ length: 200 }, (_, i) => i * 0.7);
+    const scale = buildClassScale(values, channel, ramp, 5);
+    for (const v of values) {
+      expect(scale.colors[scale.binIndex(v)]).toBe(scale.color(v));
+    }
+  });
+
+  it('forces an odd, zero-centered classing for a diverging ramp', () => {
+    const scale = buildClassScale([-3, 1, 5], channel, ramp, 5, { diverging: true });
+    expect(scale.breaks).toEqual([-3, -1, 1, 3]);
+    expect(scale.colors).toHaveLength(5);
+    // Zero sits in the middle class, which is what makes the neutral color mean
+    // "no change".
+    expect(scale.binIndex(0)).toBe(2);
+  });
+
+  it('honors an authored quantile scale instead of quantizing', () => {
+    const quantile = { ...channel, scale: { type: 'quantile' as const } };
+    const scale = buildClassScale([1, 2, 3, 4, 100], quantile, ramp, 5);
+    // Quantile breaks follow the data distribution, not round numbers.
+    expect(scale.breaks).toHaveLength(4);
+    expect(scale.breaks[scale.breaks.length - 1]).toBeLessThan(100);
+  });
+
+  it('collapses to one class when every value is identical', () => {
+    const scale = buildClassScale([7, 7, 7], channel, ramp, 5);
+    expect(scale.breaks).toEqual([]);
+    expect(scale.colors).toHaveLength(1);
+    expect(scale.binIndex(7)).toBe(0);
   });
 });

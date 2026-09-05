@@ -24,6 +24,7 @@ import type {
   LayerSpec,
   MarkDef,
   SankeySpec,
+  TableDensity,
   TableSpec,
   TileMapSpec,
   VizSpec,
@@ -438,7 +439,28 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   };
 }
 
-function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTableSpec {
+/**
+ * Resolve row density. `density` wins; the deprecated `compact` flag maps to
+ * `'condensed'` and warns once.
+ */
+function normalizeTableDensity(spec: TableSpec, warnings: string[]): TableDensity {
+  if (spec.density) return spec.density;
+  if (spec.compact) {
+    warnings.push('[openchart] table "compact" is deprecated; use density: "condensed" instead.');
+    return 'condensed';
+  }
+  return 'regular';
+}
+
+function normalizeTableSpec(spec: TableSpec, warnings: string[]): NormalizedTableSpec {
+  const density = normalizeTableDensity(spec, warnings);
+  const totalRow =
+    spec.totalRow === true
+      ? { label: 'Total' }
+      : spec.totalRow && typeof spec.totalRow === 'object'
+        ? { label: spec.totalRow.label ?? 'Total' }
+        : undefined;
+
   return {
     type: 'table',
     data: spec.data,
@@ -450,7 +472,11 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
     search: spec.search ?? false,
     pagination: spec.pagination ?? false,
     stickyFirstColumn: spec.stickyFirstColumn ?? false,
-    compact: spec.compact ?? false,
+    density,
+    striped: spec.striped ?? false,
+    sort: spec.sort,
+    totalRow,
+    compact: density === 'condensed',
     responsive: spec.responsive ?? true,
     animation: spec.animation,
     watermark: spec.watermark ?? true,
@@ -596,7 +622,10 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
     geo: {
       features: spec.geo.features,
       idField: spec.geo.idField ?? 'id',
-      projection: spec.geo.projection ?? 'albersUsa',
+      // Left undefined on purpose: compileGeoMap infers the projection from the
+      // topology (resolveDefaultProjection) so a pre-projected atlas doesn't get
+      // silently re-projected by an albersUsa default.
+      projection: spec.geo.projection,
       focus: spec.geo.focus ?? null,
     },
     data: spec.data,

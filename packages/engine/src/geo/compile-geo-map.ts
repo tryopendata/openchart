@@ -13,6 +13,7 @@ import type {
   LegendEntry,
   ResolvedAnimation,
   ResolvedTheme,
+  SizeLegendLayout,
   TextStyle,
   TooltipContent,
   TooltipField,
@@ -27,6 +28,7 @@ import {
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  isOpaqueColor,
   resolveTheme,
   SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
@@ -40,12 +42,15 @@ import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { resolveChromeLayout } from '../layout/shared';
 import {
+  type ClassScale,
   CONTINUOUS_BAR_HEIGHT,
   CONTINUOUS_LABEL_GAP,
+  classScaleForChannel,
   computeContinuousLegendContentForChannel,
 } from '../legend/continuous';
+import { computeSizeLegendContent } from '../legend/size';
 import { joinDataToFeatures } from './join';
-import { createProjection } from './projections';
+import { createProjection, resolveDefaultProjection } from './projections';
 import type { NormalizedGeoMapSpec } from './types';
 
 /**
@@ -54,6 +59,27 @@ import type { NormalizedGeoMapSpec } from './types';
  * gap to the frame edge is OVERLAY_LEGEND_INSET - 10.
  */
 const OVERLAY_LEGEND_INSET = 18;
+
+/** Gap between the color bar and the detached "no data" swatch. */
+const NO_DATA_SWATCH_GAP = 12;
+
+/** Gap between the "no data" swatch and its label. */
+const NO_DATA_LABEL_GAP = 5;
+
+/**
+ * Legend title: what the colors mean, plus the unit the format implies.
+ * A key with bare numbers on it is the single most common newsroom map defect.
+ */
+function legendTitleFor(colorEncoding: EncodingChannel): string | undefined {
+  const base = colorEncoding.title ?? colorEncoding.field;
+  if (!base) return undefined;
+  const format = colorEncoding.format;
+  if (typeof format === 'string') {
+    if (format.includes('%')) return `${base} (%)`;
+    if (format.includes('$')) return `${base} ($)`;
+  }
+  return base;
+}
 
 function validateGeoFeatures(geo: NormalizedGeoMapSpec['geo']): Topology {
   if (!geo.features) {
@@ -200,8 +226,12 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // Compute legend block height. For quantitative maps, use the continuous
   // legend infrastructure; for categorical, estimate a single swatch row.
   let legendBlockHeight = 0;
+  let legendTitle: string | undefined;
   let continuousContent: ReturnType<typeof computeContinuousLegendContentForChannel> = null;
-  if (showChoroplethLegend && colorEncoding && isQuantitative) {
+  // The one class scale the fills AND the swatches read. Built here (before the
+  // marks) so the legend can never key a color no feature carries.
+  let classScale: ClassScale | null = null;
+  if (colorEncoding && isQuantitative) {
     const colorValues: number[] = [];
     for (const row of mapSpec.data) {
       const v = row[colorEncoding.field];
@@ -210,23 +240,34 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         if (!Number.isNaN(n)) colorValues.push(n);
       }
     }
-    // Maps always use a quantile color scale, so tell the legend infra
-    // to produce binned swatches rather than a gradient bar.
+    // Maps class their values rather than ramping them continuously, so the
+    // legend infra draws swatches. `quantize` (round breaks) is the default;
+    // an authored quantile/threshold scale wins.
     const legendChannel: EncodingChannel = {
       ...colorEncoding,
-      scale: { ...colorEncoding.scale, type: 'quantile' },
+      scale: { ...colorEncoding.scale, type: colorEncoding.scale?.type ?? 'quantize' },
     };
-    continuousContent = computeContinuousLegendContentForChannel(
-      colorValues,
-      legendChannel,
-      theme,
-      fullArea.width,
-    );
-    if (continuousContent) {
-      const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
-      legendBlockHeight = continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+    if (colorValues.length > 0) {
+      classScale = classScaleForChannel(colorValues, legendChannel, theme);
     }
-  } else if (showChoroplethLegend && colorEncoding) {
+    if (showChoroplethLegend) {
+      continuousContent = computeContinuousLegendContentForChannel(
+        colorValues,
+        legendChannel,
+        theme,
+        fullArea.width,
+        classScale ?? undefined,
+      );
+    }
+    if (continuousContent) {
+      legendTitle = legendTitleFor(colorEncoding);
+      const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+      const titleRowHeight = legendTitle ? labelRowHeight : 0;
+      legendBlockHeight =
+        titleRowHeight + continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+    }
+  }
+  if (legendBlockHeight === 0 && showChoroplethLegend && colorEncoding && !isQuantitative) {
     const labelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
     legendBlockHeight = Math.max(10, labelHeight) + 6;
   }
@@ -253,7 +294,17 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // 9. Projection + path generator
   // When points are present, inset the projection by the max point radius so
   // circles at the geographic edges don't get clipped by the viewBox.
-  const projectionType = mapSpec.geo.projection;
+  const projectionType = mapSpec.geo.projection ?? resolveDefaultProjection(topology);
+  if (!mapSpec.geo.projection && projectionType === 'identity') {
+    compileWarnings.push({
+      code: 'PROJECTION_INFERRED',
+      message:
+        'No geo.projection was given and the topology looks pre-projected (its bounding box is ' +
+        'outside longitude/latitude range), so projection: "identity" was inferred. ' +
+        'Set geo.projection explicitly to silence this.',
+      context: { projection: projectionType },
+    });
+  }
   let pointInset = 0;
   if (mapSpec.points) {
     const sizeRange = mapSpec.points.size?.scale?.range as readonly [number, number] | undefined;
@@ -318,8 +369,9 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // 13. Build color scale + feature marks
   const formatter =
     buildD3Formatter(mapSpec.encoding?.color?.format ?? mapSpec.valueFormat) ?? formatNumber;
-  const neutralFill = isDarkMode ? '#2a2a2a' : '#e8e8e8';
-  const neutralStroke = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  // The theme's own neutral ramp, so a warm or cool theme gets a warm or cool
+  // "no data" gray instead of an uninvited zinc.
+  const neutralFill = isDarkMode ? theme.colors.neutral[800] : theme.colors.neutral[100];
 
   let featureMarks: GeoMapFeatureMark[];
   let continuousLegend: ContinuousLegendLayout | null = null;
@@ -331,7 +383,6 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       geoFeatures,
       pathGen,
       neutralFill,
-      neutralStroke,
       droppedFeatures,
     });
   } else if (isQuantitative) {
@@ -340,10 +391,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       pathGen,
       joined,
       colorField: colorEncoding.field,
-      palette: colorEncoding.scale?.scheme ?? 'blue',
-      isDarkMode: !!isDarkMode,
+      classScale,
       neutralFill,
-      neutralStroke,
       formatter,
       droppedFeatures,
     });
@@ -365,6 +414,14 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         legendPosition === 'bottom'
           ? fullArea.y + mapAreaHeight + legendReserveGap
           : fullArea.y + legendReserveGap;
+      const titleStyle: TextStyle | undefined = legendTitle
+        ? {
+            ...labelStyle,
+            fontWeight: theme.fonts.weights.medium,
+            fill: theme.colors.neutral.secondary,
+          }
+        : undefined;
+      const titleRowHeight = legendTitle ? Math.ceil(theme.fonts.sizes.small * 1.3) : 0;
       const bounds = {
         x: legendX,
         y: legendY,
@@ -373,10 +430,33 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       };
       const bar = {
         x: bounds.x,
-        y: bounds.y,
+        y: bounds.y + titleRowHeight,
         width: continuousContent.barWidth,
         height: continuousContent.barHeight,
       };
+      const labelY = bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize;
+
+      // "No data" is a class of its own, detached from the ramp so nobody reads
+      // it as the low end of the scale. Only drawn when the map actually has
+      // holes in it.
+      const hasUnmatched = featureMarks.some((m) => {
+        const raw = m.data?.[colorEncoding.field];
+        return raw == null || Number.isNaN(Number(raw));
+      });
+      const noDataX = bar.x + bar.width + NO_DATA_SWATCH_GAP;
+      const noData =
+        hasUnmatched && noDataX + bar.height + NO_DATA_LABEL_GAP < fullArea.x + fullArea.width
+          ? {
+              x: noDataX,
+              y: bar.y,
+              size: bar.height,
+              fill: neutralFill,
+              label: 'No data',
+              labelX: noDataX + bar.height + NO_DATA_LABEL_GAP,
+              labelY: bar.y + bar.height,
+            }
+          : undefined;
+
       continuousLegend = {
         type: 'continuous' as const,
         mode: continuousContent.mode,
@@ -387,7 +467,11 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         colorStops: continuousContent.colorStops,
         bins: continuousContent.bins.map((b) => ({ ...b, x: b.x + bar.x })),
         ticks: continuousContent.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
-        labelY: bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize,
+        labelY,
+        title: legendTitle,
+        titleStyle,
+        titleY: legendTitle ? bounds.y + labelStyle.fontSize : undefined,
+        noData,
       };
     }
   } else {
@@ -399,7 +483,6 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       colorScale: colorEncoding.scale,
       isDarkMode: !!isDarkMode,
       neutralFill,
-      neutralStroke,
       theme,
       fullArea,
       mapAreaHeight,
@@ -439,14 +522,25 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const interiorPath = pathGen(interiorMesh) ?? '';
   const outlinePath = pathGen(outlineMesh) ?? '';
 
-  const interiorStroke = isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
-  const outlineStroke = isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
-  const borders: GeoMapBorders = { interiorPath, outlinePath, interiorStroke, outlineStroke };
+  // Border hierarchy: interior lines are hairline-thin and quiet so they read as
+  // divisions inside one shape; the outline is heavier and darker so the country
+  // (or state set) reads as a single silhouette against the page.
+  const interiorStroke = isDarkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)';
+  const outlineStroke = isDarkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.55)';
+  const borders: GeoMapBorders = {
+    interiorPath,
+    outlinePath,
+    interiorStroke,
+    outlineStroke,
+    interiorWidth: 0.6,
+    outlineWidth: 1.1,
+  };
 
   // 15b. Point marks (symbol layer above choropleth)
   const pointMarks: GeoMapPointMark[] = [];
   let pointCategoricalLegend: CategoricalLegendLayout | null = null;
   let pointContinuousLegend: ContinuousLegendLayout | null = null;
+  let pointSizeLegend: SizeLegendLayout | null = null;
 
   if (mapSpec.points) {
     const pts = mapSpec.points;
@@ -518,8 +612,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     }
 
     const defaultFill = CATEGORICAL_PALETTE[0];
-    const pointOpacity = pts.opacity ?? 0.65;
-    let animIndex = 0;
+    // Bubbles read as one map layer, not as tinted glass: the knockout stroke
+    // (below) is what separates overlapping circles, so the fill can stay near
+    // full ink instead of muddying every overlap into a third color.
+    const pointOpacity = pts.opacity ?? 0.85;
     const droppedPoints: Array<[number, number]> = [];
 
     for (let i = 0; i < pts.data.length; i++) {
@@ -538,7 +634,12 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       const fill =
         pointColorScale && pts.color ? pointColorScale(row[pts.color.field]) : defaultFill;
       const key = keyChannel ? String(row[keyChannel.field] ?? i) : String(i);
-      const stroke = isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)';
+      // Knockout ring in the canvas color: overlapping bubbles stay countable.
+      const stroke = isOpaqueColor(theme.colors.background)
+        ? theme.colors.background
+        : isDarkMode
+          ? '#18181b'
+          : '#ffffff';
 
       pointMarks.push({
         type: 'map-point',
@@ -552,8 +653,17 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         key,
         data: row as Record<string, unknown>,
         aria: { role: 'img', label: key },
-        animationIndex: animIndex++,
+        animationIndex: 0,
       });
+    }
+
+    // Large under small: a big bubble drawn last swallows every small one
+    // inside it. Sorting by radius descending puts the small ones on top, and
+    // the animation order is reassigned afterwards so the entrance still runs
+    // in paint order.
+    pointMarks.sort((a, b) => b.r - a.r);
+    for (let i = 0; i < pointMarks.length; i++) {
+      pointMarks[i].animationIndex = i;
     }
 
     if (droppedPoints.length > 0) {
@@ -694,6 +804,45 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           bins: ptContinuousContent.bins.map((b) => ({ ...b, x: b.x + bar.x })),
           ticks: ptContinuousContent.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
           labelY: bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize,
+        };
+      }
+    }
+
+    // Point size key: nested circles, bottom-right over the map. Without it a
+    // bubble map asks the reader to guess what "twice the area" is worth.
+    if (pts.size && showLegend) {
+      const sizeRange = (pts.size.scale?.range as [number, number] | undefined) ?? [
+        ...SIZE_SCALE_DEFAULTS.mapPoint.range,
+      ];
+      const content = computeSizeLegendContent(pts.size, pts.data, theme, {
+        curve: SIZE_SCALE_DEFAULTS.mapPoint.curve,
+        range: sizeRange,
+      });
+      if (content) {
+        const mapTop =
+          legendPosition === 'top' && legendBlockHeight > 0
+            ? fullArea.y + legendBlockHeight + legendReserveGap
+            : fullArea.y;
+        pointSizeLegend = {
+          type: 'size',
+          channel: 'size',
+          position: 'bottom-right',
+          bounds: {
+            x: fullArea.x + fullArea.width - content.width - OVERLAY_LEGEND_INSET,
+            y: mapTop + mapAreaHeight - content.height - OVERLAY_LEGEND_INSET,
+            width: content.width,
+            height: content.height,
+          },
+          circles: content.circles,
+          stroke: theme.colors.neutral[400],
+          labelStyle: {
+            fontFamily: theme.fonts.family,
+            fontSize: theme.fonts.sizes.small,
+            fontWeight: theme.fonts.weights.normal,
+            fill: theme.colors.neutral.secondary,
+            lineHeight: 1.2,
+            fontVariant: 'tabular-nums',
+          },
         };
       }
     }
@@ -857,6 +1006,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     pointMarks,
     pointCategoricalLegend,
     pointContinuousLegend,
+    pointSizeLegend,
     tooltipDescriptors,
     a11y,
     theme,
@@ -881,12 +1031,11 @@ interface BasemapOptions {
   geoFeatures: GeoJSON.Feature[];
   pathGen: ReturnType<typeof geoPath>;
   neutralFill: string;
-  neutralStroke: string;
   droppedFeatures: string[];
 }
 
 function buildBasemapMarks(opts: BasemapOptions): GeoMapFeatureMark[] {
-  const { geoFeatures, pathGen, neutralFill, neutralStroke, droppedFeatures } = opts;
+  const { geoFeatures, pathGen, neutralFill, droppedFeatures } = opts;
   const marks: GeoMapFeatureMark[] = [];
   let animIndex = 0;
 
@@ -917,8 +1066,10 @@ function buildBasemapMarks(opts: BasemapOptions): GeoMapFeatureMark[] {
       type: 'map-feature',
       path: pathD,
       fill: neutralFill,
-      stroke: neutralStroke,
-      strokeWidth: 0.5,
+      // The border meshes draw every line on this map. A per-feature stroke on
+      // top of them double-draws each shared edge into a visible wash.
+      stroke: 'none',
+      strokeWidth: 0,
       id: featureId,
       name,
       data: null,
@@ -941,10 +1092,9 @@ interface QuantitativeOptions {
   pathGen: ReturnType<typeof geoPath>;
   joined: Map<string | number, Record<string, unknown>>;
   colorField: string;
-  palette: string;
-  isDarkMode: boolean;
+  /** The shared class scale (null only when no numeric values exist). */
+  classScale: ClassScale | null;
   neutralFill: string;
-  neutralStroke: string;
   formatter: (n: number) => string;
   droppedFeatures: string[];
 }
@@ -957,26 +1107,11 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     pathGen,
     joined,
     colorField,
-    palette,
-    isDarkMode,
+    classScale,
     neutralFill,
-    neutralStroke,
     formatter,
     droppedFeatures,
   } = opts;
-
-  // Collect values for scale domain
-  const values: number[] = [];
-  for (const row of joined.values()) {
-    const raw = row[colorField];
-    if (raw != null) {
-      const v = Number(raw);
-      if (!Number.isNaN(v)) values.push(v);
-    }
-  }
-
-  const paletteStops = [...(SEQUENTIAL_PALETTES[palette] ?? SEQUENTIAL_PALETTES.blue)];
-  const colorScale = scaleQuantile<string>().domain(values).range(paletteStops);
 
   const marks: GeoMapFeatureMark[] = [];
   let animIndex = 0;
@@ -995,16 +1130,16 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     const hasData = dataRow !== null;
 
     let fill = neutralFill;
-    let stroke = neutralStroke;
-    if (hasData) {
+    let binIndex: number | undefined;
+    if (hasData && classScale) {
       const raw = dataRow[colorField];
       if (raw != null) {
         const v = Number(raw);
         if (!Number.isNaN(v)) {
-          fill = colorScale(v);
+          fill = classScale.color(v);
+          binIndex = classScale.binIndex(v);
         }
       }
-      stroke = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
     }
 
     const props = feat.properties as Record<string, unknown> | null;
@@ -1025,8 +1160,8 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
       type: 'map-feature',
       path: pathD,
       fill,
-      stroke,
-      strokeWidth: 0.5,
+      stroke: 'none',
+      strokeWidth: 0,
       id: featureId,
       name,
       data: dataRow,
@@ -1039,6 +1174,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
       animationIndex: animIndex++,
       bounds,
       centroid: [cx, cy],
+      binIndex,
     });
   }
 
@@ -1057,7 +1193,6 @@ interface CategoricalOptions {
   colorScale?: { domain?: unknown; range?: unknown };
   isDarkMode: boolean;
   neutralFill: string;
-  neutralStroke: string;
   theme: ResolvedTheme;
   fullArea: { x: number; y: number; width: number; height: number };
   mapAreaHeight: number;
@@ -1079,7 +1214,6 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     colorScale: scaleConfig,
     isDarkMode,
     neutralFill,
-    neutralStroke,
     theme,
     fullArea,
     mapAreaHeight,
@@ -1134,14 +1268,12 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     const hasData = dataRow !== null;
 
     let fill = neutralFill;
-    let stroke = neutralStroke;
     if (hasData) {
       const raw = dataRow[colorField];
       if (raw != null) {
         const cat = String(raw);
         fill = categoryColors.get(cat) ?? neutralFill;
       }
-      stroke = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
     }
 
     const props = feat.properties as Record<string, unknown> | null;
@@ -1162,8 +1294,8 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
       type: 'map-feature',
       path: pathD,
       fill,
-      stroke,
-      strokeWidth: 0.5,
+      stroke: 'none',
+      strokeWidth: 0,
       id: featureId,
       name,
       data: dataRow,
@@ -1362,14 +1494,17 @@ function emptyLayout(
     borders: {
       interiorPath: '',
       outlinePath: '',
-      interiorStroke: 'rgba(0,0,0,0.15)',
-      outlineStroke: 'rgba(0,0,0,0.3)',
+      interiorStroke: 'rgba(0,0,0,0.25)',
+      outlineStroke: 'rgba(0,0,0,0.55)',
+      interiorWidth: 0.6,
+      outlineWidth: 1.1,
     },
     continuousLegend: null,
     categoricalLegend: null,
     pointMarks: [],
     pointCategoricalLegend: null,
     pointContinuousLegend: null,
+    pointSizeLegend: null,
     tooltipDescriptors: new Map(),
     a11y: {
       altText: 'Empty map',

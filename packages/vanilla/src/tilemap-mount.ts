@@ -232,7 +232,9 @@ export function createTileMap(
       if (!tilesByStateCode.has(t.stateCode)) tilesByStateCode.set(t.stateCode, t);
     }
 
-    // Wire tooltip on tile elements
+    // Wire tooltip on tile elements. The group carries the hover state so the
+    // dim rule can be a single class toggle rather than 51 of them.
+    const tilesGroup = svg.querySelector('.oc-tilemap-tiles');
     const tileElements = svg.querySelectorAll('.oc-tilemap-tile');
     for (const el of tileElements) {
       const stateCode = el.getAttribute('data-state');
@@ -243,6 +245,8 @@ export function createTileMap(
 
       const handleMouseEnter = (e: Event) => {
         const mouseEvent = e as MouseEvent;
+        tilesGroup?.classList.add('oc-hover-active');
+        el.classList.add('oc-tilemap-tile--hover');
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
           const x = mouseEvent.clientX - svgRect.left;
@@ -270,6 +274,8 @@ export function createTileMap(
       };
 
       const handleMouseLeave = () => {
+        tilesGroup?.classList.remove('oc-hover-active');
+        el.classList.remove('oc-tilemap-tile--hover');
         tooltipManager?.hide();
         options?.onTileHover?.(null);
       };

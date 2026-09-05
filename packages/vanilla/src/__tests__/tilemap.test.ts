@@ -36,6 +36,23 @@ describe('createTileMap', () => {
     instance.destroy();
   });
 
+  it('hovering a tile arms the group dim and outlines that tile', () => {
+    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+
+    const group = container.querySelector('.oc-tilemap-tiles')!;
+    const tile = container.querySelector('.oc-tilemap-tile')!;
+
+    tile.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(group.classList.contains('oc-hover-active')).toBe(true);
+    expect(tile.classList.contains('oc-tilemap-tile--hover')).toBe(true);
+
+    tile.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(group.classList.contains('oc-hover-active')).toBe(false);
+    expect(tile.classList.contains('oc-tilemap-tile--hover')).toBe(false);
+
+    instance.destroy();
+  });
+
   it('renders all 51 state tiles', () => {
     const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
 

@@ -116,7 +116,9 @@ const sparklineSpec: TableSpec = {
   columns: [
     { key: 'ticker', label: 'Ticker', sortable: true },
     { key: 'price', label: 'Price', format: '$,.2f', sortable: true, align: 'right' },
-    { key: 'trend', label: '8-week trend', sparkline: { type: 'line' } },
+    // Prices here span 84 to 495, so a shared domain (the default) would
+    // flatten the cheap tickers into straight lines.
+    { key: 'trend', label: '8-week trend', sparkline: { type: 'line', domain: 'row' } },
     { key: 'flows', label: 'Fund flows', sparkline: { type: 'column' } },
     { key: 'flows', label: 'Volume', sparkline: { type: 'bar' } },
   ],
@@ -387,6 +389,62 @@ function ControlledTable() {
 }
 
 // ---------------------------------------------------------------------------
+// 9. Density, delta chips, and totals
+// ---------------------------------------------------------------------------
+
+const deltaSpec: TableSpec = {
+  type: 'table',
+  data: [...stockPerformance.data].slice(0, 8),
+  columns: [
+    { key: 'ticker', label: 'Ticker' },
+    { key: 'name', label: 'Company' },
+    { key: 'price', label: 'Price', format: '$,.2f' },
+    { key: 'ytdChange', label: 'YTD', format: '.1f', delta: true },
+    { key: 'trend', label: '8-week trend', sparkline: { type: 'line', domain: 'row' } },
+  ],
+  chrome: {
+    title: 'A Year of Gains, One Chip at a Time',
+    subtitle:
+      'A delta column renders as a signed chip: direction in the arrow, valence in the color',
+    source: stockPerformance.source,
+  },
+  striped: true,
+};
+
+const totalsSpec: TableSpec = {
+  type: 'table',
+  data: [...companyBrands.data],
+  columns: [
+    { key: 'company', label: 'Company' },
+    { key: 'revenue', label: 'FY24 revenue ($B)', format: ',.0f', bar: {} },
+  ],
+  chrome: {
+    title: 'Big Tech, Summed',
+    subtitle: 'Condensed rows with a sticky total over the filtered set',
+    source: companyBrands.source,
+  },
+  density: 'condensed',
+  totalRow: true,
+};
+
+const relaxedSpec: TableSpec = {
+  type: 'table',
+  data: [...countryIndicators.data].slice(0, 6),
+  columns: [
+    { key: 'country', label: 'Country' },
+    { key: 'population', label: 'Population', format: 'compact' },
+    { key: 'gdpPerCapita', label: 'GDP/capita (PPP)', format: '$,.0f' },
+    { key: 'lifeExpectancy', label: 'Life exp.', format: '.1f' },
+  ],
+  chrome: {
+    title: 'Room to Read',
+    subtitle: 'Relaxed density at 56px rows, with the population column formatted compact',
+    source: countryIndicators.source,
+  },
+  density: 'relaxed',
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -408,7 +466,7 @@ export const Tables = () => (
     <Section
       id="cell-types"
       title="Cell types"
-      lede="Each column opts into at most one visual feature. Precedence when several are set: sparkline, bar, heatmap, image, flag, then category colors."
+      lede="Each column opts into at most one visual feature. Precedence when several are set: sparkline, bar, delta, heatmap, image, flag, then category colors."
     >
       <Demo
         id="heatmap-cells"
@@ -445,6 +503,31 @@ export const Tables = () => (
         title="Category color cells"
         description="Map each categorical value to a fixed color chip, turning the column itself into an inline legend."
         spec={categorySpec}
+      />
+    </Section>
+
+    <Section
+      id="density-and-totals"
+      title="Density, deltas & totals"
+      lede="Rows run at 40, 48, or 56px via density. A delta column becomes a signed chip, and totalRow adds a sticky footer summing every quantitative column over the filtered rows."
+    >
+      <Demo
+        id="delta-chips"
+        title="Delta chips"
+        description="A change column renders as an arrowed, tinted chip. Striping is opt-in; hairlines are the default."
+        spec={deltaSpec}
+      />
+      <Demo
+        id="totals-condensed"
+        title="Condensed rows with a total"
+        description="Condensed density with a sticky totals footer. The sum follows search and sort, not the current page."
+        spec={totalsSpec}
+      />
+      <Demo
+        id="relaxed-density"
+        title="Relaxed density"
+        description="Relaxed rows for short, scannable tables, with format: 'compact' abbreviating the population column."
+        spec={relaxedSpec}
       />
     </Section>
 

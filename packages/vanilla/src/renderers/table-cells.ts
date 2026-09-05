@@ -8,6 +8,7 @@
 import type {
   BarTableCell,
   CategoryTableCell,
+  DeltaTableCell,
   FlagTableCell,
   HeatmapTableCell,
   ImageTableCell,
@@ -255,7 +256,7 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
     polyline.setAttribute('points', scaledPointsStr);
     polyline.setAttribute('fill', 'none');
     polyline.setAttribute('stroke', sparklineData.color);
-    polyline.setAttribute('stroke-width', '1.5');
+    polyline.setAttribute('stroke-width', '1.25');
     polyline.setAttribute('stroke-linejoin', 'round');
     polyline.setAttribute('vector-effect', 'non-scaling-stroke');
     svg.appendChild(polyline);
@@ -374,6 +375,35 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
   return td;
 }
 
+/** Arrow glyph per direction. Flat uses an en dash, not a third arrow. */
+const DELTA_GLYPH: Record<DeltaTableCell['direction'], string> = {
+  up: '\u25b2',
+  down: '\u25bc',
+  flat: '\u2013',
+};
+
+/** Render a signed change chip. */
+export function renderDeltaCell(cell: DeltaTableCell): HTMLTableCellElement {
+  const td = document.createElement('td');
+  applyCellStyle(td, cell);
+
+  const chip = document.createElement('span');
+  chip.className = `oc-table-delta oc-table-delta--${cell.tone}`;
+
+  const arrow = document.createElement('span');
+  arrow.className = 'oc-table-delta-arrow';
+  arrow.setAttribute('aria-hidden', 'true');
+  arrow.textContent = DELTA_GLYPH[cell.direction];
+  chip.appendChild(arrow);
+
+  const value = document.createElement('span');
+  value.textContent = cell.formattedValue;
+  chip.appendChild(value);
+
+  td.appendChild(chip);
+  return td;
+}
+
 /** Render a cell with an image. */
 export function renderImageCell(cell: ImageTableCell): HTMLTableCellElement {
   const td = document.createElement('td');
@@ -435,6 +465,8 @@ export function renderCell(cell: TableCell): HTMLTableCellElement {
       return renderBarCell(cell);
     case 'sparkline':
       return renderSparklineCell(cell);
+    case 'delta':
+      return renderDeltaCell(cell);
     case 'image':
       return renderImageCell(cell);
     case 'flag':

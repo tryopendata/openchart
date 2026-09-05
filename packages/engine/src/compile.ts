@@ -1501,7 +1501,8 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
  * @returns Fully resolved TableLayout.
  */
 export function compileTable(spec: unknown, options: CompileTableOptions): TableLayout {
-  const { spec: normalized } = compileSpec(spec);
+  const { spec: normalized, warnings: normalizeWarnings } = compileSpec(spec);
+  emitSpecWarnings(normalizeWarnings, options.onWarn);
 
   const normType =
     'type' in normalized ? (normalized as unknown as Record<string, unknown>).type : undefined;

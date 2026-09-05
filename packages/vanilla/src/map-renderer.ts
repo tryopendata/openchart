@@ -141,7 +141,7 @@ function renderBorders(parent: SVGElement, borders: GeoMapBorders): void {
       d: borders.interiorPath,
       fill: 'none',
       stroke: borders.interiorStroke,
-      'stroke-width': 0.5,
+      'stroke-width': borders.interiorWidth,
       'stroke-linejoin': 'round',
     });
     interior.setAttribute('class', 'oc-map-border-interior');
@@ -156,7 +156,7 @@ function renderBorders(parent: SVGElement, borders: GeoMapBorders): void {
       d: borders.outlinePath,
       fill: 'none',
       stroke: borders.outlineStroke,
-      'stroke-width': 1,
+      'stroke-width': borders.outlineWidth,
       'stroke-linejoin': 'round',
     });
     outline.setAttribute('class', 'oc-map-border-outline');
@@ -222,6 +222,11 @@ function renderFeatures(
     });
     path.setAttribute('data-feature-id', String(feature.id));
     path.setAttribute('data-key', String(feature.id));
+    // The class this feature's value fell in. Hovering a legend swatch dims
+    // every feature whose index does not match (CSS in interaction.css).
+    if (feature.binIndex !== undefined) {
+      path.setAttribute('data-bin-index', String(feature.binIndex));
+    }
     if (feature.name) {
       path.setAttribute('data-feature-name', feature.name);
     }
@@ -452,6 +457,24 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
     });
     svg.appendChild(bg);
     renderLegend(svg, ptLegend);
+  }
+
+  // Point size key: nested circles bottom-right, on the same backdrop treatment
+  // as the point color legend so it stays readable over geography.
+  if (layout.pointSizeLegend) {
+    const sizeLegend = layout.pointSizeLegend;
+    const pad = 10;
+    const bg = createSVGElement('rect');
+    setAttrs(bg, {
+      x: sizeLegend.bounds.x - pad,
+      y: sizeLegend.bounds.y - pad,
+      width: sizeLegend.bounds.width + pad * 2,
+      height: sizeLegend.bounds.height + pad * 2,
+      rx: 6,
+      fill: layout.theme.isDark ? 'rgba(24,24,27,0.9)' : 'rgba(255,255,255,0.9)',
+    });
+    svg.appendChild(bg);
+    renderLegend(svg, sizeLegend);
   }
 
   // Render watermark
