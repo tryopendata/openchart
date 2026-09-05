@@ -161,6 +161,13 @@ function estimateYAxisLabelWidth(
     const v = Number(row[yField]);
     if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
   }
+  // Round to 2 significant figures to approximate d3 tick values, which land
+  // at round numbers. Without this, a max of 80,505,294 formatted with "$~s"
+  // produces "$80.5053M" while actual ticks show "$80M", over-reserving space.
+  if (maxAbsVal > 0) {
+    const mag = 10 ** (Math.floor(Math.log10(maxAbsVal)) - 1);
+    maxAbsVal = Math.ceil(maxAbsVal / mag) * mag;
+  }
   const ctx = computeFieldFormatContext(data.map((r) => r[yField]));
   let sampleLabel: string;
   if (yAxisFormat) {
