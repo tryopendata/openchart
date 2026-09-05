@@ -161,6 +161,13 @@ function estimateYAxisLabelWidth(
     const v = Number(row[yField]);
     if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
   }
+  // Round to 2 significant figures to approximate d3 tick values, which land
+  // at round numbers. Without this, a max of 80,505,294 formatted with "$~s"
+  // produces "$80.5053M" while actual ticks show "$80M", over-reserving space.
+  if (maxAbsVal > 0) {
+    const mag = 10 ** (Math.floor(Math.log10(maxAbsVal)) - 1);
+    maxAbsVal = Math.ceil(maxAbsVal / mag) * mag;
+  }
   const ctx = computeFieldFormatContext(data.map((r) => r[yField]));
   let sampleLabel: string;
   if (yAxisFormat) {
@@ -215,7 +222,11 @@ function compileLayerIndependent(
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
   const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
   const halfGlyph = Math.ceil(bodyFontSize / 2);
-  const titleCenterOffset = axisTitleOffset(rightAxisWidth, bodyFontSize, options.width);
+  // estimateYAxisLabelWidth adds +10px safety padding for tick rendering,
+  // but axisTitleOffset already adds its own structural gaps, so subtract
+  // the padding to avoid double-counting
+  const rawTickWidth = Math.max(0, rightAxisWidth - 10);
+  const titleCenterOffset = axisTitleOffset(rawTickWidth, bodyFontSize, options.width);
   const titleExtent = hasRightAxisTitle
     ? titleCenterOffset +
       halfGlyph +
@@ -267,7 +278,7 @@ function compileLayerIndependent(
                 x:
                   layout0.area.x +
                   layout0.area.width +
-                  axisTitleOffset(rightAxisWidth, bodyFontSize, layout0.dimensions.width),
+                  axisTitleOffset(rawTickWidth, bodyFontSize, layout0.dimensions.width),
                 y: layout0.area.y + layout0.area.height / 2,
                 angle: 90,
               },

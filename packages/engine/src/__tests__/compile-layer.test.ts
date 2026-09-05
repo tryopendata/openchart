@@ -1,4 +1,5 @@
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import { AXIS_TITLE_GAP, estimateTextWidth, TICK_LABEL_OFFSET } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart, compileLayer } from '../compile';
 import { flattenLayers } from '../compiler/normalize';
@@ -511,6 +512,70 @@ describe('compileLayer', () => {
     // y2 title should rotate clockwise (90), y1 counter-clockwise (-90)
     expect(y1Title!.angle).toBe(-90);
     expect(y2Title!.angle).toBe(90);
+  });
+
+  it('right-axis title sits close to tick labels (no excessive gap)', () => {
+    // Regression: v8.3.1 introduced a ~15px gap between right-axis tick labels
+    // and the title. The visible gap should be ~AXIS_TITLE_GAP (3px).
+    const spec: LayerSpec = {
+      resolve: { scale: { y: 'independent' } },
+      layer: [
+        {
+          mark: 'bar' as const,
+          data: [
+            { year: '2025', revenue: 10_000_000 },
+            { year: '2026', revenue: 80_000_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: { field: 'revenue', type: 'quantitative' as const, axis: { title: 'Revenue ($)' } },
+          },
+        },
+        {
+          mark: 'line' as const,
+          data: [
+            { year: '2025', dollars: 20_000_000 },
+            { year: '2026', dollars: 80_000_000 },
+          ],
+          encoding: {
+            x: { field: 'year', type: 'ordinal' as const },
+            y: {
+              field: 'dollars',
+              type: 'quantitative' as const,
+              axis: { title: 'Dollars raised', format: '$~s' },
+            },
+          },
+        },
+      ],
+    };
+
+    const layout = compileLayer(spec, compileOpts);
+    const y2 = layout.axes.y2!;
+    const chartRight = layout.area.x + layout.area.width;
+    const titleX = y2.titlePosition!.x;
+    const titleFontSize = y2.labelStyle.fontSize;
+    const halfGlyph = Math.ceil(titleFontSize / 2);
+
+    // Measure the widest right-axis tick label
+    const maxTickWidth = y2.ticks.reduce((max, t) => {
+      const w = estimateTextWidth(
+        t.label,
+        y2.tickLabelStyle.fontSize,
+        y2.tickLabelStyle.fontWeight ?? 400,
+      );
+      return Math.max(max, w);
+    }, 0);
+
+    // The title center is at titleX from the left edge of the SVG.
+    // The title's near edge (facing the ticks) is at titleX - halfGlyph.
+    // The tick labels' far edge is at chartRight + TICK_LABEL_OFFSET + maxTickWidth.
+    const titleNearEdge = titleX - halfGlyph;
+    const tickFarEdge = chartRight + TICK_LABEL_OFFSET + maxTickWidth;
+    const visibleGap = titleNearEdge - tickFarEdge;
+
+    // Gap should be AXIS_TITLE_GAP (3px), with a small tolerance for rounding
+    expect(visibleGap).toBeGreaterThanOrEqual(AXIS_TITLE_GAP - 1);
+    expect(visibleGap).toBeLessThanOrEqual(AXIS_TITLE_GAP + 2);
   });
 
   it('tags layer-1 marks with yScale y2', () => {

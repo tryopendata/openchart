@@ -75,10 +75,10 @@ export const AXIS_TITLE_TRAILING_PAD = 4;
  * clearance silently shrank as the font grew (14 - 11 = 3px at body size 21),
  * which let large-font titles collide with the tick labels.
  *
- * Used in both the engine (dimensions.ts margin reservation) and the renderer
+ * Used in both the engine (margin reservation) and the renderer
  * (axes.ts title placement) via axisTitleOffset(). Both must agree on this value.
  */
-export const AXIS_TITLE_GAP = 7;
+export const AXIS_TITLE_GAP = 3;
 
 /**
  * Computes the distance from the chart edge to the rotated y-axis title's center.

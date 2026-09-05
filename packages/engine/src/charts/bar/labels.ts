@@ -91,7 +91,7 @@ const MIN_WIDTH_FOR_INSIDE_LABEL = 40;
  */
 export function computeBarLabels(
   marks: RectMark[],
-  _chartArea: { x: number; y: number; width: number; height: number },
+  chartArea: { x: number; y: number; width: number; height: number },
   density: LabelDensity = 'auto',
   labelFormatter?: NumberFormatter | null,
   labelPrefix?: string,
@@ -177,13 +177,15 @@ export function computeBarLabels(
       }
     } else {
       if (isNegative) {
-        // Outside negative bar: just past the bar's left edge
-        anchorX = mark.x - LABEL_PADDING;
+        // Outside negative bar: just past the bar's left edge,
+        // but never right of the chart area
+        anchorX = Math.min(mark.x - LABEL_PADDING, chartArea.x + chartArea.width - LABEL_PADDING);
         fill = labelColor ?? getRepresentativeColor(mark.fill);
         textAnchor = 'end';
       } else {
-        // Outside positive bar: just past the bar's right edge
-        anchorX = mark.x + mark.width + LABEL_PADDING;
+        // Outside positive bar: just past the bar's right edge,
+        // but never left of the chart area (short bars near the origin)
+        anchorX = Math.max(mark.x + mark.width + LABEL_PADDING, chartArea.x + LABEL_PADDING);
         fill = labelColor ?? getRepresentativeColor(mark.fill);
         textAnchor = 'start';
       }
