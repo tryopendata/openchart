@@ -424,3 +424,27 @@ inverted from the light ramp. A non-opaque (e.g. `transparent`) background
 keeps its token but still adopts dark text/axis/gridline colors, since the
 container hosting it is dark even when the chart canvas itself has no fill
 of its own.
+
+## What changed in 8.4.0
+
+Every default below moved in the design refresh release. None is an API
+break; each is a value a spec can still override.
+
+| Area | 8.3 | 8.4 |
+|---|---|---|
+| Categorical palette | 9 saturated hues, same hexes in dark mode | 6 ordered OKLCH hues with separate fill and dark variants; series 7+ draw from the extended ramp with a warning |
+| Font weights | 450 / 550 / 590 / 700 | 400 / 500 / 600 / 700 |
+| `borderRadius` | 2 (marks and containers) | 8 for containers and tooltips; marks use a fixed 2px on the value end only |
+| Gridline alpha | 0.10 light / 0.05 dark | 0.08 / 0.06; `--oc-axis` is now a 0.14 hairline |
+| Bar band padding | 0.35 | 0.25 |
+| Area gradient | 0.35 to 0 | 0.20 to 0 solo, 0.14 overlapping, stacked areas flat |
+| Line stroke | 1.5px, 3.5px endpoint dot | 2px, 4px dot, round joins |
+| Scatter | 0.7 opacity, 1px stroke | 0.85 under 200 points (0.6 above), 1.5px knockout stroke |
+| Pie labels | name only, 10px | name and percent, 11px, theme font |
+| Table density | 40px rows, `compact` below 700px | 48px rows; `density`, cards mode below 400px, auto-condense only under column pressure; `compact` deprecated |
+| Map classing | quantile, projection from spec | quantize with nice breaks; projection inferred from the topology; legend title and No data swatch |
+| Tilemap | 6px radius, 1px strokes | 2px radius, no strokes, label ink from the blended fill |
+| Dumbbell | both dots in the series color | neutral start dot, accent end dot; direction color stays opt-in |
+| Graph / sankey | darkened node stroke, 0.15 dim, 0.75 dark link opacity | knockout rings, 0.3 dim, blended edges, 0.6 dark link opacity, path hover |
+| Motion | 500ms, 80ms stagger capped at 2s, 200ms annotation delay | 450ms, 30ms stagger capped at 300ms, 150ms |
+| Hover | none on charts | dim-the-rest at 0.3 over 140ms, legend buttons, tooltip totals, keyboard stepping |
