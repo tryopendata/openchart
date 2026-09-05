@@ -512,7 +512,7 @@ function resolveBandPadding(scaleConfig: EncodingChannel['scale'] | undefined): 
   paddingInner: number;
   paddingOuter: number;
 } {
-  const padding = scaleConfig?.padding ?? 0.35;
+  const padding = scaleConfig?.padding ?? DEFAULT_BAND_PADDING;
   return {
     paddingInner: scaleConfig?.paddingInner ?? padding,
     paddingOuter: scaleConfig?.paddingOuter ?? padding,
@@ -547,12 +547,14 @@ export function estimateBandStep(
 }
 
 /**
- * Gap between bands, as a fraction of the step. The 0.35 default is a *bar*
- * value: bars need air between them to read as separate quantities. Heatmap
- * cells are the opposite -- they tile, and the gap is a hairline gutter that
- * only exists to keep adjacent fills from bleeding into each other.
+ * Gap between bands, as a fraction of the step. The 0.25 default is a *bar*
+ * value: bars need air between them to read as separate quantities. d3 treats
+ * `paddingInner` as a fraction of the step, so 0.25 puts the gap at a third of
+ * the bar width -- inside the 20-40% editorial band (0.30 would be 43%).
+ * Heatmap cells are the opposite -- they tile, and the gap is a hairline
+ * gutter that only exists to keep adjacent fills from bleeding into each other.
  */
-const DEFAULT_BAND_PADDING = 0.35;
+const DEFAULT_BAND_PADDING = 0.25;
 const HEATMAP_BAND_PADDING = 0.04;
 
 function buildBandScale(

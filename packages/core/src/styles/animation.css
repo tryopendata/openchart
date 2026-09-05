@@ -5,16 +5,18 @@
 
   .oc-animate {
     /* Vertical bars (default): smooth ease-out, no overshoot.
-       oc-mark-bar is reserved for future mark type aliases. */
-    & .oc-mark-rect rect,
-    & .oc-mark-bar rect {
+       oc-mark-bar is reserved for future mark type aliases.
+       A bar with a value-end radius draws as <path> rather than <rect>
+       (SVG rx rounds all four corners or none), so both shapes match. */
+    & .oc-mark-rect :is(rect, path),
+    & .oc-mark-bar :is(rect, path) {
       animation: oc-enter-bar var(--oc-animation-duration) var(--oc-ease-smooth) both;
       animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
     }
 
     /* Horizontal bars (data-orient is on the mark group, not the SVG root) */
-    & .oc-mark-rect[data-orient="horizontal"] rect,
-    & .oc-mark-bar[data-orient="horizontal"] rect {
+    & .oc-mark-rect[data-orient="horizontal"] :is(rect, path),
+    & .oc-mark-bar[data-orient="horizontal"] :is(rect, path) {
       animation-name: oc-enter-bar-h;
     }
 
@@ -22,7 +24,7 @@
        right when the previous one finishes, creating one fluid reveal.
        Uses linear easing so handoffs between segments are seamless (no
        deceleration/acceleration stutter at segment boundaries). */
-    & .oc-mark-rect[data-stack-pos] rect {
+    & .oc-mark-rect[data-stack-pos] :is(rect, path) {
       animation-duration: var(--oc-stack-segment-duration, 150ms);
       animation-timing-function: linear;
       animation-delay: calc(

@@ -18,25 +18,35 @@ import type {
   Rect,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { adaptForLightLineStroke, getRepresentativeColor } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor, isOpaqueColor } from '@opendata-ai/openchart-core';
 import { line } from 'd3-shape';
 
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, getSequentialColor, groupByField, scaleValue, sortByField } from '../utils';
+import {
+  getColor,
+  getSequentialColor,
+  groupByField,
+  resolveSeriesStroke,
+  scaleValue,
+  sortByField,
+} from '../utils';
 import { resolveCurve } from './curves';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Default stroke width for line marks. Sparklines use the same width so the
- *  visual weight matches the rest of the chart family. */
-const DEFAULT_STROKE_WIDTH = 1.5;
+/** Default stroke width for line marks. Sparklines and the area top edge use
+ *  the same width so the visual weight matches the rest of the chart family. */
+export const LINE_STROKE_WIDTH = 2;
 
 /** Default radius for point marks (hover targets). */
 const DEFAULT_POINT_RADIUS = 3;
+
+/** Radius of the terminator dot emitted by `mark.point: 'last' | 'first'`. */
+const ENDPOINT_DOT_RADIUS = 4;
 
 /** Dash patterns cycled through by the strokeDash encoding, assigned in the
  *  ordinal (first-seen data) order of the field values. The first value
@@ -91,6 +101,11 @@ export function computeLineMarks(
     }
   }
   const groups = groupByField(spec.data, colorField ?? dashField);
+  // Point separator stroke: the classic white halo reads as a bright ring grid
+  // on a dark canvas, so match the resolved background when it is opaque
+  // enough to sit behind the dots. Mirrors the scatter knockout stroke.
+  const bg = theme?.colors?.background;
+  const pointSeparator = bg && isOpaqueColor(bg) ? bg : '#ffffff';
   const mutedMarks: (LineMark | PointMark)[] = [];
   const highlightedMarks: (LineMark | PointMark)[] = [];
   const highlight = spec.highlight ?? [];
@@ -106,15 +121,14 @@ export function computeLineMarks(
     // trend color; users can also set it directly to override the palette.
     //
     // A palette-derived stroke on a light canvas goes through
-    // adaptForLightLineStroke first: the accent (cyan-500) is tuned as a fill
-    // and only clears 2.4:1 on white, which is too thin for a 2px line. The
+    // resolveSeriesStroke first: the accent (cyan-500) is tuned as a fill and
+    // only clears 2.4:1 on white, which is too thin for a 2px line. The
     // darkened variant clears 3:1. An explicit markDef.stroke is the author's
-    // call and passes through untouched, as does anything on a dark canvas.
-    const strokeColor =
-      spec.markDef.stroke ??
-      (theme && !theme.isDark
-        ? adaptForLightLineStroke(getRepresentativeColor(color))
-        : getRepresentativeColor(color));
+    // call and passes through untouched, as does an explicit
+    // encoding.color.scale.range, as does anything on a dark canvas.
+    // Legend swatches and endpoint labels call the same helper so the chrome
+    // can never show a different color than the line it names.
+    const strokeColor = spec.markDef.stroke ?? resolveSeriesStroke(spec, color, theme);
 
     // Sort rows by x-axis field so lines draw left-to-right.
     // For nominal/ordinal axes, preserve data order since there's no
@@ -204,7 +218,7 @@ export function computeLineMarks(
 
     const isMuted = highlightActive && !highlight.includes(seriesKey);
     let resolvedStrokeWidth =
-      styleOverride?.strokeWidth ?? spec.markDef.strokeWidth ?? DEFAULT_STROKE_WIDTH;
+      styleOverride?.strokeWidth ?? spec.markDef.strokeWidth ?? LINE_STROKE_WIDTH;
     if (isMuted) {
       resolvedStrokeWidth = Math.max(1, resolvedStrokeWidth * 0.75);
     }
@@ -304,7 +318,7 @@ export function computeLineMarks(
             key: pointKey,
             cx: p.x,
             cy: p.y,
-            r: 3.5,
+            r: ENDPOINT_DOT_RADIUS,
             fill: strokeColor,
             stroke: 'transparent',
             strokeWidth: 0,
@@ -321,7 +335,7 @@ export function computeLineMarks(
           cy: p.y,
           r: visible ? DEFAULT_POINT_RADIUS : 0,
           fill: hollow ? 'transparent' : pointColorStr,
-          stroke: hollow ? pointColorStr : visible ? '#ffffff' : 'transparent',
+          stroke: hollow ? pointColorStr : visible ? pointSeparator : 'transparent',
           strokeWidth: visible ? 1.5 : 0,
           fillOpacity: isTransparent ? 0 : 1,
           data: p.row,

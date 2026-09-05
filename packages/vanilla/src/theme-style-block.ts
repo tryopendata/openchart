@@ -67,7 +67,9 @@ export function buildThemeStyleBlock(theme: ResolvedTheme): string {
   ];
 
   const rules = [
-    `svg.oc-chart { ${props.join('; ')}; }`,
+    // Tabular figures everywhere in the chart's own text: axis ticks, value
+    // labels and legend entries all line up column-wise.
+    `svg.oc-chart { ${props.join('; ')}; font-variant-numeric: tabular-nums; }`,
     `.oc-chrome { font-family: var(--oc-font-family); }`,
     `.oc-eyebrow { font-size: var(--oc-eyebrow-size); font-weight: var(--oc-eyebrow-weight); letter-spacing: var(--oc-eyebrow-tracking); text-transform: uppercase; fill: var(--oc-accent); }`,
     `.oc-title { font-size: var(--oc-title-size); font-weight: var(--oc-title-weight); letter-spacing: var(--oc-title-tracking); fill: var(--oc-text); }`,

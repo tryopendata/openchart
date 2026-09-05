@@ -31,6 +31,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
 
+import { isStrokeSeriesMark, resolveSeriesStroke } from '../charts/utils';
 import { categoricalColorsForDomain } from '../compile/color-scale-range';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { MeasureFn } from '../layout/plan';
@@ -207,8 +208,17 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   // Colors come from the same resolver the scale uses, so `highlight` muting
   // and the accent-neutral series strategy show up in the legend too. An
   // explicit range always wins (the scale honours it verbatim).
-  const domainColors =
+  const rawDomainColors =
     explicitRange ?? categoricalColorsForDomain(scaleDomain, theme, spec.highlight, spec.markType);
+
+  // Line and area series draw their color as a foreground stroke, which the
+  // mark compute darkens on a light canvas (resolveSeriesStroke). The swatch
+  // has to run through the same helper or the legend shows one cyan and the
+  // line another. The helper is also what keeps an explicit range verbatim on
+  // both sides.
+  const domainColors = isStrokeSeriesMark(spec.markType)
+    ? rawDomainColors.map((c) => resolveSeriesStroke(spec, c, theme))
+    : rawDomainColors;
 
   // Order legend entries by explicit domain when provided so the author
   // controls which entries render first (and which get truncated last when
@@ -433,6 +443,9 @@ export function computeLegendContent(
     fontWeight: theme.fonts.weights.normal,
     fill: theme.colors.text,
     lineHeight: 1.3,
+    // Legend labels are often values or years; lining figures keep the column
+    // of entries from shimmying.
+    fontVariant: 'tabular-nums',
   };
 
   // Resolve position: spec-level override wins, then responsive strategy.

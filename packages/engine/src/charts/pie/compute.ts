@@ -22,6 +22,7 @@ import {
   formatPercent,
   isConditionalDef,
   isGradientDef,
+  isOpaqueColor,
 } from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
@@ -37,6 +38,9 @@ import { resolveConditionalValue } from '../../transforms/conditional';
 
 /** Slices smaller than this fraction are grouped into "Other". */
 const SMALL_SLICE_THRESHOLD = 0.03;
+
+/** Separator stroke between adjacent slices, drawn in the canvas color. */
+const SLICE_STROKE_WIDTH = 1.5;
 
 /** Pad angle between slices, applied by both the pie layout and the arc
  *  generator. Shared with `buildArcPath` so data-update transitions rebuild
@@ -177,6 +181,10 @@ export function computePieMarks(
 ): ArcMark[] {
   // Arcs are a fill mark, so slices take the quieter fill palette.
   const palette = theme?.colors.categoricalFill ?? DEFAULT_PALETTE;
+  // Slice separator: the canvas color, so the gap between slices reads as
+  // background rather than as a drawn white ring on a dark chart.
+  const sliceBg = theme?.colors.background;
+  const sliceStroke = sliceBg && isOpaqueColor(sliceBg) ? sliceBg : '#ffffff';
   const encoding = spec.encoding as Encoding;
   const startAngle = spec.markDef.startAngle ?? 0;
   const endAngle = spec.markDef.endAngle ?? Math.PI * 2;
@@ -331,8 +339,8 @@ export function computePieMarks(
       startAngle: arcDatum.startAngle,
       endAngle: arcDatum.endAngle,
       fill: color,
-      stroke: '#ffffff',
-      strokeWidth: 2,
+      stroke: sliceStroke,
+      strokeWidth: SLICE_STROKE_WIDTH,
       data: slice.originalRow as Record<string, unknown>,
       aria,
     });

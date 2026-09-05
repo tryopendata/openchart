@@ -279,6 +279,8 @@ describe('computeLegend', () => {
     const ukEntry = legend.entries.find((e) => e.label === 'UK')!;
     const usEntry = legend.entries.find((e) => e.label === 'US')!;
     const deEntry = legend.entries.find((e) => e.label === 'Germany')!;
+    // An explicit scale.range is the author's call, so it renders verbatim --
+    // no light-canvas stroke adaptation, on the swatch or on the line.
     expect(usEntry.color).toBe('#ff0000');
     expect(ukEntry.color).toBe('#0000ff');
     expect(deEntry.color).toBe('#00ff00');

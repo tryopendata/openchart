@@ -252,6 +252,9 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - Marks are a discriminated union (`packages/core/src/types/layout.ts`): `LineMark`, `AreaMark`, `RectMark`, `ArcMark`, `PointMark`, `TextMarkLayout`, `RuleMarkLayout`, `TickMarkLayout`.
 - `RectMark.orient` (`'horizontal' | 'vertical'`) — set by the engine from encoding (x: quantitative = horizontal bar, y: quantitative = vertical column). **Don't infer from geometry** in renderers; grouped columns with short bars get misclassified.
 - The renderer (`vanilla/src/renderers/marks.ts`) has one function per mark type and a `registerMarkRenderer<T>` extension hook.
+- **A default bar/column renders as `<path>`, not `<rect>`.** `BAR_CORNER_RADIUS` + `valueEndCorners()` (`engine/src/charts/utils.ts`) round only the value end, and SVG `rx` rounds all four corners or none, so `renderRectMark` emits `rectPathWithCorners()`. CSS and tests that target bars must match `:is(rect, path)` (see `animation.css`), and tests read geometry through `vanilla/src/__test-fixtures__/rect-geometry.ts`. Stacked segments stay square and carry a 1px seam stroke in the canvas color (`stackSeamStroke()`).
+- **Series color adaptation lives in one place.** `adaptSeriesStroke()` / `isStrokeSeriesMark()` (`engine/src/charts/utils.ts`, wrapping `adaptForLightLineStroke`) darken a line/area series color on a light canvas. `computeLineMarks`, `computeAreaMarks` and `legend/compute.ts` all call it, so a legend swatch, an endpoint label and the line itself can never show different colors. Fills (bar/arc/waffle) are never adapted. Guarded by `engine/src/__tests__/series-color-parity.test.ts`.
+- Band padding default: `DEFAULT_BAND_PADDING` in `engine/src/layout/scales.ts` (0.25 = a gap of one third of the bar width). `resolveBandPadding` must use the same constant, not a literal.
 
 ### Text marks (`engine/src/charts/text/index.ts`)
 

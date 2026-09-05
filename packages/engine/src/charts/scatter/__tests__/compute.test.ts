@@ -130,14 +130,26 @@ describe('computeScatterMarks', () => {
       }
     });
 
-    it('points have partial fill opacity for overlap visibility', () => {
+    it('sparse layers get a near-solid fill behind a 1.5px knockout stroke', () => {
       const spec = makeBasicScatterSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
 
       for (const mark of marks) {
-        expect(mark.fillOpacity).toBeGreaterThan(0);
-        expect(mark.fillOpacity).toBeLessThan(1);
+        expect(mark.fillOpacity).toBe(0.85);
+        expect(mark.strokeWidth).toBe(1.5);
+      }
+    });
+
+    it('dense layers (200+ points) drop to 0.6 so pile-up still reads', () => {
+      const spec = makeBasicScatterSpec();
+      spec.data = Array.from({ length: 250 }, (_, i) => ({ x: i, y: i * 2 }));
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+
+      expect(marks.length).toBeGreaterThan(0);
+      for (const mark of marks) {
+        expect(mark.fillOpacity).toBe(0.6);
       }
     });
 

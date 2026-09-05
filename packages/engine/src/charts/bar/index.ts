@@ -22,7 +22,7 @@ export const barRenderer: ChartRenderer = (
   theme,
   containerWidth,
 ) => {
-  const marks = computeBarMarks(spec, scales, chartArea, strategy, containerWidth);
+  const marks = computeBarMarks(spec, scales, chartArea, strategy, containerWidth, theme);
 
   // Compute and attach value labels (respects spec.labels.density)
   const valueField =

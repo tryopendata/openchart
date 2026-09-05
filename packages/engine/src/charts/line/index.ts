@@ -11,7 +11,7 @@
  */
 
 import type { AreaMark, LineMark, Mark, PointMark } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor, isOpaqueColor } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ChartRenderer } from '../registry';
 import { computeAreaMarks } from './area';
@@ -76,7 +76,7 @@ export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
  * raw values).
  */
 export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
-  const areas = computeAreaMarks(spec, scales, chartArea, theme.isDark);
+  const areas = computeAreaMarks(spec, scales, chartArea, theme);
 
   const encoding = spec.encoding;
   const hasColor = !!(encoding.color && 'field' in encoding.color);
@@ -92,7 +92,11 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
   // the point-emission path in computeLineMarks. Emit the data-point dots here
   // so `mark.point` works on area charts the same way it does on lines.
   // Single-series areas already get their points from computeLineMarks above.
-  const points = hasColor && spec.markDef.point ? pointsFromAreas(areas, spec.markDef.point) : [];
+  const bg = theme.colors.background;
+  const points =
+    hasColor && spec.markDef.point
+      ? pointsFromAreas(areas, spec.markDef.point, isOpaqueColor(bg) ? bg : '#ffffff')
+      : [];
 
   // Areas go first (rendered behind lines), then lines, then points on top
   return [...areas, ...lines, ...points] as Mark[];
@@ -118,7 +122,10 @@ function linesFromAreas(areas: AreaMark[]): LineMark[] {
     type: 'line' as const,
     points: a.topPoints,
     path: a.topPath,
-    stroke: getRepresentativeColor(a.fill),
+    // The area already resolved its top-edge stroke (palette color, adapted
+    // for a light canvas, or the author's markDef.stroke). Re-deriving it from
+    // the fill here would paint an unadapted line over the adapted top path.
+    stroke: a.stroke ?? getRepresentativeColor(a.fill),
     strokeWidth: a.strokeWidth ?? 1,
     seriesKey: a.seriesKey,
     data: a.data,
@@ -135,13 +142,14 @@ function linesFromAreas(areas: AreaMark[]): LineMark[] {
 function pointsFromAreas(
   areas: AreaMark[],
   pointMode: NonNullable<NormalizedChartSpec['markDef']['point']>,
+  separator: string,
 ): PointMark[] {
   const isTransparent = pointMode === 'transparent';
   const isEndpoints = pointMode === 'endpoints';
   const points: PointMark[] = [];
 
   for (const a of areas) {
-    const stroke = getRepresentativeColor(a.fill);
+    const stroke = a.stroke ?? getRepresentativeColor(a.fill);
     const lastIdx = a.topPoints.length - 1;
 
     for (let i = 0; i < a.topPoints.length; i++) {
@@ -155,7 +163,7 @@ function pointsFromAreas(
         cy: pt.y,
         r: visible ? AREA_POINT_RADIUS : 0,
         fill: hollow ? 'transparent' : stroke,
-        stroke: hollow ? stroke : visible ? '#ffffff' : 'transparent',
+        stroke: hollow ? stroke : visible ? separator : 'transparent',
         strokeWidth: visible ? 1.5 : 0,
         fillOpacity: isTransparent ? 0 : 1,
         data: a.data[i] ?? {},

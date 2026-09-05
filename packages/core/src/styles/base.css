@@ -28,6 +28,7 @@
 
   .oc-chart {
     font-family: var(--oc-font-family);
+    font-variant-numeric: tabular-nums;
     display: block;
     width: 100%;
   }

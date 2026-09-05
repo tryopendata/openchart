@@ -1,5 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
-import { buildD3Formatter } from '@opendata-ai/openchart-core';
+import { buildD3Formatter, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -133,12 +133,53 @@ describe('computeBarMarks', () => {
       expect(cherry.width).toBeGreaterThan(banana.width);
     });
 
-    it('bars have corner radius applied', () => {
+    it('bars round only their value end', () => {
       const spec = makeSimpleBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       expect(marks[0].cornerRadius).toBe(2);
+      // Positive horizontal bar: right end rounds, baseline end stays square.
+      expect(marks[0].cornerRadiusSides).toEqual({
+        tl: false,
+        tr: true,
+        br: true,
+        bl: false,
+      });
+    });
+
+    it('negative bars round the left (value) end instead', () => {
+      const spec = makeSimpleBarSpec();
+      spec.data = [
+        { category: 'Apple', value: -50 },
+        { category: 'Banana', value: 30 },
+      ];
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
+
+      expect(marks[0].cornerRadiusSides).toEqual({
+        tl: true,
+        tr: false,
+        br: false,
+        bl: true,
+      });
+      expect(marks[1].cornerRadiusSides).toEqual({
+        tl: false,
+        tr: true,
+        br: true,
+        bl: false,
+      });
+    });
+
+    it('band padding leaves a gap of one third of the bar thickness', () => {
+      const spec = makeSimpleBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
+
+      // d3 paddingInner is a fraction of the STEP, so the default 0.25 puts the
+      // bar at 75% of the step and the gap at a third of the bar.
+      const step = Math.abs(marks[1].y - marks[0].y);
+      expect(marks[0].height / step).toBeCloseTo(0.75, 6);
     });
 
     it('each bar has an aria label with category and value', () => {
@@ -213,6 +254,26 @@ describe('computeBarMarks', () => {
 
       for (const mark of marks) {
         expect(mark.cornerRadius).toBe(0);
+        expect(mark.cornerRadiusSides).toBeUndefined();
+      }
+    });
+
+    it('stacked segments carry a 1px seam stroke in the canvas color', () => {
+      const spec = makeStackedBarSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeBarMarks(
+        spec,
+        scales,
+        chartArea,
+        fullStrategy,
+        CONTAINER_WIDTH,
+        resolveTheme({ colors: { background: '#ffffff' } }),
+      );
+
+      expect(marks.length).toBeGreaterThan(0);
+      for (const mark of marks) {
+        expect(mark.stroke).toBe('#ffffff');
+        expect(mark.strokeWidth).toBe(1);
       }
     });
   });
@@ -296,13 +357,14 @@ describe('computeBarMarks', () => {
       expect(q1East.x).toBe(q1West.x);
     });
 
-    it('grouped bars have cornerRadius 2', () => {
+    it('grouped bars have cornerRadius 2 on the value end', () => {
       const spec = makeGroupedBarSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
 
       for (const mark of marks) {
         expect(mark.cornerRadius).toBe(2);
+        expect(mark.cornerRadiusSides).toEqual({ tl: false, tr: true, br: true, bl: false });
       }
     });
 

@@ -117,7 +117,7 @@ export function hasExplicitColor(
 
 /**
  * Build the default area gradient for a sparkline area mark. Uses the
- * trend-derived base color and fades top→bottom from 35% to 0% opacity.
+ * trend-derived base color and fades top→bottom from 20% to 0% opacity.
  *
  * Coordinate system is normalized [0,1] relative to the mark bounding box,
  * matching the existing `LinearGradient` shape used by user-authored
@@ -131,7 +131,7 @@ export function buildSparklineAreaGradient(baseColor: string): GradientDef {
     x2: 0,
     y2: 1,
     stops: [
-      { offset: 0, color: baseColor, opacity: 0.35 },
+      { offset: 0, color: baseColor, opacity: 0.2 },
       { offset: 1, color: baseColor, opacity: 0 },
     ],
   };

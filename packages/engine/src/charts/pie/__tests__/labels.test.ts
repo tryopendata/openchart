@@ -65,14 +65,14 @@ describe('computePieLabels density modes', () => {
   it('density "endpoints" returns only first and last labels', () => {
     const labels = computePieLabels(marks, chartArea, 'endpoints');
     expect(labels).toHaveLength(2);
-    expect(labels[0].text).toBe('Alpha');
-    expect(labels[1].text).toBe('Gamma');
+    expect(labels[0].text).toBe('Alpha 50%');
+    expect(labels[1].text).toBe('Gamma 20%');
   });
 
   it('density "endpoints" with single mark returns that mark', () => {
     const labels = computePieLabels([marks[0]], chartArea, 'endpoints');
     expect(labels).toHaveLength(1);
-    expect(labels[0].text).toBe('Alpha');
+    expect(labels[0].text).toBe('Alpha 50%');
   });
 
   it('default density is "auto"', () => {
@@ -88,11 +88,25 @@ describe('computePieLabels density modes', () => {
 });
 
 describe('computePieLabels positioning', () => {
-  it('labels use category name (not value) as text', () => {
+  it('labels pair the category name with its percent share', () => {
     const labels = computePieLabels(marks, chartArea, 'all');
-    expect(labels[0].text).toBe('Alpha');
-    expect(labels[1].text).toBe('Beta');
-    expect(labels[2].text).toBe('Gamma');
+    expect(labels[0].text).toBe('Alpha 50%');
+    expect(labels[1].text).toBe('Beta 30%');
+    expect(labels[2].text).toBe('Gamma 20%');
+  });
+
+  it('labels show the formatted raw value when a value formatter is supplied', () => {
+    const labels = computePieLabels(marks, chartArea, 'all', '#333333', {
+      formatValue: (v) => `$${v}M`,
+    });
+    expect(labels[0].text).toBe('Alpha $50M');
+  });
+
+  it('label font family comes from the theme', () => {
+    const labels = computePieLabels(marks, chartArea, 'all', '#333333', {
+      fontFamily: 'Charter, serif',
+    });
+    expect(labels[0].style.fontFamily).toBe('Charter, serif');
   });
 
   it('labels are positioned outside the outer radius', () => {
@@ -146,8 +160,9 @@ describe('label/slice identity', () => {
       expect(label.index).toBeDefined();
       const source = marks[label.index as number];
       expect(source).toBeDefined();
-      // The label text is the category parsed off the source mark's aria label.
-      expect(source.aria.label.startsWith(label.text)).toBe(true);
+      // The label text is the category parsed off the source mark's aria
+      // label, with the percent share appended.
+      expect(source.aria.label.startsWith(label.text.split(' ')[0])).toBe(true);
     }
   });
 
@@ -165,7 +180,7 @@ describe('label/slice identity', () => {
     expect(labels.length).toBe(marks.length);
     for (const label of labels) {
       const source = marks[label.index as number];
-      expect(source.aria.label.startsWith(label.text)).toBe(true);
+      expect(source.aria.label.startsWith(label.text.split(' ')[0])).toBe(true);
     }
   });
 });

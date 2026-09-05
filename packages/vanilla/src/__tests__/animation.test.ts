@@ -65,17 +65,18 @@ describe('SVG structure for animation CSS hooks', () => {
     const spec = { ...barSpec, animation: true } as ChartSpec;
     const { svg } = compileAndRender(spec);
 
-    // CSS animations target .oc-mark-rect rect and .oc-mark-bar rect
-    const rects = svg.querySelectorAll('.oc-marks rect');
-    expect(rects.length).toBeGreaterThan(0);
+    // CSS animations target `.oc-mark-rect :is(rect, path)`: a bar with a
+    // value-end radius draws as a path.
+    const shapes = svg.querySelectorAll('.oc-marks .oc-mark-rect :is(rect, path)');
+    expect(shapes.length).toBeGreaterThan(0);
   });
 
   it('column chart renders rect elements for vertical bars', () => {
     const spec = { ...columnSpec, animation: true } as ChartSpec;
     const { svg } = compileAndRender(spec);
 
-    const rects = svg.querySelectorAll('.oc-marks rect');
-    expect(rects.length).toBeGreaterThan(0);
+    const shapes = svg.querySelectorAll('.oc-marks .oc-mark-rect :is(rect, path)');
+    expect(shapes.length).toBeGreaterThan(0);
   });
 
   it('line chart renders path elements inside oc-mark-line groups', () => {
@@ -288,8 +289,8 @@ describe('createChart animation lifecycle', () => {
     expect(svg?.getAttribute('class')).toContain('oc-animate');
 
     // Marks are rendered
-    const rects = container.querySelectorAll('.oc-marks rect');
-    expect(rects.length).toBeGreaterThan(0);
+    const shapes = container.querySelectorAll('.oc-marks .oc-mark-rect :is(rect, path)');
+    expect(shapes.length).toBeGreaterThan(0);
 
     chart.destroy();
   });
@@ -300,7 +301,7 @@ describe('createChart animation lifecycle', () => {
     const chart = createChart(container, spec);
 
     // Verify initial render
-    let rects = container.querySelectorAll('.oc-marks rect');
+    let rects = container.querySelectorAll('.oc-marks .oc-mark-rect :is(rect, path)');
     const initialCount = rects.length;
     expect(initialCount).toBeGreaterThan(0);
 
@@ -320,7 +321,7 @@ describe('createChart animation lifecycle', () => {
     expect(svg).not.toBeNull();
 
     // Marks reflect updated data
-    rects = container.querySelectorAll('.oc-marks rect');
+    rects = container.querySelectorAll('.oc-marks .oc-mark-rect :is(rect, path)');
     expect(rects.length).toBeGreaterThan(0);
 
     chart.destroy();
@@ -338,7 +339,7 @@ describe('createChart animation lifecycle', () => {
     // Chart should still render correctly
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
-    const rects = container.querySelectorAll('.oc-marks rect');
+    const rects = container.querySelectorAll('.oc-marks .oc-mark-rect :is(rect, path)');
     expect(rects.length).toBeGreaterThan(0);
 
     chart.destroy();

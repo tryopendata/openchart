@@ -10,7 +10,14 @@
  * - Single series always renders one gradient-filled area.
  */
 
-import type { AreaMark, DataRow, Encoding, MarkAria, Rect } from '@opendata-ai/openchart-core';
+import type {
+  AreaMark,
+  DataRow,
+  Encoding,
+  MarkAria,
+  Rect,
+  ResolvedTheme,
+} from '@opendata-ai/openchart-core';
 import { getRepresentativeColor, isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
 import {
@@ -26,7 +33,8 @@ import {
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor, scaleValue, sortByField } from '../utils';
+import { getColor, resolveSeriesStroke, scaleValue, sortByField } from '../utils';
+import { LINE_STROKE_WIDTH } from './compute';
 import { resolveCurve } from './curves';
 
 // ---------------------------------------------------------------------------
@@ -46,35 +54,24 @@ function isStacked(stackProp: unknown): boolean {
   return stackProp !== null && stackProp !== false;
 }
 
-// Gradient stops calibrated by series count. Solo areas can carry richer fills
-// because there's no overlap to manage; multi-series overlap needs lighter
-// stops so layered bands stay legible.
+// Gradient stops calibrated by series count. Solo areas can carry a slightly
+// richer fill because there's no overlap to manage; multi-series overlap needs
+// lighter stops so layered bands stay legible. Both fade to zero, in the
+// 12-20% product-chart band -- a heavier wash competes with the line itself.
 const SOLO_GRADIENT_STOPS = [
-  { offset: 0, opacity: 0.42 },
-  { offset: 0.6, opacity: 0.1 },
+  { offset: 0, opacity: 0.2 },
   { offset: 1, opacity: 0 },
 ];
 
 const OVERLAP_GRADIENT_STOPS = [
-  { offset: 0, opacity: 0.22 },
-  { offset: 0.7, opacity: 0.04 },
+  { offset: 0, opacity: 0.14 },
   { offset: 1, opacity: 0 },
 ];
 
-// Stacked layers sit on top of each other and need higher opacity so each
-// band reads as a distinct quantity. A gentle top-to-bottom gradient adds
-// depth without losing the categorical color identity.
-const STACKED_GRADIENT_STOPS = [
-  { offset: 0, opacity: 0.65 },
-  { offset: 1, opacity: 0.35 },
-];
-
-// Light-mode stacked areas: bottom out at opacity 0 rather than 0.35 to avoid
-// the muddy color wash at the base of each band on white/light backgrounds.
-const STACKED_GRADIENT_STOPS_LIGHT = [
-  { offset: 0, opacity: 0.65 },
-  { offset: 1, opacity: 0 },
-];
+// Stacked bands render FLAT. A vertical gradient inside a stacked band reads as
+// a value change within the band, which is exactly the thing a stacked area is
+// meant to encode with height; every editorial reference stacks flat.
+const STACKED_FILL_OPACITY = 0.92;
 
 function buildGradientFill(
   colorStr: string,
@@ -105,6 +102,7 @@ function computeSingleArea(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
   _chartArea: Rect,
+  theme?: ResolvedTheme,
 ): AreaMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -240,9 +238,14 @@ function computeSingleArea(
       topPath: topPathStr,
       fill: fillValue,
       fillOpacity: fillOpacity,
+      // The top edge is a foreground stroke, so it goes through the same
+      // light-canvas adaptation as a line mark's stroke. Otherwise the area's
+      // own top path and the LineMark the renderer draws over it (both from
+      // this series color) come out as two different colors.
       stroke:
-        spec.markDef.stroke ?? getRepresentativeColor(isGradientDef(fillValue) ? color : fillValue),
-      strokeWidth: spec.markDef.strokeWidth ?? 1.5,
+        spec.markDef.stroke ??
+        resolveSeriesStroke(spec, isGradientDef(fillValue) ? color : fillValue, theme),
+      strokeWidth: spec.markDef.strokeWidth ?? LINE_STROKE_WIDTH,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
       dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row })),
@@ -261,7 +264,7 @@ function computeStackedArea(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
   chartArea: Rect,
-  darkMode?: boolean,
+  theme?: ResolvedTheme,
 ): AreaMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -270,7 +273,7 @@ function computeStackedArea(
 
   if (!xChannel || !yChannel || !scales.x || !scales.y || !colorField) {
     // If no color field, can't stack -- fall back to single area
-    return computeSingleArea(spec, scales, chartArea);
+    return computeSingleArea(spec, scales, chartArea, theme);
   }
 
   // Sort data by x field so stacked areas render left-to-right.
@@ -383,8 +386,8 @@ function computeStackedArea(
       label: `${seriesKey}: stacked area with ${validPoints.length} data points`,
     };
 
-    // Per-layer top-to-bottom gradient. User-supplied markDef.fill (string or
-    // gradient) overrides the auto gradient just like in single-area mode.
+    // Flat per-layer fill. User-supplied markDef.fill (string or gradient)
+    // overrides it just like in single-area mode.
     const markFill = spec.markDef.fill;
     let fillValue: string | import('@opendata-ai/openchart-core').GradientDef;
     let fillOpacity: number;
@@ -393,10 +396,8 @@ function computeStackedArea(
       fillValue = markFill;
       fillOpacity = isGradientDef(markFill) ? 1 : (spec.markDef.opacity ?? 0.7);
     } else {
-      const colorStr = getRepresentativeColor(color);
-      const stackedStops = darkMode ? STACKED_GRADIENT_STOPS : STACKED_GRADIENT_STOPS_LIGHT;
-      fillValue = buildGradientFill(colorStr, stackedStops);
-      fillOpacity = 1;
+      fillValue = getRepresentativeColor(color);
+      fillOpacity = STACKED_FILL_OPACITY;
     }
 
     const rawPointKeys = validPoints.map((_p, idx) => serializeKeyValue(layer[idx]?.data.__x__));
@@ -412,7 +413,7 @@ function computeStackedArea(
       topPath: topPathStr,
       fill: fillValue,
       fillOpacity,
-      stroke: getRepresentativeColor(color),
+      stroke: resolveSeriesStroke(spec, color, theme),
       strokeWidth: 1,
       seriesKey,
       data: layer.map((d) => {
@@ -451,16 +452,16 @@ export function computeAreaMarks(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
   chartArea: Rect,
-  darkMode?: boolean,
+  theme?: ResolvedTheme,
 ): AreaMark[] {
   const encoding = spec.encoding as Encoding;
   const yChannel = encoding.y;
 
   let marks: AreaMark[];
   if (yChannel && isStacked(yChannel.stack)) {
-    marks = computeStackedArea(spec, scales, chartArea, darkMode);
+    marks = computeStackedArea(spec, scales, chartArea, theme);
   } else {
-    marks = computeSingleArea(spec, scales, chartArea);
+    marks = computeSingleArea(spec, scales, chartArea, theme);
   }
 
   // Dedupe area mark keys

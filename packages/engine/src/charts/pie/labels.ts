@@ -26,9 +26,20 @@ import { filterByDensity } from '../_shared/density-filter';
 // Constants
 // ---------------------------------------------------------------------------
 
-const LABEL_FONT_SIZE = 10;
+const LABEL_FONT_SIZE = 11;
 const LABEL_FONT_WEIGHT = 500;
 const LEADER_LINE_OFFSET = 12;
+
+/** Theme-derived options for pie/donut leader-line labels. */
+export interface PieLabelOptions {
+  /** Font family for the label text. Defaults to the system stack. */
+  fontFamily?: string;
+  /**
+   * Formats the slice's raw value. Supplied only when the author set
+   * `labels.format`; otherwise the label shows the slice's percent share.
+   */
+  formatValue?: (value: number) => string;
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -46,7 +57,10 @@ export function computePieLabels(
   _chartArea: Rect,
   density: LabelDensity = 'auto',
   _textFill = '#333333',
+  options: PieLabelOptions = {},
 ): ResolvedLabel[] {
+  const fontFamily = options.fontFamily ?? 'system-ui, -apple-system, sans-serif';
+  const formatValue = options.formatValue;
   if (marks.length === 0) return [];
 
   // Get the pie center from the first mark's center property
@@ -62,14 +76,29 @@ export function computePieLabels(
 
   for (let mi = 0; mi < targetMarks.length; mi++) {
     const mark = targetMarks[mi];
-    // Extract the label text (category name) from the aria label.
-    // Format is "Category: value (percent%)". Split on the first colon
-    // to handle category names that might contain colons.
+    // Extract the slice name and its share from the aria label, whose format
+    // is "Category: value (percent%)". Split on the FIRST colon so category
+    // names containing colons survive, and take the LAST parenthesised group
+    // as the percent. A name alone is a chart the reader has to eyeball, so
+    // the label carries the number too: the percent by default, or the
+    // formatted raw value when the author set `labels.format`.
     const ariaLabel = mark.aria.label;
     if (!ariaLabel) continue;
     const firstColon = ariaLabel.indexOf(':');
-    const labelText = firstColon >= 0 ? ariaLabel.slice(0, firstColon).trim() : '';
-    if (!labelText) continue;
+    const sliceName = firstColon >= 0 ? ariaLabel.slice(0, firstColon).trim() : '';
+    if (!sliceName) continue;
+    const openParen = ariaLabel.lastIndexOf('(');
+    const closeParen = ariaLabel.lastIndexOf(')');
+    const percentText =
+      openParen > firstColon && closeParen > openParen
+        ? ariaLabel.slice(openParen + 1, closeParen).trim()
+        : '';
+    const rawValueText =
+      openParen > firstColon ? ariaLabel.slice(firstColon + 1, openParen).trim() : '';
+    const rawValue = Number(rawValueText);
+    const valueText =
+      formatValue && Number.isFinite(rawValue) ? formatValue(rawValue) : percentText;
+    const labelText = valueText ? `${sliceName} ${valueText}` : sliceName;
 
     const textWidth = estimateTextWidth(labelText, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
     const textHeight = LABEL_FONT_SIZE * 1.2;
@@ -97,7 +126,7 @@ export function computePieLabels(
       // instead of zipping positionally.
       index: marks.indexOf(mark),
       style: {
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily,
         fontSize: LABEL_FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
         fill: _textFill,

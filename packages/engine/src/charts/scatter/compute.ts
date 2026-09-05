@@ -31,6 +31,13 @@ import { getColor, getSequentialColor } from '../utils';
 
 const DEFAULT_POINT_RADIUS = 5;
 
+/** Knockout separator stroke width around each dot. */
+const POINT_STROKE_WIDTH = 1.5;
+
+/** Above this many points in a layer, overplotting needs the extra fill
+ *  transparency to stay readable as density. */
+const DENSE_LAYER_POINTS = 200;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -142,6 +149,11 @@ export function computeScatterMarks(
   const bg = theme?.colors?.background;
   const defaultStroke = bg && isOpaqueColor(bg) ? bg : '#ffffff';
 
+  // A knockout stroke at 1.5px separates touching dots, which lets the fill
+  // run near-solid without overplotting turning into mush. Dense layers still
+  // need the extra transparency to show pile-up.
+  const defaultFillOpacity = spec.data.length < DENSE_LAYER_POINTS ? 0.85 : 0.6;
+
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
   const keyField = keyEnc?.field;
   const marks: PointMark[] = [];
@@ -194,8 +206,8 @@ export function computeScatterMarks(
       r: radius,
       fill: color,
       stroke: spec.markDef.stroke ?? defaultStroke,
-      strokeWidth: spec.markDef.strokeWidth ?? 1,
-      fillOpacity: spec.markDef.opacity ?? 0.7,
+      strokeWidth: spec.markDef.strokeWidth ?? POINT_STROKE_WIDTH,
+      fillOpacity: spec.markDef.opacity ?? defaultFillOpacity,
       data: row as Record<string, unknown>,
       aria,
     });

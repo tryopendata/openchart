@@ -1,10 +1,13 @@
 import type { LayoutStrategy, LineMark, PointMark, Rect } from '@opendata-ai/openchart-core';
+import { adaptTheme, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
 import { computeAreaMarks } from '../area';
 import { computeLineMarks } from '../compute';
 import { computeLineLabels } from '../labels';
+
+const DARK_THEME = adaptTheme(resolveTheme());
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -561,7 +564,7 @@ describe('computeAreaMarks', () => {
       const fill = mark.fill as { gradient: string; stops: { opacity?: number }[] };
       expect(fill.gradient).toBe('linear');
       // Overlap stops are calibrated lower than solo stops so layered bands stay legible.
-      expect(fill.stops[0].opacity).toBe(0.22);
+      expect(fill.stops[0].opacity).toBe(0.14);
       expect(fill.stops[fill.stops.length - 1].opacity).toBe(0);
     }
   });
@@ -599,10 +602,11 @@ describe('computeAreaMarks', () => {
     const fill = marks[0].fill as { gradient: string; stops: { opacity?: number }[] };
     expect(fill.gradient).toBe('linear');
     // Solo stops are heavier than overlap stops since there's no overlap.
-    expect(fill.stops[0].opacity).toBe(0.42);
+    expect(fill.stops[0].opacity).toBe(0.2);
+    expect(fill.stops[fill.stops.length - 1].opacity).toBe(0);
   });
 
-  it('stacked areas use a top-to-bottom gradient fill (not flat opacity)', () => {
+  it('stacked areas render flat, with no gradient fill', () => {
     const spec = makeMultiSeriesSpec();
     spec.encoding.y!.stack = 'zero';
     const scales = computeScales(spec, chartArea, spec.data);
@@ -610,32 +614,23 @@ describe('computeAreaMarks', () => {
 
     expect(marks.length).toBeGreaterThan(0);
     for (const mark of marks) {
-      const fill = mark.fill as { gradient: string; stops: { opacity?: number }[] };
-      expect(fill.gradient).toBe('linear');
-      expect(fill.stops).toHaveLength(2);
-      expect(fill.stops[0].opacity).toBe(0.65);
-      // Light mode: bottom fades to 0 so the colored wash at the base is avoided
-      expect(fill.stops[1].opacity).toBe(0);
-      // fillOpacity should be 1 so gradient stop-opacity controls the fade
-      expect(mark.fillOpacity).toBe(1);
+      // A vertical gradient inside a stacked band reads as a value change
+      // within the band, which is what the band's height already encodes.
+      expect(typeof mark.fill).toBe('string');
+      expect(mark.fillOpacity).toBe(0.92);
     }
   });
 
-  it('stacked areas use higher bottom opacity in dark mode', () => {
+  it('stacked areas render flat in dark mode too', () => {
     const spec = makeMultiSeriesSpec();
     spec.encoding.y!.stack = 'zero';
     const scales = computeScales(spec, chartArea, spec.data);
-    const marks = computeAreaMarks(spec, scales, chartArea, true /* darkMode */);
+    const marks = computeAreaMarks(spec, scales, chartArea, DARK_THEME);
 
     expect(marks.length).toBeGreaterThan(0);
     for (const mark of marks) {
-      const fill = mark.fill as { gradient: string; stops: { opacity?: number }[] };
-      expect(fill.gradient).toBe('linear');
-      expect(fill.stops).toHaveLength(2);
-      expect(fill.stops[0].opacity).toBe(0.65);
-      // Dark mode: bottom stop is 0.35 so bands remain visible on dark surfaces
-      expect(fill.stops[1].opacity).toBe(0.35);
-      expect(mark.fillOpacity).toBe(1);
+      expect(typeof mark.fill).toBe('string');
+      expect(mark.fillOpacity).toBe(0.92);
     }
   });
 
@@ -1061,7 +1056,7 @@ describe('seriesStyles', () => {
     const usLine = lineMarks.find((m) => m.seriesKey === 'US');
 
     expect(ukLine?.strokeWidth).toBe(1.5);
-    expect(usLine?.strokeWidth).toBe(1.5); // default
+    expect(usLine?.strokeWidth).toBe(2); // default
   });
 
   it('sets opacity on a series', () => {
@@ -1106,7 +1101,7 @@ describe('seriesStyles', () => {
     for (const line of lineMarks) {
       expect(line.strokeDasharray).toBeUndefined();
       expect(line.opacity).toBeUndefined();
-      expect(line.strokeWidth).toBe(1.5);
+      expect(line.strokeWidth).toBe(2);
     }
   });
 });

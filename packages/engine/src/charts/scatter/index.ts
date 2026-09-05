@@ -30,10 +30,10 @@ export const scatterRenderer: ChartRenderer = (spec, scales, chartArea, strategy
   const trendline = spec.markDef?.trendline;
   if (trendline !== false) {
     const config = typeof trendline === 'object' ? trendline : undefined;
-    // Default to the theme's high-contrast text color so the line reads on both
-    // grounds. The old axis color was too dim over a dense cloud on black;
-    // `text` (near-white in dark mode) stays visible. Callers can override.
-    const stroke = config?.stroke ?? theme?.colors?.text;
+    // The trendline is a reference, not data: it sits at the axis-ink level so
+    // it reads as chrome rather than competing with the cloud. Callers who need
+    // it louder over a dense scatter can pass `trendline: { stroke }`.
+    const stroke = config?.stroke ?? theme?.colors?.axis;
     const trendLine = computeTrendLine(pointMarks, stroke, config?.strokeWidth);
     if (trendLine) {
       // Stacking order defaults to `below` the points. Over a dense scatter

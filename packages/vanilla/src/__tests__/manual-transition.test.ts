@@ -7,6 +7,7 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
+import { rectMarkGeometry } from '../__test-fixtures__/rect-geometry';
 import { createChart } from '../mount';
 
 /**
@@ -32,11 +33,14 @@ function columnSpec(valueA: number): ChartSpec {
   };
 }
 
-/** Height of bar A's <rect>, as a number. data-key is series-prefixed ("|A"). */
+/**
+ * Height of bar A's shape element. The default value-end radius makes it a
+ * <path>, so read it through the geometry helper rather than a rect attribute.
+ * data-key is series-prefixed ("|A").
+ */
 function barHeight(container: HTMLElement): number {
   const group = container.querySelector('.oc-mark-rect[data-series="A"]');
-  const rect = group?.querySelector('rect');
-  return rect ? parseFloat(rect.getAttribute('height') ?? '0') : NaN;
+  return rectMarkGeometry(group)?.height ?? Number.NaN;
 }
 
 describe('beginManualUpdate (seekable transition)', () => {

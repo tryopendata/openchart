@@ -97,6 +97,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -372,6 +395,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -649,6 +695,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -924,6 +993,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -1201,6 +1293,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -1476,6 +1591,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -1753,6 +1891,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -2028,6 +2189,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -2305,6 +2489,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -2580,6 +2787,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -2857,6 +3087,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -3132,6 +3385,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -3409,6 +3685,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -3684,6 +3983,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [
@@ -3961,6 +4283,29 @@
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
                         },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
                         "cornerRadius": {
                           "anyOf": [
                             {
@@ -4236,6 +4581,29 @@
                         "endAngle": {
                           "type": "number",
                           "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
                         },
                         "cornerRadius": {
                           "anyOf": [

@@ -1,4 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
+import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -139,14 +140,27 @@ describe('computePieMarks', () => {
       }
     });
 
-    it('arcs have white stroke for separation', () => {
+    it('arcs are separated by a 1.5px stroke in the canvas color', () => {
       const spec = makeBasicPieSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computePieMarks(spec, scales, chartArea, fullStrategy, false);
 
+      // No theme in hand: the separator falls back to white.
       for (const mark of marks) {
         expect(mark.stroke).toBe('#ffffff');
-        expect(mark.strokeWidth).toBeGreaterThan(0);
+        expect(mark.strokeWidth).toBe(1.5);
+      }
+
+      const darkMarks = computePieMarks(
+        spec,
+        scales,
+        chartArea,
+        fullStrategy,
+        false,
+        resolveTheme({ colors: { background: '#0b0f14' } }),
+      );
+      for (const mark of darkMarks) {
+        expect(mark.stroke).toBe('#0b0f14');
       }
     });
 

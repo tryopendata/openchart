@@ -217,6 +217,12 @@ export interface MarkDef {
    * See `startAngle`. Only meaningful when `type` is `'arc'`.
    */
   endAngle?: number;
+  /**
+   * Donut center stat. A string renders one line; the object form adds a
+   * caption under it. Decorative (the number is already in the slices), and
+   * only meaningful when `type` is `'arc'` with an inner radius.
+   */
+  centerLabel?: string | { text: string; subtitle?: string };
   /** Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness. */
   cornerRadius?: number | 'pill';
   /**

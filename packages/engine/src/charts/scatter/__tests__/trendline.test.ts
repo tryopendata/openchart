@@ -105,7 +105,7 @@ describe('computeTrendLine', () => {
       const points = [makePoint(100, 200), makePoint(300, 100)];
       const result = computeTrendLine(points)!;
 
-      expect(result.strokeDasharray).toBe('6 4');
+      expect(result.strokeDasharray).toBe('4 4');
     });
 
     it('falls back to a subdued stroke color when none is passed', () => {

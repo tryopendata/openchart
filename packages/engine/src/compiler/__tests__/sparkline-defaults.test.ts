@@ -136,7 +136,7 @@ describe('hasExplicitColor', () => {
 });
 
 describe('buildSparklineAreaGradient', () => {
-  it('builds a top-to-bottom gradient with 0.35 -> 0 opacity in the trend color', () => {
+  it('builds a top-to-bottom gradient with 0.2 -> 0 opacity in the trend color', () => {
     const grad = buildSparklineAreaGradient('#16a34a');
     expect(grad).toEqual({
       gradient: 'linear',
@@ -145,7 +145,7 @@ describe('buildSparklineAreaGradient', () => {
       x2: 0,
       y2: 1,
       stops: [
-        { offset: 0, color: '#16a34a', opacity: 0.35 },
+        { offset: 0, color: '#16a34a', opacity: 0.2 },
         { offset: 1, color: '#16a34a', opacity: 0 },
       ],
     });

@@ -15,7 +15,7 @@ import type { LineMark, MarkAria, PointMark } from '@opendata-ai/openchart-core'
 // the resolved text color so the line reads on both light and dark grounds.
 const TRENDLINE_COLOR = '#666666';
 const TRENDLINE_STROKE_WIDTH = 1.5;
-const TRENDLINE_DASH = '6 4';
+const TRENDLINE_DASH = '4 4';
 
 // ---------------------------------------------------------------------------
 // Linear regression

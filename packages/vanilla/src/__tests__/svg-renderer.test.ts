@@ -12,6 +12,11 @@ import { compileChart, compileLayer } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import {
+  rectMarkGeometries,
+  rectMarkGeometry,
+  rectMarkShape,
+} from '../__test-fixtures__/rect-geometry';
+import {
   barSpec,
   columnSpec,
   lineSpec,
@@ -114,21 +119,19 @@ describe('line chart SVG rendering', () => {
 // ---------------------------------------------------------------------------
 
 describe('bar chart SVG rendering', () => {
-  it('renders <rect> elements for each data point', () => {
+  it('renders a shape element for each data point', () => {
     const { svg } = renderSpec(barSpec);
-    const rects = svg.querySelectorAll('.oc-mark-rect rect');
+    // Value-end rounding means the shape is a <path>, not a <rect>.
+    const shapes = svg.querySelectorAll('.oc-mark-rect :is(rect, path)');
     // barSpec has 3 data points
-    expect(rects.length).toBe(3);
+    expect(shapes.length).toBe(3);
   });
 
-  it('rect elements have width and height > 0', () => {
+  it('rect marks have width and height > 0', () => {
     const { svg } = renderSpec(barSpec);
-    const rects = svg.querySelectorAll('.oc-mark-rect rect');
-    for (const rect of rects) {
-      const width = Number(rect.getAttribute('width'));
-      const height = Number(rect.getAttribute('height'));
-      expect(width).toBeGreaterThan(0);
-      expect(height).toBeGreaterThan(0);
+    for (const geom of rectMarkGeometries(svg)) {
+      expect(geom.width).toBeGreaterThan(0);
+      expect(geom.height).toBeGreaterThan(0);
     }
   });
 
@@ -142,10 +145,9 @@ describe('bar chart SVG rendering', () => {
     }
   });
 
-  it('bar rects are oriented horizontally (width varies, y is categorical)', () => {
+  it('bar marks are oriented horizontally (width varies, y is categorical)', () => {
     const { svg } = renderSpec(barSpec);
-    const rects = svg.querySelectorAll('.oc-mark-rect rect');
-    const widths = Array.from(rects).map((r) => Number(r.getAttribute('width')));
+    const widths = rectMarkGeometries(svg).map((g) => g.width);
     // Different data values should produce different widths
     const uniqueWidths = new Set(widths);
     expect(uniqueWidths.size).toBeGreaterThan(1);
@@ -157,16 +159,15 @@ describe('bar chart SVG rendering', () => {
 // ---------------------------------------------------------------------------
 
 describe('column chart SVG rendering', () => {
-  it('renders <rect> elements oriented vertically', () => {
+  it('renders a shape element per column, oriented vertically', () => {
     const { svg } = renderSpec(columnSpec);
-    const rects = svg.querySelectorAll('.oc-mark-rect rect');
-    expect(rects.length).toBe(3);
+    const shapes = svg.querySelectorAll('.oc-mark-rect :is(rect, path)');
+    expect(shapes.length).toBe(3);
   });
 
-  it('column rects have varying heights (vertical orientation)', () => {
+  it('column marks have varying heights (vertical orientation)', () => {
     const { svg } = renderSpec(columnSpec);
-    const rects = svg.querySelectorAll('.oc-mark-rect rect');
-    const heights = Array.from(rects).map((r) => Number(r.getAttribute('height')));
+    const heights = rectMarkGeometries(svg).map((g) => g.height);
     // Different revenue values should produce different heights
     const uniqueHeights = new Set(heights);
     expect(uniqueHeights.size).toBeGreaterThan(1);
@@ -176,12 +177,10 @@ describe('column chart SVG rendering', () => {
     }
   });
 
-  it('column rects have positive width', () => {
+  it('column marks have positive width', () => {
     const { svg } = renderSpec(columnSpec);
-    const rects = svg.querySelectorAll('.oc-mark-rect rect');
-    for (const rect of rects) {
-      const width = Number(rect.getAttribute('width'));
-      expect(width).toBeGreaterThan(0);
+    for (const geom of rectMarkGeometries(svg)) {
+      expect(geom.width).toBeGreaterThan(0);
     }
   });
 });
@@ -731,11 +730,12 @@ describe('targeted mark snapshots', () => {
     expect(rectGroup!.getAttribute('class')).toBe('oc-mark oc-mark-rect');
     expect(rectGroup!.getAttribute('data-mark-id')).toMatch(/^rect-/);
 
-    const rect = rectGroup!.querySelector('rect');
-    expect(rect).not.toBeNull();
-    expect(Number(rect!.getAttribute('width'))).toBeGreaterThan(0);
-    expect(Number(rect!.getAttribute('height'))).toBeGreaterThan(0);
-    expect(rect!.getAttribute('fill')).not.toBeNull();
+    const shape = rectMarkShape(rectGroup);
+    expect(shape).not.toBeNull();
+    const geom = rectMarkGeometry(rectGroup)!;
+    expect(geom.width).toBeGreaterThan(0);
+    expect(geom.height).toBeGreaterThan(0);
+    expect(shape!.getAttribute('fill')).not.toBeNull();
   });
 
   it('point mark has expected attributes', () => {

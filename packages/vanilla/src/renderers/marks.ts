@@ -126,6 +126,10 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
       fill: 'none',
       stroke: mark.stroke,
       'stroke-width': mark.strokeWidth,
+      // Round joins/caps: at 2px a mitre on a sharp data spike renders as a
+      // spur past the vertex, and a butt cap leaves a squared-off line end.
+      'stroke-linejoin': 'round',
+      'stroke-linecap': 'round',
     });
     if (mark.strokeDasharray) {
       path.setAttribute('stroke-dasharray', mark.strokeDasharray);
@@ -196,6 +200,8 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
         fill: 'none',
         stroke: mark.stroke,
         'stroke-width': mark.strokeWidth ?? 1,
+        'stroke-linejoin': 'round',
+        'stroke-linecap': 'round',
       });
       // Note: area drawing animation is handled via CSS clip-path on the group,
       // no inline dasharray/dashoffset needed.

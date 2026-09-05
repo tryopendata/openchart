@@ -1,5 +1,5 @@
 import type { LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
-import { buildD3Formatter } from '@opendata-ai/openchart-core';
+import { buildD3Formatter, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -235,14 +235,45 @@ describe('computeColumnMarks', () => {
       expect(groupedMarks[0].width).toBeGreaterThan(0);
     });
 
-    it('grouped columns have cornerRadius 2 and no stackGroup', () => {
+    it('grouped columns round the top (value) end only, and set no stackGroup', () => {
       const spec = makeGroupedColumnSpec();
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
       for (const mark of marks) {
         expect(mark.cornerRadius).toBe(2);
+        expect(mark.cornerRadiusSides).toEqual({ tl: true, tr: true, br: false, bl: false });
         expect(mark.stackGroup).toBeUndefined();
+      }
+    });
+
+    it('negative columns round the bottom (value) end instead', () => {
+      const spec = makeNegativeColumnSpec();
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
+
+      const q1 = marks.find((m) => m.aria.label.includes('Q1'))!;
+      const q2 = marks.find((m) => m.aria.label.includes('Q2'))!;
+      expect(q1.cornerRadiusSides).toEqual({ tl: true, tr: true, br: false, bl: false });
+      expect(q2.cornerRadiusSides).toEqual({ tl: false, tr: false, br: true, bl: true });
+    });
+
+    it('stacked column segments carry a 1px seam stroke in the canvas color', () => {
+      const spec = makeGroupedColumnSpec();
+      (spec.encoding.y as { stack?: string }).stack = 'zero';
+      const scales = computeScales(spec, chartArea, spec.data);
+      const marks = computeColumnMarks(
+        spec,
+        scales,
+        chartArea,
+        fullStrategy,
+        resolveTheme({ colors: { background: '#0b0b0f' } }),
+      );
+
+      expect(marks.length).toBeGreaterThan(0);
+      for (const mark of marks) {
+        expect(mark.stroke).toBe('#0b0b0f');
+        expect(mark.strokeWidth).toBe(1);
       }
     });
 

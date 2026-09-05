@@ -16,6 +16,7 @@ import type {
   MarkAria,
   Rect,
   RectMark,
+  ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import { isGradientDef, NARROW_VIEWPORT_MAX } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
@@ -24,7 +25,28 @@ import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { formatLabelValue } from '../_shared/format-label-value';
-import { getColor, getSequentialColor, groupByField } from '../utils';
+import {
+  BAR_CORNER_RADIUS,
+  getColor,
+  getSequentialColor,
+  groupByField,
+  stackSeamStroke,
+  valueEndCorners,
+} from '../utils';
+
+/**
+ * Draw a 1px seam in the canvas color between adjacent stacked segments so
+ * neighbouring fills are separated by a line rather than relying on hue
+ * contrast alone (WCAG 1.4.11 non-text contrast, met by separator).
+ */
+function applyStackSeams(marks: RectMark[], theme?: ResolvedTheme): void {
+  const seam = stackSeamStroke(theme);
+  for (const mark of marks) {
+    if (mark.stackGroup === undefined) continue;
+    mark.stroke = seam;
+    mark.strokeWidth = 1;
+  }
+}
 
 /**
  * Auto-orient a gradient for horizontal bars.
@@ -82,6 +104,7 @@ export function computeBarMarks(
   _chartArea: Rect,
   _strategy: LayoutStrategy,
   containerWidth: number,
+  theme?: ResolvedTheme,
 ): RectMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -194,6 +217,8 @@ export function computeBarMarks(
   // Stamp identity keys for data-update transitions
   const categoryField = yChannel.field;
   stampBarKeys(marks, categoryField, colorField);
+
+  applyStackSeams(marks, theme);
 
   return applyMarkDefOverrides(marks, spec, bandwidth);
 }
@@ -366,7 +391,8 @@ function computeGroupedBars(
         width: barWidth,
         height: subBandHeight,
         fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
-        cornerRadius: 2,
+        cornerRadius: BAR_CORNER_RADIUS,
+        cornerRadiusSides: valueEndCorners('horizontal', value < 0),
         data: row as Record<string, unknown>,
         aria,
         orient: 'horizontal',
@@ -416,7 +442,8 @@ function computeColoredBars(
       width: barWidth,
       height: bandwidth,
       fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
-      cornerRadius: 2,
+      cornerRadius: BAR_CORNER_RADIUS,
+      cornerRadiusSides: valueEndCorners('horizontal', value < 0),
       data: row as Record<string, unknown>,
       aria,
       orient: 'horizontal',
@@ -465,8 +492,13 @@ function applyMarkDefOverrides(
 
     if (crSpec === 'pill') {
       mark.cornerRadius = effectiveHeight / 2;
+      // A pill is round on both ends by definition; the value-end rule only
+      // applies to a numeric radius.
+      mark.cornerRadiusSides = undefined;
     } else if (typeof crSpec === 'number') {
       mark.cornerRadius = crSpec;
+      // Keep the value-end sides stamped at emit time; only the radius value
+      // is overridden here.
     } else {
       continue;
     }
@@ -528,7 +560,8 @@ function computeSimpleBars(
       width: barWidth,
       height: bandwidth,
       fill: isGradientDef(color) ? orientGradientForHorizontalBar(color) : color,
-      cornerRadius: 2,
+      cornerRadius: BAR_CORNER_RADIUS,
+      cornerRadiusSides: valueEndCorners('horizontal', value < 0),
       data: row as Record<string, unknown>,
       aria,
       orient: 'horizontal',

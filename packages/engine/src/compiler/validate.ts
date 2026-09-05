@@ -309,6 +309,62 @@ function validateRangeSpec(spec: Record<string, unknown>, errors: ValidationErro
 }
 
 // ---------------------------------------------------------------------------
+// Arc mark validation
+// ---------------------------------------------------------------------------
+
+/**
+ * `mark.centerLabel` draws into the hole of a donut, so it means nothing on
+ * any other mark type. The object form must carry a non-empty `text`.
+ */
+function validateCenterLabel(
+  spec: Record<string, unknown>,
+  markType: unknown,
+  errors: ValidationError[],
+): void {
+  if (!spec.mark || typeof spec.mark !== 'object' || Array.isArray(spec.mark)) return;
+  const centerLabel = (spec.mark as Record<string, unknown>).centerLabel;
+  if (centerLabel === undefined) return;
+
+  if (markType !== 'arc') {
+    errors.push({
+      message: `Spec error: mark.centerLabel is only supported on arc (pie/donut) marks, not "${String(markType)}"`,
+      path: 'mark.centerLabel',
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Remove mark.centerLabel, or use mark: { type: "arc", innerRadius: 0.6, centerLabel: "..." } for a donut center stat.',
+    });
+    return;
+  }
+
+  const isString = typeof centerLabel === 'string';
+  const obj =
+    !isString && centerLabel !== null && typeof centerLabel === 'object'
+      ? (centerLabel as Record<string, unknown>)
+      : undefined;
+  const validObject = obj !== undefined && typeof obj.text === 'string' && obj.text.length > 0;
+  const validString = isString && (centerLabel as string).length > 0;
+
+  if (!validString && !validObject) {
+    errors.push({
+      message: `Spec error: mark.centerLabel must be a non-empty string or { text, subtitle? }, got ${JSON.stringify(centerLabel)}`,
+      path: 'mark.centerLabel',
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Use centerLabel: "$4.2M" or centerLabel: { text: "$4.2M", subtitle: "Total revenue" }.',
+    });
+  }
+
+  if (validObject && obj.subtitle !== undefined && typeof obj.subtitle !== 'string') {
+    errors.push({
+      message: `Spec error: mark.centerLabel.subtitle must be a string, got ${JSON.stringify(obj.subtitle)}`,
+      path: 'mark.centerLabel.subtitle',
+      code: 'INVALID_VALUE',
+      suggestion: 'Use centerLabel: { text: "$4.2M", subtitle: "Total revenue" }.',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Calendar mark validation
 // ---------------------------------------------------------------------------
 
@@ -632,6 +688,9 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
       });
     }
   }
+
+  // Donut center stat: arc-only, and the object form needs a text string.
+  validateCenterLabel(spec, markType, errors);
 
   // Range marks: orientation-dependent x2/y2 requirement + mark.style options
   if (markType === 'range') {
