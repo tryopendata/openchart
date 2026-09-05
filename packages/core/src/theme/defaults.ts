@@ -52,7 +52,7 @@ export const DEFAULT_THEME: Theme = {
       body: 13,
       small: 11,
       axisTick: 11,
-      metricLabel: 10,
+      metricLabel: 11,
       metricValue: 22,
     },
     // One ladder everywhere: 400 regular / 500 medium (eyebrow, labels, UI,

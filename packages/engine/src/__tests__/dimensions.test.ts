@@ -548,14 +548,16 @@ describe('computeDimensions', () => {
       const dims = computeDimensions(spec, { width: 400, height: 400 }, emptyLegend, lightTheme);
       expect(dims.metrics).toBeUndefined();
 
-      // Top margin should match the no-metrics case (no leftover reservation)
+      // Top margin should match the no-metrics case (no leftover reservation).
+      // Compared with a tolerance: the two paths reach the same number through
+      // different float arithmetic, so they can differ in the last ULP.
       const noMetrics = computeDimensions(
         baseSpec,
         { width: 400, height: 400 },
         emptyLegend,
         lightTheme,
       );
-      expect(dims.margins.top).toBe(noMetrics.margins.top);
+      expect(dims.margins.top).toBeCloseTo(noMetrics.margins.top, 6);
     });
 
     it('strips metric bar when value text would overflow', () => {

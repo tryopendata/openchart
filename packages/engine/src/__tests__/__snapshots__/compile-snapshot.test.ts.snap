@@ -510,7 +510,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "sizes": {
         "axisTick": 11,
         "body": 13,
-        "metricLabel": 10,
+        "metricLabel": 11,
         "metricValue": 22,
         "small": 11,
         "subtitle": 14,
@@ -1611,7 +1611,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "sizes": {
         "axisTick": 11,
         "body": 13,
-        "metricLabel": 10,
+        "metricLabel": 11,
         "metricValue": 22,
         "small": 11,
         "subtitle": 14,
@@ -2324,7 +2324,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "sizes": {
         "axisTick": 11,
         "body": 13,
-        "metricLabel": 10,
+        "metricLabel": 11,
         "metricValue": 22,
         "small": 11,
         "subtitle": 14,

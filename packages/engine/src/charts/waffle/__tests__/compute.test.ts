@@ -186,8 +186,8 @@ describe('computeWaffleMarks', () => {
     expect(marks[60].aria.decorative).toBeUndefined();
   });
 
-  it('defaults cornerRadius to 1 and honors a mark-level override', () => {
-    expect(marksFor(makeWaffleSpec())[0].cornerRadius).toBe(1);
+  it('defaults cornerRadius to 2 and honors a mark-level override', () => {
+    expect(marksFor(makeWaffleSpec())[0].cornerRadius).toBe(2);
 
     const spec = makeWaffleSpec({ markDef: { type: 'waffle', cornerRadius: 3 } });
     expect(marksFor(spec)[0].cornerRadius).toBe(3);
@@ -301,5 +301,94 @@ describe('compileChart with waffle marks', () => {
     const layout = compileChart(baseSpec, { width: 600, height: 400 });
     expect(layout.a11y.altText).toContain('Waffle chart');
     expect(layout.a11y.altText).toContain('dividing 100 units');
+  });
+});
+
+describe('waffle "other" bucketing (opt-in)', () => {
+  const longTail = [
+    { source: 'Fossil', share: 60 },
+    { source: 'Renewables', share: 30 },
+    { source: 'Nuclear', share: 6 },
+    { source: 'Hydro', share: 2 },
+    { source: 'Tidal', share: 1 },
+    { source: 'Geothermal', share: 1 },
+  ];
+
+  function compileWaffle(mark: unknown) {
+    return compileChart(
+      {
+        mark,
+        data: longTail,
+        encoding: {
+          y: { field: 'share', type: 'quantitative' },
+          color: { field: 'source', type: 'nominal' },
+        },
+      },
+      { width: 500, height: 400 },
+    );
+  }
+
+  /** Category -> cell count, read off the compiled marks. */
+  function cellsByCategory(layout: ReturnType<typeof compileChart>): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const mark of layout.marks) {
+      if (mark.type !== 'rect') continue;
+      const cat = String((mark.data as Record<string, unknown>).source);
+      counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  it('emits every category when `other` is not set', () => {
+    const counts = cellsByCategory(compileWaffle('waffle'));
+    expect([...counts.keys()]).toEqual([
+      'Fossil',
+      'Renewables',
+      'Nuclear',
+      'Hydro',
+      'Tidal',
+      'Geothermal',
+    ]);
+  });
+
+  it('merges sub-threshold categories into a trailing Other, preserving the total', () => {
+    const layout = compileWaffle({ type: 'waffle', other: 0.05 });
+    const counts = cellsByCategory(layout);
+    expect([...counts.keys()]).toEqual(['Fossil', 'Renewables', 'Nuclear', 'Other']);
+    // 2 + 1 + 1 out of 100 -- the merged share, not a dropped one.
+    expect(counts.get('Other')).toBe(4);
+    let total = 0;
+    for (const n of counts.values()) total += n;
+    expect(total).toBe(100);
+  });
+
+  it('accepts the object form with a custom label', () => {
+    const counts = cellsByCategory(
+      compileWaffle({ type: 'waffle', other: { threshold: 0.05, label: 'Everything else' } }),
+    );
+    expect(counts.has('Everything else')).toBe(true);
+  });
+
+  it('leaves a single sub-threshold category alone (a bucket of one is a rename)', () => {
+    const layout = compileChart(
+      {
+        mark: { type: 'waffle', other: 0.05 },
+        data: [
+          { source: 'Fossil', share: 60 },
+          { source: 'Renewables', share: 38 },
+          { source: 'Tidal', share: 2 },
+        ],
+        encoding: {
+          y: { field: 'share', type: 'quantitative' },
+          color: { field: 'source', type: 'nominal' },
+        },
+      },
+      { width: 500, height: 400 },
+    );
+    expect([...cellsByCategory(layout).keys()]).toEqual(['Fossil', 'Renewables', 'Tidal']);
+  });
+
+  it('stamps crispEdges on cells', () => {
+    expect(marksFor(makeWaffleSpec())[0].shapeRendering).toBe('crispEdges');
   });
 });

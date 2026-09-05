@@ -367,10 +367,95 @@ function warnParliamentMajorityRange(
   }
 }
 
+/**
+ * Default a calendar's color scale to five quantize classes.
+ *
+ * A contribution grid is read as a small ordinal ladder ("nothing / a little /
+ * a lot"), not as a continuous gradient, and the five-step ramp is the idiom
+ * every reader already knows from GitHub. Doing it here rather than in
+ * `computeScales` keeps the cells, the legend swatches and the tooltip on one
+ * scale: they all read `encoding.color.scale.type`.
+ */
+function withCalendarColorScale(encoding: Encoding): Encoding {
+  const color = encoding.color;
+  if (!color || !('field' in color) || color.type !== 'quantitative') return encoding;
+  if (color.scale?.type) return encoding;
+  return {
+    ...encoding,
+    color: { ...color, scale: { ...color.scale, type: 'quantize' } },
+  };
+}
+
+/** Resolved form of the opt-in `other` bucketing option. */
+function resolveOtherOption(
+  other: number | { threshold: number; label?: string } | undefined,
+): { threshold: number; label: string } | null {
+  if (other == null) return null;
+  const threshold = typeof other === 'number' ? other : other.threshold;
+  if (!Number.isFinite(threshold) || threshold <= 0) return null;
+  return { threshold, label: (typeof other === 'object' && other.label) || 'Other' };
+}
+
+/**
+ * Bucket sub-threshold waffle categories into one trailing "Other" category.
+ *
+ * Rewrites the rows rather than the marks so the color scale, the legend and
+ * the grid can't disagree about which categories exist. Opt-in: a waffle
+ * without `mark.other` still emits every category, however small.
+ */
+function applyWaffleOther(
+  spec: ChartSpec,
+  encoding: Encoding,
+  markDef: MarkDef,
+  warnings: string[],
+): DataRow[] {
+  const option = resolveOtherOption(markDef.other);
+  const colorField = encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
+  const valueField = (encoding.y ?? encoding.x)?.field;
+  if (!option || !colorField || !valueField) return spec.data;
+
+  const totals = new Map<string, number>();
+  for (const row of spec.data) {
+    const value = Number(row[valueField] ?? 0);
+    if (!Number.isFinite(value) || value < 0) continue;
+    const cat = String(row[colorField] ?? '');
+    totals.set(cat, (totals.get(cat) ?? 0) + value);
+  }
+  let grandTotal = 0;
+  for (const value of totals.values()) grandTotal += value;
+  if (grandTotal <= 0) return spec.data;
+
+  const merged = new Set<string>();
+  for (const [cat, value] of totals) {
+    if (value / grandTotal < option.threshold) merged.add(cat);
+  }
+  if (merged.size < 2) return spec.data;
+
+  const kept: DataRow[] = [];
+  const bucketed: DataRow[] = [];
+  for (const row of spec.data) {
+    const cat = String(row[colorField] ?? '');
+    if (merged.has(cat)) {
+      bucketed.push({ ...row, [colorField]: option.label });
+    } else {
+      kept.push(row);
+    }
+  }
+  warnings.push(
+    `[openchart] WAFFLE_OTHER_BUCKET: merged ${merged.size} categories under ${
+      option.threshold * 100
+    }% of the total into "${option.label}" (${[...merged].join(', ')})`,
+  );
+  return [...kept, ...bucketed];
+}
+
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
-  const encoding = inferEncodingTypes(spec.encoding, spec.data, warnings);
+  const inferred = inferEncodingTypes(spec.encoding, spec.data, warnings);
   const markType = resolveMarkType(spec.mark);
   const markDef = resolveMarkDef(spec.mark);
+  const encoding = markType === 'calendar' ? withCalendarColorScale(inferred) : inferred;
+  const data =
+    markType === 'waffle' ? applyWaffleOther(spec, encoding, markDef, warnings) : spec.data;
   const display = spec.display ?? 'full';
 
   if (
@@ -398,7 +483,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   return {
     markType,
     markDef,
-    data: spec.data,
+    data,
     encoding,
     chrome: normalizeChrome(spec.chrome),
     chromeLayout: spec.chromeLayout,
@@ -502,6 +587,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
     animation: spec.animation,
     valueFormat: spec.valueFormat,
     linkOpacity: spec.linkOpacity,
+    other: spec.other,
     watermark: spec.watermark ?? true,
   };
 }

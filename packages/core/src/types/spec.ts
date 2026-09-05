@@ -323,6 +323,14 @@ export interface MarkDef {
    */
   columns?: number;
   /**
+   * Opt-in "Other" bucketing for waffle grids. Only meaningful when `type` is
+   * `'waffle'`. Categories whose share of the total falls below `threshold`
+   * (a fraction, so `0.05` is 5%) merge into one trailing category. Off by
+   * default: bucketing is an editorial decision, not a layout default. Same
+   * shape as `SankeySpec.other`.
+   */
+  other?: number | { threshold: number; label?: string };
+  /**
    * First day of the week for calendar marks. Only meaningful when `type` is
    * `'calendar'`. Controls which weekday occupies the top row of each band.
    * Defaults to 'monday' (ISO week convention).
@@ -330,7 +338,7 @@ export interface MarkDef {
   weekStart?: 'monday' | 'sunday';
   /**
    * Corner radius in pixels for calendar day cells. Only meaningful when
-   * `type` is `'calendar'`. Defaults to 1.
+   * `type` is `'calendar'`. Defaults to 2.
    */
   cellRadius?: number;
   /**
@@ -2272,7 +2280,7 @@ export interface GraphInteractionConfig {
   /**
    * Hover emphasis behavior. `neighbors` (default) lights the hovered node and
    * its adjacency; `category` lights same-category nodes; `node` lights only the
-   * hovered node; `none` disables. `dimOpacity` (default 0.15) is the node dim
+   * hovered node; `none` disables. `dimOpacity` (default 0.3) is the node dim
    * tier. Named `mode` (not `highlight`) to avoid colliding with the three other
    * meanings of "highlight" (the encoding value list, the `highlight()` verb).
    */
@@ -2475,8 +2483,19 @@ export interface SankeySpec {
   iterations?: number;
   /** Link coloring strategy. Defaults to 'gradient'. */
   linkStyle?: SankeyLinkColor;
-  /** Link fill opacity (0-1). Defaults to 0.5 in light mode, 0.75 in dark mode. */
+  /** Link fill opacity (0-1). Defaults to 0.5 in light mode, 0.6 in dark mode. */
   linkOpacity?: number;
+  /**
+   * Bucket sub-threshold nodes into a single "Other" node per column. Opt-in:
+   * omitted, every node in the data is drawn.
+   *
+   * A number is the threshold as a share of the node's own column total
+   * (`0.05` = under 5% of that column). The object form adds a custom `label`.
+   * A column with only one sub-threshold node is left alone, since renaming one
+   * node "Other" hides its identity without buying any space. Bucketing never
+   * changes the diagram's total flow.
+   */
+  other?: number | { threshold: number; label?: string };
   /**
    * Which side of each node to place labels. 'auto' uses the default heuristic
    * (left-column right, right-column left, middle right). 'right' forces all

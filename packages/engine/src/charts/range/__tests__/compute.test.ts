@@ -126,8 +126,17 @@ describe('computeRangeMarks', () => {
 
       const start = points.find((m) => m.key === 'Japan|start')!;
       const end = points.find((m) => m.key === 'Japan|end')!;
-      expect(start.fill).toBe(theme.colors.axis);
-      expect(end.fill).not.toBe(theme.colors.axis);
+      expect(start.fill).toBe(theme.colors.neutral[400]);
+      expect(end.fill).not.toBe(theme.colors.neutral[400]);
+    });
+
+    it('draws the undirected connector from the neutral ramp at 0.6 stroke opacity', () => {
+      const marks = marksFor(makeHorizontalRangeSpec());
+      const connector = marks.find(
+        (m): m is RuleMarkLayout => m.type === 'rule' && m.key === 'Japan|range',
+      )!;
+      expect(connector.stroke).toBe(theme.colors.neutral[400]);
+      expect(connector.strokeOpacity).toBe(0.6);
     });
 
     it('skips rows with non-finite endpoint values', () => {
@@ -167,7 +176,10 @@ describe('computeRangeMarks', () => {
 
       expect(japanEnd.fill).toBe(colorScale('Asia'));
       expect(connector.stroke).toBe(colorScale('Asia'));
-      expect(japanStart.fill).toBe(theme.colors.axis);
+      expect(japanStart.fill).toBe(theme.colors.neutral[400]);
+      // A colored connector carries the series color at full strength: the
+      // 0.6 softening is only for the neutral, undirected default.
+      expect(connector.strokeOpacity).toBeUndefined();
     });
   });
 

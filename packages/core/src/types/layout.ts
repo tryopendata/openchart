@@ -384,6 +384,12 @@ export interface RectMark {
    */
   cornerRadiusSides?: { tl?: boolean; tr?: boolean; br?: boolean; bl?: boolean };
   /**
+   * SVG `shape-rendering` hint. Set to `'crispEdges'` by the dense unit grids
+   * (calendar cells, waffle cells), where antialiasing on a 1-2px gap turns
+   * the gap into a pale smear and the grid loses its rhythm.
+   */
+  shapeRendering?: 'auto' | 'crispEdges' | 'geometricPrecision';
+  /**
    * Series identifier: the color-encoding value for this mark. Set only when a
    * color field groups the marks, so a single-series bar chart stays
    * single-series for hover emphasis and legend matching.
@@ -557,6 +563,13 @@ export interface RuleMarkLayout {
   strokeWidth: number;
   /** Stroke dash pattern (e.g. "4 2"). */
   strokeDasharray?: string;
+  /**
+   * Stroke opacity (0-1). Distinct from `opacity`: the element-level opacity
+   * slot is owned by the hover-dim class and the update-transition driver, so
+   * a mark that wants a permanently softened stroke (the dumbbell connector)
+   * has to say so on the stroke itself.
+   */
+  strokeOpacity?: number;
   /** Opacity (0-1). */
   opacity?: number;
   /** Original data row. */
@@ -1713,6 +1726,11 @@ export interface SankeyNodeMark {
   cornerRadius: number;
   /** Node label positioned outside the node. */
   label: ResolvedLabel;
+  /**
+   * The node's total flow, rendered as a tspan after the name in lighter,
+   * tabular ink. Renderers append it to the label's last line.
+   */
+  valueLabel?: { text: string; style: TextStyle };
   /** Node identifier (unique across the diagram). */
   nodeId: string;
   /** Total value flowing through this node. */
@@ -1736,7 +1754,7 @@ export interface SankeyLinkMark {
   sourceColor: string;
   /** Target node color (for gradient end). */
   targetColor: string;
-  /** Fill opacity (0.35 default, increases on hover). */
+  /** Fill opacity (0.5 light / 0.6 dark by default; hover raises it to 0.7). */
   fillOpacity: number;
   /** Source node identifier. */
   sourceId: string;

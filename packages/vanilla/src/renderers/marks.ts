@@ -284,6 +284,9 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
   if (mark.strokeWidth) {
     shapeEl.setAttribute('stroke-width', String(mark.strokeWidth));
   }
+  if (mark.shapeRendering) {
+    shapeEl.setAttribute('shape-rendering', mark.shapeRendering);
+  }
   g.appendChild(shapeEl);
 
   // Labels for rect marks are rendered in a dedicated overlay group by
@@ -394,6 +397,9 @@ function renderRuleMark(mark: RuleMarkLayout, index: number): SVGElement {
   });
   if (mark.strokeDasharray) {
     line.setAttribute('stroke-dasharray', mark.strokeDasharray);
+  }
+  if (mark.strokeOpacity != null) {
+    line.setAttribute('stroke-opacity', String(mark.strokeOpacity));
   }
   if (mark.opacity != null) {
     line.setAttribute('opacity', String(mark.opacity));

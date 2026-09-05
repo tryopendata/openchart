@@ -244,6 +244,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -254,7 +277,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -543,6 +566,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -553,7 +599,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -842,6 +888,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -852,7 +921,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -1141,6 +1210,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -1151,7 +1243,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -1440,6 +1532,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -1450,7 +1565,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -1739,6 +1854,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -1749,7 +1887,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -2038,6 +2176,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -2048,7 +2209,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -2337,6 +2498,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -2347,7 +2531,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -2636,6 +2820,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -2646,7 +2853,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -2935,6 +3142,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -2945,7 +3175,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -3234,6 +3464,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -3244,7 +3497,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -3533,6 +3786,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -3543,7 +3819,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -3832,6 +4108,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -3842,7 +4141,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -4131,6 +4430,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -4141,7 +4463,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -4430,6 +4752,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -4440,7 +4785,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",
@@ -4729,6 +5074,29 @@
                           "type": "number",
                           "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
                         },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
                         "weekStart": {
                           "type": "string",
                           "enum": [
@@ -4739,7 +5107,7 @@
                         },
                         "cellRadius": {
                           "type": "number",
-                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 1."
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
                         },
                         "shape": {
                           "type": "string",

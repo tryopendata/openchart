@@ -302,10 +302,10 @@ describe('calendar weekStart', () => {
 // ---------------------------------------------------------------------------
 
 describe('calendar mark options and responsive floor', () => {
-  it('applies cellRadius to day cells (default 1)', () => {
+  it('applies cellRadius to day cells (default 2)', () => {
     const data = dailyRows('2024-02-01', 30);
     const defaulted = compile(calendarSpec(data));
-    expect(rectsOf(defaulted)[0].cornerRadius).toBe(1);
+    expect(rectsOf(defaulted)[0].cornerRadius).toBe(2);
 
     const rounded = compile(calendarSpec(data, { type: 'calendar', cellRadius: 3 }));
     expect(rectsOf(rounded)[0].cornerRadius).toBe(3);
@@ -413,5 +413,59 @@ describe('calendar validation', () => {
     // Sub-daily rows plus an aggregating transform must not trip the
     // granularity check at validation time.
     expect(() => compile(spec)).not.toThrow(/daily granularity/);
+  });
+});
+
+describe('calendar color scale and legend', () => {
+  /** Rows where every value is a distinct positive, plus explicit zeros. */
+  function zeroAndRange(): Array<{ date: string; value: number }> {
+    const rows = dailyRows('2024-01-01', 40).map((r, i) => ({ ...r, value: i % 11 }));
+    rows[0].value = 0;
+    return rows;
+  }
+
+  it('defaults the color scale to five quantize classes', () => {
+    const layout = compile(calendarSpec(zeroAndRange()));
+    const legend = layout.legend as { type?: string; mode?: string; bins?: unknown[] };
+    expect(legend.type).toBe('continuous');
+    expect(legend.mode).toBe('binned');
+    expect(legend.bins).toHaveLength(5);
+  });
+
+  it('fills a recorded zero with the lightest ramp step, not the missing-day fill', () => {
+    const layout = compile(calendarSpec(zeroAndRange()));
+    const legend = layout.legend as { bins: Array<{ color: string }> };
+    const lightest = legend.bins[0].color;
+    const zeroCell = dataCells(layout).find((c) => c.data.value === 0)!;
+    expect(zeroCell.fill).toBe(lightest);
+
+    const missing = emptyCells(layout)[0];
+    expect(missing.fill).not.toBe(zeroCell.fill);
+  });
+
+  it('renders the compact Less/More key instead of break values', () => {
+    const layout = compile(calendarSpec(zeroAndRange()));
+    const legend = layout.legend as { ticks: Array<{ label: string; anchor: string }> };
+    expect(legend.ticks.map((t) => t.label)).toEqual(['Less', 'More']);
+    expect(legend.ticks[0].anchor).toBe('end');
+    expect(legend.ticks[1].anchor).toBe('start');
+  });
+
+  it('hangs the compact key off the right edge, on the swatch baseline', () => {
+    const layout = compile(calendarSpec(zeroAndRange()));
+    const legend = layout.legend as {
+      bounds: { x: number; width: number };
+      bar: { y: number; height: number };
+      labelY: number;
+    };
+    const right = legend.bounds.x + legend.bounds.width;
+    expect(right).toBeGreaterThan(layout.area.x + layout.area.width - 1);
+    // Labels sit on the swatch row, not on a line beneath it.
+    expect(legend.labelY).toBeLessThan(legend.bar.y + legend.bar.height);
+  });
+
+  it('stamps crispEdges on day cells', () => {
+    const layout = compile(calendarSpec(zeroAndRange()));
+    expect(rectsOf(layout)[0].shapeRendering).toBe('crispEdges');
   });
 });

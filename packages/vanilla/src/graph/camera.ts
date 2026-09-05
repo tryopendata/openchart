@@ -22,8 +22,8 @@ const K_MIN = 0.05;
 const K_MAX = 15;
 
 /** Auto-duration bounds (ms) and the interpolateZoom.duration scale factor. */
-const AUTO_MIN_MS = 300;
-const AUTO_MAX_MS = 1200;
+const AUTO_MIN_MS = 400;
+const AUTO_MAX_MS = 600;
 const AUTO_SCALE = 0.6;
 
 /** A d3 zoom "view": graph-space center x/y and the graph-space width in view. */

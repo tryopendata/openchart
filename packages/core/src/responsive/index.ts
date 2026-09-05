@@ -6,6 +6,7 @@ export type {
   AnnotationPosition,
   AxisLabelDensity,
   Breakpoint,
+  ChromeEconomy,
   ChromeMode,
   HeightClass,
   LabelMode,
@@ -15,11 +16,14 @@ export type {
 export {
   BREAKPOINT_COMPACT_MAX,
   BREAKPOINT_MEDIUM_MAX,
+  COMPACT_MAX_X_TICKS,
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
   HEIGHT_CRAMPED_MAX,
+  HEIGHT_NO_GRID_MAX,
   HEIGHT_SHORT_MAX,
+  resolveChromeEconomy,
 } from './breakpoints';
 export type { XAxisExtentInput } from './metrics';
 export {

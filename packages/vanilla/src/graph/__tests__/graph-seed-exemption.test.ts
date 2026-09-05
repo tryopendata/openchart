@@ -421,8 +421,8 @@ describe('seedNode dim exemption (mount)', () => {
     // 'b' is the seed's own neighbor and is not in the highlighted category.
     // Literal, not state.dimOpacity: sourcing the expectation from the object
     // under test would pass vacuously if both sides went undefined.
-    expect(state.dimOpacity).toBe(0.15);
-    expect(alphaAt(probe.arcs, byId.get('b')!)).toBe(0.15);
+    expect(state.dimOpacity).toBe(0.3);
+    expect(alphaAt(probe.arcs, byId.get('b')!)).toBe(0.3);
     expect(alphaAt(probe.arcs, byId.get('c')!)).toBe(1);
 
     graph.destroy();

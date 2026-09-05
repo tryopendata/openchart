@@ -49,8 +49,18 @@ import type { NormalizedSankeySpec } from './types';
 
 const LABEL_GAP = 6;
 const LINK_OPACITY_LIGHT = 0.5;
-const LINK_OPACITY_DARK = 0.75;
+/**
+ * Dark-mode link opacity. Light ribbons on a dark ground gain apparent weight,
+ * so 0.75 turned every crossing into a solid slab; 0.6 keeps overlaps readable.
+ */
+const LINK_OPACITY_DARK = 0.6;
 const NODE_CORNER_RADIUS = 2;
+/** Gap between a node's name and its value tspan. */
+const VALUE_GAP = 5;
+/** Share of the drawing width either label gutter may claim. */
+const MAX_LABEL_GUTTER = 0.35;
+/** Id prefix for a synthetic "Other" bucket node (one per column). */
+const OTHER_ID_PREFIX = '__oc_other_';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -129,11 +139,102 @@ function getLinkColors(
   }
 }
 
+/** Resolved form of the opt-in `other` bucketing config. */
+interface OtherConfig {
+  threshold: number;
+  label: string;
+}
+
+/** Normalize `other: 0.05` / `other: { threshold, label }` into one shape. */
+function resolveOtherConfig(other: NormalizedSankeySpec['other']): OtherConfig | null {
+  if (other == null) return null;
+  const threshold = typeof other === 'number' ? other : other.threshold;
+  if (!Number.isFinite(threshold) || threshold <= 0) return null;
+  const label = (typeof other === 'object' ? other.label : undefined) ?? 'Other';
+  return { threshold, label };
+}
+
+/**
+ * Map sub-threshold nodes to a per-column "Other" bucket.
+ *
+ * The share is measured against the node's own column total, which is what a
+ * reader compares against: a 4% node in a two-node column is not the same kind
+ * of small as a 4% node in a column of thirty. A column with a single small node
+ * is left alone -- renaming one node "Other" hides its identity and buys no
+ * space.
+ */
+function bucketSmallNodes(nodes: ComputedNode[], cfg: OtherConfig): Map<string, string> {
+  const byDepth = new Map<number, ComputedNode[]>();
+  for (const node of nodes) {
+    const depth = node.depth ?? 0;
+    const group = byDepth.get(depth);
+    if (group) group.push(node);
+    else byDepth.set(depth, [node]);
+  }
+
+  const merged = new Map<string, string>();
+  for (const [depth, group] of byDepth) {
+    const total = group.reduce((sum, n) => sum + (n.value ?? 0), 0);
+    if (total <= 0) continue;
+    const small = group.filter((n) => (n.value ?? 0) / total < cfg.threshold);
+    if (small.length < 2) continue;
+    for (const node of small) merged.set(node.id, `${OTHER_ID_PREFIX}${depth}`);
+  }
+  return merged;
+}
+
+/**
+ * Rewrite flow rows through an "Other" mapping, summing rows that collapse onto
+ * the same source/target pair so the diagram's total flow is preserved. Rows
+ * whose endpoints collapse onto each other would be self-loops and are dropped.
+ */
+function rewriteRowsForOther(
+  data: Record<string, unknown>[],
+  sourceField: string,
+  targetField: string,
+  valueField: string,
+  merged: Map<string, string>,
+): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  const index = new Map<string, Record<string, unknown>>();
+  for (const row of data) {
+    const src = String(row[sourceField]);
+    const tgt = String(row[targetField]);
+    const newSrc = merged.get(src) ?? src;
+    const newTgt = merged.get(tgt) ?? tgt;
+    if (newSrc === newTgt) continue;
+    const key = `${newSrc}\u0000${newTgt}`;
+    const value = Number(row[valueField]) || 0;
+    const existing = index.get(key);
+    if (existing) {
+      existing[valueField] = (Number(existing[valueField]) || 0) + value;
+      continue;
+    }
+    const next = { ...row, [sourceField]: newSrc, [targetField]: newTgt, [valueField]: value };
+    index.set(key, next);
+    out.push(next);
+  }
+  return out;
+}
+
 /**
  * Determine label position for a node based on its column depth.
  * Default ('auto'): leftmost/middle columns label right, rightmost column labels left.
  * 'right': all labels to the right.  'left': all labels to the left.
  */
+function labelsLeftForDepth(
+  depth: number,
+  maxDepth: number,
+  nodeLabelAlign: 'auto' | 'left' | 'right',
+): boolean {
+  if (nodeLabelAlign === 'left') return true;
+  if (nodeLabelAlign === 'right') return false;
+  // 'auto': the first column labels outside-left and the last outside-right, so
+  // the flow itself is never crossed by type. Interior columns label right.
+  if (depth === 0 && maxDepth > 0) return true;
+  return false;
+}
+
 function computeNodeLabel(
   node: ComputedNode,
   maxDepth: number,
@@ -144,22 +245,12 @@ function computeNodeLabel(
   padding?: number,
 ): SankeyNodeMark['label'] {
   const depth = node.depth ?? 0;
-
-  // Determine which side to place the label
-  let placeLeft: boolean;
-  if (nodeLabelAlign === 'left') {
-    placeLeft = true;
-  } else if (nodeLabelAlign === 'right') {
-    placeLeft = false;
-  } else {
-    // 'auto': rightmost column goes left, everything else goes right
-    placeLeft = depth === maxDepth;
-  }
+  const placeLeft = labelsLeftForDepth(depth, maxDepth, nodeLabelAlign);
 
   const style: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: theme.fonts.sizes.small,
-    fontWeight: theme.fonts.weights.normal,
+    fontWeight: theme.fonts.weights.medium,
     fill: theme.colors.text,
     lineHeight: 1.3,
   };
@@ -356,64 +447,110 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     return emptyLayout(area, chrome, theme, { ...options, height: grownHeight }, watermark);
   }
 
-  // 6. Run d3-sankey layout (may re-run once if labels overflow)
+  // 6. Run d3-sankey layout (re-runs when "Other" bucketing or label gutters
+  //    change the graph or the extent it is laid out in).
   const labelFontSize = theme.fonts.sizes.small;
-  const labelFontWeight = theme.fonts.weights.normal;
-  const nodeWidth = sankeySpec.nodeWidth ?? 12;
-
-  let layoutArea: Rect = { ...area };
-  let { nodes, links } = computeSankeyLayout(
-    sankeySpec.data,
-    sourceField,
-    targetField,
-    valueField,
-    layoutArea,
-    sankeySpec.nodeWidth,
-    sankeySpec.nodePadding,
-    sankeySpec.nodeAlign,
-    sankeySpec.iterations,
-    sankeySpec.nodeSort,
-  );
-
-  // 6b. Check if any right-side node labels overflow the right edge.
+  const labelFontWeight = theme.fonts.weights.medium;
+  const valueFontWeight = theme.fonts.weights.normal;
   const nodeLabelAlign = sankeySpec.nodeLabelAlign ?? 'auto';
-  const maxDepthFirst = nodes.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
-  const rightEdge = area.x + area.width;
-  let maxOverflow = 0;
-  for (const node of nodes) {
-    const depth = node.depth ?? 0;
-    // Skip nodes whose labels go left (they can't overflow the right edge)
-    const labelsLeft =
-      nodeLabelAlign === 'left' || (nodeLabelAlign === 'auto' && depth === maxDepthFirst);
-    if (labelsLeft) continue;
-    const labelX = (node.x1 ?? nodeWidth) + LABEL_GAP;
-    const labelText = node.label ?? node.id;
-    const labelWidth = estimateTextWidth(labelText, labelFontSize, labelFontWeight);
-    const overflow = labelX + labelWidth - rightEdge;
-    if (overflow > maxOverflow) maxOverflow = overflow;
-  }
 
-  // Re-run layout with tighter width if labels would clip
-  if (maxOverflow > 0) {
-    const margin = Math.ceil(maxOverflow) + 4; // small extra buffer
-    layoutArea = {
-      x: area.x,
-      y: area.y,
-      width: Math.max(area.width - margin, 40),
-      height: area.height,
-    };
-    ({ nodes, links } = computeSankeyLayout(
-      sankeySpec.data,
+  let workingData = sankeySpec.data;
+  const runLayout = (rect: Rect) =>
+    computeSankeyLayout(
+      workingData,
       sourceField,
       targetField,
       valueField,
-      layoutArea,
+      rect,
       sankeySpec.nodeWidth,
       sankeySpec.nodePadding,
       sankeySpec.nodeAlign,
       sankeySpec.iterations,
       sankeySpec.nodeSort,
-    ));
+    );
+
+  let layoutArea: Rect = { ...area };
+  let { nodes, links } = runLayout(layoutArea);
+
+  // 6a. Opt-in "Other" bucketing. Needs the first layout because a node's share
+  //     is measured against its own column, and columns come from the layout.
+  const otherConfig = resolveOtherConfig(sankeySpec.other);
+  const otherLabels = new Map<string, string>();
+  const otherMembers = new Map<string, string[]>();
+  if (otherConfig) {
+    const merged = bucketSmallNodes(nodes, otherConfig);
+    if (merged.size > 0) {
+      for (const [nodeId, otherId] of merged) {
+        otherLabels.set(otherId, otherConfig.label);
+        const members = otherMembers.get(otherId);
+        if (members) members.push(nodeId);
+        else otherMembers.set(otherId, [nodeId]);
+      }
+      workingData = rewriteRowsForOther(workingData, sourceField, targetField, valueField, merged);
+      ({ nodes, links } = runLayout(layoutArea));
+    }
+  }
+
+  const applyOtherLabels = (list: ComputedNode[]): void => {
+    if (otherLabels.size === 0) return;
+    for (const node of list) {
+      const label = otherLabels.get(node.id);
+      if (label) node.label = label;
+    }
+  };
+  applyOtherLabels(nodes);
+
+  // 6b. Reserve label gutters. Outside-left labels on the first column and
+  //     outside-right labels on the last need room the layout does not know
+  //     about, so measure the widest block on each side and re-run the layout
+  //     inside the remaining extent. Each gutter is capped so a long name can
+  //     never squeeze the flow itself out of the frame.
+  const labelBlockWidth = (node: ComputedNode): number => {
+    const name = node.label ?? node.id;
+    const nameWidth = estimateTextWidth(name, labelFontSize, labelFontWeight);
+    const valueWidth = estimateTextWidth(
+      formatFlowValue(node.value ?? 0, flowFmt),
+      labelFontSize,
+      valueFontWeight,
+    );
+    return nameWidth + VALUE_GAP + valueWidth;
+  };
+
+  const measureGutters = (list: ComputedNode[]): { left: number; right: number } => {
+    const maxDepth = list.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
+    const cap = area.width * MAX_LABEL_GUTTER;
+    let left = 0;
+    let right = 0;
+    for (const node of list) {
+      const depth = node.depth ?? 0;
+      const width = labelBlockWidth(node) + LABEL_GAP;
+      if (labelsLeftForDepth(depth, maxDepth, nodeLabelAlign)) {
+        // Space needed to the left of the node, minus what already exists.
+        const need = width - ((node.x0 ?? 0) - area.x);
+        if (need > left) left = need;
+      } else {
+        const need = width - (area.x + area.width - (node.x1 ?? 0));
+        if (need > right) right = need;
+      }
+    }
+    return {
+      left: Math.min(Math.max(left, 0), cap),
+      right: Math.min(Math.max(right, 0), cap),
+    };
+  };
+
+  const gutters = measureGutters(nodes);
+  if (gutters.left > 0 || gutters.right > 0) {
+    const left = Math.ceil(gutters.left);
+    const right = Math.ceil(gutters.right);
+    layoutArea = {
+      x: area.x + left,
+      y: area.y,
+      width: Math.max(area.width - left - right, 40),
+      height: area.height,
+    };
+    ({ nodes, links } = runLayout(layoutArea));
+    applyOtherLabels(nodes);
   }
 
   // 7. Build node color map
@@ -421,18 +558,67 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     nodes,
     theme.colors.categorical,
     colorField,
-    sankeySpec.data,
+    workingData,
     sourceField,
     targetField,
   );
+  // An "Other" bucket is a residual, not a category: it takes neutral ink so it
+  // never competes with the real flows for attention.
+  for (const otherId of otherMembers.keys()) {
+    nodeColorMap.set(otherId, theme.colors.neutral[300]);
+  }
 
   // 8. Compute max depth for label positioning
   const maxDepth = nodes.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
 
   // 9. Build SankeyNodeMark[]
+  const valueStyle: TextStyle = {
+    fontFamily: theme.fonts.family,
+    fontSize: theme.fonts.sizes.small,
+    fontWeight: theme.fonts.weights.normal,
+    fill: theme.colors.axis,
+    fontVariant: 'tabular-nums',
+    lineHeight: 1.3,
+  };
+
+  // Left edge of each column, so an interior label knows how much room it has
+  // before it runs into the next column.
+  const columnX0 = new Map<number, number>();
+  for (const node of nodes) {
+    const d = node.depth ?? 0;
+    const x0 = node.x0 ?? 0;
+    const current = columnX0.get(d);
+    if (current === undefined || x0 < current) columnX0.set(d, x0);
+  }
+
+  /**
+   * Interior labels are drawn inside the flow, between their own node and the
+   * next column, so they get the value tspan only when it actually fits there.
+   * Outside-placed labels (first and last column) always keep theirs -- their
+   * gutter was reserved for exactly this width.
+   */
+  const valueLabelFor = (
+    node: ComputedNode,
+    depth: number,
+    text: string,
+  ): SankeyNodeMark['valueLabel'] => {
+    const placedLeft = labelsLeftForDepth(depth, maxDepth, nodeLabelAlign);
+    if (placedLeft || depth === maxDepth) return { text, style: valueStyle };
+    const nextColumn = columnX0.get(depth + 1);
+    if (nextColumn === undefined) return { text, style: valueStyle };
+    const available = nextColumn - LABEL_GAP - ((node.x1 ?? 0) + LABEL_GAP);
+    const needed =
+      estimateTextWidth(node.label ?? node.id, labelFontSize, labelFontWeight) +
+      VALUE_GAP +
+      estimateTextWidth(text, labelFontSize, valueFontWeight);
+    return needed <= available ? { text, style: valueStyle } : undefined;
+  };
+
   const nodeMarks: SankeyNodeMark[] = nodes.map((node) => {
     const fill = nodeColorMap.get(node.id) ?? theme.colors.categorical[0];
     const depth = node.depth ?? 0;
+    const merged = otherMembers.get(node.id);
+    const valueText = formatFlowValue(node.value ?? 0, flowFmt);
 
     return {
       type: 'sankeyNode' as const,
@@ -441,6 +627,9 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       width: (node.x1 ?? 0) - (node.x0 ?? 0),
       height: (node.y1 ?? 0) - (node.y0 ?? 0),
       fill,
+      // Explicit: a node is a solid block of flow, not an outlined box. Without
+      // this the renderer inherits whatever stroke the SVG context carries.
+      stroke: 'none',
       cornerRadius: NODE_CORNER_RADIUS,
       label: computeNodeLabel(
         node,
@@ -451,13 +640,16 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
         options.width,
         padding,
       ),
+      valueLabel: valueLabelFor(node, depth, valueText),
       nodeId: node.id,
       value: node.value ?? 0,
       depth,
-      data: { id: node.id, label: node.label },
+      data: merged
+        ? { id: node.id, label: node.label, merged }
+        : { id: node.id, label: node.label },
       aria: {
         role: 'img',
-        label: `${node.label}: ${formatFlowValue(node.value ?? 0, flowFmt)}`,
+        label: `${node.label}: ${valueText}`,
       },
       animationIndex: 0, // Reassigned below after sorting by depth
     };
@@ -503,7 +695,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const finalLegend = buildSankeyLegend(
     nodeColorMap,
     colorField,
-    sankeySpec.data,
+    workingData,
     sourceField,
     targetField,
     theme,

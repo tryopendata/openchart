@@ -10,14 +10,20 @@
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import { adaptForLightLineStroke, cssTokenDefault } from '@opendata-ai/openchart-core';
 
+/**
+ * The opaque surface a theme paints on. A transparent theme background has no
+ * color of its own, so it resolves to the static `--oc-bg` token for the mode --
+ * the same value the engine's knockout strokes are cut in.
+ */
+export function resolvedSurface(theme: ResolvedTheme): string {
+  return theme.colors.background === 'transparent'
+    ? cssTokenDefault('--oc-bg', theme.isDark ? 'dark' : 'light')
+    : theme.colors.background;
+}
+
 export function stampThemeProperties(el: HTMLElement, theme: ResolvedTheme): void {
   const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
-  const bg =
-    theme.colors.background === 'transparent'
-      ? theme.isDark
-        ? cssTokenDefault('--oc-bg', 'dark')
-        : cssTokenDefault('--oc-bg', 'light')
-      : theme.colors.background;
+  const bg = resolvedSurface(theme);
 
   const n = theme.colors.neutral;
 

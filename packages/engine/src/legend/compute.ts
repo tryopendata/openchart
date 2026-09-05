@@ -39,6 +39,7 @@ import { applyCategoricalSort } from '../layout/scales';
 import {
   CONTINUOUS_LABEL_GAP,
   type ContinuousLegendContent,
+  computeCompactClassLegendContent,
   computeContinuousLegendContent,
   hasContinuousColorScale,
 } from './continuous';
@@ -106,6 +107,25 @@ export interface LegendContent {
    * `entries` is empty and `height`/`legendWidth` describe the bar block.
    */
   continuous?: ContinuousLegendContent;
+}
+
+/**
+ * Build the compact class key from a spec's quantitative color channel.
+ * Returns null when the channel carries no numeric values.
+ */
+function compactClassLegend(
+  spec: NormalizedChartSpec,
+  theme: ResolvedTheme,
+  measureWidth: MeasureFn,
+): ContinuousLegendContent | null {
+  const colorEnc = spec.encoding.color;
+  if (!colorEnc || !('field' in colorEnc)) return null;
+  const values: number[] = [];
+  for (const row of spec.data) {
+    const value = Number(row[colorEnc.field]);
+    if (Number.isFinite(value)) values.push(value);
+  }
+  return computeCompactClassLegendContent(values, colorEnc, theme, measureWidth);
 }
 
 /**
@@ -339,8 +359,19 @@ export function computeLegendContent(
   // position resolves to top (newsroom map-key convention) unless the user
   // asks for bottom; right-column positions can't fit the bar.
   if (hasContinuousColorScale(spec)) {
-    const continuous = computeContinuousLegendContent(spec, theme, availableWidth);
-    const continuousPosition = spec.legend?.position === 'bottom' ? 'bottom' : 'top';
+    // Calendars get the compact `Less ▢▢▢▢▢ More` key in the bottom-right
+    // corner instead of a labelled class bar: on a contribution grid the
+    // reader wants the direction of the ramp, not its break values.
+    const compact =
+      spec.markType === 'calendar' && !spec.legend?.position
+        ? compactClassLegend(spec, theme, measureWidth)
+        : null;
+    const continuous = compact ?? computeContinuousLegendContent(spec, theme, availableWidth);
+    const continuousPosition = compact
+      ? 'bottom'
+      : spec.legend?.position === 'bottom'
+        ? 'bottom'
+        : 'top';
     if (!continuous) {
       return emptyContent(continuousPosition, theme);
     }
@@ -353,15 +384,18 @@ export function computeLegendContent(
       fontVariant: 'tabular-nums',
     };
     const labelRowHeight = Math.ceil(labelStyle.fontSize * labelStyle.lineHeight);
-    const height = continuous.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+    const height = compact
+      ? Math.max(continuous.barHeight, labelRowHeight)
+      : continuous.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+    const blockWidth = continuous.blockWidth ?? continuous.barWidth;
     return {
       entries: [],
       position: continuousPosition,
       labelStyle,
       rowCount: 1,
-      totalWidth: continuous.barWidth,
+      totalWidth: blockWidth,
       height,
-      legendWidth: continuous.barWidth,
+      legendWidth: blockWidth,
       offset: spec.legend?.offset,
       ...categoricalDefaults(theme),
       continuous,
@@ -653,13 +687,19 @@ export function placeLegend(
     const cDx = offset?.dx ?? 0;
     const cDy = offset?.dy ?? 0;
     const cGap = legendGap(containerWidth);
-    const boundsX = chartArea.x + cDx;
+    const boundsX =
+      c.align === 'right' ? chartArea.x + chartArea.width - legendWidth + cDx : chartArea.x + cDx;
     const boundsY =
       position === 'bottom'
         ? chartArea.y + chartArea.height + xAxisHeight + cGap + cDy
         : chartArea.y - axisGapBelowLegend - cGap - height + cDy;
     const bounds = { x: boundsX, y: boundsY, width: legendWidth, height };
-    const bar = { x: bounds.x, y: bounds.y, width: c.barWidth, height: c.barHeight };
+    const bar = {
+      x: bounds.x + (c.barOffsetX ?? 0),
+      y: bounds.y,
+      width: c.barWidth,
+      height: c.barHeight,
+    };
     return {
       type: 'continuous' as const,
       mode: c.mode,
@@ -670,7 +710,8 @@ export function placeLegend(
       colorStops: c.colorStops,
       bins: c.bins.map((b) => ({ ...b, x: b.x + bar.x })),
       ticks: c.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
-      labelY: bar.y + bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize,
+      labelY:
+        bar.y + (c.labelBaselineOffset ?? bar.height + CONTINUOUS_LABEL_GAP + labelStyle.fontSize),
     } satisfies ContinuousLegendLayout;
   }
 

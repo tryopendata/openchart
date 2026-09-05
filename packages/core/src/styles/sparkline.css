@@ -13,4 +13,20 @@
     margin: 0;
     padding: 0;
   }
+
+  /**
+   * Data-arrival pulse. The update driver stamps `oc-pulse` on the sparkline's
+   * terminator dot when a transition finishes and strips it 600ms later.
+   * Deliberately not scoped under `.oc-animate`: that class only exists during
+   * the entrance window, and this fires on updates.
+   */
+  .oc-chart[data-display="sparkline"] .oc-pulse {
+    animation: oc-pulse 600ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .oc-chart[data-display="sparkline"] .oc-pulse {
+      animation: none;
+    }
+  }
 }

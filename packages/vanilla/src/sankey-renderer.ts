@@ -497,29 +497,53 @@ function renderLabels(
     const text = createSVGElement('text');
     setAttrs(text, { x: label.x, y: label.y });
     applyTextStyle(text, label.style);
+    // Path highlighting dims labels alongside their node.
+    text.setAttribute('class', 'oc-sankey-label');
+    text.setAttribute('data-node-id', node.nodeId);
+
+    const fontSize = label.style.fontSize ?? 12;
+    const fontWeight = label.style.fontWeight ?? 400;
 
     // Wrap label text when maxWidth is set and text would overflow
+    let lines = [label.text];
     if (label.maxWidth !== undefined && label.maxWidth > 0) {
-      const fontSize = label.style.fontSize ?? 12;
-      const fontWeight = label.style.fontWeight ?? 400;
-      const lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth, measureText);
-      if (lines.length > 1) {
-        const lineHeight = fontSize * (label.style.lineHeight ?? 1.3);
-        // Center the multi-line block vertically around the label y position
-        const totalHeight = (lines.length - 1) * lineHeight;
-        const startY = label.y - totalHeight / 2;
-        for (let i = 0; i < lines.length; i++) {
-          const tspan = createSVGElement('tspan');
-          tspan.setAttribute('x', String(label.x));
-          tspan.setAttribute('y', String(startY + i * lineHeight));
-          tspan.textContent = lines[i];
-          text.appendChild(tspan);
-        }
-      } else {
-        text.textContent = label.text;
+      lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth, measureText);
+    }
+
+    if (lines.length > 1) {
+      const lineHeight = fontSize * (label.style.lineHeight ?? 1.3);
+      // Center the multi-line block vertically around the label y position
+      const totalHeight = (lines.length - 1) * lineHeight;
+      const startY = label.y - totalHeight / 2;
+      for (let i = 0; i < lines.length; i++) {
+        const tspan = createSVGElement('tspan');
+        tspan.setAttribute('x', String(label.x));
+        tspan.setAttribute('y', String(startY + i * lineHeight));
+        tspan.textContent = lines[i];
+        text.appendChild(tspan);
       }
     } else {
-      text.textContent = label.text;
+      text.textContent = lines[0];
+    }
+
+    // The node's value rides the last line as a lighter tabular tspan. It
+    // carries no x/y, so it stays in the same text chunk and the anchor
+    // (start or end) still applies to name + value as one block.
+    if (node.valueLabel) {
+      // A bare textContent has to become a tspan first, or the value tspan
+      // would render before it.
+      if (text.childNodes.length === 0) {
+        const nameSpan = createSVGElement('tspan');
+        nameSpan.textContent = text.textContent;
+        text.textContent = '';
+        text.appendChild(nameSpan);
+      }
+      const valueSpan = createSVGElement('tspan');
+      valueSpan.setAttribute('class', 'oc-sankey-label-value');
+      valueSpan.setAttribute('dx', '5');
+      applyTextStyle(valueSpan, node.valueLabel.style);
+      valueSpan.textContent = node.valueLabel.text;
+      text.appendChild(valueSpan);
     }
 
     g.appendChild(text);

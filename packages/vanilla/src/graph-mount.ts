@@ -49,6 +49,7 @@ import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
+import { resolvedSurface } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -501,9 +502,14 @@ export function createGraph(
     const resolvedTheme = compilation.theme;
     if (resolvedTheme) {
       const s = wrapper.style;
-      s.setProperty('--oc-bg', resolvedTheme.colors.background);
+      // The graph paints on an opaque canvas, so a transparent theme background
+      // resolves to the mode's --oc-bg token. This is the single source for the
+      // graph surface: the node knockout rings are cut in the same color.
+      s.setProperty('--oc-bg', resolvedSurface(resolvedTheme));
       s.setProperty('--oc-text', resolvedTheme.colors.text);
-      s.setProperty('--oc-text-secondary', resolvedTheme.colors.axis ?? resolvedTheme.colors.text);
+      s.setProperty('--oc-text-secondary', resolvedTheme.colors.neutral.secondary);
+      s.setProperty('--oc-text-muted', resolvedTheme.colors.axis);
+      s.setProperty('--oc-border', resolvedTheme.colors.neutral.border);
       s.setProperty('--oc-font-family', resolvedTheme.fonts.family);
       s.fontFamily = resolvedTheme.fonts.family;
     }

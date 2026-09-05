@@ -16,7 +16,7 @@ export type GraphHoverMode = 'neighbors' | 'category' | 'node' | 'none';
 export interface ResolvedGraphInteraction {
   /** Hover emphasis mode. Default `'neighbors'`. */
   hoverMode: GraphHoverMode;
-  /** Node dim tier during hover/focus. Default 0.15. */
+  /** Node dim tier during hover/focus. Default 0.3. */
   dimOpacity: number;
   /** Whether selecting a node flies the camera to it. Default false. */
   selectFlyTo: boolean;
@@ -26,7 +26,7 @@ export interface ResolvedGraphInteraction {
   springyDrag: boolean;
 }
 
-const DEFAULT_DIM_OPACITY = 0.15;
+const DEFAULT_DIM_OPACITY = 0.3;
 const DEFAULT_CURSOR_RADIUS = 80;
 const DEFAULT_CURSOR_STRENGTH = 30;
 

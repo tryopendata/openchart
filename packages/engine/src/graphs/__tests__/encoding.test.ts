@@ -4,9 +4,14 @@ import type {
   GraphNode,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { resolveTheme } from '@opendata-ai/openchart-core';
+import { adaptTheme, cssTokenDefault, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import { darkenColor, resolveEdgeVisuals, resolveNodeVisuals } from '../encoding';
+import {
+  darkenColor,
+  resolveEdgeVisuals,
+  resolveGraphSurface,
+  resolveNodeVisuals,
+} from '../encoding';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -232,16 +237,32 @@ describe('resolveNodeVisuals', () => {
   });
 
   describe('stroke color', () => {
-    it('stroke is darker than fill', () => {
+    it('every node gets a knockout ring in the resolved surface', () => {
       const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme);
+      const surface = resolveGraphSurface(theme);
 
       for (const node of nodes) {
-        // Both fill and stroke should be valid color strings
         expect(node.fill).toBeTruthy();
-        expect(node.stroke).toBeTruthy();
-        // Stroke should be different from fill (darkened)
+        expect(node.stroke).toBe(surface);
         expect(node.stroke).not.toBe(node.fill);
       }
+    });
+
+    it('the ring follows the mode when the theme background is transparent', () => {
+      const light = resolveTheme({});
+      const dark = adaptTheme(light);
+      expect(resolveGraphSurface(light)).toBe(cssTokenDefault('--oc-bg', 'light'));
+      expect(resolveGraphSurface(dark)).toBe(cssTokenDefault('--oc-bg', 'dark'));
+
+      const darkNodes = resolveNodeVisuals(basicNodes, {}, basicEdges, dark);
+      for (const node of darkNodes) {
+        expect(node.stroke).toBe(cssTokenDefault('--oc-bg', 'dark'));
+      }
+    });
+
+    it('an opaque theme background is used verbatim', () => {
+      const painted = resolveTheme({ colors: { background: '#102030' } });
+      expect(resolveGraphSurface(painted)).toBe('#102030');
     });
   });
 
@@ -261,11 +282,11 @@ describe('resolveNodeVisuals', () => {
       expect(fills.size).toBe(1);
     });
 
-    it('stroke width defaults to 1', () => {
+    it('stroke width defaults to the 1.5px knockout ring', () => {
       const nodes = resolveNodeVisuals(basicNodes, {}, basicEdges, theme);
 
       for (const node of nodes) {
-        expect(node.strokeWidth).toBe(1);
+        expect(node.strokeWidth).toBe(1.5);
       }
     });
   });
@@ -376,12 +397,46 @@ describe('resolveEdgeVisuals', () => {
   });
 
   describe('edge color', () => {
-    it('uses theme axis color with opacity when no encoding', () => {
+    it('falls back to the axis gray when endpoint colors are unknown', () => {
       const edges = resolveEdgeVisuals(basicEdges, {}, theme);
 
       for (const edge of edges) {
         expect(edge.stroke).toContain('rgba');
       }
+    });
+
+    it('blends the endpoint fills when node colors are supplied', () => {
+      const nodeFills = new Map([
+        ['a', '#000000'],
+        ['b', '#ffffff'],
+        ['c', '#ffffff'],
+      ]);
+      const edges = resolveEdgeVisuals([{ source: 'a', target: 'b' }], {}, theme, nodeFills);
+      // Midpoint of black and white.
+      expect(edges[0].stroke).toBe('rgb(128, 128, 128)');
+    });
+
+    it('keeps the color as-is when both endpoints share a fill', () => {
+      const nodeFills = new Map([
+        ['b', '#06b6d4'],
+        ['c', '#06b6d4'],
+      ]);
+      const edges = resolveEdgeVisuals([{ source: 'b', target: 'c' }], {}, theme, nodeFills);
+      expect(edges[0].stroke).toBe('#06b6d4');
+    });
+
+    it('an explicit edgeColor encoding still wins over the blend', () => {
+      const nodeFills = new Map([
+        ['a', '#000000'],
+        ['b', '#ffffff'],
+      ]);
+      const edges = resolveEdgeVisuals(
+        [{ source: 'a', target: 'b', kind: 'x' }],
+        { edgeColor: { field: 'kind', scale: { range: ['#ff0000'] } } },
+        theme,
+        nodeFills,
+      );
+      expect(edges[0].stroke).toBe('#ff0000');
     });
   });
 

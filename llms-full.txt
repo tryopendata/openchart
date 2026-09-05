@@ -3539,7 +3539,7 @@ const spec = {
 | `edgeWidth` | Edge stroke width| quantitative (0.5-4px range)   |
 | `edgeStyle` | Edge line style  | nominal, ordinal (solid/dashed/dotted) |
 
-Label priority defaults to node degree, so the best-connected nodes keep their labels as the view gets crowded. Point `nodeLabelPriority` at a field to label by importance instead:
+Labels run on a budget, not a threshold: the renderer draws the highest-priority labels that fit the current zoom (12 when zoomed out, up to 80 zoomed in) and drops any whose box would collide with one already placed. Label priority defaults to node degree, so the best-connected nodes keep their labels as the view gets crowded. Point `nodeLabelPriority` at a field to label by importance instead:
 
 ```ts
 encoding: {
@@ -3548,7 +3548,7 @@ encoding: {
 }
 ```
 
-`nodeOverrides[id].alwaysShowLabel` still hard-pins an individual label above everything the channel produces.
+`nodeOverrides[id].alwaysShowLabel` still hard-pins an individual label above everything the channel produces. Pinned, hovered, selected, and search-matched labels bypass both the budget and the declutter, and they are the only ones drawn with a halo behind the text.
 
 **Live example**: [Encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded)
 

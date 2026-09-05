@@ -65,11 +65,13 @@
 
   .oc-graph-legend {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    background: var(--oc-bg);
+    top: 12px;
+    right: 12px;
+    /* Slightly translucent so the graph reads as continuous underneath, in
+     * whatever surface the mount stamped on the wrapper. */
+    background: color-mix(in srgb, var(--oc-bg) 88%, transparent);
     border: 1px solid var(--oc-border);
-    border-radius: var(--oc-border-radius);
+    border-radius: var(--oc-radius-lg);
     padding: 8px 12px;
     font-size: 12px;
     color: var(--oc-text-secondary);
@@ -140,16 +142,16 @@
 
   .oc-graph-search {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 12px;
+    left: 12px;
 
     & input {
       font-family: var(--oc-font-family);
       font-size: var(--oc-body-size);
       padding: 6px 10px;
       border: 1px solid var(--oc-border);
-      border-radius: var(--oc-border-radius);
-      background: var(--oc-bg);
+      border-radius: var(--oc-radius-md);
+      background: color-mix(in srgb, var(--oc-bg) 88%, transparent);
       color: var(--oc-text);
       outline: none;
 
@@ -160,23 +162,10 @@
     }
   }
 
-  /* Dark mode graph overrides (darker bg for canvas-based rendering) */
-  .oc-dark .oc-graph-wrapper,
-  .oc-graph-wrapper.oc-dark {
-    /* GitHub-dark canvas background, intentionally not a token */
-    --oc-bg: #0d1117;
-  }
-
   /*
-   * graph-mount.ts stamps .oc-dark on both .oc-graph-wrapper and
-   * .oc-graph-container simultaneously, so the self-variant
-   * (.oc-dark.oc-graph-wrapper) and descendant variant
-   * (.oc-dark .oc-graph-legend) resolve identically.
+   * No dark-mode canvas override lives here. graph-mount stamps the resolved
+   * theme surface on the wrapper (--oc-bg), so dark graphs sit on the same
+   * --oc-bg the rest of the library uses instead of a private GitHub-dark hex,
+   * and the legend/search panels mix against whatever that surface is.
    */
-  .oc-dark .oc-graph-legend,
-  .oc-dark.oc-graph-wrapper .oc-graph-legend,
-  .oc-dark .oc-graph-search input {
-    background: rgba(13, 17, 23, 0.85);
-    border-color: var(--oc-border);
-  }
 }

@@ -137,6 +137,25 @@
     }
   }
 
+  /* Live-tile pulse: the terminator dot of a sparkline swells once when new
+     data lands, so a glance at a wall of tiles catches which one just moved.
+     `r` is animated as a presentation attribute (SVG geometry properties are
+     animatable in CSS); the fallback is simply no swell. */
+  @keyframes oc-pulse {
+    0% {
+      r: var(--oc-pulse-r, 4px);
+      fill-opacity: 1;
+    }
+    45% {
+      r: calc(var(--oc-pulse-r, 4px) * 1.8);
+      fill-opacity: 0.5;
+    }
+    100% {
+      r: var(--oc-pulse-r, 4px);
+      fill-opacity: 1;
+    }
+  }
+
   /* Tooltip entrance */
   @keyframes oc-tooltip-in {
     from {

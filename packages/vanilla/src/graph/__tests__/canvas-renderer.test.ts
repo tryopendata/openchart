@@ -1,6 +1,6 @@
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GraphCanvasRenderer, labelThreshold, visibleRect } from '../canvas-renderer';
+import { GraphCanvasRenderer, labelBudget, visibleRect } from '../canvas-renderer';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +49,8 @@ function createRecordingCanvas(): {
     textAlign: '',
     textBaseline: '',
     lineJoin: '',
+    // 6px per character: enough for the declutter pass to have real boxes.
+    measureText: (text: string) => ({ width: text.length * 6 }),
   };
 
   for (const method of trackedMethods) {
@@ -179,37 +181,25 @@ function makeState(overrides?: Partial<GraphRenderState>): GraphRenderState {
 }
 
 // ---------------------------------------------------------------------------
-// Tests: labelThreshold
+// Tests: labelBudget
 // ---------------------------------------------------------------------------
 
-describe('labelThreshold', () => {
-  it('returns ~1 at very low zoom (only top priority labels visible)', () => {
-    const t = labelThreshold(0.2);
-    expect(t).toBeCloseTo(1, 5);
+describe('labelBudget', () => {
+  it('floors at 12 when zoomed out', () => {
+    expect(labelBudget(0.2)).toBe(12);
+    expect(labelBudget(0.05)).toBe(12);
   });
 
-  it('returns ~0 at high zoom (all labels visible)', () => {
-    const t = labelThreshold(2.0);
-    expect(t).toBeCloseTo(0, 5);
+  it('scales with zoom between the bounds', () => {
+    expect(labelBudget(1)).toBe(30);
+    expect(labelBudget(2)).toBe(60);
   });
 
-  it('returns ~0.5 at midpoint zoom', () => {
-    const t = labelThreshold(1.1);
-    expect(t).toBeCloseTo(0.5, 1);
-  });
-
-  it('clamps below 0.2 zoom', () => {
-    expect(labelThreshold(0.05)).toBe(1);
-  });
-
-  it('clamps above 2.0 zoom', () => {
-    expect(labelThreshold(5.0)).toBe(0);
+  it('caps at 80 however far in the camera goes', () => {
+    expect(labelBudget(5)).toBe(80);
+    expect(labelBudget(50)).toBe(80);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Tests: visibleRect
-// ---------------------------------------------------------------------------
 
 describe('visibleRect', () => {
   it('computes correct bounds with identity transform', () => {
@@ -426,6 +416,7 @@ function createTrackingCanvas(): {
     textAlign: '',
     textBaseline: '',
     lineJoin: '',
+    measureText: (text: string) => ({ width: text.length * 6 }),
   };
 
   const handler: ProxyHandler<Record<string, unknown>> = {
@@ -601,8 +592,8 @@ describe('search highlighting', () => {
 
     // Should see full opacity (1) for matched nodes
     expect(alphaValues).toContain(1);
-    // Should see dimmed opacity (0.15) for non-matching nodes
-    expect(alphaValues).toContain(0.15);
+    // Should see dimmed opacity (SEARCH_NON_MATCH_ALPHA) for non-matching nodes
+    expect(alphaValues).toContain(0.25);
   });
 
   it('search-dimmed edges use reduced opacity', () => {
@@ -765,19 +756,19 @@ describe('focus crossfade', () => {
       makeState({
         nodes,
         edges,
-        // Crossfade from resting (all default 0.35) → hover (a-b connected 1.0,
-        // b-c dimmed 0.05). At t=0.5 the connected edge blends to 0.675, the
-        // dimmed edge to 0.2.
+        // Crossfade from resting (all default 0.3) → hover (a-b connected 1.0,
+        // b-c dimmed 0.05). At t=0.5 the connected edge blends to 0.65, the
+        // dimmed edge to 0.175.
         focus: { t: 0.5, prev: restingFocus, next: hoverFocus },
       }),
     );
     const alphas = edgeStrokeAlphas(calls);
-    // connected a-b: lerp(0.35, 1.0, 0.5) = 0.675
-    expect(alphas.some((a) => Math.abs(a - 0.675) < 1e-6)).toBe(true);
-    // dimmed b-c: lerp(0.35, 0.05, 0.5) = 0.2
-    expect(alphas.some((a) => Math.abs(a - 0.2) < 1e-6)).toBe(true);
+    // connected a-b: lerp(0.3, 1.0, 0.5) = 0.65
+    expect(alphas.some((a) => Math.abs(a - 0.65) < 1e-6)).toBe(true);
+    // dimmed b-c: lerp(0.3, 0.05, 0.5) = 0.175
+    expect(alphas.some((a) => Math.abs(a - 0.175) < 1e-6)).toBe(true);
     // Nothing is left at a pure tier value mid-flight.
-    expect(alphas).not.toContain(0.35);
+    expect(alphas).not.toContain(0.3);
   });
 
   it('settled focus (t=1) uses the fast 3-bucket path at exact tier alphas', () => {
@@ -856,7 +847,10 @@ describe('label halo on transparent background', () => {
     theme.colors.background = 'transparent';
     renderer.render(
       makeState({
+        // Only forced labels (hovered/selected/alwaysShowLabel/search match)
+        // get a halo, so hover the node to exercise the halo path.
         nodes: [makeNode({ id: 'a', label: 'A', labelPriority: 1 })],
+        hoveredNodeId: 'a',
         theme,
         transform: { x: 0, y: 0, k: 2 },
       }),
@@ -948,8 +942,8 @@ describe('GraphCanvasRenderer entrance', () => {
       makeState({
         nodes: [makeNode({ id: 'a', index: 0 }), makeNode({ id: 'b', index: 1, x: 100 })],
         edges: [makeEdge('a', 'b')],
-        // t=0.65 → edgeAlpha = (0.65-0.3)/0.7 = 0.5, scaling the 0.35 default edge
-        // alpha to 0.175. The first stroke (edge) is now visible.
+        // t=0.65 → edgeAlpha = (0.65-0.3)/0.7 = 0.5, scaling the 0.3 default edge
+        // alpha to 0.15. The first stroke (edge) is now visible.
         entrance: { t: 0.65, stagger: false },
       }),
     );
@@ -1044,8 +1038,63 @@ describe('GraphCanvasRenderer update transitions', () => {
       }),
     );
 
-    // Ghost edge stroke = EDGE_ALPHA_DEFAULT (0.35) × ghost alpha (0.5) = 0.175.
+    // Ghost edge stroke = light-mode default edge alpha (0.3) × ghost alpha (0.5).
     const strokes = calls.filter((c) => c.method === 'stroke' && c.alpha !== undefined);
-    expect(strokes.some((c) => Math.abs((c.alpha ?? 0) - 0.175) < 1e-6)).toBe(true);
+    expect(strokes.some((c) => Math.abs((c.alpha ?? 0) - 0.15) < 1e-6)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: label budget + declutter (Phase 6)
+// ---------------------------------------------------------------------------
+
+describe('label declutter', () => {
+  function labelsDrawn(nodes: PositionedNode[], zoom: number, extra?: Partial<GraphRenderState>) {
+    const { canvas, calls } = createRecordingCanvas();
+    const renderer = new GraphCanvasRenderer(canvas);
+    renderer.resize(4000, 4000);
+    renderer.render(makeState({ nodes, transform: { x: 0, y: 0, k: zoom }, ...extra }));
+    return calls.filter((c) => c.method === 'fillText').map((c) => String(c.args[0]));
+  }
+
+  it('never draws more non-forced labels than the zoom budget allows', () => {
+    // 200 well-separated nodes: nothing collides, so the budget is the only cap.
+    const nodes = Array.from({ length: 200 }, (_, i) =>
+      makeNode({
+        id: `n${i}`,
+        x: (i % 20) * 180,
+        y: Math.floor(i / 20) * 180,
+        label: `N${i}`,
+        labelPriority: 1 - i / 200,
+      }),
+    );
+    expect(labelsDrawn(nodes, 1).length).toBe(labelBudget(1));
+  });
+
+  it('drops labels whose boxes would overlap', () => {
+    // Three nodes stacked on the same point: only the first can be placed.
+    const nodes = Array.from({ length: 3 }, (_, i) =>
+      makeNode({ id: `n${i}`, x: 100, y: 100, label: `Node ${i}`, labelPriority: 1 - i / 10 }),
+    );
+    expect(labelsDrawn(nodes, 1)).toEqual(['Node 0']);
+  });
+
+  it('draws the highest-priority labels first', () => {
+    const nodes = [
+      makeNode({ id: 'low', x: 100, y: 100, label: 'low', labelPriority: 0.1 }),
+      makeNode({ id: 'high', x: 100, y: 100, label: 'high', labelPriority: 0.9 }),
+    ];
+    expect(labelsDrawn(nodes, 1)).toEqual(['high']);
+  });
+
+  it('forced labels bypass both the budget and the declutter', () => {
+    const nodes = [
+      makeNode({ id: 'a', x: 100, y: 100, label: 'bulk', labelPriority: 0.9 }),
+      // Same spot, would collide, but alwaysShowLabel sets priority to Infinity.
+      makeNode({ id: 'b', x: 100, y: 100, label: 'pinned', labelPriority: Infinity }),
+    ];
+    const drawn = labelsDrawn(nodes, 1);
+    expect(drawn).toContain('pinned');
+    expect(drawn).not.toContain('bulk');
   });
 });

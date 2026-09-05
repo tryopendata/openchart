@@ -53,8 +53,8 @@ describe('resolveDuration', () => {
     expect(resolveDuration(0, 999)).toBe(1);
   });
   it('auto scales and clamps the interpolateZoom distance', () => {
-    expect(resolveDuration('auto', 100)).toBe(300); // 100*0.6=60 -> min 300
-    expect(resolveDuration('auto', 5000)).toBe(1200); // 5000*0.6=3000 -> max 1200
+    expect(resolveDuration('auto', 100)).toBe(400); // 100*0.6=60 -> min 400
+    expect(resolveDuration('auto', 5000)).toBe(600); // 5000*0.6=3000 -> max 600
     expect(resolveDuration(undefined, 1000)).toBe(600); // 1000*0.6=600
   });
 });

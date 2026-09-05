@@ -27,6 +27,7 @@
  */
 
 import type { BarListSpec, ChartSpec, SankeySpec, TableSpec } from '@opendata-ai/openchart-core';
+import { DEFAULT_THEME } from '@opendata-ai/openchart-core';
 import { BarList, Chart, DataTable, Sankey } from '@opendata-ai/openchart-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -43,7 +44,8 @@ import {
 } from '../data';
 import { vBarGradient } from './helpers';
 
-const ACCENT = '#0e7490';
+/** Slot 1 of the library palette: the accent every dashboard hero uses. */
+const ACCENT = DEFAULT_THEME.colors.categorical[0];
 
 // ---------------------------------------------------------------------------
 // Live data simulation
@@ -182,20 +184,32 @@ export function pctChange(series: ReadonlyArray<{ value: number }>): {
   return { text: `${up ? '+' : ''}${delta.toFixed(2)}%`, up, delta };
 }
 
-/** Dashboard surface tokens derived from the resolved gallery mode. Kept in JS
- *  (inline styles) so these product cards stay self-contained and don't touch
- *  the shared gallery.css. */
-export function dashTokens(dark: boolean) {
+/**
+ * Dashboard surface tokens.
+ *
+ * Every value is a `--oc-*` custom property, not a hex literal: the dashboard
+ * roots carry `oc-root` (plus `oc-dark`), so the same cascade that themes the
+ * charts themes the tiles around them. When the library's card, border, or
+ * semantic colors move, these tiles move with them instead of drifting into a
+ * private slate palette.
+ */
+export function dashTokens() {
   return {
-    surface: dark ? '#10151d' : '#ffffff',
-    border: dark ? '1px solid #232b38' : '1px solid #e2e8f0',
-    text: dark ? '#e2e8f0' : '#1e293b',
-    muted: dark ? '#94a3b8' : '#64748b',
-    faint: dark ? '#64748b' : '#94a3b8',
-    up: dark ? '#4ade80' : '#16a34a',
-    down: dark ? '#f87171' : '#dc2626',
+    surface: 'var(--oc-card)',
+    border: '1px solid var(--oc-border)',
+    text: 'var(--oc-text)',
+    muted: 'var(--oc-text-muted)',
+    faint: 'var(--oc-text-faint)',
+    up: 'var(--oc-positive)',
+    down: 'var(--oc-negative)',
     mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
   };
+}
+
+/** Class list for a dashboard root: the token cascade plus the mode flag. */
+export function useDashRootClass(gridClass: string): string {
+  const dark = useOcMode() === 'dark';
+  return [gridClass, 'oc-root', dark ? 'oc-dark' : ''].filter(Boolean).join(' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -204,14 +218,14 @@ export function dashTokens(dark: boolean) {
 
 /** A bordered dashboard surface. `className` carries the layout's grid spans. */
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
   return (
     <div
       className={className}
       style={{
         padding: 16,
         border: t.border,
-        borderRadius: 8,
+        borderRadius: 'var(--oc-radius-lg)',
         background: t.surface,
         color: t.text,
         minWidth: 0,
@@ -224,49 +238,90 @@ export function Panel({ children, className }: { children: ReactNode; className?
 
 const tileTitleStyle: CSSProperties = {
   fontSize: 11,
-  fontWeight: 600,
+  fontWeight: 500,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
   marginBottom: 12,
 };
 
+/**
+ * The delta chip. A signed percentage on a 10% tint of its own semantic color,
+ * so it reads as a badge rather than as a second, competing number.
+ */
+export function DeltaChip({ text, tone }: { text: string; tone: 'up' | 'down' | 'flat' }) {
+  const t = dashTokens();
+  const color = tone === 'down' ? t.down : tone === 'flat' ? t.muted : t.up;
+  const background =
+    tone === 'down'
+      ? 'var(--oc-negative-tint)'
+      : tone === 'flat'
+        ? 'var(--oc-hover-bg)'
+        : 'var(--oc-positive-tint)';
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '1px 6px',
+        borderRadius: 'var(--oc-radius-md)',
+        fontSize: 12,
+        fontWeight: 500,
+        fontVariantNumeric: 'tabular-nums',
+        color,
+        background,
+      }}
+    >
+      {text}
+    </span>
+  );
+}
+
 /** The small caps label a tile carries instead of chart chrome. */
 export function TileTitle({ children }: { children: ReactNode }) {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
   return <div style={{ ...tileTitleStyle, color: t.muted }}>{children}</div>;
 }
 
-/** A headline number with an optional signed delta underneath. */
+/**
+ * KPI tile. One anatomy, top to bottom: label, value, delta chip, timeframe.
+ * The value is the only thing at display size; everything else steps down in
+ * size and contrast so a wall of these scans as a single column of numbers.
+ */
 export function StatCard({
   label,
   value,
   delta,
+  timeframe,
   tone = 'up',
 }: {
   label: string;
   value: string;
   delta?: string;
+  timeframe?: string;
   tone?: 'up' | 'down' | 'flat';
 }) {
-  const t = dashTokens(useOcMode() === 'dark');
-  const deltaColor = tone === 'down' ? t.down : tone === 'flat' ? t.muted : t.up;
+  const t = dashTokens();
   return (
     <Panel>
-      <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 11, fontWeight: 500, color: t.muted, marginBottom: 4 }}>{label}</div>
       <div
         style={{
-          fontSize: 24,
+          fontSize: 30,
           fontWeight: 600,
-          letterSpacing: '-0.01em',
+          letterSpacing: '-0.02em',
+          lineHeight: 1.1,
           fontVariantNumeric: 'tabular-nums',
         }}
       >
         {value}
       </div>
       {delta ? (
-        <div style={{ fontSize: 11, fontWeight: 500, color: deltaColor, marginTop: 2 }}>
-          {delta}
+        <div style={{ marginTop: 6 }}>
+          <DeltaChip text={delta} tone={tone} />
         </div>
+      ) : null}
+      {timeframe ? (
+        <div style={{ fontSize: 11, color: t.faint, marginTop: 6 }}>{timeframe}</div>
       ) : null}
     </Panel>
   );
@@ -277,12 +332,19 @@ type IndexSeries = (typeof marketIndices.indices)[number];
 /** One market-index sparkline card: name, symbol, last level, change, spark.
  *  Live: the series advances every ~5s, staggered per card via `phaseMs`. */
 export function SparklineCard({ index, phaseMs = 0 }: { index: IndexSeries; phaseMs?: number }) {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
   const series = useLiveSeries(index.series, phaseMs);
   const change = pctChange(series);
   const last = series[series.length - 1]?.value ?? 0;
   return (
-    <div style={{ padding: 16, border: t.border, borderRadius: 8, background: t.surface }}>
+    <div
+      style={{
+        padding: 16,
+        border: t.border,
+        borderRadius: 'var(--oc-radius-lg)',
+        background: t.surface,
+      }}
+    >
       <div
         style={{
           display: 'flex',
@@ -297,26 +359,19 @@ export function SparklineCard({ index, phaseMs = 0 }: { index: IndexSeries; phas
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
         <span
           style={{
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: 600,
-            letterSpacing: '-0.01em',
+            letterSpacing: '-0.02em',
             fontVariantNumeric: 'tabular-nums',
           }}
         >
           {last.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </span>
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 500,
-            fontVariantNumeric: 'tabular-nums',
-            color: change.up ? t.up : t.down,
-          }}
-        >
-          {change.text}
-        </span>
+        <DeltaChip text={change.text} tone={change.up ? 'up' : 'down'} />
       </div>
-      <div style={{ height: 44 }}>
+      {/* 36px spark: enough to read the shape, not enough to compete with the
+          number above it. */}
+      <div style={{ height: 36 }}>
         <Chart spec={sparklineSpec(index.mark, series)} />
       </div>
     </div>
@@ -494,7 +549,7 @@ export function SaasDashboard() {
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: SAAS_GRID_CSS }} />
-      <div className="oc-dash-saas">
+      <div className={useDashRootClass('oc-dash-saas')}>
         <div className="oc-dash-stats oc-dash-span">
           <StatCard
             label="MRR"
@@ -672,7 +727,7 @@ function OpsSparkCard({
   series: seed,
   phaseMs,
 }: (typeof OPS_CARDS)[number] & { phaseMs: number }) {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
   const series = useLiveSeries(seed, phaseMs);
   const last = series[series.length - 1]?.value ?? 0;
   const change = pctChange(series);
@@ -783,7 +838,7 @@ export function OpsDashboard() {
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: OPS_GRID_CSS }} />
-      <div className="oc-dash-ops">
+      <div className={useDashRootClass('oc-dash-ops')}>
         <div className="oc-dash-strip oc-dash-span">
           {OPS_CARDS.map((card, i) => (
             <OpsSparkCard key={card.label} {...card} phaseMs={i * 400} />
@@ -949,7 +1004,7 @@ export function MarketsDashboard() {
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: MARKETS_GRID_CSS }} />
-      <div className="oc-dash-fin">
+      <div className={useDashRootClass('oc-dash-fin')}>
         <div className="oc-dash-strip oc-dash-span">
           {marketIndices.indices.slice(0, 4).map((index, i) => (
             <SparklineCard key={index.symbol} index={index} phaseMs={i * 400} />
@@ -1077,7 +1132,7 @@ export function MarketingDashboard() {
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: MARKETING_GRID_CSS }} />
-      <div className="oc-dash-mkt">
+      <div className={useDashRootClass('oc-dash-mkt')}>
         <Panel className="oc-dash-span">
           <div style={{ height: 400 }}>
             <Sankey spec={funnelSankeySpec} />
@@ -1349,7 +1404,7 @@ export function IncidentDashboard() {
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: INCIDENT_GRID_CSS }} />
-      <div className="oc-dash-inc">
+      <div className={useDashRootClass('oc-dash-inc')}>
         <div className="oc-dash-stats oc-dash-span">
           <StatCard
             label="Open incidents"

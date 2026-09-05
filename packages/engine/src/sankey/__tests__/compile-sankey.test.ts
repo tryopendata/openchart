@@ -471,3 +471,170 @@ describe('compileSankey', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Label anatomy (Phase 6): outside-left first column, outside-right last,
+// value tspan in tabular ink
+// ---------------------------------------------------------------------------
+
+describe('sankey label anatomy', () => {
+  const byId = (result: ReturnType<typeof compileSankey>, id: string) =>
+    result.nodes.find((n) => n.nodeId === id)!;
+
+  it('labels the first column outside-left and every other column right', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+
+    // A and B are depth 0.
+    for (const id of ['A', 'B']) {
+      const node = byId(result, id);
+      expect(node.label.style.textAnchor).toBe('end');
+      expect(node.label.x).toBeLessThan(node.x);
+    }
+    // C (middle) and D/E (last) label to the right of their node.
+    for (const id of ['C', 'D', 'E']) {
+      const node = byId(result, id);
+      expect(node.label.style.textAnchor).toBe('start');
+      expect(node.label.x).toBeGreaterThan(node.x + node.width - 1);
+    }
+  });
+
+  it('reserves a left gutter so first-column labels stay inside the frame', () => {
+    const longSpec = {
+      ...basicSpec,
+      data: [
+        { from: 'Residential and commercial buildings', to: 'C', amount: 10 },
+        { from: 'B', to: 'C', amount: 20 },
+        { from: 'C', to: 'D', amount: 30 },
+      ],
+    };
+    const result = compileSankey(longSpec, defaultOptions);
+    const node = byId(result, 'Residential and commercial buildings');
+    // The gutter is real space: the node no longer starts at the padding edge.
+    expect(node.x).toBeGreaterThan(40);
+    expect(node.label.maxWidth).toBeGreaterThan(0);
+  });
+
+  it('the left gutter never claims more than 35% of the width', () => {
+    const hugeLabel = 'x'.repeat(400);
+    const result = compileSankey(
+      { ...basicSpec, data: [{ from: hugeLabel, to: 'C', amount: 10 }] },
+      defaultOptions,
+    );
+    const node = byId(result, hugeLabel);
+    expect(node.x).toBeLessThan(defaultOptions.width * 0.4);
+  });
+
+  it('carries the node value as a separate tabular tspan', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+    const c = byId(result, 'C');
+
+    expect(c.valueLabel?.text).toBe('30');
+    expect(c.valueLabel?.style.fontVariant).toBe('tabular-nums');
+    // Value ink is quieter than the name's.
+    expect(c.valueLabel?.style.fill).not.toBe(c.label.style.fill);
+    // The name itself carries no value text.
+    expect(c.label.text).toBe('C');
+  });
+
+  it('drops the interior value tspan when it would run into the next column', () => {
+    // A long interior name at a narrow width leaves no room for the value
+    // between the middle column and the next one.
+    const longMiddle = {
+      ...basicSpec,
+      data: basicSpec.data.map((r) => ({
+        ...r,
+        from: r.from === 'C' ? 'Electricity generation' : r.from,
+        to: r.to === 'C' ? 'Electricity generation' : r.to,
+      })),
+    };
+    const narrow = compileSankey(longMiddle, { width: 300, height: 400 });
+    const c = narrow.nodes.find((n) => n.nodeId === 'Electricity generation')!;
+    const d = narrow.nodes.find((n) => n.nodeId === 'D')!;
+    const a = narrow.nodes.find((n) => n.nodeId === 'A')!;
+
+    expect(c.valueLabel).toBeUndefined();
+    // Outside-placed columns keep theirs: their gutter was reserved for it.
+    expect(d.valueLabel?.text).toBe('15');
+    expect(a.valueLabel?.text).toBe('10');
+  });
+
+  it('draws nodes as solid blocks (no stroke)', () => {
+    const result = compileSankey(basicSpec, defaultOptions);
+    for (const node of result.nodes) expect(node.stroke).toBe('none');
+  });
+
+  it('dark mode links sit at 0.6, light at 0.5', () => {
+    const light = compileSankey(basicSpec, defaultOptions);
+    const dark = compileSankey(basicSpec, { ...defaultOptions, darkMode: true });
+    expect(light.links[0].fillOpacity).toBe(0.5);
+    expect(dark.links[0].fillOpacity).toBe(0.6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Opt-in "Other" bucketing
+// ---------------------------------------------------------------------------
+
+describe('sankey other bucketing', () => {
+  const longTail = {
+    type: 'sankey' as const,
+    data: [
+      { from: 'Big', to: 'Sink', amount: 900 },
+      { from: 'Small1', to: 'Sink', amount: 10 },
+      { from: 'Small2', to: 'Sink', amount: 10 },
+      { from: 'Small3', to: 'Sink', amount: 10 },
+    ],
+    encoding: {
+      source: { field: 'from', type: 'nominal' as const },
+      target: { field: 'to', type: 'nominal' as const },
+      value: { field: 'amount', type: 'quantitative' as const },
+    },
+  };
+
+  const totalFlow = (result: ReturnType<typeof compileSankey>) =>
+    result.links.reduce((sum, l) => sum + l.value, 0);
+
+  it('is off by default: every node in the data is drawn', () => {
+    const result = compileSankey(longTail, defaultOptions);
+    expect(result.nodes.map((n) => n.nodeId).sort()).toEqual([
+      'Big',
+      'Sink',
+      'Small1',
+      'Small2',
+      'Small3',
+    ]);
+  });
+
+  it('merges sub-threshold nodes per column and preserves total flow', () => {
+    const before = compileSankey(longTail, defaultOptions);
+    const after = compileSankey({ ...longTail, other: 0.05 }, defaultOptions);
+
+    const labels = after.nodes.map((n) => n.label.text).sort();
+    expect(labels).toEqual(['Big', 'Other', 'Sink']);
+    expect(totalFlow(after)).toBe(totalFlow(before));
+
+    const other = after.nodes.find((n) => n.label.text === 'Other')!;
+    expect(other.value).toBe(30);
+    expect(other.data.merged).toEqual(['Small1', 'Small2', 'Small3']);
+  });
+
+  it('accepts a custom label', () => {
+    const after = compileSankey(
+      { ...longTail, other: { threshold: 0.05, label: 'All others' } },
+      defaultOptions,
+    );
+    expect(after.nodes.some((n) => n.label.text === 'All others')).toBe(true);
+  });
+
+  it('leaves a column with a single small node alone', () => {
+    const oneSmall = {
+      ...longTail,
+      data: [
+        { from: 'Big', to: 'Sink', amount: 900 },
+        { from: 'Small1', to: 'Sink', amount: 10 },
+      ],
+    };
+    const after = compileSankey({ ...oneSmall, other: 0.05 }, defaultOptions);
+    expect(after.nodes.map((n) => n.nodeId).sort()).toEqual(['Big', 'Sink', 'Small1']);
+  });
+});

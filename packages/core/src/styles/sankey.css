@@ -1,0 +1,29 @@
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Sankey
+   *
+   * Hovering a node (or a link) traces the whole path through it: everything
+   * upstream and everything downstream stays lit, the rest drops back. The mount
+   * writes the opacities; this file only owns how they move, using the shared
+   * hover duration so a sankey fades on the same clock as a bar chart.
+   *
+   * The transitions are switched off during the entrance (`.oc-animate`), where
+   * the keyframes own opacity and a competing transition would smear them.
+   * --------------------------------------------------------------------------- */
+
+  .oc-sankey:not(.oc-animate) .oc-sankey-link path {
+    transition: fill-opacity var(--oc-hover-duration) ease-out;
+  }
+
+  .oc-sankey:not(.oc-animate) .oc-sankey-node,
+  .oc-sankey:not(.oc-animate) .oc-sankey-label {
+    transition: opacity var(--oc-hover-duration) ease-out;
+  }
+
+  /* Labels are decoration over the flow: never a text cursor, never a selection
+   * drag that eats the hover. */
+  .oc-sankey-label {
+    pointer-events: none;
+    user-select: none;
+  }
+}

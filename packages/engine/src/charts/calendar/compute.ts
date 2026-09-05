@@ -18,6 +18,11 @@
  * (colors.annotationFill), visually distinct from the chromatic scale
  * minimum in both light and dark modes. Days padding the first/last week
  * but belonging to a neighboring year render nothing.
+ *
+ * A recorded zero is not a missing day: it takes the lightest step of the
+ * five-class ramp (the color scale defaults to `quantize` with five classes
+ * for calendars, in `normalizeChartSpec`), so "nothing happened" and "no
+ * data" stay two different colors, the way GitHub draws them.
  */
 
 import type {
@@ -53,8 +58,11 @@ export const MIN_CELL_SIZE = 7;
 /** Maximum grid step (cell + gap) so huge containers stay dense. */
 const MAX_STEP = 20;
 
-/** Minimum grid step: the cell floor plus a 1px gap. */
-const MIN_STEP = MIN_CELL_SIZE + 1;
+/** Narrowest gap between day cells, in pixels. See the gap ladder below. */
+const MIN_CELL_GAP = 2;
+
+/** Minimum grid step: the cell floor plus the narrowest gap. */
+const MIN_STEP = MIN_CELL_SIZE + MIN_CELL_GAP;
 
 /** Vertical gap between stacked year bands. */
 const BAND_GAP = 18;
@@ -63,7 +71,7 @@ const BAND_GAP = 18;
 const WEEKDAY_LABEL_GAP = 6;
 
 /** Default corner radius for day cells (markDef.cellRadius overrides). */
-const DEFAULT_CELL_RADIUS = 1;
+const DEFAULT_CELL_RADIUS = 2;
 
 /** Weekday labels shown on the left (day-of-week numbers, 0 = Sunday). */
 const WEEKDAY_LABELS: Array<{ dow: number; label: string }> = [
@@ -190,7 +198,9 @@ export function computeCalendarMarks(
     MAX_STEP,
     Math.max(MIN_STEP, Math.floor(Math.min(stepFromWidth, stepFromHeight))),
   );
-  const cellGap = step >= 14 ? 3 : step >= 10 ? 2 : 1;
+  // Gap ladder. The floor is 2px, not 1: a 1px gap antialiases into the cells
+  // and the grid reads as a solid block instead of a run of days.
+  const cellGap = step >= 14 ? 3 : MIN_CELL_GAP;
   const cell = step - cellGap;
 
   const gridWidth = maxColumns * step - cellGap;
@@ -293,6 +303,7 @@ export function computeCalendarMarks(
           height: cell,
           fill: getSequentialColor(scales, datum.value),
           cornerRadius: cellRadius,
+          shapeRendering: 'crispEdges',
           data: datum.row,
           aria: {
             label: `${dateLabel}, ${colorEnc.field}: ${calendarFmt(datum.value)}`,
@@ -308,6 +319,7 @@ export function computeCalendarMarks(
           height: cell,
           fill: theme.colors.annotationFill,
           cornerRadius: cellRadius,
+          shapeRendering: 'crispEdges',
           data: {},
           aria: { decorative: true },
         });

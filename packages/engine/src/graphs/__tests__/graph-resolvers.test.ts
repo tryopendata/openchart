@@ -53,10 +53,10 @@ describe('resolveGraphAnimation', () => {
 });
 
 describe('resolveGraphInteraction', () => {
-  it('defaults to neighbors / 0.15 / no fly / no physics', () => {
+  it('defaults to neighbors / 0.3 / no fly / no physics', () => {
     expect(resolveGraphInteraction(undefined)).toEqual({
       hoverMode: 'neighbors',
-      dimOpacity: 0.15,
+      dimOpacity: 0.3,
       selectFlyTo: false,
       cursorRepulsion: null,
       springyDrag: false,

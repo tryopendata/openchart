@@ -21,13 +21,23 @@ import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 // Constants
 // ---------------------------------------------------------------------------
 
-const LABEL_FONT_MIN = 8;
+const LABEL_FONT_MIN = 9;
 const LABEL_FONT_MAX = 12;
-const EDGE_ALPHA_DEFAULT = 0.35;
+/**
+ * Resting edge alpha, per mode. Edges are structure, not data: they sit under
+ * the label layer, so dark canvases take the quieter value (light strokes gain
+ * apparent weight against a dark ground).
+ */
+const EDGE_ALPHA_DEFAULT_LIGHT = 0.3;
+const EDGE_ALPHA_DEFAULT_DARK = 0.25;
 const EDGE_ALPHA_CONNECTED = 1.0;
-const SEARCH_NON_MATCH_ALPHA = 0.15;
+const SEARCH_NON_MATCH_ALPHA = 0.25;
 /** Default node dim tier — the ratio the edge dim tier derives against. */
-const DEFAULT_DIM_OPACITY = 0.15;
+const DEFAULT_DIM_OPACITY = 0.3;
+/** Maximum labels drawn at once, before the declutter pass. */
+const LABEL_BUDGET_MIN = 12;
+const LABEL_BUDGET_MAX = 80;
+const LABEL_BUDGET_PER_ZOOM = 30;
 /** Above this visible-edge count a focus crossfade snaps (no per-frame blend). */
 const CROSSFADE_MAX_EDGES = 20000;
 
@@ -74,17 +84,17 @@ function nodeTier(
 
 /**
  * Resolve a tier to its edge alpha. The dimmed tier derives from the node dim
- * knob (`dimOpacity / 3`), preserving the deliberate 0.15-node / 0.05-edge ratio
+ * knob (`dimOpacity / 3`), preserving the deliberate node-to-edge dim ratio
  * that keeps dense hairballs quiet during hover.
  */
-function edgeTierAlpha(tier: FocusTier, dimOpacity: number): number {
+function edgeTierAlpha(tier: FocusTier, dimOpacity: number, defaultAlpha: number): number {
   switch (tier) {
     case 'connected':
       return EDGE_ALPHA_CONNECTED;
     case 'dimmed':
       return dimOpacity / 3;
     default:
-      return EDGE_ALPHA_DEFAULT;
+      return defaultAlpha;
   }
 }
 
@@ -179,7 +189,7 @@ function deriveFocus(
 }
 const GLOW_NODE_THRESHOLD = 2000;
 const GLOW_RADIUS_MULTIPLIER = 1.3;
-const GLOW_ALPHA = 0.15;
+const GLOW_ALPHA = 0.1;
 const CULL_MARGIN = 50;
 const TWO_PI = Math.PI * 2;
 
@@ -191,13 +201,28 @@ const MIN_SCREEN_RADIUS = 2.5;
 // ---------------------------------------------------------------------------
 
 /**
- * Compute label visibility threshold from zoom level.
- * At zoom 0.2 (zoomed out): threshold ~1.0 (only top ~5% visible).
- * At zoom 2.0+: threshold ~0.0 (all visible).
+ * How many non-forced labels may be drawn at the current zoom.
+ *
+ * A budget, not a priority threshold: a threshold either shows every node above
+ * a cutoff (a wall of text on a dense graph) or nothing at all. The budget draws
+ * the top-priority labels that still fit, and the declutter pass in `drawLabels`
+ * drops the ones that would collide.
  */
-export function labelThreshold(zoom: number): number {
-  const t = Math.max(0, Math.min(1, (zoom - 0.2) / 1.8));
-  return 1 - t;
+export function labelBudget(zoom: number): number {
+  const raw = Math.round(zoom * LABEL_BUDGET_PER_ZOOM);
+  return Math.max(LABEL_BUDGET_MIN, Math.min(LABEL_BUDGET_MAX, raw));
+}
+
+/** Axis-aligned box used by the label declutter pass. */
+interface LabelBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+function boxesOverlap(a: LabelBox, b: LabelBox): boolean {
+  return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 }
 
 /** Compute visible rect in graph coordinates from canvas size + transform. */
@@ -327,8 +352,8 @@ export class GraphCanvasRenderer {
     const visibleEdges = edges.filter((e) => edgeInView(e, rect));
 
     const isDark = theme.isDark;
+    const edgeAlphaDefault = isDark ? EDGE_ALPHA_DEFAULT_DARK : EDGE_ALPHA_DEFAULT_LIGHT;
     const showGlow = isDark && !isGesturing && visibleNodes.length < GLOW_NODE_THRESHOLD;
-    const threshold = labelThreshold(transform.k);
     // Minimum radius in graph coordinates so nodes stay visible when zoomed out
     const minRadius = MIN_SCREEN_RADIUS / transform.k;
 
@@ -350,7 +375,7 @@ export class GraphCanvasRenderer {
     // Removed nodes/edges fade out beneath the live graph. Not hit-tested (the
     // mount never rebuilds the spatial index with them), just painted.
     if (state.exiting && state.exiting.alpha > 0) {
-      this.drawGhosts(ctx, state.exiting, rect);
+      this.drawGhosts(ctx, state.exiting, rect, edgeAlphaDefault);
     }
 
     // -- Draw edges (batched) -- crossfade path only mid-transition, else the
@@ -363,6 +388,7 @@ export class GraphCanvasRenderer {
         crossfade.next,
         crossfade.t,
         dimOpacity,
+        edgeAlphaDefault,
         isGesturing ? null : searchMatches,
         hoveredEdgeId,
         entrance,
@@ -374,6 +400,7 @@ export class GraphCanvasRenderer {
         visibleEdges,
         nextFocus,
         dimOpacity,
+        edgeAlphaDefault,
         isGesturing ? null : searchMatches,
         hoveredEdgeId,
         entrance,
@@ -405,7 +432,6 @@ export class GraphCanvasRenderer {
       this.drawLabels(
         ctx,
         visibleNodes,
-        threshold,
         hoveredNodeId,
         selectedNodeIds,
         searchMatches,
@@ -459,6 +485,7 @@ export class GraphCanvasRenderer {
     edges: PositionedEdge[],
     focus: FocusSnapshot,
     dimOpacity: number,
+    edgeAlphaDefault: number,
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
     entrance: EntranceReveal | null,
@@ -488,14 +515,14 @@ export class GraphCanvasRenderer {
     this.drawEdgeGroupBatched(
       ctx,
       buckets.dimmed,
-      edgeTierAlpha('dimmed', dimOpacity) * ea,
+      edgeTierAlpha('dimmed', dimOpacity, edgeAlphaDefault) * ea,
       searchMatches,
       enterAlphaFor,
     );
     this.drawEdgeGroupBatched(
       ctx,
       buckets.default,
-      EDGE_ALPHA_DEFAULT * ea,
+      edgeAlphaDefault * ea,
       searchMatches,
       enterAlphaFor,
     );
@@ -523,6 +550,7 @@ export class GraphCanvasRenderer {
     next: FocusSnapshot,
     t: number,
     dimOpacity: number,
+    edgeAlphaDefault: number,
     searchMatches: Set<string> | null,
     hoveredEdgeId: string | null,
     entrance: EntranceReveal | null,
@@ -554,7 +582,11 @@ export class GraphCanvasRenderer {
       .map(([key, bucket]) => {
         const [prevTier, nextTier] = key.split('|') as [FocusTier, FocusTier];
         const alpha =
-          lerp(edgeTierAlpha(prevTier, dimOpacity), edgeTierAlpha(nextTier, dimOpacity), t) * ea;
+          lerp(
+            edgeTierAlpha(prevTier, dimOpacity, edgeAlphaDefault),
+            edgeTierAlpha(nextTier, dimOpacity, edgeAlphaDefault),
+            t,
+          ) * ea;
         return { alpha, bucket };
       })
       .sort((a, b) => a.alpha - b.alpha);
@@ -897,7 +929,6 @@ export class GraphCanvasRenderer {
   private drawLabels(
     ctx: CanvasRenderingContext2D,
     nodes: PositionedNode[],
-    threshold: number,
     hoveredNodeId: string | null,
     selectedNodeIds: Set<string>,
     searchMatches: Set<string> | null,
@@ -906,7 +937,7 @@ export class GraphCanvasRenderer {
     entrance: EntranceReveal | null,
     enterAlphaFor: (id: string) => number,
   ): void {
-    // Labels fade in with the raw entrance progress (× on top of dim alpha).
+    // Labels fade in with the raw entrance progress (x on top of dim alpha).
     const la = entrance ? entrance.labelAlpha : 1;
     // Font size inversely scaled by zoom, clamped to readable range
     const rawSize = 10 / zoom;
@@ -916,39 +947,96 @@ export class GraphCanvasRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
+    // Halo color: the canvas the text is cut out of. A transparent bg inherits
+    // its mode from the theme's darkMode flag, not from text luminance.
+    const haloColor =
+      theme.colors.background !== 'transparent'
+        ? theme.colors.background
+        : theme.isDark
+          ? 'rgba(0, 0, 0, 0.7)'
+          : 'rgba(255, 255, 255, 0.85)';
+
+    // Forced labels (hovered, selected, alwaysShowLabel, search match) always
+    // draw and reserve their box first; everything else competes for the budget.
+    const forced: PositionedNode[] = [];
+    const rest: PositionedNode[] = [];
     for (const node of nodes) {
       if (!node.label) continue;
+      const isForced =
+        node.id === hoveredNodeId ||
+        selectedNodeIds.has(node.id) ||
+        node.labelPriority === Infinity ||
+        (searchMatches?.has(node.id) ?? false);
+      if (isForced) forced.push(node);
+      else rest.push(node);
+    }
+    rest.sort((a, b) => b.labelPriority - a.labelPriority);
 
-      const isHovered = node.id === hoveredNodeId;
-      const isSelected = selectedNodeIds.has(node.id);
-      const forced = isHovered || isSelected;
+    const budget = labelBudget(zoom);
+    // Measuring every candidate would cost more than the labels we can draw, so
+    // only the top slice by priority is considered for the remaining slots.
+    const candidates = rest.slice(0, budget * 4);
+    const placed: LabelBox[] = [];
+    const pad = fontSize * 0.15;
+    const lineHeight = fontSize * 1.2;
+
+    // Headless canvases (jsdom/happy-dom stubs) can be missing measureText;
+    // an average-glyph estimate keeps the declutter pass honest there.
+    const textWidth = (text: string): number =>
+      ctx.measureText?.(text)?.width ?? text.length * fontSize * 0.55;
+
+    const boxFor = (node: PositionedNode): LabelBox => {
+      const w = textWidth(node.label as string);
+      const y0 = node.y + node.radius + 3;
+      return {
+        x0: node.x - w / 2 - pad,
+        x1: node.x + w / 2 + pad,
+        y0: y0 - pad,
+        y1: y0 + lineHeight + pad,
+      };
+    };
+
+    const drawOne = (node: PositionedNode, isForced: boolean): void => {
       const dimmed = searchMatches !== null && !searchMatches.has(node.id);
-
-      // LOD: skip labels below threshold unless forced
-      if (!forced && node.labelPriority < threshold) continue;
-
       ctx.globalAlpha = (dimmed ? SEARCH_NON_MATCH_ALPHA : 1) * la * enterAlphaFor(node.id);
-
       const labelY = node.y + node.radius + 3;
 
-      // Halo for readability: stroke behind text in the background color
-      // so labels stay legible over edges and other nodes.
-      if (theme.colors.background !== 'transparent') {
-        ctx.strokeStyle = theme.colors.background;
-      } else {
-        // Transparent bg inherits its mode from the theme's darkMode flag, not
-        // from text luminance. Dark mode = dark page = dark halo behind light
-        // text; light mode = light page = light halo.
-        ctx.strokeStyle = theme.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.85)';
+      // Halo is reserved for the labels that must win over whatever they cross:
+      // painting one behind every label thickens the whole type layer into a
+      // gray mat on a dense graph.
+      if (isForced) {
+        ctx.strokeStyle = haloColor;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.miterLimit = 2;
+        ctx.strokeText(node.label as string, node.x, labelY);
       }
-      ctx.lineWidth = 3;
-      ctx.lineJoin = 'round';
-      ctx.miterLimit = 2;
-      ctx.strokeText(node.label, node.x, labelY);
 
-      ctx.fillStyle = theme.colors.text;
-      ctx.fillText(node.label, node.x, labelY);
+      ctx.fillStyle = isForced ? theme.colors.text : theme.colors.axis;
+      ctx.fillText(node.label as string, node.x, labelY);
+    };
+
+    // Forced labels reserve space, and paint last so they sit on top.
+    for (const node of forced) placed.push(boxFor(node));
+
+    let drawn = 0;
+    for (const node of candidates) {
+      if (drawn >= budget) break;
+      const box = boxFor(node);
+      let collides = false;
+      for (const other of placed) {
+        if (boxesOverlap(box, other)) {
+          collides = true;
+          break;
+        }
+      }
+      if (collides) continue;
+      placed.push(box);
+      drawOne(node, false);
+      drawn++;
     }
+
+    for (const node of forced) drawOne(node, true);
 
     ctx.globalAlpha = 1;
   }
@@ -967,6 +1055,7 @@ export class GraphCanvasRenderer {
     ctx: CanvasRenderingContext2D,
     exiting: NonNullable<GraphRenderState['exiting']>,
     rect: { minX: number; minY: number; maxX: number; maxY: number },
+    edgeAlphaDefault: number,
   ): void {
     const alpha = exiting.alpha;
 
@@ -985,7 +1074,7 @@ export class GraphCanvasRenderer {
       ctx.setLineDash(dash);
       ctx.strokeStyle = sample.stroke;
       ctx.lineWidth = sample.strokeWidth;
-      ctx.globalAlpha = EDGE_ALPHA_DEFAULT * alpha;
+      ctx.globalAlpha = edgeAlphaDefault * alpha;
       ctx.beginPath();
       for (const edge of group) {
         ctx.moveTo(edge.sourceX, edge.sourceY);

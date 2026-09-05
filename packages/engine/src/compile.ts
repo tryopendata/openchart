@@ -43,6 +43,7 @@ import {
   getLayoutStrategy,
   isAxislessMark,
   MAX_SR_TABLE_ROWS,
+  resolveChromeEconomy,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { collectPinnedOverlapWarnings } from './annotations/collisions';
@@ -310,6 +311,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   const breakpoint = getBreakpoint(options.width);
   const heightClass = getHeightClass(options.height);
   let strategy = getLayoutStrategy(breakpoint, heightClass);
+  // How much chrome the container can afford: a tile drops its grid, then its
+  // axes, and caps x tick labels at compact widths. Explicit axis config wins.
+  const economy = resolveChromeEconomy(options.width, options.height);
 
   // Apply breakpoint-conditional overrides from the expanded spec
   const rawSpec = expandedSpec as Record<string, unknown>;
@@ -775,8 +779,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // Compute axes (skip for radial charts).
   // Sparkline mode skips axes by default unless the user explicitly opted into
   // an axis on a specific channel.
-  const skipX = chartSpec.display === 'sparkline' && !chartSpec.userExplicit.xAxis;
-  const skipY = chartSpec.display === 'sparkline' && !chartSpec.userExplicit.yAxis;
+  const axisless = chartSpec.display === 'sparkline' || !economy.axes;
+  const skipX = axisless && !chartSpec.userExplicit.xAxis;
+  const skipY = axisless && !chartSpec.userExplicit.yAxis;
   const axes = isRadial
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText, {
@@ -784,6 +789,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
         encoding: renderSpec.encoding as Encoding,
         skipX,
         skipY,
+        suppressGrid: !economy.gridlines,
+        maxXTicks: economy.maxXTicks,
         markType: chartSpec.markType,
         totalWidth: options.width,
         // If the guardrail stripped chrome, the plan's y-ticks were sized

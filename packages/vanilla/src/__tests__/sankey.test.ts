@@ -131,3 +131,109 @@ describe('createSankey', () => {
     instance.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Path highlighting (Phase 6)
+// ---------------------------------------------------------------------------
+
+describe('sankey path highlighting', () => {
+  let container: HTMLDivElement;
+
+  // A -> B -> C, plus A -> D. Hovering B must light the whole A->B->C path and
+  // leave the A->D branch off-path.
+  const branching = {
+    type: 'sankey' as const,
+    data: [
+      { from: 'A', to: 'B', amount: 10 },
+      { from: 'B', to: 'C', amount: 10 },
+      { from: 'A', to: 'D', amount: 5 },
+    ],
+    encoding: {
+      source: { field: 'from', type: 'nominal' as const },
+      target: { field: 'to', type: 'nominal' as const },
+      value: { field: 'amount', type: 'quantitative' as const },
+    },
+  };
+
+  beforeEach(() => {
+    container = createContainer();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function linkOpacity(source: string, target: string): number {
+    const el = container.querySelector(
+      `.oc-sankey-link[data-source="${source}"][data-target="${target}"] path`,
+    );
+    return Number(el?.getAttribute('fill-opacity'));
+  }
+
+  function nodeOpacity(selector: string, id: string): string {
+    const el = container.querySelector(`${selector}[data-node-id="${id}"]`) as SVGElement | null;
+    return el?.style.opacity ?? '';
+  }
+
+  function hover(nodeId: string): void {
+    const el = container.querySelector(`.oc-sankey-node[data-node-id="${nodeId}"]`);
+    el?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+  }
+
+  it('traces upstream and downstream from the hovered node', () => {
+    const instance = createSankey(container, branching, { responsive: false });
+
+    hover('B');
+    expect(linkOpacity('A', 'B')).toBe(0.7);
+    expect(linkOpacity('B', 'C')).toBe(0.7);
+    expect(linkOpacity('A', 'D')).toBe(0.12);
+
+    // On-path nodes and labels keep full ink; off-path drop to the hover dim.
+    for (const id of ['A', 'B', 'C']) {
+      expect(nodeOpacity('.oc-sankey-node', id)).toBe('1');
+      expect(nodeOpacity('.oc-sankey-label', id)).toBe('1');
+    }
+    expect(nodeOpacity('.oc-sankey-node', 'D')).toBe('0.3');
+    expect(nodeOpacity('.oc-sankey-label', 'D')).toBe('0.3');
+
+    instance.destroy();
+  });
+
+  it('restores the compiled opacities on mouseleave', () => {
+    const instance = createSankey(container, branching, { responsive: false });
+
+    hover('B');
+    const el = container.querySelector('.oc-sankey-node[data-node-id="B"]');
+    el?.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+
+    expect(linkOpacity('A', 'D')).toBe(0.5);
+    expect(nodeOpacity('.oc-sankey-node', 'D')).toBe('1');
+
+    instance.destroy();
+  });
+
+  it('a link hover seeds the trace from both of its endpoints', () => {
+    const instance = createSankey(container, branching, { responsive: false });
+
+    const link = container.querySelector('.oc-sankey-link[data-source="A"][data-target="D"]');
+    link?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+
+    expect(linkOpacity('A', 'D')).toBe(0.7);
+    // A's other branch is downstream of a seed, so it stays on the path.
+    expect(linkOpacity('A', 'B')).toBe(0.7);
+    expect(nodeOpacity('.oc-sankey-node', 'D')).toBe('1');
+
+    instance.destroy();
+  });
+
+  it('labels carry their node id and the value tspan', () => {
+    const instance = createSankey(container, branching, { responsive: false });
+
+    const label = container.querySelector('.oc-sankey-label[data-node-id="B"]');
+    expect(label).not.toBeNull();
+    const value = label?.querySelector('.oc-sankey-label-value');
+    expect(value?.textContent).toBe('10');
+
+    instance.destroy();
+  });
+});

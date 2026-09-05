@@ -428,6 +428,34 @@ export interface AxesDataContext {
    * User-specified `axis.values` still takes priority.
    */
   precomputedYTicks?: unknown[];
+  /**
+   * Chrome economy: drop gridlines that the container has no room for. Only
+   * suppresses the default -- an explicit `axis.grid` still wins.
+   */
+  suppressGrid?: boolean;
+  /**
+   * Chrome economy: hard cap on drawn x-axis tick labels. Applied after
+   * thinning, keeping the first and last tick and spreading the rest evenly.
+   * Continuous scales only (a band tick is a category identity, not a ruler
+   * mark); explicit `axis.values` opt out.
+   */
+  maxXTicks?: number;
+}
+
+/**
+ * Reduce `ticks` to at most `max` entries, keeping the first and the last and
+ * spreading the remainder evenly. The endpoints anchor the reader; anything in
+ * between is a convenience.
+ */
+function capTickCount(ticks: AxisTick[], max: number): AxisTick[] {
+  if (max <= 0 || ticks.length <= max) return ticks;
+  if (max === 1) return [ticks[0]];
+  const last = ticks.length - 1;
+  const kept: AxisTick[] = [];
+  for (let i = 0; i < max; i++) {
+    kept.push(ticks[Math.round((i * last) / (max - 1))]);
+  }
+  return kept;
 }
 
 /**
@@ -572,6 +600,13 @@ export function computeAxes(
       ticks = thinTicksUntilFit(allTicks, fontSize, fontWeight, measureText);
     }
 
+    // Chrome-economy tick cap. Continuous axes only: on a band/ordinal axis a
+    // tick IS a category's identity, so dropping one erases a bar rather than
+    // coarsening a ruler. Explicit `axis.values` opts out either way.
+    if (isContinuousX && !hasExplicitValues && dataContext?.maxXTicks != null) {
+      ticks = capTickCount(ticks, dataContext.maxXTicks);
+    }
+
     // Truncate rotated labels that would overflow the capped reservation.
     // computeXAxisExtentFromLabels clamps the reserved band to
     // X_AXIS_ROTATED_EXTENT_CAP, but nothing shortened the drawn string, so a
@@ -607,7 +642,10 @@ export function computeAxes(
 
     result.x = {
       ticks,
-      gridlines: (axisConfig?.grid ?? dataContext?.markType === 'point') ? gridlines : [],
+      gridlines:
+        (axisConfig?.grid ?? (!dataContext?.suppressGrid && dataContext?.markType === 'point'))
+          ? gridlines
+          : [],
       label: axisTitle,
       labelStyle: xLabelColor ? { ...axisLabelStyle, fill: xLabelColor } : axisLabelStyle,
       tickLabelStyle: xLabelColor ? { ...tickLabelStyle, fill: xLabelColor } : tickLabelStyle,
@@ -724,7 +762,10 @@ export function computeAxes(
       // Not for heatmaps: the cells tile the plot, so a gridline can only draw
       // *through* them. The cell grid already is the grid. Explicit `grid: true`
       // still wins.
-      gridlines: (axisConfig?.grid ?? dataContext?.markType !== 'rect') ? gridlines : [],
+      gridlines:
+        (axisConfig?.grid ?? (!dataContext?.suppressGrid && dataContext?.markType !== 'rect'))
+          ? gridlines
+          : [],
       label: axisTitle,
       labelStyle: yLabelColor ? { ...axisLabelStyle, fill: yLabelColor } : axisLabelStyle,
       tickLabelStyle: yLabelColor ? { ...tickLabelStyle, fill: yLabelColor } : tickLabelStyle,

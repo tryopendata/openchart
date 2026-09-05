@@ -180,3 +180,49 @@ export function getLayoutStrategy(
   const base = getWidthStrategy(breakpoint);
   return applyHeightConstraints(base, heightClass);
 }
+
+// ---------------------------------------------------------------------------
+// Chrome economy
+// ---------------------------------------------------------------------------
+
+/**
+ * Height below which gridlines are dropped. A 140px dashboard tile has room
+ * for the shape of the series and nothing else; five hairlines behind it are
+ * decoration, not structure.
+ */
+export const HEIGHT_NO_GRID_MAX = 150;
+
+/** Tick-label budget for the x-axis at the compact breakpoint. */
+export const COMPACT_MAX_X_TICKS = 3;
+
+/**
+ * How much chart chrome a container can afford.
+ *
+ * Small embeds get the same treatment an editorial designer would give them:
+ * drop the grid first, then the axes, and keep only the tick labels that
+ * anchor the reader (first, last, and one in between). Every drop is a
+ * default — an explicit `axis.grid` / `encoding.*.axis` on the spec wins.
+ */
+export interface ChromeEconomy {
+  /** Draw gridlines by default? False under `HEIGHT_NO_GRID_MAX`. */
+  gridlines: boolean;
+  /** Draw axes by default? False under `HEIGHT_CRAMPED_MAX`. */
+  axes: boolean;
+  /** Cap on drawn x-axis tick labels, or undefined for no cap. */
+  maxXTicks?: number;
+}
+
+/**
+ * Resolve the chrome economy for a container size.
+ *
+ * @param width - Container width in pixels.
+ * @param height - Container height in pixels.
+ */
+export function resolveChromeEconomy(width: number, height: number): ChromeEconomy {
+  const economy: ChromeEconomy = {
+    gridlines: height >= HEIGHT_NO_GRID_MAX,
+    axes: height >= HEIGHT_CRAMPED_MAX,
+  };
+  if (getBreakpoint(width) === 'compact') economy.maxXTicks = COMPACT_MAX_X_TICKS;
+  return economy;
+}

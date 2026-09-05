@@ -3,8 +3,11 @@
  *
  * A band scale on the nominal axis and two quantitative positions per row
  * (x + x2 horizontal, or y + y2 vertical). Three styles via markDef.style:
- * - 'dumbbell' (default): connector rule + a dot at each end. The start dot
- *   is muted, the end dot carries the accent color.
+ * - 'dumbbell' (default): connector rule + a dot at each end. The start dot is
+ *   neutral and the end dot carries the accent color, so the direction of the
+ *   change reads without assigning it a valence (`markDef.colorByDirection`
+ *   opts into red/green, which is the worst pair for color-vision deficiency
+ *   and wrong for any range that has no good or bad end).
  * - 'arrow': shaft rule + chevron arrowhead at the x2/y2 end, built from the
  *   shared computeArrowheadPoints geometry.
  * - 'bar': plain floating RectMark spanning start to end.
@@ -29,15 +32,20 @@ import { computeArrowheadPoints } from '../../annotations/geometry';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor } from '../utils';
+import { getColor, stackSeamStroke } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const DOT_RADIUS = 6;
+const DOT_RADIUS = 5.5;
 const CONNECTOR_WIDTH = 2;
-const CONNECTOR_COLOR = '#cccccc';
+/**
+ * The undirected connector is drawn from the derived neutral ramp at 0.6
+ * stroke opacity, so the two dots (start neutral, end accent) carry the
+ * direction and the rule stays a track rather than a second data mark.
+ */
+const CONNECTOR_OPACITY = 0.6;
 const ARROW_STROKE_WIDTH = 2;
 const ARROWHEAD_LENGTH = 8;
 const ARROWHEAD_HALF_WIDTH = 4;
@@ -102,6 +110,9 @@ export function computeRangeMarks(
   const valueScale = (horizontal ? scales.x.scale : scales.y.scale) as ScaleLinear<number, number>;
   const bandwidth = bandScale.bandwidth();
 
+  // Both dots are knocked out of the canvas so a short span still reads as two
+  // ends rather than one lozenge.
+  const knockout = stackSeamStroke(theme);
   const style: RangeStyle = spec.markDef.style ?? 'dumbbell';
   const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
   const colorByDirection = spec.markDef.colorByDirection === true && !colorEnc;
@@ -226,15 +237,16 @@ export function computeRangeMarks(
 
     // Dumbbell (default): connector + muted start dot + accent end dot.
     if (spanLength > 0) {
-      const connectorColor = colorEnc || colorByDirection ? accentStroke : CONNECTOR_COLOR;
+      const colored = !!colorEnc || colorByDirection;
       marks.push({
         type: 'rule',
         x1,
         y1,
         x2,
         y2,
-        stroke: connectorColor,
+        stroke: colored ? accentStroke : theme.colors.neutral[400],
         strokeWidth: CONNECTOR_WIDTH,
+        ...(colored ? {} : { strokeOpacity: CONNECTOR_OPACITY }),
         data: row as Record<string, unknown>,
         aria: spanAria,
         key: `${catKey}|range`,
@@ -247,8 +259,8 @@ export function computeRangeMarks(
         cx: x1,
         cy: y1,
         r: DOT_RADIUS,
-        fill: theme.colors.axis,
-        stroke: '#ffffff',
+        fill: theme.colors.neutral[400],
+        stroke: knockout,
         strokeWidth: 2,
         data: row as Record<string, unknown>,
         aria: { label: `${category}, start: ${startVal}` },
@@ -260,7 +272,7 @@ export function computeRangeMarks(
         cy: y2,
         r: DOT_RADIUS,
         fill: accent,
-        stroke: '#ffffff',
+        stroke: knockout,
         strokeWidth: 2,
         data: row as Record<string, unknown>,
         aria: { label: `${category}, end: ${endVal}` },

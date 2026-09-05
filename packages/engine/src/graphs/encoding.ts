@@ -14,7 +14,9 @@ import type {
   NodeOverride,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
+import { cssTokenDefault, isOpaqueColor } from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
+import { interpolateRgb } from 'd3-interpolate';
 import { scaleLinear, scaleOrdinal, scaleSqrt } from 'd3-scale';
 
 import type { CompiledGraphEdge, CompiledGraphNode } from './types';
@@ -31,7 +33,8 @@ const DEFAULT_EDGE_WIDTH = 1;
 const MIN_EDGE_WIDTH = 0.5;
 const MAX_EDGE_WIDTH = 4;
 
-const DEFAULT_STROKE_WIDTH = 1;
+/** Knockout ring width. Wide enough to separate two touching nodes. */
+const DEFAULT_STROKE_WIDTH = 1.5;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -147,6 +150,21 @@ export function resolveCategoricalDomain(
   return sort === 'descending' ? sorted.reverse() : sorted;
 }
 
+/**
+ * The opaque canvas a graph is painted on.
+ *
+ * Node rings are drawn in this color (a knockout ring), so overlapping nodes
+ * stay countable instead of merging into one blob. A transparent theme
+ * background has no color of its own, so fall back to the static `--oc-bg`
+ * token for the mode -- the same value `graph-mount` stamps on the wrapper, so
+ * the ring always matches the surface it is cut out of.
+ */
+export function resolveGraphSurface(theme: ResolvedTheme): string {
+  const bg = theme.colors.background;
+  if (isOpaqueColor(bg)) return bg;
+  return cssTokenDefault('--oc-bg', theme.isDark ? 'dark' : 'light');
+}
+
 // ---------------------------------------------------------------------------
 // Node visual resolution
 // ---------------------------------------------------------------------------
@@ -243,6 +261,7 @@ export function resolveNodeVisuals(
   }
 
   const defaultColor = theme.colors.categorical[0];
+  const surface = resolveGraphSurface(theme);
 
   // Build node opacity scale (VL opacity channel). Quantitative fields map
   // linearly to [0.25, 1]; scale.range overrides.
@@ -306,8 +325,9 @@ export function resolveNodeVisuals(
     // Color
     const fill = colorFn ? colorFn(node) : defaultColor;
 
-    // Stroke: darken fill by 20%
-    const stroke = darkenColor(fill);
+    // Stroke: a knockout ring in the canvas color, not a darkened fill. A
+    // darker rim reads as a second color per node; the knockout reads as space.
+    const stroke = surface;
 
     // Label
     let label: string | undefined;
@@ -369,6 +389,7 @@ export function resolveEdgeVisuals(
   edges: GraphEdge[],
   encoding: GraphEncoding,
   theme: ResolvedTheme,
+  nodeFills?: Map<string, string>,
 ): CompiledGraphEdge[] {
   // Edge width scale
   let widthScale: ((v: number) => number) | undefined;
@@ -429,7 +450,26 @@ export function resolveEdgeVisuals(
     }
   }
 
-  const defaultEdgeColor = hexWithOpacity(theme.colors.axis, 0.4);
+  const fallbackEdgeColor = hexWithOpacity(theme.colors.axis, 0.4);
+
+  /**
+   * Unencoded edges take the midpoint of their endpoints' fills, so a bundle of
+   * edges leaving one community reads as that community's color instead of as a
+   * gray mat. Falls back to the axis gray when either endpoint is unknown (or
+   * the mix throws on a non-parseable color).
+   */
+  const defaultEdgeColorFor = (source: string, target: string): string => {
+    if (!nodeFills) return fallbackEdgeColor;
+    const a = nodeFills.get(source);
+    const b = nodeFills.get(target);
+    if (!a || !b) return fallbackEdgeColor;
+    if (a === b) return a;
+    try {
+      return interpolateRgb(a, b)(0.5);
+    } catch {
+      return fallbackEdgeColor;
+    }
+  };
 
   // Edge style mapping (ordinal: map unique field values to solid/dashed/dotted)
   const EDGE_STYLES: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
@@ -459,7 +499,9 @@ export function resolveEdgeVisuals(
       }
     }
 
-    const stroke = edgeColorFn ? edgeColorFn(edge) : defaultEdgeColor;
+    const stroke = edgeColorFn
+      ? edgeColorFn(edge)
+      : defaultEdgeColorFor(String(source), String(target));
     const style = styleFn ? styleFn(edge) : ('solid' as const);
 
     return {

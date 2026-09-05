@@ -26,9 +26,10 @@
  */
 
 import type { BarListSpec, ChartSpec } from '@opendata-ai/openchart-core';
+import { DEFAULT_THEME } from '@opendata-ai/openchart-core';
 import { BarList, Chart } from '@opendata-ai/openchart-react';
 import { useMemo } from 'react';
-import { Demo, GalleryPage, Section, useOcMode } from '../components';
+import { Demo, GalleryPage, Section } from '../components';
 import {
   indexTotalReturns,
   marketIndices,
@@ -37,6 +38,7 @@ import {
   sp500SectorReturns,
 } from '../data';
 import {
+  DeltaChip,
   dashTokens,
   funnelSankeySpec,
   IncidentDashboard,
@@ -51,12 +53,14 @@ import {
   SparklineCard,
   saasMrrSpec,
   sparklineSpec,
+  useDashRootClass,
   useLiveSectorReturns,
   useLiveSeries,
 } from './dashboards.layouts';
 import { vBarGradient } from './helpers';
 
-const ACCENT = '#0e7490';
+/** Slot 1 of the library palette: the accent every dashboard hero uses. */
+const ACCENT = DEFAULT_THEME.colors.categorical[0];
 
 // ---------------------------------------------------------------------------
 // 1. Sparkline card grid — display: 'sparkline'
@@ -67,10 +71,11 @@ const ACCENT = '#0e7490';
 // dashboards in the Layouts section can reuse them. The markup below is
 // unchanged; only the per-card body moved.
 function SparklineCards() {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
 
   return (
     <div
+      className={useDashRootClass('')}
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -234,7 +239,7 @@ const tileTitleStyle: React.CSSProperties = {
 
 /** KPI pill row rendered as a compact custom card (not a full chart). */
 function KpiTile() {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
   const pills = [
     { label: 'Revenue', value: '$60.9B', delta: '+94% YoY' },
     { label: 'Net margin', value: '55.6%', delta: '+12pp' },
@@ -247,18 +252,22 @@ function KpiTile() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
         {pills.map((p) => (
           <div key={p.label}>
-            <div style={{ fontSize: 11, color: t.muted, marginBottom: 2 }}>{p.label}</div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: t.muted, marginBottom: 2 }}>
+              {p.label}
+            </div>
             <div
               style={{
                 fontSize: 20,
                 fontWeight: 600,
-                letterSpacing: '-0.01em',
+                letterSpacing: '-0.02em',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
               {p.value}
             </div>
-            <div style={{ fontSize: 11, fontWeight: 500, color: t.up }}>{p.delta}</div>
+            <div style={{ marginTop: 4 }}>
+              <DeltaChip text={p.delta} tone="up" />
+            </div>
           </div>
         ))}
       </div>
@@ -268,7 +277,7 @@ function KpiTile() {
 
 /** A single sparkline tile for the composed grid. Live like the cards above. */
 function SparkTile() {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
   const idx = marketIndices.indices[1]; // Nasdaq
   const series = useLiveSeries(idx.series, 600);
   const change = pctChange(series);
@@ -287,16 +296,7 @@ function SparkTile() {
         >
           {last.toLocaleString(undefined, { maximumFractionDigits: 0 })}
         </span>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            fontVariantNumeric: 'tabular-nums',
-            color: change.up ? t.up : t.down,
-          }}
-        >
-          {change.text}
-        </span>
+        <DeltaChip text={change.text} tone={change.up ? 'up' : 'down'} />
       </div>
       <div style={{ height: 56, marginTop: 12 }}>
         <Chart spec={sparklineSpec('area', series)} />
@@ -358,7 +358,8 @@ const COMPOSED_GRID_CSS = `
 `;
 
 function ComposedDashboard() {
-  const t = dashTokens(useOcMode() === 'dark');
+  const t = dashTokens();
+  const rootClass = useDashRootClass('oc-dash-2x2');
   const sectors = useLiveSectorReturns(1800);
   // Memoized on the ticking rows so unrelated re-renders (e.g. a dark-mode
   // toggle) don't hand the chart a fresh spec object with identical data.
@@ -369,7 +370,7 @@ function ComposedDashboard() {
   const panelStyle: React.CSSProperties = {
     padding: 16,
     border: t.border,
-    borderRadius: 8,
+    borderRadius: 'var(--oc-radius-lg)',
     background: t.surface,
   };
   // The 2x2 grid fills its Demo card. The `.oc-bleed` breakout wraps the whole
@@ -381,7 +382,7 @@ function ComposedDashboard() {
     <>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, page-local CSS */}
       <style dangerouslySetInnerHTML={{ __html: COMPOSED_GRID_CSS }} />
-      <div className="oc-dash-2x2">
+      <div className={rootClass}>
         <div style={panelStyle}>
           <KpiTile />
         </div>

@@ -10,6 +10,7 @@ import type {
   CompileOptions,
   DarkMode,
   SankeyLayout,
+  SankeyLinkMark,
   SankeySpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
@@ -74,12 +75,12 @@ export interface SankeyInstance {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Opacity for links connected to hovered node. */
+/** Opacity for links on the hovered node's path. */
 const HIGHLIGHT_OPACITY = 0.7;
-/** Opacity for links NOT connected to hovered node. */
-const DIM_OPACITY = 0.15;
-/** Opacity for nodes NOT connected to hovered node. */
-const NODE_DIM_OPACITY = 0.2;
+/** Opacity for links off the path. Low enough to read as context, not flow. */
+const DIM_OPACITY = 0.12;
+/** Opacity for nodes and labels off the path. */
+const NODE_DIM_OPACITY = 0.3;
 
 // ---------------------------------------------------------------------------
 // Main API
@@ -194,7 +195,7 @@ export function createSankey(
           tooltipManager.show(content, x, y);
         }
         options?.onNodeHover?.(nodeData);
-        if (nodeId) highlightConnectedLinks(svg, nodeId, layout);
+        if (nodeId) highlightPath(svg, [nodeId], layout);
       };
 
       const handleMouseMove = (e: Event) => {
@@ -250,6 +251,7 @@ export function createSankey(
           tooltipManager.show(content, x, y);
         }
         options?.onLinkHover?.(linkData);
+        if (sourceId && targetId) highlightPath(svg, [sourceId, targetId], layout);
       };
 
       const handleMouseMove = (e: Event) => {
@@ -265,6 +267,7 @@ export function createSankey(
       const handleMouseLeave = () => {
         tooltipManager?.hide();
         options?.onLinkHover?.(null);
+        resetLinkOpacity(svg, layout);
       };
 
       const handleClick = () => {
@@ -305,37 +308,77 @@ export function createSankey(
   }
 
   /**
-   * Highlight links connected to a node and dim unconnected links.
+   * Trace the whole path through a set of seed nodes: everything upstream of
+   * them and everything downstream, links included.
+   *
+   * A sankey answers "where did this come from and where does it go", so
+   * lighting only the direct neighbors stops the answer one hop short. Returns
+   * the node ids and the "source->target" link keys on the path.
    */
-  function highlightConnectedLinks(
-    svg: SVGSVGElement,
-    nodeId: string,
-    _layout: SankeyLayout,
-  ): void {
-    // Collect connected node IDs (the hovered node + its direct neighbors)
-    const connectedNodeIds = new Set<string>([nodeId]);
-    const linkElements = svg.querySelectorAll('.oc-sankey-link');
-    for (const el of linkElements) {
-      const source = el.getAttribute('data-source');
-      const target = el.getAttribute('data-target');
-      const path = el.querySelector('path');
-      if (!path) continue;
-
-      const isConnected = source === nodeId || target === nodeId;
-      path.setAttribute('fill-opacity', String(isConnected ? HIGHLIGHT_OPACITY : DIM_OPACITY));
-      if (isConnected) {
-        if (source) connectedNodeIds.add(source);
-        if (target) connectedNodeIds.add(target);
-      }
+  function tracePath(
+    layout: SankeyLayout,
+    seedIds: string[],
+  ): { nodes: Set<string>; links: Set<string> } {
+    const out = new Map<string, typeof layout.links>();
+    const inn = new Map<string, typeof layout.links>();
+    for (const link of layout.links) {
+      const o = out.get(link.sourceId);
+      if (o) o.push(link);
+      else out.set(link.sourceId, [link]);
+      const i = inn.get(link.targetId);
+      if (i) i.push(link);
+      else inn.set(link.targetId, [link]);
     }
 
-    // Dim unconnected nodes (rect + label)
-    const nodeElements = svg.querySelectorAll('.oc-sankey-node');
-    for (const el of nodeElements) {
+    const nodes = new Set<string>(seedIds);
+    const links = new Set<string>();
+
+    const walk = (
+      adjacency: Map<string, typeof layout.links>,
+      nextId: (l: SankeyLinkMark) => string,
+    ) => {
+      const queue = [...seedIds];
+      const seen = new Set<string>(seedIds);
+      while (queue.length > 0) {
+        const id = queue.shift() as string;
+        for (const link of adjacency.get(id) ?? []) {
+          links.add(`${link.sourceId}->${link.targetId}`);
+          const next = nextId(link);
+          nodes.add(next);
+          if (!seen.has(next)) {
+            seen.add(next);
+            queue.push(next);
+          }
+        }
+      }
+    };
+
+    walk(out, (l) => l.targetId);
+    walk(inn, (l) => l.sourceId);
+
+    return { nodes, links };
+  }
+
+  /**
+   * Dim everything that is not on the traced path: off-path links go to a whisper,
+   * off-path nodes and their labels to the shared hover dim.
+   */
+  function highlightPath(svg: SVGSVGElement, seedIds: string[], layout: SankeyLayout): void {
+    const { nodes: onNodes, links: onLinks } = tracePath(layout, seedIds);
+
+    for (const el of svg.querySelectorAll('.oc-sankey-link')) {
+      const path = el.querySelector('path');
+      if (!path) continue;
+      const source = el.getAttribute('data-source');
+      const target = el.getAttribute('data-target');
+      const onPath = onLinks.has(`${source}->${target}`);
+      path.setAttribute('fill-opacity', String(onPath ? HIGHLIGHT_OPACITY : DIM_OPACITY));
+    }
+
+    for (const el of svg.querySelectorAll('.oc-sankey-node, .oc-sankey-label')) {
       const nid = el.getAttribute('data-node-id');
       if (!nid) continue;
-      const isConnected = connectedNodeIds.has(nid);
-      (el as SVGElement).style.opacity = isConnected ? '1' : String(NODE_DIM_OPACITY);
+      (el as SVGElement).style.opacity = onNodes.has(nid) ? '1' : String(NODE_DIM_OPACITY);
     }
   }
 
@@ -354,9 +397,8 @@ export function createSankey(
       path.setAttribute('fill-opacity', String(link?.fillOpacity ?? 0.5));
     }
 
-    // Restore all node opacities
-    const nodeElements = svg.querySelectorAll('.oc-sankey-node');
-    for (const el of nodeElements) {
+    // Restore all node and label opacities
+    for (const el of svg.querySelectorAll('.oc-sankey-node, .oc-sankey-label')) {
       (el as SVGElement).style.opacity = '1';
     }
   }

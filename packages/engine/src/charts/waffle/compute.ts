@@ -14,6 +14,10 @@
  * and there is deliberately no minimum-1-cell rule (a floor would distort the
  * other categories). The legend still lists the category because legend
  * entries derive from data, not marks.
+ *
+ * `mark.other` (opt-in) merges sub-threshold categories into one trailing
+ * "Other". That happens upstream in `normalizeChartSpec`, on the rows, so the
+ * grid, the color scale and the legend can't disagree about the category set.
  */
 
 import type {
@@ -42,7 +46,7 @@ const DEFAULT_UNITS = 100;
 const DEFAULT_COLUMNS = 10;
 
 /** Default cell corner radius (px). Subtle rounding; cells stay data-crisp. */
-const DEFAULT_CORNER_RADIUS = 1;
+const DEFAULT_CORNER_RADIUS = 2;
 
 /** Gap between cells as a fraction of the cell size. */
 const GAP_FRACTION = 1 / 6;
@@ -187,6 +191,7 @@ export function computeWaffleMarks(
         height: cell,
         fill,
         cornerRadius,
+        shapeRendering: 'crispEdges',
         data: row as Record<string, unknown>,
         aria: k === 0 ? aria : { ...aria, decorative: true },
       });

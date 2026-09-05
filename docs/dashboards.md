@@ -36,13 +36,26 @@ const spec = {
 };
 ```
 
-Mount it in a small fixed-height box (44–56px is typical) next to a headline number and delta you render as plain HTML:
+Mount it in a small fixed-height box (36–56px is typical; the gallery tiles run 36) next to a headline number and delta you render as plain HTML:
 
 ```tsx
-<div style={{ height: 44 }}>
+<div style={{ height: 36 }}>
   <Chart spec={spec} />
 </div>
 ```
+
+When the tile is live and the spec keeps `animation: true`, a finished data update flashes the sparkline's terminator dot (`mark: { type: 'line', point: 'last' }`) for 600ms via the `oc-pulse` class. On a wall of tiles that is what tells the reader which number just moved. It is off under `prefers-reduced-motion`.
+
+## KPI tile anatomy
+
+The gallery tiles (`examples/src/gallery/dashboards.layouts.tsx`) all follow one order, top to bottom, and it is worth copying:
+
+1. **Label** — 11px, weight 500, `--oc-text-muted`.
+2. **Value** — 30px, weight 600, `-0.02em` tracking, tabular figures. The only thing at display size.
+3. **Delta chip** — 12px, weight 500, on a 10% tint of its own semantic color (`--oc-positive-tint` / `--oc-negative-tint`) at `--oc-radius-md`. A chip, not a second number competing with the value.
+4. **Timeframe** — 11px, `--oc-text-faint`. Optional.
+
+Surfaces: `--oc-card` background, a 1px `--oc-border` hairline, `--oc-radius-lg`, no shadow. Put `oc-root` (plus `oc-dark` in dark mode) on the dashboard's root element and every one of those tokens resolves for free — the same cascade the charts inside the tiles already run on. Don't hard-code a slate palette next to the library's.
 
 ## Metrics pills vs HTML stat cards
 
@@ -54,6 +67,18 @@ Two ways to show a row of headline numbers, and they solve different problems:
 Use `metrics` when the numbers summarize the chart underneath them. Reach for HTML cards when the numbers are the dashboard's headline and any chart is secondary.
 
 ## Chrome economy
+
+Small containers drop chrome automatically, on a ladder:
+
+| Container | What the engine drops by default |
+|---|---|
+| height < 150px | gridlines |
+| height < 200px | axes (which takes the gridlines with them) |
+| width < 400px | x-axis tick labels capped at 3 (first, last, one between) |
+
+Every drop is a *default*. An explicit `axis` on the encoding channel keeps the axis (`encoding.y.axis: { tickCount: 3 }`), and an explicit `axis.grid` keeps the grid, at any size. The rules live in `resolveChromeEconomy` (`packages/core/src/responsive/breakpoints.ts`) if you need the exact thresholds.
+
+This is a change from 8.3: a 300x140 tile used to draw a full axis pair and five gridlines behind a shape 100px tall. If you were relying on that, add the explicit `axis` config.
 
 A dashboard is mostly tiles, and every pixel spent on chrome per tile is a pixel not spent on data. `computeChrome` reserves zero top space when a chart has no title, subtitle, or eyebrow authored, and zero bottom space when it has no source, byline, or footer and the watermark is off — an unauthored text field costs nothing, but on a tile 200px or taller the default watermark still reserves its brand band unless you set `watermark: false` (see the next section).
 

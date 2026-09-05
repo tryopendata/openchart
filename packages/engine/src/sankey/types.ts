@@ -38,4 +38,5 @@ export interface NormalizedSankeySpec {
   animation?: AnimationSpec;
   valueFormat?: string;
   linkOpacity?: number;
+  other?: number | { threshold: number; label?: string };
 }

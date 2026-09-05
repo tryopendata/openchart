@@ -37,7 +37,7 @@ import { formatPercent } from '@opendata-ai/openchart-core';
 import { serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { getColor } from '../utils';
+import { getColor, stackSeamStroke } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -138,6 +138,9 @@ function packSeats(seats: number, rows: number): SeatSlot[] {
 // Majority computation
 // ---------------------------------------------------------------------------
 
+/** Knockout ring width around each seat, in pixels. */
+const SEAT_STROKE_WIDTH = 0.75;
+
 /** Resolve the majority-line seat threshold and label from the mark options. */
 function resolveMajority(
   totalSeats: number,
@@ -231,6 +234,7 @@ export function computeParliamentMarks(
   const centerY = chartArea.y + chartArea.height - seatRadius;
 
   // Assign parties to contiguous seat blocks in data order.
+  const knockout = stackSeamStroke(theme);
   const marks: Mark[] = [];
   let slotIndex = 0;
   let animationIndex = 0;
@@ -263,8 +267,10 @@ export function computeParliamentMarks(
         cy,
         r: seatRadius,
         fill,
-        stroke: 'none',
-        strokeWidth: 0,
+        // Knockout ring: seats are packed tight enough that same-party
+        // neighbours merge into a blob without a hairline of canvas between.
+        stroke: knockout,
+        strokeWidth: SEAT_STROKE_WIDTH,
         data: row as Record<string, unknown>,
         aria,
         animationIndex,
@@ -299,7 +305,7 @@ export function computeParliamentMarks(
       x: centerX,
       y: Math.max(chartArea.y + theme.fonts.sizes.small, lineTop - 6),
       text: majority.label,
-      fill: theme.colors.text,
+      fill: theme.colors.axis,
       fontSize: theme.fonts.sizes.small,
       fontWeight: theme.fonts.weights.semibold,
       textAnchor: 'middle',

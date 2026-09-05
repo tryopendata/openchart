@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getBreakpoint, getHeightClass, getLayoutStrategy } from '../breakpoints';
+import {
+  getBreakpoint,
+  getHeightClass,
+  getLayoutStrategy,
+  resolveChromeEconomy,
+} from '../breakpoints';
 
 describe('getBreakpoint', () => {
   it('returns compact for widths below 400', () => {
@@ -153,5 +158,32 @@ describe('getLayoutStrategy with height class', () => {
     const strategy = getLayoutStrategy('medium');
     expect(strategy.chromeMode).toBe('full');
     expect(strategy.legendMaxHeight).toBe(-1);
+  });
+});
+
+describe('resolveChromeEconomy', () => {
+  it('drops gridlines and axes and caps x ticks on a tiny tile', () => {
+    expect(resolveChromeEconomy(300, 140)).toEqual({
+      gridlines: false,
+      axes: false,
+      maxXTicks: 3,
+    });
+  });
+
+  it('keeps gridlines but drops axes between the two thresholds', () => {
+    const economy = resolveChromeEconomy(700, 180);
+    expect(economy.gridlines).toBe(true);
+    expect(economy.axes).toBe(false);
+  });
+
+  it('leaves a normal embed alone', () => {
+    expect(resolveChromeEconomy(700, 180).maxXTicks).toBeUndefined();
+    const full = resolveChromeEconomy(700, 400);
+    expect(full).toEqual({ gridlines: true, axes: true });
+  });
+
+  it('caps x ticks at compact width regardless of height', () => {
+    expect(resolveChromeEconomy(320, 400).maxXTicks).toBe(3);
+    expect(resolveChromeEconomy(400, 400).maxXTicks).toBeUndefined();
   });
 });

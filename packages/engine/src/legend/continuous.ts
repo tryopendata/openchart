@@ -74,6 +74,13 @@ const BAR_WIDTH_MAX = 220;
 /** Default class count for quantile/quantize scales without an explicit range. */
 export const DEFAULT_BIN_COUNT = 5;
 
+/** Swatch edge, gap, and flanking-label gap for the compact `Less/More` key. */
+export const COMPACT_SWATCH_SIZE = 11;
+export const COMPACT_SWATCH_GAP = 2;
+export const COMPACT_LABEL_GAP = 6;
+const COMPACT_LESS_LABEL = 'Less';
+const COMPACT_MORE_LABEL = 'More';
+
 /** Scale types that produce a binned swatch legend. */
 const BINNED_SCALE_TYPES = new Set(['quantile', 'quantize', 'threshold']);
 
@@ -100,6 +107,24 @@ export interface ContinuousLegendContent {
   ticks: ContinuousLegendTick[];
   /** The class scale the swatches were drawn from (binned mode only). */
   classScale?: ClassScale;
+  /**
+   * Bar x offset inside the legend block. Non-zero only for the compact
+   * variant, where a "Less" label sits to the left of the first swatch.
+   */
+  barOffsetX?: number;
+  /**
+   * Label baseline offset from the bar's top edge. Defaults to the bar height
+   * plus `CONTINUOUS_LABEL_GAP` (labels under the bar); the compact variant
+   * centres its two labels on the swatch row instead.
+   */
+  labelBaselineOffset?: number;
+  /** Which chart-area edge the block hangs off. Defaults to `'left'`. */
+  align?: 'left' | 'right';
+  /**
+   * Total block width when it is wider than the bar (the compact variant's
+   * flanking labels). Defaults to `barWidth`.
+   */
+  blockWidth?: number;
 }
 
 /**
@@ -471,6 +496,74 @@ export function computeContinuousLegendContentForChannel(
     colorStops,
     bins: [],
     ticks,
+  };
+}
+
+/**
+ * Compact class key: `Less ▢▢▢▢▢ More`.
+ *
+ * The calendar variant. A day grid needs to say "darker is more" and nothing
+ * else -- printing five break values under a contribution grid asks the reader
+ * to do arithmetic they never wanted. Five small swatches with a word at each
+ * end, tucked into the bottom-right corner the way GitHub draws it.
+ */
+export function computeCompactClassLegendContent(
+  values: number[],
+  channel: EncodingChannel,
+  theme: ResolvedTheme,
+  measure: (text: string, fontSize: number, fontWeight: number) => number,
+): ContinuousLegendContent | null {
+  if (values.length === 0) return null;
+
+  // Diverging ramps are about sign, not magnitude: "Less/More" would describe
+  // the wrong axis of the scale. Those fall back to the labelled class bar.
+  if (isDivergingRamp(resolveRampColors(channel, theme), theme)) return null;
+
+  const scale = classScaleForChannel(values, channel, theme);
+  const colors = scale.colors;
+  if (colors.length === 0) return null;
+
+  const bins: ContinuousLegendBin[] = colors.map((color, i) => ({
+    x: i * (COMPACT_SWATCH_SIZE + COMPACT_SWATCH_GAP),
+    width: COMPACT_SWATCH_SIZE,
+    color,
+  }));
+  const barWidth = colors.length * COMPACT_SWATCH_SIZE + (colors.length - 1) * COMPACT_SWATCH_GAP;
+
+  const fontSize = theme.fonts.sizes.small;
+  const fontWeight = theme.fonts.weights.normal;
+  const lessWidth = measure(COMPACT_LESS_LABEL, fontSize, fontWeight);
+  const moreWidth = measure(COMPACT_MORE_LABEL, fontSize, fontWeight);
+
+  const [domainMin, domainMax] = extent(values);
+  const ticks: ContinuousLegendTick[] = [
+    {
+      value: domainMin,
+      label: COMPACT_LESS_LABEL,
+      x: -COMPACT_LABEL_GAP,
+      anchor: 'end' as const,
+    },
+    {
+      value: domainMax,
+      label: COMPACT_MORE_LABEL,
+      x: barWidth + COMPACT_LABEL_GAP,
+      anchor: 'start' as const,
+    },
+  ];
+
+  return {
+    mode: 'binned',
+    barWidth,
+    barHeight: COMPACT_SWATCH_SIZE,
+    colorStops: [],
+    bins,
+    ticks,
+    classScale: scale,
+    barOffsetX: lessWidth + COMPACT_LABEL_GAP,
+    // Optical centre of the cap height against the swatch row.
+    labelBaselineOffset: COMPACT_SWATCH_SIZE / 2 + fontSize * 0.35,
+    align: 'right',
+    blockWidth: lessWidth + COMPACT_LABEL_GAP + barWidth + COMPACT_LABEL_GAP + moreWidth,
   };
 }
 

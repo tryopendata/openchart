@@ -334,6 +334,7 @@ export function runTransition(args: {
     snapToFinal();
     removeGhosts();
     settleCanvas();
+    pulseSparklineTerminator(svg, marksContainer);
     // Restore secondary element opacities to their rendered values
     for (let i = 0; i < secondaryEls.length; i++) {
       secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
@@ -530,6 +531,33 @@ export function runTransition(args: {
  * diffs them by key. Do not re-add them here -- the blanket fade runs after the
  * tweens and would clobber the keyed opacity.
  */
+/**
+ * Flash the sparkline's terminator dot when fresh data has finished landing.
+ *
+ * Real-time tiles are the one place where "something changed" is the message,
+ * and on a 36px spark the geometry change is often a pixel. Only sparklines
+ * pulse, only the last point dot, and only for the length of the keyframe --
+ * the class is stripped afterwards so a paused feed leaves nothing animating.
+ */
+const PULSE_CLASS = 'oc-pulse';
+const PULSE_DURATION_MS = 600;
+
+function pulseSparklineTerminator(svg: SVGSVGElement, marksContainer: SVGElement | null): void {
+  if (!marksContainer || svg.getAttribute('data-display') !== 'sparkline') return;
+  const dots = marksContainer.querySelectorAll('circle.oc-mark-point');
+  const dot = dots[dots.length - 1] as SVGElement | undefined;
+  if (!dot) return;
+  const r = dot.getAttribute('r');
+  if (r) dot.style.setProperty('--oc-pulse-r', `${r}px`);
+  // Restart the keyframe on a tile that ticks faster than the pulse.
+  dot.classList.remove(PULSE_CLASS);
+  void (dot as unknown as { getBoundingClientRect?: () => unknown }).getBoundingClientRect?.();
+  dot.classList.add(PULSE_CLASS);
+  setTimeout(() => {
+    dot.classList.remove(PULSE_CLASS);
+  }, PULSE_DURATION_MS);
+}
+
 export function collectSecondaryElements(svg: SVGSVGElement): SVGElement[] {
   const els: SVGElement[] = [];
   const epLabels = svg.querySelector('.oc-endpoint-labels') as SVGElement | null;

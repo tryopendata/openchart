@@ -409,3 +409,23 @@ describe('parliament edge cases', () => {
     expect(parties.size).toBe(8);
   });
 });
+
+describe('seat and majority-label chrome', () => {
+  it('knocks each seat out of the canvas with a 0.75px ring', () => {
+    const layout = compileHouse();
+    const seat = seatMarks(layout)[0];
+    // Default theme background is transparent, so the knockout falls back to
+    // white the same way every other knockout stroke in the engine does.
+    expect(seat.stroke).toBe('#ffffff');
+    expect(seat.strokeWidth).toBe(0.75);
+  });
+
+  it('sets the majority label in the tick-label gray, not full ink', () => {
+    const layout = compileHouse();
+    const label = layout.marks.find(
+      (m): m is TextMarkLayout => m.type === 'textMark' && m.key === 'oc-majority-label',
+    )!;
+    expect(label.fill).toBe(layout.theme.colors.axis);
+    expect(label.fill).not.toBe(layout.theme.colors.text);
+  });
+});

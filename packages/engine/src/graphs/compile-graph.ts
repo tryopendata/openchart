@@ -395,7 +395,10 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   }
 
   // 6. Resolve edge visuals
-  const compiledEdges = resolveEdgeVisuals(graphSpec.edges, graphSpec.encoding, theme);
+  // Node fills are final here (community colors already applied), so an
+  // unencoded edge can take the midpoint of its endpoints' colors.
+  const nodeFills = new Map(compiledNodes.map((n) => [n.id, n.fill]));
+  const compiledEdges = resolveEdgeVisuals(graphSpec.edges, graphSpec.encoding, theme, nodeFills);
 
   // 7. Build legend (use nodeColor encoding colors when present, community otherwise)
   const useCommunitiesForLegend = hasCommunities && !hasNodeColorEncoding;
