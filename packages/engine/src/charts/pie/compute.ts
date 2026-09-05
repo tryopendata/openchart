@@ -15,8 +15,14 @@ import type {
   LayoutStrategy,
   MarkAria,
   Rect,
+  ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { formatPercent, isConditionalDef, isGradientDef } from '@opendata-ai/openchart-core';
+import {
+  CATEGORICAL_FILL_PALETTE,
+  formatPercent,
+  isConditionalDef,
+  isGradientDef,
+} from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
 
@@ -60,19 +66,12 @@ export function buildArcPath(geom: {
   );
 }
 
-/** Default color palette when no color scale is available. */
-const DEFAULT_PALETTE = [
-  '#1b7fa3',
-  '#c44e52',
-  '#6a9f58',
-  '#d47215',
-  '#507e79',
-  '#9a6a8d',
-  '#c4636b',
-  '#9c755f',
-  '#a88f22',
-  '#858078',
-];
+/**
+ * Fallback slice palette for callers that compute marks without a theme
+ * (unit tests, direct callers). The renderer always passes the resolved
+ * theme, so charts get `theme.colors.categoricalFill`.
+ */
+const DEFAULT_PALETTE: readonly string[] = CATEGORICAL_FILL_PALETTE;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -174,7 +173,10 @@ export function computePieMarks(
   chartArea: Rect,
   _strategy: LayoutStrategy,
   isDonut = false,
+  theme?: ResolvedTheme,
 ): ArcMark[] {
+  // Arcs are a fill mark, so slices take the quieter fill palette.
+  const palette = theme?.colors.categoricalFill ?? DEFAULT_PALETTE;
   const encoding = spec.encoding as Encoding;
   const startAngle = spec.markDef.startAngle ?? 0;
   const endAngle = spec.markDef.endAngle ?? Math.PI * 2;
@@ -295,13 +297,13 @@ export function computePieMarks(
         const colorScale = scales.color.scale as (v: string) => string;
         color = colorScale(slice.label);
       } else {
-        color = DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+        color = palette[i % palette.length];
       }
     } else if (scales.color && categoryField) {
       const colorScale = scales.color.scale as (v: string) => string;
       color = colorScale(slice.label);
     } else {
-      color = DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+      color = palette[i % palette.length];
     }
 
     // Generate SVG path (relative to 0,0; renderer wraps in translate)

@@ -7,7 +7,12 @@
 
 import { hsl, rgb } from 'd3-color';
 import { contrastRatio, isOpaqueColor } from '../colors/contrast';
-import { ACHROMATIC_RAMP } from '../colors/palettes';
+import { deriveNeutralRamp } from '../colors/neutral';
+import {
+  ACHROMATIC_RAMP,
+  CATEGORICAL_FILL_PALETTE_DARK,
+  CATEGORICAL_PALETTE_DARK,
+} from '../colors/palettes';
 import type { ResolvedTheme } from '../types/theme';
 import { DEFAULT_THEME } from './defaults';
 
@@ -138,18 +143,26 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
     : overridden(theme.colors.text, light.text, DARK_TEXT);
   const darkGridline = pairs?.['colors.gridline']
     ? pairs['colors.gridline'].dark
-    : overridden(theme.colors.gridline, light.gridline, 'rgba(255,255,255,0.05)');
+    : overridden(theme.colors.gridline, light.gridline, 'rgba(255,255,255,0.06)');
+  const darkHairline = pairs?.['colors.hairline']
+    ? pairs['colors.hairline'].dark
+    : overridden(theme.colors.hairline, light.hairline, 'rgba(255,255,255,0.14)');
   // axis is also tick-label fill — needs WCAG AA contrast on dark bg.
   // Zinc-400 (`#a1a1aa`) hits ~6:1 against #09090b.
   const darkAxis = pairs?.['colors.axis']
     ? pairs['colors.axis'].dark
     : overridden(theme.colors.axis, light.axis, '#a1a1aa');
 
-  // Categorical palette is pinned to design-system tokens. The same vibrant
-  // hex values render in both light and dark modes — adapting them via
-  // contrast-equivalence dulls them on dark backgrounds (cyan -> teal),
-  // which is the opposite of what the design system calls for.
-  const categorical = theme.colors.categorical;
+  // The categorical palette has purpose-built dark variants (L raised ~0.10,
+  // chroma trimmed) rather than reusing the light hexes or running them
+  // through contrast-equivalence, which dulls cyan into teal. A palette the
+  // spec overrode passes through untouched, same rule as every other color.
+  const categorical = overridden(theme.colors.categorical, light.categorical, [
+    ...CATEGORICAL_PALETTE_DARK,
+  ]);
+  const categoricalFill = overridden(theme.colors.categoricalFill, light.categoricalFill, [
+    ...CATEGORICAL_FILL_PALETTE_DARK,
+  ]);
 
   return {
     ...theme,
@@ -167,16 +180,15 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
         ? pairs['colors.annotationText'].dark
         : overridden(theme.colors.annotationText, light.annotationText, darkMuted),
       categorical,
+      categoricalFill,
+      hairline: darkHairline,
       positive: pairs?.['colors.positive']
         ? pairs['colors.positive'].dark
-        : theme.colors.positive !== '#16a34a'
-          ? theme.colors.positive
-          : '#34d399',
+        : overridden(theme.colors.positive, light.positive, '#4ade80'),
       negative: pairs?.['colors.negative']
         ? pairs['colors.negative'].dark
-        : theme.colors.negative !== '#dc2626'
-          ? theme.colors.negative
-          : '#f87171',
+        : overridden(theme.colors.negative, light.negative, '#f87171'),
+      neutral: deriveNeutralRamp(darkText, darkBg, true),
     },
     chrome: {
       // Eyebrow keeps its accent tint (cyan in both modes) unless the user

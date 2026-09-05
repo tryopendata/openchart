@@ -7,7 +7,6 @@ export {
   checkPaletteDistinguishability,
   simulateColorBlindness,
 } from './colorblind';
-
 export {
   contrastRatio,
   findAccessibleColor,
@@ -15,6 +14,8 @@ export {
   meetsAA,
   pickLabelColor,
 } from './contrast';
+export type { NeutralRamp } from './neutral';
+export { deriveNeutralRamp } from './neutral';
 export type {
   CategoricalPalette,
   DivergingPalette,
@@ -22,7 +23,13 @@ export type {
 } from './palettes';
 export {
   ACHROMATIC_RAMP,
+  CATEGORICAL_EXTENDED_PALETTE,
+  CATEGORICAL_FILL_PALETTE,
+  CATEGORICAL_FILL_PALETTE_DARK,
+  CATEGORICAL_HUES,
+  CATEGORICAL_LIGHTNESS,
   CATEGORICAL_PALETTE,
+  CATEGORICAL_PALETTE_DARK,
   DIVERGING_BROWN_TEAL,
   DIVERGING_PALETTES,
   DIVERGING_RED_BLUE,

@@ -72,7 +72,7 @@
     align-self: center;
     max-width: 100%;
     padding: 6px 12px;
-    border-radius: 6px;
+    border-radius: var(--oc-radius-md);
     background: var(--oc-card);
     border: 1px solid var(--oc-border);
     color: var(--oc-text-secondary);
@@ -97,7 +97,7 @@
     justify-content: center;
     padding: 6px 14px;
     border: 1px solid var(--oc-border);
-    border-radius: 6px;
+    border-radius: var(--oc-radius-md);
     background: var(--oc-bg);
     color: var(--oc-text);
     font-family: inherit;

@@ -31,8 +31,8 @@ const AREA_POINT_RADIUS = 3;
  * Computes line marks + point marks for hover targets, then resolves
  * end-of-line labels and attaches them to the corresponding line marks.
  */
-export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, _theme) => {
-  const marks = computeLineMarks(spec, scales, chartArea, strategy);
+export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+  const marks = computeLineMarks(spec, scales, chartArea, strategy, theme);
 
   // Extract just the line marks for label computation
   const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
@@ -86,7 +86,7 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
   // series, compute lines normally so we get the regular line + point marks.
   const lines = hasColor
     ? linesFromAreas(areas)
-    : computeLineMarks(spec, scales, chartArea, strategy);
+    : computeLineMarks(spec, scales, chartArea, strategy, theme);
 
   // For multi-series areas the lines are derived from area tops, which skips
   // the point-emission path in computeLineMarks. Emit the data-point dots here

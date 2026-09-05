@@ -19,6 +19,8 @@ export function stampThemeProperties(el: HTMLElement, theme: ResolvedTheme): voi
         : cssTokenDefault('--oc-bg', 'light')
       : theme.colors.background;
 
+  const n = theme.colors.neutral;
+
   const props: [string, string][] = [
     ['--oc-font-family', theme.fonts.family],
     ['--oc-font-mono', theme.fonts.mono],
@@ -34,8 +36,22 @@ export function stampThemeProperties(el: HTMLElement, theme: ResolvedTheme): voi
     ['--oc-bg', bg],
     ['--oc-text', theme.colors.text],
     ['--oc-text-muted', theme.colors.axis],
+    // Secondary grays are derived from the theme's own text/background pair
+    // (ResolvedTheme.colors.neutral), so a warm or cool theme gets warm or
+    // cool grays instead of zinc. One direction only: theme -> CSS.
+    ['--oc-text-secondary', n.secondary],
+    ['--oc-text-faint', n.faint],
+    ['--oc-border', n.border],
+    ['--oc-gray-100', n[100]],
+    ['--oc-gray-200', n[200]],
+    ['--oc-gray-300', n[300]],
+    ['--oc-gray-400', n[400]],
+    ['--oc-gray-600', n[600]],
+    ['--oc-gray-800', n[800]],
     ['--oc-gridline', theme.colors.gridline],
-    ['--oc-axis', theme.colors.axis],
+    // --oc-axis is the hairline the axis line is drawn with, not the ink its
+    // tick labels take (that is --oc-text-muted, above).
+    ['--oc-axis', theme.colors.hairline],
     ['--oc-border-radius', `${theme.borderRadius}px`],
     ['--oc-accent', accent],
     ['--oc-accent-strong', adaptForLightLineStroke(accent)],

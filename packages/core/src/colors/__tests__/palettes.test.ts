@@ -10,8 +10,8 @@ import {
 } from '../palettes';
 
 describe('palettes', () => {
-  it('categorical palette has 9 colors (cyan-led OKLCH ramp)', () => {
-    expect(CATEGORICAL_PALETTE).toHaveLength(9);
+  it('categorical palette has 6 colors (cyan-led ordered editorial ramp)', () => {
+    expect(CATEGORICAL_PALETTE).toHaveLength(6);
   });
 
   it('categorical palette leads with cyan #06b6d4', () => {

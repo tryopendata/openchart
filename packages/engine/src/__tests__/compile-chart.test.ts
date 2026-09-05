@@ -1,3 +1,4 @@
+import { contrastRatio } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart, compileGraph, compileTable } from '../compile';
 
@@ -883,10 +884,34 @@ describe('compileChart', () => {
     expect(points[0].aria?.decorative).toBe(true);
   });
 
+  it('a default line stroke clears 3:1 on white after light-stroke adaptation', () => {
+    // The palette accent is tuned as a fill and only clears 2.4:1 on white,
+    // which is too thin for a 2px line. computeLineMarks routes palette-derived
+    // strokes through adaptForLightLineStroke on light canvases.
+    const layout = compileChart(
+      {
+        mark: 'line' as const,
+        data: [
+          { x: 'Jan', y: 10 },
+          { x: 'Feb', y: 20 },
+          { x: 'Mar', y: 15 },
+        ],
+        encoding: {
+          x: { field: 'x', type: 'ordinal' as const },
+          y: { field: 'y', type: 'quantitative' as const },
+        },
+      },
+      { width: 400, height: 200 },
+    );
+    const lineMark = layout.marks.find((m) => m.type === 'line');
+    expect(lineMark?.stroke).toBeDefined();
+    expect(contrastRatio(lineMark?.stroke as string, '#ffffff')).toBeGreaterThanOrEqual(3);
+  });
+
   it('sparkline line uses the positive theme token for an up-trending series', () => {
     const layout = compileChart(sparkLineSpec, { width: 200, height: 40 });
     const lineMark = layout.marks.find((m) => m.type === 'line');
-    expect(lineMark?.stroke).toBe('#16a34a');
+    expect(lineMark?.stroke).toBe('#15803d');
   });
 
   it('sparkline line uses the negative theme token for a down-trending series', () => {

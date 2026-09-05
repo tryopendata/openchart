@@ -16,9 +16,13 @@
 | `DEFAULT_THEME` literal | `packages/core/src/theme/defaults.ts` |
 | Theme deep-merge | `packages/core/src/theme/resolve.ts` → `resolveTheme()` |
 | Dark-mode adapter (binary-search lightness) | `packages/core/src/theme/dark-mode.ts` → `adaptTheme()`, `adaptColorForDarkMode()` |
-| Categorical palette (`CATEGORICAL_PALETTE`) and sequential/diverging | `packages/core/src/colors/palettes.ts` |
+| Categorical palettes (stroke/fill x light/dark, plus `CATEGORICAL_EXTENDED_PALETTE`) and sequential/diverging | `packages/core/src/colors/palettes.ts` |
+| Derived neutral gray ramp (`deriveNeutralRamp`, on `ResolvedTheme.colors.neutral`) | `packages/core/src/colors/neutral.ts` |
+| Palette a11y guard (contrast, hue adjacency, CVD) | `packages/core/src/colors/__tests__/palette-a11y.test.ts` |
 | Color contrast / accessibility helpers | `packages/core/src/colors/contrast.ts`, `colorblind.ts` |
 | CSS token source of truth | `packages/core/src/styles/token-definitions.ts` |
+| CSS-token / JS-theme parity guard | `packages/core/src/styles/__tests__/token-theme-parity.test.ts` |
+| Stroke-vs-fill palette selection, muted color, extended-ramp overflow warning | `packages/engine/src/compile/color-scale-range.ts` |
 | CSS tokens (light defaults) — **generated** | `packages/core/src/styles/tokens.css` |
 | CSS dark overrides (`.oc-dark`) — **generated** | `packages/core/src/styles/dark.css` |
 | CSS token generator | `scripts/generate-css-tokens.mjs` |

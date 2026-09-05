@@ -38,7 +38,7 @@
 
   .oc-brand {
     font-size: 11px;
-    font-weight: 510;
+    font-weight: 500;
     letter-spacing: 0.02em;
     fill: var(--oc-text-faint);
   }
@@ -61,7 +61,7 @@
 
   .oc-metric-label {
     font-size: 10px;
-    font-weight: 510;
+    font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     fill: var(--oc-text-muted);
@@ -69,7 +69,7 @@
 
   .oc-metric-value {
     font-size: 22px;
-    font-weight: 510;
+    font-weight: 500;
     letter-spacing: -0.01em;
     fill: var(--oc-text);
     font-variant-numeric: tabular-nums;
@@ -78,13 +78,13 @@
   .oc-metric-delta-up {
     fill: var(--oc-positive);
     font-size: 12px;
-    font-weight: 510;
+    font-weight: 500;
   }
 
   .oc-metric-delta-down {
     fill: var(--oc-negative);
     font-size: 12px;
-    font-weight: 510;
+    font-weight: 500;
   }
 
   .oc-metric-secondary {

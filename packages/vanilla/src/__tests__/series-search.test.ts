@@ -13,7 +13,7 @@ import { createContainer } from '../__test-fixtures__/dom';
 import { type ChartInstance, createChart } from '../mount';
 
 /** Neutral gray the engine assigns to non-highlighted series. */
-const MUTED = '#bfc3c8';
+const MUTED = '#d4d4d8';
 
 const COUNTRIES = ['United States', 'Germany', 'France', 'Georgia', 'México'];
 

@@ -5,7 +5,7 @@
  * data grouping, color lookup, and shared constants.
  */
 
-import type { DataRow, GradientDef } from '@opendata-ai/openchart-core';
+import { CATEGORICAL_PALETTE, type DataRow, type GradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import type { D3Scale, ResolvedScales } from '../layout/scales';
 
@@ -13,8 +13,12 @@ import type { D3Scale, ResolvedScales } from '../layout/scales';
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Default single-series color when no color encoding is present. */
-export const DEFAULT_COLOR = '#1b7fa3';
+/**
+ * Default single-series color when no color encoding is present and no theme
+ * is in hand. Slot 1 of the categorical palette (the accent), so an untinted
+ * mark matches the one a themed compile would produce.
+ */
+export const DEFAULT_COLOR: string = CATEGORICAL_PALETTE[0];
 
 // ---------------------------------------------------------------------------
 // Scale helpers

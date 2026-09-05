@@ -77,7 +77,7 @@
   .oc-editable-hover {
     outline: 1.5px solid var(--oc-editable-hover);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: var(--oc-radius-sm);
   }
 
   /* ---------------------------------------------------------------------------
@@ -99,6 +99,6 @@
   .oc-mark-focused {
     outline: 2px solid var(--oc-focus);
     outline-offset: 1px;
-    border-radius: 2px;
+    border-radius: var(--oc-radius-sm);
   }
 }

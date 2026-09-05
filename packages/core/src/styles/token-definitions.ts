@@ -62,15 +62,19 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   { name: '--oc-annotation-delay', light: '200ms' },
 
   { section: 'Typography scale (editorial design system)', name: '--oc-title-size', light: '26px' },
-  { name: '--oc-title-weight', light: '590' },
+  {
+    name: '--oc-title-weight',
+    light: '600',
+    comment: 'one ladder: 400 regular / 500 medium / 600 semibold / 700 bold',
+  },
   { name: '--oc-title-tracking', light: '-0.022em' },
   { name: '--oc-subtitle-size', light: '14px' },
-  { name: '--oc-subtitle-weight', light: '450' },
+  { name: '--oc-subtitle-weight', light: '400' },
   { name: '--oc-source-size', light: '11px' },
-  { name: '--oc-source-weight', light: '450' },
+  { name: '--oc-source-weight', light: '400' },
   { name: '--oc-body-size', light: '13px' },
   { name: '--oc-eyebrow-size', light: '11px' },
-  { name: '--oc-eyebrow-weight', light: '550' },
+  { name: '--oc-eyebrow-weight', light: '500' },
   { name: '--oc-eyebrow-tracking', light: '0.08em' },
 
   { section: 'Surfaces (light mode defaults)', name: '--oc-bg', light: '#ffffff', dark: '#09090b' },
@@ -102,22 +106,48 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   { name: '--oc-text-faint', light: '#d4d4d8', dark: '#52525b' },
 
   {
+    section: `Derived neutral ramp. Named by the share of *text* in a text-toward-
+   * background mix: 100 is nearly the background, 800 is nearly the text.
+   * These static values are the mix against the default surfaces; mounts
+   * restamp them from ResolvedTheme.colors.neutral, which a custom warm or
+   * cool theme derives from its own text/background pair.`,
+    name: '--oc-gray-100',
+    light: '#f0f0f0',
+    dark: '#171719',
+  },
+  { name: '--oc-gray-200', light: '#e1e1e2', dark: '#262627' },
+  { name: '--oc-gray-300', light: '#c9c9c9', dark: '#3d3e3f' },
+  { name: '--oc-gray-400', light: '#9d9d9d', dark: '#68696a' },
+  { name: '--oc-gray-600', light: '#787879', dark: '#8c8c8d' },
+  { name: '--oc-gray-800', light: '#474748', dark: '#bcbcbd' },
+
+  {
     section: 'Lines',
     name: '--oc-gridline',
-    light: 'rgba(0, 0, 0, 0.1)',
-    dark: 'rgba(255, 255, 255, 0.05)',
+    light: 'rgba(0, 0, 0, 0.08)',
+    dark: 'rgba(255, 255, 255, 0.06)',
   },
   {
     name: '--oc-axis',
-    light: 'rgba(0, 0, 0, 0.1)',
-    dark: 'rgba(255, 255, 255, 0.1)',
+    light: 'rgba(0, 0, 0, 0.14)',
+    dark: 'rgba(255, 255, 255, 0.14)',
+    comment: 'hairline = theme.colors.hairline, not the tick-label ink',
   },
   {
     name: '--oc-border',
     light: 'rgba(0, 0, 0, 0.08)',
     dark: 'rgba(255, 255, 255, 0.1)',
   },
-  { name: '--oc-border-radius', light: '2px' },
+  {
+    name: '--oc-border-radius',
+    light: '8px',
+    comment: 'containers and tooltips; marks use --oc-radius-sm',
+  },
+
+  { section: 'Radius ladder', name: '--oc-radius-sm', light: '2px' },
+  { name: '--oc-radius-md', light: '6px' },
+  { name: '--oc-radius-lg', light: 'var(--oc-border-radius)' },
+  { name: '--oc-radius-full', light: '999px' },
 
   {
     section: 'Brand and semantic',
@@ -132,8 +162,22 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
     comment: 'darker cyan for line strokes on light bg',
     consumers: 'stamped via adaptForLightLineStroke',
   },
-  { name: '--oc-positive', light: '#10b981', dark: '#34d399' },
-  { name: '--oc-negative', light: '#e11d48', dark: '#fb7185' },
+  {
+    name: '--oc-positive',
+    light: '#15803d',
+    dark: '#4ade80',
+    comment: 'kept equal to DEFAULT_THEME.colors.positive (token-theme-parity test)',
+  },
+  { name: '--oc-negative', light: '#dc2626', dark: '#f87171' },
+  {
+    name: '--oc-positive-tint',
+    light: 'color-mix(in srgb, var(--oc-positive) 10%, var(--oc-bg))',
+    comment: 'delta chip background',
+  },
+  {
+    name: '--oc-negative-tint',
+    light: 'color-mix(in srgb, var(--oc-negative) 10%, var(--oc-bg))',
+  },
   { name: '--oc-focus', light: '#3b82f6', dark: '#60a5fa' },
   {
     name: '--oc-focus-ring',
@@ -163,6 +207,16 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
     consumers:
       'stamped at mount from theme.spacing (theme-tokens.ts); component CSS must NOT consume these',
   },
+
+  {
+    section: `Hover language. The hovered element goes to full ink; the rest of its
+   * group drops to --oc-hover-dim over --oc-hover-duration. Maps override the
+   * dim locally (3000 county paths at 0.3 reads as a blackout, not a hint).`,
+    name: '--oc-hover-dim',
+    light: '0.3',
+  },
+  { name: '--oc-hover-duration', light: '140ms' },
+  { name: '--oc-map-hover-dim', light: '0.75' },
 
   {
     section: 'Interactive states',

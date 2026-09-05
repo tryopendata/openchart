@@ -5,6 +5,8 @@
  * ResolvedTheme is the engine-internal fully resolved version (no optionals).
  */
 
+import type { NeutralRamp } from '../colors/neutral';
+
 // ---------------------------------------------------------------------------
 // Token value (light/dark pair)
 // ---------------------------------------------------------------------------
@@ -38,8 +40,22 @@ export type SeriesStrategy = 'palette' | 'accent-neutral';
 
 /** Color palettes for the visualization. */
 export interface ThemeColors {
-  /** Categorical palette for nominal data. Array of CSS color strings. */
+  /**
+   * Categorical palette for nominal data, used for *strokes* (line, rule,
+   * point outlines, graph nodes). Array of CSS color strings.
+   */
   categorical: string[];
+  /**
+   * Categorical palette for area-filling marks (bar, area, arc, waffle,
+   * calendar, rect). Same hues as `categorical`, one step lighter and
+   * quieter so a block of colour never shouts as loud as a line stroke.
+   */
+  categoricalFill: string[];
+  /**
+   * Hairline colour for structural rules (axis lines, table separators).
+   * Distinct from `axis`, which is the tick-label ink.
+   */
+  hairline: string;
   /** Sequential palettes keyed by name. Each is an array of color stops from light to dark. */
   sequential: Record<string, string[]>;
   /** Diverging palettes keyed by name. Each is an array of color stops with a neutral midpoint. */
@@ -60,6 +76,15 @@ export interface ThemeColors {
   positive: string;
   /** Semantic color for negative/down-trend values (e.g. sparkline trend coloring). */
   negative: string;
+}
+
+/**
+ * Colors on a resolved theme: everything in {@link ThemeColors} plus the
+ * neutral ramp derived from the theme's own text/background pair.
+ */
+export interface ResolvedThemeColors extends ThemeColors {
+  /** Grays derived by mixing `text` toward `background`. */
+  neutral: NeutralRamp;
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +222,8 @@ export interface Theme {
  * definition, ResolvedTheme is the runtime-resolved instance.
  */
 export interface ResolvedTheme extends Theme {
+  /** Colors plus the neutral ramp derived from `text` and `background`. */
+  colors: ResolvedThemeColors;
   /** Whether dark mode adaptations have been applied to this theme. */
   isDark: boolean;
   /**

@@ -62,7 +62,7 @@ import {
 } from './charts/post-process';
 import { getChartRenderer } from './charts/registry';
 import { groupByField } from './charts/utils';
-import { applyColorScaleRange } from './compile/color-scale-range';
+import { applyColorScaleRange, defaultSeriesColor } from './compile/color-scale-range';
 import { filterClippedDomains } from './compile/data-clip';
 import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
@@ -741,13 +741,24 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
 
   // Update color scale to use theme palette (only when user hasn't provided an explicit range).
   // When highlight is active, assign palette colors to highlighted series and mute the rest.
-  applyColorScaleRange(scales, renderSpec.encoding, theme, renderSpec.highlight);
+  emitSpecWarnings(
+    applyColorScaleRange(
+      scales,
+      renderSpec.encoding,
+      theme,
+      renderSpec.highlight,
+      chartSpec.markType,
+    ),
+    options.onWarn,
+  );
 
   // INVARIANT 3 -- post-hoc defaultColor: must run AFTER computeScales since resolution needs
   // theme context. Do not move into computeScales (would require threading theme through).
   // fill wins for bar/area/arc marks; stroke wins for line marks (the stroke IS the color).
   scales.defaultColor =
-    chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
+    chartSpec.markDef.fill ??
+    chartSpec.markDef.stroke ??
+    defaultSeriesColor(theme, chartSpec.markType);
 
   // Dev-mode WCAG contrast diagnostics. Host-gated via options.dev (never an
   // env sniff; the engine is isomorphic). Advisory console.warn only.
@@ -1174,9 +1185,17 @@ function compileFaceted(
 
     // Compute scales for this panel's area
     const panelScales = computeScales(panelSpecWithDomains, gridPanel.area, panelData);
-    applyColorScaleRange(panelScales, panelSpecWithDomains.encoding, theme, renderSpec.highlight);
+    applyColorScaleRange(
+      panelScales,
+      panelSpecWithDomains.encoding,
+      theme,
+      renderSpec.highlight,
+      chartSpec.markType,
+    );
     panelScales.defaultColor =
-      chartSpec.markDef.fill ?? chartSpec.markDef.stroke ?? theme.colors.categorical[0];
+      chartSpec.markDef.fill ??
+      chartSpec.markDef.stroke ??
+      defaultSeriesColor(theme, chartSpec.markType);
 
     // Dev-mode contrast diagnostics: panels share one palette resolution, so
     // checking the first panel covers the figure without repeating warnings.

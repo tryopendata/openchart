@@ -17,9 +17,9 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.fonts.family).toContain('Inter Variable');
   });
 
-  it('title is 26px demi (590 weight)', () => {
+  it('title is 26px semibold (600 weight)', () => {
     expect(DEFAULT_THEME.chrome.title.fontSize).toBe(26);
-    expect(DEFAULT_THEME.chrome.title.fontWeight).toBe(590);
+    expect(DEFAULT_THEME.chrome.title.fontWeight).toBe(600);
   });
 
   it('subtitle is 14px normal weight', () => {
@@ -32,13 +32,15 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.chrome.source.fontWeight).toBe(400);
   });
 
-  it('borderRadius is 2px (square aesthetic)', () => {
-    expect(DEFAULT_THEME.borderRadius).toBe(2);
+  it('borderRadius is 8px (containers and tooltips; marks carry their own 2px)', () => {
+    expect(DEFAULT_THEME.borderRadius).toBe(8);
   });
 
-  it('font weights include 550 (medium) and 590 (demi)', () => {
-    expect(DEFAULT_THEME.fonts.weights.medium).toBe(550);
-    expect(DEFAULT_THEME.fonts.weights.semibold).toBe(590);
+  it('font weights run the one 400/500/600/700 ladder', () => {
+    expect(DEFAULT_THEME.fonts.weights.normal).toBe(400);
+    expect(DEFAULT_THEME.fonts.weights.medium).toBe(500);
+    expect(DEFAULT_THEME.fonts.weights.semibold).toBe(600);
+    expect(DEFAULT_THEME.fonts.weights.bold).toBe(700);
   });
 
   it('categorical palette is non-empty and primary accent is cyan', () => {

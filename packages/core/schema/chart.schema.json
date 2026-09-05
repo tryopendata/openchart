@@ -5958,7 +5958,7 @@
               "$ref": "#/definitions/ChromeText"
             }
           ],
-          "description": "Right-anchored brand block on the footer row, paired with a small accent dot to its left. Visually balances the source/byline left-anchored text. When set, suppresses the default `tryOpenData.ai` watermark for this chart."
+          "description": "Right-anchored brand block on the footer row, paired with a small accent dot to its left. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenData` watermark for this chart."
         }
       },
       "additionalProperties": false,
@@ -6645,7 +6645,18 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Categorical palette for nominal data (array of CSS color strings)."
+                  "description": "Categorical stroke palette for nominal data (array of CSS color strings)."
+                },
+                "categoricalFill": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Categorical palette for area-filling marks (bar, area, arc, waffle, calendar, rect). Defaults to `categorical` when only that is set."
+                },
+                "hairline": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Hairline color for axis lines and separators. Accepts a TokenValue for light/dark pairs."
                 },
                 "sequential": {
                   "type": "object",
@@ -6756,15 +6767,15 @@
               "properties": {
                 "normal": {
                   "type": "number",
-                  "description": "Normal text weight. Default: 450."
+                  "description": "Normal text weight. Default: 400."
                 },
                 "medium": {
                   "type": "number",
-                  "description": "Medium text weight. Default: 550."
+                  "description": "Medium text weight. Default: 500."
                 },
                 "semibold": {
                   "type": "number",
-                  "description": "Semibold text weight. Default: 590."
+                  "description": "Semibold text weight. Default: 600."
                 },
                 "bold": {
                   "type": "number",
@@ -9190,7 +9201,7 @@
         },
         "watermark": {
           "type": "boolean",
-          "description": "Whether to show the tryOpenData.ai watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
+          "description": "Whether to show the OpenData watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
         },
         "hiddenSeries": {
           "type": "array",

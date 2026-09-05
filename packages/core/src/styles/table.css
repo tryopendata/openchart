@@ -186,7 +186,7 @@
   .oc-series-search-input {
     width: 100%;
     border: 1px solid var(--oc-border);
-    border-radius: 6px;
+    border-radius: var(--oc-radius-md);
     font-size: 13px;
     font-family: inherit;
     background: var(--oc-bg);
@@ -231,7 +231,7 @@
     & button {
       padding: 6px 14px;
       border: 1px solid var(--oc-border);
-      border-radius: 6px;
+      border-radius: var(--oc-radius-md);
       background: var(--oc-bg);
       color: var(--oc-text);
       cursor: pointer;
@@ -280,7 +280,7 @@
     top: 6px;
     left: 0;
     bottom: 6px;
-    border-radius: 2px;
+    border-radius: var(--oc-radius-sm);
     opacity: 0.15;
     pointer-events: none;
   }

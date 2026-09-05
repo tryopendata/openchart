@@ -44,31 +44,100 @@ export const ACHROMATIC_RAMP = {
 // ---------------------------------------------------------------------------
 
 /**
- * Default categorical palette. Cyan-led OKLCH-balanced multi-hue ramp.
+ * Quiet ordered editorial categorical palette: six hues, cyan in slot 1.
  *
- * Hex values precomputed from OKLCH via the standard OKLab -> linear sRGB
- * -> sRGB pipeline. Documented OKLCH source values are the contract; if
- * the conversion math changes, regenerate from the source rather than
- * editing hex literals directly.
+ * Construction rules (the contract; the hexes below are output, not input):
+ *   - Hue order cyan 208 -> ochre 70 -> blue 262 -> rose 350 -> green 155 ->
+ *     violet 300, so every adjacent pair including the wrap is >= 80° apart.
+ *   - Lightness varies rather than matching: colour-vision deficiency
+ *     collapses hue and only lightness survives, so a matched-lightness ramp
+ *     fails the repo's own Brettel simulator on ochre/rose and blue/violet.
+ *   - Strokes carry more chroma than fills; a fill is the same hue one step
+ *     lighter and quieter, so a bar or slice never shouts as loud as a line.
+ *   - Dark variants raise L and trim chroma instead of reusing the light hexes.
  *
- * Tuned at L≈0.65, C≈0.20 (vs prior L≈0.70, C≈0.15) for more vivid,
- * saturated color on dark backgrounds where the lighter pastels read soft.
+ * Hex values are precomputed sRGB via the Ottosson OKLab -> linear sRGB ->
+ * sRGB pipeline (raw `oklch()` strings parse unreliably through d3-color and
+ * the dark-mode adapter's hsl-based binary search). Each entry carries its
+ * *measured* OKLCH so the ramp can be regenerated; do not edit hexes directly.
+ *
+ * Every array here clears `checkPaletteDistinguishability` at the default
+ * minDistance 30 for deuteranopia and protanopia — see
+ * `colors/__tests__/palette-a11y.test.ts`, which is the guard on any change.
  */
-// Order interleaves hues so adjacent slots sit at least ~70° apart on the
-// OKLCH wheel. Cyan and teal differ by only ~10° and read as the same color
-// when placed side-by-side (e.g. on a pie slice or stacked area), so the
-// teal slot is pushed deep into the ramp where it won't neighbor cyan.
 export const CATEGORICAL_PALETTE = [
-  '#06b6d4', // cyan,    primary accent (sRGB literal, ~205°)
-  '#ee4a73', // rose     — oklch(65% 0.20 10)
-  '#00b054', // emerald  — oklch(65% 0.20 155)
-  '#a46bf5', // violet   — oklch(65% 0.20 300)
-  '#e07d00', // amber    — oklch(68% 0.19 70)
-  '#0091ff', // sky      — oklch(65% 0.20 250)
-  '#f36000', // orange   — oklch(67% 0.20 45)
-  '#6f7dff', // indigo   — oklch(65% 0.20 275)
-  '#00afbf', // teal     — oklch(65% 0.20 200)
+  '#06b6d4', // cyan   — oklch(0.715 0.126 215) — sRGB literal, primary accent
+  '#e29e47', // ochre  — oklch(0.750 0.130 70)
+  '#4170cb', // blue   — oklch(0.559 0.150 262)
+  '#b2417f', // rose   — oklch(0.550 0.161 350)
+  '#3ca368', // green  — oklch(0.640 0.130 155)
+  '#a584dc', // violet — oklch(0.679 0.130 300)
 ] as const;
+
+/**
+ * Fill counterparts of {@link CATEGORICAL_PALETTE}: same hues, ~0.03 lighter
+ * and ~0.03 lower chroma. Used for area-filling marks (bar, area, arc,
+ * waffle, calendar, rect) so large blocks of colour read quieter than the
+ * strokes of a line chart drawn beside them.
+ */
+export const CATEGORICAL_FILL_PALETTE = [
+  '#51bccc', // cyan   — oklch(0.739 0.100 209)
+  '#dda96b', // ochre  — oklch(0.770 0.100 70)
+  '#587fc8', // blue   — oklch(0.601 0.120 262)
+  '#bf6291', // rose   — oklch(0.619 0.131 350)
+  '#62ab7d', // green  — oklch(0.681 0.101 155)
+  '#ae96da', // violet — oklch(0.719 0.100 300)
+] as const;
+
+/** Dark-mode stroke palette: L raised ~0.10, chroma trimmed. */
+export const CATEGORICAL_PALETTE_DARK = [
+  '#22d3ee', // cyan   — oklch(0.797 0.134 212) — sRGB literal
+  '#f9be78', // ochre  — oklch(0.840 0.111 70)
+  '#6591e1', // blue   — oklch(0.660 0.129 262)
+  '#d771a4', // rose   — oklch(0.680 0.140 350)
+  '#6ebf8c', // green  — oklch(0.739 0.109 155)
+  '#bca1ed', // violet — oklch(0.760 0.110 300)
+] as const;
+
+/** Dark-mode fill palette: the dark strokes one step quieter. */
+export const CATEGORICAL_FILL_PALETTE_DARK = [
+  '#72cedc', // cyan   — oklch(0.800 0.090 208)
+  '#f3c898', // ochre  — oklch(0.859 0.079 70)
+  '#7698d6', // blue   — oklch(0.679 0.100 262)
+  '#d281a8', // rose   — oklch(0.700 0.111 350)
+  '#82ba95', // green  — oklch(0.740 0.079 155)
+  '#c2afe7', // violet — oklch(0.789 0.081 300)
+] as const;
+
+/**
+ * Slots 7-12. Only reached past slot 6, and reaching it emits a warning:
+ * a chart with more than six categorical series is a chart that should be
+ * bucketed, faceted, or direct-labelled instead.
+ *
+ * Built by interleaving: each base hue + 40° (which lands each entry near the
+ * midpoint of a gap in the base ramp) with lightness alternating ±0.12 from
+ * its base slot. The array is rotated so slot 7 sits 105° from cyan and never
+ * neighbours it on a seven-slice pie wrap; the two entries that do land near
+ * cyan in hue are pushed to slots 10 and 12.
+ */
+export const CATEGORICAL_EXTENDED_PALETTE = [
+  '#8e8f19', // olive     — oklch(0.629 0.130 110)
+  '#b086eb', // periwinkle— oklch(0.701 0.149 302)
+  '#ac3225', // brick     — oklch(0.501 0.161 30)
+  '#00bfc0', // teal      — oklch(0.729 0.124 195)
+  '#a5538c', // mulberry  — oklch(0.560 0.129 340)
+  '#65b1f6', // sky       — oklch(0.740 0.126 248)
+] as const;
+
+/**
+ * Measured OKLCH hue (deg) of each {@link CATEGORICAL_PALETTE} slot, in slot
+ * order. Exported so the adjacency test can assert the ordering rule without
+ * re-deriving OKLCH from the hexes.
+ */
+export const CATEGORICAL_HUES = [215.2, 70.0, 262.1, 349.7, 154.8, 300.2] as const;
+
+/** Measured OKLCH lightness of each {@link CATEGORICAL_PALETTE} slot. */
+export const CATEGORICAL_LIGHTNESS = [0.715, 0.75, 0.559, 0.55, 0.64, 0.679] as const;
 
 export type CategoricalPalette = typeof CATEGORICAL_PALETTE;
 

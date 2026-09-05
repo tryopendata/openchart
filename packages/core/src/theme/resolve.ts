@@ -11,6 +11,7 @@
  */
 
 import { isOpaqueColor } from '../colors/contrast';
+import { deriveNeutralRamp } from '../colors/neutral';
 import type { ChromeThemeOverride, ThemeConfig } from '../types/spec';
 import type { ChromeDefaults, ResolvedTheme, Theme, TokenValue } from '../types/theme';
 import { DEFAULT_THEME } from './defaults';
@@ -64,11 +65,13 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
       colors.categorical = config.colors;
     } else {
       if (config.colors.categorical) colors.categorical = config.colors.categorical;
+      if (config.colors.categoricalFill) colors.categoricalFill = config.colors.categoricalFill;
       if (config.colors.sequential) colors.sequential = config.colors.sequential;
       if (config.colors.diverging) colors.diverging = config.colors.diverging;
       if (config.colors.background) colors.background = resolveTokenLight(config.colors.background);
       if (config.colors.text) colors.text = resolveTokenLight(config.colors.text);
       if (config.colors.gridline) colors.gridline = resolveTokenLight(config.colors.gridline);
+      if (config.colors.hairline) colors.hairline = resolveTokenLight(config.colors.hairline);
       if (config.colors.axis) colors.axis = resolveTokenLight(config.colors.axis);
       if (config.colors.annotationFill)
         colors.annotationFill = resolveTokenLight(config.colors.annotationFill);
@@ -76,6 +79,12 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
         colors.annotationText = resolveTokenLight(config.colors.annotationText);
       if (config.colors.positive) colors.positive = resolveTokenLight(config.colors.positive);
       if (config.colors.negative) colors.negative = resolveTokenLight(config.colors.negative);
+    }
+    // A user who sets only `categorical` gets fills from the same array. The
+    // two palettes must never drift apart behind the author's back: a custom
+    // six-hue palette shouldn't leave bars on the built-in fills.
+    if (colors.categorical && !colors.categoricalFill) {
+      colors.categoricalFill = colors.categorical;
     }
     partial.colors = colors as Theme['colors'];
   }
@@ -147,6 +156,7 @@ function collectTokenPairs(
       'background',
       'text',
       'gridline',
+      'hairline',
       'axis',
       'annotationFill',
       'annotationText',
@@ -308,6 +318,10 @@ export function resolveTheme(userTheme?: ThemeConfig, base: Theme = DEFAULT_THEM
 
   return {
     ...merged,
+    colors: {
+      ...merged.colors,
+      neutral: deriveNeutralRamp(merged.colors.text, merged.colors.background, dark),
+    },
     isDark: dark,
     _tokenPairs: userTheme ? collectTokenPairs(userTheme) : undefined,
   } as ResolvedTheme;

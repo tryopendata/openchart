@@ -547,10 +547,11 @@ describe('compileTileMap', () => {
       };
       const result = compileTileMap(spec, defaultOptions);
 
-      // Category 'A' (index 0) and 'J' (index 9) share the same palette slot after wrapping
+      // Category 'A' (index 0) and 'G' (index 6) share the same palette slot
+      // after wrapping the six-hue categorical ramp.
       const alTile = result.tiles.find((t) => t.stateCode === 'AL')!; // category A, palette[0]
-      const gaTile = result.tiles.find((t) => t.stateCode === 'GA')!; // category J, palette[9 % 9 = 0]
-      expect(alTile.fill).toBe(gaTile.fill);
+      const ctTile = result.tiles.find((t) => t.stateCode === 'CT')!; // category G, palette[6 % 6 = 0]
+      expect(alTile.fill).toBe(ctTile.fill);
     });
 
     it('tooltip uses "Category" label for categorical tiles', () => {

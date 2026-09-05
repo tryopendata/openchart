@@ -208,7 +208,7 @@ function extractColorEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): L
   // and the accent-neutral series strategy show up in the legend too. An
   // explicit range always wins (the scale honours it verbatim).
   const domainColors =
-    explicitRange ?? categoricalColorsForDomain(scaleDomain, theme, spec.highlight);
+    explicitRange ?? categoricalColorsForDomain(scaleDomain, theme, spec.highlight, spec.markType);
 
   // Order legend entries by explicit domain when provided so the author
   // controls which entries render first (and which get truncated last when

@@ -44,7 +44,7 @@ function cameraTransform(container: HTMLElement): string | null {
  * presence on a line stroke is the observable signal that a highlight is
  * active; its absence means no highlight.
  */
-const MUTED_STROKE = '#bfc3c8';
+const MUTED_STROKE = '#d4d4d8';
 
 /** Keyed beeswarm spec with `count` dots; `shift` perturbs the values. */
 function beeswarmStorySpec(count: number, shift: number): ChartSpec {

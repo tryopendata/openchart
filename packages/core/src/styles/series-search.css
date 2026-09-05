@@ -40,7 +40,7 @@
     gap: 4px;
     padding: 3px 4px 3px 10px;
     border: 1px solid var(--oc-border);
-    border-radius: 999px;
+    border-radius: var(--oc-radius-full);
     background: var(--oc-secondary);
     color: var(--oc-text-secondary);
     font-size: 12px;
@@ -118,7 +118,7 @@
     padding: 4px;
     list-style: none;
     border: 1px solid var(--oc-border);
-    border-radius: 8px;
+    border-radius: var(--oc-radius-lg);
     background: var(--oc-card);
     box-shadow: var(--oc-tooltip-shadow);
     z-index: 20;
@@ -126,7 +126,7 @@
 
   .oc-series-search-option {
     padding: 6px 10px;
-    border-radius: 4px;
+    border-radius: var(--oc-radius-sm);
     font-size: 13px;
     color: var(--oc-text);
     cursor: pointer;

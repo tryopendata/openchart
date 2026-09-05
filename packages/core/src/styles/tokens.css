@@ -91,15 +91,15 @@
 
     /* Typography scale (editorial design system) */
     --oc-title-size: 26px;
-    --oc-title-weight: 590;
+    --oc-title-weight: 600; /* one ladder: 400 regular / 500 medium / 600 semibold / 700 bold */
     --oc-title-tracking: -0.022em;
     --oc-subtitle-size: 14px;
-    --oc-subtitle-weight: 450;
+    --oc-subtitle-weight: 400;
     --oc-source-size: 11px;
-    --oc-source-weight: 450;
+    --oc-source-weight: 400;
     --oc-body-size: 13px;
     --oc-eyebrow-size: 11px;
-    --oc-eyebrow-weight: 550;
+    --oc-eyebrow-weight: 500;
     --oc-eyebrow-tracking: 0.08em;
 
     /* Surfaces (light mode defaults) */
@@ -124,17 +124,41 @@
     --oc-text-muted: #71717a;
     --oc-text-faint: #d4d4d8;
 
+    /*
+   * Derived neutral ramp. Named by the share of *text* in a text-toward-
+   * background mix: 100 is nearly the background, 800 is nearly the text.
+   * These static values are the mix against the default surfaces; mounts
+   * restamp them from ResolvedTheme.colors.neutral, which a custom warm or
+   * cool theme derives from its own text/background pair.
+   */
+    --oc-gray-100: #f0f0f0;
+    --oc-gray-200: #e1e1e2;
+    --oc-gray-300: #c9c9c9;
+    --oc-gray-400: #9d9d9d;
+    --oc-gray-600: #787879;
+    --oc-gray-800: #474748;
+
     /* Lines */
-    --oc-gridline: rgba(0, 0, 0, 0.1);
-    --oc-axis: rgba(0, 0, 0, 0.1);
+    --oc-gridline: rgba(0, 0, 0, 0.08);
+    --oc-axis: rgba(0, 0, 0, 0.14); /* hairline = theme.colors.hairline, not the tick-label ink */
     --oc-border: rgba(0, 0, 0, 0.08);
-    --oc-border-radius: 2px;
+    --oc-border-radius: 8px; /* containers and tooltips; marks use --oc-radius-sm */
+
+    /* Radius ladder */
+    --oc-radius-sm: 2px;
+    --oc-radius-md: 6px;
+    --oc-radius-lg: var(--oc-border-radius);
+    --oc-radius-full: 999px;
 
     /* Brand and semantic */
     --oc-accent: #06b6d4;
     --oc-accent-strong: #0891b2; /* darker cyan for line strokes on light bg */
-    --oc-positive: #10b981;
-    --oc-negative: #e11d48;
+    /* kept equal to DEFAULT_THEME.colors.positive (token-theme-parity test) */
+    --oc-positive: #15803d;
+    --oc-negative: #dc2626;
+    /* delta chip background */
+    --oc-positive-tint: color-mix(in srgb, var(--oc-positive) 10%, var(--oc-bg));
+    --oc-negative-tint: color-mix(in srgb, var(--oc-negative) 10%, var(--oc-bg));
     --oc-focus: #3b82f6;
     /* static, intentionally NOT derived from --oc-focus and NOT flipped in dark mode */
     --oc-focus-ring: rgba(59, 130, 246, 0.1);
@@ -144,6 +168,15 @@
     /* Spacing scale (4px base) — only --oc-space-2/4 are consumed (JS-stamped) */
     --oc-space-2: 8px;
     --oc-space-4: 16px;
+
+    /*
+   * Hover language. The hovered element goes to full ink; the rest of its
+   * group drops to --oc-hover-dim over --oc-hover-duration. Maps override the
+   * dim locally (3000 county paths at 0.3 reads as a blackout, not a hint).
+   */
+    --oc-hover-dim: 0.3;
+    --oc-hover-duration: 140ms;
+    --oc-map-hover-dim: 0.75;
 
     /* Interactive states */
     --oc-hover-bg: rgba(0, 0, 0, 0.025);

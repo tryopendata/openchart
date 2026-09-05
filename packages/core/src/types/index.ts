@@ -282,6 +282,7 @@ export type {
 export type {
   ChromeDefaults,
   ResolvedTheme,
+  ResolvedThemeColors,
   SeriesStrategy,
   Theme,
   ThemeChromeDefaults,

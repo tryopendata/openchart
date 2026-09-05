@@ -1216,8 +1216,15 @@ export interface ThemeConfig {
   colors?:
     | string[]
     | {
-        /** Categorical palette for nominal data (array of CSS color strings). */
+        /** Categorical stroke palette for nominal data (array of CSS color strings). */
         categorical?: string[];
+        /**
+         * Categorical palette for area-filling marks (bar, area, arc, waffle,
+         * calendar, rect). Defaults to `categorical` when only that is set.
+         */
+        categoricalFill?: string[];
+        /** Hairline color for axis lines and separators. Accepts a TokenValue for light/dark pairs. */
+        hairline?: TokenValue;
         /** Sequential palettes keyed by name. Each is an array of color stops. */
         sequential?: Record<string, string[]>;
         /** Diverging palettes keyed by name. Each is an array of color stops with a neutral midpoint. */
@@ -1264,11 +1271,11 @@ export interface ThemeConfig {
     };
     /** Font weight overrides. Partial — only specified keys are overridden. */
     weights?: {
-      /** Normal text weight. Default: 450. */
+      /** Normal text weight. Default: 400. */
       normal?: number;
-      /** Medium text weight. Default: 550. */
+      /** Medium text weight. Default: 500. */
       medium?: number;
-      /** Semibold text weight. Default: 590. */
+      /** Semibold text weight. Default: 600. */
       semibold?: number;
       /** Bold text weight. Default: 700. */
       bold?: number;

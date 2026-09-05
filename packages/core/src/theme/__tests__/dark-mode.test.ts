@@ -1,6 +1,7 @@
 import { hsl } from 'd3-color';
 import { describe, expect, it } from 'vitest';
 import { contrastRatio } from '../../colors/contrast';
+import { CATEGORICAL_FILL_PALETTE_DARK, CATEGORICAL_PALETTE_DARK } from '../../colors/palettes';
 import { adaptColorForDarkMode, adaptForLightLineStroke, adaptTheme } from '../dark-mode';
 import { resolveTheme } from '../resolve';
 
@@ -106,13 +107,18 @@ describe('adaptTheme', () => {
     expect(ratio).toBeGreaterThan(4);
   });
 
-  it('preserves categorical palette across modes', () => {
+  it('swaps in the purpose-built dark palette, and passes a custom one through', () => {
     const light = resolveTheme();
     const dark = adaptTheme(light);
-    // Design-system tokens are mode-agnostic: the same vibrant cyan-led
-    // palette renders in both modes. Contrast-equivalence adaptation
-    // dulls cyan into teal, which is not what the spec calls for.
-    expect(dark.colors.categorical).toEqual(light.colors.categorical);
+    // Contrast-equivalence adaptation dulls cyan into teal, so the dark
+    // variants are authored (L raised ~0.10, chroma trimmed) rather than
+    // derived from the light hexes.
+    expect(dark.colors.categorical).toEqual([...CATEGORICAL_PALETTE_DARK]);
+    expect(dark.colors.categoricalFill).toEqual([...CATEGORICAL_FILL_PALETTE_DARK]);
+
+    const custom = adaptTheme(resolveTheme({ colors: ['#111111', '#222222'] }));
+    expect(custom.colors.categorical).toEqual(['#111111', '#222222']);
+    expect(custom.colors.categoricalFill).toEqual(['#111111', '#222222']);
   });
 
   it('updates chrome text colors', () => {

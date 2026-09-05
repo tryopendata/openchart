@@ -6,7 +6,7 @@ import { compileChart } from '../../compile';
 // Test data
 // ---------------------------------------------------------------------------
 
-const MUTED_COLOR = '#bfc3c8';
+const MUTED_COLOR = '#d4d4d8';
 
 const data = [
   { date: '2020', country: 'Germany', value: 100 },

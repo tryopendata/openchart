@@ -14,7 +14,7 @@ import { computePieLabels } from './labels';
 // ---------------------------------------------------------------------------
 
 export const pieRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
-  const marks = computePieMarks(spec, scales, chartArea, strategy, false);
+  const marks = computePieMarks(spec, scales, chartArea, strategy, false, theme);
 
   // Compute and attach labels (respects spec.labels.density). Assign by the
   // label's carried index, never positionally: density filtering drops slices
@@ -32,7 +32,7 @@ export const pieRenderer: ChartRenderer = (spec, scales, chartArea, strategy, th
 // ---------------------------------------------------------------------------
 
 export const donutRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
-  const marks = computePieMarks(spec, scales, chartArea, strategy, true);
+  const marks = computePieMarks(spec, scales, chartArea, strategy, true, theme);
 
   // Compute and attach labels (respects spec.labels.density). Assign by the
   // label's carried index, never positionally: density filtering drops slices

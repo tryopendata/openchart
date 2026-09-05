@@ -96,7 +96,7 @@
   /* Interactive legend rows are buttons; give them affordance + a focus ring. */
   button.oc-graph-legend-item {
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--oc-radius-sm);
 
     &:hover {
       background: var(--oc-focus-ring);

@@ -3,16 +3,14 @@
    * Legend
    * --------------------------------------------------------------------------- */
 
+  /* Font size and text fill are set inline by the renderer's applyTextStyle
+   * from the engine-computed legend layout, which is authoritative (11px).
+   * Only the family, which nothing computes per-entry, lives here. */
   .oc-legend {
     font-family: var(--oc-font-family);
-    font-size: var(--oc-body-size);
   }
 
   .oc-legend-entry {
     cursor: default;
-  }
-
-  .oc-legend text {
-    fill: var(--oc-legend-text);
   }
 }

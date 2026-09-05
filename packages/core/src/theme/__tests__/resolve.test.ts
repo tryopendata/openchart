@@ -275,3 +275,29 @@ describe('resolveTheme widened ThemeConfig', () => {
     expect(resolved.seriesStrategy).toBe('palette');
   });
 });
+
+describe('categoricalFill', () => {
+  it('mirrors a user palette when only `categorical` is given', () => {
+    expect(resolveTheme({ colors: ['#111111', '#222222'] }).colors.categoricalFill).toEqual([
+      '#111111',
+      '#222222',
+    ]);
+    expect(resolveTheme({ colors: { categorical: ['#111111'] } }).colors.categoricalFill).toEqual([
+      '#111111',
+    ]);
+  });
+
+  it('keeps an explicit fill palette distinct from the stroke palette', () => {
+    const theme = resolveTheme({
+      colors: { categorical: ['#111111'], categoricalFill: ['#eeeeee'] },
+    });
+    expect(theme.colors.categorical).toEqual(['#111111']);
+    expect(theme.colors.categoricalFill).toEqual(['#eeeeee']);
+  });
+
+  it('defaults to the built-in fill palette, which differs from the strokes', () => {
+    const theme = resolveTheme();
+    expect(theme.colors.categoricalFill).not.toEqual(theme.colors.categorical);
+    expect(theme.colors.categoricalFill).toHaveLength(6);
+  });
+});

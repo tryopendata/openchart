@@ -16,8 +16,9 @@ import type {
   MarkAria,
   PointMark,
   Rect,
+  ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor } from '@opendata-ai/openchart-core';
+import { adaptForLightLineStroke, getRepresentativeColor } from '@opendata-ai/openchart-core';
 import { line } from 'd3-shape';
 
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
@@ -58,6 +59,7 @@ export function computeLineMarks(
   scales: ResolvedScales,
   _chartArea: Rect,
   _strategy: LayoutStrategy,
+  theme?: ResolvedTheme,
 ): (LineMark | PointMark)[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -102,7 +104,17 @@ export function computeLineMarks(
     // markDef.stroke wins over the scale-derived color when set explicitly.
     // Sparkline mode injects this via applySparklineDefaults to carry the
     // trend color; users can also set it directly to override the palette.
-    const strokeColor = spec.markDef.stroke ?? getRepresentativeColor(color);
+    //
+    // A palette-derived stroke on a light canvas goes through
+    // adaptForLightLineStroke first: the accent (cyan-500) is tuned as a fill
+    // and only clears 2.4:1 on white, which is too thin for a 2px line. The
+    // darkened variant clears 3:1. An explicit markDef.stroke is the author's
+    // call and passes through untouched, as does anything on a dark canvas.
+    const strokeColor =
+      spec.markDef.stroke ??
+      (theme && !theme.isDark
+        ? adaptForLightLineStroke(getRepresentativeColor(color))
+        : getRepresentativeColor(color));
 
     // Sort rows by x-axis field so lines draw left-to-right.
     // For nominal/ordinal axes, preserve data order since there's no

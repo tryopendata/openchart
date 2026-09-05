@@ -14,7 +14,7 @@
     background: var(--oc-tooltip-bg);
     backdrop-filter: blur(14px);
     border: 1px solid var(--oc-tooltip-border);
-    border-radius: var(--oc-border-radius, 2px);
+    border-radius: var(--oc-radius-lg);
     box-shadow: var(--oc-tooltip-shadow);
     color: var(--oc-tooltip-text);
     font-family: var(--oc-font-family);
@@ -43,7 +43,7 @@
     }
 
     & .oc-tooltip-title {
-      font-weight: 590;
+      font-weight: 600;
       font-size: 11px;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -93,7 +93,7 @@
     }
 
     & .oc-tooltip-value {
-      font-weight: 510;
+      font-weight: 500;
       font-size: 12px;
       font-variant-numeric: tabular-nums;
       color: var(--oc-tooltip-text);
