@@ -1,5 +1,27 @@
 # Changelog
 
+## [8.4.0](https://github.com/tryopendata/openchart/compare/core-v8.3.1...core-v8.4.0) (2026-09-05)
+
+
+### Features
+
+* design refresh phase 9 - motion timings, fixtures, invariants, docs ([52883e5](https://github.com/tryopendata/openchart/commit/52883e5))
+* render table categoryColors cells as chips ([420de90](https://github.com/tryopendata/openchart/commit/420de90))
+* design refresh phase 8: broadsheet and terminal presets, rule chrome surface, six gallery house styles ([be41cf0](https://github.com/tryopendata/openchart/commit/be41cf0))
+* design refresh phases 6-7: graph/sankey hover, dashboards, chrome economy, long-tail marks ([af73755](https://github.com/tryopendata/openchart/commit/af73755))
+* design refresh phases 4-5: table design system, map and tilemap anatomy ([c3e6768](https://github.com/tryopendata/openchart/commit/c3e6768))
+* design refresh phases 2-3: hover language, legend buttons, tooltip totals, refline collision ([be8ae37](https://github.com/tryopendata/openchart/commit/be8ae37))
+* design refresh phase 1: mark defaults and baseline regeneration ([e1d6e1d](https://github.com/tryopendata/openchart/commit/e1d6e1d))
+* design refresh phase 0: six-hue editorial palette, neutral ramp, token contract ([1e2e925](https://github.com/tryopendata/openchart/commit/1e2e925))
+
+
+### Bug Fixes
+
+* controlled sort survives wrapper mount sync; svg style block uses neutral.surface ([55dbd22](https://github.com/tryopendata/openchart/commit/55dbd22))
+* address design refresh code review findings ([5deec30](https://github.com/tryopendata/openchart/commit/5deec30))
+* round max value before estimating right-axis tick width ([0ccf610](https://github.com/tryopendata/openchart/commit/0ccf610))
+* tighten right y-axis title gap and bar label clamping ([1c54319](https://github.com/tryopendata/openchart/commit/1c54319))
+
 ## [8.3.1](https://github.com/tryopendata/openchart/compare/core-v8.3.0...core-v8.3.1) (2026-09-05)
 
 

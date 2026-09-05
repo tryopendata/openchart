@@ -1,6 +1,6 @@
 {
   "name": "@opendata-ai/openchart-vanilla",
-  "version": "8.3.1",
+  "version": "8.4.0",
   "description": "Vanilla JS renderer for openchart: SVG charts, HTML tables, force-directed graphs",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",
