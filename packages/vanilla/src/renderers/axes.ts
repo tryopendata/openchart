@@ -6,7 +6,6 @@ import type { AxisLayout, ChartLayout } from '@opendata-ai/openchart-core';
 import {
   axisTitleOffset,
   estimateTextWidth,
-  getAxisTitleOffset,
   TICK_LABEL_OFFSET,
   textAscent,
 } from '@opendata-ai/openchart-core';
@@ -301,7 +300,19 @@ function renderAxis(
         'text-anchor': 'middle',
       });
     } else if (isRight) {
-      const titleOffset = getAxisTitleOffset(layout.dimensions.width);
+      const maxTickLabelWidth = axis.ticks.reduce((max, t) => {
+        const w = estimateTextWidth(
+          t.label,
+          axis.tickLabelStyle.fontSize,
+          axis.tickLabelStyle.fontWeight ?? 400,
+        );
+        return Math.max(max, w);
+      }, 0);
+      const titleOffset = axisTitleOffset(
+        maxTickLabelWidth,
+        axis.labelStyle.fontSize,
+        layout.dimensions.width,
+      );
       const titleX = area.x + area.width + titleOffset;
       setAttrs(axisLabel, {
         x: titleX,

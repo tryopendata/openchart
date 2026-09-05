@@ -9,11 +9,11 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   AXIS_TITLE_TRAILING_PAD,
+  axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   computeFieldFormatContext,
   defaultNumberFormatter,
   estimateTextWidth,
-  getAxisTitleOffset,
   resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
@@ -214,10 +214,10 @@ function compileLayerIndependent(
   const hasRightAxisTitle = !!yAxisConfig?.title;
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
   const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
-  const axisTitleOffset = getAxisTitleOffset(options.width);
   const halfGlyph = Math.ceil(bodyFontSize / 2);
+  const titleCenterOffset = axisTitleOffset(rightAxisWidth, bodyFontSize, options.width);
   const titleExtent = hasRightAxisTitle
-    ? axisTitleOffset +
+    ? titleCenterOffset +
       halfGlyph +
       (options.width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD)
     : 0;
@@ -267,7 +267,7 @@ function compileLayerIndependent(
                 x:
                   layout0.area.x +
                   layout0.area.width +
-                  getAxisTitleOffset(layout0.dimensions.width),
+                  axisTitleOffset(rightAxisWidth, bodyFontSize, layout0.dimensions.width),
                 y: layout0.area.y + layout0.area.height / 2,
                 angle: 90,
               },
