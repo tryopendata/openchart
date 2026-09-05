@@ -1,9 +1,10 @@
 /**
  * Showcase — the full-bleed editorial gallery.
  *
- * Six publication-quality pieces that people most want to steal: a multi-series
+ * Ten publication-quality pieces that people most want to steal: a multi-series
  * line, a fully-chromed horizontal bar, a stacked-area story, a dense data
- * table, an annotated scatter, and a keyboard-navigable chart. Each piece is
+ * table, a world choropleth, a path-tracing sankey, a force graph, a KPI row,
+ * an annotated scatter, and a keyboard-navigable chart. Each piece is
  * wrapped in `.oc-bleed` so it spans wider than body text, carries a real
  * takeaway title with cited data, and exposes its spec via the copy panel.
  *
@@ -12,17 +13,27 @@
  * .ladle/redirects.ts).
  */
 
-import type { ChartSpec, TableSpec } from '@opendata-ai/openchart-core';
+import type {
+  ChartSpec,
+  GeoMapSpec,
+  GraphSpec,
+  SankeySpec,
+  TableSpec,
+} from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
+import worldTopo from 'world-atlas/countries-110m.json';
 import { Demo, GalleryPage, Section } from '../components';
 import {
   bigTechRevenue,
   countryIndicators,
+  energyFlow,
   energyMix,
   populationByCountry,
   stockPerformance,
   wealthHealth,
+  worldGdp,
 } from '../data';
+import { StatCard, useDashRootClass } from './dashboards.layouts';
 import { hBarGradient } from './helpers';
 
 const ACCENT = '#0e7490';
@@ -150,27 +161,158 @@ const tableSpec: TableSpec = {
         Healthcare: '#be123c',
       },
     },
-    { key: 'price', label: 'Price', format: '$,.2f', sortable: true, align: 'right' },
-    {
-      key: 'ytdChange',
-      label: 'YTD %',
-      format: '+.1f',
-      sortable: true,
-      align: 'right',
-      bar: {},
-    },
+    { key: 'price', label: 'Price', format: '$,.2f', sortable: true, bar: {} },
+    { key: 'ytdChange', label: 'YTD', format: '.1f', sortable: true, delta: true },
     { key: 'trend', label: '8-week trend', sparkline: { type: 'line' } },
   ],
   chrome: {
     title: 'Twenty Large Caps, One Dense Table',
-    subtitle: 'Price, year-to-date return, and an 8-week trend line per row',
+    subtitle:
+      'Condensed 40px rows: a category chip, an inline price bar, a signed YTD chip, and a shared-domain 8-week spark',
     source: stockPerformance.source,
     byline: 'Table: OpenChart',
   },
+  density: 'condensed',
   search: true,
   pagination: { pageSize: 10 },
   animation: true,
 };
+
+// ---------------------------------------------------------------------------
+// 4b. World choropleth — equal-earth with a titled, unit-carrying legend
+// ---------------------------------------------------------------------------
+
+const worldMapSpec: GeoMapSpec = {
+  type: 'map',
+  geo: { features: worldTopo, projection: 'equalEarth' },
+  data: [...worldGdp.data],
+  encoding: {
+    key: { field: 'id', type: 'nominal' },
+    color: { field: 'gdp', type: 'quantitative', title: 'GDP per capita (US$)' },
+  },
+  valueFormat: '$,.0f',
+  chrome: {
+    title: 'The World in Dollars Per Person',
+    subtitle:
+      'GDP per capita, current US$, 2023 — equal-interval classes with a detached “no data” swatch',
+    source: worldGdp.source,
+    byline: 'Map: OpenChart',
+  },
+  animation: true,
+};
+
+// ---------------------------------------------------------------------------
+// 4c. Sankey — hovering any node traces its whole upstream and downstream path
+// ---------------------------------------------------------------------------
+
+const sankeySpec: SankeySpec = {
+  type: 'sankey',
+  data: [...energyFlow.data],
+  encoding: {
+    source: { field: 'source', type: 'nominal' },
+    target: { field: 'target', type: 'nominal' },
+    value: { field: 'value', type: 'quantitative' },
+  },
+  valueFormat: '.1f',
+  chrome: {
+    title: 'Electricity Is the Grand Central of US Energy',
+    subtitle: 'Hover any node: the whole upstream and downstream path lights, everything else dims',
+    source: energyFlow.source,
+    byline: 'Chart: OpenChart',
+  },
+  animation: true,
+};
+
+// ---------------------------------------------------------------------------
+// 4d. Force graph — a supply network, colored by tier
+// ---------------------------------------------------------------------------
+
+type SupplyEdge = [string, string];
+
+const supplyTiers: Record<string, string> = {
+  Assembly: 'Assembly',
+  'Battery Pack': 'Module',
+  Powertrain: 'Module',
+  Chassis: 'Module',
+  Cells: 'Component',
+  'Cathode Mill': 'Component',
+  Inverter: 'Component',
+  'Wire Harness': 'Component',
+  Stamping: 'Component',
+  Lithium: 'Raw material',
+  Nickel: 'Raw material',
+  Copper: 'Raw material',
+  Aluminium: 'Raw material',
+  Graphite: 'Raw material',
+};
+
+const supplyEdges: SupplyEdge[] = [
+  ['Battery Pack', 'Assembly'],
+  ['Powertrain', 'Assembly'],
+  ['Chassis', 'Assembly'],
+  ['Cells', 'Battery Pack'],
+  ['Cathode Mill', 'Cells'],
+  ['Inverter', 'Powertrain'],
+  ['Wire Harness', 'Powertrain'],
+  ['Stamping', 'Chassis'],
+  ['Lithium', 'Cathode Mill'],
+  ['Nickel', 'Cathode Mill'],
+  ['Graphite', 'Cells'],
+  ['Copper', 'Wire Harness'],
+  ['Copper', 'Inverter'],
+  ['Aluminium', 'Stamping'],
+  ['Aluminium', 'Chassis'],
+];
+
+const graphSpec: GraphSpec = {
+  type: 'graph',
+  nodes: Object.entries(supplyTiers).map(([id, tier]) => ({ id, label: id, tier })),
+  edges: supplyEdges.map(([source, target]) => ({ source, target })),
+  encoding: { nodeColor: { field: 'tier', type: 'nominal' } },
+  layout: { type: 'force', chargeStrength: -220, linkDistance: 60 },
+  chrome: {
+    title: 'Five Raw Materials Reach One Assembly Line',
+    subtitle: 'Hover a node to isolate its neighbourhood; drag to reheat the layout',
+    source: 'Illustrative data',
+    byline: 'Graph: OpenChart',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 4e. KPI row — the dashboard tile anatomy at editorial width
+// ---------------------------------------------------------------------------
+
+function KpiRow() {
+  const rootClass = useDashRootClass('');
+  return (
+    <div
+      className={rootClass}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: 'var(--gx-space-4)',
+      }}
+    >
+      <StatCard label="MRR" value="$1.42M" delta="+4.8%" timeframe="vs. last month" />
+      <StatCard label="Net new logos" value="218" delta="+12.1%" timeframe="vs. last month" />
+      <StatCard
+        label="Gross churn"
+        value="1.9%"
+        delta="-0.4pp"
+        tone="up"
+        timeframe="vs. last month"
+      />
+      <StatCard
+        label="Support backlog"
+        value="341"
+        delta="+18.0%"
+        tone="down"
+        timeframe="vs. last week"
+      />
+      <StatCard label="p95 latency" value="284ms" delta="0.0%" tone="flat" timeframe="last 24h" />
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // 5. Annotated scatter — the wealth/health story with a callout
@@ -284,12 +426,12 @@ export default { title: 'Showcase' };
 export const Showcase = () => (
   <GalleryPage
     title="Showcase"
-    lede="Full-bleed, publication-ready pieces — the specs people most want to steal. Every chart carries a takeaway title, cited data, and a copyable spec. These are the same declarative specs you'd write yourself, rendered at editorial scale."
+    lede="Full-bleed, publication-ready pieces — the specs people most want to steal. Charts, a table, a map, a sankey, a graph, and a KPI row, every one carrying a takeaway title, cited data, and a copyable spec. These are the same declarative specs you'd write yourself, rendered at editorial scale."
   >
     <Section
       id="pieces"
       title="Editorial pieces"
-      lede="Six patterns, each wider than body text: a multi-series line, a fully-chromed bar, a stacked-area story, a dense table, an annotated scatter, and a keyboard-navigable chart."
+      lede="Ten patterns, each wider than body text: a multi-series line, a fully-chromed bar, a stacked-area story, a dense table, a world choropleth, a path-tracing sankey, a force graph, a KPI row, an annotated scatter, and a keyboard-navigable chart."
     >
       <div className="oc-bleed">
         <Demo
@@ -325,9 +467,49 @@ export const Showcase = () => (
         <Demo
           id="data-table"
           title="Dense data table"
-          description="A DataTable spec with category-color chips, an inline YTD bar, and an 8-week sparkline per row — sortable, searchable, paginated."
+          description="A DataTable spec at condensed density: category-color chips, an inline price bar, a signed YTD delta chip, and an 8-week sparkline per row — sortable, searchable, paginated."
           spec={tableSpec}
         />
+      </div>
+
+      <div className="oc-bleed">
+        <Demo
+          id="world-choropleth"
+          title="World choropleth"
+          description="Equal-earth projection, equal-interval classes, and a legend that carries its own title, units, and a detached “no data” swatch."
+          spec={worldMapSpec}
+          height={560}
+        />
+      </div>
+
+      <div className="oc-bleed">
+        <Demo
+          id="sankey-flow"
+          title="Sankey with path tracing"
+          description="Hover any node and the whole upstream and downstream path stays lit while everything else drops back."
+          spec={sankeySpec}
+          height={560}
+        />
+      </div>
+
+      <div className="oc-bleed">
+        <Demo
+          id="force-graph"
+          title="Force-directed graph"
+          description="A supply network colored by tier. Hovering isolates a neighbourhood; the legend toggles categories."
+          spec={graphSpec}
+          height={560}
+        />
+      </div>
+
+      <div className="oc-bleed">
+        <Demo
+          id="kpi-row"
+          title="KPI row"
+          description="The tile anatomy: label, value at display size, a delta chip on a tint of its own semantic color, then the timeframe."
+        >
+          <KpiRow />
+        </Demo>
       </div>
 
       <div className="oc-bleed">

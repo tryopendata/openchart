@@ -1,6 +1,8 @@
-import type { MeasureTextFn, ResolvedChromeElement } from '@opendata-ai/openchart-core';
+import type { ChartSpec, MeasureTextFn, ResolvedChromeElement } from '@opendata-ai/openchart-core';
+import { broadsheet } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { renderChromeElement } from '../renderers/chrome';
+import { renderStaticSVG } from '../static';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -61,5 +63,32 @@ describe('renderChromeElement maxLines truncation', () => {
     expect(text!.textContent).toBe('Short title');
     expect(text!.querySelectorAll('tspan').length).toBe(0);
     expect(text!.textContent?.endsWith('…')).toBe(false);
+  });
+});
+
+describe('editorial rule', () => {
+  const spec: ChartSpec = {
+    mark: 'bar',
+    data: [
+      { x: 'A', y: 3 },
+      { x: 'B', y: 5 },
+    ],
+    encoding: {
+      x: { field: 'x', type: 'nominal' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+    chrome: { eyebrow: 'Kicker', title: 'A Headline', subtitle: 'A subtitle' },
+  };
+
+  it('draws an oc-chrome-rule rect in the theme rule color', () => {
+    const svg = renderStaticSVG({ ...spec, theme: broadsheet }, { width: 640, height: 420 });
+    expect(svg).toContain('class="oc-chrome-rule"');
+    expect(svg).toContain('fill="#e3120b"');
+    expect(svg).toContain('height="3"');
+  });
+
+  it('draws nothing when the theme has no rule', () => {
+    const svg = renderStaticSVG(spec, { width: 640, height: 420 });
+    expect(svg).not.toContain('oc-chrome-rule');
   });
 });

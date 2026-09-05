@@ -16,6 +16,8 @@
 | `DEFAULT_THEME` literal | `packages/core/src/theme/defaults.ts` |
 | Theme deep-merge | `packages/core/src/theme/resolve.ts` → `resolveTheme()` |
 | Dark-mode adapter (binary-search lightness) | `packages/core/src/theme/dark-mode.ts` → `adaptTheme()`, `adaptColorForDarkMode()` |
+| Theme presets (`editorial`, `essay`, `wire`, `broadsheet`, `terminal`) | `packages/core/src/theme/presets.ts`. `broadsheet` is the only one that sets `rule`; `terminal` resolves `isDark: true` in light mode off its own dark background. |
+| Editorial rule (masthead bar above the chrome block) | `ThemeConfig.rule` (`types/spec.ts`) → `Theme.rule` (`types/theme.ts`, `ThemeRule`) → reserved by `computeChrome` (`layout/chrome.ts`, `ResolvedChrome.rule`) → drawn by `renderChrome` as `<rect class="oc-chrome-rule">` (`vanilla/src/renderers/chrome.ts`). `rule.color` is registered in `collectTokenPairs` so dark mode needs no literal branch. |
 | Categorical palettes (stroke/fill x light/dark, plus `CATEGORICAL_EXTENDED_PALETTE`) and sequential/diverging | `packages/core/src/colors/palettes.ts` |
 | Derived neutral gray ramp (`deriveNeutralRamp`, on `ResolvedTheme.colors.neutral`) | `packages/core/src/colors/neutral.ts` |
 | Palette a11y guard (contrast, hue adjacency, CVD) | `packages/core/src/colors/__tests__/palette-a11y.test.ts` |
@@ -100,8 +102,8 @@
 | Shared dataset pool (one module per dataset: `export const x = { source, url?, ... } as const`; single-table modules use a `data` array, multi-table modules export named tables like `marketIndices.indices` or `saasMetrics.mrr`) | `examples/src/data/*.ts`, barrel `examples/src/data/index.ts`. No inline data blobs in story files. Includes the dashboard-layout datasets `saas-metrics.ts` (`saasMetrics`: mrr, signups, topPages, accounts), `ops-monitoring.ts` (`opsMonitoring`: latency, throughput, cpu, errorRate, serviceStatus), and `marketing-funnel.ts` (`marketingFunnel`: conversionTrend, channelPerformance) — all `source: 'Illustrative data'` static snapshots. |
 | Demo index registry (Welcome's findability index; single source of truth) | `examples/src/gallery/registry.ts` assembles per-page `examples/src/gallery/<page>.demos.ts` sidecars. Sidecars live outside `*.stories.*` on purpose: Ladle turns every named export in a story file into a story, so a shared `export const demos` collides (e.g. all five Charts pages → duplicate `charts--demos`) and fails `ladle build`. |
 | Legacy-slug redirect map (old published `?story=` deep links → new page+anchor; guarantees no 404s after the flip) | `examples/.ladle/redirects.ts`. Provider reads `?story=` on mount and redirects. |
-| Ladle config (defaultStory, storyOrder wildcards, width/theme addons) + head (favicon, OG/twitter meta, Bricolage-only font), shell CSS, 11 named themes | `examples/.ladle/config.mjs`, `head.html`, `shell.css`, `themes.ts`. Social OG image: `examples/public/og-preview.png`. |
-| Theming gallery page (presets, 11 named themes, custom ThemeConfig, dark adaptation) | `examples/src/gallery/features-theming.stories.tsx` (slug `features--theming`) |
+| Ladle config (defaultStory, storyOrder wildcards, width/theme addons) + head (favicon, OG/twitter meta, Bricolage-only font), shell CSS, 6 named house styles | `examples/.ladle/config.mjs`, `head.html`, `shell.css`, `themes.ts`. Social OG image: `examples/public/og-preview.png`. |
+| Theming gallery page (five presets, six named house styles, custom ThemeConfig, dark adaptation) | `examples/src/gallery/features-theming.stories.tsx` (slug `features--theming`) |
 | Visual regression spec | `e2e/visual/stories.spec.ts` |
 | Mobile visual regression spec (390px viewport, `visual-mobile` project) | `e2e/visual/stories-mobile.spec.ts` |
 | Visual regression baselines | `e2e/visual/__screenshots__/` |

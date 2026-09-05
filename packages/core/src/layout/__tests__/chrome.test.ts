@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { broadsheet } from '../../theme/presets';
 import { resolveTheme } from '../../theme/resolve';
 import type { Chrome } from '../../types/spec';
 import { computeChrome } from '../chrome';
@@ -265,5 +266,46 @@ describe('computeChrome', () => {
 
     // Without watermark, source text gets full width (not reduced by BRAND_RESERVE_WIDTH)
     expect(withoutWatermark.source!.maxWidth).toBeGreaterThan(withWatermark.source!.maxWidth);
+  });
+});
+
+describe('computeChrome editorial rule', () => {
+  const ruled = resolveTheme(broadsheet);
+
+  it('is absent when the theme sets no rule', () => {
+    expect(computeChrome({ title: 'Title' }, theme, 600).rule).toBeUndefined();
+  });
+
+  it('sits at the top of the block and reserves thickness + chromeGap', () => {
+    const chrome: Chrome = { eyebrow: 'Kicker', title: 'Title', subtitle: 'Subtitle' };
+    const withRule = computeChrome(chrome, ruled, 600);
+    const noRule = computeChrome(chrome, { ...ruled, rule: null }, 600);
+    expect(withRule.rule).toEqual({
+      x: ruled.spacing.padding,
+      y: ruled.spacing.padding,
+      width: 40,
+      thickness: 3,
+      color: '#e3120b',
+    });
+    const reserved = 3 + ruled.spacing.chromeGap;
+    expect(withRule.topHeight - noRule.topHeight).toBe(reserved);
+    // Everything below the rule shifts down by exactly the reservation.
+    expect((withRule.eyebrow?.y ?? 0) - (noRule.eyebrow?.y ?? 0)).toBe(reserved);
+    expect((withRule.title?.y ?? 0) - (noRule.title?.y ?? 0)).toBe(reserved);
+  });
+
+  it('is dropped when there is no top chrome to sit above', () => {
+    expect(computeChrome({ source: 'Source' }, ruled, 600).rule).toBeUndefined();
+  });
+
+  it('survives compact mode, where the title is the only element left', () => {
+    const result = computeChrome(
+      { title: 'Title', subtitle: 'Sub' },
+      ruled,
+      600,
+      undefined,
+      'compact',
+    );
+    expect(result.rule?.thickness).toBe(3);
   });
 });

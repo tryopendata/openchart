@@ -2,7 +2,7 @@
  * Features / Theming — presets, named themes, custom ThemeConfig, dark adaptation.
  *
  * Everything a host app needs to make OpenChart match its own house style: the
- * three built-in presets, the 11 named ThemeConfigs the toolbar picker applies
+ * five built-in presets, the six named house styles the toolbar picker applies
  * globally, a custom theme built from parts, and the dark-mode story
  * (`darkMode: 'auto' | 'force' | 'off'` + `adaptTheme()`).
  *
@@ -15,7 +15,7 @@
  */
 
 import type { ChartSpec, ThemeConfig } from '@opendata-ai/openchart-core';
-import { editorial, essay, wire } from '@opendata-ai/openchart-core';
+import { broadsheet, editorial, essay, terminal, wire } from '@opendata-ai/openchart-core';
 import { Chart, VizThemeProvider } from '@opendata-ai/openchart-react';
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
@@ -156,7 +156,24 @@ const PRESETS: { name: string; theme: ThemeConfig; note: string }[] = [
   },
   { name: 'essay', theme: essay, note: 'Serif display titles, warm canvas, generous spacing.' },
   { name: 'wire', theme: wire, note: 'Dense, monospace, tight chrome — a dashboard/agency feel.' },
+  {
+    name: 'broadsheet',
+    theme: broadsheet,
+    note: 'Newspaper editorial: warm paper, a red masthead rule above the eyebrow, bold 24px title.',
+  },
+  {
+    name: 'terminal',
+    theme: terminal,
+    note: 'Dense dark product surface — dark in both modes, one cyan accent against neutral siblings.',
+  },
 ];
+
+// The presets demo carries an eyebrow so `broadsheet`'s red masthead rule and
+// kicker are both visible; every other page demo uses the plain lineSpec.
+const presetSpec: ChartSpec = {
+  ...lineSpec,
+  chrome: { ...lineSpec.chrome, eyebrow: 'Prices' },
+};
 
 function PresetGrid() {
   return (
@@ -171,7 +188,7 @@ function PresetGrid() {
               inherit from the page provider so the global toggle still applies. */}
           <div style={vizStyle}>
             <div className="story-chart" style={{ height: 300 }}>
-              <Chart spec={lineSpec} theme={p.theme} />
+              <Chart spec={presetSpec} theme={p.theme} />
             </div>
           </div>
         </figure>
@@ -246,6 +263,42 @@ function JsonPanel({ label, value }: { label: string; value: unknown }) {
 // ---------------------------------------------------------------------------
 // Named-theme gallery — the 11 toolbar themes as a card grid.
 // ---------------------------------------------------------------------------
+
+const calloutStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'var(--gx-space-2) var(--gx-space-4)',
+  margin: '0 0 var(--gx-space-5)',
+  padding: 'var(--gx-space-3) var(--gx-space-4)',
+  border: '1px solid var(--gx-border)',
+  borderRadius: 'var(--gx-radius-control)',
+  background: 'var(--gx-surface-raised)',
+  fontSize: 'var(--gx-type-caption)',
+  lineHeight: 1.5,
+  color: 'var(--gx-text-muted)',
+};
+
+/** What separates a house style from a palette swap. */
+function HouseStyleCallout() {
+  const parts = [
+    'six stroke hues + matching fills',
+    'surface, text, gridline, hairline, axis',
+    'positive / negative',
+    'typeface, sizes, weights',
+    'border radius',
+    'chrome typography',
+  ];
+  return (
+    <div style={calloutStyle}>
+      <strong style={{ color: 'var(--gx-text-strong)', fontWeight: 600 }}>
+        What a house style sets:
+      </strong>
+      {parts.map((p) => (
+        <span key={p}>{p}</span>
+      ))}
+    </div>
+  );
+}
 
 function NamedThemeGrid() {
   return (
@@ -461,9 +514,9 @@ export const Theming = () => (
     <Section
       id="presets"
       title="Built-in presets"
-      lede="Three ready-made looks ship in the core package: editorial (the default), essay, and wire. Import and pass them directly — the same chart, three personalities."
+      lede="Five ready-made looks ship in the core package: editorial (the default), essay, wire, broadsheet, and terminal. Import and pass them directly — the same chart, five personalities. broadsheet shows the theme `rule`: a short colored bar above the chrome block."
     >
-      <Demo id="presets" specForPanel={{ ...lineSpec, theme: essay }} maxWidth={1040}>
+      <Demo id="presets" specForPanel={{ ...presetSpec, theme: broadsheet }} maxWidth={1040}>
         <PresetGrid />
       </Demo>
     </Section>
@@ -471,9 +524,10 @@ export const Theming = () => (
     <Section
       id="named-themes"
       title="Theme gallery"
-      lede="The eleven named themes the toolbar picker cycles through. Each is a plain ThemeConfig — expand any card to copy the exact object. Pick one in the toolbar to apply it to every page at once."
+      lede="Six house styles the toolbar picker cycles through — not palette swaps. Each is a plain ThemeConfig; expand any card to copy the exact object. Pick one in the toolbar to apply it to every page at once."
     >
       <Demo id="named-themes" maxWidth={1040}>
+        <HouseStyleCallout />
         <NamedThemeGrid />
       </Demo>
     </Section>

@@ -118,5 +118,7 @@ export const DEFAULT_THEME: Theme = {
       lineHeight: 1.4,
     },
   },
+  /** No editorial rule by default; the `broadsheet` preset sets one. */
+  rule: null,
   seriesStrategy: 'palette',
 };

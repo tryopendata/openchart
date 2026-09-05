@@ -136,6 +136,14 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     partial.chrome = chrome as unknown as Theme['chrome'];
   }
 
+  if (config.rule) {
+    partial.rule = {
+      color: resolveTokenLight(config.rule.color),
+      width: config.rule.width,
+      thickness: config.rule.thickness,
+    };
+  }
+
   if (config.seriesStrategy) {
     partial.seriesStrategy = config.seriesStrategy;
   }
@@ -169,6 +177,9 @@ function collectTokenPairs(
         pairs[`colors.${field}`] = v;
       }
     }
+  }
+  if (config.rule?.color && typeof config.rule.color === 'object' && 'light' in config.rule.color) {
+    pairs['rule.color'] = config.rule.color;
   }
   if (config.chrome) {
     for (const [element, value] of Object.entries(config.chrome)) {

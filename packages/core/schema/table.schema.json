@@ -782,6 +782,30 @@
           "additionalProperties": false,
           "description": "Per-element chrome style overrides. Pass a plain string for color-only (backward-compatible), or a ChromeThemeOverride object for full typography control (color, fontSize, fontWeight, lineHeight)."
         },
+        "rule": {
+          "type": "object",
+          "properties": {
+            "color": {
+              "$ref": "#/definitions/TokenValue",
+              "description": "Rule color. Accepts a TokenValue for light/dark pairs."
+            },
+            "width": {
+              "type": "number",
+              "description": "Rule length in pixels."
+            },
+            "thickness": {
+              "type": "number",
+              "description": "Rule height in pixels."
+            }
+          },
+          "required": [
+            "color",
+            "width",
+            "thickness"
+          ],
+          "additionalProperties": false,
+          "description": "Editorial rule above the chrome block: a short colored bar (the Economist/FT masthead device). Omit for no rule."
+        },
         "seriesStrategy": {
           "$ref": "#/definitions/SeriesStrategy",
           "description": "Series color assignment strategy. Default: 'palette' (full categorical palette always, zero visual drift)."

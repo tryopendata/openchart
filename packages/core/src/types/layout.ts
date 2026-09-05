@@ -102,11 +102,22 @@ export interface ResolvedChromeElement {
  * Fully resolved chrome with computed positions for all elements.
  * Only present elements are included (no undefined checks needed at render time).
  */
+/** A resolved editorial rule bar, positioned above the top chrome block. */
+export interface ResolvedChromeRule {
+  x: number;
+  y: number;
+  width: number;
+  thickness: number;
+  color: string;
+}
+
 export interface ResolvedChrome {
   /** Total height consumed by chrome elements above the chart area. */
   topHeight: number;
   /** Total height consumed by chrome elements below the chart area. */
   bottomHeight: number;
+  /** Editorial rule above the top chrome block. Only present when `theme.rule` is set. */
+  rule?: ResolvedChromeRule;
   /** Resolved chrome elements. Only present if specified in the spec. */
   eyebrow?: ResolvedChromeElement;
   title?: ResolvedChromeElement;

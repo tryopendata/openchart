@@ -1335,6 +1335,18 @@ export interface ThemeConfig {
     footer?: string | ChromeThemeOverride;
   };
   /**
+   * Editorial rule above the chrome block: a short colored bar (the
+   * Economist/FT masthead device). Omit for no rule.
+   */
+  rule?: {
+    /** Rule color. Accepts a TokenValue for light/dark pairs. */
+    color: TokenValue;
+    /** Rule length in pixels. */
+    width: number;
+    /** Rule height in pixels. */
+    thickness: number;
+  };
+  /**
    * Series color assignment strategy.
    * Default: 'palette' (full categorical palette always, zero visual drift).
    */

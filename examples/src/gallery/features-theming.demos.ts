@@ -14,8 +14,8 @@ export const page: PageEntry = {
   slug: 'features--theming',
   export: 'Theming',
   demos: [
-    { id: 'presets', title: 'editorial · essay · wire' },
-    { id: 'named-themes', title: 'The eleven named themes' },
+    { id: 'presets', title: 'editorial · essay · wire · broadsheet · terminal' },
+    { id: 'named-themes', title: 'Six house styles' },
     { id: 'custom', title: 'A ThemeConfig assembled from parts' },
     { id: 'dark-mode', title: 'Same spec, forced light vs. forced dark' },
     { id: 'recreations', title: 'FT-like and Economist-like' },

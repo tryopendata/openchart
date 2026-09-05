@@ -93,13 +93,15 @@ The neutral grays are surface-aware: on light backgrounds the second series gets
 
 ### Named presets
 
-Three presets exported from `@opendata-ai/openchart-core`:
+Five presets exported from `@opendata-ai/openchart-core`:
 
 | Preset | Feel |
 |--------|------|
 | `editorial` | Current default (empty config, zero drift) |
 | `essay` | Serif titles, warm background, generous spacing |
 | `wire` | Monospace, dense, tight chrome, dashboard feel |
+| `broadsheet` | Newspaper editorial: warm paper, red masthead `rule` and eyebrow, 24/700 title, square corners |
+| `terminal` | Dense dark product surface, dark in both modes, one cyan accent (`seriesStrategy: 'accent-neutral'`) |
 
 ```ts
 import { essay, wire } from '@opendata-ai/openchart-core';
@@ -110,6 +112,22 @@ import { essay, wire } from '@opendata-ai/openchart-core';
 // Vanilla
 createChart(container, spec, { theme: wire });
 ```
+
+### The editorial rule
+
+`ThemeConfig.rule` draws a short colored bar above the chrome block — the
+Economist/FT masthead device. It is `null` on every theme but `broadsheet`.
+
+```ts
+theme: {
+  rule: { color: { light: '#e3120b', dark: '#f4463f' }, width: 40, thickness: 3 },
+}
+```
+
+`color` accepts a `TokenValue`, so it goes through the same light/dark pairing
+as `chrome.*.color` and needs no dark-mode branch. `computeChrome` reserves
+`thickness + chromeGap` above the eyebrow/title and the renderer draws it as
+`<rect class="oc-chrome-rule">`. No top chrome means no rule.
 
 ### CSS custom properties
 

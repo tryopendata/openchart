@@ -85,6 +85,7 @@ export type {
   ResolvedAnnotation,
   ResolvedChrome,
   ResolvedChromeElement,
+  ResolvedChromeRule,
   ResolvedColumn,
   ResolvedFillPattern,
   ResolvedLabel,
@@ -294,6 +295,7 @@ export type {
   ThemeFontSizes,
   ThemeFonts,
   ThemeFontWeights,
+  ThemeRule,
   ThemeSpacing,
   TokenValue,
 } from './theme';

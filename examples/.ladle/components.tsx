@@ -171,11 +171,26 @@ function useTitleOverride(story: string | undefined) {
 // Theme picker (floating; keep `.ladle-theme-picker` class — C1)
 // ---------------------------------------------------------------------------
 
+/** Resolve a TokenValue (or plain string) to one mode's color. */
+function tokenColor(v: unknown, mode: OcMode): string | undefined {
+  if (typeof v === 'string') return v;
+  if (v && typeof v === 'object' && 'light' in v) {
+    return (v as { light: string; dark: string })[mode];
+  }
+  return undefined;
+}
+
 /**
  * Pull the display fields off a named theme. `ThemeConfig.colors` may be the
  * object form or an array palette shortcut, so narrow before reading keys.
+ * Surface colors are `TokenValue` pairs on every house style, so the shell
+ * canvas has to read the half that matches the current mode — otherwise a dark
+ * house style paints its charts dark on a light page.
  */
-function themeSwatch(name: string): {
+function themeSwatch(
+  name: string,
+  mode: OcMode,
+): {
   categorical?: string[];
   background?: string;
   text?: string;
@@ -185,8 +200,8 @@ function themeSwatch(name: string): {
   if (Array.isArray(colors)) return { categorical: colors };
   return {
     categorical: colors.categorical,
-    background: typeof colors.background === 'string' ? colors.background : undefined,
-    text: typeof colors.text === 'string' ? colors.text : undefined,
+    background: tokenColor(colors.background, mode),
+    text: tokenColor(colors.text, mode),
   };
 }
 
@@ -279,7 +294,7 @@ function ThemePicker({
         </span>
         <span style={{ width: 1, height: 14, background: p.border, flexShrink: 0 }} />
         <span>{selected}</span>
-        <Swatches colors={themeSwatch(selected).categorical} />
+        <Swatches colors={themeSwatch(selected, mode).categorical} />
         <svg
           width="10"
           height="6"
@@ -351,7 +366,7 @@ function ThemePicker({
                 }}
               >
                 <span style={{ flex: 1 }}>{name}</span>
-                <Swatches colors={themeSwatch(name).categorical} size={7} />
+                <Swatches colors={themeSwatch(name, mode).categorical} size={7} />
               </button>
             );
           })}
@@ -420,7 +435,7 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
   useLegacyRedirect();
   useTitleOverride(globalState.story);
 
-  const swatch = themeSwatch(selected);
+  const swatch = themeSwatch(selected, mode);
   const p = PALETTE[mode];
   const bg = swatch.background ?? p.bgCanvas;
   const fg = swatch.text ?? p.text;

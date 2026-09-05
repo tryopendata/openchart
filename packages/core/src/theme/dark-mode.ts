@@ -231,6 +231,12 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
           : overridden(theme.chrome.footer.color, lightChrome.footer.color, darkMuted),
       },
     },
+    // The editorial rule is a brand device: it keeps its authored color unless
+    // the theme gave an explicit dark half of the pair.
+    rule:
+      theme.rule && pairs?.['rule.color']
+        ? { ...theme.rule, color: pairs['rule.color'].dark }
+        : theme.rule,
   };
 }
 

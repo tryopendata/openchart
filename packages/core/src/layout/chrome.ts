@@ -18,6 +18,7 @@ import type {
   MeasureTextFn,
   ResolvedChrome,
   ResolvedChromeElement,
+  ResolvedChromeRule,
   TextStyle,
 } from '../types/layout';
 import type { Chrome, ChromeText } from '../types/spec';
@@ -249,6 +250,24 @@ export function computeChrome(
   // Eyebrow (hidden in compact mode — same rule as subtitle, keeps the
   // title alone at narrow viewports).
   const eyebrowNorm = chromeMode === 'compact' ? null : normalizeChromeText(chrome.eyebrow);
+  const titleNormPeek = normalizeChromeText(chrome.title);
+  const subtitleNormPeek = chromeMode === 'compact' ? null : normalizeChromeText(chrome.subtitle);
+
+  // Editorial rule (theme.rule): a short colored bar above the block. Only
+  // drawn when there is top chrome for it to sit above; it reserves its own
+  // thickness plus one chromeGap, exactly like a text element.
+  let ruleElement: ResolvedChromeRule | undefined;
+  if (theme.rule && (eyebrowNorm || titleNormPeek || subtitleNormPeek)) {
+    ruleElement = {
+      x: pad,
+      y: topY,
+      width: theme.rule.width,
+      thickness: theme.rule.thickness,
+      color: theme.rule.color,
+    };
+    topY += theme.rule.thickness + chromeGap;
+  }
+
   if (eyebrowNorm) {
     const style = buildTextStyle(
       theme.chrome.eyebrow,
@@ -272,7 +291,7 @@ export function computeChrome(
   }
 
   // Title
-  const titleNorm = normalizeChromeText(chrome.title);
+  const titleNorm = titleNormPeek;
   if (titleNorm) {
     const style = buildTextStyle(
       theme.chrome.title,
@@ -296,7 +315,7 @@ export function computeChrome(
   }
 
   // Subtitle (hidden in compact mode)
-  const subtitleNorm = chromeMode === 'compact' ? null : normalizeChromeText(chrome.subtitle);
+  const subtitleNorm = subtitleNormPeek;
   if (subtitleNorm) {
     const style = buildTextStyle(
       theme.chrome.subtitle,
@@ -342,6 +361,7 @@ export function computeChrome(
     return {
       topHeight,
       bottomHeight: compactBottom,
+      ...(ruleElement ? { rule: ruleElement } : {}),
       ...topElements,
     };
   }
@@ -495,6 +515,7 @@ export function computeChrome(
   return {
     topHeight,
     bottomHeight,
+    ...(ruleElement ? { rule: ruleElement } : {}),
     ...topElements,
     ...bottomElements,
     ...(brandElement ? { brand: brandElement } : {}),

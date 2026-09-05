@@ -172,6 +172,19 @@ export interface ChromeDefaults {
   lineHeight: number;
 }
 
+/**
+ * Editorial rule: a short colored bar drawn above the chrome block (the
+ * Economist/FT masthead device). `null` on every theme that doesn't want one.
+ */
+export interface ThemeRule {
+  /** Fill color (CSS color string). */
+  color: string;
+  /** Rule length in pixels. */
+  width: number;
+  /** Rule height in pixels. */
+  thickness: number;
+}
+
 /** Default chrome styles for each element type. */
 export interface ThemeChromeDefaults {
   eyebrow: ChromeDefaults;
@@ -206,6 +219,11 @@ export interface Theme {
   borderRadius: number;
   /** Default chrome text styles. */
   chrome: ThemeChromeDefaults;
+  /**
+   * Editorial rule above the chrome block. `null` (the default) draws nothing;
+   * the `broadsheet` preset sets one.
+   */
+  rule: ThemeRule | null;
   /** Series color assignment strategy. Default: 'palette' (full categorical). */
   seriesStrategy: SeriesStrategy;
 }

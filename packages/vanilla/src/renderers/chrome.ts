@@ -110,8 +110,27 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
 
   const { chrome, measureText } = layout;
 
+  // Editorial rule: a short colored bar above the top chrome block.
+  if (chrome.rule) {
+    const rule = createSVGElement('rect');
+    rule.setAttribute('class', 'oc-chrome-rule');
+    setAttrs(rule, {
+      x: chrome.rule.x,
+      y: chrome.rule.y,
+      width: chrome.rule.width,
+      height: chrome.rule.thickness,
+    });
+    rule.setAttribute('fill', chrome.rule.color);
+    rule.setAttribute('shape-rendering', 'crispEdges');
+    g.appendChild(rule);
+  }
+
   // Top chrome: render at their stored y positions (already absolute)
-  if (chrome.eyebrow) {
+  if (chrome.eyebrow && chrome.rule) {
+    // The rule already carries the accent above the block; a dot as well is
+    // two pieces of furniture saying the same thing.
+    renderChromeElement(g, chrome.eyebrow, 'oc-eyebrow', 'eyebrow', measureText, true);
+  } else if (chrome.eyebrow) {
     // Leading accent dot — matches the editorial design system mock.
     // eyebrow.y is the top of the text box. Visual center is roughly
     // y + fontSize * 0.55 (cap height).

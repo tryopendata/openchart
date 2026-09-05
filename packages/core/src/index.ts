@@ -58,10 +58,12 @@ export {
   adaptColorForDarkMode,
   adaptForLightLineStroke,
   adaptTheme,
+  broadsheet,
   DEFAULT_THEME,
   editorial,
   essay,
   resolveTheme,
+  terminal,
   wire,
 } from './theme/index';
 

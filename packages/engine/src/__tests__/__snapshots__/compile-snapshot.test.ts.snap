@@ -524,6 +524,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       },
     },
     "isDark": false,
+    "rule": null,
     "seriesStrategy": "palette",
     "spacing": {
       "axisMargin": 6,
@@ -1625,6 +1626,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       },
     },
     "isDark": false,
+    "rule": null,
     "seriesStrategy": "palette",
     "spacing": {
       "axisMargin": 6,
@@ -2338,6 +2340,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       },
     },
     "isDark": false,
+    "rule": null,
     "seriesStrategy": "palette",
     "spacing": {
       "axisMargin": 6,
