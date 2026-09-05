@@ -56,16 +56,25 @@ export function wireTooltipEvents(
       }
     };
 
+    // A tap raises the mark the same way hover does, and nothing else ever
+    // drops that emphasis on touch -- there is no mouseleave. The tooltip
+    // stays up (tap-to-read); only the dimming of everything else lifts.
+    const handleTouchEnd = () => {
+      emphasis?.clear();
+    };
+
     el.addEventListener('mouseenter', handleMouseEnter);
     el.addEventListener('mousemove', handleMouseMove);
     el.addEventListener('mouseleave', handleMouseLeave);
     el.addEventListener('touchstart', handleTouchStart);
+    el.addEventListener('touchend', handleTouchEnd);
 
     cleanups.push(() => {
       el.removeEventListener('mouseenter', handleMouseEnter);
       el.removeEventListener('mousemove', handleMouseMove);
       el.removeEventListener('mouseleave', handleMouseLeave);
       el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchend', handleTouchEnd);
     });
   }
 

@@ -481,6 +481,7 @@ const spec = {
 **Mark options:**
 - `units` (default 100) -- total number of cells in the grid
 - `columns` (default 10) -- columns per grid; rows derive from `units / columns`
+- `other` (off by default) -- bucket categories below a share threshold into one trailing "Other" category: `other: 0.05` folds everything under 5%, or `other: { threshold: 0.05, label: "Rest" }` to rename it
 
 Set these on the mark object, e.g. `mark: { type: "waffle", units: 50, columns: 10 }`. A categorical `color` encoding accepts `highlight` to single out one category and mute the rest.
 

@@ -105,6 +105,15 @@ mix weight (share of text in the result) per step: 100 → 0.06, 200 → 0.12,
 300 → 0.22, 400 → 0.40, 600 → 0.55, 800 → 0.75. `secondary` equals `800`,
 `faint` equals `300`, `border` equals `100`.
 
+The ramp also carries `surface`: the opaque color the theme actually paints
+on. It is the theme background when that background has a color of its own,
+and the mode's `--oc-bg` token (`#ffffff` light, `#09090b` dark) when the
+background is transparent. Everything that has to knock a hole in the canvas
+reads it, so there is exactly one answer: knockout rings and stacked-segment
+seams (`resolveKnockoutColor`), table cell fills (`resolveTableSurface`),
+graph node rings (`resolveGraphSurface`), tilemap label contrast, and the
+`--oc-bg` the vanilla mount stamps (`resolvedSurface`).
+
 Source: `packages/core/src/colors/neutral.ts` — `deriveNeutralRamp(text, bg,
 isDark)`. Computed once in `resolveTheme`/`adaptTheme` and carried on
 `ResolvedTheme.colors.neutral`; mounts stamp the CSS tokens from it. The

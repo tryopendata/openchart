@@ -17,6 +17,7 @@ import { stampAnimationVars } from './animation-vars';
 import { FOCUS_DIM_OPACITY } from './map-camera';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
+import { resolvedSurface } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -29,6 +30,35 @@ const BULK_ANIMATION_THRESHOLD = 200;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Opacity of the legend backdrops that float over map geography. */
+const LEGEND_BACKDROP_ALPHA = 0.9;
+
+/**
+ * The theme's own surface, at legend-backdrop alpha.
+ *
+ * The overlay legends sit on top of geography, so they need a scrim rather than
+ * a solid fill. Hardcoding zinc-950/white here pinned both backdrops to the
+ * default theme; a warm or branded surface got a grey card over it.
+ */
+function legendBackdrop(theme: GeoMapLayout['theme']): string {
+  const surface = resolvedSurface(theme).trim();
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(surface);
+  if (hex) {
+    const h = hex[1];
+    const full = h.length === 3 ? h.replace(/./g, (c) => c + c) : h;
+    const r = Number.parseInt(full.slice(0, 2), 16);
+    const g = Number.parseInt(full.slice(2, 4), 16);
+    const b = Number.parseInt(full.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${LEGEND_BACKDROP_ALPHA})`;
+  }
+  const rgb = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(surface);
+  if (rgb) {
+    return `rgba(${rgb[1]},${rgb[2]},${rgb[3]},${LEGEND_BACKDROP_ALPHA})`;
+  }
+  // Named colors and anything else: no way to add alpha, so paint it opaque.
+  return surface;
+}
 
 function createSVGElement(tag: string): SVGElement {
   return document.createElementNS(SVG_NS, tag);
@@ -409,7 +439,6 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   // clearly over map geography (e.g. AK/HI insets in Albers USA).
   const ptLegend = layout.pointCategoricalLegend ?? layout.pointContinuousLegend;
   if (ptLegend) {
-    const isDark = layout.theme.isDark;
     const padX = 10;
     const padY = 8;
 
@@ -453,7 +482,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       width: contentWidth + padX * 2,
       height: bgHeight,
       rx: 4,
-      fill: isDark ? 'rgba(24,24,27,0.9)' : 'rgba(255,255,255,0.9)',
+      fill: legendBackdrop(layout.theme),
     });
     svg.appendChild(bg);
     renderLegend(svg, ptLegend);
@@ -471,7 +500,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       width: sizeLegend.bounds.width + pad * 2,
       height: sizeLegend.bounds.height + pad * 2,
       rx: 6,
-      fill: layout.theme.isDark ? 'rgba(24,24,27,0.9)' : 'rgba(255,255,255,0.9)',
+      fill: legendBackdrop(layout.theme),
     });
     svg.appendChild(bg);
     renderLegend(svg, sizeLegend);

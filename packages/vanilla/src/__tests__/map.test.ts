@@ -122,6 +122,28 @@ describe('createGeoMap', () => {
       instance.destroy();
     });
 
+    it('does not reorder features while the entrance is still running', () => {
+      const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+      const svg = container.querySelector('svg')!;
+      const group = container.querySelector('.oc-map-features')!;
+      const first = group.firstElementChild as SVGElement;
+      const originalOrder = [...group.children];
+
+      // Re-appending an element restarts its CSS entrance keyframe, so a hover
+      // during the entrance would make that one feature stutter.
+      svg.classList.add('oc-animate');
+      first.dispatchEvent(new MouseEvent('mouseenter'));
+
+      expect([...group.children]).toEqual(originalOrder);
+      // The outline still lands; only the raise is skipped.
+      expect(first.classList.contains('oc-map-feature--hover')).toBe(true);
+
+      first.dispatchEvent(new MouseEvent('mouseleave'));
+      expect([...group.children]).toEqual(originalOrder);
+
+      instance.destroy();
+    });
+
     it('marks the features group with the hovered legend bin', () => {
       const instance = createGeoMap(container, basicMapSpec, { responsive: false });
       const group = container.querySelector('.oc-map-features')!;
@@ -434,6 +456,26 @@ describe('createGeoMap', () => {
       expect(points.length).toBe(2);
 
       instance.destroy();
+    });
+
+    it('derives the size-legend backdrop from the theme surface', () => {
+      const backdrops = () =>
+        Array.from(container.querySelectorAll('rect'))
+          .map((r) => r.getAttribute('fill') ?? '')
+          .filter((f) => f.startsWith('rgba('));
+
+      const plain = createGeoMap(container, pointSpec, { responsive: false });
+      // Default light theme: white at scrim alpha, not a hardcoded literal that
+      // ignores whatever surface the theme actually uses.
+      expect(backdrops()).toContain('rgba(255,255,255,0.9)');
+      plain.destroy();
+
+      const themed = createGeoMap(container, pointSpec, {
+        responsive: false,
+        theme: { colors: { background: '#102030' } },
+      });
+      expect(backdrops()).toContain('rgba(16,32,48,0.9)');
+      themed.destroy();
     });
 
     it('stores data-base-r on point circles', () => {

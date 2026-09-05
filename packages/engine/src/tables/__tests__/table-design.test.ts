@@ -36,6 +36,36 @@ describe('column type and alignment', () => {
     expect(layout.columns[1].align).toBe('left');
   });
 
+  it('treats camelCase id/zip/year-style keys as nominal too', () => {
+    const layout = compileTable(
+      {
+        type: 'table' as const,
+        data: [
+          { stateId: 6, zipCode: 94110, postalCode: 10001, fiscalYear: 2024, revenue: 1200 },
+          { stateId: 36, zipCode: 10001, postalCode: 60601, fiscalYear: 2025, revenue: 800 },
+        ],
+        columns: [
+          { key: 'stateId' },
+          { key: 'zipCode' },
+          { key: 'postalCode' },
+          { key: 'fiscalYear' },
+          { key: 'revenue' },
+        ],
+        totalRow: true,
+      },
+      options,
+    );
+    expect(layout.columns.slice(0, 4).map((c) => c.type)).toEqual([
+      'nominal',
+      'nominal',
+      'nominal',
+      'nominal',
+    ]);
+    expect(layout.columns[4].type).toBe('quantitative');
+    // Only the real measure gets summed into the totals footer.
+    expect(layout.totalRow?.cells.map((c) => c.formattedValue)).toEqual(['', '', '', '', '2,000']);
+  });
+
   it('honors an explicit type', () => {
     const layout = compileTable(
       { ...base, columns: [{ key: 'name' }, { key: 'zip' }, { key: 'revenue', type: 'nominal' }] },

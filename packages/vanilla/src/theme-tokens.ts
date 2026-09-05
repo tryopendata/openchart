@@ -13,12 +13,11 @@ import { adaptForLightLineStroke, cssTokenDefault } from '@opendata-ai/openchart
 /**
  * The opaque surface a theme paints on. A transparent theme background has no
  * color of its own, so it resolves to the static `--oc-bg` token for the mode --
- * the same value the engine's knockout strokes are cut in.
+ * the same value the engine's knockout strokes are cut in. Resolved once in
+ * core, on `colors.neutral.surface`; this is a named read of it.
  */
 export function resolvedSurface(theme: ResolvedTheme): string {
-  return theme.colors.background === 'transparent'
-    ? cssTokenDefault('--oc-bg', theme.isDark ? 'dark' : 'light')
-    : theme.colors.background;
+  return theme.colors.neutral.surface;
 }
 
 export function stampThemeProperties(el: HTMLElement, theme: ResolvedTheme): void {

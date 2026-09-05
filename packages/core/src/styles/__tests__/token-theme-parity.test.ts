@@ -74,6 +74,7 @@ describe('CSS token / theme parity', () => {
       expect(cssTokenDefault('--oc-text-secondary', mode)).toBe(n.secondary);
       expect(cssTokenDefault('--oc-text-faint', mode)).toBe(n.faint);
       expect(cssTokenDefault('--oc-border', mode)).toBe(n.border);
+      expect(cssTokenDefault('--oc-bg', mode)).toBe(n.surface);
     }
   });
 
@@ -84,5 +85,13 @@ describe('CSS token / theme parity', () => {
     const warm = resolveTheme({ colors: { background: '#fffdf9', text: '#171513' } });
     expect(warm.colors.neutral[600]).not.toBe(cssTokenDefault('--oc-gray-600', 'light'));
     expect(warm.colors.neutral.secondary).toBe(warm.colors.neutral[800]);
+  });
+
+  it('surface is the theme background whenever that background paints', () => {
+    const warm = resolveTheme({ colors: { background: '#fffdf9', text: '#171513' } });
+    expect(warm.colors.neutral.surface).toBe('#fffdf9');
+    // Transparent themes take the mode's canvas token instead.
+    expect(light.colors.neutral.surface).toBe(cssTokenDefault('--oc-bg', 'light'));
+    expect(dark.colors.neutral.surface).toBe(cssTokenDefault('--oc-bg', 'dark'));
   });
 });

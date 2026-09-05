@@ -146,8 +146,12 @@ mixing the theme's `text` color toward its `background`, not read from a
 fixed zinc ladder. A warm or cool custom theme gets warm or cool grays for
 free instead of zinc showing up uninvited beside the palette. The ramp lives
 on `ResolvedTheme.colors.neutral` (`100`/`200`/`300`/`400`/`600`/`800`, plus
-`secondary` = `800`, `faint` = `300`, `border` = `100`) and is computed once
-in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from it. When the
+`secondary` = `800`, `faint` = `300`, `border` = `100`, plus `surface`) and is
+computed once in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from
+it. `surface` is the opaque color the theme paints on — the background itself
+when it is opaque, otherwise the mode's `--oc-bg` token — and is the single
+source for knockout rings, stacked-segment seams, table cell fills, graph node
+rings and the stamped `--oc-bg`. When the
 background is transparent (the default) the ramp falls back to the static
 token defaults, which is why the default theme and the generated `tokens.css`
 never disagree.

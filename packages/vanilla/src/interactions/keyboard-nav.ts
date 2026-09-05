@@ -26,53 +26,52 @@ export function wireKeyboardNav(
   container.setAttribute('aria-label', layout.a11y.altText);
 
   if (tooltipDescriptors.size === 0 && crosshair) {
-    let step = -1;
+    // No local step index: the crosshair owns it, so ArrowRight after the
+    // pointer left the chart at index 8 goes to 9 rather than restarting.
     const handleCrosshairKeys = (e: KeyboardEvent) => {
+      const step = crosshair.currentIndex;
       switch (e.key) {
         case 'ArrowRight':
           e.preventDefault();
-          step = (step + 1) % crosshair.snapCount;
-          crosshair.stepTo(step);
+          crosshair.stepTo(step + 1);
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          step = step <= 0 ? crosshair.snapCount - 1 : step - 1;
-          crosshair.stepTo(step);
+          crosshair.stepTo(step <= 0 ? crosshair.snapCount - 1 : step - 1);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          if (step < 0) {
-            step = 0;
-            crosshair.stepTo(step);
-          }
+          if (step < 0) crosshair.stepTo(0);
           crosshair.cycleSeries(1);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          if (step < 0) {
-            step = 0;
-            crosshair.stepTo(step);
-          }
+          if (step < 0) crosshair.stepTo(0);
           crosshair.cycleSeries(-1);
           break;
         case 'Enter':
         case ' ':
           e.preventDefault();
-          if (step < 0) step = 0;
           crosshair.showCurrent();
           break;
         case 'Escape':
           e.preventDefault();
-          crosshair.hide();
-          step = -1;
+          crosshair.hide(true);
           break;
       }
     };
 
+    // Tabbing away leaves the crosshair and its tooltip painted otherwise.
+    const handleCrosshairBlur = () => {
+      crosshair.hide(true);
+    };
+
     container.addEventListener('keydown', handleCrosshairKeys);
+    container.addEventListener('blur', handleCrosshairBlur);
 
     return () => {
       container.removeEventListener('keydown', handleCrosshairKeys);
+      container.removeEventListener('blur', handleCrosshairBlur);
       container.removeAttribute('tabindex');
       container.removeAttribute('aria-roledescription');
       container.removeAttribute('aria-label');
@@ -162,10 +161,18 @@ export function wireKeyboardNav(
     }
   };
 
+  // Tabbing away leaves the tooltip and the focus ring painted otherwise.
+  const handleBlur = () => {
+    tooltipManager.hide();
+    highlightMark(-1);
+  };
+
   container.addEventListener('keydown', handleKeyDown);
+  container.addEventListener('blur', handleBlur);
 
   return () => {
     container.removeEventListener('keydown', handleKeyDown);
+    container.removeEventListener('blur', handleBlur);
     container.removeAttribute('tabindex');
     container.removeAttribute('aria-roledescription');
     container.removeAttribute('aria-label');

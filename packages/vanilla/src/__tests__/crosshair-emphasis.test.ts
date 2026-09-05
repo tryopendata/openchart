@@ -133,6 +133,51 @@ describe('crosshair emphasis', () => {
     chart.destroy();
   });
 
+  it('ArrowRight resumes from where the pointer left the chart', () => {
+    const chart = createChart(container, multiLineSpec);
+    const svg = mockSvgRect(container);
+    const overlay = svg.querySelector('[data-voronoi-overlay]')!;
+    const crosshair = container.querySelector('[data-crosshair]') as SVGLineElement;
+
+    const us = chart.layout.marks.find(
+      (m) => m.type === 'line' && m.seriesKey === 'US',
+    ) as LineMark;
+    const middle = us.dataPoints![1];
+    const last = us.dataPoints![2];
+
+    overlay.dispatchEvent(createMouseEvent('mousemove', middle.x, middle.y));
+    expect(crosshair.getAttribute('x1')).toBe(String(Math.round(middle.x)));
+    overlay.dispatchEvent(createMouseEvent('mouseleave', middle.x, middle.y));
+
+    // Not back to the first x: the crosshair owns the index, so the keyboard
+    // picks up one step past wherever the pointer was.
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(crosshair.getAttribute('x1')).toBe(String(Math.round(last.x)));
+
+    chart.destroy();
+  });
+
+  it('hides the crosshair when the container loses focus', () => {
+    const chart = createChart(container, multiLineSpec);
+    mockSvgRect(container);
+    const crosshair = container.querySelector('[data-crosshair]') as SVGLineElement;
+
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(crosshair.style.display).toBe('');
+
+    container.dispatchEvent(new FocusEvent('blur'));
+    expect(crosshair.style.display).toBe('none');
+
+    // The index was reset with it, so the next ArrowRight starts over.
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    const firstX = crosshair.getAttribute('x1');
+    container.dispatchEvent(new FocusEvent('blur'));
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(crosshair.getAttribute('x1')).toBe(firstX);
+
+    chart.destroy();
+  });
+
   it('cycles the raised series at one x with ArrowDown', () => {
     const chart = createChart(container, multiLineSpec);
     mockSvgRect(container);

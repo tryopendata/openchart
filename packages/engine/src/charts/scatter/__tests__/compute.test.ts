@@ -1,4 +1,5 @@
-import type { LayoutStrategy, PointMark, Rect, ResolvedTheme } from '@opendata-ai/openchart-core';
+import type { LayoutStrategy, PointMark, Rect } from '@opendata-ai/openchart-core';
+import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
@@ -497,7 +498,7 @@ describe('computeScatterMarks', () => {
         markDef: { type: 'point' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const theme = { colors: { background: '#09090b' } } as ResolvedTheme;
+      const theme = resolveTheme({ colors: { background: '#09090b' } });
       const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
       expect(marks.every((m) => m.stroke === '#09090b')).toBe(true);
     });
@@ -508,7 +509,7 @@ describe('computeScatterMarks', () => {
         markDef: { type: 'point' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const theme = { colors: { background: 'transparent' } } as ResolvedTheme;
+      const theme = resolveTheme({ colors: { background: 'transparent' } });
       const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
       expect(marks.every((m) => m.stroke === '#ffffff')).toBe(true);
     });
@@ -524,7 +525,7 @@ describe('computeScatterMarks', () => {
       };
       const scales = computeScales(spec, chartArea, spec.data);
       for (const background of ['none', 'rgba(0, 0, 0, 0)', 'rgba(9, 9, 11, 0.5)']) {
-        const theme = { colors: { background } } as ResolvedTheme;
+        const theme = resolveTheme({ colors: { background } });
         const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
         expect(marks.every((m) => m.stroke === '#ffffff')).toBe(true);
       }
@@ -536,7 +537,7 @@ describe('computeScatterMarks', () => {
         markDef: { type: 'point', stroke: '#123456' },
       };
       const scales = computeScales(spec, chartArea, spec.data);
-      const theme = { colors: { background: '#09090b' } } as ResolvedTheme;
+      const theme = resolveTheme({ colors: { background: '#09090b' } });
       const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy, theme);
       expect(marks.every((m) => m.stroke === '#123456')).toBe(true);
     });

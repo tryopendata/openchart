@@ -8,7 +8,7 @@
  * up as a bright halo grid on the preset's dark canvas.
  */
 
-import { resolveTheme, terminal } from '@opendata-ai/openchart-core';
+import { adaptTheme, resolveTheme, terminal } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../../compile';
 import { resolveKnockoutColor } from '../utils';
@@ -41,10 +41,10 @@ describe('resolveKnockoutColor', () => {
   });
 
   it('falls back to the mode surface when the background is not opaque', () => {
-    expect(resolveKnockoutColor({ colors: { background: 'transparent' } })).toBe('#ffffff');
-    expect(resolveKnockoutColor({ colors: { background: 'transparent' }, isDark: true })).toBe(
-      '#18181b',
-    );
+    // The default theme background is transparent, so the ramp's surface is
+    // the static `--oc-bg` token for the mode.
+    expect(resolveKnockoutColor(resolveTheme())).toBe('#ffffff');
+    expect(resolveKnockoutColor(adaptTheme(resolveTheme()))).toBe('#09090b');
   });
 });
 

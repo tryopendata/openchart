@@ -33,6 +33,14 @@ export interface NeutralRamp {
   faint: string;
   /** Container border / hairline on non-chart surfaces. Same value as `100`. */
   border: string;
+  /**
+   * The opaque canvas the theme paints on. Equal to the theme background when
+   * that background has a color of its own; a transparent theme resolves to
+   * the static `--oc-bg` token for the mode. Knockout rings, stacked-segment
+   * seams, table cell fills and graph node rings all read this so they are cut
+   * in the same color the surface actually renders as.
+   */
+  surface: string;
 }
 
 /** Mix weight (share of `text`) for each numbered step. */
@@ -82,6 +90,7 @@ function staticRamp(mode: 'light' | 'dark'): NeutralRamp {
     secondary: cssTokenDefault('--oc-text-secondary', mode),
     faint: cssTokenDefault('--oc-text-faint', mode),
     border: cssTokenDefault('--oc-border', mode),
+    surface: cssTokenDefault('--oc-bg', mode),
   };
 }
 
@@ -96,10 +105,13 @@ function staticRamp(mode: 'light' | 'dark'): NeutralRamp {
  */
 export function deriveNeutralRamp(text: string, bg: string, isDark = false): NeutralRamp {
   const mode = isDark ? 'dark' : 'light';
+  // The surface is the background itself whenever that background paints
+  // something; only a transparent/none background falls back to the token.
+  const surface = isOpaqueColor(bg) ? bg : cssTokenDefault('--oc-bg', mode);
   if (!isOpaqueColor(bg)) return staticRamp(mode);
   const t = parseHex(text);
   const b = parseHex(bg);
-  if (!t || !b) return staticRamp(mode);
+  if (!t || !b) return { ...staticRamp(mode), surface };
 
   const ramp = Object.fromEntries(STEPS.map(([step, w]) => [step, mix(t, b, w)])) as Pick<
     NeutralRamp,
@@ -110,5 +122,6 @@ export function deriveNeutralRamp(text: string, bg: string, isDark = false): Neu
     secondary: ramp[800],
     faint: ramp[300],
     border: ramp[100],
+    surface,
   };
 }

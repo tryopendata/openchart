@@ -212,16 +212,17 @@ describe('sankey path highlighting', () => {
     instance.destroy();
   });
 
-  it('a link hover seeds the trace from both of its endpoints', () => {
+  it('a link hover lights only the path running through that link', () => {
     const instance = createSankey(container, branching, { responsive: false });
 
     const link = container.querySelector('.oc-sankey-link[data-source="A"][data-target="D"]');
     link?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
 
     expect(linkOpacity('A', 'D')).toBe(0.7);
-    // A's other branch is downstream of a seed, so it stays on the path.
-    expect(linkOpacity('A', 'B')).toBe(0.7);
+    // A's other branch is a sibling of the hovered link, not on its path.
+    expect(linkOpacity('A', 'B')).toBe(0.12);
     expect(nodeOpacity('.oc-sankey-node', 'D')).toBe('1');
+    expect(nodeOpacity('.oc-sankey-node', 'A')).toBe('1');
 
     instance.destroy();
   });

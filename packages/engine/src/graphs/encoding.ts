@@ -14,7 +14,6 @@ import type {
   NodeOverride,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { cssTokenDefault, isOpaqueColor } from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleLinear, scaleOrdinal, scaleSqrt } from 'd3-scale';
@@ -155,14 +154,13 @@ export function resolveCategoricalDomain(
  *
  * Node rings are drawn in this color (a knockout ring), so overlapping nodes
  * stay countable instead of merging into one blob. A transparent theme
- * background has no color of its own, so fall back to the static `--oc-bg`
- * token for the mode -- the same value `graph-mount` stamps on the wrapper, so
- * the ring always matches the surface it is cut out of.
+ * background has no color of its own, so the theme resolves `neutral.surface`
+ * to the static `--oc-bg` token for the mode -- the same value `graph-mount`
+ * stamps on the wrapper, so the ring always matches the surface it is cut out
+ * of.
  */
 export function resolveGraphSurface(theme: ResolvedTheme): string {
-  const bg = theme.colors.background;
-  if (isOpaqueColor(bg)) return bg;
-  return cssTokenDefault('--oc-bg', theme.isDark ? 'dark' : 'light');
+  return theme.colors.neutral.surface;
 }
 
 // ---------------------------------------------------------------------------

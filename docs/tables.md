@@ -188,6 +188,11 @@ All features are opt-in via top-level `TableSpec` properties.
 | Compact mode | `compact: true` | `false` | **Deprecated.** Alias for `density: 'condensed'`; warns |
 | Responsive | `responsive: true` | `true` | Table adapts to container width |
 
+In controlled mode a `sort` of `null` means "the user cleared sorting" and
+`undefined` means "no opinion, apply the spec default" — so an initial
+controlled state of `{ sort: null }` still gets `spec.sort` until the user
+actually touches a header.
+
 ### Density and responsive behavior
 
 `density` is the authoritative setting: when you set it, no container width

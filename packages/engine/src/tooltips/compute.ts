@@ -442,6 +442,9 @@ function isNormalizedStack(encoding: Encoding): boolean {
  * Sum each stacked bar/column group so every segment's tooltip can end with the
  * whole bar's value -- the number the reader is actually comparing across
  * categories, which a stack otherwise hides.
+ *
+ * A group with a single segment is skipped: its total is the value already on
+ * the line above it, and repeating it reads as a second data point.
  */
 function computeRectStackTotals(
   marks: Mark[],
@@ -453,24 +456,27 @@ function computeRectStackTotals(
   if (!valueCh) return undefined;
 
   const sums = new Map<string, number>();
+  const counts = new Map<string, number>();
   for (const mark of marks) {
     if (mark.type !== 'rect' || mark.stackGroup === undefined) continue;
     const value = Number((mark.data as DataRow)[valueCh.field]);
     if (!Number.isFinite(value)) continue;
     sums.set(mark.stackGroup, (sums.get(mark.stackGroup) ?? 0) + value);
+    counts.set(mark.stackGroup, (counts.get(mark.stackGroup) ?? 0) + 1);
   }
   if (sums.size === 0) return undefined;
 
   const formatter = getFormatter(formatters, valueCh);
   const totals = new Map<string, TooltipField>();
   for (const [group, sum] of sums) {
+    if ((counts.get(group) ?? 0) < 2) continue;
     totals.set(group, {
       label: TOTAL_LABEL,
       value: formatValue(sum, valueCh.type, formatter),
       role: 'total',
     });
   }
-  return totals;
+  return totals.size > 0 ? totals : undefined;
 }
 
 /** The same, per x position, for stacked area bands. */

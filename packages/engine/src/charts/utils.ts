@@ -12,7 +12,6 @@ import {
   type Encoding,
   type GradientDef,
   getRepresentativeColor,
-  isOpaqueColor,
   type ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
@@ -75,15 +74,15 @@ export function stackSeamStroke(theme?: ResolvedTheme): string {
  * gets a ring that reads as space rather than a bright halo.
  *
  * A non-opaque background ('transparent', 'none') has no color of its own, so
- * fall back to the mode's surface: near-black in dark mode, white in light.
+ * the resolved theme's `neutral.surface` carries the mode's canvas token
+ * instead -- one answer, shared with tables, graphs and the CSS `--oc-bg`.
+ *
+ * With no theme at all there is nothing to read, so the light canvas stands in.
  */
 export function resolveKnockoutColor(theme?: {
-  colors?: { background?: string };
-  isDark?: boolean;
+  colors?: { neutral?: { surface?: string } };
 }): string {
-  const bg = theme?.colors?.background;
-  if (bg && isOpaqueColor(bg)) return bg;
-  return theme?.isDark ? '#18181b' : '#ffffff';
+  return theme?.colors?.neutral?.surface ?? '#ffffff';
 }
 
 /**

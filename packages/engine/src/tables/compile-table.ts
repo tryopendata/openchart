@@ -53,9 +53,17 @@ function determineCellType(col: ColumnConfig): ResolvedColumn['cellType'] {
 
 /**
  * Keys whose values are numbers but not quantities. Right-aligning a zip code
- * or a year makes the column read as a measure it is not.
+ * or a year makes the column read as a measure it is not, and summing one into
+ * a total row is nonsense.
+ *
+ * Tested against the snake_cased key, so `zipCode` and `zip_code` match alike.
  */
 const NON_QUANTITATIVE_KEY = /(^|_)(id|zip|postal|code|year|fips)$/i;
+
+/** `zipCode` -> `zip_Code`, so one snake_case pattern covers both conventions. */
+function snakeCaseKey(key: string): string {
+  return key.replace(/([a-z0-9])([A-Z])/g, '$1_$2');
+}
 
 /**
  * Infer a column's field type: explicit `type` wins, otherwise probe the first
@@ -66,7 +74,7 @@ function inferColumnType(
   data: Record<string, unknown>[],
 ): ResolvedColumn['type'] {
   if (col.type) return col.type;
-  if (NON_QUANTITATIVE_KEY.test(col.key)) return 'nominal';
+  if (NON_QUANTITATIVE_KEY.test(snakeCaseKey(col.key))) return 'nominal';
 
   for (const row of data) {
     const val = row[col.key];

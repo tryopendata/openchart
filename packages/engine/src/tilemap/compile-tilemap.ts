@@ -39,7 +39,6 @@ import {
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
-  isOpaqueColor,
   pickLabelColor,
   resolveTheme,
   SEQUENTIAL_PALETTES,
@@ -90,14 +89,8 @@ function clamp(value: number, min: number, max: number): number {
  * canvas. Label contrast has to be judged against this, never against the
  * undimmed fill.
  */
-function blendOnSurface(
-  fill: string,
-  fillOpacity: number,
-  theme: ResolvedTheme,
-  isDarkMode: boolean,
-): string {
-  const bg = theme.colors.background;
-  const surface = isOpaqueColor(bg) ? bg : isDarkMode ? '#18181b' : '#ffffff';
+function blendOnSurface(fill: string, fillOpacity: number, theme: ResolvedTheme): string {
+  const surface = theme.colors.neutral.surface;
   if (fillOpacity >= 1) return fill;
   try {
     return interpolateRgb(surface, fill)(fillOpacity);
@@ -691,7 +684,7 @@ function buildTileMark(opts: TileMarkOptions): TileMapTileMark {
   // its base color: a deep blue drawn at 0.25 alpha on white is a pale blue, and
   // flipping to white text on the base color put white on near-white for every
   // low-value tile in the grid.
-  const effectiveColor = hasData ? blendOnSurface(fill, fillOpacity, theme, isDarkMode) : fill;
+  const effectiveColor = hasData ? blendOnSurface(fill, fillOpacity, theme) : fill;
   const textColor = hasData ? pickLabelColor(effectiveColor, isDarkMode) : theme.colors.axis;
   const isLightText = textColor === '#ffffff';
 

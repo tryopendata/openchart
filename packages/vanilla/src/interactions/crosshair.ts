@@ -32,14 +32,23 @@ export interface CrosshairController {
   cleanup(): void;
   /** Number of snap positions along x. */
   readonly snapCount: number;
+  /**
+   * The snap index currently shown, or -1 when nothing is. Pointer and keyboard
+   * share it, so stepping with the arrow keys resumes from wherever the pointer
+   * left off instead of restarting at the first x.
+   */
+  readonly currentIndex: number;
   /** Show the slice at a snap index (wraps). Used by keyboard nav. */
   stepTo(index: number): void;
   /** Cycle the emphasized series at the current x by `delta` (wraps). */
   cycleSeries(delta: number): void;
   /** Re-show the current slice. */
   showCurrent(): void;
-  /** Hide crosshair, dots, tooltip and emphasis. */
-  hide(): void;
+  /**
+   * Hide crosshair, dots, tooltip and emphasis. Pass `true` to also forget the
+   * current snap index (Escape / blur, where the reader has left the chart).
+   */
+  hide(resetIndex?: boolean): void;
 }
 
 function snapKey(x: number): number {
@@ -301,13 +310,30 @@ export function wireVoronoiTooltipEvents(
     positionAt(svgX, svgY, viewBoxToContainer);
   };
 
-  const hideAll = () => {
+  const hideAll = (resetIndex = false) => {
     if (crosshair) crosshair.style.display = 'none';
     for (const dot of dots) dot.style.display = 'none';
     tooltipManager.hide();
     currentEmphasis = null;
+    if (resetIndex) currentIndex = -1;
     emphasis?.clear();
   };
+
+  // Listeners get the arity-0 wrapper: passing hideAll straight to
+  // addEventListener would hand the Event object to `resetIndex`.
+  const hideOnPointerOut = () => hideAll();
+
+  /** Show the slice at a snap index (wraps). Shared by pointer and keyboard. */
+  function stepTo(index: number): void {
+    if (snapXs.length === 0) return;
+    const wrapped = ((index % snapXs.length) + snapXs.length) % snapXs.length;
+    currentIndex = wrapped;
+    const snappedX = snapXs[wrapped];
+    // Keep the raised series across steps when it still has a point here.
+    const keys = keysAt(snappedX);
+    const keep = currentEmphasis && keys.includes(currentEmphasis) ? currentEmphasis : null;
+    showAt(snappedX, keep, containerScale());
+  }
 
   const handleTouch = (e: Event) => {
     const te = e as TouchEvent;
@@ -319,35 +345,29 @@ export function wireVoronoiTooltipEvents(
   };
 
   overlay.addEventListener('mousemove', handleMouseMove);
-  overlay.addEventListener('mouseleave', hideAll);
+  overlay.addEventListener('mouseleave', hideOnPointerOut);
   overlay.addEventListener('touchstart', handleTouch, { passive: false });
   overlay.addEventListener('touchmove', handleTouch, { passive: false });
-  overlay.addEventListener('touchend', hideAll);
+  overlay.addEventListener('touchend', hideOnPointerOut);
 
   return {
     cleanup() {
       overlay.removeEventListener('mousemove', handleMouseMove);
-      overlay.removeEventListener('mouseleave', hideAll);
+      overlay.removeEventListener('mouseleave', hideOnPointerOut);
       overlay.removeEventListener('touchstart', handleTouch);
       overlay.removeEventListener('touchmove', handleTouch);
-      overlay.removeEventListener('touchend', hideAll);
+      overlay.removeEventListener('touchend', hideOnPointerOut);
     },
     get snapCount() {
       return snapXs.length;
     },
-    stepTo(index: number) {
-      if (snapXs.length === 0) return;
-      const wrapped = ((index % snapXs.length) + snapXs.length) % snapXs.length;
-      currentIndex = wrapped;
-      const snappedX = snapXs[wrapped];
-      // Keep the raised series across steps when it still has a point here.
-      const keys = keysAt(snappedX);
-      const keep = currentEmphasis && keys.includes(currentEmphasis) ? currentEmphasis : null;
-      showAt(snappedX, keep, containerScale());
+    get currentIndex() {
+      return currentIndex;
     },
+    stepTo,
     cycleSeries(delta: number) {
       if (currentIndex < 0) {
-        this.stepTo(0);
+        stepTo(0);
         return;
       }
       const snappedX = snapXs[currentIndex];
@@ -358,8 +378,10 @@ export function wireVoronoiTooltipEvents(
       showAt(snappedX, keys[next], containerScale());
     },
     showCurrent() {
-      this.stepTo(currentIndex < 0 ? 0 : currentIndex);
+      stepTo(currentIndex < 0 ? 0 : currentIndex);
     },
-    hide: hideAll,
+    hide(resetIndex?: boolean) {
+      hideAll(resetIndex === true);
+    },
   };
 }

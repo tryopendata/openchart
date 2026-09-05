@@ -285,6 +285,8 @@ export function runTransition(args: {
   // Animation loop state
   let rafId: number | null = null;
   let running = true;
+  /** The dot this transition pulsed, so cancel() can clear its pending strip. */
+  let pulsedDot: SVGElement | null = null;
   let startTime: number | null = null;
   let lastElapsed = 0;
 
@@ -334,7 +336,7 @@ export function runTransition(args: {
     snapToFinal();
     removeGhosts();
     settleCanvas();
-    pulseSparklineTerminator(svg, marksContainer);
+    pulsedDot = pulseSparklineTerminator(svg, marksContainer);
     // Restore secondary element opacities to their rendered values
     for (let i = 0; i < secondaryEls.length; i++) {
       secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
@@ -469,6 +471,11 @@ export function runTransition(args: {
 
   return {
     cancel(): void {
+      // Before the running check: the pulse is scheduled by finish(), so a
+      // teardown after a completed transition still owes this cleanup.
+      clearPulseTimer(pulsedDot);
+      pulsedDot?.classList.remove(PULSE_CLASS);
+      pulsedDot = null;
       if (!running) return;
       running = false;
       svg.classList.remove(TRANSITIONING_CLASS);
@@ -542,20 +549,46 @@ export function runTransition(args: {
 const PULSE_CLASS = 'oc-pulse';
 const PULSE_DURATION_MS = 600;
 
-function pulseSparklineTerminator(svg: SVGSVGElement, marksContainer: SVGElement | null): void {
-  if (!marksContainer || svg.getAttribute('data-display') !== 'sparkline') return;
+/**
+ * Pending strip-the-class timers, keyed by the dot they belong to. A tile that
+ * ticks faster than the pulse would otherwise leave the previous timer running,
+ * and it would strip the class out from under the pulse that replaced it.
+ */
+const pulseTimers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+
+/** Cancel a pending pulse strip, if this dot has one. */
+function clearPulseTimer(dot: Element | null | undefined): void {
+  if (!dot) return;
+  const pending = pulseTimers.get(dot);
+  if (pending !== undefined) {
+    clearTimeout(pending);
+    pulseTimers.delete(dot);
+  }
+}
+
+function pulseSparklineTerminator(
+  svg: SVGSVGElement,
+  marksContainer: SVGElement | null,
+): SVGElement | null {
+  if (!marksContainer || svg.getAttribute('data-display') !== 'sparkline') return null;
   const dots = marksContainer.querySelectorAll('circle.oc-mark-point');
   const dot = dots[dots.length - 1] as SVGElement | undefined;
-  if (!dot) return;
+  if (!dot) return null;
   const r = dot.getAttribute('r');
   if (r) dot.style.setProperty('--oc-pulse-r', `${r}px`);
   // Restart the keyframe on a tile that ticks faster than the pulse.
+  clearPulseTimer(dot);
   dot.classList.remove(PULSE_CLASS);
   void (dot as unknown as { getBoundingClientRect?: () => unknown }).getBoundingClientRect?.();
   dot.classList.add(PULSE_CLASS);
-  setTimeout(() => {
-    dot.classList.remove(PULSE_CLASS);
-  }, PULSE_DURATION_MS);
+  pulseTimers.set(
+    dot,
+    setTimeout(() => {
+      pulseTimers.delete(dot);
+      dot.classList.remove(PULSE_CLASS);
+    }, PULSE_DURATION_MS),
+  );
+  return dot;
 }
 
 export function collectSecondaryElements(svg: SVGSVGElement): SVGElement[] {

@@ -42,7 +42,9 @@ bounding box:
 
 - A pre-projected bounding box (values outside the longitude/latitude range —
   the common case for a `us-atlas` topology already projected to pixel space)
-  → `identity`, with a `PROJECTION_INFERRED` compile warning explaining why.
+  → `identity`. In dev mode (`dev: true`) a `PROJECTION_INFERRED` compile
+  warning notes what happened; production compiles stay silent, since identity
+  is the only correct answer for an already-projected atlas.
 - A longitude span over 200° (a world topology) → `equalEarth`, an
   equal-area projection appropriate for a global choropleth.
 - Anything else → `albersUsa`, the historical default (composite projection

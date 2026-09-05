@@ -216,3 +216,40 @@ describe('legend entries as toggle buttons', () => {
     chart.destroy();
   });
 });
+
+describe('touch emphasis', () => {
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    container = createContainer(600, 400);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('lifts the emphasis when the tap ends', () => {
+    const chart = createChart(container, multiSeriesColumnSpec);
+
+    const marks = marksOf(container);
+    const b = marks.find((m) => m.getAttribute('data-series') === 'B')!;
+    const touch = (x: number, y: number) => ({ clientX: x, clientY: y }) as Touch;
+
+    b.dispatchEvent(
+      new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch(50, 50)] }),
+    );
+    expect(container.querySelector('.oc-marks')!.classList.contains('oc-hover-active')).toBe(true);
+
+    // There is no mouseleave on touch, so without a touchend handler every
+    // other series stays dimmed for the rest of the session.
+    b.dispatchEvent(new TouchEvent('touchend', { bubbles: true }));
+
+    expect(container.querySelector('.oc-marks')!.classList.contains('oc-hover-active')).toBe(false);
+    for (const mark of marksOf(container)) {
+      expect(mark.classList.contains('oc-mark--dim')).toBe(false);
+      expect(mark.classList.contains('oc-mark--hover')).toBe(false);
+    }
+
+    chart.destroy();
+  });
+});

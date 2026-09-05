@@ -194,3 +194,48 @@ describe('cell labels and chips', () => {
     t.destroy();
   });
 });
+
+describe('table theme custom properties', () => {
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    container = mountAt(900);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function props(): CSSStyleDeclaration {
+    return (container.querySelector('.oc-table-wrapper') as HTMLElement).style;
+  }
+
+  it('stamps an opaque surface on --oc-bg', () => {
+    const t = createTable(container, makeSpec());
+    // The default theme's background is 'transparent'; the sticky thead, the
+    // sticky first column and the totals footer paint this to occlude the rows
+    // scrolling under them, so a transparent value shows rows through them.
+    const bg = props().getPropertyValue('--oc-bg');
+    expect(bg).not.toBe('');
+    expect(bg).not.toBe('transparent');
+    t.destroy();
+  });
+
+  it('uses the neutral border on the default theme, the gridline when overridden', () => {
+    // The hairline is a border, not a gridline. This comparison used to be made
+    // against a CSS token written with spaces ('rgba(0, 0, 0, 0.08)') while the
+    // theme literal has none, so it never matched and the border was always the
+    // gridline.
+    const plain = createTable(container, makeSpec());
+    const border = props().getPropertyValue('--oc-border');
+    expect(border).not.toBe('');
+    expect(border).not.toBe(props().getPropertyValue('--oc-gridline'));
+    plain.destroy();
+
+    const themed = createTable(container, makeSpec(), {
+      theme: { colors: { gridline: 'rgb(255, 0, 0)' } },
+    });
+    expect(props().getPropertyValue('--oc-border')).toBe('rgb(255, 0, 0)');
+    themed.destroy();
+  });
+});

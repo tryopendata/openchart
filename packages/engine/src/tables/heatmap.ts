@@ -102,11 +102,10 @@ export function computeHeatmapColors(
   let stops = resolvePalette(config.palette, theme);
   if (darkMode) {
     const lightBg = '#ffffff';
-    const themeBg = theme.colors.background;
     // Use an opaque dark surface for palette blending even when the theme
     // bg is transparent, so interpolation never passes through alpha=0
     // (which breaks accessibleTextColor via NaN contrast ratios).
-    const darkBg = themeBg === 'transparent' ? '#09090b' : themeBg;
+    const darkBg = resolveTableSurface(theme);
     if (Array.isArray(config.palette)) {
       // Custom arrays: swap near-white stops for the dark bg so the low end
       // blends in, then adapt the remaining (saturated) stops normally.

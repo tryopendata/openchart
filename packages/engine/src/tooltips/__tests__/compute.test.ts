@@ -636,6 +636,14 @@ describe('computeTooltipDescriptors', () => {
       }
     });
 
+    it('skips the total when the group has only one segment', () => {
+      // A one-segment "stack" total just repeats the value above it.
+      const single = [stackedRects()[0]];
+      const descriptors = computeTooltipDescriptors(makeStackedColumnSpec('zero'), single);
+      const fields = descriptors.get('rect-0')!.fields;
+      expect(fields.some((f) => f.role === 'total')).toBe(false);
+    });
+
     it('skips the total on a normalized stack', () => {
       const descriptors = computeTooltipDescriptors(
         makeStackedColumnSpec('normalize'),

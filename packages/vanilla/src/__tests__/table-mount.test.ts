@@ -1,4 +1,4 @@
-import type { TableSpec } from '@opendata-ai/openchart-engine';
+import type { SortState, TableSpec } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTable } from '../table-mount';
 
@@ -384,6 +384,41 @@ describe('createTable', () => {
     // Youngest (Eve, 22) should now be first.
     const firstAfter = container.querySelector('tbody tr td')?.textContent;
     expect(firstAfter).toBe('Eve');
+
+    table.destroy();
+  });
+
+  it('controlled mode: an initial null sort still applies spec.sort', () => {
+    // `{ sort: null, search: '', page: 0 }` is the natural initial controlled
+    // state (it is what useTable() starts with). null there means "no opinion",
+    // not "the user cleared sorting", so the spec default must survive.
+    const externalState = { sort: null, search: '', page: 0 };
+    const table = createTable(container, makeSpec({ sort: { column: 'age', direction: 'asc' } }), {
+      externalState,
+    });
+
+    expect(container.querySelector('tbody tr td')?.textContent).toBe('Eve');
+
+    table.destroy();
+  });
+
+  it('controlled mode: a null sort sticks once the user has cleared sorting', () => {
+    const externalState: { sort: SortState | null; search: string; page: number } = {
+      sort: null,
+      search: '',
+      page: 0,
+    };
+    const table = createTable(container, makeSpec({ sort: { column: 'age', direction: 'asc' } }), {
+      externalState,
+    });
+
+    // Sort by name, then clear it: the original row order comes back rather
+    // than the spec default reasserting itself.
+    table.setState({ sort: { column: 'name', direction: 'desc' } });
+    expect(container.querySelector('tbody tr td')?.textContent).toBe('Eve');
+
+    table.setState({ sort: null });
+    expect(container.querySelector('tbody tr td')?.textContent).toBe('Alice');
 
     table.destroy();
   });

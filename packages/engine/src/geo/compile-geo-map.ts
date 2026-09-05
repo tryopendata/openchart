@@ -295,7 +295,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // When points are present, inset the projection by the max point radius so
   // circles at the geographic edges don't get clipped by the viewBox.
   const projectionType = mapSpec.geo.projection ?? resolveDefaultProjection(topology);
-  if (!mapSpec.geo.projection && projectionType === 'identity') {
+  // Dev-only: identity is the only correct answer for a pre-projected atlas, so
+  // the inference is a note about what happened, not a problem to fix. Warning
+  // on every production compile would train authors to ignore the channel.
+  if (options.dev && !mapSpec.geo.projection && projectionType === 'identity') {
     compileWarnings.push({
       code: 'PROJECTION_INFERRED',
       message:

@@ -3,19 +3,18 @@
  */
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
-import { contrastRatio, cssTokenDefault, isOpaqueColor } from '@opendata-ai/openchart-core';
+import { contrastRatio, cssTokenDefault } from '@opendata-ai/openchart-core';
 
 /**
  * Resolve the opaque surface a filled table cell is painted on.
  *
- * Transparent themes fall back to the static `--oc-bg` token for the mode, so
+ * Transparent themes resolve to the static `--oc-bg` token for the mode, so
  * color interpolation never passes through alpha = 0 (which would produce NaN
- * contrast ratios downstream).
+ * contrast ratios downstream). The resolution happens once in the theme, on
+ * `colors.neutral.surface`.
  */
 export function resolveTableSurface(theme: ResolvedTheme): string {
-  const bg = theme.colors.background;
-  if (isOpaqueColor(bg)) return bg;
-  return cssTokenDefault('--oc-bg', theme.isDark ? 'dark' : 'light');
+  return theme.colors.neutral.surface;
 }
 
 /**

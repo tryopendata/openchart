@@ -64,7 +64,11 @@ function focusSignature(focus: GeoMapLayout['focus']): string | null {
  */
 const featureOrigin = new WeakMap<Element, Element | null>();
 
-function raiseFeature(el: Element): void {
+function raiseFeature(el: Element, svg: SVGElement): void {
+  // Re-appending restarts the element's CSS entrance keyframe. While the map is
+  // still animating in, keep paint order and settle for the outline class
+  // alone -- a hover this early is worth less than the entrance stuttering.
+  if (svg.classList.contains('oc-animate')) return;
   const parent = el.parentNode;
   if (!parent || el === parent.lastChild) return;
   if (!featureOrigin.has(el)) {
@@ -276,7 +280,7 @@ export function createGeoMap(
       const handleMouseEnter = (e: Event) => {
         const mouseEvent = e as MouseEvent;
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
-        raiseFeature(el);
+        raiseFeature(el, svg);
         el.classList.add('oc-map-feature--hover');
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();

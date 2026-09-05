@@ -12,6 +12,7 @@ import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { applySrOnlyStyles } from './dom-helpers';
 import { renderCell } from './renderers/table-cells';
+import { resolvedSurface } from './theme-tokens';
 
 /** Options for renderTable(). */
 export interface TableRenderOptions {
@@ -302,7 +303,10 @@ export function renderTable(
   if (theme) {
     const s = wrapper.style;
     const n = theme.colors.neutral;
-    s.setProperty('--oc-bg', theme.colors.background);
+    // Sticky header/column/footer cells paint this to occlude the rows sliding
+    // under them, so it has to be an opaque surface. theme.colors.background is
+    // 'transparent' on the default theme.
+    s.setProperty('--oc-bg', resolvedSurface(theme));
     s.setProperty('--oc-text', theme.colors.text);
     // Secondary grays come from the theme's own text/background mix, the same
     // ramp charts stamp. Deriving them from colors.axis (the tick-label ink)
@@ -317,11 +321,12 @@ export function renderTable(
     s.setProperty('--oc-gridline', theme.colors.gridline);
     // The table hairline is a border, not a gridline. Only a theme that sets
     // gridline explicitly gets to drive it; otherwise the derived ramp wins.
+    // Compare whitespace-stripped: the theme literal is 'rgba(0,0,0,0.08)' but
+    // the CSS token is written 'rgba(0, 0, 0, 0.08)'.
+    const stripWs = (c: string) => c.replace(/\s+/g, '');
     const defaultGridline = cssTokenDefault('--oc-gridline', theme.isDark ? 'dark' : 'light');
-    s.setProperty(
-      '--oc-border',
-      theme.colors.gridline === defaultGridline ? n.border : theme.colors.gridline,
-    );
+    const gridlineOverridden = stripWs(theme.colors.gridline) !== stripWs(defaultGridline);
+    s.setProperty('--oc-border', gridlineOverridden ? theme.colors.gridline : n.border);
     s.setProperty('--oc-positive', theme.colors.positive);
     s.setProperty('--oc-negative', theme.colors.negative);
     s.setProperty('--oc-font-family', theme.fonts.family);

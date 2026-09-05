@@ -457,6 +457,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "border": "rgba(0, 0, 0, 0.08)",
         "faint": "#d4d4d8",
         "secondary": "#3f3f46",
+        "surface": "#ffffff",
       },
       "positive": "#15803d",
       "sequential": {
@@ -1559,6 +1560,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "border": "rgba(0, 0, 0, 0.08)",
         "faint": "#d4d4d8",
         "secondary": "#3f3f46",
+        "surface": "#ffffff",
       },
       "positive": "#15803d",
       "sequential": {
@@ -2273,6 +2275,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "border": "rgba(0, 0, 0, 0.08)",
         "faint": "#d4d4d8",
         "secondary": "#3f3f46",
+        "surface": "#ffffff",
       },
       "positive": "#15803d",
       "sequential": {

@@ -82,6 +82,21 @@ const DIM_OPACITY = 0.12;
 /** Opacity for nodes and labels off the path. */
 const NODE_DIM_OPACITY = 0.3;
 
+/**
+ * Seeds for a trace: which nodes to walk upstream from, which to walk
+ * downstream from, plus any link keys that are on the path by construction.
+ *
+ * A node hover seeds both directions from that node. A link hover seeds
+ * upstream from the source and downstream from the target, so the highlight
+ * is the one path running through the hovered link rather than every sibling
+ * ribbon out of the source and into the target.
+ */
+interface TraceSeeds {
+  up: string[];
+  down: string[];
+  links?: string[];
+}
+
 // ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
@@ -195,7 +210,7 @@ export function createSankey(
           tooltipManager.show(content, x, y);
         }
         options?.onNodeHover?.(nodeData);
-        if (nodeId) highlightPath(svg, [nodeId], layout);
+        if (nodeId) highlightPath(svg, { up: [nodeId], down: [nodeId] }, layout);
       };
 
       const handleMouseMove = (e: Event) => {
@@ -251,7 +266,13 @@ export function createSankey(
           tooltipManager.show(content, x, y);
         }
         options?.onLinkHover?.(linkData);
-        if (sourceId && targetId) highlightPath(svg, [sourceId, targetId], layout);
+        if (sourceId && targetId) {
+          highlightPath(
+            svg,
+            { up: [sourceId], down: [targetId], links: [`${sourceId}->${targetId}`] },
+            layout,
+          );
+        }
       };
 
       const handleMouseMove = (e: Event) => {
@@ -308,8 +329,8 @@ export function createSankey(
   }
 
   /**
-   * Trace the whole path through a set of seed nodes: everything upstream of
-   * them and everything downstream, links included.
+   * Trace the path through a set of seed nodes: everything upstream of the
+   * `up` seeds and everything downstream of the `down` seeds, links included.
    *
    * A sankey answers "where did this come from and where does it go", so
    * lighting only the direct neighbors stops the answer one hop short. Returns
@@ -317,7 +338,7 @@ export function createSankey(
    */
   function tracePath(
     layout: SankeyLayout,
-    seedIds: string[],
+    seeds: TraceSeeds,
   ): { nodes: Set<string>; links: Set<string> } {
     const out = new Map<string, typeof layout.links>();
     const inn = new Map<string, typeof layout.links>();
@@ -330,11 +351,12 @@ export function createSankey(
       else inn.set(link.targetId, [link]);
     }
 
-    const nodes = new Set<string>(seedIds);
-    const links = new Set<string>();
+    const nodes = new Set<string>([...seeds.up, ...seeds.down]);
+    const links = new Set<string>(seeds.links ?? []);
 
     const walk = (
       adjacency: Map<string, typeof layout.links>,
+      seedIds: string[],
       nextId: (l: SankeyLinkMark) => string,
     ) => {
       const queue = [...seedIds];
@@ -353,8 +375,8 @@ export function createSankey(
       }
     };
 
-    walk(out, (l) => l.targetId);
-    walk(inn, (l) => l.sourceId);
+    walk(out, seeds.down, (l) => l.targetId);
+    walk(inn, seeds.up, (l) => l.sourceId);
 
     return { nodes, links };
   }
@@ -363,8 +385,8 @@ export function createSankey(
    * Dim everything that is not on the traced path: off-path links go to a whisper,
    * off-path nodes and their labels to the shared hover dim.
    */
-  function highlightPath(svg: SVGSVGElement, seedIds: string[], layout: SankeyLayout): void {
-    const { nodes: onNodes, links: onLinks } = tracePath(layout, seedIds);
+  function highlightPath(svg: SVGSVGElement, seeds: TraceSeeds, layout: SankeyLayout): void {
+    const { nodes: onNodes, links: onLinks } = tracePath(layout, seeds);
 
     for (const el of svg.querySelectorAll('.oc-sankey-link')) {
       const path = el.querySelector('path');

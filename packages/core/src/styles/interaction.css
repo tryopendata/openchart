@@ -24,11 +24,13 @@
     stroke-width: 1;
   }
 
-  /* The fade is scoped to marks under an active hover, and switched off while
-   * the rAF transition driver owns opacity: an unscoped 140ms transition would
-   * smear every frame of an update tween. `.oc-animate` is excluded for the
-   * same reason during the entrance. */
-  .oc-chart:not(.oc-animate):not(.oc-transitioning) .oc-marks.oc-hover-active .oc-mark {
+  /* The fade is switched off while the rAF transition driver owns opacity: an
+   * unscoped 140ms transition would smear every frame of an update tween.
+   * `.oc-animate` is excluded for the same reason during the entrance.
+   *
+   * It is NOT scoped to `.oc-hover-active`: dropping the class on mouseleave
+   * would drop the transition with it, so the dim faded in and snapped back. */
+  .oc-chart:not(.oc-animate):not(.oc-transitioning) .oc-marks .oc-mark {
     transition: opacity var(--oc-hover-duration) ease-out;
   }
 

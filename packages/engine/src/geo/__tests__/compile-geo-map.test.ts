@@ -495,7 +495,7 @@ describe('compileGeoMap', () => {
     expect(warnings.some((w) => w.includes('identity'))).toBe(false);
   });
 
-  it('infers identity for a pre-projected topology and says so', () => {
+  it('infers identity for a pre-projected topology and says so in dev', () => {
     const PRE_PROJECTED = {
       type: 'Topology',
       objects: {
@@ -525,12 +525,31 @@ describe('compileGeoMap', () => {
           color: { field: 'value', type: 'quantitative' },
         },
       },
-      { ...DEFAULT_OPTIONS, onWarn: (w: string) => warnings.push(w) },
+      { ...DEFAULT_OPTIONS, dev: true, onWarn: (w: string) => warnings.push(w) },
     );
 
     expect(layout.features).toHaveLength(1);
     expect(layout.warnings.some((w) => w.code === 'PROJECTION_INFERRED')).toBe(true);
     expect(warnings.some((w) => w.includes('identity'))).toBe(true);
+
+    // Outside dev the inference is silent: identity is the only correct answer
+    // for a pre-projected atlas, so there is nothing for the author to fix.
+    const quiet: string[] = [];
+    const prod = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: PRE_PROJECTED },
+        data: [{ id: 'A', value: 10 }],
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      { ...DEFAULT_OPTIONS, onWarn: (w: string) => quiet.push(w) },
+    );
+    expect(prod.features).toHaveLength(1);
+    expect(prod.warnings.some((w) => w.code === 'PROJECTION_INFERRED')).toBe(false);
+    expect(quiet.some((w) => w.includes('identity'))).toBe(false);
   });
 
   it('emits warnings via onWarn callback', () => {

@@ -158,6 +158,7 @@ export function createTable(
         search: partial.search !== undefined ? partial.search : current.search,
         page: partial.page !== undefined ? partial.page : current.page,
       };
+      if (partial.sort !== undefined) sortTouched = true;
       options?.onStateChange?.(next);
     } else {
       // In uncontrolled mode, update internal state
@@ -183,8 +184,10 @@ export function createTable(
       darkMode,
       watermark: options?.watermark,
       // undefined = "no opinion, apply the spec default"; null = the user
-      // cycled sorting off and expects the original row order back.
-      sort: isControlled ? options?.externalState?.sort : resolveMountSort(),
+      // cycled sorting off and expects the original row order back. A
+      // controlled caller's natural initial `sort: null` means "no opinion"
+      // until the user has actually touched sorting.
+      sort: resolveEffectiveSort(state),
       search: state.search || undefined,
       page: state.page,
     };
@@ -192,10 +195,9 @@ export function createTable(
     return compileTable(currentSpec, compileOpts);
   }
 
-  /** Uncontrolled sort: the state once touched, otherwise defer to the spec. */
-  function resolveMountSort(): SortState | null | undefined {
-    if (internalState.sort) return internalState.sort;
-    return sortTouched ? null : undefined;
+  /** The sort once the user has touched it, otherwise defer to the spec. */
+  function resolveEffectiveSort(state: TableState): SortState | null | undefined {
+    return sortTouched ? state.sort : (state.sort ?? undefined);
   }
 
   function getContainerDimensions(): { width: number; height: number } {
@@ -492,7 +494,7 @@ export function createTable(
       height: 600,
       theme: options?.theme,
       darkMode,
-      sort: isControlled ? options?.externalState?.sort : resolveMountSort(),
+      sort: resolveEffectiveSort(state),
       search: state.search || undefined,
       // No page/pageSize: get all rows
     });
@@ -514,6 +516,10 @@ export function createTable(
     // In controlled mode compile() reads from options.externalState, so
     // updating internalState alone would be ignored. Push the new values onto
     // externalState (the source getState() reads) so the render reflects them.
+    // Any explicit sort -- including null -- is the caller taking a position on
+    // sorting, so from here on a null sort means "cleared", not "no opinion".
+    if (partial.sort !== undefined) sortTouched = true;
+
     if (isControlled && options?.externalState) {
       if (partial.sort !== undefined) options.externalState.sort = partial.sort;
       if (partial.search !== undefined) options.externalState.search = partial.search;

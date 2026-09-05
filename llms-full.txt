@@ -934,9 +934,9 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
 - [Chrome](#chrome) (title, subtitle, source, byline, footer)
-- [ThemeConfig](#themeconfig) (colors, fonts, spacing)
+- [ThemeConfig](#themeconfig) (colors, fonts, spacing, editorial rule)
 - [DarkMode](#darkmode) (auto, force, off)
-- [TableSpec](#tablespec) (data tables with visual features)
+- [TableSpec](#tablespec) (data tables: density, striping, sort, totals)
 - [ColumnConfig](#columnconfig) (column definitions and visual types)
 - [Event handlers](#event-handlers) (chart and table interaction callbacks)
 - [GraphSpec](#graphspec) (network/relationship visualizations)
@@ -1029,7 +1029,8 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `orient`       | `'horizontal' \| 'vertical'` | auto   | bar            | Explicit orientation override. |
 | `innerRadius`  | `number`                | `0`         | arc            | Inner radius. >0 produces a donut. |
 | `outerRadius`  | `number`                | auto        | arc            | Outer radius. |
-| `cornerRadius` | `number`                | `0`         | bar, arc       | Corner rounding in pixels. |
+| `cornerRadius` | `number \| 'pill'`      | `0`         | bar, arc       | Corner rounding in pixels. `'pill'` sets `rx` to half the bar thickness. |
+| `centerLabel`  | `string \| { text, subtitle? }` | `undefined` | arc    | Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful with an inner radius. |
 | `filled`       | `boolean`               | `true`      | all            | Whether the mark is filled vs stroked only. |
 | `opacity`      | `number`                | `1`         | all            | Overall mark opacity (0-1). |
 | `fill`         | `string \| GradientDef` | theme color | all            | Fill color or gradient. See [Gradients](#gradients). |
@@ -1042,8 +1043,9 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `colorByDirection` | `boolean`           | `false`     | range          | Color range marks by direction of change: increases use the theme `positive` color, decreases `negative`. A field-based `color` encoding takes precedence. |
 | `units`        | `number`                | `100`       | waffle         | Total cells in the grid. Categories normalize to this via largest-remainder rounding. |
 | `columns`      | `number`                | `10`        | waffle         | Columns per grid. Rows derive from `units / columns`. |
+| `other`        | `number \| { threshold, label? }` | `undefined` | waffle | Opt-in "Other" bucketing: categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default -- bucketing is an editorial decision. Same shape as `SankeySpec.other`. |
 | `weekStart`    | `'monday' \| 'sunday'`  | `'monday'`  | calendar       | Weekday on the top row of each year band. |
-| `cellRadius`   | `number`                | `1`         | calendar       | Corner radius in pixels for day cells. |
+| `cellRadius`   | `number`                | `2`         | calendar       | Corner radius in pixels for day cells. |
 | `shape`        | `'hemicycle'`           | `'hemicycle'` | parliament   | Seat layout shape (currently the only shape). |
 | `seatRadius`   | `number \| 'auto'`      | `'auto'`    | parliament     | Seat dot radius in pixels. `'auto'` sizes dots to fill the rings for the seat count. |
 | `majorityLine` | `boolean`               | `true`      | parliament     | Draw the majority-threshold line and its "N to win" label. |
@@ -1786,11 +1788,13 @@ All fields are optional. The engine deep-merges these onto `DEFAULT_THEME`. You 
 interface ThemeConfig {
   colors?: {
     categorical?: string[];
+    categoricalFill?: string[];
     sequential?: Record<string, string[]>;
     diverging?: Record<string, string[]>;
     background?: string;
     text?: string;
     gridline?: string;
+    hairline?: string;
     axis?: string;
   };
   fonts?: {
@@ -1801,6 +1805,7 @@ interface ThemeConfig {
     padding?: number;
     chromeGap?: number;
   };
+  rule?: { color: TokenValue; width: number; thickness: number };
   borderRadius?: number;
 }
 ```
@@ -1810,11 +1815,13 @@ interface ThemeConfig {
 | Field                | Type                       | Default                           | Description                                                       |
 | -------------------- | -------------------------- | --------------------------------- | ----------------------------------------------------------------- |
 | `colors.categorical` | `string[]`                 | 8-color palette                   | Categorical palette for nominal data. Array of CSS color strings. |
+| `colors.categoricalFill` | `string[]`             | copied from `categorical`         | Quieter palette used for area-filling marks (bar, area, arc, waffle, calendar, rect). Set it only to control fills and strokes independently; leaving it unset copies `categorical` so a custom palette never drifts between the two. |
 | `colors.sequential`  | `Record<string, string[]>` | `{ blue, green, orange, purple }` | Sequential palettes keyed by name.                                |
 | `colors.diverging`   | `Record<string, string[]>` | `{ redBlue, brownTeal }`          | Diverging palettes keyed by name.                                 |
 | `colors.background`  | `string`                   | `'#ffffff'`                       | Visualization background color.                                   |
 | `colors.text`        | `string`                   | `'#1d1d1d'`                       | Default text color.                                               |
 | `colors.gridline`    | `string`                   | `'#e8e8e8'`                       | Gridline color.                                                   |
+| `colors.hairline`    | `string`                   | `'rgba(0,0,0,0.14)'`              | Structural line color for axis lines and separators. Distinct from `gridline`, which is lighter. |
 | `colors.axis`        | `string`                   | `'#888888'`                       | Axis line and tick color.                                         |
 
 ### Font overrides
@@ -1830,6 +1837,26 @@ interface ThemeConfig {
 | ------------------- | -------- | ------- | ---------------------------------------- |
 | `spacing.padding`   | `number` | `12`    | Padding inside the chart container (px). |
 | `spacing.chromeGap` | `number` | `4`     | Gap between chrome elements (px).        |
+
+### The editorial rule
+
+`rule` draws a short colored bar above the chrome block — the Economist/FT
+masthead device. Omit it (the default on every preset but `broadsheet`) for no
+rule.
+
+```ts
+theme: {
+  rule: { color: { light: '#e3120b', dark: '#f4463f' }, width: 40, thickness: 3 },
+}
+```
+
+| Field            | Type         | Default     | Description                                                        |
+| ---------------- | ------------ | ----------- | ------------------------------------------------------------------ |
+| `rule.color`     | `TokenValue` | (required)  | Rule color. A `TokenValue` accepts a `{ light, dark }` pair, so it needs no dark-mode branch. |
+| `rule.width`     | `number`     | (required)  | Rule length in pixels.                                             |
+| `rule.thickness` | `number`     | (required)  | Rule height in pixels. `computeChrome` reserves `thickness + chromeGap` above the eyebrow/title. |
+
+No top chrome means no rule.
 
 ### Other
 
@@ -1910,7 +1937,11 @@ Input for data table visualizations. Source: `core/src/types/spec.ts`.
 | `search`            | `boolean`                         | `false`        | Enable client-side search/filter bar.                                             |
 | `pagination`        | `boolean \| { pageSize: number }` | `false`        | Enable pagination. `true` uses default page size. Object sets explicit page size. |
 | `stickyFirstColumn` | `boolean`                         | `false`        | Freeze the first column during horizontal scroll.                                 |
-| `compact`           | `boolean`                         | `false`        | Reduced padding and font sizes.                                                   |
+| `density`           | `'condensed' \| 'regular' \| 'relaxed'` | `'regular'` | Row height: condensed 40px, regular 48px, relaxed 56px. An explicit value always wins over the responsive auto-condense. |
+| `striped`           | `boolean`                         | `false`        | Zebra striping on body rows. Hairlines only by default.                           |
+| `sort`              | `SortState`                       | first inline-bar column, descending | Initial sort applied before the user touches a header. `{ column: string, direction: 'asc' \| 'desc' }`. |
+| `totalRow`          | `boolean \| { label?: string }`   | `false`        | Sticky footer summing every quantitative column over the filtered rows (the whole result set, not just the current page). `true` uses the label `'Total'`. |
+| `compact`           | `boolean`                         | `false`        | **Deprecated.** Alias for `density: 'condensed'`; still honored, with a warning.  |
 | `responsive`        | `boolean`                         | `true`         | Whether the table adapts to container width.                                      |
 | `watermark`         | `boolean`                         | `true`         | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. |
 
@@ -1925,16 +1956,19 @@ Configuration for a single table column. Source: `core/src/types/table.ts`.
 | `sortable` | `boolean`                       | `true`                                    | Whether this column is sortable.                                                       |
 | `align`    | `'left' \| 'center' \| 'right'` | `'right'` for numbers, `'left'` otherwise | Text alignment.                                                                        |
 | `width`    | `string`                        | auto-sized                                | CSS width like `'200px'` or `'20%'`.                                                   |
-| `format`   | `string`                        | none                                      | d3-format or d3-time-format string. e.g. `',.0f'` for numbers, `'%Y-%m-%d'` for dates. |
+| `format`   | `string`                        | none                                      | d3-format or d3-time-format string (e.g. `',.0f'`, `'%Y-%m-%d'`), or a semantic keyword: `'percent'`, `'currency'`, `'ordinal'`, `'compact'`. Tables show full precision by default; `'compact'` opts a column into the chart-surface abbreviation (1.2k, 3.4M). |
+| `type`     | `'quantitative' \| 'nominal' \| 'ordinal' \| 'temporal'` | inferred from the data     | Field type, Vega-Lite style. Drives alignment (quantitative right, everything else left) and which columns the total row sums. Number-valued keys that read as identifiers (`id`, `zip`, `postalCode`, `year`, `fips`, in either snake_case or camelCase) infer `nominal`. |
+| `priority` | `1 \| 2 \| 3`                   | `1` for the first column, `2` elsewhere   | Mobile priority for cards mode (below 400px): `1` renders first and spans the row, `2` renders as a label/value pair, `3` is hidden. |
 
 ### Column visual types
 
-Each column can have at most one visual feature. If multiple are set, precedence is: sparkline > bar > heatmap > image > flag > categoryColors.
+Each column can have at most one visual feature. If multiple are set, precedence is: sparkline > bar > delta > heatmap > image > flag > categoryColors.
 
 | Feature         | Config field     | Config type              | Description                                   |
 | --------------- | ---------------- | ------------------------ | --------------------------------------------- |
 | Heatmap         | `heatmap`        | `HeatmapColumnConfig`    | Color cell background based on numeric value. |
 | Inline bar      | `bar`            | `BarColumnConfig`        | Proportional bar in the cell.                 |
+| Delta chip      | `delta`          | `boolean \| DeltaColumnConfig` | Signed, colored change chip (up 2.4%). |
 | Sparkline       | `sparkline`      | `SparklineColumnConfig`  | Mini line/bar chart from array data.          |
 | Image           | `image`          | `ImageColumnConfig`      | Render cell value as an image.                |
 | Flag            | `flag`           | `boolean`                | Render cell value as a country flag.          |
@@ -1962,6 +1996,13 @@ Each column can have at most one visual feature. If multiple are set, precedence
 | `type`        | `'line' \| 'bar' \| 'column'` | `'line'`                | Sparkline chart type.                         |
 | `valuesField` | `string`                      | same column             | Field containing the array of values to plot. |
 | `color`       | `string`                      | first categorical color | Sparkline color.                              |
+| `domain`      | `'shared' \| 'row' \| [number, number]` | `'shared'`    | Value domain each row is normalized against. `'shared'` computes one extent across every row so heights are comparable down the column; `'row'` normalizes each row against its own min/max (maximises shape, loses comparability); a tuple sets an explicit extent. |
+
+#### DeltaColumnConfig
+
+| Field    | Type      | Default | Description                                                                                     |
+| -------- | --------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `invert` | `boolean` | `false` | Flip the color valence so negative values read as positive. Use for metrics where down is good (churn, latency, cost). |
 
 #### ImageColumnConfig
 
@@ -3179,6 +3220,7 @@ const spec = {
 **Mark options:**
 - `units` (default 100) -- total number of cells in the grid
 - `columns` (default 10) -- columns per grid; rows derive from `units / columns`
+- `other` (off by default) -- bucket categories below a share threshold into one trailing "Other" category: `other: 0.05` folds everything under 5%, or `other: { threshold: 0.05, label: "Rest" }` to rename it
 
 Set these on the mark object, e.g. `mark: { type: "waffle", units: 50, columns: 10 }`. A categorical `color` encoding accepts `highlight` to single out one category and mute the rest.
 
@@ -3907,6 +3949,11 @@ All features are opt-in via top-level `TableSpec` properties.
 | Compact mode | `compact: true` | `false` | **Deprecated.** Alias for `density: 'condensed'`; warns |
 | Responsive | `responsive: true` | `true` | Table adapts to container width |
 
+In controlled mode a `sort` of `null` means "the user cleared sorting" and
+`undefined` means "no opinion, apply the spec default" — so an initial
+controlled state of `{ sort: null }` still gets `spec.sort` until the user
+actually touches a header.
+
 ### Density and responsive behavior
 
 `density` is the authoritative setting: when you set it, no container width
@@ -4136,8 +4183,12 @@ mixing the theme's `text` color toward its `background`, not read from a
 fixed zinc ladder. A warm or cool custom theme gets warm or cool grays for
 free instead of zinc showing up uninvited beside the palette. The ramp lives
 on `ResolvedTheme.colors.neutral` (`100`/`200`/`300`/`400`/`600`/`800`, plus
-`secondary` = `800`, `faint` = `300`, `border` = `100`) and is computed once
-in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from it. When the
+`secondary` = `800`, `faint` = `300`, `border` = `100`, plus `surface`) and is
+computed once in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from
+it. `surface` is the opaque color the theme paints on — the background itself
+when it is opaque, otherwise the mode's `--oc-bg` token — and is the single
+source for knockout rings, stacked-segment seams, table cell fills, graph node
+rings and the stamped `--oc-bg`. When the
 background is transparent (the default) the ramp falls back to the static
 token defaults, which is why the default theme and the generated `tokens.css`
 never disagree.

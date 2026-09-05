@@ -86,6 +86,35 @@ describe('sparkline update feedback', () => {
     }
   });
 
+  it('keeps the pulse alive when a second update lands mid-pulse', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const container = createContainer();
+      const chart = createChart(container, sparkSpec([10, 20, 30]));
+
+      chart.update(sparkSpec([10, 20, 90]));
+      pumpRaf(0);
+      pumpRaf(2000);
+      expect(terminator(container)!.classList.contains('oc-pulse')).toBe(true);
+
+      // Second tick 400ms later, well inside the first pulse's 600ms window.
+      vi.advanceTimersByTime(400);
+      chart.update(sparkSpec([10, 20, 40]));
+      pumpRaf(0);
+      pumpRaf(2000);
+      expect(terminator(container)!.classList.contains('oc-pulse')).toBe(true);
+
+      // The first update's timer must not strip the second update's pulse.
+      vi.advanceTimersByTime(500); // t = 900
+      expect(terminator(container)!.classList.contains('oc-pulse')).toBe(true);
+
+      vi.advanceTimersByTime(200); // t = 1100, past the second pulse's window
+      expect(terminator(container)!.classList.contains('oc-pulse')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not move marks whose geometry is unchanged', () => {
     const container = createContainer();
     const chart = createChart(container, sparkSpec([10, 20, 30]));
