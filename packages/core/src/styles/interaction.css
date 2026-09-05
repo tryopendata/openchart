@@ -1,0 +1,71 @@
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Hover language
+   *
+   * One vocabulary for mark hover, legend hover and the crosshair. Emphasis is
+   * always a CLASS, never an inline style: a class beats the renderer's
+   * `opacity` attributes (suppressed points under endpoint markers keep their
+   * opacity="0") and loses to the transition driver's per-frame inline
+   * `style.opacity`, which is exactly the precedence a hover during a data
+   * update needs.
+   * --------------------------------------------------------------------------- */
+
+  .oc-marks.oc-hover-active .oc-mark--dim:not([opacity="0"]) {
+    opacity: var(--oc-hover-dim);
+  }
+
+  /* Single-series register: outline the hovered mark instead of dimming eleven
+   * others. Scoped per mark type -- an inherited stroke on a line or area group
+   * would repaint the series in the text color. */
+  .oc-marks.oc-hover-active .oc-mark-rect.oc-mark--hover > *,
+  .oc-marks.oc-hover-active .oc-mark-arc.oc-mark--hover > *,
+  .oc-marks.oc-hover-active circle.oc-mark-point.oc-mark--hover {
+    stroke: var(--oc-text);
+    stroke-width: 1;
+  }
+
+  /* The fade is scoped to marks under an active hover, and switched off while
+   * the rAF transition driver owns opacity: an unscoped 140ms transition would
+   * smear every frame of an update tween. `.oc-animate` is excluded for the
+   * same reason during the entrance. */
+  .oc-chart:not(.oc-animate):not(.oc-transitioning) .oc-marks.oc-hover-active .oc-mark {
+    transition: opacity var(--oc-hover-duration) ease-out;
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Legend hover-link
+   *
+   * The swatch dims; the label text stays at full contrast so the list is still
+   * readable while one series is raised.
+   * --------------------------------------------------------------------------- */
+
+  .oc-legend-entry--dim .oc-legend-swatch-line,
+  .oc-legend-entry--dim .oc-legend-swatch-rect,
+  .oc-legend-entry--dim > circle {
+    opacity: var(--oc-hover-dim);
+    transition: opacity var(--oc-hover-duration) ease-out;
+  }
+
+  .oc-legend-hit {
+    fill: transparent;
+  }
+
+  .oc-legend-entry:focus {
+    outline: none;
+  }
+
+  /* Focus ring on the 24px hit rect, drawn as a stroke: `outline` on an SVG
+   * group is inconsistent across browsers, a stroke is not. */
+  .oc-legend-entry:focus-visible .oc-legend-hit {
+    stroke: var(--oc-focus);
+    stroke-width: 2;
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Endpoint-label hover-link
+   * --------------------------------------------------------------------------- */
+
+  .oc-endpoint-label-entry {
+    cursor: default;
+  }
+}

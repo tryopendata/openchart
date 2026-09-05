@@ -208,6 +208,7 @@ export function computeScatterMarks(
       stroke: spec.markDef.stroke ?? defaultStroke,
       strokeWidth: spec.markDef.strokeWidth ?? POINT_STROKE_WIDTH,
       fillOpacity: spec.markDef.opacity ?? defaultFillOpacity,
+      ...(category ? { seriesKey: category } : {}),
       data: row as Record<string, unknown>,
       aria,
     });

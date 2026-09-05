@@ -541,11 +541,6 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       {
         "fields": [
           {
-            "color": "#51bccc",
-            "label": "name",
-            "value": "A",
-          },
-          {
             "label": "value",
             "value": "10",
           },
@@ -558,11 +553,6 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       {
         "fields": [
           {
-            "color": "#51bccc",
-            "label": "name",
-            "value": "B",
-          },
-          {
             "label": "value",
             "value": "25",
           },
@@ -574,11 +564,6 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "rect-2",
       {
         "fields": [
-          {
-            "color": "#51bccc",
-            "label": "name",
-            "value": "C",
-          },
           {
             "label": "value",
             "value": "40",
@@ -1151,10 +1136,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "label": "value",
                 "value": "10",
               },
-              {
-                "label": "date",
-                "value": "2020",
-              },
             ],
             "title": "2020",
           },
@@ -1178,10 +1159,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "color": undefined,
                 "label": "value",
                 "value": "40",
-              },
-              {
-                "label": "date",
-                "value": "2021",
               },
             ],
             "title": "2021",
@@ -1249,10 +1226,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "label": "value",
                 "value": "15",
               },
-              {
-                "label": "date",
-                "value": "2020",
-              },
             ],
             "title": "2020",
           },
@@ -1276,10 +1249,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "color": undefined,
                 "label": "value",
                 "value": "35",
-              },
-              {
-                "label": "date",
-                "value": "2021",
               },
             ],
             "title": "2021",
@@ -1347,10 +1316,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "label": "value",
                 "value": "8",
               },
-              {
-                "label": "date",
-                "value": "2020",
-              },
             ],
             "title": "2020",
           },
@@ -1374,10 +1339,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "color": undefined,
                 "label": "value",
                 "value": "22",
-              },
-              {
-                "label": "date",
-                "value": "2021",
               },
             ],
             "title": "2021",
@@ -1445,10 +1406,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "label": "value",
                 "value": "12",
               },
-              {
-                "label": "date",
-                "value": "2020",
-              },
             ],
             "title": "2020",
           },
@@ -1472,10 +1429,6 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
                 "color": undefined,
                 "label": "value",
                 "value": "28",
-              },
-              {
-                "label": "date",
-                "value": "2021",
               },
             ],
             "title": "2021",
@@ -2406,10 +2359,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
             "label": "score",
             "value": "30",
           },
-          {
-            "label": "category",
-            "value": "A",
-          },
         ],
         "title": "A",
       },
@@ -2422,10 +2371,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
             "color": "#0000ff",
             "label": "score",
             "value": "55",
-          },
-          {
-            "label": "category",
-            "value": "B",
           },
         ],
         "title": "B",
@@ -2440,10 +2385,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
             "label": "score",
             "value": "70",
           },
-          {
-            "label": "category",
-            "value": "C",
-          },
         ],
         "title": "C",
       },
@@ -2456,10 +2397,6 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
             "color": "#0000ff",
             "label": "score",
             "value": "45",
-          },
-          {
-            "label": "category",
-            "value": "D",
           },
         ],
         "title": "D",

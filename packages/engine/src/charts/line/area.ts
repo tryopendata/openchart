@@ -416,6 +416,8 @@ function computeStackedArea(
       stroke: resolveSeriesStroke(spec, color, theme),
       strokeWidth: 1,
       seriesKey,
+      stacked: true,
+      stackNormalized: stackProp === 'normalize',
       data: layer.map((d) => {
         const xStr = String(d.data.__x__);
         return (rowsByXSeries.get(`${xStr}::${seriesKey}`) ?? d.data) as Record<string, unknown>;

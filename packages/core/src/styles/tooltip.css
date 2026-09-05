@@ -21,7 +21,7 @@
     font-size: 12px;
     padding: 0;
     max-width: 280px;
-    min-width: 160px;
+    min-width: 140px;
     line-height: 1.4;
     animation: oc-tooltip-in 120ms ease-out;
     transition:
@@ -32,7 +32,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 12px 6px;
+      padding: 8px 10px 6px;
     }
 
     & .oc-tooltip-dot {
@@ -54,7 +54,7 @@
     }
 
     & .oc-tooltip-body {
-      padding: 6px 12px 10px;
+      padding: 6px 10px 8px;
       border-top: 1px solid var(--oc-tooltip-border);
     }
 
@@ -101,6 +101,33 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    /* The series the pointer is nearest to in a shared tooltip. */
+    & .oc-tooltip-row--emphasis .oc-tooltip-label {
+      color: var(--oc-tooltip-text);
+      font-weight: 600;
+    }
+
+    & .oc-tooltip-row--emphasis .oc-tooltip-value {
+      font-weight: 600;
+    }
+
+    /* Stack sum, set below a hairline so it reads as a summary of the rows
+     * above rather than one more series. */
+    & .oc-tooltip-row--total {
+      margin-top: 4px;
+      padding-top: 5px;
+      border-top: 1px solid var(--oc-tooltip-border);
+    }
+
+    & .oc-tooltip-row--total .oc-tooltip-label {
+      color: var(--oc-tooltip-text);
+      font-weight: 500;
+    }
+
+    & .oc-tooltip-row--total .oc-tooltip-value {
+      font-weight: 600;
     }
   }
 

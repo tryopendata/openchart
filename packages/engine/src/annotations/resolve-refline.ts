@@ -12,7 +12,8 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import { DARK_REFLINE_STROKE, DEFAULT_REFLINE_DASH, LIGHT_REFLINE_STROKE } from './constants';
-import { applyOffset } from './geometry';
+import { type AnnotationMeasureTextFn, applyOffset, heuristicMeasure } from './geometry';
+import { annotationBlockBounds } from './move';
 import { resolvePosition } from './position';
 import { makeAnnotationLabelStyle } from './resolve-text';
 
@@ -21,6 +22,7 @@ export function resolveRefLineAnnotation(
   scales: ResolvedScales,
   chartArea: Rect,
   isDark: boolean,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
   fontFamily?: string,
 ): ResolvedAnnotation | null {
   let start: Point;
@@ -144,7 +146,7 @@ export function resolveRefLineAnnotation(
 
   const defaultStroke = isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE;
 
-  return {
+  const resolved: ResolvedAnnotation = {
     type: 'refline',
     id: annotation.id,
     line: { start, end },
@@ -154,4 +156,14 @@ export function resolveRefLineAnnotation(
     strokeWidth: annotation.strokeWidth ?? 1,
     zIndex: annotation.zIndex,
   };
+
+  // Measure the label so it is a first-class citizen of the collision passes:
+  // without bounds a refline label is invisible to the obstacle nudge, to the
+  // greedy text pass, and to the auto-placement search, which is why callouts
+  // printed on top of "avg: 168K".
+  if (label) {
+    resolved.bounds = annotationBlockBounds(resolved, label, measure);
+  }
+
+  return resolved;
 }

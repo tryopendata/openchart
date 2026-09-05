@@ -124,12 +124,19 @@ function buildExplicitTooltipFields(
   }));
 }
 
-/** Build tooltip fields from a data row based on the spec encoding. */
+/**
+ * Build tooltip fields from a data row based on the spec encoding.
+ *
+ * `titleChannel` is the channel the header already shows; its row is dropped so
+ * a single-series line tooltip does not repeat the date under its own heading.
+ * An explicit `encoding.tooltip` is always rendered verbatim.
+ */
 function buildFields(
   row: DataRow,
   encoding: Encoding,
   formatters: Map<string, ChannelFormatter>,
   color?: string,
+  titleChannel?: TitleChannel,
 ): TooltipField[] {
   if (encoding.tooltip) {
     const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
@@ -137,9 +144,10 @@ function buildFields(
   }
 
   const fields: TooltipField[] = [];
+  const skipped: TooltipField[] = [];
 
   if (encoding.color && 'field' in encoding.color) {
-    fields.push({
+    (titleChannel === 'color' ? skipped : fields).push({
       label: resolveLabel(encoding.color),
       value: formatValue(
         row[encoding.color.field],
@@ -151,7 +159,7 @@ function buildFields(
   }
 
   if (encoding.y) {
-    fields.push({
+    (titleChannel === 'y' ? skipped : fields).push({
       label: resolveLabel(encoding.y),
       value: formatValue(
         row[encoding.y.field],
@@ -163,7 +171,7 @@ function buildFields(
   }
 
   if (encoding.x) {
-    fields.push({
+    (titleChannel === 'x' ? skipped : fields).push({
       label: resolveLabel(encoding.x),
       value: formatValue(
         row[encoding.x.field],
@@ -184,7 +192,9 @@ function buildFields(
     });
   }
 
-  return fields;
+  // Never hand back an empty card: if the title consumed the only channel
+  // there was, show the row after all.
+  return fields.length > 0 ? fields : skipped;
 }
 
 /**
@@ -206,30 +216,41 @@ function computeEncodedFieldsSet(encoding: Encoding): Set<string> | undefined {
   return encodedFields;
 }
 
+/** Which encoding channel a tooltip title was taken from, if any. */
+type TitleChannel = 'x' | 'y' | 'color';
+
+interface TooltipTitle {
+  title?: string;
+  /** Set when the title is the whole of a positional/color channel's value, so
+   *  the field list can skip it instead of repeating it one line down. */
+  channel?: TitleChannel;
+}
+
 /** Determine the title for a tooltip based on encoding. */
 function getTooltipTitle(
   row: DataRow,
   encoding: Encoding,
   encodedFields?: Set<string>,
-): string | undefined {
-  // Detail channel provides an explicit label (e.g. district name in scatter)
+): TooltipTitle {
+  // Detail channel provides an explicit label (e.g. district name in scatter).
+  // Detail is never rendered as a field row, so nothing is consumed.
   if (encoding.detail) {
-    return String(row[encoding.detail.field] ?? '');
+    return { title: String(row[encoding.detail.field] ?? '') };
   }
 
   // For charts with a temporal x-axis, use the date as the title
   if (encoding.x?.type === 'temporal') {
-    return formatValue(row[encoding.x.field], 'temporal');
+    return { title: formatValue(row[encoding.x.field], 'temporal'), channel: 'x' };
   }
 
   // For nominal x, use the category
   if (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') {
-    return String(row[encoding.x.field] ?? '');
+    return { title: String(row[encoding.x.field] ?? ''), channel: 'x' };
   }
 
   // For nominal y (e.g. horizontal bar charts), use the category
   if (encoding.y?.type === 'nominal' || encoding.y?.type === 'ordinal') {
-    return String(row[encoding.y.field] ?? '');
+    return { title: String(row[encoding.y.field] ?? ''), channel: 'y' };
   }
 
   // For scatter/bubble (both axes quantitative), find a name-like string field
@@ -239,17 +260,17 @@ function getTooltipTitle(
     for (const key of Object.keys(row)) {
       const value = row[key];
       if (!fields.has(key) && typeof value === 'string') {
-        return value;
+        return { title: value };
       }
     }
   }
 
   // For color-encoded series, use the series name (skip conditional defs)
   if (encoding.color && 'field' in encoding.color) {
-    return String(row[encoding.color.field] ?? '');
+    return { title: String(row[encoding.color.field] ?? ''), channel: 'color' };
   }
 
-  return undefined;
+  return {};
 }
 
 // ---------------------------------------------------------------------------
@@ -262,13 +283,21 @@ function tooltipsForLine(
   formatters: Map<string, ChannelFormatter>,
   _markIndex: number,
   encodedFields?: Set<string>,
+  stackTotals?: Map<string, TooltipField>,
 ): Array<[string, TooltipContent]> {
   if (mark.dataPoints) {
     for (const dp of mark.dataPoints) {
-      dp.tooltip = {
-        title: getTooltipTitle(dp.datum, encoding, encodedFields),
-        fields: buildFields(dp.datum, encoding, formatters, mark.stroke),
-      };
+      const { title, channel } = getTooltipTitle(dp.datum, encoding, encodedFields);
+      const fields = buildFields(dp.datum, encoding, formatters, mark.stroke, channel);
+      // A stacked area chart also emits a derived line mark per band, and the
+      // crosshair reads the line's tooltip in preference to the area's. The
+      // totals map only exists for a non-normalized stack, so this is inert on
+      // a plain line chart.
+      if (stackTotals && encoding.x) {
+        const total = stackTotals.get(stackKeyOf(dp.datum[encoding.x.field]));
+        if (total) fields.push(total);
+      }
+      dp.tooltip = { title, fields };
     }
   }
   return [];
@@ -281,8 +310,14 @@ function tooltipsForPoint(
   markIndex: number,
   encodedFields?: Set<string>,
 ): Array<[string, TooltipContent]> {
-  const title = getTooltipTitle(mark.data, encoding, encodedFields);
-  const fields = buildFields(mark.data, encoding, formatters, getRepresentativeColor(mark.fill));
+  const { title, channel } = getTooltipTitle(mark.data, encoding, encodedFields);
+  const fields = buildFields(
+    mark.data,
+    encoding,
+    formatters,
+    getRepresentativeColor(mark.fill),
+    channel,
+  );
 
   return [[`point-${markIndex}`, { title, fields }]];
 }
@@ -293,9 +328,19 @@ function tooltipsForRect(
   formatters: Map<string, ChannelFormatter>,
   markIndex: number,
   encodedFields?: Set<string>,
+  stackTotals?: Map<string, TooltipField>,
 ): Array<[string, TooltipContent]> {
-  const title = getTooltipTitle(mark.data, encoding, encodedFields);
-  const fields = buildFields(mark.data, encoding, formatters, getRepresentativeColor(mark.fill));
+  const { title, channel } = getTooltipTitle(mark.data, encoding, encodedFields);
+  const fields = buildFields(
+    mark.data,
+    encoding,
+    formatters,
+    getRepresentativeColor(mark.fill),
+    channel,
+  );
+
+  const total = mark.stackGroup !== undefined ? stackTotals?.get(mark.stackGroup) : undefined;
+  if (total) fields.push(total);
 
   return [[`rect-${markIndex}`, { title, fields }]];
 }
@@ -346,16 +391,121 @@ function tooltipsForArea(
   formatters: Map<string, ChannelFormatter>,
   _markIndex: number,
   encodedFields?: Set<string>,
+  stackTotals?: Map<string, TooltipField>,
 ): Array<[string, TooltipContent]> {
   if (mark.dataPoints) {
+    const wantsTotal = mark.stacked === true && mark.stackNormalized !== true;
     for (const dp of mark.dataPoints) {
-      dp.tooltip = {
-        title: getTooltipTitle(dp.datum, encoding, encodedFields),
-        fields: buildFields(dp.datum, encoding, formatters, getRepresentativeColor(mark.fill)),
-      };
+      const { title, channel } = getTooltipTitle(dp.datum, encoding, encodedFields);
+      const fields = buildFields(
+        dp.datum,
+        encoding,
+        formatters,
+        getRepresentativeColor(mark.fill),
+        channel,
+      );
+      if (wantsTotal && encoding.x) {
+        const total = stackTotals?.get(stackKeyOf(dp.datum[encoding.x.field]));
+        if (total) fields.push(total);
+      }
+      dp.tooltip = { title, fields };
     }
   }
   return [];
+}
+
+// ---------------------------------------------------------------------------
+// Stack totals
+// ---------------------------------------------------------------------------
+
+/** Label on the stack-sum row. */
+const TOTAL_LABEL = 'Total';
+
+/** Stable map key for an x value (Dates are not usable as object keys). */
+function stackKeyOf(value: unknown): string {
+  return value instanceof Date ? String(value.getTime()) : String(value);
+}
+
+/** The quantitative channel of a bar/column encoding, which is what stacks. */
+function stackValueChannel(encoding: Encoding): EncodingChannel | undefined {
+  if (encoding.y?.type === 'quantitative') return encoding.y;
+  if (encoding.x?.type === 'quantitative') return encoding.x;
+  return undefined;
+}
+
+/** True when the stack is normalized to 100%, where a sum row means nothing. */
+function isNormalizedStack(encoding: Encoding): boolean {
+  return encoding.y?.stack === 'normalize' || encoding.x?.stack === 'normalize';
+}
+
+/**
+ * Sum each stacked bar/column group so every segment's tooltip can end with the
+ * whole bar's value -- the number the reader is actually comparing across
+ * categories, which a stack otherwise hides.
+ */
+function computeRectStackTotals(
+  marks: Mark[],
+  encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
+): Map<string, TooltipField> | undefined {
+  if (isNormalizedStack(encoding)) return undefined;
+  const valueCh = stackValueChannel(encoding);
+  if (!valueCh) return undefined;
+
+  const sums = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.type !== 'rect' || mark.stackGroup === undefined) continue;
+    const value = Number((mark.data as DataRow)[valueCh.field]);
+    if (!Number.isFinite(value)) continue;
+    sums.set(mark.stackGroup, (sums.get(mark.stackGroup) ?? 0) + value);
+  }
+  if (sums.size === 0) return undefined;
+
+  const formatter = getFormatter(formatters, valueCh);
+  const totals = new Map<string, TooltipField>();
+  for (const [group, sum] of sums) {
+    totals.set(group, {
+      label: TOTAL_LABEL,
+      value: formatValue(sum, valueCh.type, formatter),
+      role: 'total',
+    });
+  }
+  return totals;
+}
+
+/** The same, per x position, for stacked area bands. */
+function computeAreaStackTotals(
+  marks: Mark[],
+  encoding: Encoding,
+  formatters: Map<string, ChannelFormatter>,
+): Map<string, TooltipField> | undefined {
+  const xCh = encoding.x;
+  const yCh = encoding.y;
+  if (!xCh || !yCh) return undefined;
+
+  const sums = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.type !== 'area') continue;
+    if (mark.stacked !== true || mark.stackNormalized === true) continue;
+    for (const dp of mark.dataPoints ?? []) {
+      const value = Number(dp.datum[yCh.field]);
+      if (!Number.isFinite(value)) continue;
+      const key = stackKeyOf(dp.datum[xCh.field]);
+      sums.set(key, (sums.get(key) ?? 0) + value);
+    }
+  }
+  if (sums.size === 0) return undefined;
+
+  const formatter = getFormatter(formatters, yCh);
+  const totals = new Map<string, TooltipField>();
+  for (const [key, sum] of sums) {
+    totals.set(key, {
+      label: TOTAL_LABEL,
+      value: formatValue(sum, yCh.type, formatter),
+      role: 'total',
+    });
+  }
+  return totals;
 }
 
 // ---------------------------------------------------------------------------
@@ -389,7 +539,7 @@ function computeRangeTooltips(
   const encodedFields = computeEncodedFieldsSet(encoding);
 
   const contentFor = (row: DataRow): TooltipContent => {
-    const title = getTooltipTitle(row, encoding, encodedFields);
+    const { title } = getTooltipTitle(row, encoding, encodedFields);
     if (encoding.tooltip) {
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
       return { title, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
@@ -695,6 +845,8 @@ export function computeTooltipDescriptors(
   ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
   const formatters = buildFormatterCache(spec.data, allChannels);
   const encodedFields = computeEncodedFieldsSet(encoding);
+  const rectStackTotals = computeRectStackTotals(marks, encoding, formatters);
+  const areaStackTotals = computeAreaStackTotals(marks, encoding, formatters);
 
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i];
@@ -702,16 +854,16 @@ export function computeTooltipDescriptors(
 
     switch (mark.type) {
       case 'line':
-        entries = tooltipsForLine(mark, encoding, formatters, i, encodedFields);
+        entries = tooltipsForLine(mark, encoding, formatters, i, encodedFields, areaStackTotals);
         break;
       case 'area':
-        entries = tooltipsForArea(mark, encoding, formatters, i, encodedFields);
+        entries = tooltipsForArea(mark, encoding, formatters, i, encodedFields, areaStackTotals);
         break;
       case 'point':
         entries = tooltipsForPoint(mark, encoding, formatters, i, encodedFields);
         break;
       case 'rect':
-        entries = tooltipsForRect(mark, encoding, formatters, i, encodedFields);
+        entries = tooltipsForRect(mark, encoding, formatters, i, encodedFields, rectStackTotals);
         break;
       case 'arc':
         entries = tooltipsForArc(mark, encoding, formatters, i);

@@ -326,6 +326,10 @@ export interface AreaMark {
   strokeWidth?: number;
   /** Series identifier. */
   seriesKey?: string;
+  /** True when this band is one layer of a stacked area. */
+  stacked?: boolean;
+  /** True when the stack is normalized (100%), where a total row is meaningless. */
+  stackNormalized?: boolean;
   /** Original data rows. */
   data: Record<string, unknown>[];
   /**
@@ -379,6 +383,12 @@ export interface RectMark {
    * between stacked segments stay square and visually contiguous.
    */
   cornerRadiusSides?: { tl?: boolean; tr?: boolean; br?: boolean; bl?: boolean };
+  /**
+   * Series identifier: the color-encoding value for this mark. Set only when a
+   * color field groups the marks, so a single-series bar chart stays
+   * single-series for hover emphasis and legend matching.
+   */
+  seriesKey?: string;
   /** Original data row. */
   data: Record<string, unknown>;
   /** Resolved label. */
@@ -425,6 +435,8 @@ export interface ArcMark {
   stroke: string;
   /** Stroke width. */
   strokeWidth: number;
+  /** Series identifier: the slice's category name. */
+  seriesKey?: string;
   /** Original data row. */
   data: Record<string, unknown>;
   /** Resolved label. */
@@ -459,6 +471,11 @@ export interface PointMark {
   strokeWidth: number;
   /** Fill opacity. */
   fillOpacity?: number;
+  /**
+   * Series identifier: the color-encoding value for this mark. Set only when a
+   * categorical color field groups the points.
+   */
+  seriesKey?: string;
   /** Original data row. */
   data: Record<string, unknown>;
   /** Resolved label. */
@@ -996,6 +1013,13 @@ export interface TooltipField {
   value: string;
   /** Optional color swatch for series identification. */
   color?: string;
+  /**
+   * Marks the row the pointer is nearest to in a shared (crosshair) tooltip.
+   * Rendered at full text contrast in semibold.
+   */
+  emphasis?: boolean;
+  /** Semantic role. `'total'` is the stack sum row, rendered below a hairline. */
+  role?: 'total';
 }
 
 /** Tooltip content descriptor for a data point. */

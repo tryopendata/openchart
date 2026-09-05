@@ -98,7 +98,10 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
 
     const content = input;
     // Fast content identity check: title + field count + first/last field values
-    const contentKey = `${content.title}|${content.fields.length}|${content.fields[0]?.value}|${content.fields[content.fields.length - 1]?.value}`;
+    // Includes the emphasized row: moving the pointer between series at the
+    // same x changes only which row is bold, and the fast path would skip it.
+    const emphasisIndex = content.fields.findIndex((f) => f.emphasis);
+    const contentKey = `${content.title}|${content.fields.length}|${content.fields[0]?.value}|${content.fields[content.fields.length - 1]?.value}|${emphasisIndex}`;
 
     if (contentKey !== lastContentKey) {
       lastContentKey = contentKey;
@@ -107,7 +110,7 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
 
       // Multi-series tooltips put a swatch on each row instead of in the
       // header, so detect that case once.
-      const colorRowCount = content.fields.filter((f) => f.color).length;
+      const colorRowCount = content.fields.filter((f) => f.color && f.role !== 'total').length;
       const perRowSwatches = colorRowCount > 1;
 
       // Title row: header dot only when there's a single color (single-series)
@@ -125,7 +128,10 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
       if (content.fields.length > 0) {
         html += '<div class="oc-tooltip-body">';
         for (const field of content.fields) {
-          html += '<div class="oc-tooltip-row">';
+          let rowClass = 'oc-tooltip-row';
+          if (field.emphasis) rowClass += ' oc-tooltip-row--emphasis';
+          if (field.role === 'total') rowClass += ' oc-tooltip-row--total';
+          html += `<div class="${rowClass}">`;
           html += '<span class="oc-tooltip-label">';
           if (perRowSwatches && field.color) {
             html += `<span class="oc-tooltip-row-swatch" style="background:${esc(field.color)}"></span>`;

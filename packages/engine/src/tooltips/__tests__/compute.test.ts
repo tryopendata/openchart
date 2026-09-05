@@ -376,11 +376,11 @@ describe('computeTooltipDescriptors', () => {
       const descriptors = computeTooltipDescriptors(spec, rectMarks);
       const content = descriptors.get('rect-0')!;
 
-      // Default: y field first, then x field
-      expect(content.fields.length).toBeGreaterThanOrEqual(1);
+      // The nominal y channel is the title, so its row is dropped: a bar
+      // tooltip reading "A / category A / value 100" says the category twice.
+      expect(content.title).toBe('A');
       const labels = content.fields.map((f) => f.label);
-      expect(labels).toContain('value');
-      expect(labels).toContain('category');
+      expect(labels).toEqual(['value']);
     });
   });
 
@@ -535,9 +535,9 @@ describe('computeTooltipDescriptors', () => {
       const descriptors = computeTooltipDescriptors(spec, rectMarks);
       const content = descriptors.get('rect-0')!;
 
-      const productField = content.fields.find((f) => f.label === 'Product');
-      expect(productField).toBeDefined();
-      expect(productField!.value).toBe('A');
+      // 'Product' is the title channel, so it is not repeated as a row.
+      expect(content.title).toBe('A');
+      expect(content.fields.find((f) => f.label === 'Product')).toBeUndefined();
 
       const salesField = content.fields.find((f) => f.label === 'Sales');
       expect(salesField).toBeDefined();
@@ -569,6 +569,80 @@ describe('computeTooltipDescriptors', () => {
       const content = descriptors.get('rect-0')!;
 
       expect(content.fields[0].label).toBe('Axis Label');
+    });
+  });
+
+  describe('stacked totals', () => {
+    function makeStackedColumnSpec(stack: 'zero' | 'normalize'): NormalizedChartSpec {
+      return {
+        markType: 'bar',
+        markDef: { type: 'bar' },
+        data: [
+          { month: 'Jan', value: 30, series: 'A' },
+          { month: 'Jan', value: 20, series: 'B' },
+        ],
+        encoding: {
+          x: { field: 'month', type: 'nominal' },
+          y: { field: 'value', type: 'quantitative', stack },
+          color: { field: 'series', type: 'nominal' },
+        },
+        chrome: {},
+        annotations: [],
+        responsive: true,
+        theme: {},
+        darkMode: 'off',
+        labels: { density: 'auto', format: '' },
+      };
+    }
+
+    function stackedRects(): RectMark[] {
+      return [
+        {
+          type: 'rect',
+          x: 10,
+          y: 100,
+          width: 40,
+          height: 60,
+          fill: '#111111',
+          data: { month: 'Jan', value: 30, series: 'A' },
+          aria: { label: 'a' },
+          stackGroup: 'Jan',
+          seriesKey: 'A',
+        },
+        {
+          type: 'rect',
+          x: 10,
+          y: 40,
+          width: 40,
+          height: 40,
+          fill: '#222222',
+          data: { month: 'Jan', value: 20, series: 'B' },
+          aria: { label: 'b' },
+          stackGroup: 'Jan',
+          seriesKey: 'B',
+        },
+      ];
+    }
+
+    it('ends every segment tooltip with the whole bar', () => {
+      const descriptors = computeTooltipDescriptors(makeStackedColumnSpec('zero'), stackedRects());
+
+      for (const key of ['rect-0', 'rect-1']) {
+        const fields = descriptors.get(key)!.fields;
+        const total = fields[fields.length - 1];
+        expect(total.role).toBe('total');
+        expect(total.label).toBe('Total');
+        expect(total.value).toBe('50');
+      }
+    });
+
+    it('skips the total on a normalized stack', () => {
+      const descriptors = computeTooltipDescriptors(
+        makeStackedColumnSpec('normalize'),
+        stackedRects(),
+      );
+      const fields = descriptors.get('rect-0')!.fields;
+      expect(fields.some((f) => f.role === 'total')).toBe(false);
     });
   });
 

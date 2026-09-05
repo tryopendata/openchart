@@ -1,5 +1,6 @@
 import type { TooltipContent } from '@opendata-ai/openchart-core';
 import type { TooltipManager } from '../tooltip';
+import type { HoverEmphasis } from './hover-emphasis';
 
 /**
  * Wire tooltip events on mark elements inside an SVG.
@@ -9,6 +10,7 @@ export function wireTooltipEvents(
   svg: SVGElement,
   tooltipDescriptors: Map<string, TooltipContent>,
   tooltipManager: TooltipManager,
+  emphasis?: HoverEmphasis,
 ): () => void {
   const markElements = svg.querySelectorAll('[data-mark-id]');
   const cleanups: Array<() => void> = [];
@@ -26,6 +28,7 @@ export function wireTooltipEvents(
       const x = mouseEvent.clientX - svgRect.left;
       const y = mouseEvent.clientY - svgRect.top;
       tooltipManager.show(content, x, y);
+      emphasis?.setMark(el);
     };
 
     const handleMouseMove = (e: Event) => {
@@ -38,6 +41,7 @@ export function wireTooltipEvents(
 
     const handleMouseLeave = () => {
       tooltipManager.hide();
+      emphasis?.clear();
     };
 
     const handleTouchStart = (e: Event) => {
@@ -48,6 +52,7 @@ export function wireTooltipEvents(
         const x = touch.clientX - svgRect.left;
         const y = touch.clientY - svgRect.top;
         tooltipManager.show(content, x, y);
+        emphasis?.setMark(el);
       }
     };
 

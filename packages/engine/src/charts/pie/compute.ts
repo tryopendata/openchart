@@ -341,6 +341,7 @@ export function computePieMarks(
       fill: color,
       stroke: sliceStroke,
       strokeWidth: SLICE_STROKE_WIDTH,
+      seriesKey: slice.label,
       data: slice.originalRow as Record<string, unknown>,
       aria,
     });

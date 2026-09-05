@@ -1,6 +1,7 @@
-import type { ChartLayout, TooltipContent } from '@opendata-ai/openchart-core';
+import type { ChartLayout, TooltipContent, TooltipField } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { TooltipManager } from '../tooltip';
+import type { HoverEmphasis } from './hover-emphasis';
 
 interface SeriesPoint {
   x: number;
@@ -13,6 +14,32 @@ interface SeriesGroup {
   seriesKey: string;
   color: string;
   pointsByX: Map<number, SeriesPoint>;
+}
+
+/**
+ * Vertical distance from a series' point at which the pointer counts as being
+ * "on" that series. Beyond it the crosshair and tooltip still track, but no
+ * series is raised: without the threshold every crossing of the plot would
+ * re-dim the whole chart on the way past.
+ */
+const EMPHASIS_PROXIMITY_PX = 18;
+
+/** Snap dot radius. */
+const SNAP_DOT_RADIUS = 4.5;
+
+export interface CrosshairController {
+  /** Remove all listeners. */
+  cleanup(): void;
+  /** Number of snap positions along x. */
+  readonly snapCount: number;
+  /** Show the slice at a snap index (wraps). Used by keyboard nav. */
+  stepTo(index: number): void;
+  /** Cycle the emphasized series at the current x by `delta` (wraps). */
+  cycleSeries(delta: number): void;
+  /** Re-show the current slice. */
+  showCurrent(): void;
+  /** Hide crosshair, dots, tooltip and emphasis. */
+  hide(): void;
 }
 
 function snapKey(x: number): number {
@@ -71,41 +98,52 @@ function findNearestX(sortedXs: number[], x: number): number | null {
 
 function buildSliceTooltip(
   hits: Array<{ group: SeriesGroup; point: SeriesPoint }>,
+  emphasisKey: string | null,
 ): TooltipContent | null {
   if (hits.length === 0) return null;
 
   const title = hits[0].point.tooltip?.title;
-  const fields: Array<{ label: string; value: string; color?: string }> = [];
+  const fields: TooltipField[] = [];
 
   const isMulti = hits.length > 1;
+  // The stack total is precomputed per x by the engine and carried on every
+  // layer's row; take the first one and append it once, below the series rows.
+  let total: TooltipField | undefined;
+
   for (const { group, point } of hits) {
     const tip = point.tooltip;
     if (!tip) continue;
+    if (!total) total = tip.fields.find((f) => f.role === 'total');
     if (isMulti) {
       // Find the primary value field for this series. Skip fields that are
-      // series indicators (have color), match the tooltip title by label or
-      // value (the x-axis field), or match the series key by value (the
-      // color-encoding field in explicit tooltip channels).
+      // series indicators (have color), the stack total, or match the tooltip
+      // title by label or value (the x-axis field), or match the series key by
+      // value (the color-encoding field in explicit tooltip channels).
+      const candidates = tip.fields.filter((f) => f.role !== 'total');
       const yField =
-        tip.fields.find(
+        candidates.find(
           (f) => !f.color && f.label !== title && f.value !== title && f.value !== group.seriesKey,
         ) ??
-        tip.fields[tip.fields.length - 1] ??
+        candidates[candidates.length - 1] ??
         null;
       if (!yField) continue;
       fields.push({
         label: group.seriesKey,
         value: yField.value,
         color: group.color,
+        ...(emphasisKey === group.seriesKey ? { emphasis: true } : {}),
       });
     } else {
       for (const f of tip.fields) {
+        if (f.role === 'total') continue;
         fields.push({ ...f, color: f.color ?? group.color });
       }
     }
   }
 
   if (fields.length === 0) return null;
+  // A total only reads as a total when there is more than one row to add up.
+  if (total && isMulti) fields.push(total);
   return { title, fields };
 }
 
@@ -114,20 +152,24 @@ function buildSliceTooltip(
  * On mousemove over the chart area we find the nearest x in the union of all
  * series, render one snap dot per series at that x, and show one merged
  * tooltip listing every series' value.
+ *
+ * Returns a controller so keyboard navigation can drive the same crosshair,
+ * or `null` when the chart has no snap overlay (bars, pies, scatter).
  */
 export function wireVoronoiTooltipEvents(
   svg: SVGElement,
   layout: ChartLayout,
   tooltipManager: TooltipManager,
-): () => void {
+  emphasis?: HoverEmphasis,
+): CrosshairController | null {
   const overlay = svg.querySelector('[data-voronoi-overlay]');
-  if (!overlay) return () => {};
+  if (!overlay) return null;
 
   const groups = collectSeriesGroups(layout);
-  if (groups.length === 0) return () => {};
+  if (groups.length === 0) return null;
 
   const snapXs = collectSnapXs(groups);
-  if (snapXs.length === 0) return () => {};
+  if (snapXs.length === 0) return null;
 
   const crosshair = svg.querySelector('[data-crosshair]') as SVGLineElement | null;
   const dotsLayer = svg.querySelector('[data-snap-dots]') as SVGGElement | null;
@@ -137,7 +179,7 @@ export function wireVoronoiTooltipEvents(
     while (dotsLayer.firstChild) dotsLayer.removeChild(dotsLayer.firstChild);
     for (const group of groups) {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      circle.setAttribute('r', '4');
+      circle.setAttribute('r', String(SNAP_DOT_RADIUS));
       circle.setAttribute('fill', layout.theme.colors.background);
       circle.setAttribute('stroke', group.color);
       circle.setAttribute('stroke-width', '2');
@@ -148,10 +190,25 @@ export function wireVoronoiTooltipEvents(
     }
   }
 
-  const positionAt = (svgX: number, _svgY: number, viewBoxToContainer: number): boolean => {
-    const snappedX = findNearestX(snapXs, svgX);
-    if (snappedX === null) return false;
+  // Current snapped x index and the series raised at it, shared by pointer and
+  // keyboard so ArrowUp/Down picks up where the pointer left off.
+  let currentIndex = -1;
+  let currentEmphasis: string | null = null;
 
+  function containerScale(): number {
+    const svgEl = svg as unknown as SVGSVGElement;
+    const rect = svgEl.getBoundingClientRect();
+    const viewBox = svgEl.viewBox?.baseVal;
+    const scaleX = viewBox?.width && rect.width ? viewBox.width / rect.width : 1;
+    return scaleX > 0 ? 1 / scaleX : 1;
+  }
+
+  /** Draw crosshair, dots and tooltip for one snapped x. */
+  function showAt(
+    snappedX: number,
+    emphasisKey: string | null,
+    viewBoxToContainer: number,
+  ): boolean {
     const hits: Array<{ group: SeriesGroup; point: SeriesPoint }> = [];
     let anchorY = 0;
     let anchorCount = 0;
@@ -179,7 +236,11 @@ export function wireVoronoiTooltipEvents(
       crosshair.style.display = '';
     }
 
-    const tooltip = buildSliceTooltip(hits);
+    currentEmphasis = emphasisKey;
+    if (emphasisKey) emphasis?.setSeries(emphasisKey);
+    else emphasis?.clear();
+
+    const tooltip = buildSliceTooltip(hits, emphasisKey);
     if (!tooltip) return false;
 
     const containerAnchorX = snappedX * viewBoxToContainer;
@@ -188,6 +249,38 @@ export function wireVoronoiTooltipEvents(
       placement: 'right',
     });
     return true;
+  }
+
+  /** Series keys present at a snapped x, in draw order. */
+  function keysAt(snappedX: number): string[] {
+    const keys: string[] = [];
+    for (const group of groups) {
+      if (group.pointsByX.has(snappedX)) keys.push(group.seriesKey);
+    }
+    return keys;
+  }
+
+  const positionAt = (svgX: number, svgY: number, viewBoxToContainer: number): boolean => {
+    const snappedX = findNearestX(snapXs, svgX);
+    if (snappedX === null) return false;
+    currentIndex = snapXs.indexOf(snappedX);
+
+    // Raise the series the pointer is actually near. Past the threshold the
+    // slice still shows, with nothing dimmed.
+    let nearestKey: string | null = null;
+    let nearestDy = Number.POSITIVE_INFINITY;
+    for (const group of groups) {
+      const point = group.pointsByX.get(snappedX);
+      if (!point) continue;
+      const dy = Math.abs(point.y - svgY);
+      if (dy < nearestDy) {
+        nearestDy = dy;
+        nearestKey = group.seriesKey;
+      }
+    }
+    const emphasisKey = nearestDy <= EMPHASIS_PROXIMITY_PX ? nearestKey : null;
+
+    return showAt(snappedX, emphasisKey, viewBoxToContainer);
   };
 
   const toSvgCoords = (clientX: number, clientY: number) => {
@@ -212,6 +305,8 @@ export function wireVoronoiTooltipEvents(
     if (crosshair) crosshair.style.display = 'none';
     for (const dot of dots) dot.style.display = 'none';
     tooltipManager.hide();
+    currentEmphasis = null;
+    emphasis?.clear();
   };
 
   const handleTouch = (e: Event) => {
@@ -229,11 +324,42 @@ export function wireVoronoiTooltipEvents(
   overlay.addEventListener('touchmove', handleTouch, { passive: false });
   overlay.addEventListener('touchend', hideAll);
 
-  return () => {
-    overlay.removeEventListener('mousemove', handleMouseMove);
-    overlay.removeEventListener('mouseleave', hideAll);
-    overlay.removeEventListener('touchstart', handleTouch);
-    overlay.removeEventListener('touchmove', handleTouch);
-    overlay.removeEventListener('touchend', hideAll);
+  return {
+    cleanup() {
+      overlay.removeEventListener('mousemove', handleMouseMove);
+      overlay.removeEventListener('mouseleave', hideAll);
+      overlay.removeEventListener('touchstart', handleTouch);
+      overlay.removeEventListener('touchmove', handleTouch);
+      overlay.removeEventListener('touchend', hideAll);
+    },
+    get snapCount() {
+      return snapXs.length;
+    },
+    stepTo(index: number) {
+      if (snapXs.length === 0) return;
+      const wrapped = ((index % snapXs.length) + snapXs.length) % snapXs.length;
+      currentIndex = wrapped;
+      const snappedX = snapXs[wrapped];
+      // Keep the raised series across steps when it still has a point here.
+      const keys = keysAt(snappedX);
+      const keep = currentEmphasis && keys.includes(currentEmphasis) ? currentEmphasis : null;
+      showAt(snappedX, keep, containerScale());
+    },
+    cycleSeries(delta: number) {
+      if (currentIndex < 0) {
+        this.stepTo(0);
+        return;
+      }
+      const snappedX = snapXs[currentIndex];
+      const keys = keysAt(snappedX);
+      if (keys.length === 0) return;
+      const at = currentEmphasis ? keys.indexOf(currentEmphasis) : -1;
+      const next = (((at + delta) % keys.length) + keys.length) % keys.length;
+      showAt(snappedX, keys[next], containerScale());
+    },
+    showCurrent() {
+      this.stepTo(currentIndex < 0 ? 0 : currentIndex);
+    },
+    hide: hideAll,
   };
 }

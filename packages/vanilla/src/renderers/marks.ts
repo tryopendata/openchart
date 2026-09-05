@@ -461,6 +461,13 @@ function getMarkSeries(mark: Mark): string | undefined {
   if (mark.type === 'line' || mark.type === 'area') {
     return mark.seriesKey;
   }
+  // Rect/arc/point marks carry an explicit seriesKey whenever a color field
+  // groups them. It is the authoritative value: the aria fallback below yields
+  // "Jan, US" for a grouped bar, which matches no legend entry.
+  const explicitSeries = (mark as { seriesKey?: string }).seriesKey;
+  if (explicitSeries) {
+    return explicitSeries;
+  }
   // For arc marks, the category name is the first part of the aria label (before ':')
   if (mark.type === 'arc') {
     const label = mark.aria.label;

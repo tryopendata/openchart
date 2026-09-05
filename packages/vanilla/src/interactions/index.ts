@@ -1,4 +1,5 @@
 export { wireChartEvents } from './chart-events';
+export type { CrosshairController } from './crosshair';
 export { wireVoronoiTooltipEvents } from './crosshair';
 export type { DragConfig } from './drag-handler';
 export { createDragHandler } from './drag-handler';
@@ -11,6 +12,8 @@ export {
   wireLegendDrag,
   wireSeriesLabelDrag,
 } from './editing-drags';
+export type { HoverEmphasis } from './hover-emphasis';
+export { createHoverEmphasis, wireEndpointLabelHover } from './hover-emphasis';
 export { invertScale } from './invert';
 export { wireKeyboardNav } from './keyboard-nav';
 export { wireLegendInteraction } from './legend-interaction';

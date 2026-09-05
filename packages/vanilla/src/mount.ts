@@ -42,10 +42,13 @@ import { materializeCanvasModeSVG } from './export-canvas';
 import type { GIFExportOptions } from './export-gif';
 import {
   buildElementRef,
+  type CrosshairController,
+  createHoverEmphasis,
   createScreenReaderTable,
   findElementByRef,
   getEditableElements,
   getElementText,
+  type HoverEmphasis,
   invertScale,
   isTextEditable,
   refsEqual,
@@ -56,6 +59,7 @@ import {
   wireChartEvents,
   wireChromeDrag,
   wireConnectorEndpointDrag,
+  wireEndpointLabelHover,
   wireKeyboardNav,
   wireLegendDrag,
   wireLegendInteraction,
@@ -248,6 +252,9 @@ export function createChart<TData extends DataRow = DataRow>(
   let disconnectResize: (() => void) | null = null;
   let cleanupTooltipEvents: (() => void) | null = null;
   let cleanupVoronoiEvents: (() => void) | null = null;
+  let cleanupEndpointHover: (() => void) | null = null;
+  let hoverEmphasis: HoverEmphasis | null = null;
+  let crosshairController: CrosshairController | null = null;
   // Canvas mark layer, present only while currentLayout.markRenderMode is
   // 'canvas'. render() is a full teardown/rebuild, so StrictMode double-mounts
   // and resizes need no canvas-specific handling beyond destroying it here.
@@ -880,6 +887,11 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupTooltipEvents = null;
     cleanupVoronoiEvents?.();
     cleanupVoronoiEvents = null;
+    crosshairController = null;
+    cleanupEndpointHover?.();
+    cleanupEndpointHover = null;
+    hoverEmphasis?.destroy();
+    hoverEmphasis = null;
     cleanupCanvasEvents?.();
     cleanupCanvasEvents = null;
     canvasLayer?.destroy();
@@ -965,15 +977,31 @@ export function createChart<TData extends DataRow = DataRow>(
       });
     }
 
+    // Shared hover language: mark hover, legend hover and the crosshair all
+    // route through this one controller so they cannot contradict each other.
+    hoverEmphasis = createHoverEmphasis(svgElement, currentLayout);
+
     // Wire tooltip events on mark elements
     cleanupTooltipEvents = wireTooltipEvents(
       svgElement,
       currentLayout.tooltipDescriptors,
       tooltipManager,
+      hoverEmphasis,
     );
 
     // Wire voronoi overlay tooltip events for line/area charts
-    cleanupVoronoiEvents = wireVoronoiTooltipEvents(svgElement, currentLayout, tooltipManager);
+    const crosshairCtl = wireVoronoiTooltipEvents(
+      svgElement,
+      currentLayout,
+      tooltipManager,
+      hoverEmphasis,
+    );
+    crosshairController = crosshairCtl;
+    // Bound to the local, not the instance field: teardown nulls the field.
+    cleanupVoronoiEvents = crosshairCtl ? () => crosshairCtl.cleanup() : null;
+
+    // The endpoint-label column is the legend on charts that have none.
+    cleanupEndpointHover = wireEndpointLabelHover(svgElement, hoverEmphasis);
 
     // Wire keyboard navigation. Skipped when the author hid the chart from
     // assistive technology (a11y.hidden): a hidden chart must not be a tab stop.
@@ -984,6 +1012,7 @@ export function createChart<TData extends DataRow = DataRow>(
         currentLayout.tooltipDescriptors,
         tooltipManager,
         currentLayout,
+        crosshairController,
       );
     }
 
@@ -1009,6 +1038,7 @@ export function createChart<TData extends DataRow = DataRow>(
       toggleSeriesVisibility,
       options?.onLegendToggle,
       editSuppressed ? undefined : options?.onEdit,
+      hoverEmphasis,
     );
 
     // Wire chart event handlers (mark click/hover/leave, annotation click)
@@ -1457,6 +1487,11 @@ export function createChart<TData extends DataRow = DataRow>(
     cleanupTooltipEvents = null;
     cleanupVoronoiEvents?.();
     cleanupVoronoiEvents = null;
+    crosshairController = null;
+    cleanupEndpointHover?.();
+    cleanupEndpointHover = null;
+    hoverEmphasis?.destroy();
+    hoverEmphasis = null;
     cleanupCanvasEvents?.();
     cleanupCanvasEvents = null;
     // Cancel before destroying the layer, matching render()/resize(). The

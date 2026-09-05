@@ -621,14 +621,21 @@ describe('legend rendering', () => {
     }
   });
 
-  it('legend has ARIA attributes for accessibility', () => {
+  it('legend entries are toggle buttons with a 24px hit target', () => {
     const { svg } = renderSpec(lineSpecWithLegend);
     const legend = svg.querySelector('.oc-legend');
-    expect(legend!.getAttribute('role')).toBe('list');
+    expect(legend!.getAttribute('role')).toBe('group');
     expect(legend!.getAttribute('aria-label')).toBe('Chart legend');
     const entries = legend!.querySelectorAll('.oc-legend-entry');
+    expect(entries.length).toBeGreaterThan(0);
     for (const entry of entries) {
-      expect(entry.getAttribute('role')).toBe('listitem');
+      expect(entry.getAttribute('role')).toBe('button');
+      expect(entry.getAttribute('tabindex')).toBe('0');
+      expect(entry.getAttribute('aria-pressed')).toBe('true');
+      expect(entry.getAttribute('data-legend-active')).toBe('true');
+      const hit = entry.querySelector('.oc-legend-hit');
+      expect(hit).not.toBeNull();
+      expect(Number(hit!.getAttribute('height'))).toBeGreaterThanOrEqual(24);
     }
   });
 

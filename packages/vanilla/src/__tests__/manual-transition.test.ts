@@ -105,4 +105,24 @@ describe('beginManualUpdate (seekable transition)', () => {
 
     chart.destroy();
   });
+
+  it('marks the SVG .oc-transitioning for the life of the tween', () => {
+    const container = createContainer();
+    const chart = createChart(container, columnSpec(10));
+    const svg = () => container.querySelector('svg') as SVGElement;
+
+    expect(svg().classList.contains('oc-transitioning')).toBe(false);
+
+    const handle = chart.beginManualUpdate(columnSpec(100));
+    expect(handle).not.toBeNull();
+    // The driver owns per-frame inline opacity from here: the hover CSS reads
+    // this class to switch its own opacity transition off.
+    expect(svg().classList.contains('oc-transitioning')).toBe(true);
+
+    handle!.step(handle!.totalMs);
+    handle!.cancel();
+    expect(svg().classList.contains('oc-transitioning')).toBe(false);
+
+    chart.destroy();
+  });
 });

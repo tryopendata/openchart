@@ -45,6 +45,7 @@ import {
   MAX_SR_TABLE_ROWS,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
+import { collectPinnedOverlapWarnings } from './annotations/collisions';
 import { computeAnnotations } from './annotations/compute';
 import { type AnnotationMeasureTextFn, heuristicMeasure } from './annotations/geometry';
 import type { PlacementObstacle } from './annotations/placement';
@@ -892,6 +893,20 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     fontFamily: theme.fonts.family,
     autoThin: chartSpec.autoThin,
   });
+
+  // Dev-mode diagnostic: hand-placed annotations that sit on the data. Advisory
+  // only -- a pinned block is never moved by the engine, so the fix is authorial.
+  if (options.dev) {
+    emitSpecWarnings(
+      collectPinnedOverlapWarnings(
+        annotations,
+        chartSpec.annotations,
+        obstacles,
+        annotationMeasure,
+      ),
+      options.onWarn,
+    );
+  }
 
   // Auto-thinning: demote overlapping text annotations to footnote markers.
   // Pass the full spec annotations (not filtered to text-only) so index

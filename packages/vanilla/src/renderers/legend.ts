@@ -14,6 +14,11 @@ import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { nextSvgId } from '../svg-ids';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
+/** Minimum legend hit-target height in px (WCAG 2.2 SC 2.5.8). */
+const LEGEND_HIT_HEIGHT = 24;
+/** Horizontal slack on each side of the legend hit rect. */
+const LEGEND_HIT_PAD = 4;
+
 function isCategorical(legend: LegendLayout): legend is CategoricalLegendLayout {
   return !legend.type || legend.type === 'categorical';
 }
@@ -184,7 +189,10 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
 
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-legend');
-  g.setAttribute('role', 'list');
+  // A group of toggle buttons, not a list: each entry is an interactive
+  // control with aria-pressed, and role="listitem" inside role="list" would
+  // announce them as static content.
+  g.setAttribute('role', 'group');
   g.setAttribute('aria-label', 'Chart legend');
 
   const isHorizontal =
@@ -214,7 +222,6 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     }
     const entryG = createSVGElement('g');
     entryG.setAttribute('class', 'oc-legend-entry');
-    entryG.setAttribute('role', 'listitem');
     entryG.setAttribute('data-legend-index', String(i));
     entryG.setAttribute('data-legend-label', entry.label);
     if (entry.overflow) {
@@ -222,16 +229,39 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       entryG.setAttribute('aria-label', entry.label);
       entryG.setAttribute('opacity', '0.5');
     } else {
-      entryG.setAttribute(
-        'aria-label',
-        `${entry.label}: ${entry.active !== false ? 'visible' : 'hidden'}`,
-      );
+      const visible = entry.active !== false;
+      entryG.setAttribute('role', 'button');
+      entryG.setAttribute('tabindex', '0');
+      entryG.setAttribute('aria-pressed', String(visible));
+      // Read by the hover-emphasis controller, which must not touch a
+      // toggled-off entry (it already carries opacity 0.3 as an attribute).
+      entryG.setAttribute('data-legend-active', String(visible));
+      entryG.setAttribute('aria-label', `${entry.label}: ${visible ? 'visible' : 'hidden'}`);
       entryG.setAttribute('style', 'cursor: pointer');
 
       // Apply dimming for inactive entries
-      if (entry.active === false) {
+      if (!visible) {
         entryG.setAttribute('opacity', '0.3');
       }
+
+      // Transparent hit + focus target, at least 24px tall (WCAG 2.2 SC 2.5.8).
+      // First child so it paints behind the swatch and label.
+      const labelWidth = estimateTextWidth(
+        entry.label,
+        legend.labelStyle.fontSize,
+        legend.labelStyle.fontWeight,
+      );
+      const hit = createSVGElement('rect');
+      hit.setAttribute('class', 'oc-legend-hit');
+      setAttrs(hit, {
+        x: offsetX - LEGEND_HIT_PAD,
+        y: offsetY + legend.swatchSize / 2 - LEGEND_HIT_HEIGHT / 2,
+        width: legend.swatchSize + legend.swatchGap + labelWidth + LEGEND_HIT_PAD * 2,
+        height: LEGEND_HIT_HEIGHT,
+        rx: 2,
+        fill: 'transparent',
+      });
+      entryG.appendChild(hit);
     }
 
     // Swatch: bare colored mark matching the chart type.

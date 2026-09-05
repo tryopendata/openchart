@@ -83,7 +83,6 @@ const simpleColumnSpec: ChartSpec = {
       style: 'dashed',
       stroke: '#64748b',
       strokeWidth: 1,
-      labelOffset: { dx: -90, dy: 16 },
     },
   ],
   labels: { density: 'all', format: ',.0f' },
@@ -320,8 +319,6 @@ const tempSpec: ChartSpec = {
       y: -0.42,
       text: 'Coldest decade on record\nat 0.42°C below average',
       connector: true,
-      anchor: 'top',
-      offset: { dx: 200, dy: -6 },
     },
     {
       type: 'text',

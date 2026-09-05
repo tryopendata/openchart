@@ -22,6 +22,7 @@ import type { ResolvedScales } from '../layout/scales';
 import {
   clampAnnotationsToBounds,
   nudgeAnnotationFromObstacles,
+  nudgeRefLineLabel,
   resolveAnnotationCollisions,
 } from './collisions';
 import { SUBTITLE_FONT_WEIGHT, subtitleFontSize } from './constants';
@@ -178,6 +179,7 @@ export function computeAnnotations(
           ctx.scales,
           ctx.chartArea,
           ctx.isDark,
+          ctx.measure,
           ctx.fontFamily,
         );
         break;
@@ -193,6 +195,9 @@ export function computeAnnotations(
           ctx.obstacles,
           ctx.measure,
         );
+      }
+      if (annotation.type === 'refline' && ctx.obstacles.length > 0) {
+        nudgeRefLineLabel(resolved, annotation, ctx.obstacles, ctx.chartArea, ctx.measure);
       }
       // The resolved array is filtered (an out-of-domain annotation resolves to
       // nothing), so carry the spec index along -- it's the only stable way back

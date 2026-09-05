@@ -64,6 +64,9 @@ import type {
 // runTransition
 // ---------------------------------------------------------------------------
 
+/** Set on the SVG root while the rAF driver owns per-frame inline opacity. */
+const TRANSITIONING_CLASS = 'oc-transitioning';
+
 export function runTransition(args: {
   svg: SVGSVGElement;
   prevLayout: ChartLayout;
@@ -114,6 +117,11 @@ export function runTransition(args: {
       totalMs: 0,
     };
   }
+
+  // Marks the window in which the rAF loop owns every mark's inline
+  // `style.opacity`. The hover CSS reads it to switch its own opacity
+  // transition off, so a hover mid-update cannot smear the tween.
+  svg.classList.add(TRANSITIONING_CLASS);
 
   // One DOM pass for every keyed mark element; valid for the whole transition
   // (the transition owns the DOM until onComplete, and ghosts carry no data-key).
@@ -321,6 +329,7 @@ export function runTransition(args: {
     if (!running) return;
     running = false;
     rafId = null;
+    svg.classList.remove(TRANSITIONING_CLASS);
 
     snapToFinal();
     removeGhosts();
@@ -461,6 +470,7 @@ export function runTransition(args: {
     cancel(): void {
       if (!running) return;
       running = false;
+      svg.classList.remove(TRANSITIONING_CLASS);
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;
