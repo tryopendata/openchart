@@ -6,8 +6,16 @@
  */
 
 import type { CellStyle, ColumnConfig, ResolvedTheme } from '@opendata-ai/openchart-core';
-import { adaptColorForDarkMode } from '@opendata-ai/openchart-core';
-import { accessibleTextColor } from './utils';
+import { adaptColorForDarkMode, findAccessibleColor } from '@opendata-ai/openchart-core';
+import { interpolateRgb } from 'd3-interpolate';
+import { resolveTableSurface } from './utils';
+
+/**
+ * How far the chip background sits from the surface toward the category
+ * color. 14% reads as a tint, not a block: the hue is carried by the ink and
+ * the dot, the background only groups them.
+ */
+const CHIP_TINT = 0.14;
 
 /**
  * Compute category-colored cell styles for a column.
@@ -15,7 +23,13 @@ import { accessibleTextColor } from './utils';
  * Uses column.categoryColors for explicit value-to-color mappings.
  * Unmapped values get colors from the theme's categorical palette.
  *
- * Returns a Map keyed by original data index with background and text colors.
+ * Category cells render as chips: `accent` is the category color itself
+ * (drawn as a dot), `backgroundColor` is a 14% tint of it toward the table
+ * surface, and `color` is the category hue pushed to 4.5:1 on that tint.
+ * Painting the whole cell in the raw color is the dashboard look this library
+ * moved away from.
+ *
+ * Returns a Map keyed by original data index.
  */
 export function computeCategoryColors(
   data: Record<string, unknown>[],
@@ -32,6 +46,7 @@ export function computeCategoryColors(
   const autoAssigned = new Map<string, string>();
   const lightBg = '#ffffff';
   const darkBg = theme.colors.background;
+  const surface = resolveTableSurface(theme);
 
   for (let i = 0; i < data.length; i++) {
     const raw = data[i][column.key];
@@ -67,10 +82,11 @@ export function computeCategoryColors(
       bg = adaptColorForDarkMode(bg, lightBg, darkBg);
     }
 
-    const textColor = accessibleTextColor(bg, theme);
+    const tint = interpolateRgb(surface, bg)(CHIP_TINT);
     result.set(i, {
-      backgroundColor: bg,
-      color: textColor,
+      accent: bg,
+      backgroundColor: tint,
+      color: findAccessibleColor(bg, tint, 4.5),
     });
   }
 

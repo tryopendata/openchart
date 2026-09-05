@@ -28,11 +28,11 @@ describe('computeCategoryColors', () => {
     const colors = computeCategoryColors(data, col, theme, false);
 
     expect(colors.size).toBe(3);
-    // "active" rows (indices 0, 2) should have green background
-    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
-    expect(colors.get(2)!.backgroundColor).toBe('#00ff00');
-    // "inactive" row (index 1) should have red background
-    expect(colors.get(1)!.backgroundColor).toBe('#ff0000');
+    // "active" rows (indices 0, 2) carry green as the chip accent
+    expect(colors.get(0)!.accent).toBe('#00ff00');
+    expect(colors.get(2)!.accent).toBe('#00ff00');
+    // "inactive" row (index 1) carries red
+    expect(colors.get(1)!.accent).toBe('#ff0000');
     // "pending" (index 3) is not in the explicit map, should be skipped
     expect(colors.has(3)).toBe(false);
   });
@@ -49,8 +49,8 @@ describe('computeCategoryColors', () => {
 
     // Only "active" rows (indices 0, 2) should be colored
     expect(colors.size).toBe(2);
-    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
-    expect(colors.get(2)!.backgroundColor).toBe('#00ff00');
+    expect(colors.get(0)!.accent).toBe('#00ff00');
+    expect(colors.get(2)!.accent).toBe('#00ff00');
     // Unmapped values should not have entries
     expect(colors.has(1)).toBe(false); // inactive
     expect(colors.has(3)).toBe(false); // pending
@@ -70,8 +70,8 @@ describe('computeCategoryColors', () => {
     // All 4 rows should be colored
     expect(colors.size).toBe(4);
     // "inactive" and "pending" should get palette colors (not the explicit green)
-    const inactiveBg = colors.get(1)!.backgroundColor!;
-    const pendingBg = colors.get(3)!.backgroundColor!;
+    const inactiveBg = colors.get(1)!.accent!;
+    const pendingBg = colors.get(3)!.accent!;
     expect(inactiveBg).toBeTruthy();
     expect(pendingBg).toBeTruthy();
     expect(inactiveBg).not.toBe('#00ff00');
@@ -89,7 +89,19 @@ describe('computeCategoryColors', () => {
     expect(colors.get(0)!.backgroundColor).toBe(colors.get(2)!.backgroundColor);
   });
 
-  it('text contrast meets AA (at least 3:1)', () => {
+  it('chip background is a tint of the surface, not the raw color', () => {
+    const col: ColumnConfig = {
+      key: 'status',
+      categoryColors: { active: '#00ff00' },
+    };
+    const colors = computeCategoryColors(data, col, getTheme(), false);
+    const style = colors.get(0)!;
+    expect(style.backgroundColor).not.toBe('#00ff00');
+    // A 14% tint on white stays close to white.
+    expect(contrastRatio(style.backgroundColor!, '#ffffff')).toBeLessThan(1.3);
+  });
+
+  it('text contrast meets AA (at least 4.5:1)', () => {
     const col: ColumnConfig = {
       key: 'status',
       categoryColors: {
@@ -105,8 +117,8 @@ describe('computeCategoryColors', () => {
       const bg = style.backgroundColor!;
       const fg = style.color!;
       const ratio = contrastRatio(fg, bg);
-      // accessibleTextColor picks black or white; both should exceed 3:1
-      expect(ratio).toBeGreaterThanOrEqual(3);
+      // The ink is the category hue pushed to AA on its own tint.
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -122,8 +134,8 @@ describe('computeCategoryColors', () => {
     const colors = computeCategoryColors(data, col, darkTheme, true);
 
     // Explicit colors should NOT be adapted for dark mode
-    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
-    expect(colors.get(1)!.backgroundColor).toBe('#ff0000');
+    expect(colors.get(0)!.accent).toBe('#00ff00');
+    expect(colors.get(1)!.accent).toBe('#ff0000');
   });
 
   it('dark mode adapts auto-assigned palette colors but not explicit ones', () => {
@@ -139,7 +151,7 @@ describe('computeCategoryColors', () => {
     const darkColors = computeCategoryColors(data, col, darkTheme, true);
 
     // Explicit color should be preserved as-is (not adapted)
-    expect(darkColors.get(0)!.backgroundColor).toBe('#ffff00');
+    expect(darkColors.get(0)!.accent).toBe('#ffff00');
 
     // Auto-assigned palette colors should still be present (adaptation may or
     // may not visually change them, but the code path runs adaptColorForDarkMode)
@@ -157,7 +169,7 @@ describe('computeCategoryColors', () => {
     const colors = computeCategoryColors(data, col, theme, false);
 
     // Both "active" rows should get the same auto-assigned color
-    expect(colors.get(0)!.backgroundColor).toBe(colors.get(2)!.backgroundColor);
+    expect(colors.get(0)!.accent).toBe(colors.get(2)!.accent);
   });
 
   it('dark mode text contrast still meets AA', () => {
@@ -175,7 +187,7 @@ describe('computeCategoryColors', () => {
       const bg = style.backgroundColor!;
       const fg = style.color!;
       const ratio = contrastRatio(fg, bg);
-      expect(ratio).toBeGreaterThanOrEqual(3);
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -209,8 +221,8 @@ describe('computeCategoryColors', () => {
     expect(colors.has(1)).toBe(false); // inactive = transparent
     expect(colors.has(2)).toBe(false); // pending = none
     // explicit colors should still be present
-    expect(colors.get(0)!.backgroundColor).toBe('#00ff00');
-    expect(colors.get(3)!.backgroundColor).toBe('#cccccc');
+    expect(colors.get(0)!.accent).toBe('#00ff00');
+    expect(colors.get(3)!.accent).toBe('#cccccc');
     expect(colors.size).toBe(2);
   });
 

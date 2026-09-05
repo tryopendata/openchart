@@ -433,6 +433,26 @@
     background: color-mix(in srgb, var(--oc-text) 6%, transparent);
   }
 
+  /* Category chips: the engine supplies the tint, ink and dot color inline. */
+  .oc-table-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: var(--oc-radius-full);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .oc-table-chip-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
   /* ---------------------------------------------------------------------------
    * Totals footer
    * --------------------------------------------------------------------------- */

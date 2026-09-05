@@ -153,7 +153,9 @@ metrics where down is good (churn, latency, cost). Zero renders a neutral chip.
 
 ### Category colors
 
-Color-code cells by categorical value.
+Color-code cells by categorical value. Each value renders as a chip: a dot in
+the mapped color, the label in that hue pushed to AA contrast, on a 14% tint of
+the same hue. The cell itself is never painted.
 
 ```ts
 {

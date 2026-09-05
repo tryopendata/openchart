@@ -155,12 +155,30 @@ export function renderHeatmapCell(cell: HeatmapTableCell): HTMLTableCellElement 
   return td;
 }
 
-/** Render a category-colored cell. */
+/**
+ * Render a category-colored cell as a chip: a dot in the category color, the
+ * value in a contrast-safe ink, on a tint of the same hue. The color lives on
+ * the chip, never on the cell, so a column of categories reads as labels
+ * rather than a block of paint.
+ */
 export function renderCategoryCell(cell: CategoryTableCell): HTMLTableCellElement {
   const td = document.createElement('td');
   td.className = 'oc-table-category';
-  td.textContent = cell.formattedValue;
-  applyCellStyle(td, cell);
+
+  const chip = document.createElement('span');
+  chip.className = 'oc-table-chip';
+  if (cell.style.backgroundColor) chip.style.background = cell.style.backgroundColor;
+  if (cell.style.color) chip.style.color = cell.style.color;
+
+  if (cell.style.accent) {
+    const dot = document.createElement('span');
+    dot.className = 'oc-table-chip-dot';
+    dot.style.background = cell.style.accent;
+    chip.appendChild(dot);
+  }
+
+  chip.appendChild(document.createTextNode(cell.formattedValue));
+  td.appendChild(chip);
   return td;
 }
 

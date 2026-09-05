@@ -64,6 +64,8 @@ export interface TextStyle {
 
 /** Cell style for table cells. */
 export interface CellStyle {
+  /** Category color for chip cells: drawn as the leading dot. */
+  accent?: string;
   /** Background color. */
   backgroundColor?: string;
   /** Text color. */
