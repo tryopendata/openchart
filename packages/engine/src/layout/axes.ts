@@ -23,7 +23,6 @@ import {
   axisTitleOffset,
   computeXAxisExtentFromLabels,
   estimateTextWidth,
-  getAxisTitleOffset,
   truncateRotatedLabel,
   X_AXIS_TITLE_BAND,
   X_AXIS_TITLE_BAND_ROTATED,
@@ -785,7 +784,15 @@ export function computeAxes(
   if (result.y?.label && result.y.labelStyle) {
     const isRight = result.y.orient === 'right';
     if (isRight) {
-      const titleOff = getAxisTitleOffset(totalWidth);
+      const maxTickLabelWidth = result.y.ticks.reduce((max, t) => {
+        const w = estimateTextWidth(
+          t.label,
+          result.y!.tickLabelStyle.fontSize,
+          result.y!.tickLabelStyle.fontWeight ?? 400,
+        );
+        return Math.max(max, w);
+      }, 0);
+      const titleOff = axisTitleOffset(maxTickLabelWidth, result.y.labelStyle.fontSize, totalWidth);
       result.y.titlePosition = {
         x: chartArea.x + chartArea.width + titleOff,
         y: chartArea.y + chartArea.height / 2,

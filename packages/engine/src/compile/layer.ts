@@ -215,7 +215,11 @@ function compileLayerIndependent(
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
   const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
   const halfGlyph = Math.ceil(bodyFontSize / 2);
-  const titleCenterOffset = axisTitleOffset(rightAxisWidth, bodyFontSize, options.width);
+  // estimateYAxisLabelWidth adds +10px safety padding for tick rendering,
+  // but axisTitleOffset already adds its own structural gaps, so subtract
+  // the padding to avoid double-counting
+  const rawTickWidth = Math.max(0, rightAxisWidth - 10);
+  const titleCenterOffset = axisTitleOffset(rawTickWidth, bodyFontSize, options.width);
   const titleExtent = hasRightAxisTitle
     ? titleCenterOffset +
       halfGlyph +
@@ -267,7 +271,7 @@ function compileLayerIndependent(
                 x:
                   layout0.area.x +
                   layout0.area.width +
-                  axisTitleOffset(rightAxisWidth, bodyFontSize, layout0.dimensions.width),
+                  axisTitleOffset(rawTickWidth, bodyFontSize, layout0.dimensions.width),
                 y: layout0.area.y + layout0.area.height / 2,
                 angle: 90,
               },
