@@ -1,6 +1,6 @@
 {
   "name": "@opendata-ai/openchart-vue",
-  "version": "8.3.0",
+  "version": "8.3.1",
   "description": "Vue 3 components for openchart: <Chart />, <DataTable />, <Graph />, <VizThemeProvider />",
   "license": "Apache-2.0",
   "author": "Riley Hilliard",
