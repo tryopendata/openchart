@@ -124,3 +124,14 @@ describe('<DataTable />', () => {
     expect(wrapper?.style.border).toBe('1px solid red');
   });
 });
+
+describe('<DataTable /> controlled sort', () => {
+  it('applies spec.sort when the controlled sort starts as null', async () => {
+    const spec: TableSpec = { ...tableSpec, sort: { column: 'age', direction: 'asc' } };
+    const { container } = await renderTable({ spec, sort: null, search: '', page: 0 });
+    await waitFor(() => {
+      const firstCell = container.querySelector('tbody tr td');
+      expect(firstCell?.textContent).toBe('Bob');
+    });
+  });
+});

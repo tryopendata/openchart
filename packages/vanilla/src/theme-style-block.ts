@@ -26,12 +26,7 @@ import { SVG_NS } from './renderers/svg-dom';
  */
 export function buildThemeStyleBlock(theme: ResolvedTheme): string {
   const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
-  const bg =
-    theme.colors.background === 'transparent'
-      ? theme.isDark
-        ? cssTokenDefault('--oc-bg', 'dark')
-        : cssTokenDefault('--oc-bg', 'light')
-      : theme.colors.background;
+  const bg = theme.colors.neutral.surface;
 
   const props = [
     `--oc-font-family: ${theme.fonts.family}`,

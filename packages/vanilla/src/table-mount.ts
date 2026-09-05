@@ -196,6 +196,11 @@ export function createTable(
   }
 
   /** The sort once the user has touched it, otherwise defer to the spec. */
+  function sameSort(a: SortState | null, b: SortState | null): boolean {
+    if (a === null || b === null) return a === b;
+    return a.column === b.column && a.direction === b.direction;
+  }
+
   function resolveEffectiveSort(state: TableState): SortState | null | undefined {
     return sortTouched ? state.sort : (state.sort ?? undefined);
   }
@@ -516,9 +521,14 @@ export function createTable(
     // In controlled mode compile() reads from options.externalState, so
     // updating internalState alone would be ignored. Push the new values onto
     // externalState (the source getState() reads) so the render reflects them.
-    // Any explicit sort -- including null -- is the caller taking a position on
-    // sorting, so from here on a null sort means "cleared", not "no opinion".
-    if (partial.sort !== undefined) sortTouched = true;
+    // An explicit sort that actually changes the state -- including a change
+    // to null -- is the caller taking a position on sorting, so from here on a
+    // null sort means "cleared", not "no opinion". A no-op sync (the React and
+    // Svelte wrappers push their initial `sort: null` on mount) must not count,
+    // or spec.sort would be dropped before the first interaction.
+    if (partial.sort !== undefined && !sameSort(partial.sort, getState().sort)) {
+      sortTouched = true;
+    }
 
     if (isControlled && options?.externalState) {
       if (partial.sort !== undefined) options.externalState.sort = partial.sort;
