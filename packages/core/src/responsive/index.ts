@@ -21,6 +21,7 @@ export {
   getHeightClass,
   getLayoutStrategy,
   HEIGHT_CRAMPED_MAX,
+  HEIGHT_MINIMAL_MAX,
   HEIGHT_NO_GRID_MAX,
   HEIGHT_SHORT_MAX,
   resolveChromeEconomy,

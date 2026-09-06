@@ -672,11 +672,13 @@ describe('compileChart', () => {
     expect(layout.watermark).toBe(false);
   });
 
-  it('explicit watermark: true at cramped height reserves the brand band', () => {
-    const withBrand = compileChart({ ...lineSpec, watermark: true }, { width: 600, height: 180 });
+  it('explicit watermark: true at minimal height reserves the brand band', () => {
+    // height: 80 is below HEIGHT_MINIMAL_MAX, so chromeMode is 'hidden' (unlike
+    // the cramped 100-199px range, which now renders a compact title).
+    const withBrand = compileChart({ ...lineSpec, watermark: true }, { width: 600, height: 80 });
     const withoutBrand = compileChart(
       { ...lineSpec, watermark: false },
-      { width: 600, height: 180 },
+      { width: 600, height: 80 },
     );
     // The hidden-chrome branch of computeChrome must reserve bottom space for
     // the opted-in brand, shrinking the plot rather than painting over it.

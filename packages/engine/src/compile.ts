@@ -554,10 +554,14 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     chartSpec = { ...chartSpec, watermark: false };
   }
 
-  // Watermark auto-hides in cramped containers (height < 200px): chromeMode is
-  // already 'hidden' there, so no bottom space is reserved and the brand would
-  // paint over the plot. Explicit user watermark at any level wins.
-  if (heightClass === 'cramped' && !chartSpec.userExplicit.watermark) {
+  // Watermark auto-hides in minimal and cramped containers (height < 200px):
+  // there isn't room to spare for the brand band on a tile that small, even
+  // though cramped (100-199px) now keeps a compact title. Explicit user
+  // watermark at any level wins.
+  if (
+    (heightClass === 'minimal' || heightClass === 'cramped') &&
+    !chartSpec.userExplicit.watermark
+  ) {
     watermark = false;
     chartSpec = { ...chartSpec, watermark: false };
   }

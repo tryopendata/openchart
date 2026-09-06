@@ -8,7 +8,7 @@ For field-by-field type details, see the [spec reference](spec-reference.md). Fo
 
 ## Sizing charts in a tile
 
-A chart mounted without an explicit height compiles at a 400px auto-height budget (`FALLBACK_HEIGHT` in the mount's convergence loop), then grows if chrome/legend/metrics need more room. That budget is well above the 200px threshold where chrome and the watermark start collapsing, so a tile relying on auto-height won't get the compact treatment described below — it needs a constrained container.
+A chart mounted without an explicit height compiles at a 400px auto-height budget (`FALLBACK_HEIGHT` in the mount's convergence loop), then grows if chrome/legend/metrics need more room. That budget is well above the 200px threshold where the watermark starts auto-hiding, so a tile relying on auto-height won't get the compact treatment described below — it needs a constrained container.
 
 Give a tile an explicit height, either on the mount container or the parent grid cell:
 
@@ -80,13 +80,15 @@ Every drop is a *default*. An explicit `axis` on the encoding channel keeps the 
 
 This is a change from 8.3: a 300x140 tile used to draw a full axis pair and five gridlines behind a shape 100px tall. If you were relying on that, add the explicit `axis` config.
 
+Chrome mode follows a separate, narrower ladder than the gridline/axis drops above: below 100px chrome is `hidden` entirely (no title); from 100-199px chrome is `compact` — a title renders (at a smaller size than a full-size compact title, so it fits under the min-chart-height guardrail) but subtitle, source, byline, and footer stay dropped, same as at 200-350px. A tile in the 100-199px range with a `metrics` row won't render it: the metric bar is sized for full tiles and doesn't fit that height, so it's gated off the same as it is when chrome is `hidden`.
+
 A dashboard is mostly tiles, and every pixel spent on chrome per tile is a pixel not spent on data. `computeChrome` reserves zero top space when a chart has no title, subtitle, or eyebrow authored, and zero bottom space when it has no source, byline, or footer and the watermark is off — an unauthored text field costs nothing, but on a tile 200px or taller the default watermark still reserves its brand band unless you set `watermark: false` (see the next section).
 
 The convention: give one hero chart per dashboard the full treatment (`chrome: { title, subtitle, source }`), and keep every other tile terse. A one-line `chrome: { title }` is often enough to label a supporting tile. Tiles with their own HTML label (a stat card header, a custom panel title) should skip `chrome` entirely and let the chart reserve no space for it.
 
 ## Watermark rules
 
-Charts default to showing the watermark, but it auto-hides in cramped tiles: when the compiled container height falls under 200px, chrome is already forced to `hidden`, and the brand band collapses along with it unless you explicitly set `watermark` (top-level or on the active breakpoint override). This only fires when the tile's height is actually constrained below 200px — see [Sizing charts in a tile](#sizing-charts-in-a-tile) above; the 400px auto-height default never triggers it on its own.
+Charts default to showing the watermark, but it auto-hides under 200px unless you explicitly set `watermark` (top-level or on the active breakpoint override). Below 100px chrome is forced to `hidden` entirely; from 100-199px chrome renders a compact title (see [Chrome economy](#chrome-economy) below) but the watermark still auto-hides in that range — there isn't room to spare for the brand band on a tile that small. This only fires when the tile's height is actually constrained below 200px — see [Sizing charts in a tile](#sizing-charts-in-a-tile) above; the 400px auto-height default never triggers it on its own.
 
 If you do set `watermark: true` explicitly on a chart under 200px, the engine reserves a compact brand band at the bottom instead of painting the brand over the plot.
 

@@ -430,6 +430,11 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures-dashboards--tiny-tile',
     note: '140px-tall tile: chrome economy drops gridlines (under 150px) and axes (under 200px) so the trend keeps the frame.',
   },
+  {
+    name: 'dashboard-tiny-tile-metrics',
+    slug: 'testing--fixtures-dashboards--tiny-tile-metrics',
+    note: '160px-tall cramped tile with a title and one metric: cramped now renders chromeMode "compact" (not "hidden"), so wantsMetrics reserves the metric bar.',
+  },
 ];
 
 for (const story of stories) {

@@ -31,6 +31,8 @@ import {
   computeFieldFormatContext,
   defaultNumberFormatter,
   estimateTextWidth,
+  HEIGHT_CRAMPED_MAX,
+  HEIGHT_MINIMAL_MAX,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   isAxislessMark,
@@ -253,6 +255,13 @@ export function computeDimensions(
   // So the legend band is implicitly inside margins.bottom exactly once.
   // The legend-reservation block further down explicitly skips position
   // 'bottom' to avoid double-counting.
+  // The 100-199px cramped height range renders a compact title (chromeMode
+  // 'compact'), but a full-size title there can push chrome.topHeight past
+  // the min-chart-height guardrail and get stripped by the hidden-chrome
+  // fallback below. Shrink the default title size a bit further to keep it.
+  // Also used below to gate out the metric bar / series-search band, which
+  // are sized for full tiles and would blow the same guardrail at this height.
+  const isCrampedHeight = height >= HEIGHT_MINIMAL_MAX && height < HEIGHT_CRAMPED_MAX;
   const chrome =
     plan?.chrome ??
     computeChrome(
@@ -264,6 +273,7 @@ export function computeDimensions(
       padding,
       watermark,
       bottomLegendReservation,
+      isCrampedHeight,
     );
 
   // chromeLayout 'grow': the plot keeps the full height budget and the SVG
@@ -395,11 +405,18 @@ export function computeDimensions(
   // below by computeMetricBar, which can strip it on overflow / narrow areas.
   // We reserve optimistically so the chart-area math is correct when the bar
   // is kept; the rollback path subtracts it back when stripped.
-  const wantsMetrics = !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden';
+  //
+  // Also gated off in the 100-199px cramped height range: the metric bar is
+  // sized for full tiles (~80px), which alone blows the min-chart-height
+  // guardrail at this height and drags chrome (including the title) down
+  // with it via the hidden-chrome fallback.
+  const wantsMetrics =
+    !!spec.metrics && spec.metrics.length > 0 && chromeMode !== 'hidden' && !isCrampedHeight;
   const tentativeMetricsHeight = wantsMetrics ? metricBarHeight(metricFonts(theme)) : 0;
   // Series-search band: reserved empty SVG space directly below chrome and
   // the metric bar. The vanilla adapter overlays a DOM combobox on this rect.
-  const wantsSearch = !!spec.seriesSearch && chromeMode !== 'hidden';
+  // Same cramped-height gate as the metric bar above.
+  const wantsSearch = !!spec.seriesSearch && chromeMode !== 'hidden' && !isCrampedHeight;
   const searchReservation = wantsSearch ? SERIES_SEARCH_INPUT_HEIGHT + SERIES_SEARCH_GAP : 0;
   // topAxisGap sits between the legend (or chrome, if no legend) and the
   // chart area. It accounts for the general axis margin plus any inline

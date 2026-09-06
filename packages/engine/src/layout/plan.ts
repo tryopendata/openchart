@@ -19,6 +19,8 @@ import {
   computeXAxisExtentFromLabels,
   defaultNumberFormatter,
   estimateTextWidth,
+  HEIGHT_CRAMPED_MAX,
+  HEIGHT_MINIMAL_MAX,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   isAxislessMark,
@@ -168,6 +170,12 @@ export function resolveLayoutPlan(
     chromeMode = 'hidden';
   }
 
+  // The 100-199px cramped height range renders a compact title (chromeMode
+  // 'compact'), but a full-size title there can push chrome.topHeight past
+  // the min-chart-height guardrail and get stripped by the hidden-chrome
+  // fallback. Shrink the default title size a bit further to keep it.
+  const crampedTitle = height >= HEIGHT_MINIMAL_MAX && height < HEIGHT_CRAMPED_MAX;
+
   // -----------------------------------------------------------------------
   // Sparkline / radial: trivial plan (no y-axis measurement needed)
   // -----------------------------------------------------------------------
@@ -194,6 +202,7 @@ export function resolveLayoutPlan(
       padding,
       watermark,
       bottomLegendReservation,
+      crampedTitle,
     );
     return {
       leftGutter: hPad,
@@ -375,6 +384,7 @@ export function resolveLayoutPlan(
       padding,
       watermark,
       bottomLegendReservation,
+      crampedTitle,
     );
 
     // Effective x tick angle. Band x-axes auto-rotate to -45° when horizontal
