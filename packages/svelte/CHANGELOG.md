@@ -1,5 +1,22 @@
 # Changelog
 
+## [8.4.1](https://github.com/tryopendata/openchart/compare/core-v8.4.0...core-v8.4.1) (2026-09-06)
+
+
+### Features
+
+* hatch no-data map features so they read apart from a ramp's middle class ([a0c6e46](https://github.com/tryopendata/openchart/commit/a0c6e46))
+
+
+### Bug Fixes
+
+* address RFC 26 re-review findings ([d06e5a5](https://github.com/tryopendata/openchart/commit/d06e5a5))
+* address RFC 26 review findings ([c632e7e](https://github.com/tryopendata/openchart/commit/c632e7e))
+* keep the title on 100-199px dashboard tiles ([096aac1](https://github.com/tryopendata/openchart/commit/096aac1))
+* draw annotations under the data-label overlay ([aa9f1a3](https://github.com/tryopendata/openchart/commit/aa9f1a3))
+* paint the knockout halo and keep callouts out of chrome ([2f3c0fa](https://github.com/tryopendata/openchart/commit/2f3c0fa))
+* per-column total opt-out and correct explicit column widths ([8dffbc5](https://github.com/tryopendata/openchart/commit/8dffbc5))
+
 ## [8.4.0](https://github.com/tryopendata/openchart/compare/core-v8.3.1...core-v8.4.0) (2026-09-05)
 
 
