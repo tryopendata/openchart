@@ -9,6 +9,7 @@ import type {
   ContinuousLegendLayout,
   LegendLayout,
   SizeLegendLayout,
+  TextStyle,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { nextSvgId } from '../svg-ids';
@@ -21,6 +22,44 @@ const LEGEND_HIT_PAD = 4;
 
 function isCategorical(legend: LegendLayout): legend is CategoricalLegendLayout {
   return !legend.type || legend.type === 'categorical';
+}
+
+/**
+ * Detached "no data" swatch + label, set only by maps with unjoined features.
+ * Not an entry: it carries no toggle role and no `data-legend-index`.
+ *
+ * The categorical legend passes a chip (rounded corners, label on the slot's
+ * centerline) so the swatch matches its neighbouring entries; the continuous
+ * legend keeps the crisp full-height square that matches the color bar.
+ */
+function renderNoDataSwatch(
+  parent: SVGElement,
+  noData: NonNullable<CategoricalLegendLayout['noData']>,
+  labelStyle: TextStyle,
+  chip?: { rx: number; baseline: string },
+): void {
+  const swatch = createSVGElement('rect');
+  swatch.setAttribute('class', 'oc-legend-nodata');
+  setAttrs(swatch, {
+    x: noData.x,
+    y: noData.y,
+    width: noData.size,
+    height: noData.size,
+    fill: noData.fill,
+    ...(chip ? { rx: chip.rx, ry: chip.rx } : { 'shape-rendering': 'crispEdges' }),
+  });
+  parent.appendChild(swatch);
+
+  const label = createSVGElement('text');
+  setAttrs(label, {
+    x: noData.labelX,
+    y: noData.labelY,
+    'text-anchor': 'start',
+    ...(chip ? { 'dominant-baseline': chip.baseline } : {}),
+  });
+  applyTextStyle(label, labelStyle);
+  label.textContent = noData.label;
+  parent.appendChild(label);
 }
 
 /**
@@ -118,27 +157,7 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   }
 
   if (legend.noData) {
-    const swatch = createSVGElement('rect');
-    swatch.setAttribute('class', 'oc-legend-nodata');
-    setAttrs(swatch, {
-      x: legend.noData.x,
-      y: legend.noData.y,
-      width: legend.noData.size,
-      height: legend.noData.size,
-      fill: legend.noData.fill,
-      'shape-rendering': 'crispEdges',
-    });
-    g.appendChild(swatch);
-
-    const label = createSVGElement('text');
-    setAttrs(label, {
-      x: legend.noData.labelX,
-      y: legend.noData.labelY,
-      'text-anchor': 'start',
-    });
-    applyTextStyle(label, legend.labelStyle);
-    label.textContent = legend.noData.label;
-    g.appendChild(label);
+    renderNoDataSwatch(g, legend.noData, legend.labelStyle);
   }
 
   parent.appendChild(g);
@@ -385,30 +404,8 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     }
   }
 
-  // Detached "no data" swatch, set only by maps with unjoined features. Not an
-  // entry: it carries no toggle role and no data-legend-index.
   if (legend.noData) {
-    const swatch = createSVGElement('rect');
-    swatch.setAttribute('class', 'oc-legend-nodata');
-    setAttrs(swatch, {
-      x: legend.noData.x,
-      y: legend.noData.y,
-      width: legend.noData.size,
-      height: legend.noData.size,
-      fill: legend.noData.fill,
-      'shape-rendering': 'crispEdges',
-    });
-    g.appendChild(swatch);
-
-    const label = createSVGElement('text');
-    setAttrs(label, {
-      x: legend.noData.labelX,
-      y: legend.noData.labelY,
-      'text-anchor': 'start',
-    });
-    applyTextStyle(label, legend.labelStyle);
-    label.textContent = legend.noData.label;
-    g.appendChild(label);
+    renderNoDataSwatch(g, legend.noData, legend.labelStyle, { rx: 2, baseline: 'central' });
   }
 
   parent.appendChild(g);

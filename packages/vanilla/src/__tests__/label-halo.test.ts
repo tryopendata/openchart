@@ -51,6 +51,27 @@ describe('mark label halo', () => {
     expect(label!.getAttribute('stroke-linejoin')).toBe('round');
   });
 
+  it('scales the halo width with the label font size', () => {
+    for (const [fontSize, strokeWidth] of [
+      [14, '4'],
+      [10, '3'],
+    ] as const) {
+      const container = render({
+        mark: 'bar',
+        data: COLUMN_DATA,
+        encoding: {
+          x: { field: 'category', type: 'nominal' },
+          y: { field: 'value', type: 'quantitative' },
+        },
+        labels: { fontSize },
+      });
+
+      const label = container.querySelector('.oc-mark-label');
+      expect(label).toBeTruthy();
+      expect(label!.getAttribute('stroke-width')).toBe(strokeWidth);
+    }
+  });
+
   it('leaves a stacked (inside) label unhaloed', () => {
     const container = render({
       mark: 'bar',

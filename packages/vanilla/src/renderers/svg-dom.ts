@@ -31,7 +31,7 @@ export function setAttrs(el: SVGElement, attrs: Record<string, string | number>)
 export function applyKnockoutHalo(el: SVGElement, color: string, fontSize: number): void {
   setAttrs(el, {
     stroke: color,
-    'stroke-width': Math.max(1, Math.round(fontSize * 0.3)),
+    'stroke-width': Math.round(fontSize * 0.3),
     'stroke-linejoin': 'round',
     'paint-order': 'stroke',
   });

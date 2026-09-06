@@ -67,6 +67,92 @@ const NO_DATA_SWATCH_GAP = 12;
 /** Gap between the "no data" swatch and its label. */
 const NO_DATA_LABEL_GAP = 5;
 
+/** Categorical legend geometry. Must match `renderCategoricalLegend` in vanilla. */
+const CATEGORICAL_SWATCH_SIZE = 10;
+const CATEGORICAL_SWATCH_GAP = 6;
+const CATEGORICAL_ENTRY_GAP = 16;
+/** Row advance the renderer uses when a horizontal legend wraps. */
+const CATEGORICAL_ROW_HEIGHT = CATEGORICAL_SWATCH_SIZE + 6;
+
+/** Label style for the map's own categorical legend (also used to size the block). */
+function categoricalLegendLabelStyle(theme: ResolvedTheme): TextStyle {
+  return {
+    fontFamily: theme.fonts.family,
+    fontSize: 11,
+    fontWeight: 400,
+    fill: theme.colors.text,
+    lineHeight: 1.2,
+  };
+}
+
+/** Slot width for one legend entry (swatch + gap + label + trailing entry gap). */
+function categoricalEntryWidth(label: string, labelStyle: TextStyle): number {
+  return (
+    CATEGORICAL_SWATCH_SIZE +
+    CATEGORICAL_SWATCH_GAP +
+    estimateTextWidth(label, labelStyle.fontSize, labelStyle.fontWeight) +
+    CATEGORICAL_ENTRY_GAP
+  );
+}
+
+/** Width of the detached "no data" block (swatch + gap + label, no trailing gap). */
+function noDataBlockWidth(labelStyle: TextStyle): number {
+  return (
+    CATEGORICAL_SWATCH_SIZE +
+    NO_DATA_LABEL_GAP +
+    estimateTextWidth('No data', labelStyle.fontSize, labelStyle.fontWeight)
+  );
+}
+
+/**
+ * Wrap entry slots across rows the way the renderer does: an entry that would
+ * run past the legend's right edge starts a new row. Returns row-relative x
+ * offsets so the engine and the renderer can never disagree about where an
+ * entry lands.
+ */
+function wrapCategoricalEntries(
+  widths: number[],
+  legendWidth: number,
+): { x: number; row: number }[] {
+  const placed: { x: number; row: number }[] = [];
+  let x = 0;
+  let row = 0;
+  for (let i = 0; i < widths.length; i++) {
+    if (i > 0 && x + widths[i] > legendWidth) {
+      x = 0;
+      row += 1;
+    }
+    placed.push({ x, row });
+    x += widths[i];
+  }
+  return placed;
+}
+
+/**
+ * Categories in legend order: `scale.domain` first, then anything the rows add.
+ * Shared by the height reservation (which reads the spec rows, before the join)
+ * and the legend build (which reads the joined rows).
+ */
+function collectCategories(
+  rows: Iterable<Record<string, unknown>>,
+  field: string,
+  domain: unknown,
+): string[] {
+  const categories: string[] = Array.isArray(domain) ? domain.map((c) => String(c)) : [];
+  const seen = new Set<string>(categories);
+  for (const row of rows) {
+    const raw = row[field];
+    if (raw != null) {
+      const cat = String(raw);
+      if (!seen.has(cat)) {
+        seen.add(cat);
+        categories.push(cat);
+      }
+    }
+  }
+  return categories;
+}
+
 /**
  * Legend title: what the colors mean, plus the unit the format implies.
  * A key with bare numbers on it is the single most common newsroom map defect.
@@ -270,7 +356,22 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   }
   if (legendBlockHeight === 0 && showChoroplethLegend && colorEncoding && !isQuantitative) {
     const labelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
-    legendBlockHeight = Math.max(10, labelHeight) + 6;
+    // The legend wraps once the entries run past the frame, so reserve every
+    // row it will use. Categories come from the spec rows (the join hasn't run
+    // yet); a row that matches no feature can only over-count, which costs a
+    // little whitespace rather than clipping the legend. The "No data" block is
+    // always counted for the same reason -- whether the map has holes is not
+    // known until the marks are built.
+    const labelStyle = categoricalLegendLabelStyle(theme);
+    const widths = collectCategories(
+      mapSpec.data,
+      colorEncoding.field,
+      colorEncoding.scale?.domain,
+    ).map((cat) => categoricalEntryWidth(cat, labelStyle));
+    widths.push(noDataBlockWidth(labelStyle));
+    const placed = wrapCategoricalEntries(widths, fullArea.width);
+    const rows = placed.length > 0 ? placed[placed.length - 1].row + 1 : 1;
+    legendBlockHeight = rows * (Math.max(10, labelHeight) + 6);
   }
 
   // Reserve height for point color legend if applicable (overlay legends
@@ -455,8 +556,16 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       // holes in it.
       const hasUnmatched = featureMarks.some((m) => m.noData);
       const noDataX = bar.x + bar.width + NO_DATA_SWATCH_GAP;
+      // The label is part of the block, so the fit check has to carry it too --
+      // a swatch that fits with its text hanging off the frame is not a fit.
+      const noDataLabelWidth = estimateTextWidth(
+        'No data',
+        labelStyle.fontSize,
+        labelStyle.fontWeight,
+      );
       const noData =
-        hasUnmatched && noDataX + bar.height + NO_DATA_LABEL_GAP < fullArea.x + fullArea.width
+        hasUnmatched &&
+        noDataX + bar.height + NO_DATA_LABEL_GAP + noDataLabelWidth < fullArea.x + fullArea.width
           ? {
               x: noDataX,
               y: bar.y,
@@ -1249,24 +1358,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
   } = opts;
 
   // Collect unique categories: honor scale.domain for order, then append any unseen from data
-  const categories: string[] = [];
-  const explicitDomain = scaleConfig?.domain;
-  if (explicitDomain && Array.isArray(explicitDomain)) {
-    for (const cat of explicitDomain) {
-      categories.push(String(cat));
-    }
-  }
-  const seen = new Set<string>(categories);
-  for (const row of joined.values()) {
-    const raw = row[colorField];
-    if (raw != null) {
-      const cat = String(raw);
-      if (!seen.has(cat)) {
-        seen.add(cat);
-        categories.push(cat);
-      }
-    }
-  }
+  const categories = collectCategories(joined.values(), colorField, scaleConfig?.domain);
 
   const explicitRange = scaleConfig?.range;
   const colorSource =
@@ -1344,13 +1436,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
   // Legend
   let legend: CategoricalLegendLayout | null = null;
   if (showLegend && categories.length > 0) {
-    const labelStyle: TextStyle = {
-      fontFamily: theme.fonts.family,
-      fontSize: 11,
-      fontWeight: 400,
-      fill: theme.colors.text,
-      lineHeight: 1.2,
-    };
+    const labelStyle = categoricalLegendLabelStyle(theme);
 
     const entries: LegendEntry[] = categories.map((cat) => ({
       label: cat,
@@ -1368,46 +1454,77 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
         ? fullArea.y + mapAreaHeight + legendReserveGap
         : fullArea.y + legendReserveGap;
     const legendWidth = fullArea.width;
-    const swatchSize = 10;
-    const swatchGap = 6;
-    const entryGap = 16;
+    const swatchSize = CATEGORICAL_SWATCH_SIZE;
+    const swatchGap = CATEGORICAL_SWATCH_GAP;
+    const entryGap = CATEGORICAL_ENTRY_GAP;
+
+    // Entries wrap once they run past the frame, so the engine resolves the
+    // positions itself rather than letting the renderer's fallback guess -- the
+    // "no data" swatch has to know where the last entry actually landed.
+    const entryWidths = entries.map((e) => categoricalEntryWidth(e.label, labelStyle));
+    const placed = wrapCategoricalEntries(entryWidths, legendWidth);
+    const entryPositions = placed.map((p, i) => {
+      const x = legendX + p.x;
+      const y = legendY + p.row * CATEGORICAL_ROW_HEIGHT;
+      return {
+        x,
+        y,
+        labelX: x + swatchSize + swatchGap,
+        labelY: y + swatchSize / 2,
+        width: entryWidths[i],
+        row: p.row,
+      };
+    });
+    let rows = placed.length > 0 ? placed[placed.length - 1].row + 1 : 1;
 
     // Unjoined features are hatched, so the hatch needs a key of its own --
     // detached after the last entry, never as one more category. Only drawn
-    // when the map actually has holes, and only when it fits on the row.
+    // when the map actually has holes, and only when it fits (wrapping to a row
+    // of its own when the entries filled the last one).
     const hasUnmatched = marks.some((m) => m.noData);
-    const entriesWidth = entries.reduce(
-      (sum, e) =>
-        sum +
-        swatchSize +
-        swatchGap +
-        estimateTextWidth(e.label, labelStyle.fontSize, labelStyle.fontWeight) +
-        entryGap,
-      0,
-    );
-    const noDataX = legendX + entriesWidth;
+    const last = placed[placed.length - 1];
+    const blockWidth = noDataBlockWidth(labelStyle);
+    let noDataOffsetX = last ? last.x + entryWidths[entryWidths.length - 1] : 0;
+    let noDataRow = last ? last.row : 0;
+    if (noDataOffsetX + blockWidth > legendWidth) {
+      noDataOffsetX = 0;
+      noDataRow += 1;
+    }
+    const noDataX = legendX + noDataOffsetX;
+    const noDataY = legendY + noDataRow * CATEGORICAL_ROW_HEIGHT;
+    // Match the entry chips: a rounded 6px square centered in the 10px slot,
+    // label on the slot's centerline.
+    const chipSize = Math.round(swatchSize * 0.6);
     const noData =
-      hasUnmatched && noDataX + swatchSize + NO_DATA_LABEL_GAP < legendX + legendWidth
+      hasUnmatched && blockWidth <= legendWidth
         ? {
-            x: noDataX,
-            y: legendY,
-            size: swatchSize,
+            x: noDataX + (swatchSize - chipSize) / 2,
+            y: noDataY + swatchSize / 2 - chipSize / 2,
+            size: chipSize,
             fill: neutralFill,
             // The same hatch the no-data features carry, so the key matches
             // what is on the map.
             pattern: noDataPattern,
             label: 'No data',
             labelX: noDataX + swatchSize + NO_DATA_LABEL_GAP,
-            labelY: legendY + swatchSize,
+            labelY: noDataY + swatchSize / 2,
           }
         : undefined;
+    if (noData) rows = Math.max(rows, noDataRow + 1);
 
     legend = {
       type: 'categorical',
       position: legendPosition,
-      bounds: { x: legendX, y: legendY, width: legendWidth, height: swatchSize + 6 },
+      bounds: {
+        x: legendX,
+        y: legendY,
+        width: legendWidth,
+        height: rows * CATEGORICAL_ROW_HEIGHT,
+      },
       labelStyle,
       entries,
+      entryPositions,
+      rowHeight: CATEGORICAL_ROW_HEIGHT,
       swatchSize,
       swatchGap,
       entryGap,

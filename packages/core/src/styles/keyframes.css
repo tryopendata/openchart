@@ -69,8 +69,9 @@
      animate straight to their dimmed rest opacity instead of hitting 1 and then
      snapping down when the dim is applied post-animation.
      Non-interpolable fills (the url(#pattern) hatch on no-data features) do not
-     transition: the browser holds the neutral and flips to the pattern at the
-     keyframe midpoint, so those features fade in rather than cross-fade. */
+     transition: the browser holds the neutral and flips to the pattern when the
+     eased progress passes 50%, so those features fade in rather than
+     cross-fade. */
   @keyframes oc-enter-map-fill {
     from {
       fill: var(--oc-secondary);

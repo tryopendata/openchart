@@ -332,6 +332,17 @@ describe('column width', () => {
     expect(layout.columns[0].width).toBe(250);
   });
 
+  it('rounds a fractional percent width to whole pixels', () => {
+    const layout = compileTable(
+      {
+        ...base,
+        columns: [{ key: 'name', width: '33.3%' }, { key: 'zip' }, { key: 'revenue' }],
+      },
+      wideOptions,
+    );
+    expect(layout.columns[0].width).toBe(333);
+  });
+
   it('scales overflowing explicit widths down proportionally and warns', () => {
     const warnings: string[] = [];
     const layout = compileTable(
@@ -363,6 +374,7 @@ describe('column width', () => {
     );
     expect(layout.columns.every((c) => c.width === 60)).toBe(true);
     const warning = warnings.find((w) => w.includes('TABLE_WIDTH_OVERFLOW'));
+    expect(warning).toContain('at least one column hit the 60px minimum');
     expect(warning).toContain('still overflow');
   });
 });

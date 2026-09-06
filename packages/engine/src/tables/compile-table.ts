@@ -15,6 +15,7 @@ import type {
   ResolvedTheme,
   SortState,
   TableCell,
+  TableDensity,
   TableLayout,
   TableRow,
   TableTotalRow,
@@ -101,15 +102,21 @@ function inferAlignment(
 }
 
 /**
- * Horizontal padding inside a cell, in pixels: `th, td { padding: 12px 16px }`
- * in `packages/core/src/styles/table.css`, so 16 on each side. Cells are
+ * Horizontal padding inside a cell, both sides summed, in pixels. Mirrors
+ * `packages/core/src/styles/table.css`: `padding: 12px 16px` at the default
+ * density, `8px 12px` condensed, `16px 20px` relaxed. Cells are
  * `box-sizing: border-box`, so an estimate that undercounts the padding lands
  * below the cell's min-content width and the browser rescales the row.
  *
- * The two other densities change horizontal padding too (condensed 12px a side,
- * relaxed 20px); the estimate assumes the default density.
+ * `table-mount.ts` also condenses at runtime under content pressure (more
+ * columns than the rendered width can give 96px each). That width isn't known
+ * at compile time, so the estimate follows the authored density only.
  */
-const CELL_PADDING_X = 32;
+function cellPaddingX(density: TableDensity | undefined): number {
+  if (density === 'condensed') return 24;
+  if (density === 'relaxed') return 40;
+  return 32;
+}
 
 /**
  * Estimate the needed width for a column by measuring header and data values.
@@ -119,17 +126,18 @@ function estimateColumnWidth(
   col: ColumnConfig,
   data: Record<string, unknown>[],
   fontSize: number,
+  paddingX: number,
 ): number {
   const MIN_WIDTH = 60;
 
   // Visual columns get fixed widths (they render graphics, not text)
   if (col.sparkline) return 140;
-  if (col.image) return (col.image.width ?? 24) + CELL_PADDING_X;
+  if (col.image) return (col.image.width ?? 24) + paddingX;
   if (col.flag) return 60;
 
   // Header width
   const label = col.label ?? col.key;
-  const headerWidth = estimateTextWidth(label, fontSize, 600) + CELL_PADDING_X;
+  const headerWidth = estimateTextWidth(label, fontSize, 600) + paddingX;
 
   // Sample data values
   const sampleSize = Math.min(100, data.length);
@@ -138,7 +146,7 @@ function estimateColumnWidth(
   for (let i = 0; i < sampleSize; i++) {
     const val = data[i][col.key];
     const text = val == null ? '' : String(val);
-    const width = estimateTextWidth(text, fontSize, 400) + CELL_PADDING_X;
+    const width = estimateTextWidth(text, fontSize, 400) + paddingX;
     if (width > maxDataWidth) maxDataWidth = width;
   }
 
@@ -159,9 +167,11 @@ function resolveColumns(
   data: Record<string, unknown>[],
   totalWidth: number,
   theme: ResolvedTheme,
+  density: TableDensity | undefined,
   warnings: string[] = [],
 ): ResolvedColumn[] {
   const fontSize = theme.fonts.sizes.body;
+  const paddingX = cellPaddingX(density);
 
   // Compute natural widths and identify fixed-width columns. Visual columns
   // (sparkline, image, flag) get fixed graphic sizes and an explicit `width`
@@ -182,7 +192,7 @@ function resolveColumns(
       }
       return parseInt(col.width, 10) || 100;
     }
-    return estimateColumnWidth(col, data, fontSize);
+    return estimateColumnWidth(col, data, fontSize, paddingX);
   });
 
   // If explicit widths alone would overflow the space left after the
@@ -215,8 +225,8 @@ function resolveColumns(
       cumulative += width;
     }
     const outcome = floored
-      ? `scaled proportionally down to the ${MIN_COLUMN_WIDTH}px minimum column width, which ` +
-        `they hit, so the table will still overflow.`
+      ? `scaled proportionally down, but at least one column hit the ${MIN_COLUMN_WIDTH}px ` +
+        `minimum, so the table will still overflow.`
       : 'scaled proportionally to fit.';
     warnings.push(
       `[openchart] TABLE_WIDTH_OVERFLOW: explicit column widths summed to ${explicitTotal}px, ` +
@@ -473,7 +483,15 @@ export function compileTableLayout(
 
   // 1. Resolve columns
   const columnWarnings: string[] = [];
-  const resolvedColumns = resolveColumns(spec.columns, data, options.width, theme, columnWarnings);
+  const resolvedColumns = resolveColumns(
+    spec.columns,
+    data,
+    options.width,
+    theme,
+    // The deprecated `compact` flag renders condensed padding too.
+    spec.density ?? (spec.compact ? 'condensed' : undefined),
+    columnWarnings,
+  );
   emitSpecWarnings(columnWarnings, options.onWarn);
 
   // 1b. Resolve the sort: caller state wins, then the spec, then the first

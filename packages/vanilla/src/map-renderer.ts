@@ -290,10 +290,8 @@ function renderFeatures(
       const idx = feature.animationIndex ?? i;
       path.setAttribute('data-animation-index', String(idx));
       s.setProperty('--oc-mark-index', String(idx));
-      // For hatched features this is a url(#pattern), which is not interpolable:
-      // the browser holds the neutral and swaps to the hatch at the keyframe
-      // midpoint (50% of oc-enter-map-fill) instead of easing into it.
-      // Accepted — a fill transition on a texture would read as a flicker.
+      // Non-interpolable for hatched features; see oc-enter-map-fill in
+      // packages/core/src/styles/keyframes.css.
       s.setProperty('--oc-feature-fill', fill);
       if (dimmed) {
         s.setProperty('--oc-feature-target-opacity', String(FOCUS_DIM_OPACITY));

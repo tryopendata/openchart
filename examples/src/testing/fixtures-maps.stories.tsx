@@ -263,3 +263,90 @@ export const WorldDivergingQuantize = () => (
     <GeoMap spec={worldDivergingSpec} />
   </div>
 );
+
+// ---------------------------------------------------------------------------
+// UsStatesCategorical — a nominal fill with an explicit domain/range, and a
+// handful of states left out of the data so the hatched "no data" class (and
+// its detached legend swatch) renders next to the category entries.
+// ---------------------------------------------------------------------------
+
+const censusRegions = [
+  { id: '09', region: 'Northeast' },
+  { id: '23', region: 'Northeast' },
+  { id: '25', region: 'Northeast' },
+  { id: '33', region: 'Northeast' },
+  { id: '34', region: 'Northeast' },
+  { id: '36', region: 'Northeast' },
+  { id: '42', region: 'Northeast' },
+  { id: '44', region: 'Northeast' },
+  { id: '50', region: 'Northeast' },
+  { id: '17', region: 'Midwest' },
+  { id: '18', region: 'Midwest' },
+  { id: '19', region: 'Midwest' },
+  { id: '20', region: 'Midwest' },
+  { id: '26', region: 'Midwest' },
+  { id: '27', region: 'Midwest' },
+  { id: '29', region: 'Midwest' },
+  { id: '31', region: 'Midwest' },
+  { id: '38', region: 'Midwest' },
+  { id: '39', region: 'Midwest' },
+  { id: '46', region: 'Midwest' },
+  { id: '55', region: 'Midwest' },
+  { id: '01', region: 'South' },
+  { id: '05', region: 'South' },
+  { id: '10', region: 'South' },
+  { id: '11', region: 'South' },
+  { id: '12', region: 'South' },
+  { id: '13', region: 'South' },
+  { id: '21', region: 'South' },
+  { id: '22', region: 'South' },
+  { id: '24', region: 'South' },
+  { id: '28', region: 'South' },
+  { id: '37', region: 'South' },
+  { id: '40', region: 'South' },
+  { id: '45', region: 'South' },
+  { id: '47', region: 'South' },
+  { id: '48', region: 'South' },
+  { id: '51', region: 'South' },
+  { id: '54', region: 'South' },
+  { id: '04', region: 'West' },
+  { id: '06', region: 'West' },
+  { id: '08', region: 'West' },
+  { id: '16', region: 'West' },
+  { id: '30', region: 'West' },
+  { id: '35', region: 'West' },
+  { id: '41', region: 'West' },
+  { id: '49', region: 'West' },
+  { id: '53', region: 'West' },
+  // Alaska (02), Hawaii (15), Nevada (32) and Wyoming (56) are deliberately
+  // absent: the map needs holes for the "No data" key to render.
+];
+
+const usStatesCategoricalSpec: GeoMapSpec = {
+  type: 'map',
+  geo: { features: usStatesTopo, projection: 'identity' },
+  data: censusRegions,
+  encoding: {
+    key: { field: 'id', type: 'nominal' },
+    color: {
+      field: 'region',
+      type: 'nominal',
+      scale: {
+        domain: ['Northeast', 'Midwest', 'South', 'West'],
+        range: ['#2f6f9f', '#4b9a72', '#c0762f', '#8b5f9e'],
+      },
+    },
+  },
+  chrome: {
+    title: 'The Four Census Regions',
+    subtitle: 'States grouped as the Census Bureau groups them',
+    source: 'Source: US Census Bureau',
+  },
+  animation: false,
+};
+
+export const UsStatesCategorical = () => (
+  <div className="tfix-chart tfix-h-500">
+    <GeoMap spec={usStatesCategoricalSpec} />
+  </div>
+);

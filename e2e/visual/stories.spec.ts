@@ -268,6 +268,11 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     note: 'Same US state choropleth with darkMode: force.',
   },
   {
+    name: 'map-us-states-categorical',
+    slug: 'testing--fixtures-maps--us-states-categorical',
+    note: 'Nominal census-region fill with unjoined states, so the "No data" legend key renders.',
+  },
+  {
     name: 'map-world-equal-earth',
     slug: 'testing--fixtures-maps--world-equal-earth',
     note: 'World countries equal-earth projection, GDP per capita sequential fill.',

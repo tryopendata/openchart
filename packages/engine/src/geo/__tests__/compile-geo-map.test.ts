@@ -509,6 +509,40 @@ describe('compileGeoMap', () => {
     expect(noData.pattern).toEqual(layout.features.find((f) => f.id === '48')!.pattern);
   });
 
+  it('wraps the categorical legend and puts the no-data key after the last entry', () => {
+    const long = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot'].map(
+      (c) => `${c} region`,
+    );
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        // Only one feature joins, so the map keeps a hole for the no-data key
+        // while the domain supplies enough entries to overflow the row.
+        data: [{ fips: '06', party: long[0] }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'party', type: 'nominal', scale: { domain: long } },
+        },
+      },
+      { width: 300, height: 400 },
+    );
+
+    const legend = layout.categoricalLegend!;
+    const positions = legend.entryPositions!;
+    expect(positions).toHaveLength(legend.entries.length);
+    const lastRow = positions[positions.length - 1].row;
+    expect(lastRow).toBeGreaterThan(0);
+    // Every row fits inside the legend box, and the box is tall enough for them.
+    for (const pos of positions) {
+      expect(pos.x + pos.width).toBeLessThanOrEqual(legend.bounds.x + legend.bounds.width);
+    }
+    const noData = legend.noData!;
+    expect(noData.labelX).toBeGreaterThan(noData.x);
+    expect(noData.y).toBeGreaterThanOrEqual(positions[positions.length - 1].y);
+    expect(legend.bounds.height).toBeGreaterThanOrEqual(noData.y + noData.size - legend.bounds.y);
+  });
+
   it('leaves the categorical legend without a no-data swatch when every feature joins', () => {
     const layout = compileGeoMap(
       {
