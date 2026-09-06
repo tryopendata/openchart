@@ -3945,7 +3945,7 @@ All features are opt-in via top-level `TableSpec` properties.
 | Density | `density: 'condensed'` | `'regular'` | Row height: condensed 40px, regular 48px, relaxed 56px |
 | Striping | `striped: true` | `false` | Zebra rows. Hairlines only by default |
 | Initial sort | `sort: { column, direction }` | first inline-bar column, desc | Sort applied before the user touches a header |
-| Total row | `totalRow: true` | `false` | Sticky footer summing every quantitative column |
+| Total row | `totalRow: true` | `false` | Sticky footer summing every quantitative column with a summable cell type (text/bar/heatmap). Set `columns[].total: false` to leave an individual column's total cell blank |
 | Compact mode | `compact: true` | `false` | **Deprecated.** Alias for `density: 'condensed'`; warns |
 | Responsive | `responsive: true` | `true` | Table adapts to container width |
 
@@ -3983,6 +3983,15 @@ identifiers rather than quantities — `id`, `zip`, `postal`, `code`, `year`,
 `fips`, with or without a prefix — are treated as nominal and stay left, which
 is what you want for a zip code that happens to be a number. `columns[].align`
 still overrides everything.
+
+### Column width
+
+Columns auto-size to fit their header and sampled data by default. Set
+`columns[].width` (a CSS length like `'200px'` or `'25%'`) to pin a column to
+an exact pixel size or a fraction of the container width; unwidthed columns
+share whatever space is left. If the explicit widths on their own would
+exceed the container, they're scaled down proportionally (floored at 60px)
+and the engine emits a `TABLE_WIDTH_OVERFLOW` warning through `onWarn`.
 
 ### Full-featured example
 
