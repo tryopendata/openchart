@@ -84,8 +84,14 @@ describe('getLayoutStrategy', () => {
 // ---------------------------------------------------------------------------
 
 describe('getHeightClass', () => {
-  it('returns cramped for heights below 200', () => {
+  it('returns minimal for heights below 100', () => {
+    expect(getHeightClass(0)).toBe('minimal');
+    expect(getHeightClass(99)).toBe('minimal');
+  });
+
+  it('returns cramped for heights 100-199', () => {
     expect(getHeightClass(100)).toBe('cramped');
+    expect(getHeightClass(140)).toBe('cramped');
     expect(getHeightClass(199)).toBe('cramped');
   });
 
@@ -101,8 +107,8 @@ describe('getHeightClass', () => {
   });
 
   it('handles edge cases', () => {
-    expect(getHeightClass(0)).toBe('cramped');
-    expect(getHeightClass(-10)).toBe('cramped');
+    expect(getHeightClass(0)).toBe('minimal');
+    expect(getHeightClass(-10)).toBe('minimal');
     expect(getHeightClass(5000)).toBe('normal');
   });
 });
@@ -118,9 +124,24 @@ describe('getLayoutStrategy with height class', () => {
     expect(withoutHeight).toEqual(withNormal);
   });
 
-  it('cramped height hides chrome and labels', () => {
-    const strategy = getLayoutStrategy('full', 'cramped');
+  it('minimal height hides chrome and labels', () => {
+    const strategy = getLayoutStrategy('full', 'minimal');
     expect(strategy.chromeMode).toBe('hidden');
+    expect(strategy.legendMaxHeight).toBe(0);
+    expect(strategy.labelMode).toBe('none');
+    expect(strategy.annotationPosition).toBe('tooltip-only');
+  });
+
+  it('minimal overrides even compact width strategy', () => {
+    const strategy = getLayoutStrategy('compact', 'minimal');
+    expect(strategy.chromeMode).toBe('hidden');
+    expect(strategy.legendMaxHeight).toBe(0);
+    expect(strategy.labelMode).toBe('none');
+  });
+
+  it('cramped height shows a compact title but still hides labels', () => {
+    const strategy = getLayoutStrategy('full', 'cramped');
+    expect(strategy.chromeMode).toBe('compact');
     expect(strategy.legendMaxHeight).toBe(0);
     expect(strategy.labelMode).toBe('none');
     expect(strategy.annotationPosition).toBe('tooltip-only');
@@ -128,7 +149,7 @@ describe('getLayoutStrategy with height class', () => {
 
   it('cramped overrides even compact width strategy', () => {
     const strategy = getLayoutStrategy('compact', 'cramped');
-    expect(strategy.chromeMode).toBe('hidden');
+    expect(strategy.chromeMode).toBe('compact');
     expect(strategy.legendMaxHeight).toBe(0);
     expect(strategy.labelMode).toBe('none');
   });
@@ -158,6 +179,13 @@ describe('getLayoutStrategy with height class', () => {
     const strategy = getLayoutStrategy('medium');
     expect(strategy.chromeMode).toBe('full');
     expect(strategy.legendMaxHeight).toBe(-1);
+  });
+
+  it('acceptance: minimal/cramped classification and chromeMode', () => {
+    expect(getHeightClass(90)).toBe('minimal');
+    expect(getHeightClass(140)).toBe('cramped');
+    expect(getLayoutStrategy('medium', 'cramped').chromeMode).toBe('compact');
+    expect(getLayoutStrategy('medium', 'minimal').chromeMode).toBe('hidden');
   });
 });
 

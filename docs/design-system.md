@@ -339,11 +339,18 @@ Legend focus rings draw as a stroke on the 24px hit rect
 Small containers drop chrome automatically
 (`resolveChromeEconomy(width, height)`, `packages/core/src/responsive/breakpoints.ts`):
 height under 150px (`HEIGHT_NO_GRID_MAX`) drops gridlines; height under the
-existing cramped threshold drops axes entirely; width at the compact
-breakpoint caps x-axis tick labels at 3 (`COMPACT_MAX_X_TICKS`). Every drop
-is a default — an explicit `axis` config or `axis.grid` on the encoding
-channel always wins, at any size. See `docs/dashboards.md` for the full
-ladder and the watermark interaction.
+existing cramped threshold (200px, `HEIGHT_CRAMPED_MAX`) drops axes entirely;
+width at the compact breakpoint caps x-axis tick labels at 3
+(`COMPACT_MAX_X_TICKS`). Every drop is a default — an explicit `axis` config
+or `axis.grid` on the encoding channel always wins, at any size.
+
+Chrome mode itself (title/subtitle/source visibility, distinct from the
+gridline/axis drops above) uses a finer split under 200px: below 100px
+(`HEIGHT_MINIMAL_MAX`, `HeightClass: 'minimal'`) chrome is `hidden`; from
+100-199px (`HeightClass: 'cramped'`) chrome is `compact` and still renders a
+title, just at a smaller size than a full-size compact title so it clears the
+min-chart-height guardrail. See `docs/dashboards.md` for the full ladder and
+the watermark interaction.
 
 ## Motion
 

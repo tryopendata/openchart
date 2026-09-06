@@ -56,6 +56,12 @@ function scaleFontSize(baseFontSize: number, width: number): number {
   return Math.max(Math.round(baseFontSize * (0.72 + t * 0.28)), 10);
 }
 
+/**
+ * Extra scale applied to the default compact title font size in the 100-199px
+ * cramped height range (see `computeChrome`'s `crampedTitle` param).
+ */
+const CRAMPED_TITLE_SCALE = 0.65;
+
 /** Build a TextStyle from chrome defaults + optional overrides, with width-based scaling. */
 function buildTextStyle(
   defaults: ChromeDefaults,
@@ -63,10 +69,13 @@ function buildTextStyle(
   textColor: string,
   width: number,
   overrides?: ChromeText['style'],
+  extraScale = 1,
 ): TextStyle {
   const hasExplicitSize = overrides?.fontSize !== undefined;
   const baseFontSize = overrides?.fontSize ?? defaults.fontSize;
-  const fontSize = hasExplicitSize ? baseFontSize : scaleFontSize(baseFontSize, width);
+  const fontSize = hasExplicitSize
+    ? baseFontSize
+    : Math.max(Math.round(scaleFontSize(baseFontSize, width) * extraScale), 10);
 
   // No dominantBaseline: chrome y positions are top-edge coordinates and
   // renderers convert to the alphabetic baseline via textAscent(). WebKit
@@ -201,6 +210,11 @@ export function footnoteBandHeight(count: number, theme: ResolvedTheme): number 
  *   are shifted down by this amount so the chrome stacks BELOW the legend
  *   rather than colliding with it. The returned `bottomHeight` includes this
  *   reservation, so callers should not double-reserve it in margin math.
+ * @param crampedTitle - Shrinks the default (non-explicit) title font size an
+ *   extra 20% on top of the width-based scaling. Set by callers for the
+ *   100-199px cramped height range: at that height a full-size compact title
+ *   can push `chrome.topHeight` past the min-chart-height guardrail, which
+ *   would strip the title back out via the hidden-chrome fallback.
  */
 export function computeChrome(
   chrome: Chrome | undefined,
@@ -211,6 +225,7 @@ export function computeChrome(
   padding?: number,
   watermark: boolean = true,
   bottomLegendHeight: number = 0,
+  crampedTitle: boolean = false,
 ): ResolvedChrome {
   if (!chrome || chromeMode === 'hidden') {
     // `watermark` is still true here in two cases: the user explicitly opted
@@ -299,6 +314,7 @@ export function computeChrome(
       theme.chrome.title.color,
       width,
       titleNorm.style,
+      crampedTitle ? CRAMPED_TITLE_SCALE : 1,
     );
     const maxLines = titleNorm.style?.maxLines;
     const lineCount = estimateLineCount(titleNorm.text, style, maxWidth, measureText, maxLines);

@@ -100,3 +100,31 @@ export const TinyTile = () => (
     <Chart spec={tinyTileSpec} />
   </div>
 );
+
+// ---------------------------------------------------------------------------
+// TinyTileMetrics — 160px tall, cramped height class (100-199px) with a
+// metric row. wantsMetrics/wantsSearch gate on chromeMode !== 'hidden', and
+// cramped now renders chromeMode 'compact' instead of 'hidden', so a titled
+// tile in this range reserves space for its metric bar where it previously
+// couldn't. Pins that this stays legible rather than fighting the title.
+// ---------------------------------------------------------------------------
+
+const tinyTileMetricsSpec: ChartSpec = {
+  animation: false,
+  mark: { type: 'line', interpolate: 'monotone' },
+  data: weeklyActive,
+  encoding: {
+    x: { field: 'week', type: 'temporal' },
+    y: { field: 'users', type: 'quantitative' },
+  },
+  chrome: {
+    title: 'Weekly actives',
+  },
+  metrics: [{ label: 'THIS WEEK', value: '534K', delta: '+3.3%', deltaTone: 'up' }],
+};
+
+export const TinyTileMetrics = () => (
+  <div className="tfix-chart" style={{ maxWidth: '280px', height: '160px' }}>
+    <Chart spec={tinyTileMetricsSpec} />
+  </div>
+);

@@ -7,7 +7,8 @@
  * - full: > 700px (desktop, full-width)
  *
  * Height classes:
- * - cramped: < 200px (dashboard widgets, thumbnails)
+ * - minimal: < 100px (sparklines, chrome-less thumbnails)
+ * - cramped: 100-199px (dashboard widgets with a compact title)
  * - short: 200-350px (embedded panels, short containers)
  * - normal: > 350px (standard containers)
  */
@@ -37,9 +38,10 @@ export function getBreakpoint(width: number): Breakpoint {
 // ---------------------------------------------------------------------------
 
 /** Height classification based on container height. */
-export type HeightClass = 'cramped' | 'short' | 'normal';
+export type HeightClass = 'minimal' | 'cramped' | 'short' | 'normal';
 
 /** Height class thresholds in pixels. */
+export const HEIGHT_MINIMAL_MAX = 100;
 export const HEIGHT_CRAMPED_MAX = 200;
 export const HEIGHT_SHORT_MAX = 350;
 
@@ -47,6 +49,7 @@ export const HEIGHT_SHORT_MAX = 350;
  * Determine the height class for a given container height.
  */
 export function getHeightClass(height: number): HeightClass {
+  if (height < HEIGHT_MINIMAL_MAX) return 'minimal';
   if (height < HEIGHT_CRAMPED_MAX) return 'cramped';
   if (height <= HEIGHT_SHORT_MAX) return 'short';
   return 'normal';
@@ -133,7 +136,9 @@ function getWidthStrategy(breakpoint: Breakpoint): LayoutStrategy {
 /**
  * Apply height constraints to a width-based strategy.
  * Short containers compress chrome and cap legend height.
- * Cramped containers hide chrome and labels entirely.
+ * Minimal containers hide chrome and labels entirely. Cramped containers
+ * (100-199px) keep the same reduced layout but show a compact title: a
+ * titled dashboard tile in that range is unusable without its label.
  */
 function applyHeightConstraints(
   strategy: LayoutStrategy,
@@ -141,10 +146,10 @@ function applyHeightConstraints(
 ): LayoutStrategy {
   if (heightClass === 'normal') return strategy;
 
-  if (heightClass === 'cramped') {
+  if (heightClass === 'minimal' || heightClass === 'cramped') {
     return {
       ...strategy,
-      chromeMode: 'hidden',
+      chromeMode: heightClass === 'minimal' ? 'hidden' : 'compact',
       legendMaxHeight: 0,
       labelMode: 'none',
       annotationPosition: 'tooltip-only',
