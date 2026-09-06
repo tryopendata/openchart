@@ -244,3 +244,31 @@ export const CardsMobile = () => (
     <DataTable spec={cardsSpec} />
   </div>
 );
+
+// ---------------------------------------------------------------------------
+// ExplicitColumnWidth — a `width: '200px'` column in a fixed 1000px container.
+// Regression fixture for the column-width overflow bug (RFC 26 group G): the
+// header cell must render at exactly 200px, not 232px (padding without
+// border-box) and not rescaled by proportional flex-sizing.
+// ---------------------------------------------------------------------------
+
+const explicitWidthSpec: TableSpec = {
+  type: 'table',
+  data: economies,
+  columns: [
+    { key: 'country', label: 'Country', width: '200px' },
+    { key: 'zip', label: 'Capital ZIP' },
+    { key: 'population', label: 'Population', format: 'compact' },
+    { key: 'gdp', label: 'GDP/capita (PPP)', format: '$,.0f' },
+  ],
+  chrome: {
+    title: 'Fixed-Width Country Column',
+    subtitle: 'One 200px column in a 1000px table',
+  },
+};
+
+export const ExplicitColumnWidth = () => (
+  <div style={{ width: '1000px' }}>
+    <DataTable spec={explicitWidthSpec} />
+  </div>
+);

@@ -21,6 +21,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
 
+import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import type { NormalizedTableSpec } from '../compiler/types';
 import { computeBarCell, computeColumnMax, computeColumnMin } from './bar-column';
@@ -134,21 +135,29 @@ function estimateColumnWidth(
   return Math.max(MIN_WIDTH, headerWidth, maxDataWidth);
 }
 
+/** Minimum column width, in pixels, after any fixed-width scaling. */
+const MIN_COLUMN_WIDTH = 60;
+
 /**
  * Resolve all columns: compute widths, types, alignment.
+ *
+ * `warnings` collects advisory messages (e.g. explicit widths overflowing
+ * the container) for the caller to surface via `emitSpecWarnings`.
  */
 function resolveColumns(
   columns: ColumnConfig[],
   data: Record<string, unknown>[],
   totalWidth: number,
   theme: ResolvedTheme,
+  warnings: string[] = [],
 ): ResolvedColumn[] {
   const fontSize = theme.fonts.sizes.body;
 
-  // Compute natural widths and identify fixed-width visual columns.
-  // Visual columns (sparkline, image, flag) get fixed sizes; only text
-  // columns participate in proportional scaling to fill the container.
-  const isFixed = columns.map((col) => !!(col.sparkline || col.image || col.flag));
+  // Compute natural widths and identify fixed-width columns. Visual columns
+  // (sparkline, image, flag) get fixed graphic sizes and an explicit `width`
+  // is honored as-is; only columns without either participate in
+  // proportional scaling to fill the container.
+  const isFixed = columns.map((col) => !!(col.sparkline || col.image || col.flag || col.width));
 
   const naturalWidths = columns.map((col) => {
     if (col.width) {
@@ -164,8 +173,44 @@ function resolveColumns(
     return estimateColumnWidth(col, data, fontSize);
   });
 
-  // Fixed columns keep their natural width; remaining space goes to text columns
-  const fixedTotal = naturalWidths.reduce((sum, w, i) => sum + (isFixed[i] ? w : 0), 0);
+  // If explicit widths alone would overflow the space left after the
+  // (non-explicit) visual-fixed columns, scale the explicit ones down
+  // proportionally to fit, floored at MIN_COLUMN_WIDTH. Sparkline/image/flag
+  // columns without an explicit width keep their natural graphic size.
+  const explicitIndices = columns.map((_, i) => i).filter((i) => isFixed[i] && !!columns[i].width);
+  const visualFixedTotal = columns.reduce(
+    (sum, col, i) => sum + (isFixed[i] && !col.width ? naturalWidths[i] : 0),
+    0,
+  );
+  const explicitTotal = explicitIndices.reduce((sum, i) => sum + naturalWidths[i], 0);
+  const budgetForExplicit = totalWidth - visualFixedTotal;
+
+  const scaledExplicitWidths = new Map<number, number>();
+  if (explicitTotal > 0 && budgetForExplicit > 0 && explicitTotal > budgetForExplicit) {
+    const scale = budgetForExplicit / explicitTotal;
+    // Cumulative rounding: each column gets the running rounded target minus
+    // the previous one, so the scaled widths sum to exactly budgetForExplicit
+    // instead of drifting from independently rounding each column.
+    let cumulative = 0;
+    let cumulativeTarget = 0;
+    for (const i of explicitIndices) {
+      cumulativeTarget += naturalWidths[i] * scale;
+      const width = Math.max(MIN_COLUMN_WIDTH, Math.round(cumulativeTarget) - cumulative);
+      scaledExplicitWidths.set(i, width);
+      cumulative += width;
+    }
+    warnings.push(
+      `[openchart] TABLE_WIDTH_OVERFLOW: explicit column widths summed to ${explicitTotal}px, ` +
+        `exceeding the ${budgetForExplicit}px available in a ${totalWidth}px-wide table; scaled ` +
+        `proportionally to fit.`,
+    );
+  }
+
+  const resolvedFixedWidths = naturalWidths.map((w, i) => scaledExplicitWidths.get(i) ?? w);
+
+  // Fixed columns keep their (possibly scaled) width; remaining space goes
+  // to text columns.
+  const fixedTotal = resolvedFixedWidths.reduce((sum, w, i) => sum + (isFixed[i] ? w : 0), 0);
   const flexTotal = naturalWidths.reduce((sum, w, i) => sum + (isFixed[i] ? 0 : w), 0);
   const remainingWidth = totalWidth - fixedTotal;
   const flexScale = flexTotal > 0 && remainingWidth > 0 ? remainingWidth / flexTotal : 1;
@@ -175,7 +220,10 @@ function resolveColumns(
     return {
       key: col.key,
       label: col.label ?? col.key,
-      width: Math.max(60, isFixed[i] ? naturalWidths[i] : Math.round(naturalWidths[i] * flexScale)),
+      width: Math.max(
+        MIN_COLUMN_WIDTH,
+        isFixed[i] ? resolvedFixedWidths[i] : Math.round(naturalWidths[i] * flexScale),
+      ),
       sortable: col.sortable ?? true,
       align: inferAlignment(col, type),
       type,
@@ -355,6 +403,8 @@ function buildTotalRow(
       cellType: 'text',
     };
 
+    const col = columns[i];
+    if (col.total === false) return blank;
     if (resolved.type !== 'quantitative' || !SUMMABLE.has(resolved.cellType)) return blank;
 
     let sum = 0;
@@ -404,7 +454,9 @@ export function compileTableLayout(
   const darkMode = theme.isDark;
 
   // 1. Resolve columns
-  const resolvedColumns = resolveColumns(spec.columns, data, options.width, theme);
+  const columnWarnings: string[] = [];
+  const resolvedColumns = resolveColumns(spec.columns, data, options.width, theme, columnWarnings);
+  emitSpecWarnings(columnWarnings, options.onWarn);
 
   // 1b. Resolve the sort: caller state wins, then the spec, then the first
   // inline-bar column descending (a bar column is a ranking by construction).

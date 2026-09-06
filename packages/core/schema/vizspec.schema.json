@@ -18473,6 +18473,10 @@
           ],
           "description": "Mobile priority for cards mode (below 400px): 1 renders first and spans the row, 2 renders as a label/value pair, 3 is hidden. Defaults to 2 (1 for the first column)."
         },
+        "total": {
+          "type": "boolean",
+          "description": "Whether the total row sums this column. Defaults to true for quantitative columns with a summable cell type (text/bar/heatmap); set `false` to leave the total row blank for this column instead."
+        },
         "heatmap": {
           "$ref": "#/definitions/HeatmapColumnConfig",
           "description": "Heatmap: color the cell background based on numeric value."
