@@ -178,6 +178,29 @@ describe('createGeoMap', () => {
     instance.destroy();
   });
 
+  it('shares one hatch def between every no-data feature and the legend swatch', () => {
+    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+
+    const svg = container.querySelector('svg')!;
+    const patterns = [...svg.querySelectorAll('defs > pattern')];
+    expect(patterns.length).toBe(1);
+    const expected = `url(#${patterns[0].getAttribute('id')})`;
+
+    const holes = [...svg.querySelectorAll('.oc-map-feature[data-nodata="true"]')];
+    // Only the third state is unjoined; the two with values stay solid.
+    expect(holes.length).toBe(1);
+    for (const hole of holes) {
+      expect(hole.getAttribute('fill')).toBe(expected);
+    }
+    for (const solid of svg.querySelectorAll('.oc-map-feature:not([data-nodata])')) {
+      expect(solid.getAttribute('fill')).not.toContain('url(');
+    }
+
+    expect(svg.querySelector('.oc-legend-nodata')!.getAttribute('fill')).toBe(expected);
+
+    instance.destroy();
+  });
+
   it('update() re-renders with new data', () => {
     const instance = createGeoMap(container, basicMapSpec, { responsive: false });
 

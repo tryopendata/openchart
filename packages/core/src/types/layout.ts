@@ -939,6 +939,11 @@ export interface ContinuousLegendNoData {
   size: number;
   /** Swatch fill (the same neutral the unmatched features carry). */
   fill: string;
+  /**
+   * Hatch fill matching the no-data features on a map. When present the
+   * renderer resolves it to a `url(#pattern)` and ignores `fill`.
+   */
+  pattern?: ResolvedFillPattern;
   /** Label text, e.g. "No data". */
   label: string;
   /** Label x (pixel coordinates); baseline y is the legend's `labelY`. */
@@ -1956,6 +1961,16 @@ export interface GeoMapFeatureMark {
    * `data-bin-index` so hovering a legend swatch can dim everything else.
    */
   binIndex?: number;
+  /**
+   * True when a color encoding is present but the join left this feature
+   * without a value. A value of exactly 0 is data, not a hole.
+   */
+  noData?: boolean;
+  /**
+   * Hatch fill for no-data features. A neutral solid is indistinguishable from
+   * the middle class of a diverging ramp, so holes get a texture instead.
+   */
+  pattern?: ResolvedFillPattern;
 }
 
 /** A resolved map point mark with projected coordinates and visual properties. */

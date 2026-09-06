@@ -357,3 +357,34 @@ test('sankey labels stay inside the svg: sankey-energy', async ({ page }) => {
 
   expect(violations, violations.join('; ')).toEqual([]);
 });
+
+/**
+ * No-data hatch (design refresh, plan 26 / item D).
+ *
+ * On a diverging ramp the middle class sits near the neutral gray, so a
+ * solid-filled hole is indistinguishable from a country at zero growth.
+ * Unjoined features must carry the hatch — and only the computed style proves
+ * the url(#id) actually resolved against a def in the document.
+ */
+test('no-data features render a hatch pattern: world-diverging-quantize', async ({ page }) => {
+  await page.goto(
+    `/?story=${encodeURIComponent('testing--fixtures-maps--world-diverging-quantize')}&mode=preview`,
+  );
+  await page.waitForSelector('svg.oc-map');
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(100);
+
+  const fills = await page.evaluate(() => {
+    const svg = document.querySelector('svg.oc-map');
+    if (!svg) return null;
+    return [...svg.querySelectorAll('.oc-map-feature[data-nodata="true"]')].map(
+      (el) => getComputedStyle(el).fill,
+    );
+  });
+
+  expect(fills, 'no svg.oc-map found').not.toBeNull();
+  expect(fills!.length, 'story rendered no no-data features').toBeGreaterThan(0);
+  expect(fills!.filter((f) => !f.startsWith('url(')), 'no-data fills that are not patterns').toEqual(
+    [],
+  );
+});
