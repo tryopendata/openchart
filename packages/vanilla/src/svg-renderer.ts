@@ -289,11 +289,15 @@ export function renderChartSVG(
 
       svg.appendChild(clipGroup);
 
+      // Annotations go under the data-label overlay so a refline or range
+      // passes behind a label's knockout halo instead of over it; auto
+      // placement already keeps annotation text clear of data labels.
+      renderAnnotations(svg, layout);
+
       if (markLabelsOverlay) {
         svg.appendChild(markLabelsOverlay);
       }
 
-      renderAnnotations(svg, layout);
       renderEndpointLabels(svg, layout);
 
       // Suppress decorative point marks under endpoint markers
@@ -424,12 +428,12 @@ function renderFacetedPanels(
     const panelLabelsOverlay = renderMarks(clippedGroup, panelLayout);
     g.appendChild(clippedGroup);
 
+    // Panel annotations, under the label overlay (same order as the single path)
+    renderAnnotations(g, panelLayout);
+
     if (panelLabelsOverlay) {
       g.appendChild(panelLabelsOverlay);
     }
-
-    // Panel annotations
-    renderAnnotations(g, panelLayout);
 
     svg.appendChild(g);
   }
