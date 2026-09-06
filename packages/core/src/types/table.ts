@@ -123,6 +123,12 @@ export interface ColumnConfig {
    * (1 for the first column).
    */
   priority?: 1 | 2 | 3;
+  /**
+   * Whether the total row sums this column. Defaults to true for
+   * quantitative columns with a summable cell type (text/bar/heatmap); set
+   * `false` to leave the total row blank for this column instead.
+   */
+  total?: boolean;
 
   // Visual features (pick at most one per column)
 

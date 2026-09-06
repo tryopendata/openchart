@@ -31,6 +31,10 @@
       line-height: 24px;
       text-align: left;
       border-bottom: 1px solid var(--oc-border);
+      /* Column widths from the engine already sum to the container width;
+         without border-box the padding pushes each cell wider than its
+         computed width and auto layout rescales the whole row. */
+      box-sizing: border-box;
     }
 
     & th {

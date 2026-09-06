@@ -189,6 +189,23 @@ describe('total row', () => {
   it('is absent when not requested', () => {
     expect(compileTable(base, options).totalRow).toBeUndefined();
   });
+
+  it('leaves a column blank when total: false, but still sums its siblings', () => {
+    const layout = compileTable(
+      {
+        ...base,
+        columns: [{ key: 'name' }, { key: 'zip' }, { key: 'revenue', total: false }],
+        totalRow: true,
+      },
+      options,
+    );
+    expect(layout.totalRow?.cells[2].formattedValue).toBe('');
+  });
+
+  it('sums a quantitative column by default when total is omitted', () => {
+    const layout = compileTable({ ...base, totalRow: true }, options);
+    expect(layout.totalRow?.cells[2].formattedValue).toBe('2,400');
+  });
 });
 
 describe('default sort', () => {
@@ -287,5 +304,50 @@ describe("format: 'compact'", () => {
       options,
     );
     expect(layout.rows[0].cells[1].formattedValue).toBe('940');
+  });
+});
+
+describe('column width', () => {
+  const wideOptions: CompileTableOptions = { width: 1000, height: 600, onWarn: () => {} };
+
+  it('resolves an explicit px width exactly, without flex-scaling it', () => {
+    const layout = compileTable(
+      {
+        ...base,
+        columns: [{ key: 'name', width: '200px' }, { key: 'zip' }, { key: 'revenue' }],
+      },
+      wideOptions,
+    );
+    expect(layout.columns[0].width).toBe(200);
+  });
+
+  it('resolves a percent width as a fraction of the container width', () => {
+    const layout = compileTable(
+      {
+        ...base,
+        columns: [{ key: 'name', width: '25%' }, { key: 'zip' }, { key: 'revenue' }],
+      },
+      wideOptions,
+    );
+    expect(layout.columns[0].width).toBe(250);
+  });
+
+  it('scales overflowing explicit widths down proportionally and warns', () => {
+    const warnings: string[] = [];
+    const layout = compileTable(
+      {
+        ...base,
+        columns: [
+          { key: 'name', width: '500px' },
+          { key: 'zip', width: '500px' },
+          { key: 'revenue', width: '500px' },
+        ],
+      },
+      { ...wideOptions, onWarn: (m) => warnings.push(m) },
+    );
+    const widths = layout.columns.map((c) => c.width);
+    expect(widths.reduce((a, b) => a + b, 0)).toBe(1000);
+    expect(widths.every((w) => w >= 333 && w <= 334)).toBe(true);
+    expect(warnings.some((w) => w.includes('TABLE_WIDTH_OVERFLOW'))).toBe(true);
   });
 });
