@@ -12,6 +12,7 @@ import type {
   GeoMapPointMark,
   LegendEntry,
   ResolvedAnimation,
+  ResolvedFillPattern,
   ResolvedTheme,
   SizeLegendLayout,
   TextStyle,
@@ -375,6 +376,15 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // The theme's own neutral ramp, so a warm or cool theme gets a warm or cool
   // "no data" gray instead of an uninvited zinc.
   const neutralFill = isDarkMode ? theme.colors.neutral[800] : theme.colors.neutral[100];
+  // A solid neutral is indistinguishable from the middle class of a diverging
+  // ramp (redBlue's center is #f7f7f7), so holes in the join get a diagonal
+  // hatch over the same neutral. Only under a color encoding: a basemap-only
+  // map has no data to be missing, and hatching every country would be noise.
+  const noDataPattern: ResolvedFillPattern = {
+    type: 'diagonal',
+    base: neutralFill,
+    line: isDarkMode ? theme.colors.neutral[600] : theme.colors.neutral[300],
+  };
 
   let featureMarks: GeoMapFeatureMark[];
   let continuousLegend: ContinuousLegendLayout | null = null;
@@ -396,6 +406,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       colorField: colorEncoding.field,
       classScale,
       neutralFill,
+      noDataPattern,
       formatter,
       droppedFeatures,
     });
@@ -442,10 +453,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       // "No data" is a class of its own, detached from the ramp so nobody reads
       // it as the low end of the scale. Only drawn when the map actually has
       // holes in it.
-      const hasUnmatched = featureMarks.some((m) => {
-        const raw = m.data?.[colorEncoding.field];
-        return raw == null || Number.isNaN(Number(raw));
-      });
+      const hasUnmatched = featureMarks.some((m) => m.noData);
       const noDataX = bar.x + bar.width + NO_DATA_SWATCH_GAP;
       const noData =
         hasUnmatched && noDataX + bar.height + NO_DATA_LABEL_GAP < fullArea.x + fullArea.width
@@ -454,6 +462,9 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
               y: bar.y,
               size: bar.height,
               fill: neutralFill,
+              // Same hatch the no-data features carry, so the key matches what
+              // is on the map rather than a neutral the ramp's center mimics.
+              pattern: noDataPattern,
               label: 'No data',
               labelX: noDataX + bar.height + NO_DATA_LABEL_GAP,
               labelY: bar.y + bar.height,
@@ -486,6 +497,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       colorScale: colorEncoding.scale,
       isDarkMode: !!isDarkMode,
       neutralFill,
+      noDataPattern,
       theme,
       fullArea,
       mapAreaHeight,
@@ -1097,6 +1109,7 @@ interface QuantitativeOptions {
   /** The shared class scale (null only when no numeric values exist). */
   classScale: ClassScale | null;
   neutralFill: string;
+  noDataPattern: ResolvedFillPattern;
   formatter: (n: number) => string;
   droppedFeatures: string[];
 }
@@ -1111,6 +1124,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
     colorField,
     classScale,
     neutralFill,
+    noDataPattern,
     formatter,
     droppedFeatures,
   } = opts;
@@ -1133,13 +1147,19 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
 
     let fill = neutralFill;
     let binIndex: number | undefined;
-    if (hasData && classScale) {
+    // A value of exactly 0 is data. Only a missing row, a null cell or a
+    // non-numeric cell counts as a hole.
+    let hasValue = false;
+    if (hasData) {
       const raw = dataRow[colorField];
       if (raw != null) {
         const v = Number(raw);
         if (!Number.isNaN(v)) {
-          fill = classScale.color(v);
-          binIndex = classScale.binIndex(v);
+          hasValue = true;
+          if (classScale) {
+            fill = classScale.color(v);
+            binIndex = classScale.binIndex(v);
+          }
         }
       }
     }
@@ -1177,6 +1197,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
       bounds,
       centroid: [cx, cy],
       binIndex,
+      ...(hasValue ? {} : { noData: true, pattern: noDataPattern }),
     });
   }
 
@@ -1195,6 +1216,7 @@ interface CategoricalOptions {
   colorScale?: { domain?: unknown; range?: unknown };
   isDarkMode: boolean;
   neutralFill: string;
+  noDataPattern: ResolvedFillPattern;
   theme: ResolvedTheme;
   fullArea: { x: number; y: number; width: number; height: number };
   mapAreaHeight: number;
@@ -1216,6 +1238,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     colorScale: scaleConfig,
     isDarkMode,
     neutralFill,
+    noDataPattern,
     theme,
     fullArea,
     mapAreaHeight,
@@ -1270,10 +1293,14 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     const hasData = dataRow !== null;
 
     let fill = neutralFill;
+    // A missing row or a null cell is a hole; any present category (including
+    // an empty string or "0") is data.
+    let hasValue = false;
     if (hasData) {
       const raw = dataRow[colorField];
       if (raw != null) {
         const cat = String(raw);
+        hasValue = true;
         fill = categoryColors.get(cat) ?? neutralFill;
       }
     }
@@ -1310,6 +1337,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
       animationIndex: animIndex++,
       bounds,
       centroid: [cx, cy],
+      ...(hasValue ? {} : { noData: true, pattern: noDataPattern }),
     });
   }
 

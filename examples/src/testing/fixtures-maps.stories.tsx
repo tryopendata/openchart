@@ -136,7 +136,7 @@ export const UsStatesLight = () => (
 );
 
 export const UsStatesDark = () => (
-  <div className="tfix-chart tfix-h-500">
+  <div className="tfix-chart tfix-h-500 oc-dark" style={{ background: 'var(--oc-bg)' }}>
     <GeoMap spec={usStatesSpec} darkMode="force" />
   </div>
 );

@@ -15,6 +15,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
 import { FOCUS_DIM_OPACITY } from './map-camera';
+import { buildPatternDefs, resolvePatternFill } from './pattern-utils';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { resolvedSurface } from './theme-tokens';
@@ -207,6 +208,7 @@ function renderFeatures(
   animation?: ResolvedAnimation,
   staggerBudget = 0,
   focusIds?: Set<string>,
+  patternMap?: Map<string, string>,
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-map-features');
@@ -244,13 +246,22 @@ function renderFeatures(
     const path = createSVGElement('path');
     path.setAttribute('class', 'oc-map-feature');
     path.setAttribute('role', 'listitem');
+    // No-data features carry a hatch pattern so they never read as a class of
+    // the ramp (redBlue's middle class is near the neutral gray).
+    const fill =
+      feature.pattern && patternMap
+        ? resolvePatternFill(feature.pattern, patternMap)
+        : feature.fill;
     setAttrs(path, {
       d: feature.path,
-      fill: feature.fill,
+      fill,
       stroke: feature.stroke,
       'stroke-width': feature.strokeWidth,
     });
     path.setAttribute('data-feature-id', String(feature.id));
+    if (feature.noData) {
+      path.setAttribute('data-nodata', 'true');
+    }
     path.setAttribute('data-key', String(feature.id));
     // The class this feature's value fell in. Hovering a legend swatch dims
     // every feature whose index does not match (CSS in interaction.css).
@@ -279,7 +290,10 @@ function renderFeatures(
       const idx = feature.animationIndex ?? i;
       path.setAttribute('data-animation-index', String(idx));
       s.setProperty('--oc-mark-index', String(idx));
-      s.setProperty('--oc-feature-fill', feature.fill);
+      // For hatched features this is a url(#pattern), which is not interpolable:
+      // the entrance keyframe snaps to the hatch instead of easing into it.
+      // Accepted — a fill transition on a texture would read as a flicker.
+      s.setProperty('--oc-feature-fill', fill);
       if (dimmed) {
         s.setProperty('--oc-feature-target-opacity', String(FOCUS_DIM_OPACITY));
       }
@@ -380,6 +394,12 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   const defs = createSVGElement('defs');
   svg.appendChild(defs);
 
+  // One <pattern> per unique hatch, shared by every no-data feature and the
+  // legend's no-data swatch (the legend entry carries the same pattern object,
+  // so buildPatternDefs dedups them onto a single def).
+  const noDataSwatch = layout.continuousLegend?.noData;
+  const patternMap = buildPatternDefs(noDataSwatch ? [...features, noDataSwatch] : features, defs);
+
   // Create map group offset to the drawing area
   const mapGroup = createSVGElement('g');
   mapGroup.setAttribute('class', 'oc-map-group');
@@ -405,6 +425,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
     animate ? animation : undefined,
     mapStaggerBudget,
     focusIdSet,
+    patternMap,
   );
 
   // Render borders on top of features
@@ -430,7 +451,20 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
 
   // Render legend (continuous for quantitative, categorical for nominal)
   if (layout.continuousLegend) {
-    renderLegend(svg, layout.continuousLegend);
+    // The swatch fill is a string in the layout, so resolve the hatch to its
+    // url(#id) here — the map renderer owns the defs the pattern lives in.
+    renderLegend(
+      svg,
+      noDataSwatch?.pattern
+        ? {
+            ...layout.continuousLegend,
+            noData: {
+              ...noDataSwatch,
+              fill: resolvePatternFill(noDataSwatch.pattern, patternMap),
+            },
+          }
+        : layout.continuousLegend,
+    );
   } else if (layout.categoricalLegend) {
     renderLegend(svg, layout.categoricalLegend);
   }

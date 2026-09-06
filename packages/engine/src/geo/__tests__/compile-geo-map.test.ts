@@ -448,6 +448,85 @@ describe('compileGeoMap', () => {
     expect(complete.continuousLegend!.noData).toBeUndefined();
   });
 
+  it('hatches no-data features (and the legend swatch), but never a zero value', () => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value: 10 },
+          // Zero is data, not a hole.
+          { fips: '48', value: 0 },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    const zero = layout.features.find((f) => f.id === '48')!;
+    expect(zero.noData).toBeUndefined();
+    expect(zero.pattern).toBeUndefined();
+
+    const hole = layout.features.find((f) => f.id === '36')!;
+    expect(hole.noData).toBe(true);
+    expect(hole.pattern).toEqual({
+      type: 'diagonal',
+      base: hole.fill,
+      line: layout.theme.colors.neutral[300],
+    });
+
+    // The legend swatch keys the same hatch the features carry.
+    expect(layout.continuousLegend!.noData!.pattern).toEqual(hole.pattern);
+  });
+
+  it('hatches no-data features under a categorical color encoding', () => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [{ fips: '06', party: 'D' }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'party', type: 'nominal' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.features.find((f) => f.id === '06')!.pattern).toBeUndefined();
+    for (const id of ['48', '36']) {
+      const f = layout.features.find((m) => m.id === id)!;
+      expect(f.noData).toBe(true);
+      expect(f.pattern?.type).toBe('diagonal');
+    }
+  });
+
+  it('never hatches basemap-only features (no color encoding, nothing to be missing)', () => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [],
+        encoding: { key: { field: 'id', type: 'nominal' } },
+        points: {
+          data: [{ lat: 34, lon: -118, name: 'LA' }],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          key: { field: 'name', type: 'nominal' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    for (const f of layout.features) {
+      expect(f.noData).toBeUndefined();
+      expect(f.pattern).toBeUndefined();
+    }
+  });
+
   it('fills features from the same class scale the legend keys', () => {
     const data = Array.from({ length: 3 }, (_, i) => ({
       fips: ['06', '48', '36'][i],
