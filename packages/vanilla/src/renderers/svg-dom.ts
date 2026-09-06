@@ -19,6 +19,24 @@ export function setAttrs(el: SVGElement, attrs: Record<string, string | number>)
   }
 }
 
+/**
+ * Cut a knockout halo behind text so it stays legible where it crosses
+ * gridlines, marks, or a neighbouring series: a surface-colored stroke painted
+ * under the glyphs.
+ *
+ * Presentation attributes, not inline styles, so a stylesheet can still
+ * override the halo. The width scales with the font size -- a fixed width rings
+ * small glyphs and disappears behind large ones.
+ */
+export function applyKnockoutHalo(el: SVGElement, color: string, fontSize: number): void {
+  setAttrs(el, {
+    stroke: color,
+    'stroke-width': Math.max(1, Math.round(fontSize * 0.3)),
+    'stroke-linejoin': 'round',
+    'paint-order': 'stroke',
+  });
+}
+
 export function applyTextStyle(el: SVGElement, style: TextStyle): void {
   // Use inline styles so engine-computed values take priority over CSS class
   // defaults (e.g. .oc-title { font-size: var(--oc-title-size) } would otherwise

@@ -67,7 +67,10 @@
      to the data-driven color stored in --oc-feature-fill. The target opacity is
      --oc-feature-target-opacity (default 1) so features under a focus dim
      animate straight to their dimmed rest opacity instead of hitting 1 and then
-     snapping down when the dim is applied post-animation. */
+     snapping down when the dim is applied post-animation.
+     Non-interpolable fills (the url(#pattern) hatch on no-data features) do not
+     transition: the browser holds the neutral and flips to the pattern at the
+     keyframe midpoint, so those features fade in rather than cross-fade. */
   @keyframes oc-enter-map-fill {
     from {
       fill: var(--oc-secondary);

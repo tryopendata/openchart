@@ -843,6 +843,12 @@ export interface CategoricalLegendLayout extends BaseLegendLayout {
   entryPositions?: LegendEntryPosition[];
   /** Row advance used to build entryPositions (single source of truth). */
   rowHeight?: number;
+  /**
+   * Detached "no data" swatch, drawn after the last entry. Only maps set it,
+   * and only when the geography actually has unjoined features -- their hatch
+   * needs a key like every other fill on the map.
+   */
+  noData?: ContinuousLegendNoData;
 }
 
 /** A color stop in a gradient legend. */

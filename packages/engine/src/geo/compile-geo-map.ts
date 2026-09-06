@@ -1372,6 +1372,36 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
     const swatchGap = 6;
     const entryGap = 16;
 
+    // Unjoined features are hatched, so the hatch needs a key of its own --
+    // detached after the last entry, never as one more category. Only drawn
+    // when the map actually has holes, and only when it fits on the row.
+    const hasUnmatched = marks.some((m) => m.noData);
+    const entriesWidth = entries.reduce(
+      (sum, e) =>
+        sum +
+        swatchSize +
+        swatchGap +
+        estimateTextWidth(e.label, labelStyle.fontSize, labelStyle.fontWeight) +
+        entryGap,
+      0,
+    );
+    const noDataX = legendX + entriesWidth;
+    const noData =
+      hasUnmatched && noDataX + swatchSize + NO_DATA_LABEL_GAP < legendX + legendWidth
+        ? {
+            x: noDataX,
+            y: legendY,
+            size: swatchSize,
+            fill: neutralFill,
+            // The same hatch the no-data features carry, so the key matches
+            // what is on the map.
+            pattern: noDataPattern,
+            label: 'No data',
+            labelX: noDataX + swatchSize + NO_DATA_LABEL_GAP,
+            labelY: legendY + swatchSize,
+          }
+        : undefined;
+
     legend = {
       type: 'categorical',
       position: legendPosition,
@@ -1382,6 +1412,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
       swatchGap,
       entryGap,
       swatchChipFill: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+      noData,
     };
   }
 

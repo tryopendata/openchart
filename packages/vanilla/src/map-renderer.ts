@@ -291,7 +291,8 @@ function renderFeatures(
       path.setAttribute('data-animation-index', String(idx));
       s.setProperty('--oc-mark-index', String(idx));
       // For hatched features this is a url(#pattern), which is not interpolable:
-      // the entrance keyframe snaps to the hatch instead of easing into it.
+      // the browser holds the neutral and swaps to the hatch at the keyframe
+      // midpoint (50% of oc-enter-map-fill) instead of easing into it.
       // Accepted — a fill transition on a texture would read as a flicker.
       s.setProperty('--oc-feature-fill', fill);
       if (dimmed) {
@@ -397,7 +398,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   // One <pattern> per unique hatch, shared by every no-data feature and the
   // legend's no-data swatch (the legend entry carries the same pattern object,
   // so buildPatternDefs dedups them onto a single def).
-  const noDataSwatch = layout.continuousLegend?.noData;
+  const noDataSwatch = layout.continuousLegend?.noData ?? layout.categoricalLegend?.noData;
   const patternMap = buildPatternDefs(noDataSwatch ? [...features, noDataSwatch] : features, defs);
 
   // Create map group offset to the drawing area
@@ -453,20 +454,27 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   if (layout.continuousLegend) {
     // The swatch fill is a string in the layout, so resolve the hatch to its
     // url(#id) here — the map renderer owns the defs the pattern lives in.
+    const contNoData = layout.continuousLegend.noData;
     renderLegend(
       svg,
-      noDataSwatch?.pattern
+      contNoData?.pattern
         ? {
             ...layout.continuousLegend,
-            noData: {
-              ...noDataSwatch,
-              fill: resolvePatternFill(noDataSwatch.pattern, patternMap),
-            },
+            noData: { ...contNoData, fill: resolvePatternFill(contNoData.pattern, patternMap) },
           }
         : layout.continuousLegend,
     );
   } else if (layout.categoricalLegend) {
-    renderLegend(svg, layout.categoricalLegend);
+    const catNoData = layout.categoricalLegend.noData;
+    renderLegend(
+      svg,
+      catNoData?.pattern
+        ? {
+            ...layout.categoricalLegend,
+            noData: { ...catNoData, fill: resolvePatternFill(catNoData.pattern, patternMap) },
+          }
+        : layout.categoricalLegend,
+    );
   }
 
   // Render point legends with a semi-transparent background so they read

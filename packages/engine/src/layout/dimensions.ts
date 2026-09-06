@@ -31,8 +31,7 @@ import {
   computeFieldFormatContext,
   defaultNumberFormatter,
   estimateTextWidth,
-  HEIGHT_CRAMPED_MAX,
-  HEIGHT_MINIMAL_MAX,
+  getHeightClass,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   isAxislessMark,
@@ -261,7 +260,7 @@ export function computeDimensions(
   // fallback below. Shrink the default title size a bit further to keep it.
   // Also used below to gate out the metric bar / series-search band, which
   // are sized for full tiles and would blow the same guardrail at this height.
-  const isCrampedHeight = height >= HEIGHT_MINIMAL_MAX && height < HEIGHT_CRAMPED_MAX;
+  const isCrampedHeight = getHeightClass(height) === 'cramped';
   const chrome =
     plan?.chrome ??
     computeChrome(

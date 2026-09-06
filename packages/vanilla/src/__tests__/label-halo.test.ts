@@ -95,8 +95,10 @@ describe('annotation label halo', () => {
 
     const label = container.querySelector('.oc-annotation-label') as SVGElement | null;
     expect(label).toBeTruthy();
-    expect(label!.style.paintOrder).toBe('stroke');
-    expect(label!.style.stroke).toBeTruthy();
-    expect(label!.style.stroke).not.toBe('transparent');
+    expect(label!.getAttribute('paint-order')).toBe('stroke');
+    const stroke = label!.getAttribute('stroke');
+    expect(stroke).toBeTruthy();
+    expect(stroke).not.toBe('transparent');
+    expect(label!.getAttribute('stroke-linejoin')).toBe('round');
   });
 });

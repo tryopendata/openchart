@@ -210,8 +210,8 @@ export function footnoteBandHeight(count: number, theme: ResolvedTheme): number 
  *   are shifted down by this amount so the chrome stacks BELOW the legend
  *   rather than colliding with it. The returned `bottomHeight` includes this
  *   reservation, so callers should not double-reserve it in margin math.
- * @param crampedTitle - Shrinks the default (non-explicit) title font size an
- *   extra 20% on top of the width-based scaling. Set by callers for the
+ * @param crampedTitle - Shrinks the default (non-explicit) title font size by
+ *   `CRAMPED_TITLE_SCALE` on top of the width-based scaling. Set by callers for the
  *   100-199px cramped height range: at that height a full-size compact title
  *   can push `chrome.topHeight` past the min-chart-height guardrail, which
  *   would strip the title back out via the hidden-chrome fallback.

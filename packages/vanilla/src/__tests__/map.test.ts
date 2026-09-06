@@ -201,6 +201,38 @@ describe('createGeoMap', () => {
     instance.destroy();
   });
 
+  it('keys the hatch on a categorical legend too', () => {
+    const instance = createGeoMap(
+      container,
+      {
+        ...basicMapSpec,
+        data: [
+          { fips: '06', party: 'D' },
+          { fips: '48', party: 'R' },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' as const },
+          color: { field: 'party', type: 'nominal' as const },
+        },
+      },
+      { responsive: false },
+    );
+
+    const svg = container.querySelector('svg')!;
+    const patterns = [...svg.querySelectorAll('defs > pattern')];
+    expect(patterns.length).toBe(1);
+
+    const swatch = svg.querySelector('.oc-legend-nodata')!;
+    expect(swatch.getAttribute('fill')).toBe(`url(#${patterns[0].getAttribute('id')})`);
+    expect([...svg.querySelectorAll('.oc-legend text')].map((t) => t.textContent)).toContain(
+      'No data',
+    );
+    // Not an entry: no toggle role, no index.
+    expect(swatch.closest('.oc-legend-entry')).toBeNull();
+
+    instance.destroy();
+  });
+
   it('update() re-renders with new data', () => {
     const instance = createGeoMap(container, basicMapSpec, { responsive: false });
 

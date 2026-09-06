@@ -25,7 +25,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { resolveMarkFill } from '../gradient-utils';
 import { resolvePatternFill } from '../pattern-utils';
-import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
+import { applyKnockoutHalo, applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
  * Module-level animation state. Set by the orchestrator before rendering marks
@@ -81,12 +81,7 @@ export function resetMarkRenderState(): void {
  */
 function applyLabelHalo(text: SVGElement, label: ResolvedLabel): void {
   if (!currentSurface || label.halo === false) return;
-  setAttrs(text, {
-    stroke: currentSurface,
-    'stroke-width': 3,
-    'stroke-linejoin': 'round',
-    'paint-order': 'stroke',
-  });
+  applyKnockoutHalo(text, currentSurface, label.style.fontSize);
 }
 
 /**

@@ -385,5 +385,31 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     }
   }
 
+  // Detached "no data" swatch, set only by maps with unjoined features. Not an
+  // entry: it carries no toggle role and no data-legend-index.
+  if (legend.noData) {
+    const swatch = createSVGElement('rect');
+    swatch.setAttribute('class', 'oc-legend-nodata');
+    setAttrs(swatch, {
+      x: legend.noData.x,
+      y: legend.noData.y,
+      width: legend.noData.size,
+      height: legend.noData.size,
+      fill: legend.noData.fill,
+      'shape-rendering': 'crispEdges',
+    });
+    g.appendChild(swatch);
+
+    const label = createSVGElement('text');
+    setAttrs(label, {
+      x: legend.noData.labelX,
+      y: legend.noData.labelY,
+      'text-anchor': 'start',
+    });
+    applyTextStyle(label, legend.labelStyle);
+    label.textContent = legend.noData.label;
+    g.appendChild(label);
+  }
+
   parent.appendChild(g);
 }

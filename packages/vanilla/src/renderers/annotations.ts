@@ -12,7 +12,7 @@ import {
   parseAnnotationSpans,
 } from '@opendata-ai/openchart-engine';
 import { resolvedSurface } from '../theme-tokens';
-import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
+import { applyKnockoutHalo, applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /** Stroke width shared by every connector voice except the drop-line hairline. */
 const CONNECTOR_STROKE_WIDTH = 1.25;
@@ -348,10 +348,7 @@ function renderAnnotation(
       });
       g.appendChild(bgRect);
     } else if (bgColor && annotation.label.halo !== false) {
-      text.style.paintOrder = 'stroke';
-      text.style.stroke = bgColor;
-      text.style.strokeWidth = `${Math.round(fontSize * 0.3)}px`;
-      text.style.strokeLinejoin = 'round';
+      applyKnockoutHalo(text, bgColor, fontSize);
     }
 
     g.appendChild(text);

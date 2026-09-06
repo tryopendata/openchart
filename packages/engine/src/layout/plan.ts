@@ -19,8 +19,7 @@ import {
   computeXAxisExtentFromLabels,
   defaultNumberFormatter,
   estimateTextWidth,
-  HEIGHT_CRAMPED_MAX,
-  HEIGHT_MINIMAL_MAX,
+  getHeightClass,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   isAxislessMark,
@@ -174,7 +173,7 @@ export function resolveLayoutPlan(
   // 'compact'), but a full-size title there can push chrome.topHeight past
   // the min-chart-height guardrail and get stripped by the hidden-chrome
   // fallback. Shrink the default title size a bit further to keep it.
-  const crampedTitle = height >= HEIGHT_MINIMAL_MAX && height < HEIGHT_CRAMPED_MAX;
+  const crampedTitle = getHeightClass(height) === 'cramped';
 
   // -----------------------------------------------------------------------
   // Sparkline / radial: trivial plan (no y-axis measurement needed)

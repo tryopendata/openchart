@@ -101,6 +101,17 @@ function inferAlignment(
 }
 
 /**
+ * Horizontal padding inside a cell, in pixels: `th, td { padding: 12px 16px }`
+ * in `packages/core/src/styles/table.css`, so 16 on each side. Cells are
+ * `box-sizing: border-box`, so an estimate that undercounts the padding lands
+ * below the cell's min-content width and the browser rescales the row.
+ *
+ * The two other densities change horizontal padding too (condensed 12px a side,
+ * relaxed 20px); the estimate assumes the default density.
+ */
+const CELL_PADDING_X = 32;
+
+/**
  * Estimate the needed width for a column by measuring header and data values.
  * Samples up to 100 rows for estimation.
  */
@@ -110,16 +121,15 @@ function estimateColumnWidth(
   fontSize: number,
 ): number {
   const MIN_WIDTH = 60;
-  const PADDING = 24; // cell padding
 
   // Visual columns get fixed widths (they render graphics, not text)
   if (col.sparkline) return 140;
-  if (col.image) return (col.image.width ?? 24) + PADDING;
+  if (col.image) return (col.image.width ?? 24) + CELL_PADDING_X;
   if (col.flag) return 60;
 
   // Header width
   const label = col.label ?? col.key;
-  const headerWidth = estimateTextWidth(label, fontSize, 600) + PADDING;
+  const headerWidth = estimateTextWidth(label, fontSize, 600) + CELL_PADDING_X;
 
   // Sample data values
   const sampleSize = Math.min(100, data.length);
@@ -128,7 +138,7 @@ function estimateColumnWidth(
   for (let i = 0; i < sampleSize; i++) {
     const val = data[i][col.key];
     const text = val == null ? '' : String(val);
-    const width = estimateTextWidth(text, fontSize, 400) + PADDING;
+    const width = estimateTextWidth(text, fontSize, 400) + CELL_PADDING_X;
     if (width > maxDataWidth) maxDataWidth = width;
   }
 
@@ -166,7 +176,9 @@ function resolveColumns(
         return parseInt(col.width, 10) || 100;
       }
       if (col.width.endsWith('%')) {
-        return (parseFloat(col.width) / 100) * totalWidth || 100;
+        // Rounded like every other width, so a 33.3% column is 333px and not
+        // 333.3px of fractional layout.
+        return Math.round((parseFloat(col.width) / 100) * totalWidth) || 100;
       }
       return parseInt(col.width, 10) || 100;
     }
@@ -193,16 +205,22 @@ function resolveColumns(
     // instead of drifting from independently rounding each column.
     let cumulative = 0;
     let cumulativeTarget = 0;
+    let floored = false;
     for (const i of explicitIndices) {
       cumulativeTarget += naturalWidths[i] * scale;
-      const width = Math.max(MIN_COLUMN_WIDTH, Math.round(cumulativeTarget) - cumulative);
+      const target = Math.round(cumulativeTarget) - cumulative;
+      const width = Math.max(MIN_COLUMN_WIDTH, target);
+      if (width > target) floored = true;
       scaledExplicitWidths.set(i, width);
       cumulative += width;
     }
+    const outcome = floored
+      ? `scaled proportionally down to the ${MIN_COLUMN_WIDTH}px minimum column width, which ` +
+        `they hit, so the table will still overflow.`
+      : 'scaled proportionally to fit.';
     warnings.push(
       `[openchart] TABLE_WIDTH_OVERFLOW: explicit column widths summed to ${explicitTotal}px, ` +
-        `exceeding the ${budgetForExplicit}px available in a ${totalWidth}px-wide table; scaled ` +
-        `proportionally to fit.`,
+        `exceeding the ${budgetForExplicit}px available in a ${totalWidth}px-wide table; ${outcome}`,
     );
   }
 

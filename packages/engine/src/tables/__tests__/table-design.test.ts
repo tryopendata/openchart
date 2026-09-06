@@ -350,4 +350,19 @@ describe('column width', () => {
     expect(widths.every((w) => w >= 333 && w <= 334)).toBe(true);
     expect(warnings.some((w) => w.includes('TABLE_WIDTH_OVERFLOW'))).toBe(true);
   });
+
+  it('warns that the table still overflows when scaling hits the minimum width', () => {
+    const warnings: string[] = [];
+    const layout = compileTable(
+      {
+        type: 'table' as const,
+        data: [Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`c${i}`, i]))],
+        columns: Array.from({ length: 8 }, (_, i) => ({ key: `c${i}`, width: '200px' })),
+      },
+      { width: 400, height: 600, onWarn: (m) => warnings.push(m) },
+    );
+    expect(layout.columns.every((c) => c.width === 60)).toBe(true);
+    const warning = warnings.find((w) => w.includes('TABLE_WIDTH_OVERFLOW'));
+    expect(warning).toContain('still overflow');
+  });
 });

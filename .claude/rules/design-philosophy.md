@@ -13,7 +13,7 @@ Every design decision should serve reader comprehension first.
 
 **Smart defaults over manual tweaking.** Labels shouldn't overlap. Axes should pick sensible tick intervals. Colors should be accessible out of the box. The system should produce a publication-ready chart from a minimal spec. Users refine from a good starting point, not fix a broken one.
 
-**Hierarchy through restraint.** The most important text (title) is biggest and boldest. Supporting text (subtitle, source, byline) steps down in size, weight, and contrast. Limit to 2-3 distinct text hierarchy levels. Gray for secondary information. Never shrink text to make it fit, redesign instead.
+**Hierarchy through restraint.** The most important text (title) is biggest and boldest. Supporting text (subtitle, source, byline) steps down in size, weight, and contrast. Limit to 2-3 distinct text hierarchy levels. Gray for secondary information. Never shrink text to make it fit, redesign instead. The one exception is the 100-199px cramped height range, where the default title (and only the default title) shrinks by `CRAMPED_TITLE_SCALE` so a dashboard tile keeps its label instead of losing it to the hidden-chrome fallback; see `packages/core/src/layout/chrome.ts`.
 
 ## Simplicity
 

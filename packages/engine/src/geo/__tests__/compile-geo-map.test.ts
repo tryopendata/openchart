@@ -502,6 +502,32 @@ describe('compileGeoMap', () => {
       expect(f.noData).toBe(true);
       expect(f.pattern?.type).toBe('diagonal');
     }
+
+    // The hatch gets a key of its own, carrying the same pattern.
+    const noData = layout.categoricalLegend!.noData!;
+    expect(noData.label).toBe('No data');
+    expect(noData.pattern).toEqual(layout.features.find((f) => f.id === '48')!.pattern);
+  });
+
+  it('leaves the categorical legend without a no-data swatch when every feature joins', () => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', party: 'D' },
+          { fips: '48', party: 'R' },
+          { fips: '36', party: 'D' },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'party', type: 'nominal' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+
+    expect(layout.categoricalLegend!.noData).toBeUndefined();
   });
 
   it('never hatches basemap-only features (no color encoding, nothing to be missing)', () => {
