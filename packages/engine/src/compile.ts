@@ -885,6 +885,20 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     obstacles.push({ ...endpointLabels.bounds, kind: 'endpoint-label' });
   }
 
+  // The top chrome block (eyebrow / title / subtitle) is painted text, not empty
+  // space. Auto-placed annotations anchored near the plot's top edge would
+  // otherwise happily land on top of the subtitle.
+  const chromeBottomY = dims.topPad + dims.chrome.topHeight;
+  if (dims.chrome.topHeight > 0) {
+    obstacles.push({
+      x: 0,
+      y: 0,
+      width: dims.total.width,
+      height: chromeBottomY,
+      kind: 'chrome',
+    });
+  }
+
   const annotationMeasure: AnnotationMeasureTextFn = options.measureText
     ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
     : heuristicMeasure;
@@ -899,6 +913,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     measure: annotationMeasure,
     fontFamily: theme.fonts.family,
     autoThin: chartSpec.autoThin,
+    // Hand-placed blocks skip every nudge pass, so the clamp is the only lever
+    // that keeps an author's offset from parking a callout on the title.
+    topBound: dims.chrome.topHeight > 0 ? chromeBottomY : undefined,
   });
 
   // Dev-mode diagnostic: hand-placed annotations that sit on the data. Advisory
@@ -1292,6 +1309,7 @@ function compileFaceted(
       measure: annotationMeasure,
       fontFamily: theme.fonts.family,
       autoThin: panelSpecWithDomains.autoThin,
+      topBound: dims.chrome.topHeight > 0 ? dims.topPad + dims.chrome.topHeight : undefined,
     });
 
     // Auto-thinning, per panel. A panel is its own little chart: the box a label

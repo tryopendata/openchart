@@ -305,12 +305,17 @@ export function resolveAnnotationCollisions(
  * If a label overflows the right, left, top, or bottom edge, its position
  * is adjusted inward by the overflow amount. Connector geometry is updated
  * to match.
+ *
+ * `topBound` is the first y a label may occupy. Callers pass the bottom of the
+ * top chrome block so a hand-placed callout can't climb into the title or
+ * subtitle; it defaults to the plain SVG margin.
  */
 export function clampAnnotationsToBounds(
   annotations: ResolvedAnnotation[],
   svgWidth: number,
   svgHeight: number,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
+  topBound: number = CLAMP_MARGIN,
 ): void {
   for (const annotation of annotations) {
     if (annotation.type !== 'text' || !annotation.label) continue;
@@ -329,8 +334,8 @@ export function clampAnnotationsToBounds(
       dx = CLAMP_MARGIN - bounds.x;
     }
     // Top overflow
-    if (bounds.y < CLAMP_MARGIN) {
-      dy = CLAMP_MARGIN - bounds.y;
+    if (bounds.y < topBound) {
+      dy = topBound - bounds.y;
     }
     // Bottom overflow
     if (bounds.y + bounds.height + dy > svgHeight - CLAMP_MARGIN) {

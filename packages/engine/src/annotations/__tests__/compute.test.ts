@@ -1673,4 +1673,86 @@ describe('computeAnnotations', () => {
       expect(withClamping[0].label!.y).toBe(withoutClamping[0].label!.y);
     });
   });
+
+  describe('top chrome bound', () => {
+    const CHROME_BOTTOM = 60;
+    const measure = (text: string, font: { fontSize: number }) => text.length * font.fontSize * 0.6;
+
+    it('clamps a pinned annotation out of the chrome block', () => {
+      // A hand-placed block skips every nudge pass, so the clamp is the only
+      // thing standing between the author's offset and the title.
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Hurricane Ida',
+          offset: { dx: 0, dy: -300 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, {
+        scales,
+        chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: 600, height: 400 },
+        measure,
+        topBound: CHROME_BOTTOM,
+      });
+
+      expect(annotations).toHaveLength(1);
+      expect(annotations[0].bounds!.y).toBeGreaterThanOrEqual(CHROME_BOTTOM);
+    });
+
+    it('leaves the default top bound at the SVG margin', () => {
+      const spec = makeSpec([
+        {
+          type: 'text',
+          x: '2020-01-01',
+          y: 20,
+          text: 'Hurricane Ida',
+          offset: { dx: 0, dy: -300 },
+        },
+      ]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const annotations = computeAnnotations(spec, {
+        scales,
+        chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: 600, height: 400 },
+        measure,
+      });
+
+      expect(annotations[0].bounds!.y).toBeLessThan(CHROME_BOTTOM);
+    });
+
+    it('keeps an auto-placed annotation clear of the chrome obstacle', () => {
+      const spec = makeSpec([{ type: 'text', x: '2022-01-01', y: 40, text: 'Peak' }]);
+      const scales = computeScales(spec, chartArea, spec.data);
+      const ctx = {
+        scales,
+        chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        svg: { width: 600, height: 400 },
+        measure,
+      };
+
+      // Control: with nothing in the way the search parks the block above the
+      // anchor, inside what would be the title's airspace.
+      const unblocked = computeAnnotations(spec, { ...ctx, obstacles: [] });
+      expect(unblocked[0].bounds!.y).toBeLessThan(CHROME_BOTTOM);
+
+      const blocked = computeAnnotations(spec, {
+        ...ctx,
+        obstacles: [{ x: 0, y: 0, width: 600, height: CHROME_BOTTOM, kind: 'chrome' }],
+      });
+      expect(blocked).toHaveLength(1);
+      expect(blocked[0].bounds!.y).toBeGreaterThanOrEqual(CHROME_BOTTOM);
+    });
+  });
 });

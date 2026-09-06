@@ -21,7 +21,8 @@ export type ObstacleKind =
   | 'endpoint-label'
   | 'watermark'
   | 'axis-band'
-  | 'annotation';
+  | 'annotation'
+  | 'chrome';
 
 export interface PlacementObstacle extends Rect {
   kind: ObstacleKind;
@@ -227,6 +228,7 @@ const OBSTACLE_WEIGHTS: Record<ObstacleKind, number> = {
   'data-label': 8,
   'endpoint-label': 8,
   legend: 6,
+  chrome: 6,
   watermark: 6,
   'axis-band': 6,
   'area-fill': 1.5,

@@ -70,6 +70,8 @@ export function computeColumnLabels(
   const formatter = labelFormatter ?? null;
 
   const candidates: LabelCandidate[] = [];
+  // Per-candidate knockout-halo flag; false for labels drawn inside a segment.
+  const haloFlags: boolean[] = [];
   // Track whether each candidate fits inside its stacked segment. Non-stacked
   // columns label into open space above the bar, so they always fit.
   const fitsInSegment: boolean[] = [];
@@ -141,6 +143,11 @@ export function computeColumnLabels(
     // overflow into their neighbours.
     fitsInSegment.push(!(isStacked && textHeight > mark.height - 2 * LABEL_PADDING_Y));
 
+    // A stacked label sits ON its own segment fill, contrast-picked against it.
+    // A surface-colored knockout stroke would ring every glyph, so only the
+    // labels floating outside the bar get the halo.
+    haloFlags.push(!isStacked);
+
     candidates.push({
       text: valuePart,
       anchorX,
@@ -203,6 +210,7 @@ export function computeColumnLabels(
         y: candidates[i].anchorY + ascent,
         style: candidates[i].style,
         visible: false,
+        ...(haloFlags[i] ? {} : { halo: false }),
       });
       continue;
     }
@@ -213,6 +221,7 @@ export function computeColumnLabels(
     const { index: _index, ...rest } = r;
     results.push({
       ...rest,
+      ...(haloFlags[i] ? {} : { halo: false }),
       y: r.y + ascent,
       // The connector originates at the label; shift its start to the baseline
       // too so the leader stays glued to the shifted text.

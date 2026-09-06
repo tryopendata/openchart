@@ -115,6 +115,11 @@ export interface LayoutDimensions {
    */
   effectiveAxisGap: number;
   /**
+   * Padding above the top chrome block. Chrome text starts at this y, so
+   * `topPad + chrome.topHeight` is the first y below the chrome block.
+   */
+  topPad: number;
+  /**
    * True when the chrome-strip guardrail fired and chrome was reduced from what
    * the layout plan assumed. Signals that plan-precomputed y-ticks were sized
    * against the pre-strip (shorter) plot and must be regenerated against the
@@ -317,6 +322,7 @@ export function computeDimensions(
       theme,
       xAxisHeight: xAxisSpace,
       effectiveAxisGap: 0,
+      topPad: padding,
     };
   }
 
@@ -840,6 +846,7 @@ export function computeDimensions(
           : undefined,
         xAxisHeight,
         effectiveAxisGap: fallbackEffectiveAxisGap,
+        topPad,
         chromeStripped: true,
       };
     }
@@ -882,6 +889,7 @@ export function computeDimensions(
       : undefined,
     xAxisHeight,
     effectiveAxisGap,
+    topPad,
   };
 }
 

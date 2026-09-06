@@ -112,6 +112,8 @@ export function computeBarLabels(
   // Candidates carry the box's LEFT edge for collision math; on emit we map any
   // horizontal nudge back onto this display anchor so textAnchor stays honored.
   const displayAnchorX: number[] = [];
+  // Per-candidate knockout-halo flag; false for labels drawn inside the bar.
+  const haloFlags: boolean[] = [];
 
   const formatter = labelFormatter ?? null;
 
@@ -212,6 +214,11 @@ export function computeBarLabels(
     // Check if label text fits within the stacked segment
     const fits = !(isStacked && textWidth > mark.width - 2 * LABEL_PADDING);
 
+    // An inside label sits ON the bar fill, contrast-picked against it. A
+    // surface-colored knockout stroke would ring every glyph, so only labels
+    // placed outside the bar get the halo.
+    haloFlags.push(!isInside);
+
     displayAnchorX.push(anchorX);
     fitsInSegment.push(fits);
     candidates.push({
@@ -273,6 +280,7 @@ export function computeBarLabels(
         y: candidates[i].anchorY + halfHeight,
         style: candidates[i].style,
         visible: false,
+        ...(haloFlags[i] ? {} : { halo: false }),
       });
     } else {
       const r = resolvedByOrig.get(i);
@@ -288,6 +296,7 @@ export function computeBarLabels(
       const { index: _index, ...rest } = r;
       results.push({
         ...rest,
+        ...(haloFlags[i] ? {} : { halo: false }),
         x: r.x + dx,
         y: r.y + halfHeight,
         connector: r.connector

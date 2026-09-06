@@ -290,3 +290,21 @@ describe('computeBarLabels inside-label color by mode', () => {
     expect(dark[0].style.fill).toBe('#ffffff');
   });
 });
+
+describe('computeBarLabels knockout halo', () => {
+  it('opts inside-placed labels out of the halo', () => {
+    // width 200 >= MIN_WIDTH_FOR_INSIDE_LABEL, so the label is drawn inside the
+    // bar on its own fill, contrast-picked against it.
+    const labels = computeBarLabels([makeMark(0, 40)], chartArea, 'all');
+    expect(labels).toHaveLength(1);
+    expect(labels[0].halo).toBe(false);
+  });
+
+  it('leaves the halo on for labels placed outside a narrow bar', () => {
+    // width 25 < MIN_WIDTH_FOR_INSIDE_LABEL, so the label sits past the bar's
+    // right edge, over the plot background.
+    const labels = computeBarLabels([makeMark(0, 5)], chartArea, 'all');
+    expect(labels).toHaveLength(1);
+    expect(labels[0].halo).not.toBe(false);
+  });
+});

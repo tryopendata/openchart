@@ -29,6 +29,7 @@ import { renderMarks, resetMarkRenderState, setMarkRenderState } from './rendere
 import { renderMetrics } from './renderers/metrics';
 import { createSVGElement, SVG_NS, setAttrs } from './renderers/svg-dom';
 import { nextSvgId } from './svg-ids';
+import { resolvedSurface } from './theme-tokens';
 
 // Re-export registerMarkRenderer so external consumers can still register
 // custom mark renderers via the vanilla package entry point.
@@ -182,7 +183,12 @@ export function renderChartSVG(
   // animation + gradient/pattern fills without signature changes. try/finally
   // guarantees the reset fires even if any downstream renderer throws, so the
   // next render starts with a clean slate.
-  setMarkRenderState({ animation, gradientMap, patternMap });
+  setMarkRenderState({
+    animation,
+    gradientMap,
+    patternMap,
+    surface: resolvedSurface(layout.theme),
+  });
   try {
     if (layout.facet) {
       // Faceted rendering: per-panel axes, marks, annotations

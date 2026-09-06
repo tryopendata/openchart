@@ -257,6 +257,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "key": "|A",
       "label": {
         "connector": undefined,
+        "halo": false,
         "style": {
           "dominantBaseline": "central",
           "fill": "#111111",
@@ -298,6 +299,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "key": "|B",
       "label": {
         "connector": undefined,
+        "halo": false,
         "style": {
           "dominantBaseline": "central",
           "fill": "#111111",
@@ -339,6 +341,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "key": "|C",
       "label": {
         "connector": undefined,
+        "halo": false,
         "style": {
           "dominantBaseline": "central",
           "fill": "#111111",

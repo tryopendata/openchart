@@ -57,6 +57,12 @@ export interface AnnotationContext {
   debugPlacement?: boolean;
   /** When true, annotations that overlap are demoted to footnote markers instead of being hidden. */
   autoThin?: boolean;
+  /**
+   * First y an annotation label may occupy, in SVG coordinates. Callers pass
+   * the bottom of the top chrome block so hand-placed callouts stay clear of
+   * the title/subtitle. Defaults to the plain SVG clamp margin.
+   */
+  topBound?: number;
 }
 
 /**
@@ -328,7 +334,7 @@ export function computeAnnotations(
 
   // Clamp labels that overflow the SVG boundary back inside
   if (ctx.svg.width > 0 && ctx.svg.height > 0) {
-    clampAnnotationsToBounds(annotations, ctx.svg.width, ctx.svg.height, ctx.measure);
+    clampAnnotationsToBounds(annotations, ctx.svg.width, ctx.svg.height, ctx.measure, ctx.topBound);
   }
 
   // Sort by zIndex (lower first, undefined treated as 0)

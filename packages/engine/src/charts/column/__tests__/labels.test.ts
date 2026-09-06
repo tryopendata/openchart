@@ -177,3 +177,34 @@ describe('computeColumnLabels stacked segments', () => {
     expect(labels[0].y).toBeLessThan(mark.y);
   });
 });
+
+describe('computeColumnLabels knockout halo', () => {
+  /** One segment of a stacked column, positioned by its top edge. */
+  function makeStackedMark(y: number, height: number, value: number): RectMark {
+    return {
+      type: 'rect',
+      x: 0,
+      y,
+      width: 60,
+      height,
+      fill: '#0e7490',
+      stackGroup: 'Cat0',
+      data: { category: 'Cat0', value },
+      aria: { label: `Cat0: ${value}` },
+    };
+  }
+
+  it('opts a stacked (inside) label out of the halo', () => {
+    const labels = computeColumnLabels([makeStackedMark(100, 80, 33)], chartArea, 'all');
+    expect(labels).toHaveLength(1);
+    expect(labels[0].halo).toBe(false);
+  });
+
+  it('leaves the halo on for labels floating above the bar', () => {
+    const labels = computeColumnLabels(marks, chartArea, 'all');
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      expect(label.halo).not.toBe(false);
+    }
+  });
+});

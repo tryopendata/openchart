@@ -11,6 +11,7 @@ import {
   DEFAULT_LINE_HEIGHT,
   parseAnnotationSpans,
 } from '@opendata-ai/openchart-engine';
+import { resolvedSurface } from '../theme-tokens';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /** Stroke width shared by every connector voice except the drop-line hairline. */
@@ -378,8 +379,10 @@ export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-annotations');
 
-  // Annotations are already sorted by zIndex from the engine, so render in order
-  const bgColor = layout.theme.colors.background;
+  // Annotations are already sorted by zIndex from the engine, so render in order.
+  // The knockout halo has to be cut in an OPAQUE color: theme.colors.background
+  // defaults to 'transparent', which made every halo a no-op on default themes.
+  const bgColor = resolvedSurface(layout.theme);
   for (let i = 0; i < layout.annotations.length; i++) {
     renderAnnotation(g, layout.annotations[i], i, bgColor);
   }

@@ -18,6 +18,7 @@ import type {
   RectMark,
   ResolvedAnimation,
   ResolvedFillPattern,
+  ResolvedLabel,
   RuleMarkLayout,
   TextMarkLayout,
   TickMarkLayout,
@@ -44,22 +45,48 @@ let currentGradientMap: Map<string, string> = new Map();
  */
 let currentPatternMap: Map<string, string> = new Map();
 
-/** Set animation + gradient + pattern state before rendering marks. */
+/**
+ * Module-level opaque surface color, used to cut the knockout halo behind mark
+ * labels. Empty string means "no halo" (state was never primed).
+ */
+let currentSurface = '';
+
+/** Set animation + gradient + pattern + surface state before rendering marks. */
 export function setMarkRenderState(state: {
   animation: ResolvedAnimation | undefined;
   gradientMap: Map<string, string>;
   patternMap?: Map<string, string>;
+  surface?: string;
 }): void {
   currentAnimation = state.animation;
   currentGradientMap = state.gradientMap;
   currentPatternMap = state.patternMap ?? new Map();
+  currentSurface = state.surface ?? '';
 }
 
-/** Reset animation + gradient + pattern state after rendering. */
+/** Reset animation + gradient + pattern + surface state after rendering. */
 export function resetMarkRenderState(): void {
   currentAnimation = undefined;
   currentGradientMap = new Map();
   currentPatternMap = new Map();
+  currentSurface = '';
+}
+
+/**
+ * Cut a knockout halo behind a mark label so it stays legible where it crosses
+ * gridlines, marks, or a neighbouring series. Skipped when the engine set
+ * `halo: false` -- labels drawn *inside* a filled bar are already
+ * contrast-picked against that fill, and a surface-colored stroke there would
+ * ring every glyph.
+ */
+function applyLabelHalo(text: SVGElement, label: ResolvedLabel): void {
+  if (!currentSurface || label.halo === false) return;
+  setAttrs(text, {
+    stroke: currentSurface,
+    'stroke-width': 3,
+    'stroke-linejoin': 'round',
+    'paint-order': 'stroke',
+  });
 }
 
 /**
@@ -151,6 +178,7 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
     }
     setAttrs(label, { x: mark.label.x, y: mark.label.y });
     applyTextStyle(label, mark.label.style);
+    applyLabelHalo(label, mark.label);
     label.textContent = mark.label.text;
     g.appendChild(label);
 
@@ -323,6 +351,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
       y: mark.label.y - mark.center.y,
     });
     applyTextStyle(label, mark.label.style);
+    applyLabelHalo(label, mark.label);
     label.textContent = mark.label.text;
     g.appendChild(label);
   }
@@ -573,6 +602,7 @@ export function renderMarks(
     label.setAttribute('class', 'oc-mark-label');
     setAttrs(label, { x: rect.label.x, y: rect.label.y });
     applyTextStyle(label, rect.label.style);
+    applyLabelHalo(label, rect.label);
     label.textContent = rect.label.text;
 
     // Stamp animation index so the CSS stagger delay works for overlay labels
