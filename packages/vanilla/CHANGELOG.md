@@ -1,5 +1,29 @@
 # Changelog
 
+## [8.5.1](https://github.com/tryopendata/openchart/compare/core-v8.5.0...core-v8.5.1) (2026-09-07)
+
+
+### Features
+
+* entrance choreography, 2000-node gate, toggle and over-gate stories, invariants ([e9ec03a](https://github.com/tryopendata/openchart/commit/e9ec03a))
+* 3D renderer scaffold via 3d-force-graph (RFC 27 phases 1-2) ([1ae803c](https://github.com/tryopendata/openchart/commit/1ae803c))
+* hatch no-data map features so they read apart from a ramp's middle class ([a0c6e46](https://github.com/tryopendata/openchart/commit/a0c6e46))
+
+
+### Bug Fixes
+
+* declare the graph-3d subpath as side-effectful so bundlers keep it ([ed6573a](https://github.com/tryopendata/openchart/commit/ed6573a))
+* address CodeRabbit findings on #118 ([508a417](https://github.com/tryopendata/openchart/commit/508a417))
+* address re-review findings ([0957388](https://github.com/tryopendata/openchart/commit/0957388))
+* address review findings ([44691eb](https://github.com/tryopendata/openchart/commit/44691eb))
+* address RFC 26 re-review findings ([d06e5a5](https://github.com/tryopendata/openchart/commit/d06e5a5))
+* address RFC 26 review findings ([c632e7e](https://github.com/tryopendata/openchart/commit/c632e7e))
+* keep the title on 100-199px dashboard tiles ([096aac1](https://github.com/tryopendata/openchart/commit/096aac1))
+* draw annotations under the data-label overlay ([aa9f1a3](https://github.com/tryopendata/openchart/commit/aa9f1a3))
+* paint the knockout halo and keep callouts out of chrome ([2f3c0fa](https://github.com/tryopendata/openchart/commit/2f3c0fa))
+* per-column total opt-out and correct explicit column widths ([8dffbc5](https://github.com/tryopendata/openchart/commit/8dffbc5))
+* controlled sort survives wrapper mount sync; svg style block uses neutral.surface ([55dbd22](https://github.com/tryopendata/openchart/commit/55dbd22))
+
 ## [8.5.0](https://github.com/tryopendata/openchart/compare/core-v8.4.1...core-v8.5.0) (2026-09-07)
 
 
