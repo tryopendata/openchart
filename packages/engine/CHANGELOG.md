@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.5.2](https://github.com/tryopendata/openchart/compare/core-v8.5.1...core-v8.5.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* animate structural update() instead of snapping ([8771a97](https://github.com/tryopendata/openchart/commit/8771a97))
+
 ## [8.5.1](https://github.com/tryopendata/openchart/compare/core-v8.5.0...core-v8.5.1) (2026-09-07)
 
 
